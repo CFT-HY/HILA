@@ -3,10 +3,12 @@
 
 // New buffer interface, due to weirdly buggy(?) ReplaceText and RemoveText
 // in libtooling
+// NOTE: It's probably due to the funny use of SourceRange in Expr and Stmt.
+// Easy to make errors
 
 struct srcbuftoken {
   Expr * srcExpr;
-  size_t begin, end;
+  size_t begin, len;
 };
 
 class srcBuf {
@@ -51,7 +53,7 @@ public:
     // llvm::errs() << " ** SrcRange: " << startOffset <<" " << start << '\n';
 
     t.begin = start - startOffset;
-    t.end   = t.begin + myRewriter->getRangeSize( e->getSourceRange() ) - 1;
+    t.len   = myRewriter->getRangeSize( e->getSourceRange() );
     t.srcExpr = e;
 
     tokens.push_back(t);
@@ -59,9 +61,9 @@ public:
     // Check just in case - the tokens should be the same in this case
 
     std::string tok( myRewriter->getRewrittenText(e->getSourceRange()) );
-    if ( tok.compare(buffer.substr(t.begin,t.end-t.begin+1)) != 0 ) {
+    if ( tok.compare(buffer.substr(t.begin,t.len)) != 0 ) {
       llvm::errs() << " * Buffer marking error, src: " << tok
-                   << "  buffer " << buffer.substr(t.begin,t.end-t.begin+1) << '\n';
+                   << "  buffer " << buffer.substr(t.begin,t.len) << '\n';
       exit(0);
     }
     // ret index
@@ -76,53 +78,55 @@ public:
     buffer.insert( pos, s );
     for ( size_t i=0; i<tokens.size(); i++ ) {
       if (tokens[i].begin > pos || (!incl && tokens[i].begin == pos)) tokens[i].begin += len;
-      if (tokens[i].end >= pos) tokens[i].end += len;
+      else if (incl && tokens[i].begin == pos) tokens[i].len += len;
+      else if (tokens[i].begin + tokens[i].len >= pos) tokens[i].len += len;
     }
   }
 
-  void remove( size_t b, size_t e ) {
+  void remove( size_t b, size_t len ) {
     // llvm::errs() << " -- Buffer: " << buffer << '\n';
-    assert( b <= e && e < buffer.length() );
-    // llvm::errs() << " -- Removing substr: " << buffer.substr(b, e-b+1) << '\n';
-    buffer.erase( b, e-b+1 );
+    size_t e = b+len-1;
+    assert( e < buffer.length() );
+    // llvm::errs() << " -- Removing substr: " << buffer.substr(b, len) << '\n';
+    buffer.erase( b, len );
     for ( size_t i=0; i<tokens.size(); i++ ) {
+      size_t end = tokens[i].begin + tokens[i].len - 1;
       if (tokens[i].begin > e ) {
-        tokens[i].begin -= e-b+1;
-        tokens[i].end   -= e-b+1;
-      } else if (tokens[i].begin > b) {
-        if (tokens[i].end > e ) tokens[i].end -= e-tokens[i].begin+1;
-        else tokens[i].end = b;
+        tokens[i].begin -= len;
+      } else if (tokens[i].begin >= b) {
+        if (end > e) tokens[i].len -= e-tokens[i].begin+1;
+        else tokens[i].len = 0;
         tokens[i].begin = b;
       } else {
-        if (tokens[i].end > e) tokens[i].end -= e-b+1;
-        else if (tokens[i].end > b) tokens[i].end = b;
+        if (end >= e) tokens[i].len -= len;
+        else if (end >= b) tokens[i].len = end-b+1;
       }
     }
   }
 
   // replace is a remove + insert pair, should write with a single operation
-  void replace( size_t b, size_t e, const std::string &s ) {
-    remove(b,e);
+  void replace( size_t b, size_t len, const std::string &s ) {
+    remove(b,len);
     insert(b,s,true);
   }
 
   void replace( unsigned ind, const std::string &s) {
     assert(ind < tokens.size());
-    replace( tokens[ind].begin, tokens[ind].end, s );
+    replace( tokens[ind].begin, tokens[ind].len, s );
   }
 
   std::string dump() {
     return buffer;
   }
 
-  std::string substr( unsigned a, unsigned b ) {
-    assert(a <= b && b < buffer.size());
-    return buffer.substr(a, b-a+1 );
+  std::string substr( size_t b, size_t len ) {
+    assert(b+len-1 < buffer.size());
+    return buffer.substr(b, len );
   }
   
   std::string token( unsigned ind ) {
     assert(ind < tokens.size());
-    return substr( tokens[ind].begin, tokens[ind].end );
+    return substr( tokens[ind].begin, tokens[ind].len );
   }
   
     
