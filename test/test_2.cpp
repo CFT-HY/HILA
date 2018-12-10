@@ -68,6 +68,7 @@ int main()
 
   if2 = if2 + intfield;
   lf = tf[0] + tf[1];
+  lf[ALL] = tf[0][X] + tf[1][X];
   
   lf = tf[0] + (*dp) + 3*5.6;
 
@@ -82,7 +83,7 @@ int main()
 
   lf = tf[1] + tf[0] * dd;
 
-  lf[X] = sin(lf[X]);
+  lf[X] = exp(lf[X]);
   
   
   

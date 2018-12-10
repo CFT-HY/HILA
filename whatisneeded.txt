@@ -85,11 +85,15 @@ NEIGHBOURS:
    e.g. for GPUs and "short sitevec" directions
 
 REDUCTIONS:
+
+   
    double val=0;
    onsites(EVEN) {
      f[X] = A[X] + B[X];
-     reduce_sum(val, norm2(f[X]));
-   }
+     auto n = norm2(f[X]);
+     reduce_sum(val, n );
+   } 
+
 
    functions 
       reduce_sum(v,e)   v += e
