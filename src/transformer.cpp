@@ -237,8 +237,6 @@ bool MyASTVisitor::check_lf_ref_list() {
       lfv.old_name = name;
       lfv.type = get_expr_type(p.nameExpr);
       lfv.is_changed = p.is_changed;
-      // Generate new variable name, may be needed
-      lfv.new_name = "lf_"+clean_name(name)+"_";
         
       field_info_list.push_back(lfv);
       lfip = & field_info_list.back();
@@ -433,11 +431,14 @@ var_expr MyASTVisitor::handle_var_expr(Expr *E) {
   
   // check if duplicate, use the Profile function in clang, which "fingerprints"
   // statements
+  // NOTE: MYSTERIOUS BUG; DOES NOT RECOGNIZE REFS TO THE SAME VAR AS IDENTICAL
   llvm::FoldingSetNodeID thisID, ID;
   E->Profile(thisID, *Context, true);
+  // llvm::errs() << "   comparing:: \'"<< get_stmt_str(E) <<"\'\n";
   v.duplicate = nullptr;
   for ( var_expr & p : var_expr_list ) {
     p.e->Profile(ID, *Context, true);
+    // llvm::errs() << "   against:: \'" << get_stmt_str(p.e) << "\'\n";
     if ( thisID == ID ) {
       // dup found
       v.duplicate = &p;
