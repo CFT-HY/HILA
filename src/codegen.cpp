@@ -117,7 +117,10 @@ bool MyASTVisitor::generate_code( SourceLocation kernelloc, Stmt *S ) {
       def  += ", ";
       call += ", ";
     }
-      
+
+    // Generate new variable name, may be needed -- use here simple receipe
+    l.new_name = "lf_"+clean_name(l.old_name)+"_";
+    
     if (!l.is_changed) def += "const ";
     // TODO: type to field_data
     def += l.type + " & " + l.new_name;
@@ -131,7 +134,7 @@ bool MyASTVisitor::generate_code( SourceLocation kernelloc, Stmt *S ) {
     bool dup = (ep.duplicate != nullptr);
 
     if (!dup) {
-      std::string varname = "nolf_var_"+std::to_string(i);
+      std::string varname = "sv_" + std::to_string(i) + "_";
       def += ", const " + ep.type + " " + varname;
       call += ", " + get_stmt_str(ep.e);
       
