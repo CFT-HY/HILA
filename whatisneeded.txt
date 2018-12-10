@@ -1,0 +1,123 @@
+FIELD:
+Lattice field of type T definition through template:
+
+        field<T> a;  ( or maybe latfield<T> a; ? )
+
+allocates field & resets status (deallocated when leaving scope)
+
+Contains an array of T-objects (or an array of field_element<T> objects?)
++ status information of the field related to nn-fetches
+
+PARITY:
+        enum class parity { even, odd, all, x };
+        #define EVEN parity::even
+        #define ODD parity::odd
+        #define ALL parity::all
+        #define X parity::x
+
+refers to sites of specific parity (a[EVEN]).
+X is a "wildcard", typographically
+could prefer a[*] or a[:] but c++ does not allow this.
+--> Textual substitution before parsing?
+
+REFER TO PARITY:
+overload operator[] for field variables
+
+LOOPING:
+
+compound loops:
+         onsites(p) {
+            latfield_elem<T> tmp;   // or only T tmp?
+            tmp = b[X] + f(c[X]);
+            r[X] = tmp + tmp*tmp;
+         }
+
+  Should use onsites(X,p) or X : p?
+  is the loop "index" (above x) needed?  It is always the same,
+  use special symbol??
+
+
+one-liners:
+        a[EVEN] = b[:] * c[:] + d[:];
+  equivalent to onsites(EVEN) { a[X] = b[X]*c[X] + d[X];}
+
+  Now
+        a = b * c + d;
+  is different, uses std c++ operator syntax
+
+  difference in function calls:
+        T f(const T& var) { ... }
+        a[EVEN] = f(b[:])  --> 
+           onsites(EVEN) { a[X] = f(b[X]);}
+
+        a = f(b);
+  in the latter case the function eats the whole field
+
+NOTE:
+  when field is modified, it is marked "dirty":
+        a[EVEN] = ...
+  even portion of a is marked dirty (e.g. "a.isdirty[EVEN] = 1")
+
+  this helps in organizing neighbour fetching, see below
+
+
+NEIGHBOURS:
+        direction d = -dir::x;
+        a[EVEN] = b[: + d];
+
+   this should open up to something like
+        msg_tag *tag = start_get(b,d,EVEN);
+                    --> flags ongoing comm (EVEN,d) in b,
+                        + pointers to comm structs
+
+        do { a[x] = b[neighbour(x,d)]; } for sites which do
+        not touch the surface
+
+        wait_get(tag);
+        do {} for surface pts.
+
+   present c-code implements this already
+
+   It is possible that in some cases need to use simply
+   a construct
+        latfield<T> tmp = shift_field(b,d);
+   which just shifts field b.  This may be advantageous
+   e.g. for GPUs and "short sitevec" directions
+
+REDUCTIONS:
+   double val=0;
+   onsites(EVEN) {
+     f[X] = A[X] + B[X];
+     reduce_sum(val, norm2(f[X]));
+   }
+
+   functions 
+      reduce_sum(v,e)   v += e
+      reduce_prod(v,e)  v *= e
+      reduce_max(v,e)   v = max(v,e)  error if v < e errors out
+      reduce_min(v,e)   v = min(v,e)  error if v < e errors out
+      Logicals?
+      reduce_maxloc(coord,v,e)
+      reduce_minloc(coord,v,e)
+
+MEMORY LAYOUT:
+   Variations:
+   even first, followed by odd sites.
+   1. coordinate is the "outermost" index (normal case)
+      (array-of-structs)
+   2. GPU: coordinate is the innermost index
+      (struct-of-arrays)
+   3. "short vector": pack 4 or 8 sites to a short vector,
+      which is the innermost structure
+      (array-of-structs-of-shortvectors)
+      Ensures full utilization of mem bandwidth and AVX registers
+      (remember to take care of alignment in allocations!)
+      In a sense, this contains 1 and 2.
+      
+      This will require special treatment for fetches from
+      one special direction ("shift" style operation)
+
+      Perhaps optimal GPU layout is also of this type 
+
+
+

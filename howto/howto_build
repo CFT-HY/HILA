@@ -1,0 +1,26 @@
+See page https://apt.llvm.org/
+ * add deb to sources, with key
+
+sudo apt install clang-7 clang-tools-7 clang-7-doc libclang-common-7-dev libclang-7-dev libclang1-7 clang-format-7 python-clang-7
+
+--------------------
+Or:
+
+see page https://clang.llvm.org/get_started.html
+
+Download with (file "download")
+
+git clone http://llvm.org/git/llvm.git
+cd llvm/tools
+git clone http://llvm.org/git/clang.git
+cd clang/tools
+git clone http://llvm.org/git/clang-tools-extra.git extra
+
+-----
+
+mkdir build (in-tree build is not supported)
+cd build
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ../llvm
+make
+
+Build types are Release, MinSizeRel, Debug, RelWithDebInfo
