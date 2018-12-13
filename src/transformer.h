@@ -25,15 +25,12 @@ struct loop_parity_struct {
   std::string text;
 };
 
+
+
 struct global_state {
-  bool in_loop_body = false;
-  bool accept_field_parity = false;
   bool assert_loop_parity = false;
   std::string full_loop_text = "";
-  unsigned skip_children = 0;
   unsigned in_func_template = 0;
-  unsigned scope_level = 0;
-  int skip_next = 0;
   BinaryOperatorKind template_field_assignment_opcode;
   FunctionDecl * currentFunctionDecl = nullptr;
   struct location_struct {
@@ -41,8 +38,6 @@ struct global_state {
     SourceLocation top;
     SourceLocation loop;
   } location;
-  
-    
 };
 
 

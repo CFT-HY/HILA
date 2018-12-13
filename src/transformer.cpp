@@ -32,6 +32,17 @@ using namespace clang::tooling;
 #include "myastvisitor.h"
 
 
+// collection of variables holding the state of parsing
+namespace state {
+  unsigned skip_children = 0;
+  unsigned scope_level = 0;
+  int skip_next = 0;
+  bool in_loop_body = false;
+  bool accept_field_parity = false;
+  bool is_file_modified = false;
+}
+
+
 static llvm::cl::OptionCategory ToolingSampleCategory("Transformer");
 
 // command line options
@@ -94,8 +105,8 @@ bool MyASTVisitor::is_field_decl(ValueDecl *D) {
 
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
-  if (global.skip_next > 0) {
-    global.skip_next--;
+  if (state::skip_next > 0) {
+    state::skip_next--;
     return true;
   }
     
@@ -103,13 +114,13 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
     global.in_func_template ++;
   }
 
-  // if global.skip_children > 0 we'll skip all until return to level up
-  if (global.skip_children > 0) global.skip_children++;
+  // if state::skip_children > 0 we'll skip all until return to level up
+  if (state::skip_children > 0) state::skip_children++;
     
   // go via the original routine...
-  if (!global.skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
+  if (!state::skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
 
-  if (global.skip_children > 0) global.skip_children--;
+  if (state::skip_children > 0) state::skip_children--;
   
   if (global.in_func_template > 0) {
     global.in_func_template--;
@@ -344,7 +355,7 @@ bool MyASTVisitor::handle_lf_parity_expr(Expr *e, bool is_assign) {
   lfe.dirExpr  = nullptr;  // no neighb expression
     
   if (get_expr_type(lfe.parityExpr) == "parity") {
-    if (global.accept_field_parity) {
+    if (state::accept_field_parity) {
       // 1st parity statement on a single line lattice loop
       loop_parity.expr  = lfe.parityExpr;
       loop_parity.value = get_parity_val(loop_parity.expr);
@@ -357,7 +368,7 @@ bool MyASTVisitor::handle_lf_parity_expr(Expr *e, bool is_assign) {
   lfe.is_changed = is_assign;
     
   // next ref must have wildcard parity
-  global.accept_field_parity = false;
+  state::accept_field_parity = false;
         
   if (get_expr_type(lfe.parityExpr) == "parity_plus_direction") {
 
@@ -431,7 +442,7 @@ var_expr MyASTVisitor::handle_var_expr(Expr *E) {
   
   // check if duplicate, use the Profile function in clang, which "fingerprints"
   // statements
-  // NOTE: MYSTERIOUS BUG; DOES NOT RECOGNIZE REFS TO THE SAME VAR AS IDENTICAL
+  // NOTE: MYSTERIOUS BUG; DOES NOT ALWAYS RECOGNIZE REFS TO THE SAME VAR AS IDENTICAL
   llvm::FoldingSetNodeID thisID, ID;
   E->Profile(thisID, *Context, true);
   // llvm::errs() << "   comparing:: \'"<< get_stmt_str(E) <<"\'\n";
@@ -511,13 +522,13 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   var_expr_list.clear();
   var_decl_list.clear();
   
-  global.accept_field_parity = field_parity_ok;
+  state::accept_field_parity = field_parity_ok;
     
   // the following is for taking the parity from next elem
-  global.scope_level = 0;
-  global.in_loop_body = true;
+  state::scope_level = 0;
+  state::in_loop_body = true;
   TraverseStmt(ls);
-  global.in_loop_body = false;
+  state::in_loop_body = false;
 
   // check and analyze the field expressions
   check_lf_ref_list();
@@ -534,8 +545,10 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   global.full_loop_text = "";
 
   // don't go again through the arguments
-  global.skip_children = 1;
+  state::skip_children = 1;
 
+  state::is_file_modified = true;
+  
   return true;
 }
 
@@ -562,10 +575,8 @@ var_decl * MyASTVisitor::is_loop_local_var_ref(Expr *E) {
 bool MyASTVisitor::is_loop_extern_var_ref(Expr *E) {
   E = E->IgnoreParenCasts();
   while (isa<ArraySubscriptExpr>(E)) {
-    llvm::errs() << " found arr expr " << get_stmt_str(E) << '\n';
     E = dyn_cast<ArraySubscriptExpr>(E)->getBase();
     E = E->IgnoreParenCasts();
-    llvm::errs() << " - with base " << get_stmt_str(E) << '\n';
   }
   
   if (isa<DeclRefExpr>(E)) {
@@ -607,7 +618,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
       llvm::errs() << "Constant expr: "
                    << TheRewriter.getRewrittenText(s->getSourceRange()) << "\n";
-      global.skip_children = 1;
+      state::skip_children = 1;
       return true;
     }
     
@@ -622,7 +633,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
         // llvm::errs() << "Field expr: " << get_stmt_str(lfE.nameExpr) << "\n";
             
-        global.skip_children = 1;
+        state::skip_children = 1;
       }
       return true;
     }
@@ -632,7 +643,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
                  "Field expressions without [..] not allowed within \'onsites()\'" );
-      global.skip_children = 1;  // once is enough
+      state::skip_children = 1;  // once is enough
       return true;
     }
 
@@ -643,7 +654,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
                    B->getLHS()->getSourceRange().getBegin(),
                    "Assignment to a non-field variable declared out of loop "
                    "not allowed within field loop" );
-        global.skip_children = 1;  // once is enough
+        state::skip_children = 1;  // once is enough
         return true;
       }
       return true;
@@ -660,7 +671,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // now it should be external var ref non-field
       var_expr_list.push_back( handle_var_expr(E) );
       
-      global.skip_children = 1;
+      state::skip_children = 1;
       llvm::errs() << " Some other declref: " << TheRewriter.getRewrittenText(E->getSourceRange()) << '\n';
 
       return true;
@@ -669,7 +680,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (isa<ArraySubscriptExpr>(E)) {
       llvm::errs() << "  It's array expr "
                    << TheRewriter.getRewrittenText(E->getSourceRange()) << "\n";
-      //global.skip_children = 1;
+      //state::skip_children = 1;
       auto a = dyn_cast<ArraySubscriptExpr>(E);
       Expr *base = a->getBase();
       
@@ -691,7 +702,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // TODO: find really uniq variable references
       var_expr_list.push_back( handle_var_expr(E) );
 
-      global.skip_children = 1;          
+      state::skip_children = 1;          
       return true;
     }
     // this point not reached
@@ -711,11 +722,11 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     }
     
     is_revisit = true;
-    global.scope_level++;
+    state::scope_level++;
     TraverseStmt(s);
-    global.scope_level--;
-    remove_vars_out_of_scope(global.scope_level);
-    global.skip_children = 1;
+    state::scope_level--;
+    remove_vars_out_of_scope(state::scope_level);
+    state::skip_children = 1;
     return true;
   }
     
@@ -724,7 +735,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
 
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
-  if (global.in_loop_body) {
+  if (state::in_loop_body) {
     // for now care only loop body variable declarations
 
     if (!var->hasLocalStorage()) {
@@ -738,7 +749,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
                  "Cannot declare field variables within field traversal");
-      global.skip_children = 1;
+      state::skip_children = 1;
       return true;
     }
 
@@ -747,7 +758,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     vd.decl = var;
     vd.name = var->getName();
     vd.type = var->getType().getAsString();
-    vd.scope = global.scope_level;
+    vd.scope = state::scope_level;
     var_decl_list.push_back(vd);
     
     llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
@@ -769,7 +780,7 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
 bool MyASTVisitor::VisitStmt(Stmt *s) {
     
   // Entry point when inside field[par] = .... body
-  if (global.in_loop_body) {
+  if (state::in_loop_body) {
     return handle_loop_body_stmt(s);
   }
     
@@ -861,7 +872,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
       if (lhs_string.find(field_type) == 0 ||
           lhs_string.find(field_element_type) == 0) {
         
-        global.skip_next = 1;     // next is op type which we know already, skip
+        state::skip_next = 1;     // next is op type which we know already, skip
         global.template_field_assignment_opcode = BO->getOpcode();
         //handle_lhs_field = true;
           
@@ -944,41 +955,107 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
 }
 
 
+struct include_struct {
+  struct file_id *fp;
+  SourceLocation loc;
+};
+
+struct file_id {
+  FileID FID;
+  bool modified;
+  std::vector<include_struct> included;
+};
+
+std::list<file_id> file_id_list = {};
+
+
 // Implementation of the ASTConsumer interface for reading an AST produced
 // by the Clang parser.
 class MyASTConsumer : public ASTConsumer {
 public:
-  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) {}
+  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { Rewriterp = &R; }
 
   // Override the method that gets called for each parsed top-level
   // declaration.
+  // ANOTHER OPTION: use HandleTranslationUnit?
   bool HandleTopLevelDecl(DeclGroupRef DR) override {
 
-    // check if we're in main file, and do the transformation only
-    // for that
+    // do the transformation for non-system files, also included files
+
     SourceManager &SM = Visitor.getRewriter().getSourceMgr();
-    //llvm::errs() << "Processing file " << SM.getFilename((*(DR.begin()))->getLocStart()) << "\n";
-    if (SM.isInMainFile((*(DR.begin()))->getLocStart())) {
-      // ((*(DR.begin()))->getLocStart()); {
+    // llvm::errs() << "Processing file " << SM.getFilename((*(DR.begin()))->getLocStart()) << "\n";
+    if (!SM.isInSystemHeader((*(DR.begin()))->getLocStart())) {
+      // TODO: ensure that we go only through files which are needed!
+
+      state::is_file_modified = false;
       
-      // This loop apparently always has only 1 iteration
+      // This loop apparently always has only 1 iteration?
       for (DeclGroupRef::iterator b = DR.begin(), e = DR.end(); b != e; ++b) {
         // Traverse the declaration using our AST visitor.
-
+        
         global.location.top = (*b)->getSourceRange().getBegin();  // save this for source location
         Visitor.TraverseDecl(*b);
         // llvm::errs() << "Dumping level " << i++ << "\n";
         if (dump_ast) (*b)->dump();
       }
-      // llvm::errs() << "Done with top level\n";
-    }
 
+      FileID FID = SM.getFileID((*(DR.begin()))->getLocStart());
+      bool found = false;
+      for (file_id & f : file_id_list) {
+        if (f.FID == FID) {
+          found = true;
+          f.modified |= state::is_file_modified;
+          break;
+        }
+      }
+      if (!found) {
+        // new file to be added
+        file_id f;
+        f.FID = FID;
+        f.modified = state::is_file_modified;
+        f.included = {};
+        file_id_list.push_back(f);
+        llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+      }
+        
+    }
+    
     return true;
   }
 
+  // Does nothing, apparently..
+  // void HandleImplicitImportDecl(ImportDecl *D) override {
+  //  llvm::errs() << " ***Import: "
+  //              << Rewriterp->getRewrittenText(D->getSourceRange()) << '\n';
+  // HandleTopLevelDecl(DeclGroupRef(D));
+  // }
+
 private:
   MyASTVisitor Visitor;
+  Rewriter * Rewriterp;
 };
+
+
+#ifdef NEED_PP_CALLBACKS
+class MyPPCallbacks : public PPCallbacks {
+public:
+
+  // This triggers when the preprocessor changes file (#include, exit from it)
+  void FileChanged(SourceLocation Loc, FileChangeReason Reason, SrcMgr::CharacteristicKind FileType,
+                   FileID PrevFID) {
+    SourceManager &SM = myCompilerInstance->getSourceManager();
+    llvm::errs() << "FILE CHANGED to "
+                 << SM.getFilename(Loc)
+                 << '\n';
+  }
+  // This triggers when range is skipped due to #if (0) .. #endif
+  void SourceRangeSkipped(SourceRange Range, SourceLocation endLoc) {
+    llvm::errs() << "RANGE skipped\n";
+  }
+  
+};
+
+#endif
 
 
 
@@ -989,6 +1066,17 @@ public:
 
   virtual bool BeginSourceFileAction(CompilerInstance &CI) override {  
     llvm::errs() << "** Starting operation on source file "+getCurrentFile()+"\n";
+
+#ifdef NEED_PP_CALLBACKS
+    // Insert preprocessor callback functions to the stream.  This enables
+    // tracking included files, ranges etc.
+    Preprocessor &pp = CI.getPreprocessor();
+    std::unique_ptr<MyPPCallbacks> callbacks(new MyPPCallbacks());
+    pp.addPPCallbacks(std::move(callbacks));
+#endif
+
+    file_id_list.clear();
+    
     //   // SourceManager &SM = TheRewriter.getSourceMgr();
     //   // llvm::errs() << "** BeginSourceFileAction for: "
     //   //             << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
@@ -996,12 +1084,51 @@ public:
     return (true);
   }
 
+  void insert_includes_to_file_buffer(FileID myFID) {
+    // find files to be included
+    SourceManager &SM = TheRewriter.getSourceMgr();
+    for (file_id & f : file_id_list) {
+      SourceLocation IL = SM.getIncludeLoc(f.FID);
+      if (IL.isValid() && myFID == SM.getFileID(IL)) {
+        // file f.FID is included, but do include there first
+        insert_includes_to_file_buffer(f.FID);
+
+        // Find now #include "file.h" -stmt (no obv way!)
+        SourceRange SR = SM.getExpansionRange(IL).getAsRange();
+        SourceLocation e = SR.getEnd();
+        std::string includestr;
+        for (int i=1; i<1000; i++) {
+          SourceLocation b = SR.getBegin().getLocWithOffset(-i);
+          includestr = TheRewriter.getRewrittenText(SourceRange(b,e));
+          if (includestr.find("#include") != std::string::npos) {
+            SR = SourceRange(b,e);
+            break;
+          }
+        }
+        // Remove
+        TheRewriter.RemoveText(SR);
+        // and finally insert
+        std::string buf;
+        llvm::raw_string_ostream rsos(buf);
+        TheRewriter.getEditBuffer(f.FID).write(rsos);
+        TheRewriter.InsertText(SR.getBegin(),buf,true,true);
+        TheRewriter.InsertText(SR.getBegin(),"// "+includestr+'\n');
+      }
+    }
+  }
+
+  
+  // TODO: Must do it so that files without top level decls are used too!!!
   void EndSourceFileAction() override {
     SourceManager &SM = TheRewriter.getSourceMgr();
-    llvm::errs() << "** EndSourceFileAction for: "
-                 << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
+    llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
+    // << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
 
-    // Now emit the rewritten buffer.
+    // Now emit rewritten buffers.  Modified files
+    // should be substituted on top of #include's
+
+    insert_includes_to_file_buffer(SM.getMainFileID());
+      
     TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
   }
 
