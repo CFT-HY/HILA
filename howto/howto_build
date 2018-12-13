@@ -1,6 +1,14 @@
-See page https://apt.llvm.org/
- * add deb to sources, with key
 
+See page https://apt.llvm.org/
+
+* add deb to sources (this for ubuntu 16.04 xenial)
+sudo add-apt-repository 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main'
+
+* with key
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+
+* install
+sudo apt update
 sudo apt install clang-7 clang-tools-7 clang-7-doc libclang-common-7-dev libclang-7-dev libclang1-7 clang-format-7 python-clang-7
 
 --------------------
@@ -18,6 +26,7 @@ git clone http://llvm.org/git/clang-tools-extra.git extra
 
 -----
 
+cd ../../../..  (At top level again)
 mkdir build (in-tree build is not supported)
 cd build
 cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ../llvm
