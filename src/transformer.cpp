@@ -39,7 +39,7 @@ namespace state {
   int skip_next = 0;
   bool in_loop_body = false;
   bool accept_field_parity = false;
-  bool is_file_modified = false;
+  bool is_modified = false;
 }
 
 
@@ -547,7 +547,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // don't go again through the arguments
   state::skip_children = 1;
 
-  state::is_file_modified = true;
+  state::is_modified = true;
   
   return true;
 }
@@ -955,18 +955,20 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
 }
 
 
-struct include_struct {
-  struct file_id *fp;
-  SourceLocation loc;
-};
+// This struct will be used to keep track of #include-chains.
+// We also use 
 
-struct file_id {
-  FileID FID;
-  bool modified;
-  std::vector<include_struct> included;
-};
+std::vector<FileID> file_id_list = {};
 
-std::list<file_id> file_id_list = {};
+// Tiny utility to search for the list
+// cache previous file_id to speed up
+
+bool search_fid(const FileID FID) {
+  for (const FileID f : file_id_list) {
+    if (f == FID) return true;
+  }
+  return false;
+}
 
 
 // Implementation of the ASTConsumer interface for reading an AST produced
@@ -987,7 +989,7 @@ public:
     if (!SM.isInSystemHeader((*(DR.begin()))->getLocStart())) {
       // TODO: ensure that we go only through files which are needed!
 
-      state::is_file_modified = false;
+      state::is_modified = false;
       
       // This loop apparently always has only 1 iteration?
       for (DeclGroupRef::iterator b = DR.begin(), e = DR.end(); b != e; ++b) {
@@ -999,25 +1001,15 @@ public:
         if (dump_ast) (*b)->dump();
       }
 
-      FileID FID = SM.getFileID((*(DR.begin()))->getLocStart());
-      bool found = false;
-      for (file_id & f : file_id_list) {
-        if (f.FID == FID) {
-          found = true;
-          f.modified |= state::is_file_modified;
-          break;
+      // We keep track here only of files which were touched
+      if (state::is_modified) {
+        FileID FID = SM.getFileID((*(DR.begin()))->getLocStart());
+        if (search_fid(FID) == false) {
+          // new file to be added
+          file_id_list.push_back(FID);
+          llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
         }
       }
-      if (!found) {
-        // new file to be added
-        file_id f;
-        f.FID = FID;
-        f.modified = state::is_file_modified;
-        f.included = {};
-        file_id_list.push_back(f);
-        llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
-      }
-        
     }
     
     return true;
@@ -1036,27 +1028,48 @@ private:
 };
 
 
+// #define NEED_PP_CALLBACKS
 #ifdef NEED_PP_CALLBACKS
+
 class MyPPCallbacks : public PPCallbacks {
 public:
+  SourceLocation This_hashloc;
+  std::string This_name;
 
+  // This hook is called when #include (or #import) is processed
+  void InclusionDirective(SourceLocation HashLoc,
+                          const Token & IncludeTok,
+                          StringRef FileName,
+                          bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          const FileEntry * File,
+                          StringRef SearchPath,
+                          StringRef RelativePath,
+                          const Module * Imported,
+                          SrcMgr::CharacteristicKind FileType) { }
+  
   // This triggers when the preprocessor changes file (#include, exit from it)
+  // Use this to track the chain of non-system include files
   void FileChanged(SourceLocation Loc, FileChangeReason Reason, SrcMgr::CharacteristicKind FileType,
                    FileID PrevFID) {
     SourceManager &SM = myCompilerInstance->getSourceManager();
-    llvm::errs() << "FILE CHANGED to "
-                 << SM.getFilename(Loc)
-                 << '\n';
+    if (Reason == PPCallbacks::EnterFile &&
+        FileType == SrcMgr::CharacteristicKind::C_User &&
+        Loc.isValid() &&
+        !SM.isInSystemHeader(Loc) &&
+        !SM.isInMainFile(Loc) ) {
+
+      llvm::errs() << "FILE CHANGED to " << SM.getFilename(Loc) << '\n';
+    }
   }
+
   // This triggers when range is skipped due to #if (0) .. #endif
   void SourceRangeSkipped(SourceRange Range, SourceLocation endLoc) {
-    llvm::errs() << "RANGE skipped\n";
+    // llvm::errs() << "RANGE skipped\n";
   }
-  
 };
 
 #endif
-
 
 
 // For each source file provided to the tool, a new FrontendAction is created.
@@ -1087,37 +1100,54 @@ public:
   void insert_includes_to_file_buffer(FileID myFID) {
     // find files to be included
     SourceManager &SM = TheRewriter.getSourceMgr();
-    for (file_id & f : file_id_list) {
-      SourceLocation IL = SM.getIncludeLoc(f.FID);
+    for (FileID f : file_id_list) {
+      SourceLocation IL = SM.getIncludeLoc(f);
       if (IL.isValid() && myFID == SM.getFileID(IL)) {
-        // file f.FID is included, but do include there first
-        insert_includes_to_file_buffer(f.FID);
+        // file f is included, but do #include there first
+        insert_includes_to_file_buffer(f);
 
-        // Find now #include "file.h" -stmt (no obv way!)
+        // Find now '#include "file.h"' -stmt (no obv way!)
         SourceRange SR = SM.getExpansionRange(IL).getAsRange();
+        std::string includestr = TheRewriter.getRewrittenText(SR);
         SourceLocation e = SR.getEnd();
-        std::string includestr;
-        for (int i=1; i<1000; i++) {
-          SourceLocation b = SR.getBegin().getLocWithOffset(-i);
-          includestr = TheRewriter.getRewrittenText(SourceRange(b,e));
-          if (includestr.find("#include") != std::string::npos) {
-            SR = SourceRange(b,e);
+        SourceLocation b = SR.getBegin();
+        for (int i=1; i<100; i++) {
+          const char * p = SM.getCharacterData(b.getLocWithOffset(-i));
+          if (p && *p == '#' && strncmp(p,"#include",8) == 0) {
+            SR = SourceRange(b.getLocWithOffset(-i),e);
             break;
           }
         }
         // Remove
         TheRewriter.RemoveText(SR);
+
         // and finally insert
-        std::string buf;
-        llvm::raw_string_ostream rsos(buf);
-        TheRewriter.getEditBuffer(f.FID).write(rsos);
-        TheRewriter.InsertText(SR.getBegin(),buf,true,true);
-        TheRewriter.InsertText(SR.getBegin(),"// "+includestr+'\n');
+        SourceRange r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
+        TheRewriter.InsertText(SR.getBegin(),
+                               "// start include "+includestr
+                               + "---------------------------------\n"
+                               + TheRewriter.getRewrittenText(r) +
+                               "// end include "+includestr
+                               + "---------------------------------\n",
+                               true,false);
+        
       }
     }
   }
 
-  
+  // check and add FileID's for files in #include chains if needed
+  void check_include_path(const FileID FID) {
+    SourceManager &SM = TheRewriter.getSourceMgr();
+    SourceLocation IL = SM.getIncludeLoc(FID);
+    if (IL.isValid()) {
+      FileID FID_up = SM.getFileID(IL);
+      if (!search_fid(FID_up)) {
+        file_id_list.push_back(FID_up);
+        if (FID_up != SM.getMainFileID()) check_include_path(FID_up);
+      }
+    }
+  }
+
   // TODO: Must do it so that files without top level decls are used too!!!
   void EndSourceFileAction() override {
     SourceManager &SM = TheRewriter.getSourceMgr();
@@ -1125,7 +1155,12 @@ public:
     // << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
 
     // Now emit rewritten buffers.  Modified files
-    // should be substituted on top of #include's
+    // should be substituted on top of #include -directives
+    // first, ensure that the full include chain is present in file_id_list
+    // Use iterator here, because the list can grow!
+    for ( FileID f : file_id_list ) {
+      check_include_path(f);
+    }
 
     insert_includes_to_file_buffer(SM.getMainFileID());
       

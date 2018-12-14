@@ -99,12 +99,5 @@ struct var_decl {
 };
 
 
-struct lists_struct {
-  std::list<field_ref> field_ref;
-  std::list<field_info> field_info;
-  std::list<var_expr> var_expr;
-  std::list<var_decl> var_decl;
-};
-
 
 #endif
