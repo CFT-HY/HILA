@@ -7,7 +7,6 @@
 #define NDIM 4
 
 
-
 enum class direction { xup, yup, zup, tup, tdown, zdown, ydown, xdown, NONE };
 // static inline const direction opp_dir(const direction d) { return 2*NDIM - d; }
 
@@ -260,28 +259,50 @@ field<T> operator+( const T &lhs, const field<T> &rhs) {
 };
 
 template <typename T>
-inline field<T> operator+( const field<T> &lhs,  const T &rhs) {
+field<T> operator+( const field<T> &lhs,  const T &rhs) {
   return operator+(rhs,lhs);
 };
 
 template <typename T>
-inline field<T> operator+( const int lhs, const field<T> &rhs) {
+field<T> operator+( const int lhs, const field<T> &rhs) {
   return rhs;
 };
 
 template <typename T>
-inline field<T> operator+( const field<T> &lhs, const int rhs) {
+field<T> operator+( const field<T> &lhs, const int rhs) {
   return lhs;
 };
 
 template <typename T>
-inline field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
+field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
   return lhs;
 };
 
 
+// TRY NOW AUTOMATIC REDUCTION IDENTIFICATION
 
+// template <typename T>
+// class reduction {
+//  private:
+//   field_element<T> value;
+  
+//  public:
+//   void sum(const field_element<T> & rhs) { value += rhs; }
+//   void operator+=(const field_element<T> & rhs) { value += rhs; }
+//   void product(const field_element<T> & rhs) { value *= rhs; }
+//   void operator*=(const field_element<T> & rhs) { value *= rhs; }
 
+//   // TODO - short vectors!
+//   void max(const field_element<T> & rhs) { if (rhs > value) value = rhs; }
+//   void min(const field_element<T> & rhs) { if (rhs < value) value = rhs; }
+
+//   // TODO - short vectors!
+//   T get() { return value.get_value(); }
+
+//   // implicit conversion
+//   operator T() { return get(); }
+  
+// };
 
 
 

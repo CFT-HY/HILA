@@ -17,7 +17,7 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Tooling/CommonOptionsParser.h"
+// #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
@@ -25,6 +25,8 @@
 using namespace clang;
 //using namespace clang::driver;
 using namespace clang::tooling;
+
+#include "optionsparser.h"
 
 #include "transformer.h"
 #include "stringops.h"
@@ -43,10 +45,29 @@ namespace state {
 }
 
 
-static llvm::cl::OptionCategory ToolingSampleCategory("Transformer");
+static llvm::cl::OptionCategory TransformerCat("Transformer");
 
 // command line options
-static llvm::cl::opt<bool> dump_ast("d", llvm::cl::desc("dump AST tree"));
+static llvm::cl::opt<bool> dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
+                                    llvm::cl::cat(TransformerCat));
+
+static llvm::cl::opt<bool> no_include("noincl",
+                                      llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
+                                      llvm::cl::cat(TransformerCat));
+
+static llvm::cl::opt<std::string>
+dummy_def("D", 
+          llvm::cl::desc("Define name/symbol for preprocessor"),
+          llvm::cl::value_desc("define"),
+          llvm::cl::cat(TransformerCat));
+
+static llvm::cl::opt<std::string>
+dummy_incl("I", 
+           llvm::cl::desc("Directory for include file search"),
+           llvm::cl::value_desc("directory"),
+           llvm::cl::cat(TransformerCat));
+
+
 // static llvm::cl::extrahelp CommonHelp("  -d dump AST");
 
 // local global vars
@@ -83,17 +104,17 @@ bool MyASTVisitor::is_field_decl(ValueDecl *D) {
 }
   
   
-// // Define a pragma handler for #pragma example_pragma
+// // Define a pragma handler for #pragma heLpp
+// // NOTE: This is executed before AST analysis
 // class heLppPragmaHandler : public PragmaHandler {
 // public:
 //   heLppPragmaHandler() : PragmaHandler("heLpp") { }
 //   void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
 //                     Token &PragmaTok) {
 //     // Handle the pragma
-//     llvm::errs() << "Got the pragma! name " << getName() << '\n';
-//     llvm::errs() << TheRewriter.getRewrittenText(SourceRange(PragmaTok.getLocation(),
-//                                                              PragmaTok.getLastLoc())) << '\n';
-    
+//    
+//     llvm::errs() << "Got the pragma! name " << getName() << " Token " << PragmaTok.getName() << '\n';
+//
 //   }
 // };
 
@@ -735,6 +756,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
 
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
+  
   if (state::in_loop_body) {
     // for now care only loop body variable declarations
 
@@ -891,6 +913,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
+
   if ((f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_NonTemplate ||
        f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization )
       && f->hasBody()) {
@@ -1154,16 +1177,21 @@ public:
     llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
     // << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
 
-    // Now emit rewritten buffers.  Modified files
-    // should be substituted on top of #include -directives
-    // first, ensure that the full include chain is present in file_id_list
-    // Use iterator here, because the list can grow!
-    for ( FileID f : file_id_list ) {
-      check_include_path(f);
-    }
+    // Now emit rewritten buffers.
 
-    insert_includes_to_file_buffer(SM.getMainFileID());
-      
+    if (!no_include) {
+
+      // Modified files should be substituted on top of #include -directives
+      // first, ensure that the full include chain is present in file_id_list
+      // Use iterator here, because the list can grow!
+
+      for ( FileID f : file_id_list ) {
+        check_include_path(f);
+      }
+
+      insert_includes_to_file_buffer(SM.getMainFileID());
+    }
+    
     TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
   }
 
@@ -1181,8 +1209,52 @@ private:
 };
 
 int main(int argc, const char **argv) {
+
+  // TODO: clang CommandLine.cpp/.h has strange category and help
+  // msg handling, should we get rid of it?
+
+  // Also, check if the cmdline has -I<include> or -D<define> -
+  // arguments and move these after -- if that exists on the command line.
+
+  bool found_ddash = false;
+  const char *av[argc+1];
+  char s[3] = "--";
+  int ddashloc = 0;
+  for (int i=0; i<argc; i++) {
+    av[i] = argv[i];
+    if (strcmp(av[i],s) == 0) {
+      found_ddash = true;
+      ddashloc = i;
+    }
+  }
+  if (!found_ddash) {
+    // add ddash, does not hurt in any case
+    av[argc] = s;
+    ddashloc = argc;
+    argc++;
+  }
+
+  // now find -I and -D -options and move them after --
+  for (int i=0; i<ddashloc; i++) {
+    if (i < ddashloc-1 && (strcmp(av[i],"-D") == 0 || strcmp(av[i],"-I") == 0)) {
+      // type -D define
+      const char * a1 = av[i];
+      const char * a2 = av[i+1];
+      for (int j=i+2; j<argc; j++) av[j-2] = av[j];
+      av[argc-2] = a1;
+      av[argc-1] = a2;
+      ddashloc -= 2;
+    } else if (strncmp(av[i],"-D",2) == 0 || strncmp(av[i],"-I",2) == 0) {
+      // type -Ddefine
+      const char * a1 = av[i];
+      for (int j=i+1; j<argc; j++) av[j-1] = av[j];
+      av[argc-1] = a1;
+      ddashloc--;
+    }      
+  }
   
-  CommonOptionsParser op(argc, argv, ToolingSampleCategory);
+  
+  OptionsParser op(argc, av, TransformerCat);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
 
   // ClangTool::run accepts a FrontendActionFactory, which is then used to
