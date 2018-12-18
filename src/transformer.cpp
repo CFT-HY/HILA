@@ -48,12 +48,14 @@ namespace state {
 static llvm::cl::OptionCategory TransformerCat("Transformer");
 
 // command line options
-static llvm::cl::opt<bool> dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
-                                    llvm::cl::cat(TransformerCat));
+static llvm::cl::opt<bool>
+dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
+         llvm::cl::cat(TransformerCat));
 
-static llvm::cl::opt<bool> no_include("noincl",
-                                      llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
-                                      llvm::cl::cat(TransformerCat));
+static llvm::cl::opt<bool>
+no_include("noincl",
+           llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
+           llvm::cl::cat(TransformerCat));
 
 static llvm::cl::opt<std::string>
 dummy_def("D", 
@@ -182,7 +184,7 @@ bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
 
   
 // catches both parity and parity_plus_direction 
-bool MyASTVisitor::is_lf_parity_expr(Expr *e) {
+bool MyASTVisitor::is_field_parity_expr(Expr *e) {
   e = e->IgnoreParens();
   CXXOperatorCallExpr *O = dyn_cast<CXXOperatorCallExpr>(e);
   if (O &&
@@ -239,7 +241,7 @@ void MyASTVisitor::require_parity_X(Expr * pExpr) {
 // finish the field_ref_list, and
 // construct the field_info_list
   
-bool MyASTVisitor::check_lf_ref_list() {
+bool MyASTVisitor::check_field_ref_list() {
 
   bool no_errors = true;
   
@@ -358,7 +360,7 @@ bool MyASTVisitor::check_lf_ref_list() {
 // This routine goes through one field reference and
 // pushes the info to lists
   
-bool MyASTVisitor::handle_lf_parity_expr(Expr *e, bool is_assign) {
+bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
     
   e = e->IgnoreParens();
   CXXOperatorCallExpr *O = dyn_cast<CXXOperatorCallExpr>(e);
@@ -483,11 +485,11 @@ var_expr MyASTVisitor::handle_var_expr(Expr *E) {
 }
 
 // check if stmt is lf[par] = ... -type
-bool MyASTVisitor::is_lf_parity_assignment( Stmt *s ) {
+bool MyASTVisitor::is_field_parity_assignment( Stmt *s ) {
   CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
   if (OP && OP->isAssignmentOp()) {
     // is assginment, verify that LHS is field_element
-    if ( is_lf_parity_expr( OP->getArg(0) ) )
+    if ( is_field_parity_expr( OP->getArg(0) ) )
       return true;
   }
   return false;
@@ -552,7 +554,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   state::in_loop_body = false;
 
   // check and analyze the field expressions
-  check_lf_ref_list();
+  check_field_ref_list();
           
   generate_code( global.location.top, ls );
   
@@ -624,7 +626,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   
   // need to recognize assignments lf[X] =  or lf[X] += etc.
   // because we need to find changed fields
-  if (is_lf_parity_assignment(s)) {
+  if (is_field_parity_assignment(s)) {
     is_assignment = true;
     // next visit will be to the assigned to field
     return true;
@@ -645,11 +647,11 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     
     if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs
-      if (is_lf_parity_expr(E)) {
+      if (is_field_parity_expr(E)) {
         // Now we know it is a field parity reference
         // get the expression for field name
           
-        handle_lf_parity_expr(E, is_assignment);
+        handle_field_parity_expr(E, is_assignment);
         is_assignment = false;  // next will not be assignment, unless it is
 
         // llvm::errs() << "Field expr: " << get_stmt_str(lfE.nameExpr) << "\n";
@@ -817,7 +819,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     if (OP->isAssignmentOp()) {
         
       // is assginment, verify that LHS is field or field_element
-      if (is_lf_parity_expr(OP->getArg(0))) {
+      if (is_field_parity_expr(OP->getArg(0))) {
         // now we have fieldop.  1st child will be
         // the lhs of the assignment
 

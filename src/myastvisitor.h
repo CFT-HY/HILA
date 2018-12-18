@@ -76,7 +76,7 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
   bool is_duplicate_expr(const Expr * a, const Expr * b);
   
   // catches both parity and parity_plus_direction 
-  bool is_lf_parity_expr(Expr *e);
+  bool is_field_parity_expr(Expr *e);
 
   /// Checks if expr points to a variable defined in the same loop
   var_decl * is_loop_local_var_ref(Expr *E);
@@ -87,14 +87,14 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
     
   void require_parity_X(Expr * pExpr);
   
-  bool check_lf_ref_list();
+  bool check_field_ref_list();
   
-  bool handle_lf_parity_expr(Expr *e, bool is_assign);
+  bool handle_field_parity_expr(Expr *e, bool is_assign);
   
   var_expr handle_var_expr(Expr *E);
 
   // check if stmt is lf[par] = ... -type
-  bool is_lf_parity_assignment( Stmt *s );
+  bool is_field_parity_assignment( Stmt *s );
 
   /// Does ; follow the statement?
   bool isStmtWithSemi(Stmt * S);  
