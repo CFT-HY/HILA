@@ -1,3 +1,4 @@
+// -*- mode: c++ -*-
 #ifndef TRANSFORMER_SRCBUF_H
 #define TRANSFORMER_SRCBUF_H
 
@@ -12,10 +13,17 @@ struct srcbuftoken {
 };
 
 class srcBuf {
+private:
+  std::string buffer;
+  Stmt *bufStmt;
+  std::vector<srcbuftoken> tokens;
+  Rewriter * myRewriter;
+  size_t startOffset;
+
 public:
   srcBuf() {
     buffer.clear();
-    bufStmt = NULL;
+    bufStmt = nullptr;
   }
   srcBuf( Rewriter * R, Stmt *s ) {
     create( R, s );
@@ -40,9 +48,11 @@ public:
 
   void clear() {
     buffer.clear();
-    bufStmt = NULL;
+    bufStmt = nullptr;
     tokens.clear();
   }
+
+  bool isOn() { return bufStmt != nullptr; }
   
   // mark the location of the expression pointed by e
   unsigned markExpr( Expr *e ) {
@@ -83,6 +93,12 @@ public:
     }
   }
 
+  void insert(Expr *e, const std::string & s, bool incl = false) {
+    insert(myRewriter->getSourceMgr().getFileOffset(e->getSourceRange().getBegin())
+           - startOffset,
+           s, incl);
+  }
+
   void remove( size_t b, size_t len ) {
     // llvm::errs() << " -- Buffer: " << buffer << '\n';
     size_t e = b+len-1;
@@ -104,6 +120,16 @@ public:
     }
   }
 
+  void remove(Expr *e) {
+    remove(myRewriter->getSourceMgr().getFileOffset(e->getSourceRange().getBegin())
+           - startOffset,
+           myRewriter->getRangeSize(e->getSourceRange()));
+  }
+  void remove(unsigned i) {
+    remove(tokens[i].begin, tokens[i].len);
+  }
+    
+  
   // replace is a remove + insert pair, should write with a single operation
   void replace( size_t b, size_t len, const std::string &s ) {
     remove(b,len);
@@ -130,12 +156,6 @@ public:
   }
   
     
-private:
-  std::string buffer;
-  Stmt *bufStmt;
-  std::vector<srcbuftoken> tokens;
-  Rewriter * myRewriter;
-  size_t startOffset;
 };
 
 

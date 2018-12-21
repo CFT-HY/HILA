@@ -38,7 +38,7 @@ extern loop_parity_struct loop_parity;
 
 extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;
-extern std::list<var_expr> var_expr_list;
+extern std::list<var_info> var_info_list;
 extern std::list<var_decl> var_decl_list;
 
 const std::string looping_var = "LFI_";
@@ -101,7 +101,7 @@ bool MyASTVisitor::generate_code( SourceLocation kernelloc, Stmt *S ) {
     }
     
   call += kernel_name + "(";
-  def   = "//vvvvvv\nvoid " + kernel_name + "(";
+  def   = "//----------\nvoid " + kernel_name + "(";
     
   if (loop_parity.value == parity::none) {
     call += parity_name + ", ";
@@ -130,23 +130,18 @@ bool MyASTVisitor::generate_code( SourceLocation kernelloc, Stmt *S ) {
 
   i=0;
   // and non-field vars
-  for ( var_expr &ep : var_expr_list ) {
-    bool dup = (ep.duplicate != nullptr);
+  for ( var_info & vi : var_info_list ) {
 
-    if (!dup) {
-      std::string varname = "sv_" + std::to_string(i) + "_";
-      def += ", const " + ep.type + " " + varname;
-      call += ", " + get_stmt_str(ep.e);
+    std::string varname = "sv_" + std::to_string(i) + "_";
+    def += ", const " + vi.type + " " + varname;
+    call += ", " + vi.name;
       
-      //SourceRange range( E->getSourceRange().getBegin(), ep.e->getSourceRange().getBegin() );
-      //llvm::errs() << " ++ diff in position " << TheRewriter.getRangeSize(range) << '\n';
+    //SourceRange range( E->getSourceRange().getBegin(), ep.e->getSourceRange().getBegin() );
+    //llvm::errs() << " ++ diff in position " << TheRewriter.getRangeSize(range) << '\n';
       
-      // replace_expr(ep, varname);
-      Buf.replace( ep.ind, varname );
-
-      i++;
-    } else {
-      Buf.replace( ep.ind, Buf.token(ep.duplicate->ind) );
+    // replace_expr(ep, varname);
+    for (var_ref & vr : vi.refs) {
+      Buf.replace( vr.ind, varname );
     }
   }
  
@@ -163,7 +158,7 @@ bool MyASTVisitor::generate_code( SourceLocation kernelloc, Stmt *S ) {
     
   def += ")\n{\nforparity("+looping_var+", par_v) {\n" + Buf.dump();
   if (semi_at_end) def += ';';
-  def += + "\n}\n}\n//^^^^^^\n";
+  def += + "\n}\n}\n//----------\n";
   call += ");\n";
 
   // and mark changed vars
@@ -172,7 +167,7 @@ bool MyASTVisitor::generate_code( SourceLocation kernelloc, Stmt *S ) {
   }
     
   // and close
-  call += "}\n//^^^^^^";
+  call += "}\n//----------";
 
   // Finally, emit the kernel
   TheRewriter.InsertText(kernelloc, indent_string(def),true,true);

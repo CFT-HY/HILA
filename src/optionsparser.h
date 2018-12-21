@@ -1,3 +1,4 @@
+// -*- mode: c++ -*-
 //===- OptionsParser.h - common options for clang tools -*- C++ -*-=====//
 //
 //                     The LLVM Compiler Infrastructure

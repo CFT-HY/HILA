@@ -42,6 +42,7 @@ namespace state {
   bool in_loop_body = false;
   bool accept_field_parity = false;
   bool is_modified = false;
+  bool dump_ast_next = false;
 }
 
 
@@ -70,8 +71,6 @@ dummy_incl("I",
            llvm::cl::cat(TransformerCat));
 
 
-// static llvm::cl::extrahelp CommonHelp("  -d dump AST");
-
 // local global vars
 global_state global;
 // and global loop_parity
@@ -81,10 +80,14 @@ static const std::string field_element_type = "field_element<";
 static const std::string field_type = "field<";
 
 // global lists for functions
+// TODO: THESE SHOULD PROBABLY BE CHANGED INTO vectors,
+// but they contain pointers to list elements.  pointers to vector elems are not good!
 std::list<field_ref> field_ref_list = {};
 std::list<field_info> field_info_list = {};
-std::list<var_expr> var_expr_list = {};
+std::list<var_info> var_info_list = {};
 std::list<var_decl> var_decl_list = {};
+
+std::vector<unsigned> remove_expr_list = {};
 
 // take global CI just in case
 CompilerInstance *myCompilerInstance;
@@ -184,18 +187,18 @@ bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
 
   
 // catches both parity and parity_plus_direction 
-bool MyASTVisitor::is_field_parity_expr(Expr *e) {
-  e = e->IgnoreParens();
-  CXXOperatorCallExpr *O = dyn_cast<CXXOperatorCallExpr>(e);
-  if (O &&
-      strcmp(getOperatorSpelling(O->getOperator()),"[]") == 0 && 
-      is_field_expr(O->getArg(0))) {
-    std::string s = get_expr_type(O->getArg(1)); 
+bool MyASTVisitor::is_field_parity_expr(Expr *E) {
+  E = E->IgnoreParens();
+  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+  if (OC &&
+      strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
+      is_field_expr(OC->getArg(0))) {
+    std::string s = get_expr_type(OC->getArg(1)); 
     if (s == "parity" || s == "parity_plus_direction") {
-      // llvm::errs() << " <<<Parity type " << get_expr_type(O->getArg(1)) << '\n';
+      // llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
       return true;
     } 
-    // llvm::errs() << " <<<Parity type " << get_expr_type(O->getArg(1)) << '\n';
+    // llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
   }
   return false;
 }
@@ -452,37 +455,137 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
   return(no_errors);
 }
 
-////////
+/// This processes references to non-field variables within field loops
 
   
-var_expr MyASTVisitor::handle_var_expr(Expr *E) {
-  var_expr v;
-  v.e = E;
-  v.ind = Buf.markExpr(E);
-  // This is somehow needed for printing type without "class" id
-  PrintingPolicy pp(Context->getLangOpts());
-  v.type = E->getType().getUnqualifiedType().getAsString(pp);
+void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
+                                  bool is_assign,
+                                  std::string &assignop) {
+
   
-  // check if duplicate, use the Profile function in clang, which "fingerprints"
-  // statements
-  // NOTE: MYSTERIOUS BUG; DOES NOT ALWAYS RECOGNIZE REFS TO THE SAME VAR AS IDENTICAL
-  llvm::FoldingSetNodeID thisID, ID;
-  E->Profile(thisID, *Context, true);
-  // llvm::errs() << "   comparing:: \'"<< get_stmt_str(E) <<"\'\n";
-  v.duplicate = nullptr;
-  for ( var_expr & p : var_expr_list ) {
-    p.e->Profile(ID, *Context, true);
-    // llvm::errs() << "   against:: \'" << get_stmt_str(p.e) << "\'\n";
-    if ( thisID == ID ) {
-      // dup found
-      v.duplicate = &p;
-      llvm::errs() << "Found dup: " << get_stmt_str(E) << '\n';
-      break;
+  if (isa<VarDecl>(DRE->getDecl())) {
+    auto decl = dyn_cast<VarDecl>(DRE->getDecl());
+    var_ref vr;
+    vr.ref = DRE;
+    vr.ind = Buf.markExpr(DRE);
+    vr.is_assigned = is_assign;
+    if (is_assign) vr.assignop = assignop;
+    
+    bool found = false;
+    var_info *vip = nullptr;
+    for (var_info & vi : var_info_list) {
+      if (vi.decl == decl) {
+        // found already referred to decl
+        vi.refs.push_back(vr);
+        vi.is_assigned |= is_assign;
+        vi.is_reduction |=
+          (is_assign && (!vi.is_loop_local) &&
+           (assignop == "+=" || assignop == "*="));
+
+        vip = &vi;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      // new variable referred to
+      var_info vi;
+      vi.refs = {};
+      vi.refs.push_back(vr);
+      vi.decl = decl;
+      vi.name = decl->getName();
+      // This is somehow needed for printing type without "class" id
+      PrintingPolicy pp(Context->getLangOpts());
+      vi.type = DRE->getType().getUnqualifiedType().getAsString(pp);
+
+      // is it loop-local?
+      vi.is_loop_local = false;
+      for (var_decl & d : var_decl_list) {
+        if (d.scope >= 0 && vi.decl == d.decl) {
+          llvm::errs() << "loop local var ref! " << vi.name << '\n';
+          vi.is_loop_local = true;
+          vi.var_declp = &d;   
+          break;
+        }
+      }
+      vi.is_assigned = is_assign;
+      // we know refs contains only 1 element
+      vi.is_reduction =
+        (is_assign && (!vi.is_loop_local) &&
+         (assignop == "+=" || assignop == "*="));
+      
+      var_info_list.push_back(vi);
+      vip = &(var_info_list.back());
+    }
+  } else { 
+    // end of VarDecl - how about other decls, e.g. functions?
+    reportDiag(DiagnosticsEngine::Level::Error,
+               DRE->getSourceRange().getBegin(),
+               "Reference to unimplemented (non-variable) type");
+  }
+}
+
+
+/// Check now that the references to variables are according to rules
+void MyASTVisitor::check_var_info_list() {
+  for (var_info & vi : var_info_list) {
+    if (!vi.is_loop_local) {
+      if (vi.is_reduction) {
+        if (vi.refs.size() > 1) {
+          // reduction only once
+          int i=0;
+          for (auto & vr : vi.refs) {
+            if (vr.assignop == "+=" || vr.assignop == "*=") {
+              reportDiag(DiagnosticsEngine::Level::Error,
+                         vr.ref->getSourceRange().getBegin(),
+                         "Reduction variable \'%0\' used more than once within one field loop",
+                         vi.name.c_str());
+              break;
+            }
+            i++;
+          }
+          int j=0;
+          for (auto & vr : vi.refs) {
+            if (j!=i) reportDiag(DiagnosticsEngine::Level::Note,
+                                 vr.ref->getSourceRange().getBegin(),
+                                 "Other reference to \'%0\'", vi.name.c_str());
+            j++;
+          }
+        }
+      } else if (vi.is_assigned) {
+        // now not reduction
+        for (auto & vr : vi.refs) {
+          if (vr.is_assigned) 
+            reportDiag(DiagnosticsEngine::Level::Error,
+                       vr.ref->getSourceRange().getBegin(),
+                       "Cannot assign to variable defined outside field loop (unless reduction \'+=\' or \'*=\')");
+        }
+      }
     }
   }
-    
-  return(v);
 }
+
+
+/// is the stmt pointing now to assignment
+bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr) {
+  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s))
+    if (OP->isAssignmentOp()) {
+      if (opcodestr)
+        *opcodestr = getOperatorSpelling(OP->getOperator());
+      return true;
+    }
+  
+  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s))
+    if (B->isAssignmentOp()) {
+      if (opcodestr)
+        *opcodestr = B->getOpcodeStr();
+      return true;
+    }
+
+  return false;
+}
+
+  
 
 // check if stmt is lf[par] = ... -type
 bool MyASTVisitor::is_field_parity_assignment( Stmt *s ) {
@@ -542,8 +645,9 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   Buf.create( &TheRewriter, ls );
           
   field_ref_list.clear();
-  var_expr_list.clear();
+  var_info_list.clear();
   var_decl_list.clear();
+  remove_expr_list.clear();
   
   state::accept_field_parity = field_parity_ok;
     
@@ -553,9 +657,13 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   TraverseStmt(ls);
   state::in_loop_body = false;
 
+  // Remove exprs which we do not want
+  for (unsigned i : remove_expr_list) Buf.remove(i);
+  
   // check and analyze the field expressions
   check_field_ref_list();
-          
+  check_var_info_list();
+  
   generate_code( global.location.top, ls );
   
   Buf.clear();
@@ -575,47 +683,6 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   return true;
 }
 
-/// Is expr a reference to a loop-local var
-var_decl * MyASTVisitor::is_loop_local_var_ref(Expr *E) {
-  E = E->IgnoreParens();
-  if (isa<DeclRefExpr>(E)) {
-    DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
-        
-    if (isa<VarDecl>(DRE->getDecl())) {
-      VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
-      for( var_decl & v : var_decl_list ) {
-        if (decl == v.decl) {
-          // reference to loop-local var, leave as is
-          // llvm::errs() << "loop local var ref! " << v.name << '\n';
-          return &v;
-        }
-      }
-    }
-  }
-  return nullptr;
-}
-
-bool MyASTVisitor::is_loop_extern_var_ref(Expr *E) {
-  E = E->IgnoreParenCasts();
-  while (isa<ArraySubscriptExpr>(E)) {
-    E = dyn_cast<ArraySubscriptExpr>(E)->getBase();
-    E = E->IgnoreParenCasts();
-  }
-  
-  if (isa<DeclRefExpr>(E)) {
-    DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
-        
-    if (isa<VarDecl>(DRE->getDecl())) {
-      VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
-      for( var_decl & v : var_decl_list ) {
-        if (decl == v.decl) return false;
-      }
-      return true;
-    }
-  }    
-  return false;
-}
-
 
 // This handles statements within field loops
 bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
@@ -623,82 +690,69 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // This keeps track of the assignment to field
   // must remember the set value across calls
   static bool is_assignment = false;
-  
-  // need to recognize assignments lf[X] =  or lf[X] += etc.
-  // because we need to find changed fields
-  if (is_field_parity_assignment(s)) {
+  static std::string assignop;
+ 
+  // Need to recognize assignments lf[X] =  or lf[X] += etc.
+  // And also assignments to other vars: t += norm2(lf[X]) etc.
+   if (is_assignment_expr(s,&assignop)) {
     is_assignment = true;
-    // next visit will be to the assigned to field
+    // next visit here will be to the assigned to variable
     return true;
-  }  
+  } 
   
   // catch then expressions
-  // TODO: reductions!
       
   if (Expr *E = dyn_cast<Expr>(s)) {
     
     // Not much to do with const exprs
-    if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
-      llvm::errs() << "Constant expr: "
-                   << TheRewriter.getRewrittenText(s->getSourceRange()) << "\n";
-      state::skip_children = 1;
-      return true;
-    }
+    // if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
+    //   state::skip_children = 1;
+    //   return true;
+    // }
     
-    if (is_field_element_expr(E)) {
+    //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs
-      if (is_field_parity_expr(E)) {
-        // Now we know it is a field parity reference
-        // get the expression for field name
+    if (is_field_parity_expr(E)) {
+      // Now we know it is a field parity reference
+      // get the expression for field name
           
-        handle_field_parity_expr(E, is_assignment);
-        is_assignment = false;  // next will not be assignment, unless it is
+      handle_field_parity_expr(E, is_assignment);
+      is_assignment = false;  // next will not be assignment
+      // (unless it is a[] = b[] = c[], which is OK)
 
-        // llvm::errs() << "Field expr: " << get_stmt_str(lfE.nameExpr) << "\n";
-            
-        state::skip_children = 1;
-      }
+      state::skip_children = 1;
       return true;
     }
 
     if (is_field_expr(E)) {
-      // field without [parity], bad
+      // field without [parity], bad usually (TODO: allow  scalar func(field)-type?)
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
-                 "Field expressions without [..] not allowed within \'onsites()\'" );
+                 "Field expressions without [..] not allowed within field loop");
       state::skip_children = 1;  // once is enough
       return true;
     }
 
-    // prevent assignments to loop-external vars within loops
-    if (BinaryOperator * B = dyn_cast<BinaryOperator>(E)) {
-      if (B->isAssignmentOp() && is_loop_extern_var_ref(B->getLHS())) {
-        reportDiag(DiagnosticsEngine::Level::Error,
-                   B->getLHS()->getSourceRange().getBegin(),
-                   "Assignment to a non-field variable declared out of loop "
-                   "not allowed within field loop" );
-        state::skip_children = 1;  // once is enough
+    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+      if (isa<VarDecl>(DRE->getDecl())) {
+        // now it should be var ref non-field
+      
+        handle_var_ref(DRE,is_assignment,assignop);
+        is_assignment = false;
+      
+        state::skip_children = 1;
+        llvm::errs() << "Variable ref: "
+                     << TheRewriter.getRewrittenText(E->getSourceRange()) << '\n';
+
+        state::skip_children = 1;
         return true;
       }
-      return true;
+      // TODO: function ref?
     }
+
+
 
 #if 1
-    // TODO - more careful analysis of the expressions in the loops!
-    if (var_decl * p = is_loop_local_var_ref(E)) {
-      llvm::errs() << "loop local var ref! " << p->name << '\n';      
-      return true;
-    } 
-      
-    if (isa<DeclRefExpr>(E)) {
-      // now it should be external var ref non-field
-      var_expr_list.push_back( handle_var_expr(E) );
-      
-      state::skip_children = 1;
-      llvm::errs() << " Some other declref: " << TheRewriter.getRewrittenText(E->getSourceRange()) << '\n';
-
-      return true;
-    }
 
     if (isa<ArraySubscriptExpr>(E)) {
       llvm::errs() << "  It's array expr "
@@ -723,7 +777,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // check_local_loop_var_refs = 1;
         
       // TODO: find really uniq variable references
-      var_expr_list.push_back( handle_var_expr(E) );
+      //var_ref_list.push_back( handle_var_ref(E) );
 
       state::skip_children = 1;          
       return true;
@@ -758,7 +812,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
 
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
-  
+
   if (state::in_loop_body) {
     // for now care only loop body variable declarations
 
@@ -798,11 +852,46 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
 }
 
 
+// This is a horrible hack to enable control statements such as
+//  transformer_control("dump-ast");
+// Should use #pragma, but pragma handling is very messy
+ 
+bool MyASTVisitor::handle_control_stmt(Stmt *s) {
+  if (CallExpr * CE = dyn_cast<CallExpr>(s)) 
+    if (FunctionDecl * FD = CE->getDirectCallee())
+      if (FD->getNameInfo().getName().getAsString() == "transformer_control")
+        if (CE->getNumArgs() == 1) {
+          Expr * E = CE->getArg(0);
+          E = E->IgnoreParenCasts();
+          if (StringLiteral *SL = dyn_cast<StringLiteral>(E)) {
+            std::string command = SL->getString();
+            
+            if (command == "dump-ast") state::dump_ast_next = true;
+            
+            if (Buf.isOn()) remove_expr_list.push_back(Buf.markExpr(CE));
+            TheRewriter.InsertText(s->getSourceRange().getBegin(),"//-- ",true,true);
+              
+            state::skip_children = 1;
+            return true;
+          }
+        }
+  return false;
+}
+
+
 // VisitStmt is called for each statement in AST.  Thus, when traversing the
 // AST or part of it we always start from here
 
 bool MyASTVisitor::VisitStmt(Stmt *s) {
-    
+
+  if (state::dump_ast_next) {
+    llvm::errs() << "**** Dumping statement:\n" + get_stmt_str(s)+'\n';
+    s->dump();
+    state::dump_ast_next = false;
+  }
+
+  if (handle_control_stmt(s)) return true;
+  
   // Entry point when inside field[par] = .... body
   if (state::in_loop_body) {
     return handle_loop_body_stmt(s);
@@ -931,7 +1020,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     DeclarationName DeclName = f->getNameInfo().getName();
     std::string FuncName = DeclName.getAsString();
 
-    llvm::errs() << " - Function "<< FuncName << "\n";
+    // llvm::errs() << " - Function "<< FuncName << "\n";
 
     // Add comment before
     std::stringstream SSBefore;
@@ -1219,7 +1308,9 @@ int main(int argc, const char **argv) {
   // arguments and move these after -- if that exists on the command line.
 
   bool found_ddash = false;
-  const char *av[argc+1];
+  const char *av[argc+2];
+  av[argc+1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
+  
   char s[3] = "--";
   int ddashloc = 0;
   for (int i=0; i<argc; i++) {

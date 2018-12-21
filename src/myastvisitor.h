@@ -1,3 +1,4 @@
+// -*- mode: c++ -*-
 #ifndef MYASTVISITOR_H
 #define MYASTVISITOR_H
 
@@ -20,12 +21,12 @@
 
 class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 
- private:  
+private:  
   Rewriter &TheRewriter;
   ASTContext *Context;
   srcBuf Buf;
 
- public:
+public:
   MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
   MyASTVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
 
@@ -81,6 +82,8 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
   /// Checks if expr points to a variable defined in the same loop
   var_decl * is_loop_local_var_ref(Expr *E);
 
+  bool is_assignment_expr(Stmt * s, std::string * opcodestr);
+  
   bool is_loop_extern_var_ref(Expr *E);
   
   parity get_parity_val(const Expr *pExpr);
@@ -88,10 +91,12 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
   void require_parity_X(Expr * pExpr);
   
   bool check_field_ref_list();
+
+  void check_var_info_list();
   
   bool handle_field_parity_expr(Expr *e, bool is_assign);
   
-  var_expr handle_var_expr(Expr *E);
+  void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );
@@ -114,7 +119,10 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 
   /// Code generation headers start here
   /// Starting point for new code
-  bool generate_code( SourceLocation kernelloc, Stmt *S );
+  bool generate_code(SourceLocation kernelloc, Stmt *S);
+
+  /// shortcut for "pragma"-like transformer_control("cmd")-functin
+  bool handle_control_stmt(Stmt *s);
   
   
 };

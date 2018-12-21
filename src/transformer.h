@@ -1,3 +1,4 @@
+// -*- mode: c++ -*-
 #ifndef TRANSFORMER_H
 #define TRANSFORMER_H
 
@@ -25,7 +26,6 @@ struct loop_parity_struct {
   parity value;
   std::string text;
 };
-
 
 
 struct global_state {
@@ -65,8 +65,8 @@ struct field_info {
   std::string old_name;
   std::string new_name;
   bool is_changed;   
-  std::list<dir_ptr> dir_list;
-  std::list<field_ref *> ref_list;
+  std::vector<dir_ptr> dir_list;
+  std::vector<field_ref *> ref_list;
 
   field_info() {
     type = old_name = new_name = "";
@@ -84,11 +84,22 @@ struct field_info {
   }
 };
 
-struct var_expr {
-  Expr * e;
+struct var_ref {
+  DeclRefExpr *ref;
   unsigned ind;
+  std::string assignop;
+  bool is_assigned;
+};
+
+struct var_info {
+  std::vector<var_ref> refs;
+  VarDecl * decl;
+  struct var_decl * var_declp;
   std::string type;
-  var_expr * duplicate;
+  std::string name;
+  bool is_loop_local;
+  bool is_reduction;
+  bool is_assigned;
 };
 
 
@@ -96,7 +107,7 @@ struct var_decl {
   VarDecl *decl;
   std::string name;
   std::string type;
-  unsigned scope;
+  int scope;
 };
 
 

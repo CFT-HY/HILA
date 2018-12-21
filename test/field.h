@@ -98,7 +98,16 @@ class field_element  {
     v /= rhs; return *this;}
 
   // access the raw value - TODO:short vectors 
-  T get_value() { return v; } 
+  T get_value() { return v; }
+
+  T reduce_plus() {
+    return v;   // TODO: short vector!
+  }
+
+  T reduce_mult() {
+    return v;   // TODO: short vector!
+  }
+  
 };
 
 // declarations, implemented by transformer -- not defined anywhere!
@@ -160,6 +169,25 @@ field_element<T> exp( field_element<T> &arg) {
   res = exp(arg.get_value());
   return res;
 }
+
+
+// TRY NOW AUTOMATIC REDUCTION IDENTIFICATION
+// Overload operator  res += expr, where
+// res is type T and expr is field_element<T>
+// Make these void, because these cannot be assigned from
+// These will be modified by transformer
+
+template <typename T>
+void operator += (T& lhs, field_element<T>& rhs) {
+  lhs += rhs.reduce_plus();
+}
+
+template <typename T>
+void operator *= (T& lhs, field_element<T>& rhs) {
+  lhs *= rhs.reduce_mult();
+}
+
+
 
 
 
@@ -279,7 +307,6 @@ field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
 };
 
 
-// TRY NOW AUTOMATIC REDUCTION IDENTIFICATION
 
 // template <typename T>
 // class reduction {

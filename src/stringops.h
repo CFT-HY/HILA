@@ -1,3 +1,4 @@
+// -*- mode: c++ -*-
 #ifndef STRINGOPS_H
 #define STRINGOPS_H
 
