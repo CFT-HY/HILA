@@ -1,5 +1,10 @@
+
 template <typename T>
-void sub(latfield<T> &a, latfield<T> &b, parity p)
-{
-  a -= b;
-}
+class tst {
+public:
+  field<T> k;
+  void sub(field<T> &a, const field<T> &b, parity p)
+  {
+    a[p] -= b[X];
+  }
+};

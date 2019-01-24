@@ -19,6 +19,10 @@
 #undef NDEBUG
 #include <assert.h>
 
+struct codetype {
+  bool kernelize;
+};
+
 enum class parity { none, even, odd, all, x };
 
 struct loop_parity_struct {
@@ -27,12 +31,13 @@ struct loop_parity_struct {
   std::string text;
 };
 
-
 struct global_state {
   bool assert_loop_parity = false;
   std::string full_loop_text = "";
-  unsigned in_func_template = 0;
-  BinaryOperatorKind template_field_assignment_opcode;
+  bool in_func_template = false;
+  bool in_class_template = false;
+  TemplateParameterList *function_tpl = nullptr;
+  std::vector<TemplateParameterList *> class_tpl = {};
   FunctionDecl * currentFunctionDecl = nullptr;
   struct location_struct {
     SourceLocation function;
@@ -91,6 +96,8 @@ struct var_ref {
   bool is_assigned;
 };
 
+enum class reduction { NONE, SUM, PRODUCT };
+
 struct var_info {
   std::vector<var_ref> refs;
   VarDecl * decl;
@@ -98,7 +105,7 @@ struct var_info {
   std::string type;
   std::string name;
   bool is_loop_local;
-  bool is_reduction;
+  reduction reduction_type;
   bool is_assigned;
 };
 

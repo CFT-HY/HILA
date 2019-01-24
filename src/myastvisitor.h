@@ -36,6 +36,10 @@ public:
   /// We can keep track of the level here
   bool TraverseStmt(Stmt *S);
 
+  /// TraverseDecl is called recursively for each declaration in the AST
+  /// We can keep track of the level here
+  bool TraverseDecl(Decl *S);
+  
   /// VisitStmt is called for each statement in AST.  Thus, when traversing the
   /// AST or part of it we always start from here
   bool VisitStmt(Stmt *s);
@@ -48,6 +52,11 @@ public:
   /// same for function templates
   bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
 
+  /// same for function templates
+  bool VisitCXXMethodDecl(CXXMethodDecl *tf);
+
+  /// and a hook for getting templated class template params
+  bool VisitClassTemplateDecl(ClassTemplateDecl *D);
   
   bool is_field_element_expr(Expr *E);
   bool is_field_expr(Expr *E);
@@ -119,7 +128,16 @@ public:
 
   /// Code generation headers start here
   /// Starting point for new code
-  bool generate_code(SourceLocation kernelloc, Stmt *S);
+  void generate_code(Stmt *S, codetype & target);
+
+  std::string generate_kernel(Stmt *S, bool semi_at_end);
+  std::string generate_in_place(Stmt *S, bool semi_at_end);
+
+  /// Generate a candidate for a kernel name
+  std::string make_kernel_name();
+
+  /// Change field references within loops
+  void replace_field_refs();
 
   /// shortcut for "pragma"-like transformer_control("cmd")-functin
   bool handle_control_stmt(Stmt *s);

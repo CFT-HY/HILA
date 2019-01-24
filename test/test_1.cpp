@@ -1,34 +1,55 @@
+
 #include "field.h"
 
-double f(field<double> t);
+void transformer_control(const char *);
 
-class cclass {
-  double d;
-public:
-  double get() {return d;}
-};
+
+template <typename T>
+void sub(field<T> &a, const field<T> &b, parity p)
+{
+  a[p] = b[X];
+}
+
+// #include "sub.h"
+
+
+#ifdef kissa
+Miau
+#endif
+
 
 int main() 
 {
   int i;
   field<double> lf;
   field<double> dd;
-  double dp[10], somevar, b, c;
-  cclass tst;
-  
+  double dp[10], somevar, *b, c;
+
   // cout << "Starting..\n";
   
   //a[EVEN];
 
-  parity p=EVEN;
-  lf[EVEN] = dd[X+direction::xup] + exp(dp[1] + somevar +  dp[2] + somevar );
 
-  onsites(p)  {
+  
+  parity p=ALL;
+  lf[ALL] = dd[X] + dp[1];
+
+  lf = dd + dp[1];
+
+  double t;
+  onsites(p) {
     for (int k=0; k<10; k++) {
-      lf[X] = dd[X+direction::xup] + a + b + c;
+      lf[X] = dd[X+direction::xup] + *b  + c;
     }
-    auto t = lf[X];
+    // transformer_control("dump-ast");
+    t += dd[X];
+    dd[X] *= lf[X];
   }
+ 
+  somevar = t+1.0;
+  t = 10;
+  
+  sub(lf,dd,EVEN);
   
   std::cout << "After 1st\n";
 

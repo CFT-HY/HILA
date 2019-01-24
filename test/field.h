@@ -1,3 +1,4 @@
+// -*- mode: c++ -*-
 #include <iostream>
 #include <string>
 #include <math.h>
@@ -5,6 +6,9 @@
 // using namespace std;
 
 #define NDIM 4
+
+// HACK
+void transformer_control(const char *);
 
 
 enum class direction { xup, yup, zup, tup, tdown, zdown, ydown, xdown, NONE };
@@ -212,7 +216,7 @@ public:
   field<T>(const T& val) {
     // cout << "In constructor 2\n";
     data = new T[N];
-    for (int i=0; i<N; i++) data[i] = val;
+    (*this)[ALL] = val;
   }
   
   ~field<T>() {
@@ -223,7 +227,7 @@ public:
   // copy constructor
   field<T>(const field<T>& other) {
     data = new T[N];
-    for (int i=0; i<N; i++) data[i] = other.data[i];
+    (*this)[ALL] = other[X];
   }
   
   // move constructor
@@ -246,7 +250,7 @@ public:
 
   // Overloading =
   field<T>& operator= (const field<T>& rhs) {
-    onallsites(i) data[i] = rhs.data[i];
+    (*this)[ALL] = rhs[X];
     return *this;
   }
   field<T>& operator= (const T& d) {
@@ -310,10 +314,10 @@ field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
 
 // template <typename T>
 // class reduction {
-//  private:
+// private:
 //   field_element<T> value;
   
-//  public:
+// public:
 //   void sum(const field_element<T> & rhs) { value += rhs; }
 //   void operator+=(const field_element<T> & rhs) { value += rhs; }
 //   void product(const field_element<T> & rhs) { value *= rhs; }

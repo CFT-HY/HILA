@@ -60,8 +60,8 @@ no_include("noincl",
 
 static llvm::cl::opt<std::string>
 dummy_def("D", 
+          llvm::cl::value_desc("name"),
           llvm::cl::desc("Define name/symbol for preprocessor"),
-          llvm::cl::value_desc("define"),
           llvm::cl::cat(TransformerCat));
 
 static llvm::cl::opt<std::string>
@@ -69,6 +69,28 @@ dummy_incl("I",
            llvm::cl::desc("Directory for include file search"),
            llvm::cl::value_desc("directory"),
            llvm::cl::cat(TransformerCat));
+
+static llvm::cl::opt<bool>
+no_output("no-output",
+          llvm::cl::desc("No output file, for syntax check"),
+          llvm::cl::cat(TransformerCat));
+
+static llvm::cl::opt<std::string>
+output_filename("o",
+           llvm::cl::desc("Output file name"),
+           llvm::cl::value_desc("name"),
+           llvm::cl::cat(TransformerCat));
+
+static llvm::cl::opt<bool>
+kernel("vanilla-kernel",
+       llvm::cl::desc("Generate kernels"),
+       llvm::cl::cat(TransformerCat));
+
+static llvm::cl::opt<bool>
+vanilla("vanilla",
+        llvm::cl::desc("Generate loops in place"),
+        llvm::cl::cat(TransformerCat));
+
 
 
 // local global vars
@@ -78,6 +100,8 @@ loop_parity_struct loop_parity;
 
 static const std::string field_element_type = "field_element<";
 static const std::string field_type = "field<";
+
+static codetype target;
 
 // global lists for functions
 // TODO: THESE SHOULD PROBABLY BE CHANGED INTO vectors,
@@ -135,11 +159,7 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
     state::skip_next--;
     return true;
   }
-    
-  if (global.in_func_template > 0) {
-    global.in_func_template ++;
-  }
-
+  
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;
     
@@ -147,19 +167,30 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
   if (!state::skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
 
   if (state::skip_children > 0) state::skip_children--;
-  
-  if (global.in_func_template > 0) {
-    global.in_func_template--;
-    if (global.in_func_template == 1) {
-      // Now we finished loop
-      //llvm::errs() << "out of func template, last stmt " <<
-      //  TheRewriter.getRewrittenText(S->getSourceRange()) << "\n";
-      global.in_func_template = 0;
-    }
-  }
-    
+      
   return true;
 }
+
+
+// Similarly, implement skip_children for decl traversal
+bool MyASTVisitor::TraverseDecl(Decl *D) {
+  if (state::skip_next > 0) {
+    state::skip_next--;
+    return true;
+  }
+
+  // if state::skip_children > 0 we'll skip all until return to level up
+  if (state::skip_children > 0) state::skip_children++;
+    
+  // go via the original routine...
+  if (!state::skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseDecl(D);
+
+  if (state::skip_children > 0) state::skip_children--;
+
+  return true;
+}
+
+
 
 template <unsigned N>
 void MyASTVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
@@ -195,13 +226,26 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
       is_field_expr(OC->getArg(0))) {
     std::string s = get_expr_type(OC->getArg(1)); 
     if (s == "parity" || s == "parity_plus_direction") {
-      // llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
+      llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
       return true;
-    } 
-    // llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
+    }
+  } else {
+    // This is for templated expressions
+    // for some reason, expr a[X] "getBase() gives X, getIdx() a...
+    if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      if (is_field_expr(ASE->getLHS())) {
+        llvm::errs() << " FP: and field\n";
+        std::string s = get_expr_type(ASE->getRHS());
+        if (s == "parity" || s == "parity_plus_direction") {
+          llvm::errs() << " <<<Parity type " << get_expr_type(ASE->getRHS()) << '\n';
+          return true;
+        }
+      }
+    }
   }
-  return false;
+  return false;   
 }
+
 
 parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
   SourceLocation SL;
@@ -366,18 +410,26 @@ bool MyASTVisitor::check_field_ref_list() {
 bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
     
   e = e->IgnoreParens();
-  CXXOperatorCallExpr *O = dyn_cast<CXXOperatorCallExpr>(e);
   field_ref lfe;
-  bool no_errors = true;
-    
-  lfe.fullExpr   = O;
-  // take name 
-  lfe.nameExpr   = O->getArg(0);
-  lfe.nameInd    = Buf.markExpr(lfe.nameExpr); 
-  
-  lfe.parityExpr = O->getArg(1);
-  lfe.parityInd  = Buf.markExpr(lfe.parityExpr);
+  if (CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(e)) {
+    lfe.fullExpr   = OC;
+    // take name 
+    lfe.nameExpr   = OC->getArg(0);
+    lfe.parityExpr = OC->getArg(1);
+  } else if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(e)) {
+    // In template definition
 
+    lfe.fullExpr   = ASE;
+    lfe.nameExpr   = ASE->getLHS();
+    lfe.parityExpr = ASE->getRHS();
+  } else {
+    llvm::errs() << "Internal error 3\n";
+    exit(0);
+  }
+  
+  lfe.nameInd    = Buf.markExpr(lfe.nameExpr); 
+  lfe.parityInd  = Buf.markExpr(lfe.parityExpr);
+  
   lfe.dirExpr  = nullptr;  // no neighb expression
     
   if (get_expr_type(lfe.parityExpr) == "parity") {
@@ -402,7 +454,6 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
                  "Neighbour offset not allowed on the LHS of an assignment");
-      no_errors = false;
     }
 
     // Now need to split the expr to parity and dir-bits
@@ -452,12 +503,22 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
    
   field_ref_list.push_back(lfe);
       
-  return(no_errors);
+  return(true);
 }
+
+
+reduction get_reduction_type(bool is_assign, 
+                             std::string & assignop, 
+                             var_info & vi) {
+  if (is_assign && (!vi.is_loop_local)) {
+    if (assignop == "+=") return reduction::SUM;
+    if (assignop == "*=") return reduction::PRODUCT;
+  }
+  return reduction::NONE;
+}  
 
 /// This processes references to non-field variables within field loops
 
-  
 void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
                                   bool is_assign,
                                   std::string &assignop) {
@@ -478,10 +539,8 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
         // found already referred to decl
         vi.refs.push_back(vr);
         vi.is_assigned |= is_assign;
-        vi.is_reduction |=
-          (is_assign && (!vi.is_loop_local) &&
-           (assignop == "+=" || assignop == "*="));
-
+        vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
+        
         vip = &vi;
         found = true;
         break;
@@ -510,9 +569,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
       }
       vi.is_assigned = is_assign;
       // we know refs contains only 1 element
-      vi.is_reduction =
-        (is_assign && (!vi.is_loop_local) &&
-         (assignop == "+=" || assignop == "*="));
+      vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
       
       var_info_list.push_back(vi);
       vip = &(var_info_list.back());
@@ -530,7 +587,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
 void MyASTVisitor::check_var_info_list() {
   for (var_info & vi : var_info_list) {
     if (!vi.is_loop_local) {
-      if (vi.is_reduction) {
+      if (vi.reduction_type != reduction::NONE) {
         if (vi.refs.size() > 1) {
           // reduction only once
           int i=0;
@@ -585,19 +642,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr) {
   return false;
 }
 
-  
-
-// check if stmt is lf[par] = ... -type
-bool MyASTVisitor::is_field_parity_assignment( Stmt *s ) {
-  CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
-  if (OP && OP->isAssignmentOp()) {
-    // is assginment, verify that LHS is field_element
-    if ( is_field_parity_expr( OP->getArg(0) ) )
-      return true;
-  }
-  return false;
-}
-          
+            
 
 bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
   SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(),
@@ -636,8 +681,6 @@ SourceRange MyASTVisitor::getRangeWithSemi(Stmt * S, bool flag_error) {
 }
 
   
-//std::string generate_call_param_list
-  
 
 // start dealing with the loop statement
 bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
@@ -648,6 +691,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   var_info_list.clear();
   var_decl_list.clear();
   remove_expr_list.clear();
+  global.location.loop = ls->getSourceRange().getBegin();
   
   state::accept_field_parity = field_parity_ok;
     
@@ -664,7 +708,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   check_field_ref_list();
   check_var_info_list();
   
-  generate_code( global.location.top, ls );
+  generate_code(ls, target);
   
   Buf.clear();
           
@@ -897,33 +941,6 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     return handle_loop_body_stmt(s);
   }
     
-                                 
-  //  Starting point for fundamental operation
-  //  field[par] = .... - non-templated version
-  
-  // isStmtWithSemi(s);
-    
-  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
-
-    if (OP->isAssignmentOp()) {
-        
-      // is assginment, verify that LHS is field or field_element
-      if (is_field_parity_expr(OP->getArg(0))) {
-        // now we have fieldop.  1st child will be
-        // the lhs of the assignment
-
-        SourceRange full_range = getRangeWithSemi(OP,false);
-        global.full_loop_text = TheRewriter.getRewrittenText(full_range);
-        
-        handle_full_loop_stmt(OP, true);
-          
-      }
-      return true;
-    }
-      
-    return true;
-  }
-
   // loop of type "onsites(p)"
   if (isa<ForStmt>(s)) {
 
@@ -938,6 +955,8 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
         CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( startloc );
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
         bool internal_error = true;
+
+        llvm::errs() << "macro str " << macro << '\n';
         
         DeclStmt * init = dyn_cast<DeclStmt>(f->getInit());
         if (init && init->isSingleDecl() ) {
@@ -968,34 +987,36 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
         }
       }
     }        
-    
-    return true;
-      
+    return true;      
   }
+
+                                   
+  //  Starting point for fundamental operation
+  //  field[par] = .... - non-templated version
   
-  // templated function analysis      
-  // templated field type assignment, within a template function.  This should not
-  // trigger for untemplated loops
-  if (global.in_func_template > 0 && isa<BinaryOperator>(s)) {
-    BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
-    if (BO->isAssignmentOp()) {
-      // Check LHS
-      std::string lhs_string = BO->getLHS()->getType().getAsString();
-      llvm::errs() << " Templ assign string " << lhs_string << "\n";
-      if (lhs_string.find(field_type) == 0 ||
-          lhs_string.find(field_element_type) == 0) {
+  // isStmtWithSemi(s);
+
+
+  CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
+  if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0))) {
+    // now we have a[par] += ...  -stmt.  Arg(0) is
+    // the lhs of the assignment
+
+    SourceRange full_range = getRangeWithSemi(OP,false);
+    global.full_loop_text = TheRewriter.getRewrittenText(full_range);
         
-        state::skip_next = 1;     // next is op type which we know already, skip
-        global.template_field_assignment_opcode = BO->getOpcode();
-        //handle_lhs_field = true;
-          
-        std::string assign = TheRewriter.getRewrittenText(BO->getSourceRange());
-        llvm::errs() << "The basic stmt content: " << assign << "\n";
-      }
-    }
+    handle_full_loop_stmt(OP, true);
     return true;
+  } 
+  // now the above within template
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
+  if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS())) {
+    SourceRange full_range = getRangeWithSemi(BO,false);
+    global.full_loop_text = TheRewriter.getRewrittenText(full_range);        
+    handle_full_loop_stmt(BO, true);
+    return true;    
   }
-  
+
   return true;
 }
 
@@ -1005,9 +1026,23 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
 
-  if ((f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_NonTemplate ||
-       f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization )
-      && f->hasBody()) {
+  if (state::dump_ast_next) {
+    llvm::errs() << "**** Dumping funcdecl:\n";
+    f->dump();
+    state::dump_ast_next = false;
+  }
+
+  // don't go through instantiations (for now!)
+  // analyse templates directly
+  if (f->isTemplateInstantiation()) {
+    state::skip_children = 1;
+    return true;
+  }
+
+  
+  if ((f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_NonTemplate
+       // || f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization
+       ) && f->hasBody()) {
     global.currentFunctionDecl = f;
     
     Stmt *FuncBody = f->getBody();
@@ -1030,6 +1065,8 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     SourceLocation ST = f->getSourceRange().getBegin();
     TheRewriter.InsertText(ST, SSBefore.str(), true, true);
 
+    llvm::errs() << "Function decl " << FuncName << '\n';
+
     global.location.function = ST;
       
     // And after
@@ -1037,36 +1074,115 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     SSAfter << "\n// End function " << FuncName;
     ST = FuncBody->getLocEnd().getLocWithOffset(1);
     TheRewriter.InsertText(ST, SSAfter.str(), true, true);
+
+    //TraverseStmt(FuncBody);
+    //state::skip_children = 1;
+      
   }
   
   return true;
 }
 
 
+
 bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
+
+  if (state::dump_ast_next) {
+    llvm::errs() << "**** Dumping funcdecl:\n";
+    tf->dump();
+    state::dump_ast_next = false;
+  }
+
   if (tf->isThisDeclarationADefinition()) {
     FunctionDecl *f = tf->getTemplatedDecl();
     // Add comment before
 
-    TemplateParameterList *tpl = tf->getTemplateParameters();
-      
+    global.function_tpl = tf->getTemplateParameters();
+    global.currentFunctionDecl = f;
+        
     std::stringstream SSBefore;
     SSBefore << "// Begin function template " << f->getNameInfo().getName().getAsString()
              << " of template type " << f->getTemplatedKind()
              << " with template params " ;
-    for (unsigned i = 0; i < tpl->size(); i++) 
-      SSBefore << tpl->getParam(i)->getNameAsString() << " ";
+    for (unsigned i = 0; i < global.function_tpl->size(); i++) 
+      SSBefore << global.function_tpl->getParam(i)->getNameAsString() << " ";
     SSBefore << "\n";
-    SourceLocation ST = f->getSourceRange().getBegin();
+    SourceLocation ST = tf->getSourceRange().getBegin();
     TheRewriter.InsertText(ST, SSBefore.str(), true, true);
 
     global.location.function = ST;
     // start tracking the template
-    global.in_func_template = 1;
+    
+    global.in_func_template = true;
+    TraverseDecl(f);
+    global.in_func_template = false;
+
+    state::skip_children = 1;
     
   }
   return true;
 }
+
+
+// Entry point for class templates
+// This (may) be needed for template class methods
+bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
+  if (D->isThisDeclarationADefinition()) {
+
+    // save template params in a list, for templates within templates .... ugh!
+    global.class_tpl.push_back(D->getTemplateParameters());
+
+    // this block for debugging
+    TemplateParameterList * tplp = D->getTemplateParameters();
+    std::stringstream SSBefore;
+    SSBefore << "// Begin template class "
+             << " with template params " ;
+    for (unsigned i = 0; i < tplp->size(); i++) 
+      SSBefore << tplp->getParam(i)->getNameAsString() << " ";
+    SSBefore << "\n";
+    SourceLocation ST = D->getSourceRange().getBegin();
+    TheRewriter.InsertText(ST, SSBefore.str(), true, true);
+    // end block
+    
+    global.in_class_template = true;
+    TraverseDecl(D->getTemplatedDecl());
+    global.in_class_template = false;
+
+    state::skip_children = 1;
+
+    // Remove template param list
+    global.class_tpl.pop_back();
+    
+  }
+  return true;
+}
+
+
+#if 1
+bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
+  // This comes after VisitFunctionDecl for methods -- this does really nothing here
+
+  if (method->isThisDeclarationADefinition()) {
+    // FunctionDecl *f = method->getTemplatedDecl();
+    // Add comment before
+
+    std::stringstream SSBefore;
+    SSBefore << "// Begin method "
+             << method->getNameInfo().getName().getAsString();
+      //<< " of template type " << f->getTemplatedKind()
+      //     << " with template params " ;
+    //for (unsigned i = 0; i < global.tpl->size(); i++) 
+    //   SSBefore << global.tpl->getParam(i)->getNameAsString() << " ";
+    SSBefore << "\n";
+    SourceLocation ST = method->getSourceRange().getBegin();
+    TheRewriter.InsertText(ST, SSBefore.str(), true, true);
+
+    llvm::errs() << "Method decl " << method->getNameInfo().getName().getAsString() << '\n';
+    
+  }
+  return true;
+}
+#endif
 
 
 // This struct will be used to keep track of #include-chains.
@@ -1112,9 +1228,11 @@ public:
         global.location.top = (*b)->getSourceRange().getBegin();  // save this for source location
         Visitor.TraverseDecl(*b);
         // llvm::errs() << "Dumping level " << i++ << "\n";
-        if (dump_ast) (*b)->dump();
+        if (dump_ast) {
+          if (!no_include || SM.isInMainFile((*(DR.begin()))->getLocStart()))
+            (*b)->dump();
+        }
       }
-
       // We keep track here only of files which were touched
       if (state::is_modified) {
         FileID FID = SM.getFileID((*(DR.begin()))->getLocStart());
@@ -1283,7 +1401,8 @@ public:
       insert_includes_to_file_buffer(SM.getMainFileID());
     }
     
-    TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
+    if (!no_output)
+      TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -1299,20 +1418,19 @@ private:
   // ASTContext  TheContext;
 };
 
-int main(int argc, const char **argv) {
 
-  // TODO: clang CommandLine.cpp/.h has strange category and help
-  // msg handling, should we get rid of it?
-
-  // Also, check if the cmdline has -I<include> or -D<define> -
-  // arguments and move these after -- if that exists on the command line.
+// Check if the cmdline has -I<include> or -D<define> -
+// arguments and move these after -- if that exists on the command line.
+// Clang's optionparser expects these "generic compiler and linker"
+// args to be after --
+// return value new argc
+int rearrange_cmdline(int argc, const char **argv, const char **av) {
 
   bool found_ddash = false;
-  const char *av[argc+2];
   av[argc+1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
-  
-  char s[3] = "--";
+  static char s[3] = "--";   // needs to be static because ptrs
   int ddashloc = 0;
+
   for (int i=0; i<argc; i++) {
     av[i] = argv[i];
     if (strcmp(av[i],s) == 0) {
@@ -1345,10 +1463,29 @@ int main(int argc, const char **argv) {
       ddashloc--;
     }      
   }
-  
+
+  return argc;
+}
+
+void get_target_struct(codetype & target) {
+  if (kernel) target.kernelize = true;
+  else target.kernelize = false;
+}
+
+int main(int argc, const char **argv) {
+
+  // TODO: clang CommandLine.cpp/.h has strange category and help
+  // msg handling, should we get rid of it?
+
+  // av takes over from argv
+  const char **av = new const char *[argc+2];
+  argc = rearrange_cmdline(argc, argv, av);
   
   OptionsParser op(argc, av, TransformerCat);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
+  
+  // We have command line args, possibly do something with them
+  get_target_struct(target);
 
   // ClangTool::run accepts a FrontendActionFactory, which is then used to
   // create new objects implementing the FrontendAction interface. Here we use
