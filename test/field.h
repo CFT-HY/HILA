@@ -10,6 +10,8 @@
 // HACK
 void transformer_control(const char *);
 
+// TODO: default type real_t definition somewhere
+typedef double real_t;
 
 enum class direction { xup, yup, zup, tup, tdown, zdown, ydown, xdown, NONE };
 // static inline const direction opp_dir(const direction d) { return 2*NDIM - d; }
@@ -46,7 +48,12 @@ const parity_plus_direction operator-(const parity par, const direction d);
 
 #define N 10
 
-#define onallsites(i) for (int i=0; i<N; i++) 
+// #define onallsites(i) for (int i=0; i<N; i++) 
+
+
+template <typename R> struct field_vector {
+  R vec[32/sizeof(R)];   // TODO: size should be the size of the vector
+};
 
 // fwd definition
 template <typename T> class field;
@@ -67,9 +74,9 @@ class field_element  {
   // operator T() { return v; }
       
   // The type is important for ensuring correctness
-  // TBD: write these so that they work without the transformer
+  // Possibility: write these so that they work without the transformer
   field_element<T>& operator= (const T &d) {
-    v  = d; return *this;}
+    v = d; return *this;}
   
   // field_element = field_element
   field_element<T>& operator=  (const field_element<T>& rhs) {
@@ -101,6 +108,7 @@ class field_element  {
   field_element<T>& operator/= (const double rhs) {
     v /= rhs; return *this;}
 
+
   // access the raw value - TODO:short vectors 
   T get_value() { return v; }
 
@@ -114,56 +122,69 @@ class field_element  {
   
 };
 
-// declarations, implemented by transformer -- not defined anywhere!
+// declarations, implemented by transformer -- not necessarily defined anywhere
+// +
 template <typename T>
 field_element<T> operator+( const field_element<T> &lhs, const field_element<T> &rhs);
 
-template <typename T>
-field_element<T> operator+( const T &lhs, const field_element<T> &rhs);
+//template <typename T>
+//field_element<T> operator+( const T &lhs, const field_element<T> &rhs);
 
-template <typename T>
-field_element<T> operator+( const field_element<T> &lhs,  const T &rhs);
+//template <typename T>
+//field_element<T> operator+( const field_element<T> &lhs,  const T &rhs);
 
-template <typename T>
-field_element<T> operator+( double lhs, const field_element<T> &rhs);
+template <typename T,typename L>
+field_element<T> operator+( const L &lhs, const field_element<T> &rhs);
 
-template <typename T>
-field_element<T> operator+( const field_element<T> &lhs, double rhs);
+template <typename T,typename R>
+field_element<T> operator+( const field_element<T> &lhs, const R &rhs);
 
-field_element<double> operator+( double lhs, const field_element<double> &rhs);
-
-field_element<double> operator+( const field_element<double> &lhs, double rhs);
-
+// -
 template <typename T>
 field_element<T> operator-( const field_element<T> &lhs, const field_element<T> &rhs);
 
-template <typename T>
-field_element<T> operator-( const T &lhs, const field_element<T> &rhs);
+template <typename T,typename L>
+field_element<T> operator-( const L &lhs, const field_element<T> &rhs);
 
-template <typename T>
-field_element<T> operator-( const field_element<T> &lhs,  const T &rhs);
+template <typename T,typename R>
+field_element<T> operator-( const field_element<T> &lhs,  const R &rhs);
 
-template <typename T>
-field_element<T> operator-( double lhs, const field_element<T> &rhs);
+// template <typename T>
+// field_element<T> operator-( double lhs, const field_element<T> &rhs);
 
-template <typename T>
-field_element<T> operator-( const field_element<T> &lhs, double rhs);
+// template <typename T>
+// field_element<T> operator-( const field_element<T> &lhs, double rhs);
 
-field_element<double> operator-( double lhs, const field_element<double> &rhs);
-
-field_element<double> operator-( const field_element<double> &lhs, double rhs);
-
-//template <typename T>
-//field_element<T> operator+( const field_element<T> &lhs, int rhs);
-
+// *
 template <typename T>
 field_element<T> operator*( const field_element<T> &lhs, const field_element<T> &rhs);
 
-template <typename T>
-field_element<T> operator*( const double lhs, const field_element<T> &rhs);
+template <typename T,typename L>
+field_element<T> operator*( const L &lhs, const field_element<T> &rhs);
 
+template <typename T,typename R>
+field_element<T> operator*( const field_element<T> &lhs,  const R &rhs);
+
+// template <typename T>
+// field_element<T> operator*( double lhs, const field_element<T> &rhs);
+
+// template <typename T>
+// field_element<T> operator*( const field_element<T> &lhs, double rhs);
+
+
+// /    Division is not implemented for all types, but define generically here
 template <typename T>
-field_element<T> operator*( const field_element<T> &lhs, const double rhs);
+field_element<T> operator/( const field_element<T> &lhs, const field_element<T> &rhs);
+
+template <typename T,typename L>
+field_element<T> operator/( const L &lhs, const field_element<T> &rhs);
+
+template <typename T,typename R>
+field_element<T> operator/( const field_element<T> &lhs,  const R &rhs);
+
+// template <typename T>
+// field_element<T> operator/( const field_element<T> &lhs, double rhs);
+
 
 
 // a function
@@ -192,18 +213,13 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 }
 
 
-
-
-
-
 // template <typename T>
 // class field_parity : field_element<T> {} ;
-
 
 template <typename T>
 class field {
 private:
-  // std::unique_ptr<T> data;
+  // here correct data
   T * data;
   
 public:
@@ -254,7 +270,7 @@ public:
     return *this;
   }
   field<T>& operator= (const T& d) {
-    onallsites(i) data[i] = d;
+    (*this)[ALL] = d;
     return *this;
   }
   // Do also move assignment
@@ -268,47 +284,50 @@ public:
   }
   
 
-  field<T>& operator+= (const field<T>& rhs) { onallsites(i) data[i] += rhs.data[i]; return *this;}
-  field<T>& operator-= (const field<T>& rhs) { onallsites(i) data[i] -= rhs.data[i]; return *this;}
-  field<T>& operator*= (const field<T>& rhs) { onallsites(i) data[i] *= rhs.data[i]; return *this;}
+  field<T>& operator+= (const field<T>& rhs) { (*this)[ALL] += rhs[X]; return *this;}
+  field<T>& operator-= (const field<T>& rhs) { (*this)[ALL] -= rhs[X]; return *this;}
+  field<T>& operator*= (const field<T>& rhs) { (*this)[ALL] *= rhs[X]; return *this;}
+  field<T>& operator/= (const field<T>& rhs) { (*this)[ALL] /= rhs[X]; return *this;}
   
 };
 
 
-// these no work yet
 template <typename T>
 field<T> operator+( const field<T> &lhs, const field<T> &rhs) {
   field<T> tmp;
   tmp[ALL] = lhs[X] + rhs[X];
   return tmp;
-};
+}
 
-template <typename T>
-field<T> operator+( const T &lhs, const field<T> &rhs) {
+template <typename T,typename L>
+field<T> operator+( const L &lhs, const field<T> &rhs) {
   field<T> tmp;
   tmp[ALL] = lhs + rhs[X];
   return tmp;
-};
+}
 
-template <typename T>
-field<T> operator+( const field<T> &lhs,  const T &rhs) {
+template <typename T,typename R>
+field<T> operator+( const field<T> &lhs,  const R &rhs) {
   return operator+(rhs,lhs);
-};
+}
 
-template <typename T>
-field<T> operator+( const int lhs, const field<T> &rhs) {
-  return rhs;
-};
+// template <typename T>
+// field<T> operator+( const double lhs, const field<T> &rhs) {
+//   field<T> tmp;
+//   tmp[ALL] = lhs + rhs[X];
+//   return tmp;
+// }
 
-template <typename T>
-field<T> operator+( const field<T> &lhs, const int rhs) {
-  return lhs;
-};
+// template <typename T>
+// field<T> operator+( const field<T> &lhs, const double rhs) {
+  
+//   return lhs;
+// }
 
 template <typename T>
 field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
   return lhs;
-};
+}
 
 
 
@@ -334,6 +353,5 @@ field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
 //   operator T() { return get(); }
   
 // };
-
 
 

@@ -44,14 +44,16 @@ extern std::list<var_decl> var_decl_list;
 const std::string looping_var("FI__");
 const std::string parity_name("pty__");
 
+static std::string parity_in_this_loop = "";
+
 std::string parity_str(parity p)
 {
   switch (p) {
-  case parity::none : return "NONE";
-  case parity::even : return "EVEN";
-  case parity::odd  : return "ODD";
-  case parity::all  : return "ALL";
-  case parity::x    : return "X";
+  case parity::none : return "parity::none";
+  case parity::even : return "parity::even";
+  case parity::odd  : return "parity::odd";
+  case parity::all  : return "parity::all";
+  case parity::x    : return "parity::x";
   }
 }
 
@@ -59,7 +61,7 @@ std::string parity_str(parity p)
 /// Help routine to write (part of) a name for a kernel
 std::string MyASTVisitor::make_kernel_name() {
   return 
-    "kern_"
+    "kernel_"
     + clean_name(global.currentFunctionDecl
                  ->getNameInfo().getName().getAsString())
     + "_" + std::to_string(TheRewriter.getSourceMgr().
@@ -90,8 +92,10 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     if (global.assert_loop_parity) {
       code += "assert_even_odd_parity(" + parity_name + ");\n";
     }
+    parity_in_this_loop = parity_name;
       
-  } // else parity_name = parity_str(loop_parity.value);
+  } 
+  else parity_in_this_loop = parity_str(loop_parity.value);
 
   for (field_info & l : field_info_list) {
     // Generate new variable name, may be needed -- use here simple receipe
@@ -109,7 +113,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     for (dir_ptr & d : l.dir_list ) {
       // TODO - move to temp vars
       code += l.new_name + ".start_move(" + get_stmt_str(d.e) + ", " 
-           + parity_name + ");\n";
+           + parity_in_this_loop + ");\n";
       // TODO: must add wait_gets, if we want those
     }
   
@@ -132,7 +136,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
       
   // Mark changed vars
   for ( field_info  & l : field_info_list ) {
-    if (l.is_changed) code += l.old_name + ".changed(" + parity_name + ");\n";
+    if (l.is_changed) code += l.old_name + ".changed(" + parity_in_this_loop + ");\n";
   }
     
   // and close
@@ -150,7 +154,6 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   //TheRewriter.InsertText(getRangeWithSemi(S,false).getEnd().getLocWithOffset(1),
   //                        call, true, true);
   //replace_expr(S, call);
-
   
 }
 
@@ -159,7 +162,7 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end) {
   
   replace_field_refs();
   
-  std::string code = "forparity("+looping_var+", "+parity_name+") {\n" + Buf.dump();
+  std::string code = "forparity("+looping_var+", "+parity_in_this_loop+") {\n" + Buf.dump();
   if (semi_at_end) code += ';';
   code += "\n}\n";
 
@@ -226,7 +229,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end) {
   // finally, change the references to variables in the body
   replace_field_refs();
       
-  kernel += ")\n{\nforparity("+looping_var+", par_v) {\n" + Buf.dump();
+  kernel += ")\n{\nforparity("+looping_var+", "+parity_in_this_loop+") {\n" + Buf.dump();
   if (semi_at_end) kernel += ';';
   kernel += "\n}\n}\n//----------\n";
   call += ");\n";

@@ -1,3 +1,12 @@
+VARIABLE TYPE:
+define always as a template where the templated type is
+the real number , e.g.
+
+        template<typename T> struct vector { T v[N]; };
+        
+
+
+
 FIELD:
 Lattice field of type T definition through template:
 

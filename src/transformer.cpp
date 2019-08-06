@@ -707,7 +707,13 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // check and analyze the field expressions
   check_field_ref_list();
   check_var_info_list();
-  
+  // check that loop_parity is not X
+  if (loop_parity.value == parity::x) {
+    reportDiag(DiagnosticsEngine::Level::Error,
+               loop_parity.expr->getSourceRange().getBegin(),
+               "Parity of the full loop cannot be \'X\'");
+  }
+
   generate_code(ls, target);
   
   Buf.clear();
