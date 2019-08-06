@@ -136,7 +136,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
       
   // Mark changed vars
   for ( field_info  & l : field_info_list ) {
-    if (l.is_changed) code += l.old_name + ".changed(" + parity_in_this_loop + ");\n";
+    if (l.is_changed) code += l.old_name + ".mark_changed(" + parity_in_this_loop + ");\n";
   }
     
   // and close

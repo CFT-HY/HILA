@@ -83,7 +83,7 @@ int main()
 
   lf = tf[1] + tf[0] * dd;
 
-  lf[ALL] = exp(lf[X]);
+  (*p)[ALL] = exp(lf[X]);
   
   
   
