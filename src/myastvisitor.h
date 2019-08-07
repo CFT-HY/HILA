@@ -30,7 +30,7 @@ public:
   MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
   MyASTVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
 
-  bool shouldVisitTemplateInstantiations() const { return true; } // is false by default, but still goes?
+  bool shouldVisitTemplateInstantiations() { return true; } // is false by default, but still goes?
 
   /// TraverseStmt is called recursively for each level in the AST
   /// We can keep track of the level here
@@ -57,6 +57,9 @@ public:
 
   /// and a hook for getting templated class template params
   bool VisitClassTemplateDecl(ClassTemplateDecl *D);
+
+  bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
+  bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
   
   bool is_field_element_expr(Expr *E);
   bool is_field_expr(Expr *E);

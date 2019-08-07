@@ -98,6 +98,8 @@ global_state global;
 // and global loop_parity
 loop_parity_struct loop_parity;
 
+static ClassTemplateDecl * field_def = NULL;   // Ptr to field primary def in AST
+
 static const std::string field_element_type = "field_element<";
 static const std::string field_type = "field<";
 
@@ -876,7 +878,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     if (is_field_decl(var)) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
-                 "Cannot declare field variables within field traversal");
+                 "Cannot declare field variables within field loops");
       state::skip_children = 1;
       return true;
     }
@@ -891,7 +893,14 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     
     llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
     return true;
+  } 
+
+  if (is_field_decl(var)) {
+    llvm::errs() << "FIELD DECL \'" << var->getName() << "\' of type "
+                 << var->getType().getAsString() << '\n';
+    if (var->isTemplated()) llvm::errs() << " .. was templated\n";
   }
+  
   return true;
 }
 
@@ -1142,6 +1151,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     TemplateParameterList * tplp = D->getTemplateParameters();
     std::stringstream SSBefore;
     SSBefore << "// Begin template class "
+             << D->getNameAsString()
              << " with template params " ;
     for (unsigned i = 0; i < tplp->size(); i++) 
       SSBefore << tplp->getParam(i)->getNameAsString() << " ";
@@ -1158,7 +1168,41 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     // Remove template param list
     global.class_tpl.pop_back();
+
+    if (D->getNameAsString() == "field") {
+      // Now we have the main field template definition.
+      // Let us save this Decl for a revisit after AST is complete
+      llvm::errs() << "GOT FIELD DEFINITION\n";
+      field_def = D;
+    }
     
+  }    
+
+  // get the "field" class, find specializations
+  // if (D->getNameAsString() == "field") {
+  //   int i = 0;
+  //   llvm::errs() << "**** It's field\n";
+      
+  //   for (auto spec = D->spec_begin(); spec != D->spec_end(); spec++ ) {
+  //     llvm::errs() << "  iterator " << ++i << '\n';
+  //     if (spec->isExplicitSpecialization()) llvm::errs() << "explicit\n";
+  //   }
+  // }
+
+  
+  return true;
+}
+
+bool MyASTVisitor::
+VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
+  //if (D->getNameAsString() == "field")
+  {
+    
+    const TemplateArgumentList & tal = D->getTemplateArgs();
+    llvm::errs() << " *** field with args ";
+    for (unsigned i = 0; i < tal.size(); i++) 
+      llvm::errs() << TheRewriter.getRewrittenText(tal.get(i).getAsExpr()->getSourceRange()) << " ";
+    llvm::errs() << "\n";
   }
   return true;
 }
@@ -1251,6 +1295,11 @@ public:
     }
     
     return true;
+  }
+
+  virtual void HandleTranslationUnit(ASTContext & ctx) override {
+    // dump ast here - see if it is different -- HERE THE SPECIALIZATIONS ARE PRESENT!
+    // ctx.getTranslationUnitDecl()->dump();    
   }
 
   // Does nothing, apparently..
@@ -1392,6 +1441,33 @@ public:
     llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
     // << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
 
+
+    // Now check the field template instantiations/specializations
+    // We have to do the check after handling the whole translation unit
+    // this could be part of handleTranslationUnit()
+
+    llvm::errs() << "+++++++\n Specializations of field\n";
+    if (field_def->getNameAsString() != "field") {
+      llvm::errs() << "*** internal error \'field\'\n";
+      exit(0);
+    }
+      
+    for (auto spec = field_def->spec_begin(); spec != field_def->spec_end(); spec++ ) {
+      // is implicit, so create the specialization
+      auto & args = spec->getTemplateArgs();
+      for (unsigned int i=0; i<args.size(); i++) {
+        if (TemplateArgument::ArgKind::Type != args.get(i).getKind()) {
+          llvm::errs() << "*** mystery: expecting type arg\n";
+          exit(0);
+        }
+        llvm::errs() << "arg type " << args.get(i).getAsType().getAsString();
+      }
+      if (spec->isExplicitSpecialization()) llvm::errs() << " explicit";
+      llvm::errs() << '\n';
+    }
+
+
+    
     // Now emit rewritten buffers.
 
     if (!no_include) {

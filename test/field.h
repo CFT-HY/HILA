@@ -6,6 +6,7 @@
 // using namespace std;
 
 #define NDIM 4
+#define N 10
 
 // HACK
 void transformer_control(const char *);
@@ -45,8 +46,6 @@ const parity_plus_direction operator-(const parity par, const direction d);
 //  const parity_plus_direction operator+(const direction &d) { parity_plus_direction pd; return(pd); }
 //  const parity_plus_direction operator-(const direction &d) { parity_plus_direction pd; return(pd); }
 //};
-
-#define N 10
 
 // #define onallsites(i) for (int i=0; i<N; i++) 
 
@@ -274,7 +273,7 @@ public:
     return *this;
   }
   // Do also move assignment
-  field<T>& operator= (T && other) {
+  field<T>& operator= (field<T> && other) {
     if (this != &other) {
       delete[] data;
       data = other.data;
