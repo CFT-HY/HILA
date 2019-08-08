@@ -212,25 +212,31 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 }
 
 
-// template <typename T>
-// class field_parity : field_element<T> {} ;
+
+// Type alias would be nice, but one cannot specialize those!
+// Placemarker, will be specialized by transformer
+template <typename T>
+struct field_storage_type {
+  T c;
+};
+
 
 template <typename T>
 class field {
 private:
   // here correct data
-  T * data;
+  field_storage_type<T> * data;
   
 public:
   
   field<T>() {
     // cout << "In constructor 1\n";
-    data = new T[N];
+    data = new field_storage_type<T>[N];
   }
   
   field<T>(const T& val) {
     // cout << "In constructor 2\n";
-    data = new T[N];
+    data = new field_storage_type<T>[N];
     (*this)[ALL] = val;
   }
   
@@ -241,7 +247,7 @@ public:
   
   // copy constructor
   field<T>(const field<T>& other) {
-    data = new T[N];
+    data = new field_storage_type<T>[N];
     (*this)[ALL] = other[X];
   }
   

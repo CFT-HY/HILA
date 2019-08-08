@@ -98,7 +98,8 @@ global_state global;
 // and global loop_parity
 loop_parity_struct loop_parity;
 
-static ClassTemplateDecl * field_def = NULL;   // Ptr to field primary def in AST
+static ClassTemplateDecl * field_decl = nullptr;   // Ptr to field primary def in AST
+static ClassTemplateDecl * field_storage_type_decl = nullptr;   // Ptr to field primary def in AST
 
 static const std::string field_element_type = "field_element<";
 static const std::string field_type = "field<";
@@ -228,7 +229,7 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
       is_field_expr(OC->getArg(0))) {
     std::string s = get_expr_type(OC->getArg(1)); 
     if (s == "parity" || s == "parity_plus_direction") {
-      llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
+      // llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
       return true;
     }
   } else {
@@ -236,10 +237,10 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
     // for some reason, expr a[X] "getBase() gives X, getIdx() a...
     if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
       if (is_field_expr(ASE->getLHS())) {
-        llvm::errs() << " FP: and field\n";
+        // llvm::errs() << " FP: and field\n";
         std::string s = get_expr_type(ASE->getRHS());
         if (s == "parity" || s == "parity_plus_direction") {
-          llvm::errs() << " <<<Parity type " << get_expr_type(ASE->getRHS()) << '\n';
+          // llvm::errs() << " <<<Parity type " << get_expr_type(ASE->getRHS()) << '\n';
           return true;
         }
       }
@@ -373,7 +374,7 @@ bool MyASTVisitor::check_field_ref_list() {
       if (loop_parity.value == parity::all) {
         // There's error, find culprits
         for (field_ref * p : l.ref_list) {
-          if (p->dirExpr != NULL && !p->is_changed) {
+          if (p->dirExpr != nullptr && !p->is_changed) {
             reportDiag(DiagnosticsEngine::Level::Error,
                        p->parityExpr->getSourceRange().getBegin(),
                        "Accessing field '%0' undefined when assigning to '%1' with parity ALL, flagging as error",
@@ -384,7 +385,7 @@ bool MyASTVisitor::check_field_ref_list() {
         }
 
         for (field_ref * p : l.ref_list) {
-          if (p->is_changed && p->dirExpr == NULL) {
+          if (p->is_changed && p->dirExpr == nullptr) {
             reportDiag(DiagnosticsEngine::Level::Note,
                        p->fullExpr->getSourceRange().getBegin(),
                        "Location of assignment");
@@ -895,11 +896,11 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     return true;
   } 
 
-  if (is_field_decl(var)) {
-    llvm::errs() << "FIELD DECL \'" << var->getName() << "\' of type "
-                 << var->getType().getAsString() << '\n';
-    if (var->isTemplated()) llvm::errs() << " .. was templated\n";
-  }
+  // if (is_field_decl(var)) {
+  //   llvm::errs() << "FIELD DECL \'" << var->getName() << "\' of type "
+  //                << var->getType().getAsString() << '\n';
+  //   if (var->isTemplated()) llvm::errs() << " .. was templated\n";
+  // }
   
   return true;
 }
@@ -1087,7 +1088,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     // And after
     std::stringstream SSAfter;
     SSAfter << "\n// End function " << FuncName;
-    ST = FuncBody->getLocEnd().getLocWithOffset(1);
+    ST = FuncBody->getEndLoc().getLocWithOffset(1);
     TheRewriter.InsertText(ST, SSAfter.str(), true, true);
 
     //TraverseStmt(FuncBody);
@@ -1171,11 +1172,17 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (D->getNameAsString() == "field") {
       // Now we have the main field template definition.
+      // Check the field template instantiations/specializations
+      // This can be done at this point only if we use
+      // handleTranslationUnit() as the entry point
+
       // Let us save this Decl for a revisit after AST is complete
       llvm::errs() << "GOT FIELD DEFINITION\n";
-      field_def = D;
+      handle_field_specializations(D);
+
+    } else if (D->getNameAsString() == "field_storage_type") {
+      field_storage_type_decl = D;
     }
-    
   }    
 
   // get the "field" class, find specializations
@@ -1193,24 +1200,107 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   return true;
 }
 
-bool MyASTVisitor::
-VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
-  //if (D->getNameAsString() == "field")
-  {
+
+int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
+  // save global, perhaps needed (perhaps not)
+  field_decl = D;
+
+  llvm::errs() << "+++++++\n Specializations of field\n";
+
+  int count = 0;
+  for (auto spec = D->spec_begin(); spec != D->spec_end(); spec++ ) {
+    count++;
+    auto & args = spec->getTemplateArgs();
+
+    if (args.size() != 1) {
+      llvm::errs() << " *** Fatal: More than one type arg for field<>\n";
+      exit(0);
+    }
+    if (TemplateArgument::ArgKind::Type != args.get(0).getKind()) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 D->getSourceRange().getBegin(),
+                 "Expect type argument in \'field\' template" );
+      return(0);
+    }
+
+    std::string typestr = args.get(0).getAsType().getAsString();
+    llvm::errs() << "arg type " << typestr;
+
+    if (spec->isExplicitSpecialization()) llvm::errs() << " explicit";
+    llvm::errs() << '\n';
+
+    // write storage_type specialization
+    // NOTE: this has to be moved to codegen, different for diff. codes
+    if (field_storage_type_decl == nullptr) {
+      llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
+      exit(0);
+    }
+
+    std::string fst_spec = "template<>\nstruct field_storage_type<"
+      + typestr +"> {\n  " + typestr + " c[10];\n};\n";
+
+    // insert after new line
+    SourceLocation l = field_storage_type_decl->getSourceRange().getEnd();
+    SourceManager &SM = TheRewriter.getSourceMgr();
+    int i;
+    for (i=1; i<40 && *(SM.getCharacterData(l.getLocWithOffset(i))) != '\n'; i++);
+    TheRewriter.InsertText(field_storage_type_decl->getSourceRange().getEnd().getLocWithOffset(i+1),
+                           fst_spec,
+                           true,true);
     
-    const TemplateArgumentList & tal = D->getTemplateArgs();
-    llvm::errs() << " *** field with args ";
-    for (unsigned i = 0; i < tal.size(); i++) 
-      llvm::errs() << TheRewriter.getRewrittenText(tal.get(i).getAsExpr()->getSourceRange()) << " ";
-    llvm::errs() << "\n";
   }
+  return(count);
+      
+} // end of "field"
+
+
+// Find the field_storage_type typealias here -- could not work
+// directly with VisitTypeAliasTemplateDecl below, a bug??
+bool MyASTVisitor::VisitDecl( Decl * D) {
+  auto t = dyn_cast<TypeAliasTemplateDecl>(D);
+  if (t && t->getNameAsString() == "field_storage_type") {
+    llvm::errs() << "Got field storage\n";
+  }
+  
   return true;
-}
+}                           
+
+
+//void MyASTVisitor::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
+  // if (D->isThisDeclarationADefinition()) {
+  // Now the main definition
+  // if (D->getNameAsString() == "field_storage_type") {
+  //   TemplateParameterList * tplp = D->getTemplateParameters();
+  //   std::stringstream SSBefore;
+  //   SSBefore << "// field_storage_class def "
+  //            << " with template params " ;
+  //   for (unsigned i = 0; i < tplp->size(); i++) 
+  //     SSBefore << tplp->getParam(i)->getNameAsString() << " ";
+  //   SSBefore << "\n";
+  //   SourceLocation ST = D->getSourceRange().getBegin();
+  //   TheRewriter.InsertText(ST, SSBefore.str(), true, true);
+  // }
+//}
+
+
+// bool MyASTVisitor::
+// VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
+//   //if (D->getNameAsString() == "field")
+//   {
+    
+//     const TemplateArgumentList & tal = D->getTemplateArgs();
+//     llvm::errs() << " *** field with args ";
+//     for (unsigned i = 0; i < tal.size(); i++) 
+//       llvm::errs() << TheRewriter.getRewrittenText(tal.get(i).getAsExpr()->getSourceRange()) << " ";
+//     llvm::errs() << "\n";
+//   }
+//   return true;
+// }
 
 
 #if 1
 bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
-  // This comes after VisitFunctionDecl for methods -- this does really nothing here
+  // Comes after VisitFunctionDecl for methods -- this does really nothing here
 
   if (method->isThisDeclarationADefinition()) {
     // FunctionDecl *f = method->getTemplatedDecl();
@@ -1257,16 +1347,22 @@ class MyASTConsumer : public ASTConsumer {
 public:
   MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { Rewriterp = &R; }
 
+  // #define use_HandleTopLevelDecl
+  
+#ifdef use_HandleTopLevelDecl
+
+  // THIS IS NOT IN USE NOW; SHOULD BE DELETED AT SOME POINT
   // Override the method that gets called for each parsed top-level
   // declaration.
   // ANOTHER OPTION: use HandleTranslationUnit?
+
   bool HandleTopLevelDecl(DeclGroupRef DR) override {
 
     // do the transformation for non-system files, also included files
 
     SourceManager &SM = Visitor.getRewriter().getSourceMgr();
-    // llvm::errs() << "Processing file " << SM.getFilename((*(DR.begin()))->getLocStart()) << "\n";
-    if (!SM.isInSystemHeader((*(DR.begin()))->getLocStart())) {
+    // llvm::errs() << "Processing file " << SM.getFilename((*(DR.begin()))->getBeginLoc()) << "\n";
+    if (!SM.isInSystemHeader((*(DR.begin()))->getBeginLoc())) {
       // TODO: ensure that we go only through files which are needed!
 
       state::is_modified = false;
@@ -1279,13 +1375,13 @@ public:
         Visitor.TraverseDecl(*b);
         // llvm::errs() << "Dumping level " << i++ << "\n";
         if (dump_ast) {
-          if (!no_include || SM.isInMainFile((*(DR.begin()))->getLocStart()))
+          if (!no_include || SM.isInMainFile((*(DR.begin()))->getBeginLoc()))
             (*b)->dump();
         }
       }
       // We keep track here only of files which were touched
       if (state::is_modified) {
-        FileID FID = SM.getFileID((*(DR.begin()))->getLocStart());
+        FileID FID = SM.getFileID((*(DR.begin()))->getBeginLoc());
         if (search_fid(FID) == false) {
           // new file to be added
           file_id_list.push_back(FID);
@@ -1297,17 +1393,51 @@ public:
     return true;
   }
 
+#else // now not use_HandleTopLevelDecl
+
+  // HandleTranslationUnit is called after the AST for the whole TU is completed
   virtual void HandleTranslationUnit(ASTContext & ctx) override {
     // dump ast here - see if it is different -- HERE THE SPECIALIZATIONS ARE PRESENT!
-    // ctx.getTranslationUnitDecl()->dump();    
+    // ctx.getTranslationUnitDecl()->dump();
+    
+    SourceManager &SM = ctx.getSourceManager();
+    TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
+
+    for (DeclContext::decl_iterator d = tud->decls_begin(); d != tud->decls_end(); d++) {
+
+      SourceLocation beginloc = d->getBeginLoc();
+      // analyze only user files (these should be named)
+      if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
+        // llvm::errs() << "Processing file " << SM.getFilename(beginloc) << "\n";
+        // TODO: ensure that we go only through files which are needed!
+
+        state::is_modified = false;
+      
+        // Traverse the declaration using our AST visitor.
+        
+        global.location.top = d->getSourceRange().getBegin();  // save this for source location
+        Visitor.TraverseDecl(*d);
+        // llvm::errs() << "Dumping level " << i++ << "\n";
+        if (dump_ast) {
+          if (!no_include || SM.isInMainFile(beginloc))
+            d->dump();
+        }
+        
+        // We keep track here only of files which were touched
+        if (state::is_modified) {
+          FileID FID = SM.getFileID(beginloc);
+          if (search_fid(FID) == false) {
+            // new file to be added
+            file_id_list.push_back(FID);
+            llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+          }
+        }
+      }  
+    }
   }
 
-  // Does nothing, apparently..
-  // void HandleImplicitImportDecl(ImportDecl *D) override {
-  //  llvm::errs() << " ***Import: "
-  //              << Rewriterp->getRewrittenText(D->getSourceRange()) << '\n';
-  // HandleTopLevelDecl(DeclGroupRef(D));
-  // }
+#endif
+  
 
 private:
   MyASTVisitor Visitor;
@@ -1376,6 +1506,7 @@ public:
 #endif
 
     file_id_list.clear();
+    field_decl = field_storage_type_decl = nullptr;
     
     //   // SourceManager &SM = TheRewriter.getSourceMgr();
     //   // llvm::errs() << "** BeginSourceFileAction for: "
@@ -1440,33 +1571,6 @@ public:
     SourceManager &SM = TheRewriter.getSourceMgr();
     llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
     // << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
-
-
-    // Now check the field template instantiations/specializations
-    // We have to do the check after handling the whole translation unit
-    // this could be part of handleTranslationUnit()
-
-    llvm::errs() << "+++++++\n Specializations of field\n";
-    if (field_def->getNameAsString() != "field") {
-      llvm::errs() << "*** internal error \'field\'\n";
-      exit(0);
-    }
-      
-    for (auto spec = field_def->spec_begin(); spec != field_def->spec_end(); spec++ ) {
-      // is implicit, so create the specialization
-      auto & args = spec->getTemplateArgs();
-      for (unsigned int i=0; i<args.size(); i++) {
-        if (TemplateArgument::ArgKind::Type != args.get(i).getKind()) {
-          llvm::errs() << "*** mystery: expecting type arg\n";
-          exit(0);
-        }
-        llvm::errs() << "arg type " << args.get(i).getAsType().getAsString();
-      }
-      if (spec->isExplicitSpecialization()) llvm::errs() << " explicit";
-      llvm::errs() << '\n';
-    }
-
-
     
     // Now emit rewritten buffers.
 

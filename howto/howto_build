@@ -2,14 +2,16 @@
 See page https://apt.llvm.org/
 
 * add deb to sources (this for ubuntu 16.04 xenial)
-sudo add-apt-repository 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main'
+sudo add-apt-repository 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main'
 
 * with key
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 
 * install
 sudo apt update
-sudo apt install clang-7 clang-tools-7 clang-7-doc libclang-common-7-dev libclang-7-dev libclang1-7 clang-format-7 python-clang-7
+sudo apt install clang-8 clang-tools-8 clang-8-doc libclang-common-8-dev libclang-8-dev libclang1-8 clang-format-8 python-clang-8
+
+* Clang 8 (at least) required, change in libtooling API in 7->8
 
 --------------------
 Or:

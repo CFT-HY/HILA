@@ -1,6 +1,8 @@
 
 #include "field.h"
 
+
+
 template <int n, typename T>
 struct s {
   T c[n];

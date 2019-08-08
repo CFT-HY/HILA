@@ -45,6 +45,8 @@ public:
   bool VisitStmt(Stmt *s);
 
   bool VisitVarDecl(VarDecl *var);
+
+  bool VisitDecl( Decl * D);
   
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
@@ -58,6 +60,10 @@ public:
   /// and a hook for getting templated class template params
   bool VisitClassTemplateDecl(ClassTemplateDecl *D);
 
+  int handle_field_specializations(ClassTemplateDecl *D);
+
+  // void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
+  
   bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
   bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
   

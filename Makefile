@@ -16,7 +16,7 @@
 # directories of LLVM, Clang in tools/clang/, etc.
 #
 
-LLVM_SRC_PATH := /usr/lib/llvm-7
+LLVM_SRC_PATH := /usr/lib/llvm-8
 
 # LLVM_BUILD_PATH is the directory in which you built LLVM - where you ran
 # configure or cmake.
