@@ -30,7 +30,8 @@ public:
   MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
   MyASTVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
 
-  bool shouldVisitTemplateInstantiations() { return true; } // is false by default, but still goes?
+  bool shouldVisitTemplateInstantiations() const { return true; }
+  // is false by default, but still goes?
 
   /// TraverseStmt is called recursively for each level in the AST
   /// We can keep track of the level here
@@ -150,7 +151,9 @@ public:
 
   /// shortcut for "pragma"-like transformer_control("cmd")-functin
   bool handle_control_stmt(Stmt *s);
-  
+
+  /// utility used in inserting stuff after new line in buffer
+  SourceLocation getSourceLocationAfterNewLine( SourceLocation l );
   
 };
 

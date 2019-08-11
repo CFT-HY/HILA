@@ -271,7 +271,7 @@ public:
 
   // Overloading =
   field<T>& operator= (const field<T>& rhs) {
-    (*this)[ALL] = rhs[X];
+    this[0][ALL] = rhs[X];
     return *this;
   }
   field<T>& operator= (const T& d) {

@@ -146,11 +146,12 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   if (semi_at_end) {
     TheRewriter.RemoveText(getRangeWithSemi(S));
   } else {
-    TheRewriter.RemoveText(S->getSourceRange());
+     TheRewriter.RemoveText(S->getSourceRange());
   }
     
   // TheRewriter.InsertText(E->getBeginLoc(), "//-  "+ global.full_loop_text + '\n', true, true );
-  TheRewriter.InsertText(S->getBeginLoc(), indent_string(code), true, true);
+  TheRewriter.InsertText(getSourceLocationAfterNewLine(S->getEndLoc()),
+                         indent_string(code), true, true);
   //TheRewriter.InsertText(getRangeWithSemi(S,false).getEnd().getLocWithOffset(1),
   //                        call, true, true);
   //replace_expr(S, call);

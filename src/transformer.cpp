@@ -134,7 +134,23 @@ bool MyASTVisitor::is_field_expr(Expr *E) {
 bool MyASTVisitor::is_field_decl(ValueDecl *D) {
   return( D && D->getType().getAsString().find(field_type) != std::string::npos);
 }
-  
+
+SourceLocation MyASTVisitor::getSourceLocationAfterNewLine( SourceLocation l ) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  for (int i=0; i<10000; i++) {
+    bool invalid = false;
+    const char * c = SM.getCharacterData(l.getLocWithOffset(i),&invalid);
+    if (invalid) {
+      // no new line found in buffer.  return current loc, could be false!
+      llvm::errs() << " Transformer: no new line found in buffer, internal error\n";
+      return( l.getLocWithOffset(i) );
+    }
+    if (*c == '\n') return( l.getLocWithOffset(i+1) );
+  }
+  return l;
+}
+
+
   
 // // Define a pragma handler for #pragma heLpp
 // // NOTE: This is executed before AST analysis
@@ -236,7 +252,9 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
     // This is for templated expressions
     // for some reason, expr a[X] "getBase() gives X, getIdx() a...
     if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-      if (is_field_expr(ASE->getLHS())) {
+      Expr * lhs = ASE->getLHS()->IgnoreParens();
+      
+      if (is_field_expr(ASE->getLHS()->IgnoreParens())) {
         // llvm::errs() << " FP: and field\n";
         std::string s = get_expr_type(ASE->getRHS());
         if (s == "parity" || s == "parity_plus_direction") {
@@ -1051,14 +1069,16 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // don't go through instantiations (for now!)
   // analyse templates directly
   if (f->isTemplateInstantiation()) {
+    
     state::skip_children = 1;
     return true;
   }
 
   
-  if ((f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_NonTemplate
+  if (//(f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_NonTemplate
        // || f->getTemplatedKind() == FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization
-       ) && f->hasBody()) {
+       //) &&
+      f->hasBody()) {
     global.currentFunctionDecl = f;
     
     Stmt *FuncBody = f->getBody();
@@ -1124,15 +1144,37 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
       SSBefore << global.function_tpl->getParam(i)->getNameAsString() << " ";
     SSBefore << "\n";
     SourceLocation ST = tf->getSourceRange().getBegin();
-    TheRewriter.InsertText(ST, SSBefore.str(), true, true);
 
     global.location.function = ST;
     // start tracking the template
     
     global.in_func_template = true;
-    TraverseDecl(f);
+    // TraverseDecl(f);   // Let's not traverse the template any more!
     global.in_func_template = false;
+    
+    // check specializations -- for clang 8 the iterator is over FunctionDecl,
+    // for documentation (clang 10) it is different type!!!
+    // TODO: prepare for API change!!!
+    for (auto spec = tf->spec_begin(); spec != tf->spec_end(); spec++ ) {
+      auto tal = spec->getTemplateSpecializationArgs();
 
+      SSBefore << "// Specialization args ";
+      for (int i=0; i<tal->size(); i++) {
+        if (tal->get(i).getKind() == TemplateArgument::ArgKind::Type) {
+          SSBefore << tal->get(i).getAsType().getAsString() << " ";
+        }
+      }
+      // if (spec->isExplicitSpecialization()) SSBefore << " explicit";
+      SSBefore << "\n";
+
+      spec->dump();
+      TraverseDecl(*spec);
+      
+    }
+
+    TheRewriter.InsertText(ST, SSBefore.str(), true, true);
+
+   
     state::skip_children = 1;
     
   }
@@ -1184,18 +1226,6 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
       field_storage_type_decl = D;
     }
   }    
-
-  // get the "field" class, find specializations
-  // if (D->getNameAsString() == "field") {
-  //   int i = 0;
-  //   llvm::errs() << "**** It's field\n";
-      
-  //   for (auto spec = D->spec_begin(); spec != D->spec_end(); spec++ ) {
-  //     llvm::errs() << "  iterator " << ++i << '\n';
-  //     if (spec->isExplicitSpecialization()) llvm::errs() << "explicit\n";
-  //   }
-  // }
-
   
   return true;
 }
@@ -1240,13 +1270,8 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       + typestr +"> {\n  " + typestr + " c[10];\n};\n";
 
     // insert after new line
-    SourceLocation l = field_storage_type_decl->getSourceRange().getEnd();
-    SourceManager &SM = TheRewriter.getSourceMgr();
-    int i;
-    for (i=1; i<40 && *(SM.getCharacterData(l.getLocWithOffset(i))) != '\n'; i++);
-    TheRewriter.InsertText(field_storage_type_decl->getSourceRange().getEnd().getLocWithOffset(i+1),
-                           fst_spec,
-                           true,true);
+    SourceLocation l = getSourceLocationAfterNewLine( field_storage_type_decl->getSourceRange().getEnd() );
+    TheRewriter.InsertText(l, fst_spec, true,true);
     
   }
   return(count);
@@ -1283,19 +1308,18 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
 //}
 
 
-// bool MyASTVisitor::
-// VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
-//   //if (D->getNameAsString() == "field")
-//   {
-    
-//     const TemplateArgumentList & tal = D->getTemplateArgs();
-//     llvm::errs() << " *** field with args ";
-//     for (unsigned i = 0; i < tal.size(); i++) 
-//       llvm::errs() << TheRewriter.getRewrittenText(tal.get(i).getAsExpr()->getSourceRange()) << " ";
-//     llvm::errs() << "\n";
-//   }
-//   return true;
-// }
+bool MyASTVisitor::
+VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
+  if (D->getNameAsString() == "field")
+    {    
+      const TemplateArgumentList & tal = D->getTemplateArgs();
+      llvm::errs() << " *** field with args ";
+      for (unsigned i = 0; i < tal.size(); i++) 
+        llvm::errs() << TheRewriter.getRewrittenText(tal.get(i).getAsExpr()->getSourceRange()) << " ";
+      llvm::errs() << "\n";
+    }
+  return true;
+}
 
 
 #if 1
@@ -1348,7 +1372,6 @@ public:
   MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { Rewriterp = &R; }
 
   // #define use_HandleTopLevelDecl
-  
 #ifdef use_HandleTopLevelDecl
 
   // THIS IS NOT IN USE NOW; SHOULD BE DELETED AT SOME POINT
@@ -1408,6 +1431,7 @@ public:
       SourceLocation beginloc = d->getBeginLoc();
       // analyze only user files (these should be named)
       if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
+      //if (!SM.isInSystemHeader(beginloc)) {
         // llvm::errs() << "Processing file " << SM.getFilename(beginloc) << "\n";
         // TODO: ensure that we go only through files which are needed!
 

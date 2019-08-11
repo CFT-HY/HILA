@@ -1,34 +1,26 @@
 
 #include "field.h"
 
-
-
-template <int n, typename T>
-struct s {
-  T c[n];
-};
-
-using vec = s<3,double>;
-
-
-template <>
-class field<int>  {
-  int j;
-};
+template <typename T>
+field<T> sum(field<T> a, field<T> b) {
+  field<T> r;
+  r[ALL] = a[X] + b[X];
+  return r;
+}
 
 
 // extern field<int> glob;
 
 int main()
 {
-  field<double> lf;
-  field<double> dd;
-  field<double> t;
-  field<int> k;
-  field<vec> sa;
-  // struct s<int> is;
+  field<double> x;
+  field<int> y;
   
-  lf[ALL] = dd[X]+t[X];
+  x = sum(x,x);
+  // y = sum(y,y);
+
+  x = x+x;
+  
 
   // is.c = 2;
 
