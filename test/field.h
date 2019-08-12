@@ -7,6 +7,7 @@
 
 #define NDIM 4
 #define N 10
+#define VECTOR_LENGTH 1
 
 // HACK
 void transformer_control(const char *);
@@ -217,7 +218,8 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 // Placemarker, will be specialized by transformer
 template <typename T>
 struct field_storage_type {
-  T c;
+  T c[VECTOR_LENGTH];
+  T& operator[] (const int i) { return c[i]; }
 };
 
 
@@ -260,7 +262,11 @@ public:
   
   // Overloading [] 
   // placemarker, should not be here
-  T& operator[] (const int i) { return data[i]; }
+  T& operator[] (const int i) { 
+    int vector_number = N/VECTOR_LENGTH;
+    int vector_index = N%VECTOR_LENGTH;
+    return data[vector_number][vector_index]; 
+  }
 
   // these give the field_element -- WILL BE modified by transformer
   field_element<T>& operator[] (const parity p) const;
