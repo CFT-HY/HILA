@@ -1,10 +1,12 @@
 
 #include "field.h"
 
-template <typename T>
-field<T> sum(field<T> a, field<T> b) {
+template <typename T, typename A>
+field<T> sum(const field<T> a, const field<A> b) {
   field<T> r;
   r[ALL] = a[X] + b[X];
+
+  
   return r;
 }
 
@@ -13,19 +15,19 @@ field<T> sum(field<T> a, field<T> b) {
 
 int main()
 {
-  field<double> x;
+  field<double> a,x;
   field<int> y;
   
-  x = sum(x,x);
-  // y = sum(y,y);
-
-  x = x+x;
+  x = sum(a,x);
+  y = sum(y,y);
+  
+  //x = x+x;
   
 
   // is.c = 2;
 
   
-  // i[ALL] = i[X]+j[X];
+  x[ALL] = x[X]+x[X];
   
   
   return 0;

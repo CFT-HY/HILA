@@ -55,8 +55,8 @@ struct field_ref {
   Expr * parityExpr;
   Expr * dirExpr;
   struct field_info * info;
-  unsigned nameInd, parityInd;
-  unsigned dirInd;
+  // unsigned nameInd, parityInd;
+  int direction;
   bool is_changed;
 };
 
@@ -91,7 +91,7 @@ struct field_info {
 
 struct var_ref {
   DeclRefExpr *ref;
-  unsigned ind;
+  // unsigned ind;
   std::string assignop;
   bool is_assigned;
 };

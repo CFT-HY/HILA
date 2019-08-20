@@ -24,7 +24,7 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 private:  
   Rewriter &TheRewriter;
   ASTContext *Context;
-  srcBuf Buf;
+  srcBuf *writeBuf;
 
 public:
   MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
@@ -140,21 +140,23 @@ public:
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
 
-  std::string generate_kernel(Stmt *S, bool semi_at_end);
-  std::string generate_in_place(Stmt *S, bool semi_at_end);
+  std::string generate_kernel(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_in_place(Stmt *S, bool semi_at_end, srcBuf &sb);
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();
 
   /// Change field references within loops
-  void replace_field_refs();
+  void replace_field_refs(srcBuf &sb);
 
   /// shortcut for "pragma"-like transformer_control("cmd")-functin
   bool handle_control_stmt(Stmt *s);
 
   /// utility used in inserting stuff after new line in buffer
   SourceLocation getSourceLocationAfterNewLine( SourceLocation l );
-  
+
+  void set_writeBuf(const FileID fid);
+
 };
 
 #endif

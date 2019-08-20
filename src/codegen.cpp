@@ -74,7 +74,9 @@ std::string MyASTVisitor::make_kernel_name() {
 /// The main entry point for code generation
 
 void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
- 
+
+  srcBuf loopBuf( &TheRewriter, S);
+  
   // is it compound stmt: { } -no ; needed
   bool semi_at_end = !(isa<CompoundStmt>(S));
  
@@ -119,10 +121,10 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   
   // Here generate kernel, or produce the loop in place
   if (target.kernelize) {
-    code += generate_kernel(S,semi_at_end);
+    code += generate_kernel(S,semi_at_end,loopBuf);
   } else {
     // Now in place
-    code += generate_in_place(S,semi_at_end);
+    code += generate_in_place(S,semi_at_end,loopBuf);
   }
   
   // Check reduction variables
@@ -143,15 +145,18 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   code += "}\n//----------";
   
   // Remove old code + replace
-  if (semi_at_end) {
-    TheRewriter.RemoveText(getRangeWithSemi(S));
-  } else {
-     TheRewriter.RemoveText(S->getSourceRange());
-  }
+  // if (semi_at_end) {
+  //   TheRewriter.RemoveText(getRangeWithSemi(S));
+  // } else {
+  //    TheRewriter.RemoveText(S->getSourceRange());
+  // }
     
   // TheRewriter.InsertText(E->getBeginLoc(), "//-  "+ global.full_loop_text + '\n', true, true );
-  TheRewriter.InsertText(getSourceLocationAfterNewLine(S->getEndLoc()),
-                         indent_string(code), true, true);
+  writeBuf->insert(getSourceLocationAfterNewLine(S->getEndLoc()),
+                   indent_string(code), true);
+
+  // TheRewriter.InsertText(getSourceLocationAfterNewLine(S->getEndLoc()),
+  //                    indent_string(code), true, true);
   //TheRewriter.InsertText(getRangeWithSemi(S,false).getEnd().getLocWithOffset(1),
   //                        call, true, true);
   //replace_expr(S, call);
@@ -159,11 +164,12 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 }
 
 
-std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end) {
+std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   
-  replace_field_refs();
+  replace_field_refs(loopBuf);
   
-  std::string code = "forparity("+looping_var+", "+parity_in_this_loop+") {\n" + Buf.dump();
+  std::string code = "forparity("+looping_var+", "+parity_in_this_loop+") {\n" +
+    loopBuf.dump();
   if (semi_at_end) code += ';';
   code += "\n}\n";
 
@@ -172,7 +178,7 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end) {
 
 /// return value: kernel call code
 
-std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end) {
+std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
 
   // Get kernel name - use line number or file offset (must be deterministic)
   std::string kernel_name = make_kernel_name();
@@ -223,34 +229,36 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end) {
       
       // replace_expr(ep, varname);
       for (var_ref & vr : vi.refs) {
-        Buf.replace( vr.ind, varname );
+        loopBuf.replace( vr.ref, varname );
       }
     }
   }
   // finally, change the references to variables in the body
-  replace_field_refs();
+  replace_field_refs(loopBuf);
       
-  kernel += ")\n{\nforparity("+looping_var+", "+parity_in_this_loop+") {\n" + Buf.dump();
+  kernel += ")\n{\nforparity("+looping_var+", "+parity_in_this_loop+") {\n" + loopBuf.dump();
   if (semi_at_end) kernel += ';';
   kernel += "\n}\n}\n//----------\n";
   call += ");\n";
 
   // Finally, emit the kernel
-  TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
+  // TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
+  writeBuf->insert(global.location.function, indent_string(kernel),true);
 
   return call;
 }
 
 
 /// Change field references within loops
-void MyASTVisitor::replace_field_refs() {
+void MyASTVisitor::replace_field_refs(srcBuf & loopBuf) {
   
   for ( field_ref & le : field_ref_list ) {
-    Buf.replace( le.nameInd, le.info->new_name );
+    loopBuf.replace( le.nameExpr, le.info->new_name );
     if (le.dirExpr != nullptr) {
-      Buf.replace(le.parityInd, "neighbour(" + looping_var + ", " + get_stmt_str(le.dirExpr)+")");
+      loopBuf.replace(le.parityExpr,
+                       "neighbour(" + looping_var + ", " + get_stmt_str(le.dirExpr)+")");
     } else {
-      Buf.replace(le.parityInd, looping_var);
+      loopBuf.replace(le.parityExpr, looping_var);
     }      
   }                        
 }

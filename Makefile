@@ -100,6 +100,7 @@ OBJECTS = \
   $(BUILDDIR)/transformer.o \
   $(BUILDDIR)/stringops.o \
   $(BUILDDIR)/codegen.o \
+  $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/optionsparser.o
 
 $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile

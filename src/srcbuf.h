@@ -7,154 +7,106 @@
 // NOTE: It's probably due to the funny use of SourceRange in Expr and Stmt.
 // Easy to make errors
 
-struct srcbuftoken {
-  Expr * srcExpr;
-  size_t begin, len;
-};
+// This stores the original text in string buffer buf.  In addtion,
+// "vector<int> ext_ind" of length buf is allocated, and extents are
+// stored in "vector<string> extents"
+// ext_ind[i] == 1: nothing special
+// ext_ind[i] > 1: content of  extents[ext_ind[i]-2] is inserted before buf[i]
+// ext_ind[i] == 0: content of buf[i] skipped.
+// ext_ind[i] < -1: content of extents[-ext_ind[i]-2] is inserted before buf[i],
+//                  and buf[i] skipped 
+//
+// Example:  buf="0123456789", eind="1111211111", extents[0] = "cat"
+//           would read as "0123cat456789"
+//       or, if eind="1111(-2)0011" otherwise as above reads "0123cat789"
+
+
+// struct srcbuftoken {
+//   Expr * srcExpr;
+//   int begin;
+//   int end;
+// };
+
+
+// node is Stmt, Decl or Expr - depending on the type of context
 
 class srcBuf {
 private:
-  std::string buffer;
-  Stmt *bufStmt;
-  std::vector<srcbuftoken> tokens;
+  std::string buf;
+  std::vector<int> ext_ind;
+  std::vector<std::string> extents;
+  std::vector<int> free_ext;
+  // std::vector<srcbuftoken> tokens;
   Rewriter * myRewriter;
-  size_t startOffset;
+  unsigned first_offset, full_length;
 
 public:
-  srcBuf() {
-    buffer.clear();
-    bufStmt = nullptr;
-  }
-  srcBuf( Rewriter * R, Stmt *s ) {
-    create( R, s );
-  }
-  ~srcBuf() {
-    clear();
-  }
+  srcBuf() { buf.clear(); }
 
-  // this routine creates the buffer
-  void create( Rewriter * R, Stmt *s ) {
-    bufStmt = s;
-    myRewriter = R;
-    buffer = myRewriter->getRewrittenText(s->getSourceRange());
-    SourceManager &SM = myRewriter->getSourceMgr();
-    startOffset = SM.getFileOffset( s->getSourceRange().getBegin() );
-    tokens.clear();
+  ~srcBuf() { clear(); }
 
-    
-    // llvm::errs() << buffer << '\n';
-    // llvm::errs() << " * Start offs " << startOffset << '\n';
-  }
+  srcBuf( Rewriter *R, Expr *E ) { create(R,E); }
+  srcBuf( Rewriter *R, Stmt *S ) { create(R,S); }
+  srcBuf( Rewriter *R, Decl *D ) { create(R,D); }
 
-  void clear() {
-    buffer.clear();
-    bufStmt = nullptr;
-    tokens.clear();
-  }
-
-  bool isOn() { return bufStmt != nullptr; }
+  int get_offset( SourceLocation s );
   
-  // mark the location of the expression pointed by e
-  unsigned markExpr( Expr *e ) {
-    srcbuftoken t;
-
-    size_t start = myRewriter->getSourceMgr().getFileOffset( e->getSourceRange().getBegin() );
+  int get_index( SourceLocation s ) { return get_offset(s) - first_offset; }
+  
+  void create( Rewriter *R, const SourceRange &sr);
+  void create( Rewriter * R, Expr *e );
+  void create( Rewriter * R, Stmt *s );
+  void create( Rewriter * R, Decl *d );
     
-    // llvm::errs() << " ** SrcRange: " << startOffset <<" " << start << '\n';
+  void clear();
 
-    t.begin = start - startOffset;
-    t.len   = myRewriter->getRangeSize( e->getSourceRange() );
-    t.srcExpr = e;
+  int get_index_range_size(int i1, int i2);
+  
+  // the mapped size of the range
+  int get_sourcerange_size(const SourceRange & s);
 
-    tokens.push_back(t);
+  std::string get(int index, int len);
+  std::string get(SourceLocation s, int len);
+  std::string get(const SourceRange & s);
 
-    // Check just in case - the tokens should be the same in this case
+  // get edited string originally from range
+  std::string get_range(int i1, int i2);
 
-    std::string tok( myRewriter->getRewrittenText(e->getSourceRange()) );
-    if ( tok.compare(buffer.substr(t.begin,t.len)) != 0 ) {
-      llvm::errs() << " * Buffer marking error, src: " << tok
-                   << "  buffer " << buffer.substr(t.begin,t.len) << '\n';
-      exit(0);
-    }
-    // ret index
-    return ( tokens.size() - 1 );
-  }
+  std::string dump();
 
-  // insert string to position pos - if incl == true, add 
-  void insert( size_t pos, const std::string &s, bool incl = false ) {
-    assert( pos <= buffer.length() );
-    // llvm::errs() << " -- Inserting substr: " << s << " at pos " << pos << '\n';
-    unsigned len = s.length();
-    buffer.insert( pos, s );
-    for ( size_t i=0; i<tokens.size(); i++ ) {
-      if (tokens[i].begin > pos || (!incl && tokens[i].begin == pos)) tokens[i].begin += len;
-      else if (incl && tokens[i].begin == pos) tokens[i].len += len;
-      else if (tokens[i].begin + tokens[i].len >= pos) tokens[i].len += len;
-    }
-  }
+  bool isOn();
 
-  void insert(Expr *e, const std::string & s, bool incl = false) {
-    insert(myRewriter->getSourceMgr().getFileOffset(e->getSourceRange().getBegin())
-           - startOffset,
-           s, incl);
-  }
+  char get_original(int i);
+  int find_original(int idx, const char c);
+  int find_original(SourceLocation start, const char c);
+  int find_original(int idx, const std::string &s);
+  int find_original(SourceLocation start, const std::string &c);
 
-  void remove( size_t b, size_t len ) {
-    // llvm::errs() << " -- Buffer: " << buffer << '\n';
-    size_t e = b+len-1;
-    assert( e < buffer.length() );
-    // llvm::errs() << " -- Removing substr: " << buffer.substr(b, len) << '\n';
-    buffer.erase( b, len );
-    for ( size_t i=0; i<tokens.size(); i++ ) {
-      size_t end = tokens[i].begin + tokens[i].len - 1;
-      if (tokens[i].begin > e ) {
-        tokens[i].begin -= len;
-      } else if (tokens[i].begin >= b) {
-        if (end > e) tokens[i].len -= e-tokens[i].begin+1;
-        else tokens[i].len = 0;
-        tokens[i].begin = b;
-      } else {
-        if (end >= e) tokens[i].len -= len;
-        else if (end >= b) tokens[i].len = end-b+1;
-      }
-    }
-  }
+  bool is_extent(int i);
 
-  void remove(Expr *e) {
-    remove(myRewriter->getSourceMgr().getFileOffset(e->getSourceRange().getBegin())
-           - startOffset,
-           myRewriter->getRangeSize(e->getSourceRange()));
-  }
-  void remove(unsigned i) {
-    remove(tokens[i].begin, tokens[i].len);
-  }
+  void remove_extent(int i);
+
+  std::string * get_extent_ptr(int i);
     
+  // erase text between index values (note: not length!)
+  void remove(int index1, int index2);
+  void remove(const SourceRange &s);
+  void remove(Expr *E);
+
+  void insert(int i, const std::string & s, bool incl_before = false);
+  void insert(SourceLocation sl, const std::string & s,
+              bool incl_before = false);
+  void insert(Expr *e, const std::string & s, bool incl_before = false);
   
   // replace is a remove + insert pair, should write with a single operation
-  void replace( size_t b, size_t len, const std::string &s ) {
-    remove(b,len);
-    insert(b,s,true);
-  }
+  void replace( int i1, int i2, const std::string &s );
+  void replace( const SourceRange & r, const std::string &s );
+  void replace( Expr *e, const std::string &s );
 
-  void replace( unsigned ind, const std::string &s) {
-    assert(ind < tokens.size());
-    replace( tokens[ind].begin, tokens[ind].len, s );
-  }
+  void replace_tokens(SourceRange r,
+                      const std::vector<std::string> &a,
+                      const std::vector<std::string> &b);
 
-  std::string dump() {
-    return buffer;
-  }
-
-  std::string substr( size_t b, size_t len ) {
-    assert(b+len-1 < buffer.size());
-    return buffer.substr(b, len );
-  }
-  
-  std::string token( unsigned ind ) {
-    assert(ind < tokens.size());
-    return substr( tokens[ind].begin, tokens[ind].len );
-  }
-  
     
 };
 
