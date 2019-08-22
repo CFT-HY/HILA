@@ -5,7 +5,7 @@
 // Uses Clang RecursiveASTVisitor and Rewriter 
 // interfaces
 //
-// Kari Rummukainen 2017-18
+// Kari Rummukainen 2017-19
 // 
 //------------------------------------------------------------------------------
 #include <sstream>
@@ -40,7 +40,7 @@ namespace state {
   int skip_next = 0;
   bool in_loop_body = false;
   bool accept_field_parity = false;
-  bool is_modified = false;
+  bool loop_found = false;
   bool dump_ast_next = false;
 }
 
@@ -742,14 +742,14 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
           
   // Emit the original command as a commented line
   writeBuf->insert(ls->getSourceRange().getBegin(),
-                   comment_string(global.full_loop_text) + "\n",true);
+                   comment_string(global.full_loop_text) + "\n",true,true);
 
   global.full_loop_text = "";
 
   // don't go again through the arguments
   state::skip_children = 1;
 
-  state::is_modified = true;
+  state::loop_found = true;
   
   return true;
 }
@@ -947,7 +947,7 @@ bool MyASTVisitor::handle_control_stmt(Stmt *s) {
             if (command == "dump-ast") state::dump_ast_next = true;
             
             if (writeBuf->isOn()) remove_expr_list.push_back(CE);
-            writeBuf->insert(s->getSourceRange().getBegin(),"//-- ",true);
+            writeBuf->insert(s->getSourceRange().getBegin(),"//-- ",true,false);
               
             state::skip_children = 1;
             return true;
@@ -1099,7 +1099,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
              << " of template type " << f->getTemplatedKind()
              << "\n";
     SourceLocation ST = f->getSourceRange().getBegin();
-    writeBuf->insert(ST, SSBefore.str(), true);
+    writeBuf->insert(ST, SSBefore.str(), true,true);
     // TheRewriter.InsertText(ST, SSBefore.str(), true, true);
 
     llvm::errs() << "Function decl " << FuncName << '\n';
@@ -1111,7 +1111,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     SSAfter << "\n// End function " << FuncName;
     ST = FuncBody->getEndLoc().getLocWithOffset(1);
     // TheRewriter.InsertText(ST, SSAfter.str(), true, true);
-    writeBuf->insert(ST, SSAfter.str(), true);
+    writeBuf->insert(ST, SSAfter.str(), true, true);
 
     //TraverseStmt(FuncBody);
     //state::skip_children = 1;
@@ -1136,21 +1136,23 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
     FunctionDecl *f = tf->getTemplatedDecl();
     // Add comment before
 
-    global.function_tpl = tf->getTemplateParameters();
+    TemplateParameterList * tpl = tf->getTemplateParameters();
+    global.function_tpl = tpl;
     global.currentFunctionDecl = f;
 
     std::vector<std::string> template_params = {};
     
-    std::stringstream SSBefore;
-    SSBefore << "// Begin function template " << f->getNameInfo().getName().getAsString()
-             << " of template type " << f->getTemplatedKind()
-             << " with template params " ;
-    for (unsigned i = 0; i < global.function_tpl->size(); i++) {
-      SSBefore << global.function_tpl->getParam(i)->getNameAsString() << " ";
-      template_params.push_back(global.function_tpl->getParam(i)->getNameAsString());
+    // std::stringstream SSBefore;
+    // SSBefore << "// Begin function template " << f->getNameInfo().getName().getAsString()
+    //          << " of template type " << f->getTemplatedKind()
+    //          << " with template params " ;
+    for (unsigned i = 0; i < tpl->size(); i++) {
+      // SSBefore << tpl->getParam(i)->getNameAsString() << " ";
+      template_params.push_back(tpl->getParam(i)->getNameAsString());
     }
       
-    SSBefore << "\n";
+    // SSBefore << "\n";
+
     SourceLocation ST = tf->getSourceRange().getBegin();
 
     global.location.function = ST;
@@ -1176,93 +1178,89 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
           TemplateSpecializationKind::TSK_ImplicitInstantiation) {
         auto tal = f->getTemplateSpecializationArgs();
 
-        // buffer whole template
+        // 1st test if we need to do anything
+        // buffer the template and traverse through it
         srcBuf templateBuf( &TheRewriter, tf );
         writeBuf = &templateBuf;
 
-        // wipe params between < ... >
-        int start = templateBuf.find_original(0,'<') + 1;
-        int j = 1;
-        int k,i = start;
-        for(k=1 ; k>0 && j>0; i++) {
-          k = templateBuf.get_original(i);
-          if (k == '<') j++;
-          else if (k == '>') j--;
-        }
-        if (k<0) {
-          reportDiag(DiagnosticsEngine::Level::Error,
-                     tf->getSourceRange().getBegin(),
-                     "Could not handle template parameters" );
-          return(false);
-        }
-        templateBuf.remove(start,i-2);   
-
-        // Appropriate return type
-        templateBuf.replace( f->getReturnTypeSourceRange(), f->getReturnType().getAsString() );
-
-        // generate name<template params>
-        std::string name = f->getNameInfo().getAsString() + "<";
-
-        std::vector<std::string> template_args = {};
-        
-        //SourceLocation 
-        //handle_specialization_args( 
-        std::string info = "// Specialization args ";
-        for (int i=0; i<tal->size(); i++) {
-          if (tal->get(i).getKind() == TemplateArgument::ArgKind::Type) {
-            info += tal->get(i).getAsType().getAsString() + " ";
-            if (i>0) name += ", ";
-            name += tal->get(i).getAsType().getAsString();
-            template_args.push_back(tal->get(i).getAsType().getAsString());
-          }
-        }
-        
-        name += ">";
-
-        // if (f->isExplicitSpecialization()) SSBefore << " explicit";
-        info += "\n";
-
-        if (template_params.size() != template_args.size()) {
-          for (auto & s : template_params) 
-            llvm::errs() << "p " << s << '\n';
-
-          for (auto & s : template_args) 
-            llvm::errs() << "a " << s << '\n';
-          
-          reportDiag(DiagnosticsEngine::Level::Error,
-                     tf->getSourceRange().getBegin(),
-                     "Template param/arg mismatch!" );
-          return(false);
-        }
-        
-        templateBuf.replace( f->getNameInfo().getSourceRange(), name );
-
-        // Now parameters of the function
-        for ( auto par : f->parameters() ) {
-          // std::string p = templateBuf.get(par->getSourceRange());
-          // llvm::errs() << "Par srcrange " << p;
-          // std::string s = replace_tokens(p, template_params, template_args);
-          // llvm::errs() << "  replaced by " << s << '\n';
-          
-          templateBuf.replace_tokens(par->getSourceRange(),
-                                     template_params, template_args);
-        }
-
-        templateBuf.replace_tokens(f->getBody()->getSourceRange(),
-                                   template_params, template_args);
-        
-        llvm::errs() << "1st 100 chars: " << templateBuf.get(0,100) << '\n';
-      
-        bool mod = state::is_modified;
-        state::is_modified = false;  // use this to flag
+        bool found = state::loop_found;
+        state::loop_found = false;  // use this to flag
 
         TraverseStmt(f->getBody());
+        templateBuf.clear();
 
-        if (state::is_modified) {
-          templateBuf.insert(0,info,true);
-          writeBuf_saved->insert( insertloc, templateBuf.dump(), false);
+        if (state::loop_found) {
+          // OK, need to convert -- clear buffer and refill it
+          templateBuf.create( &TheRewriter, tf );
+          writeBuf = &templateBuf;
+
+          // Appropriate return type
+          templateBuf.replace( f->getReturnTypeSourceRange(), f->getReturnType().getAsString() );
+
+          // generate name<template params>
+          std::string name = f->getNameInfo().getAsString() + "<";
+
+          std::vector<std::string> template_args = {};
+        
+          //SourceLocation 
+          //handle_specialization_args( 
+          std::string info = "// ---- Generated specialization with type args ";
+          bool first = true;
+          for (int i=0; i<tal->size(); i++) {
+            if (tal->get(i).getKind() == TemplateArgument::ArgKind::Type) {
+              info += tal->get(i).getAsType().getAsString() + " ";
+              if (!first) name += ", ";
+              first = false;
+              name += tal->get(i).getAsType().getAsString();
+
+              template_args.push_back(tal->get(i).getAsType().getAsString());
+
+              // wipe type params in "template < ... >", incl. comma
+              templateBuf.remove_with_comma(tpl->getParam(i)->getSourceRange());
+            
+            } else {
+              // Now arg not of Type, mark with empty - not matched
+              template_args.push_back("");
+              template_params.at(i) = "";   // TODO: not sure if this is a good idea
+            }
+          }
+        
+          name += ">";
+
+          // if (f->isExplicitSpecialization()) SSBefore << " explicit";
+          info += "\n";
+
+          if (template_params.size() != template_args.size()) {
+            reportDiag(DiagnosticsEngine::Level::Error,
+                       tf->getSourceRange().getBegin(),
+                       "Template param/arg number mismatch!" );
+            return(false);
+          }
+
+          // function name -> name<..>
+          templateBuf.replace( f->getNameInfo().getSourceRange(), name );
+
+          // Now parameters of the function
+          for ( auto par : f->parameters() ) {          
+            templateBuf.replace_tokens(par->getSourceRange(),
+                                       template_params, template_args);
+          }
+
+          // replace template params in func body
+          templateBuf.replace_tokens(f->getBody()->getSourceRange(),
+                                     template_params, template_args);
+
+          // traverse again, with right arguments
+          TraverseStmt(f->getBody());
+
+          templateBuf.insert(0,info,true,false);
+
+          writeBuf_saved->insert( insertloc,
+                                  templateBuf.dump() + "\n//---------\n",
+                                  false, false);
+
         } else {
-          state::is_modified = mod;
+          state::loop_found = found;
         }
 
         templateBuf.clear();
@@ -1271,9 +1269,8 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
     
     writeBuf = writeBuf_saved;
 
-    // TheRewriter.InsertText(ST, SSBefore.str(), true, true);
-
-    writeBuf->insert(ST,SSBefore.str(),true);
+    // SSBefore << '\n';
+    // writeBuf->insert(ST,SSBefore.str(),true,true);
    
     state::skip_children = 1;
     
@@ -1301,7 +1298,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     SSBefore << "\n";
     SourceLocation ST = D->getSourceRange().getBegin();
     // TheRewriter.InsertText(ST, SSBefore.str(), true, true);
-    writeBuf->insert(ST, SSBefore.str(), true);
+    writeBuf->insert(ST, SSBefore.str(), true, true);
     // end block
     
     global.in_class_template = true;
@@ -1320,7 +1317,6 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
       // handleTranslationUnit() as the entry point
 
       // Let us save this Decl for a revisit after AST is complete
-      llvm::errs() << "GOT FIELD DEFINITION\n";
       handle_field_specializations(D);
 
     } else if (D->getNameAsString() == "field_storage_type") {
@@ -1336,7 +1332,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
   // save global, perhaps needed (perhaps not)
   field_decl = D;
 
-  llvm::errs() << "+++++++\n Specializations of field\n";
+  // llvm::errs() << "+++++++\n Specializations of field\n";
 
   int count = 0;
   for (auto spec = D->spec_begin(); spec != D->spec_end(); spec++ ) {
@@ -1374,7 +1370,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     SourceLocation l =
       getSourceLocationAfterNewLine( field_storage_type_decl->getSourceRange().getEnd() );
     // TheRewriter.InsertText(l, fst_spec, true,true);
-    writeBuf->insert(l, fst_spec, true);
+    writeBuf->insert(l, fst_spec, true, false);
     
   }
   return(count);
@@ -1443,7 +1439,7 @@ bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
     SSBefore << "\n";
     SourceLocation ST = method->getSourceRange().getBegin();
     // TheRewriter.InsertText(ST, SSBefore.str(), true, true);
-    writeBuf->insert(ST,SSBefore.str(), true);
+    writeBuf->insert(ST,SSBefore.str(), true, true);
     
     llvm::errs() << "Method decl " << method->getNameInfo().getName().getAsString() << '\n';
     
@@ -1525,7 +1521,7 @@ public:
         // llvm::errs() << "Processing file " << SM.getFilename(beginloc) << "\n";
         // TODO: ensure that we go only through files which are needed!
 
-        state::is_modified = false;
+        state::loop_found = false;
       
         // get our own file edit buffer (unless it exists)
         Visitor.set_writeBuf(SM.getFileID(beginloc));
@@ -1542,7 +1538,7 @@ public:
         }
         
         // We keep track here only of files which were touched
-        if (state::is_modified) {
+        if (state::loop_found) {
           FileID FID = SM.getFileID(beginloc);
           if (search_fid(FID) == false) {
             // new file to be added

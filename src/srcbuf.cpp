@@ -35,12 +35,32 @@ void srcBuf::create( Rewriter *R, const SourceRange &sr) {
 
   full_length  = rsize;
   first_offset = get_offset(sr.getBegin());
-  // TODO: check that this works as intended!
   // get_offset(s->getSourceRange().getEnd()) does not necessarily
   // give end location
     
   buf = myRewriter->getRewrittenText(sr) + " ";  // 1 extra char
 
+  // Find indent level on this line
+  // if (first_offset == 0) {
+  //   // now we have the whole file
+  //   indent = "";
+  // } else {
+  //   SourceLocation p = sr.getBegin();
+  //   SourceManager &SM = myRewriter->getSourceMgr();
+  //   int col = SM.getSpellingColumnNumber(p);
+
+  //   assert(col <= first_offset && "srcbuf indent logic error");
+  //   SourceLocation b = p.getLocWithOffset(-col);
+    
+  //   for (int i=0; i<=col; i++) {
+  //     const char * p = SM.getCharacterData(b.getLocWithOffset(i));
+  //     if (p && std::isspace(*p))
+  //       indent.push_back(*p);
+  //     else
+  //       break;
+  //   }
+    
+  
   // llvm::errs() << "Got buf:  " << buf << '\n';
     
   ext_ind.clear();
@@ -183,7 +203,8 @@ std::string * srcBuf::get_extent_ptr(int i) {
 }
     
 // erase text between index values (note: not length!)
-void srcBuf::remove(int index1, int index2) {
+// return next index
+int srcBuf::remove(int index1, int index2) {
   for (int i=index1; i<=index2; i++) {
     remove_extent(i);
     if (ext_ind[i] > 0) {
@@ -191,60 +212,119 @@ void srcBuf::remove(int index1, int index2) {
       ext_ind[i] = 0;
     }
   }
+  return index2+1;
 }
 
-void srcBuf::remove(const SourceRange &s) {
+int srcBuf::remove(const SourceRange &s) {
   int i=get_index(s.getBegin());
-  remove(i, i+myRewriter->getRangeSize(s)-1);
+  return remove(i, i+myRewriter->getRangeSize(s)-1);
 }
 
-void srcBuf::remove(Expr *E) {
-  remove(E->getSourceRange());
+int srcBuf::remove(Expr *E) {
+  return remove(E->getSourceRange());
 }
 
-void srcBuf::insert(int i, const std::string & s, bool incl_before) {
+// wipe range with included comma before or after, if found.
+// return the next element 
+
+int srcBuf::remove_with_comma(const SourceRange &s) {
+  int after  = remove(s);
+  int before = get_index(s.getBegin()) - 1;
+  int r = before;
+  while (r >= 0 && std::isspace(buf[r])) r--;
+  if (r >= 0 && get_original(r) == ',') {
+    remove(r,before);
+    return after;
+  } else {
+    r = after;
+    while (r < buf.size() && std::isspace(buf[r])) r++;
+    if (r < buf.size() && get_original(r) == ',') {
+      return remove(after,r);
+    }
+  }
+  // here comma not found
+  return after;
+}
+
+// incl_before = true -> insert include before others at this location
+int srcBuf::insert(int i, const std::string & s_in, bool incl_before, bool do_indent) {
+
+  const std::string * s = &s_in;
+  std::string indented = "";
+  
+  // Is there newline in s?  If so, think about indent
+  // for simplicity, we use the indent of this line in original text
+  // Logic not perfect, but it's all cosmetics anyway
+  if (do_indent && s_in.find('\n') != std::string::npos) {
+    int j;
+    for (j=i-1; j>=0 && buf[j] != '\n'; j--) ;
+    j++;
+    size_t k;
+    for (k=j; k<i && std::isspace(buf[k]); k++) ;
+    std::string indent = buf.substr(j,k-j);
+
+    k = 0;
+    while (k < s_in.length()) {
+      size_t nl = s_in.find('\n',k);
+      if (nl != std::string::npos) {
+        indented.append(s_in.substr(k,nl-k+1));
+        indented.append(indent);
+        k = nl + 1;
+      } else {
+        indented.append(s_in.substr(k,std::string::npos));
+        k = s_in.length();
+      }
+    }
+    s = &indented;
+  } 
+
   std::string * p = get_extent_ptr(i);
+  
   if (p != nullptr) {
-    if (incl_before) *p = s + *p;
-    else p->append(s);
+    if (incl_before) *p = *s + *p;
+    else p->append(*s);
   } else {
     int j;
     if (free_ext.empty()) {
-      extents.push_back(s);
+      extents.push_back(*s);
       j = extents.size()-1;
     } else {
       j = free_ext.back();
       free_ext.pop_back();
-      extents[j] = s;
+      extents[j] = *s;
     }
     if (ext_ind[i] > 0) ext_ind[i] = j+2;
     else ext_ind[i] = -(j+2);
   }
-  full_length += s.length();
+  full_length += s->length();
+  return i+1;
 }
         
-void srcBuf::insert(SourceLocation sl, const std::string & s,
-                    bool incl_before) {
-  insert(get_index(sl), s, incl_before);
+int srcBuf::insert(SourceLocation sl, const std::string & s,
+                   bool incl_before, bool do_indent) {
+  return insert(get_index(sl), s, incl_before, do_indent);
 }
 
-void srcBuf::insert(Expr *e, const std::string & s, bool incl_before) {
-  insert(e->getSourceRange().getBegin(), s, incl_before);
+int srcBuf::insert(Expr *e, const std::string & s, bool incl_before, bool do_indent) {
+  return insert(e->getSourceRange().getBegin(), s, incl_before, do_indent);
 }
   
 // replace is a remove + insert pair, should write with a single operation
-void srcBuf::replace( int i1, int i2, const std::string &s ) {
+// return the index after
+int srcBuf::replace( int i1, int i2, const std::string &s ) {
   remove(i1,i2);
-  insert(i1,s,true);
+  insert(i1,s,true,false);
+  return i2+1;
 }
 
-void srcBuf::replace( const SourceRange & r, const std::string &s ) {
-  remove(r);
-  insert(r.getBegin(),s,true);
+int srcBuf::replace( const SourceRange & r, const std::string &s ) {
+  int i = remove(r);
+  insert(r.getBegin(),s,true,false);
+  return i;
 }
 
-void srcBuf::replace( Expr *e, const std::string &s ) {
-  replace( e->getSourceRange(), s );
+int srcBuf::replace( Expr *e, const std::string &s ) {
+  return replace( e->getSourceRange(), s );
 }
 
 
@@ -262,17 +342,15 @@ void srcBuf::replace_tokens(SourceRange r,
   std::string tok;
   // walk through the string, form tokens
   int i=start;
-  bool only_whitespace_line = true;
   while (i<=end) {
     tok = "";
     // letters, _
     if (std::isalpha(buf[i]) || '_' == buf[i]) {
       int st = i;
-      only_whitespace_line = false;
       for ( ; i<=end && (std::isalnum(buf[i]) || '_' == buf[i]); i++)
         tok.push_back(buf[i]);
 
-      // now got the token, search...
+      // now got the token, search... note: a[i] == "" never matches
       for (int j=0; j<a.size(); j++) {
         if (tok.compare(a[j]) == 0) {
           // substutute
@@ -284,25 +362,20 @@ void srcBuf::replace_tokens(SourceRange r,
       if (i > 0 && buf[i] == '/' && buf[i-1] == '/') {
         // skip commented lines
         for (i++ ; i<=end && buf[i] != '\n'; i++) ;
-        only_whitespace_line = true;
-      } else if (buf[i] == '#' && only_whitespace_line) {
+      } else if (i > 0 && buf[i-1] == '/' && buf[i] == '*') {
+        // c-stype comment
+        i = buf.find("*/",i+1) + 2;
+      } else if (buf[i] == '#') {
         // skip preproc lines #
         for (i++ ; i<=end && buf[i] != '\n'; i++) ;
-        only_whitespace_line = true;
       } else if (buf[i] == '"') {
         // don't mess with strings
         for (i++ ; i<=end && buf[i] != '"'; i++) if (buf[i] == '\\') i++;
-        only_whitespace_line = false;
       } else if (buf[i] == '\'') {
         // char constant
         if (buf[i+1] == '\\') i++;
         i+=3;
-        only_whitespace_line = false;
-      } else if (buf[i] == '\n') {
-        i++;
-        only_whitespace_line = true;
       } else {
-        if (!std::isspace(buf[i])) only_whitespace_line = false;
         i++;
       }
     }   

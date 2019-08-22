@@ -89,19 +89,26 @@ public:
   std::string * get_extent_ptr(int i);
     
   // erase text between index values (note: not length!)
-  void remove(int index1, int index2);
-  void remove(const SourceRange &s);
-  void remove(Expr *E);
+  // return value: index of next char
+  int remove(int index1, int index2);
+  int remove(const SourceRange &s);
+  int remove(Expr *E);
+  // remove including possible comma before or after the range
+  // useful for removing arguments
+  int remove_with_comma(const SourceRange &s); 
 
-  void insert(int i, const std::string & s, bool incl_before = false);
-  void insert(SourceLocation sl, const std::string & s,
-              bool incl_before = false);
-  void insert(Expr *e, const std::string & s, bool incl_before = false);
+  
+  // insert text - return is just insertion point + 1
+  int insert(int i, const std::string & s, bool incl_before = false, bool indent = false);
+  int insert(SourceLocation sl, const std::string & s,
+             bool incl_before = false, bool indent = false);
+  int insert(Expr *e, const std::string & s, bool incl_before = false, bool indent = false);
   
   // replace is a remove + insert pair, should write with a single operation
-  void replace( int i1, int i2, const std::string &s );
-  void replace( const SourceRange & r, const std::string &s );
-  void replace( Expr *e, const std::string &s );
+  // return: next element from remove
+  int replace( int i1, int i2, const std::string &s );
+  int replace( const SourceRange & r, const std::string &s );
+  int replace( Expr *e, const std::string &s );
 
   void replace_tokens(SourceRange r,
                       const std::vector<std::string> &a,

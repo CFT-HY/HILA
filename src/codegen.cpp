@@ -145,15 +145,13 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   code += "}\n//----------";
   
   // Remove old code + replace
-  // if (semi_at_end) {
-  //   TheRewriter.RemoveText(getRangeWithSemi(S));
-  // } else {
-  //    TheRewriter.RemoveText(S->getSourceRange());
-  // }
+  if (semi_at_end) {
+    writeBuf->remove(getRangeWithSemi(S));
+  } else {
+    writeBuf->remove(S->getSourceRange());
+  }
     
-  // TheRewriter.InsertText(E->getBeginLoc(), "//-  "+ global.full_loop_text + '\n', true, true );
-  writeBuf->insert(getSourceLocationAfterNewLine(S->getEndLoc()),
-                   indent_string(code), true);
+  writeBuf->insert(S->getBeginLoc(), indent_string(code), true, true);
 
   // TheRewriter.InsertText(getSourceLocationAfterNewLine(S->getEndLoc()),
   //                    indent_string(code), true, true);
@@ -243,7 +241,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
 
   // Finally, emit the kernel
   // TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
-  writeBuf->insert(global.location.function, indent_string(kernel),true);
+  writeBuf->insert(global.location.function, indent_string(kernel),true,false);
 
   return call;
 }
