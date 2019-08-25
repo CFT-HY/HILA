@@ -85,6 +85,7 @@ public:
 
   std::string get_expr_type(const Expr *e) {
     // This is somehow needed for printing type without "class" id
+    // TODO: perhaps reanalyse and make more robust?
     PrintingPolicy pp(Context->getLangOpts());
     return e->getType().getUnqualifiedType().getAsString(pp);
   }
@@ -156,6 +157,8 @@ public:
   SourceLocation getSourceLocationAfterNewLine( SourceLocation l );
 
   void set_writeBuf(const FileID fid);
+
+  SourceRange get_templatefunc_decl_range(FunctionTemplateDecl *tf, FunctionDecl *f); 
 
 };
 

@@ -19,7 +19,7 @@ std::string clean_name(const std::string & s) {
 }
 
 
-std::string remove_whitespace(const std::string & line) {
+std::string remove_initial_whitespace(const std::string & line) {
   // clear whitespace at the beginning of string
   size_t j = 0;
   for (char p : line) {
@@ -30,7 +30,17 @@ std::string remove_whitespace(const std::string & line) {
   return line;
 }
 
-  
+std::string remove_all_whitespace(const std::string & line) {
+  std::string out = line; // init string 
+  int j=0;
+  for (char p : line) {
+    if (!std::isspace(p)) out[j++] = p;
+  }
+  out.resize(j);
+  return out;
+}
+    
+
 std::string indent_string(const std::string & s) {
   
   std::string indentstr = "  ";
@@ -47,7 +57,7 @@ std::string indent_string(const std::string & s) {
     } else {
       line = s.substr(current,i-current+1);
     }
-    line = remove_whitespace(line);
+    line = remove_initial_whitespace(line);
     // do the actual indent
     for (char p : line) if (p == '}') lev--;
     for (int j=0; j<lev; j++) res += indentstr;

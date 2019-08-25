@@ -22,16 +22,13 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
 
-using namespace clang;
-//using namespace clang::driver;
-using namespace clang::tooling;
 
-#include "optionsparser.h"
 #include "transformer.h"
+#include "optionsparser.h"
 #include "stringops.h"
 #include "srcbuf.h"
 #include "myastvisitor.h"
-
+#include "specialization_db.h"
 
 // collection of variables holding the state of parsing
 namespace state {
@@ -47,7 +44,7 @@ namespace state {
 
 
 
-static llvm::cl::OptionCategory TransformerCat("Transformer");
+static llvm::cl::OptionCategory TransformerCat(program_name);
 
 // command line options
 static llvm::cl::opt<bool>
@@ -76,9 +73,14 @@ no_output("no-output",
           llvm::cl::desc("No output file, for syntax check"),
           llvm::cl::cat(TransformerCat));
 
+static llvm::cl::opt<bool>
+syntax_only("syntax-only",
+            llvm::cl::desc("Same as no-output"),
+            llvm::cl::cat(TransformerCat));
+            
 static llvm::cl::opt<std::string>
 output_filename("o",
-           llvm::cl::desc("Output file name"),
+           llvm::cl::desc("Output file (default: *."+default_output_suffix+", stdout: -"),
            llvm::cl::value_desc("name"),
            llvm::cl::cat(TransformerCat));
 
@@ -1000,8 +1002,8 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
             if (ie) {
               loop_parity.expr  = ie;
               loop_parity.value = get_parity_val(loop_parity.expr);
-              loop_parity.text  = remove_whitespace(macro.substr(loop_call.length(),
-                                                                 std::string::npos));
+              loop_parity.text  = remove_initial_whitespace(macro.substr(loop_call.length(),
+                                                                         std::string::npos));
                 
               global.full_loop_text = macro + " " + get_stmt_str(f->getBody());
 
@@ -1054,7 +1056,6 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   return true;
 }
 
-  
 
 bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
@@ -1191,74 +1192,99 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
 
         if (state::loop_found) {
           // OK, need to convert -- clear buffer and refill it
-          templateBuf.create( &TheRewriter, tf );
-          writeBuf = &templateBuf;
 
-          // Appropriate return type
-          templateBuf.replace( f->getReturnTypeSourceRange(), f->getReturnType().getAsString() );
-
-          // generate name<template params>
-          std::string name = f->getNameInfo().getAsString() + "<";
-
-          std::vector<std::string> template_args = {};
-        
-          //SourceLocation 
-          //handle_specialization_args( 
-          std::string info = "// ---- Generated specialization with type args ";
-          bool first = true;
-          for (int i=0; i<tal->size(); i++) {
-            if (tal->get(i).getKind() == TemplateArgument::ArgKind::Type) {
-              info += tal->get(i).getAsType().getAsString() + " ";
-              if (!first) name += ", ";
-              first = false;
-              name += tal->get(i).getAsType().getAsString();
-
-              template_args.push_back(tal->get(i).getAsType().getAsString());
-
-              // wipe type params in "template < ... >", incl. comma
-              templateBuf.remove_with_comma(tpl->getParam(i)->getSourceRange());
+          if (create_function_specializations) {
             
-            } else {
-              // Now arg not of Type, mark with empty - not matched
-              template_args.push_back("");
-              template_params.at(i) = "";   // TODO: not sure if this is a good idea
-            }
-          }
+            templateBuf.create( &TheRewriter, tf );
+            writeBuf = &templateBuf;
+
+            // set appropriate return type
+            templateBuf.replace( f->getReturnTypeSourceRange(), f->getReturnType().getAsString() );
+
+            // generate name<template params>
+            std::string name = f->getNameInfo().getAsString() + "<";
+
+            std::vector<std::string> template_args = {};
         
-          name += ">";
+            //SourceLocation 
+            //handle_specialization_args( 
+            std::string info = "// ---- Generated specialization with type args ";
+            bool first = true;
+            for (int i=0; i<tal->size(); i++) {
+              if (tal->get(i).getKind() == TemplateArgument::ArgKind::Type) {
+                info += tal->get(i).getAsType().getAsString() + " ";
+                if (!first) name += ", ";
+                first = false;
+                name += tal->get(i).getAsType().getAsString();
 
-          // if (f->isExplicitSpecialization()) SSBefore << " explicit";
-          info += "\n";
+                template_args.push_back(tal->get(i).getAsType().getAsString());
 
-          if (template_params.size() != template_args.size()) {
-            reportDiag(DiagnosticsEngine::Level::Error,
-                       tf->getSourceRange().getBegin(),
-                       "Template param/arg number mismatch!" );
-            return(false);
+                // wipe type params in "template < ... >", incl. comma
+                templateBuf.remove_with_comma(tpl->getParam(i)->getSourceRange());
+            
+              } else {
+                // Now arg not of Type, mark with empty - not matched
+                template_args.push_back("");
+                template_params.at(i) = "";   // TODO: not sure if this is a good idea
+              }
+            }
+        
+            name += ">";
+
+            // if (f->isExplicitSpecialization()) SSBefore << " explicit";
+            info += "\n";
+
+            if (template_params.size() != template_args.size()) {
+              reportDiag(DiagnosticsEngine::Level::Error,
+                         tf->getSourceRange().getBegin(),
+                         "Template param/arg number mismatch!" );
+              return(false);
+            }
+
+            // function name -> name<..>
+            templateBuf.replace( f->getNameInfo().getSourceRange(), name );
+
+            // Now parameters of the function
+            for ( auto par : f->parameters() ) {          
+              templateBuf.replace_tokens(par->getSourceRange(),
+                                         template_params, template_args);
+            }
+
+            // Now we have the function name ready - check if this
+            // has already been generated
+            SourceRange decl_sr = get_templatefunc_decl_range(tf,f);
+            std::string wheredefined = "";
+            if (f->isInlineSpecified() ||
+                !is_specialization_done(templateBuf.get(decl_sr), wheredefined)) {
+              
+              // replace template params in func body
+              templateBuf.replace_tokens(f->getBody()->getSourceRange(),
+                                         template_params, template_args);
+
+              // traverse again, with right arguments
+              TraverseStmt(f->getBody());
+
+              templateBuf.insert(0,info,true,false);
+
+              writeBuf_saved->insert( insertloc,
+                                      templateBuf.dump() + "\n//---------\n",
+                                      false, false);
+            } else {
+              // just insert declaration, defined on another compilation unit
+              writeBuf_saved->insert( insertloc,
+                                      "// Generated specialization declaration, defined in compilation unit\n// "
+                                      + wheredefined + "\n"
+                                      + templateBuf.get(decl_sr)
+                                      + ";\n//---------\n",
+                                      false, false);
+            }
+              
+          } else {
+            // Now attempt to modify the template directly, no specializations generated
+            // NOT DONE!
           }
 
-          // function name -> name<..>
-          templateBuf.replace( f->getNameInfo().getSourceRange(), name );
-
-          // Now parameters of the function
-          for ( auto par : f->parameters() ) {          
-            templateBuf.replace_tokens(par->getSourceRange(),
-                                       template_params, template_args);
-          }
-
-          // replace template params in func body
-          templateBuf.replace_tokens(f->getBody()->getSourceRange(),
-                                     template_params, template_args);
-
-          // traverse again, with right arguments
-          TraverseStmt(f->getBody());
-
-          templateBuf.insert(0,info,true,false);
-
-          writeBuf_saved->insert( insertloc,
-                                  templateBuf.dump() + "\n//---------\n",
-                                  false, false);
-
+            
         } else {
           state::loop_found = found;
         }
@@ -1277,6 +1303,28 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
   }
   return true;
 }
+
+// locate range of specialization "template< ..> .. func<...>( ... )"
+// tf is ptr to template, and f to instantiated function
+SourceRange MyASTVisitor::get_templatefunc_decl_range(FunctionTemplateDecl *tf,
+                                                      FunctionDecl *f) {
+  SourceLocation a = tf->getSourceRange().getBegin();
+  int n = f->getNumParams()-1;
+  SourceLocation b = f->getParamDecl(n-1)->getSourceRange().getEnd();
+
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  for (int i=1; i<50; i++) {
+    const char * p = SM.getCharacterData(b.getLocWithOffset(i));
+    if (p && *p == ')') {
+      b = b.getLocWithOffset(i);
+      break;
+    }
+  }
+
+  SourceRange r(a,b);
+  return r;
+}
+  
 
 
 // Entry point for class templates
@@ -1421,7 +1469,6 @@ VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
 }
 
 
-#if 1
 bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
   // Comes after VisitFunctionDecl for methods -- this does really nothing here
 
@@ -1446,7 +1493,6 @@ bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
   }
   return true;
 }
-#endif
 
 
 // This struct will be used to keep track of #include-chains.
@@ -1511,6 +1557,7 @@ public:
     
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
+    global.main_file_name = SM.getFilename(SM.getLocForStartOfFile(SM.getMainFileID()));
 
     for (DeclContext::decl_iterator d = tud->decls_begin(); d != tud->decls_end(); d++) {
       
@@ -1685,7 +1732,7 @@ public:
     }
   }
 
-  // TODO: Must do it so that files without top level decls are used too!!!
+
   void EndSourceFileAction() override {
     SourceManager &SM = TheRewriter.getSourceMgr();
     llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
@@ -1706,9 +1753,12 @@ public:
       insert_includes_to_file_buffer(SM.getMainFileID());
     }
     
-    if (!no_output)
-      // TheRewriter.getEditBuffer(SM.getMainFileID()).write(llvm::outs());
-      llvm::outs() << get_file_buffer(TheRewriter,SM.getMainFileID())->dump();
+    if (!no_output) {
+      write_output_file( output_filename,
+                         get_file_buffer(TheRewriter,SM.getMainFileID())->dump() );
+
+      write_specialization_db();
+    }
     
     file_buffer_list.clear();
     file_id_list.clear();
@@ -1796,6 +1846,7 @@ int main(int argc, const char **argv) {
   
   // We have command line args, possibly do something with them
   get_target_struct(target);
+  if (syntax_only) no_output = true;
 
   // ClangTool::run accepts a FrontendActionFactory, which is then used to
   // create new objects implementing the FrontendAction interface. Here we use

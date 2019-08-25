@@ -3,6 +3,8 @@
 #define TRANSFORMER_H
 
 #include <string>
+#include <vector>
+#include <list>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -15,9 +17,24 @@
 //#include "llvm/Support/raw_ostream.h"
 
 
-
 #undef NDEBUG
 #include <assert.h>
+
+// set namespaces globally
+using namespace clang;
+//using namespace clang::driver;
+using namespace clang::tooling;
+
+// constant names for program
+const std::string program_name("Transformer");
+const std::string specialization_db_filename("specialization_db.txt");
+const std::string default_output_suffix("cpt");
+
+bool write_output_file( const std::string & name, const std::string & buf ) ;
+
+
+// This could be upgraded into a flag, but alternative not implemented
+const bool create_function_specializations = true;
 
 struct codetype {
   bool kernelize;
@@ -32,6 +49,7 @@ struct loop_parity_struct {
 };
 
 struct global_state {
+  std::string main_file_name = "";
   bool assert_loop_parity = false;
   std::string full_loop_text = "";
   bool in_func_template = false;

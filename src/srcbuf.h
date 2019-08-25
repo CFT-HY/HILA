@@ -65,12 +65,12 @@ public:
   // the mapped size of the range
   int get_sourcerange_size(const SourceRange & s);
 
-  std::string get(int index, int len);
+  // get string from index to mapped length
+  std::string get_mapped(int index, int len);
+  // get edited string originally from range
+  std::string get(int i1, int i2);
   std::string get(SourceLocation s, int len);
   std::string get(const SourceRange & s);
-
-  // get edited string originally from range
-  std::string get_range(int i1, int i2);
 
   std::string dump();
 

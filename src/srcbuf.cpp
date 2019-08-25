@@ -93,7 +93,7 @@ void srcBuf::clear() {
 
 
 int srcBuf::get_index_range_size(int i1, int i2) {
-  assert( i2 >= i1 && i2 < buf.size() );
+  assert( i1 >= 0 && i1 <= i2 && i2 < buf.size() );
   
   int size = 0;
   for (int i=i1; i<=i2; i++) {
@@ -112,13 +112,11 @@ int srcBuf::get_sourcerange_size(const SourceRange & s) {
 }
 
   // get buffer content from index to length len
-std::string srcBuf::get(int index, int len) {
+std::string srcBuf::get_mapped(int index, int len) {
   assert(index >= 0 && len <= full_length - index
          && "srcbuf: offset error");
 
-  std::string out;
-  out.clear();
-  out.resize(len,' ');
+  std::string out(len,' ');
 
   int j = index;
   for (int i=0; i<len; i++,j++) {
@@ -135,23 +133,24 @@ std::string srcBuf::get(int index, int len) {
   return out;
 }
 
-// buffer content from mapped sourcelocation
+// get edited string originally from range
+std::string srcBuf::get(int i1, int i2) {
+  return get_mapped(i1,get_index_range_size(i1,i2));
+}
+
+// buffer content from mapped sourcelocation: len is original "length"
 std::string srcBuf::get(SourceLocation s, int len) {
-  return get(get_index(s),len);
+  int i1 = get_index(s);
+  return get(i1,i1+len-1);
 }
   
 // get edited string originally from range
 std::string srcBuf::get(const SourceRange & s) {
-  return get(s.getBegin(),get_sourcerange_size(s));
-}
-
-// get edited string originally from range
-std::string srcBuf::get_range(int i1, int i2) {
-  return get(i1,get_index_range_size(i1,i2));
+  return get_mapped(get_index(s.getBegin()),get_sourcerange_size(s));
 }
 
 std::string srcBuf::dump() {
-  return get(0,full_length);
+  return get_mapped(0,full_length);
 }
 
 bool srcBuf::isOn() { return buf.size() > 0; }

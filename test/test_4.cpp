@@ -2,20 +2,20 @@
 #include "field.h"
 
 template <typename T>
-field<T> sum(const field<T> a, const field<T> b) {
+inline field<T> sum(const field<T> a, const field<T> b) {
   field<T> r;
   r[ALL] = a[X] + b[X];
 
   return r;
 }
 
-template <>  
-field<double> sum<double>(const field<double> a, const field<double> b) {
-  field<double> r;
-  r[ALL] = a[X] + b[X];
-
-  return r;
-}
+//template <>  
+//field<double> sum<double>(const field<double> a, const field<double> b) {
+//  field<double> r;
+//  r[ALL] = a[X] + b[X];
+//
+//  return r;
+//}
 
 
 

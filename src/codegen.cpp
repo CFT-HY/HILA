@@ -22,9 +22,6 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
 
-using namespace clang;
-//using namespace clang::driver;
-using namespace clang::tooling;
 
 #include "transformer.h"
 #include "stringops.h"
@@ -41,7 +38,7 @@ extern std::list<field_info> field_info_list;
 extern std::list<var_info> var_info_list;
 extern std::list<var_decl> var_decl_list;
 
-const std::string looping_var("FI__");
+const std::string looping_var("I__");
 const std::string parity_name("pty__");
 
 static std::string parity_in_this_loop = "";
