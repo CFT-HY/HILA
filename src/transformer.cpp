@@ -39,6 +39,7 @@ namespace state {
   bool accept_field_parity = false;
   bool loop_found = false;
   bool dump_ast_next = false;
+  bool compile_errors_occurred = false;
 }
 
 
@@ -285,7 +286,7 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  pExpr->getSourceRange().getBegin(),
                  "Transformer internal error, unknown parity" );
-      exit(0);
+      exit(1);
     }
     if (p == parity::none) {
       reportDiag(DiagnosticsEngine::Level::Error,
@@ -448,7 +449,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
     lfe.parityExpr = ASE->getRHS();
   } else {
     llvm::errs() << "Internal error 3\n";
-    exit(0);
+    exit(1);
   }
   
   //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr); 
@@ -501,7 +502,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  lfe.parityExpr->getSourceRange().getBegin(),
                  "Internal error: could not decipher parity + dir statement" );
-      exit(0);
+      exit(1);
     }
       
     // if (!Op) {
@@ -1389,7 +1390,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
 
     if (args.size() != 1) {
       llvm::errs() << " *** Fatal: More than one type arg for field<>\n";
-      exit(0);
+      exit(1);
     }
     if (TemplateArgument::ArgKind::Type != args.get(0).getKind()) {
       reportDiag(DiagnosticsEngine::Level::Error,
@@ -1408,7 +1409,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     // NOTE: this has to be moved to codegen, different for diff. codes
     if (field_storage_type_decl == nullptr) {
       llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
-      exit(0);
+      exit(1);
     }
 
     std::string fst_spec = "template<>\nstruct field_storage_type<"
@@ -1557,8 +1558,7 @@ public:
     
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
-    global.main_file_name = SM.getFilename(SM.getLocForStartOfFile(SM.getMainFileID()));
-
+ 
     for (DeclContext::decl_iterator d = tud->decls_begin(); d != tud->decls_end(); d++) {
       
       SourceLocation beginloc = d->getBeginLoc();
@@ -1590,11 +1590,16 @@ public:
           if (search_fid(FID) == false) {
             // new file to be added
             file_id_list.push_back(FID);
-            llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+            // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
           }
         }
       }  
     }
+
+    // check compile errors, as long as we have context -- use diagnostics engine
+    auto & DE = ctx.getDiagnostics();
+    state::compile_errors_occurred = DE.hasErrorOccurred();
+    
   }
 
 
@@ -1664,14 +1669,12 @@ public:
     pp.addPPCallbacks(std::move(callbacks));
 #endif
 
+    global.main_file_name = getCurrentFile();
+    
     file_id_list.clear();
     file_buffer_list.clear();
     field_decl = field_storage_type_decl = nullptr;
     
-    //   // SourceManager &SM = TheRewriter.getSourceMgr();
-    //   // llvm::errs() << "** BeginSourceFileAction for: "
-    //   //             << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
-
     return (true);
   }
 
@@ -1754,14 +1757,20 @@ public:
     }
     
     if (!no_output) {
-      write_output_file( output_filename,
-                         get_file_buffer(TheRewriter,SM.getMainFileID())->dump() );
-
-      write_specialization_db();
+      if (!state::compile_errors_occurred) {
+        write_output_file( output_filename,
+                           get_file_buffer(TheRewriter,SM.getMainFileID())->dump() );
+        
+        write_specialization_db();
+      } else {
+        llvm::errs() << program_name << ": not writing output due to compile errors\n";
+      }
     }
     
     file_buffer_list.clear();
     file_id_list.clear();
+
+    // EndSourceFile();
         
   }
 
@@ -1778,54 +1787,6 @@ private:
   // ASTContext  TheContext;
 };
 
-
-// Check if the cmdline has -I<include> or -D<define> -
-// arguments and move these after -- if that exists on the command line.
-// Clang's optionparser expects these "generic compiler and linker"
-// args to be after --
-// return value new argc
-int rearrange_cmdline(int argc, const char **argv, const char **av) {
-
-  bool found_ddash = false;
-  av[argc+1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
-  static char s[3] = "--";   // needs to be static because ptrs
-  int ddashloc = 0;
-
-  for (int i=0; i<argc; i++) {
-    av[i] = argv[i];
-    if (strcmp(av[i],s) == 0) {
-      found_ddash = true;
-      ddashloc = i;
-    }
-  }
-  if (!found_ddash) {
-    // add ddash, does not hurt in any case
-    av[argc] = s;
-    ddashloc = argc;
-    argc++;
-  }
-
-  // now find -I and -D -options and move them after --
-  for (int i=0; i<ddashloc; i++) {
-    if (i < ddashloc-1 && (strcmp(av[i],"-D") == 0 || strcmp(av[i],"-I") == 0)) {
-      // type -D define
-      const char * a1 = av[i];
-      const char * a2 = av[i+1];
-      for (int j=i+2; j<argc; j++) av[j-2] = av[j];
-      av[argc-2] = a1;
-      av[argc-1] = a2;
-      ddashloc -= 2;
-    } else if (strncmp(av[i],"-D",2) == 0 || strncmp(av[i],"-I",2) == 0) {
-      // type -Ddefine
-      const char * a1 = av[i];
-      for (int j=i+1; j<argc; j++) av[j-1] = av[j];
-      av[argc-1] = a1;
-      ddashloc--;
-    }      
-  }
-
-  return argc;
-}
 
 void get_target_struct(codetype & target) {
   if (kernel) target.kernelize = true;

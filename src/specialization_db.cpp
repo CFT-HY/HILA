@@ -58,7 +58,7 @@ void load_spec_db() {
           llvm::errs() << program_name << ": I/O error in " << specialization_db_filename << '\n';
           if (iss.eof()) llvm::errs() << "Too few arguments on a line \"" << line <<  "\"\n";
           llvm::errs() << "Suggest removing " << specialization_db_filename << " and recompile\n";
-          exit(0);
+          exit(1);
         }
         // do not include own specializations in database, will be added again
 
@@ -114,7 +114,7 @@ bool is_specialization_done( const std::string & decl_in, std::string & here ) {
   } else {
     // now main_file == s->file -- should not happen
     llvm::errs() << program_name << ": specialization db handling error\n";
-    exit(0);
+    exit(1);
   }
 
   here = global.main_file_name;
@@ -143,7 +143,7 @@ void write_specialization_db() {
   }
   if (db.bad() || db.fail()) {
     llvm::errs() << program_name << ": specialization db write error\n";
-    exit(0);
+    exit(1);
   }
 
   specializations.clear();

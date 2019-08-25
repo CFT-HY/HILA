@@ -1,5 +1,7 @@
 #include <string>
+#include <cstring>
 #include "stringops.h"
+
 
 
 std::string clean_name(const std::string & s) {
@@ -87,3 +89,52 @@ std::string comment_string(const std::string & s) {
   return res;
 }
   
+
+
+// Check if the cmdline has -I<include> or -D<define> -
+// arguments and move these after -- if that exists on the command line.
+// Clang's optionparser expects these "generic compiler and linker"
+// args to be after --
+// return value new argc
+int rearrange_cmdline(int argc, const char **argv, const char **av) {
+
+  bool found_ddash = false;
+  av[argc+1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
+  static char s[3] = "--";   // needs to be static because ptrs
+  int ddashloc = 0;
+
+  for (int i=0; i<argc; i++) {
+    av[i] = argv[i];
+    if (strcmp(av[i],s) == 0) {
+      found_ddash = true;
+      ddashloc = i;
+    }
+  }
+  if (!found_ddash) {
+    // add ddash, does not hurt in any case
+    av[argc] = s;
+    ddashloc = argc;
+    argc++;
+  }
+
+  // now find -I and -D -options and move them after --
+  for (int i=0; i<ddashloc; i++) {
+    if (i < ddashloc-1 && (strcmp(av[i],"-D") == 0 || strcmp(av[i],"-I") == 0)) {
+      // type -D define
+      const char * a1 = av[i];
+      const char * a2 = av[i+1];
+      for (int j=i+2; j<argc; j++) av[j-2] = av[j];
+      av[argc-2] = a1;
+      av[argc-1] = a2;
+      ddashloc -= 2;
+    } else if (strncmp(av[i],"-D",2) == 0 || strncmp(av[i],"-I",2) == 0) {
+      // type -Ddefine
+      const char * a1 = av[i];
+      for (int j=i+1; j<argc; j++) av[j-1] = av[j];
+      av[argc-1] = a1;
+      ddashloc--;
+    }      
+  }
+
+  return argc;
+}

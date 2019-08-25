@@ -45,7 +45,7 @@ bool write_output_file( const std::string & filename, const std::string & buf ) 
     
     if (f.bad() || f.fail()) {
       llvm::errs() << program_name << ": output error for file " << name << '\n';
-      exit(0);
+      exit(1);
     }
   }
   return true;
