@@ -46,11 +46,10 @@ static llvm::cl::OptionCategory TransformerCat(program_name);
 
 namespace cmdline {
 
-
   // command line options
   static llvm::cl::opt<bool>
   dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
-           llvm::cl::cat(TransformerCat));
+          llvm::cl::cat(TransformerCat));
 
   static llvm::cl::opt<bool>
   no_include("noincl",
@@ -91,7 +90,7 @@ namespace cmdline {
   
   static llvm::cl::opt<std::string>
   output_filename("o",
-                  llvm::cl::desc("Output file (default: <file>.cpt, stdout: -)"),
+                  llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
                   llvm::cl::value_desc("name"),
                   llvm::cl::cat(TransformerCat));
 
@@ -137,7 +136,7 @@ CompilerInstance *myCompilerInstance;
 
 // utility functions
 
-
+// TODO: make these more robust!!!
 bool MyASTVisitor::is_field_element_expr(Expr *E) {
   return( E && E->getType().getAsString().find(field_element_type) != std::string::npos);
 }
@@ -156,9 +155,9 @@ SourceLocation MyASTVisitor::getSourceLocationAfterNewLine( SourceLocation l ) {
     bool invalid = false;
     const char * c = SM.getCharacterData(l.getLocWithOffset(i),&invalid);
     if (invalid) {
-      // no new line found in buffer.  return current loc, could be false!
-      llvm::errs() << " Transformer: no new line found in buffer, internal error\n";
-      return( l.getLocWithOffset(i) );
+      // no new line found in buffer.  return previous loc, could be false!
+      llvm::errs() << program_name + ": no new line found in buffer, internal error\n";
+      return( l.getLocWithOffset(i-1) );
     }
     if (*c == '\n') return( l.getLocWithOffset(i+1) );
   }
@@ -166,23 +165,23 @@ SourceLocation MyASTVisitor::getSourceLocationAfterNewLine( SourceLocation l ) {
 }
 
 
-  
-// // Define a pragma handler for #pragma heLpp
-// // NOTE: This is executed before AST analysis
-// class heLppPragmaHandler : public PragmaHandler {
-// public:
-//   heLppPragmaHandler() : PragmaHandler("heLpp") { }
-//   void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
-//                     Token &PragmaTok) {
-//     // Handle the pragma
-//    
-//     llvm::errs() << "Got the pragma! name " << getName() << " Token " << PragmaTok.getName() << '\n';
-//
-//   }
-// };
+#if 0  
+// Define a pragma handler for #pragma heLpp
+// NOTE: This is executed before AST analysis
+class heLppPragmaHandler : public PragmaHandler {
+  public:
+    heLppPragmaHandler() : PragmaHandler("heLpp") { }
+    void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                      Token &PragmaTok) {
+     // Handle the pragma
+    
+     llvm::errs() << "Got the pragma! name " << getName() << " Token " << PragmaTok.getName() << '\n';
 
-// static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("heLpp","heL pragma description");
+   }
+};
 
+static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("heLpp","heL pragma description");
+#endif
   
 // By implementing RecursiveASTVisitor, we can specify which AST nodes
 // we're interested in by overriding relevant methods.
@@ -1211,7 +1210,9 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
             writeBuf = &templateBuf;
 
             // set appropriate return type
-            templateBuf.replace( f->getReturnTypeSourceRange(), f->getReturnType().getAsString() );
+            // llvm::errs() << "Func ret qualtype: " << f->getReturnType().getAsString() << '\n';
+            templateBuf.replace( f->getReturnTypeSourceRange(), 
+                                 remove_class_from_type(f->getReturnType().getAsString()) );
 
             if (cmdline::spec_inline && !f->isInlineSpecified()) {
               templateBuf.insert( f->getReturnTypeSourceRange().getBegin(), "inline ", true, false);
@@ -1228,12 +1229,14 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
             bool first = true;
             for (int i=0; i<tal->size(); i++) {
               if (tal->get(i).getKind() == TemplateArgument::ArgKind::Type) {
-                info += tal->get(i).getAsType().getAsString() + " ";
+                std::string typestr = remove_class_from_type(tal->get(i).getAsType().getAsString());
+
+                info += typestr + " ";
                 if (!first) name += ", ";
                 first = false;
-                name += tal->get(i).getAsType().getAsString();
 
-                template_args.push_back(tal->get(i).getAsType().getAsString());
+                name += typestr;
+                template_args.push_back(typestr);
 
                 // wipe type params in "template < ... >", incl. comma
                 templateBuf.remove_with_comma(tpl->getParam(i)->getSourceRange());
@@ -1758,20 +1761,20 @@ public:
     
     // Now emit rewritten buffers.
 
-    if (!cmdline::no_include) {
-
-      // Modified files should be substituted on top of #include -directives
-      // first, ensure that the full include chain is present in file_id_list
-      // Use iterator here, because the list can grow!
-
-      for ( FileID f : file_id_list ) {
-        check_include_path(f);
-      }
-
-      insert_includes_to_file_buffer(SM.getMainFileID());
-    }
-    
     if (!cmdline::no_output) {
+      if (!cmdline::no_include) {
+
+        // Modified files should be substituted on top of #include -directives
+        // first, ensure that the full include chain is present in file_id_list
+        // Use iterator here, because the list can grow!
+
+        for ( FileID f : file_id_list ) {
+          check_include_path(f);
+        }
+
+        insert_includes_to_file_buffer(SM.getMainFileID());
+      }
+    
       if (!state::compile_errors_occurred) {
         write_output_file( cmdline::output_filename,
                            get_file_buffer(TheRewriter,SM.getMainFileID())->dump() );

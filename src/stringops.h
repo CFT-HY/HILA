@@ -19,6 +19,9 @@ std::string indent_string(const std::string & s);
 /// Convert string to a valid c++ comment.  Indentation is not changed
 std::string comment_string(const std::string & s);
 
+/// Remove "class " keyword from type which sometimes pops there
+std::string remove_class_from_type( const std::string & s);
+
 /// Rearranges command line args according to the wishes of clang tool
 int rearrange_cmdline(int argc, const char **argv, const char **av);
 

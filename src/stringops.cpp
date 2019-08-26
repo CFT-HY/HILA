@@ -88,6 +88,16 @@ std::string comment_string(const std::string & s) {
   }
   return res;
 }
+
+
+/// Types ofen seem to have "class name" -names, harmful
+std::string remove_class_from_type(const std::string & s) {
+  size_t i = s.find("class ",0);
+  if (i < s.size() && ( i == 0 || !std::isalnum(s[i-1]))) {
+    return s.substr(0,i) + s.substr(i+6,std::string::npos);
+  } else    
+    return s;
+}
   
 
 
