@@ -40,62 +40,73 @@ namespace state {
   bool loop_found = false;
   bool dump_ast_next = false;
   bool compile_errors_occurred = false;
-}
-
-
-
+};
 
 static llvm::cl::OptionCategory TransformerCat(program_name);
 
-// command line options
-static llvm::cl::opt<bool>
-dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
-         llvm::cl::cat(TransformerCat));
+namespace cmdline {
 
-static llvm::cl::opt<bool>
-no_include("noincl",
-           llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
+
+  // command line options
+  static llvm::cl::opt<bool>
+  dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
            llvm::cl::cat(TransformerCat));
 
-static llvm::cl::opt<std::string>
-dummy_def("D", 
-          llvm::cl::value_desc("name"),
-          llvm::cl::desc("Define name/symbol for preprocessor"),
-          llvm::cl::cat(TransformerCat));
+  static llvm::cl::opt<bool>
+  no_include("noincl",
+             llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
+             llvm::cl::cat(TransformerCat));
 
-static llvm::cl::opt<std::string>
-dummy_incl("I", 
-           llvm::cl::desc("Directory for include file search"),
-           llvm::cl::value_desc("directory"),
-           llvm::cl::cat(TransformerCat));
-
-static llvm::cl::opt<bool>
-no_output("no-output",
-          llvm::cl::desc("No output file, for syntax check"),
-          llvm::cl::cat(TransformerCat));
-
-static llvm::cl::opt<bool>
-syntax_only("syntax-only",
-            llvm::cl::desc("Same as no-output"),
+  static llvm::cl::opt<std::string>
+  dummy_def("D", 
+            llvm::cl::value_desc("name"),
+            llvm::cl::desc("Define name/symbol for preprocessor"),
             llvm::cl::cat(TransformerCat));
-            
-static llvm::cl::opt<std::string>
-output_filename("o",
-           llvm::cl::desc("Output file (default: *."+default_output_suffix+", stdout: -"),
-           llvm::cl::value_desc("name"),
-           llvm::cl::cat(TransformerCat));
 
-static llvm::cl::opt<bool>
-kernel("vanilla-kernel",
-       llvm::cl::desc("Generate kernels"),
-       llvm::cl::cat(TransformerCat));
+  static llvm::cl::opt<std::string>
+  dummy_incl("I", 
+             llvm::cl::desc("Directory for include file search"),
+             llvm::cl::value_desc("directory"),
+             llvm::cl::cat(TransformerCat));
 
-static llvm::cl::opt<bool>
-vanilla("vanilla",
-        llvm::cl::desc("Generate loops in place"),
-        llvm::cl::cat(TransformerCat));
+  static llvm::cl::opt<bool>
+  spec_no_db("spec:no-db",
+             llvm::cl::desc("Do not use generated specialization database, include them (potentially unsafe)"),
+             llvm::cl::cat(TransformerCat));
+
+  static llvm::cl::opt<bool>
+  spec_inline("spec:inline",
+              llvm::cl::desc("Mark generated specializations inline"),
+              llvm::cl::cat(TransformerCat));
+  
+  static llvm::cl::opt<bool>
+  no_output("no-output",
+            llvm::cl::desc("No output file, for syntax check"),
+            llvm::cl::cat(TransformerCat));
+  
+  static llvm::cl::opt<bool>
+  syntax_only("syntax-only",
+              llvm::cl::desc("Same as no-output"),
+              llvm::cl::cat(TransformerCat));
+  
+  static llvm::cl::opt<std::string>
+  output_filename("o",
+                  llvm::cl::desc("Output file (default: <file>.cpt, stdout: -)"),
+                  llvm::cl::value_desc("name"),
+                  llvm::cl::cat(TransformerCat));
 
 
+  static llvm::cl::opt<bool>
+  kernel("vanilla-kernel",
+         llvm::cl::desc("Generate kernels"),
+         llvm::cl::cat(TransformerCat));
+  
+  static llvm::cl::opt<bool>
+  vanilla("vanilla",
+          llvm::cl::desc("Generate loops in place"),
+          llvm::cl::cat(TransformerCat));
+
+};
 
 // local global vars
 global_state global;
@@ -1202,6 +1213,10 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
             // set appropriate return type
             templateBuf.replace( f->getReturnTypeSourceRange(), f->getReturnType().getAsString() );
 
+            if (cmdline::spec_inline && !f->isInlineSpecified()) {
+              templateBuf.insert( f->getReturnTypeSourceRange().getBegin(), "inline ", true, false);
+            }
+            
             // generate name<template params>
             std::string name = f->getNameInfo().getAsString() + "<";
 
@@ -1255,8 +1270,8 @@ bool MyASTVisitor::VisitFunctionTemplateDecl(FunctionTemplateDecl *tf) {
             // has already been generated
             SourceRange decl_sr = get_templatefunc_decl_range(tf,f);
             std::string wheredefined = "";
-            if (f->isInlineSpecified() ||
-                !is_specialization_done(templateBuf.get(decl_sr), wheredefined)) {
+            if (f->isInlineSpecified() || cmdline::spec_inline || cmdline::spec_no_db
+                || !in_specialization_db(templateBuf.get(decl_sr), wheredefined)) {
               
               // replace template params in func body
               templateBuf.replace_tokens(f->getBody()->getSourceRange(),
@@ -1579,8 +1594,8 @@ public:
         
         Visitor.TraverseDecl(*d);
         // llvm::errs() << "Dumping level " << i++ << "\n";
-        if (dump_ast) {
-          if (!no_include || SM.isInMainFile(beginloc))
+        if (cmdline::dump_ast) {
+          if (!cmdline::no_include || SM.isInMainFile(beginloc))
             d->dump();
         }
         
@@ -1743,7 +1758,7 @@ public:
     
     // Now emit rewritten buffers.
 
-    if (!no_include) {
+    if (!cmdline::no_include) {
 
       // Modified files should be substituted on top of #include -directives
       // first, ensure that the full include chain is present in file_id_list
@@ -1756,12 +1771,12 @@ public:
       insert_includes_to_file_buffer(SM.getMainFileID());
     }
     
-    if (!no_output) {
+    if (!cmdline::no_output) {
       if (!state::compile_errors_occurred) {
-        write_output_file( output_filename,
+        write_output_file( cmdline::output_filename,
                            get_file_buffer(TheRewriter,SM.getMainFileID())->dump() );
         
-        write_specialization_db();
+        if (!cmdline::spec_no_db) write_specialization_db();
       } else {
         llvm::errs() << program_name << ": not writing output due to compile errors\n";
       }
@@ -1789,7 +1804,7 @@ private:
 
 
 void get_target_struct(codetype & target) {
-  if (kernel) target.kernelize = true;
+  if (cmdline::kernel) target.kernelize = true;
   else target.kernelize = false;
 }
 
@@ -1807,8 +1822,8 @@ int main(int argc, const char **argv) {
   
   // We have command line args, possibly do something with them
   get_target_struct(target);
-  if (syntax_only) no_output = true;
-
+  if (cmdline::syntax_only) cmdline::no_output = true;
+  
   // ClangTool::run accepts a FrontendActionFactory, which is then used to
   // create new objects implementing the FrontendAction interface. Here we use
   // the helper newFrontendActionFactory to create a default factory that will

@@ -55,9 +55,11 @@ void load_spec_db() {
         iss >> s.timestamp;
         
         if (iss.fail()) {
-          llvm::errs() << program_name << ": I/O error in " << specialization_db_filename << '\n';
+          llvm::errs() << program_name << ": I/O error in " 
+                       << specialization_db_filename << '\n';
           if (iss.eof()) llvm::errs() << "Too few arguments on a line \"" << line <<  "\"\n";
-          llvm::errs() << "Suggest removing " << specialization_db_filename << " and recompile\n";
+          llvm::errs() << "Suggest removing " << specialization_db_filename 
+                       << " and recompile\n";
           exit(1);
         }
         // do not include own specializations in database, will be added again
@@ -84,7 +86,7 @@ spec * search_spec_db( std::string & decl ) {
 
 // checks whether this decl exists in database.  If so, returns true and filename in "here".
 // if not, returns false and adds the item in db
-bool is_specialization_done( const std::string & decl_in, std::string & here ) {
+bool in_specialization_db( const std::string & decl_in, std::string & here ) {
 
   std::string decl = remove_all_whitespace(decl_in);
   

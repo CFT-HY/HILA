@@ -2,6 +2,20 @@
 #include "field.h"
 
 template <typename T>
+class c {
+public:
+  static T sum(T a, T b) { return a + b; }
+};
+
+template<>
+field<double> c<field<double>>::sum( field<double> a, field<double> b ) {
+  field<double> t;
+  t[ALL] = a[X] + b[X];
+  return t;
+}
+
+
+template <typename T>
 inline field<T> sum(const field<T> a, const field<T> b) {
   field<T> r;
   r[ALL] = a[X] + b[X];
@@ -26,8 +40,8 @@ int main()
   field<double> a,x;
   field<int> y;
   
-  x = sum(a,x);
-  y = sum(y,y);
+  x = c<field<double>>::sum( a, x);
+  
   
   x = x+x+2.0;
   

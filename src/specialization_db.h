@@ -3,7 +3,7 @@
 
 #include <string>
 
-bool is_specialization_done( const std::string & decl_in, std::string & here );
+bool in_specialization_db( const std::string & decl_in, std::string & here );
 void write_specialization_db();
 
 #endif
