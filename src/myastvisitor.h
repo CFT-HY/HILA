@@ -52,15 +52,26 @@ public:
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
 
+  /// true if function contains parity loop
+  bool functiondecl_loop_found( FunctionDecl *f );
+  
   /// same for function templates
   bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
 
   /// same for function templates
   bool VisitCXXMethodDecl(CXXMethodDecl *tf);
 
+  void specialize_method( CXXMethodDecl *method );
+
+  // bool VisitCXXRecordDecl( CXXRecordDecl * D);
+
   /// and a hook for getting templated class template params
   bool VisitClassTemplateDecl(ClassTemplateDecl *D);
 
+  /// handle the templated class specializations
+  // int handle_class_specializations(ClassTemplateDecl *D);
+  
+  /// special handler for field<>
   int handle_field_specializations(ClassTemplateDecl *D);
 
   // void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
@@ -90,10 +101,7 @@ public:
     return e->getType().getUnqualifiedType().getAsString(pp);
   }
   
-  void replace_expr(Expr *e, const std::string &s) {
-    TheRewriter.ReplaceText(e->getSourceRange(),s);
-  }  
-
+  /// this tries to "fingerprint" expressions and see if they're duplicate
   bool is_duplicate_expr(const Expr * a, const Expr * b);
   
   // catches both parity and parity_plus_direction 
@@ -151,10 +159,12 @@ public:
   void replace_field_refs(srcBuf &sb);
 
   /// shortcut for "pragma"-like transformer_control("cmd")-functin
-  bool handle_control_stmt(Stmt *s);
+  // bool handle_control_stmt(Stmt *s);
+  bool control_command(VarDecl *var);
+
 
   /// utility used in inserting stuff after new line in buffer
-  SourceLocation getSourceLocationAfterNewLine( SourceLocation l );
+  SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
 
   void set_writeBuf(const FileID fid);
 

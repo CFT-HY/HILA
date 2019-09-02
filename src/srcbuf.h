@@ -38,7 +38,7 @@ private:
   std::vector<int> free_ext;
   // std::vector<srcbuftoken> tokens;
   Rewriter * myRewriter;
-  unsigned first_offset, full_length;
+  unsigned first_offset, full_length, original_size, true_size;
 
 public:
   srcBuf() { buf.clear(); }
@@ -51,7 +51,11 @@ public:
 
   int get_offset( SourceLocation s );
   
-  int get_index( SourceLocation s ) { return get_offset(s) - first_offset; }
+  int get_index( SourceLocation s ) { 
+    int l = get_offset(s) - first_offset;
+    assert(l>=0 && l<true_size);
+    return l;
+  }
   
   void create( Rewriter *R, const SourceRange &sr);
   void create( Rewriter * R, Expr *e );
@@ -92,6 +96,7 @@ public:
   // return value: index of next char
   int remove(int index1, int index2);
   int remove(const SourceRange &s);
+  int remove(const CharSourceRange &s);
   int remove(Expr *E);
   // remove including possible comma before or after the range
   // useful for removing arguments
@@ -108,6 +113,7 @@ public:
   // return: next element from remove
   int replace( int i1, int i2, const std::string &s );
   int replace( const SourceRange & r, const std::string &s );
+  int replace( const CharSourceRange & r, const std::string &s );
   int replace( Expr *e, const std::string &s );
 
   void replace_tokens(SourceRange r,

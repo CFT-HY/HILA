@@ -38,8 +38,10 @@ void srcBuf::create( Rewriter *R, const SourceRange &sr) {
   // get_offset(s->getSourceRange().getEnd()) does not necessarily
   // give end location
     
-  buf = myRewriter->getRewrittenText(sr) + " ";  // 1 extra char
-
+  buf = myRewriter->getRewrittenText(sr) + "  ";  // couple of extra chars (1 needed for insert after)
+  true_size = original_size = rsize;
+  
+  
   // Find indent level on this line
   // if (first_offset == 0) {
   //   // now we have the whole file
@@ -64,8 +66,8 @@ void srcBuf::create( Rewriter *R, const SourceRange &sr) {
   // llvm::errs() << "Got buf:  " << buf << '\n';
     
   ext_ind.clear();
-  ext_ind.resize(buf.size(),1);  // default=1
-  ext_ind.back() = 0;
+  ext_ind.resize(original_size+2,1);  // default=1
+  ext_ind[original_size] = ext_ind[original_size+1] = 0;  // skip these
   free_ext.clear();
     
   // tokens.clear();
@@ -93,7 +95,7 @@ void srcBuf::clear() {
 
 
 int srcBuf::get_index_range_size(int i1, int i2) {
-  assert( i1 >= 0 && i1 <= i2 && i2 < buf.size() );
+  assert( i1 >= 0 && i1 <= i2 && i2 < true_size );
   
   int size = 0;
   for (int i=i1; i<=i2; i++) {
@@ -122,7 +124,7 @@ std::string srcBuf::get_mapped(int index, int len) {
   for (int i=0; i<len; i++,j++) {
     // llvm::errs() << " ext_ind at "<<j<<"  is "<<ext_ind[j] << '\n';
     while (ext_ind[j] == 0) j++;
-    if (ext_ind[j] == 1) out[i] = buf[j];
+    if (ext_ind[j] == 1) out.at(i) = buf[j];
     else {
       std::string &e = extents[abs(ext_ind[j])-2];
       for (int k=0; k<e.size() && i<len; k++,i++) out[i] = e[k];
@@ -204,6 +206,7 @@ std::string * srcBuf::get_extent_ptr(int i) {
 // erase text between index values (note: not length!)
 // return next index
 int srcBuf::remove(int index1, int index2) {
+  assert(index1 >= 0 && index2 >= index1 && index2 < true_size);
   for (int i=index1; i<=index2; i++) {
     remove_extent(i);
     if (ext_ind[i] > 0) {
@@ -215,6 +218,11 @@ int srcBuf::remove(int index1, int index2) {
 }
 
 int srcBuf::remove(const SourceRange &s) {
+  int i=get_index(s.getBegin());
+  return remove(i, i+myRewriter->getRangeSize(s)-1);
+}
+
+int srcBuf::remove(const CharSourceRange &s) {
   int i=get_index(s.getBegin());
   return remove(i, i+myRewriter->getRangeSize(s)-1);
 }
@@ -236,8 +244,8 @@ int srcBuf::remove_with_comma(const SourceRange &s) {
     return after;
   } else {
     r = after;
-    while (r < buf.size() && std::isspace(buf[r])) r++;
-    if (r < buf.size() && get_original(r) == ',') {
+    while (r < true_size && std::isspace(buf[r])) r++;
+    if (r < true_size && get_original(r) == ',') {
       return remove(after,r);
     }
   }
@@ -248,6 +256,13 @@ int srcBuf::remove_with_comma(const SourceRange &s) {
 // incl_before = true -> insert include before others at this location
 int srcBuf::insert(int i, const std::string & s_in, bool incl_before, bool do_indent) {
 
+  if (i == original_size) {
+    // Now append at end, OK
+    true_size = original_size + 1;
+    //  ext_ind[original_size] = 0;
+  }
+
+  assert( i>=0 && i<true_size && "srcBuf insert range error");
   const std::string * s = &s_in;
   std::string indented = "";
   
@@ -336,7 +351,7 @@ void srcBuf::replace_tokens(SourceRange r,
   int start = get_index(r.getBegin());
   int end   = start + myRewriter->getRangeSize(r) - 1;
 
-  assert(start >= 0 && end >= start && end < buf.size());
+  assert(start >= 0 && end >= start && end < true_size);
   
   std::string tok;
   // walk through the string, form tokens

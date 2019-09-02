@@ -150,7 +150,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     
   writeBuf->insert(S->getBeginLoc(), indent_string(code), true, true);
 
-  // TheRewriter.InsertText(getSourceLocationAfterNewLine(S->getEndLoc()),
+  // TheRewriter.InsertText(getSourceLocationAtEndOfLine(S->getEndLoc()),
   //                    indent_string(code), true, true);
   //TheRewriter.InsertText(getRangeWithSemi(S,false).getEnd().getLocWithOffset(1),
   //                        call, true, true);

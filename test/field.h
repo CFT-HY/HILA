@@ -8,8 +8,14 @@
 #define NDIM 4
 #define N 10
 
+// HACK  -- this is needed for pragma handlin, do not change!
+// #pragma transformer _transformer_cmd_dump_ast_
+
+
+
 // HACK
-void transformer_control(const char *);
+#define transformer_ctl(a) extern int _transformer_ctl_##a
+//void transformer_control(const char *);
 
 // TODO: default type real_t definition somewhere
 typedef double real_t;
@@ -55,7 +61,7 @@ template <typename R> struct field_vector {
 };
 
 // fwd definition
-template <typename T> class field;
+// template <typename T> class field;
 
 // field_element class: virtual class, no storage allocated,
 // wiped out by the transformer
@@ -271,7 +277,7 @@ public:
 
   // Overloading =
   field<T>& operator= (const field<T>& rhs) {
-    this[0][ALL] = rhs[X];
+    (*this)[ALL] = rhs[X];
     return *this;
   }
   field<T>& operator= (const T& d) {
