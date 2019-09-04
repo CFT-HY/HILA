@@ -22,9 +22,17 @@ public:
       return r;
     }
   };
+  
+  template <typename U>
+  U sumt(T a, U b) {
+    T r;
+    r[ALL] = a[X] + b[X]; 
+    return r;
+  }
+  
   class f {
   public:
-    static field<double> sum2(field<double> a, field<double> b) {
+    inline static field<double> sum2(field<double> a, field<double> b) {
       field<double> r;
       r[ALL] = a[X] + b[X];
       return r;
@@ -32,8 +40,6 @@ public:
   };
 };
 
-//template <> template<>
-//field<double> c<field<double>>::sum<field<double>>(field<double>a, field<double> b);
 
 transformer_ctl(dump_ast);
 template <typename T, int n>
@@ -65,9 +71,11 @@ int main()
   field<int> y;
   r rv;
   c<field<int>>::f fv;
+  c<field<double>> cv;
 
 //  int j = c<int>::sum( 1, 2);
   
+  x = cv.sumt(a,x);
   x = fv.sum2(a,x);
   
   extern int kissa;

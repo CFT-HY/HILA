@@ -342,16 +342,17 @@ int srcBuf::replace( Expr *e, const std::string &s ) {
 }
 
 
+
 // replace legal name tokens with this routine
 // note- search done on "unedited" string
-void srcBuf::replace_tokens(SourceRange r,
-                            const std::vector<std::string> &a,
-                            const std::vector<std::string> &b) {
+// return value: number of replacements
+int srcBuf::replace_tokens(int start, int end,
+                           const std::vector<std::string> &a,
+                           const std::vector<std::string> &b) {
   
-  int start = get_index(r.getBegin());
-  int end   = start + myRewriter->getRangeSize(r) - 1;
-
   assert(start >= 0 && end >= start && end < true_size);
+
+  int replacements = 0;
   
   std::string tok;
   // walk through the string, form tokens
@@ -369,6 +370,7 @@ void srcBuf::replace_tokens(SourceRange r,
         if (tok.compare(a[j]) == 0) {
           // substutute
           replace(st,st+tok.size()-1,b[j]);
+          replacements++;
           break;
         }
       }
@@ -394,7 +396,27 @@ void srcBuf::replace_tokens(SourceRange r,
       }
     }   
   }
+  return replacements;
 }
 
+int srcBuf::replace_tokens(SourceRange r,
+                           const std::vector<std::string> &a,
+                           const std::vector<std::string> &b) {
+  
+  int start = get_index(r.getBegin());
+  int end   = start + myRewriter->getRangeSize(r) - 1;
 
+  return replace_tokens(start,end,a,b);
+}
+  
+
+
+int srcBuf::replace_token(int start, int end, const std::string & a, const std::string & b ) {
+  std::vector<std::string> va = {}, vb = {};
+  va.push_back(a);
+  vb.push_back(b);
+  
+  return replace_tokens(start,end,va,vb);
+}
+  
 

@@ -56,13 +56,25 @@ public:
   bool functiondecl_loop_found( FunctionDecl *f );
   
   /// same for function templates
-  bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
+  // bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
 
   /// same for function templates
   bool VisitCXXMethodDecl(CXXMethodDecl *tf);
 
+  void specialize_function( FunctionDecl *f );
   void specialize_method( CXXMethodDecl *method );
+  void specialize_function_or_method( FunctionDecl *f, CXXRecordDecl *parent, 
+                                      bool is_static, bool no_inline );
 
+  int get_param_substitution_list( CXXRecordDecl * r,
+                                   std::vector<std::string> & par,
+                                   std::vector<std::string> & arg );
+
+  void make_mapping_lists( const TemplateParameterList * tpl, 
+                           const TemplateArgumentList & tal,
+                           std::vector<std::string> & par,
+                           std::vector<std::string> & arg );
+ 
   // bool VisitCXXRecordDecl( CXXRecordDecl * D);
 
   /// and a hook for getting templated class template params
@@ -76,8 +88,8 @@ public:
 
   // void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
   
-  bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
-  bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
+  // bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
+  // bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
   
   bool is_field_element_expr(Expr *E);
   bool is_field_expr(Expr *E);
@@ -162,13 +174,16 @@ public:
   // bool handle_control_stmt(Stmt *s);
   bool control_command(VarDecl *var);
 
-
+  
   /// utility used in inserting stuff after new line in buffer
   SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
-
+  /// another utility (cannot trust r.getEnd())
+  SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
+  
   void set_writeBuf(const FileID fid);
 
   SourceRange get_templatefunc_decl_range(FunctionTemplateDecl *tf, FunctionDecl *f); 
+  SourceRange get_func_decl_range(FunctionDecl *f);
 
 };
 

@@ -45,11 +45,6 @@ struct loop_parity_struct {
   std::string text;
 };
 
-struct par_to_arg {
-  std::string par;
-  std::string arg;
-};
-
 struct global_state {
   std::string main_file_name = "";
   bool assert_loop_parity = false;
@@ -57,14 +52,14 @@ struct global_state {
   bool in_func_template = false;
   bool in_class_template = false;
   TemplateParameterList *function_tpl = nullptr;
-  std::vector<const TemplateParameterList *> class_templ_params = {};
-  std::vector<const TemplateArgumentList *> class_templ_args = {};
+//  std::vector<const TemplateParameterList *> class_templ_params = {};
+//  std::vector<const TemplateArgumentList *> class_templ_args = {};
   FunctionDecl * currentFunctionDecl = nullptr;
   struct location_struct {
     SourceLocation function;
     SourceLocation top;
+    SourceLocation bot;
     SourceLocation loop;
-    SourceLocation spec_insert;
   } location;
 };
 

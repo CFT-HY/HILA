@@ -116,11 +116,14 @@ public:
   int replace( const CharSourceRange & r, const std::string &s );
   int replace( Expr *e, const std::string &s );
 
-  void replace_tokens(SourceRange r,
-                      const std::vector<std::string> &a,
-                      const std::vector<std::string> &b);
+  int replace_tokens(int start, int end,
+                     const std::vector<std::string> &a,
+                     const std::vector<std::string> &b);
+  int replace_tokens(SourceRange r,
+                     const std::vector<std::string> &a,
+                     const std::vector<std::string> &b);    
+  int replace_token(int start, int end, const std::string & a, const std::string & b );
 
-    
 };
 
 
