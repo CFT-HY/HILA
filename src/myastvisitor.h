@@ -73,7 +73,8 @@ public:
   void make_mapping_lists( const TemplateParameterList * tpl, 
                            const TemplateArgumentList & tal,
                            std::vector<std::string> & par,
-                           std::vector<std::string> & arg );
+                           std::vector<std::string> & arg,
+                           std::string *al );
  
   // bool VisitCXXRecordDecl( CXXRecordDecl * D);
 

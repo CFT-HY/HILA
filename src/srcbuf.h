@@ -115,6 +115,9 @@ public:
   int replace( const SourceRange & r, const std::string &s );
   int replace( const CharSourceRange & r, const std::string &s );
   int replace( Expr *e, const std::string &s );
+  
+  void copy_from_range(srcBuf * src, SourceRange range);
+
 
   int replace_tokens(int start, int end,
                      const std::vector<std::string> &a,

@@ -72,7 +72,8 @@ std::string MyASTVisitor::make_kernel_name() {
 
 void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
-  srcBuf loopBuf( &TheRewriter, S);
+  srcBuf loopBuf;
+  loopBuf.copy_from_range(writeBuf,S->getSourceRange());
   
   // is it compound stmt: { } -no ; needed
   bool semi_at_end = !(isa<CompoundStmt>(S));

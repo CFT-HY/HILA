@@ -126,7 +126,7 @@ std::string srcBuf::get_mapped(int index, int len) {
     while (ext_ind[j] == 0) j++;
     if (ext_ind[j] == 1) out.at(i) = buf[j];
     else {
-      std::string &e = extents[abs(ext_ind[j])-2];
+      const std::string &e = extents[abs(ext_ind[j])-2];
       for (int k=0; k<e.size() && i<len; k++,i++) out[i] = e[k];
       if (i<len && ext_ind[j] > 0) out[i] = buf[j];
       else i--;  // for-loop advances i too far
@@ -339,6 +339,18 @@ int srcBuf::replace( const SourceRange & r, const std::string &s ) {
 
 int srcBuf::replace( Expr *e, const std::string &s ) {
   return replace( e->getSourceRange(), s );
+}
+
+
+void srcBuf::copy_from_range(srcBuf * src, SourceRange range) {
+  create(src->myRewriter, range);
+  // fill in using methods, no raw copy of stucts
+  int srcind = src->get_index(range.getBegin());
+  for (int i=0; i<buf.size(); i++) {
+    int j = i+srcind;
+    if (src->ext_ind[j] <= 0) remove(i,i);
+    if (src->is_extent(j)) insert(i,*src->get_extent_ptr(j));
+  }
 }
 
 
