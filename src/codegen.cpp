@@ -72,8 +72,15 @@ std::string MyASTVisitor::make_kernel_name() {
 
 void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
-  srcBuf loopBuf;
+  srcBuf loopBuf; // (&TheRewriter,S);
   loopBuf.copy_from_range(writeBuf,S->getSourceRange());
+  
+  //   llvm::errs() << "\nOriginal range: +++++++++++++++\n\""
+  //                << TheRewriter.getRewrittenText(S->getSourceRange()) 
+  //                << "\"\nwriteBuf range: ================\n\""
+  //                << writeBuf->get(S->getSourceRange())
+  //                << "\"\nCopied range: ================\n\""
+  //                << loopBuf.dump() << "\"\n";
   
   // is it compound stmt: { } -no ; needed
   bool semi_at_end = !(isa<CompoundStmt>(S));
@@ -97,10 +104,13 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   } 
   else parity_in_this_loop = parity_str(loop_parity.value);
 
+  std::string t = loopBuf.dump();
   for (field_info & l : field_info_list) {
     // Generate new variable name, may be needed -- use here simple receipe
-    l.new_name = "f__"+clean_name(l.old_name)+"_";
-
+    l.new_name = "F"+clean_name(l.old_name);
+    // Ensure that the name is not reserved by scanning the source
+    while (t.find(l.new_name,0) != std::string::npos) l.new_name += "_";
+    
     // variable links if needed
     if (!target.kernelize || l.dir_list.size() > 0) {
       code += l.type + " & " + l.new_name + " = " + l.old_name + ";\n";
@@ -239,7 +249,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
 
   // Finally, emit the kernel
   // TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
-  writeBuf->insert(global.location.function, indent_string(kernel),true,false);
+  toplevelBuf->insert(global.location.top.getLocWithOffset(-1), indent_string(kernel),true,false);
 
   return call;
 }

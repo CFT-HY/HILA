@@ -29,6 +29,7 @@ int srcBuf::get_offset( SourceLocation s ) {
 }
 
 void srcBuf::create( Rewriter *R, const SourceRange &sr) {
+  clear();
   myRewriter = R;
   int rsize = myRewriter->getRangeSize(sr);
   assert( rsize >= 0 && "srcbuf: RangeSize should be > 0");
@@ -40,39 +41,14 @@ void srcBuf::create( Rewriter *R, const SourceRange &sr) {
     
   buf = myRewriter->getRewrittenText(sr) + "  ";  // couple of extra chars (1 needed for insert after)
   true_size = original_size = rsize;
-  
-  
-  // Find indent level on this line
-  // if (first_offset == 0) {
-  //   // now we have the whole file
-  //   indent = "";
-  // } else {
-  //   SourceLocation p = sr.getBegin();
-  //   SourceManager &SM = myRewriter->getSourceMgr();
-  //   int col = SM.getSpellingColumnNumber(p);
-
-  //   assert(col <= first_offset && "srcbuf indent logic error");
-  //   SourceLocation b = p.getLocWithOffset(-col);
-    
-  //   for (int i=0; i<=col; i++) {
-  //     const char * p = SM.getCharacterData(b.getLocWithOffset(i));
-  //     if (p && std::isspace(*p))
-  //       indent.push_back(*p);
-  //     else
-  //       break;
-  //   }
-    
-  
-  // llvm::errs() << "Got buf:  " << buf << '\n';
-    
-  ext_ind.clear();
+      
   ext_ind.resize(original_size+2,1);  // default=1
   ext_ind[original_size] = ext_ind[original_size+1] = 0;  // skip these
-  free_ext.clear();
+  write_ok = true;
     
   // tokens.clear();
 }
-  
+
 void srcBuf::create( Rewriter * R, Expr *e ) {
   create( R, e->getSourceRange() );
 }
@@ -90,6 +66,7 @@ void srcBuf::clear() {
   ext_ind.clear();
   extents.clear();
   free_ext.clear();
+  prependbuf = "";
   // tokens.clear();
 }
 
@@ -115,23 +92,26 @@ int srcBuf::get_sourcerange_size(const SourceRange & s) {
 
   // get buffer content from index to length len
 std::string srcBuf::get_mapped(int index, int len) {
-  assert(index >= 0 && len <= full_length - index
-         && "srcbuf: offset error");
+  assert(index >= 0 && "srcbuf: offset error");
 
   std::string out(len,' ');
 
   int j = index;
-  for (int i=0; i<len; i++,j++) {
+  int i;
+  for (i=0; i<len && j<true_size; i++,j++) {
     // llvm::errs() << " ext_ind at "<<j<<"  is "<<ext_ind[j] << '\n';
-    while (ext_ind[j] == 0) j++;
-    if (ext_ind[j] == 1) out.at(i) = buf[j];
-    else {
-      const std::string &e = extents[abs(ext_ind[j])-2];
-      for (int k=0; k<e.size() && i<len; k++,i++) out[i] = e[k];
-      if (i<len && ext_ind[j] > 0) out[i] = buf[j];
-      else i--;  // for-loop advances i too far
+    while (j<true_size && ext_ind[j] == 0) j++;
+    if (j < true_size) {
+      if (ext_ind[j] == 1) out.at(i) = buf[j];
+      else {
+        const std::string &e = extents[abs(ext_ind[j])-2];
+        for (int k=0; k<e.size() && i<len; k++,i++) out[i] = e[k];
+        if (i<len && ext_ind[j] > 0) out[i] = buf[j];
+        else i--;  // for-loop advances i too far
+      }
     }
   }
+  if (i < len) out.resize(i);
   return out;
 }
 
@@ -152,7 +132,8 @@ std::string srcBuf::get(const SourceRange & s) {
 }
 
 std::string srcBuf::dump() {
-  return get_mapped(0,full_length);
+  if (prependbuf.size() > 0) return prependbuf + get_mapped(0,full_length);
+  else return get_mapped(0,full_length);
 }
 
 bool srcBuf::isOn() { return buf.size() > 0; }
@@ -182,12 +163,14 @@ int srcBuf::find_original(SourceLocation start, const std::string &c) {
 }
             
 bool srcBuf::is_extent(int i) {
+  assert(i>=0 && i<true_size);
   int e = abs(ext_ind[i]);
   if (e > 1) return true;
   return false;
 }
 
 void srcBuf::remove_extent(int i) {
+  if (!write_ok) return;
   int e = abs(ext_ind[i]);
   if (e > 1) {
     full_length -= extents[e-2].size();
@@ -207,6 +190,8 @@ std::string * srcBuf::get_extent_ptr(int i) {
 // return next index
 int srcBuf::remove(int index1, int index2) {
   assert(index1 >= 0 && index2 >= index1 && index2 < true_size);
+  if (!write_ok) return index2+1;
+
   for (int i=index1; i<=index2; i++) {
     remove_extent(i);
     if (ext_ind[i] > 0) {
@@ -256,6 +241,8 @@ int srcBuf::remove_with_comma(const SourceRange &s) {
 // incl_before = true -> insert include before others at this location
 int srcBuf::insert(int i, const std::string & s_in, bool incl_before, bool do_indent) {
 
+  if (!write_ok) return i+1;
+  
   if (i == original_size) {
     // Now append at end, OK
     true_size = original_size + 1;
@@ -341,16 +328,29 @@ int srcBuf::replace( Expr *e, const std::string &s ) {
   return replace( e->getSourceRange(), s );
 }
 
+void srcBuf::append( const std::string &s, bool do_indent ) {
+  insert( original_size, s, false, do_indent);
+}
+
+void srcBuf::prepend( const std::string &s, bool do_indent ) {
+  if (!write_ok) return;
+  prependbuf = s + prependbuf;
+  full_length += s.length();
+}
 
 void srcBuf::copy_from_range(srcBuf * src, SourceRange range) {
+  clear();
   create(src->myRewriter, range);
-  // fill in using methods, no raw copy of stucts
+  // fill in using methods, no raw copy of structs
+  //llvm::errs() << "Dump: " << dump();
   int srcind = src->get_index(range.getBegin());
-  for (int i=0; i<buf.size(); i++) {
+  for (int i=0; i<true_size; i++) {
     int j = i+srcind;
     if (src->ext_ind[j] <= 0) remove(i,i);
-    if (src->is_extent(j)) insert(i,*src->get_extent_ptr(j));
+    if (src->is_extent(j)) insert(i,*src->get_extent_ptr(j),true,false);
   }
+  //llvm::errs() << "Dump again: " << dump();
+
 }
 
 
@@ -361,6 +361,8 @@ void srcBuf::copy_from_range(srcBuf * src, SourceRange range) {
 int srcBuf::replace_tokens(int start, int end,
                            const std::vector<std::string> &a,
                            const std::vector<std::string> &b) {
+
+  if (!write_ok) return 0;
   
   assert(start >= 0 && end >= start && end < true_size);
 

@@ -3,20 +3,25 @@
 #include "stringops.h"
 
 
-
+/// this routine changes the input to alphanumeric + _, for naming purposes
 std::string clean_name(const std::string & s) {
   
   std::string r = s;
   size_t j=0;
-  for (size_t i=0; i<s.length(); i++) {
+  for (size_t i=0; i<s.length(); i++,j++) {
     char c = s[i];
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
-        c == '_' ||(i > 0 && c >= '0' && c <= '9'))
-      {
-        r[j++] = c;
+    if (std::isalnum(c) || c == '_') r[j] = c;
+    else {
+      switch(c) {
+        case '+': r[j] = 'P'; break;
+        case '-': r[j] = 'M'; break;
+        case '*': r[j] = 'X'; break;
+        case '/': r[j] = 'D'; break;
+        case '=': r[j] = 'E'; break;
+        default: r[j] = '_' ;
       }
+    }
   }
-  r.resize(j);
   return r;
 }
 

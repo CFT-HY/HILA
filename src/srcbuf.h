@@ -36,6 +36,8 @@ private:
   std::vector<int> ext_ind;
   std::vector<std::string> extents;
   std::vector<int> free_ext;
+  std::string prependbuf;
+  bool write_ok;
   // std::vector<srcbuftoken> tokens;
   Rewriter * myRewriter;
   unsigned first_offset, full_length, original_size, true_size;
@@ -50,6 +52,9 @@ public:
   srcBuf( Rewriter *R, Decl *D ) { create(R,D); }
 
   int get_offset( SourceLocation s );
+
+  void off() { write_ok = false; }
+  void on()  { write_ok = true; }
   
   int get_index( SourceLocation s ) { 
     int l = get_offset(s) - first_offset;
@@ -116,8 +121,11 @@ public:
   int replace( const CharSourceRange & r, const std::string &s );
   int replace( Expr *e, const std::string &s );
   
+  void append( const std::string &s, bool do_indent );
+  void prepend( const std::string &s, bool do_indent );
+  
   void copy_from_range(srcBuf * src, SourceRange range);
-
+  
 
   int replace_tokens(int start, int end,
                      const std::vector<std::string> &a,

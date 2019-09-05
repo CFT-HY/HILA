@@ -25,7 +25,8 @@ private:
   Rewriter &TheRewriter;
   ASTContext *Context;
   srcBuf *writeBuf;
-
+  srcBuf *toplevelBuf;
+  
 public:
   MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
   MyASTVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
