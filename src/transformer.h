@@ -74,7 +74,7 @@ struct field_ref {
   struct field_info * info;
   // unsigned nameInd, parityInd;
   int direction;
-  bool is_changed;
+  bool is_written, is_read;
 };
 
 struct dir_ptr {
@@ -86,13 +86,13 @@ struct field_info {
   std::string type;
   std::string old_name;
   std::string new_name;
-  bool is_changed;   
+  bool is_written, is_read;
   std::vector<dir_ptr> dir_list;
   std::vector<field_ref *> ref_list;
 
   field_info() {
     type = old_name = new_name = "";
-    is_changed = false;
+    is_written = is_read = false;
     dir_list = {};
     ref_list = {};
   }

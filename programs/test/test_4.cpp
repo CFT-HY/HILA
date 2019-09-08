@@ -1,14 +1,6 @@
 
 #include "field.h"
 
-class r {
-public:
-  field<double>sum(field<double> a, field<double> b) { 
-    field<double>r;
-    r[ALL] = a[X] + b[X];
-    return r;
-  }
-};
 
 template <typename T>
 class c {
@@ -42,10 +34,10 @@ public:
 
 
 transformer_ctl(dump_ast);
-template <typename T, int n>
+template <typename T>
 inline T sum(const T a, const T b) {
   T r;
-  r[ALL] = a[X] + n*b[X];
+  r[ALL] = a[X] + b[X];
 
   return r;
 }
@@ -69,9 +61,9 @@ int main()
 {
   field<double> a,x;
   field<int> y;
-  r rv;
   c<field<int>>::f fv;
   c<field<double>> cv;
+  double dd;
 
 //  int j = c<int>::sum( 1, 2);
   
@@ -81,9 +73,9 @@ int main()
   extern int kissa;
   x = c<field<double>>::d<field<double>>::sum( a, x);
   
-  x = sum<field<double>,2>(a,x);
+  x = sum(a,x);
+  y = sum(y,y);
   
-  x = rv.sum(a,x);
 
   x = x+x+2.0;
   
@@ -92,6 +84,12 @@ int main()
 
   
   x[ALL] = x[X]+x[X];
+  
+  onsites(EVEN) {
+    for (int k=0; k<NDIM; k++) {
+      x[X] = a[X+direction::xup] + dd*x[X];
+    }
+  }
   
   
   return 0;

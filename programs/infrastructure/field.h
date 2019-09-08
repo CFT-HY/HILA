@@ -1,17 +1,21 @@
 // -*- mode: c++ -*-
+#ifndef FIELD_H
+#define FIELD_H
 #include <iostream>
 #include <string>
 #include <math.h>
 
 // using namespace std;
 
+// move these somewhere - use consts?
 #define NDIM 4
-#define N 10
+#define NDIRS (2*NDIM)
+
+#include "lattice.h"
+
 
 // HACK  -- this is needed for pragma handlin, do not change!
 // #pragma transformer _transformer_cmd_dump_ast_
-
-
 
 // HACK
 #define transformer_ctl(a) extern int _transformer_ctl_##a
@@ -20,14 +24,22 @@
 // TODO: default type real_t definition somewhere
 typedef double real_t;
 
-enum class direction { xup, yup, zup, tup, tdown, zdown, ydown, xdown, NONE };
-// static inline const direction opp_dir(const direction d) { return 2*NDIM - d; }
+enum class direction : unsigned { xup, yup, zup, tup, tdown, zdown, ydown, xdown, NONE };
 
-enum class parity { none, even, odd, all, x };
+static inline direction opp_dir(const direction d) { 
+  return static_cast<direction>(NDIRS - static_cast<unsigned>(d)); }
+
+enum class parity : unsigned { none, even, odd, all, x };
 const parity EVEN = parity::even;
 const parity ODD  = parity::odd;
 const parity ALL  = parity::all;
 const parity X    = parity::x;
+
+// turns EVEN <-> ODD, ALL remains.  X->none, none->none
+static inline parity opp_parity(const parity p) {
+  unsigned u = 0x3 & static_cast<unsigned>(p);
+  return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
+}
 
 
 struct parity_plus_direction {
@@ -40,7 +52,6 @@ const parity_plus_direction operator-(const parity par, const direction d);
 
 // This is a marker for transformer -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)
-
 
 //class parity {
 //  parity() {}
@@ -226,47 +237,96 @@ struct field_storage_type {
   T c;
 };
 
+/// The following struct holds the data + information about the field
+/// TODO: field-specific boundary conditions?
+template <typename T>
+class field_struct {
+  field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
+  lattice_struct * lattice;
+  unsigned is_fetched[NDIRS];
+  
+};
 
 template <typename T>
 class field {
 private:
   // here correct data
-  field_storage_type<T> * data;
+  field_struct<T> * fs;
   
 public:
   
   field<T>() {
     // cout << "In constructor 1\n";
-    data = new field_storage_type<T>[N];
+    fs = nullptr;             // lazy allocation on 1st use
   }
   
-  field<T>(const T& val) {
-    // cout << "In constructor 2\n";
-    data = new field_storage_type<T>[N];
+  // copy constructor  -- let the latfield_element<> type find if this is OK
+  template <typename R>
+  field<T>(const field<R>& other) {
+    fs = nullptr;
+    (*this)[ALL] = other[X];
+  }
+
+  template <typename R>
+  field<T>(const R& val) {
+    fs = nullptr;
     (*this)[ALL] = val;
   }
   
-  ~field<T>() {
-    // cout << "in destructor\n";
-    delete[] data;
-  }
-  
-  // copy constructor
-  field<T>(const field<T>& other) {
-    data = new field_storage_type<T>[N];
-    (*this)[ALL] = other[X];
-  }
-  
-  // move constructor
-  field<T>(field<T>&& other) {
+  // move constructor - steal the content
+  field<T>(field<T>&& rhs) {
     // cout << "in move constructor\n";
-    data = other.data;
-    other.data = NULL;
+    fs = rhs.fs;
+    rhs.fs = nullptr;
+  }
+
+  ~field<T>() {
+    free();
+  }
+    
+  void alloc() {
+    assert(fs == nullptr);
+    if (current_lattice == nullptr) {
+      // TODO: write to some named stream
+      cout << "Can not use field variables before lattice is initialized\n";
+      exit(1);  // TODO - more ordered exit?
+    }
+    fs = new field_struct;
+    fs->lattice = &current_lattice;
+    fs->payload = (field_storage_type<T> *)alloc_field_memory(sizeof(T)*current_lattice.node_fullsize);
+
+    mark_changed(ALL);
+  }
+
+  void free() {
+    if (fs != nullptr) {
+      free_field_memory( fs->payload );
+      delete fs;
+      fs = nullptr;
+    }
+  }
+
+  // call this BEFORE the var is written to
+  void mark_changed(const parity p) {
+    if (fs == nullptr) alloc();
+    else {
+      char pc = static_cast<char>(p);
+      assert(p == EVEN || p == ODD || p == ALL);
+      unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
+      for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
+    }
+  }
+  
+  void assert_is_initialized() {
+    if (fs == nullptr) {
+      cout << "field variable used before it is assigned to\n";
+      exit(1);
+    }
   }
   
   // Overloading [] 
   // placemarker, should not be here
-  T& operator[] (const int i) { return data[i]; }
+  // T& operator[] (const int i) { return data[i]; }
 
   // these give the field_element -- WILL BE modified by transformer
   field_element<T>& operator[] (const parity p) const;
@@ -275,36 +335,55 @@ public:
   //  return (field_element<T>) *this;
   //}
 
-  // Overloading =
-  field<T>& operator= (const field<T>& rhs) {
+  // Overloading =  
+  // it is left to "field_element<>" to decide whether the assignment is OK
+  template <typename R>
+  field<T>& operator= (const field<R>& rhs) {
     (*this)[ALL] = rhs[X];
     return *this;
   }
-  field<T>& operator= (const T& d) {
+  
+  template <typename R>
+  field<T>& operator= (const R& d) {
     (*this)[ALL] = d;
     return *this;
   }
+  
   // Do also move assignment
-  field<T>& operator= (field<T> && other) {
-    if (this != &other) {
-      delete[] data;
-      data = other.data;
-      other.data = NULL;
+  field<T>& operator= (field<T> && rhs) {
+    if (this != &rhs) {
+      free();
+      fs = rhs.fs;
+      rhs.fs = nullptr;
     }
     return *this;
   }
   
+  template <typename R>
+  field<T>& operator+= (const field<R>& rhs) { (*this)[ALL] += rhs[X]; return *this;}
+  template <typename R>
+  field<T>& operator-= (const field<R>& rhs) { (*this)[ALL] -= rhs[X]; return *this;}
+  template <typename R>
+  field<T>& operator*= (const field<R>& rhs) { (*this)[ALL] *= rhs[X]; return *this;}
+  template <typename R>
+  field<T>& operator/= (const field<R>& rhs) { (*this)[ALL] /= rhs[X]; return *this;}
 
-  field<T>& operator+= (const field<T>& rhs) { (*this)[ALL] += rhs[X]; return *this;}
-  field<T>& operator-= (const field<T>& rhs) { (*this)[ALL] -= rhs[X]; return *this;}
-  field<T>& operator*= (const field<T>& rhs) { (*this)[ALL] *= rhs[X]; return *this;}
-  field<T>& operator/= (const field<T>& rhs) { (*this)[ALL] /= rhs[X]; return *this;}
+  template <typename R>
+  field<T>& operator+= (const R & rhs) { (*this)[ALL] += rhs; return *this;}
+  template <typename R>
+  field<T>& operator-= (const R & rhs) { (*this)[ALL] -= rhs; return *this;}
+
+  template <typename R>
+  field<T>& operator*= (const R & rhs) { (*this)[ALL] *= rhs; return *this;}
+  template <typename R>
+  field<T>& operator/= (const R & rhs) { (*this)[ALL] /= rhs; return *this;}
+
   
 };
 
 
-template <typename T>
-field<T> operator+( const field<T> &lhs, const field<T> &rhs) {
+template <typename T, typename L, typename R>
+field<T> operator+( const field<L> &lhs, const field<R> &rhs) {
   field<T> tmp;
   tmp[ALL] = lhs[X] + rhs[X];
   return tmp;
@@ -335,7 +414,7 @@ field<T> operator+( const field<T> &lhs,  const R &rhs) {
 //   return lhs;
 // }
 
-template <typename T>
+template <typename T, typename R>
 field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
   return lhs;
 }
@@ -365,4 +444,6 @@ field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
   
 // };
 
+
+#endif
 

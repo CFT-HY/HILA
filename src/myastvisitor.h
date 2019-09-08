@@ -124,7 +124,7 @@ public:
   /// Checks if expr points to a variable defined in the same loop
   var_decl * is_loop_local_var_ref(Expr *E);
 
-  bool is_assignment_expr(Stmt * s, std::string * opcodestr);
+  bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool & is_compound);
   
   bool is_loop_extern_var_ref(Expr *E);
   
@@ -136,7 +136,7 @@ public:
 
   void check_var_info_list();
   
-  bool handle_field_parity_expr(Expr *e, bool is_assign);
+  bool handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
 

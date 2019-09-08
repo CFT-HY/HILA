@@ -35,9 +35,10 @@ int main()
   F<vector> vd;
   F<vector,float> vf;
 
+  
     
   
-  // t.sub2(a,b,EVEN);
+  t.sub2(a,b,EVEN);
   
   return 0;
 }

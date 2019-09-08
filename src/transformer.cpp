@@ -437,8 +437,9 @@ bool MyASTVisitor::check_field_ref_list() {
       field_info lfv;
       lfv.old_name = name;
       lfv.type = get_expr_type(p.nameExpr);
-      lfv.is_changed = p.is_changed;
-        
+      lfv.is_written = p.is_written;
+      lfv.is_read    = p.is_read;
+      
       field_info_list.push_back(lfv);
       lfip = & field_info_list.back();
     }
@@ -446,14 +447,15 @@ bool MyASTVisitor::check_field_ref_list() {
     // copy that to lf reference
     p.info = lfip;
 
-    if (p.is_changed) lfip->is_changed = true;
+    if (p.is_written) lfip->is_written = true;
+    if (p.is_read)    lfip->is_read    = true;
       
     // save expr record
     lfip->ref_list.push_back(&p);
 
     if (p.dirExpr != nullptr) {
 
-      if (p.is_changed) {
+      if (p.is_written) {
         reportDiag(DiagnosticsEngine::Level::Error,
                    p.parityExpr->getSourceRange().getBegin(),
                    "Neighbour offset not allowed on the LHS of an assignment");
@@ -487,11 +489,11 @@ bool MyASTVisitor::check_field_ref_list() {
   // check for f[ALL] = f[X+dir] -type use, which is undefined
   
   for (field_info & l : field_info_list) {
-    if (l.is_changed && l.dir_list.size() > 0) {
+    if (l.is_written && l.dir_list.size() > 0) {
       if (loop_parity.value == parity::all) {
         // There's error, find culprits
         for (field_ref * p : l.ref_list) {
-          if (p->dirExpr != nullptr && !p->is_changed) {
+          if (p->dirExpr != nullptr && !p->is_written) {
             reportDiag(DiagnosticsEngine::Level::Error,
                        p->parityExpr->getSourceRange().getBegin(),
                        "Accessing field '%0' undefined when assigning to '%1' with parity ALL, flagging as error",
@@ -502,7 +504,7 @@ bool MyASTVisitor::check_field_ref_list() {
         }
 
         for (field_ref * p : l.ref_list) {
-          if (p->is_changed && p->dirExpr == nullptr) {
+          if (p->is_written && p->dirExpr == nullptr) {
             reportDiag(DiagnosticsEngine::Level::Note,
                        p->fullExpr->getSourceRange().getBegin(),
                        "Location of assignment");
@@ -527,7 +529,7 @@ bool MyASTVisitor::check_field_ref_list() {
 // This routine goes through one field reference and
 // pushes the info to lists
   
-bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
+bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound) {
     
   e = e->IgnoreParens();
   field_ref lfe;
@@ -537,7 +539,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
     lfe.nameExpr   = OC->getArg(0);
     lfe.parityExpr = OC->getArg(1);
   } else if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(e)) {
-    // In template definition
+    // In template definition TODO: should be removed?
 
     lfe.fullExpr   = ASE;
     lfe.nameExpr   = ASE->getLHS();
@@ -563,7 +565,8 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign) {
     }
   }
 
-  lfe.is_changed = is_assign;
+  lfe.is_written = is_assign;
+  lfe.is_read = (is_compound || !is_assign);
     
   // next ref must have wildcard parity
   state::accept_field_parity = false;
@@ -744,16 +747,23 @@ void MyASTVisitor::check_var_info_list() {
 
 
 /// is the stmt pointing now to assignment
-bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr) {
+bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s))
     if (OP->isAssignmentOp()) {
+      // TODO: there should be some more elegant way to do this
+      const char *sp = getOperatorSpelling(OP->getOperator());
+      if ((sp[0] == '+' || sp[0] == '-' || sp[0] == '*' || sp[0] == '/')
+          && sp[1] == '=') iscompound = true;
+      else iscompound = false;
       if (opcodestr)
         *opcodestr = getOperatorSpelling(OP->getOperator());
       return true;
     }
   
+  // TODO: this is for templated expr, I think -- should be removed (TEST IT)
   if (BinaryOperator *B = dyn_cast<BinaryOperator>(s))
     if (B->isAssignmentOp()) {
+      iscompound = B->isCompoundAssignmentOp();
       if (opcodestr)
         *opcodestr = B->getOpcodeStr();
       return true;
@@ -859,11 +869,12 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // This keeps track of the assignment to field
   // must remember the set value across calls
   static bool is_assignment = false;
+  static bool is_compound = false;
   static std::string assignop;
  
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
   // And also assignments to other vars: t += norm2(lf[X]) etc.
-   if (is_assignment_expr(s,&assignop)) {
+   if (is_assignment_expr(s,&assignop,is_compound)) {
     is_assignment = true;
     // next visit here will be to the assigned to variable
     return true;
@@ -885,7 +896,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // Now we know it is a field parity reference
       // get the expression for field name
           
-      handle_field_parity_expr(E, is_assignment);
+      handle_field_parity_expr(E, is_assignment, is_compound);
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
 
