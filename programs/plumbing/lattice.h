@@ -8,7 +8,7 @@
 #undef NDEBUG
 #include <assert.h>
 
-alloc
+void * allocate_aligned
 
 
 // move these somewhere - use consts?

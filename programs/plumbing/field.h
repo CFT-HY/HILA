@@ -7,7 +7,7 @@
 
 // using namespace std;
 
-#include "../infrastructure/lattice.h"
+#include "../plumbing/lattice.h"
 
 
 // HACK  -- this is needed for pragma handlin, do not change!
