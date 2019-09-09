@@ -8,7 +8,7 @@
 #undef NDEBUG
 #include <assert.h>
 
-void * allocate_aligned
+#include "memory.h"
 
 
 // move these somewhere - use consts?
@@ -35,6 +35,6 @@ public:
   unsigned node_fullsize() { return node_fullsize_p; }
 };
 
-extern lattice_struct * current_lattice;
+extern lattice_struct * lattice;
 
 #endif

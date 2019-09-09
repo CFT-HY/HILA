@@ -186,12 +186,17 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
   
   replace_field_refs(loopBuf);
   
-  std::string code = "forparity("+looping_var+", "+parity_in_this_loop+") {\n" +
-    loopBuf.dump();
-  if (semi_at_end) code += ';';
-  code += "\n}\n";
+  std::stringstream code;
+  code << "const int loop_begin = lattice->node.loop_begin[" << parity_in_this_loop << "];\n";
+  code << "const int loop_end   = lattice->node.loop_end[" << parity_in_this_loop << "];\n";
+  
+  code << "for(int " << looping_var <<" = loop_begin; " 
+       << looping_var << " < loop_end; " << looping_var << "++) {\n" 
+       << loopBuf.dump();
+  if (semi_at_end) code << ';';
+  code << "\n}\n";
 
-  return code;
+  return code.str();
 }
 
 /// return value: kernel call code

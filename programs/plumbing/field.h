@@ -234,14 +234,15 @@ struct field_storage_type {
 };
 
 /// The following struct holds the data + information about the field
-/// TODO: field-specific boundary conditions?
-template <typename T>
-class field_struct {
-  field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-  lattice_struct * lattice;
-  unsigned is_fetched[NDIRS];
-  
-};
+// template <typename T>
+// class field_struct {
+//   friend field<T>;
+// 
+//   field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
+//   lattice_struct * lattice;
+//   unsigned is_fetched[NDIRS];
+//   
+// };
 
 
 // ** class field
@@ -249,8 +250,32 @@ class field_struct {
 template <typename T>
 class field {
 private:
-  // here correct data
-  field_struct<T> * fs;
+
+  /// TODO: field-specific boundary conditions?
+  class field_struct {
+  private:
+    field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
+    lattice_struct * lattice;
+    unsigned is_fetched[NDIRS];
+    
+  public:
+    void allocate_payload() {
+      payload = (field_storage_type<T> *) 
+                   allocate_field_mem(sizeof(T) * lattice->node_fullsize());
+      if (payload == nullptr) {
+        std::cout << "Failure in field memory allocation\n";
+        exit(1);
+      }
+    }
+    
+    void free_payload() {
+      free_field_mem((void *)payload);
+      payload = nullptr;
+    }
+    
+  };
+  
+  field_struct * fs;
   
 public:
   
@@ -259,15 +284,13 @@ public:
     fs = nullptr;             // lazy allocation on 1st use
   }
   
-  // copy constructor  -- let the latfield_element<> type find if this is OK
-  template <typename R>
-  field<T>(const field<R>& other) {
+  // copy constructor 
+  field<T>(const field<T>& other) {
     fs = nullptr;
     (*this)[ALL] = other[X];
   }
 
-  template <typename R>
-  field<T>(const R& val) {
+  field<T>(const T& val) {
     fs = nullptr;
     (*this)[ALL] = val;
   }
@@ -283,23 +306,23 @@ public:
     free();
   }
     
-  void alloc() {
+  void allocate() {
     assert(fs == nullptr);
-    if (current_lattice == nullptr) {
+    if (lattice == nullptr) {
       // TODO: write to some named stream
       std::cout << "Can not use field variables before lattice is initialized\n";
       exit(1);  // TODO - more ordered exit?
     }
-    fs = new field_struct<T>;
-    fs->lattice = &current_lattice;
-    fs->payload = (field_storage_type<T> *)alloc_field_memory(sizeof(T)*current_lattice->node_fullsize());
+    fs = new field_struct;
+    fs->lattice = &lattice;
+    fs->allocate_payload();
 
     mark_changed(ALL);
   }
 
   void free() {
     if (fs != nullptr) {
-      free_field_memory( fs->payload );
+      fs->free_payload();
       delete fs;
       fs = nullptr;
     }
@@ -307,7 +330,7 @@ public:
 
   // call this BEFORE the var is written to
   void mark_changed(const parity p) {
-    if (fs == nullptr) alloc();
+    if (fs == nullptr) allocate();
     else {
       char pc = static_cast<char>(p);
       assert(p == EVEN || p == ODD || p == ALL);
@@ -335,15 +358,12 @@ public:
   //}
 
   // Overloading =  
-  // it is left to "field_element<>" to decide whether the assignment is OK
-  template <typename R>
-  field<T>& operator= (const field<R>& rhs) {
+  field<T>& operator= (const field<T>& rhs) {
     (*this)[ALL] = rhs[X];
     return *this;
   }
   
-  template <typename R>
-  field<T>& operator= (const R& d) {
+  field<T>& operator= (const T& d) {
     (*this)[ALL] = d;
     return *this;
   }
@@ -358,47 +378,59 @@ public:
     return *this;
   }
   
-  template <typename R>
-  field<T>& operator+= (const field<R>& rhs) { (*this)[ALL] += rhs[X]; return *this;}
-  template <typename R>
-  field<T>& operator-= (const field<R>& rhs) { (*this)[ALL] -= rhs[X]; return *this;}
-  template <typename R>
-  field<T>& operator*= (const field<R>& rhs) { (*this)[ALL] *= rhs[X]; return *this;}
-  template <typename R>
-  field<T>& operator/= (const field<R>& rhs) { (*this)[ALL] /= rhs[X]; return *this;}
+  field<T>& operator+= (const field<T>& rhs) { (*this)[ALL] += rhs[X]; return *this;}
+  field<T>& operator-= (const field<T>& rhs) { (*this)[ALL] -= rhs[X]; return *this;}
+  field<T>& operator*= (const field<T>& rhs) { (*this)[ALL] *= rhs[X]; return *this;}
+  field<T>& operator/= (const field<T>& rhs) { (*this)[ALL] /= rhs[X]; return *this;}
 
-  template <typename R>
-  field<T>& operator+= (const R & rhs) { (*this)[ALL] += rhs; return *this;}
-  template <typename R>
-  field<T>& operator-= (const R & rhs) { (*this)[ALL] -= rhs; return *this;}
-
-  template <typename R>
-  field<T>& operator*= (const R & rhs) { (*this)[ALL] *= rhs; return *this;}
-  template <typename R>
-  field<T>& operator/= (const R & rhs) { (*this)[ALL] /= rhs; return *this;}
+  field<T>& operator+= (const T & rhs) { (*this)[ALL] += rhs; return *this;}
+  field<T>& operator-= (const T & rhs) { (*this)[ALL] -= rhs; return *this;}
+  field<T>& operator*= (const T & rhs) { (*this)[ALL] *= rhs; return *this;}
+  field<T>& operator/= (const T & rhs) { (*this)[ALL] /= rhs; return *this;}
 
   
 };
 
-
-template <typename T, typename L, typename R>
-field<T> operator+( const field<L> &lhs, const field<R> &rhs) {
+template <typename T>
+field<T> operator+( const field<T> &lhs, const field<T> &rhs) {
   field<T> tmp;
   tmp[ALL] = lhs[X] + rhs[X];
   return tmp;
 }
 
-template <typename T,typename L>
-field<T> operator+( const L &lhs, const field<T> &rhs) {
+template <typename T>
+field<T> operator+( const T &lhs, const field<T> &rhs) {
   field<T> tmp;
   tmp[ALL] = lhs + rhs[X];
   return tmp;
 }
 
-template <typename T,typename R>
-field<T> operator+( const field<T> &lhs,  const R &rhs) {
+template <typename T>
+field<T> operator+( const field<T> &lhs,  const T &rhs) {
   return operator+(rhs,lhs);
 }
+
+template <typename T>
+field<T> operator-( const field<T> &lhs, const field<T> &rhs) {
+  field<T> tmp;
+  tmp[ALL] = lhs[X] - rhs[X];
+  return tmp;
+}
+
+template <typename T>
+field<T> operator-( const T &lhs, const field<T> &rhs) {
+  field<T> tmp;
+  tmp[ALL] = lhs - rhs[X];
+  return tmp;
+}
+
+template <typename T>
+field<T> operator-( const field<T> &lhs,  const T &rhs) {
+  field<T> tmp;
+  tmp[ALL] = lhs[X] - rhs;
+  return tmp;
+}
+
 
 // template <typename T>
 // field<T> operator+( const double lhs, const field<T> &rhs) {
@@ -413,11 +445,9 @@ field<T> operator+( const field<T> &lhs,  const R &rhs) {
 //   return lhs;
 // }
 
-template <typename T, typename R>
-field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
-  return lhs;
-}
-
+//field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
+//  return lhs;
+//}
 
 
 // template <typename T>
