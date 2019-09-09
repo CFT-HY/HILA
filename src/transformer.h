@@ -17,9 +17,6 @@
 //#include "llvm/Support/raw_ostream.h"
 
 
-#undef NDEBUG
-#include <assert.h>
-
 // set namespaces globally
 using namespace clang;
 //using namespace clang::driver;

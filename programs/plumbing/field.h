@@ -7,11 +7,7 @@
 
 // using namespace std;
 
-// move these somewhere - use consts?
-#define NDIM 4
-#define NDIRS (2*NDIM)
-
-#include "lattice.h"
+#include "../infrastructure/lattice.h"
 
 
 // HACK  -- this is needed for pragma handlin, do not change!
@@ -247,6 +243,9 @@ class field_struct {
   
 };
 
+
+// ** class field
+
 template <typename T>
 class field {
 private:
@@ -256,7 +255,7 @@ private:
 public:
   
   field<T>() {
-    // cout << "In constructor 1\n";
+    // std::cout << "In constructor 1\n";
     fs = nullptr;             // lazy allocation on 1st use
   }
   
@@ -275,7 +274,7 @@ public:
   
   // move constructor - steal the content
   field<T>(field<T>&& rhs) {
-    // cout << "in move constructor\n";
+    // std::cout << "in move constructor\n";
     fs = rhs.fs;
     rhs.fs = nullptr;
   }
@@ -288,12 +287,12 @@ public:
     assert(fs == nullptr);
     if (current_lattice == nullptr) {
       // TODO: write to some named stream
-      cout << "Can not use field variables before lattice is initialized\n";
+      std::cout << "Can not use field variables before lattice is initialized\n";
       exit(1);  // TODO - more ordered exit?
     }
-    fs = new field_struct;
+    fs = new field_struct<T>;
     fs->lattice = &current_lattice;
-    fs->payload = (field_storage_type<T> *)alloc_field_memory(sizeof(T)*current_lattice.node_fullsize);
+    fs->payload = (field_storage_type<T> *)alloc_field_memory(sizeof(T)*current_lattice->node_fullsize());
 
     mark_changed(ALL);
   }
@@ -319,7 +318,7 @@ public:
   
   void assert_is_initialized() {
     if (fs == nullptr) {
-      cout << "field variable used before it is assigned to\n";
+      std::cout << "field variable used before it is assigned to\n";
       exit(1);
     }
   }
