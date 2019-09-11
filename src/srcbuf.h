@@ -2,7 +2,7 @@
 #ifndef TRANSFORMER_SRCBUF_H
 #define TRANSFORMER_SRCBUF_H
 
-// New buffer interface, due to weirdly buggy(?) ReplaceText and RemoveText
+// New buffer interface.  Libtooling contains a  ReplaceText and RemoveText
 // in libtooling
 // NOTE: It's probably due to the funny use of SourceRange in Expr and Stmt.
 // Easy to make errors

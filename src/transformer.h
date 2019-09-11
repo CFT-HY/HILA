@@ -80,15 +80,16 @@ struct dir_ptr {
 };
   
 struct field_info {
-  std::string type;
-  std::string old_name;
-  std::string new_name;
-  bool is_written, is_read;
-  std::vector<dir_ptr> dir_list;
-  std::vector<field_ref *> ref_list;
+  std::string type_template;             // This will be the <T> part of field<T>
+  std::string old_name;                  // "name" of field variable, can be an expression
+  std::string new_name;                  // replacement field name
+  std::string loop_ref_name;             // var which refers to payload, loop_ref_name v = new_name->fs.payload
+  bool is_written, is_read;              // is the field read from or written to in this loop
+  std::vector<dir_ptr> dir_list;         // nb directions TODO: more general gather ptr
+  std::vector<field_ref *> ref_list;     // where the var is referred at
 
   field_info() {
-    type = old_name = new_name = "";
+    type_template = old_name = new_name = loop_ref_name = "";
     is_written = is_read = false;
     dir_list = {};
     ref_list = {};
@@ -97,9 +98,10 @@ struct field_info {
   ~field_info() {
     dir_list.clear();
     ref_list.clear();
-    type.clear();
+    type_template.clear();
     old_name.clear();
     new_name.clear();
+    loop_ref_name.clear();
   }
 };
 

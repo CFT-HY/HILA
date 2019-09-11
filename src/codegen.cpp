@@ -38,8 +38,8 @@ extern std::list<field_info> field_info_list;
 extern std::list<var_info> var_info_list;
 extern std::list<var_decl> var_decl_list;
 
-const std::string looping_var("I__");
-const std::string parity_name("pty__");
+std::string looping_var;
+std::string parity_name;
 
 static std::string parity_in_this_loop = "";
 
@@ -93,6 +93,15 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   // basic set up: 1st loop_parity, if it is known const set it up,
   // else copy it to a variable name
 
+  const std::string t = loopBuf.dump();
+
+  looping_var = "Index";
+  while (t.find(looping_var,0) != std::string::npos) looping_var += "_";
+  
+  // Ensure that the name is not reserved by scanning the source
+  parity_name = "Parity";
+  while (t.find(parity_name,0) != std::string::npos) parity_name += "_";
+  
   if (loop_parity.value == parity::none) {
     // now unknown
     code << "const parity " << parity_name << " = " << loop_parity.text << ";\n";
@@ -104,18 +113,20 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
       
   } 
   else parity_in_this_loop = parity_str(loop_parity.value);
-
-  std::string t = loopBuf.dump();
+  
   for (field_info & l : field_info_list) {
     // Generate new variable name, may be needed -- use here simple receipe
     l.new_name = "F"+clean_name(l.old_name);
     // Perhaps simpler FA, FB, FC. ?  The following helps avoid collisions
-    // Ensure that the name is not reserved by scanning the source
     while (t.find(l.new_name,0) != std::string::npos) l.new_name += "_";
+    l.loop_ref_name = l.new_name + "_payload";
     
     // variable links if needed
     if (!target.kernelize || l.dir_list.size() > 0) {
-      code << l.type << " & " << l.new_name << " = " << l.old_name << ";\n";
+      code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
+      // l.type_template is < type >.  Change this to field_storage_type<T>
+      code << "field_storage_type" << l.type_template << " * const " 
+           << l.loop_ref_name << " = " << l.new_name << "->fs.payload;\n";
     }
   }
   
@@ -237,7 +248,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
 
     if (!l.is_written) kernel << "const ";
     // TODO: type to field_data
-    kernel << l.type << " & " << l.new_name;
+    kernel << "field" << l.type_template << " & " << l.new_name;
     if (l.dir_list.size() == 0) call << l.old_name;
     else call << l.new_name;
   }
@@ -277,7 +288,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
 void MyASTVisitor::replace_field_refs(srcBuf & loopBuf) {
   
   for ( field_ref & le : field_ref_list ) {
-    loopBuf.replace( le.nameExpr, le.info->new_name );
+    loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
     if (le.dirExpr != nullptr) {
       loopBuf.replace(le.parityExpr,
                        "neighbour(" + looping_var + ", " + get_stmt_str(le.dirExpr)+")");

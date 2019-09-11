@@ -436,7 +436,14 @@ bool MyASTVisitor::check_field_ref_list() {
     if (lfip == nullptr) {
       field_info lfv;
       lfv.old_name = name;
-      lfv.type = get_expr_type(p.nameExpr);
+      lfv.type_template = get_expr_type(p.nameExpr);
+      if (lfv.type_template.find("field",0) != 0) {
+        reportDiag(DiagnosticsEngine::Level::Error,
+                   p.nameExpr->getSourceRange().getBegin(),
+                   "Confused: type of field expression?");
+        no_errors = false;
+      }
+      lfv.type_template.erase(0,5);  // Remove "field"  from field<T>
       lfv.is_written = p.is_written;
       lfv.is_read    = p.is_read;
       

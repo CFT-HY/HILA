@@ -5,6 +5,21 @@
 
 // Memory alignment for "vanilla"
 
+#ifdef VANILLA
+
+void * allocate_field_mem(size_t size) {
+  // returns nullptr if there are problems
+  return malloc(size);  
+}
+
+void free_field_mem(void * p) {
+  if (p != nullptr)
+    free(p);
+}
+
+
+#elif AVX512
+
 // AVX512 sweet spot?
 #define FIELD_ALIGNMENT 512
 
@@ -24,3 +39,5 @@ void free_field_mem(void * p) {
   if (p != nullptr)
     free(p);
 }
+
+#endif

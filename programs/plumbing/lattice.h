@@ -17,22 +17,24 @@
 
 
 class lattice_struct {
-private:
-  unsigned size_p[NDIM];
-  
-  unsigned sites_on_node_p;
-  unsigned node_fullsize_p;
-  
 public:
-  unsigned size(int d) { return size_p[d]; }
-  unsigned volume() { 
-    unsigned v = size_p[0];
-    for (int i=1; i<NDIM; i++) v *= size_p[i];
-    return v;
-  }
+  // expose these directly, by far the simplest interface - who cares about c++ practices
+  // use also ints instead of unsigned, just to avoid surprises in arithmetics
+  // I shall assume here that int is 32 bits, and long long 64 bits.  I guess these are
+  // standard for now
+  // Alternative: int_32t and int_64t (or int_fast_32t  and int_fast_64t, even more generally) 
+  int size[NDIM];
+  int_fast_64t volume;
 
-  unsigned sites_on_node() { return sites_on_node_p; }
-  unsigned node_fullsize() { return node_fullsize_p; }
+  struct node_struct {
+    int sites, evensites, oddsites;
+    int field_alloc_size;          // how many sites/node in allocations 
+    
+    int xmin[NDIM], size[NDIM];    // node local coordinate ranges
+    int nn[NDIRS];                 // nn-node of node down/up to dirs
+    
+  } node;
+  
 };
 
 extern lattice_struct * lattice;
