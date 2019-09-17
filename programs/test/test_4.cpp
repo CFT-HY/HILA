@@ -8,7 +8,7 @@ public:
   template <typename U>
   class d {
   public:
-    static U sum(U a, T b) { 
+    static U sum(U & a, T & b) { 
       T r;
       r[ALL] = a[X] + b[X]; 
       return r;
@@ -16,7 +16,7 @@ public:
   };
   
   template <typename U>
-  U sumt(T a, U b) {
+  U sumt(T& a, U& b) {
     T r;
     r[ALL] = a[X] + b[X]; 
     return r;
@@ -24,7 +24,7 @@ public:
   
   class f {
   public:
-    inline static field<double> sum2(field<double> a, field<double> b) {
+    inline static field<double> sum2(field<double> & a, field<double> & b) {
       field<double> r;
       r[ALL] = a[X] + b[X];
       return r;
@@ -50,16 +50,12 @@ inline T sum(const T a, const T b) {
 //   return r;
 // }
 
-extern int kissa;
-
-extern int kissa;
-
 
 // extern field<int> glob;
 
 int main()
 {
-  field<double> a,x;
+  field<double> a(2.0),x;
   field<int> y;
   c<field<int>>::f fv;
   c<field<double>> cv;

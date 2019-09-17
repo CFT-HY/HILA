@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <math.h>
+#include <type_traits>
 
 // using namespace std;
 
@@ -63,19 +64,16 @@ const parity_plus_direction operator-(const parity par, const direction d);
 // #define onallsites(i) for (int i=0; i<N; i++) 
 
 
-template <typename R> struct field_vector {
-  R vec[32/sizeof(R)];   // TODO: size should be the size of the vector
-};
-
 // fwd definition
 // template <typename T> class field;
 
+#if 0
 // field_element class: virtual class, no storage allocated,
 // wiped out by the transformer
 template <typename T>
 class field_element  {
  private:
-  T v;   // TODO: should rather be a short vector type?
+  T v;   // TODO: this must be set appropriately?
   
  public:
   // the following are just placemarkers, and are substituted by the transformer
@@ -87,8 +85,12 @@ class field_element  {
       
   // The type is important for ensuring correctness
   // Possibility: write these so that they work without the transformer
-  field_element<T>& operator= (const T &d) {
-    v = d; return *this;}
+  template <typename A,
+            std::enable_if_t<std::is_assignable<T&,A>::value, int> = 0 >
+  field_element<T>& operator= (const A &d) {
+    v = d; 
+    return *this;
+  }
   
   // field_element = field_element
   field_element<T>& operator=  (const field_element<T>& rhs) {
@@ -224,6 +226,10 @@ void operator *= (T& lhs, field_element<T>& rhs) {
   lhs *= rhs.reduce_mult();
 }
 
+#endif
+
+template <typename T>
+using field_element = T;
 
 
 // Type alias would be nice, but one cannot specialize those!
@@ -245,12 +251,22 @@ struct field_storage_type {
 // };
 
 
+// These are helpers, to make generic templates
+// e.g. t_plus(A,B) gives the type of the operator a + b, where a is of type A and b B.
+#define t_plus(A,B)  decltype(std::declval<A>() + std::declval<B>())
+#define t_minus(A,B) decltype(std::declval<A>() - std::declval<B>())
+#define t_mul(A,B)   decltype(std::declval<A>() * std::declval<B>())
+#define t_div(A,B)   decltype(std::declval<A>() / std::declval<B>())
+
+
 // ** class field
 
 template <typename T>
 class field {
 private:
 
+  static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
+  
   /// TODO: field-specific boundary conditions?
   class field_struct {
   private:
@@ -261,7 +277,7 @@ private:
   public:
     void allocate_payload() {
       payload = (field_storage_type<T> *) 
-                   allocate_field_mem(sizeof(T) * lattice->node_fullsize());
+                   allocate_field_mem(sizeof(T) * lattice->node.field_alloc_size);
       if (payload == nullptr) {
         std::cout << "Failure in field memory allocation\n";
         exit(1);
@@ -276,7 +292,7 @@ private:
   };
   
   field_struct * fs;
-  
+    
 public:
   
   field<T>() {
@@ -284,14 +300,27 @@ public:
     fs = nullptr;             // lazy allocation on 1st use
   }
   
-  // copy constructor 
+  // TODO: for some reason this straightforward copy constructor seems to be necessary, the
+  // one below it does not catch implicit copying.  Try to understand why
   field<T>(const field<T>& other) {
-    fs = nullptr;
+    fs = nullptr;  // this is probably unnecessary
+    (*this)[ALL] = other[X];
+  }
+    
+  // copy constructor - from fields which can be assigned
+  template <typename A,
+            std::enable_if_t<std::is_convertible<A,T>::value, int> = 0 >  
+  field<T>(const field<A>& other) {
+    fs = nullptr;  // this is probably unnecessary
     (*this)[ALL] = other[X];
   }
 
-  field<T>(const T& val) {
+
+  template <typename A,
+            std::enable_if_t<std::is_convertible<A,T>::value, int> = 0 >  
+  field<T>(const A& val) {
     fs = nullptr;
+    // static_assert(!std::is_same<A,int>::value, "in int constructor");
     (*this)[ALL] = val;
   }
   
@@ -310,7 +339,7 @@ public:
     assert(fs == nullptr);
     if (lattice == nullptr) {
       // TODO: write to some named stream
-      std::cout << "Can not use field variables before lattice is initialized\n";
+      std::cout << "Can not allocate field variables before lattice.setup()\n";
       exit(1);  // TODO - more ordered exit?
     }
     fs = new field_struct;
@@ -328,6 +357,8 @@ public:
     }
   }
 
+  bool is_allocated() { return (fs != nullptr); }
+  
   // call this BEFORE the var is written to
   void mark_changed(const parity p) {
     if (fs == nullptr) allocate();
@@ -357,13 +388,21 @@ public:
   //  return (field_element<T>) *this;
   //}
 
-  // Overloading =  
-  field<T>& operator= (const field<T>& rhs) {
+  // fetch the element at this loc
+  // T get(int i) const;
+  
+  // Overloading = - possible only if T = A is OK
+  template <typename A, 
+            std::enable_if_t<std::is_assignable<T&,A>::value, int> = 0 >
+  field<T>& operator= (const field<A>& rhs) {
     (*this)[ALL] = rhs[X];
     return *this;
   }
-  
-  field<T>& operator= (const T& d) {
+
+  // same but without the field
+  template <typename A, 
+            std::enable_if_t<std::is_assignable<T&,A>::value, int> = 0 >
+  field<T>& operator= (const A& d) {
     (*this)[ALL] = d;
     return *this;
   }
@@ -378,59 +417,155 @@ public:
     return *this;
   }
   
-  field<T>& operator+= (const field<T>& rhs) { (*this)[ALL] += rhs[X]; return *this;}
-  field<T>& operator-= (const field<T>& rhs) { (*this)[ALL] -= rhs[X]; return *this;}
-  field<T>& operator*= (const field<T>& rhs) { (*this)[ALL] *= rhs[X]; return *this;}
-  field<T>& operator/= (const field<T>& rhs) { (*this)[ALL] /= rhs[X]; return *this;}
+  // is OK if T+A can be converted to type T
+  template <typename A,
+            std::enable_if_t<std::is_convertible<t_plus(T,A),T>::value, int> = 0>
+  field<T>& operator+= (const field<A>& rhs) { 
+    (*this)[ALL] += rhs[X]; return *this;
+  }
+  
+  template <typename A,
+            std::enable_if_t<std::is_convertible<t_minus(T,A),T>::value, int> = 0>  
+  field<T>& operator-= (const field<A>& rhs) { 
+    (*this)[ALL] -= rhs[X];
+    return *this;
+  }
+  
+  template <typename A,
+            std::enable_if_t<std::is_convertible<t_mul(T,A),T>::value, int> = 0>
+  field<T>& operator*= (const field<A>& rhs) {
+    (*this)[ALL] *= rhs[X]; 
+    return *this;
+  }
 
-  field<T>& operator+= (const T & rhs) { (*this)[ALL] += rhs; return *this;}
-  field<T>& operator-= (const T & rhs) { (*this)[ALL] -= rhs; return *this;}
-  field<T>& operator*= (const T & rhs) { (*this)[ALL] *= rhs; return *this;}
-  field<T>& operator/= (const T & rhs) { (*this)[ALL] /= rhs; return *this;}
+  template <typename A,
+            std::enable_if_t<std::is_convertible<t_div(T,A),T>::value, int> = 0>
+  field<T>& operator/= (const field<A>& rhs) {
+    (*this)[ALL] /= rhs[X];
+    return *this;
+  }
+
+  template <typename A,
+            std::enable_if_t<std::is_convertible<t_plus(T,A),T>::value, int> = 0>
+  field<T>& operator+= (const A & rhs) { (*this)[ALL] += rhs; return *this;}
+
+  template <typename A,
+            std::enable_if_t<std::is_convertible<t_minus(T,A),T>::value, int> = 0>  
+  field<T>& operator-= (const A & rhs) { (*this)[ALL] -= rhs; return *this;}
+
+  template <typename A,
+            std::enable_if_t<std::is_convertible<t_mul(T,A),T>::value, int> = 0>
+  field<T>& operator*= (const A & rhs) { (*this)[ALL] *= rhs; return *this;}
+  
+  template <typename A,
+            std::enable_if_t<std::is_convertible<t_div(T,A),T>::value, int> = 0>
+  field<T>& operator/= (const A & rhs) { (*this)[ALL] /= rhs; return *this;}
 
   
 };
 
-template <typename T>
-field<T> operator+( const field<T> &lhs, const field<T> &rhs) {
-  field<T> tmp;
+
+// these operators rely on SFINAE, OK if field_t_plus(A,B) exists i.e. A+B is OK
+/// operator +
+template <typename A, typename B>
+auto operator+( const field<A> &lhs, const field<B> &rhs) -> field<t_plus(A,B)>
+{
+  field <t_plus(A,B)> tmp;
   tmp[ALL] = lhs[X] + rhs[X];
   return tmp;
 }
 
-template <typename T>
-field<T> operator+( const T &lhs, const field<T> &rhs) {
-  field<T> tmp;
+template <typename A, typename B>
+auto operator+( const A &lhs, const field<B> &rhs) -> field<t_plus(A,B)>
+{
+  field<t_plus(A,B)> tmp;
   tmp[ALL] = lhs + rhs[X];
   return tmp;
 }
 
-template <typename T>
-field<T> operator+( const field<T> &lhs,  const T &rhs) {
-  return operator+(rhs,lhs);
+template <typename A, typename B>
+auto operator+( const field<A> &lhs, const B &rhs) -> field<t_plus(A,B)>
+{
+  field<t_plus(A,B)> tmp;
+  tmp[ALL] = lhs[X] + rhs;
+  return tmp;
 }
 
-template <typename T>
-field<T> operator-( const field<T> &lhs, const field<T> &rhs) {
-  field<T> tmp;
+/// operator -
+template <typename A, typename B>
+auto operator-( const field<A> &lhs, const field<B> &rhs) -> field<t_minus(A,B)>
+{
+  field <t_minus(A,B)> tmp;
   tmp[ALL] = lhs[X] - rhs[X];
   return tmp;
 }
 
-template <typename T>
-field<T> operator-( const T &lhs, const field<T> &rhs) {
-  field<T> tmp;
+template <typename A, typename B>
+auto operator-( const A &lhs, const field<B> &rhs) -> field<t_minus(A,B)>
+{
+  field<t_minus(A,B)> tmp;
   tmp[ALL] = lhs - rhs[X];
   return tmp;
 }
 
-template <typename T>
-field<T> operator-( const field<T> &lhs,  const T &rhs) {
-  field<T> tmp;
+template <typename A, typename B>
+auto operator-( const field<A> &lhs, const B &rhs) -> field<t_minus(A,B)>
+{
+  field<t_minus(A,B)> tmp;
   tmp[ALL] = lhs[X] - rhs;
   return tmp;
 }
 
+
+/// operator *
+template <typename A, typename B>
+auto operator*( const field<A> &lhs, const field<B> &rhs) -> field<t_mul(A,B)>
+{
+  field <t_mul(A,B)> tmp;
+  tmp[ALL] = lhs[X] * rhs[X];
+  return tmp;
+}
+
+template <typename A, typename B>
+auto operator*( const A &lhs, const field<B> &rhs) -> field<t_mul(A,B)>
+{
+  field<t_mul(A,B)> tmp;
+  tmp[ALL] = lhs * rhs[X];
+  return tmp;
+}
+
+template <typename A, typename B>
+auto operator*( const field<A> &lhs, const B &rhs) -> field<t_mul(A,B)>
+{
+  field<t_mul(A,B)> tmp;
+  tmp[ALL] = lhs[X] * rhs;
+  return tmp;
+}
+
+/// operator /
+template <typename A, typename B>
+auto operator/( const field<A> &lhs, const field<B> &rhs) -> field<t_div(A,B)>
+{
+  field <t_div(A,B)> tmp;
+  tmp[ALL] = lhs[X] / rhs[X];
+  return tmp;
+}
+
+template <typename A, typename B>
+auto operator/( const A &lhs, const field<B> &rhs) -> field<t_div(A,B)>
+{
+  field<t_div(A,B)> tmp;
+  tmp[ALL] = lhs / rhs[X];
+  return tmp;
+}
+
+template <typename A, typename B>
+auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div(A,B)>
+{
+  field<t_div(A,B)> tmp;
+  tmp[ALL] = lhs[X] / rhs;
+  return tmp;
+}
 
 // template <typename T>
 // field<T> operator+( const double lhs, const field<T> &rhs) {

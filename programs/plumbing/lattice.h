@@ -24,7 +24,7 @@ public:
   // standard for now
   // Alternative: int_32t and int_64t (or int_fast_32t  and int_fast_64t, even more generally) 
   int size[NDIM];
-  int_fast_64t volume;
+  long long volume;
 
   struct node_struct {
     int sites, evensites, oddsites;
@@ -34,6 +34,19 @@ public:
     int nn[NDIRS];                 // nn-node of node down/up to dirs
     
   } node;
+
+  
+  void setup(int siz[NDIM]);
+  
+#if NDIM == 4
+  void setup(int nx, int ny, int nz, int nt);
+#elif NDIM == 3  
+  void setup(int nx, int ny, int nz);
+#elif NDIM == 2
+  void setup(int nx, int ny);
+#elif NDIM == 1
+  void setup(int nx); 
+#endif
   
 };
 

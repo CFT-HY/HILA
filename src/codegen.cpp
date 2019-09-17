@@ -122,9 +122,10 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     l.loop_ref_name = l.new_name + "_payload";
     
     // variable links if needed
-    if (!target.kernelize || l.dir_list.size() > 0) {
-      code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
-      // l.type_template is < type >.  Change this to field_storage_type<T>
+    // if (l.dir_list.size() > 0) {
+    code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
+    // l.type_template is < type >.  Change this to field_storage_type<T>
+    if (!target.kernelize) {
       code << "field_storage_type" << l.type_template << " * const " 
            << l.loop_ref_name << " = " << l.new_name << "->fs.payload;\n";
     }
@@ -221,14 +222,15 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
 
   call   << kernel_name << "(";
   kernel << "//----------\n";
-  if (global.in_func_template) {
-    kernel << "template <typename ";
-    for (unsigned i = 0; i < global.function_tpl->size(); i++) {
-      if (i>0) kernel << ", ";
-      kernel << global.function_tpl->getParam(i)->getNameAsString();
-    }
-    kernel << ">\n";
-  }
+  // I don't think kernels need to be templates
+  //   if (global.in_func_template) {
+  //     kernel << "template <typename ";
+  //     for (unsigned i = 0; i < global.function_tpl->size(); i++) {
+  //       if (i>0) kernel << ", ";
+  //       kernel << global.function_tpl->getParam(i)->getNameAsString();
+  //     }
+  //     kernel << ">\n";
+  //   }
   kernel << "void " << kernel_name << "(";
     
   if (loop_parity.value == parity::none) {
@@ -248,9 +250,8 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
 
     if (!l.is_written) kernel << "const ";
     // TODO: type to field_data
-    kernel << "field" << l.type_template << " & " << l.new_name;
-    if (l.dir_list.size() == 0) call << l.old_name;
-    else call << l.new_name;
+    kernel << "field_storage_type" << l.type_template << " & " << l.loop_ref_name;
+    call << l.new_name + "->payload";
   }
 
   i=0;
