@@ -11,8 +11,13 @@
 int main() 
 {
   field<cmplx<double>> df;
+  cmplx<double> cd;
+  cmplx<int> ci;
   
-  df = 1;
+  
+  cd = +cd;
+  ci = cmplx<double>(0,1);
+  df = 2 + 3.0_i;
   
   df[ALL] = df[X] + df[X];
     

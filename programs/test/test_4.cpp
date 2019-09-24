@@ -83,7 +83,7 @@ int main()
   
   onsites(EVEN) {
     for (int k=0; k<NDIM; k++) {
-      x[X] = a[X+direction::xup] + dd*x[X];
+      x[X] = a[X+XUP] + dd*x[X];
     }
   }
   

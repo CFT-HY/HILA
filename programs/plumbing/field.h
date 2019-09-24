@@ -18,26 +18,6 @@
 #define transformer_ctl(a) extern int _transformer_ctl_##a
 //void transformer_control(const char *);
 
-// TODO: default type real_t definition somewhere
-typedef double real_t;
-
-enum class direction : unsigned { xup, yup, zup, tup, tdown, zdown, ydown, xdown, NONE };
-
-static inline direction opp_dir(const direction d) { 
-  return static_cast<direction>(NDIRS - static_cast<unsigned>(d)); }
-
-enum class parity : unsigned { none, even, odd, all, x };
-const parity EVEN = parity::even;
-const parity ODD  = parity::odd;
-const parity ALL  = parity::all;
-const parity X    = parity::x;
-
-// turns EVEN <-> ODD, ALL remains.  X->none, none->none
-static inline parity opp_parity(const parity p) {
-  unsigned u = 0x3 & static_cast<unsigned>(p);
-  return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
-}
-
 
 struct parity_plus_direction {
   parity p;
