@@ -251,8 +251,6 @@ private:
   class field_struct {
   private:
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    lattice_struct * lattice;
-    unsigned is_fetched[NDIRS];
     
   public:
     void allocate_payload() {
@@ -269,6 +267,8 @@ private:
       payload = nullptr;
     }
     
+    unsigned is_fetched[NDIRS];
+    lattice_struct * lattice;
   };
   
   field_struct * fs;
@@ -323,7 +323,7 @@ public:
       exit(1);  // TODO - more ordered exit?
     }
     fs = new field_struct;
-    fs->lattice = &lattice;
+    fs->lattice = lattice;
     fs->allocate_payload();
 
     mark_changed(ALL);
