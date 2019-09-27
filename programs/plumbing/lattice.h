@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <array>
+#include <vector>
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
@@ -40,7 +41,7 @@ public:
     unsigned number;
     unsigned num_dir[NDIM];
     // lattice division to nodes: div[d] will have num_dir[d]+1 elements, last size
-    std::vector<unsigned> div[NDIM]; 
+    std::vector<unsigned> div[NDIM];
     unsigned * remap;                    // mapping (optional)
   } nodes;
 
