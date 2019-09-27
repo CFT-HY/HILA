@@ -9,8 +9,10 @@ using real_t = double;
 
 
 // move these somewhere - use consts?
-#define NDIM 4
-
+// Have this defined in the program?
+#ifndef NDIM
+  #define NDIM 4
+#endif
 
 // Direction and parity
 
