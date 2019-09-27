@@ -459,5 +459,3 @@ void lattice::create_std_gathers()
 
 }
 
-
-  

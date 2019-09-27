@@ -86,6 +86,11 @@ public:
   unsigned site_index(const location & c);
   unsigned site_index(const location & c, const unsigned node);
   
+  unsigned remap_node(const unsigned i);
+
+  unsigned loop_begin(const parity p);
+  unsigned loop_end(const parity p);
+
   
 };
 
