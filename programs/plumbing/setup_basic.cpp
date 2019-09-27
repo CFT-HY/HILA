@@ -127,7 +127,7 @@ void initialize_prn(long seed)
   seed += 1121*n;
   seed = seed ^ ((511*n)<<18);
 
-  output0 << " Using node random numbers, seed for node 0: " << seed << '\n'';
+  output0 << " Using node random numbers, seed for node 0: " << seed << '\n';
 
   seed_mersenne(seed);
   // warm it up
