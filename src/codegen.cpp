@@ -125,10 +125,10 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     // if (l.dir_list.size() > 0) {
     code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
     // l.type_template is < type >.  Change this to field_storage_type<T>
-    if (!target.kernelize) {
-      code << "field_storage_type" << l.type_template << " * const " 
-           << l.loop_ref_name << " = " << l.new_name << "->fs.payload;\n";
-    }
+    //if (!target.kernelize) {
+    //  code << "field_storage_type" << l.type_template << " * const " 
+    //       << l.loop_ref_name << " = " << l.new_name << "->fs.payload;\n";
+    //}
   }
   
   // Assert that vars to be read are initialized TODO: make optional (cmdline?)

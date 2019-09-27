@@ -266,9 +266,15 @@ private:
       free_field_mem((void *)payload);
       payload = nullptr;
     }
-    
+
     unsigned is_fetched[NDIRS];
     lattice_struct * lattice;
+
+    T& operator[] (int i)
+    {
+      return (T&) (payload[i].c);
+    }
+    
   };
   
   field_struct * fs;
@@ -367,6 +373,11 @@ public:
   //{ 
   //  return (field_element<T>) *this;
   //}
+
+  T& operator[] (int i)
+  {
+    return (T&) (this->fs[0][i]);
+  }
 
   // fetch the element at this loc
   // T get(int i) const;
