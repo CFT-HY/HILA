@@ -93,14 +93,19 @@ HEADERS = \
   $(SRCDIR)/myastvisitor.h \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \
-  $(SRCDIR)/optionsparser.h
+  $(SRCDIR)/optionsparser.h \
+  $(SRCDIR)/specialization_db.h
 
 
 OBJECTS = \
   $(BUILDDIR)/transformer.o \
   $(BUILDDIR)/stringops.o \
   $(BUILDDIR)/codegen.o \
-  $(BUILDDIR)/optionsparser.o
+  $(BUILDDIR)/srcbuf.o \
+  $(BUILDDIR)/optionsparser.o \
+  $(BUILDDIR)/specialization_db.o \
+  $(BUILDDIR)/write_output.o
+
 
 $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
 	$(CXX) -c $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $< -o $@

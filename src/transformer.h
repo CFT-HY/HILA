@@ -3,6 +3,8 @@
 #define TRANSFORMER_H
 
 #include <string>
+#include <vector>
+#include <list>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -15,9 +17,18 @@
 //#include "llvm/Support/raw_ostream.h"
 
 
+// set namespaces globally
+using namespace clang;
+//using namespace clang::driver;
+using namespace clang::tooling;
 
-#undef NDEBUG
-#include <assert.h>
+// constant names for program
+const std::string program_name("Transformer");
+const std::string specialization_db_filename("specialization_db.txt");
+const std::string default_output_suffix("cpt");
+
+bool write_output_file( const std::string & name, const std::string & buf ) ;
+
 
 struct codetype {
   bool kernelize;
@@ -32,16 +43,19 @@ struct loop_parity_struct {
 };
 
 struct global_state {
+  std::string main_file_name = "";
   bool assert_loop_parity = false;
   std::string full_loop_text = "";
   bool in_func_template = false;
   bool in_class_template = false;
   TemplateParameterList *function_tpl = nullptr;
-  std::vector<TemplateParameterList *> class_tpl = {};
+//  std::vector<const TemplateParameterList *> class_templ_params = {};
+//  std::vector<const TemplateArgumentList *> class_templ_args = {};
   FunctionDecl * currentFunctionDecl = nullptr;
   struct location_struct {
     SourceLocation function;
     SourceLocation top;
+    SourceLocation bot;
     SourceLocation loop;
   } location;
 };
@@ -55,9 +69,9 @@ struct field_ref {
   Expr * parityExpr;
   Expr * dirExpr;
   struct field_info * info;
-  unsigned nameInd, parityInd;
-  unsigned dirInd;
-  bool is_changed;
+  // unsigned nameInd, parityInd;
+  int direction;
+  bool is_written, is_read;
 };
 
 struct dir_ptr {
@@ -66,16 +80,17 @@ struct dir_ptr {
 };
   
 struct field_info {
-  std::string type;
-  std::string old_name;
-  std::string new_name;
-  bool is_changed;   
-  std::vector<dir_ptr> dir_list;
-  std::vector<field_ref *> ref_list;
+  std::string type_template;             // This will be the <T> part of field<T>
+  std::string old_name;                  // "name" of field variable, can be an expression
+  std::string new_name;                  // replacement field name
+  std::string loop_ref_name;             // var which refers to payload, loop_ref_name v = new_name->fs.payload
+  bool is_written, is_read;              // is the field read from or written to in this loop
+  std::vector<dir_ptr> dir_list;         // nb directions TODO: more general gather ptr
+  std::vector<field_ref *> ref_list;     // where the var is referred at
 
   field_info() {
-    type = old_name = new_name = "";
-    is_changed = false;
+    type_template = old_name = new_name = loop_ref_name = "";
+    is_written = is_read = false;
     dir_list = {};
     ref_list = {};
   }
@@ -83,15 +98,16 @@ struct field_info {
   ~field_info() {
     dir_list.clear();
     ref_list.clear();
-    type.clear();
+    type_template.clear();
     old_name.clear();
     new_name.clear();
+    loop_ref_name.clear();
   }
 };
 
 struct var_ref {
   DeclRefExpr *ref;
-  unsigned ind;
+  // unsigned ind;
   std::string assignop;
   bool is_assigned;
 };

@@ -22,9 +22,6 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
 
-using namespace clang;
-//using namespace clang::driver;
-using namespace clang::tooling;
 
 #include "transformer.h"
 #include "stringops.h"
@@ -41,8 +38,8 @@ extern std::list<field_info> field_info_list;
 extern std::list<var_info> var_info_list;
 extern std::list<var_decl> var_decl_list;
 
-const std::string looping_var("FI__");
-const std::string parity_name("pty__");
+std::string looping_var;
+std::string parity_name;
 
 static std::string parity_in_this_loop = "";
 
@@ -74,126 +71,171 @@ std::string MyASTVisitor::make_kernel_name() {
 /// The main entry point for code generation
 
 void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
- 
+
+  srcBuf loopBuf; // (&TheRewriter,S);
+  loopBuf.copy_from_range(writeBuf,S->getSourceRange());
+  
+  //   llvm::errs() << "\nOriginal range: +++++++++++++++\n\""
+  //                << TheRewriter.getRewrittenText(S->getSourceRange()) 
+  //                << "\"\nwriteBuf range: ================\n\""
+  //                << writeBuf->get(S->getSourceRange())
+  //                << "\"\nCopied range: ================\n\""
+  //                << loopBuf.dump() << "\"\n";
+  
   // is it compound stmt: { } -no ; needed
   bool semi_at_end = !(isa<CompoundStmt>(S));
  
   // Build replacement in variable "code"
   // Encapsulate everything within {}
-  std::string code = "{\n";
+  std::stringstream code;
+  code << "{\n";
 
   // basic set up: 1st loop_parity, if it is known const set it up,
   // else copy it to a variable name
 
+  const std::string t = loopBuf.dump();
+
+  looping_var = "Index";
+  while (t.find(looping_var,0) != std::string::npos) looping_var += "_";
+  
+  // Ensure that the name is not reserved by scanning the source
+  parity_name = "Parity";
+  while (t.find(parity_name,0) != std::string::npos) parity_name += "_";
+  
   if (loop_parity.value == parity::none) {
     // now unknown
-    code += "const parity " + parity_name + " = " + loop_parity.text + ";\n";
+    code << "const parity " << parity_name << " = " << loop_parity.text << ";\n";
 
     if (global.assert_loop_parity) {
-      code += "assert_even_odd_parity(" + parity_name + ");\n";
+      code << "assert_even_odd_parity(" << parity_name << ");\n";
     }
     parity_in_this_loop = parity_name;
       
   } 
   else parity_in_this_loop = parity_str(loop_parity.value);
-
+  
   for (field_info & l : field_info_list) {
     // Generate new variable name, may be needed -- use here simple receipe
-    l.new_name = "f__"+clean_name(l.old_name)+"_";
-
+    l.new_name = "F"+clean_name(l.old_name);
+    // Perhaps simpler FA, FB, FC. ?  The following helps avoid collisions
+    while (t.find(l.new_name,0) != std::string::npos) l.new_name += "_";
+    l.loop_ref_name = l.new_name + "_payload";
+    
     // variable links if needed
-    if (!target.kernelize || l.dir_list.size() > 0) {
-      code += l.type + " & " + l.new_name + " = " + l.old_name + ";\n";
+    // if (l.dir_list.size() > 0) {
+    code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
+    // l.type_template is < type >.  Change this to field_storage_type<T>
+    if (!target.kernelize) {
+      code << "field_storage_type" << l.type_template << " * const " 
+           << l.loop_ref_name << " = " << l.new_name << "->fs.payload;\n";
     }
   }
   
+  // Assert that vars to be read are initialized TODO: make optional (cmdline?)
+  int i = 0;
+  for ( field_info  & l : field_info_list ) if (l.is_read) {
+    if (i == 0) {
+      code << "assert(" << l.new_name <<".fs != nullptr";
+    } else {
+      code << " && " << l.new_name + ".fs != nullptr";
+    }
+    i++;
+  }
+  if (i > 0) code << ");\n";
+  
+  
   // Insert field neighbour fetches
-
-  for (field_info & l : field_info_list) 
+  
+  for (field_info & l : field_info_list) {
     for (dir_ptr & d : l.dir_list ) {
-      // TODO - move to temp vars
-      code += l.new_name + ".start_move(" + get_stmt_str(d.e) + ", " 
-           + parity_in_this_loop + ");\n";
+      // TODO - move to temp vars?
+      code << l.new_name << ".start_move(" << get_stmt_str(d.e) << ", " 
+           << parity_in_this_loop << ");\n";
       // TODO: must add wait_gets, if we want those
     }
-  
+  }
+
+    
+  // Mark changed vars - do it BEFORE using vars, possible alloc
+  for ( field_info  & l : field_info_list ) {
+    if (l.is_written) code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
+  }
+
   // Here generate kernel, or produce the loop in place
   if (target.kernelize) {
-    code += generate_kernel(S,semi_at_end);
+    code << generate_kernel(S,semi_at_end,loopBuf);
   } else {
     // Now in place
-    code += generate_in_place(S,semi_at_end);
+    code << generate_in_place(S,semi_at_end,loopBuf);
   }
   
   // Check reduction variables
   for (var_info & v : var_info_list) { 
     if (v.reduction_type == reduction::SUM) {
-      code += "reduce_node_sum(" + v.name + ", true);\n";
+      code << "reduce_node_sum(" << v.name << ", true);\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code += "reduce_node_product(" + v.name + ", true);\n";
+      code << "reduce_node_product(" << v.name << ", true);\n";
     }
   }
-      
-  // Mark changed vars
-  for ( field_info  & l : field_info_list ) {
-    if (l.is_changed) code += l.old_name + ".mark_changed(" + parity_in_this_loop + ");\n";
-  }
-    
+          
   // and close
-  code += "}\n//----------";
+  code << "}\n//----------";
   
   // Remove old code + replace
   if (semi_at_end) {
-    TheRewriter.RemoveText(getRangeWithSemi(S));
+    writeBuf->remove(getRangeWithSemi(S));
   } else {
-     TheRewriter.RemoveText(S->getSourceRange());
+    writeBuf->remove(S->getSourceRange());
   }
     
-  // TheRewriter.InsertText(E->getBeginLoc(), "//-  "+ global.full_loop_text + '\n', true, true );
-  TheRewriter.InsertText(getSourceLocationAfterNewLine(S->getEndLoc()),
-                         indent_string(code), true, true);
-  //TheRewriter.InsertText(getRangeWithSemi(S,false).getEnd().getLocWithOffset(1),
-  //                        call, true, true);
-  //replace_expr(S, call);
+  writeBuf->insert(S->getBeginLoc(), indent_string(code.str()), true, true);
+
   
 }
 
 
-std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end) {
+std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   
-  replace_field_refs();
+  replace_field_refs(loopBuf);
   
-  std::string code = "forparity("+looping_var+", "+parity_in_this_loop+") {\n" + Buf.dump();
-  if (semi_at_end) code += ';';
-  code += "\n}\n";
+  std::stringstream code;
+  code << "const int loop_begin = lattice->node.loop_begin[" << parity_in_this_loop << "];\n";
+  code << "const int loop_end   = lattice->node.loop_end[" << parity_in_this_loop << "];\n";
+  
+  code << "for(int " << looping_var <<" = loop_begin; " 
+       << looping_var << " < loop_end; " << looping_var << "++) {\n" 
+       << loopBuf.dump();
+  if (semi_at_end) code << ';';
+  code << "\n}\n";
 
-  return code;
+  return code.str();
 }
 
 /// return value: kernel call code
 
-std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end) {
+std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
 
   // Get kernel name - use line number or file offset (must be deterministic)
   std::string kernel_name = make_kernel_name();
                            
-  std::string kernel,call;
+  std::stringstream kernel,call;
 
-  call   = kernel_name + "(";
-  kernel = "//----------\n";
-  if (global.in_func_template) {
-    kernel += "template <typename ";
-    for (unsigned i = 0; i < global.function_tpl->size(); i++) {
-      if (i>0) kernel += ", ";
-      kernel += global.function_tpl->getParam(i)->getNameAsString();
-    }
-    kernel += ">\n";
-  }
-  kernel += "void " + kernel_name + "(";
+  call   << kernel_name << "(";
+  kernel << "//----------\n";
+  // I don't think kernels need to be templates
+  //   if (global.in_func_template) {
+  //     kernel << "template <typename ";
+  //     for (unsigned i = 0; i < global.function_tpl->size(); i++) {
+  //       if (i>0) kernel << ", ";
+  //       kernel << global.function_tpl->getParam(i)->getNameAsString();
+  //     }
+  //     kernel << ">\n";
+  //   }
+  kernel << "void " << kernel_name << "(";
     
   if (loop_parity.value == parity::none) {
-    call   += parity_name + ", ";
-    kernel += "const parity " + parity_name + ", ";
+    call   << parity_name << ", ";
+    kernel << "const parity " << parity_name << ", ";
   }
       
   // print field call list
@@ -202,15 +244,14 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end) {
     i++;
       
     if (i>0) {
-      kernel += ", ";
-      call   += ", ";
+      kernel << ", ";
+      call   << ", ";
     }
 
-    if (!l.is_changed) kernel += "const ";
+    if (!l.is_written) kernel << "const ";
     // TODO: type to field_data
-    kernel += l.type + " & " + l.new_name;
-    if (l.dir_list.size() == 0) call += l.old_name;
-    else call += l.new_name;
+    kernel << "field_storage_type" << l.type_template << " & " << l.loop_ref_name;
+    call << l.new_name + "->payload";
   }
 
   i=0;
@@ -218,39 +259,42 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end) {
   for ( var_info & vi : var_info_list ) {
     if (!vi.is_loop_local) {
       std::string varname = "sv__" + std::to_string(i) + "_";
-      kernel += ", const " + vi.type + " " + varname;
-      call += ", " + vi.name;
+      kernel << ", const " << vi.type << " " << varname;
+      call << ", " << vi.name;
       
       // replace_expr(ep, varname);
       for (var_ref & vr : vi.refs) {
-        Buf.replace( vr.ind, varname );
+        loopBuf.replace( vr.ref, varname );
       }
     }
   }
   // finally, change the references to variables in the body
-  replace_field_refs();
+  replace_field_refs(loopBuf);
       
-  kernel += ")\n{\nforparity("+looping_var+", "+parity_in_this_loop+") {\n" + Buf.dump();
-  if (semi_at_end) kernel += ';';
-  kernel += "\n}\n}\n//----------\n";
-  call += ");\n";
+  kernel << ")\n{\nforparity(" << looping_var << ", " 
+         << parity_in_this_loop << ") {\n" << loopBuf.dump();
+  if (semi_at_end) kernel << ';';
+  kernel << "\n}\n}\n//----------\n";
+  call << ");\n";
 
   // Finally, emit the kernel
-  TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
+  // TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
+  toplevelBuf->insert(global.location.top.getLocWithOffset(-1), indent_string(kernel.str()),true,false);
 
-  return call;
+  return call.str();
 }
 
 
 /// Change field references within loops
-void MyASTVisitor::replace_field_refs() {
+void MyASTVisitor::replace_field_refs(srcBuf & loopBuf) {
   
   for ( field_ref & le : field_ref_list ) {
-    Buf.replace( le.nameInd, le.info->new_name );
+    loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
     if (le.dirExpr != nullptr) {
-      Buf.replace(le.parityInd, "neighbour(" + looping_var + ", " + get_stmt_str(le.dirExpr)+")");
+      loopBuf.replace(le.parityExpr,
+                       "neighbour(" + looping_var + ", " + get_stmt_str(le.dirExpr)+")");
     } else {
-      Buf.replace(le.parityInd, looping_var);
+      loopBuf.replace(le.parityExpr, looping_var);
     }      
   }                        
 }

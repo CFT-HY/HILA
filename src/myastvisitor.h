@@ -24,8 +24,9 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 private:  
   Rewriter &TheRewriter;
   ASTContext *Context;
-  srcBuf Buf;
-
+  srcBuf *writeBuf;
+  srcBuf *toplevelBuf;
+  
 public:
   MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
   MyASTVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
@@ -52,21 +53,45 @@ public:
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
 
+  /// true if function contains parity loop
+  bool functiondecl_loop_found( FunctionDecl *f );
+  
   /// same for function templates
-  bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
+  // bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
 
   /// same for function templates
   bool VisitCXXMethodDecl(CXXMethodDecl *tf);
 
+  void specialize_function( FunctionDecl *f );
+  void specialize_method( CXXMethodDecl *method );
+  void specialize_function_or_method( FunctionDecl *f, CXXRecordDecl *parent, 
+                                      bool is_static, bool no_inline );
+
+  int get_param_substitution_list( CXXRecordDecl * r,
+                                   std::vector<std::string> & par,
+                                   std::vector<std::string> & arg );
+
+  void make_mapping_lists( const TemplateParameterList * tpl, 
+                           const TemplateArgumentList & tal,
+                           std::vector<std::string> & par,
+                           std::vector<std::string> & arg,
+                           std::string *al );
+ 
+  // bool VisitCXXRecordDecl( CXXRecordDecl * D);
+
   /// and a hook for getting templated class template params
   bool VisitClassTemplateDecl(ClassTemplateDecl *D);
 
+  /// handle the templated class specializations
+  // int handle_class_specializations(ClassTemplateDecl *D);
+  
+  /// special handler for field<>
   int handle_field_specializations(ClassTemplateDecl *D);
 
   // void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
   
-  bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
-  bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
+  // bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
+  // bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
   
   bool is_field_element_expr(Expr *E);
   bool is_field_expr(Expr *E);
@@ -85,14 +110,12 @@ public:
 
   std::string get_expr_type(const Expr *e) {
     // This is somehow needed for printing type without "class" id
+    // TODO: perhaps reanalyse and make more robust?
     PrintingPolicy pp(Context->getLangOpts());
     return e->getType().getUnqualifiedType().getAsString(pp);
   }
   
-  void replace_expr(Expr *e, const std::string &s) {
-    TheRewriter.ReplaceText(e->getSourceRange(),s);
-  }  
-
+  /// this tries to "fingerprint" expressions and see if they're duplicate
   bool is_duplicate_expr(const Expr * a, const Expr * b);
   
   // catches both parity and parity_plus_direction 
@@ -101,7 +124,7 @@ public:
   /// Checks if expr points to a variable defined in the same loop
   var_decl * is_loop_local_var_ref(Expr *E);
 
-  bool is_assignment_expr(Stmt * s, std::string * opcodestr);
+  bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool & is_compound);
   
   bool is_loop_extern_var_ref(Expr *E);
   
@@ -113,7 +136,7 @@ public:
 
   void check_var_info_list();
   
-  bool handle_field_parity_expr(Expr *e, bool is_assign);
+  bool handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
 
@@ -140,21 +163,30 @@ public:
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
 
-  std::string generate_kernel(Stmt *S, bool semi_at_end);
-  std::string generate_in_place(Stmt *S, bool semi_at_end);
+  std::string generate_kernel(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_in_place(Stmt *S, bool semi_at_end, srcBuf &sb);
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();
 
   /// Change field references within loops
-  void replace_field_refs();
+  void replace_field_refs(srcBuf &sb);
 
   /// shortcut for "pragma"-like transformer_control("cmd")-functin
-  bool handle_control_stmt(Stmt *s);
+  // bool handle_control_stmt(Stmt *s);
+  bool control_command(VarDecl *var);
 
-  /// utility used in inserting stuff after new line in buffer
-  SourceLocation getSourceLocationAfterNewLine( SourceLocation l );
   
+  /// utility used in inserting stuff after new line in buffer
+  SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
+  /// another utility (cannot trust r.getEnd())
+  SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
+  
+  void set_writeBuf(const FileID fid);
+
+  SourceRange get_templatefunc_decl_range(FunctionTemplateDecl *tf, FunctionDecl *f); 
+  SourceRange get_func_decl_range(FunctionDecl *f);
+
 };
 
 #endif
