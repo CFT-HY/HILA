@@ -154,4 +154,33 @@ int node_index(int loc[NDIM], node_struct *node)
 
 
 
+void lattice_struct::loop_begin( parity p )
+{
+  #ifndef USE_MPI
+    #if defined(EVENFIRST)
+      if(p==ODD){
+        return mynode->evensites;
+      } else {
+        return 0; // EVEN or ALL
+      }
+    #endif
+  #else //USE_MPI
+    not implemented
+  #endif
+}
 
+
+void lattice_struct::loop_begin( parity p )
+{
+  #ifndef USE_MPI
+    #if defined(EVENFIRST)
+      if(p==EVEN){
+        return mynode->evensites; 
+      } else {
+        return mynode->sites; // ODD or ALL
+      }
+    #endif
+  #else //USE_MPI
+    not implemented
+  #endif
+}
