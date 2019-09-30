@@ -65,6 +65,7 @@ private:
 public:
   
   void setup(int siz[NDIM]);
+  void setup_layout( );
   
   #if NDIM == 4
   void setup(int nx, int ny, int nz, int nt);
@@ -83,11 +84,26 @@ public:
   unsigned node_number(const location & c);
   unsigned site_index(const location & c);
   unsigned site_index(const location & c, const unsigned node);
-  
+
   const int field_alloc_size(){
     return this_node.field_alloc_size;
   }
   
+  const int loop_begin( parity P){
+    if(P==ODD){
+      return this_node.evensites;
+    } else {
+      return 0;
+    }
+  }
+
+  const int loop_end( parity P){
+    if(P==EVEN){
+      return this_node.evensites;
+    } else {
+      return this_node.sites;
+    }
+  }
   
 };
 
