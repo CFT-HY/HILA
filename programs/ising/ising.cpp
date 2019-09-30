@@ -10,7 +10,6 @@
 
 int main() 
 {
-  lattice_struct * lattice;
   lattice->setup( 8, 8 );
 
   field<cmplx<double>> spin;
