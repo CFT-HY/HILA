@@ -84,6 +84,10 @@ public:
   unsigned site_index(const location & c);
   unsigned site_index(const location & c, const unsigned node);
   
+  const int field_alloc_size(){
+    return this_node.field_alloc_size;
+  }
+  
   
 };
 
