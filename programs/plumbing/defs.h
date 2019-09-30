@@ -16,7 +16,7 @@ using real_t = double;
 // Direction and parity
 
 #if   NDIM==4
-enum direction { XUP, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRS };
+enum direction :unsigned { XUP, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRS };
 #elif NDIM==3
 enum direction { XUP, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRS };
 #elif NDIM==2
@@ -40,7 +40,7 @@ static inline parity opp_parity(const parity p) {
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
 }
 
-#define foralldir(d) for(direction d=0; d<NDIM; d++)
+#define foralldir(d) for(int d=XUP; d<NDIM; d++) 
 
 // location type
 
