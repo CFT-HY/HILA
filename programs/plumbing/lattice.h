@@ -93,6 +93,7 @@ public:
   unsigned node_number(const location & c);
   unsigned site_index(const location & c);
   unsigned site_index(const location & c, const unsigned node);
+  unsigned field_alloc_size() {return this_node.field_alloc_size; }
   
   unsigned remap_node(const unsigned i);
 
