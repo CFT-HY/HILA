@@ -3,6 +3,7 @@
 
 // Useful global definitions here -- this file should be included by (almost) all others
 
+#include <array>
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = double;
@@ -38,6 +39,39 @@ static inline parity opp_parity(const parity p) {
   unsigned u = 0x3 & static_cast<unsigned>(p);
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
 }
+
+#define foralldir(d) for(direction d=0; d<NDIM; d++)
+
+// location type
+
+
+using location = std::array<int,NDIM>;
+
+inline location operator+(const location & a, const location & b) {
+  location r;
+  foralldir(d) r[d] = a[d] + b[d];
+  return r;
+}
+
+inline location operator-(const location & a, const location & b) {
+  location r;
+  foralldir(d) r[d] = a[d] - b[d];
+  return r;
+}
+
+inline location operator-(const location & a) {
+  location r;
+  foralldir(d) r[d] = -a[d];
+  return r;
+}
+
+inline parity location_parity(const location & a) {
+  int s = 0;
+  foralldir(d) s += a[d];
+  if (s % 2 == 0) return parity::even;
+  else return parity::odd;
+}
+
 
 
 #endif

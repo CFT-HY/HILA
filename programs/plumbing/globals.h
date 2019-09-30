@@ -5,6 +5,10 @@
 /// Probably this could be done much more elegantly
 
 #include <iostream>
+#include "../plumbing/lattice.h"
+
+/// global handle to lattice
+extern lattice_struct lattice;
 
 // text output section -- defines also output0, which writes from node 0 only
 
