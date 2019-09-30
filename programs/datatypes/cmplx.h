@@ -15,9 +15,14 @@ struct cmplx {
   //     re = rhs.re; im = rhs.im; 
   //     return *this; 
   //   }
-  cmplx<T>() =default;
+  cmplx<T>() = default;
   
   cmplx<T>(const cmplx<T> & a) =default;
+
+  // constructor from single scalar value 
+  template <typename scalar_t,
+            std::enable_if_t<std::is_arithmetic<scalar_t>::value, int> = 0 >
+  constexpr cmplx<T>(const scalar_t val): re(static_cast<T>(val)), im(static_cast<T>(0)) {}
   
   // constructor c(a,b)
 //   template <typename A, typename B,
@@ -65,9 +70,11 @@ struct cmplx {
   T norm() const { return re*re + im*im; }
   // TODO: make this work for vector type!  Not double
   
+  //currently this gives a compilation error
   double abs() const { return sqrt(static_cast<double>(norm()) ); }
   double arg() const { return atan2(static_cast<double>(im),static_cast<double>(re)); }
-  
+
+
   cmplx<T> conj() const { return cmplx<T>( { re, -im } ); }
 
   cmplx<T> polar(const T r, const T theta) { 
