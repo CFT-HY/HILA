@@ -98,6 +98,10 @@ public:
   unsigned loop_begin(const parity p);
   unsigned loop_end(const parity p);
 
+  const int field_alloc_size(){
+    return this_node.field_alloc_size;
+  }
+  
   
 };
 

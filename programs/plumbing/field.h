@@ -257,7 +257,7 @@ private:
   public:
     void allocate_payload() {
       payload = (field_storage_type<T> *) 
-                   allocate_field_mem(sizeof(T) * lattice->this_node.field_alloc_size);
+                   allocate_field_mem(sizeof(T) * lattice->field_alloc_size());
       if (payload == nullptr) {
         std::cout << "Failure in field memory allocation\n";
         exit(1);
