@@ -22,7 +22,7 @@ void lattice_struct::setup(int siz[NDIM]) {
 
   /* then, set up the comm arrays */
   make_lattice_arrays( &lattice );
-      
+
 #ifdef USE_MPI
   /* Initialize wait_array structures */
   initialize_wait_arrays();
@@ -58,7 +58,7 @@ void lattice_struct::setup(int nx) {
 /// Is the coordinate on THIS node 
 ///////////////////////////////////////////////////////////////////////
 
-bool lattice::is_on_node(const location & loc)
+bool lattice_struct::is_on_node(const location & loc)
 {
   int d,dir;
 
@@ -73,7 +73,7 @@ bool lattice::is_on_node(const location & loc)
 /// Get the node number for (BLOCKED) coordinates 
 ///////////////////////////////////////////////////////////////////////
 
-int lattice::node_number(const location & loc)
+int lattice_struct::node_number(const location & loc)
 {
   unsigned i;
   int dir;
