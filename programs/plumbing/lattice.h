@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
@@ -83,6 +84,7 @@ public:
   unsigned node_number(const location & c);
   unsigned site_index(const location & c);
   unsigned site_index(const location & c, const unsigned node);
+  unsigned field_alloc_size() {return this_node.field_alloc_size; }
   
   
 };
