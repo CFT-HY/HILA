@@ -4,6 +4,7 @@
 // Useful global definitions here -- this file should be included by (almost) all others
 
 #include <array>
+#include <vector>
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = double;
@@ -74,6 +75,11 @@ inline parity location_parity(const location & a) {
   else return parity::odd;
 }
 
+
+#ifndef USE_MPI
+#define mynode() 0
+#define numnodes() 1
+#endif
 
 
 #endif
