@@ -86,7 +86,6 @@ void initial_setup(int & argc, char ***argvp)
   timing.init();
 
   /* basic static node variables */
-  number_of_nodes = numnodes();
 #if defined(CUDA) && !defined(PIZDAINT)
   localhost_info(&g_local_nodeid, &g_num_local_nodes);
 #endif

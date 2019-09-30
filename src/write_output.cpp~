@@ -1,0 +1,32 @@
+#include <fstream>
+
+#include "transformer.h"
+#include "stringops.h"
+#include "srcbuf.h"
+
+int write_output_file( std::string & filename ) {
+
+  if (filename == "-") {
+    llvm::outs() << get_file_buffer(TheRewriter,SM.getMainFileID())->dump();
+  } else {
+    std::string name;
+    if (filename == "") {
+      // use now main_file_name, strip dirs
+      size_t s = global.main_file_name.rfind('/',std::string::npos);
+      if (s < global.main_file_name.size()) {
+        name = global.main_file_name.substr(s+1,std::string::npos);
+      } else {
+        name = global.main_file_name;
+      }
+
+      // remove last max 3 letter extension TODO: is this safe?
+      s = name.rfind('.',std::string::npos);
+      if (s < name.size() && s >= name.size()-4 && s > 0) {
+        name = name.substr(0,s-1);
+      }
+
+      name += "." + default_output_suffix;
+    } else {
+      name = output_filename;
+    }
+        

@@ -3,8 +3,6 @@
 
 #include <iostream>
 #include <fstream>
-#include <array>
-#include <vector>
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
@@ -12,47 +10,59 @@
 #include "../plumbing/defs.h"
 #include "../plumbing/memory.h"
 
-using location = std::array<int,NDIM>;
-
-#ifndef USE_MPI
-static inline int mynode(){
-  return 0;
-}
-#endif
+struct node_info {
+  location min,size;
+  unsigned evensites, oddsites;
+};
 
 
 class lattice_struct {
-public:
+private:
   // expose these directly, by far the simplest interface - who cares about c++ practices
   // use also ints instead of unsigned, just to avoid surprises in arithmetics
   // I shall assume here that int is 32 bits, and long long 64 bits.  I guess these are
   // pretty much standard for now
   // Alternative: int_32t and int_64t (or int_fast_32t  and int_fast_64t, even more generally) 
-  int size[NDIM];
-  long long volume;
+  int l_size[NDIM];
+  long long l_volume;
 
   // Information about the node stored on this process
   struct node_struct {
     unsigned index;
     unsigned sites, evensites, oddsites;
     unsigned field_alloc_size;          // how many sites/node in allocations 
-    unsigned min[NDIM], size[NDIM];          // node local coordinate ranges
-    unsigned nn[NDIRS];                      // nn-node of node down/up to dirs
-  } mynode;
+    location min, size;                 // node local coordinate ranges
+    unsigned nn[NDIRS];                 // nn-node of node down/up to dirs
+    bool first_site_even;               // is location min even or odd?
+    
+    void setup(node_info & ni);
+  } this_node;
 
   // information about all nodes
   struct allnodes {
     unsigned number;
-    unsigned num_dir[NDIM];
-    // lattice division to nodes: div[d] will have num_dir[d]+1 elements, last size
-    std::vector<unsigned> div[NDIM];
-    unsigned * remap;                    // mapping (optional)
+    unsigned ndir[NDIM];  // number of node divisions to dir
+    // lattice division: div[d] will have num_dir[d]+1 elements, last size
+    // TODO: is this needed at all?
+    std::vector<unsigned> divisors[NDIM];
+    std::vector<node_info> nodelist;
+
+    unsigned * map_array;                  // mapping (optional)
+    unsigned * map_inverse;                // inv of it
+    
+    void create_remap();                   // create remap_node
+    unsigned remap(unsigned i);            // use remap
+    unsigned inverse_remap(unsigned i);    // inverse remap
+    
   } nodes;
 
-  #ifdef USE_MPI
-  int * map_node_list;
-  #endif  
+  struct comm_struct {
+    
+  };
   
+  std::vector<comm_struct> commlist;
+  
+public:
   
   void setup(int siz[NDIM]);
   
@@ -66,15 +76,14 @@ public:
   void setup(int nx); 
   #endif
   
+  int size(direction d) { return l_size[d]; }
+  long long volume() { return l_volume; }
+  
   bool is_on_node(const location & c);
   unsigned node_number(const location & c);
   unsigned site_index(const location & c);
+  unsigned site_index(const location & c, const unsigned node);
   
-  unsigned remap_node(const unsigned i);
-
-  unsigned loop_begin(const parity p);
-  unsigned loop_end(const parity p);
-
   
 };
 

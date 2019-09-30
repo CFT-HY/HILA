@@ -1,7 +1,10 @@
-/* This routine decides how the lattice is distributed among
- * the nodes.  This is the generic version, which just
- * throws the system to as square blocks as possible
- */
+/// This routine decides how the lattice is distributed among
+/// the nodes.  This is the generic version, which just
+/// throws the system to as "square"" blocks as possible.
+/// TODO:
+/// First tries to divide the lattice so that every node has 
+/// the same size, but if that fails then allow different
+/// division to one direction
 
 #include "../plumbing/lattice.h"
 
@@ -16,27 +19,15 @@ static int prime[NPRIMES] = {2,3,5,7,11,13,17,19};
  * Print info to outf as we proceed 
  */
 
-void setup_layout( int siz[NDIM], 
-		   int nsquares[NDIM], 
-		   int squaresize[NDIM],
-		   int *map_node_list )
+void lattice::setup_layout( )
 {
-  int i,j,dir,nfactors[NPRIMES];
+  int i,msize,dir,nfactors[NPRIMES], nodesiz[NDIM];
 
-  output0 << "LATTICE LAYOUT (GENERIC):\n " << NDIM << " dimensions, layout options: ";
-  #ifdef EVENFIRST
-  output0 << "EVENFIRST ";
-  #endif
-  output0 << '\n';
+  output0 << "Standard lattice layout:\n " << NDIM << " dimensions\n";
 
   /* Figure out dimensions of hyperrectangle - this version ensures all are same size */
 
-  foralldir(dir) {
-    nsquares[dir] = 1;
-    squaresize[dir] = lattice.size[dir];
-  }
-
-  if (lattice.volume % numnodes()) {
+  if (volume % numnodes()) {
     output0 << " No hope of laying out the lattice using " << numnodes() << " nodes\n";
     finishrun();
   }
@@ -55,33 +46,37 @@ void setup_layout( int siz[NDIM],
     finishrun();
   }
   
+  for (i=0; i<NDIM; i++) {
+    nodesiz[i] = size[i];
+    nodes.ndir[i] = 1;
+  }
+  
   for (int n=NPRIMES-1; n>=0; n--) for(i=0; i<nfactors[n]; i++) {
     /* figure out which direction to divide -- start from the largest prime, because
      * we don't want this to be last divisor! (would probably wind up with size 1) 
      */
 
-    /* find largest divisible dimension of h-cubes 
-     *   - start the division from direction 0, because
-     * these are likely to be within the same node!  */
-    for(j=1,dir=0; dir<NDIM; dir++)
-      if( squaresize[dir]>j && squaresize[dir]%prime[n] == 0 ) j=squaresize[dir];
-    /* if one direction with largest dimension has already been
-       divided, divide it again.  Otherwise divide first direction
-       with largest dimension. */
+    // find largest divisible dimension of h-cubes - start from last, because 
+    // SF and spatial FFT.
+    for (msize=1,dir=0; dir<NDIM; dir++)
+      if (nodesiz[dir] > msize && nodesiz[dir]%prime[n] == 0 ) msize = nodesiz[dir];
 
-    /* NEW-Switch here to first divide along t-direction, in
-     * order to 
-     * a) minimize spatial blocks, for FFT
-     * b) In sf t-division is cheaper (1 non-communicating slice)
-     */
+    // if one direction with largest dimension has already been
+    // divided, divide it again.  Otherwise divide first direction
+    // with largest dimension. 
 
+    // Switch here to first divide along t-direction, in
+    // order to 
+    // a) minimize spatial blocks, for FFT
+    // b) In sf t-division is cheaper (1 non-communicating slice)
+    
     for (dir=NDIM-1; dir>=0; dir--)
-      if( squaresize[dir]==j && nsquares[dir]>1 && 
-	  squaresize[dir]%prime[n] == 0) break;
+      if (nodesiz[dir]==msize && nodes.ndir[dir]>1 && 
+          nodesiz[dir]%prime[n] == 0) break;
 
     /* If not previously sliced, take one direction to slice */
     if (dir < 0) for (dir=NDIM-1; dir>=0; dir--)
-      if( squaresize[dir]==j && squaresize[dir]%prime[n] == 0) break;
+      if( nodesiz[dir]==msize && nodesiz[dir]%prime[n] == 0) break;
 
     if (dir < 0) {
       /* This cannot happen */
@@ -90,32 +85,39 @@ void setup_layout( int siz[NDIM],
     }
 
     /* Now slice it */
-    squaresize[dir] /= prime[n]; nsquares[dir] *= prime[n];
+    nodesiz[dir] /= prime[n]; nodes.ndir[dir] *= prime[n];
 
   }
+  
+  // set up struct nodes variables
+  nodes.number = numnodes();
+  foralldir(dir) {
+    nodes.divisors[dir].resize(nodes.ndir[dir]+1);
+    // trivial, evenly spaced divisors -- note: last element == size[dir]
+    for (int i=0; i<=nodes.ndir[dir]; i++) 
+      nodes.divisors[dir].at(i) = i*nodesiz[dir];
+  }
+
+  // For MPI, remap the nodes for periodic torus
+  // in the desired manner 
+  // we have at least 2 options:
+  // map_node_layout_trivial.c
+  // map_node_layout_block2.c - for 2^n n.n. blocks
+  
+  nodes.create_remap();
   
   if (mynode() == 0) {
     output0 << "\n Sites on node: ";
     foralldir(dir) {
       if (dir > 0) output0 << " x ";
-      output0 << squaresize[dir];
+      output0 << nodesiz[dir];
     }
     output0 << "\n Processor layout: ";
     foralldir(dir) {
       if (dir > 0) output0 << " x ";
-      output0 << nsquares[dir];
+      output0 << node.ndir[dir];
     }
     output0 << '\n';
   }
-
-#ifdef USE_MPI
-  /* Then, for MPI, remap the nodes for periodic torus
-   * in the desired manner 
-   * we have at least 2 options:
-   * map_node_layout_trivial.c
-   * map_node_layout_block2.c - for 2^n n.n. blocks
-   */
-  map_node_layout( nsquares, squaresize, map_node_list );
-#endif
 
 }

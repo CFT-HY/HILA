@@ -5,11 +5,12 @@
 
 #include "../plumbing/lattice.h"
 
-void lattice::map_node_layout( int size[NDIM], 
-                               int g[NDIM], 
-                               int *map_arr )
+void lattice::nodes.create_remap()
 {
-  output0 << " map_node_layout: TRIVIAL (no effort made to reorder)\n";
+  output0 << " Node remapping: TRIVIAL (no effort made to reorder)\n";
+  nodes.map_array = nodes.map_inverse = nullptr;
 }
 
-unsigned lattice::remap_node(unsigned i) { return i; }
+unsigned lattice::nodes.remap(unsigned i) { return i; }
+
+unsigned lattice::nodes.inverse_remap(unsigned i) { return i; }
