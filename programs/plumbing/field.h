@@ -268,6 +268,12 @@ private:
       free_field_mem((void *)payload);
       payload = nullptr;
     }
+
+
+    T& operator[] (int i)
+    {
+      return (T&) (payload[i].c);
+    }
     
   };
   
@@ -323,7 +329,7 @@ public:
       exit(1);  // TODO - more ordered exit?
     }
     fs = new field_struct;
-    fs->lattice = &lattice;
+    fs->lattice = lattice;
     fs->allocate_payload();
 
     mark_changed(ALL);
@@ -367,6 +373,11 @@ public:
   //{ 
   //  return (field_element<T>) *this;
   //}
+
+  T& operator[] (int i)
+  {
+    return (T&) (this->fs[0][i]);
+  }
 
   // fetch the element at this loc
   // T get(int i) const;
