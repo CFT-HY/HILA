@@ -241,32 +241,31 @@ void lattice_struct::setup_nodes() {
 ////////////////////////////////////////////////////////////////////////
 /// Fill in this_node fields -- node_number() must be set up OK
 ////////////////////////////////////////////////////////////////////////
-
-void lattice_struct::this_node.setup(node_info & ni)
+void lattice_struct::node_struct::setup(node_info & ni)
 {
 
-  this_node.index = mynode();
+  index = mynode();
 
   foralldir(d) {
-    this_node.min[d]  = ni.min[d];
-    this_node.size[d] = ni.size[d];
+    min[d]  = ni.min[d];
+    size[d] = ni.size[d];
   }
-  this_node.evensites = ni.evensites;
-  this_node.oddsites  = ni.oddsites;
-  this_node.sites     = ni.evensites + ni.oddsites;
+  evensites = ni.evensites;
+  oddsites  = ni.oddsites;
+  sites     = ni.evensites + ni.oddsites;
 
   int i = 0;
-  foralldir(d) i += this_node.min[d];
-  if (i % 2 == 0) this_node.first_site_even = true;
-  else            this_node.first_site_even = false;
+  foralldir(d) i += min[d];
+  if (i % 2 == 0) first_site_even = true;
+  else            first_site_even = false;
    
   // neighbour node indices
   foralldir(d) {
-    location l = this_node.min;
-    l[d] = (this_node.min[d] + this_node.size[d]) % l_size[d];
-    this_node.nn[d] = node_number(l);
-    l[d] = (l_size[d] + this_node.min[d] - 1) % l_size[d];
-    this_node.nn[opp_dir(d)] = node_number(l);
+    location l = min;
+    l[d] = (min[d] + size[d]) % l_size[d];
+    nn[d] = node_number(l);
+    l[d] = (l_size[d] + min[d] - 1) % l_size[d];
+    nn[opp_dir(d)] = node_number(l);
   }
 }
 

@@ -69,6 +69,7 @@ public:
   
   void setup(int siz[NDIM]);
   void setup_layout( );
+  void setup_nodes();
   
   #if NDIM == 4
   void setup(int nx, int ny, int nz, int nt);
@@ -87,6 +88,7 @@ public:
   unsigned node_number(const location & c);
   unsigned site_index(const location & c);
   unsigned site_index(const location & c, const unsigned node);
+  location site_location(unsigned index);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
   
   unsigned remap_node(const unsigned i);
