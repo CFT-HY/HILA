@@ -241,7 +241,7 @@ void lattice_struct::setup_nodes() {
 ////////////////////////////////////////////////////////////////////////
 /// Fill in this_node fields -- node_number() must be set up OK
 ////////////////////////////////////////////////////////////////////////
-void lattice_struct::node_struct::setup(node_info & ni)
+void lattice_struct::node_struct::setup(node_info & ni, lattice_struct lattice)
 {
 
   index = mynode();
@@ -262,10 +262,10 @@ void lattice_struct::node_struct::setup(node_info & ni)
   // neighbour node indices
   foralldir(d) {
     location l = min;
-    l[d] = (min[d] + size[d]) % l_size[d];
-    nn[d] = node_number(l);
-    l[d] = (l_size[d] + min[d] - 1) % l_size[d];
-    nn[opp_dir(d)] = node_number(l);
+    l[d] = (min[d] + size[d]) % lattice.l_size[d];
+    nn[d] = lattice.node_number(l);
+    l[d] = (lattice.l_size[d] + min[d] - 1) % lattice.l_size[d];
+    nn[opp_dir(d)] = lattice.node_number(l);
   }
 }
 
