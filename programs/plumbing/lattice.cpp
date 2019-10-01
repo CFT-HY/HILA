@@ -282,7 +282,7 @@ void lattice_struct::create_std_gathers()
   // be allocated on "device" memory too!
   
   for (int d=0; d<NDIRS; d++) {
-    neigb[d] = (unsigned *)allocate_field_mem(this_node.sites * sizeof(unsigned));
+    neighb[d] = (unsigned *)allocate_field_mem(this_node.sites * sizeof(unsigned));
   }
   
   comminfo.resize(MAX_GATHERS);
