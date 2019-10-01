@@ -18,12 +18,6 @@ struct node_info {
 };
 using location = std::array<int,NDIM>;
 
-#ifndef USE_MPI
-static inline int mynode(){
-  return 0;
-}
-#endif
-
 
 class lattice_struct {
 private:
