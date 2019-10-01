@@ -66,6 +66,8 @@ private:
   std::vector<comm_struct> commlist;
   
 public:
+
+  unsigned * neigb[NDIRS];
   
   void setup(int siz[NDIM]);
   void setup_layout( );

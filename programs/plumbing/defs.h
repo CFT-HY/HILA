@@ -81,5 +81,6 @@ inline parity location_parity(const location & a) {
 #define numnodes() 1
 #endif
 
+#define MAX_GATHERS 1000
 
 #endif

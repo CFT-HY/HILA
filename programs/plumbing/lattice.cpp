@@ -281,7 +281,7 @@ void lattice_struct::create_std_gathers()
   // allocate neighbour arrays - TODO: these should 
   // be allocated on "device" memory too!
   
-  for (direction d=0; d<NDIRS; d++) {
+  for (int d=0; d<NDIRS; d++) {
     neigb[d] = (unsigned *)allocate_field_mem(this_node.sites * sizeof(unsigned));
   }
   
