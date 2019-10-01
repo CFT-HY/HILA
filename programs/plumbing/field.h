@@ -251,10 +251,11 @@ private:
   class field_struct {
   private:
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    lattice_struct * lattice;
-    unsigned is_fetched[NDIRS];
     
   public:
+    lattice_struct * lattice;
+    unsigned is_fetched[NDIRS];
+
     void allocate_payload() {
       payload = (field_storage_type<T> *) 
                    allocate_field_mem(sizeof(T) * lattice->field_alloc_size());
@@ -268,7 +269,6 @@ private:
       free_field_mem((void *)payload);
       payload = nullptr;
     }
-
 
     T& operator[] (int i)
     {
