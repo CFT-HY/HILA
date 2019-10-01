@@ -135,10 +135,10 @@ unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
   unsigned i;
   node_info & ni = nodes.nodelist[nodeid];
   
-  i = l = loc[NDIM-1] - ni.xmin[NDIM-1];
+  i = l = loc[NDIM-1] - ni.min[NDIM-1];
   s = loc[NDIM-1];
   for (dir=NDIM-2; dir>=0; dir--) {
-    l = loc[dir] - ni.xmin[dir];
+    l = loc[dir] - ni.min[dir];
     i = i*ni.size[dir] + l;
     s += loc[dir];
   }
