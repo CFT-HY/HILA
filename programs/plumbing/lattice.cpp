@@ -15,6 +15,7 @@ void lattice_struct::setup(int siz[NDIM]) {
   this_node.index = mynode();
   nodes.number = numnodes();
   
+  node_info ni;
   setup_layout();
   this_node.setup();
 
@@ -64,7 +65,7 @@ void lattice_struct::setup(int nx) {
 /// algorithm!
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice::node_number(const location & loc)
+unsigned lattice_struct::node_number(const location & loc)
 {
   unsigned i;
   int dir;
@@ -128,7 +129,7 @@ int lattice_struct::node_number(const location & loc)
 /// Note: loc really has to be on this node
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice::site_index(const location & loc, const unsigned nodeid)
+unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
 {
   int dir,l,s;
   unsigned i;
@@ -156,7 +157,7 @@ unsigned lattice::site_index(const location & loc, const unsigned nodeid)
 /// invert the this_node index -> location
 ///////////////////////////////////////////////////////////////////////
 
-location lattice::site_location(unsigned index)
+location lattice_struct::site_location(unsigned index)
 {
   // make the index lexicographic
 #ifdef EVENFIRST
