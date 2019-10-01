@@ -90,13 +90,6 @@ public:
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
   
   unsigned remap_node(const unsigned i);
-
-  unsigned loop_begin(const parity p);
-  unsigned loop_end(const parity p);
-
-  const int field_alloc_size(){
-    return this_node.field_alloc_size;
-  }
   
   const int loop_begin( parity P){
     if(P==ODD){
