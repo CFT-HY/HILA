@@ -19,8 +19,8 @@ void lattice_struct::setup(int siz[NDIM]) {
   this_node.setup();
 
   /* then, set up the comm arrays */
-  setup_communications();
-      
+  make_lattice_arrays( &lattice );
+
 #ifdef USE_MPI
   /* Initialize wait_array structures */
   initialize_wait_arrays();
@@ -84,7 +84,7 @@ unsigned lattice::node_number(const location & loc)
 /// Is the coordinate on THIS node 
 ///////////////////////////////////////////////////////////////////////
 
-bool lattice::is_on_node(const location & loc)
+bool lattice_struct::is_on_node(const location & loc)
 {
   int d;
 
@@ -101,7 +101,7 @@ bool lattice::is_on_node(const location & loc)
 /// Note: loc really has to be on this node
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice::site_index(const location & loc)
+int lattice_struct::node_number(const location & loc)
 {
   int dir,l,s;
   unsigned i;
@@ -459,5 +459,3 @@ void lattice::create_std_gathers()
 
 }
 
-
-  

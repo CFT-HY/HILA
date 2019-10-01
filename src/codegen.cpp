@@ -119,7 +119,8 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     l.new_name = "F"+clean_name(l.old_name);
     // Perhaps simpler FA, FB, FC. ?  The following helps avoid collisions
     while (t.find(l.new_name,0) != std::string::npos) l.new_name += "_";
-    l.loop_ref_name = l.new_name + "_payload";
+    //l.loop_ref_name = l.new_name + "_payload";
+    l.loop_ref_name = l.new_name;
     
     // variable links if needed
     // if (l.dir_list.size() > 0) {
@@ -199,8 +200,8 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
   replace_field_refs(loopBuf);
   
   std::stringstream code;
-  code << "const int loop_begin = lattice->node.loop_begin[" << parity_in_this_loop << "];\n";
-  code << "const int loop_end   = lattice->node.loop_end[" << parity_in_this_loop << "];\n";
+  code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
+  code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
   
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n" 

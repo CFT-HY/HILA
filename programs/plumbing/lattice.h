@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <array>
 #include <vector>
 
 // TODO: assertion moved somewhere where basic params
@@ -15,6 +16,13 @@ struct node_info {
   location min,size;
   unsigned evensites, oddsites;
 };
+using location = std::array<int,NDIM>;
+
+#ifndef USE_MPI
+static inline int mynode(){
+  return 0;
+}
+#endif
 
 
 class lattice_struct {
@@ -66,6 +74,7 @@ private:
 public:
   
   void setup(int siz[NDIM]);
+  void setup_layout( );
   
   #if NDIM == 4
   void setup(int nx, int ny, int nz, int nt);
@@ -86,6 +95,30 @@ public:
   unsigned site_index(const location & c, const unsigned node);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
   
+  unsigned remap_node(const unsigned i);
+
+  unsigned loop_begin(const parity p);
+  unsigned loop_end(const parity p);
+
+  const int field_alloc_size(){
+    return this_node.field_alloc_size;
+  }
+  
+  const int loop_begin( parity P){
+    if(P==ODD){
+      return this_node.evensites;
+    } else {
+      return 0;
+    }
+  }
+
+  const int loop_end( parity P){
+    if(P==EVEN){
+      return this_node.evensites;
+    } else {
+      return this_node.sites;
+    }
+  }
   
 };
 
