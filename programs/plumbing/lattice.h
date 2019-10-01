@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <fstream>
+#include <array>
+#include <vector>
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
