@@ -190,7 +190,7 @@ location lattice_struct::site_location(unsigned index)
 /// inconveniently large.  Alternatives?
 /////////////////////////////////////////////////////////////////////
 
-void lattice::setup_nodes() {
+void lattice_struct::setup_nodes() {
 
   nodes.number = numnodes();
   // Loop over all node "origins"
@@ -242,7 +242,7 @@ void lattice::setup_nodes() {
 /// Fill in this_node fields -- node_number() must be set up OK
 ////////////////////////////////////////////////////////////////////////
 
-void lattice::this_node.setup(node_info & ni)
+void lattice_struct::this_node.setup(node_info & ni)
 {
 
   this_node.index = mynode();
@@ -277,7 +277,7 @@ void lattice::this_node.setup(node_info & ni)
 /// TODO: implement some other neighbour schemas!
 /////////////////////////////////////////////////////////////////////
 
-void lattice::create_std_gathers()
+void lattice_struct::create_std_gathers()
 {
   // allocate neighbour arrays - TODO: these should 
   // be allocated on "device" memory too!

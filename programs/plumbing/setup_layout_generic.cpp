@@ -19,7 +19,7 @@ static int prime[NPRIMES] = {2,3,5,7,11,13,17,19};
  * Print info to outf as we proceed 
  */
 
-void lattice::setup_layout( )
+void lattice_struct::setup_layout( )
 {
   int i,msize,dir,nfactors[NPRIMES], nodesiz[NDIM];
 
