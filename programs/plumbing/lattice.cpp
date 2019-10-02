@@ -231,7 +231,7 @@ void lattice_struct::setup_nodes() {
     }
     
     // use the opportunity to set up this_node when it is met
-    if (nn == mynode()) this_node.setup(ni);
+    if (nn == mynode()) this_node.setup(ni, *lattice);
     
   }
 }
@@ -240,7 +240,7 @@ void lattice_struct::setup_nodes() {
 ////////////////////////////////////////////////////////////////////////
 /// Fill in this_node fields -- node_number() must be set up OK
 ////////////////////////////////////////////////////////////////////////
-void lattice_struct::node_struct::setup(node_info & ni, lattice_struct lattice)
+void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice)
 {
 
   index = mynode();

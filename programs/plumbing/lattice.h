@@ -38,7 +38,7 @@ private:
     unsigned nn[NDIRS];                 // nn-node of node down/up to dirs
     bool first_site_even;               // is location min even or odd?
     
-    void setup(node_info & ni);
+    void setup(node_info & ni, lattice_struct & lattice);
   } this_node;
 
   // information about all nodes
