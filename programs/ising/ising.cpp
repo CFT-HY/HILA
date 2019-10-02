@@ -31,6 +31,16 @@ int main()
   spin[ALL] = 1;
 
   parity p = EVEN;
+  for(int i=0; i<n_measurements; i++){
+    onsites(EVEN){
+      double neighbour_sum=0;
+      neighbour_sum += spin[X+XUP];
+      neighbour_sum += spin[X+XDOWN];
+      neighbour_sum += spin[X+YUP];
+      neighbour_sum += spin[X+YDOWN];
+    }
+    p=opp_parity(p);
+  }
 
   // Just a test, calculate magnetisation
   double M=0;
