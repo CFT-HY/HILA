@@ -27,7 +27,7 @@ void lattice_struct::setup_layout( )
 
   /* Figure out dimensions of hyperrectangle - this version ensures all are same size */
 
-  if (volume % numnodes()) {
+  if (l_volume % numnodes()) {
     output0 << " No hope of laying out the lattice using " << numnodes() << " nodes\n";
     finishrun();
   }
@@ -47,7 +47,7 @@ void lattice_struct::setup_layout( )
   }
   
   for (i=0; i<NDIM; i++) {
-    nodesiz[i] = size[i];
+    nodesiz[i] = size(i);
     nodes.ndir[i] = 1;
   }
   
@@ -93,7 +93,7 @@ void lattice_struct::setup_layout( )
   nodes.number = numnodes();
   foralldir(dir) {
     nodes.divisors[dir].resize(nodes.ndir[dir]+1);
-    // trivial, evenly spaced divisors -- note: last element == size[dir]
+    // trivial, evenly spaced divisors -- note: last element == size(dir)
     for (int i=0; i<=nodes.ndir[dir]; i++) 
       nodes.divisors[dir].at(i) = i*nodesiz[dir];
   }
