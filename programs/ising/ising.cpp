@@ -7,6 +7,9 @@
 #include "../plumbing/field.h"
 #include "../datatypes/cmplx.h"
 
+lattice_struct * lattice;
+std::ostream &hila::output = std::cout;
+
 
 int main() 
 {

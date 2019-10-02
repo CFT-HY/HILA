@@ -14,7 +14,7 @@ extern lattice_struct lattice;
 
 namespace hila {
   // this is our default output file stream
-  extern std::ostream output;
+  extern std::ostream &output;
   // this is just a hook to store output file, if it is in use
   extern std::ofstream output_file;
 };
