@@ -274,7 +274,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
 /// This is for the index array neighbours
 /// TODO: implement some other neighbour schemas!
 /////////////////////////////////////////////////////////////////////
-
+#ifdef USE_MPI
 void lattice_struct::create_std_gathers()
 {
   // allocate neighbour arrays - TODO: these should 
@@ -344,12 +344,12 @@ void lattice_struct::create_std_gathers()
       if (is_on_node(ln)) {
         neighb[d][i] = site_index(ln);
       } else {
-	// Now site is off-node, this lead to fetching
-	nodes[num] = node_number(ln);
-	index[num] = node_index(x, allnodes + nodes[num] );
-	parity[num] = location_parity(l);  // parity of THIS
-	here[num]  = i;
-	num++;
+	      // Now site is off-node, this lead to fetching
+	      nodes[num] = node_number(ln);
+	      index[num] = node_index(x, allnodes + nodes[num] );
+	      parity[num] = location_parity(l);  // parity of THIS
+	      here[num]  = i;
+	      num++;
       }
     }
 
@@ -457,4 +457,4 @@ void lattice_struct::create_std_gathers()
   node.latfield_size = c_offset;
 
 }
-
+#endif

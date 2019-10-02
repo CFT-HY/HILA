@@ -71,7 +71,7 @@ private:
   };
   
   std::vector<comminfo_struct> comminfo;
-  
+
 public:
 
   unsigned * neighb[NDIRS];
