@@ -101,7 +101,7 @@ bool lattice_struct::is_on_node(const location & loc)
 /// Note: loc really has to be on this node
 ///////////////////////////////////////////////////////////////////////
 
-int lattice_struct::node_number(const location & loc)
+unsigned lattice_struct::node_number(const location & loc)
 {
   int dir,l,s;
   unsigned i;

@@ -65,6 +65,13 @@ private:
   
   std::vector<comm_struct> commlist;
   
+  struct comminfo_struct {
+    int label;    
+    unsigned * index;    
+  };
+  
+  std::vector<comminfo_struct> comminfo;
+  
 public:
 
   unsigned * neighb[NDIRS];
@@ -84,6 +91,7 @@ public:
   #endif
   
   int size(direction d) { return l_size[d]; }
+  int size(int d) { return l_size[d]; }
   long long volume() { return l_volume; }
   
   bool is_on_node(const location & c);
