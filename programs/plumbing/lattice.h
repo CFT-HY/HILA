@@ -70,7 +70,7 @@ public:
   unsigned * neighb[NDIRS];
   
   void setup(int siz[NDIM]);
-  void setup_layout( );
+  void setup_layout();
   void setup_nodes();
   
   #if NDIM == 4
@@ -92,7 +92,8 @@ public:
   unsigned site_index(const location & c, const unsigned node);
   location site_location(unsigned index);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
-  
+  void create_std_gathers();
+
   unsigned remap_node(const unsigned i);
   
   const int loop_begin( parity P){
