@@ -119,8 +119,23 @@ public:
       return this_node.sites;
     }
   }
+
+
+  /* Communication routines. Define here in lattice? */
+  template <typename T>
+  void reduce_node_sum(T value, bool distribute);
+
+  template <typename T>
+  void reduce_node_product(T value, bool distribute);
   
 };
+
+
+#ifdef USE_MPI
+#include "comm_mpi.h"
+#else
+#include "comm_vanilla.h"
+#endif
 
 
 #endif

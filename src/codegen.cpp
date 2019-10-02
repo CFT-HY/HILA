@@ -136,9 +136,9 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   int i = 0;
   for ( field_info  & l : field_info_list ) if (l.is_read) {
     if (i == 0) {
-      code << "assert(" << l.new_name <<".fs != nullptr";
+      code << "assert(" << l.new_name <<".is_allocated()";
     } else {
-      code << " && " << l.new_name + ".fs != nullptr";
+      code << " && " << l.new_name + ".is_allocated()";
     }
     i++;
   }
@@ -173,9 +173,9 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   // Check reduction variables
   for (var_info & v : var_info_list) { 
     if (v.reduction_type == reduction::SUM) {
-      code << "reduce_node_sum(" << v.name << ", true);\n";
+      code << "lattice->reduce_node_sum(" << v.name << ", true);\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code << "reduce_node_product(" << v.name << ", true);\n";
+      code << "lattice->reduce_node_product(" << v.name << ", true);\n";
     }
   }
           

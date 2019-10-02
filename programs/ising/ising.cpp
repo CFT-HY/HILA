@@ -19,6 +19,14 @@ int main()
   field<cmplx<double>> spin;
   
   spin[ALL] = 1;
+
+  cmplx<double> sum=0;
+  onsites(ALL){
+    sum += spin[X];
+  }
+
+  printf(" %f\n", sum.re);
+  printf(" %f\n", spin[12].re);
   
   return 0;
 }
