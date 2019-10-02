@@ -130,6 +130,8 @@ public:
   
 };
 
+/// global handle to lattice
+extern lattice_struct * lattice;
 
 #ifdef USE_MPI
 #include "comm_mpi.h"
