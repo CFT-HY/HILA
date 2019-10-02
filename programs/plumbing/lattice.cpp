@@ -307,7 +307,7 @@ void lattice_struct::create_std_gathers()
 
   int sf_special_boundary = c_offset;
   /* add space for boundary only when needed */
-  if (this_node.min[NDIM-1] + this_node.nodesize[NDIM-1] == size[NDIM-1])
+  if (this_node.min[NDIM-1] + this_node.nodesize[NDIM-1] == size(NDIM-1])
     c_offset += 1;
   else sf_special_boundary = -(1<<30);
 
@@ -326,14 +326,14 @@ void lattice_struct::create_std_gathers()
       location ln,l = site_location(i);
       // set ln to be the neighbour of the site
       if (is_up_dir(d)) {
-        ln[d] = (l[d] + 1) % size[d];
+        ln[d] = (l[d] + 1) % size(d);
       } else {
         direction k = opp_dir(d);
-        ln[k] = (l[k] + size[k] - 1) % size[k];
+        ln[k] = (l[k] + size(k) - 1) % size(k);
       }
  
 #ifdef SCHROED_FUN
-      if (d == NDIM-1 && l[NDIM-1] == size[NDIM-1]-1) {
+      if (d == NDIM-1 && l[NDIM-1] == size(NDIM-1)-1) {
 	// This is up-direction, give special site
 	neighb[d][i] = sf_special_boundary;
       } else if (d == opp_dir(NDIM-1) && l[NDIM-1] == 0) {
