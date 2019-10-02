@@ -452,7 +452,11 @@ public:
             std::enable_if_t<std::is_convertible<t_div(T,A),T>::value, int> = 0>
   field<T>& operator/= (const A & rhs) { (*this)[ALL] /= rhs; return *this;}
 
-  
+
+  // Communication routines
+  #ifndef USE_MPI
+  void start_move(direction d, parity p){}
+  #endif
 };
 
 
