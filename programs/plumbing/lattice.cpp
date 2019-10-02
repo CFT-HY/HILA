@@ -88,8 +88,8 @@ bool lattice_struct::is_on_node(const location & loc)
 {
   int d;
 
-  for (direction dir=0; dir<NDIM; dir++) {
-    d = loc[dir] - this_node.xmin[dir];
+  for (int dir=0; dir<NDIM; dir++) {
+    d = loc[dir] - this_node.min[dir];
     if (d < 0 || d >= this_node.size[dir] ) return false;
   }
   return true;
@@ -106,10 +106,10 @@ int lattice_struct::node_number(const location & loc)
   int dir,l,s;
   unsigned i;
 
-  i = l = loc[NDIM-1] - this_node.xmin[NDIM-1];
+  i = l = loc[NDIM-1] - this_node.min[NDIM-1];
   s = loc[NDIM-1];
   for (dir=NDIM-2; dir>=0; dir--) {
-    l = loc[dir] - this_node.xmin[dir];
+    l = loc[dir] - this_node.min[dir];
     i = i*this_node.size[dir] + l;
     s += loc[dir];
   }
@@ -307,14 +307,14 @@ void lattice_struct::create_std_gathers()
 
   int sf_special_boundary = c_offset;
   /* add space for boundary only when needed */
-  if (this_node.xmin[NDIM-1] + this_node.nodesize[NDIM-1] == size[NDIM-1])
+  if (this_node.min[NDIM-1] + this_node.nodesize[NDIM-1] == size[NDIM-1])
     c_offset += 1;
   else sf_special_boundary = -(1<<30);
 
   output0 << "SPECIAL BOUNDARY LAYOUT for SF");
 #endif
 
-  for (direction d=0; d<NDIRS; d++) {
+  for (int d=0; d<NDIRS; d++) {
 
     comminfo_struct & ci = comminfo[d];
     ci.index = neighb[d];  // the neighbour array - not needed really
