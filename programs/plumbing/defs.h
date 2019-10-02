@@ -28,7 +28,8 @@ enum direction { XUP, YUP, YDOWN, XDOWN, NDIRS };
 enum direction { XUP, XDOWN, NDIRS };
 #endif
 
-static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - d); }
+static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
+static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
 
 enum class parity : unsigned { none, even, odd, all, x };
 // use here #define instead of const parity. Makes EVEN a protected symbol
@@ -44,6 +45,9 @@ static inline parity opp_parity(const parity p) {
 }
 
 #define foralldir(d) for(int d=XUP; d<NDIM; d++) 
+
+static inline int is_up_dir(const int d) { return d<NDIM; }
+
 
 // location type
 
