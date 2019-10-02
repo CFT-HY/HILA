@@ -15,14 +15,13 @@ void lattice_struct::setup(int siz[NDIM]) {
   this_node.index = mynode();
   nodes.number = numnodes();
   
-  node_info ni;
   setup_layout();
-  this_node.setup();
+  setup_nodes();
 
+#ifdef USE_MPI
   /* then, set up the comm arrays */
   make_lattice_arrays( &lattice );
 
-#ifdef USE_MPI
   /* Initialize wait_array structures */
   initialize_wait_arrays();
 #endif
