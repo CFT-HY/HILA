@@ -201,7 +201,7 @@ void lattice_struct::setup_nodes() {
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {
     location l;
-    foralldir(d) l[d] = nodes.divisors[n[d]];
+    foralldir(d) l[d] = nodes.divisors[n[d]][i];
 
     int nn = node_number(l);
     node_info & ni = nodes.nodelist[nn];

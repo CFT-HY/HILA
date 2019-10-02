@@ -44,7 +44,7 @@ static inline parity opp_parity(const parity p) {
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
 }
 
-#define foralldir(d) for(int d=XUP; d<NDIM; d++) 
+#define foralldir(d) for(int d=XUP; d<NDIM; d++)
 
 static inline int is_up_dir(const int d) { return d<NDIM; }
 

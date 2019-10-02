@@ -60,11 +60,11 @@ private:
   } nodes;
 
   struct comm_struct {
-    
+
   };
   
   std::vector<comm_struct> commlist;
-  
+
   struct comminfo_struct {
     int label;    
     unsigned * index;    
