@@ -16,6 +16,10 @@ using real_t = double;
   #define NDIM 4
 #endif
 
+#ifndef USE_MPI
+  #define VANILLA
+#endif
+
 // Direction and parity
 
 #if   NDIM==4
@@ -83,6 +87,9 @@ inline parity location_parity(const location & a) {
 #ifndef USE_MPI
 #define mynode() 0
 #define numnodes() 1
+inline void finishrun() {
+  exit(1);
+}
 #endif
 
 #define MAX_GATHERS 1000

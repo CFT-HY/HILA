@@ -98,6 +98,7 @@ void lattice_struct::setup_layout( )
       nodes.divisors[dir].at(i) = i*nodesiz[dir];
   }
 
+  #ifdef USE_MPI
   // For MPI, remap the nodes for periodic torus
   // in the desired manner 
   // we have at least 2 options:
@@ -109,15 +110,15 @@ void lattice_struct::setup_layout( )
   if (mynode() == 0) {
     output0 << "\n Sites on node: ";
     foralldir(dir) {
-      if (dir > 0) output0 << " x ";
+      if (dir > 0) { output0 << " x "; }
       output0 << nodesiz[dir];
     }
     output0 << "\n Processor layout: ";
     foralldir(dir) {
-      if (dir > 0) output0 << " x ";
-      output0 << node.ndir[dir];
+      if (dir > 0) { output0 << " x "; }
+      output0 << nodes.ndir[dir];
     }
     output0 << '\n';
   }
-
+  #endif
 }
