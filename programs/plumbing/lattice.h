@@ -122,6 +122,5 @@ public:
   
 };
 
-extern lattice_struct * lattice;
 
 #endif

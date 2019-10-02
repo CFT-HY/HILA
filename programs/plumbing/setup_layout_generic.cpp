@@ -6,7 +6,7 @@
 /// the same size, but if that fails then allow different
 /// division to one direction
 
-#include "../plumbing/lattice.h"
+#include "../plumbing/globals.h"
 
 
 /***************************************************************/

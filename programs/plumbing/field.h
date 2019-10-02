@@ -8,7 +8,7 @@
 
 // using namespace std;
 
-#include "../plumbing/lattice.h"
+#include "../plumbing/globals.h"
 
 
 // HACK  -- this is needed for pragma handlin, do not change!

@@ -1,5 +1,5 @@
 
-#include "lattice.h"
+#include "globals.h"
 
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
