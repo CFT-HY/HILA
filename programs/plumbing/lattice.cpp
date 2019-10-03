@@ -64,21 +64,21 @@ void lattice_struct::setup(int nx) {
 /// algorithm!
 ///////////////////////////////////////////////////////////////////////
 
-//unsigned lattice_struct::node_number(const location & loc)
-//{
-//  unsigned i;
-//  int dir;
-//
-//  i = (loc[NDIM-1] * nodes.ndir[NDIM-1]) / l_size[NDIM-1];
-//  for (dir=NDIM-2; dir>=0; dir--) {
-//    i = i*nodes.ndir[dir] +
-//        ((loc[dir] * nodes.ndir[dir]) / l_size[dir]);
-//  }
-//  /* do we want to remap this?  YES PLEASE */
-//  i = nodes.remap(i);
-//
-//  return( i );
-//}
+unsigned lattice_struct::node_number(const location & loc)
+{
+  unsigned i;
+  int dir;
+
+  i = (loc[NDIM-1] * nodes.ndir[NDIM-1]) / l_size[NDIM-1];
+  for (dir=NDIM-2; dir>=0; dir--) {
+    i = i*nodes.ndir[dir] +
+        ((loc[dir] * nodes.ndir[dir]) / l_size[dir]);
+  }
+  /* do we want to remap this?  YES PLEASE */
+  i = nodes.remap(i);
+
+  return( i );
+}
 
 ///////////////////////////////////////////////////////////////////////
 /// Is the coordinate on THIS node 
@@ -101,7 +101,7 @@ bool lattice_struct::is_on_node(const location & loc)
 /// Note: loc really has to be on this node
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::node_number(const location & loc)
+unsigned lattice_struct::site_index(const location & loc)
 {
   int dir,l,s;
   unsigned i;
