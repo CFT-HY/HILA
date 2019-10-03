@@ -325,7 +325,8 @@ void lattice_struct::create_std_gathers()
     // pass over sites
     int num = 0;  // number of sites off node
     for (int i=0; i<this_node.sites; i++) {
-      location ln,l = site_location(i);
+      location ln, l;
+      ln = l = site_location(i);
       // set ln to be the neighbour of the site
       if (is_up_dir(d)) {
         ln[d] = (l[d] + 1) % size(d);
