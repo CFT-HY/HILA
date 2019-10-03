@@ -5,6 +5,7 @@
 
 #include <array>
 #include <vector>
+#include <assert.h> 
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = double;
@@ -93,5 +94,10 @@ inline void finishrun() {
 #endif
 
 #define MAX_GATHERS 1000
+
+
+inline void assert_even_odd_parity( parity p ) {
+    assert(p == EVEN || p == ODD || p == ALL);
+}
 
 #endif
