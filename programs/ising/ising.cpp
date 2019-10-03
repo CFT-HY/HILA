@@ -28,7 +28,10 @@ long seed = 123456;
 int main()
 {
   // Basic setup
-  lattice->setup( 8, 8 );
+  int NX=8, NY=8;
+  int VOLUME = NX*NY;
+
+  lattice->setup( NX, NY );
 
   // Define a field
   field<scalar<double>> spin;
@@ -69,7 +72,7 @@ int main()
       M += spin[X];
     }
 
-    printf("Magnetisation %f\n", M);
+    printf("Magnetisation %f\n", M/VOLUME);
   }
   
   return 0;
