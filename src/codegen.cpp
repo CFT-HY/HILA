@@ -293,7 +293,7 @@ void MyASTVisitor::replace_field_refs(srcBuf & loopBuf) {
     loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
     if (le.dirExpr != nullptr) {
       loopBuf.replace(le.parityExpr,
-                       "neighbour(" + looping_var + ", " + get_stmt_str(le.dirExpr)+")");
+                       "lattice->neighb[" +  get_stmt_str(le.dirExpr) + "][" + looping_var + "]");
     } else {
       loopBuf.replace(le.parityExpr, looping_var);
     }      

@@ -68,12 +68,13 @@ private:
   struct comm_node_struct {
     unsigned index;
     unsigned sites, evensites, oddsites;
-    unsigned int buffer;
+    unsigned buffer;
+    std::vector<unsigned>  sitelist;
   };
 
   struct comminfo_struct {
     int label;    
-    unsigned * index;   
+    unsigned * index;
     std::vector<comm_node_struct> from_node;
     std::vector<comm_node_struct> to_node;
   };

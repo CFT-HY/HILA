@@ -17,10 +17,11 @@ void lattice_struct::setup(int siz[NDIM]) {
   
   setup_layout();
   setup_nodes();
+  create_std_gathers();
 
 #ifdef USE_MPI
   /* then, set up the comm arrays */
-  make_lattice_arrays( &lattice );
+  make_lattice_arrays();
 
   /* Initialize wait_array structures */
   initialize_wait_arrays();
@@ -426,36 +427,47 @@ void lattice_struct::create_std_gathers()
 
     // receive done, now opposite send. This is just the gather
     // inverted
-
     int od = opp_dir(d);
-    comminfo[od].to_node = comminfo[d].from_node;
+    comminfo[od].to_node = {};
 
     if (num > 0) {
-      comm_node_struct & fn = comminfo[d].to_node;
-      for (int j=0, s=&(comminfo[od].to_node); j<comminfo[od].n_send;
-	    j++, s = &((*s)->next), p = p->next) {
-	      (*s) = q = (send_struct *)memalloc( sizeof(send_struct) );
-	      q->node   = p->node;
-	      q->n      = p->n;
-	      q->n_even = p->n_odd;     /* Note the swap !  even/odd refers to type of gather */
-	      q->n_odd  = p->n_even;
-	      q->next   = NULL;
-	      q->sitelist = (int *)memalloc(q->n * sizeof(int));
+      std::vector<comm_node_struct> fn = comminfo[d].from_node;
+      for (int j=0; j<fn.size(); j++) {
+        comm_node_struct s;
+        s.index = fn[j].index;
+        s.sites = fn[j].sites;
+        /* Note the swap !  even/odd refers to type of gather */
+        s.evensites = fn[j].oddsites;
+        s.oddsites = fn[j].evensites;
+
+        comminfo[od].to_node.push_back(s);
 
 	      /* now, initialize sitelist -- Now, we first want ODD parity, since
 	       * this is what even gather asks for!
 	       */
       
-	      for (n=0,par=ODD; par>=EVEN; par--) {
-	        for (i=0; i<num; i++) if (nnodes[i] == q->node && parity[i] == par) {
-	          (q->sitelist)[n++] = here[i];
+        {
+          int n=0;
+	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && parity[i] == ODD) {
+	          (s.sitelist)[n++] = here[i];
 	        }
-	        if (par == ODD && n != q->n_even) halt("Parity odd error 3");
-	        if (par == EVEN && n != q->n) halt("Parity even error 3");
+	        if (n != s.evensites){
+            output0 << "Parity odd error 3";
+            exit(1);
+          }
+	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && parity[i] == EVEN) {
+	          (s.sitelist)[n++] = here[i];
+	        }
+	        if (n != s.sites){
+            output0 << "Parity even error 3";
+            exit(1);
+          }
 	      }
 
 	      // ignore return value
-	      (void)parallel_initDevSitelist(q);
+        #ifdef CUDA
+	      (void)parallel_initDevSitelist(s);
+        #endif
 
       }
     }
