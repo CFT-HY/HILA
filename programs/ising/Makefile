@@ -9,3 +9,11 @@ ising: Makefile ising.cpt
 
 ising.cpt: Makefile ising.cpp
 	../../build/transformer -DNDIM=$(NDIM) ising.cpp
+
+
+clean:
+	rm -rf ising.cpt
+
+cleanall:
+	rm -rf ising.cpt ising
+
