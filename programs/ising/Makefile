@@ -1,7 +1,7 @@
 
-TRANSFORMER = ../../build/transformer
 OPTS = -DNDIM=2
 
+TRANSFORMER = ../../build/transformer
 CC = clang++-8
 
 CFLAGS = -g -O0 $(OPTS)
