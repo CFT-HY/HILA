@@ -274,7 +274,8 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
 /// This is for the index array neighbours
 /// TODO: implement some other neighbour schemas!
 /////////////////////////////////////////////////////////////////////
-#ifdef USE_MPI
+#define swap(a,b) {int t; t=a; a=b; b=t; }
+
 void lattice_struct::create_std_gathers()
 {
   // allocate neighbour arrays - TODO: these should 
@@ -291,7 +292,7 @@ void lattice_struct::create_std_gathers()
   // allocate work arrays, will be released later
   std::vector<unsigned> nnodes(this_node.sites); // node number
   std::vector<unsigned> index(this_node.sites);  // index on node
-  std::vector<unsigned> parity(this_node.sites); // parity 
+  std::vector<parity> parity(this_node.sites); // parity 
   std::vector<unsigned> here(this_node.sites);   // index of original site
   std::vector<unsigned> itmp(this_node.sites);   // temp sorting array
 
@@ -345,8 +346,8 @@ void lattice_struct::create_std_gathers()
         neighb[d][i] = site_index(ln);
       } else {
 	      // Now site is off-node, this lead to fetching
-	      nodes[num] = node_number(ln);
-	      index[num] = node_index(x, allnodes + nodes[num] );
+	      nnodes[num] = node_number(ln);
+	      index[num] = site_index(ln, nnodes[num] );
 	      parity[num] = location_parity(l);  // parity of THIS
 	      here[num]  = i;
 	      num++;
@@ -354,30 +355,31 @@ void lattice_struct::create_std_gathers()
     }
 
     // construct nodes to be gathered from
-    ci.from_node = {};    
+    ci.from_node = {};
 
     if (num > 0) {
       // now, get the number of nodes to be gathered from
       for (int i=0; i<num; i++) {
 	// chase the list until the node found
-        for (int j=0; j<ci.from_node.size() && nodes[i] != ci.from_node[j].node; j++);
-	if (j == ci.from_node.size()) {
-	  // NEW NODE to receive from
+        int j;
+        for (j=0; j<ci.from_node.size() && nnodes[i] != ci.from_node[j].index; j++);
+	      if (j == ci.from_node.size()) {
+	        // NEW NODE to receive from
           comm_node_struct s;
-          s.node = nodes[i];
-          s.n = s.n_even = s.n_odd = 0;
+          s.index = nnodes[i];
+          s.sites = s.evensites = s.oddsites = 0;
           ci.from_node.push_back(s);
-	}
-	// add to OLD NODE or just added node
-        ci.from_node[j].n++;
-        if ( parity[i] == EVEN ) ci.from_node[j].n_even ++;  
-        else ci.from_node[j].n_odd++;
+	      }
+	      // add to OLD NODE or just added node
+        ci.from_node[j].sites++;
+        if ( parity[i] == EVEN ) ci.from_node[j].evensites ++;  
+        else ci.from_node[j].oddsites++;
       }
 
       // Calculate the buffer offsets for the gathers
       for (comm_node_struct & fn : ci.from_node) {
         fn.buffer = c_offset;
-        c_offset += fn.n;  // and increase the offset
+        c_offset += fn.sites;  // and increase the offset
       }
 
       // and NOW, finish the NEIGHBOR array 
@@ -387,20 +389,32 @@ void lattice_struct::create_std_gathers()
         // array according to the index of the sending node .
         // First even neighbours
 
-	for (parity par=EVEN; par<=ODD; par++) {
+        {
           int n,i;
-	  for (n=i=0; i<num; i++) if (nodes[i] == fn.node && parity[i] == par) {
-	    itmp[n++] = i;
-	    // bubble sort the tmp-array according to the index on the neighbour
-            // node
-	    for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
-	      swap( itmp[k], itmp[k-1] );
-	  }
-	  off = fn.buffer;
-	  if (par == ODD) off += fn.n_even;
-	  // finally, root indices according to offset
-	  for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
-	}
+          unsigned int off;
+          // EVEN
+	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && parity[i] == EVEN) {
+	          itmp[n++] = i;
+	          // bubble sort the tmp-array according to the index on the neighbour node
+	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
+	            swap( itmp[k], itmp[k-1] );
+	        }
+	        off = fn.buffer;
+	        // finally, root indices according to offset
+	        for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
+
+          //ODD
+	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && parity[i] == ODD) {
+	          itmp[n++] = i;
+	          // bubble sort the tmp-array according to the index on the neighbour node
+	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
+	            swap( itmp[k], itmp[k-1] );
+	        }
+	        off = fn.buffer + fn.evensites;
+	        // finally, root indices according to offset
+	        for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
+	      }
+        
       }
     } // num > 0 
 
@@ -413,48 +427,41 @@ void lattice_struct::create_std_gathers()
     // receive done, now opposite send. This is just the gather
     // inverted
 
-    od = opp_dir(d);
-    comminfo[od].n_send = comminfo[d].n_receive;
+    int od = opp_dir(d);
+    comminfo[od].to_node = comminfo[d].from_node;
 
     if (num > 0) {
-      comm_node_struct & fn = comminfo[d].from_node;
-      for (j=0, s=&(comlist[od].to_node); j<comlist[od].n_send;
-	   j++, s = &((*s)->next), p = p->next) {
-	(*s) = q = (send_struct *)memalloc( sizeof(send_struct) );
-	q->node   = p->node;
-	q->n      = p->n;
-	q->n_even = p->n_odd;     /* Note the swap !  even/odd refers to type of gather */
-	q->n_odd  = p->n_even;
-	q->next   = NULL;
-	q->sitelist = (int *)memalloc(q->n * sizeof(int));
+      comm_node_struct & fn = comminfo[d].to_node;
+      for (int j=0, s=&(comminfo[od].to_node); j<comminfo[od].n_send;
+	    j++, s = &((*s)->next), p = p->next) {
+	      (*s) = q = (send_struct *)memalloc( sizeof(send_struct) );
+	      q->node   = p->node;
+	      q->n      = p->n;
+	      q->n_even = p->n_odd;     /* Note the swap !  even/odd refers to type of gather */
+	      q->n_odd  = p->n_even;
+	      q->next   = NULL;
+	      q->sitelist = (int *)memalloc(q->n * sizeof(int));
 
-	/* now, initialize sitelist -- Now, we first want ODD parity, since
-	 * this is what even gather asks for!
-	 */
+	      /* now, initialize sitelist -- Now, we first want ODD parity, since
+	       * this is what even gather asks for!
+	       */
+      
+	      for (n=0,par=ODD; par>=EVEN; par--) {
+	        for (i=0; i<num; i++) if (nnodes[i] == q->node && parity[i] == par) {
+	          (q->sitelist)[n++] = here[i];
+	        }
+	        if (par == ODD && n != q->n_even) halt("Parity odd error 3");
+	        if (par == EVEN && n != q->n) halt("Parity even error 3");
+	      }
 
-	for (n=0,par=ODD; par>=EVEN; par--) {
-	  for (i=0; i<num; i++) if (nodes[i] == q->node && parity[i] == par) {
-	    (q->sitelist)[n++] = here[i];
-	  }
-	  if (par == ODD && n != q->n_even) halt("Parity odd error 3");
-	  if (par == EVEN && n != q->n) halt("Parity even error 3");
-	}
-
-	// ignore return value
-	(void)parallel_initDevSitelist(q);
+	      // ignore return value
+	      (void)parallel_initDevSitelist(q);
 
       }
     }
   } /* directions */
 
-  free(nodes);
-  free(index);
-  free(parity);
-  free(here);
-  free(itmp);
-
   /* Finally, set the site to the final offset (better be right!) */
-  node.latfield_size = c_offset;
+  this_node.field_alloc_size = c_offset;
 
 }
-#endif
