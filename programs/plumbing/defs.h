@@ -7,6 +7,8 @@
 #include <vector>
 #include <assert.h> 
 
+#define EVENFIRST
+
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = double;
 
