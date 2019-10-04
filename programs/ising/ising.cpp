@@ -20,19 +20,19 @@ std::ostream &output = std::cout;
 lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 
-double beta = 0.1;
+
+// Define some parameters for the simulation
+double beta = 0.4;
 int n_measurements=100;
-int n_updates_per_measurement=10;
+int n_updates_per_measurement=1;
 long seed = 123456;
+int NX=8, NY=8;
+int VOLUME = NX*NY;
 
 int main()
 {
   // Basic setup
-  int NX=8, NY=8;
-  int VOLUME = NX*NY;
-
   lattice->setup( NX, NY );
-
   // Define a field
   field<scalar<double>> spin;
 
@@ -50,12 +50,12 @@ int main()
     // Run a number of updates, starting with EVEN sites
     // and alternating between parities
     parity p = EVEN;
-    for(int i=0; i<n_updates_per_measurement; i++){
+    for(int j=0; j<2*n_updates_per_measurement; j++){
 
       // A temporary field for the local change in action
       field<scalar<double>> deltaS;
-      deltaS[p] = 2*spin[X]*( spin[X+XUP] + spin[X+XDOWN]
-                            + spin[X+YUP] + spin[X+YDOWN] );
+      deltaS[p] = 2.0*spin[X]*( spin[X+XUP] + spin[X+XDOWN]
+                               + spin[X+YUP] + spin[X+YDOWN] );
 
       onsites(p){
         if( mersenne() < exp(-beta*deltaS[X]) ){
@@ -70,9 +70,9 @@ int main()
     onsites(ALL){
       M += spin[X];
     }
-
     printf("Magnetisation %f\n", M/VOLUME);
   }
   
+
   return 0;
 }
