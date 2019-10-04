@@ -160,23 +160,27 @@ unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
 location lattice_struct::site_location(unsigned index)
 {
   // make the index lexicographic
+  location l;
 #ifdef EVENFIRST
-  if (index < this_node.evensites) {
-    index *= 2;
-    if (!this_node.first_site_even) index++;
-  } else {
-    index = (index - this_node.evensites)*2;
-    if (this_node.first_site_even) index++;
+  for(unsigned i = 0; i<this_node.sites; i++){
+    unsigned l_index = i;
+    foralldir(d){
+      l[d] = l_index % this_node.size[d] + this_node.min[d];
+      l_index /= this_node.size[d];
+    }
+    l_index = lattice_struct::site_index(l);
+    if( l_index == index){
+      return l;
+    }
   }
-#endif
-  
+#else
   location l;
   foralldir(d) {
     l[d] = index % this_node.size[d] + this_node.min[d];
     index /= this_node.size[d];
   }
-  
   return l;
+#endif
 }
 
 
