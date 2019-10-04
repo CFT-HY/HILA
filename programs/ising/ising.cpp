@@ -51,15 +51,14 @@ int main()
     // and alternating between parities
     parity p = EVEN;
     for(int i=0; i<n_updates_per_measurement; i++){
-      onsites(p){
-        double deltaS, neighbour_sum=0;
-        neighbour_sum += spin[X+XUP];
-        neighbour_sum += spin[X+XDOWN];
-        neighbour_sum += spin[X+YUP];
-        neighbour_sum += spin[X+YDOWN];
 
-        deltaS = 2*neighbour_sum*spin[X];
-        if( mersenne() < exp(-beta*deltaS) ){
+      // A temporary field for the local change in action
+      field<scalar<double>> deltaS;
+      deltaS[p] = 2*spin[X]*( spin[X+XUP] + spin[X+XDOWN]
+                            + spin[X+YUP] + spin[X+YDOWN] );
+
+      onsites(p){
+        if( mersenne() < exp(-beta*deltaS[X]) ){
           spin[X] = -spin[X];
         }
       }
