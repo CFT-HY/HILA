@@ -45,7 +45,6 @@ int main()
   
   // Set to 1
   foralldir(d) {
-    printf(" %d\n", d);
     U[d][ALL] = 1;
   }
 
@@ -66,8 +65,8 @@ int main()
       onsites(ALL){
         matrix<N,N,double> temp;
         temp =  U[dir1][X] * U[dir2][X+dir1];
-        temp *= U[dir2][X+dir1].conjugate();
         temp *= U[dir1][X+dir2].conjugate();
+        temp *= U[dir2][X].conjugate();
         Plaq += 1-temp.trace()/N;
       }
     }
