@@ -40,7 +40,7 @@ The statement will apply only to this collection of sites.
 On the right hand side, use `[X]` to refer to this collection
 of sites.
 
-You can refer to neighbouring sites by adding a direction (XUP, XDOWN, YUP, YDOWN, ZUP, ZDOWN, TUP, TDOWN, ...):
+You can refer to neighbouring sites by adding a direction (`XUP`, `XDOWN`, `YUP`, `YDOWN`, `ZUP`, `ZDOWN`, `TUP`, `TDOWN`, ...):
 ~~~
 my_field[EVEN] = my_field[X+YUP];
 ~~~
