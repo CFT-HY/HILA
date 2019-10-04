@@ -22,9 +22,9 @@ lattice_struct * lattice = & my_lattice;
 
 
 // Define some parameters for the simulation
-double beta = 0.4;
+double beta = 8;
 int n_measurements=100;
-int n_updates_per_measurement=1;
+int n_updates_per_measurement=10;
 long seed = 123456;
 int NX=8, NY=8, NZ=8, NT=8;
 int VOLUME = NX*NY*NZ*NT;
@@ -123,7 +123,7 @@ int main()
             s1 = -(U[dir][X]*staple[X]).trace().re/N;
             U_new = SUN_update_simple( U[dir][X], 0.1 );
             s2 = -(U_new*staple[X]).trace().re/N;
-            if( mersenne() < exp(beta*(s2-s1)) ){
+            if( mersenne() < exp(-beta*(s2-s1)) ){
               U[dir][X] = U_new;
             }
           }
@@ -141,7 +141,7 @@ int main()
         temp =  U[dir1][X] * U[dir2][X+dir1];
         temp *= U[dir1][X+dir2].conjugate();
         temp *= U[dir2][X].conjugate();
-        Plaq += 1-temp.trace().re/N;
+        Plaq += temp.trace().re/N;
       }
     }
     printf("Plaquette %f\n", Plaq/(VOLUME*NDIM*(NDIM-1)));
