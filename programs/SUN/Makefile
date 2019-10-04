@@ -9,11 +9,15 @@ CXXFLAGS = -g -O0 -x c++ $(OPTS)
 
 
 
-SUN: Makefile SUN.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
-	$(CC) -o SUN SUN.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o 
+SUN: Makefile SUN.o monte.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
+	$(CC) -o SUN SUN.o monte.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o 
 
 SUN.cpt: Makefile SUN.cpp
 	../../build/transformer SUN.cpp
+
+monte.cpt: Makefile monte.cpp
+	../../build/transformer monte.cpp
+
 
 mersenne_inline.o: mersenne_inline.c
 	gcc -c mersenne_inline.c
