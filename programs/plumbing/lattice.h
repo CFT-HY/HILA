@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 
+
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
 #include <assert.h>
@@ -113,6 +114,7 @@ public:
 
   unsigned remap_node(const unsigned i);
   
+  #ifdef EVENFIRST
   const int loop_begin( parity P){
     if(P==ODD){
       return this_node.evensites;
@@ -120,7 +122,6 @@ public:
       return 0;
     }
   }
-
   const int loop_end( parity P){
     if(P==EVEN){
       return this_node.evensites;
@@ -128,6 +129,22 @@ public:
       return this_node.sites;
     }
   }
+  #else
+  const int loop_begin( parity P){
+    if(P==EVEN){
+      return this_node.evensites;
+    } else {
+      return 0;
+    }
+  }
+  const int loop_end( parity P){
+    if(P==ODD){
+      return this_node.evensites;
+    } else {
+      return this_node.sites;
+    }
+  }
+  #endif
 
 
   /* Communication routines. Define here in lattice? */
