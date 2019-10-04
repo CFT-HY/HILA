@@ -8,7 +8,7 @@
 #define PI 3.14159265358979323846
 
 #define NDIM 4
-const int N=2;
+const int N=3;
 
 // Include the lattice field definition
 #include "../plumbing/field.h"
