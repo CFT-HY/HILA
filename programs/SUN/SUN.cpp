@@ -31,12 +31,67 @@ int VOLUME = NX*NY*NZ*NT;
 
 const int N=2;
 
+
+
+
+field<matrix<N,N,cmplx<double>>>
+calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
+{
+  /* Calculate the sum of staples connected to links in direction
+   * dir 
+   */
+  field<matrix<N,N,cmplx<double>>> down_staple, staple_sum;
+  staple_sum[ALL] = 0;
+  foralldir(d2){
+    direction dir2 = (direction)d2;
+    //Calculate the down side staple.
+    //This will be communicated up.
+    down_staple[ALL] = U[dir2][X].conjugate()
+                     * U[dir][X]
+                     * U[dir2][X+dir];
+    // Forward staple
+    staple_sum[ALL] += U[dir2][X+dir]
+                     * U[dir][X+dir2].conjugate()
+                     * U[dir2][X].conjugate();
+    // Add the two staples together
+    staple_sum[ALL] += down_staple[X];
+  }
+  return staple_sum;
+}
+
+
+/* Update by multiplying with a "small" SU(N) matrix */
+// NOTE: only antisymmetric generators, add the rest
+matrix<N,N,cmplx<double>> 
+SUN_update_simple( matrix<N,N,cmplx<double>> U, double delta ){
+  double r = delta*mersenne();
+  int n1 = (N-1)*mersenne()+1;
+  int n2 = n1*mersenne();
+  matrix<N,N,cmplx<double>> G = 0;
+  if( mersenne() > 0.5 ){
+    G.c[n1][n2].re = r;
+    G.c[n2][n1].re = -r;
+  } else {
+    G.c[n1][n2].im = r;
+    G.c[n2][n1].im = r;
+  }
+  matrix<N,N,cmplx<double>> U_new = U;
+  matrix<N,N,cmplx<double>> G_p = 1;
+  for( int i=1; i<10; i++){
+    G_p *= G*(1.0/i);  //NOTE: fix division by double
+    U_new = U_new + U_new*G_p;
+  }
+  return U_new;
+}
+
+
+
 int main()
 {
   // Basic setup
   lattice->setup( NX, NY, NZ, NT );
   // Define a field
-  field<matrix<N,N,double>> U[NDIM];
+  field<matrix<N,N,cmplx<double>>> U[NDIM];
 
   seed_mersenne( seed );
 
@@ -51,11 +106,30 @@ int main()
   // Run update-measure loop
   for( int i=0; i<n_measurements; i++ ){
 
-    // Run a number of updates, starting with EVEN sites
-    // and alternating between parities
-    parity p = EVEN;
-    for(int j=0; j<2*n_updates_per_measurement; j++){
-      p=opp_parity(p);
+    // Run a number of updates
+    for(int j=0; j<n_updates_per_measurement; j++){
+      foralldir(d) {
+        // update direction dir
+        direction dir = (direction)d;
+        // First we need the staple sum
+        field<matrix<N,N,cmplx<double>>> staple = calc_staples(U, dir);
+
+        // Now update, first even then odd
+        parity p = EVEN;
+        for( int par=0; par < 2; par++ ){
+          onsites(p){
+            matrix<N,N,cmplx<double>> U_new;
+            double s1, s2, deltaS;
+            s1 = -(U[dir][X]*staple[X]).trace().re/N;
+            U_new = SUN_update_simple( U[dir][X], 0.1 );
+            s2 = -(U_new*staple[X]).trace().re/N;
+            if( mersenne() < exp(beta*(s2-s1)) ){
+              U[dir][X] = U_new;
+            }
+          }
+          p = opp_parity(p);
+        }
+      }
     }
 
     // Measure plauqette
@@ -63,16 +137,15 @@ int main()
     foralldir(d1) foralldir(d2) if(d1 != d2){
       direction dir1 = (direction)d1, dir2 = (direction)d2;
       onsites(ALL){
-        matrix<N,N,double> temp;
+        matrix<N,N,cmplx<double>> temp;
         temp =  U[dir1][X] * U[dir2][X+dir1];
         temp *= U[dir1][X+dir2].conjugate();
         temp *= U[dir2][X].conjugate();
-        Plaq += 1-temp.trace()/N;
+        Plaq += 1-temp.trace().re/N;
       }
     }
-    printf("Plaquette %f\n", Plaq/VOLUME);
+    printf("Plaquette %f\n", Plaq/(VOLUME*NDIM*(NDIM-1)));
   }
   
-
   return 0;
 }
