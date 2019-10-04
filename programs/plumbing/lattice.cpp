@@ -14,7 +14,7 @@ void lattice_struct::setup(int siz[NDIM]) {
   
   this_node.index = mynode();
   nodes.number = numnodes();
-  
+
   setup_layout();
   setup_nodes();
   create_std_gathers();
@@ -162,25 +162,15 @@ location lattice_struct::site_location(unsigned index)
   // make the index lexicographic
   location l;
 #ifdef EVENFIRST
-  for(unsigned i = 0; i<this_node.sites; i++){
-    unsigned l_index = i;
-    foralldir(d){
-      l[d] = l_index % this_node.size[d] + this_node.min[d];
-      l_index /= this_node.size[d];
-    }
-    l_index = lattice_struct::site_index(l);
-    if( l_index == index){
-      return l;
-    }
-  }
+  return this_node.site_index_list[index];
 #else
   location l;
   foralldir(d) {
     l[d] = index % this_node.size[d] + this_node.min[d];
     index /= this_node.size[d];
   }
-  return l;
 #endif
+  return l;
 }
 
 
@@ -270,6 +260,19 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
     nn[d] = lattice.node_number(l);
     l[d] = (lattice.l_size[d] + min[d] - 1) % lattice.l_size[d];
     nn[opp_dir(d)] = lattice.node_number(l);
+  }
+
+  // map site indexes to locations
+  site_index_list.resize(sites);
+  for(unsigned i = 0; i<sites; i++){
+    location l;
+    unsigned l_index;
+    foralldir(d){
+      l[d] = l_index % size[d] + min[d];
+      l_index /= size[d];
+    }
+    l_index = lattice.site_index(l);
+    site_index_list[l_index] = l;
   }
 }
 
