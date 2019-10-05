@@ -8,7 +8,7 @@
 #define PI 3.14159265358979323846
 
 #define NDIM 4
-const int N=3;
+const int N=2;
 
 // Include the lattice field definition
 #include "../plumbing/field.h"
@@ -33,6 +33,10 @@ double monte(
   matrix<N,N,cmplx<double>> &staple,
   double beta);
 
+void KennedyPendleton(
+  matrix<2,2,cmplx<double>> &U,
+  matrix<2,2,cmplx<double>> &staple
+);
 
 
 #endif //SUN_H_

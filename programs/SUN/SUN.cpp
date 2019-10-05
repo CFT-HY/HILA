@@ -46,6 +46,24 @@ calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
 }
 
 
+template<typename T>
+void update(
+  T &U, T &staple,
+  double beta
+){
+  monte( U, staple, beta );
+}
+
+template<>
+void update(
+  matrix<2,2,cmplx<double>> &U,
+  matrix<2,2,cmplx<double>> &staple,
+  double beta
+){
+  staple = -beta*staple;
+  KennedyPendleton( U, staple );
+}
+
 
 int main()
 {
@@ -79,9 +97,7 @@ int main()
         parity p = EVEN;
         for( int par=0; par < 2; par++ ){
           onsites(p){
-            matrix<N,N,cmplx<double>> U_new;
-            double s1, s2, deltaS;
-            monte( U[dir][X], staple[X], beta );
+            update( U[dir][X], staple[X], beta );
           }
           p = opp_parity(p);
         }
