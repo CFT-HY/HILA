@@ -56,7 +56,7 @@ class matrix {
         c[i][j] = *((T*) pointers[j+n*i]);
       }
     } else {
-      for (int i=0; i<n; i++) for (int j=0; j<n; j++){
+      for (int i=0; i<n; i++) for (int j=0; j<m; j++){
         c[i][j].set_from_pointers(pointers + (i+n*j)*T::base_element_count());
       }
     }
@@ -64,12 +64,12 @@ class matrix {
 
   void set_to_pointers(char ** pointers){
     if constexpr( std::is_arithmetic<T>::value ) {
-      for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+      for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
         pointers[j+n*i] = c[i][j];
         c[i][j] = *((T*) pointers[j+n*i]);
       }
     } else {
-      for (int i=0; i<n; i++) for (int j=0; j<n; j++){
+      for (int i=0; i<n; i++) for (int j=0; j<m; j++){
         c[i][j].set_to_pointers(pointers + (i+n*j)*T::base_element_count());
       }
     }

@@ -251,7 +251,7 @@ private:
   class field_struct {
   private:
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    char * fieldbuf;
+    char * fieldbuf[T::base_element_count()];
   public:
     lattice_struct * lattice;
     unsigned is_fetched[NDIRS];
@@ -260,44 +260,42 @@ private:
     #ifdef layout_SOA
 
     void allocate_payload(){
-      fieldbuf = (char *) allocate_field_mem( 
-          T::base_element_count() * T::base_element_size() * lattice->field_alloc_size()
-      );
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
+      for(int p=0; p<T::base_element_count(); p++){
+        fieldbuf[p] = (char *) allocate_field_mem( T::base_element_size() * lattice->field_alloc_size() );
+        if (fieldbuf[p] == nullptr) {
+          std::cout << "Failure in field memory allocation\n";
+          exit(1);
+        }
       }
     }
 
     void free_payload() {
-      free_field_mem((void *)fieldbuf);
-      fieldbuf = nullptr;
+      for(int p=0; p<T::base_element_count(); p++) {
+        free_field_mem((void *)fieldbuf[p]);
+        fieldbuf[p] = nullptr;
+      }
     }
 
     T get(int i)
     {
       assert( fieldbuf != nullptr );
       T value;
-      char ** pointers = (char **)malloc(sizeof(char **)*T::base_element_count());
+      char * pointers[T::base_element_count()];
       for(int p=0; p<value.base_element_count(); p++){
-        int offset = value.base_element_size() * ( i + p * lattice->field_alloc_size());
-        pointers[p] = fieldbuf + offset;
+        pointers[p] = fieldbuf[p]+value.base_element_size() * i;
       }
       value.set_from_pointers(pointers);
-      std::free(pointers);
       return value;
     }
 
     void set(T value, int i)
     {
       assert( fieldbuf != nullptr );
-      char ** pointers = (char **)malloc(sizeof(char **)*T::base_element_count());
+      char * pointers[T::base_element_count()];
       for(int p=0; p<value.base_element_count(); p++){
-        int offset = value.base_element_size() * ( i + p * lattice->field_alloc_size());
-        pointers[p] = fieldbuf + offset;
+        pointers[p] = fieldbuf[p]+value.base_element_size() * i;
       }
       value.set_to_pointers(pointers);
-      std::free(pointers);
     }
 
 
