@@ -45,6 +45,22 @@ struct cmatrix {
     }
     return res;
   }
+
+  constexpr static int base_element_count(){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      return 2*n*n;
+    } else {
+      return 2*n*n*T::base_element_count();
+    }
+  }
+
+  constexpr static int base_element_size(){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      return sizeof(T);
+    } else {
+      return T::base_element_size();
+    }
+  }
 };
 
 
