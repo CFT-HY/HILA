@@ -77,8 +77,8 @@ struct cmplx {
 
   void set_to_pointers(char ** pointers){
     if constexpr( std::is_arithmetic<T>::value ) {
-      *pointers[0] = re;
-      *pointers[1] = im;
+      *((T *) pointers[0]) = re;
+      *((T *) pointers[1]) = im;
     } else {
       re.set_to_pointers(pointers);
       im.set_to_pointers(pointers + T::base_element_count());
