@@ -251,29 +251,81 @@ private:
   class field_struct {
   private:
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    
+    char * fieldbuf;
   public:
     lattice_struct * lattice;
     unsigned is_fetched[NDIRS];
 
+    
+    #ifdef layout_SOA
+
+    void allocate_payload(){
+      fieldbuf = (char *) allocate_field_mem( 
+          T::base_element_count() * T::base_element_size() * lattice->field_alloc_size()
+      );
+      if (fieldbuf == nullptr) {
+        std::cout << "Failure in field memory allocation\n";
+        exit(1);
+      }
+    }
+
+    void free_payload() {
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    T get(int i)
+    {
+      T value;
+      char ** pointers = (char **)malloc(T::base_element_count());
+      for(int p=0; p<value.base_element_count(); p++){
+        int offset = value.base_element_size() * ( i + p * lattice->field_alloc_size());
+        pointers[p] = fieldbuf + offset;
+      }
+      value.set_from_pointers(pointers);
+      std::free(pointers);
+      return value;
+    }
+
+    void set(T value, int i)
+    {
+      char ** pointers = (char **)malloc(T::base_element_count());
+      for(int p=0; p<value.base_element_count(); p++){
+        int offset = value.base_element_size() * ( i + p * lattice->field_alloc_size());
+        pointers[p] = fieldbuf + offset;
+      }
+      value.set_from_pointers(pointers);
+      std::free(pointers);
+    }
+
+
+    #else
+
     void allocate_payload() {
       payload = (field_storage_type<T> *) 
                    allocate_field_mem(sizeof(T) * lattice->field_alloc_size());
+              
       if (payload == nullptr) {
         std::cout << "Failure in field memory allocation\n";
         exit(1);
       }
     }
-    
+
     void free_payload() {
       free_field_mem((void *)payload);
       payload = nullptr;
     }
 
-    T& operator[] (int i)
+    T get(int i)
     {
-      return (T&) (payload[i].c);
+      return (T) (payload[i].c);
     }
+
+    void set(T value, int i)
+    {
+      payload[i].c = T;
+    }
+    #endif
     
   };
   
@@ -374,9 +426,14 @@ public:
   //  return (field_element<T>) *this;
   //}
 
-  T& operator[] (int i)
+  T get_value_at(int i)
   {
-    return (T&) (this->fs[0][i]);
+    return (*this->fs).get(i);
+  }
+
+  void set_value_at(T value, int i)
+  {
+    (*this->fs).set(value, i);
   }
 
   // fetch the element at this loc

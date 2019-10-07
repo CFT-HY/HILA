@@ -17,7 +17,7 @@ inline cmplx<Accuracy> typeConj(cmplx<Accuracy> val){
 
 //---
 
-template <int n, int m, typename T>
+template <const int n, const int m, typename T>
 class matrix {
   public:
   T c[n][m];
@@ -32,6 +32,34 @@ class matrix {
       else c[i][j] = (0);
     }
     return *this;
+  }
+
+  constexpr static int base_element_count(){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      return n*m;
+    } else {
+      return n*m*T::base_element_count();
+    }
+  }
+
+  constexpr static int base_element_size(){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      return sizeof(T);
+    } else {
+      return T::base_element_size();
+    }
+  }
+
+  void set_from_pointers(char ** pointers){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+        c[0][0] = *((T*) pointers[j+n*i]);
+      }
+    } else {
+      for (int i=0; i<n; i++) for (int j=0; j<n; j++){
+        c[0][0].set_from_pointers(pointers + (i+n*j)*T::base_element_count());
+      }
+    }
   }
 
   //copy constructor from scalar  

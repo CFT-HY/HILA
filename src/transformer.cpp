@@ -9,6 +9,7 @@
 // 
 //------------------------------------------------------------------------------
 #include <sstream>
+#include <iostream>
 #include <string>
 
 #include "clang/AST/AST.h"
@@ -551,6 +552,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     lfe.fullExpr   = ASE;
     lfe.nameExpr   = ASE->getLHS();
     lfe.parityExpr = ASE->getRHS();
+    llvm::errs() << lfe.fullExpr << lfe.nameExpr << lfe.parityExpr;
   } else {
     llvm::errs() << "Internal error 3\n";
     exit(1);

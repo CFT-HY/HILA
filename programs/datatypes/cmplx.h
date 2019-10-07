@@ -49,6 +49,33 @@ struct cmplx {
     return cmplx<A>( { static_cast<A>(re), static_cast<A>(im) });
   }
 
+  constexpr static int base_element_count(){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      return 2;
+    } else {
+      return 2*T::base_element_count();
+    }
+  }
+
+  constexpr static int base_element_size(){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      return sizeof(T);
+    } else {
+      return T::base_element_size();
+    }
+  }
+
+  void set_from_pointers(char ** pointers){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      re = *((T*) pointers[0]);
+      im = *((T*) pointers[1]);
+    } else {
+      re.set_from_pointers(pointers);
+      im.set_from_pointers(pointers + T::base_element_count());
+    }
+  }
+
+
 //   // assignment from std::complex<A>  TODO: perhaps remove?
 //   template <typename A>
 //   cmplx<T> & operator=(const std::complex<A> & c) {
