@@ -276,8 +276,9 @@ private:
 
     T get(int i)
     {
+      assert( fieldbuf != nullptr );
       T value;
-      char ** pointers = (char **)malloc(T::base_element_count());
+      char ** pointers = (char **)malloc(sizeof(char **)*T::base_element_count());
       for(int p=0; p<value.base_element_count(); p++){
         int offset = value.base_element_size() * ( i + p * lattice->field_alloc_size());
         pointers[p] = fieldbuf + offset;
@@ -289,7 +290,8 @@ private:
 
     void set(T value, int i)
     {
-      char ** pointers = (char **)malloc(T::base_element_count());
+      assert( fieldbuf != nullptr );
+      char ** pointers = (char **)malloc(sizeof(char **)*T::base_element_count());
       for(int p=0; p<value.base_element_count(); p++){
         int offset = value.base_element_size() * ( i + p * lattice->field_alloc_size());
         pointers[p] = fieldbuf + offset;
@@ -428,12 +430,12 @@ public:
 
   T get_value_at(int i)
   {
-    return (*this->fs).get(i);
+    return this->fs->get(i);
   }
 
   void set_value_at(T value, int i)
   {
-    (*this->fs).set(value, i);
+    this->fs->set(value, i);
   }
 
   // fetch the element at this loc
