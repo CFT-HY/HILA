@@ -208,6 +208,11 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
   for (field_info & l : field_info_list){
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
+    for (dir_ptr & d : l.dir_list) if(d.count > 0){
+      code << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
+           << ".get_value_at(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
+           << looping_var + "]" << ");\n";
+    }
     code << type_name << l.loop_ref_name << " = " << l.new_name 
          << ".get_value_at(" << looping_var << ");\n";
   }
@@ -218,6 +223,13 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
   for (field_info & l : field_info_list){
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
+    // Probably shouldn't be setting values to neighbours...
+    //for (dir_ptr & d : l.dir_list) if(d.count > 0){
+    //  code << l.new_name << ".set_value_at(" << l.loop_ref_name << "_" 
+    //       << get_stmt_str(d.e) 
+    //       << ", lattice->neighb[" << get_stmt_str(d.e)
+    //       << "][" << looping_var + "]);\n";
+    //}
     code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " 
          << looping_var << ");\n";
   }
@@ -306,10 +318,12 @@ void MyASTVisitor::replace_field_refs(srcBuf & loopBuf) {
   
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
-    //if (le.dirExpr != nullptr) {
-    //  loopBuf.replace(parityExpr,
-    //                   "lattice->neighb[" +  get_stmt_str(le.dirExpr) + "][" + looping_var + "]");
-    //} 
-    loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
+    if (le.dirExpr != nullptr) {
+      //loopBuf.replace(parityExpr,
+      //                 "lattice->neighb[" +  get_stmt_str(le.dirExpr) + "][" + looping_var + "]");
+      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+get_stmt_str(le.dirExpr));
+    } else {
+      loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
+    }
   }                        
 }
