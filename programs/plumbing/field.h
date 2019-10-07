@@ -296,7 +296,7 @@ private:
         int offset = value.base_element_size() * ( i + p * lattice->field_alloc_size());
         pointers[p] = fieldbuf + offset;
       }
-      value.set_from_pointers(pointers);
+      value.set_to_pointers(pointers);
       std::free(pointers);
     }
 

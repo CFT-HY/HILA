@@ -53,14 +53,28 @@ class matrix {
   void set_from_pointers(char ** pointers){
     if constexpr( std::is_arithmetic<T>::value ) {
       for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-        c[0][0] = *((T*) pointers[j+n*i]);
+        c[i][j] = *((T*) pointers[j+n*i]);
       }
     } else {
       for (int i=0; i<n; i++) for (int j=0; j<n; j++){
-        c[0][0].set_from_pointers(pointers + (i+n*j)*T::base_element_count());
+        c[i][j].set_from_pointers(pointers + (i+n*j)*T::base_element_count());
       }
     }
   }
+
+  void set_to_pointers(char ** pointers){
+    if constexpr( std::is_arithmetic<T>::value ) {
+      for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+        pointers[j+n*i] = c[i][j];
+        c[i][j] = *((T*) pointers[j+n*i]);
+      }
+    } else {
+      for (int i=0; i<n; i++) for (int j=0; j<n; j++){
+        c[i][j].set_to_pointers(pointers + (i+n*j)*T::base_element_count());
+      }
+    }
+  }
+
 
   //copy constructor from scalar  
   template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
