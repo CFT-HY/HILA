@@ -277,7 +277,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
     }
     
     // This does not recognise setting in functions
-    //if (!l.is_written) kernel << "const ";
+    if (!l.is_written) kernel << "const ";
     // TODO: type to field_data
     kernel << "field_struct" << l.type_template << " * " << l.new_name;
     call << l.new_name + ".fs";
@@ -347,12 +347,12 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
   // Call setters
   for (field_info & l : field_info_list){
     // This does not recognise setting in functions
-    //if (l.is_written){
+    if (l.is_written){
       std::string type_name = l.type_template;
       type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
       kernel << l.new_name << "->set(" << l.loop_ref_name << ", " 
              << looping_var << ");\n";
-    //}
+    }
   }
 
   kernel << "}\n}\n//----------\n";
