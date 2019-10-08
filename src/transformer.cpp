@@ -110,6 +110,11 @@ namespace cmdline {
   vanilla("vanilla",
           llvm::cl::desc("Generate loops in place"),
           llvm::cl::cat(TransformerCat));
+  
+  static llvm::cl::opt<bool>
+  gpu_kernel("vanilla-gpu",
+          llvm::cl::desc("Prototype gpu kernel"),
+          llvm::cl::cat(TransformerCat));
 
 };
 
@@ -2046,8 +2051,13 @@ private:
 
 
 void get_target_struct(codetype & target) {
+  target.kernelize = target.gpu_kernel = false;
+
   if (cmdline::kernel) target.kernelize = true;
-  else target.kernelize = false;
+
+  if (cmdline::gpu_kernel) {
+    target.kernelize = target.gpu_kernel = true;
+  }
 }
 
 int main(int argc, const char **argv) {

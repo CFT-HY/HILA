@@ -12,17 +12,17 @@
 #include "../plumbing/defs.h"
 #include "../plumbing/memory.h"
 
+using location = std::array<int,NDIM>;
 struct node_info {
   location min,size;
   unsigned evensites, oddsites;
 };
-using location = std::array<int,NDIM>;
 
-#ifndef USE_MPI
-static inline int mynode(){
-  return 0;
-}
-#endif
+// #ifndef USE_MPI
+// static inline int mynode(){
+//   return 0;
+// }
+// #endif
 
 
 class lattice_struct {
