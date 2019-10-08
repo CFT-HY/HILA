@@ -36,23 +36,6 @@ struct scalar {
   // Conversion to T
   operator T() {return value;}
 
-  // Return the number of base elements
-  constexpr static int base_element_count(){
-    if constexpr( std::is_arithmetic<T>::value ) {
-      return 1;
-    } else {
-      return T::base_element_count();
-    }
-  }
-
-  constexpr static int base_element_size(){
-    if constexpr( std::is_arithmetic<T>::value ) {
-      return sizeof(T);
-    } else {
-      return T::base_element_size();
-    }
-  }
-
   
   template <typename scalar_t,
             std::enable_if_t<std::is_arithmetic<scalar_t>::value, int> = 0 >

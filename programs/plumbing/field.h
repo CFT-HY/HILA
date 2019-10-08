@@ -224,16 +224,14 @@ struct field_storage_type {
   template <typename T>
   class field_struct {
   private:
+    constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    real_t * fieldbuf[T::base_element_count()];
+    real_t * fieldbuf[t_elements];
   public:
     lattice_struct * lattice;
     unsigned is_fetched[NDIRS];
 
-    
     #ifdef layout_SOA
-
-    constexpr static int t_elements = T::base_element_count() * T::base_element_size() / sizeof(real_t);
 
     union T_access {
       T tu;
@@ -257,7 +255,7 @@ struct field_storage_type {
       }
     }
 
-    T get(int idx) {
+    inline T get(int idx) {
       T_access ta;
       for (int i=0; i<t_elements; i++) {
         ta.tarr[i] = (real_t) fieldbuf[i][idx];

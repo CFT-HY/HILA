@@ -34,22 +34,6 @@ class matrix {
     return *this;
   }
 
-  constexpr static int base_element_count(){
-    if constexpr( std::is_arithmetic<T>::value ) {
-      return n*m;
-    } else {
-      return n*m*T::base_element_count();
-    }
-  }
-
-  constexpr static int base_element_size(){
-    if constexpr( std::is_arithmetic<T>::value ) {
-      return sizeof(T);
-    } else {
-      return T::base_element_size();
-    }
-  }
-  
 
   //copy constructor from scalar  
   template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
