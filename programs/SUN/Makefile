@@ -1,7 +1,7 @@
 
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer
+TRANSFORMER = ../../build/transformer --vanilla-kernel
 CC = clang++-8
 
 CFLAGS = -g -O0 $(OPTS)
@@ -13,10 +13,10 @@ SUN: Makefile SUN.o monte.o KennedyPendleton.o mersenne_inline.o lattice.o memor
 	$(CC) -o SUN SUN.o monte.o KennedyPendleton.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o 
 
 SUN.cpt: Makefile SUN.cpp
-	../../build/transformer SUN.cpp
+	$(TRANSFORMER) SUN.cpp
 
 monte.cpt: Makefile monte.cpp
-	../../build/transformer monte.cpp
+	$(TRANSFORMER) monte.cpp
 
 
 mersenne_inline.o: mersenne_inline.c

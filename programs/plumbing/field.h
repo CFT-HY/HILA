@@ -220,34 +220,8 @@ struct field_storage_type {
 };
 
 /// The following struct holds the data + information about the field
-// template <typename T>
-// class field_struct {
-//   friend field<T>;
-// 
-//   field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-//   lattice_struct * lattice;
-//   unsigned is_fetched[NDIRS];
-//   
-// };
-
-
-// These are helpers, to make generic templates
-// e.g. t_plus(A,B) gives the type of the operator a + b, where a is of type A and b B.
-#define t_plus(A,B)  decltype(std::declval<A>() + std::declval<B>())
-#define t_minus(A,B) decltype(std::declval<A>() - std::declval<B>())
-#define t_mul(A,B)   decltype(std::declval<A>() * std::declval<B>())
-#define t_div(A,B)   decltype(std::declval<A>() / std::declval<B>())
-
-
-// ** class field
-
-template <typename T>
-class field {
-private:
-
-  static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
-  
-  /// TODO: field-specific boundary conditions?
+/// TODO: field-specific boundary conditions?
+  template <typename T>
   class field_struct {
   private:
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
@@ -276,7 +250,7 @@ private:
       }
     }
 
-    T get(int i)
+    T get(int i) const
     {
       assert( fieldbuf != nullptr );
       T value;
@@ -323,15 +297,38 @@ private:
 
     void set(T value, int i)
     {
-      payload[i].c = T;
+      payload[i].c = value;
     }
     #endif
     
   };
+
+
+
+
+
+
+// These are helpers, to make generic templates
+// e.g. t_plus(A,B) gives the type of the operator a + b, where a is of type A and b B.
+#define t_plus(A,B)  decltype(std::declval<A>() + std::declval<B>())
+#define t_minus(A,B) decltype(std::declval<A>() - std::declval<B>())
+#define t_mul(A,B)   decltype(std::declval<A>() * std::declval<B>())
+#define t_div(A,B)   decltype(std::declval<A>() / std::declval<B>())
+
+
+
+
+// ** class field
+
+template <typename T>
+class field {
+private:
+
+  static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
   
-  field_struct * fs;
-    
 public:
+
+  field_struct<T> * fs;
   
   field<T>() {
     // std::cout << "In constructor 1\n";
@@ -380,7 +377,7 @@ public:
       std::cout << "Can not allocate field variables before lattice.setup()\n";
       exit(1);  // TODO - more ordered exit?
     }
-    fs = new field_struct;
+    fs = new field_struct<T>;
     fs->lattice = lattice;
     fs->allocate_payload();
 

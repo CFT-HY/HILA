@@ -893,11 +893,11 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       
   if (Expr *E = dyn_cast<Expr>(s)) {
     
-    // Not much to do with const exprs
-    // if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
-    //   state::skip_children = 1;
-    //   return true;
-    // }
+    // Avoid treating constexprs as variables
+     if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
+       state::skip_children = 1;
+       return true;
+     }
     
     //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs

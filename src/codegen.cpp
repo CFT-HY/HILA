@@ -245,7 +245,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
 
   // Get kernel name - use line number or file offset (must be deterministic)
   std::string kernel_name = make_kernel_name();
-                           
+  
   std::stringstream kernel,call;
 
   call   << kernel_name << "(";
@@ -265,21 +265,22 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
     call   << parity_name << ", ";
     kernel << "const parity " << parity_name << ", ";
   }
-      
+
   // print field call list
-  int i = -1;        
+  int i = -1;
   for (field_info & l : field_info_list) {
     i++;
-      
+    
     if (i>0) {
       kernel << ", ";
       call   << ", ";
     }
-
-    if (!l.is_written) kernel << "const ";
+    
+    // This does not recognise setting in functions
+    //if (!l.is_written) kernel << "const ";
     // TODO: type to field_data
-    kernel << "field_storage_type" << l.type_template << " & " << l.loop_ref_name;
-    call << l.new_name + "->payload";
+    kernel << "field_struct" << l.type_template << " * " << l.new_name;
+    call << l.new_name + ".fs";
   }
 
   i=0;
@@ -287,22 +288,74 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
   for ( var_info & vi : var_info_list ) {
     if (!vi.is_loop_local) {
       std::string varname = "sv__" + std::to_string(i) + "_";
-      kernel << ", const " << vi.type << " " << varname;
-      call << ", " << vi.name;
+      kernel << ", ";
+      if(vi.is_assigned) {
+        kernel << vi.type << " & " << varname;
+        call << ", " << vi.name;
+      } else {
+        kernel << "const " << vi.type << " " << varname;
+        call << ", " << vi.name;
+      }
       
       // replace_expr(ep, varname);
       for (var_ref & vr : vi.refs) {
         loopBuf.replace( vr.ref, varname );
       }
+      i++;
     }
   }
+
+  // Directions
+  for (field_info & l : field_info_list) {
+    for (dir_ptr & d : l.dir_list) if(d.count > 0){
+      int i=0;
+      call << ", " << get_stmt_str(d.e);
+      kernel << ", const int " << get_stmt_str(d.e);
+    }
+  }
+
+  // Begin the function
+  kernel << ")\n{\n";
+
   // finally, change the references to variables in the body
   replace_field_refs(loopBuf);
-      
-  kernel << ")\n{\nforparity(" << looping_var << ", " 
-         << parity_in_this_loop << ") {\n" << loopBuf.dump();
+
+  // Generate the loop
+  kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
+  kernel << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
+
+  kernel << "for(int " << looping_var <<" = loop_begin; " 
+         << looping_var << " < loop_end; " << looping_var << "++) {\n";
+
+  // Call getters
+  for (field_info & l : field_info_list){
+    std::string type_name = l.type_template;
+    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
+    for (dir_ptr & d : l.dir_list) if(d.count > 0){
+      kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
+           << "->get(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
+           << looping_var + "]" << ");\n";
+    }
+    kernel << type_name << l.loop_ref_name << " = " << l.new_name 
+         << "->get(" << looping_var << ");\n";
+  }
+
+  kernel << loopBuf.dump();
   if (semi_at_end) kernel << ';';
-  kernel << "\n}\n}\n//----------\n";
+  kernel << '\n';
+
+  // Call setters
+  for (field_info & l : field_info_list){
+    // This does not recognise setting in functions
+    //if (l.is_written){
+      std::string type_name = l.type_template;
+      type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
+      kernel << l.new_name << "->set(" << l.loop_ref_name << ", " 
+             << looping_var << ");\n";
+    //}
+  }
+
+  kernel << "}\n}\n//----------\n";
   call << ");\n";
 
   // Finally, emit the kernel
