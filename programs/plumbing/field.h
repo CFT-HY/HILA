@@ -255,22 +255,39 @@ struct field_storage_type {
       }
     }
 
-    inline T get(int idx) {
-      T_access ta;
-      for (int i=0; i<t_elements; i++) {
-        ta.tarr[i] = (real_t) fieldbuf[i][idx];
+    //inline T get(int idx) {
+    //  T_access ta;
+    //  for (int i=0; i<t_elements; i++) {
+    //    ta.tarr[i] = (real_t) fieldbuf[i][idx];
+    //  }
+    //  T value = ta.tu;
+    //  return value;
+    //}
+
+    //void set(T value, int idx) {
+    //  T_access ta;
+    //  ta.tu = value; 
+    //  for (int i=0; i<t_elements; i++) {
+    //    fieldbuf[i][idx] = (real_t) ta.tarr[i];
+    //  }
+    //}
+
+    inline T get(const int idx) const {
+      T value;
+      real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+      for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
+         value_f[i] = fieldbuf[i][idx];
       }
-      T value = ta.tu;
-      return value;
+      return value; 
+    }
+    
+    inline void set(T value, const int idx) {
+      real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+      for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
+        fieldbuf[i][idx] = value_f[i];
+      }
     }
 
-    void set(T value, int idx) {
-      T_access ta;
-      ta.tu = value; 
-      for (int i=0; i<t_elements; i++) {
-        fieldbuf[i][idx] = (real_t) ta.tarr[i];
-      }
-    }
 
     #else
 
