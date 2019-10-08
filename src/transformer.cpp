@@ -781,6 +781,37 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
   return false;
 }
 
+
+/// is the stmt pointing now to assignment
+bool MyASTVisitor::is_function_call_expr(Stmt * s) {
+  if (CallExpr *Call = dyn_cast<CallExpr>(s)){
+    llvm::errs() << "Function call found :" << get_stmt_str(s) << '\n';
+    int i=0;
+    const Decl* D = Call->getCalleeDecl();
+    while(D->getPreviousDecl() != NULL) 
+      D = D->getPreviousDecl();
+    llvm::errs() << "Kind:  " << D->getDeclKindName() << "\n";
+    FunctionDecl* fd = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(D);
+    for( Expr * E : Call->arguments() ){
+      llvm::errs() << "Argument " << i << ": " << get_stmt_str(E) << '\n';
+      if( is_field_parity_expr(E) ){
+        llvm::errs() << "  -Field parity expr\n";
+        if(i < fd->getNumParams()){
+          ParmVarDecl * pv = fd ->getParamDecl(i);
+          llvm::errs() << "  -Decl1 :" << TheRewriter.getRewrittenText  (pv->getSourceRange()) << '\n';
+          QualType q = pv->getOriginalType ();
+          if( q.isConstQualified ()) {
+            llvm::errs() << "  -Const \n";
+          } else {
+            handle_field_parity_expr(E, true, false);
+          }
+        }
+      }
+      i++;
+    }
+  }
+  return false;
+}
             
 
 bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
@@ -883,11 +914,16 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
  
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
   // And also assignments to other vars: t += norm2(lf[X]) etc.
-   if (is_assignment_expr(s,&assignop,is_compound)) {
+  if (is_assignment_expr(s,&assignop,is_compound)) {
     is_assignment = true;
     // next visit here will be to the assigned to variable
     return true;
-  } 
+  }
+
+  // Check for function calls parameters. We need to determine if the 
+  // function can assing to the a field parameter (is not const).
+  if( is_function_call_expr(s) ){
+  }
   
   // catch then expressions
       

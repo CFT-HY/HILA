@@ -126,6 +126,8 @@ public:
 
   bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool & is_compound);
   
+  bool is_function_call_expr(Stmt * s);
+
   bool is_loop_extern_var_ref(Expr *E);
   
   parity get_parity_val(const Expr *pExpr);
