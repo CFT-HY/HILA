@@ -205,16 +205,24 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";
   
-  for (field_info & l : field_info_list){
+  for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-           << ".get_value_at(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
-           << looping_var + "]" << ");\n";
+      if(l.is_read) {
+        code << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
+             << ".get_value_at(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
+             << looping_var + "]" << ");\n";
+      } else {
+        code << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";";
+      }
     }
-    code << type_name << l.loop_ref_name << " = " << l.new_name 
-         << ".get_value_at(" << looping_var << ");\n";
+    if(l.is_read) {
+      code << type_name << l.loop_ref_name << " = " << l.new_name 
+           << ".get_value_at(" << looping_var << ");\n";
+    } else {
+      code << type_name << l.loop_ref_name << ";";
+    }
   }
 
   code << loopBuf.dump();
@@ -230,8 +238,10 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
     //       << ", lattice->neighb[" << get_stmt_str(d.e)
     //       << "][" << looping_var + "]);\n";
     //}
-    code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " 
-         << looping_var << ");\n";
+    if(l.is_written) {
+      code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " 
+           << looping_var << ");\n";
+    }
   }
 
   code << "}\n";
@@ -332,12 +342,20 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-           << "->get(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
-           << looping_var + "]" << ");\n";
+      if(l.is_read){
+        kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
+             << "->get(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
+             << looping_var + "]" << ");\n";
+      } else {
+        kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";";
+      }
     }
-    kernel << type_name << l.loop_ref_name << " = " << l.new_name 
-         << "->get(" << looping_var << ");\n";
+    if(l.is_read) {
+      kernel << type_name << l.loop_ref_name << " = " << l.new_name 
+             << "->get(" << looping_var << ");\n";
+    } else {
+      kernel << type_name << l.loop_ref_name << ";";
+    }
   }
 
   kernel << loopBuf.dump();
@@ -345,14 +363,11 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & lo
   kernel << '\n';
 
   // Call setters
-  for (field_info & l : field_info_list){
-    // This does not recognise setting in functions
-    if (l.is_written){
-      std::string type_name = l.type_template;
-      type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-      kernel << l.new_name << "->set(" << l.loop_ref_name << ", " 
-             << looping_var << ");\n";
-    }
+  for (field_info & l : field_info_list) if(l.is_written){
+    std::string type_name = l.type_template;
+    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
+    kernel << l.new_name << "->set(" << l.loop_ref_name << ", " 
+           << looping_var << ");\n";
   }
 
   kernel << "}\n}\n//----------\n";
