@@ -48,7 +48,7 @@ calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
 
 template<typename T>
 void update(
-  T &U, T &staple,
+  T &U, const T &staple,
   double beta
 ){
   monte( U, staple, beta );
@@ -57,11 +57,11 @@ void update(
 template<>
 void update(
   matrix<2,2,cmplx<double>> &U,
-  matrix<2,2,cmplx<double>> &staple,
+  const matrix<2,2,cmplx<double>> &staple,
   double beta
 ){
-  staple = -beta*staple;
-  KennedyPendleton( U, staple );
+  matrix<2,2,cmplx<double>> temp = -beta*staple;
+  KennedyPendleton( U, temp );
 }
 
 
