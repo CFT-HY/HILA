@@ -65,26 +65,6 @@ struct cmplx {
     }
   }
 
-  void set_from_pointers(char ** pointers){
-    if constexpr( std::is_arithmetic<T>::value ) {
-      re = *((T*) pointers[0]);
-      im = *((T*) pointers[1]);
-    } else {
-      re.set_from_pointers(pointers);
-      im.set_from_pointers(pointers + T::base_element_count());
-    }
-  }
-
-  void set_to_pointers(char ** pointers){
-    if constexpr( std::is_arithmetic<T>::value ) {
-      *((T *) pointers[0]) = re;
-      *((T *) pointers[1]) = im;
-    } else {
-      re.set_to_pointers(pointers);
-      im.set_to_pointers(pointers + T::base_element_count());
-    }
-  }
-
 
 //   // assignment from std::complex<A>  TODO: perhaps remove?
 //   template <typename A>
@@ -182,8 +162,6 @@ struct cmplx {
     im /= static_cast<T>(a);
     return *this;
   }
-
-  
 };
 
 template <typename T>
@@ -278,5 +256,10 @@ constexpr cmplx<double> operator""_i(unsigned long long a) {
   return cmplx<double>(0.0,static_cast<double>(a));
 }
 
+template <typename T>
+std::ostream& operator<<(std::ostream &strm, const cmplx<T> A) {
+  return strm << "(" << A.re << ", " << A.im << ")";
+}
 
 #endif
+

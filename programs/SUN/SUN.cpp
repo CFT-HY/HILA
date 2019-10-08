@@ -104,7 +104,7 @@ int main()
       }
     }
 
-    // Measure plauqette
+    // Measure plaquette
     double Plaq=0;
     foralldir(d1) foralldir(d2) if(d1 != d2){
       direction dir1 = (direction)d1, dir2 = (direction)d2;

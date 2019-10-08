@@ -49,31 +49,7 @@ class matrix {
       return T::base_element_size();
     }
   }
-
-  void set_from_pointers(char ** pointers){
-    if constexpr( std::is_arithmetic<T>::value ) {
-      for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-        c[i][j] = *((T*) pointers[j+n*i]);
-      }
-    } else {
-      for (int i=0; i<n; i++) for (int j=0; j<m; j++){
-        c[i][j].set_from_pointers(pointers + (i+n*j)*T::base_element_count());
-      }
-    }
-  }
-
-  void set_to_pointers(char ** pointers){
-    if constexpr( std::is_arithmetic<T>::value ) {
-      for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-        *((T *)pointers[j+n*i]) = c[i][j];
-      }
-    } else {
-      for (int i=0; i<n; i++) for (int j=0; j<m; j++){
-        c[i][j].set_to_pointers(pointers + (i+n*j)*T::base_element_count());
-      }
-    }
-  }
-
+  
 
   //copy constructor from scalar  
   template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
@@ -161,6 +137,17 @@ class matrix {
       result += c[i][i];
     }
     return result;
+  }
+
+  std::string str() const {
+    std::string text = "";
+    for (int i=0; i<n; i++){
+      for (int j=0; j<n; j++) {
+        text + c[i][j].str() + " "; 
+      }
+      text + "\n"; 
+    }
+    return text;
   }
 };
 
@@ -293,6 +280,19 @@ matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
 template <int n, int m, typename T, typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >
 matrix<n,m,T> operator*(const scalart s, const matrix<n,m,T> &A) {
   return operator*(A,s);
+}
+
+template <int n, int m, typename T>
+std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
+  for (int i=0; i<n; i++){
+    strm << "\n"; 
+    for (int j=0; j<n; j++) {
+      strm << " " << A.c[i][j] << " "; 
+    }
+    strm << "\n"; 
+  }
+  strm << "\n"; 
+  return strm;
 }
 
 #endif

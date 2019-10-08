@@ -225,7 +225,7 @@ struct field_storage_type {
   class field_struct {
   private:
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    char * fieldbuf[T::base_element_count()];
+    real_t * fieldbuf[T::base_element_count()];
   public:
     lattice_struct * lattice;
     unsigned is_fetched[NDIRS];
@@ -233,9 +233,16 @@ struct field_storage_type {
     
     #ifdef layout_SOA
 
+    constexpr static int t_elements = T::base_element_count() * T::base_element_size() / sizeof(real_t);
+
+    union T_access {
+      T tu;
+      real_t  tarr[t_elements];
+    };
+
     void allocate_payload(){
-      for(int p=0; p<T::base_element_count(); p++){
-        fieldbuf[p] = (char *) allocate_field_mem( T::base_element_size() * lattice->field_alloc_size() );
+      for(int p=0; p<t_elements; p++){
+        fieldbuf[p] = (real_t *) allocate_field_mem( sizeof(real_t) * lattice->field_alloc_size() );
         if (fieldbuf[p] == nullptr) {
           std::cout << "Failure in field memory allocation\n";
           exit(1);
@@ -244,34 +251,28 @@ struct field_storage_type {
     }
 
     void free_payload() {
-      for(int p=0; p<T::base_element_count(); p++) {
+      for(int p=0; p<t_elements; p++) {
         free_field_mem((void *)fieldbuf[p]);
         fieldbuf[p] = nullptr;
       }
     }
 
-    T get(int i) const
-    {
-      assert( fieldbuf != nullptr );
-      T value;
-      char * pointers[T::base_element_count()];
-      for(int p=0; p<value.base_element_count(); p++){
-        pointers[p] = fieldbuf[p]+value.base_element_size() * i;
+    T get(int idx) {
+      T_access ta;
+      for (int i=0; i<t_elements; i++) {
+        ta.tarr[i] = (real_t) fieldbuf[i][idx];
       }
-      value.set_from_pointers(pointers);
+      T value = ta.tu;
       return value;
     }
 
-    void set(T value, int i)
-    {
-      assert( fieldbuf != nullptr );
-      char * pointers[T::base_element_count()];
-      for(int p=0; p<value.base_element_count(); p++){
-        pointers[p] = fieldbuf[p]+value.base_element_size() * i;
+    void set(T value, int idx) {
+      T_access ta;
+      ta.tu = value; 
+      for (int i=0; i<t_elements; i++) {
+        fieldbuf[i][idx] = (real_t) ta.tarr[i];
       }
-      value.set_to_pointers(pointers);
     }
-
 
     #else
 
