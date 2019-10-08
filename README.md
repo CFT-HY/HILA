@@ -1,8 +1,28 @@
-# Compiling
 
-Compile the transformer by typing `make` in the main folder.
+# Description 
+
+Transformer contains a C++ preprocessing tool and framework for programming lattice field theory simulations: the main method for getting measurements from non-perturbative quantum field theories.  
+
+Lattice field theory simulations involve up to 4 dimensional grids whose points are updated continuously according to some Monte Carlo update algorithm. The update at each grid point depends on the data stored at neighboring lattice points, and the ideal 
+update order depends on the parity of the lattice points. Efficient parallel implementations using MPI and GPU's can be quite complicated to implement, modify and debug. Some kind of simplification was clearly needed. 
+
+Transformer aims to make it easier for researchers to implement a broad class of these simulations by abstracting a lot of the technicalities involved, and by bringing the syntax from CUDA kernels and MPI calls to the essentials. The approach given 
+here involves new datatypes and a preprocessing tool that converts c++ code with the new simplified syntax for loops and element accessors into working c++ code and gpu kernels. 
+
+# Instructions
+## Compiling the preprocessing tool and using it on c++ code
+
+In short, the framework can be used in these steps: 
+
+1. Write c++ code using the syntax and datatypes laid out below
+2. Use the transformer excecutable to convert this code into .cpt code 
+3. Compile the new .cpt code into the final excecutable 
+
+To compile the transformer, first create a build directory inside the main directory if it doesn't exist. 
+Then, compile the transformer by typing `make` in the main folder.
 This will create an executable called `transformer` in the build folder.
-You can compile an extended C++ file into standard C++ using
+
+You can then use it to compile an extended C++ file into standard C++ using
 ~~~ bash
 build/transformer path/to/program.cpp
 ~~~
@@ -24,11 +44,9 @@ lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 ~~~
 
+## Syntax - What works
 
-
-# What works:
-
-## Single line statements
+### Single line statements
 
 You can operate on fields using statements like
 ~~~ C++
@@ -55,7 +73,7 @@ my_field[ALL] = my_field[X] + 1;
 ~~~
 
 
-## General loops 
+### General loops 
 Loops over all sites or a parity:
 ~~~ C++
 forsites(ALL){}
@@ -78,7 +96,7 @@ forsites(EVEN){
 
 
 
-# What doesn't work (as expected)
+## What doesn't work (as expected)
 
 Direction loops in forsites environments:
 ~~~ C++
