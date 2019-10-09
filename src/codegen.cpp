@@ -163,10 +163,10 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
   // Here generate kernel, or produce the loop in place
   if (target.kernelize) {
-    code << generate_kernel(S,semi_at_end,loopBuf);
+    code << generate_kernel(S,target,semi_at_end,loopBuf);
   } else {
     // Now in place
-    code << generate_in_place(S,semi_at_end,loopBuf);
+    code << generate_in_place(S,target,semi_at_end,loopBuf);
   }
   
   // Check reduction variables
@@ -194,7 +194,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 }
 
 
-std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf & loopBuf) {
   
   replace_field_refs(loopBuf);
   
@@ -202,6 +202,9 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
   code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
 
+  if( target.GPUOMP ) {
+    code << "#pragma omp target distribute parallel for\n";
+  }
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";
   
@@ -251,7 +254,7 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
 
 /// return value: kernel call code
 
-std::string MyASTVisitor::generate_kernel(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_at_end, srcBuf & loopBuf) {
 
   // Get kernel name - use line number or file offset (must be deterministic)
   std::string kernel_name = make_kernel_name();

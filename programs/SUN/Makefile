@@ -1,12 +1,16 @@
 
 OPTS = -DNDIM=4
 
+#TRANSFORMER = ../../build/transformer --GPU-OMP
 TRANSFORMER = ../../build/transformer --vanilla-kernel
 CC = clang++-8
 
-CFLAGS = -O3  $(OPTS)
-CXXFLAGS = -O3 -x c++  $(OPTS)
-LDFLAGS = 
+#CUDAFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -lcudart -L/usr/local/cuda/lib64
+CUDAFLAGS = 
+
+CFLAGS = -O3  $(OPTS) $(CUDAFLAGS)
+CXXFLAGS = -O3 -x c++  $(OPTS) $(CUDAFLAGS)
+LDFLAGS = $(CUDAFLAGS)
 
 
 
