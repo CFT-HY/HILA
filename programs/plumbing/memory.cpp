@@ -1,5 +1,6 @@
 
 #include <stdlib.h>
+#include "defs.h"
 #include "memory.h"
 
 

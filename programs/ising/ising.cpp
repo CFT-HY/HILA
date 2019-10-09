@@ -1,20 +1,78 @@
-#define NDIM 2
-
 #include <iostream>
 #include <string>
 #include <math.h>
 
+#define NDIM 2
+
+// Include the lattice field definition
 #include "../plumbing/field.h"
-#include "../datatypes/cmplx.h"
-
-
-int main() 
+#include "../datatypes/scalar.h"
+extern "C"
 {
-  lattice->setup( 8, 8 );
+    #include "mersenne.h"
+};
 
-  field<cmplx<double>> spin;
+// Direct output to stdout
+std::ostream &hila::output = std::cout;
+std::ostream &output = std::cout;
+
+// Define the lattice global variable
+lattice_struct my_lattice;
+lattice_struct * lattice = & my_lattice;
+
+
+// Define some parameters for the simulation
+double beta = 0.4;
+int n_measurements=100;
+int n_updates_per_measurement=1;
+long seed = 123456;
+int NX=8, NY=8;
+int VOLUME = NX*NY;
+
+int main()
+{
+  // Basic setup
+  lattice->setup( NX, NY );
+  // Define a field
+  field<scalar<double>> spin;
+
+  seed_mersenne( seed );
+
+  /* "Warm up" the rng generator */
+  for( int i=0; i<543210; i++ ) mersenne();
   
+  // Set to 1
   spin[ALL] = 1;
+
+  // Run update-measure loop
+  for( int i=0; i<n_measurements; i++ ){
+
+    // Run a number of updates, starting with EVEN sites
+    // and alternating between parities
+    parity p = EVEN;
+    for(int j=0; j<2*n_updates_per_measurement; j++){
+
+      // A temporary field for the local change in action
+      field<scalar<double>> deltaS;
+      deltaS[p] = 2.0*spin[X]*( spin[X+XUP] + spin[X+XDOWN]
+                               + spin[X+YUP] + spin[X+YDOWN] );
+
+      onsites(p){
+        if( mersenne() < exp(-beta*deltaS[X]) ){
+          spin[X] = -spin[X];
+        }
+      }
+      p=opp_parity(p);
+    }
+
+    // Measure magnetisation
+    double M=0;
+    onsites(ALL){
+      M += spin[X];
+    }
+    printf("Magnetisation %f\n", M/VOLUME);
+  }
   
+
   return 0;
 }

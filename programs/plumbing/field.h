@@ -8,7 +8,7 @@
 
 // using namespace std;
 
-#include "../plumbing/lattice.h"
+#include "../plumbing/globals.h"
 
 
 // HACK  -- this is needed for pragma handlin, do not change!
@@ -220,15 +220,108 @@ struct field_storage_type {
 };
 
 /// The following struct holds the data + information about the field
-// template <typename T>
-// class field_struct {
-//   friend field<T>;
-// 
-//   field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-//   lattice_struct * lattice;
-//   unsigned is_fetched[NDIRS];
-//   
-// };
+/// TODO: field-specific boundary conditions?
+  template <typename T>
+  class field_struct {
+  private:
+    constexpr static int t_elements = sizeof(T) / sizeof(real_t);
+    field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
+    real_t * fieldbuf[t_elements];
+  public:
+    lattice_struct * lattice;
+    unsigned is_fetched[NDIRS];
+
+    #ifdef layout_SOA
+
+    union T_access {
+      T tu;
+      real_t  tarr[t_elements];
+    };
+
+    void allocate_payload(){
+      for(int p=0; p<t_elements; p++){
+        fieldbuf[p] = (real_t *) allocate_field_mem( sizeof(real_t) * lattice->field_alloc_size() );
+        if (fieldbuf[p] == nullptr) {
+          std::cout << "Failure in field memory allocation\n";
+          exit(1);
+        }
+      }
+    }
+
+    void free_payload() {
+      for(int p=0; p<t_elements; p++) {
+        free_field_mem((void *)fieldbuf[p]);
+        fieldbuf[p] = nullptr;
+      }
+    }
+
+    //inline T get(int idx) {
+    //  T_access ta;
+    //  for (int i=0; i<t_elements; i++) {
+    //    ta.tarr[i] = (real_t) fieldbuf[i][idx];
+    //  }
+    //  T value = ta.tu;
+    //  return value;
+    //}
+
+    //void set(T value, int idx) {
+    //  T_access ta;
+    //  ta.tu = value; 
+    //  for (int i=0; i<t_elements; i++) {
+    //    fieldbuf[i][idx] = (real_t) ta.tarr[i];
+    //  }
+    //}
+
+    inline T get(const int idx) const {
+      T value;
+      real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+      for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
+         value_f[i] = fieldbuf[i][idx];
+      }
+      return value; 
+    }
+    
+    inline void set(T value, const int idx) {
+      real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+      for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
+        fieldbuf[i][idx] = value_f[i];
+      }
+    }
+
+
+    #else
+
+    void allocate_payload() {
+      payload = (field_storage_type<T> *) 
+                   allocate_field_mem(sizeof(T) * lattice->field_alloc_size());
+              
+      if (payload == nullptr) {
+        std::cout << "Failure in field memory allocation\n";
+        exit(1);
+      }
+    }
+
+    void free_payload() {
+      free_field_mem((void *)payload);
+      payload = nullptr;
+    }
+
+    T get(const int i) const
+    {
+      return (T) (payload[i].c);
+    }
+
+    void set(T value, const int i) 
+    {
+      payload[i].c = value;
+    }
+    #endif
+    
+  };
+
+
+
+
 
 
 // These are helpers, to make generic templates
@@ -239,6 +332,8 @@ struct field_storage_type {
 #define t_div(A,B)   decltype(std::declval<A>() / std::declval<B>())
 
 
+
+
 // ** class field
 
 template <typename T>
@@ -247,39 +342,9 @@ private:
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
   
-  /// TODO: field-specific boundary conditions?
-  class field_struct {
-  private:
-    field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    lattice_struct * lattice;
-    unsigned is_fetched[NDIRS];
-    
-  public:
-    void allocate_payload() {
-      payload = (field_storage_type<T> *) 
-                   allocate_field_mem(sizeof(T) * lattice->field_alloc_size());
-      if (payload == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
-      }
-    }
-    
-    void free_payload() {
-      free_field_mem((void *)payload);
-      payload = nullptr;
-    }
-
-
-    T& operator[] (int i)
-    {
-      return (T&) (payload[i].c);
-    }
-    
-  };
-  
-  field_struct * fs;
-    
 public:
+
+  field_struct<T> * fs;
   
   field<T>() {
     // std::cout << "In constructor 1\n";
@@ -328,7 +393,7 @@ public:
       std::cout << "Can not allocate field variables before lattice.setup()\n";
       exit(1);  // TODO - more ordered exit?
     }
-    fs = new field_struct;
+    fs = new field_struct<T>;
     fs->lattice = lattice;
     fs->allocate_payload();
 
@@ -374,9 +439,14 @@ public:
   //  return (field_element<T>) *this;
   //}
 
-  T& operator[] (int i)
+  T get_value_at(int i)
   {
-    return (T&) (this->fs[0][i]);
+    return this->fs->get(i);
+  }
+
+  void set_value_at(T value, int i)
+  {
+    this->fs->set(value, i);
   }
 
   // fetch the element at this loc
@@ -452,7 +522,11 @@ public:
             std::enable_if_t<std::is_convertible<t_div(T,A),T>::value, int> = 0>
   field<T>& operator/= (const A & rhs) { (*this)[ALL] /= rhs; return *this;}
 
-  
+
+  // Communication routines
+  #ifndef USE_MPI
+  void start_move(direction d, parity p){}
+  #endif
 };
 
 
