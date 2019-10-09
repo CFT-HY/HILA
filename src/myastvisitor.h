@@ -126,6 +126,8 @@ public:
 
   bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool & is_compound);
   
+  bool is_function_call_stmt(Stmt * s);
+
   bool is_loop_extern_var_ref(Expr *E);
   
   parity get_parity_val(const Expr *pExpr);
@@ -139,6 +141,8 @@ public:
   bool handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
+
+  void handle_function_call_stmt(Stmt * s);
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );
