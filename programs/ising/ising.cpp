@@ -52,9 +52,8 @@ int main()
     for(int j=0; j<2*n_updates_per_measurement; j++){
 
       // A temporary field for the local change in action
-      field<scalar<double>> deltaS;
       onsites(p){
-        scalar<double> deltaS;
+        double deltaS;
         deltaS = 2.0*spin[X]*( spin[X+XUP] + spin[X+XDOWN]
                              + spin[X+YUP] + spin[X+YDOWN] );
 
