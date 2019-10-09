@@ -214,14 +214,14 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, bool semi_at_end, srcBuf & 
              << ".get_value_at(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
              << looping_var + "]" << ");\n";
       } else {
-        code << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";";
+        code << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
       }
     }
     if(l.is_read) {
       code << type_name << l.loop_ref_name << " = " << l.new_name 
            << ".get_value_at(" << looping_var << ");\n";
     } else {
-      code << type_name << l.loop_ref_name << ";";
+      code << type_name << l.loop_ref_name << ";\n";
     }
   }
 
