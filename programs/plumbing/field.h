@@ -306,12 +306,12 @@ struct field_storage_type {
       payload = nullptr;
     }
 
-    T get(int i)
+    T get(const int i) const
     {
       return (T) (payload[i].c);
     }
 
-    void set(T value, int i)
+    void set(T value, const int i) 
     {
       payload[i].c = value;
     }
