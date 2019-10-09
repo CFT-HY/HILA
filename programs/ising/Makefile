@@ -4,8 +4,8 @@ OPTS = -DNDIM=2
 TRANSFORMER = ../../build/transformer
 CC = clang++-8
 
-CFLAGS = -g -O0 $(OPTS)
-CXXFLAGS = -g -O0 -x c++ $(OPTS)
+CFLAGS = -O3 $(OPTS)
+CXXFLAGS = -O3 -x c++ $(OPTS)
 
 
 
