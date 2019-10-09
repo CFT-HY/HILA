@@ -782,35 +782,56 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 }
 
 
-/// is the stmt pointing now to assignment
-bool MyASTVisitor::is_function_call_expr(Stmt * s) {
+// is the stmt pointing now to a function call
+bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
   if (CallExpr *Call = dyn_cast<CallExpr>(s)){
-    llvm::errs() << "Function call found :" << get_stmt_str(s) << '\n';
-    int i=0;
-    const Decl* D = Call->getCalleeDecl();
-    while(D->getPreviousDecl() != NULL) 
-      D = D->getPreviousDecl();
-    llvm::errs() << "Kind:  " << D->getDeclKindName() << "\n";
-    FunctionDecl* fd = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(D);
-    for( Expr * E : Call->arguments() ){
-      llvm::errs() << "Argument " << i << ": " << get_stmt_str(E) << '\n';
-      if( is_field_parity_expr(E) ){
-        llvm::errs() << "  -Field parity expr\n";
-        if(i < fd->getNumParams()){
-          ParmVarDecl * pv = fd ->getParamDecl(i);
-          llvm::errs() << "  -Decl1 :" << TheRewriter.getRewrittenText  (pv->getSourceRange()) << '\n';
-          QualType q = pv->getOriginalType ();
-          if( q.isConstQualified ()) {
-            llvm::errs() << "  -Const \n";
-          } else {
-            handle_field_parity_expr(E, true, false);
-          }
-        }
-      }
-      i++;
-    }
+    llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+    return true;
   }
   return false;
+}
+
+// Go through each parameter of function calls and handle
+// any field references.
+// Assume non-const references can be assigned to.
+void MyASTVisitor::handle_function_call_stmt(Stmt * s) {
+  int i=0;
+
+  // Get the call expression
+  CallExpr *Call = dyn_cast<CallExpr>(s);
+
+  // Get the declaration of the function
+  const Decl* decl = Call->getCalleeDecl();
+  while(decl->getPreviousDecl() != NULL)
+    decl = decl->getPreviousDecl();
+  llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
+  const FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
+
+  // Go through arguments
+  for( Expr * E : Call->arguments() ){
+    llvm::errs() << "Argument " << i << "/" << D->getNumParams() << ": " << get_stmt_str(E) << '\n';
+
+    // Handle field type arguments
+    // NOTE: It seems that this does not recognize const parameters.
+    //       They will be handled later, when walking down the children
+    //       of the call.
+    if( is_field_parity_expr(E) ) {
+      llvm::errs() << "  -Field parity expr\n";
+      if(i < D->getNumParams()){
+        const ParmVarDecl * pv = D->getParamDecl(i);
+        QualType q = pv->getOriginalType ();
+        llvm::errs() << "  -Declaration:" << TheRewriter.getRewrittenText (pv->getSourceRange()) << '\n';
+
+        // Check for const qualifier
+        if( q.isConstQualified ()) {
+          llvm::errs() << "  -Const \n";
+        } else {
+          handle_field_parity_expr(E, true, false);
+        }
+      }
+    }
+    i++;
+  }
 }
             
 
@@ -922,7 +943,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
   // Check for function calls parameters. We need to determine if the 
   // function can assing to the a field parameter (is not const).
-  if( is_function_call_expr(s) ){
+  if( is_function_call_stmt(s) ){
+    handle_function_call_stmt(s);
   }
   
   // catch then expressions
