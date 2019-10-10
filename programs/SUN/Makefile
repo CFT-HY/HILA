@@ -1,10 +1,9 @@
 
 OPTS = -DNDIM=4
 
-#TRANSFORMER = ../../build/transformer 
-#CC = pgc++ -Minfo=all 
-TRANSFORMER = ../../build/transformer --openacc -Dopenacc
-CC = pgc++ -acc -ta=tesla:cc70 -Minfo=accel -Dopenacc
+TRANSFORMER = ../../build/transformer 
+CC = c++ 
+#CC = nvcc -gencode arch=compute_70,code=sm_70 -DCUDA
 
 
 #CUDAFLAGS = 
@@ -21,6 +20,9 @@ SUN: Makefile SUN.tr.o monte.o KennedyPendleton.o mersenne_inline.o lattice.o me
 SUN.tr.cpp: Makefile SUN.cpp 
 	$(TRANSFORMER) SUN.cpp -o=SUN.tr.cpp
 
+SUN.tr.cu: Makefile SUN.cpp 
+	$(TRANSFORMER) --CUDA SUN.cpp -o=SUN.tr.cu
+
 %.o : %.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
@@ -28,7 +30,7 @@ SUN.tr.cpp: Makefile SUN.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c
-	pgcc  -acc -ta=tesla:cc70 $(CFLAGS) $< -c
+	$(CC)$(CFLAGS) $< -c
 
 clean:
 	rm -rf *.cpt *.o

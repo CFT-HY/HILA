@@ -270,7 +270,6 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   
   std::stringstream kernel,call;
 
-  call   << kernel_name << "(";
   kernel << "//----------\n";
   // I don't think kernels need to be templates
   //   if (global.in_func_template) {
@@ -281,8 +280,14 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   //     }
   //     kernel << ">\n";
   //   }
-  kernel << "void " << kernel_name << "(";
-    
+  if( target.CUDA ){
+    kernel << "__global__ void " << kernel_name << "(";
+    call   << kernel_name << "<<< 128, 128 >>>(";
+  } else {
+    kernel << "void " << kernel_name << "(";
+    call   << kernel_name << "(";
+  }
+
   if (loop_parity.value == parity::none) {
     call   << parity_name << ", ";
     kernel << "const parity " << parity_name << ", ";
@@ -342,12 +347,18 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   // finally, change the references to variables in the body
   replace_field_refs(loopBuf);
 
-  // Generate the loop
-  kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
-  kernel << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
+  if( target.CUDA ){
+    kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
+           << " + lattice->loop_begin(" << parity_in_this_loop << "); \n";
+    kernel << "if(Index < lattice->loop_end(" << parity_in_this_loop << ")) { \n";
+  } else {
+    // Generate the loop
+    kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << "); \n";
+    kernel << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << "); \n";
 
-  kernel << "for(int " << looping_var <<" = loop_begin; " 
-         << looping_var << " < loop_end; " << looping_var << "++) {\n";
+    kernel << "for(int " << looping_var <<" = loop_begin; " 
+           << looping_var << " < loop_end; " << looping_var << "++) {\n";
+  }
 
   // Call getters
   for (field_info & l : field_info_list){

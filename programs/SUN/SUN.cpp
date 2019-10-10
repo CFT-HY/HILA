@@ -32,17 +32,14 @@ calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
     direction dir2 = (direction)d2;
     //Calculate the down side staple.
     //This will be communicated up.
-    output0 << "Loop 1";
     down_staple[ALL] = U[dir2][X].conjugate()
                      * U[dir][X]
                      * U[dir2][X+dir];
     // Forward staple
-    output0 << "Loop 2";
     staple_sum[ALL] += U[dir2][X+dir]
                      * U[dir][X+dir2].conjugate()
                      * U[dir2][X].conjugate();
     // Add the two staples together
-    output0 << "Loop 3";
     staple_sum[ALL] += down_staple[X - dir2];
   }
   return staple_sum;
@@ -57,7 +54,6 @@ void update(
   monte( U, staple, beta );
 }
 
-template<>
 void update(
   matrix<2,2,cmplx<double>> &U,
   const matrix<2,2,cmplx<double>> &staple,
@@ -82,7 +78,6 @@ int main()
   
   // Set to 1
   foralldir(d) {
-    output0 << "Init loop";
     U[d][ALL] = 1;
   }
 
@@ -100,7 +95,6 @@ int main()
         // Now update, first even then odd
         parity p = EVEN;
         for( int par=0; par < 2; par++ ){
-          output0 << "Update loop";
           onsites(p){
             update( U[dir][X], staple[X], beta );
           }
@@ -113,7 +107,6 @@ int main()
     double Plaq=0;
     foralldir(d1) foralldir(d2) if(d1 != d2){
       direction dir1 = (direction)d1, dir2 = (direction)d2;
-      output0 << "Plaquette loop";
       onsites(ALL){
         matrix<N,N,cmplx<double>> temp;
         temp =  U[dir1][X] * U[dir2][X+dir1];

@@ -815,7 +815,7 @@ void MyASTVisitor::handle_function_call_stmt(Stmt * s) {
   while(decl->getPreviousDecl() != NULL)
     decl = decl->getPreviousDecl();
   llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
-  const FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
+  FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   // Go through arguments
   for( Expr * E : Call->arguments() ){
@@ -843,7 +843,7 @@ void MyASTVisitor::handle_function_call_stmt(Stmt * s) {
     i++;
   }
 }
-            
+
 
 bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
   SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(),
@@ -1307,6 +1307,9 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     state::dump_ast_next = false;
   }
 
+  // Check if the function can be called from a loop
+  bool loop_callable = true;
+  llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
     global.currentFunctionDecl = f;
@@ -1323,7 +1326,10 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-    
+    if (functiondecl_loop_found(f)) {
+      loop_callable = false;
+    }
+
     switch (f->getTemplatedKind()) {
       case FunctionDecl::TemplatedKind::TK_NonTemplate:
         // Normal, non-templated class method -- nothing here
@@ -1350,7 +1356,14 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     SourceLocation ST = f->getSourceRange().getBegin();
     global.location.function = ST;
-    
+
+    if(target.CUDA && loop_callable){
+      // Add CUDA directive to allow calling from loops
+      llvm::errs() << "Adding device directive\n";
+      writeBuf->insert(ST,"__device__ __host__ ",true,true);
+      state::loop_found = true; // Mark this file changed
+    }
+
     if (cmdline::funcinfo) {
       // Add comment before
       std::stringstream SSBefore;
@@ -1361,7 +1374,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     }
     
   }
-  
+
   return true;
 }
 
@@ -1634,7 +1647,6 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     } else if (D->getNameAsString() == "field_storage_type") {
       field_storage_type_decl = D;
     } else {
-      //      handle_class_specializations(D);
     }
 
     global.in_class_template = false;
@@ -2116,7 +2128,7 @@ private:
 
 
 void get_target_struct(codetype & target) {
-  if (cmdline::kernel || cmdline::CUDA) {
+  if (cmdline::kernel) {
     target.kernelize = true;
     target.CUDA = false;
   } else if (cmdline::CUDA) {

@@ -221,8 +221,8 @@ struct field_storage_type {
 
 /// The following struct holds the data + information about the field
 /// TODO: field-specific boundary conditions?
-  template <typename T>
-  class field_struct {
+template <typename T>
+class field_struct {
   private:
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
@@ -238,7 +238,7 @@ struct field_storage_type {
       real_t  tarr[t_elements];
     };
 
-
+    #ifndef CUDA
     void allocate_payload(){
       fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
       #pragma acc enter data create(fieldbuf)
@@ -253,6 +253,23 @@ struct field_storage_type {
       free_field_mem((void *)fieldbuf);
       fieldbuf = nullptr;
     }
+    #else
+    void allocate_payload(){
+      cudaMalloc(
+        (void **)&fieldbuf,
+        t_elements*sizeof(real_t) * lattice->field_alloc_size()
+      );
+      if (fieldbuf == nullptr) {
+        std::cout << "Failure in field memory allocation\n";
+        exit(1);
+      }
+    }
+
+    void free_payload() {
+      cudaFree(fieldbuf);
+      fieldbuf = nullptr;
+    }
+    #endif
 
     //inline T get(int idx) {
     //  T_access ta;
