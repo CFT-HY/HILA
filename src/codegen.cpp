@@ -282,7 +282,10 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   //   }
   if( target.CUDA ){
     kernel << "__global__ void " << kernel_name << "(";
+    kernel << "int loop_begin, int loop_end, ";
     call   << kernel_name << "<<< 128, 128 >>>(";
+    call << "lattice->loop_begin(" << parity_in_this_loop << "), ";
+    call << "lattice->loop_end(" << parity_in_this_loop << "), ";
   } else {
     kernel << "void " << kernel_name << "(";
     call   << kernel_name << "(";
@@ -349,8 +352,8 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
 
   if( target.CUDA ){
     kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
-           << " + lattice->loop_begin(" << parity_in_this_loop << "); \n";
-    kernel << "if(Index < lattice->loop_end(" << parity_in_this_loop << ")) { \n";
+           << " + loop_begin; \n";
+    kernel << "if(Index < loop_end) { \n";
   } else {
     // Generate the loop
     kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << "); \n";
@@ -370,14 +373,14 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
              << "->get(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
              << looping_var + "]" << ");\n";
       } else {
-        kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";";
+        kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
       }
     }
     if(l.is_read) {
       kernel << type_name << l.loop_ref_name << " = " << l.new_name 
              << "->get(" << looping_var << ");\n";
     } else {
-      kernel << type_name << l.loop_ref_name << ";";
+      kernel << type_name << l.loop_ref_name << ";\n";
     }
   }
 
