@@ -202,8 +202,8 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
   code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
 
-  if( target.GPUOMP ) {
-    code << "#pragma omp target distribute parallel for\n";
+  if( target.openacc ) {
+    code << "#pragma acc parallel loop \n";
   }
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";

@@ -10,10 +10,6 @@
 #define EVENFIRST
 #define layout_SOA
 
-#ifdef GPUOMP
-#include <omp.h>
-#endif
-
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = double;
 

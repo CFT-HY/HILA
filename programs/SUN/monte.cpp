@@ -13,6 +13,7 @@
 
 #include "SUN.h"
 
+#pragma acc routine seq
 void mult_su2_mat_vec_elem_n(
   matrix<2,2,cmplx<double>> &u,
   cmplx<double> &x0,

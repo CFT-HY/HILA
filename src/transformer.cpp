@@ -118,7 +118,7 @@ namespace cmdline {
           llvm::cl::cat(TransformerCat));
 
   static llvm::cl::opt<bool>
-  GPUOMP("GPU-OMP",
+  openacc("openacc",
           llvm::cl::desc("Offload to GPU using openMP"),
           llvm::cl::cat(TransformerCat));
 
@@ -2122,12 +2122,12 @@ void get_target_struct(codetype & target) {
   } else if (cmdline::CUDA) {
     target.kernelize = true;
     target.CUDA = true;
-  } else if (cmdline::GPUOMP) {
+  } else if (cmdline::openacc) {
     target.kernelize = false;
-    target.GPUOMP = true;
+    target.openacc = true;
   } else {
     target.kernelize = false;
-    target.GPUOMP = false;
+    target.openacc = false;
   }
 }
 

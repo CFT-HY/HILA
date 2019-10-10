@@ -13,10 +13,7 @@ const int N=2;
 // Include the lattice field definition
 #include "../plumbing/field.h"
 #include "../datatypes/general_matrix.h"
-extern "C"
-{
-    #include "mersenne.h"
-};
+#include "mersenne.h"
 
 
 // Define some parameters for the simulation
