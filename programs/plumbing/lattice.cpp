@@ -479,6 +479,10 @@ void lattice_struct::create_std_gathers()
 
       }
     }
+
+    // GPU: Copy the neighbour array to the device
+    #pragma acc data copyin(neighb[d][0:this_node.sites])
+
   } /* directions */
 
   /* Finally, set the site to the final offset (better be right!) */

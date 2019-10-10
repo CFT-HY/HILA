@@ -203,7 +203,16 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
   code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
 
   if( target.openacc ) {
-    code << "#pragma acc parallel loop \n";
+    code << "#pragma acc parallel loop";
+    // Check reduction variables
+    for (var_info & v : var_info_list) { 
+      if (v.reduction_type == reduction::SUM) {
+        code << " reduction(+:" << v.name << ")";
+      } else if (v.reduction_type == reduction::PRODUCT) {
+        code << " reduction(*:" << v.name << ")";
+      }
+    }
+    code << "\n";
   }
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";

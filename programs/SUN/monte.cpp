@@ -38,7 +38,7 @@ void mult_su2_mat_vec_elem_n(
 } /* mult_su2_mat_vec_elem_n */
 
 
-
+#pragma acc routine seq
 void left_su2_hit_n(
   matrix<2,2,cmplx<double>> &u,
   int p,
@@ -56,7 +56,7 @@ void left_su2_hit_n(
 } /* left_su2_hit_n */
 
 
-
+#pragma acc routine seq
 double monte(
   matrix<N,N,cmplx<double>> &U, 
   matrix<N,N,cmplx<double>> &staple,
@@ -104,7 +104,7 @@ double monte(
       // Keeping this from the earlier code, but I have no idea what it does
       if (vsq <= 0.0) {
         //printf("monte: vsq error! node %d, vsq %g\n",lattice->node_number(),vsq);
-        exit(1);
+        //exit(1);
       }
 #endif
 
@@ -119,10 +119,10 @@ double monte(
       /* now begin qhb */
       /* get four random numbers */
 
-      xr1 = log(1.0 - mersenne());
-      xr2 = log(1.0 - mersenne());
-      xr3 = mersenne();
-      xr4 = mersenne();
+      xr1 = log(1.0 - random());
+      xr2 = log(1.0 - random());
+      xr3 = random();
+      xr4 = random();
 
       xr3 = cos(pi2*xr3);
 
@@ -166,10 +166,10 @@ double monte(
 	  test=0;
 	  for(k=0; k<20 && !test;k++) {
 	    /*  get four random numbers */
-	    xr1 = log(1.0 - mersenne());
-	    xr2 = log(1.0 - mersenne());
-	    xr3 = mersenne();
-	    xr4 = mersenne();
+	    xr1 = log(1.0 - random());
+	    xr2 = log(1.0 - random());
+	    xr3 = random();
+	    xr4 = random();
 
 	    xr3 = cos(pi2*xr3);
 
@@ -190,8 +190,8 @@ double monte(
 	  test=0;
 	  for(k=0;k<20 && test == 0  ;k++) {
 	    /*        get two random numbers */
-	    xr1=mersenne();
-	    xr2=mersenne();
+	    xr1=random();
+	    xr2=random();
 
 	    r = xl + xd*xr1;
 	    a0 = 1.00 + log((double)r)/al;
@@ -221,7 +221,7 @@ double monte(
       r  = sqrt(r2);
 
       /* compute a3 */
-      a3=(2.0*mersenne() - 1.0)*r;
+      a3=(2.0*random() - 1.0)*r;
 
       /* compute a1 and a2 */
       rho = r2 - a3*a3;
@@ -229,7 +229,7 @@ double monte(
       rho = sqrt(rho);
 
       /*xr2 is a random number between 0 and 2*pi */
-      xr2 = pi2*mersenne();
+      xr2 = pi2*random();
       a1 = rho*cos((double)xr2);
       a2 = rho*sin((double)xr2);
 

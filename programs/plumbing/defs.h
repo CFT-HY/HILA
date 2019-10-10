@@ -14,6 +14,13 @@
 using real_t = double;
 
 
+#ifdef openacc
+#define random() 0.5
+#else
+#define random() mersenne()
+#endif
+
+
 // move these somewhere - use consts?
 // Have this defined in the program?
 #ifndef NDIM
