@@ -40,7 +40,7 @@ calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
                      * U[dir][X+dir2].conjugate()
                      * U[dir2][X].conjugate();
     // Add the two staples together
-    staple_sum[ALL] += down_staple[X];
+    staple_sum[ALL] += down_staple[X - dir2];
   }
   return staple_sum;
 }

@@ -112,6 +112,16 @@ namespace cmdline {
           llvm::cl::desc("Generate loops in place"),
           llvm::cl::cat(TransformerCat));
 
+  static llvm::cl::opt<bool>
+  CUDA("CUDA",
+          llvm::cl::desc("Generate CUDA kernels"),
+          llvm::cl::cat(TransformerCat));
+
+  static llvm::cl::opt<bool>
+  GPUOMP("GPU-OMP",
+          llvm::cl::desc("Offload to GPU using openMP"),
+          llvm::cl::cat(TransformerCat));
+
 };
 
 // local global vars
@@ -2106,8 +2116,19 @@ private:
 
 
 void get_target_struct(codetype & target) {
-  if (cmdline::kernel) target.kernelize = true;
-  else target.kernelize = false;
+  if (cmdline::kernel || cmdline::CUDA) {
+    target.kernelize = true;
+    target.CUDA = false;
+  } else if (cmdline::CUDA) {
+    target.kernelize = true;
+    target.CUDA = true;
+  } else if (cmdline::GPUOMP) {
+    target.kernelize = false;
+    target.GPUOMP = true;
+  } else {
+    target.kernelize = false;
+    target.GPUOMP = false;
+  }
 }
 
 int main(int argc, const char **argv) {

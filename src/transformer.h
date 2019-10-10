@@ -29,9 +29,10 @@ const std::string default_output_suffix("cpt");
 
 bool write_output_file( const std::string & name, const std::string & buf ) ;
 
-
 struct codetype {
   bool kernelize;
+  bool CUDA;
+  bool GPUOMP;
 };
 
 enum class parity { none, even, odd, all, x };

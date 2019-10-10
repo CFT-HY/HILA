@@ -167,8 +167,8 @@ public:
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
 
-  std::string generate_kernel(Stmt *S, bool semi_at_end, srcBuf &sb);
-  std::string generate_in_place(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_kernel(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
+  std::string generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();

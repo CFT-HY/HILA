@@ -238,6 +238,8 @@ struct field_storage_type {
       real_t  tarr[t_elements];
     };
 
+
+#ifndef GPUOMP
     void allocate_payload(){
       for(int p=0; p<t_elements; p++){
         fieldbuf[p] = (real_t *) allocate_field_mem( sizeof(real_t) * lattice->field_alloc_size() );
@@ -254,7 +256,24 @@ struct field_storage_type {
         fieldbuf[p] = nullptr;
       }
     }
+#else
+    void allocate_payload(){
+      for(int p=0; p<t_elements; p++){
+        fieldbuf[p] = (real_t *) omp_target_alloc( sizeof(real_t) * lattice->field_alloc_size(), 0 );
+        if (fieldbuf[p] == nullptr) {
+          std::cout << "Failure in field memory allocation\n";
+          exit(1);
+        }
+      }
+    }
 
+    void free_payload() {
+      for(int p=0; p<t_elements; p++) {
+        omp_target_free((void *)fieldbuf[p]);
+        fieldbuf[p] = nullptr;
+      }
+    }
+#endif
     //inline T get(int idx) {
     //  T_access ta;
     //  for (int i=0; i<t_elements; i++) {
