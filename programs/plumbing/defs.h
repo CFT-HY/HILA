@@ -5,6 +5,10 @@
 
 #include <array>
 #include <vector>
+#include <assert.h> 
+
+#define EVENFIRST
+#define layout_SOA
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = double;
@@ -14,6 +18,10 @@ using real_t = double;
 // Have this defined in the program?
 #ifndef NDIM
   #define NDIM 4
+#endif
+
+#ifndef USE_MPI
+  #define VANILLA
 #endif
 
 // Direction and parity
@@ -28,7 +36,8 @@ enum direction { XUP, YUP, YDOWN, XDOWN, NDIRS };
 enum direction { XUP, XDOWN, NDIRS };
 #endif
 
-static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - d); }
+static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
+static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
 
 enum class parity : unsigned { none, even, odd, all, x };
 // use here #define instead of const parity. Makes EVEN a protected symbol
@@ -43,7 +52,10 @@ static inline parity opp_parity(const parity p) {
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
 }
 
-#define foralldir(d) for(int d=XUP; d<NDIM; d++) 
+#define foralldir(d) for(int d=XUP; d<NDIM; d++)
+
+static inline int is_up_dir(const int d) { return d<NDIM; }
+
 
 // location type
 
@@ -79,7 +91,16 @@ inline parity location_parity(const location & a) {
 #ifndef USE_MPI
 #define mynode() 0
 #define numnodes() 1
+inline void finishrun() {
+  exit(1);
+}
 #endif
 
+#define MAX_GATHERS 1000
+
+
+inline void assert_even_odd_parity( parity p ) {
+    assert(p == EVEN || p == ODD || p == ALL);
+}
 
 #endif

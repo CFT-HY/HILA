@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 
+
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
 #include <assert.h>
@@ -17,12 +18,6 @@ struct node_info {
   location min,size;
   unsigned evensites, oddsites;
 };
-
-// #ifndef USE_MPI
-// static inline int mynode(){
-//   return 0;
-// }
-// #endif
 
 
 class lattice_struct {
@@ -43,8 +38,9 @@ private:
     location min, size;                 // node local coordinate ranges
     unsigned nn[NDIRS];                 // nn-node of node down/up to dirs
     bool first_site_even;               // is location min even or odd?
-    
-    void setup(node_info & ni);
+    std::vector<location> site_index_list;
+
+    void setup(node_info & ni, lattice_struct & lattice);
   } this_node;
 
   // information about all nodes
@@ -66,15 +62,34 @@ private:
   } nodes;
 
   struct comm_struct {
-    
+
   };
   
   std::vector<comm_struct> commlist;
+
+  struct comm_node_struct {
+    unsigned index;
+    unsigned sites, evensites, oddsites;
+    unsigned buffer;
+    std::vector<unsigned>  sitelist;
+  };
+
+  struct comminfo_struct {
+    int label;    
+    unsigned * index;
+    std::vector<comm_node_struct> from_node;
+    std::vector<comm_node_struct> to_node;
+  };
   
+  std::vector<comminfo_struct> comminfo;
+
 public:
+
+  unsigned * neighb[NDIRS];
   
   void setup(int siz[NDIM]);
-  void setup_layout( );
+  void setup_layout();
+  void setup_nodes();
   
   #if NDIM == 4
   void setup(int nx, int ny, int nz, int nt);
@@ -87,23 +102,21 @@ public:
   #endif
   
   int size(direction d) { return l_size[d]; }
+  int size(int d) { return l_size[d]; }
   long long volume() { return l_volume; }
+  int node_number() { return this_node.index; }
   
   bool is_on_node(const location & c);
   unsigned node_number(const location & c);
   unsigned site_index(const location & c);
   unsigned site_index(const location & c, const unsigned node);
+  location site_location(unsigned index);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
-  
+  void create_std_gathers();
+
   unsigned remap_node(const unsigned i);
-
-  unsigned loop_begin(const parity p);
-  unsigned loop_end(const parity p);
-
-  const int field_alloc_size(){
-    return this_node.field_alloc_size;
-  }
   
+  #ifdef EVENFIRST
   const int loop_begin( parity P){
     if(P==ODD){
       return this_node.evensites;
@@ -111,7 +124,6 @@ public:
       return 0;
     }
   }
-
   const int loop_end( parity P){
     if(P==EVEN){
       return this_node.evensites;
@@ -119,9 +131,41 @@ public:
       return this_node.sites;
     }
   }
+  #else
+  const int loop_begin( parity P){
+    if(P==EVEN){
+      return this_node.evensites;
+    } else {
+      return 0;
+    }
+  }
+  const int loop_end( parity P){
+    if(P==ODD){
+      return this_node.evensites;
+    } else {
+      return this_node.sites;
+    }
+  }
+  #endif
+
+
+  /* Communication routines. Define here in lattice? */
+  template <typename T>
+  void reduce_node_sum(T value, bool distribute);
+
+  template <typename T>
+  void reduce_node_product(T value, bool distribute);
   
 };
 
+/// global handle to lattice
 extern lattice_struct * lattice;
+
+#ifdef USE_MPI
+#include "comm_mpi.h"
+#else
+#include "comm_vanilla.h"
+#endif
+
 
 #endif

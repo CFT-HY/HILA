@@ -145,8 +145,6 @@ struct cmplx {
     im /= static_cast<T>(a);
     return *this;
   }
-
-  
 };
 
 template <typename T>
@@ -241,5 +239,10 @@ constexpr cmplx<double> operator""_i(unsigned long long a) {
   return cmplx<double>(0.0,static_cast<double>(a));
 }
 
+template <typename T>
+std::ostream& operator<<(std::ostream &strm, const cmplx<T> A) {
+  return strm << "(" << A.re << ", " << A.im << ")";
+}
 
 #endif
+

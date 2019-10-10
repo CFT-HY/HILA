@@ -3,14 +3,14 @@
 // This is the trivial version, so that the order is straight
 // here.
 
-#include "../plumbing/lattice.h"
+#include "../plumbing/globals.h"
 
-void lattice::nodes.create_remap()
+void lattice_struct::allnodes::create_remap()
 {
   output0 << " Node remapping: TRIVIAL (no effort made to reorder)\n";
-  nodes.map_array = nodes.map_inverse = nullptr;
+  map_array = map_inverse = nullptr;
 }
 
-unsigned lattice::nodes.remap(unsigned i) { return i; }
+unsigned lattice_struct::allnodes::remap(unsigned i) { return i; }
 
-unsigned lattice::nodes.inverse_remap(unsigned i) { return i; }
+unsigned lattice_struct::allnodes::inverse_remap(unsigned i) { return i; }

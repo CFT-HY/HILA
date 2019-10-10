@@ -126,6 +126,8 @@ public:
 
   bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool & is_compound);
   
+  bool is_function_call_stmt(Stmt * s);
+
   bool is_loop_extern_var_ref(Expr *E);
   
   parity get_parity_val(const Expr *pExpr);
@@ -139,6 +141,8 @@ public:
   bool handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
+
+  void handle_function_call_stmt(Stmt * s);
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );
@@ -163,8 +167,8 @@ public:
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
 
-  std::string generate_kernel(Stmt *S, bool semi_at_end, srcBuf &sb);
-  std::string generate_in_place(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_kernel(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
+  std::string generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();

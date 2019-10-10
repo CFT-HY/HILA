@@ -6,7 +6,7 @@
 /// the same size, but if that fails then allow different
 /// division to one direction
 
-#include "../plumbing/lattice.h"
+#include "../plumbing/globals.h"
 
 
 /***************************************************************/
@@ -19,7 +19,7 @@ static int prime[NPRIMES] = {2,3,5,7,11,13,17,19};
  * Print info to outf as we proceed 
  */
 
-void lattice::setup_layout( )
+void lattice_struct::setup_layout( )
 {
   int i,msize,dir,nfactors[NPRIMES], nodesiz[NDIM];
 
@@ -27,7 +27,7 @@ void lattice::setup_layout( )
 
   /* Figure out dimensions of hyperrectangle - this version ensures all are same size */
 
-  if (volume % numnodes()) {
+  if (l_volume % numnodes()) {
     output0 << " No hope of laying out the lattice using " << numnodes() << " nodes\n";
     finishrun();
   }
@@ -47,7 +47,7 @@ void lattice::setup_layout( )
   }
   
   for (i=0; i<NDIM; i++) {
-    nodesiz[i] = size[i];
+    nodesiz[i] = size(i);
     nodes.ndir[i] = 1;
   }
   
@@ -93,11 +93,12 @@ void lattice::setup_layout( )
   nodes.number = numnodes();
   foralldir(dir) {
     nodes.divisors[dir].resize(nodes.ndir[dir]+1);
-    // trivial, evenly spaced divisors -- note: last element == size[dir]
+    // trivial, evenly spaced divisors -- note: last element == size(dir)
     for (int i=0; i<=nodes.ndir[dir]; i++) 
       nodes.divisors[dir].at(i) = i*nodesiz[dir];
   }
 
+  #ifdef USE_MPI
   // For MPI, remap the nodes for periodic torus
   // in the desired manner 
   // we have at least 2 options:
@@ -109,15 +110,15 @@ void lattice::setup_layout( )
   if (mynode() == 0) {
     output0 << "\n Sites on node: ";
     foralldir(dir) {
-      if (dir > 0) output0 << " x ";
+      if (dir > 0) { output0 << " x "; }
       output0 << nodesiz[dir];
     }
     output0 << "\n Processor layout: ";
     foralldir(dir) {
-      if (dir > 0) output0 << " x ";
-      output0 << node.ndir[dir];
+      if (dir > 0) { output0 << " x "; }
+      output0 << nodes.ndir[dir];
     }
     output0 << '\n';
   }
-
+  #endif
 }

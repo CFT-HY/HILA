@@ -1,3 +1,4 @@
 *.o
 *.cpt
+settings.json
 build/transformer
