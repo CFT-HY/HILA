@@ -14,8 +14,8 @@
 using real_t = double;
 
 
-#ifdef openacc
-#define random() 0.5
+#if defined(CUDA) || defined(openacc)
+#define random() curand_uniform_double(&state);
 #else
 #define random() mersenne()
 #endif
