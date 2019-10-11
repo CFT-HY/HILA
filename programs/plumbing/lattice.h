@@ -13,11 +13,11 @@
 #include "../plumbing/defs.h"
 #include "../plumbing/memory.h"
 
+using location = std::array<int,NDIM>;
 struct node_info {
   location min,size;
   unsigned evensites, oddsites;
 };
-using location = std::array<int,NDIM>;
 
 
 class lattice_struct {
