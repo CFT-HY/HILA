@@ -12,7 +12,6 @@ const int N=2;
 
 // Include the lattice field definition
 #include "../plumbing/field.h"
-#include "../plumbing/mersenne.h"
 #include "../datatypes/general_matrix.h"
 
 

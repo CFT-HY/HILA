@@ -160,7 +160,6 @@ unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
 location lattice_struct::site_location(unsigned index)
 {
   // make the index lexicographic
-  location l;
 #ifdef EVENFIRST
   return this_node.site_index_list[index];
 #else
@@ -169,8 +168,8 @@ location lattice_struct::site_location(unsigned index)
     l[d] = index % this_node.size[d] + this_node.min[d];
     index /= this_node.size[d];
   }
-#endif
   return l;
+#endif
 }
 
 
@@ -474,19 +473,13 @@ void lattice_struct::create_std_gathers()
             exit(1);
           }
 	      }
-
-	      // ignore return value
-        #ifdef CUDA
-	      (void)parallel_initDevSitelist(s);
-        #endif
-
       }
     }
 
     // GPU: Copy the neighbour array to the device
     /* Copy the neighbour array to the device */
     #ifdef CUDA
-    cudaMemcpy ( void* d_neighb[d], const void* neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
+    cudaMemcpy( d_neighb[d], neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
     #else
     #pragma acc data copyin(neighb[d][0:this_node.sites])
     #endif

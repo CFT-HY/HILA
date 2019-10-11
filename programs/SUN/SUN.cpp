@@ -72,11 +72,8 @@ int main()
   // Define a field
   field<matrix<N,N,cmplx<double>>> U[NDIM];
 
-  seed_mersenne( seed );
+  seed_random(seed);
 
-  /* "Warm up" the rng generator */
-  for( int i=0; i<543210; i++ ) mersenne();
-  
   // Set to 1
   foralldir(d) {
     U[d][ALL] = 1;

@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 #include <assert.h> 
+#include "../plumbing/mersenne.h"
 
 #define EVENFIRST
 #define layout_SOA
@@ -21,7 +22,8 @@ using real_t = double;
 #define loop_callable #pragma acc routine seq
 
 #else
-#define random() mersenne()
+#define seed_random(seed) seed_mersenne(seed)
+#define hila_random() mersenne()
 #define loop_callable
 #endif
 
