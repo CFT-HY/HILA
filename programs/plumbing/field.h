@@ -258,12 +258,14 @@ class field_struct {
     real_t * elementbuf[t_elements];
 
     void allocate_payload(){
+      std::cout << lattice->field_alloc_size() << "\n";
       cudaMalloc(
         (void **)&fieldbuf,
         t_elements*sizeof(real_t) * lattice->field_alloc_size()
       );
+      check_cuda_error("allocate_payload");
       if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
+        std::cout << "Failure in GPU field memory allocation\n";
         exit(1);
       }
       for (int i=0; i<t_elements; i++){
@@ -273,6 +275,7 @@ class field_struct {
 
     void free_payload() {
       cudaFree(fieldbuf);
+      check_cuda_error("free_payload");
       fieldbuf = nullptr;
     }
     #endif

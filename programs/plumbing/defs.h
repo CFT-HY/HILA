@@ -16,7 +16,7 @@ using real_t = double;
 
 
 #ifdef CUDA
-#include "../plumbing/cuda_include.h"
+#include "../plumbing/hila_cuda.h"
 
 #elif openacc
 #define loop_callable #pragma acc routine seq
