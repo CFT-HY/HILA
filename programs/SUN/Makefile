@@ -1,7 +1,7 @@
 
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer 
+TRANSFORMER = ../../build/transformer -DCUDA
 CC = c++ 
 #CC = nvcc -gencode arch=compute_70,code=sm_70 -DCUDA
 
@@ -20,7 +20,7 @@ SUN: Makefile SUN.tr.o monte.o KennedyPendleton.o mersenne_inline.o lattice.o me
 SUN.tr.cpp: Makefile SUN.cpp 
 	$(TRANSFORMER) SUN.cpp -o=SUN.tr.cpp
 
-SUN.tr.cu: Makefile SUN.cpp 
+SUN.tr.cu: Makefile SUN.cpp
 	$(TRANSFORMER) --CUDA SUN.cpp -o=SUN.tr.cu
 
 %.o : %.cpp
