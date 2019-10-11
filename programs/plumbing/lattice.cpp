@@ -291,6 +291,9 @@ void lattice_struct::create_std_gathers()
   
   for (int d=0; d<NDIRS; d++) {
     neighb[d] = (unsigned *)allocate_field_mem(this_node.sites * sizeof(unsigned));
+    #ifdef CUDA
+    cudaMalloc( (void **)&(d_neighb[d]), this_node.sites * sizeof(unsigned) );
+    #endif
   }
   
   comminfo.resize(MAX_GATHERS);
