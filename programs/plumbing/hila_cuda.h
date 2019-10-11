@@ -13,6 +13,9 @@
 
 #define loop_callable __host__ __device__
 
+extern __device__ unsigned * d_neighb[NDIRS];
+void set_neighbour_pointers( unsigned * neighb, int d );
+
 /* Random number generator */
 extern curandState * curandstate;
 __device__ extern curandState * d_curandstate;

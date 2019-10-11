@@ -5,6 +5,8 @@
 curandState * curandstate;
 __device__ curandState * d_curandstate;
 
+__device__ unsigned * d_neighb[NDIRS];
+
 /* Set seed on device */
 __global__ void seed_random_kernel( curandState * state, unsigned long seed )
 {
@@ -20,6 +22,16 @@ void seed_random(unsigned long seed){
   seed_random_kernel<<< 1, N_threads >>>( curandstate, seed );
   check_cuda_error("seed_random kernel");
   seed_mersenne(seed+N_threads);
+}
+
+__global__ void set_neighbour_pointers_kernel( unsigned * neighb, int d )
+{
+  d_neighb[d] = neighb;
+}
+
+void set_neighbour_pointers( unsigned * neighb, int d ){
+  set_neighbour_pointers_kernel<<< 1, 1 >>>( neighb, d );
+  check_cuda_error("set_neighbour_pointers kernel");
 }
 
 /* Generate on device or host */

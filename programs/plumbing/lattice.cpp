@@ -290,10 +290,6 @@ void lattice_struct::create_std_gathers()
   
   for (int d=0; d<NDIRS; d++) {
     neighb[d] = (unsigned *)allocate_field_mem(this_node.sites * sizeof(unsigned));
-    #ifdef CUDA
-    cudaMalloc( (void **)&(d_neighb[d]), this_node.sites * sizeof(unsigned));
-    check_cuda_error("create_std_gathers");
-    #endif
   }
   
   comminfo.resize(MAX_GATHERS);
@@ -480,7 +476,13 @@ void lattice_struct::create_std_gathers()
     // GPU: Copy the neighbour array to the device
     /* Copy the neighbour array to the device */
     #ifdef CUDA
-    cudaMemcpy( d_neighb[d], neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
+    output0 << "Allocating neighbours\n";
+    unsigned * d_n;
+    cudaMalloc( (void **)&(d_n), this_node.sites * sizeof(unsigned));
+    check_cuda_error("create_std_gathers");
+    set_neighbour_pointers(d_n, d);
+    output0 << "Copying neighbour array\n";
+    cudaMemcpy( d_n, neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
     check_cuda_error("create_std_gathers copy");
     #else
     #pragma acc data copyin(neighb[d][0:this_node.sites])

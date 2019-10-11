@@ -156,9 +156,6 @@ public:
   template <typename T>
   void reduce_node_product(T value, bool distribute);
 
-  #ifdef CUDA
-  unsigned * d_neighb[NDIRS];
-  #endif
   
 };
 
