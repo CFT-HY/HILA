@@ -282,10 +282,11 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   //   }
   if( target.CUDA ){
     kernel << "__global__ void " << kernel_name << "(";
-    kernel << "int loop_begin, int loop_end, ";
-    call   << kernel_name << "<<< 128, 128 >>>(";
+    kernel << "int loop_begin, int loop_end, unsigned * neighb[], ";
+    call << kernel_name << "<<< 128, 128 >>>(";
     call << "lattice->loop_begin(" << parity_in_this_loop << "), ";
     call << "lattice->loop_end(" << parity_in_this_loop << "), ";
+    call << "lattice->d_neighb, ";
   } else {
     kernel << "void " << kernel_name << "(";
     call   << kernel_name << "(";
@@ -370,7 +371,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       if(l.is_read){
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-             << "->get(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
+             << "->get(" << "neighb[" << get_stmt_str(d.e) << "][" 
              << looping_var + "]" << ");\n";
       } else {
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
