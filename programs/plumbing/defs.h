@@ -15,8 +15,7 @@ using real_t = double;
 
 
 #if defined(CUDA) || defined(openacc)
-#include <cuda_runtime.h>
-#define random() curand_uniform_double(&state);
+#include "../plumbing/cuda_include.h"
 #else
 #define random() mersenne()
 #endif
