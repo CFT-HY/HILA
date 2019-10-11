@@ -491,4 +491,11 @@ void lattice_struct::create_std_gathers()
   /* Finally, set the site to the final offset (better be right!) */
   this_node.field_alloc_size = c_offset;
 
+
+  #ifdef CUDA
+  /* Copy the neighbour array to the device */
+  for (int d=0; d<NDIRS; d++) {
+    cudaMemcpy ( void* d_neighb[d], const void* neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
+  }
+  #endif
 }
