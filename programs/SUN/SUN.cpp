@@ -45,7 +45,7 @@ calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
   return staple_sum;
 }
 
-
+ 
 template<typename T>
 void update(
   T &U, const T &staple,
@@ -54,7 +54,6 @@ void update(
   monte( U, staple, beta );
 }
 
-template<>
 void update(
   matrix<2,2,cmplx<double>> &U,
   const matrix<2,2,cmplx<double>> &staple,

@@ -221,13 +221,13 @@ struct field_storage_type {
 
 /// The following struct holds the data + information about the field
 /// TODO: field-specific boundary conditions?
-  template <typename T>
-  class field_struct {
+template <typename T>
+class field_struct {
   private:
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    real_t * fieldbuf[t_elements];
   public:
+    real_t * fieldbuf;
     lattice_struct * lattice;
     unsigned is_fetched[NDIRS];
 
@@ -238,42 +238,39 @@ struct field_storage_type {
       real_t  tarr[t_elements];
     };
 
-
-#ifndef GPUOMP
+    #ifndef CUDA
     void allocate_payload(){
-      for(int p=0; p<t_elements; p++){
-        fieldbuf[p] = (real_t *) allocate_field_mem( sizeof(real_t) * lattice->field_alloc_size() );
-        if (fieldbuf[p] == nullptr) {
-          std::cout << "Failure in field memory allocation\n";
-          exit(1);
-        }
+      fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
+      #pragma acc enter data create(fieldbuf)
+      if (fieldbuf == nullptr) {
+        std::cout << "Failure in field memory allocation\n";
+        exit(1);
       }
     }
 
     void free_payload() {
-      for(int p=0; p<t_elements; p++) {
-        free_field_mem((void *)fieldbuf[p]);
-        fieldbuf[p] = nullptr;
-      }
+      #pragma acc exit data delete(fieldbuf)
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
     }
-#else
+    #else
     void allocate_payload(){
-      for(int p=0; p<t_elements; p++){
-        fieldbuf[p] = (real_t *) omp_target_alloc( sizeof(real_t) * lattice->field_alloc_size(), 0 );
-        if (fieldbuf[p] == nullptr) {
-          std::cout << "Failure in field memory allocation\n";
-          exit(1);
-        }
+      cudaMalloc(
+        (void **)&fieldbuf,
+        t_elements*sizeof(real_t) * lattice->field_alloc_size()
+      );
+      if (fieldbuf == nullptr) {
+        std::cout << "Failure in field memory allocation\n";
+        exit(1);
       }
     }
 
     void free_payload() {
-      for(int p=0; p<t_elements; p++) {
-        omp_target_free((void *)fieldbuf[p]);
-        fieldbuf[p] = nullptr;
-      }
+      cudaFree(fieldbuf);
+      fieldbuf = nullptr;
     }
-#endif
+    #endif
+
     //inline T get(int idx) {
     //  T_access ta;
     //  for (int i=0; i<t_elements; i++) {
@@ -295,7 +292,7 @@ struct field_storage_type {
       T value;
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
-         value_f[i] = fieldbuf[i][idx];
+         value_f[i] = fieldbuf[i*lattice->field_alloc_size() + idx];
       }
       return value; 
     }
@@ -303,7 +300,7 @@ struct field_storage_type {
     inline void set(T value, const int idx) {
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
-        fieldbuf[i][idx] = value_f[i];
+        fieldbuf[i*lattice->field_alloc_size() + idx] = value_f[i];
       }
     }
 

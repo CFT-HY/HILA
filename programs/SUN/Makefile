@@ -1,40 +1,36 @@
 
 OPTS = -DNDIM=4
 
-#TRANSFORMER = ../../build/transformer --GPU-OMP
-TRANSFORMER = ../../build/transformer --vanilla-kernel
-CC = clang++-8
-
-#CUDAFLAGS = -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -lcudart -L/usr/local/cuda/lib64
-CUDAFLAGS = 
-
-CFLAGS = -O3  $(OPTS) $(CUDAFLAGS)
-CXXFLAGS = -O3 -x c++  $(OPTS) $(CUDAFLAGS)
-LDFLAGS = $(CUDAFLAGS)
+TRANSFORMER = ../../build/transformer -DCUDA
+CC = c++ 
+#CC = nvcc -gencode arch=compute_70,code=sm_70 -DCUDA
 
 
+#CUDAFLAGS = 
 
-SUN: Makefile SUN.o monte.o KennedyPendleton.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
-	$(CC) $(LDFLAGS) -o SUN SUN.o monte.o KennedyPendleton.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o 
-
-SUN.cpt: Makefile SUN.cpp
-	$(TRANSFORMER) SUN.cpp
-
-monte.cpt: Makefile monte.cpp
-	$(TRANSFORMER) monte.cpp
+CFLAGS = -O3  $(OPTS) 
+CXXFLAGS = -O3   $(OPTS) 
+LDFLAGS = 
 
 
-mersenne_inline.o: mersenne_inline.c
-	gcc -c mersenne_inline.c
 
-%.o : %.cpt
+SUN: Makefile SUN.tr.o monte.o KennedyPendleton.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
+	$(CC) $(LDFLAGS) -o SUN SUN.tr.o monte.o KennedyPendleton.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o 
+
+SUN.tr.cpp: Makefile SUN.cpp 
+	$(TRANSFORMER) SUN.cpp -o=SUN.tr.cpp
+
+SUN.tr.cu: Makefile SUN.cpp
+	$(TRANSFORMER) --CUDA SUN.cpp -o=SUN.tr.cu
+
+%.o : %.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : ../plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c
-	$(CC) $(CFLAGS) $< -c
+	$(CC)$(CFLAGS) $< -c
 
 clean:
 	rm -rf *.cpt *.o

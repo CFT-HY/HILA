@@ -32,7 +32,7 @@ bool write_output_file( const std::string & name, const std::string & buf ) ;
 struct codetype {
   bool kernelize;
   bool CUDA;
-  bool GPUOMP;
+  bool openacc;
 };
 
 enum class parity { none, even, odd, all, x };

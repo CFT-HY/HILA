@@ -14,7 +14,9 @@
 
 #define looplim 200
 
+
 //this is might be too much to have in a single kernel
+#pragma acc routine seq
 void KennedyPendleton(
   matrix<2,2,cmplx<double>> &U,
   matrix<2,2,cmplx<double>> &staple
@@ -37,12 +39,12 @@ void KennedyPendleton(
 
   nloops = 0;
   do {
-    r1 = log(1.0-mersenne());
-    r2 = log(1.0-mersenne());
-    r3 = cos(pi2*mersenne());
+    r1 = log(1.0-random());
+    r2 = log(1.0-random());
+    r3 = cos(pi2*random());
     r3 *= r3;
     e  = 1.0 + (r1+r2*r3)*b;
-    r3 = mersenne();
+    r3 = random();
     f  = e - 2.0*r3*r3 + 1.0;
   } while (nloops++ < looplim && (isnan(e) || f <= 0.0));
 
@@ -64,10 +66,10 @@ void KennedyPendleton(
     //fprintf(outf," ---> neg. K-P sqrt, val %g\n",rd);
     rd = 0.0;
   }
-  r3    = 2.0*mersenne() - 1.0;
+  r3    = 2.0*random() - 1.0;
   a.c[0][0].im = sqrt(rd)*r3;
   a.c[1][1].im =-sqrt(rd)*r3;
-  theta = pi2*mersenne();
+  theta = pi2*random();
   rd    = sqrt(rd*(1.0 - r3*r3));
   a.c[0][1].re = rd*cos(theta);
   a.c[1][0].re =-rd*cos(theta);

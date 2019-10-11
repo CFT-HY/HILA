@@ -202,8 +202,17 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
   code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
 
-  if( target.GPUOMP ) {
-    code << "#pragma omp target distribute parallel for\n";
+  if( target.openacc ) {
+    code << "#pragma acc parallel loop";
+    // Check reduction variables
+    for (var_info & v : var_info_list) { 
+      if (v.reduction_type == reduction::SUM) {
+        code << " reduction(+:" << v.name << ")";
+      } else if (v.reduction_type == reduction::PRODUCT) {
+        code << " reduction(*:" << v.name << ")";
+      }
+    }
+    code << "\n";
   }
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";
@@ -261,7 +270,6 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   
   std::stringstream kernel,call;
 
-  call   << kernel_name << "(";
   kernel << "//----------\n";
   // I don't think kernels need to be templates
   //   if (global.in_func_template) {
@@ -272,8 +280,18 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   //     }
   //     kernel << ">\n";
   //   }
-  kernel << "void " << kernel_name << "(";
-    
+  if( target.CUDA ){
+    kernel << "__global__ void " << kernel_name << "(";
+    kernel << "int loop_begin, int loop_end, unsigned * neighb[], ";
+    call << kernel_name << "<<< 128, 128 >>>(";
+    call << "lattice->loop_begin(" << parity_in_this_loop << "), ";
+    call << "lattice->loop_end(" << parity_in_this_loop << "), ";
+    call << "lattice->d_neighb, ";
+  } else {
+    kernel << "void " << kernel_name << "(";
+    call   << kernel_name << "(";
+  }
+
   if (loop_parity.value == parity::none) {
     call   << parity_name << ", ";
     kernel << "const parity " << parity_name << ", ";
@@ -333,12 +351,18 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   // finally, change the references to variables in the body
   replace_field_refs(loopBuf);
 
-  // Generate the loop
-  kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
-  kernel << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
+  if( target.CUDA ){
+    kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
+           << " + loop_begin; \n";
+    kernel << "if(Index < loop_end) { \n";
+  } else {
+    // Generate the loop
+    kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << "); \n";
+    kernel << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << "); \n";
 
-  kernel << "for(int " << looping_var <<" = loop_begin; " 
-         << looping_var << " < loop_end; " << looping_var << "++) {\n";
+    kernel << "for(int " << looping_var <<" = loop_begin; " 
+           << looping_var << " < loop_end; " << looping_var << "++) {\n";
+  }
 
   // Call getters
   for (field_info & l : field_info_list){
@@ -347,17 +371,17 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       if(l.is_read){
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-             << "->get(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
+             << "->get(" << "neighb[" << get_stmt_str(d.e) << "][" 
              << looping_var + "]" << ");\n";
       } else {
-        kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";";
+        kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
       }
     }
     if(l.is_read) {
       kernel << type_name << l.loop_ref_name << " = " << l.new_name 
              << "->get(" << looping_var << ");\n";
     } else {
-      kernel << type_name << l.loop_ref_name << ";";
+      kernel << type_name << l.loop_ref_name << ";\n";
     }
   }
 
