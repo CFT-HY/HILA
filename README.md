@@ -106,5 +106,22 @@ forsites(ALL){
     }
 }
 ~~~
+## Testing
+
+In the `programs/test_cases` folder you can find a collection of simple test programs. To test whether the translations to cpu code work, type:
+
+~~~ bash
+make test_baseline
+~~~
+This calls transformer without any parameters on the test programs, and outputs the exit status of each excecutable produced from them. To test whether the GPU translations work, type:
+
+~~~ bash
+make test_gpu
+~~~
+Or test all types of translations one after the other with:
+~~~
+make test
+~~~
+
 
 
