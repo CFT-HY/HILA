@@ -484,7 +484,12 @@ void lattice_struct::create_std_gathers()
     }
 
     // GPU: Copy the neighbour array to the device
+    /* Copy the neighbour array to the device */
+    #ifdef CUDA
+    cudaMemcpy ( void* d_neighb[d], const void* neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
+    #else
     #pragma acc data copyin(neighb[d][0:this_node.sites])
+    #endif
 
   } /* directions */
 
@@ -492,10 +497,4 @@ void lattice_struct::create_std_gathers()
   this_node.field_alloc_size = c_offset;
 
 
-  #ifdef CUDA
-  /* Copy the neighbour array to the device */
-  for (int d=0; d<NDIRS; d++) {
-    cudaMemcpy ( void* d_neighb[d], const void* neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
-  }
-  #endif
 }
