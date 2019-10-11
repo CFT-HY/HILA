@@ -1512,6 +1512,9 @@ bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
     state::dump_ast_next = false;
   }
 
+  bool loop_callable = true;
+  llvm::errs() << "Method " << method->getNameInfo().getName() << "\n";
+
 
   if (method->isThisDeclarationADefinition() && method->hasBody()) {
     // FunctionDecl *f = method->getTemplatedDecl();
@@ -1640,7 +1643,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     
     global.in_class_template = true;
     // Should go through the template in order to find function templates...
-    // TraverseDecl(D->getTemplatedDecl());
+    TraverseDecl(D->getTemplatedDecl());
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
