@@ -23,7 +23,7 @@ struct cmplx {
   // constructor from single scalar value 
   template <typename scalar_t,
             std::enable_if_t<std::is_arithmetic<scalar_t>::value, int> = 0 >
-  constexpr cmplx<T>(const scalar_t val): re(static_cast<T>(val)), im(static_cast<T>(0)) {}
+  loop_callable constexpr cmplx<T>(const scalar_t val): re(static_cast<T>(val)), im(static_cast<T>(0)) {}
   
   // constructor c(a,b)
 //   template <typename A, typename B,
@@ -38,7 +38,7 @@ struct cmplx {
   template <typename A, typename B,
             std::enable_if_t<std::is_arithmetic<A>::value, int> = 0,
             std::enable_if_t<std::is_arithmetic<B>::value, int> = 0 >
-  constexpr cmplx<T>(const A & a, const B & b): re(static_cast<T>(a)), im(static_cast<T>(b)) {}
+  loop_callable constexpr cmplx<T>(const A & a, const B & b): re(static_cast<T>(a)), im(static_cast<T>(b)) {}
 
   
   ~cmplx<T>() =default;
