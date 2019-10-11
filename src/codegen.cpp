@@ -300,11 +300,10 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   //   }
   if( target.CUDA ){
     kernel << "__global__ void " << kernel_name << "(";
-    kernel << "int loop_begin, int loop_end, unsigned * neighb[], ";
+    kernel << "int loop_begin, int loop_end, ";
     call << kernel_name << "<<< 128, 128 >>>(";
     call << "lattice->loop_begin(" << parity_in_this_loop << "), ";
     call << "lattice->loop_end(" << parity_in_this_loop << "), ";
-    call << "lattice->d_neighb, ";
   } else {
     kernel << "void " << kernel_name << "(";
     call   << kernel_name << "(";
