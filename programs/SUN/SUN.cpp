@@ -20,13 +20,15 @@ int VOLUME = NX*NY*NZ*NT;
 
 
 
-field<matrix<N,N,cmplx<double>>>
-calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
+void calc_staples(
+  field<matrix<N,N,cmplx<double>>> U[NDIM], 
+  field<matrix<N,N,cmplx<double>>> &staple_sum,
+  direction dir)
 {
   /* Calculate the sum of staples connected to links in direction
    * dir 
    */
-  field<matrix<N,N,cmplx<double>>> down_staple, staple_sum;
+  static field<matrix<N,N,cmplx<double>>> down_staple;
   staple_sum[ALL] = 0;
   foralldir(d2){
     direction dir2 = (direction)d2;
@@ -42,7 +44,6 @@ calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
     // Add the two staples together
     staple_sum[ALL] += down_staple[X - dir2];
   }
-  return staple_sum;
 }
 
  
@@ -67,10 +68,12 @@ void update(
 
 int main()
 {
+
   // Basic setup
   lattice->setup( NX, NY, NZ, NT );
   // Define a field
   field<matrix<N,N,cmplx<double>>> U[NDIM];
+  field<matrix<N,N,cmplx<double>>> staple;
 
   seed_random(seed);
 
@@ -88,7 +91,7 @@ int main()
         // update direction dir
         direction dir = (direction)d;
         // First we need the staple sum
-        field<matrix<N,N,cmplx<double>>> staple = calc_staples(U, dir);
+        calc_staples(U, staple, dir);
 
         // Now update, first even then odd
         parity p = EVEN;
