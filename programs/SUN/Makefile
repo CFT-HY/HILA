@@ -8,9 +8,9 @@ LD = nvcc -gencode arch=compute_70,code=sm_70
 
 #CUDAFLAGS = 
 
-CFLAGS = -O3  $(OPTS) 
-CXXFLAGS = -O3   $(OPTS) 
-LDFLAGS = 
+CFLAGS = -g -G  $(OPTS) 
+CXXFLAGS = -g -G   $(OPTS) 
+LDFLAGS = -g -G
 
 
 
