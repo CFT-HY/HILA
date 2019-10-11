@@ -7,7 +7,11 @@
 #include <cuda_runtime.h>
 #define random() curand_uniform_double(&state);
 
+#define loop_callable __host__ __device__
+
 #else
+
+#define loop_callable 
 
 // define cuda functions in order to avoid compilation errors
 // in transformer

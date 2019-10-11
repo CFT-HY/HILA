@@ -13,7 +13,7 @@
 
 #include "SUN.h"
 
-#pragma acc routine seq
+loop_callable 
 void mult_su2_mat_vec_elem_n(
   matrix<2,2,cmplx<double>> &u,
   cmplx<double> &x0,
@@ -38,7 +38,7 @@ void mult_su2_mat_vec_elem_n(
 } /* mult_su2_mat_vec_elem_n */
 
 
-#pragma acc routine seq
+loop_callable 
 void left_su2_hit_n(
   matrix<2,2,cmplx<double>> &u,
   int p,
@@ -56,7 +56,7 @@ void left_su2_hit_n(
 } /* left_su2_hit_n */
 
 
-#pragma acc routine seq
+loop_callable 
 double monte(
   matrix<N,N,cmplx<double>> &U, 
   matrix<N,N,cmplx<double>> &staple,

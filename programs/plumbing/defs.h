@@ -14,10 +14,15 @@
 using real_t = double;
 
 
-#if defined(CUDA) || defined(openacc)
+#ifdef CUDA
 #include "../plumbing/cuda_include.h"
+
+#elif openacc
+#define loop_callable #pragma acc routine seq
+
 #else
 #define random() mersenne()
+#define loop_callable
 #endif
 
 

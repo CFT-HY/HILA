@@ -271,23 +271,7 @@ class field_struct {
     }
     #endif
 
-    //inline T get(int idx) {
-    //  T_access ta;
-    //  for (int i=0; i<t_elements; i++) {
-    //    ta.tarr[i] = (real_t) fieldbuf[i][idx];
-    //  }
-    //  T value = ta.tu;
-    //  return value;
-    //}
-
-    //void set(T value, int idx) {
-    //  T_access ta;
-    //  ta.tu = value; 
-    //  for (int i=0; i<t_elements; i++) {
-    //    fieldbuf[i][idx] = (real_t) ta.tarr[i];
-    //  }
-    //}
-
+    loop_callable
     inline T get(const int idx) const {
       T value;
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
@@ -297,6 +281,7 @@ class field_struct {
       return value; 
     }
     
+    loop_callable
     inline void set(T value, const int idx) {
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {

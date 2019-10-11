@@ -47,13 +47,14 @@ calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
 
  
 template<typename T>
-void update(
+loop_callable void update(
   T &U, const T &staple,
   double beta
 ){
   monte( U, staple, beta );
 }
 
+loop_callable 
 void update(
   matrix<2,2,cmplx<double>> &U,
   const matrix<2,2,cmplx<double>> &staple,

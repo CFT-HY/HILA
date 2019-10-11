@@ -24,14 +24,12 @@ extern long seed;
 extern int NX, NY, NZ, NT;
 extern int VOLUME;
 
-#pragma acc routine seq
-double monte(
+loop_callable double monte(
   matrix<N,N,cmplx<double>> &U, 
   matrix<N,N,cmplx<double>> &staple,
   double beta);
 
-#pragma acc routine seq
-void KennedyPendleton(
+loop_callable void KennedyPendleton(
   matrix<2,2,cmplx<double>> &U,
   matrix<2,2,cmplx<double>> &staple
 );
