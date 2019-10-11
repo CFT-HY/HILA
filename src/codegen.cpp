@@ -307,11 +307,10 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
       call   << ", ";
     }
     
-    // This does not recognise setting in functions
     if (!l.is_written) kernel << "const ";
     // TODO: type to field_data
-    kernel << "field_struct" << l.type_template << " * " << l.new_name;
-    call << l.new_name + ".fs";
+    kernel << "field_struct" << l.type_template << " " << l.new_name;
+    call << "*" << l.new_name + ".fs";
   }
 
   i=0;
@@ -357,8 +356,8 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     kernel << "if(Index < loop_end) { \n";
   } else {
     // Generate the loop
-    kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << "); \n";
-    kernel << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << "); \n";
+    kernel << "const int loop_begin = lattice.loop_begin(" << parity_in_this_loop << "); \n";
+    kernel << "const int loop_end   = lattice.loop_end(" << parity_in_this_loop << "); \n";
 
     kernel << "for(int " << looping_var <<" = loop_begin; " 
            << looping_var << " < loop_end; " << looping_var << "++) {\n";
@@ -371,7 +370,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       if(l.is_read){
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-             << "->get(" << "neighb[" << get_stmt_str(d.e) << "][" 
+             << ".get(" << "neighb[" << get_stmt_str(d.e) << "][" 
              << looping_var + "]" << ");\n";
       } else {
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
@@ -379,7 +378,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     }
     if(l.is_read) {
       kernel << type_name << l.loop_ref_name << " = " << l.new_name 
-             << "->get(" << looping_var << ");\n";
+             << ".get(" << looping_var << ");\n";
     } else {
       kernel << type_name << l.loop_ref_name << ";\n";
     }
@@ -393,7 +392,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   for (field_info & l : field_info_list) if(l.is_written){
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-    kernel << l.new_name << "->set(" << l.loop_ref_name << ", " 
+    kernel << l.new_name << ".set(" << l.loop_ref_name << ", " 
            << looping_var << ");\n";
   }
 
