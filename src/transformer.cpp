@@ -42,6 +42,7 @@ namespace state {
   bool dump_ast_next = false;
   bool compile_errors_occurred = false;
   bool check_loop = false;
+  bool no_device_code = false;
 };
 
 static llvm::cl::OptionCategory TransformerCat(program_name);
@@ -1072,8 +1073,11 @@ bool MyASTVisitor::control_command(VarDecl *var) {
   std::string n = var->getNameAsString();
   if (n.find("_transformer_ctl_",0) == std::string::npos) return false;
   
-  if (n == "_transformer_ctl_dump_ast") state::dump_ast_next = true;
-  else {
+  if (n == "_transformer_ctl_dump_ast") {
+    state::dump_ast_next = true;
+  } else if(n == "_transformer_ctl_no_device") {
+    state::no_device_code = true;
+  } else {
     reportDiag(DiagnosticsEngine::Level::Warning,
                var->getSourceRange().getBegin(),
                "Unknown command for transformer_ctl(), ignoring");
@@ -1357,12 +1361,14 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     SourceLocation ST = f->getSourceRange().getBegin();
     global.location.function = ST;
 
-    if(target.CUDA && loop_callable){
-      // Add CUDA directive to allow calling from loops
-      llvm::errs() << "Adding device directive\n";
-      writeBuf->insert(ST,"__device__ __host__ ",true,true);
-      state::loop_found = true; // Mark this file changed
-    }
+    //if(target.CUDA && !state::no_device_code && loop_callable){
+    //  // Add CUDA directive to allow calling from loops
+    //  std::string n = DeclName.getAsString();
+    //  if (n.find("_host_",0) == std::string::npos)
+    //    writeBuf->insert(ST,"__device__ __host__ ",true,true);
+    //  state::loop_found = true; // Mark this file changed
+    //  state::no_device_code = false;
+    //}
 
     if (cmdline::funcinfo) {
       // Add comment before
