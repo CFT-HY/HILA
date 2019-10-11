@@ -36,8 +36,8 @@ int main(){
     matrices[EVEN] = a; //90 degree rotations
     matrices[ODD] = a.conjugate(); //-90 degree rotations
 
-    matrices[EVEN]*=matrices[X + XUP]; //should turn to identity 
-    matrices[ODD]*=matrices[X].conjugate(); //should also give identity
+    matrices[EVEN]*=matrices[X + XUP]; //left & right rotations cancel out 
+    matrices[ODD]*=matrices[X].conjugate();
     
     onsites(ALL){
         sum += (int) matrices[X].trace(); //reduction operation
