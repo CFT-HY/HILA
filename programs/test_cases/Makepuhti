@@ -1,7 +1,6 @@
 OPTS = -DNDIM=2 
 
-TRANSFORMER = ../../build/transformer
-CC = clang++-8
+CC = gcc
 
 CFLAGS = -O3 $(OPTS)
 CXXFLAGS = -O3 -x c++ $(OPTS)
@@ -9,13 +8,10 @@ CXXFLAGS = -O3 -x c++ $(OPTS)
 #add test excecutables as dependents to test and pass them to test.sh
 
 test: Makefile conjReduce
-	./test.sh conjReduce
+	./testPuhti.sh conjReduce
 
 conjReduce: Makefile conjReduce.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
 	$(CC) -o conjReduce conjReduce.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o 
-
-conjReduce.cpt: Makefile conjReduce.cpp
-	../../build/transformer conjReduce.cpp
 
 %.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c
@@ -27,8 +23,8 @@ conjReduce.cpt: Makefile conjReduce.cpp
 	$(CC) $(CFLAGS) $< -c
 
 clean:
-	rm -rf conjReduce.cpt
+	rm -rf conjReduce
 
 cleanall:
-	rm -rf conjReduce.cpt conjReduce 
+	rm -rf conjReduce 
 	rm -rf *.o
