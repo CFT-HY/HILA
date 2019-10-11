@@ -15,19 +15,6 @@
 using real_t = double;
 
 
-#ifdef CUDA
-#include "../plumbing/hila_cuda.h"
-
-#elif openacc
-#define loop_callable #pragma acc routine seq
-
-#else
-#define seed_random(seed) seed_mersenne(seed)
-#define hila_random() mersenne()
-#define loop_callable
-#endif
-
-
 // move these somewhere - use consts?
 // Have this defined in the program?
 #ifndef NDIM
@@ -116,5 +103,21 @@ inline void finishrun() {
 inline void assert_even_odd_parity( parity p ) {
     assert(p == EVEN || p == ODD || p == ALL);
 }
+
+
+
+#ifdef CUDA
+#include "../plumbing/hila_cuda.h"
+
+#elif openacc
+#define loop_callable #pragma acc routine seq
+
+#else
+#define seed_random(seed) seed_mersenne(seed)
+#define hila_random() mersenne()
+#define loop_callable
+#endif
+
+
 
 #endif
