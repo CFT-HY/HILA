@@ -21,7 +21,7 @@ __global__ void seed_random_kernel( curandState * state, unsigned long seed );
 void seed_random(unsigned long seed);
 loop_callable double hila_random();
 
-static void check_cuda_error(std::string message){
+static inline void check_cuda_error(std::string message){
   cudaError code = cudaGetLastError();
   if( cudaSuccess != code ){
     std::cout << message << ": "

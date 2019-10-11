@@ -161,6 +161,18 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     if (l.is_written) code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
   }
 
+  if(target.CUDA){
+    // First check for reductions
+    for (var_info & v : var_info_list) {
+      if (v.reduction_type != reduction::NONE) {
+        code << v.type << " *r_" << v.name << "; ";
+        code << "cudaMalloc( (void **)& r_" << v.name << ","
+             << "sizeof(" << v.type << ") * lattice->field_alloc_size() );\n";
+        code << "check_cuda_error(\"allocate_reduction\");";
+      }
+    }
+  }
+
   // Here generate kernel, or produce the loop in place
   if (target.kernelize) {
     code << generate_kernel(S,target,semi_at_end,loopBuf);
@@ -170,7 +182,13 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   }
   
   // Check reduction variables
-  for (var_info & v : var_info_list) { 
+  for (var_info & v : var_info_list) {
+    if(target.CUDA){
+      if (v.reduction_type != reduction::NONE) {
+        code << "cudaFree( r_" << v.name << ");\n";
+        code << "check_cuda_error(\"free_reduction\");\n";
+      }
+    }
     if (v.reduction_type == reduction::SUM) {
       code << "lattice->reduce_node_sum(" << v.name << ", true);\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
@@ -318,12 +336,15 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   for ( var_info & vi : var_info_list ) {
     if (!vi.is_loop_local) {
       std::string varname = "sv__" + std::to_string(i) + "_";
-      kernel << ", ";
-      if(vi.is_assigned) {
-        kernel << vi.type << " & " << varname;
+      if (vi.reduction_type != reduction::NONE) {
+        kernel << ", " << vi.type << " * " << varname;
+        call << ", r_" << vi.name;
+        varname += "[Index]";
+      } else if(vi.is_assigned) {
+        kernel << ", " << vi.type << " & " << varname;
         call << ", " << vi.name;
       } else {
-        kernel << "const " << vi.type << " " << varname;
+        kernel << ", const " << vi.type << " " << varname;
         call << ", " << vi.name;
       }
       
@@ -354,6 +375,18 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
            << " + loop_begin; \n";
     kernel << "if(Index < loop_end) { \n";
+    /* Initialize reductions */
+    int i=0;
+    for ( var_info & vi : var_info_list ) {
+      if (!vi.is_loop_local) {
+        if (vi.reduction_type == reduction::SUM) {
+          kernel << "sv__" + std::to_string(i) + "_[Index]" << "=0;\n";
+        } if (vi.reduction_type == reduction::PRODUCT) {
+          kernel << "sv__" + std::to_string(i) + "_[Index]" << "=1;\n";
+        }
+        i++;
+      }
+    }
   } else {
     // Generate the loop
     kernel << "const int loop_begin = lattice.loop_begin(" << parity_in_this_loop << "); \n";
@@ -398,6 +431,10 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
 
   kernel << "}\n}\n//----------\n";
   call << ");\n";
+
+  if(target.CUDA){
+    call << "check_cuda_error(\"" << kernel_name << "\");\n";
+  }
 
   // Finally, emit the kernel
   // TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
