@@ -6,11 +6,11 @@ TRANSFORMER = ../../build/transformer -DCUDA  --CUDA
 CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -DCUDA
 LD = nvcc -gencode arch=compute_70,code=sm_70
 
-#CUDAFLAGS = 
+COMMONFLAGS = -O3 -fmad=false
 
-CFLAGS = -g -G  $(OPTS) 
-CXXFLAGS = -g -G   $(OPTS) 
-LDFLAGS = -g -G
+CFLAGS = $(COMMONFLAGS) $(OPTS) 
+CXXFLAGS = $(COMMONFLAGS) $(OPTS) 
+LDFLAGS = $(COMMONFLAGS) 
 
 
 
