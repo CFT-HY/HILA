@@ -1,16 +1,16 @@
 
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer -DCUDA  --CUDA
-#CC = c++ 
-CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -DCUDA
-LD = nvcc -gencode arch=compute_70,code=sm_70
+TRANSFORMER = ../../build/transformer 
+CC = g++ 
+LD = g++
 
-COMMONFLAGS = -O3 -fmad=false
+#TRANSFORMER = ../../build/transformer -DCUDA  --CUDA
+#CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
+#LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
-CFLAGS = $(COMMONFLAGS) $(OPTS) 
-CXXFLAGS = $(COMMONFLAGS) $(OPTS) 
-LDFLAGS = $(COMMONFLAGS) 
+CXXFLAGS = -O3  $(OPTS) 
+LDFLAGS = 
 
 
 
@@ -25,9 +25,6 @@ SUN.tr.cpp: Makefile SUN.cpp
 
 %.o : ../plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
-
-%.o : %.c
-	$(CC)$(CFLAGS) $< -c
 
 clean:
 	rm -rf *.cpt *.o
