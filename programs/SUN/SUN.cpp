@@ -14,7 +14,7 @@ double beta = 8;
 int n_measurements=1;
 int n_updates_per_measurement=10;
 long seed = 123456;
-int NX=32, NY=32, NZ=32, NT=32;
+int NX=16, NY=16, NZ=16, NT=16;
 
 
 
