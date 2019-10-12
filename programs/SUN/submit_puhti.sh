@@ -8,6 +8,6 @@
 
 module load pgi
 
-time srun SUN > output_GPU
+time srun SUN_GPU > output_GPU
 time srun SUN_CPU > output_CPU
 
