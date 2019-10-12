@@ -476,12 +476,10 @@ void lattice_struct::create_std_gathers()
     // GPU: Copy the neighbour array to the device
     /* Copy the neighbour array to the device */
     #ifdef CUDA
-    output0 << "Allocating neighbours\n";
     unsigned * d_n;
     cudaMalloc( (void **)&(d_n), this_node.sites * sizeof(unsigned));
     check_cuda_error("create_std_gathers");
     set_neighbour_pointers(d_n, d);
-    output0 << "Copying neighbour array\n";
     cudaMemcpy( d_n, neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
     check_cuda_error("create_std_gathers copy");
     #else

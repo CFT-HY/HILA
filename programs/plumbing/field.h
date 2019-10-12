@@ -258,7 +258,6 @@ class field_struct {
     real_t * elementbuf[t_elements];
 
     void allocate_payload(){
-      std::cout << lattice->field_alloc_size() << "\n";
       cudaMalloc(
         (void **)&fieldbuf,
         t_elements*sizeof(real_t) * lattice->field_alloc_size()

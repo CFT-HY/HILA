@@ -24,6 +24,16 @@ void seed_random(unsigned long seed){
   seed_mersenne(seed+N_threads);
 }
 
+/* Generate random numbers on device or host */
+loop_callable double hila_random(){
+  #ifdef __CUDA_ARCH__
+  return curand_uniform( &d_curandstate[threadIdx.x] );
+  #else
+  return mersenne();
+  #endif
+}
+
+/* Copy neighbour pointers to device */
 __global__ void set_neighbour_pointers_kernel( unsigned * neighb, int d )
 {
   d_neighb[d] = neighb;
@@ -34,14 +44,8 @@ void set_neighbour_pointers( unsigned * neighb, int d ){
   check_cuda_error("set_neighbour_pointers kernel");
 }
 
-/* Generate on device or host */
-loop_callable double hila_random(){
-  #ifdef __CUDA_ARCH__
-  return curand_uniform( &d_curandstate[threadIdx.x] );
-  #else
-  return mersenne();
-  #endif
-}
+
+
 
 
 
