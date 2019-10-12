@@ -167,8 +167,8 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
       if (v.reduction_type != reduction::NONE) {
         code << v.type << " *r_" << v.name << "; ";
         code << "cudaMalloc( (void **)& r_" << v.name << ","
-             << "sizeof(" << v.type << ") * lattice->field_alloc_size() );\n";
-        code << "check_cuda_error(\"allocate_reduction\");";
+             << "sizeof(" << v.type << ") * lattice->volume() );\n";
+        code << "check_cuda_error(\"allocate_reduction\");\n";
       }
     }
   }
@@ -184,6 +184,11 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   // Check reduction variables
   for (var_info & v : var_info_list) {
     if(target.CUDA){
+      if (v.reduction_type == reduction::SUM) {
+        code << v.name << " += cuda_reduce_sum(r_" << v.name << ", lattice->volume()" <<  ");\n";
+      } else if (v.reduction_type == reduction::PRODUCT) {
+        code << v.name << " *= cuda_reduce_product(r_" << v.name << ", lattice->volume()" <<  ");\n";
+      }
       if (v.reduction_type != reduction::NONE) {
         code << "cudaFree( r_" << v.name << ");\n";
         code << "check_cuda_error(\"free_reduction\");\n";

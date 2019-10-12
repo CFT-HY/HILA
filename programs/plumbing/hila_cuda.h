@@ -33,6 +33,25 @@ static inline void check_cuda_error(std::string message){
   }
 } 
 
+/* Reduction */
+template<typename T>
+__global__ void cuda_reduce_sum_kernel( T * vector, int N)
+{
+  for( int i=1; i<N; i++ ) {
+    vector[0] += vector[i];
+  }
+}
+
+template<typename T>
+T cuda_reduce_sum(  T * vector, int N ){
+  T sum;
+  cuda_reduce_sum_kernel<<< 1, 1 >>>( vector, N );
+  check_cuda_error("cuda_reduce_sum kernel");
+  cudaMemcpy( &sum, vector, sizeof(T), cudaMemcpyDeviceToHost );
+  check_cuda_error("Memcpy in reduction");
+  return sum;
+}
+
 #else
 
 #define loop_callable 
