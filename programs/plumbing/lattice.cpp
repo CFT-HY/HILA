@@ -160,7 +160,6 @@ unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
 location lattice_struct::site_location(unsigned index)
 {
   // make the index lexicographic
-  location l;
 #ifdef EVENFIRST
   return this_node.site_index_list[index];
 #else
@@ -169,8 +168,8 @@ location lattice_struct::site_location(unsigned index)
     l[d] = index % this_node.size[d] + this_node.min[d];
     index /= this_node.size[d];
   }
-#endif
   return l;
+#endif
 }
 
 
@@ -291,9 +290,6 @@ void lattice_struct::create_std_gathers()
   
   for (int d=0; d<NDIRS; d++) {
     neighb[d] = (unsigned *)allocate_field_mem(this_node.sites * sizeof(unsigned));
-    #ifdef CUDA
-    cudaMalloc( (void **)&(d_neighb[d]), this_node.sites * sizeof(unsigned) );
-    #endif
   }
   
   comminfo.resize(MAX_GATHERS);
@@ -474,21 +470,25 @@ void lattice_struct::create_std_gathers()
             exit(1);
           }
 	      }
-
-	      // ignore return value
-        #ifdef CUDA
-	      (void)parallel_initDevSitelist(s);
-        #endif
-
       }
     }
 
     // GPU: Copy the neighbour array to the device
+    /* Copy the neighbour array to the device */
+    #ifdef CUDA
+    cudaMalloc( (void **)&(d_neighb[d]), this_node.sites * sizeof(unsigned));
+    check_cuda_error("create_std_gathers");
+    set_neighbour_pointers(d_neighb[d], d);
+    cudaMemcpy( d_neighb[d], neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
+    check_cuda_error("create_std_gathers copy");
+    #else
     #pragma acc data copyin(neighb[d][0:this_node.sites])
+    #endif
 
   } /* directions */
 
   /* Finally, set the site to the final offset (better be right!) */
   this_node.field_alloc_size = c_offset;
+
 
 }

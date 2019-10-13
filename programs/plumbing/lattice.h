@@ -13,11 +13,11 @@
 #include "../plumbing/defs.h"
 #include "../plumbing/memory.h"
 
+using location = std::array<int,NDIM>;
 struct node_info {
   location min,size;
   unsigned evensites, oddsites;
 };
-using location = std::array<int,NDIM>;
 
 
 class lattice_struct {
@@ -86,6 +86,7 @@ private:
 public:
 
   unsigned * neighb[NDIRS];
+  unsigned * d_neighb[NDIRS];
   
   void setup(int siz[NDIM]);
   void setup_layout();
@@ -156,9 +157,6 @@ public:
   template <typename T>
   void reduce_node_product(T value, bool distribute);
 
-  #ifdef CUDA
-  unsigned * d_neighb[NDIRS];
-  #endif
   
 };
 

@@ -226,6 +226,7 @@ class field_struct {
   private:
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
+    unsigned field_alloc_size;
   public:
     real_t * fieldbuf;
     lattice_struct * lattice;
@@ -239,6 +240,7 @@ class field_struct {
     };
 
     #ifndef CUDA
+    
     void allocate_payload(){
       fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
       #pragma acc enter data create(fieldbuf)
@@ -246,6 +248,7 @@ class field_struct {
         std::cout << "Failure in field memory allocation\n";
         exit(1);
       }
+      field_alloc_size = lattice->field_alloc_size();
     }
 
     void free_payload() {
@@ -253,54 +256,49 @@ class field_struct {
       free_field_mem((void *)fieldbuf);
       fieldbuf = nullptr;
     }
+
     #else
+
+    unsigned * d_neighb[NDIRS];
+
     void allocate_payload(){
       cudaMalloc(
         (void **)&fieldbuf,
         t_elements*sizeof(real_t) * lattice->field_alloc_size()
       );
+      check_cuda_error("allocate_payload");
       if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
+        std::cout << "Failure in GPU field memory allocation\n";
         exit(1);
+      }
+      field_alloc_size = lattice->field_alloc_size();
+        for (int d=0; d<NDIRS; d++) {
+          d_neighb[d] = lattice->d_neighb[d];
       }
     }
 
     void free_payload() {
       cudaFree(fieldbuf);
+      check_cuda_error("free_payload");
       fieldbuf = nullptr;
     }
     #endif
 
-    //inline T get(int idx) {
-    //  T_access ta;
-    //  for (int i=0; i<t_elements; i++) {
-    //    ta.tarr[i] = (real_t) fieldbuf[i][idx];
-    //  }
-    //  T value = ta.tu;
-    //  return value;
-    //}
-
-    //void set(T value, int idx) {
-    //  T_access ta;
-    //  ta.tu = value; 
-    //  for (int i=0; i<t_elements; i++) {
-    //    fieldbuf[i][idx] = (real_t) ta.tarr[i];
-    //  }
-    //}
-
+    loop_callable
     inline T get(const int idx) const {
       T value;
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
-         value_f[i] = fieldbuf[i*lattice->field_alloc_size() + idx];
+         value_f[i] = fieldbuf[i*field_alloc_size + idx];
       }
       return value; 
     }
     
+    loop_callable
     inline void set(T value, const int idx) {
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
-        fieldbuf[i*lattice->field_alloc_size() + idx] = value_f[i];
+        fieldbuf[i*field_alloc_size + idx] = value_f[i];
       }
     }
 

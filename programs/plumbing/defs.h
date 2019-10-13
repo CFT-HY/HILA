@@ -6,20 +6,13 @@
 #include <array>
 #include <vector>
 #include <assert.h> 
+#include "../plumbing/mersenne.h"
 
 #define EVENFIRST
 #define layout_SOA
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = double;
-
-
-#if defined(CUDA) || defined(openacc)
-#include <cuda_runtime.h>
-#define random() curand_uniform_double(&state);
-#else
-#define random() mersenne()
-#endif
 
 
 // move these somewhere - use consts?
@@ -110,5 +103,21 @@ inline void finishrun() {
 inline void assert_even_odd_parity( parity p ) {
     assert(p == EVEN || p == ODD || p == ALL);
 }
+
+
+
+#ifdef CUDA
+#include "../plumbing/hila_cuda.h"
+
+#elif openacc
+#define loop_callable #pragma acc routine seq
+
+#else
+#define seed_random(seed) seed_mersenne(seed)
+#define hila_random() mersenne()
+#define loop_callable
+#endif
+
+
 
 #endif

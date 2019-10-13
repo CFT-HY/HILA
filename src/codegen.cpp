@@ -161,6 +161,18 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     if (l.is_written) code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
   }
 
+  if(target.CUDA){
+    // Check for reductions and allocate device memory
+    for (var_info & v : var_info_list) {
+      if (v.reduction_type != reduction::NONE) {
+        code << v.type << " *r_" << v.name << "; ";
+        code << "cudaMalloc( (void **)& r_" << v.name << ","
+             << "sizeof(" << v.type << ") * lattice->volume() );\n";
+        code << "check_cuda_error(\"allocate_reduction\");\n";
+      }
+    }
+  }
+
   // Here generate kernel, or produce the loop in place
   if (target.kernelize) {
     code << generate_kernel(S,target,semi_at_end,loopBuf);
@@ -170,7 +182,20 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   }
   
   // Check reduction variables
-  for (var_info & v : var_info_list) { 
+  for (var_info & v : var_info_list) {
+    if(target.CUDA){
+      // Run reduction
+      if (v.reduction_type == reduction::SUM) {
+        code << v.name << " += cuda_reduce_sum(r_" << v.name << ", lattice->volume()" <<  ");\n";
+      } else if (v.reduction_type == reduction::PRODUCT) {
+        code << v.name << " *= cuda_reduce_product(r_" << v.name << ", lattice->volume()" <<  ");\n";
+      }
+      // Free memory allocated for the reduction
+      if (v.reduction_type != reduction::NONE) {
+        code << "cudaFree( r_" << v.name << ");\n";
+        code << "check_cuda_error(\"free_reduction\");\n";
+      }
+    }
     if (v.reduction_type == reduction::SUM) {
       code << "lattice->reduce_node_sum(" << v.name << ", true);\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
@@ -202,6 +227,7 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
   code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
 
+  // Add openacc pragmas
   if( target.openacc ) {
     code << "#pragma acc parallel loop";
     // Check reduction variables
@@ -214,9 +240,12 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
     }
     code << "\n";
   }
+
+  // Generate the loop
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";
   
+  // Create temporary field element variables and call getters
   for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
@@ -237,19 +266,14 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
     }
   }
 
+  // Dump the main loop code here
   code << loopBuf.dump();
   if (semi_at_end) code << ";\n";
 
+  // Call setters
   for (field_info & l : field_info_list){
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-    // Probably shouldn't be setting values to neighbours...
-    //for (dir_ptr & d : l.dir_list) if(d.count > 0){
-    //  code << l.new_name << ".set_value_at(" << l.loop_ref_name << "_" 
-    //       << get_stmt_str(d.e) 
-    //       << ", lattice->neighb[" << get_stmt_str(d.e)
-    //       << "][" << looping_var + "]);\n";
-    //}
     if(l.is_written) {
       code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " 
            << looping_var << ");\n";
@@ -271,7 +295,6 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   std::stringstream kernel,call;
 
   kernel << "//----------\n";
-  // I don't think kernels need to be templates
   //   if (global.in_func_template) {
   //     kernel << "template <typename ";
   //     for (unsigned i = 0; i < global.function_tpl->size(); i++) {
@@ -280,22 +303,26 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   //     }
   //     kernel << ">\n";
   //   }
+
+  // Generate the function definition and call
   if( target.CUDA ){
     kernel << "__global__ void " << kernel_name << "(";
-    kernel << "int loop_begin, int loop_end, unsigned * neighb[], ";
-    call << kernel_name << "<<< 128, 128 >>>(";
-    call << "lattice->loop_begin(" << parity_in_this_loop << "), ";
-    call << "lattice->loop_end(" << parity_in_this_loop << "), ";
-    call << "lattice->d_neighb, ";
+    kernel << "int loop_begin, int loop_end, ";
+    call << "int _loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
+    call << "int _loop_end = lattice->loop_end(" << parity_in_this_loop << ");\n";
+    call << "int N_blocks = (_loop_end - _loop_begin)/N_threads + 1;\n";
+    call << kernel_name << "<<< N_blocks, N_threads >>>(";
+    call << "_loop_begin, _loop_end, ";
   } else {
     kernel << "void " << kernel_name << "(";
     call   << kernel_name << "(";
+    // Include parity as a parameter
+      if (loop_parity.value == parity::none) {
+      call   << parity_name << ", ";
+      kernel << "const parity " << parity_name << ", ";
+    }
   }
 
-  if (loop_parity.value == parity::none) {
-    call   << parity_name << ", ";
-    kernel << "const parity " << parity_name << ", ";
-  }
 
   // print field call list
   int i = -1;
@@ -307,11 +334,10 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
       call   << ", ";
     }
     
-    // This does not recognise setting in functions
     if (!l.is_written) kernel << "const ";
     // TODO: type to field_data
-    kernel << "field_struct" << l.type_template << " * " << l.new_name;
-    call << l.new_name + ".fs";
+    kernel << "field_struct" << l.type_template << " " << l.new_name;
+    call << "*" << l.new_name + ".fs";
   }
 
   i=0;
@@ -319,12 +345,17 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   for ( var_info & vi : var_info_list ) {
     if (!vi.is_loop_local) {
       std::string varname = "sv__" + std::to_string(i) + "_";
-      kernel << ", ";
-      if(vi.is_assigned) {
-        kernel << vi.type << " & " << varname;
+      if(target.CUDA && vi.reduction_type != reduction::NONE) {
+        /* Reduction variables in a CUDA kernel are
+         * saved to an array and reduced later. */
+        kernel << ", " << vi.type << " * " << varname;
+        call << ", r_" << vi.name;
+        varname += "[Index]";
+      } else if(vi.is_assigned) {
+        kernel << ", " << vi.type << " & " << varname;
         call << ", " << vi.name;
       } else {
-        kernel << "const " << vi.type << " " << varname;
+        kernel << ", const " << vi.type << " " << varname;
         call << ", " << vi.name;
       }
       
@@ -345,20 +376,34 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     }
   }
 
-  // Begin the function
-  kernel << ")\n{\n";
-
   // finally, change the references to variables in the body
   replace_field_refs(loopBuf);
 
+  // Begin the function
+  kernel << ")\n{\n";
+
   if( target.CUDA ){
+    /* Standard boilerplate in CUDA kernels: calculate site index */
     kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
            << " + loop_begin; \n";
+    /* The last block may exceed the lattice size. Do nothing in that case. */
     kernel << "if(Index < loop_end) { \n";
+    /* Initialize reductions */
+    int i=0;
+    for ( var_info & vi : var_info_list ) {
+      if (!vi.is_loop_local) {
+        if (vi.reduction_type == reduction::SUM) {
+          kernel << "sv__" + std::to_string(i) + "_[Index]" << "=0;\n";
+        } if (vi.reduction_type == reduction::PRODUCT) {
+          kernel << "sv__" + std::to_string(i) + "_[Index]" << "=1;\n";
+        }
+        i++;
+      }
+    }
   } else {
     // Generate the loop
-    kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << "); \n";
-    kernel << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << "); \n";
+    kernel << "const int loop_begin = lattice.loop_begin(" << parity_in_this_loop << "); \n";
+    kernel << "const int loop_end   = lattice.loop_end(" << parity_in_this_loop << "); \n";
 
     kernel << "for(int " << looping_var <<" = loop_begin; " 
            << looping_var << " < loop_end; " << looping_var << "++) {\n";
@@ -371,7 +416,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       if(l.is_read){
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-             << "->get(" << "neighb[" << get_stmt_str(d.e) << "][" 
+             << ".get(" << l.new_name << ".d_neighb[" << get_stmt_str(d.e) << "][" 
              << looping_var + "]" << ");\n";
       } else {
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
@@ -379,7 +424,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     }
     if(l.is_read) {
       kernel << type_name << l.loop_ref_name << " = " << l.new_name 
-             << "->get(" << looping_var << ");\n";
+             << ".get(" << looping_var << ");\n";
     } else {
       kernel << type_name << l.loop_ref_name << ";\n";
     }
@@ -393,12 +438,16 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   for (field_info & l : field_info_list) if(l.is_written){
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-    kernel << l.new_name << "->set(" << l.loop_ref_name << ", " 
+    kernel << l.new_name << ".set(" << l.loop_ref_name << ", " 
            << looping_var << ");\n";
   }
 
   kernel << "}\n}\n//----------\n";
   call << ");\n";
+
+  if(target.CUDA){
+    call << "check_cuda_error(\"" << kernel_name << "\");\n";
+  }
 
   // Finally, emit the kernel
   // TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
