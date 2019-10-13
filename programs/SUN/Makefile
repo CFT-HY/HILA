@@ -30,6 +30,9 @@ SUN.tr.cpu.cpp: Makefile SUN.cpp
 %.cpu.o : %.cpp
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
+%.cpu.o : %.cpu.cpp
+	$(CC) $(CXXFLAGS) $< -c -o $@
+
 %.cpu.o : ../plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
@@ -38,6 +41,9 @@ SUN.tr.gpu.cpp: Makefile SUN.cpp
 	$(TRANSFOMER_GPU) SUN.cpp -o=SUN.tr.gpu.cpp
 
 %.gpu.o : %.cpp
+	$(NVCC) $(CXXFLAGS) $< -c -o $@
+
+%.gpu.o : %.gpu.cpp
 	$(NVCC) $(CXXFLAGS) $< -c -o $@
 
 %.gpu.o : ../plumbing/%.cpp
