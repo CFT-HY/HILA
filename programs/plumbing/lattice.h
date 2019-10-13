@@ -86,6 +86,7 @@ private:
 public:
 
   unsigned * neighb[NDIRS];
+  unsigned * d_neighb[NDIRS];
   
   void setup(int siz[NDIM]);
   void setup_layout();

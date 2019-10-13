@@ -416,7 +416,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       if(l.is_read){
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-             << ".get(" << "d_neighb[" << get_stmt_str(d.e) << "][" 
+             << ".get(" << l.new_name << ".d_neighb[" << get_stmt_str(d.e) << "][" 
              << looping_var + "]" << ");\n";
       } else {
         kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";

@@ -240,6 +240,7 @@ class field_struct {
     };
 
     #ifndef CUDA
+    
     void allocate_payload(){
       fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
       #pragma acc enter data create(fieldbuf)
@@ -258,6 +259,7 @@ class field_struct {
 
     #else
 
+    unsigned * d_neighb[NDIRS];
 
     void allocate_payload(){
       cudaMalloc(
@@ -270,6 +272,9 @@ class field_struct {
         exit(1);
       }
       field_alloc_size = lattice->field_alloc_size();
+        for (int d=0; d<NDIRS; d++) {
+          d_neighb[d] = lattice->d_neighb[d];
+      }
     }
 
     void free_payload() {
