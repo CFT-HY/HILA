@@ -11,7 +11,7 @@ lattice_struct * lattice = & my_lattice;
 
 // Define some parameters for the simulation
 double beta = 8;
-int n_measurements=1;
+int n_measurements=10;
 int n_updates_per_measurement=10;
 long seed = 123456;
 int NX=16, NY=16, NZ=16, NT=16;
