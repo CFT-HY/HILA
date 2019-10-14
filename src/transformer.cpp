@@ -42,6 +42,7 @@ namespace state {
   bool dump_ast_next = false;
   bool compile_errors_occurred = false;
   bool check_loop = false;
+  bool no_device_code = false;
 };
 
 static llvm::cl::OptionCategory TransformerCat(program_name);
@@ -110,11 +111,6 @@ namespace cmdline {
   static llvm::cl::opt<bool>
   vanilla("vanilla",
           llvm::cl::desc("Generate loops in place"),
-          llvm::cl::cat(TransformerCat));
-  
-  static llvm::cl::opt<bool>
-  gpu_kernel("vanilla-gpu",
-          llvm::cl::desc("Prototype gpu kernel"),
           llvm::cl::cat(TransformerCat));
 
   static llvm::cl::opt<bool>
@@ -820,7 +816,7 @@ void MyASTVisitor::handle_function_call_stmt(Stmt * s) {
   while(decl->getPreviousDecl() != NULL)
     decl = decl->getPreviousDecl();
   llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
-  const FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
+  FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   // Go through arguments
   for( Expr * E : Call->arguments() ){
@@ -848,7 +844,7 @@ void MyASTVisitor::handle_function_call_stmt(Stmt * s) {
     i++;
   }
 }
-            
+
 
 bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
   SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(),
@@ -1077,8 +1073,11 @@ bool MyASTVisitor::control_command(VarDecl *var) {
   std::string n = var->getNameAsString();
   if (n.find("_transformer_ctl_",0) == std::string::npos) return false;
   
-  if (n == "_transformer_ctl_dump_ast") state::dump_ast_next = true;
-  else {
+  if (n == "_transformer_ctl_dump_ast") {
+    state::dump_ast_next = true;
+  } else if(n == "_transformer_ctl_no_device") {
+    state::no_device_code = true;
+  } else {
     reportDiag(DiagnosticsEngine::Level::Warning,
                var->getSourceRange().getBegin(),
                "Unknown command for transformer_ctl(), ignoring");
@@ -1312,6 +1311,9 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     state::dump_ast_next = false;
   }
 
+  // Check if the function can be called from a loop
+  bool loop_callable = true;
+  llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
     global.currentFunctionDecl = f;
@@ -1328,7 +1330,10 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-    
+    if (functiondecl_loop_found(f)) {
+      loop_callable = false;
+    }
+
     switch (f->getTemplatedKind()) {
       case FunctionDecl::TemplatedKind::TK_NonTemplate:
         // Normal, non-templated class method -- nothing here
@@ -1355,7 +1360,16 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     SourceLocation ST = f->getSourceRange().getBegin();
     global.location.function = ST;
-    
+
+    //if(target.CUDA && !state::no_device_code && loop_callable){
+    //  // Add CUDA directive to allow calling from loops
+    //  std::string n = DeclName.getAsString();
+    //  if (n.find("_host_",0) == std::string::npos)
+    //    writeBuf->insert(ST,"__device__ __host__ ",true,true);
+    //  state::loop_found = true; // Mark this file changed
+    //  state::no_device_code = false;
+    //}
+
     if (cmdline::funcinfo) {
       // Add comment before
       std::stringstream SSBefore;
@@ -1366,7 +1380,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     }
     
   }
-  
+
   return true;
 }
 
@@ -1504,6 +1518,9 @@ bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
     state::dump_ast_next = false;
   }
 
+  bool loop_callable = true;
+  llvm::errs() << "Method " << method->getNameInfo().getName() << "\n";
+
 
   if (method->isThisDeclarationADefinition() && method->hasBody()) {
     // FunctionDecl *f = method->getTemplatedDecl();
@@ -1632,14 +1649,13 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     
     global.in_class_template = true;
     // Should go through the template in order to find function templates...
-    // TraverseDecl(D->getTemplatedDecl());
+    TraverseDecl(D->getTemplatedDecl());
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
     } else if (D->getNameAsString() == "field_storage_type") {
       field_storage_type_decl = D;
     } else {
-      //      handle_class_specializations(D);
     }
 
     global.in_class_template = false;
@@ -2121,7 +2137,7 @@ private:
 
 
 void get_target_struct(codetype & target) {
-  if (cmdline::kernel || cmdline::CUDA) {
+  if (cmdline::kernel) {
     target.kernelize = true;
     target.CUDA = false;
   } else if (cmdline::CUDA) {

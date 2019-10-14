@@ -11,22 +11,23 @@ lattice_struct * lattice = & my_lattice;
 
 // Define some parameters for the simulation
 double beta = 8;
-int n_measurements=100;
+int n_measurements=10;
 int n_updates_per_measurement=10;
 long seed = 123456;
-int NX=8, NY=8, NZ=8, NT=8;
-int VOLUME = NX*NY*NZ*NT;
+int NX=16, NY=16, NZ=16, NT=16;
 
 
 
 
-field<matrix<N,N,cmplx<double>>>
-calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
+void calc_staples(
+  field<matrix<N,N,cmplx<double>>> U[NDIM], 
+  field<matrix<N,N,cmplx<double>>> &staple_sum,
+  direction dir)
 {
   /* Calculate the sum of staples connected to links in direction
    * dir 
    */
-  field<matrix<N,N,cmplx<double>>> down_staple, staple_sum;
+  static field<matrix<N,N,cmplx<double>>> down_staple;
   staple_sum[ALL] = 0;
   foralldir(d2){
     direction dir2 = (direction)d2;
@@ -42,19 +43,18 @@ calc_staples( field<matrix<N,N,cmplx<double>>> U[NDIM], direction dir)
     // Add the two staples together
     staple_sum[ALL] += down_staple[X - dir2];
   }
-  return staple_sum;
 }
 
-
+ 
 template<typename T>
-void update(
+loop_callable void update(
   T &U, const T &staple,
   double beta
 ){
   monte( U, staple, beta );
 }
 
-template<>
+loop_callable 
 void update(
   matrix<2,2,cmplx<double>> &U,
   const matrix<2,2,cmplx<double>> &staple,
@@ -67,16 +67,15 @@ void update(
 
 int main()
 {
+
   // Basic setup
   lattice->setup( NX, NY, NZ, NT );
   // Define a field
   field<matrix<N,N,cmplx<double>>> U[NDIM];
+  field<matrix<N,N,cmplx<double>>> staple;
 
-  seed_mersenne( seed );
+  seed_random(seed);
 
-  /* "Warm up" the rng generator */
-  for( int i=0; i<543210; i++ ) mersenne();
-  
   // Set to 1
   foralldir(d) {
     U[d][ALL] = 1;
@@ -91,7 +90,7 @@ int main()
         // update direction dir
         direction dir = (direction)d;
         // First we need the staple sum
-        field<matrix<N,N,cmplx<double>>> staple = calc_staples(U, dir);
+        calc_staples(U, staple, dir);
 
         // Now update, first even then odd
         parity p = EVEN;
@@ -116,7 +115,7 @@ int main()
         Plaq += 1-temp.trace().re/N;
       }
     }
-    printf("Plaquette %f\n", Plaq/(VOLUME*NDIM*(NDIM-1)));
+    printf("Plaquette %f\n", Plaq/(lattice->volume()*NDIM*(NDIM-1)));
   }
   
   return 0;

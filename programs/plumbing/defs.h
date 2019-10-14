@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 #include <assert.h> 
+#include "../plumbing/mersenne.h"
 
 #define EVENFIRST
 #define layout_SOA
@@ -102,5 +103,21 @@ inline void finishrun() {
 inline void assert_even_odd_parity( parity p ) {
     assert(p == EVEN || p == ODD || p == ALL);
 }
+
+
+
+#ifdef CUDA
+#include "../plumbing/hila_cuda.h"
+
+#elif openacc
+#define loop_callable #pragma acc routine seq
+
+#else
+#define seed_random(seed) seed_mersenne(seed)
+#define hila_random() mersenne()
+#define loop_callable
+#endif
+
+
 
 #endif

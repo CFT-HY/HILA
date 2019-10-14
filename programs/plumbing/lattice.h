@@ -86,6 +86,7 @@ private:
 public:
 
   unsigned * neighb[NDIRS];
+  unsigned * d_neighb[NDIRS];
   
   void setup(int siz[NDIM]);
   void setup_layout();
@@ -155,6 +156,7 @@ public:
 
   template <typename T>
   void reduce_node_product(T value, bool distribute);
+
   
 };
 

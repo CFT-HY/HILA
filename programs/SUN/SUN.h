@@ -13,7 +13,6 @@ const int N=2;
 // Include the lattice field definition
 #include "../plumbing/field.h"
 #include "../datatypes/general_matrix.h"
-#include "mersenne.h"
 
 
 // Define some parameters for the simulation
@@ -24,13 +23,12 @@ extern long seed;
 extern int NX, NY, NZ, NT;
 extern int VOLUME;
 
-
-double monte(
+loop_callable double monte(
   matrix<N,N,cmplx<double>> &U, 
   matrix<N,N,cmplx<double>> &staple,
   double beta);
 
-void KennedyPendleton(
+loop_callable void KennedyPendleton(
   matrix<2,2,cmplx<double>> &U,
   matrix<2,2,cmplx<double>> &staple
 );
