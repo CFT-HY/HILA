@@ -957,7 +957,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   }
 
   // Check for function calls parameters. We need to determine if the 
-  // function can assing to the a field parameter (is not const).
+  // function can assign to the a field parameter (is not const).
   if( is_function_call_stmt(s) ){
     handle_function_call_stmt(s);
   }
