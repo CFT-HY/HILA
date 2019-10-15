@@ -5,18 +5,22 @@
 
 // extern field<int> glob;
 
-double d(double x) {return x;}
+cmplx<double> d(cmplx<double> x) {return x;}
+cmplx<double> e(cmplx<double> x) {return d(x);}
+cmplx<double> f(cmplx<double> x) {return e(x);}
 
 int main()
 {
   
-  field<double> a,x;
+  field<cmplx<double>> a,x;
   field<double> t(1.0);
   
-  transformer_ctl(dump_ast);
+  // transformer_ctl(dump_ast);
   x[EVEN] = a[X] + x[X];
 
-  // x = a + x;
+  
+  
+  x = a + x;
   
   
   return 0;

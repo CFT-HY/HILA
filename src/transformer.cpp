@@ -32,6 +32,10 @@
 #include "myastvisitor.h"
 #include "specialization_db.h"
 
+
+srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
+
+
 // collection of variables holding the state of parsing
 namespace state {
   unsigned skip_children = 0;
@@ -149,6 +153,7 @@ std::list<var_info> var_info_list = {};
 std::list<var_decl> var_decl_list = {};
 
 std::vector<Expr *> remove_expr_list = {};
+std::vector<loop_function_info> loop_functions = {};
 
 // take global CI just in case
 CompilerInstance *myCompilerInstance;
@@ -819,10 +824,8 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
-  // Get the call graph
-  static CallGraph CG;
-  CG.getOrInsertNode(decl);
-  CG.dump();
+  // Store functions used in loops, recursively...
+  check_loop_function(decl);
   
   // Go through arguments
   for( Expr * E : Call->arguments() ){
@@ -848,6 +851,44 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
       }
     }
     i++;
+  }
+}
+
+
+void MyASTVisitor::check_loop_function(Decl *d) {
+  assert(d != nullptr);
+  
+  // check if we already have this function
+  for (int i=0; i<loop_functions.size(); i++) if (d == loop_functions[i].decl) return;
+  loop_function_info lfi = {d,false};
+  loop_functions.push_back(lfi);
+
+  CallGraph CG;
+  CG.addToCallGraph(d);
+  int i = 0;
+  for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
+    // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
+    // root is "null function", skip
+    if (i > 0) {
+      Decl * nd = iter->second->getDecl();
+      if (nd != d) {
+        check_loop_function(nd);
+      }
+    }
+    // llvm::errs() << "   ++ loop_function loop " << i << '\n';
+  }
+  
+}
+
+void MyASTVisitor::mark_loop_functions() {
+  for (loop_function_info & lfi : loop_functions) if (!lfi.is_handled) {
+    lfi.is_handled = true;
+    // we should mark the function, but it is not necessarily in the
+    // main file buffer
+    SourceManager &SM = TheRewriter.getSourceMgr();
+    SourceLocation sl = lfi.decl->getSourceRange().getBegin();
+    srcBuf * sb = get_file_buffer(TheRewriter, SM.getFileID(sl));
+    sb->insert(sl, "/* loop function */ ",true,true);
   }
 }
 
@@ -922,6 +963,8 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
                "Parity of the full loop cannot be \'X\'");
   }
 
+  mark_loop_functions();
+  
   generate_code(ls, target);
   
   // Buf.clear();
@@ -1345,6 +1388,9 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
       loop_callable = false;
     }
 
+    // Build the callgraph for callable functions
+    // mycallgraph.getOr
+    
     switch (f->getTemplatedKind()) {
       case FunctionDecl::TemplatedKind::TK_NonTemplate:
         // Normal, non-templated class method -- nothing here

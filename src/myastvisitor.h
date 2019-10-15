@@ -143,6 +143,10 @@ public:
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
 
   void handle_function_call_in_loop(Stmt * s);
+  
+  void check_loop_function(Decl *fd);
+  
+  void mark_loop_functions();
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );
