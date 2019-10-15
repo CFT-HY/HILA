@@ -12,7 +12,7 @@ cmplx<double> f(cmplx<double> x) {return e(x);}
 int main()
 {
   
-  field<cmplx<double>> a,x;
+  field<double> a,x;
   field<double> t(1.0);
   
   // transformer_ctl(dump_ast);

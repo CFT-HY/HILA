@@ -34,7 +34,7 @@
 
 
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
-
+void set_fid_modified(const FileID FID);
 
 // collection of variables holding the state of parsing
 namespace state {
@@ -888,8 +888,10 @@ void MyASTVisitor::mark_loop_functions() {
     // main file buffer
     SourceManager &SM = TheRewriter.getSourceMgr();
     SourceLocation sl = lfi.decl->getSourceRange().getBegin();
-    srcBuf * sb = get_file_buffer(TheRewriter, SM.getFileID(sl));
+    FileID FID = SM.getFileID(sl);
+    srcBuf * sb = get_file_buffer(TheRewriter, FID);
     sb->insert(sl, "/* loop function */ ",true,true);
+    set_fid_modified(FID);
   }
 }
 
@@ -1910,6 +1912,13 @@ bool search_fid(const FileID FID) {
   return false;
 }
 
+void set_fid_modified(const FileID FID) {
+  if (search_fid(FID) == false) {
+    // new file to be added
+    file_id_list.push_back(FID);
+    // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+  }
+}
 
 // file_buffer_list stores the edited source of all files
 
@@ -1989,12 +1998,7 @@ public:
         
         // We keep track here only of files which were touched
         if (state::loop_found) {
-          FileID FID = SM.getFileID(beginloc);
-          if (search_fid(FID) == false) {
-            // new file to be added
-            file_id_list.push_back(FID);
-            // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
-          }
+          set_fid_modified( SM.getFileID(beginloc) );
         }
       }  
     }
