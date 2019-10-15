@@ -135,5 +135,9 @@ struct var_decl {
 };
 
 
+struct loop_function_info {
+  Decl * decl;
+  bool is_handled;
+};
 
 #endif
