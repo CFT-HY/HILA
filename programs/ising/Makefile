@@ -23,8 +23,8 @@ ising.cpt: Makefile ising.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 clean:
-	rm -rf ising.cpt
+	rm -rf *.o ising.cpt
 
 cleanall:
-	rm -rf ising.cpt ising
+	rm -rf *.o ising.cpt ising
 
