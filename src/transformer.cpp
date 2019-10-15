@@ -1142,13 +1142,13 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   // catch the transformer_ctl -commands here
   if (control_command(var)) return true;
   
+  if (state::check_loop && state::loop_found) return true;
+
   if (state::dump_ast_next) {
     // llvm::errs() << "**** Dumping declaration:\n" + get_stmt_str(s)+'\n';
     var->dump();
     state::dump_ast_next = false;
   }
-
-  if (state::check_loop && state::loop_found) return true;
 
   
   if (state::in_loop_body) {
@@ -1204,14 +1204,14 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
 
 bool MyASTVisitor::VisitStmt(Stmt *s) {
 
+  if (state::check_loop && state::loop_found) return true;
+  
   if (state::dump_ast_next) {
     llvm::errs() << "**** Dumping statement:\n" + get_stmt_str(s)+'\n';
     s->dump();
     state::dump_ast_next = false;
   }
 
-  if (state::check_loop && state::loop_found) return true;
-  
   // Entry point when inside field[par] = .... body
   if (state::in_loop_body) {
     return handle_loop_body_stmt(s);
@@ -1781,15 +1781,14 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
 // Find the field_storage_type typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
 bool MyASTVisitor::VisitDecl( Decl * D) {
+  if (state::check_loop && state::loop_found) return true;
 
- if (state::dump_ast_next) {
+  if (state::dump_ast_next) {
     llvm::errs() << "**** Dumping declaration:\n";
     D->dump();
     state::dump_ast_next = false;
   }
 
-  if (state::check_loop && state::loop_found) return true;
-  
   auto t = dyn_cast<TypeAliasTemplateDecl>(D);
   if (t && t->getNameAsString() == "field_storage_type") {
     llvm::errs() << "Got field storage\n";
