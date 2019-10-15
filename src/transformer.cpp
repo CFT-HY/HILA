@@ -22,6 +22,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
+#include "clang/Analysis/CallGraph.h"
 
 
 #include "transformer.h"
@@ -565,7 +566,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     lfe.parityExpr = ASE->getRHS();
     llvm::errs() << lfe.fullExpr << lfe.nameExpr << lfe.parityExpr;
   } else {
-    llvm::errs() << "Internal error 3\n";
+    llvm::errs() << "Should not happen! Error in field parity\n";
     exit(1);
   }
   
@@ -805,19 +806,24 @@ bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
 // Go through each parameter of function calls and handle
 // any field references.
 // Assume non-const references can be assigned to.
-void MyASTVisitor::handle_function_call_stmt(Stmt * s) {
+void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   int i=0;
 
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
 
   // Get the declaration of the function
-  const Decl* decl = Call->getCalleeDecl();
+  Decl* decl = Call->getCalleeDecl();
   while(decl->getPreviousDecl() != NULL)
     decl = decl->getPreviousDecl();
   llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
+  // Get the call graph
+  static CallGraph CG;
+  CG.getOrInsertNode(decl);
+  CG.dump();
+  
   // Go through arguments
   for( Expr * E : Call->arguments() ){
     llvm::errs() << "Argument " << i << "/" << D->getNumParams() << ": " << get_stmt_str(E) << '\n';
@@ -955,7 +961,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // Check for function calls parameters. We need to determine if the 
   // function can assign to the a field parameter (is not const).
   if( is_function_call_stmt(s) ){
-    handle_function_call_stmt(s);
+    handle_function_call_in_loop(s);
   }
   
   // catch then expressions
@@ -1226,10 +1232,9 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 
                                    
   //  Starting point for fundamental operation
-  //  field[par] = .... - non-templated version
+  //  field[par] = ....  version with field<class>
   
   // isStmtWithSemi(s);
-
 
   CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
   if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0))) {
@@ -1237,7 +1242,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     // the lhs of the assignment
     
     if (state::check_loop) {
-      state::loop_found = 1;
+      state::loop_found = true;
       return true;
     }
 
@@ -1247,15 +1252,21 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     handle_full_loop_stmt(OP, true);
     return true;
   } 
-  // now the above within template
-  // not doing templates any more!
-  //   BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
-  //   if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS())) {
-  //     SourceRange full_range = getRangeWithSemi(BO,false);
-  //     global.full_loop_text = TheRewriter.getRewrittenText(full_range);        
-  //     handle_full_loop_stmt(BO, true);
-  //     return true;    
-  //   }
+  // now the above when type is field<double> or some other non-class element
+  
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
+  if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS())) {
+    if (state::check_loop) {
+      state::loop_found = true;
+      return true;
+    }
+    
+    SourceRange full_range = getRangeWithSemi(BO,false);
+    global.full_loop_text = TheRewriter.getRewrittenText(full_range);        
+  
+    handle_full_loop_stmt(BO, true);
+    return true;    
+  }
 
   return true;
 }
@@ -1278,14 +1289,14 @@ bool MyASTVisitor::functiondecl_loop_found( FunctionDecl *f ) {
   bool retval;
   if (f->hasBody()) {
     
-    llvm::errs() << "About to check function " << f->getNameAsString() << '\n';
-    llvm::errs() << buf.dump() << '\n';
+    // llvm::errs() << "About to check function " << f->getNameAsString() << '\n';
+    // llvm::errs() << buf.dump() << '\n';
     
     state::check_loop = true;
     TraverseStmt(f->getBody());
     state::check_loop = false;
     
-    llvm::errs() << "Func check done\n";
+    // llvm::errs() << "Func check done\n";
     
     retval = state::loop_found;
   } else {
