@@ -251,24 +251,25 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       if(l.is_read) {
-        code << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
+        code << type_name << " "  << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
              << ".get_value_at(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
              << looping_var + "]" << ");\n";
       } else {
-        code << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
+        code << type_name << " "  << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
       }
     }
     if(l.is_read) {
-      code << type_name << l.loop_ref_name << " = " << l.new_name 
+      code << type_name << " " << l.loop_ref_name << " = " << l.new_name 
            << ".get_value_at(" << looping_var << ");\n";
     } else {
-      code << type_name << l.loop_ref_name << ";\n";
+      code << type_name << " "  << l.loop_ref_name << ";\n";
     }
   }
 
   // Dump the main loop code here
   code << loopBuf.dump();
-  if (semi_at_end) code << ";\n";
+  if (semi_at_end) code << ";";
+  code << "\n";
 
   // Call setters
   for (field_info & l : field_info_list){

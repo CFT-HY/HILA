@@ -829,7 +829,8 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   
   // Go through arguments
   for( Expr * E : Call->arguments() ){
-    llvm::errs() << "Argument " << i << "/" << D->getNumParams() << ": " << get_stmt_str(E) << '\n';
+    llvm::errs() << "Argument " << i << "/" << D->getNumParams() 
+                 << ": " << get_stmt_str(E) << '\n';
 
     // Handle field type arguments
     // NOTE: It seems that this does not recognize const parameters.

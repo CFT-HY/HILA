@@ -6,11 +6,6 @@
 
 // Include the lattice field definition
 #include "../plumbing/field.h"
-#include "../datatypes/scalar.h"
-extern "C"
-{
-    #include "mersenne.h"
-};
 
 // Direct output to stdout
 std::ostream &hila::output = std::cout;
@@ -33,7 +28,7 @@ int main()
   // Basic setup
   lattice->setup( NX, NY );
   // Define a field
-  field<scalar<double>> spin;
+  field<double> spin;
 
   seed_mersenne( seed );
 
