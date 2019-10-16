@@ -1,6 +1,13 @@
 
 # Description 
 
+The Hila framework consists of 
+
+1. the transformer and 
+2. a lattice simulation library.
+
+The library is currently found in `programs/plumbing`.
+
 Transformer contains a C++ preprocessing tool and framework for programming lattice field theory simulations: the main method for getting measurements from non-perturbative quantum field theories.  
 
 Lattice field theory simulations involve up to 4 dimensional grids whose points are updated continuously according to some Monte Carlo update algorithm. The update at each grid point depends on the data stored at neighboring lattice points, and the ideal 
@@ -52,13 +59,13 @@ There is no module on Puhti that gives access to LLVM libraries, so you need to 
 
 To compile SUN I run
 ~~~
-rm SUN.tr.*.cpp ; make SUN.tr.cpu.cpp SUN.tr.gpu.cpp ; rsync -r ../* puhti:programs/
+rm SUN.tr.*.cpp ; make SUN.tr.cpu.cpp SUN.tr.gpu.cpp ; rsync -r ../* puhti:/projappl/project_2001973/programs/
 ~~~
 and then just run
 ~~~
 make
 ~~~
-on puhti
+at /projappl/project_2001973/programs/SUN on Puhti.
 
 
 ## Syntax - What works
@@ -146,12 +153,14 @@ make test
 # Goals
 
  1. Profile and optimize the CUDA version
-  * Optimize also cpu code to be fair
+     * Optimize also cpu code to be fair
  1. Write a comprehensive test suite for existing and new features
  1. Compile and run and OpenACC version
  1. Extend both to support:
-  * Fourier transform of field variable
-  * If statements in a loop
-  * Reduction on dimension (so f(t) = sum_x g(x,t))
+     * Fourier transform of field variable
+     * If statements in a loop
+     * Reduction on dimension (so f(t) = sum_x g(x,t))
  1. Array-of-Struct-of-Arrays layout
-
+ 1. MPI
+ 1. Get rid of NDIM
+ 1. Extend field to allow lattice as input
