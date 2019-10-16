@@ -20,9 +20,14 @@ transform_c(){
 }
 
 compile_c(){
-    make ${1}.o $BUILD_REQUIREMENTS
-    clang++-8 -o $1 ${1}.o $BUILD_REQUIREMENTS
+    make -s ${1}.exe 2>/dev/null
     check compile
+}
+
+run_c(){
+    echo ./$1
+    ./${1}.exe
+    check
 }
 
 
@@ -40,10 +45,8 @@ for testfile in $tests; do
     echo $test
     transform_c ${test}.cpp
     compile_c ${test}
-    echo ./$test
-    ./$test
-    check
-    rm $test ${test}.cpt
+    run_c ${test}
+    rm ${test}.exe ${test}.cpt
 done
 
 exit 0
