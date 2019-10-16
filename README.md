@@ -1,6 +1,11 @@
 
 # Description 
 
+The Hila framework consists of 
+ 1. the transformer and 
+ 2. a lattice simulation library.
+The library is currently found in `programs/plumbing`.
+
 Transformer contains a C++ preprocessing tool and framework for programming lattice field theory simulations: the main method for getting measurements from non-perturbative quantum field theories.  
 
 Lattice field theory simulations involve up to 4 dimensional grids whose points are updated continuously according to some Monte Carlo update algorithm. The update at each grid point depends on the data stored at neighboring lattice points, and the ideal 
