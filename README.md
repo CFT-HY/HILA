@@ -125,3 +125,15 @@ forsites(ALL){
 ~~~
 
 
+
+# Goals
+
+ * Profile and optimize the CUDA version
+  * Optimize also cpu code to be fair
+ * Compile and run and OpenACC version
+ * Extend both to support:
+  * Fourier transform of field variable
+  * If statements in a loop
+  * Reduction on dimension (so f(t) = sum_x g(x,t))
+ * Array-of-Struct-of-Arrays layout
+
