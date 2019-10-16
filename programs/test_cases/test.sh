@@ -48,5 +48,6 @@ for testfile in $tests; do
     run_c ${test}
     rm ${test}.exe ${test}.cpt
 done
+make clean
 
 exit 0

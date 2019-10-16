@@ -31,8 +31,7 @@ test_conjReduce: Makefile conjReduce.o mersenne_inline.o lattice.o memory.o setu
 	$(CC) $(CFLAGS) $< -c
 
 clean:
-	rm -rf conjReduce.cpt
+	rm -rf *.cpt
 
 cleanall:
-	rm -rf conjReduce.cpt conjReduce 
-	rm -rf *.o
+	rm -rf *.o *.exe
