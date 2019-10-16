@@ -20,6 +20,15 @@ struct node_info {
 };
 
 
+#ifdef CUDA
+struct device_lattice_info {
+  unsigned * d_neighb[NDIRS];
+  unsigned field_alloc_size;
+  int loop_begin, loop_end;
+};
+#endif
+
+
 class lattice_struct {
 private:
   // expose these directly, by far the simplest interface - who cares about c++ practices
@@ -86,8 +95,11 @@ private:
 public:
 
   unsigned * neighb[NDIRS];
-  unsigned * d_neighb[NDIRS];
-  
+
+  #ifdef CUDA
+  device_lattice_info device_info;
+  #endif
+
   void setup(int siz[NDIM]);
   void setup_layout();
   void setup_nodes();
