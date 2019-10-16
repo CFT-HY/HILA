@@ -25,7 +25,7 @@ std::ostream &hila::output = std::cout;
 lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 
-const int nx = 10, ny = 10;
+const int nx = 10, ny = 20;
 
 void checkLatticeSetup(){
 	for (int dir = 0; dir < NDIRS; dir++){

@@ -5,7 +5,9 @@
 /////////////////////
 /// test_case 2
 /// manipulation of 3d fields
-/// with foralldir
+/// Coverage:
+/// - foralldir & onsites env
+/// - operations between multiple fields
 /////////////////////
 
 #define NDIM 3
@@ -21,9 +23,10 @@ std::ostream &hila::output = std::cout;
 lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 
-const int nx = 6, ny = 6, nz = 6;
+const int nx = 10, ny = 10, nz = 10;
 
 int main(){
+    cmplx<double> sum = 0;
     lattice->setup(nx, ny, nz);
     field<cmplx<double>> s1, s2, s3;
 
@@ -31,21 +34,21 @@ int main(){
     s2[EVEN] = 1.0;
     s3[ODD] = 1.0;
 
-    s1 = s2 + s3;
+    s1 = s2 + s3; //now all sites in s1 should be set to 1
+    onsites(ALL){
+        sum+=s1[X];
+    }
+    assert(sum.re==(double)nx*ny*nz); 
 
+    onsites(ODD){
+        foralldir(d){
+            s2[X]-=s1[X+d];
+        }
+    }
     foralldir(d){
         onsites(ALL){
-            s1[X]+=s1[X + d];
+
         }
     }
 
-    onsites(ALL){
-	foralldir(d){
-	    s1[X]-=s1[X + d];
-	}
-    }
-
-    onsites(ALL){
-	assert(s1[X]==1.0);
-    }
 }
