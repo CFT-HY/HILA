@@ -10,15 +10,15 @@ NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
 TRANSFOMER_openacc = ../../build/transformer -Dopenacc --openacc
-PGCC = pgc++ 
-PGLD = pgc++
+PGCC = pgc++ -acc
+PGLD = pgc++ -acc
 
 CXXFLAGS = -O3  $(OPTS) 
 LDFLAGS = 
 
 
-SUN_openacc: Makefile SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o memory.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o hila_cuda.oac.o
-	$(NVLD) $(LDFLAGS) -o SUN_openacc SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o memory.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o hila_cuda.oac.o
+SUN_openacc: Makefile SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o memory.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o
+	$(PGLD) $(LDFLAGS) -o SUN_openacc SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o memory.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o
 	rm -f *.oac.o
 
 SUN_GPU: Makefile SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inline.gpu.o lattice.gpu.o memory.gpu.o setup_layout_generic.gpu.o map_node_layout_trivial.gpu.o hila_cuda.gpu.o
@@ -61,13 +61,13 @@ SUN.tr.oac.cpp: Makefile SUN.cpp
 	$(TRANSFOMER_openacc) SUN.cpp -o=SUN.tr.oac.cpp
 
 %.oac.o : %.cpp
-	$(CC) $(CXXFLAGS) -Dopenacc $< -c -o $@
+	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
 
 %.oac.o : %.oac.cpp
-	$(CC) $(CXXFLAGS) -Dopenacc $< -c -o $@
+	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
 
 %.oac.o : ../plumbing/%.cpp
-	$(CC) $(CXXFLAGS) -Dopenacc $< -c -o $@
+	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
 
 
 clean:
