@@ -1,3 +1,7 @@
+Adding pragmas
+
+
+
 VARIABLE TYPE:
 define always as a template where the templated type is
 the real number , e.g.
