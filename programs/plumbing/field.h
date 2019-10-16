@@ -219,65 +219,51 @@ struct field_storage_type {
   T c;
 };
 
-/// The following struct holds the data + information about the field
-/// TODO: field-specific boundary conditions?
+
+
+// Pointer to field data and accessors. Only this is passed to the
+// CUDA kernels and other accelerators and it only contains a minimal
+// amount of data.
 template <typename T>
-class field_struct {
+class field_storage {
   private:
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
-    field_storage_type<T> * payload; // TODO: must be maximally aligned, modifiers - never null
-    unsigned field_alloc_size;
-  public:
     real_t * fieldbuf;
-    lattice_struct * lattice;
-    unsigned is_fetched[NDIRS];
+  public:
 
     #ifdef layout_SOA
-
-    union T_access {
-      T tu;
-      real_t  tarr[t_elements];
-    };
-
     #ifndef CUDA
     
-    void allocate_payload(){
-      fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
       #pragma acc enter data create(fieldbuf)
       if (fieldbuf == nullptr) {
         std::cout << "Failure in field memory allocation\n";
         exit(1);
       }
-      field_alloc_size = lattice->field_alloc_size();
     }
 
-    void free_payload() {
+    void free_field() {
       #pragma acc exit data delete(fieldbuf)
-      free_field_mem((void *)fieldbuf);
+      free((void *)fieldbuf);
       fieldbuf = nullptr;
     }
 
     #else
 
-    unsigned * d_neighb[NDIRS];
-
-    void allocate_payload(){
+    void allocate_field( const int field_alloc_size ) {
       cudaMalloc(
         (void **)&fieldbuf,
-        t_elements*sizeof(real_t) * lattice->field_alloc_size()
+        t_elements*sizeof(real_t) * field_alloc_size
       );
       check_cuda_error("allocate_payload");
       if (fieldbuf == nullptr) {
         std::cout << "Failure in GPU field memory allocation\n";
         exit(1);
       }
-      field_alloc_size = lattice->field_alloc_size();
-        for (int d=0; d<NDIRS; d++) {
-          d_neighb[d] = lattice->d_neighb[d];
-      }
     }
 
-    void free_payload() {
+    void free_field() {
       cudaFree(fieldbuf);
       check_cuda_error("free_payload");
       fieldbuf = nullptr;
@@ -285,7 +271,7 @@ class field_struct {
     #endif
 
     loop_callable
-    inline T get(const int idx) const {
+    inline T get(const int idx, const int field_alloc_size) const {
       T value;
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
@@ -295,7 +281,7 @@ class field_struct {
     }
     
     loop_callable
-    inline void set(T value, const int idx) {
+    inline void set(T value, const int idx, const int field_alloc_size) {
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
@@ -305,33 +291,31 @@ class field_struct {
 
     #else
 
-    void allocate_payload() {
-      payload = (field_storage_type<T> *) 
-                   allocate_field_mem(sizeof(T) * lattice->field_alloc_size());
-              
-      if (payload == nullptr) {
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = allocate_field_mem(sizeof(T) * field_alloc_size);
+      if (fieldbuf == nullptr) {
         std::cout << "Failure in field memory allocation\n";
         exit(1);
       }
     }
 
-    void free_payload() {
-      free_field_mem((void *)payload);
+    void free_field() {
+      free((void *)fieldbuf);
       payload = nullptr;
     }
 
-    T get(const int i) const
+    T get(const int i, const int field_alloc_size) const
     {
-      return (T) (payload[i].c);
+      return ((T *) payload)[i];
     }
 
-    void set(T value, const int i) 
+    void set(T value, const int i, const int field_alloc_size) 
     {
-      payload[i].c = value;
+      ((T *) payload)[i] = value;
     }
+
     #endif
-    
-  };
+};
 
 
 
@@ -354,11 +338,27 @@ template <typename T>
 class field {
 private:
 
+  /// The following struct holds the data + information about the field
+  /// TODO: field-specific boundary conditions?
+  class field_struct {
+    private:
+      constexpr static int t_elements = sizeof(T) / sizeof(real_t);
+    public:
+      field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
+      lattice_struct * lattice;
+      unsigned is_fetched[NDIRS];
+
+      void allocate_payload() { payload.allocate_field(lattice->field_alloc_size()); }
+      void free_payload() { payload.free_field(); }
+      T get(const int i) const { return  payload.get( i, lattice->field_alloc_size() ); }
+      void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() );  }
+  };
+
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
   
 public:
 
-  field_struct<T> * fs;
+  field_struct * fs;
   
   field<T>() {
     // std::cout << "In constructor 1\n";
@@ -407,7 +407,7 @@ public:
       std::cout << "Can not allocate field variables before lattice.setup()\n";
       exit(1);  // TODO - more ordered exit?
     }
-    fs = new field_struct<T>;
+    fs = new field_struct;
     fs->lattice = lattice;
     fs->allocate_payload();
 

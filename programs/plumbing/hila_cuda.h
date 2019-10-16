@@ -31,7 +31,7 @@ static inline void check_cuda_error(std::string message){
               << cudaGetErrorString(code) << "\n";
     exit(1);
   }
-} 
+}
 
 /* Reduction */
 template<typename T>
