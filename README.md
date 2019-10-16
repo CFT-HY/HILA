@@ -129,12 +129,12 @@ forsites(ALL){
 # Goals
 
  1. Profile and optimize the CUDA version
-  * Optimize also cpu code to be fair
+   * Optimize also cpu code to be fair
  1. Write a comprehensive test suite for existing and new features
  1. Compile and run and OpenACC version
  1. Extend both to support:
-  * Fourier transform of field variable
-  * If statements in a loop
-  * Reduction on dimension (so f(t) = sum_x g(x,t))
+   * Fourier transform of field variable
+   * If statements in a loop
+   * Reduction on dimension (so f(t) = sum_x g(x,t))
  1. Array-of-Struct-of-Arrays layout
 
