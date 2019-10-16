@@ -34,7 +34,7 @@
 
 
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
-
+void set_fid_modified(const FileID FID);
 
 // collection of variables holding the state of parsing
 namespace state {
@@ -888,8 +888,10 @@ void MyASTVisitor::mark_loop_functions() {
     // main file buffer
     SourceManager &SM = TheRewriter.getSourceMgr();
     SourceLocation sl = lfi.decl->getSourceRange().getBegin();
-    srcBuf * sb = get_file_buffer(TheRewriter, SM.getFileID(sl));
+    FileID FID = SM.getFileID(sl);
+    srcBuf * sb = get_file_buffer(TheRewriter, FID);
     sb->insert(sl, "/* loop function */ ",true,true);
+    set_fid_modified(FID);
   }
 }
 
@@ -1142,13 +1144,13 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   // catch the transformer_ctl -commands here
   if (control_command(var)) return true;
   
+  if (state::check_loop && state::loop_found) return true;
+
   if (state::dump_ast_next) {
     // llvm::errs() << "**** Dumping declaration:\n" + get_stmt_str(s)+'\n';
     var->dump();
     state::dump_ast_next = false;
   }
-
-  if (state::check_loop && state::loop_found) return true;
 
   
   if (state::in_loop_body) {
@@ -1204,14 +1206,14 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
 
 bool MyASTVisitor::VisitStmt(Stmt *s) {
 
+  if (state::check_loop && state::loop_found) return true;
+  
   if (state::dump_ast_next) {
     llvm::errs() << "**** Dumping statement:\n" + get_stmt_str(s)+'\n';
     s->dump();
     state::dump_ast_next = false;
   }
 
-  if (state::check_loop && state::loop_found) return true;
-  
   // Entry point when inside field[par] = .... body
   if (state::in_loop_body) {
     return handle_loop_body_stmt(s);
@@ -1781,15 +1783,14 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
 // Find the field_storage_type typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
 bool MyASTVisitor::VisitDecl( Decl * D) {
+  if (state::check_loop && state::loop_found) return true;
 
- if (state::dump_ast_next) {
+  if (state::dump_ast_next) {
     llvm::errs() << "**** Dumping declaration:\n";
     D->dump();
     state::dump_ast_next = false;
   }
 
-  if (state::check_loop && state::loop_found) return true;
-  
   auto t = dyn_cast<TypeAliasTemplateDecl>(D);
   if (t && t->getNameAsString() == "field_storage_type") {
     llvm::errs() << "Got field storage\n";
@@ -1911,6 +1912,13 @@ bool search_fid(const FileID FID) {
   return false;
 }
 
+void set_fid_modified(const FileID FID) {
+  if (search_fid(FID) == false) {
+    // new file to be added
+    file_id_list.push_back(FID);
+    // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+  }
+}
 
 // file_buffer_list stores the edited source of all files
 
@@ -1990,12 +1998,7 @@ public:
         
         // We keep track here only of files which were touched
         if (state::loop_found) {
-          FileID FID = SM.getFileID(beginloc);
-          if (search_fid(FID) == false) {
-            // new file to be added
-            file_id_list.push_back(FID);
-            // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
-          }
+          set_fid_modified( SM.getFileID(beginloc) );
         }
       }  
     }

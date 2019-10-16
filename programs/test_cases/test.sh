@@ -5,7 +5,8 @@ check(){
     then
         echo -e "$1 $test \e[36msuccess\e[39m"
     else
-        echo -e "$1 $test \e[30mfailede\e[39m"
+        echo -e "$1 $test \e[30mfailed\e[39m"
+	    exit 1
     fi
 }
 
@@ -32,3 +33,4 @@ for test in "${tests[@]}"; do
     make clean
 done
 
+exit 0
