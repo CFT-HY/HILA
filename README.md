@@ -59,13 +59,13 @@ There is no module on Puhti that gives access to LLVM libraries, so you need to 
 
 To compile SUN I run
 ~~~
-rm SUN.tr.*.cpp ; make SUN.tr.cpu.cpp SUN.tr.gpu.cpp ; rsync -r ../* puhti:programs/
+rm SUN.tr.*.cpp ; make SUN.tr.cpu.cpp SUN.tr.gpu.cpp ; rsync -r ../* puhti:/projappl/project_2001973/programs/
 ~~~
 and then just run
 ~~~
 make
 ~~~
-on puhti
+at /projappl/project_2001973/programs/SUN on Puhti.
 
 
 ## Syntax - What works
@@ -144,4 +144,6 @@ forsites(ALL){
      * If statements in a loop
      * Reduction on dimension (so f(t) = sum_x g(x,t))
  1. Array-of-Struct-of-Arrays layout
-
+ 1. MPI
+ 1. Get rid of NDIM
+ 1. Extend field to allow lattice as input
