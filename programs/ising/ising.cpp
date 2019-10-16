@@ -30,10 +30,10 @@ int main()
   // Define a field
   field<double> spin;
 
-  seed_mersenne( seed );
+  seed_random( seed );
 
   /* "Warm up" the rng generator */
-  for( int i=0; i<543210; i++ ) mersenne();
+  for( int i=0; i<543210; i++ ) hila_random();
   
   // Set to 1
   spin[ALL] = 1;
@@ -52,7 +52,7 @@ int main()
         deltaS = 2.0*spin[X]*( spin[X+XUP] + spin[X+XDOWN]
                              + spin[X+YUP] + spin[X+YDOWN] );
 
-        if( mersenne() < exp(-beta*deltaS) ){
+        if( hila_random() < exp(-beta*deltaS) ){
           spin[X] = -spin[X];
         }
       }
