@@ -12,7 +12,7 @@ test: Makefile conjReduce
 test_transformer: Makefile conjReduce.cpp ../../build/transformer
 	./test_transformer.sh conjReduce.cpp
 
-conjReduce: Makefile conjReduce.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
+test_conjReduce: Makefile conjReduce.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
 	$(CC) -o conjReduce conjReduce.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
 
 %.cpt: %.cpp Makefile
