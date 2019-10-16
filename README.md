@@ -10,6 +10,7 @@ Transformer aims to make it easier for researchers to implement a broad class of
 here involves new datatypes and a preprocessing tool that converts c++ code with the new simplified syntax for loops and element accessors into working c++ code and gpu kernels. 
 
 # Instructions
+
 ## Compiling the preprocessing tool and using it on c++ code
 
 In short, the framework can be used in these steps: 
@@ -43,6 +44,22 @@ Next, we need to initialize a lattice. The following constructs a lattice and se
 lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 ~~~
+
+
+### Compiling on Puhti
+
+There is no module on Puhti that gives access to LLVM libraries, so you need to run the transformer on a different machine.
+
+To compile SUN I run
+~~~
+rm SUN.tr.*.cpp ; make SUN.tr.cpu.cpp SUN.tr.gpu.cpp ; rsync -r ../* puhti:programs/
+~~~
+and then just run
+~~~
+make
+~~~
+on puhti
+
 
 ## Syntax - What works
 
