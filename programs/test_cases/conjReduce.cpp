@@ -5,7 +5,6 @@
 /////////////////////
 /// test_case 1
 /// neighbor access on 2d array
-/// return value 1 = Fail, 0 = Success
 /////////////////////
 
 #define NDIM 2
