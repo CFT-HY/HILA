@@ -5,6 +5,7 @@
 /////////////////////
 /// test_case 2
 /// manipulation of 3d fields
+/// with foralldir
 /////////////////////
 
 #define NDIM 3
@@ -36,5 +37,15 @@ int main(){
         onsites(ALL){
             s1[X]+=s1[X + d];
         }
+    }
+
+    onsites(ALL){
+	foralldir(d){
+	    s1[X]-=s1[X + d];
+	}
+    }
+
+    onsites(ALL){
+	assert(s1[X]==1.0);
     }
 }
