@@ -110,7 +110,12 @@ inline void assert_even_odd_parity( parity p ) {
 #include "../plumbing/hila_cuda.h"
 
 #elif openacc
-#define loop_callable #pragma acc routine seq
+
+#include <openacc.h>
+
+#define loop_callable _Pragma("acc routine seq")
+#define seed_random(seed) seed_mersenne(seed)
+#define hila_random() mersenne()
 
 #else
 #define seed_random(seed) seed_mersenne(seed)
