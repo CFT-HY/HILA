@@ -55,17 +55,14 @@ lattice_struct * lattice = & my_lattice;
 
 ### Compiling on Puhti
 
-There is no module on Puhti that gives access to LLVM libraries, so you need to run the transformer on a different machine.
+There is a separate makefile for compiling transformer on Puhti.
+To use it, run
+~~~
+module load gcc
+make -f Makefile_puhti
+~~~
 
-To compile SUN I run
-~~~
-rm SUN.tr.*.cpp ; make SUN.tr.cpu.cpp SUN.tr.gpu.cpp ; rsync -r ../* puhti:/projappl/project_2001973/programs/
-~~~
-and then just run
-~~~
-make
-~~~
-at /projappl/project_2001973/programs/SUN on Puhti.
+This will link against the llvm installation in the hila development project folder.
 
 
 ## Syntax - What works
@@ -164,3 +161,4 @@ make test
  1. MPI
  1. Get rid of NDIM
  1. Extend field to allow lattice as input
+ 1. Document the library
