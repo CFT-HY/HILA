@@ -889,9 +889,9 @@ void MyASTVisitor::mark_loop_functions() {
     SourceManager &SM = TheRewriter.getSourceMgr();
     SourceLocation sl = lfi.decl->getSourceRange().getBegin();
     FileID FID = SM.getFileID(sl);
-    srcBuf * sb = get_file_buffer(TheRewriter, FID);
-    sb->insert(sl, "/* loop function */ ",true,true);
-    set_fid_modified(FID);
+    //srcBuf * sb = get_file_buffer(TheRewriter, FID);
+    //sb->insert(sl, "/* loop function */ ",true,true);
+    //set_fid_modified(FID);
   }
 }
 

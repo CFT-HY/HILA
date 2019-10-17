@@ -1,7 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 #include<type_traits>
-#include "cmplx.h"
+#include "../datatypes/cmplx.h"
 
 //--- conjugation for general type T -> template specialized for complex types
 
