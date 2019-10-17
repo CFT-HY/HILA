@@ -1,8 +1,5 @@
 #!/bin/bash
 
-#We need these for a cpu build. Turn these into a library?
-export BUILD_REQUIREMENTS="mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o"
-
 check(){
     if [ $? -eq 0 ];
     then
