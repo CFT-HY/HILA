@@ -1,6 +1,12 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+
+#ifdef PUHTI_TRANSFORMER_CUDA
+#define PUHTI_TRANSFOMER
+#define CUDA
+#endif
+
 // Useful global definitions here -- this file should be included by (almost) all others
 
 #include <array>
@@ -125,7 +131,7 @@ inline void assert_even_odd_parity( parity p ) {
 #endif
 
 
-#if ( __cplusplus == 201103L ) || ( __cplusplus == 19971L ) || ( __cplusplus == 201402L )  
+#ifdef PUHTI_TRANSFOMER
 namespace std {
   // This is missing in c++11, which appears to be what we have on Puhti
   template< bool B, class T = void >

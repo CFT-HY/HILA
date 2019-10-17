@@ -1,16 +1,21 @@
-OPTS = -DNDIM=4
+OPTS = -DNDIM=2
 
-TRANSFORMER = ../../build/transformer -DGPU --GPU
-CC = nvcc -DGPU
+TRANSFORMER = ../../build/transformer -DPUHTI_TRANSFORMER_CUDA --CUDA
+CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
+LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
+
 
 CFLAGS = -O3 $(OPTS)
-CXXFLAGS = -O3 -x c++ $(OPTS)
+CXXFLAGS = -O3  $(OPTS)
 
-%.exe: %.tr.o Makefile mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
-	$(CC) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
+test: Makefile_gpu conjReduce
+	./test.sh conjReduce
 
-%.cpt: %.cpp Makefile
-	../../build/transformer $<
+%.exe: %.tr.o Makefile_gpu mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o
+	$(LD) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o
+
+%.cpt: %.cpp Makefile_gpu
+	$(TRANSFORMER) -I/projappl/project_2001973/llvm/lib/clang/8.0.1/include $<
 
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
