@@ -160,5 +160,6 @@ make test
  1. Array-of-Struct-of-Arrays layout
  1. MPI
  1. Get rid of NDIM
+ 1. Fix direction loops
  1. Extend field to allow lattice as input
  1. Document the library
