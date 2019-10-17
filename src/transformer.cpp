@@ -153,7 +153,7 @@ std::list<var_info> var_info_list = {};
 std::list<var_decl> var_decl_list = {};
 
 std::vector<Expr *> remove_expr_list = {};
-std::vector<loop_function_info> loop_functions = {};
+std::vector<FunctionDecl *> loop_functions = {};
 
 // take global CI just in case
 CompilerInstance *myCompilerInstance;
@@ -819,14 +819,15 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 
   // Get the declaration of the function
   Decl* decl = Call->getCalleeDecl();
-  while(decl->getPreviousDecl() != NULL)
-    decl = decl->getPreviousDecl();
+  // while(decl->getPreviousDecl() != NULL)
+  //   decl = decl->getPreviousDecl();
   llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   // Store functions used in loops, recursively...
-  check_loop_function(decl);
-  
+  loop_function_check(decl);
+
+  // TODO: move arg check to loop_function_check  
   // Go through arguments
   for( Expr * E : Call->arguments() ){
     llvm::errs() << "Argument " << i << "/" << D->getNumParams() 
@@ -856,44 +857,79 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 }
 
 
-void MyASTVisitor::check_loop_function(Decl *d) {
+bool MyASTVisitor::loop_function_check(Decl *d) {
   assert(d != nullptr);
   
-  // check if we already have this function
-  for (int i=0; i<loop_functions.size(); i++) if (d == loop_functions[i].decl) return;
-  loop_function_info lfi = {d,false};
-  loop_functions.push_back(lfi);
-
-  CallGraph CG;
-  CG.addToCallGraph(d);
-  int i = 0;
-  for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
-    // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
-    // root is "null function", skip
-    if (i > 0) {
-      Decl * nd = iter->second->getDecl();
-      if (nd != d) {
-        check_loop_function(nd);
-      }
-    }
-    // llvm::errs() << "   ++ loop_function loop " << i << '\n';
-  }
+  FunctionDecl *fd = dyn_cast<FunctionDecl>(d);
+  if (fd) {
+    
+    // fd may point to declaration (prototype) without a body.  
+    // Argument of hasBody becomes the pointer to definition if it is in this compilation unit
+    // needs to be const FunctionDecl *
+    const FunctionDecl * cfd;
+    if (fd->hasBody(cfd)) {
   
+      // take away const
+      fd = const_cast<FunctionDecl *>(cfd);
+      
+      // check if we already have this function
+      for (int i=0; i<loop_functions.size(); i++) if (fd == loop_functions[i]) return true;
+    
+      llvm::errs() << " ++ callgraph for " << fd->getNameAsString() << '\n';
+    
+      loop_functions.push_back(fd);
+      handle_loop_function(fd);
+
+      // And check also functions called by this func
+      CallGraph CG;
+      // addToCallGraph takes Decl *: cast 
+      CG.addToCallGraph( dyn_cast<Decl>(fd) );
+      CG.dump();
+      int i = 0;
+      for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
+        // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
+        // root i==0 is "null function", skip
+        if (i > 0) {
+          Decl * nd = iter->second->getDecl();
+          assert(nd != nullptr);
+          if (nd != fd) {
+            loop_function_check(nd);
+          }
+        }
+        // llvm::errs() << "   ++ loop_function loop " << i << '\n';
+      }
+      return true;
+    } else {
+      // Now function has no body - could be in other compilation unit or in system library.
+      // TODO: handle these!
+      llvm::errs() << "   Function has no body!\n";
+    }
+  } else {
+    // now not a function - should not happen
+  }
+  return false;
 }
 
-void MyASTVisitor::mark_loop_functions() {
-  for (loop_function_info & lfi : loop_functions) if (!lfi.is_handled) {
-    lfi.is_handled = true;
-    // we should mark the function, but it is not necessarily in the
-    // main file buffer
+void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
+  // we should mark the function, but it is not necessarily in the
+  // main file buffer
+
+  if (target.flag_loop_function) {
+  
     SourceManager &SM = TheRewriter.getSourceMgr();
-    SourceLocation sl = lfi.decl->getSourceRange().getBegin();
+    SourceLocation sl = fd->getSourceRange().getBegin();
     FileID FID = SM.getFileID(sl);
-    srcBuf * sb = get_file_buffer(TheRewriter, FID);
-    sb->insert(sl, "/* loop function */ ",true,true);
     set_fid_modified(FID);
+
+    srcBuf * sb = get_file_buffer(TheRewriter, FID);
+    if (target.CUDA) {
+      sb->insert(sl, "__device__ __host__ ",true,true);
+    } else if (target.openacc) {
+      sb->insert(sl, "/* some ACC pragma here */");
+    }
   }
 }
+
 
 
 bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
@@ -965,8 +1001,6 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
                loop_parity.expr->getSourceRange().getBegin(),
                "Parity of the full loop cannot be \'X\'");
   }
-
-  mark_loop_functions();
   
   generate_code(ls, target);
   
@@ -2204,12 +2238,15 @@ void get_target_struct(codetype & target) {
   } else if (cmdline::CUDA) {
     target.kernelize = true;
     target.CUDA = true;
+    target.flag_loop_function = true;
   } else if (cmdline::openacc) {
     target.kernelize = false;
     target.openacc = true;
+    target.flag_loop_function = true;
   } else {
     target.kernelize = false;
     target.openacc = false;
+    target.flag_loop_function = false;
   }
 }
 
