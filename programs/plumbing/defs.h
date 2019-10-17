@@ -125,5 +125,13 @@ inline void assert_even_odd_parity( parity p ) {
 #endif
 
 
+#if ( __cplusplus == 201103L ) || ( __cplusplus == 19971L ) || ( __cplusplus == 201402L )  
+namespace std {
+  // This is missing in c++11, which appears to be what we have on Puhti
+  template< bool B, class T = void >
+  using enable_if_t = typename std::enable_if<B,T>::type;
+}
+#endif
+
 
 #endif
