@@ -1,6 +1,13 @@
 
 # Description 
 
+The Hila framework consists of 
+
+1. the transformer and 
+2. a lattice simulation library.
+
+The library is currently found in `programs/plumbing`.
+
 Transformer contains a C++ preprocessing tool and framework for programming lattice field theory simulations: the main method for getting measurements from non-perturbative quantum field theories.  
 
 Lattice field theory simulations involve up to 4 dimensional grids whose points are updated continuously according to some Monte Carlo update algorithm. The update at each grid point depends on the data stored at neighboring lattice points, and the ideal 
@@ -10,6 +17,7 @@ Transformer aims to make it easier for researchers to implement a broad class of
 here involves new datatypes and a preprocessing tool that converts c++ code with the new simplified syntax for loops and element accessors into working c++ code and gpu kernels. 
 
 # Instructions
+
 ## Compiling the preprocessing tool and using it on c++ code
 
 In short, the framework can be used in these steps: 
@@ -43,6 +51,19 @@ Next, we need to initialize a lattice. The following constructs a lattice and se
 lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 ~~~
+
+
+### Compiling on Puhti
+
+There is a separate makefile for compiling transformer on Puhti.
+To use it, run
+~~~
+module load gcc
+make -f Makefile_puhti
+~~~
+
+This will link against the llvm installation in the hila development project folder.
+
 
 ## Syntax - What works
 
@@ -107,4 +128,47 @@ forsites(ALL){
 }
 ~~~
 
+Adding two fields together:
+~~~ C++
+field<double> s1, s2, s3;
+s1 = s2 + s3;
+~~~
 
+## Testing
+
+In the `programs/test_cases` folder you can find a collection of simple test programs. To test whether the translations to cpu code work, type:
+
+~~~ bash
+make test_baseline
+~~~
+This calls transformer without any parameters on the test programs, and outputs the exit status of each excecutable produced from them. To test whether the GPU translations work, type:
+
+~~~ bash
+make test_gpu
+~~~
+Or test all types of translations one after the other with:
+~~~
+make test
+~~~
+
+
+Method calls in loops that change the field element.
+
+
+
+# Goals
+
+ 1. Profile and optimize the CUDA version
+     * Optimize also cpu code to be fair
+ 1. Write a comprehensive test suite for existing and new features
+ 1. Compile and run and OpenACC version
+ 1. Extend both to support:
+     * Fourier transform of field variable
+     * If statements in a loop
+     * Reduction on dimension (so f(t) = sum_x g(x,t))
+ 1. Array-of-Struct-of-Arrays layout
+ 1. MPI
+ 1. Get rid of NDIM
+ 1. Fix direction loops
+ 1. Extend field to allow lattice as input
+ 1. Document the library

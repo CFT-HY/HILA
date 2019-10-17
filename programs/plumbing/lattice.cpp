@@ -485,7 +485,7 @@ void lattice_struct::create_std_gathers()
     device_info.field_alloc_size = field_alloc_size();
     
     #else
-    #pragma acc data copyin(neighb[d][0:this_node.sites])
+    //#pragma acc data copyin(neighb[d][0:this_node.sites])
     #endif
 
   } /* directions */

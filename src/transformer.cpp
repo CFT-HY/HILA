@@ -87,7 +87,7 @@ namespace cmdline {
                         llvm::cl::cat(TransformerCat));
   
   static llvm::cl::opt<bool>
-  funcinfo("flag-functions",
+  funcinfo("ident-functions",
            llvm::cl::desc("Comment function call types in output"),
            llvm::cl::cat(TransformerCat));
   
@@ -109,25 +109,29 @@ namespace cmdline {
 
 
   static llvm::cl::opt<bool>
-  kernel("vanilla-kernel",
+  kernel("target:vanilla-kernel",
          llvm::cl::desc("Generate kernels"),
          llvm::cl::cat(TransformerCat));
   
   static llvm::cl::opt<bool>
-  vanilla("vanilla",
+  vanilla("target:vanilla",
           llvm::cl::desc("Generate loops in place"),
           llvm::cl::cat(TransformerCat));
 
   static llvm::cl::opt<bool>
-  CUDA("CUDA",
+  CUDA("target:CUDA",
           llvm::cl::desc("Generate CUDA kernels"),
           llvm::cl::cat(TransformerCat));
 
   static llvm::cl::opt<bool>
-  openacc("openacc",
+  openacc("target:openacc",
           llvm::cl::desc("Offload to GPU using openMP"),
           llvm::cl::cat(TransformerCat));
 
+  static llvm::cl::opt<bool>
+  func_attribute("function-attributes",
+         llvm::cl::desc("write pragmas/attributes to functions called from loops"),
+         llvm::cl::cat(TransformerCat));
 };
 
 // local global vars
@@ -2238,16 +2242,17 @@ void get_target_struct(codetype & target) {
   } else if (cmdline::CUDA) {
     target.kernelize = true;
     target.CUDA = true;
-    target.flag_loop_function = true;
   } else if (cmdline::openacc) {
     target.kernelize = false;
     target.openacc = true;
-    target.flag_loop_function = true;
   } else {
     target.kernelize = false;
     target.openacc = false;
-    target.flag_loop_function = false;
   }
+  
+  // TODO: this will have to be made automatic, depending on target
+  if (cmdline::func_attribute) target.flag_loop_function = true;
+  else target.flag_loop_function = false;
 }
 
 int main(int argc, const char **argv) {

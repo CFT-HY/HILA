@@ -48,8 +48,7 @@ void calc_staples(
  
 template<typename T>
 loop_callable void update(
-  T &U, const T &staple,
-  double beta
+  T &U, const T &staple, double beta
 ){
   monte( U, staple, beta );
 }

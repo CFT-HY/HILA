@@ -1,7 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 #include<type_traits>
-#include "cmplx.h"
+#include "../datatypes/cmplx.h"
 
 //--- conjugation for general type T -> template specialized for complex types
 
@@ -280,6 +280,17 @@ loop_callable
 matrix<n,m,T> operator*(const scalart s, const matrix<n,m,T> &A) {
   return operator*(A,s);
 }
+
+template<int n, int m, typename T>
+loop_callable 
+double sq_sum(const matrix<n, m, T> & mat){
+  double result = 0.0;
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+    result += mat.c[i][j]*mat.c[i][j];
+  }
+  return result;
+}
+
 
 template <int n, int m, typename T>
 std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {

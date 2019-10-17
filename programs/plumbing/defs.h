@@ -1,6 +1,12 @@
 #ifndef DEFS_H
 #define DEFS_H
 
+
+#ifdef PUHTI_TRANSFORMER_CUDA
+#define PUHTI_TRANSFOMER
+#define CUDA
+#endif
+
 // Useful global definitions here -- this file should be included by (almost) all others
 
 #include <array>
@@ -110,7 +116,13 @@ inline void assert_even_odd_parity( parity p ) {
 #include "../plumbing/hila_cuda.h"
 
 #elif openacc
-#define loop_callable #pragma acc routine seq
+
+//#include <openacc.h>
+
+#define loop_callable
+//_Pragma("acc routine seq")
+#define seed_random(seed) seed_mersenne(seed)
+#define hila_random() mersenne()
 
 #else
 #define seed_random(seed) seed_mersenne(seed)
@@ -118,6 +130,14 @@ inline void assert_even_odd_parity( parity p ) {
 #define loop_callable
 #endif
 
+
+#ifdef PUHTI_TRANSFOMER
+namespace std {
+  // This is missing in c++11, which appears to be what we have on Puhti
+  template< bool B, class T = void >
+  using enable_if_t = typename std::enable_if<B,T>::type;
+}
+#endif
 
 
 #endif
