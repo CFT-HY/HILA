@@ -12,7 +12,9 @@ int main(){
 
     matrix1[ALL] = 1; 
     onsites(ALL){
-        vector1[X].fill(1);
+        vector1[X].c[0][0]=1;
+        vector1[X].c[0][1]=1;
+        vector1[X].c[0][2]=1;
     }
 
     init = clock();
