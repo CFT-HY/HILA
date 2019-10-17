@@ -57,9 +57,12 @@ for D in 1 2 3 4 ; do
   make clean
 done
 
-echo
-echo ${fails}/${num_tests} tests failed
-cat $ERRORLOG
+if [ ${fails} -eq 0 ]; then
+	echo -e "\e[36m All tests passed \e[39m"
+else
+	echo ${fails}/${num_tests} tests failed
+	cat $ERRORLOG
+fi
 
 rm $ERRORLOG
 exit 0

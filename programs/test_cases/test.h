@@ -14,7 +14,7 @@ std::ostream &hila::output = std::cout;
 lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 
-const int nd[4] = { 10, 20, 6, 32 };
+const int nd[4] = { 10, 10, 10, 4 };
 
 
 inline void checkLatticeSetup(){
