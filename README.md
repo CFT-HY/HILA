@@ -127,6 +127,11 @@ forsites(ALL){
     }
 }
 ~~~
+
+Adding two fields together:
+~~~ C++
+field<double> s1, s2, s3;
+s1 = s2 + s3;
 ## Testing
 
 In the `programs/test_cases` folder you can find a collection of simple test programs. To test whether the translations to cpu code work, type:
