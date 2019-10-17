@@ -1,8 +1,4 @@
-#include <iostream>
-#include <string>
-#include <math.h>
-#include <assert.h>
-
+#include "test.h"
 /////////////////////
 /// test_case 1
 /// 2D field of matrices
@@ -12,43 +8,16 @@
 /// - field with matrix elements
 /////////////////////
 
-#define NDIM 2
-
-#include "../plumbing/field.h"
-#include "../datatypes/general_matrix.h"
-#include "../datatypes/cmplx.h"
-
-// Direct output to stdout
-std::ostream &hila::output = std::cout;
-
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
-
-const int nx = 10, ny = 20;
-
-void checkLatticeSetup(){
-	for (int dir = 0; dir < NDIRS; dir++){
-        //check that neighbor arrays are allocated
-		assert(lattice->neighb[dir]!=nullptr);
-        #ifdef CUDA
-        assert(lattice->device_info.d_neighb[dir]!=nullptr)
-        #endif
-	}
-	assert(lattice->size(0)==nx);
-	assert(lattice->size(1)==ny);
-}
-
 int main(){
     int sum = 0;
     matrix<2,2,double> a;
+
+    test_setup();
+
     a.c[0][0] = 0;
     a.c[0][1] = -1;
     a.c[1][0] = 1;
     a.c[1][1] = 0;
-
-    lattice->setup( nx, ny );
-    checkLatticeSetup();
 
     field<matrix<2,2,double> > matrices;
 
@@ -64,6 +33,6 @@ int main(){
         sum += (int) matrices[X].trace(); //reduction operation
     }
 
-    assert(sum==nx*ny*2);
+    assert(sum==lattice->volume()*2);
     return 0;
 }
