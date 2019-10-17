@@ -19,7 +19,7 @@ int main(){
     s3[ODD] = 1.0;
 
     s1[ALL] = s2[X] + s3[X];
-    //s1 = s2 + s3; //now all sites in s1 should be set to 1
+    //s1 = s2 + s3; //this causes a compilation error
     onsites(ALL){
         sum+=s1[X];
     }
@@ -31,10 +31,4 @@ int main(){
             s2[X]-=s1[X+dir];
         }
     }
-    //foralldir(d){
-    //    onsites(ALL){
-//
-    //    }
-    //}
-
 }
