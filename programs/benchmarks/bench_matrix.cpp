@@ -1,40 +1,28 @@
-#include <iostream>
-#include <string>
-#include <math.h>
-#include <assert.h>
-
-/////////////////////
-/// Benchmark 1
-/////////////////////
-
-#define NDIM 2
-
-#include "../plumbing/field.h"
-#include "../datatypes/general_matrix.h"
-#include "../datatypes/cmplx.h"
-
-// Direct output to stdout
-std::ostream &hila::output = std::cout;
-
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
-
-const int nx = 32, ny = 32;
+#include "bench.h"
 
 int main(){
-    lattice->setup( nx, ny );
+    bench_setup();
+    int n_runs = 100;
+    double msecs;
+    clock_t init, end;
 
     field<matrix<2,2,double> > matrix1;
     field<matrix<2,2,double> > matrix2;
     field<matrix<2,2,double> > matrix3;
 
     matrix1[ALL] = 1; 
-    matrix2[ALL] = 1; 
+    matrix2[ALL] = 1;
 
-    for( int i=0; i<100; i++){
+    init = clock();
+
+    for( int i=0; i<n_runs; i++){
         matrix3[ALL] = matrix1[X]*matrix2[X];
     }
+
+    end = clock();
+
+    float timing = ((float)(end - init)) *1000 / (CLOCKS_PER_SEC) / n_runs;
+    output0 << "Matrix * Matrix: " << timing << " ms \n";
 
     return 0;
 }

@@ -11,9 +11,9 @@ fi
 make cleanall
 for benchfile in $benchmarks; do
     benchmark="${benchfile%.*}"
-    make -s ${benchmark}.exe
+    make -s ${benchmark}.exe 2>/dev/null
     ./${benchmark}.exe
-    rm ${benchmark}.exe ${benchmark}.cpt
+    rm -f ${benchmark}.exe
 done
 make clean
 
