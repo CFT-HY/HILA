@@ -1,4 +1,4 @@
-OPTS = -DNDIM=2
+OPTS =
 
 TRANSFORMER = ../../build/transformer
 CC = clang++-8
