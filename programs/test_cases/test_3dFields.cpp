@@ -11,7 +11,7 @@
 int main(){
     cmplx<double> sum = 0;
     field<cmplx<double>> s1, s2, s3;
-    
+
     test_setup();
 
     s1[ALL] = 0.0;
