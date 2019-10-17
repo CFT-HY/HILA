@@ -1,12 +1,14 @@
 #!/bin/bash
 
+export ERRORLOG=$(mktemp /tmp/abc-script.XXXXXX)
+
 check(){
     if [ $? -eq 0 ];
     then
         echo -e "$1 $test \e[36msuccess\e[39m"
     else
         echo -e "$1 $test \e[31mfailed\e[39m"
-	    exit 1
+        echo -e " * $1 $test" >> $ERRORLOG
     fi
 }
 
@@ -17,15 +19,17 @@ transform_c(){
 }
 
 compile_c(){
-    make -s ${1}.exe 2>/dev/null
+    make -s ${1}.exe 2>> $ERRORLOG
     check compile
 }
 
 run_c(){
     echo ./$1
     ./${1}.exe
-    check
+    check run
 }
+
+
 
 
 # Get a list from command line arguments or list all test files
@@ -47,4 +51,8 @@ for testfile in $tests; do
 done
 make clean
 
+echo The following tests failed:
+cat $ERRORLOG
+
+rm $ERRORLOG
 exit 0

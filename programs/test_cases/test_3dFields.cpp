@@ -25,9 +25,23 @@ lattice_struct * lattice = & my_lattice;
 
 const int nx = 10, ny = 10, nz = 10;
 
+void checkLatticeSetup(){
+	for (int dir = 0; dir < NDIRS; dir++){
+        //check that neighbor arrays are allocated
+		assert(lattice->neighb[dir]!=nullptr);
+        #ifdef CUDA
+        assert(lattice->device_info.d_neighb[dir]!=nullptr)
+        #endif
+	}
+	assert(lattice->size(0)==nx);
+	assert(lattice->size(1)==ny);
+	assert(lattice->size(2)==nz);
+}
+
 int main(){
     cmplx<double> sum = 0;
     lattice->setup(nx, ny, nz);
+    checkLatticeSetup();
     field<cmplx<double>> s1, s2, s3;
 
     s1[ALL] = 0.0;
