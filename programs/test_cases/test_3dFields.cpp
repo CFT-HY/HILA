@@ -42,7 +42,7 @@ int main(){
 
     onsites(ODD){
         foralldir(d){
-            s2[X]-=s1[X+d];
+            s2[X]-=s1[X+(direction)d];
         }
     }
     foralldir(d){
