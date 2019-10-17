@@ -1,4 +1,4 @@
-OPTS = -DNDIM=2
+OPTS = -DNDIM=4
 
 TRANSFORMER = ../../build/transformer
 CC = clang++-8
@@ -31,7 +31,7 @@ test_conjReduce: Makefile conjReduce.o mersenne_inline.o lattice.o memory.o setu
 	$(CC) $(CFLAGS) $< -c
 
 clean:
-	rm -rf *.cpt
+	rm -rf *.cpt *.o
 
 cleanall:
 	rm -rf *.o *.exe

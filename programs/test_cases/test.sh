@@ -43,17 +43,19 @@ else
     tests=$(ls test_*.cpp  )
 fi
 
-
 make cleanall
-for testfile in $tests; do
+for D in 1 2 3 4 ; do
+  sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' Makefile
+  for testfile in $tests; do
     test="${testfile%.*}"
     echo $test
     transform_c ${test}.cpp
     compile_c ${test}
     run_c ${test}
     rm ${test}.exe ${test}.cpt
+  done
+  make clean
 done
-make clean
 
 echo
 echo ${fails}/${num_tests} tests failed
