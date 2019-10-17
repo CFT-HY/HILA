@@ -4,7 +4,7 @@ export ERRORLOG=$(mktemp /tmp/abc-script.XXXXXX)
 export fails=0
 export num_tests=0
 
-MAKEFILE=Makefile
+MAKEFILE=Makefile_gpu
 
 check(){
     if [ $? -eq 0 ];
@@ -19,8 +19,8 @@ check(){
 }
 
 transform_c(){
-    echo ../../build/transformer $1
-    ../../build/transformer $1 2>/dev/null
+    echo ../../build/transformer -DGPU --CUDA $1
+    ../../build/transformer -DGPU --CUDA $1 2>/dev/null
     check transform
 }
 
