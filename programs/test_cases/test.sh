@@ -1,6 +1,8 @@
 #!/bin/bash
 
 export ERRORLOG=$(mktemp /tmp/abc-script.XXXXXX)
+export fails=0
+export num_tests=0
 
 check(){
     if [ $? -eq 0 ];
@@ -9,7 +11,9 @@ check(){
     else
         echo -e "$1 $test \e[31mfailed\e[39m"
         echo -e " * $1 $test" >> $ERRORLOG
+        export fails=$((fails+1))
     fi
+    export num_tests=$((num_tests+1))
 }
 
 transform_c(){
@@ -19,7 +23,7 @@ transform_c(){
 }
 
 compile_c(){
-    make -s ${1}.exe 2>> $ERRORLOG
+    make -s ${1}.exe 2>/dev/null
     check compile
 }
 
@@ -51,7 +55,8 @@ for testfile in $tests; do
 done
 make clean
 
-echo The following tests failed:
+echo
+echo ${fails}/${num_tests} tests failed
 cat $ERRORLOG
 
 rm $ERRORLOG
