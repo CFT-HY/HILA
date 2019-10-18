@@ -134,6 +134,11 @@ field<double> s1, s2, s3;
 s1 = s2 + s3;
 ~~~
 
+Method calls in loops that change the field element.
+
+Referring to the same direction twice in different field references causes an error in cuda kernel parameters.
+
+
 ## Testing
 
 In the `programs/test_cases` folder you can find a collection of simple test programs. To test whether the translations to cpu code work, type:
@@ -152,22 +157,17 @@ make test
 ~~~
 
 
-Method calls in loops that change the field element.
-
-
-
 # Goals
 
- 1. Profile and optimize the CUDA version
-     * Optimize also cpu code to be fair
- 1. Write a comprehensive test suite for existing and new features
- 1. Compile and run and OpenACC version
+ 1. Write tests for existing and new features
+     * Test also things that fail. The test basically defines how things should work.
  1. Extend both to support:
      * Fourier transform of field variable
      * If statements in a loop
      * Reduction on dimension (so f(t) = sum_x g(x,t))
- 1. Array-of-Struct-of-Arrays layout
- 1. MPI
+     * Array-of-Struct-of-Arrays layout
+     * MPI
+ 1. Implement OpenACC once the compiler version is updated
  1. Get rid of NDIM
  1. Fix direction loops
  1. Extend field to allow lattice as input
