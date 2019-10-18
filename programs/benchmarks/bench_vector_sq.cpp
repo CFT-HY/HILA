@@ -9,14 +9,19 @@ int main(){
     field<matrix<1,3,double> > vector1;
 
     onsites(ALL){
-        vector1[X].fill(1);
+        vector1[X].c[0][0]=1;
+        vector1[X].c[0][1]=1;
+        vector1[X].c[0][2]=1;
     }
+
 
     double sum=0;
     init = clock();
 
     for( int i=0; i<n_runs; i++){
-        sum += vector1[X].sq_sum();
+        onsites(ALL){
+            sum += vector1[X].sq_sum();
+        }
     }
 
     end = clock();

@@ -27,7 +27,7 @@ test: Makefile_gpu conjReduce
 	$(CC) $(CFLAGS) $< -c
 
 clean:
-	rm -rf *.cpt
+	rm -rf *.cpt *.o
 
 cleanall:
-	rm -rf *.o *.exe
+	rm -rf *.cpt *.o *.exe

@@ -125,6 +125,15 @@ class matrix {
     return result;
   }
 
+  loop_callable 
+  double sq_sum(){
+    double result = 0.0;
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+      result += c[i][j]*c[i][j];
+    }
+    return result;
+  }
+
   std::string str() const {
     std::string text = "";
     for (int i=0; i<n; i++){
@@ -279,16 +288,6 @@ template <int n, int m, typename T, typename scalart, std::enable_if_t<std::is_a
 loop_callable 
 matrix<n,m,T> operator*(const scalart s, const matrix<n,m,T> &A) {
   return operator*(A,s);
-}
-
-template<int n, int m, typename T>
-loop_callable 
-double sq_sum(const matrix<n, m, T> & mat){
-  double result = 0.0;
-  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-    result += mat.c[i][j]*mat.c[i][j];
-  }
-  return result;
 }
 
 
