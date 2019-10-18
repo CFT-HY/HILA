@@ -5,9 +5,9 @@
 
 
 void dirac_naive(
-    field<matrix<N,N,double> > &matrix1,
-    field<matrix<1,N,double> > &vector1,
-    field<matrix<1,N,double> > &vector2);
+    field<matrix<N,N, cmplx<double>> > &matrix1,
+    field<matrix<1,N, cmplx<double>> > &vector1,
+    field<matrix<1,N, cmplx<double>> > &vector2);
 
 
 
@@ -21,11 +21,11 @@ int main(){
 
     bench_setup();
 
-    field<matrix<N,N,double> > matrix1;
-    field<matrix<N,N,double> > matrix2;
-    field<matrix<N,N,double> > matrix3;
-    field<matrix<1,N,double> > vector1;
-    field<matrix<1,N,double> > vector2;
+    field<matrix<N,N, cmplx<double>> > matrix1;
+    field<matrix<N,N, cmplx<double>> > matrix2;
+    field<matrix<N,N, cmplx<double>> > matrix3;
+    field<matrix<1,N, cmplx<double>> > vector1;
+    field<matrix<1,N, cmplx<double>> > vector2;
 
     matrix1[ALL] = 1; 
     matrix2[ALL] = 1;
@@ -75,7 +75,7 @@ int main(){
 
     for( int i=0; i<n_runs; i++){
         onsites(ALL){
-            sum += vector1[X].sq_sum();
+            sum += vector1[X].norm_sq();
         }
     }
 
@@ -106,7 +106,7 @@ int main(){
     n_runs = n_runs_multiplier;
 
     {
-        field<matrix<1,N,double> > r, rnew, p, Dp;
+        field<matrix<1,N, cmplx<double>> > r, rnew, p, Dp;
 
         init = clock();
 
@@ -124,8 +124,8 @@ int main(){
             double pDDp = 0;
             double rr = 0;
             onsites(ALL){
-                double rr_temp = r[X].sq_sum();
-                double pDDp_temp = Dp[X].sq_sum();
+                double rr_temp = r[X].norm_sq();
+                double pDDp_temp = Dp[X].norm_sq();
                 pDDp += pDDp_temp;
                 rr += rr_temp;
             }
@@ -137,7 +137,7 @@ int main(){
 
             double rrnew = 0;
             onsites(ALL){
-                double rr_temp = r[X].sq_sum();
+                double rr_temp = r[X].norm_sq();
                 rrnew += rr_temp;
             }
 
@@ -163,9 +163,9 @@ int main(){
 
 
 void dirac_naive(
-    field<matrix<N,N,double> > &matrix1,
-    field<matrix<1,N,double> > &vector1,
-    field<matrix<1,N,double> > &vector2){
+    field<matrix<N,N, cmplx<double>> > &matrix1,
+    field<matrix<1,N, cmplx<double>> > &vector1,
+    field<matrix<1,N, cmplx<double>> > &vector2){
     double mass = 0.1;
     // Write the results here
     vector2[ALL] = mass * vector1[X];
