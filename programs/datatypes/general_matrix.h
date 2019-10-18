@@ -17,6 +17,18 @@ inline cmplx<Accuracy> typeConj(cmplx<Accuracy> val){
   return val.conj();
 }
 
+template<typename T>
+loop_callable
+inline double type_norm_sq(T val){
+  return val*val;
+}
+
+template<typename T>
+loop_callable 
+inline double type_norm_sq(cmplx<T> val){
+  return val.norm_sq();
+}
+
 //---
 
 template <const int n, const int m, typename T>
@@ -125,11 +137,11 @@ class matrix {
     return result;
   }
 
-  loop_callable 
-  double sq_sum(){
+  loop_callable
+  double norm_sq(){
     double result = 0.0;
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-      result += c[i][j]*c[i][j];
+      result += type_norm_sq(c[i][j]);
     }
     return result;
   }
