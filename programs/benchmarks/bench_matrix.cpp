@@ -1,17 +1,37 @@
 #include "bench.h"
 
+#define N 3
+#define n_runs_multiplier 1000
+
+
+void dirac_naive(
+    field<matrix<N,N,double> > &matrix1,
+    field<matrix<1,N,double> > &vector1,
+    field<matrix<1,N,double> > &vector2);
+
+
+
 int main(){
-    bench_setup();
-    int n_runs = 100;
+    int n_runs;
     double msecs;
     clock_t init, end;
+    double timing;
+    double sum;
 
-    field<matrix<2,2,double> > matrix1;
-    field<matrix<2,2,double> > matrix2;
-    field<matrix<2,2,double> > matrix3;
+
+    bench_setup();
+
+    field<matrix<N,N,double> > matrix1;
+    field<matrix<N,N,double> > matrix2;
+    field<matrix<N,N,double> > matrix3;
+    field<matrix<1,N,double> > vector1;
+    field<matrix<1,N,double> > vector2;
 
     matrix1[ALL] = 1; 
     matrix2[ALL] = 1;
+
+    // Time MATRIX * MATRIX
+    n_runs = n_runs_multiplier*10;
 
     init = clock();
 
@@ -21,8 +41,145 @@ int main(){
 
     end = clock();
 
-    float timing = ((float)(end - init)) *1000 / (CLOCKS_PER_SEC) / n_runs;
-    output0 << "Matrix * Matrix: " << timing << " ms \n";
+    timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
+    printf("Matrix * Matrix: %g ms \n", timing);
+
+    matrix1[ALL] = 1; 
+    onsites(ALL){
+        for(int i=0; i<N; i++){
+            vector1[X].c[0][1]=1;
+        }
+    }
+
+
+    // Time VECTOR * MATRIX
+    n_runs = n_runs_multiplier*10;
+
+    init = clock();
+
+    for( int i=0; i<n_runs; i++){
+        vector1[ALL] = vector1[X]*matrix1[X];
+    }
+
+    end = clock();
+
+    timing = ((double)(end - init)) *1000 / (CLOCKS_PER_SEC) / n_runs;
+    output0 << "Vector * Matrix: " << timing << " ms \n";
+
+
+    // Time VECTOR * MATRIX
+    n_runs = n_runs_multiplier*1;
+    
+    sum=0;
+    init = clock();
+
+    for( int i=0; i<n_runs; i++){
+        onsites(ALL){
+            sum += vector1[X].sq_sum();
+        }
+    }
+
+    end = clock();
+
+    timing = ((double)(end - init)) *1000 / (CLOCKS_PER_SEC) / n_runs;
+    output0 << "Vector square sum: " << timing << " ms \n";
+
+
+
+
+    // Time naive Dirac operator 
+    n_runs = n_runs_multiplier;
+
+    init = clock();
+
+    for( int i=0; i<n_runs; i++){
+        dirac_naive(matrix1, vector1, vector2);
+    }
+
+    end = clock();
+
+    timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
+    printf("Dirac: %g ms \n", timing);
+
+
+    // Conjugate gradient step 
+    n_runs = n_runs_multiplier;
+
+    {
+        field<matrix<1,N,double> > r, rnew, p, Dp;
+
+        init = clock();
+
+        for( int i=0; i<n_runs; i++){
+            r[ALL] = vector1[X];
+            p[ALL] = vector1[X];
+            onsites(ALL){
+                 for(int i=0; i<N; i++){
+                    vector2[X].c[0][i] = 0;
+                 }
+            }
+            
+            dirac_naive(matrix1, p, Dp);
+
+            double pDDp = 0;
+            double rr = 0;
+            onsites(ALL){
+                double rr_temp = r[X].sq_sum();
+                double pDDp_temp = Dp[X].sq_sum();
+                pDDp += pDDp_temp;
+                rr += rr_temp;
+            }
+
+            double alpha = rr / pDDp;
+
+            vector2[ALL] = r[X] + alpha*p[X];
+            r[ALL] = r[X] - alpha*Dp[X];
+
+            double rrnew = 0;
+            onsites(ALL){
+                double rr_temp = r[X].sq_sum();
+                rrnew += rr_temp;
+            }
+
+            double beta = rrnew/rr;
+            
+            p[ALL] = r[X] + beta*p[X];
+
+        }
+        
+        end = clock();
+    }
+
+    timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
+    printf("CG: %g ms \n", timing);
+
+
+
 
     return 0;
 }
+
+
+
+
+void dirac_naive(
+    field<matrix<N,N,double> > &matrix1,
+    field<matrix<1,N,double> > &vector1,
+    field<matrix<1,N,double> > &vector2){
+    double mass = 0.1;
+    // Write the results here
+    vector2[ALL] = mass * vector1[X];
+    
+    foralldir(d){
+        // Positive directions: get the vector and multiply by matrix stored here
+        direction dir = (direction)d;
+        vector2[ALL] += 0.5*vector1[X+dir]*matrix1[X];
+
+        // Negative directions: get both form neighbour
+        dir = opp_dir( (direction)d );
+        direction dir2 = opp_dir( (direction)d );
+        vector2[ALL] -= 0.5*vector1[X+dir]*matrix1[X+dir2].conjugate();
+    }
+}
+
+
