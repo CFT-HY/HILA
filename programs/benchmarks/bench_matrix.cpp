@@ -1,7 +1,7 @@
 #include "bench.h"
 
 #define N 3
-#define n_runs_multiplier 1000
+#define n_runs_multiplier 1
 
 
 void dirac_naive(
@@ -154,8 +154,6 @@ int main(){
     printf("CG: %g ms \n", timing);
 
 
-
-
     return 0;
 }
 
@@ -166,19 +164,41 @@ void dirac_naive(
     field<matrix<N,N, cmplx<double>> > &matrix1,
     field<matrix<1,N, cmplx<double>> > &vector1,
     field<matrix<1,N, cmplx<double>> > &vector2){
+    static field<double> eta[NDIM]; // The staggered phase
+    static bool initialized = false;
+
     double mass = 0.1;
-    // Write the results here
-    vector2[ALL] = mass * vector1[X];
+
+    if(!initialized){
+        foralldir(d){
+            onsites(ALL){
+                location l = coordinates(X);
+                int sumcoord = 0;
+                for(int d2=0;d2<d;d2++){
+                    sumcoord += l[d];
+                }
+                if( sumcoord %2 ){
+                    eta[d][X] = 1;
+                } else {
+                    eta[d][X] =-1;
+                }
+            }
+        }
+        initialized = true;
+    }
     
+
+    vector2[ALL] = mass * vector1[X];
+
     foralldir(d){
         // Positive directions: get the vector and multiply by matrix stored here
         direction dir = (direction)d;
-        vector2[ALL] += 0.5*vector1[X+dir]*matrix1[X];
+        vector2[ALL] += 0.5*eta[d][X]*vector1[X+dir]*matrix1[X];
 
         // Negative directions: get both form neighbour
         dir = opp_dir( (direction)d );
         direction dir2 = opp_dir( (direction)d );
-        vector2[ALL] -= 0.5*vector1[X+dir]*matrix1[X+dir2].conjugate();
+        vector2[ALL] -= 0.5*eta[d][X]*vector1[X+dir]*matrix1[X+dir2].conjugate();
     }
 }
 
