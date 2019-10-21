@@ -136,4 +136,13 @@ struct var_decl {
 };
 
 
+struct special_function_call {
+  Expr * fullExpr;
+  std::string full_expr;
+  std::string replace_expression;
+  bool add_loop_var;
+  int scope;
+};
+
+
 #endif

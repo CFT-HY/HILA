@@ -155,6 +155,7 @@ std::list<field_ref> field_ref_list = {};
 std::list<field_info> field_info_list = {};
 std::list<var_info> var_info_list = {};
 std::list<var_decl> var_decl_list = {};
+std::list<special_function_call> special_function_call_list = {};
 
 std::vector<Expr *> remove_expr_list = {};
 std::vector<FunctionDecl *> loop_functions = {};
@@ -821,6 +822,11 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
 
+  // Handle special loop functions
+  if( handle_special_loop_function(Call) ){
+    return;
+  }
+
   // Get the declaration of the function
   Decl* decl = Call->getCalleeDecl();
   // while(decl->getPreviousDecl() != NULL)
@@ -935,6 +941,24 @@ void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
 }
 
 
+bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
+  // If the function is in a list of defined loop functions, add it to a list
+  // Return true if the expression is a special function and
+  std::string name = Call->getDirectCallee()->getNameInfo().getAsString();
+  if( name == "coordinates" ){
+    llvm::errs() << get_stmt_str(Call) << '\n';
+    special_function_call sfc;
+    sfc.fullExpr = Call;
+    sfc.scope = state::scope_level;
+    sfc.replace_expression = "lattice->coordinates";
+    sfc.add_loop_var = true;
+    special_function_call_list.push_back(sfc);
+    return 1;
+  }
+  return 0;
+}
+
+
 
 bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
   SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(),
@@ -980,6 +1004,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // Buf.create( &TheRewriter, ls );
           
   field_ref_list.clear();
+  special_function_call_list.clear();
   var_info_list.clear();
   var_decl_list.clear();
   remove_expr_list.clear();

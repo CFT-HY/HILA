@@ -99,6 +99,10 @@ inline parity location_parity(const location & a) {
   else return parity::odd;
 }
 
+// Replaced by transformer
+location coordinates(parity X);
+
+
 
 #ifndef USE_MPI
 #define mynode() 0

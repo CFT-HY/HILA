@@ -2,7 +2,6 @@
 
 /////////////////////
 /// test_case 2
-/// manipulation of 3d fields
 /// Coverage:
 /// - foralldir & onsites env
 /// - operations between multiple fields

@@ -472,28 +472,13 @@ void lattice_struct::create_std_gathers()
 	      }
       }
     }
-
-    /* GPU: Copy the neighbour array to the device and initialize device info */
-    #ifdef CUDA
-    
-    cudaMalloc( (void **)&(device_info.d_neighb[d]), this_node.sites * sizeof(unsigned));
-    check_cuda_error("create_std_gathers");
-    set_neighbour_pointers( device_info.d_neighb[d], d);
-    cudaMemcpy( device_info.d_neighb[d], neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
-    check_cuda_error("create_std_gathers copy");
-    
-    device_info.field_alloc_size = field_alloc_size();
-    
-    #else
-    //#pragma acc data copyin(neighb[d][0:this_node.sites])
-    #endif
-
   } /* directions */
 
   /* Finally, set the site to the final offset (better be right!) */
   this_node.field_alloc_size = c_offset;
 
   #ifdef CUDA
-  device_info.field_alloc_size = field_alloc_size();
+  /* Setup lattice info on device */
+  setup_lattice_device_info();
   #endif
 }

@@ -37,6 +37,7 @@ extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;
 extern std::list<var_info> var_info_list;
 extern std::list<var_decl> var_decl_list;
+extern std::list<special_function_call> special_function_call_list;
 
 std::string looping_var;
 std::string parity_name;
@@ -221,7 +222,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
 std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf & loopBuf) {
   
-  replace_field_refs(loopBuf);
+  replace_field_refs_and_funcs(loopBuf);
   
   std::stringstream code;
   code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
@@ -377,7 +378,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   }
 
   // finally, change the references to variables in the body
-  replace_field_refs(loopBuf);
+  replace_field_refs_and_funcs(loopBuf);
 
   // Begin the function
   kernel << ")\n{\n";
@@ -457,8 +458,8 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
 }
 
 
-/// Change field references within loops
-void MyASTVisitor::replace_field_refs(srcBuf & loopBuf) {
+/// Change field references and special functions within loops
+void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf) {
   
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
@@ -469,5 +470,14 @@ void MyASTVisitor::replace_field_refs(srcBuf & loopBuf) {
     } else {
       loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
     }
-  }                        
+  }
+
+  // Handle calls to special in-loop functions
+  for ( special_function_call & sfc : special_function_call_list ){
+    if( sfc.add_loop_var ){
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
+    } else {
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression);
+    }
+  }
 }
