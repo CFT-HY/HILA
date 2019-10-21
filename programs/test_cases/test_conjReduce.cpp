@@ -6,33 +6,48 @@
 /// - reduction + onsites env.
 /// - EVEN + ODD accessors / neighbor access
 /// - field with matrix elements
+/// - NOTE: Assumes periodic boundary conditions
 /////////////////////
 
-int main(){
-    int sum = 0;
-    matrix<2,2,double> a;
+//TODO: rng definition that works for MPI, GPU and CPU
 
+int main(){
+    seed_mersenne(4l);
+    double sum = 0;
     test_setup();
 
-    a.c[0][0] = 0;
-    a.c[0][1] = -1;
-    a.c[1][0] = 1;
-    a.c[1][1] = 0;
+    std::cout << lattice->volume() << "\n";
 
     field<matrix<2,2,double> > matrices;
 
     assert(matrices.fs==nullptr); //check that fieldstruct allocated only after assignment
-    matrices[EVEN] = a; //90 degree rotations
-    matrices[ODD] = a.conjugate(); //-90 degree rotations
+    onsites(EVEN){
+        matrix<2,2,double> a;
+        double theta = 2.0*M_PI*mersenne(); //make a random rotation matrix at each even site
+        a.c[0][0] = cos(theta);
+        a.c[0][1] = -sin(theta);
+        a.c[1][0] = sin(theta);
+        a.c[1][1] = cos(theta);
+        matrices[X] = a;
+    }
     assert(matrices.fs!=nullptr);
 
-    matrices[EVEN]*=matrices[X + XUP]; //left & right rotations cancel out 
-    matrices[ODD]*=matrices[X].conjugate();
+    matrices[ODD] = matrices[X + XDOWN].conjugate(); //odd matrices are the conjugate of the previous even site in the X direction
 
-    onsites(ALL){
-        sum += (int) matrices[X].trace(); //reduction operation
+    onsites(EVEN){
+        matrices[X]*=matrices[X + XUP]; //multiply the even sites with the matrices stored in the neighboring odd site in X direction
+    }
+    onsites(ODD){
+        matrices[X]*=matrices[X].conjugate(); //multiply odd sites by their conjugate
     }
 
-    assert(sum==lattice->volume()*2);
+    //now all sites should be unit matrices
+
+    onsites(ALL){
+        sum += matrices[X].trace();
+    }
+
+    assert(((int) round(sum)) == lattice->volume()*2);
+
     return 0;
 }
