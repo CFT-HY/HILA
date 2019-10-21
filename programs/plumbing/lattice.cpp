@@ -265,16 +265,16 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   site_index_list.resize(sites);
   for(unsigned i = 0; i<sites; i++){
     location l;
-    unsigned l_index;
+    unsigned l_index=i;
     foralldir(d){
       l[d] = l_index % size[d] + min[d];
       l_index /= size[d];
     }
     l_index = lattice.site_index(l);
     site_index_list[l_index] = l;
+    location m = site_index_list[i];
   }
 }
-
 
 /////////////////////////////////////////////////////////////////////
 /// Create the neighbour index arrays 
