@@ -10,10 +10,10 @@
 int main(){
     int sum = 0;
     matrix<2,2,double> a;
-    field<matrix<2,2,double> > matrices;
-
-    field<int> coordinate, nb_coordinate1, nb_coordinate2;
     test_setup();
+
+    field<matrix<2,2,double> > matrices;
+    field<int> coordinate, nb_coordinate1, nb_coordinate2;
 
     // Test that neighbours are fetched correctly
     foralldir(d){
@@ -23,11 +23,12 @@ int main(){
             coordinate[X] = l[d];
             nb_coordinate1[X] = (l[d] + 1) % nd[d];
         }
-
+        
         nb_coordinate2[ALL] = coordinate[X+dir];
 
         onsites(ALL){
-            sum += nb_coordinate1[X]-nb_coordinate2[X];
+            int diff = nb_coordinate1[X]-nb_coordinate2[X];
+            sum += diff*diff;
         }
         assert(sum==0); // Value fetched from neighbour is correct
     }
