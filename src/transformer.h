@@ -33,6 +33,7 @@ struct codetype {
   bool kernelize;
   bool CUDA;
   bool openacc;
+  bool flag_loop_function;
 };
 
 enum class parity { none, even, odd, all, x };
@@ -134,10 +135,5 @@ struct var_decl {
   int scope;
 };
 
-
-struct loop_function_info {
-  Decl * decl;
-  bool is_handled;
-};
 
 #endif

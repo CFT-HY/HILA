@@ -144,9 +144,9 @@ public:
 
   void handle_function_call_in_loop(Stmt * s);
   
-  void check_loop_function(Decl *fd);
+  bool loop_function_check(Decl *fd);
   
-  void mark_loop_functions();
+  void handle_loop_function(FunctionDecl *fd);
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );
