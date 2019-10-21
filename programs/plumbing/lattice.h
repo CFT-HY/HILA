@@ -164,13 +164,13 @@ public:
 
 
   #ifndef CUDA
-  location coordinates( int idx ){
-    return this_node.site_index_list[idx];
+  location coordinates( unsigned idx ){
+    return site_location(idx);
   }
 
   #else
-  location coordinates( int idx ){
-    return device_info.d_coordinates[idx];
+  location coordinates( unsigned idx ){
+    return device_info.site_index_list[idx];
   }
 
   #endif
