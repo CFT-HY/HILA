@@ -32,7 +32,7 @@ void lattice_struct::setup(int siz[NDIM]) {
 
 #if NDIM==4
 void lattice_struct::setup(int nx, int ny, int nz, int nt) {
-j  int s[NDIM] = {nx, ny, nz, nt};
+  int s[NDIM] = {nx, ny, nz, nt};
   setup(s);
 }
 #elif NDIM==3
@@ -126,7 +126,7 @@ unsigned lattice_struct::site_index(const location & loc)
 
 ///////////////////////////////////////////////////////////////////////
 /// give site index for nodeid sites
-/// Note: loc really has to be on this node
+/// compare to above
 ///////////////////////////////////////////////////////////////////////
 
 unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
@@ -159,21 +159,8 @@ unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
 
 location lattice_struct::site_location(unsigned index)
 {
-  // make the index lexicographic
-#ifdef EVENFIRST
   return this_node.coordinates[index];
-#else
-  location l;
-  foralldir(d) {
-    l[d] = index % this_node.size[d] + this_node.min[d];
-    index /= this_node.size[d];
-  }
-  return l;
-#endif
 }
-
-
-
 
 
 
@@ -190,7 +177,7 @@ void lattice_struct::setup_nodes() {
   nodes.nodelist.resize(nodes.number);
 
   // n keeps track of the node "root coordinates"
-  int n[NDIM];
+  location n;
   foralldir(d) n[d] = 0;
 
   // use nodes.divisors - vectors to fill in stuff
@@ -339,16 +326,16 @@ void lattice_struct::create_std_gathers()
         ln[d] = (l[d] + 1) % size(d);
       } else {
         direction k = opp_dir(d);
-        ln[k] = (l[k] + size(k) - 1) % size(k);
+        ln[k] = (l[k] + size(k) - 1) % size(d);
       }
  
 #ifdef SCHROED_FUN
       if (d == NDIM-1 && l[NDIM-1] == size(NDIM-1)-1) {
-	// This is up-direction, give special site
-	neighb[d][i] = sf_special_boundary;
+	      // This is up-direction, give special site
+    	  neighb[d][i] = sf_special_boundary;
       } else if (d == opp_dir(NDIM-1) && l[NDIM-1] == 0) {
-	// We never should need the down direction, thus, short circuit!
-	neighb[d][i] = 1<<30;
+	      //  We never should need the down direction, thus, short circuit!
+	      neighb[d][i] = 1<<30;
       } else     // NOTE THIS UGLY else-if CONSTRUCT!
 #endif
       if (is_on_node(ln)) {
@@ -356,9 +343,9 @@ void lattice_struct::create_std_gathers()
       } else {
 	      // Now site is off-node, this lead to fetching
 	      nnodes[num] = node_number(ln);
-	      index[num] = site_index(ln, nnodes[num] );
+	      index[num]  = site_index(ln, nnodes[num] );
 	      parity[num] = location_parity(l);  // parity of THIS
-	      here[num]  = i;
+	      here[num]   = i;
 	      num++;
       }
     }
@@ -369,7 +356,7 @@ void lattice_struct::create_std_gathers()
     if (num > 0) {
       // now, get the number of nodes to be gathered from
       for (int i=0; i<num; i++) {
-	// chase the list until the node found
+	      // chase the list until the node found
         int j;
         for (j=0; j<ci.from_node.size() && nnodes[i] != ci.from_node[j].index; j++);
 	      if (j == ci.from_node.size()) {
@@ -398,30 +385,19 @@ void lattice_struct::create_std_gathers()
         // array according to the index of the sending node .
         // First even neighbours
 
-        {
+        for (int par=(int)EVEN; par<=(int)ODD; par++) {
           int n,i;
-          unsigned int off;
-          // EVEN
-	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && parity[i] == EVEN) {
+	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && ((int)parity[i]) == par) {
 	          itmp[n++] = i;
 	          // bubble sort the tmp-array according to the index on the neighbour node
 	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
 	            swap( itmp[k], itmp[k-1] );
 	        }
-	        off = fn.buffer;
+	        unsigned off = fn.buffer;
+          if (par == (int)ODD) off += fn.evensites;
 	        // finally, root indices according to offset
 	        for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
 
-          //ODD
-	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && parity[i] == ODD) {
-	          itmp[n++] = i;
-	          // bubble sort the tmp-array according to the index on the neighbour node
-	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
-	            swap( itmp[k], itmp[k-1] );
-	        }
-	        off = fn.buffer + fn.evensites;
-	        // finally, root indices according to offset
-	        for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
 	      }
         
       }
