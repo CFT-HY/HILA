@@ -32,7 +32,7 @@ void lattice_struct::setup(int siz[NDIM]) {
 
 #if NDIM==4
 void lattice_struct::setup(int nx, int ny, int nz, int nt) {
-  int s[NDIM] = {nx, ny, nz, nt};
+j  int s[NDIM] = {nx, ny, nz, nt};
   setup(s);
 }
 #elif NDIM==3
@@ -161,7 +161,7 @@ location lattice_struct::site_location(unsigned index)
 {
   // make the index lexicographic
 #ifdef EVENFIRST
-  return this_node.site_index_list[index];
+  return this_node.coordinates[index];
 #else
   location l;
   foralldir(d) {
@@ -189,13 +189,14 @@ void lattice_struct::setup_nodes() {
   // Loop over all node "origins"
   nodes.nodelist.resize(nodes.number);
 
+  // n keeps track of the node "root coordinates"
   int n[NDIM];
   foralldir(d) n[d] = 0;
 
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {
     location l;
-    foralldir(d) l[d] = nodes.divisors[n[d]][i];
+    foralldir(d) l[d] = nodes.divisors[d][n[d]];
 
     int nn = node_number(l);
     node_info & ni = nodes.nodelist[nn];
@@ -262,16 +263,16 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   }
 
   // map site indexes to locations
-  site_index_list.resize(sites);
+  coordinates.resize(sites);
   for(unsigned i = 0; i<sites; i++){
     location l;
-    unsigned l_index;
+    unsigned l_index = i;
     foralldir(d){
       l[d] = l_index % size[d] + min[d];
       l_index /= size[d];
     }
     l_index = lattice.site_index(l);
-    site_index_list[l_index] = l;
+    coordinates[l_index] = l;
   }
 }
 

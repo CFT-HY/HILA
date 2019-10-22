@@ -49,7 +49,7 @@ void lattice_struct::setup_lattice_device_info(){
   /* Setup the location field */
   cudaMalloc( (void **)&(device_info.d_coordinates), this_node.sites * sizeof(location));
   check_cuda_error("cudaMalloc device coordinate array");
-  cudaMemcpy( device_info.d_coordinates, this_node.site_index_list, this_node.sites * sizeof(location), cudaMemcpyHostToDevice );
+  cudaMemcpy( device_info.d_coordinates, this_node.coordinates, this_node.sites * sizeof(location), cudaMemcpyHostToDevice );
   check_cuda_error("cudaMemcpy device coordinate array");
 
   // Other device_info parameters

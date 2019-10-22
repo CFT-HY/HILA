@@ -48,7 +48,7 @@ private:
     location min, size;                 // node local coordinate ranges
     unsigned nn[NDIRS];                 // nn-node of node down/up to dirs
     bool first_site_even;               // is location min even or odd?
-    std::vector<location> site_index_list;
+    std::vector<location> coordinates;
 
     void setup(node_info & ni, lattice_struct & lattice);
   } this_node;
@@ -165,7 +165,7 @@ public:
 
   #ifndef CUDA
   location coordinates( int idx ){
-    return this_node.site_index_list[idx];
+    return this_node.coordinates[idx];
   }
 
   #else
