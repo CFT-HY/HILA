@@ -19,7 +19,6 @@ int main(){
     field<matrix<2,2,double> > matrices;
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
 
-    /* Currently coordinates(X) is just translated to coordinates(X)
     // Test that neighbours are fetched correctly
     foralldir(d){
         direction dir = (direction)d;
@@ -37,12 +36,11 @@ int main(){
         }
         assert(isum==0); // Value fetched from neighbour is correct
     } 
-    */
 
     assert(matrices.fs==nullptr); //check that fieldstruct allocated only after assignment
     onsites(EVEN){
         matrix<2,2,double> a;
-        double theta = 2.0*M_PI*mersenne(); //make a random rotation matrix at each even site
+        double theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
         a.c[0][0] = cos(theta);
         a.c[0][1] = -sin(theta);
         a.c[1][0] = sin(theta);
@@ -65,7 +63,6 @@ int main(){
     onsites(ALL){
         dsum += matrices[X].trace();
     }
-
 
     assert(((int) dsum) == lattice->volume()*2);
     return 0;
