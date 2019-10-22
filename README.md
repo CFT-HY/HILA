@@ -141,21 +141,18 @@ Referring to the same direction twice in different field references causes an er
 
 ## Testing
 
-In the `programs/test_cases` folder you can find a collection of simple test programs. To test whether the translations to cpu code work, type:
+In the `programs/test_cases` folder you can find a collection of simple test programs. To test whether the translations work on the cpu, type:
 
 ~~~ bash
-make test_baseline
+./test.sh 
 ~~~
-This calls transformer without any parameters on the test programs, and outputs the exit status of each excecutable produced from them. To test whether the GPU translations work, type:
+
+This tests the transform, compilation and run process for the test_*.cpp files for dimensions from 1 to 4, and outputs the exit status of each step. 
+If you're on a machine with GPU's, you can test the GPU transformations with:
 
 ~~~ bash
-make test_gpu
+./test_GPU.sh
 ~~~
-Or test all types of translations one after the other with:
-~~~
-make test
-~~~
-
 
 # Goals
 
