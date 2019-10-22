@@ -36,7 +36,7 @@ int main(){
             isum += diff*diff;
         }
         assert(isum==0); // Value fetched from neighbour is correct
-    }
+    } 
     */
 
     assert(matrices.fs==nullptr); //check that fieldstruct allocated only after assignment
@@ -66,8 +66,7 @@ int main(){
         dsum += matrices[X].trace();
     }
 
-    std::cout << dsum << "\n";
-    assert(((int) round(dsum)) == lattice->volume()*2);
 
+    assert(((int) dsum) == lattice->volume()*2);
     return 0;
 }
