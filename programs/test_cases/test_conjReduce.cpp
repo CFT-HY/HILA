@@ -1,13 +1,13 @@
 #include "test.h"
 /////////////////////
 /// test_case 1
-/// 2D field of matrices
 /// Coverage:
 /// - reduction + onsites env.
 /// - EVEN + ODD accessors / neighbor access
 /// - field with matrix elements
 /// - NOTE: Assumes periodic boundary conditions
 /////////////////////
+
 
 //TODO: rng definition that works for MPI, GPU and CPU
 
@@ -18,7 +18,31 @@ int main(){
 
     std::cout << lattice->volume() << "\n";
 
+int main(){
+    int sum = 0;
+    matrix<2,2,double> a;
+    test_setup();
+
     field<matrix<2,2,double> > matrices;
+    field<int> coordinate, nb_coordinate1, nb_coordinate2;
+
+    // Test that neighbours are fetched correctly
+    foralldir(d){
+        direction dir = (direction)d;
+        onsites(ALL){
+            location l = coordinates(X);
+            coordinate[X] = l[d];
+            nb_coordinate1[X] = (l[d] + 1) % nd[d];
+        }
+
+        nb_coordinate2[ALL] = coordinate[X+dir];
+
+        onsites(ALL){
+            int diff = nb_coordinate1[X]-nb_coordinate2[X];
+            sum += diff*diff;
+        }
+        assert(sum==0); // Value fetched from neighbour is correct
+    }
 
     assert(matrices.fs==nullptr); //check that fieldstruct allocated only after assignment
     onsites(EVEN){

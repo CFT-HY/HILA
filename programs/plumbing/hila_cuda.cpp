@@ -33,15 +33,27 @@ loop_callable double hila_random(){
   #endif
 }
 
-/* Copy neighbour pointers to device */
-__global__ void set_neighbour_pointers_kernel( unsigned * neighb, int d )
-{
-  d_neighb[d] = neighb;
-}
 
-void set_neighbour_pointers( unsigned * neighb, int d ){
-  set_neighbour_pointers_kernel<<< 1, 1 >>>( neighb, d );
-  check_cuda_error("set_neighbour_pointers kernel");
+
+void lattice_struct::setup_lattice_device_info(){
+
+  /* Setup neighbour fields in all directions */
+  for (int d=0; d<NDIRS; d++) {
+    cudaMalloc( (void **)&(device_info.d_neighb[d]), this_node.sites * sizeof(unsigned));
+    check_cuda_error("cudaMalloc device neighbour array");
+
+    cudaMemcpy( device_info.d_neighb[d], neighb[d], this_node.sites * sizeof(unsigned), cudaMemcpyHostToDevice );
+    check_cuda_error("cudaMemcpy device neighbour array");
+  }
+
+  /* Setup the location field */
+  cudaMalloc( (void **)&(device_info.d_coordinates), this_node.sites * sizeof(location));
+  check_cuda_error("cudaMalloc device coordinate array");
+  cudaMemcpy( device_info.d_coordinates, this_node.site_index_list, this_node.sites * sizeof(location), cudaMemcpyHostToDevice );
+  check_cuda_error("cudaMemcpy device coordinate array");
+
+  // Other device_info parameters
+  device_info.field_alloc_size = field_alloc_size();
 }
 
 

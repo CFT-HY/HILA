@@ -1,0 +1,8 @@
+rm -rf *.o *.cpt *.exe
+Standard lattice layout:
+ 4 dimensions
+Matrix * Matrix: 0.277 ms 
+Vector * Matrix: 0.183 ms 
+Vector square sum: 4.32 ms 
+Dirac: 1.76 ms 
+CG: 14.13 ms 

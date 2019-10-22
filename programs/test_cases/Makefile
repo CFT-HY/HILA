@@ -3,8 +3,8 @@ OPTS = -DNDIM=4
 TRANSFORMER = ../../build/transformer
 CC = clang++-8
 
-CFLAGS = -O3 $(OPTS)
-CXXFLAGS = -O3 -x c++ $(OPTS)
+CFLAGS = -g $(OPTS)
+CXXFLAGS = -g -x c++ $(OPTS)
 
 test: Makefile conjReduce
 	./test.sh conjReduce

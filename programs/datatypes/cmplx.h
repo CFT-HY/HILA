@@ -150,6 +150,11 @@ struct cmplx {
     im /= static_cast<T>(a);
     return *this;
   }
+
+  loop_callable 
+  double norm_sq(){
+    return re*re + im*im;;
+  }
 };
 
 template <typename T>

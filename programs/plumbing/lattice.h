@@ -25,6 +25,7 @@ struct device_lattice_info {
   unsigned * d_neighb[NDIRS];
   unsigned field_alloc_size;
   int loop_begin, loop_end;
+  location * d_coordinates;
 };
 #endif
 
@@ -161,6 +162,18 @@ public:
   }
   #endif
 
+
+  #ifndef CUDA
+  location coordinates( unsigned idx ){
+    return site_location(idx);
+  }
+
+  #else
+  location coordinates( unsigned idx ){
+    return device_info.site_index_list[idx];
+  }
+
+  #endif
 
   /* Communication routines. Define here in lattice? */
   template <typename T>

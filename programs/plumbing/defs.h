@@ -6,6 +6,11 @@
 #define CUDA
 #endif
 
+#ifdef PUHTI_TRANSFORMER_openacc
+#define PUHTI_TRANSFOMER
+#define openacc
+#endif
+
 // Useful global definitions here -- this file should be included by (almost) all others
 
 #include <array>
@@ -17,7 +22,7 @@
 #define layout_SOA
 
 // TODO: default type real_t definition somewhere (makefile?)
-using real_t = double;
+using real_t = float;
 
 // move these somewhere - use consts?
 // Have this defined in the program?
@@ -101,6 +106,10 @@ inline parity location_parity(const location & a) {
   else return parity::odd;
 }
 
+// Replaced by transformer
+location coordinates(parity X);
+
+
 
 #ifndef USE_MPI
 #define mynode() 0
@@ -122,12 +131,11 @@ inline void assert_even_odd_parity( parity p ) {
 #ifdef CUDA
 #include "../plumbing/hila_cuda.h"
 
-#elif openacc
+#elif defined(openacc)
 
 //#include <openacc.h>
 
-#define loop_callable
-//_Pragma("acc routine seq")
+#define loop_callable _Pragma("acc routine seq")
 #define seed_random(seed) seed_mersenne(seed)
 #define hila_random() mersenne()
 

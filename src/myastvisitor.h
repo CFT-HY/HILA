@@ -144,9 +144,11 @@ public:
 
   void handle_function_call_in_loop(Stmt * s);
   
-  void check_loop_function(Decl *fd);
+  bool loop_function_check(Decl *fd);
   
-  void mark_loop_functions();
+  void handle_loop_function(FunctionDecl *fd);
+
+  bool handle_special_loop_function(CallExpr *Call);
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );
@@ -178,7 +180,7 @@ public:
   std::string make_kernel_name();
 
   /// Change field references within loops
-  void replace_field_refs(srcBuf &sb);
+  void replace_field_refs_and_funcs(srcBuf &sb);
 
   /// shortcut for "pragma"-like transformer_control("cmd")-functin
   // bool handle_control_stmt(Stmt *s);

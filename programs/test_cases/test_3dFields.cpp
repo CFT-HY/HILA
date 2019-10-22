@@ -2,7 +2,6 @@
 
 /////////////////////
 /// test_case 2
-/// manipulation of fields in all dirs
 /// Coverage:
 /// - directions, onsites and foralldir environments
 /// - operations between fields 

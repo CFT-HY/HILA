@@ -33,6 +33,7 @@ struct codetype {
   bool kernelize;
   bool CUDA;
   bool openacc;
+  bool flag_loop_function;
 };
 
 enum class parity { none, even, odd, all, x };
@@ -135,9 +136,13 @@ struct var_decl {
 };
 
 
-struct loop_function_info {
-  Decl * decl;
-  bool is_handled;
+struct special_function_call {
+  Expr * fullExpr;
+  std::string full_expr;
+  std::string replace_expression;
+  bool add_loop_var;
+  int scope;
 };
+
 
 #endif
