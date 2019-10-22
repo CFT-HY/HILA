@@ -47,7 +47,7 @@ int main(){
 	    }
     }
 
-    s1[ALL] = s2[X] + s3[X];
+    s1[ALL] = s2[X] + s3[X];
 
     onsites(ALL){
 	cmplx<double> val = s1[X];
