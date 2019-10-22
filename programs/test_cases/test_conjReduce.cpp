@@ -8,24 +8,18 @@
 /// - NOTE: Assumes periodic boundary conditions
 /////////////////////
 
-
 //TODO: rng definition that works for MPI, GPU and CPU
 
 int main(){
     seed_mersenne(4l);
-    double sum = 0;
-    test_setup();
-
-    std::cout << lattice->volume() << "\n";
-
-int main(){
-    int sum = 0;
-    matrix<2,2,double> a;
+    double dsum = 0;
+    int isum = 0;
     test_setup();
 
     field<matrix<2,2,double> > matrices;
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
 
+    /* Currently coordinates(X) is just translated to coordinates(X)
     // Test that neighbours are fetched correctly
     foralldir(d){
         direction dir = (direction)d;
@@ -39,10 +33,11 @@ int main(){
 
         onsites(ALL){
             int diff = nb_coordinate1[X]-nb_coordinate2[X];
-            sum += diff*diff;
+            isum += diff*diff;
         }
-        assert(sum==0); // Value fetched from neighbour is correct
+        assert(isum==0); // Value fetched from neighbour is correct
     }
+    */
 
     assert(matrices.fs==nullptr); //check that fieldstruct allocated only after assignment
     onsites(EVEN){
@@ -68,10 +63,11 @@ int main(){
     //now all sites should be unit matrices
 
     onsites(ALL){
-        sum += matrices[X].trace();
+        dsum += matrices[X].trace();
     }
 
-    assert(((int) round(sum)) == lattice->volume()*2);
+    std::cout << dsum << "\n";
+    assert(((int) round(dsum)) == lattice->volume()*2);
 
     return 0;
 }
