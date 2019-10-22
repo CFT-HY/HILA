@@ -23,7 +23,7 @@
 #define layout_SOA
 
 // TODO: default type real_t definition somewhere (makefile?)
-using real_t = double;
+using real_t = float;
 
 
 // move these somewhere - use consts?
