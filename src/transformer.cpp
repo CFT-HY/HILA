@@ -1562,9 +1562,10 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
-  funcBuf.replace(f->getNameInfo().getSourceRange(), 
-                  f->getQualifiedNameAsString() + template_args);
-
+  //funcBuf.replace(f->getNameInfo().getSourceRange(),
+  //                f->getQualifiedNameAsString() + template_args);
+  funcBuf.replace(f->getNameInfo().getSourceRange(),
+                  f->getQualifiedNameAsString() );
   
 // #define use_ast_type
 #ifdef use_ast_type
@@ -1932,13 +1933,17 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
                                        std::string * argset ) {
 
   if (argset) *argset = "< ";
+
+  // Get argument strings without class, struct... qualifiers
+  PrintingPolicy pp(Context->getLangOpts()); 
+
   
   for (int i=0; i<tal.size(); i++) {
     if (argset && i>0) *argset += ", ";
     switch (tal.get(i).getKind()) {
       case TemplateArgument::ArgKind::Type:
-        arg.push_back( remove_class_from_type(tal.get(i).getAsType().getAsString()) );
-        par.push_back( tpl->getParam(i)->getNameAsString() );        
+        arg.push_back( tal.get(i).getAsType().getAsString(pp) );
+        par.push_back( tpl->getParam(i)->getNameAsString() );
         if (argset) *argset += arg.back();  // write just added arg
         break;
         
