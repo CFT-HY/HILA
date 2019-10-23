@@ -1,7 +1,6 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-
 #ifdef PUHTI_TRANSFORMER_CUDA
 #define PUHTI_TRANSFOMER
 #define CUDA
@@ -25,7 +24,6 @@
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = float;
 
-
 // move these somewhere - use consts?
 // Have this defined in the program?
 #ifndef NDIM
@@ -38,7 +36,7 @@ using real_t = float;
 
 // Direction and parity
 
-#if   NDIM==4
+#if NDIM==4
 enum direction :unsigned { XUP, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRS };
 #elif NDIM==3
 enum direction { XUP, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRS };
@@ -47,6 +45,15 @@ enum direction { XUP, YUP, YDOWN, XDOWN, NDIRS };
 #elif NDIM==1
 enum direction { XUP, XDOWN, NDIRS };
 #endif
+
+/**
+ * Increment op for directions
+ * */
+
+inline direction & operator++(direction & dir, int dummy){
+  const int i = static_cast<int>(dir);
+  return dir=static_cast<direction>((i + 1)%NDIRS);
+}
 
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
@@ -64,7 +71,7 @@ static inline parity opp_parity(const parity p) {
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
 }
 
-#define foralldir(d) for(int d=XUP; d<NDIM; d++)
+#define foralldir(d) for(direction d=XUP; d<NDIM; d++) 
 
 static inline int is_up_dir(const int d) { return d<NDIM; }
 
