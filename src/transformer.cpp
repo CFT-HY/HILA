@@ -1045,6 +1045,8 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   state::skip_children = 1;
 
   state::loop_found = true;
+  // flag the buffer to be included
+  set_sourceloc_modified( ls->getSourceRange().getBegin() );
   
   return true;
 }
@@ -1981,6 +1983,12 @@ void set_fid_modified(const FileID FID) {
     file_id_list.push_back(FID);
     // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
   }
+}
+
+void MyASTVisitor::set_sourceloc_modified(const SourceLocation sl) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  FileID FID = SM.getFileID(sl);
+  set_fid_modified(FID);
 }
 
 // file_buffer_list stores the edited source of all files

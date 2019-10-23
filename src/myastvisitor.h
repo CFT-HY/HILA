@@ -157,6 +157,8 @@ public:
   bool isStmtWithSemi(Stmt * S);  
   SourceRange getRangeWithSemi(Stmt * S, bool flag_error = true);
   
+  void set_sourceloc_modified(const SourceLocation sl);
+
   /// Entry point for the full field loop
   bool handle_full_loop_stmt(Stmt *ls, bool field_parity_ok );
 
