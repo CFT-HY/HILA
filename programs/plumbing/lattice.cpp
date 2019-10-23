@@ -286,7 +286,7 @@ void lattice_struct::create_std_gathers()
   // allocate work arrays, will be released later
   std::vector<unsigned> nnodes(this_node.sites); // node number
   std::vector<unsigned> index(this_node.sites);  // index on node
-  std::vector<parity> parity(this_node.sites); // parity 
+  std::vector<parity>   nparity(this_node.sites); // parity 
   std::vector<unsigned> here(this_node.sites);   // index of original site
   std::vector<unsigned> itmp(this_node.sites);   // temp sorting array
 
@@ -343,7 +343,7 @@ void lattice_struct::create_std_gathers()
 	      // Now site is off-node, this lead to fetching
 	      nnodes[num] = node_number(ln);
 	      index[num]  = site_index(ln, nnodes[num] );
-	      parity[num] = location_parity(l);  // parity of THIS
+	      nparity[num]    = location_parity(l);  // parity of THIS
 	      here[num]   = i;
 	      num++;
       }
@@ -367,7 +367,7 @@ void lattice_struct::create_std_gathers()
 	      }
 	      // add to OLD NODE or just added node
         ci.from_node[j].sites++;
-        if ( parity[i] == EVEN ) ci.from_node[j].evensites ++;  
+        if ( nparity[i] == EVEN ) ci.from_node[j].evensites ++;  
         else ci.from_node[j].oddsites++;
       }
 
@@ -384,16 +384,16 @@ void lattice_struct::create_std_gathers()
         // array according to the index of the sending node .
         // First even neighbours
 
-        for (int par=(int)EVEN; par<=(int)ODD; par++) {
+        for (parity par : {EVEN,ODD}) {
           int n,i;
-	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && ((int)parity[i]) == par) {
+	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && nparity[i] == par) {
 	          itmp[n++] = i;
 	          // bubble sort the tmp-array according to the index on the neighbour node
 	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
 	            swap( itmp[k], itmp[k-1] );
 	        }
 	        unsigned off = fn.buffer;
-          if (par == (int)ODD) off += fn.evensites;
+          if (par == ODD) off += fn.evensites;
 	        // finally, root indices according to offset
 	        for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
 
@@ -414,7 +414,7 @@ void lattice_struct::create_std_gathers()
     comminfo[od].to_node = {};
 
     if (num > 0) {
-      std::vector<comm_node_struct> fn = comminfo[d].from_node;
+      const std::vector<comm_node_struct> & fn = comminfo[d].from_node;
       for (int j=0; j<fn.size(); j++) {
         comm_node_struct s;
         s.index = fn[j].index;
@@ -425,23 +425,19 @@ void lattice_struct::create_std_gathers()
 
         comminfo[od].to_node.push_back(s);
 
-	      /* now, initialize sitelist -- Now, we first want ODD parity, since
-	       * this is what even gather asks for!
-	       */
+	      // now, initialize sitelist -- Now, we first want ODD parity, since
+	      // this is what even gather asks for!
       
-        {
-          int n=0;
-	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && parity[i] == ODD) {
+        int n=0;
+        for (parity par : {ODD, EVEN}) {
+	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && nparity[i] == par) {
 	          (s.sitelist)[n++] = here[i];
 	        }
-	        if (n != s.evensites){
+          if (par == ODD && n != s.evensites) {
             output0 << "Parity odd error 3";
             exit(1);
           }
-	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && parity[i] == EVEN) {
-	          (s.sitelist)[n++] = here[i];
-	        }
-	        if (n != s.sites){
+	        if (par == EVEN && n != s.sites){
             output0 << "Parity even error 3";
             exit(1);
           }

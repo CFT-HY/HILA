@@ -9,7 +9,7 @@ TRANSFOMER_GPU = ../../build/transformer -DCUDA  --CUDA
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
-TRANSFOMER_openacc = ../../build/transformer -Dopenacc --openacc
+TRANSFOMER_openacc = ../../build/transformer -Dopenacc --target:openacc
 PGCC = pgc++ -acc
 PGLD = pgc++ -acc
 
