@@ -807,7 +807,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 // is the stmt pointing now to a function call
 bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
   if (CallExpr *Call = dyn_cast<CallExpr>(s)){
-    llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+    //llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
     return true;
   }
   return false;
@@ -831,7 +831,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   Decl* decl = Call->getCalleeDecl();
   // while(decl->getPreviousDecl() != NULL)
   //   decl = decl->getPreviousDecl();
-  llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
+  //llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   // Store functions used in loops, recursively...
@@ -840,23 +840,23 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   // TODO: move arg check to loop_function_check  
   // Go through arguments
   for( Expr * E : Call->arguments() ){
-    llvm::errs() << "Argument " << i << "/" << D->getNumParams() 
-                 << ": " << get_stmt_str(E) << '\n';
+    //llvm::errs() << "Argument " << i << "/" << D->getNumParams() 
+    //             << ": " << get_stmt_str(E) << '\n';
 
     // Handle field type arguments
     // NOTE: It seems that this does not recognize const parameters.
     //       They will be handled later, when walking down the children
     //       of the call.
     if( is_field_parity_expr(E) ) {
-      llvm::errs() << "  -Field parity expr\n";
+      //llvm::errs() << "  -Field parity expr\n";
       if(i < D->getNumParams()){
         const ParmVarDecl * pv = D->getParamDecl(i);
         QualType q = pv->getOriginalType ();
-        llvm::errs() << "  -Declaration:" << TheRewriter.getRewrittenText (pv->getSourceRange()) << '\n';
+        //llvm::errs() << "  -Declaration:" << TheRewriter.getRewrittenText (pv->getSourceRange()) << '\n';
 
         // Check for const qualifier
         if( q.isConstQualified ()) {
-          llvm::errs() << "  -Const \n";
+          //llvm::errs() << "  -Const \n";
         } else {
           handle_field_parity_expr(E, true, false);
         }
@@ -1433,7 +1433,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
   // Check if the function can be called from a loop
   bool loop_callable = true;
-  llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
+  //llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
     global.currentFunctionDecl = f;
@@ -1611,7 +1611,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
        << "\n// ++++++++\n";
     toplevelBuf->insert( getSourceLocationAtEndOfLine(global.location.bot),
                          sb.str(), false, true );
-  } else {
+  } else { 
     // Now the function has been written before (and not inline)
     // just insert declaration, defined on another compilation unit
     toplevelBuf->insert( getSourceLocationAtEndOfLine(global.location.bot),
@@ -1642,7 +1642,7 @@ bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
   }
 
   bool loop_callable = true;
-  llvm::errs() << "Method " << method->getNameInfo().getName() << "\n";
+  //llvm::errs() << "Method " << method->getNameInfo().getName() << "\n";
 
 
   if (method->isThisDeclarationADefinition() && method->hasBody()) {
