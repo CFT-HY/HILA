@@ -1435,7 +1435,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
   // Check if the function can be called from a loop
   bool loop_callable = true;
-  //llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
+  // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
     global.currentFunctionDecl = f;
@@ -1452,13 +1452,11 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-    if (functiondecl_loop_found(f)) {
-      loop_callable = false;
-    }
+      if (functiondecl_loop_found(f)) {
+        loop_callable = false;
+      }
 
-    // Build the callgraph for callable functions
-    // mycallgraph.getOr
-    
+     
     switch (f->getTemplatedKind()) {
       case FunctionDecl::TemplatedKind::TK_NonTemplate:
         // Normal, non-templated class method -- nothing here
@@ -1558,14 +1556,13 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
 
   // CXXRecordDecl * parent = method->getParent();
   if (parent) ntemplates += get_param_substitution_list( parent, par, arg );
-  // llvm::errs() << "Num nesting templates " << ntemplates << '\n';
+  llvm::errs() << "Num nesting templates " << ntemplates << '\n';
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
-  //funcBuf.replace(f->getNameInfo().getSourceRange(),
-  //                f->getQualifiedNameAsString() + template_args);
+  // template_args adds template specialization args after the name, name<args>(..)
   funcBuf.replace(f->getNameInfo().getSourceRange(),
-                  f->getQualifiedNameAsString() );
+                  f->getQualifiedNameAsString() + template_args);
   
 // #define use_ast_type
 #ifdef use_ast_type
@@ -1773,9 +1770,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     }
     // end block
     
-    global.in_class_template = true;
+    // global.in_class_template = true;
     // Should go through the template in order to find function templates...
-    TraverseDecl(D->getTemplatedDecl());
+    // Comment out now, let roll through "naturally".
+    // TraverseDecl(D->getTemplatedDecl());
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
@@ -1784,10 +1782,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     } else {
     }
 
-    global.in_class_template = false;
+    // global.in_class_template = false;
 
-    // No need to traverse the template? 
-    state::skip_children = 1;
+    // Now do traverse the template naturally
+    // state::skip_children = 1;
     
   }    
   
@@ -1822,6 +1820,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     std::string typestr = args.get(0).getAsType().getAsString(pp);
     llvm::errs() << "arg type " << typestr << "\n";
 
+    // Type of field<> can never be field?  This always is true
     if( typestr.find("field<") ){ // Skip for field templates
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
 
@@ -1898,7 +1897,7 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
 
     ClassTemplateSpecializationDecl * sp = dyn_cast<ClassTemplateSpecializationDecl>(r);
     if (sp) {
-      // llvm::errs() << "Got specialization of " << sp->getNameAsString() << '\n';
+      llvm::errs() << "Got specialization of " << sp->getNameAsString() << '\n';
       const TemplateArgumentList & tal = sp->getTemplateArgs();
       assert(tal.size() > 0);
     
