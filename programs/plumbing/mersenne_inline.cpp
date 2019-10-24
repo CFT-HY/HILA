@@ -76,8 +76,8 @@ double /* generating reals */
 /* unsigned int */ /* for integer generation */
 mersenne_generate()
 {
-  register unsigned int y;
-  register int kk;
+  unsigned int y;
+  int kk;
   static unsigned int mag01[2]={0x0, MATRIX_A};
   /* mag01[x] = x * MATRIX_A  for x=0,1 */
 

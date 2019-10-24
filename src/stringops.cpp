@@ -133,7 +133,7 @@ int rearrange_cmdline(int argc, const char **argv, const char **av) {
   }
 
   // now find -I and -D -options and move them after --
-  for (int i=0; i<ddashloc; i++) {
+  for (int i=0; i<ddashloc; ) {
     if (i < ddashloc-1 && (strcmp(av[i],"-D") == 0 || strcmp(av[i],"-I") == 0)) {
       // type -D define
       const char * a1 = av[i];
@@ -148,7 +148,9 @@ int rearrange_cmdline(int argc, const char **argv, const char **av) {
       for (int j=i+1; j<argc; j++) av[j-1] = av[j];
       av[argc-1] = a1;
       ddashloc--;
-    }      
+    } else {
+      i++;
+    }
   }
 
   return argc;

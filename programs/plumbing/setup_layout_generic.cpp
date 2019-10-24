@@ -12,8 +12,8 @@
 /***************************************************************/
 
 /* number of primes to be used in factorization */
-#define NPRIMES 8
-static int prime[NPRIMES] = {2,3,5,7,11,13,17,19};
+#define NPRIMES 9
+static int prime[NPRIMES] = {2,3,5,7,11,13,17,19,23};
 
 /* Set up now squaresize and nsquares - arrays 
  * Print info to outf as we proceed 

@@ -807,7 +807,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 // is the stmt pointing now to a function call
 bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
   if (CallExpr *Call = dyn_cast<CallExpr>(s)){
-    llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+    //llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
     return true;
   }
   return false;
@@ -831,7 +831,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   Decl* decl = Call->getCalleeDecl();
   // while(decl->getPreviousDecl() != NULL)
   //   decl = decl->getPreviousDecl();
-  llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
+  //llvm::errs() << "Kind:  " << decl->getDeclKindName() << "\n";
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   // Store functions used in loops, recursively...
@@ -840,23 +840,23 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   // TODO: move arg check to loop_function_check  
   // Go through arguments
   for( Expr * E : Call->arguments() ){
-    llvm::errs() << "Argument " << i << "/" << D->getNumParams() 
-                 << ": " << get_stmt_str(E) << '\n';
+    //llvm::errs() << "Argument " << i << "/" << D->getNumParams() 
+    //             << ": " << get_stmt_str(E) << '\n';
 
     // Handle field type arguments
     // NOTE: It seems that this does not recognize const parameters.
     //       They will be handled later, when walking down the children
     //       of the call.
     if( is_field_parity_expr(E) ) {
-      llvm::errs() << "  -Field parity expr\n";
+      //llvm::errs() << "  -Field parity expr\n";
       if(i < D->getNumParams()){
         const ParmVarDecl * pv = D->getParamDecl(i);
         QualType q = pv->getOriginalType ();
-        llvm::errs() << "  -Declaration:" << TheRewriter.getRewrittenText (pv->getSourceRange()) << '\n';
+        //llvm::errs() << "  -Declaration:" << TheRewriter.getRewrittenText (pv->getSourceRange()) << '\n';
 
         // Check for const qualifier
         if( q.isConstQualified ()) {
-          llvm::errs() << "  -Const \n";
+          //llvm::errs() << "  -Const \n";
         } else {
           handle_field_parity_expr(E, true, false);
         }
@@ -1045,6 +1045,8 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   state::skip_children = 1;
 
   state::loop_found = true;
+  // flag the buffer to be included
+  set_sourceloc_modified( ls->getSourceRange().getBegin() );
   
   return true;
 }
@@ -1433,7 +1435,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
   // Check if the function can be called from a loop
   bool loop_callable = true;
-  llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
+  //llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
     global.currentFunctionDecl = f;
@@ -1560,9 +1562,10 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
-  funcBuf.replace(f->getNameInfo().getSourceRange(), 
-                  f->getQualifiedNameAsString() + template_args);
-
+  //funcBuf.replace(f->getNameInfo().getSourceRange(),
+  //                f->getQualifiedNameAsString() + template_args);
+  funcBuf.replace(f->getNameInfo().getSourceRange(),
+                  f->getQualifiedNameAsString() );
   
 // #define use_ast_type
 #ifdef use_ast_type
@@ -1611,7 +1614,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
        << "\n// ++++++++\n";
     toplevelBuf->insert( getSourceLocationAtEndOfLine(global.location.bot),
                          sb.str(), false, true );
-  } else {
+  } else { 
     // Now the function has been written before (and not inline)
     // just insert declaration, defined on another compilation unit
     toplevelBuf->insert( getSourceLocationAtEndOfLine(global.location.bot),
@@ -1642,7 +1645,7 @@ bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
   }
 
   bool loop_callable = true;
-  llvm::errs() << "Method " << method->getNameInfo().getName() << "\n";
+  //llvm::errs() << "Method " << method->getNameInfo().getName() << "\n";
 
 
   if (method->isThisDeclarationADefinition() && method->hasBody()) {
@@ -1814,27 +1817,30 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       return(0);
     }
 
-    std::string typestr = args.get(0).getAsType().getAsString();
-    llvm::errs() << "arg type " << typestr;
+    // Get typename without class, struct... qualifiers
+    PrintingPolicy pp(Context->getLangOpts());
+    std::string typestr = args.get(0).getAsType().getAsString(pp);
+    llvm::errs() << "arg type " << typestr << "\n";
 
-    if (spec->isExplicitSpecialization()) llvm::errs() << " explicit";
-    llvm::errs() << '\n';
+    if( typestr.find("field<") ){ // Skip for field templates
+      if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
 
-    // write storage_type specialization
-    // NOTE: this has to be moved to codegen, different for diff. codes
-    if (field_storage_type_decl == nullptr) {
-      llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
-      exit(1);
+      // write storage_type specialization
+      // NOTE: this has to be moved to codegen, different for diff. codes
+      if (field_storage_type_decl == nullptr) {
+        llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
+        exit(1);
+      }
+
+      std::string fst_spec = "template<>\nstruct field_storage_type<"
+        + typestr +"> {\n  " + typestr + " c[10];\n};\n";
+
+      // insert after new line
+      SourceLocation l =
+      getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
+      // TheRewriter.InsertText(l, fst_spec, true,true);
+      writeBuf->insert(l, fst_spec, true, false);
     }
-
-    std::string fst_spec = "template<>\nstruct field_storage_type<"
-      + typestr +"> {\n  " + typestr + " c[10];\n};\n";
-
-    // insert after new line
-    SourceLocation l =
-    getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
-    // TheRewriter.InsertText(l, fst_spec, true,true);
-    writeBuf->insert(l, fst_spec, true, false);
     
   }
   return(count);
@@ -1927,13 +1933,17 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
                                        std::string * argset ) {
 
   if (argset) *argset = "< ";
+
+  // Get argument strings without class, struct... qualifiers
+  PrintingPolicy pp(Context->getLangOpts()); 
+
   
   for (int i=0; i<tal.size(); i++) {
     if (argset && i>0) *argset += ", ";
     switch (tal.get(i).getKind()) {
       case TemplateArgument::ArgKind::Type:
-        arg.push_back( remove_class_from_type(tal.get(i).getAsType().getAsString()) );
-        par.push_back( tpl->getParam(i)->getNameAsString() );        
+        arg.push_back( tal.get(i).getAsType().getAsString(pp) );
+        par.push_back( tpl->getParam(i)->getNameAsString() );
         if (argset) *argset += arg.back();  // write just added arg
         break;
         
@@ -1981,6 +1991,12 @@ void set_fid_modified(const FileID FID) {
     file_id_list.push_back(FID);
     // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
   }
+}
+
+void MyASTVisitor::set_sourceloc_modified(const SourceLocation sl) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  FileID FID = SM.getFileID(sl);
+  set_fid_modified(FID);
 }
 
 // file_buffer_list stores the edited source of all files

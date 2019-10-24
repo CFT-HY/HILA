@@ -126,7 +126,7 @@ unsigned lattice_struct::site_index(const location & loc)
 
 ///////////////////////////////////////////////////////////////////////
 /// give site index for nodeid sites
-/// Note: loc really has to be on this node
+/// compare to above
 ///////////////////////////////////////////////////////////////////////
 
 unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
@@ -159,21 +159,8 @@ unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
 
 location lattice_struct::site_location(unsigned index)
 {
-  // make the index lexicographic
-#ifdef EVENFIRST
-  return this_node.site_index_list[index];
-#else
-  location l;
-  foralldir(d) {
-    l[d] = index % this_node.size[d] + this_node.min[d];
-    index /= this_node.size[d];
-  }
-  return l;
-#endif
+  return this_node.coordinates[index];
 }
-
-
-
 
 
 
@@ -189,13 +176,14 @@ void lattice_struct::setup_nodes() {
   // Loop over all node "origins"
   nodes.nodelist.resize(nodes.number);
 
-  int n[NDIM];
+  // n keeps track of the node "root coordinates"
+  location n;
   foralldir(d) n[d] = 0;
 
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {
     location l;
-    foralldir(d) l[d] = nodes.divisors[n[d]][i];
+    foralldir(d) l[d] = nodes.divisors[d][n[d]];
 
     int nn = node_number(l);
     node_info & ni = nodes.nodelist[nn];
@@ -262,7 +250,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   }
 
   // map site indexes to locations
-  site_index_list.resize(sites);
+  coordinates.resize(sites);
   for(unsigned i = 0; i<sites; i++){
     location l;
     unsigned l_index=i;
@@ -271,8 +259,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
       l_index /= size[d];
     }
     l_index = lattice.site_index(l);
-    site_index_list[l_index] = l;
-    location m = site_index_list[i];
+    coordinates[l_index] = l;
   }
 }
 
@@ -299,7 +286,7 @@ void lattice_struct::create_std_gathers()
   // allocate work arrays, will be released later
   std::vector<unsigned> nnodes(this_node.sites); // node number
   std::vector<unsigned> index(this_node.sites);  // index on node
-  std::vector<parity> parity(this_node.sites); // parity 
+  std::vector<parity>   nparity(this_node.sites); // parity 
   std::vector<unsigned> here(this_node.sites);   // index of original site
   std::vector<unsigned> itmp(this_node.sites);   // temp sorting array
 
@@ -338,16 +325,16 @@ void lattice_struct::create_std_gathers()
         ln[d] = (l[d] + 1) % size(d);
       } else {
         direction k = opp_dir(d);
-        ln[k] = (l[k] + size(k) - 1) % size(k);
+        ln[k] = (l[k] + size(k) - 1) % size(d);
       }
  
 #ifdef SCHROED_FUN
       if (d == NDIM-1 && l[NDIM-1] == size(NDIM-1)-1) {
-	// This is up-direction, give special site
-	neighb[d][i] = sf_special_boundary;
+	      // This is up-direction, give special site
+    	  neighb[d][i] = sf_special_boundary;
       } else if (d == opp_dir(NDIM-1) && l[NDIM-1] == 0) {
-	// We never should need the down direction, thus, short circuit!
-	neighb[d][i] = 1<<30;
+	      //  We never should need the down direction, thus, short circuit!
+	      neighb[d][i] = 1<<30;
       } else     // NOTE THIS UGLY else-if CONSTRUCT!
 #endif
       if (is_on_node(ln)) {
@@ -355,9 +342,9 @@ void lattice_struct::create_std_gathers()
       } else {
 	      // Now site is off-node, this lead to fetching
 	      nnodes[num] = node_number(ln);
-	      index[num] = site_index(ln, nnodes[num] );
-	      parity[num] = location_parity(l);  // parity of THIS
-	      here[num]  = i;
+	      index[num]  = site_index(ln, nnodes[num] );
+	      nparity[num]    = location_parity(l);  // parity of THIS
+	      here[num]   = i;
 	      num++;
       }
     }
@@ -368,7 +355,7 @@ void lattice_struct::create_std_gathers()
     if (num > 0) {
       // now, get the number of nodes to be gathered from
       for (int i=0; i<num; i++) {
-	// chase the list until the node found
+	      // chase the list until the node found
         int j;
         for (j=0; j<ci.from_node.size() && nnodes[i] != ci.from_node[j].index; j++);
 	      if (j == ci.from_node.size()) {
@@ -380,7 +367,7 @@ void lattice_struct::create_std_gathers()
 	      }
 	      // add to OLD NODE or just added node
         ci.from_node[j].sites++;
-        if ( parity[i] == EVEN ) ci.from_node[j].evensites ++;  
+        if ( nparity[i] == EVEN ) ci.from_node[j].evensites ++;  
         else ci.from_node[j].oddsites++;
       }
 
@@ -397,30 +384,19 @@ void lattice_struct::create_std_gathers()
         // array according to the index of the sending node .
         // First even neighbours
 
-        {
+        for (parity par : {EVEN,ODD}) {
           int n,i;
-          unsigned int off;
-          // EVEN
-	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && parity[i] == EVEN) {
+	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && nparity[i] == par) {
 	          itmp[n++] = i;
 	          // bubble sort the tmp-array according to the index on the neighbour node
 	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
 	            swap( itmp[k], itmp[k-1] );
 	        }
-	        off = fn.buffer;
+	        unsigned off = fn.buffer;
+          if (par == ODD) off += fn.evensites;
 	        // finally, root indices according to offset
 	        for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
 
-          //ODD
-	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && parity[i] == ODD) {
-	          itmp[n++] = i;
-	          // bubble sort the tmp-array according to the index on the neighbour node
-	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
-	            swap( itmp[k], itmp[k-1] );
-	        }
-	        off = fn.buffer + fn.evensites;
-	        // finally, root indices according to offset
-	        for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
 	      }
         
       }
@@ -438,7 +414,7 @@ void lattice_struct::create_std_gathers()
     comminfo[od].to_node = {};
 
     if (num > 0) {
-      std::vector<comm_node_struct> fn = comminfo[d].from_node;
+      const std::vector<comm_node_struct> & fn = comminfo[d].from_node;
       for (int j=0; j<fn.size(); j++) {
         comm_node_struct s;
         s.index = fn[j].index;
@@ -449,23 +425,19 @@ void lattice_struct::create_std_gathers()
 
         comminfo[od].to_node.push_back(s);
 
-	      /* now, initialize sitelist -- Now, we first want ODD parity, since
-	       * this is what even gather asks for!
-	       */
+	      // now, initialize sitelist -- Now, we first want ODD parity, since
+	      // this is what even gather asks for!
       
-        {
-          int n=0;
-	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && parity[i] == ODD) {
+        int n=0;
+        for (parity par : {ODD, EVEN}) {
+	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && nparity[i] == par) {
 	          (s.sitelist)[n++] = here[i];
 	        }
-	        if (n != s.evensites){
+          if (par == ODD && n != s.evensites) {
             output0 << "Parity odd error 3";
             exit(1);
           }
-	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && parity[i] == EVEN) {
-	          (s.sitelist)[n++] = here[i];
-	        }
-	        if (n != s.sites){
+	        if (par == EVEN && n != s.sites){
             output0 << "Parity even error 3";
             exit(1);
           }
