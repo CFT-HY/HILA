@@ -1560,9 +1560,10 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
-  funcBuf.replace(f->getNameInfo().getSourceRange(), 
-                  f->getQualifiedNameAsString() + template_args);
-
+  //funcBuf.replace(f->getNameInfo().getSourceRange(),
+  //                f->getQualifiedNameAsString() + template_args);
+  funcBuf.replace(f->getNameInfo().getSourceRange(),
+                  f->getQualifiedNameAsString() );
   
 // #define use_ast_type
 #ifdef use_ast_type
@@ -1814,27 +1815,30 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       return(0);
     }
 
-    std::string typestr = args.get(0).getAsType().getAsString();
-    llvm::errs() << "arg type " << typestr;
+    // Get typename without class, struct... qualifiers
+    PrintingPolicy pp(Context->getLangOpts());
+    std::string typestr = args.get(0).getAsType().getAsString(pp);
+    llvm::errs() << "arg type " << typestr << "\n";
 
-    if (spec->isExplicitSpecialization()) llvm::errs() << " explicit";
-    llvm::errs() << '\n';
+    if( typestr.find("field<") ){ // Skip for field templates
+      if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
 
-    // write storage_type specialization
-    // NOTE: this has to be moved to codegen, different for diff. codes
-    if (field_storage_type_decl == nullptr) {
-      llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
-      exit(1);
+      // write storage_type specialization
+      // NOTE: this has to be moved to codegen, different for diff. codes
+      if (field_storage_type_decl == nullptr) {
+        llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
+        exit(1);
+      }
+
+      std::string fst_spec = "template<>\nstruct field_storage_type<"
+        + typestr +"> {\n  " + typestr + " c[10];\n};\n";
+
+      // insert after new line
+      SourceLocation l =
+      getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
+      // TheRewriter.InsertText(l, fst_spec, true,true);
+      writeBuf->insert(l, fst_spec, true, false);
     }
-
-    std::string fst_spec = "template<>\nstruct field_storage_type<"
-      + typestr +"> {\n  " + typestr + " c[10];\n};\n";
-
-    // insert after new line
-    SourceLocation l =
-    getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
-    // TheRewriter.InsertText(l, fst_spec, true,true);
-    writeBuf->insert(l, fst_spec, true, false);
     
   }
   return(count);
@@ -1927,13 +1931,17 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
                                        std::string * argset ) {
 
   if (argset) *argset = "< ";
+
+  // Get argument strings without class, struct... qualifiers
+  PrintingPolicy pp(Context->getLangOpts()); 
+
   
   for (int i=0; i<tal.size(); i++) {
     if (argset && i>0) *argset += ", ";
     switch (tal.get(i).getKind()) {
       case TemplateArgument::ArgKind::Type:
-        arg.push_back( remove_class_from_type(tal.get(i).getAsType().getAsString()) );
-        par.push_back( tpl->getParam(i)->getNameAsString() );        
+        arg.push_back( tal.get(i).getAsType().getAsString(pp) );
+        par.push_back( tpl->getParam(i)->getNameAsString() );
         if (argset) *argset += arg.back();  // write just added arg
         break;
         

@@ -1,5 +1,5 @@
-#include "globals.h"
-#include "field.h"
+#include "../plumbing/globals.h"
+#include "../plumbing/field.h"
 
 ///***********************************************************
 /// Vanilla (non-mpi) implementations of communication routines.
