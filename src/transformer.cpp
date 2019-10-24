@@ -1435,7 +1435,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
   // Check if the function can be called from a loop
   bool loop_callable = true;
-  //llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
+  // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
     global.currentFunctionDecl = f;
@@ -1452,13 +1452,11 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-    if (functiondecl_loop_found(f)) {
-      loop_callable = false;
-    }
+      if (functiondecl_loop_found(f)) {
+        loop_callable = false;
+      }
 
-    // Build the callgraph for callable functions
-    // mycallgraph.getOr
-    
+     
     switch (f->getTemplatedKind()) {
       case FunctionDecl::TemplatedKind::TK_NonTemplate:
         // Normal, non-templated class method -- nothing here
@@ -1558,7 +1556,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
 
   // CXXRecordDecl * parent = method->getParent();
   if (parent) ntemplates += get_param_substitution_list( parent, par, arg );
-  // llvm::errs() << "Num nesting templates " << ntemplates << '\n';
+  llvm::errs() << "Num nesting templates " << ntemplates << '\n';
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
@@ -1894,7 +1892,7 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
 
     ClassTemplateSpecializationDecl * sp = dyn_cast<ClassTemplateSpecializationDecl>(r);
     if (sp) {
-      // llvm::errs() << "Got specialization of " << sp->getNameAsString() << '\n';
+      llvm::errs() << "Got specialization of " << sp->getNameAsString() << '\n';
       const TemplateArgumentList & tal = sp->getTemplateArgs();
       assert(tal.size() > 0);
     

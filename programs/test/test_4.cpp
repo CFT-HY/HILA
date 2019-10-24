@@ -2,6 +2,7 @@
 #include "../plumbing/field.h"
 
 
+transformer_ctl(dump_ast);
 template <typename T>
 class c {
 public:
