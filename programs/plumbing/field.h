@@ -466,6 +466,12 @@ public:
   // fetch the element at this loc
   // T get(int i) const;
   
+  // NOTE: THIS SHOULD BE INCLUDED IN TEMPLATE BELOW; SEEMS NOT???  
+  field<T>& operator= (const field<T>& rhs) {
+   (*this)[ALL] = rhs[X];
+   return *this;
+  }
+
   // Overloading = - possible only if T = A is OK
   template <typename A, 
             std::enable_if_t<std::is_assignable<T&,A>::value, int> = 0 >
