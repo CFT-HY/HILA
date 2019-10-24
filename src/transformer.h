@@ -49,7 +49,7 @@ struct global_state {
   bool assert_loop_parity = false;
   std::string full_loop_text = "";
   bool in_func_template = false;
-  bool in_class_template = false;
+  // bool in_class_template = false;
   TemplateParameterList *function_tpl = nullptr;
 //  std::vector<const TemplateParameterList *> class_templ_params = {};
 //  std::vector<const TemplateArgumentList *> class_templ_args = {};

@@ -1560,10 +1560,9 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
-  //funcBuf.replace(f->getNameInfo().getSourceRange(),
-  //                f->getQualifiedNameAsString() + template_args);
+  // template_args adds template specialization args after the name, name<args>(..)
   funcBuf.replace(f->getNameInfo().getSourceRange(),
-                  f->getQualifiedNameAsString() );
+                  f->getQualifiedNameAsString() + template_args);
   
 // #define use_ast_type
 #ifdef use_ast_type
@@ -1771,9 +1770,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     }
     // end block
     
-    global.in_class_template = true;
+    // global.in_class_template = true;
     // Should go through the template in order to find function templates...
-    TraverseDecl(D->getTemplatedDecl());
+    // Comment out now, let roll through "naturally".
+    // TraverseDecl(D->getTemplatedDecl());
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
@@ -1782,10 +1782,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     } else {
     }
 
-    global.in_class_template = false;
+    // global.in_class_template = false;
 
-    // No need to traverse the template? 
-    state::skip_children = 1;
+    // Now do traverse the template naturally
+    // state::skip_children = 1;
     
   }    
   
@@ -1820,6 +1820,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     std::string typestr = args.get(0).getAsType().getAsString(pp);
     llvm::errs() << "arg type " << typestr << "\n";
 
+    // Type of field<> can never be field?  This always is true
     if( typestr.find("field<") ){ // Skip for field templates
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
 
