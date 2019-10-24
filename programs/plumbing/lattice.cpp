@@ -325,7 +325,7 @@ void lattice_struct::create_std_gathers()
         ln[d] = (l[d] + 1) % size(d);
       } else {
         direction k = opp_dir(d);
-        ln[k] = (l[k] + size(k) - 1) % size(d);
+        ln[k] = (l[k] + size(k) - 1) % size(k);
       }
  
 #ifdef SCHROED_FUN
@@ -367,7 +367,7 @@ void lattice_struct::create_std_gathers()
 	      }
 	      // add to OLD NODE or just added node
         ci.from_node[j].sites++;
-        if ( nparity[i] == EVEN ) ci.from_node[j].evensites ++;  
+        if ( nparity[i] == EVEN ) ci.from_node[j].evensites ++;
         else ci.from_node[j].oddsites++;
       }
 
