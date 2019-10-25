@@ -885,7 +885,7 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       // check if we already have this function
       for (int i=0; i<loop_functions.size(); i++) if (fd == loop_functions[i]) return true;
     
-      llvm::errs() << " ++ callgraph for " << fd->getNameAsString() << '\n';
+      // llvm::errs() << " ++ callgraph for " << fd->getNameAsString() << '\n';
     
       loop_functions.push_back(fd);
       handle_loop_function(fd);
