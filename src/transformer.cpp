@@ -894,7 +894,7 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       CallGraph CG;
       // addToCallGraph takes Decl *: cast 
       CG.addToCallGraph( dyn_cast<Decl>(fd) );
-      CG.dump();
+      // CG.dump();
       int i = 0;
       for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
         // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
@@ -1908,7 +1908,7 @@ void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument
       if (rd && SM.isBeforeInTranslationUnit( ip, rd->getSourceRange().getBegin() )) {
         reportDiag(DiagnosticsEngine::Level::Warning,
                    f->getSourceRange().getBegin(),
-                   "Specialization point for the function appears to be before the declaration of type \'%0\'",
+    "Specialization point for function appears to be before the declaration of type \'%0\', code might not compile",
                    tap->getAsType().getAsString().c_str());
       } 
     }
