@@ -1510,13 +1510,18 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
 
 void MyASTVisitor::specialize_function( FunctionDecl *f ) {
+  if(f->isCXXClassMember()){
+    // method is defined inside template class.  Could be a chain of classes!
+    CXXMethodDecl *method = dyn_cast<CXXMethodDecl>(f);
+    specialize_function_or_method( method, method->getParent(), 
+                                   method->isStatic(), cmdline::method_spec_no_inline );
+  } else {
   specialize_function_or_method( f, nullptr, false, cmdline::function_spec_no_inline );
+}
 }
 
 void MyASTVisitor::specialize_method( CXXMethodDecl *method ) {
-  // method is defined inside template class.  Could be a chain of classes!
-  specialize_function_or_method( method, method->getParent(), 
-                                 method->isStatic(), cmdline::method_spec_no_inline );
+  
 }
 
 void MyASTVisitor::specialize_function_or_method( FunctionDecl *f, 
