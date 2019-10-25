@@ -10,8 +10,8 @@ template<typename mtype, typename vtype>
 void dirac_stagggered(
     const mtype &gauge,
     const double mass,
-    vtype &v_in,
-    const vtype &v_out)
+    const vtype &v_in,
+    vtype &v_out)
 {
     static field<double> eta[NDIM]; // The staggered phase
     static bool initialized = false;
