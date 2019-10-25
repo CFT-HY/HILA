@@ -4,9 +4,11 @@
 #include <assert.h>
 #include <time.h>
 
-#include "../plumbing/field.h"
+#include "../plumbing/defs.h"
 #include "../datatypes/general_matrix.h"
 #include "../datatypes/cmplx.h"
+#include "../plumbing/field.h"
+#include "../plumbing/dirac.h"
 
 // Direct output to stdout
 std::ostream &hila::output = std::cout;
