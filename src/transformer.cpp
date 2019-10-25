@@ -650,9 +650,9 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     }
   }
     
-  llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
-               << " parity " << get_stmt_str(lfe.parityExpr)
-               << "\n";
+  // llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
+  //              << " parity " << get_stmt_str(lfe.parityExpr)
+  //              << "\n";
 
    
   field_ref_list.push_back(lfe);
@@ -911,8 +911,8 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       return true;
     } else {
       // Now function has no body - could be in other compilation unit or in system library.
-      // TODO: handle these!
-      llvm::errs() << "   Function has no body!\n";
+      // TODO: should we handle these?
+      // llvm::errs() << "   Function has no body!\n";
     }
   } else {
     // now not a function - should not happen
@@ -1538,24 +1538,26 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
   // cannot rely on getReturnTypeSourceRange() for methods.  Let us not even try,
   // change the whole method here
   
-
   bool is_templated = ( f->getTemplatedKind() ==
                         FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization );
   
   int ntemplates = 0;
-
   std::string template_args = "";
+  std::vector<const TemplateArgument *> typeargs = {};
+
   if (is_templated) {
+    // Get here the template param->arg mapping for func template
     auto tal = f->getTemplateSpecializationArgs();
     auto tpl = f->getPrimaryTemplate()->getTemplateParameters();
     assert( tal && tpl && tal->size() == tpl->size() && "Method template par/arg error");
 
-    make_mapping_lists(tpl, *tal, par, arg, &template_args);
+    make_mapping_lists(tpl, *tal, par, arg, typeargs, &template_args);
     ntemplates = 1;
   }
 
-  // CXXRecordDecl * parent = method->getParent();
-  if (parent) ntemplates += get_param_substitution_list( parent, par, arg );
+  // Get template mapping for classes
+  // parent is from: CXXRecordDecl * parent = method->getParent();   
+  if (parent) ntemplates += get_param_substitution_list( parent, par, arg, typeargs );
   llvm::errs() << "Num nesting templates " << ntemplates << '\n';
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
@@ -1591,6 +1593,8 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
   for (int i=0; i<ntemplates; i++) {
     funcBuf.insert(0,"template <>\n",true,true);
   }
+
+  check_spec_insertion_point(typeargs, global.location.bot, f);
 
   SourceRange decl_sr = get_func_decl_range(f);
   std::string wheredefined = "";
@@ -1883,12 +1887,42 @@ VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
 }
 #endif
 
+/////////////////////////////////////////////////////////////////////////////////
+/// Check that all template specialization type arguments are defined at the point
+/// where the specialization is inserted
+/// TODO: change the insertion point
+/////////////////////////////////////////////////////////////////////////////////
 
-/// Returns the mapping params -> args for templates, inner first.  Return value
+void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
+                                              SourceLocation ip, 
+                                              FunctionDecl *f) 
+{
+  SourceManager &SM = TheRewriter.getSourceMgr();
+
+  for (const TemplateArgument * tap : typeargs) {
+    llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
+    const Type * tp = tap->getAsType().getTypePtrOrNull();
+    // Builtins are fine too
+    if (tp && !tp->isBuiltinType()) {
+      RecordDecl * rd = tp->getAsRecordDecl();
+      if (rd && SM.isBeforeInTranslationUnit( ip, rd->getSourceRange().getBegin() )) {
+        reportDiag(DiagnosticsEngine::Level::Warning,
+                   f->getSourceRange().getBegin(),
+                   "Specialization point for the function appears to be before the declaration of type \'%0\'",
+                   tap->getAsType().getAsString().c_str());
+      } 
+    }
+  }
+}
+
+
+
+/// Returns the mapping params -> args for class templates, inner first.  Return value
 /// the number of template nestings
 int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
                                                std::vector<std::string> & par,
-                                               std::vector<std::string> & arg ) {
+                                               std::vector<std::string> & arg,
+                                               std::vector<const TemplateArgument *> & typeargs ) {
   
   if (r == nullptr) return 0;
 
@@ -1907,18 +1941,18 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
 
       assert(tal.size() == tpl->size());
     
-      make_mapping_lists(tpl, tal, par, arg, nullptr);
+      make_mapping_lists(tpl, tal, par, arg, typeargs, nullptr);
     
       level = 1;
     }
   } else {
-    llvm::errs() << "No specialization of classs " << r->getNameAsString() << '\n';
+    llvm::errs() << "No specialization of class " << r->getNameAsString() << '\n';
   }
   
   auto * parent = r->getParent();
   if (parent) {
     if (CXXRecordDecl * pr = dyn_cast<CXXRecordDecl>(parent))
-      return level + get_param_substitution_list(pr, par, arg);
+      return level + get_param_substitution_list(pr, par, arg, typeargs);
   }
   return level;
 }
@@ -1929,6 +1963,7 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
                                        const TemplateArgumentList & tal,
                                        std::vector<std::string> & par,
                                        std::vector<std::string> & arg,
+                                       std::vector<const TemplateArgument *> & typeargs,
                                        std::string * argset ) {
 
   if (argset) *argset = "< ";
@@ -1944,6 +1979,7 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
         arg.push_back( tal.get(i).getAsType().getAsString(pp) );
         par.push_back( tpl->getParam(i)->getNameAsString() );
         if (argset) *argset += arg.back();  // write just added arg
+        typeargs.push_back( &tal.get(i) );  // save type-type arguments
         break;
         
       case TemplateArgument::ArgKind::Integral:
