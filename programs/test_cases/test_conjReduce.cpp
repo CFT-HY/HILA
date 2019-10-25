@@ -20,12 +20,11 @@ int main(){
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
 
     // Test that neighbours are fetched correctly
-    foralldir(d){
-        direction dir = (direction)d;
+    foralldir(dir){
         onsites(ALL){
             location l = coordinates(X);
-            coordinate[X] = l[d];
-            nb_coordinate1[X] = (l[d] + 1) % nd[d];
+            coordinate[X] = l[dir];
+            nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
         }
 
         nb_coordinate2[ALL] = coordinate[X+dir];
