@@ -452,7 +452,7 @@ public:
 
   // these give the field_element -- WILL BE modified by transformer
   field_element<T>& operator[] (const parity p) const;
-  field_element<T>& operator[] (const parity_plus_direction p);
+  field_element<T>& operator[] (const parity_plus_direction p) const;
   //{ 
   //  return (field_element<T>) *this;
   //}
