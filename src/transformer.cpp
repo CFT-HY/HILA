@@ -1470,7 +1470,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
 
         if (functiondecl_loop_found(f)) {
-          specialize_function(f);
+          specialize_function_or_method(f);
         } else {
           state::skip_children = 1;  // no reason to look at it further
         }
@@ -1509,28 +1509,24 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
 
 
-void MyASTVisitor::specialize_function( FunctionDecl *f ) {
+void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
+  // This handles all functions and methods. Parent is non-null for methods,
+  // and then is_static gives the static flag
+  
+  bool no_inline;
+  bool is_static = false;
+  CXXRecordDecl * parent = nullptr;
+
+  /* Check if the function is a class method */
   if(f->isCXXClassMember()){
     // method is defined inside template class.  Could be a chain of classes!
     CXXMethodDecl *method = dyn_cast<CXXMethodDecl>(f);
-    specialize_function_or_method( method, method->getParent(), 
-                                   method->isStatic(), cmdline::method_spec_no_inline );
+    parent = method->getParent();
+    is_static = method->isStatic();
+    no_inline = cmdline::method_spec_no_inline;
   } else {
-  specialize_function_or_method( f, nullptr, false, cmdline::function_spec_no_inline );
-}
-}
-
-void MyASTVisitor::specialize_method( CXXMethodDecl *method ) {
-  
-}
-
-void MyASTVisitor::specialize_function_or_method( FunctionDecl *f, 
-                                                  CXXRecordDecl * parent,
-                                                  bool is_static,
-                                                  bool no_inline ) {
-  
-  // This handles all functions and methods. Parent is non-null for methods,
-  // and then is_static gives the static flag
+    no_inline = cmdline::function_spec_no_inline;
+  }
   
   srcBuf * writeBuf_saved = writeBuf;
   srcBuf funcBuf(&TheRewriter,f);
@@ -1637,67 +1633,6 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
   state::skip_children = 1;
 }
 
-
-/// Method decls need special handling - move defn outside of class, if needed!
-/// If template instantiaton, need the param mapping too
-
-bool MyASTVisitor::VisitCXXMethodDecl(CXXMethodDecl *method) {
-  // Comes after VisitFunctionDecl for methods
-  
-  if (state::dump_ast_next) {
-    llvm::errs() << "**** Dumping method:\n";
-    method->dump();
-    state::dump_ast_next = false;
-  }
-
-  bool loop_callable = true;
-  //llvm::errs() << "Method " << method->getNameInfo().getName() << "\n";
-
-
-  if (method->isThisDeclarationADefinition() && method->hasBody()) {
-    // FunctionDecl *f = method->getTemplatedDecl();
-
-    global.currentFunctionDecl = method;
-
-
-    switch (method->getTemplatedKind()) {
-      case FunctionDecl::TemplatedKind::TK_NonTemplate:
-        // Normal, non-templated class method -- 
-        break;
-        
-      case FunctionDecl::TemplatedKind::TK_FunctionTemplate:
-        // don't go here
-        state::skip_children = 1;
-        break;
-        
-      case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
-      case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
-        
-        if (functiondecl_loop_found(method)) {
-          specialize_method( method );
-        } else {
-          state::skip_children = 1;
-        }
-        break;
-        
-      default:
-        break;
-    }
-
-    if (cmdline::funcinfo) {
-      std::stringstream SSBefore;
-      SSBefore << "// Begin method "
-               << method->getQualifiedNameAsString()
-               << " returning " << method->getReturnType().getAsString()
-               << " of template type " << print_TemplatedKind(method->getTemplatedKind()) 
-               << '\n';
-
-      SourceLocation ST = method->getSourceRange().getBegin();
-      writeBuf->insert(ST,SSBefore.str(), true, true);
-    }    
-  }
-  return true;
-}
 
 // locate range of specialization "template< ..> .. func<...>( ... )"
 // tf is ptr to template, and f to instantiated function
