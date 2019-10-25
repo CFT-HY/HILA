@@ -650,9 +650,9 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     }
   }
     
-  llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
-               << " parity " << get_stmt_str(lfe.parityExpr)
-               << "\n";
+  // llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
+  //              << " parity " << get_stmt_str(lfe.parityExpr)
+  //              << "\n";
 
    
   field_ref_list.push_back(lfe);
@@ -894,7 +894,7 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       CallGraph CG;
       // addToCallGraph takes Decl *: cast 
       CG.addToCallGraph( dyn_cast<Decl>(fd) );
-      CG.dump();
+      // CG.dump();
       int i = 0;
       for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
         // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
@@ -911,8 +911,8 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       return true;
     } else {
       // Now function has no body - could be in other compilation unit or in system library.
-      // TODO: handle these!
-      llvm::errs() << "   Function has no body!\n";
+      // TODO: should we handle these?
+      // llvm::errs() << "   Function has no body!\n";
     }
   } else {
     // now not a function - should not happen
@@ -1435,7 +1435,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
   // Check if the function can be called from a loop
   bool loop_callable = true;
-  //llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
+  // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
     global.currentFunctionDecl = f;
@@ -1452,13 +1452,11 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-    if (functiondecl_loop_found(f)) {
-      loop_callable = false;
-    }
+      if (functiondecl_loop_found(f)) {
+        loop_callable = false;
+      }
 
-    // Build the callgraph for callable functions
-    // mycallgraph.getOr
-    
+     
     switch (f->getTemplatedKind()) {
       case FunctionDecl::TemplatedKind::TK_NonTemplate:
         // Normal, non-templated class method -- nothing here
@@ -1540,32 +1538,33 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
   // cannot rely on getReturnTypeSourceRange() for methods.  Let us not even try,
   // change the whole method here
   
-
   bool is_templated = ( f->getTemplatedKind() ==
                         FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization );
   
   int ntemplates = 0;
-
   std::string template_args = "";
+  std::vector<const TemplateArgument *> typeargs = {};
+
   if (is_templated) {
+    // Get here the template param->arg mapping for func template
     auto tal = f->getTemplateSpecializationArgs();
     auto tpl = f->getPrimaryTemplate()->getTemplateParameters();
     assert( tal && tpl && tal->size() == tpl->size() && "Method template par/arg error");
 
-    make_mapping_lists(tpl, *tal, par, arg, &template_args);
+    make_mapping_lists(tpl, *tal, par, arg, typeargs, &template_args);
     ntemplates = 1;
   }
 
-  // CXXRecordDecl * parent = method->getParent();
-  if (parent) ntemplates += get_param_substitution_list( parent, par, arg );
-  // llvm::errs() << "Num nesting templates " << ntemplates << '\n';
+  // Get template mapping for classes
+  // parent is from: CXXRecordDecl * parent = method->getParent();   
+  if (parent) ntemplates += get_param_substitution_list( parent, par, arg, typeargs );
+  llvm::errs() << "Num nesting templates " << ntemplates << '\n';
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
-  //funcBuf.replace(f->getNameInfo().getSourceRange(),
-  //                f->getQualifiedNameAsString() + template_args);
+  // template_args adds template specialization args after the name, name<args>(..)
   funcBuf.replace(f->getNameInfo().getSourceRange(),
-                  f->getQualifiedNameAsString() );
+                  f->getQualifiedNameAsString() + template_args);
   
 // #define use_ast_type
 #ifdef use_ast_type
@@ -1594,6 +1593,8 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f,
   for (int i=0; i<ntemplates; i++) {
     funcBuf.insert(0,"template <>\n",true,true);
   }
+
+  check_spec_insertion_point(typeargs, global.location.bot, f);
 
   SourceRange decl_sr = get_func_decl_range(f);
   std::string wheredefined = "";
@@ -1773,9 +1774,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     }
     // end block
     
-    global.in_class_template = true;
+    // global.in_class_template = true;
     // Should go through the template in order to find function templates...
-    TraverseDecl(D->getTemplatedDecl());
+    // Comment out now, let roll through "naturally".
+    // TraverseDecl(D->getTemplatedDecl());
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
@@ -1784,10 +1786,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     } else {
     }
 
-    global.in_class_template = false;
+    // global.in_class_template = false;
 
-    // No need to traverse the template? 
-    state::skip_children = 1;
+    // Now do traverse the template naturally
+    // state::skip_children = 1;
     
   }    
   
@@ -1822,6 +1824,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     std::string typestr = args.get(0).getAsType().getAsString(pp);
     llvm::errs() << "arg type " << typestr << "\n";
 
+    // Type of field<> can never be field?  This always is true
     if( typestr.find("field<") ){ // Skip for field templates
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
 
@@ -1884,12 +1887,42 @@ VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
 }
 #endif
 
+/////////////////////////////////////////////////////////////////////////////////
+/// Check that all template specialization type arguments are defined at the point
+/// where the specialization is inserted
+/// TODO: change the insertion point
+/////////////////////////////////////////////////////////////////////////////////
 
-/// Returns the mapping params -> args for templates, inner first.  Return value
+void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
+                                              SourceLocation ip, 
+                                              FunctionDecl *f) 
+{
+  SourceManager &SM = TheRewriter.getSourceMgr();
+
+  for (const TemplateArgument * tap : typeargs) {
+    llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
+    const Type * tp = tap->getAsType().getTypePtrOrNull();
+    // Builtins are fine too
+    if (tp && !tp->isBuiltinType()) {
+      RecordDecl * rd = tp->getAsRecordDecl();
+      if (rd && SM.isBeforeInTranslationUnit( ip, rd->getSourceRange().getBegin() )) {
+        reportDiag(DiagnosticsEngine::Level::Warning,
+                   f->getSourceRange().getBegin(),
+    "Specialization point for function appears to be before the declaration of type \'%0\', code might not compile",
+                   tap->getAsType().getAsString().c_str());
+      } 
+    }
+  }
+}
+
+
+
+/// Returns the mapping params -> args for class templates, inner first.  Return value
 /// the number of template nestings
 int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
                                                std::vector<std::string> & par,
-                                               std::vector<std::string> & arg ) {
+                                               std::vector<std::string> & arg,
+                                               std::vector<const TemplateArgument *> & typeargs ) {
   
   if (r == nullptr) return 0;
 
@@ -1898,7 +1931,7 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
 
     ClassTemplateSpecializationDecl * sp = dyn_cast<ClassTemplateSpecializationDecl>(r);
     if (sp) {
-      // llvm::errs() << "Got specialization of " << sp->getNameAsString() << '\n';
+      llvm::errs() << "Got specialization of " << sp->getNameAsString() << '\n';
       const TemplateArgumentList & tal = sp->getTemplateArgs();
       assert(tal.size() > 0);
     
@@ -1908,18 +1941,18 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
 
       assert(tal.size() == tpl->size());
     
-      make_mapping_lists(tpl, tal, par, arg, nullptr);
+      make_mapping_lists(tpl, tal, par, arg, typeargs, nullptr);
     
       level = 1;
     }
   } else {
-    llvm::errs() << "No specialization of classs " << r->getNameAsString() << '\n';
+    llvm::errs() << "No specialization of class " << r->getNameAsString() << '\n';
   }
   
   auto * parent = r->getParent();
   if (parent) {
     if (CXXRecordDecl * pr = dyn_cast<CXXRecordDecl>(parent))
-      return level + get_param_substitution_list(pr, par, arg);
+      return level + get_param_substitution_list(pr, par, arg, typeargs);
   }
   return level;
 }
@@ -1930,6 +1963,7 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
                                        const TemplateArgumentList & tal,
                                        std::vector<std::string> & par,
                                        std::vector<std::string> & arg,
+                                       std::vector<const TemplateArgument *> & typeargs,
                                        std::string * argset ) {
 
   if (argset) *argset = "< ";
@@ -1945,6 +1979,7 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
         arg.push_back( tal.get(i).getAsType().getAsString(pp) );
         par.push_back( tpl->getParam(i)->getNameAsString() );
         if (argset) *argset += arg.back();  // write just added arg
+        typeargs.push_back( &tal.get(i) );  // save type-type arguments
         break;
         
       case TemplateArgument::ArgKind::Integral:

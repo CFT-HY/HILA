@@ -69,13 +69,19 @@ public:
 
   int get_param_substitution_list( CXXRecordDecl * r,
                                    std::vector<std::string> & par,
-                                   std::vector<std::string> & arg );
+                                   std::vector<std::string> & arg,
+                                   std::vector<const TemplateArgument *> & typeargs );
 
   void make_mapping_lists( const TemplateParameterList * tpl, 
                            const TemplateArgumentList & tal,
                            std::vector<std::string> & par,
                            std::vector<std::string> & arg,
+                           std::vector<const TemplateArgument *> & typeargs,
                            std::string *al );
+
+  void check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
+                                  SourceLocation ip, 
+                                  FunctionDecl *f);
  
   // bool VisitCXXRecordDecl( CXXRecordDecl * D);
 

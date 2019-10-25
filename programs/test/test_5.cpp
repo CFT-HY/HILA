@@ -16,11 +16,11 @@ int main()
   field<double> t(1.0);
   
   // transformer_ctl(dump_ast);
-  x[EVEN] = f(a[X]) + x[X];
+  // x[EVEN] = f(a[X]) + x[X];
 
   
   
-  x = a + x;
+  x = t;
   
   
   return 0;
