@@ -426,7 +426,7 @@ public:
     }
   }
 
-  bool is_allocated() { return (fs != nullptr); }
+  bool is_allocated() const { return (fs != nullptr); }
   
   // call this BEFORE the var is written to
   void mark_changed(const parity p) {
@@ -457,7 +457,7 @@ public:
   //  return (field_element<T>) *this;
   //}
 
-  T get_value_at(int i)
+  T get_value_at(int i) const
   {
     return this->fs->get(i);
   }
@@ -549,7 +549,7 @@ public:
 
   // Communication routines
   #ifndef USE_MPI
-  void start_move(direction d, parity p){}
+  void start_move(direction d, parity p) const {}
   #endif
 };
 

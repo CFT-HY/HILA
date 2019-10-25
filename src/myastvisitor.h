@@ -59,13 +59,7 @@ public:
   /// same for function templates
   // bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
 
-  /// same for function templates
-  bool VisitCXXMethodDecl(CXXMethodDecl *tf);
-
-  void specialize_function( FunctionDecl *f );
-  void specialize_method( CXXMethodDecl *method );
-  void specialize_function_or_method( FunctionDecl *f, CXXRecordDecl *parent, 
-                                      bool is_static, bool no_inline );
+  void specialize_function_or_method( FunctionDecl *f );
 
   int get_param_substitution_list( CXXRecordDecl * r,
                                    std::vector<std::string> & par,
