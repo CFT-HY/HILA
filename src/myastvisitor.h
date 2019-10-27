@@ -96,7 +96,12 @@ public:
   bool is_field_element_expr(Expr *E);
   bool is_field_expr(Expr *E);
   bool is_field_decl(ValueDecl *D);
-  
+
+  // catches both parity and parity_plus_direction 
+  bool is_field_parity_expr(Expr *e);
+
+  bool is_array_expr(Expr *E); 
+
   template <unsigned N>
   void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
                   const char (&msg)[N],
@@ -118,9 +123,6 @@ public:
   /// this tries to "fingerprint" expressions and see if they're duplicate
   bool is_duplicate_expr(const Expr * a, const Expr * b);
   
-  // catches both parity and parity_plus_direction 
-  bool is_field_parity_expr(Expr *e);
-
   /// Checks if expr points to a variable defined in the same loop
   var_decl * is_loop_local_var_ref(Expr *E);
 

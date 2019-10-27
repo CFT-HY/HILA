@@ -2,11 +2,11 @@
 // Transformer tools to convert "lattice loops" into
 // hardware-dependent "kernels".
 //
-// Uses Clang RecursiveASTVisitor and Rewriter 
+// Uses Clang RecursiveASTVisitor and Rewriter
 // interfaces
 //
 // Kari Rummukainen 2017-19
-// 
+//
 //------------------------------------------------------------------------------
 #include <sstream>
 #include <iostream>
@@ -65,13 +65,13 @@ namespace cmdline {
              llvm::cl::cat(TransformerCat));
 
   static llvm::cl::opt<std::string>
-  dummy_def("D", 
+  dummy_def("D",
             llvm::cl::value_desc("name"),
             llvm::cl::desc("Define name/symbol for preprocessor"),
             llvm::cl::cat(TransformerCat));
 
   static llvm::cl::opt<std::string>
-  dummy_incl("I", 
+  dummy_incl("I",
              llvm::cl::desc("Directory for include file search"),
              llvm::cl::value_desc("directory"),
              llvm::cl::cat(TransformerCat));
@@ -85,22 +85,22 @@ namespace cmdline {
   method_spec_no_inline("method-spec-no-inline",
                         llvm::cl::desc("Do not mark generated method specializations \"inline\""),
                         llvm::cl::cat(TransformerCat));
-  
+
   static llvm::cl::opt<bool>
   funcinfo("ident-functions",
            llvm::cl::desc("Comment function call types in output"),
            llvm::cl::cat(TransformerCat));
-  
+
   static llvm::cl::opt<bool>
   no_output("no-output",
             llvm::cl::desc("No output file, for syntax check"),
             llvm::cl::cat(TransformerCat));
-  
+
   static llvm::cl::opt<bool>
   syntax_only("syntax-only",
               llvm::cl::desc("Same as no-output"),
               llvm::cl::cat(TransformerCat));
-  
+
   static llvm::cl::opt<std::string>
   output_filename("o",
                   llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
@@ -112,7 +112,7 @@ namespace cmdline {
   kernel("target:vanilla-kernel",
          llvm::cl::desc("Generate kernels"),
          llvm::cl::cat(TransformerCat));
-  
+
   static llvm::cl::opt<bool>
   vanilla("target:vanilla",
           llvm::cl::desc("Generate loops in place"),
@@ -166,15 +166,15 @@ CompilerInstance *myCompilerInstance;
 // function to help development
 std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
   switch (kind) {
-    case FunctionDecl::TemplatedKind::TK_NonTemplate:  
+    case FunctionDecl::TemplatedKind::TK_NonTemplate:
       return "TK_NonTemplate";
     case FunctionDecl::TemplatedKind::TK_FunctionTemplate:
       return "TK_FunctionTemplate";
     case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
       return "TK_MemberSpecialization";
-    case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:  
+    case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
       return "TK_FunctionTemplateSpecialization";
-    case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:  
+    case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
       return "TK_DependentFunctionTemplateSpecialization";
   }
 }
@@ -229,22 +229,22 @@ class heLppPragmaHandler : public PragmaHandler {
     void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
                       Token &Tok) {
       // Handle the pragma
-    
+
       llvm::errs() << "Got the pragma! name " << getName() << " Token " << Tok.getName() << '\n';
 
       static Token tok_dump_ast;
-      
+
       Token pragma_name = Tok;
       PP.Lex(Tok);  // lex next token
       if (Tok.is(tok::identifier)) {
-        
+
         if (PP.getSpelling(Tok) == "_transformer_cmd_dump_ast_") {
-          
+
           llvm::errs() << "Got " << PP.getSpelling(Tok) << '\n';
           tok_dump_ast.setIdentifierInfo(Tok.getIdentifierInfo());
-          
+
         } else if (PP.getSpelling(Tok) == "dump_ast") {
-          
+
           llvm::errs() << "Dumping ast for next cmd\n";
           std::vector<Token> tokenlist;
           Token t;
@@ -254,12 +254,12 @@ class heLppPragmaHandler : public PragmaHandler {
           t.setLocation(pragma_name.getLocation());
           t.setLength(pragma_name.getLength());
           tokenlist.push_back(t);
-          
-          t.setKind(tok::kw_long);  // 
+
+          t.setKind(tok::kw_long);  //
           t.setLocation(pragma_name.getLocation());
           t.setLength(pragma_name.getLength());
           tokenlist.push_back(t);
-          
+
           t.startToken();
           t.setIdentifierInfo(tok_dump_ast.getIdentifierInfo());  // _transformer_cmd_
           t.setKind(tok::identifier);
@@ -270,14 +270,14 @@ class heLppPragmaHandler : public PragmaHandler {
           t.setKind(tok::semi);
           t.setLocation(pragma_name.getLocation());
           tokenlist.push_back(t);
-         
+
           auto TokenArray = llvm::make_unique<Token[]>(tokenlist.size());
           std::copy(tokenlist.begin(), tokenlist.end(), TokenArray.get());
           PP.EnterTokenStream(std::move(TokenArray), tokenlist.size(),
                               /*DisableMacroExpansion=*/false);
         }
       }
-       
+
     return;
   }
 
@@ -285,27 +285,27 @@ class heLppPragmaHandler : public PragmaHandler {
 
 static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("heLpp","heL pragma description");
 #endif
-  
+
 // By implementing RecursiveASTVisitor, we can specify which AST nodes
 // we're interested in by overriding relevant methods.
 
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
   if (state::check_loop && state::loop_found) return true;
-  
+
   if (state::skip_next > 0) {
     state::skip_next--;
     return true;
   }
-  
+
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;
-    
+
   // go via the original routine...
   if (!state::skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
 
   if (state::skip_children > 0) state::skip_children--;
-      
+
   return true;
 }
 
@@ -322,7 +322,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
 
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;
-    
+
   // go via the original routine...
   if (!state::skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseDecl(D);
 
@@ -340,17 +340,17 @@ void MyASTVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation
                               const char *s2,
                               const char *s3 ) {
   // we'll do reporting only when output is on, avoid double reports
-  auto & DE = Context->getDiagnostics();    
+  auto & DE = Context->getDiagnostics();
   auto ID = DE.getCustomDiagID(lev, msg );
   auto DB = DE.Report(SL, ID);
   if (s1 != nullptr) DB.AddString(s1);
   if (s2 != nullptr) DB.AddString(s2);
   if (s3 != nullptr) DB.AddString(s3);
 }
-  
+
 ///////////////////////////////////////////////////////////////////////////
 /// Find duplicate expressions using Profile function in clang
-/// which should "fingerprint" expressions 
+/// which should "fingerprint" expressions
 ///////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
@@ -364,14 +364,14 @@ bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
 
 ///////////////////////////////////////////////////////////////////////////
 
-// catches both parity and parity_plus_direction 
+// catches both parity and parity_plus_direction
 bool MyASTVisitor::is_field_parity_expr(Expr *E) {
   E = E->IgnoreParens();
   CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
   if (OC &&
-      strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
+      strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 &&
       is_field_expr(OC->getArg(0))) {
-    std::string s = get_expr_type(OC->getArg(1)); 
+    std::string s = get_expr_type(OC->getArg(1));
     if (s == "parity" || s == "parity_plus_direction") {
       // llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
       return true;
@@ -383,7 +383,7 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
     // TODO: this branch should never be used to find field[], but it is taken: find out why!
     if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
       Expr * lhs = ASE->getLHS()->IgnoreParens();
-      
+
       if (is_field_expr(ASE->getLHS()->IgnoreParens())) {
         // llvm::errs() << " FP: and field\n";
         std::string s = get_expr_type(ASE->getRHS());
@@ -393,8 +393,26 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
       }
     }
   }
-  return false;   
+  return false;
 }
+
+
+/////////////////////////////////////////////////////////////////
+// Check if E is array expr, can also be operator
+/////////////////////////////////////////////////////////////////
+
+bool MyASTVisitor::is_array_expr(Expr *E) {
+  E = E->IgnoreParens();
+  E = E->IgnoreImpCasts();
+
+  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+  if (OC && strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0) return true;
+
+  if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) return true;
+
+  return false;
+}
+
 
 ///////////////////////////////////////////////////////////////////
 // If parity in field[] is constant, return it - otherwise return
@@ -422,13 +440,13 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
                  pExpr->getSourceRange().getBegin(),
                  "parity::none is reserved for internal use" );
     }
-        
+
     return p;
   } else {
     return parity::none;
   }
 }
-  
+
 void MyASTVisitor::require_parity_X(Expr * pExpr) {
   // Now parity has to be X (or the same as before?)
   if (get_parity_val(pExpr) != parity::x) {
@@ -447,17 +465,17 @@ void MyASTVisitor::require_parity_X(Expr * pExpr) {
 bool MyASTVisitor::check_field_ref_list() {
 
   bool no_errors = true;
-  
+
   global.assert_loop_parity = false;
 
   field_info_list.clear();
-    
+
   for( field_ref & p : field_ref_list ) {
 
     p.direction = -1;  // reset the direction
-    
+
     std::string name = get_stmt_str(p.nameExpr);
-      
+
     field_info * lfip = nullptr;
 
     // search for duplicates: if found, lfip is non-null
@@ -482,9 +500,15 @@ bool MyASTVisitor::check_field_ref_list() {
       lfv.type_template.erase(0,5);  // Remove "field"  from field<T>
       lfv.is_written = p.is_written;
       lfv.is_read    = p.is_read;
-      
+
       field_info_list.push_back(lfv);
       lfip = & field_info_list.back();
+
+      // check if the reference is through an array!
+      if (is_array_expr(p.nameExpr)) {
+        llvm::errs() << "it's an array ref " << name << "!!\n";
+        
+      }
     }
     // now lfip points to the right info element
     // copy that to lf reference
@@ -492,7 +516,7 @@ bool MyASTVisitor::check_field_ref_list() {
 
     if (p.is_written) lfip->is_written = true;
     if (p.is_read)    lfip->is_read    = true;
-      
+
     // save expr record
     lfip->ref_list.push_back(&p);
 
@@ -517,7 +541,7 @@ bool MyASTVisitor::check_field_ref_list() {
         }
         i++;
       }
-        
+
       if (!found) {
         dir_ptr dp;
         dp.e = p.dirExpr;
@@ -528,9 +552,9 @@ bool MyASTVisitor::check_field_ref_list() {
       }
     } // dirExpr
   } // p-loop
-  
+
   // check for f[ALL] = f[X+dir] -type use, which is undefined
-  
+
   for (field_info & l : field_info_list) {
     if (l.is_written && l.dir_list.size() > 0) {
       if (loop_parity.value == parity::all) {
@@ -551,7 +575,7 @@ bool MyASTVisitor::check_field_ref_list() {
             reportDiag(DiagnosticsEngine::Level::Note,
                        p->fullExpr->getSourceRange().getBegin(),
                        "Location of assignment");
-              
+
           }
         }
       } else if (loop_parity.value == parity::none) {
@@ -567,18 +591,18 @@ bool MyASTVisitor::check_field_ref_list() {
   }
   return no_errors;
 }
-          
-        
+
+
 // This routine goes through one field reference and
 // pushes the info to lists
-  
+
 bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound_assign) {
-    
+
   e = e->IgnoreParens();
   field_ref lfe;
   if (CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(e)) {
     lfe.fullExpr   = OC;
-    // take name 
+    // take name
     lfe.nameExpr   = OC->getArg(0);
     lfe.parityExpr = OC->getArg(1);
   } else if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(e)) {
@@ -593,12 +617,12 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     llvm::errs() << "Should not happen! Error in field parity\n";
     exit(1);
   }
-  
-  //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr); 
+
+  //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr);
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
-  
+
   lfe.dirExpr  = nullptr;  // no neighb expression
-    
+
   if (get_expr_type(lfe.parityExpr) == "parity") {
     if (state::accept_field_parity) {
       // 1st parity statement on a single line lattice loop
@@ -612,10 +636,10 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
 
   lfe.is_written = is_assign;
   lfe.is_read = (is_compound_assign || !is_assign);
-    
+
   // next ref must have wildcard parity
   state::accept_field_parity = false;
-        
+
   if (get_expr_type(lfe.parityExpr) == "parity_plus_direction") {
 
     if (is_assign) {
@@ -647,10 +671,10 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
                  "Internal error: could not decipher parity + dir statement" );
       exit(1);
     }
-      
+
     // if (!Op) {
     //   e = e->IgnoreImplicit();
-    //   Op = dyn_cast<CXXOperatorCallExpr>(e);        
+    //   Op = dyn_cast<CXXOperatorCallExpr>(e);
     // }
 
     if (Op &&
@@ -663,14 +687,14 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
         lfe.dirExpr = Op->getArg(1);
     } // parity_plus_direction
   }
-    
+
   // llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
   //              << " parity " << get_stmt_str(lfe.parityExpr)
   //              << "\n";
 
-   
+
   field_ref_list.push_back(lfe);
-      
+
   return(true);
 }
 
@@ -678,15 +702,15 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
 // Reductions - with this formalism, only += and *= are allowed
 ////////////////////////////////////////////////////////////////////
 
-reduction get_reduction_type(bool is_assign, 
-                             std::string & assignop, 
+reduction get_reduction_type(bool is_assign,
+                             std::string & assignop,
                              var_info & vi) {
   if (is_assign && (!vi.is_loop_local)) {
     if (assignop == "+=") return reduction::SUM;
     if (assignop == "*=") return reduction::PRODUCT;
   }
   return reduction::NONE;
-}  
+}
 
 /// This processes references to non-field variables within field loops
 
@@ -694,7 +718,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
                                   bool is_assign,
                                   std::string &assignop) {
 
-  
+
   if (isa<VarDecl>(DRE->getDecl())) {
     auto decl = dyn_cast<VarDecl>(DRE->getDecl());
     var_ref vr;
@@ -702,7 +726,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
     //vr.ind = writeBuf->markExpr(DRE);
     vr.is_assigned = is_assign;
     if (is_assign) vr.assignop = assignop;
-    
+
     bool found = false;
     var_info *vip = nullptr;
     for (var_info & vi : var_info_list) {
@@ -711,7 +735,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
         vi.refs.push_back(vr);
         vi.is_assigned |= is_assign;
         vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
-        
+
         vip = &vi;
         found = true;
         break;
@@ -734,18 +758,18 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
         if (d.scope >= 0 && vi.decl == d.decl) {
           llvm::errs() << "loop local var ref! " << vi.name << '\n';
           vi.is_loop_local = true;
-          vi.var_declp = &d;   
+          vi.var_declp = &d;
           break;
         }
       }
       vi.is_assigned = is_assign;
       // we know refs contains only 1 element
       vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
-      
+
       var_info_list.push_back(vi);
       vip = &(var_info_list.back());
     }
-  } else { 
+  } else {
     // end of VarDecl - how about other decls, e.g. functions?
     reportDiag(DiagnosticsEngine::Level::Error,
                DRE->getSourceRange().getBegin(),
@@ -783,7 +807,7 @@ void MyASTVisitor::check_var_info_list() {
       } else if (vi.is_assigned) {
         // now not reduction
         for (auto & vr : vi.refs) {
-          if (vr.is_assigned) 
+          if (vr.is_assigned)
             reportDiag(DiagnosticsEngine::Level::Error,
                        vr.ref->getSourceRange().getBegin(),
                        "Cannot assign to variable defined outside field loop (unless reduction \'+=\' or \'*=\')");
@@ -807,7 +831,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
         *opcodestr = getOperatorSpelling(OP->getOperator());
       return true;
     }
-  
+
   // TODO: this is for templated expr, I think -- should be removed (TEST IT)
   if (BinaryOperator *B = dyn_cast<BinaryOperator>(s))
     if (B->isAssignmentOp()) {
@@ -854,10 +878,10 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   // Store functions used in loops, recursively...
   loop_function_check(decl);
 
-  // TODO: move arg check to loop_function_check  
+  // TODO: move arg check to loop_function_check
   // Go through arguments
   for( Expr * E : Call->arguments() ){
-    //llvm::errs() << "Argument " << i << "/" << D->getNumParams() 
+    //llvm::errs() << "Argument " << i << "/" << D->getNumParams()
     //             << ": " << get_stmt_str(E) << '\n';
 
     // Handle field type arguments
@@ -886,30 +910,30 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 
 bool MyASTVisitor::loop_function_check(Decl *d) {
   assert(d != nullptr);
-  
+
   FunctionDecl *fd = dyn_cast<FunctionDecl>(d);
   if (fd) {
-    
-    // fd may point to declaration (prototype) without a body.  
+
+    // fd may point to declaration (prototype) without a body.
     // Argument of hasBody becomes the pointer to definition if it is in this compilation unit
     // needs to be const FunctionDecl *
     const FunctionDecl * cfd;
     if (fd->hasBody(cfd)) {
-  
+
       // take away const
       fd = const_cast<FunctionDecl *>(cfd);
-      
+
       // check if we already have this function
       for (int i=0; i<loop_functions.size(); i++) if (fd == loop_functions[i]) return true;
-    
+
       // llvm::errs() << " ++ callgraph for " << fd->getNameAsString() << '\n';
-    
+
       loop_functions.push_back(fd);
       handle_loop_function(fd);
 
       // And check also functions called by this func
       CallGraph CG;
-      // addToCallGraph takes Decl *: cast 
+      // addToCallGraph takes Decl *: cast
       CG.addToCallGraph( dyn_cast<Decl>(fd) );
       // CG.dump();
       int i = 0;
@@ -942,7 +966,7 @@ void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
   // main file buffer
 
   if (target.flag_loop_function) {
-  
+
     SourceManager &SM = TheRewriter.getSourceMgr();
     SourceLocation sl = fd->getSourceRange().getBegin();
     FileID FID = SM.getFileID(sl);
@@ -1006,29 +1030,29 @@ SourceRange MyASTVisitor::getRangeWithSemi(Stmt * S, bool flag_error) {
                  "Expecting ';' after expression");
     }
     // put a valid value in any case
-    range = S->getSourceRange();        
+    range = S->getSourceRange();
   }
-    
+
   // llvm::errs() << "Range w semi: " << TheRewriter.getRewrittenText(range) << '\n';
   return range;
 }
 
-  
+
 
 // start dealing with the loop statement
 bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // init edit buffer
   // Buf.create( &TheRewriter, ls );
-          
+
   field_ref_list.clear();
   special_function_call_list.clear();
   var_info_list.clear();
   var_decl_list.clear();
   remove_expr_list.clear();
   global.location.loop = ls->getSourceRange().getBegin();
-  
+
   state::accept_field_parity = field_parity_ok;
-    
+
   // the following is for taking the parity from next elem
   state::scope_level = 0;
   state::in_loop_body = true;
@@ -1037,7 +1061,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
 
   // Remove exprs which we do not want
   for (Expr * e : remove_expr_list) writeBuf->remove(e);
-  
+
   // check and analyze variables and field expressions
   check_var_info_list();
   check_field_ref_list();
@@ -1047,15 +1071,15 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
                loop_parity.expr->getSourceRange().getBegin(),
                "Parity of the full loop cannot be \'X\'");
   }
-  
+
   generate_code(ls, target);
-  
+
   // Buf.clear();
-          
+
   // Emit the original command as a commented line
   writeBuf->insert(ls->getSourceRange().getBegin(),
                    comment_string(global.full_loop_text) + "\n",true,true);
-  
+
   global.full_loop_text = "";
 
   // don't go again through the arguments
@@ -1064,7 +1088,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   state::loop_found = true;
   // flag the buffer to be included
   set_sourceloc_modified( ls->getSourceRange().getBegin() );
-  
+
   return true;
 }
 
@@ -1077,7 +1101,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   static bool is_assignment = false;
   static bool is_compound_assign = false;
   static std::string assignop;
- 
+
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
   // And also assignments to other vars: t += norm2(lf[X]) etc.
   if (is_assignment_expr(s,&assignop,is_compound_assign)) {
@@ -1086,28 +1110,28 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     return true;
   }
 
-  // Check for function calls parameters. We need to determine if the 
+  // Check for function calls parameters. We need to determine if the
   // function can assign to the a field parameter (is not const).
   if( is_function_call_stmt(s) ){
     handle_function_call_in_loop(s);
   }
-  
+
   // catch then expressions
-      
+
   if (Expr *E = dyn_cast<Expr>(s)) {
-    
+
     // Avoid treating constexprs as variables
      if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
        state::skip_children = 1;
        return true;
      }
-    
+
     //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs
     if (is_field_parity_expr(E)) {
       // Now we know it is a field parity reference
       // get the expression for field name
-          
+
       handle_field_parity_expr(E, is_assignment, is_compound_assign);
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
@@ -1128,10 +1152,10 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (isa<VarDecl>(DRE->getDecl())) {
         // now it should be var ref non-field
-      
+
         handle_var_ref(DRE,is_assignment,assignop);
         is_assignment = false;
-      
+
         state::skip_children = 1;
         llvm::errs() << "Variable ref: "
                      << TheRewriter.getRewrittenText(E->getSourceRange()) << '\n';
@@ -1152,14 +1176,14 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       //state::skip_children = 1;
       auto a = dyn_cast<ArraySubscriptExpr>(E);
       Expr *base = a->getBase();
-      
+
       //check_loop_local_vars = true;
       //TraverseStmt(
-      
+
       return true;
       }
-#endif          
-        
+#endif
+
     if (0){
 
       // not field type non-const expr
@@ -1167,11 +1191,11 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // loop-local variable refs inside? If so, we cannot evaluate this as "whole"
 
       // check_local_loop_var_refs = 1;
-        
+
       // TODO: find really uniq variable references
       //var_ref_list.push_back( handle_var_ref(E) );
 
-      state::skip_children = 1;          
+      state::skip_children = 1;
       return true;
     }
     // this point not reached
@@ -1189,7 +1213,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       passthrough = false;
       return true;
     }
-    
+
     state::scope_level++;
     passthrough = true;     // next visit will be to the same node, skip
     TraverseStmt(s);
@@ -1198,9 +1222,9 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     state::skip_children = 1;
     return true;
   }
-    
-  return true;    
-} 
+
+  return true;
+}
 
 ///////////////////////////////////////////////////////////////////////
 // A hacky control command for transformer.  TODO: MUST DO BETTER!
@@ -1209,7 +1233,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 bool MyASTVisitor::control_command(VarDecl *var) {
   std::string n = var->getNameAsString();
   if (n.find("_transformer_ctl_",0) == std::string::npos) return false;
-  
+
   if (n == "_transformer_ctl_dump_ast") {
     state::dump_ast_next = true;
   } else if(n == "_transformer_ctl_no_device") {
@@ -1228,7 +1252,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
 
   // catch the transformer_ctl -commands here
   if (control_command(var)) return true;
-  
+
   if (state::check_loop && state::loop_found) return true;
 
   if (state::dump_ast_next) {
@@ -1237,7 +1261,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     state::dump_ast_next = false;
   }
 
-  
+
   if (state::in_loop_body) {
     // for now care only loop body variable declarations
 
@@ -1263,17 +1287,17 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     vd.type = var->getType().getAsString();
     vd.scope = state::scope_level;
     var_decl_list.push_back(vd);
-    
+
     llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
     return true;
-  } 
+  }
 
   // if (is_field_decl(var)) {
   //   llvm::errs() << "FIELD DECL \'" << var->getName() << "\' of type "
   //                << var->getType().getAsString() << '\n';
   //   if (var->isTemplated()) llvm::errs() << " .. was templated\n";
   // }
-  
+
   return true;
 }
 
@@ -1292,7 +1316,7 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
 bool MyASTVisitor::VisitStmt(Stmt *s) {
 
   if (state::check_loop && state::loop_found) return true;
-  
+
   if (state::dump_ast_next) {
     llvm::errs() << "**** Dumping statement:\n" + get_stmt_str(s)+'\n';
     s->dump();
@@ -1303,7 +1327,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   if (state::in_loop_body) {
     return handle_loop_body_stmt(s);
   }
-    
+
   // loop of type "onsites(p)"
   if (isa<ForStmt>(s)) {
 
@@ -1320,13 +1344,13 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           state::loop_found = true;
           return true;
         }
-        
+
         CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( startloc );
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
         bool internal_error = true;
 
         llvm::errs() << "macro str " << macro << '\n';
-        
+
         DeclStmt * init = dyn_cast<DeclStmt>(f->getInit());
         if (init && init->isSingleDecl() ) {
           VarDecl * vd = dyn_cast<VarDecl>(init->getSingleDecl());
@@ -1337,14 +1361,14 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
               loop_parity.value = get_parity_val(loop_parity.expr);
               loop_parity.text  = remove_initial_whitespace(macro.substr(loop_call.length(),
                                                                          std::string::npos));
-                
+
               global.full_loop_text = macro + " " + get_stmt_str(f->getBody());
 
               // Delete "onsites()" -text
 
               // TheRewriter.RemoveText(CSR);
               writeBuf->remove(CSR);
-              
+
               handle_full_loop_stmt(f->getBody(), false);
               internal_error = false;
             }
@@ -1357,21 +1381,21 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           return false;
         }
       }
-    }        
-    return true;      
+    }
+    return true;
   }
 
-                                   
+
   //  Starting point for fundamental operation
   //  field[par] = ....  version with field<class>
-  
+
   // isStmtWithSemi(s);
 
   CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
   if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0))) {
     // now we have a[par] += ...  -stmt.  Arg(0) is
     // the lhs of the assignment
-    
+
     if (state::check_loop) {
       state::loop_found = true;
       return true;
@@ -1379,24 +1403,24 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 
     SourceRange full_range = getRangeWithSemi(OP,false);
     global.full_loop_text = TheRewriter.getRewrittenText(full_range);
-        
+
     handle_full_loop_stmt(OP, true);
     return true;
-  } 
+  }
   // now the above when type is field<double> or some other non-class element
-  
+
   BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
   if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS())) {
     if (state::check_loop) {
       state::loop_found = true;
       return true;
     }
-    
+
     SourceRange full_range = getRangeWithSemi(BO,false);
-    global.full_loop_text = TheRewriter.getRewrittenText(full_range);        
-  
+    global.full_loop_text = TheRewriter.getRewrittenText(full_range);
+
     handle_full_loop_stmt(BO, true);
-    return true;    
+    return true;
   }
 
   return true;
@@ -1411,33 +1435,33 @@ bool MyASTVisitor::functiondecl_loop_found( FunctionDecl *f ) {
   srcBuf buf(&TheRewriter,f);
   srcBuf *bp = writeBuf;
   writeBuf = &buf;
-  
+
   buf.off();
-  
+
   bool lf = state::loop_found;
   state::loop_found = false;  // use this to flag
 
   bool retval;
   if (f->hasBody()) {
-    
+
     // llvm::errs() << "About to check function " << f->getNameAsString() << '\n';
     // llvm::errs() << buf.dump() << '\n';
-    
+
     state::check_loop = true;
     TraverseStmt(f->getBody());
     state::check_loop = false;
-    
+
     // llvm::errs() << "Func check done\n";
-    
+
     retval = state::loop_found;
   } else {
     retval = false;
   }
   state::loop_found = lf;
   writeBuf = bp;
-  
+
   buf.clear();
-  
+
   return retval;
 }
 
@@ -1456,10 +1480,10 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Check if the function can be called from a loop
   bool loop_callable = true;
   // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
-  
+
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
     global.currentFunctionDecl = f;
-    
+
     Stmt *FuncBody = f->getBody();
 
     // Type name as string
@@ -1476,17 +1500,17 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
         loop_callable = false;
       }
 
-     
+
     switch (f->getTemplatedKind()) {
       case FunctionDecl::TemplatedKind::TK_NonTemplate:
         // Normal, non-templated class method -- nothing here
         break;
-        
+
       case FunctionDecl::TemplatedKind::TK_FunctionTemplate:
         // not descent inside templates
         state::skip_children = 1;
         break;
-        
+
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
 
         if (functiondecl_loop_found(f)) {
@@ -1495,7 +1519,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
           state::skip_children = 1;  // no reason to look at it further
         }
         break;
-        
+
       default:
         // do nothing
         break;
@@ -1521,7 +1545,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
                << "\n";
       writeBuf->insert(ST, SSBefore.str(), true,true);
     }
-    
+
   }
 
   return true;
@@ -1532,7 +1556,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   // This handles all functions and methods. Parent is non-null for methods,
   // and then is_static gives the static flag
-  
+
   bool no_inline;
   bool is_static = false;
   CXXRecordDecl * parent = nullptr;
@@ -1547,21 +1571,21 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   } else {
     no_inline = cmdline::function_spec_no_inline;
   }
-  
+
   srcBuf * writeBuf_saved = writeBuf;
   srcBuf funcBuf(&TheRewriter,f);
   writeBuf = &funcBuf;
-  
+
   std::vector<std::string> par, arg;
 
   // llvm::errs() << "funcBuffer:\n" << funcBuf.dump() << '\n';
 
   // cannot rely on getReturnTypeSourceRange() for methods.  Let us not even try,
   // change the whole method here
-  
+
   bool is_templated = ( f->getTemplatedKind() ==
                         FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization );
-  
+
   int ntemplates = 0;
   std::string template_args = "";
   std::vector<const TemplateArgument *> typeargs = {};
@@ -1577,7 +1601,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   }
 
   // Get template mapping for classes
-  // parent is from: CXXRecordDecl * parent = method->getParent();   
+  // parent is from: CXXRecordDecl * parent = method->getParent();
   if (parent) ntemplates += get_param_substitution_list( parent, par, arg, typeargs );
   llvm::errs() << "Num nesting templates " << ntemplates << '\n';
 
@@ -1586,7 +1610,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   // template_args adds template specialization args after the name, name<args>(..)
   funcBuf.replace(f->getNameInfo().getSourceRange(),
                   f->getQualifiedNameAsString() + template_args);
-  
+
 // #define use_ast_type
 #ifdef use_ast_type
   // replace type as written with the type given in ast (?qualifiers)
@@ -1594,13 +1618,13 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   int i = funcBuf.get_index(f->getNameInfo().getSourceRange().getBegin());
   if (i > 0)
     funcBuf.replace(0,i-1,remove_class_from_type(f->getReturnType().getAsString()) + " ");
-  else 
+  else
     funcBuf.insert(0,remove_class_from_type(f->getReturnType().getAsString()) + " ",true,false);
-  
-#else 
-  
+
+#else
+
   // remove "static" if it is so specified in methods
-  if (is_static) { 
+  if (is_static) {
     funcBuf.replace_token(0,
                           funcBuf.get_index(f->getNameInfo().getSourceRange().getBegin()),
                           "static","");
@@ -1622,7 +1646,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   if (f->isInlineSpecified() || !no_inline ||
       !in_specialization_db(funcBuf.get(decl_sr), wheredefined)) {
     // Now we should write the spec here
-      
+
     // llvm::errs() << "new func:\n" << funcBuf.dump() <<'\n';
     // visit the body
     TraverseStmt(f->getBody());
@@ -1632,11 +1656,11 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
     // insert after the current toplevedecl
     std::stringstream sb;
     sb << "\n// ++++++++ Generated function/method specialization\n"
-       << funcBuf.dump() 
+       << funcBuf.dump()
        << "\n// ++++++++\n";
     toplevelBuf->insert( getSourceLocationAtEndOfLine(global.location.bot),
                          sb.str(), false, true );
-  } else { 
+  } else {
     // Now the function has been written before (and not inline)
     // just insert declaration, defined on another compilation unit
     toplevelBuf->insert( getSourceLocationAtEndOfLine(global.location.bot),
@@ -1646,7 +1670,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
                          + ";\n// ++++++++\n",
                          false, false);
   }
-    
+
   writeBuf = writeBuf_saved;
   funcBuf.clear();
   // don't descend again
@@ -1670,7 +1694,7 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
     SourceRange r(a,b);
     return r;
   }
-  
+
   return f->getSourceRange();
 }
 
@@ -1682,7 +1706,7 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
 //   SourceLocation a = tf->getSourceRange().getBegin();
 //   int n = f->getNumParams();
 //   SourceLocation b = getSourceLocationAtEndOfRange(f->getParamDecl(n-1)->getSourceRange());
-// 
+//
 //   SourceManager &SM = TheRewriter.getSourceMgr();
 //   for (int i=1; i<50; i++) {
 //     const char * p = SM.getCharacterData(b.getLocWithOffset(i));
@@ -1691,16 +1715,16 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
 //       break;
 //     }
 //   }
-// 
+//
 //   SourceRange r(a,b);
 //   return r;
 // }
-//   
+//
 
 
 //Entry point for class templates
 bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
-  
+
   if (state::dump_ast_next) {
     llvm::errs() << "**** Dumping class template declaration: \'" << D->getNameAsString() << "\'\n";
     D->dump();
@@ -1718,22 +1742,22 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     const TemplateParameterList * tplp = D->getTemplateParameters();
     // save template params in a list, for templates within templates .... ugh!
     // global.class_templ_params.push_back( tplp );
-    
+
     // this block for debugging
     if (cmdline::funcinfo) {
       std::stringstream SSBefore;
       SSBefore << "// Begin template class "
                << D->getNameAsString()
                << " with template params " ;
-      for (unsigned i = 0; i < tplp->size(); i++) 
+      for (unsigned i = 0; i < tplp->size(); i++)
         SSBefore << tplp->getParam(i)->getNameAsString() << " ";
       SourceLocation ST = D->getSourceRange().getBegin();
       SSBefore << '\n';
-    
+
       writeBuf->insert(ST, SSBefore.str(), true, true);
     }
     // end block
-    
+
     // global.in_class_template = true;
     // Should go through the template in order to find function templates...
     // Comment out now, let roll through "naturally".
@@ -1750,9 +1774,9 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     // Now do traverse the template naturally
     // state::skip_children = 1;
-    
-  }    
-  
+
+  }
+
   return true;
 }
 
@@ -1804,10 +1828,10 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       // TheRewriter.InsertText(l, fst_spec, true,true);
       writeBuf->insert(l, fst_spec, true, false);
     }
-    
+
   }
   return(count);
-      
+
 } // end of "field"
 
 
@@ -1827,18 +1851,18 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
   if (t && t->getNameAsString() == "field_storage_type") {
     llvm::errs() << "Got field storage\n";
   }
-  
+
   return true;
-}                           
+}
 
 
 #if 0
 bool MyASTVisitor::
 VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
-  if (D->getNameAsString() == "field") {    
+  if (D->getNameAsString() == "field") {
     const TemplateArgumentList & tal = D->getTemplateArgs();
     llvm::errs() << " *** field with args ";
-    for (unsigned i = 0; i < tal.size(); i++) 
+    for (unsigned i = 0; i < tal.size(); i++)
       llvm::errs() << TheRewriter.getRewrittenText(tal.get(i).getAsExpr()->getSourceRange())
                    << " ";
     llvm::errs() << "\n";
@@ -1854,13 +1878,13 @@ VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
 /////////////////////////////////////////////////////////////////////////////////
 
 void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
-                                              SourceLocation ip, 
-                                              FunctionDecl *f) 
+                                              SourceLocation ip,
+                                              FunctionDecl *f)
 {
   SourceManager &SM = TheRewriter.getSourceMgr();
 
   for (const TemplateArgument * tap : typeargs) {
-    llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
+    // llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
     const Type * tp = tap->getAsType().getTypePtrOrNull();
     // Builtins are fine too
     if (tp && !tp->isBuiltinType()) {
@@ -1870,7 +1894,7 @@ void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument
                    f->getSourceRange().getBegin(),
     "Specialization point for function appears to be before the declaration of type \'%0\', code might not compile",
                    tap->getAsType().getAsString().c_str());
-      } 
+      }
     }
   }
 }
@@ -1883,7 +1907,7 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
                                                std::vector<std::string> & par,
                                                std::vector<std::string> & arg,
                                                std::vector<const TemplateArgument *> & typeargs ) {
-  
+
   if (r == nullptr) return 0;
 
   int level = 0;
@@ -1894,21 +1918,21 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
       llvm::errs() << "Got specialization of " << sp->getNameAsString() << '\n';
       const TemplateArgumentList & tal = sp->getTemplateArgs();
       assert(tal.size() > 0);
-    
+
       ClassTemplateDecl * ctd = sp->getSpecializedTemplate();
       TemplateParameterList * tpl = ctd->getTemplateParameters();
       assert(tpl && tpl->size() > 0);
 
       assert(tal.size() == tpl->size());
-    
+
       make_mapping_lists(tpl, tal, par, arg, typeargs, nullptr);
-    
+
       level = 1;
     }
   } else {
     llvm::errs() << "No specialization of class " << r->getNameAsString() << '\n';
   }
-  
+
   auto * parent = r->getParent();
   if (parent) {
     if (CXXRecordDecl * pr = dyn_cast<CXXRecordDecl>(parent))
@@ -1919,7 +1943,7 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
 
 
 
-void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl, 
+void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
                                        const TemplateArgumentList & tal,
                                        std::vector<std::string> & par,
                                        std::vector<std::string> & arg,
@@ -1929,9 +1953,9 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
   if (argset) *argset = "< ";
 
   // Get argument strings without class, struct... qualifiers
-  PrintingPolicy pp(Context->getLangOpts()); 
+  PrintingPolicy pp(Context->getLangOpts());
 
-  
+
   for (int i=0; i<tal.size(); i++) {
     if (argset && i>0) *argset += ", ";
     switch (tal.get(i).getKind()) {
@@ -1941,16 +1965,16 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
         if (argset) *argset += arg.back();  // write just added arg
         typeargs.push_back( &tal.get(i) );  // save type-type arguments
         break;
-        
+
       case TemplateArgument::ArgKind::Integral:
         arg.push_back( tal.get(i).getAsIntegral().toString(10) );
         par.push_back( tpl->getParam(i)->getNameAsString() );
         if (argset) *argset += arg.back();
         break;
-        
+
       default:
-        llvm::errs() << " debug: ignoring template argument of argument kind " 
-                     << tal.get(i).getKind() 
+        llvm::errs() << " debug: ignoring template argument of argument kind "
+                     << tal.get(i).getKind()
                      << " with parameter "
                      << tpl->getParam(i)->getNameAsString() << '\n';
         exit(1);  // Don't know what to do
@@ -1962,7 +1986,7 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
 
 }
 
-  
+
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -2008,7 +2032,7 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
     if (fb.fid == fid) return( &fb.sbuf );
   }
   // Now allocate and return new buffer
-    
+
   file_buffer fb;
   fb.fid = fid;
   file_buffer_list.push_back(fb);
@@ -2017,10 +2041,10 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
 
   llvm::errs() << "Create buf for file "
                << SM.getFilename(SM.getLocForStartOfFile(fid)) << '\n';
-  
+
   file_buffer_list.back().sbuf.create( &R, r );
   return( &file_buffer_list.back().sbuf );
-}  
+}
 
 
 void MyASTVisitor::set_writeBuf(const FileID fid) {
@@ -2040,12 +2064,12 @@ public:
   virtual void HandleTranslationUnit(ASTContext & ctx) override {
     // dump ast here -- HERE THE SPECIALIZATIONS ARE PRESENT!
     // ctx.getTranslationUnitDecl()->dump();
-    
+
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
- 
+
     for (DeclContext::decl_iterator d = tud->decls_begin(); d != tud->decls_end(); d++) {
-      
+
       SourceLocation beginloc = d->getBeginLoc();
       // analyze only user files (these should be named)
       if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
@@ -2054,7 +2078,7 @@ public:
         // TODO: ensure that we go only through files which are needed!
 
         state::loop_found = false;
-      
+
         // get our own file edit buffer (unless it exists)
         Visitor.set_writeBuf(SM.getFileID(beginloc));
 
@@ -2062,25 +2086,25 @@ public:
 
         global.location.top = d->getSourceRange().getBegin();  // save this for source location
         global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
-        
+
         Visitor.TraverseDecl(*d);
         // llvm::errs() << "Dumping level " << i++ << "\n";
         if (cmdline::dump_ast) {
           if (!cmdline::no_include || SM.isInMainFile(beginloc))
             d->dump();
         }
-        
+
         // We keep track here only of files which were touched
         if (state::loop_found) {
           set_fid_modified( SM.getFileID(beginloc) );
         }
-      }  
+      }
     }
 
     // check compile errors, as long as we have context -- use diagnostics engine
     auto & DE = ctx.getDiagnostics();
     state::compile_errors_occurred = DE.hasErrorOccurred();
-    
+
   }
 
 
@@ -2109,7 +2133,7 @@ public:
                           StringRef RelativePath,
                           const Module * Imported,
                           SrcMgr::CharacteristicKind FileType) { }
-  
+
   // This triggers when the preprocessor changes file (#include, exit from it)
   // Use this to track the chain of non-system include files
   void FileChanged(SourceLocation Loc, FileChangeReason Reason, SrcMgr::CharacteristicKind FileType,
@@ -2122,7 +2146,7 @@ public:
         !SM.isInMainFile(Loc) ) {
 
       llvm::errs() << "FILE CHANGED to " << SM.getFilename(Loc) << '\n';
-      
+
     }
   }
 
@@ -2140,7 +2164,7 @@ class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}
 
-  virtual bool BeginSourceFileAction(CompilerInstance &CI) override {  
+  virtual bool BeginSourceFileAction(CompilerInstance &CI) override {
     llvm::errs() << "** Starting operation on source file "+getCurrentFile()+"\n";
 
 #ifdef NEED_PP_CALLBACKS
@@ -2152,11 +2176,11 @@ public:
 #endif
 
     global.main_file_name = getCurrentFile();
-    
+
     file_id_list.clear();
     file_buffer_list.clear();
     field_decl = field_storage_type_decl = nullptr;
-    
+
     return (true);
   }
 
@@ -2192,14 +2216,14 @@ public:
         // SourceRange r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
         srcBuf * buf_from = get_file_buffer(TheRewriter, f);
         // TheRewriter.InsertText(SR.getBegin(),
-        buf->insert(SR.getBegin(), 
+        buf->insert(SR.getBegin(),
                     "// start include "+includestr
                     + "---------------------------------\n"
                     + buf_from->dump() +
                     "// end include "+includestr
                     + "---------------------------------\n",
                     false);
-        
+
       }
     }
   }
@@ -2222,7 +2246,7 @@ public:
     SourceManager &SM = TheRewriter.getSourceMgr();
     llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
     // << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
-    
+
     // Now emit rewritten buffers.
 
     if (!cmdline::no_output) {
@@ -2238,23 +2262,23 @@ public:
 
         insert_includes_to_file_buffer(SM.getMainFileID());
       }
-    
+
       if (!state::compile_errors_occurred) {
         write_output_file( cmdline::output_filename,
                            get_file_buffer(TheRewriter,SM.getMainFileID())->dump() );
-        
-        if (cmdline::function_spec_no_inline || cmdline::method_spec_no_inline) 
+
+        if (cmdline::function_spec_no_inline || cmdline::method_spec_no_inline)
           write_specialization_db();
       } else {
         llvm::errs() << program_name << ": not writing output due to compile errors\n";
       }
     }
-    
+
     file_buffer_list.clear();
     file_id_list.clear();
 
     // EndSourceFile();
-        
+
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -2285,7 +2309,7 @@ void get_target_struct(codetype & target) {
     target.kernelize = false;
     target.openacc = false;
   }
-  
+
   // TODO: this will have to be made automatic, depending on target
   if (cmdline::func_attribute) target.flag_loop_function = true;
   else target.flag_loop_function = false;
@@ -2299,14 +2323,14 @@ int main(int argc, const char **argv) {
   // av takes over from argv
   const char **av = new const char *[argc+2];
   argc = rearrange_cmdline(argc, argv, av);
-  
+
   OptionsParser op(argc, av, TransformerCat);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
-  
+
   // We have command line args, possibly do something with them
   get_target_struct(target);
   if (cmdline::syntax_only) cmdline::no_output = true;
-  
+
   // ClangTool::run accepts a FrontendActionFactory, which is then used to
   // create new objects implementing the FrontendAction interface. Here we use
   // the helper newFrontendActionFactory to create a default factory that will

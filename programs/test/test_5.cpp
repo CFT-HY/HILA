@@ -1,7 +1,7 @@
 
-#include "../plumbing/field.h"
+#include "../plumbing/defs.h"
 #include "../datatypes/cmplx.h"
-
+#include "../plumbing/field.h"
 
 // extern field<int> glob;
 
@@ -12,7 +12,7 @@ cmplx<double> f(cmplx<double> x) {return e(x);}
 int main()
 {
   
-  field<cmplx<double>> a,x;
+  field<cmplx<double>> a[2];
   field<double> t(1.0);
   
   // transformer_ctl(dump_ast);
@@ -20,7 +20,7 @@ int main()
 
   
   
-  x = t;
+  a[0][ALL] = a[1][X];
   
   
   return 0;
