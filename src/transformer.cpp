@@ -348,6 +348,11 @@ void MyASTVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation
   if (s3 != nullptr) DB.AddString(s3);
 }
   
+///////////////////////////////////////////////////////////////////////////
+/// Find duplicate expressions using Profile function in clang
+/// which should "fingerprint" expressions 
+///////////////////////////////////////////////////////////////////////////
+
 bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
   // Use the Profile function in clang, which "fingerprints"
   // statements
@@ -357,7 +362,8 @@ bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
   return ( IDa == IDb );
 }
 
-  
+///////////////////////////////////////////////////////////////////////////
+
 // catches both parity and parity_plus_direction 
 bool MyASTVisitor::is_field_parity_expr(Expr *E) {
   E = E->IgnoreParens();
@@ -373,6 +379,8 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
   } else {
     // This is for templated expressions
     // for some reason, expr a[X] "getBase() gives X, getIdx() a...
+    // use getLHS, getRHS instead
+    // TODO: this branch should never be used to find field[], but it is taken: find out why!
     if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
       Expr * lhs = ASE->getLHS()->IgnoreParens();
       
@@ -380,7 +388,6 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
         // llvm::errs() << " FP: and field\n";
         std::string s = get_expr_type(ASE->getRHS());
         if (s == "parity" || s == "parity_plus_direction") {
-          // llvm::errs() << " <<<Parity type " << get_expr_type(ASE->getRHS()) << '\n';
           return true;
         }
       }
@@ -389,6 +396,10 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
   return false;   
 }
 
+///////////////////////////////////////////////////////////////////
+// If parity in field[] is constant, return it - otherwise return
+// parity::none
+///////////////////////////////////////////////////////////////////
 
 parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
   SourceLocation SL;
@@ -427,10 +438,12 @@ void MyASTVisitor::require_parity_X(Expr * pExpr) {
   }
 }
 
-
+//////////////////////////////////////////////////////////////////////
+// Check the field[] -type references within loops:
 // finish the field_ref_list, and
-// construct the field_info_list
-  
+// construct the field_info_list used in code generation
+//////////////////////////////////////////////////////////////////////
+
 bool MyASTVisitor::check_field_ref_list() {
 
   bool no_errors = true;
@@ -559,7 +572,7 @@ bool MyASTVisitor::check_field_ref_list() {
 // This routine goes through one field reference and
 // pushes the info to lists
   
-bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound) {
+bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound_assign) {
     
   e = e->IgnoreParens();
   field_ref lfe;
@@ -574,6 +587,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     lfe.fullExpr   = ASE;
     lfe.nameExpr   = ASE->getLHS();
     lfe.parityExpr = ASE->getRHS();
+    llvm::errs() << " FIELD PARITY W/O OPERATOR ";
     llvm::errs() << lfe.fullExpr << lfe.nameExpr << lfe.parityExpr;
   } else {
     llvm::errs() << "Should not happen! Error in field parity\n";
@@ -597,7 +611,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   }
 
   lfe.is_written = is_assign;
-  lfe.is_read = (is_compound || !is_assign);
+  lfe.is_read = (is_compound_assign || !is_assign);
     
   // next ref must have wildcard parity
   state::accept_field_parity = false;
@@ -647,7 +661,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
 
         require_parity_X(Op->getArg(0));
         lfe.dirExpr = Op->getArg(1);
-    }
+    } // parity_plus_direction
   }
     
   // llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
@@ -660,6 +674,9 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   return(true);
 }
 
+////////////////////////////////////////////////////////////////////
+// Reductions - with this formalism, only += and *= are allowed
+////////////////////////////////////////////////////////////////////
 
 reduction get_reduction_type(bool is_assign, 
                              std::string & assignop, 
@@ -1021,9 +1038,9 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // Remove exprs which we do not want
   for (Expr * e : remove_expr_list) writeBuf->remove(e);
   
-  // check and analyze the field expressions
-  check_field_ref_list();
+  // check and analyze variables and field expressions
   check_var_info_list();
+  check_field_ref_list();
   // check that loop_parity is not X
   if (loop_parity.value == parity::x) {
     reportDiag(DiagnosticsEngine::Level::Error,
@@ -1058,12 +1075,12 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // This keeps track of the assignment to field
   // must remember the set value across calls
   static bool is_assignment = false;
-  static bool is_compound = false;
+  static bool is_compound_assign = false;
   static std::string assignop;
  
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
   // And also assignments to other vars: t += norm2(lf[X]) etc.
-  if (is_assignment_expr(s,&assignop,is_compound)) {
+  if (is_assignment_expr(s,&assignop,is_compound_assign)) {
     is_assignment = true;
     // next visit here will be to the assigned to variable
     return true;
@@ -1091,7 +1108,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // Now we know it is a field parity reference
       // get the expression for field name
           
-      handle_field_parity_expr(E, is_assignment, is_compound);
+      handle_field_parity_expr(E, is_assignment, is_compound_assign);
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
 
@@ -1185,6 +1202,9 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   return true;    
 } 
 
+///////////////////////////////////////////////////////////////////////
+// A hacky control command for transformer.  TODO: MUST DO BETTER!
+///////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::control_command(VarDecl *var) {
   std::string n = var->getNameAsString();
