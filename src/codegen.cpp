@@ -232,25 +232,59 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool semi_at_end) {
   srcBuf loopBuf;
   loopBuf.copy_from_range(writeBuf,S->getSourceRange());
+  std::vector<std::string> va = {}, vb = {};
+  int i=0;
 
-  // Remove the first '{' and last '}'
-  loopBuf.remove(0,1);
-  loopBuf.remove(loopBuf.get_index(S->getEndLoc())-1, loopBuf.get_index(S->getEndLoc()));
+  // Replace loop references with temporary variables
+  // and add calls to mark_changed() and start_get()
+  for ( field_info & fi : field_info_list ) {
+    std::string type_name = fi.type_template;
+    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
 
-  for ( field_ref & le : field_ref_list ) {
-    Expr *e = le.nameExpr;
-    if( le.is_written ){
-      loopBuf.insert_above(e, get_stmt_str(e) + ".mark_changed();", true, true);
+    // Add a simple temp variable to replace the field reference
+    std::string varname = "__v_" + std::to_string(i);
+    loopBuf.prepend(type_name + " " + varname + "=0;\n", true);
+
+    for( field_ref *le : fi.ref_list ){
+      Expr *e = le->nameExpr;
+      if( le->is_written ){
+        loopBuf.insert_above(e, get_stmt_str(e) + ".mark_changed(" + loop_parity.text + ");", true,   true);
     }
-    if( le.dirExpr != nullptr ){
-      loopBuf.insert_above(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le.dirExpr) + ", " 
+      if( le->dirExpr != nullptr ){
+        loopBuf.insert_above(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
            + parity_in_this_loop + ");", true, true);
     }
-    loopBuf.comment_line(e);
+      loopBuf.replace(le->fullExpr, varname );
+      va.push_back(get_stmt_str(le->fullExpr));
+      vb.push_back(varname);
+      llvm::errs() << get_stmt_str(le->fullExpr) << ":" << varname << "\n";
+    }
+    i++;
   }
 
-  return loopBuf.dump() + "\n";
+  // Replace reduction variables with copies to avoid changing originals
+  // No other variables are allowed to change
+  for ( var_info & vi : var_info_list ) {
+    if( vi.reduction_type != reduction::NONE ){
+      std::string varname = "__v_" + std::to_string(i);
+      va.push_back(vi.name);
+      vb.push_back(varname);
+      loopBuf.prepend(vi.type + " " + varname + "=" + vi.name + ";\n", true);
+  }
+    i++;
+  }
+
+  // Surround by curly brackets to keep new variables local
+  loopBuf.replace_tokens( va, vb );
+  loopBuf.prepend("{",true);
+
+  if(semi_at_end){
+    return loopBuf.dump() + ";}\n"; 
+  } else {
+    return loopBuf.dump() + "}\n";
+  }
 }
+
 
 
 std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf & loopBuf) {
