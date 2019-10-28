@@ -18,37 +18,15 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/CompilerInstance.h"
-// #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-//#include "llvm/Support/raw_ostream.h"
 #include "clang/Analysis/CallGraph.h"
-
 
 #include "transformer.h"
 #include "optionsparser.h"
 #include "stringops.h"
-#include "srcbuf.h"
 #include "myastvisitor.h"
 #include "specialization_db.h"
-
-
-srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
-void set_fid_modified(const FileID FID);
-
-// collection of variables holding the state of parsing
-namespace state {
-  unsigned skip_children = 0;
-  unsigned scope_level = 0;
-  int skip_next = 0;
-  bool in_loop_body = false;
-  bool accept_field_parity = false;
-  bool loop_found = false;
-  bool dump_ast_next = false;
-  bool compile_errors_occurred = false;
-  bool check_loop = false;
-  bool no_device_code = false;
-};
 
 static llvm::cl::OptionCategory TransformerCat(program_name);
 
@@ -134,34 +112,18 @@ namespace cmdline {
          llvm::cl::cat(TransformerCat));
 };
 
-// local global vars
-global_state global;
-// and global loop_parity
-loop_parity_struct loop_parity;
-// this stores the top level decls buffer
-
-static ClassTemplateDecl * field_decl = nullptr;   // Ptr to field primary def in AST
-static ClassTemplateDecl * field_storage_type_decl = nullptr;   // Ptr to field primary def in AST
-
-static const std::string field_element_type = "field_element<";
-static const std::string field_type = "field<";
-
-static codetype target;
-
-// global lists for functions
-// TODO: THESE SHOULD PROBABLY BE CHANGED INTO vectors,
-// but they contain pointers to list elements.  pointers to vector elems are not good!
+//definitions for global variables declared in transformer.h
+ClassTemplateDecl * field_decl = nullptr; 
+ClassTemplateDecl * field_storage_type_decl = nullptr;   
+const std::string field_element_type = "field_element<";
+const std::string field_type = "field<";
 std::list<field_ref> field_ref_list = {};
 std::list<field_info> field_info_list = {};
 std::list<var_info> var_info_list = {};
 std::list<var_decl> var_decl_list = {};
 std::list<special_function_call> special_function_call_list = {};
-
 std::vector<Expr *> remove_expr_list = {};
 std::vector<FunctionDecl *> loop_functions = {};
-
-// take global CI just in case
-CompilerInstance *myCompilerInstance;
 
 // function to help development
 std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {

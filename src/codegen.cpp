@@ -22,20 +22,8 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
 
-
 #include "transformer.h"
-#include "stringops.h"
-#include "srcbuf.h"
 #include "myastvisitor.h"
-
-extern global_state global;
-extern loop_parity_struct loop_parity;
-
-extern std::list<field_ref> field_ref_list;
-extern std::list<field_info> field_info_list;
-extern std::list<var_info> var_info_list;
-extern std::list<var_decl> var_decl_list;
-extern std::list<special_function_call> special_function_call_list;
 
 std::string looping_var;
 std::string parity_name;

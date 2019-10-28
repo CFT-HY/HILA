@@ -14,10 +14,9 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
 
+#include "transformer.h"
 #include "stringops.h"
 #include "srcbuf.h"
-#include "transformer.h"
-// #include "codegen.h"
 
 class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 

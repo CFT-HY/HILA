@@ -6,8 +6,6 @@
 #include <math.h>
 #include <type_traits>
 
-// using namespace std;
-
 #include "../plumbing/globals.h"
 
 

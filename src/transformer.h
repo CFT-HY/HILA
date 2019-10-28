@@ -14,9 +14,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-//#include "llvm/Support/raw_ostream.h"
-
-
+#include "srcbuf.h"
 // set namespaces globally
 using namespace clang;
 //using namespace clang::driver;
@@ -26,9 +24,10 @@ using namespace clang::tooling;
 const std::string program_name("Transformer");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
+enum class reduction { NONE, SUM, PRODUCT };
+enum class parity { none, even, odd, all, x };
 
-bool write_output_file( const std::string & name, const std::string & buf ) ;
-
+// variables describing the type of code to be generated
 struct codetype {
   bool kernelize;
   bool CUDA;
@@ -36,7 +35,19 @@ struct codetype {
   bool flag_loop_function;
 };
 
-enum class parity { none, even, odd, all, x };
+// collection of variables holding the state of parsing
+namespace state {
+  unsigned skip_children = 0;
+  unsigned scope_level = 0;
+  int skip_next = 0;
+  bool in_loop_body = false;
+  bool accept_field_parity = false;
+  bool loop_found = false;
+  bool dump_ast_next = false;
+  bool compile_errors_occurred = false;
+  bool check_loop = false;
+  bool no_device_code = false;
+};
 
 struct loop_parity_struct {
   const Expr * expr;
@@ -115,8 +126,6 @@ struct var_ref {
   bool is_assigned;
 };
 
-enum class reduction { NONE, SUM, PRODUCT };
-
 struct var_info {
   std::vector<var_ref> refs;
   VarDecl * decl;
@@ -145,5 +154,34 @@ struct special_function_call {
   int scope;
 };
 
+bool write_output_file( const std::string & name, const std::string & buf ) ;
+reduction get_reduction_type(bool, std::string &, var_info &);
+void set_fid_modified(const FileID FID);
+bool search_fid(const FileID FID);
+srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
+
+// take global CI just in case
+CompilerInstance *myCompilerInstance;
+global_state global;
+loop_parity_struct loop_parity;
+codetype target;
+
+/// global variable declarations - definitions on transformer.cpp
+
+extern ClassTemplateDecl * field_decl;   // Ptr to field primary def in AST
+extern ClassTemplateDecl * field_storage_type_decl;   // Ptr to field primary def in AST
+extern const std::string field_element_type;
+extern const std::string field_type;
+
+// global list decls. for functions
+// TODO: THESE SHOULD PROBABLY BE CHANGED INTO vectors,
+// but they contain pointers to list elements.  pointers to vector elems are not good!
+extern std::list<field_ref> field_ref_list;
+extern std::list<field_info> field_info_list;
+extern std::list<var_info> var_info_list;
+extern std::list<var_decl> var_decl_list;
+extern std::list<special_function_call> special_function_call_list;
+extern std::vector<Expr *> remove_expr_list;
+extern std::vector<FunctionDecl *> loop_functions;
 
 #endif

@@ -1,6 +1,7 @@
 // -*- mode: c++ -*-
 #ifndef TRANSFORMER_SRCBUF_H
 #define TRANSFORMER_SRCBUF_H
+#include "transformer.h"
 
 // New buffer interface.  Libtooling contains a  ReplaceText and RemoveText
 // in libtooling
@@ -29,6 +30,8 @@
 
 
 // node is Stmt, Decl or Expr - depending on the type of context
+
+using namespace clang;
 
 class srcBuf {
 private:

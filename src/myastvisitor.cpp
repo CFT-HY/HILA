@@ -1,7 +1,9 @@
 #include "myastvisitor.h"
+#include "srcbuf.h"
 
 /////////
 /// A part of the implementation of myastvisitor methods
+/// Code generation functions found in codegen
 /////////
 
 /// -- Identifier utility functions --
@@ -1467,60 +1469,6 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   
   return true;
 }
-
-
-int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
-  // save global, perhaps needed (perhaps not)
-  field_decl = D;
-
-  // llvm::errs() << "+++++++\n Specializations of field\n";
-
-  int count = 0;
-  for (auto spec = D->spec_begin(); spec != D->spec_end(); spec++ ) {
-    count++;
-    auto & args = spec->getTemplateArgs();
-
-    if (args.size() != 1) {
-      llvm::errs() << " *** Fatal: More than one type arg for field<>\n";
-      exit(1);
-    }
-    if (TemplateArgument::ArgKind::Type != args.get(0).getKind()) {
-      reportDiag(DiagnosticsEngine::Level::Error,
-                 D->getSourceRange().getBegin(),
-                 "Expect type argument in \'field\' template" );
-      return(0);
-    }
-
-    // Get typename without class, struct... qualifiers
-    PrintingPolicy pp(Context->getLangOpts());
-    std::string typestr = args.get(0).getAsType().getAsString(pp);
-    llvm::errs() << "arg type " << typestr << "\n";
-
-    // Type of field<> can never be field?  This always is true
-    if( typestr.find("field<") ){ // Skip for field templates
-      if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
-
-      // write storage_type specialization
-      // NOTE: this has to be moved to codegen, different for diff. codes
-      if (field_storage_type_decl == nullptr) {
-        llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
-        exit(1);
-      }
-
-      std::string fst_spec = "template<>\nstruct field_storage_type<"
-        + typestr +"> {\n  " + typestr + " c[10];\n};\n";
-
-      // insert after new line
-      SourceLocation l =
-      getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
-      // TheRewriter.InsertText(l, fst_spec, true,true);
-      writeBuf->insert(l, fst_spec, true, false);
-    }
-    
-  }
-  return(count);
-      
-} // end of "field"
 
 // Find the field_storage_type typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
