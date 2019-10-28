@@ -28,8 +28,6 @@
 #include "srcbuf.h"
 #include "myastvisitor.h"
 
-// lots of global vars -- perhaps invent a class or something
-
 extern global_state global;
 extern loop_parity_struct loop_parity;
 

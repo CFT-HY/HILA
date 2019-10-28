@@ -98,6 +98,7 @@ HEADERS = \
 
 
 OBJECTS = \
+  $(BUILDDIR)/myastvisitor.o \
   $(BUILDDIR)/transformer.o \
   $(BUILDDIR)/stringops.o \
   $(BUILDDIR)/codegen.o \

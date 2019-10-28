@@ -44,6 +44,7 @@ struct loop_parity_struct {
   std::string text;
 };
 
+//class storing global variables
 struct global_state {
   std::string main_file_name = "";
   bool assert_loop_parity = false;
