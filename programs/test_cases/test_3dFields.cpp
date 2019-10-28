@@ -65,10 +65,12 @@ int main(){
 
     s1[ALL] = s2[X] + s3[X];
 
+    sum = 0;
     onsites(ALL){
-	    cmplx<double> val = s1[X];
-	    assert(val.re==NDIM+1);
+        double diff = s1[X].re - (NDIM+1);
+	    sum += diff*diff;
     }
+	assert(sum.re==0);
 
 
     // Test foralldir loop in a onsites environment
