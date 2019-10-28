@@ -142,6 +142,8 @@ public:
                      const std::vector<std::string> &a,
                      const std::vector<std::string> &b);    
   int replace_token(int start, int end, const std::string & a, const std::string & b );
+  int replace_tokens(const std::vector<std::string> &a,
+                     const std::vector<std::string> &b);
 
 };
 

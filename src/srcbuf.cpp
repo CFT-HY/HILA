@@ -313,7 +313,9 @@ int srcBuf::insert(Expr *e, const std::string & s, bool incl_before, bool do_ind
 // Insert a new line above the location i
 int srcBuf::insert_above(int i, const std::string & s, bool incl_before, bool do_indent) {
   while (i > 0 && buf[i] != '\n' ) i--;
-  return insert(i, '\n'+s, incl_before, do_indent);
+  std::string new_line = '\n'+s;
+  if(i==0) new_line = new_line+'\n';
+  return insert(i, new_line, incl_before, do_indent);
 }
 
 int srcBuf::insert_above(SourceLocation sl, const std::string & s,
@@ -462,5 +464,11 @@ int srcBuf::replace_token(int start, int end, const std::string & a, const std::
   
   return replace_tokens(start,end,va,vb);
 }
-  
+
+
+int srcBuf::replace_tokens(const std::vector<std::string> &a,
+                           const std::vector<std::string> &b)
+{
+  return replace_tokens(0,true_size-1,a,b);
+}  
 
