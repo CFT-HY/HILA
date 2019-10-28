@@ -91,8 +91,6 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   std::stringstream code;
   code << "{\n";
 
-  code << comment_string(generate_loop_header(S,target,semi_at_end))+ "\n";
-
   // basic set up: 1st loop_parity, if it is known const set it up,
   // else copy it to a variable name
 
@@ -138,36 +136,12 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     //}
   }
 
-  // Assert that vars to be read are initialized TODO: make optional (cmdline?)
-  int i = 0;
-  for ( field_info  & l : field_info_list ) if (l.is_read) {
-    if (i == 0) {
-      code << "assert(" << l.new_name <<".is_allocated()";
-    } else {
-      code << " && " << l.new_name + ".is_allocated()";
-    }
-    i++;
-  }
-  if (i > 0) code << ");\n";
+  
+  // Generate a header that starts communication and checks
+  // that fields are allocated
+  code << generate_loop_header(S,target,semi_at_end)+ "\n";
   
   
-  // Insert field neighbour fetches
-  
-  for (field_info & l : field_info_list) {
-    for (dir_ptr & d : l.dir_list ) {
-      // TODO - move to temp vars?
-      code << l.new_name << ".start_move(" << get_stmt_str(d.e) << ", " 
-           << parity_in_this_loop << ");\n";
-      // TODO: must add wait_gets, if we want those
-    }
-  }
-
-    
-  // Mark changed vars - do it BEFORE using vars, possible alloc
-  for ( field_info  & l : field_info_list ) {
-    if (l.is_written) code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
-  }
-
   if(target.CUDA){
     // Check for reductions and allocate device memory
     for (var_info & v : var_info_list) {
@@ -247,16 +221,24 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
 
     for( field_ref *le : fi.ref_list ){
       Expr *e = le->nameExpr;
+      loopBuf.replace(le->fullExpr, varname );
       if( le->is_written ){
-        loopBuf.insert_above(e, get_stmt_str(e) + ".mark_changed(" + loop_parity.text + ");", true,   true);
+        // Mark changed fields - do it BEFORE using vars, possible alloc
+        loopBuf.insert_above(e, get_stmt_str(e) + ".mark_changed(" + parity_in_this_loop + ");", true,   true);
     }
       if( le->dirExpr != nullptr ){
+        // If a field needs to be communicated, start here
         loopBuf.insert_above(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
            + parity_in_this_loop + ");", true, true);
     }
-      loopBuf.replace(le->fullExpr, varname );
-      va.push_back(get_stmt_str(le->fullExpr));
-      vb.push_back(varname);
+      if( le->is_read ){
+        // If a field is read, check that is has been allocated
+        loopBuf.insert_above(e, "assert(" + get_stmt_str(e) 
+          + ".is_allocated());", true, true);
+      }
+
+      //va.push_back(get_stmt_str(le->fullExpr));
+      //vb.push_back(varname);
       llvm::errs() << get_stmt_str(le->fullExpr) << ":" << varname << "\n";
     }
     i++;
