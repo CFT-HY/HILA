@@ -11,9 +11,9 @@
 int main(){
 
     //check that you can increment a direction correctly
-    #if NDIM > 1
     direction d = XUP;
     direction d2 = (direction) (NDIRS - 1);
+    #if NDIM > 1
     d++; 
     d2++;
     assert(d==YUP);
@@ -66,7 +66,39 @@ int main(){
     s1[ALL] = s2[X] + s3[X];
 
     onsites(ALL){
-	cmplx<double> val = s1[X];
+	    cmplx<double> val = s1[X];
 	    assert(val.re==NDIM+1);
     }
+
+
+    // Test foralldir loop in a onsites environment
+    onsites(ALL){
+        double csum = 0;
+        foralldir(d){
+            csum += coordinates(X)[d];
+        }
+        s1[X] = csum;
+        s2[X] = 0;
+        s3[X] = 0;
+    }
+
+    foralldir(d){
+        onsites(ALL){
+            s2[X] += s1[X + d];
+        }
+    }
+
+    onsites(ALL){
+        foralldir(d){
+            s3[X] += s1[X + d];
+        }
+    }
+
+    sum = 0;
+    onsites(ALL){
+        double diff = (s2[X]-s3[X]).re;
+        sum += diff*diff;
+    }
+    assert(sum.re == 0);
+
 }
