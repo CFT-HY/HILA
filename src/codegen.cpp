@@ -300,19 +300,32 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      if(l.is_read) {
-        code << type_name << " "  << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-             << ".get_value_at(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
-             << looping_var + "]" << ");\n";
-      } else {
         code << type_name << " "  << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
       }
+    code << type_name << " "  << l.loop_ref_name << ";\n";
+    code << "std::array<bool, NDIRS+1> " << l.new_name << "_read;\n";
+    code << l.new_name << "_read.fill(true);\n";
+
+    for( field_ref *r : l.ref_list ){
+      Expr *d = r->dirExpr;
+      if(d){
+        std::string dstring = get_stmt_str(d);
+        std::string is_read = l.new_name + "_read["+dstring+"]";
+        loopBuf.insert_above(r->fullExpr, 
+          "if("  + is_read + ") {"
+          + l.loop_ref_name + "_" + dstring + "=" + get_stmt_str(r->nameExpr) 
+          + ".get_value_at(" + "lattice->neighb[" + dstring + "][" 
+          + looping_var + "]);"
+          + is_read + "=false;}", true, true);
+      } else if(r->is_read) {
+        std::string is_read = l.new_name + "_read[NDIRS]";
+        loopBuf.insert_above(r->fullExpr, 
+          "if("  + is_read + ") {"
+          + l.loop_ref_name + "=" + get_stmt_str(r->nameExpr) 
+          + ".get_value_at(" + looping_var + "); "
+          + is_read + "=false;}", true, true);
     }
-    if(l.is_read) {
-      code << type_name << " " << l.loop_ref_name << " = " << l.new_name 
-           << ".get_value_at(" << looping_var << ");\n";
-    } else {
-      code << type_name << " "  << l.loop_ref_name << ";\n";
+
     }
   }
 
