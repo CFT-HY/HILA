@@ -309,6 +309,36 @@ int srcBuf::insert(SourceLocation sl, const std::string & s,
 int srcBuf::insert(Expr *e, const std::string & s, bool incl_before, bool do_indent) {
   return insert(e->getSourceRange().getBegin(), s, incl_before, do_indent);
 }
+
+// Insert a new line above the location i
+int srcBuf::insert_above(int i, const std::string & s, bool incl_before, bool do_indent) {
+  while (i > 0 && buf[i] != '\n' ) i--;
+  return insert(i, '\n'+s, incl_before, do_indent);
+}
+
+int srcBuf::insert_above(SourceLocation sl, const std::string & s,
+                   bool incl_before, bool do_indent) {
+  return insert_above(get_index(sl), s, incl_before, do_indent);
+}
+
+int srcBuf::insert_above(Expr *e, const std::string & s, bool incl_before, bool do_indent) {
+  return insert_above(e->getSourceRange().getBegin(), s, incl_before, do_indent);
+}
+
+
+int srcBuf::comment_line(int i){
+  while (i > 0 && buf[i] != '\n' ) i--;
+  return insert(i+1, "//", false, false);
+}
+
+int srcBuf::comment_line(SourceLocation sl){
+  return comment_line(get_index(sl));
+}
+
+int srcBuf::comment_line(Expr *e){
+  return comment_line(e->getSourceRange().getBegin());
+}
+
   
 // replace is a remove + insert pair, should write with a single operation
 // return the index after

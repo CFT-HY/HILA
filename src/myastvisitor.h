@@ -177,6 +177,9 @@ public:
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
 
+  /// Generate a header for starting communication and marking fields changed
+  std::string generate_loop_header(Stmt *S, codetype & target, bool semi_at_end);
+  
   std::string generate_kernel(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
   std::string generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
 

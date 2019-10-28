@@ -91,6 +91,8 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   std::stringstream code;
   code << "{\n";
 
+  code << comment_string(generate_loop_header(S,target,semi_at_end))+ "\n";
+
   // basic set up: 1st loop_parity, if it is known const set it up,
   // else copy it to a variable name
 
@@ -221,6 +223,33 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   writeBuf->insert(S->getBeginLoc(), indent_string(code.str()), true, true);
 
   
+}
+
+
+/* Generate a header that marks field references read or written.
+ * This is a copy of the loop body with modifications, only ran once
+ */
+std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool semi_at_end) {
+  srcBuf loopBuf;
+  loopBuf.copy_from_range(writeBuf,S->getSourceRange());
+
+  // Remove the first '{' and last '}'
+  loopBuf.remove(0,1);
+  loopBuf.remove(loopBuf.get_index(S->getEndLoc())-1, loopBuf.get_index(S->getEndLoc()));
+
+  for ( field_ref & le : field_ref_list ) {
+    Expr *e = le.nameExpr;
+    if( le.is_written ){
+      loopBuf.insert_above(e, get_stmt_str(e) + ".mark_changed();", true, true);
+    }
+    if( le.dirExpr != nullptr ){
+      loopBuf.insert_above(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le.dirExpr) + ", " 
+           + parity_in_this_loop + ");", true, true);
+    }
+    loopBuf.comment_line(e);
+  }
+
+  return loopBuf.dump() + "\n";
 }
 
 
