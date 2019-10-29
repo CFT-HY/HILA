@@ -557,9 +557,9 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
         std::string is_read = l.new_name + "_read";
         std::string getter;
         if(CUDA){
-          getter = ".get(" + looping_var + "], lattice_info.field_alloc_size)";
+          getter = ".get(" + looping_var + ", lattice_info.field_alloc_size)";
         } else {
-          getter = ".get_value_at(" + looping_var + "])";
+          getter = ".get_value_at(" + looping_var + ")";
         }
         loopBuf.insert_above(r->fullExpr, 
           "if("  + is_read + ") {"
