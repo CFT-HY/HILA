@@ -20,97 +20,12 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "clang/Analysis/CallGraph.h"
 
 #include "transformer.h"
 #include "optionsparser.h"
 #include "stringops.h"
 #include "myastvisitor.h"
 #include "specialization_db.h"
-
-static llvm::cl::OptionCategory TransformerCat(program_name);
-
-namespace cmdline {
-
-  // command line options
-  static llvm::cl::opt<bool>
-  dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
-          llvm::cl::cat(TransformerCat));
-
-  static llvm::cl::opt<bool>
-  no_include("noincl",
-             llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
-             llvm::cl::cat(TransformerCat));
-
-  static llvm::cl::opt<std::string>
-  dummy_def("D", 
-            llvm::cl::value_desc("name"),
-            llvm::cl::desc("Define name/symbol for preprocessor"),
-            llvm::cl::cat(TransformerCat));
-
-  static llvm::cl::opt<std::string>
-  dummy_incl("I", 
-             llvm::cl::desc("Directory for include file search"),
-             llvm::cl::value_desc("directory"),
-             llvm::cl::cat(TransformerCat));
-
-  static llvm::cl::opt<bool>
-  function_spec_no_inline("function-spec-no-inline",
-                          llvm::cl::desc("Do not mark generated function specializations \"inline\""),
-                          llvm::cl::cat(TransformerCat));
-
-  static llvm::cl::opt<bool>
-  method_spec_no_inline("method-spec-no-inline",
-                        llvm::cl::desc("Do not mark generated method specializations \"inline\""),
-                        llvm::cl::cat(TransformerCat));
-  
-  static llvm::cl::opt<bool>
-  funcinfo("ident-functions",
-           llvm::cl::desc("Comment function call types in output"),
-           llvm::cl::cat(TransformerCat));
-  
-  static llvm::cl::opt<bool>
-  no_output("no-output",
-            llvm::cl::desc("No output file, for syntax check"),
-            llvm::cl::cat(TransformerCat));
-  
-  static llvm::cl::opt<bool>
-  syntax_only("syntax-only",
-              llvm::cl::desc("Same as no-output"),
-              llvm::cl::cat(TransformerCat));
-  
-  static llvm::cl::opt<std::string>
-  output_filename("o",
-                  llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
-                  llvm::cl::value_desc("name"),
-                  llvm::cl::cat(TransformerCat));
-
-
-  static llvm::cl::opt<bool>
-  kernel("target:vanilla-kernel",
-         llvm::cl::desc("Generate kernels"),
-         llvm::cl::cat(TransformerCat));
-  
-  static llvm::cl::opt<bool>
-  vanilla("target:vanilla",
-          llvm::cl::desc("Generate loops in place"),
-          llvm::cl::cat(TransformerCat));
-
-  static llvm::cl::opt<bool>
-  CUDA("target:CUDA",
-          llvm::cl::desc("Generate CUDA kernels"),
-          llvm::cl::cat(TransformerCat));
-
-  static llvm::cl::opt<bool>
-  openacc("target:openacc",
-          llvm::cl::desc("Offload to GPU using openMP"),
-          llvm::cl::cat(TransformerCat));
-
-  static llvm::cl::opt<bool>
-  func_attribute("function-attributes",
-         llvm::cl::desc("write pragmas/attributes to functions called from loops"),
-         llvm::cl::cat(TransformerCat));
-};
 
 //definitions for global variables declared in transformer.h
 ClassTemplateDecl * field_decl = nullptr; 
@@ -125,21 +40,87 @@ std::list<special_function_call> special_function_call_list = {};
 std::vector<Expr *> remove_expr_list = {};
 std::vector<FunctionDecl *> loop_functions = {};
 
-// function to help development
-std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
-  switch (kind) {
-    case FunctionDecl::TemplatedKind::TK_NonTemplate:  
-      return "TK_NonTemplate";
-    case FunctionDecl::TemplatedKind::TK_FunctionTemplate:
-      return "TK_FunctionTemplate";
-    case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
-      return "TK_MemberSpecialization";
-    case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:  
-      return "TK_FunctionTemplateSpecialization";
-    case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:  
-      return "TK_DependentFunctionTemplateSpecialization";
-  }
-}
+unsigned state::skip_children = 0;
+unsigned state::scope_level = 0;
+int state::skip_next = 0;
+bool state::in_loop_body = false;
+bool state::accept_field_parity = false;
+bool state::loop_found = false;
+bool state::dump_ast_next = false;
+bool state::compile_errors_occurred = false;
+bool state::check_loop = false;
+bool state::no_device_code = false;
+
+llvm::cl::OptionCategory TransformerCat(program_name);
+
+  // command line options
+llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
+          llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::no_include("noincl",
+             llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
+             llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<std::string> cmdline::dummy_def("D", 
+            llvm::cl::value_desc("name"),
+            llvm::cl::desc("Define name/symbol for preprocessor"),
+            llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<std::string> cmdline::dummy_incl("I", 
+             llvm::cl::desc("Directory for include file search"),
+             llvm::cl::value_desc("directory"),
+             llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::function_spec_no_inline("function-spec-no-inline",
+                          llvm::cl::desc("Do not mark generated function specializations \"inline\""),
+                          llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::method_spec_no_inline("method-spec-no-inline",
+                        llvm::cl::desc("Do not mark generated method specializations \"inline\""),
+                        llvm::cl::cat(TransformerCat));
+  
+llvm::cl::opt<bool> cmdline::funcinfo("ident-functions",
+           llvm::cl::desc("Comment function call types in output"),
+           llvm::cl::cat(TransformerCat));
+  
+llvm::cl::opt<bool> cmdline::no_output("no-output",
+            llvm::cl::desc("No output file, for syntax check"),
+            llvm::cl::cat(TransformerCat));
+  
+llvm::cl::opt<bool> cmdline::syntax_only("syntax-only",
+              llvm::cl::desc("Same as no-output"),
+              llvm::cl::cat(TransformerCat));
+  
+llvm::cl::opt<std::string> cmdline::output_filename("o",
+                  llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
+                  llvm::cl::value_desc("name"),
+                  llvm::cl::cat(TransformerCat));
+
+
+llvm::cl::opt<bool> cmdline::kernel("target:vanilla-kernel",
+         llvm::cl::desc("Generate kernels"),
+         llvm::cl::cat(TransformerCat));
+  
+llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
+          llvm::cl::desc("Generate loops in place"),
+          llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
+          llvm::cl::desc("Generate CUDA kernels"),
+          llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::openacc("target:openacc",
+          llvm::cl::desc("Offload to GPU using openMP"),
+          llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
+         llvm::cl::desc("write pragmas/attributes to functions called from loops"),
+         llvm::cl::cat(TransformerCat));
+
+CompilerInstance *myCompilerInstance;
+global_state global;
+loop_parity_struct loop_parity;
+codetype target;
 
 #if 0
 // It is very hard to anything with pragmas in clang.  Requires modification of

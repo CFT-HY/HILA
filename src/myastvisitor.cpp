@@ -1,10 +1,31 @@
 #include "myastvisitor.h"
-#include "srcbuf.h"
+#include "transformer.h"
+#include "specialization_db.h"
+#include "clang/Analysis/CallGraph.h"
+#include <sstream>
+#include <iostream>
+#include <string>
 
 /////////
 /// A part of the implementation of myastvisitor methods
 /// Code generation functions found in codegen
 /////////
+
+//function used for development
+std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
+  switch (kind) {
+    case FunctionDecl::TemplatedKind::TK_NonTemplate:  
+      return "TK_NonTemplate";
+    case FunctionDecl::TemplatedKind::TK_FunctionTemplate:
+      return "TK_FunctionTemplate";
+    case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+      return "TK_MemberSpecialization";
+    case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:  
+      return "TK_FunctionTemplateSpecialization";
+    case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:  
+      return "TK_DependentFunctionTemplateSpecialization";
+  }
+}
 
 /// -- Identifier utility functions --
 

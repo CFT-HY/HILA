@@ -35,18 +35,40 @@ struct codetype {
   bool flag_loop_function;
 };
 
-// collection of variables holding the state of parsing
+
+// collection of variables holding the state of parsing - definition in transformer.cpp
 namespace state {
-  unsigned skip_children = 0;
-  unsigned scope_level = 0;
-  int skip_next = 0;
-  bool in_loop_body = false;
-  bool accept_field_parity = false;
-  bool loop_found = false;
-  bool dump_ast_next = false;
-  bool compile_errors_occurred = false;
-  bool check_loop = false;
-  bool no_device_code = false;
+  extern unsigned skip_children; //= 0;
+  extern unsigned scope_level; // = 0;
+  extern int skip_next; // = 0;
+  extern bool in_loop_body; // = false;
+  extern bool accept_field_parity; // = false;
+  extern bool loop_found; // = false;
+  extern bool dump_ast_next; // = false;
+  extern bool compile_errors_occurred; // = false;
+  extern bool check_loop; // = false;
+  extern bool no_device_code; // = false;
+};
+
+extern llvm::cl::OptionCategory TransformerCat;
+
+namespace cmdline {
+  // command line options
+  extern llvm::cl::opt<bool> dump_ast;
+  extern llvm::cl::opt<bool> no_include;
+  extern llvm::cl::opt<std::string> dummy_def;
+  extern llvm::cl::opt<std::string> dummy_incl;
+  extern llvm::cl::opt<bool> function_spec_no_inline;
+  extern llvm::cl::opt<bool> method_spec_no_inline; 
+  extern llvm::cl::opt<bool> funcinfo;
+  extern llvm::cl::opt<bool> no_output;
+  extern llvm::cl::opt<bool> syntax_only;
+  extern llvm::cl::opt<std::string> output_filename;
+  extern llvm::cl::opt<bool> kernel;
+  extern llvm::cl::opt<bool> vanilla;
+  extern llvm::cl::opt<bool> CUDA;
+  extern llvm::cl::opt<bool> openacc;
+  extern llvm::cl::opt<bool> func_attribute;
 };
 
 struct loop_parity_struct {
@@ -161,10 +183,10 @@ bool search_fid(const FileID FID);
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
 
 // take global CI just in case
-CompilerInstance *myCompilerInstance;
-global_state global;
-loop_parity_struct loop_parity;
-codetype target;
+extern CompilerInstance *myCompilerInstance;
+extern global_state global;
+extern loop_parity_struct loop_parity;
+extern codetype target;
 
 /// global variable declarations - definitions on transformer.cpp
 
