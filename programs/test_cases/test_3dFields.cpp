@@ -23,6 +23,7 @@ int main(){
 
     cmplx<double> sum = 0;
     field<cmplx<double>> s1, s2, s3;
+    field<cmplx<double>> s4[3];
 
     test_setup();
 
@@ -102,5 +103,20 @@ int main(){
         sum += diff*diff;
     }
     assert(sum.re == 0);
+
+
+    // Test referring to an array of fields
+
+    s4[0] = s1;
+    s4[1] = s1;
+
+    s4[2][ALL] = s4[0][X] - s4[1][X];
+
+    sum = 0;
+    onsites(ALL){
+        sum += s4[2][X]*s4[2][X];
+    }
+    assert(sum.re == 0);
+
 
 }
