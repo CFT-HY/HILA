@@ -311,7 +311,8 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
     // Check for references without a direction. If found, add temp variable
     for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
       code << type_name << " "  << l.loop_ref_name << ";\n";
-      code << "bool "  << l.loop_ref_name << "_read = true;\n";
+      code << "bool "  << l.new_name << "_read = true;\n";
+      break;  // Only one needed
     }
 
     // Add a getter in above each field reference
@@ -541,7 +542,7 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf) {
     if (le.dirExpr != nullptr) {
       //loopBuf.replace(parityExpr,
       //                 "lattice->neighb[" +  get_stmt_str(le.dirExpr) + "][" + looping_var + "]");
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+get_stmt_str(le.dirExpr));
+      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_d["+get_stmt_str(le.dirExpr)+"]");
     } else {
       loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
     }
