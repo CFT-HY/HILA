@@ -314,33 +314,6 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
       code << "bool "  << l.new_name << "_read = true;\n";
       break;  // Only one needed
     }
-
-    // Add a getter in above each field reference
-    for( field_ref *r : l.ref_list ){
-      Expr *d = r->dirExpr;
-      
-      // If reference has a direction, use the temp list
-      if(d){
-        std::string dstring = get_stmt_str(d);
-        std::string is_read = l.new_name + "_read_d["+dstring+"]";
-        loopBuf.insert_above(r->fullExpr, 
-          "if("  + is_read + ") {"
-          + l.loop_ref_name + "_d[" + dstring + "]=" + get_stmt_str(r->nameExpr) 
-          + ".get_value_at(" + "lattice->neighb[" + dstring + "][" 
-          + looping_var + "]);"
-          + is_read + "=false;}", true, true);
-      
-      } else if(r->is_read) { // No direction, use the temp variable
-      
-        std::string is_read = l.new_name + "_read";
-        loopBuf.insert_above(r->fullExpr, 
-          "if("  + is_read + ") {"
-          + l.loop_ref_name + "=" + get_stmt_str(r->nameExpr) 
-          + ".get_value_at(" + looping_var + "); "
-          + is_read + "=false;}", true, true);
-      }
-
-    }
   }
 
   // Dump the main loop code here
@@ -554,6 +527,34 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf) {
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
     } else {
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression);
+    }
+  }
+
+  // Add a getter in above each field reference
+  for (field_info & l : field_info_list) {
+    for( field_ref *r : l.ref_list ){
+      Expr *d = r->dirExpr;
+      
+      // If reference has a direction, use the temp list
+      if(d){
+        std::string dstring = get_stmt_str(d);
+        std::string is_read = l.new_name + "_read_d["+dstring+"]";
+        loopBuf.insert_above(r->fullExpr, 
+          "if("  + is_read + ") {"
+          + l.loop_ref_name + "_d[" + dstring + "]=" + get_stmt_str(r->nameExpr) 
+          + ".get_value_at(" + "lattice->neighb[" + dstring + "][" 
+          + looping_var + "]);"
+          + is_read + "=false;}", true, true);
+      
+      } else if(r->is_read) { // No direction, use the temp variable
+      
+        std::string is_read = l.new_name + "_read";
+        loopBuf.insert_above(r->fullExpr, 
+          "if("  + is_read + ") {"
+          + l.loop_ref_name + "=" + get_stmt_str(r->nameExpr) 
+          + ".get_value_at(" + looping_var + "); "
+          + is_read + "=false;}", true, true);
+      }
     }
   }
 }
