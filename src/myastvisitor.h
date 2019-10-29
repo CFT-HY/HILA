@@ -187,7 +187,7 @@ public:
   std::string make_kernel_name();
 
   /// Change field references within loops
-  void replace_field_refs_and_funcs(srcBuf &sb);
+  void replace_field_refs_and_funcs(srcBuf &sb, bool CUDA);
 
   /// shortcut for "pragma"-like transformer_control("cmd")-functin
   // bool handle_control_stmt(Stmt *s);

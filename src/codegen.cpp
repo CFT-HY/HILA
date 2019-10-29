@@ -271,7 +271,7 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
 
 std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf & loopBuf) {
   
-  replace_field_refs_and_funcs(loopBuf);
+  replace_field_refs_and_funcs(loopBuf, false);
   
   std::stringstream code;
   code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
@@ -295,7 +295,7 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";
   
-  // Create temporary field element variables and call getters
+  // Create temporary field element variables
   for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
@@ -427,7 +427,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   }
 
   // finally, change the references to variables in the body
-  replace_field_refs_and_funcs(loopBuf);
+  replace_field_refs_and_funcs(loopBuf, true);
 
   // Begin the function
   kernel << ")\n{\n";
@@ -459,24 +459,24 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
            << looping_var << " < loop_end; " << looping_var << "++) {\n";
   }
 
-  // Call getters
-  for (field_info & l : field_info_list){
+  // Create temporary field element variables
+  for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
+
+    // First check for direction references. If any found, create list of temp
+    // variables
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      if(l.is_read){
-        kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-               << ".get(lattice_info.d_neighb[" << get_stmt_str(d.e) << "][" 
-               << looping_var + "]" << ", lattice_info.field_alloc_size);\n";
-      } else {
-        kernel << type_name << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
-      }
+      kernel << type_name << " "  << l.loop_ref_name << "_d[NDIRS];\n";
+      kernel << "std::array<bool, NDIRS> " << l.new_name << "_read_d;\n";
+      kernel << l.new_name << "_read_d.fill(true);\n";
+      break; // Only need one direction reference
     }
-    if(l.is_read) {
-      kernel << type_name << l.loop_ref_name << " = " << l.new_name 
-             << ".get(" << looping_var << ", lattice_info.field_alloc_size);\n";
-    } else {
-      kernel << type_name << l.loop_ref_name << ";\n";
+    // Check for references without a direction. If found, add temp variable
+    for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
+      kernel << type_name << " "  << l.loop_ref_name << ";\n";
+      kernel << "bool "  << l.new_name << "_read = true;\n";
+      break;  // Only one needed
     }
   }
 
@@ -508,7 +508,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
 
 
 /// Change field references and special functions within loops
-void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf) {
+void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
   
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
@@ -539,20 +539,31 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf) {
       if(d){
         std::string dstring = get_stmt_str(d);
         std::string is_read = l.new_name + "_read_d["+dstring+"]";
+        std::string getter;
+        if(CUDA){
+          getter = ".get(lattice_info.d_neighb[" + dstring + "]["
+            + looping_var + "], lattice_info.field_alloc_size)";
+        } else {
+          getter = ".get_value_at(lattice->neighb[" + dstring + "][" 
+            + looping_var + "])";
+        }
         loopBuf.insert_above(r->fullExpr, 
           "if("  + is_read + ") {"
-          + l.loop_ref_name + "_d[" + dstring + "]=" + get_stmt_str(r->nameExpr) 
-          + ".get_value_at(" + "lattice->neighb[" + dstring + "][" 
-          + looping_var + "]);"
+          + l.loop_ref_name + "_d[" + dstring + "]=" + l.new_name + getter + ";"
           + is_read + "=false;}", true, true);
       
       } else if(r->is_read) { // No direction, use the temp variable
       
         std::string is_read = l.new_name + "_read";
+        std::string getter;
+        if(CUDA){
+          getter = ".get(" + looping_var + "], lattice_info.field_alloc_size)";
+        } else {
+          getter = ".get_value_at(" + looping_var + "])";
+        }
         loopBuf.insert_above(r->fullExpr, 
           "if("  + is_read + ") {"
-          + l.loop_ref_name + "=" + get_stmt_str(r->nameExpr) 
-          + ".get_value_at(" + looping_var + "); "
+          + l.loop_ref_name + "=" + l.new_name + getter + ";"
           + is_read + "=false;}", true, true);
       }
     }
