@@ -5,6 +5,10 @@
 //#include <complex>
 //#include <cmath>
 
+#include <iostream>
+#include <math.h>
+#include <type_traits>
+
 
 template <typename T = double>
 struct cmplx {

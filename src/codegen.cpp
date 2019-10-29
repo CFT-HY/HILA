@@ -122,36 +122,12 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     //}
   }
 
-  // Assert that vars to be read are initialized TODO: make optional (cmdline?)
-  int i = 0;
-  for ( field_info  & l : field_info_list ) if (l.is_read) {
-    if (i == 0) {
-      code << "assert(" << l.new_name <<".is_allocated()";
-    } else {
-      code << " && " << l.new_name + ".is_allocated()";
-    }
-    i++;
-  }
-  if (i > 0) code << ");\n";
+  
+  // Generate a header that starts communication and checks
+  // that fields are allocated
+  code << generate_loop_header(S,target,semi_at_end)+ "\n";
   
   
-  // Insert field neighbour fetches
-  
-  for (field_info & l : field_info_list) {
-    for (dir_ptr & d : l.dir_list ) {
-      // TODO - move to temp vars?
-      code << l.new_name << ".start_move(" << get_stmt_str(d.e) << ", " 
-           << parity_in_this_loop << ");\n";
-      // TODO: must add wait_gets, if we want those
-    }
-  }
-
-    
-  // Mark changed vars - do it BEFORE using vars, possible alloc
-  for ( field_info  & l : field_info_list ) {
-    if (l.is_written) code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
-  }
-
   if(target.CUDA){
     // Check for reductions and allocate device memory
     for (var_info & v : var_info_list) {
@@ -210,6 +186,75 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 }
 
 
+/* Generate a header that marks field references read or written.
+ * This is a copy of the loop body with modifications, only ran once
+ */
+std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool semi_at_end) {
+  srcBuf loopBuf;
+  loopBuf.copy_from_range(writeBuf,S->getSourceRange());
+  std::vector<std::string> va = {}, vb = {};
+  int i=0;
+
+  // Replace loop references with temporary variables
+  // and add calls to mark_changed() and start_get()
+  for ( field_info & fi : field_info_list ) {
+    std::string type_name = fi.type_template;
+    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
+
+    // Add a simple temp variable to replace the field reference
+    std::string varname = "__v_" + std::to_string(i);
+    loopBuf.prepend(type_name + " " + varname + "=0;\n", true);
+
+    for( field_ref *le : fi.ref_list ){
+      Expr *e = le->nameExpr;
+      loopBuf.replace(le->fullExpr, varname );
+      if( le->is_written ){
+        // Mark changed fields - do it BEFORE using vars, possible alloc
+        loopBuf.insert_above(e, get_stmt_str(e) + ".mark_changed(" + parity_in_this_loop + ");", true,   true);
+    }
+      if( le->dirExpr != nullptr ){
+        // If a field needs to be communicated, start here
+        loopBuf.insert_above(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
+           + parity_in_this_loop + ");", true, true);
+    }
+      if( le->is_read ){
+        // If a field is read, check that is has been allocated
+        loopBuf.insert_above(e, "assert(" + get_stmt_str(e) 
+          + ".is_allocated());", true, true);
+      }
+
+      //va.push_back(get_stmt_str(le->fullExpr));
+      //vb.push_back(varname);
+      llvm::errs() << get_stmt_str(le->fullExpr) << ":" << varname << "\n";
+    }
+    i++;
+  }
+
+  // Replace reduction variables with copies to avoid changing originals
+  // No other variables are allowed to change
+  for ( var_info & vi : var_info_list ) {
+    if( vi.reduction_type != reduction::NONE ){
+      std::string varname = "__v_" + std::to_string(i);
+      va.push_back(vi.name);
+      vb.push_back(varname);
+      loopBuf.prepend(vi.type + " " + varname + "=" + vi.name + ";\n", true);
+  }
+    i++;
+  }
+
+  // Surround by curly brackets to keep new variables local
+  loopBuf.replace_tokens( va, vb );
+  loopBuf.prepend("{",true);
+
+  if(semi_at_end){
+    return loopBuf.dump() + ";}\n"; 
+  } else {
+    return loopBuf.dump() + "}\n";
+  }
+}
+
+
+
 std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf & loopBuf) {
   
   replace_field_refs_and_funcs(loopBuf);
@@ -241,19 +286,32 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      if(l.is_read) {
-        code << type_name << " "  << l.loop_ref_name << "_" << get_stmt_str(d.e) << " = " << l.new_name 
-             << ".get_value_at(" << "lattice->neighb[" << get_stmt_str(d.e) << "][" 
-             << looping_var + "]" << ");\n";
-      } else {
         code << type_name << " "  << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
       }
+    code << type_name << " "  << l.loop_ref_name << ";\n";
+    code << "std::array<bool, NDIRS+1> " << l.new_name << "_read;\n";
+    code << l.new_name << "_read.fill(true);\n";
+
+    for( field_ref *r : l.ref_list ){
+      Expr *d = r->dirExpr;
+      if(d){
+        std::string dstring = get_stmt_str(d);
+        std::string is_read = l.new_name + "_read["+dstring+"]";
+        loopBuf.insert_above(r->fullExpr, 
+          "if("  + is_read + ") {"
+          + l.loop_ref_name + "_" + dstring + "=" + get_stmt_str(r->nameExpr) 
+          + ".get_value_at(" + "lattice->neighb[" + dstring + "][" 
+          + looping_var + "]);"
+          + is_read + "=false;}", true, true);
+      } else if(r->is_read) {
+        std::string is_read = l.new_name + "_read[NDIRS]";
+        loopBuf.insert_above(r->fullExpr, 
+          "if("  + is_read + ") {"
+          + l.loop_ref_name + "=" + get_stmt_str(r->nameExpr) 
+          + ".get_value_at(" + looping_var + "); "
+          + is_read + "=false;}", true, true);
     }
-    if(l.is_read) {
-      code << type_name << " " << l.loop_ref_name << " = " << l.new_name 
-           << ".get_value_at(" << looping_var << ");\n";
-    } else {
-      code << type_name << " "  << l.loop_ref_name << ";\n";
+
     }
   }
 

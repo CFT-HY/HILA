@@ -2,11 +2,11 @@
 // Transformer tools to convert "lattice loops" into
 // hardware-dependent "kernels".
 //
-// Uses Clang RecursiveASTVisitor and Rewriter 
+// Uses Clang RecursiveASTVisitor and Rewriter
 // interfaces
 //
 // Kari Rummukainen 2017-19
-// 
+//
 //------------------------------------------------------------------------------
 #include <sstream>
 #include <iostream>
@@ -133,22 +133,22 @@ class heLppPragmaHandler : public PragmaHandler {
     void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
                       Token &Tok) {
       // Handle the pragma
-    
+
       llvm::errs() << "Got the pragma! name " << getName() << " Token " << Tok.getName() << '\n';
 
       static Token tok_dump_ast;
-      
+
       Token pragma_name = Tok;
       PP.Lex(Tok);  // lex next token
       if (Tok.is(tok::identifier)) {
-        
+
         if (PP.getSpelling(Tok) == "_transformer_cmd_dump_ast_") {
-          
+
           llvm::errs() << "Got " << PP.getSpelling(Tok) << '\n';
           tok_dump_ast.setIdentifierInfo(Tok.getIdentifierInfo());
-          
+
         } else if (PP.getSpelling(Tok) == "dump_ast") {
-          
+
           llvm::errs() << "Dumping ast for next cmd\n";
           std::vector<Token> tokenlist;
           Token t;
@@ -158,12 +158,12 @@ class heLppPragmaHandler : public PragmaHandler {
           t.setLocation(pragma_name.getLocation());
           t.setLength(pragma_name.getLength());
           tokenlist.push_back(t);
-          
-          t.setKind(tok::kw_long);  // 
+
+          t.setKind(tok::kw_long);  //
           t.setLocation(pragma_name.getLocation());
           t.setLength(pragma_name.getLength());
           tokenlist.push_back(t);
-          
+
           t.startToken();
           t.setIdentifierInfo(tok_dump_ast.getIdentifierInfo());  // _transformer_cmd_
           t.setKind(tok::identifier);
@@ -174,14 +174,14 @@ class heLppPragmaHandler : public PragmaHandler {
           t.setKind(tok::semi);
           t.setLocation(pragma_name.getLocation());
           tokenlist.push_back(t);
-         
+
           auto TokenArray = llvm::make_unique<Token[]>(tokenlist.size());
           std::copy(tokenlist.begin(), tokenlist.end(), TokenArray.get());
           PP.EnterTokenStream(std::move(TokenArray), tokenlist.size(),
                               /*DisableMacroExpansion=*/false);
         }
       }
-       
+
     return;
   }
 
@@ -190,15 +190,15 @@ class heLppPragmaHandler : public PragmaHandler {
 static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("heLpp","heL pragma description");
 #endif
 
-reduction get_reduction_type(bool is_assign, 
-                             std::string & assignop, 
+reduction get_reduction_type(bool is_assign,
+                             std::string & assignop,
                              var_info & vi) {
   if (is_assign && (!vi.is_loop_local)) {
     if (assignop == "+=") return reduction::SUM;
     if (assignop == "*=") return reduction::PRODUCT;
   }
   return reduction::NONE;
-}  
+}
 
 /////////////////////////////////////////////////////////////////////////////
 
@@ -249,7 +249,7 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   
   file_buffer_list.back().sbuf.create( &R, r );
   return( &file_buffer_list.back().sbuf );
-}  
+}
 
 // Implementation of the ASTConsumer interface for reading an AST produced
 // by the Clang parser.
@@ -262,12 +262,12 @@ public:
   virtual void HandleTranslationUnit(ASTContext & ctx) override {
     // dump ast here -- HERE THE SPECIALIZATIONS ARE PRESENT!
     // ctx.getTranslationUnitDecl()->dump();
-    
+
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
- 
+
     for (DeclContext::decl_iterator d = tud->decls_begin(); d != tud->decls_end(); d++) {
-      
+
       SourceLocation beginloc = d->getBeginLoc();
       // analyze only user files (these should be named)
       if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
@@ -276,7 +276,7 @@ public:
         // TODO: ensure that we go only through files which are needed!
 
         state::loop_found = false;
-      
+
         // get our own file edit buffer (unless it exists)
         Visitor.set_writeBuf(SM.getFileID(beginloc));
 
@@ -284,25 +284,25 @@ public:
 
         global.location.top = d->getSourceRange().getBegin();  // save this for source location
         global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
-        
+
         Visitor.TraverseDecl(*d);
         // llvm::errs() << "Dumping level " << i++ << "\n";
         if (cmdline::dump_ast) {
           if (!cmdline::no_include || SM.isInMainFile(beginloc))
             d->dump();
         }
-        
+
         // We keep track here only of files which were touched
         if (state::loop_found) {
           set_fid_modified( SM.getFileID(beginloc) );
         }
-      }  
+      }
     }
 
     // check compile errors, as long as we have context -- use diagnostics engine
     auto & DE = ctx.getDiagnostics();
     state::compile_errors_occurred = DE.hasErrorOccurred();
-    
+
   }
 
 
@@ -331,7 +331,7 @@ public:
                           StringRef RelativePath,
                           const Module * Imported,
                           SrcMgr::CharacteristicKind FileType) { }
-  
+
   // This triggers when the preprocessor changes file (#include, exit from it)
   // Use this to track the chain of non-system include files
   void FileChanged(SourceLocation Loc, FileChangeReason Reason, SrcMgr::CharacteristicKind FileType,
@@ -344,7 +344,7 @@ public:
         !SM.isInMainFile(Loc) ) {
 
       llvm::errs() << "FILE CHANGED to " << SM.getFilename(Loc) << '\n';
-      
+
     }
   }
 
@@ -362,7 +362,7 @@ class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}
 
-  virtual bool BeginSourceFileAction(CompilerInstance &CI) override {  
+  virtual bool BeginSourceFileAction(CompilerInstance &CI) override {
     llvm::errs() << "** Starting operation on source file "+getCurrentFile()+"\n";
 
 #ifdef NEED_PP_CALLBACKS
@@ -374,11 +374,11 @@ public:
 #endif
 
     global.main_file_name = getCurrentFile();
-    
+
     file_id_list.clear();
     file_buffer_list.clear();
     field_decl = field_storage_type_decl = nullptr;
-    
+
     return (true);
   }
 
@@ -414,14 +414,14 @@ public:
         // SourceRange r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
         srcBuf * buf_from = get_file_buffer(TheRewriter, f);
         // TheRewriter.InsertText(SR.getBegin(),
-        buf->insert(SR.getBegin(), 
+        buf->insert(SR.getBegin(),
                     "// start include "+includestr
                     + "---------------------------------\n"
                     + buf_from->dump() +
                     "// end include "+includestr
                     + "---------------------------------\n",
                     false);
-        
+
       }
     }
   }
@@ -444,7 +444,7 @@ public:
     SourceManager &SM = TheRewriter.getSourceMgr();
     llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
     // << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
-    
+
     // Now emit rewritten buffers.
 
     if (!cmdline::no_output) {
@@ -460,23 +460,23 @@ public:
 
         insert_includes_to_file_buffer(SM.getMainFileID());
       }
-    
+
       if (!state::compile_errors_occurred) {
         write_output_file( cmdline::output_filename,
                            get_file_buffer(TheRewriter,SM.getMainFileID())->dump() );
-        
-        if (cmdline::function_spec_no_inline || cmdline::method_spec_no_inline) 
+
+        if (cmdline::function_spec_no_inline || cmdline::method_spec_no_inline)
           write_specialization_db();
       } else {
         llvm::errs() << program_name << ": not writing output due to compile errors\n";
       }
     }
-    
+
     file_buffer_list.clear();
     file_id_list.clear();
 
     // EndSourceFile();
-        
+
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -507,7 +507,7 @@ void get_target_struct(codetype & target) {
     target.kernelize = false;
     target.openacc = false;
   }
-  
+
   // TODO: this will have to be made automatic, depending on target
   if (cmdline::func_attribute) target.flag_loop_function = true;
   else target.flag_loop_function = false;
@@ -521,14 +521,14 @@ int main(int argc, const char **argv) {
   // av takes over from argv
   const char **av = new const char *[argc+2];
   argc = rearrange_cmdline(argc, argv, av);
-  
+
   OptionsParser op(argc, av, TransformerCat);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
-  
+
   // We have command line args, possibly do something with them
   get_target_struct(target);
   if (cmdline::syntax_only) cmdline::no_output = true;
-  
+
   // ClangTool::run accepts a FrontendActionFactory, which is then used to
   // create new objects implementing the FrontendAction interface. Here we use
   // the helper newFrontendActionFactory to create a default factory that will

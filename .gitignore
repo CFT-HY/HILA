@@ -1,5 +1,5 @@
 *.o
 *.cpt
-.vscode/
-settings.json
 build/transformer
+settings.json
+.vscode/

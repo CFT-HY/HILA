@@ -119,22 +119,7 @@ forsites(EVEN){
 
 ## What doesn't work (as expected)
 
-Direction loops in forsites environments:
-~~~ C++
-forsites(ALL){
-    foralldir(d){
-        my_field[X] += my_other_field[X+d];
-    }
-}
-~~~
-
-Adding two fields together:
-~~~ C++
-field<double> s1, s2, s3;
-s1 = s2 + s3;
-~~~
-
-Method calls in loops that change the field element.
+Field element method calls in loops that change the element.
 
 Referring to the same direction twice in different field references causes an error in cuda kernel parameters.
 
@@ -160,12 +145,11 @@ If you're on a machine with GPU's, you can test the GPU transformations with:
      * Test also things that fail. The test basically defines how things should work.
  1. Extend both to support:
      * Fourier transform of field variable
-     * If statements in a loop
+     * If (or where) statements in a loop
      * Reduction on dimension (so f(t) = sum_x g(x,t))
      * Array-of-Struct-of-Arrays layout
      * MPI
  1. Implement OpenACC once the compiler version is updated
  1. Get rid of NDIM
- 1. Fix direction loops
  1. Extend field to allow lattice as input
  1. Document the library

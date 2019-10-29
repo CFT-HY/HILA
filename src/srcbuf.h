@@ -115,7 +115,15 @@ public:
   int insert(SourceLocation sl, const std::string & s,
              bool incl_before = false, bool indent = false);
   int insert(Expr *e, const std::string & s, bool incl_before = false, bool indent = false);
+  int insert_above(int i, const std::string & s, bool incl_before, bool do_indent);
+  int insert_above(SourceLocation sl, const std::string & s, bool incl_before, bool do_indent);
+  int insert_above(Expr *e, const std::string & s, bool incl_before, bool do_indent);
   
+  int comment_line(int i);
+  int comment_line(SourceLocation sl);
+  int comment_line(Expr *e);
+
+
   // replace is a remove + insert pair, should write with a single operation
   // return: next element from remove
   int replace( int i1, int i2, const std::string &s );
@@ -136,6 +144,8 @@ public:
                      const std::vector<std::string> &a,
                      const std::vector<std::string> &b);    
   int replace_token(int start, int end, const std::string & a, const std::string & b );
+  int replace_tokens(const std::vector<std::string> &a,
+                     const std::vector<std::string> &b);
 
 };
 
