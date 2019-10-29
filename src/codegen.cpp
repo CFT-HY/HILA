@@ -299,32 +299,45 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
   for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-    for (dir_ptr & d : l.dir_list) if(d.count > 0){
-        code << type_name << " "  << l.loop_ref_name << "_" << get_stmt_str(d.e) << ";\n";
-      }
-    code << type_name << " "  << l.loop_ref_name << ";\n";
-    code << "std::array<bool, NDIRS+1> " << l.new_name << "_read;\n";
-    code << l.new_name << "_read.fill(true);\n";
 
+    // First check for direction references. If any found, create list of temp
+    // variables
+    for (dir_ptr & d : l.dir_list) if(d.count > 0){
+      code << type_name << " "  << l.loop_ref_name << "_d[NDIRS];\n";
+      code << "std::array<bool, NDIRS> " << l.new_name << "_read_d;\n";
+      code << l.new_name << "_read_d.fill(true);\n";
+      break; // Only need one direction reference
+    }
+    // Check for references without a direction. If found, add temp variable
+    for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
+      code << type_name << " "  << l.loop_ref_name << ";\n";
+      code << "bool "  << l.loop_ref_name << "_read = true;\n";
+    }
+
+    // Add a getter in above each field reference
     for( field_ref *r : l.ref_list ){
       Expr *d = r->dirExpr;
+      
+      // If reference has a direction, use the temp list
       if(d){
         std::string dstring = get_stmt_str(d);
-        std::string is_read = l.new_name + "_read["+dstring+"]";
+        std::string is_read = l.new_name + "_read_d["+dstring+"]";
         loopBuf.insert_above(r->fullExpr, 
           "if("  + is_read + ") {"
-          + l.loop_ref_name + "_" + dstring + "=" + get_stmt_str(r->nameExpr) 
+          + l.loop_ref_name + "_d[" + dstring + "]=" + get_stmt_str(r->nameExpr) 
           + ".get_value_at(" + "lattice->neighb[" + dstring + "][" 
           + looping_var + "]);"
           + is_read + "=false;}", true, true);
-      } else if(r->is_read) {
-        std::string is_read = l.new_name + "_read[NDIRS]";
+      
+      } else if(r->is_read) { // No direction, use the temp variable
+      
+        std::string is_read = l.new_name + "_read";
         loopBuf.insert_above(r->fullExpr, 
           "if("  + is_read + ") {"
           + l.loop_ref_name + "=" + get_stmt_str(r->nameExpr) 
           + ".get_value_at(" + looping_var + "); "
           + is_read + "=false;}", true, true);
-    }
+      }
 
     }
   }
