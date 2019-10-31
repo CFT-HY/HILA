@@ -18,6 +18,12 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
+#ifdef USE_MPI
+#include <mpi.h>
+#else
+#define VANILLA
+#endif
+
 #define EVENFIRST
 #define layout_SOA
 
@@ -28,10 +34,6 @@ using real_t = float;
 // Have this defined in the program?
 #ifndef NDIM
   #define NDIM 4
-#endif
-
-#ifndef USE_MPI
-  #define VANILLA
 #endif
 
 // Direction and parity
@@ -117,6 +119,9 @@ inline location coordinates(parity X){location l; return l;};
 inline void finishrun() {
   exit(1);
 }
+#else
+int mynode();
+int numnodes();
 #endif
 
 #define MAX_GATHERS 1000

@@ -548,9 +548,7 @@ public:
 
 
   // Communication routines
-  #ifndef USE_MPI
-  void start_move(direction d, parity p) const {}
-  #endif
+  void start_move(direction d, parity p) const;
 };
 
 
@@ -696,6 +694,21 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 //   operator T() { return get(); }
   
 // };
+
+
+
+
+#ifndef USE_MPI
+template<typename T>
+void field<T>::start_move(direction d, parity p) const {}
+#else
+template<typename T>
+void field<T>::start_move(direction d, parity p) const{
+  
+}
+#endif
+
+
 
 
 #endif

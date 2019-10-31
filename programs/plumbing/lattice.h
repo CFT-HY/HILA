@@ -96,6 +96,7 @@ private:
 public:
 
   unsigned * neighb[NDIRS];
+  unsigned char *wait_arr_;
 
   #ifdef CUDA
   device_lattice_info device_info;
@@ -173,6 +174,10 @@ public:
     return device_info.site_index_list[idx];
   }
 
+  #endif
+
+  #ifdef USE_MPI
+  //void initialize_wait_arrays();
   #endif
 
   /* Communication routines. Define here in lattice? */

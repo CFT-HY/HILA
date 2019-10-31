@@ -1,5 +1,5 @@
 
-#include "globals.h"
+#include "../plumbing/globals.h"
 
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
@@ -17,11 +17,12 @@ void lattice_struct::setup(int siz[NDIM]) {
 
   setup_layout();
   setup_nodes();
+  /* then, set up the comm arrays */
   create_std_gathers();
+  /* Setup required for local_sites_first */
+  //make_lattice_arrays(); 
 
 #ifdef USE_MPI
-  /* then, set up the comm arrays */
-  make_lattice_arrays();
 
   /* Initialize wait_array structures */
   initialize_wait_arrays();
@@ -454,3 +455,38 @@ void lattice_struct::create_std_gathers()
   setup_lattice_device_info();
   #endif
 }
+
+
+
+/************************************************************************/
+
+/* this formats the wait_array, used by forallsites_waitA()
+ * should be made as fast as possible!
+ *
+ * wait_array[i] contains a bit at position 1<<dir if nb(dir,i) is out
+ * of lattice.
+ * Site OK if ((wait_arr ^ xor_mask ) & and_mask) == 0
+ */
+
+
+void lattice_struct::initialize_wait_arrays()
+{
+  int i,dir;
+
+  /* Allocate here the mask array needed for forallsites_wait
+   * This will contain a bit at location dir if the neighbour
+   * at that dir is out of the local volume
+   */
+
+  wait_arr_  = (unsigned char *)malloc( this_node.sites * sizeof(unsigned char) );
+
+  for (int i=0; i<this_node.sites; i++) {
+    wait_arr_[i] = 0;    /* basic, no wait */
+    foralldir(dir) {
+      int odir = opp_dir(dir);
+      if ( neighb[dir][i] >= this_node.sites ) wait_arr_[i] = wait_arr_[i] | (1<<dir) ;
+      if ( neighb[odir][i]>= this_node.sites ) wait_arr_[i] = wait_arr_[i] | (1<<odir) ;
+    }
+  }
+}
+
