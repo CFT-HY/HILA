@@ -5,13 +5,15 @@
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
 
 
-void lattice_struct::setup(int siz[NDIM]) {
+void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
   l_volume = 1;
   for (int i=0; i<NDIM; i++) {
     l_size[i] = siz[i];
     l_volume *= siz[i];
   }
   
+  initialize_machine(argc, argvp);
+
   this_node.index = mynode();
   nodes.number = numnodes();
 
@@ -28,6 +30,11 @@ void lattice_struct::setup(int siz[NDIM]) {
   initialize_wait_arrays();
 #endif
 
+}
+
+void lattice_struct::setup(int siz[NDIM]) {
+  int argc=0; char **argv;
+  setup(siz, argc, &argv);
 }
 
 
@@ -225,7 +232,7 @@ void lattice_struct::setup_nodes() {
 ////////////////////////////////////////////////////////////////////////
 void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice)
 {
-
+  
   index = mynode();
 
   foralldir(d) {
@@ -432,7 +439,8 @@ void lattice_struct::create_std_gathers()
         int n=0;
         for (parity par : {ODD, EVEN}) {
 	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && nparity[i] == par) {
-	          (s.sitelist)[n++] = here[i];
+	          s.sitelist.resize(n+1);
+            (s.sitelist)[n++] = here[i];
 	        }
           if (par == ODD && n != s.evensites) {
             output0 << "Parity odd error 3";
@@ -489,4 +497,5 @@ void lattice_struct::initialize_wait_arrays()
     }
   }
 }
+
 

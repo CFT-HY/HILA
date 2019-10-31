@@ -20,9 +20,9 @@
 
 #ifdef USE_MPI
 #include <mpi.h>
-#else
-#define VANILLA
 #endif
+
+#define VANILLA
 
 #define EVENFIRST
 #define layout_SOA
@@ -113,15 +113,28 @@ inline location coordinates(parity X){location l; return l;};
 
 
 
+// Global functions: setup
+void initial_setup(int & argc, char ***argvp);
+
+// Communication functions
 #ifndef USE_MPI
+
+// Trivial, no MPI
 #define mynode() 0
 #define numnodes() 1
+inline void initialize_machine(int & argc, char ***argvp) {}
 inline void finishrun() {
   exit(1);
 }
+
 #else
+
+// Basic MPI implementation
 int mynode();
 int numnodes();
+void finishrun();
+void initialize_machine(int & argc, char ***argvp);
+
 #endif
 
 #define MAX_GATHERS 1000

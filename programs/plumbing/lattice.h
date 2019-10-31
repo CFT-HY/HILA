@@ -115,7 +115,12 @@ public:
   #elif NDIM == 1
   void setup(int nx); 
   #endif
-  
+
+  void setup(int siz[NDIM], int & argc, char ***argvp);
+
+
+  void teardown();
+
   int size(direction d) { return l_size[d]; }
   int size(int d) { return l_size[d]; }
   long long volume() { return l_volume; }
@@ -177,7 +182,7 @@ public:
   #endif
 
   #ifdef USE_MPI
-  //void initialize_wait_arrays();
+  void initialize_wait_arrays();
   #endif
 
   /* Communication routines. Define here in lattice? */
