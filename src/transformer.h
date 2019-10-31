@@ -15,6 +15,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "srcbuf.h"
+
 // set namespaces globally
 using namespace clang;
 //using namespace clang::driver;
@@ -195,7 +196,6 @@ extern ClassTemplateDecl * field_storage_type_decl;   // Ptr to field primary de
 extern const std::string field_element_type;
 extern const std::string field_type;
 
-// global list decls. for functions
 // TODO: THESE SHOULD PROBABLY BE CHANGED INTO vectors,
 // but they contain pointers to list elements.  pointers to vector elems are not good!
 extern std::list<field_ref> field_ref_list;

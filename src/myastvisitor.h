@@ -14,6 +14,7 @@
 #include "stringops.h"
 #include "srcbuf.h"
 #include "transformer.h"
+#include "specialization_db.h"
 
 class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 
