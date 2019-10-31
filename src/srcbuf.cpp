@@ -14,14 +14,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
 
-using namespace clang;
-//using namespace clang::driver;
-using namespace clang::tooling;
-
-
 #include "srcbuf.h"
-#include "myastvisitor.h"
-
 
 int srcBuf::get_offset( SourceLocation s ) {
   SourceManager &SM = myRewriter->getSourceMgr();
