@@ -1,11 +1,6 @@
 #include <fstream>
 #include <ctime>
-
 #include "transformer.h"
-#include "stringops.h"
-#include "srcbuf.h"
-
-extern global_state global;
 
 bool write_output_file( const std::string & filename, const std::string & buf ) {
   

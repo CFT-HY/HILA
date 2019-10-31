@@ -30,6 +30,8 @@
 
 // node is Stmt, Decl or Expr - depending on the type of context
 
+using namespace clang;
+
 class srcBuf {
 private:
   std::string buf;

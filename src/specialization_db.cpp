@@ -36,10 +36,6 @@ static std::vector<spec> specializations = {};
 
 static bool db_loaded = false;
 
-// global struct
-extern global_state global;
-
-
 void load_spec_db() {
   std::ifstream db(specialization_db_filename);
   if (db.is_open()) {
