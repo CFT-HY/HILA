@@ -187,12 +187,11 @@ public:
 
   /* Communication routines. Define here in lattice? */
   template <typename T>
-  void reduce_node_sum(T value, bool distribute);
+  void reduce_node_sum(T & value, bool distribute);
 
   template <typename T>
-  void reduce_node_product(T value, bool distribute);
+  void reduce_node_product(T & value, bool distribute);
 
-  
 };
 
 /// global handle to lattice

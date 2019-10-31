@@ -21,7 +21,7 @@ int main(){
     assert(d2==XUP);
     #endif
 
-    cmplx<double> sum = 0;
+    double sum = 0;
     field<cmplx<double>> s1, s2, s3;
     field<cmplx<double>> s4[3];
 
@@ -37,9 +37,9 @@ int main(){
 
     // Test field assignment to field element (reduction)
     onsites(ALL){
-        sum+=s1[X];
+        sum+=s1[X].re;
     }
-    assert(sum.re==2*(double)lattice->volume());
+    assert(sum==2*(double)lattice->volume());
     s1=0; s2=0; s3=0;
     sum = 0;
 
@@ -51,9 +51,9 @@ int main(){
     s1[ALL] = s2[X] + s3[X];
 
     onsites(ALL){
-        sum+=s1[X];
+        sum+=s1[X].re;
     }
-    assert(sum.re==(double)lattice->volume());
+    assert(sum==(double)lattice->volume());
 
     foralldir(d){
         onsites(ODD){
@@ -71,7 +71,7 @@ int main(){
         double diff = s1[X].re - (NDIM+1);
 	    sum += diff*diff;
     }
-	assert(sum.re==0);
+	assert(sum==0);
 
 
     // Test foralldir loop in a onsites environment
@@ -102,7 +102,7 @@ int main(){
         double diff = (s2[X]-s3[X]).re;
         sum += diff*diff;
     }
-    assert(sum.re == 0);
+    assert(sum == 0);
 
 
     // Test referring to an array of fields
@@ -114,7 +114,7 @@ int main(){
 
     sum = 0;
     onsites(ALL){
-        sum += s4[2][X]*s4[2][X];
+        sum += (s4[2][X]*s4[2][X]).re;
     }
-    assert(sum.re == 0);
+    assert(sum == 0);
 }
