@@ -9,12 +9,18 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-//#include "llvm/Support/raw_ostream.h"
 
-#include "stringops.h"
-#include "srcbuf.h"
-#include "transformer.h"
-#include "specialization_db.h"
+#include "srcbuf.h" //srcbuf class interface 
+#include "transformer.h" //global vars needed  
+
+//////////////////////////////////////////////
+/// myastvisitor.h : overloaded ASTVisitor for 
+/// generating code from AST
+///
+/// Implemented by:
+/// - myastvisitor.cpp
+/// - codegen.cpp 
+//////////////////////////////////////////////
 
 class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 

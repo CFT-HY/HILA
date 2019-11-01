@@ -36,7 +36,6 @@ struct codetype {
   bool flag_loop_function;
 };
 
-
 // collection of variables holding the state of parsing - definition in transformer.cpp
 namespace state {
   extern unsigned skip_children; //= 0;
@@ -96,7 +95,6 @@ struct global_state {
     SourceLocation loop;
   } location;
 };
-
 
 // struct field_info;
 

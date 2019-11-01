@@ -1,5 +1,6 @@
 #include "myastvisitor.h"
 #include "transformer.h"
+#include "stringops.h"
 #include "specialization_db.h"
 #include "clang/Analysis/CallGraph.h"
 #include <sstream>
@@ -7,8 +8,7 @@
 #include <string>
 
 /////////
-/// A part of the implementation of myastvisitor methods
-/// Code generation functions found in codegen
+/// Implementation of most myastvisitor methods
 /////////
 
 //function used for development

@@ -27,7 +27,7 @@
 #include "myastvisitor.h"
 #include "specialization_db.h"
 
-//definitions for global variables declared in transformer.h
+//definitions for global variables
 ClassTemplateDecl * field_decl = nullptr; 
 ClassTemplateDecl * field_storage_type_decl = nullptr;   
 const std::string field_element_type = "field_element<";
@@ -51,9 +51,9 @@ bool state::compile_errors_occurred = false;
 bool state::check_loop = false;
 bool state::no_device_code = false;
 
+///definition of command line options
 llvm::cl::OptionCategory TransformerCat(program_name);
 
-  // command line options
 llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
           llvm::cl::cat(TransformerCat));
 
@@ -96,7 +96,6 @@ llvm::cl::opt<std::string> cmdline::output_filename("o",
                   llvm::cl::value_desc("name"),
                   llvm::cl::cat(TransformerCat));
 
-
 llvm::cl::opt<bool> cmdline::kernel("target:vanilla-kernel",
          llvm::cl::desc("Generate kernels"),
          llvm::cl::cat(TransformerCat));
@@ -117,7 +116,7 @@ llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
          llvm::cl::desc("write pragmas/attributes to functions called from loops"),
          llvm::cl::cat(TransformerCat));
 
-CompilerInstance *myCompilerInstance;
+CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
 loop_parity_struct loop_parity;
 codetype target;
