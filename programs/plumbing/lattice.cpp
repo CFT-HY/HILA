@@ -1,32 +1,40 @@
 
-#include "globals.h"
+#include "../plumbing/globals.h"
 
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
 
 
-void lattice_struct::setup(int siz[NDIM]) {
+void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
   l_volume = 1;
   for (int i=0; i<NDIM; i++) {
     l_size[i] = siz[i];
     l_volume *= siz[i];
   }
   
+  initialize_machine(argc, argvp);
+
   this_node.index = mynode();
   nodes.number = numnodes();
 
   setup_layout();
   setup_nodes();
+  /* then, set up the comm arrays */
   create_std_gathers();
+  /* Setup required for local_sites_first */
+  //make_lattice_arrays(); 
 
 #ifdef USE_MPI
-  /* then, set up the comm arrays */
-  make_lattice_arrays();
 
   /* Initialize wait_array structures */
   initialize_wait_arrays();
 #endif
 
+}
+
+void lattice_struct::setup(int siz[NDIM]) {
+  int argc=0; char **argv;
+  setup(siz, argc, &argv);
 }
 
 
@@ -224,7 +232,7 @@ void lattice_struct::setup_nodes() {
 ////////////////////////////////////////////////////////////////////////
 void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice)
 {
-
+  
   index = mynode();
 
   foralldir(d) {
@@ -431,7 +439,8 @@ void lattice_struct::create_std_gathers()
         int n=0;
         for (parity par : {ODD, EVEN}) {
 	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && nparity[i] == par) {
-	          (s.sitelist)[n++] = here[i];
+	          s.sitelist.resize(n+1);
+            (s.sitelist)[n++] = here[i];
 	        }
           if (par == ODD && n != s.evensites) {
             output0 << "Parity odd error 3";
@@ -454,3 +463,39 @@ void lattice_struct::create_std_gathers()
   setup_lattice_device_info();
   #endif
 }
+
+
+
+/************************************************************************/
+
+/* this formats the wait_array, used by forallsites_waitA()
+ * should be made as fast as possible!
+ *
+ * wait_array[i] contains a bit at position 1<<dir if nb(dir,i) is out
+ * of lattice.
+ * Site OK if ((wait_arr ^ xor_mask ) & and_mask) == 0
+ */
+
+
+void lattice_struct::initialize_wait_arrays()
+{
+  int i,dir;
+
+  /* Allocate here the mask array needed for forallsites_wait
+   * This will contain a bit at location dir if the neighbour
+   * at that dir is out of the local volume
+   */
+
+  wait_arr_  = (unsigned char *)malloc( this_node.sites * sizeof(unsigned char) );
+
+  for (int i=0; i<this_node.sites; i++) {
+    wait_arr_[i] = 0;    /* basic, no wait */
+    foralldir(dir) {
+      int odir = opp_dir(dir);
+      if ( neighb[dir][i] >= this_node.sites ) wait_arr_[i] = wait_arr_[i] | (1<<dir) ;
+      if ( neighb[odir][i]>= this_node.sites ) wait_arr_[i] = wait_arr_[i] | (1<<odir) ;
+    }
+  }
+}
+
+
