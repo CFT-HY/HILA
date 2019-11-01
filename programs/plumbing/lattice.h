@@ -96,6 +96,7 @@ private:
 public:
 
   unsigned * neighb[NDIRS];
+  unsigned char *wait_arr_;
 
   #ifdef CUDA
   device_lattice_info device_info;
@@ -114,7 +115,12 @@ public:
   #elif NDIM == 1
   void setup(int nx); 
   #endif
-  
+
+  void setup(int siz[NDIM], int & argc, char ***argvp);
+
+
+  void teardown();
+
   int size(direction d) { return l_size[d]; }
   int size(int d) { return l_size[d]; }
   long long volume() { return l_volume; }
@@ -175,14 +181,17 @@ public:
 
   #endif
 
+  #ifdef USE_MPI
+  void initialize_wait_arrays();
+  #endif
+
   /* Communication routines. Define here in lattice? */
   template <typename T>
-  void reduce_node_sum(T value, bool distribute);
+  void reduce_node_sum(T & value, bool distribute);
 
   template <typename T>
-  void reduce_node_product(T value, bool distribute);
+  void reduce_node_product(T & value, bool distribute);
 
-  
 };
 
 /// global handle to lattice
