@@ -35,6 +35,12 @@ run_c(){
     check run
 }
 
+run_mpi_c(){
+    echo mpirun -n $2 ./${1}.exe
+    mpirun -n $2 ./${1}.exe
+    check run $2
+}
+
 # Get a list from command line arguments or list all test files
 if [ "$#" -gt 0 ]; then
     tests=( "$@" )
@@ -42,7 +48,6 @@ else
     tests=$(ls test_*.cpp  )
 fi
 
-make -f ${MAKEFILE} cleanall
 for D in 1 2 3 4 ; do
   sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' Makefile
   for testfile in $tests; do
@@ -51,10 +56,14 @@ for D in 1 2 3 4 ; do
     transform_c ${test}.cpp
     compile_c ${test}
     run_c ${test}
+    run_mpi_c ${test} 1
+    run_mpi_c ${test} 2
+    run_mpi_c ${test} 4
     rm ${test}.exe ${test}.cpt
   done
   make -f ${MAKEFILE} clean
 done
+
 
 if [ ${fails} -eq 0 ]; then
 	echo -e "\e[36m All tests passed \e[39m"

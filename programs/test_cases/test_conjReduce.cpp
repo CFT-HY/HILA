@@ -64,5 +64,6 @@ int main(){
     }
 
     assert(((int) dsum) == lattice->volume()*2);
-    return 0;
+    
+    finishrun();
 }

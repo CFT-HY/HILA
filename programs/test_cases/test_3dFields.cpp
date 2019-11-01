@@ -117,4 +117,6 @@ int main(){
         sum += (s4[2][X]*s4[2][X]).re;
     }
     assert(sum == 0);
+
+    finishrun();
 }
