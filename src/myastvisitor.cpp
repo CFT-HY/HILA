@@ -131,7 +131,7 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
 
 /// -- Handler utility functions -- 
 
-// This routine goes through one field reference and pushes the info to lists
+/// This routine goes through one field reference and pushes the info to lists
 bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound) {
     
   e = e->IgnoreParens();
@@ -372,7 +372,11 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
   return 0;
 }
 
-// start dealing with the loop statement
+///////////////////////////////////////////////////////////////////////////////
+/// handle_full_loop_stmt() is the starting point for the analysis of all
+/// "parity" -loops
+///////////////////////////////////////////////////////////////////////////////
+
 bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // init edit buffer
   // Buf.create( &TheRewriter, ls );
@@ -425,7 +429,11 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   return true;
 }
 
-// This handles statements within field loops
+////////////////////////////////////////////////////////////////////////////////
+///  act on statements within the parity loops.  This is called 
+///  from VisitStmt() if the status state::in_loop_body is true
+////////////////////////////////////////////////////////////////////////////////
+
 bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
   // This keeps track of the assignment to field
@@ -454,7 +462,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     
     // Avoid treating constexprs as variables
      if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
-       state::skip_children = 1;
+       state::skip_children = 1;   // nothing to be done
        return true;
      }
     
@@ -1046,8 +1054,11 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
     var_decl_list.pop_back();
 }
 
-// VisitStmt is called for each statement in AST.  Thus, when traversing the
-// AST or part of it we always start from here
+///////////////////////////////////////////////////////////////////////////////
+/// VisitStmt is called for each statement in AST.  Thus, when traversing the
+/// AST or part of it we start here, and branch off depending on the statements
+/// and state flags
+///////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::VisitStmt(Stmt *s) {
 
@@ -1065,6 +1076,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   }
     
   // loop of type "onsites(p)"
+  // Defined as a macro, needs special macro handling
   if (isa<ForStmt>(s)) {
 
     ForStmt *f = cast<ForStmt>(s);
