@@ -71,11 +71,7 @@ private:
     
   } nodes;
 
-  struct comm_struct {
-
-  };
-  
-  std::vector<comm_struct> commlist;
+public:
 
   struct comm_node_struct {
     unsigned index;
@@ -90,10 +86,8 @@ private:
     std::vector<comm_node_struct> from_node;
     std::vector<comm_node_struct> to_node;
   };
-  
-  std::vector<comminfo_struct> comminfo;
 
-public:
+  std::vector<comminfo_struct> comminfo;
 
   unsigned * neighb[NDIRS];
   unsigned char *wait_arr_;

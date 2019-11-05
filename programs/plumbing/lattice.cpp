@@ -287,7 +287,7 @@ void lattice_struct::create_std_gathers()
     neighb[d] = (unsigned *)allocate_field_mem(this_node.sites * sizeof(unsigned));
   }
   
-  comminfo.resize(MAX_GATHERS);
+  comminfo.resize(NDIRS);
   for (auto & c : comminfo) c.label = -1;  // reset
   unsigned c_offset = this_node.sites;  // current offset in field-arrays
 
@@ -404,7 +404,6 @@ void lattice_struct::create_std_gathers()
           if (par == ODD) off += fn.evensites;
 	        // finally, root indices according to offset
 	        for (int k=0; k<n; k++) neighb[d][here[itmp[k]]] = off + k;
-
 	      }
         
       }
@@ -431,15 +430,13 @@ void lattice_struct::create_std_gathers()
         s.evensites = fn[j].oddsites;
         s.oddsites = fn[j].evensites;
 
-        comminfo[od].to_node.push_back(s);
-
 	      // now, initialize sitelist -- Now, we first want ODD parity, since
 	      // this is what even gather asks for!
       
         int n=0;
+        s.sitelist.resize(s.sites);
         for (parity par : {ODD, EVEN}) {
 	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && nparity[i] == par) {
-	          s.sitelist.resize(n+1);
             (s.sitelist)[n++] = here[i];
 	        }
           if (par == ODD && n != s.evensites) {
@@ -451,6 +448,9 @@ void lattice_struct::create_std_gathers()
             exit(1);
           }
 	      }
+
+        comminfo[od].to_node.push_back(s);
+
       }
     }
   } /* directions */

@@ -226,8 +226,8 @@ template <typename T>
 class field_storage {
   private:
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
-    real_t * fieldbuf;
   public:
+    real_t * fieldbuf;
 
     #ifdef layout_SOA
     #ifndef CUDA
@@ -546,7 +546,7 @@ public:
 
 
   // Communication routines
-  void start_move(direction d, parity p) const;
+  void start_move(direction d, parity p);
 };
 
 
@@ -695,15 +695,74 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 
 
 
-
+/* Communication routines for fields */
 #ifndef USE_MPI
+
+///* start_move(): Communicate the field from direction d 
+///  No mpi, trivial implementation 
 template<typename T>
-void field<T>::start_move(direction d, parity p) const {}
+void field<T>::start_move(direction d, parity p) {}
+
 #else
+
+#include "../plumbing/comm_mpi.h"
+
+///* start_move(): Communicate the field from direction d 
+///  A simple implementation that waits completes the communication
+///  in the function. Uses accessors to prevent dependency on the 
+///  layout
 template<typename T>
-void field<T>::start_move(direction d, parity p) const{
-  
+void field<T>::start_move(direction d, parity par) {
+  constexpr int size = sizeof(T);
+
+  lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+  std::vector<char *> receive_buffer;
+  std::vector<MPI_Request> request;
+  int n = 0;
+  receive_buffer.resize(ci.from_node.size());
+  request.resize(ci.from_node.size());
+
+  /* HANDLE RECEIVES: loop over nodes which will send here */
+  for( lattice_struct::comm_node_struct from_node : ci.from_node ){
+    receive_buffer[n] = (char *)malloc( from_node.sites*size );
+
+    MPI_Irecv( receive_buffer[n], from_node.sites*size, MPI_BYTE,
+	         from_node.index, n, mpi_comm_lat, &request[n] );
+    n++;
+  }
+
+  /* HANDLE SENDS - note: mp points to right mbuf list element */
+  n=0;
+  for( lattice_struct::comm_node_struct to_node : ci.to_node ){
+    char * buffer = (char *)malloc( to_node.sites*size );
+    /* gather data into the buffer */
+    for (int j=0; j<to_node.sites; j++) {
+      T element = get_value_at(to_node.sitelist[j]);
+      memcpy( buffer + j*size, (char *) (&element), size );
+    }
+
+    MPI_Send( buffer, to_node.sites*size, MPI_BYTE, to_node.index, n,  mpi_comm_lat);
+
+    std::free(buffer);
+    n++;
+  }
+
+  /* Wait for the data here */
+  n=0;
+  for( lattice_struct::comm_node_struct from_node : ci.from_node ){
+    MPI_Status status;
+    MPI_Wait(&request[n], &status);
+
+    char * buffer = receive_buffer[n];
+    for (int j=0; j<from_node.sites; j++) {
+      T element = *((T*) ( buffer + j*size ));
+      set_value_at(element, from_node.buffer+j);
+    }
+      
+    n++;
+  }
 }
+
 #endif
 
 
