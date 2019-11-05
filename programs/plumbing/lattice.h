@@ -170,7 +170,7 @@ public:
 
   #else
   location coordinates( unsigned idx ){
-    return device_info.site_index_list[idx];
+    return device_info.d_coordinates[idx];
   }
 
   #endif
