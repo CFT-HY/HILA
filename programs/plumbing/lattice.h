@@ -12,6 +12,7 @@
 #include <assert.h>
 #include "../plumbing/defs.h"
 #include "../plumbing/memory.h"
+#include "../plumbing/inputs.h"
 
 using location = std::array<int,NDIM>;
 struct node_info {
@@ -111,7 +112,7 @@ public:
   #endif
 
   void setup(int siz[NDIM], int & argc, char ***argvp);
-
+  void setup(const inputs &); //TODO: setup field from inputs reference
 
   void teardown();
 
