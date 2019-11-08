@@ -759,7 +759,7 @@ void field<T>::start_move(direction d, parity par) {
     receive_buffer[n] = (char *)malloc( sites*size );
 
     MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE,
-	         from_node.index, n, mpi_comm_lat, &request[n] );
+	         from_node.index, n, lattice->mpi_comm_lat, &request[n] );
     n++;
   }
 
@@ -774,7 +774,7 @@ void field<T>::start_move(direction d, parity par) {
       memcpy( buffer + j*size, (char *) (&element), size );
     }
 
-    MPI_Send( buffer, sites*size, MPI_BYTE, to_node.index, n,  mpi_comm_lat);
+    MPI_Send( buffer, sites*size, MPI_BYTE, to_node.index, n,  lattice->mpi_comm_lat);
 
     std::free(buffer);
     n++;
