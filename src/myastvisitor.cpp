@@ -131,7 +131,10 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
 
 /// -- Handler utility functions -- 
 
-/// This routine goes through one field reference and pushes the info to lists
+//////////////////////////////////////////////////////////////////////////////
+/// Go through one field reference within parity loop and store relevant info
+//////////////////////////////////////////////////////////////////////////////
+
 bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound) {
     
   e = e->IgnoreParens();
