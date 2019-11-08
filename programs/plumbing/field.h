@@ -426,7 +426,7 @@ public:
 
   bool is_allocated() const { return (fs != nullptr); }
   
-  // call this BEFORE the var is written to
+  /// call this BEFORE the var is written to
   void mark_changed(const parity p) {
     if (fs == nullptr) allocate();
     else {
@@ -436,7 +436,23 @@ public:
       for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
     }
   }
+
+  /// Mark the field parity fetched from direction
+  void mark_fetched(int dir, const parity p) {
+    char pc = static_cast<char>(p);
+    assert(p == EVEN || p == ODD || p == ALL);
+    unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
+    fs->is_fetched[dir] |= up;
+  }
+
+  /// Check if the field has been changed since the previous communication
+  bool is_fetched( int dir, parity par){
+    assert(dir < NDIRS);
+    int par_int = (int)par;
+    return (fs->is_fetched[dir] ^ par_int) != 0;
+  }
   
+
   void assert_is_initialized() {
     if (fs == nullptr) {
       std::cout << "field variable used before it is assigned to\n";
@@ -697,13 +713,21 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 
 /* Communication routines for fields */
 #ifndef USE_MPI
+/* No MPI, trivial implementations */
 
-///* start_move(): Communicate the field from direction d 
-///  No mpi, trivial implementation 
+#include "../plumbing/comm_vanilla.h"
+
+///* start_move(): Trivial implementation when no MPI is used
 template<typename T>
 void field<T>::start_move(direction d, parity p) {}
 
+
 #else
+/* MPI implementations
+ * For simplicity, these functions do not use field expressions and
+ * can be ignored by the transformer. Since the transformer does not
+ * have access to mpi.h, it cannot process this branch.
+ */
 
 #include "../plumbing/comm_mpi.h"
 
@@ -713,6 +737,13 @@ void field<T>::start_move(direction d, parity p) {}
 ///  layout
 template<typename T>
 void field<T>::start_move(direction d, parity par) {
+  if( is_fetched(d, par) ){
+    // Not changed, return directly
+    //return;
+  }
+
+  // The field has been changed and needs to be communicated
+
   constexpr int size = sizeof(T);
 
   lattice_struct::comminfo_struct ci = lattice->comminfo[d];
@@ -724,24 +755,26 @@ void field<T>::start_move(direction d, parity par) {
 
   /* HANDLE RECEIVES: loop over nodes which will send here */
   for( lattice_struct::comm_node_struct from_node : ci.from_node ){
-    receive_buffer[n] = (char *)malloc( from_node.sites*size );
+    unsigned sites = from_node.n_sites(par);
+    receive_buffer[n] = (char *)malloc( sites*size );
 
-    MPI_Irecv( receive_buffer[n], from_node.sites*size, MPI_BYTE,
+    MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE,
 	         from_node.index, n, mpi_comm_lat, &request[n] );
     n++;
   }
 
-  /* HANDLE SENDS - note: mp points to right mbuf list element */
+  /* HANDLE SENDS: Copy field elements on the boundary to a send buffer and send */
   n=0;
   for( lattice_struct::comm_node_struct to_node : ci.to_node ){
-    char * buffer = (char *)malloc( to_node.sites*size );
+    unsigned sites = to_node.n_sites(par);
+    char * buffer = (char *)malloc( sites*size );
     /* gather data into the buffer */
-    for (int j=0; j<to_node.sites; j++) {
-      T element = get_value_at(to_node.sitelist[j]);
+    for (int j=0; j<sites; j++) {
+      T element = get_value_at(to_node.site_index(j, par));
       memcpy( buffer + j*size, (char *) (&element), size );
     }
 
-    MPI_Send( buffer, to_node.sites*size, MPI_BYTE, to_node.index, n,  mpi_comm_lat);
+    MPI_Send( buffer, sites*size, MPI_BYTE, to_node.index, n,  mpi_comm_lat);
 
     std::free(buffer);
     n++;
@@ -753,14 +786,19 @@ void field<T>::start_move(direction d, parity par) {
     MPI_Status status;
     MPI_Wait(&request[n], &status);
 
+    unsigned sites = from_node.n_sites(par);
+    int offset = from_node.offset(par);
     char * buffer = receive_buffer[n];
-    for (int j=0; j<from_node.sites; j++) {
+    for (int j=0; j<sites; j++) {
       T element = *((T*) ( buffer + j*size ));
-      set_value_at(element, from_node.buffer+j);
+      set_value_at(element, offset+j);
     }
       
     n++;
   }
+
+  /* Mark the parity fetched from direction dir */
+  //mark_fetched(d, par);
 }
 
 #endif

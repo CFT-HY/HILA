@@ -78,6 +78,35 @@ public:
     unsigned sites, evensites, oddsites;
     unsigned buffer;
     std::vector<unsigned>  sitelist;
+
+    // The number of sites that need to be communicated
+    unsigned n_sites(parity par){
+      if(par == ALL){
+        return sites;
+      } else if(par == EVEN){
+        return evensites;
+      } else if(par == ODD){
+        return oddsites;
+      }
+    }
+
+    // The local index of a site that is sent to neighbour
+    unsigned site_index(int site, parity par){
+      if(par == ODD){
+        return sitelist[evensites+site];
+      } else {
+        return sitelist[site];
+      }
+    }
+
+    // The offset of the halo from the start of the field array
+    unsigned offset(parity par){
+      if(par == ODD){
+        return buffer + evensites;
+      } else {
+        return buffer;
+      }
+    }
   };
 
   struct comminfo_struct {
@@ -191,11 +220,6 @@ public:
 /// global handle to lattice
 extern lattice_struct * lattice;
 
-#ifdef USE_MPI
-#include "comm_mpi.h"
-#else
-#include "comm_vanilla.h"
-#endif
 
 
 #endif

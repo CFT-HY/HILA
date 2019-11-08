@@ -1,7 +1,10 @@
+
+#include "../plumbing/globals.h"
+#include "../plumbing/lattice.h"
+#include "../plumbing/field.h"
 #include "../plumbing/comm_mpi.h"
 
 MPI_Comm mpi_comm_lat;
-
 
 
 
