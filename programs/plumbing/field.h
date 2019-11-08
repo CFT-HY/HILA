@@ -441,15 +441,15 @@ public:
   void mark_fetched(int dir, const parity p) {
     char pc = static_cast<char>(p);
     assert(p == EVEN || p == ODD || p == ALL);
-    unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
+    unsigned up = 0x3 & (static_cast<unsigned>(opp_parity(p)));
     fs->is_fetched[dir] |= up;
   }
 
   /// Check if the field has been changed since the previous communication
   bool is_fetched( int dir, parity par){
     assert(dir < NDIRS);
-    int par_int = (int)par;
-    return (fs->is_fetched[dir] ^ par_int) != 0;
+    int par_int = static_cast<unsigned>(opp_parity(par));
+    return (fs->is_fetched[dir] ^ par_int) == 0;
   }
   
 
@@ -739,7 +739,7 @@ template<typename T>
 void field<T>::start_move(direction d, parity par) {
   if( is_fetched(d, par) ){
     // Not changed, return directly
-    //return;
+    return;
   }
 
   // The field has been changed and needs to be communicated
@@ -798,7 +798,7 @@ void field<T>::start_move(direction d, parity par) {
   }
 
   /* Mark the parity fetched from direction dir */
-  //mark_fetched(d, par);
+  mark_fetched(d, par);
 }
 
 #endif
