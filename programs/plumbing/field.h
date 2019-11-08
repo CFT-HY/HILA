@@ -739,6 +739,8 @@ template<typename T>
 void field<T>::start_move(direction d, parity par) {
   if( is_fetched(d, par) ){
     // Not changed, return directly
+    // Keep count of gathers optimized away
+    lattice->n_gather_done += 1;
     return;
   }
 
@@ -799,6 +801,9 @@ void field<T>::start_move(direction d, parity par) {
 
   /* Mark the parity fetched from direction dir */
   mark_fetched(d, par);
+
+  /* Keep count of communications */
+  lattice->n_gather_done += 1;
 }
 
 #endif
