@@ -740,7 +740,7 @@ void field<T>::start_move(direction d, parity par) {
   if( is_fetched(d, par) ){
     // Not changed, return directly
     // Keep count of gathers optimized away
-    lattice->n_gather_done += 1;
+    lattice->n_gather_avoided += 1;
     return;
   }
 
