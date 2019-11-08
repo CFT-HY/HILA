@@ -102,6 +102,7 @@ OBJECTS = \
   $(BUILDDIR)/stringops.o \
   $(BUILDDIR)/codegen.o \
   $(BUILDDIR)/srcbuf.o \
+  $(BUILDDIR)/myastvisitor.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o

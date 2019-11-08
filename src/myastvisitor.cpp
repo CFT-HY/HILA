@@ -189,6 +189,8 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     // Now need to split the expr to parity and dir-bits
     // Need to descent quite deeply into the expr chain
     Expr* e = lfe.parityExpr->IgnoreParens();
+    // The next line is necessary with the clang version on Puhti
+    e = e->IgnoreImplicit();
     CXXOperatorCallExpr* Op = dyn_cast<CXXOperatorCallExpr>(e);
     // descent into expression
     // TODO: must allow for arbitrary offset!

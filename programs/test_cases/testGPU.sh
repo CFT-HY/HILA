@@ -19,8 +19,8 @@ check(){
 }
 
 transform_c(){
-    echo ../../build/transformer -DGPU --CUDA $1
-    ../../build/transformer -DGPU --CUDA $1 2>/dev/null
+    echo ../../build/transformer -I../../../llvm/lib/clang/8.0.1/include/ -target:CUDA -DPUHTI_TRANSFOMER -DCUDA $1
+    ../../build/transformer -I../../../llvm/lib/clang/8.0.1/include/ -target:CUDA -DPUHTI_TRANSFOMER -DCUDA $1 2>/dev/null
     check transform
 }
 
