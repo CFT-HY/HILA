@@ -106,13 +106,15 @@ int main()
     double Plaq=0;
     foralldir(d1) foralldir(d2) if(d1 != d2){
       direction dir1 = (direction)d1, dir2 = (direction)d2;
+      double tPlaq = 0;
       onsites(ALL){
         matrix<N,N,cmplx<double>> temp;
         temp =  U[dir1][X] * U[dir2][X+dir1];
         temp *= U[dir1][X+dir2].conjugate();
         temp *= U[dir2][X].conjugate();
-        Plaq += 1-temp.trace().re/N;
+        tPlaq += 1-temp.trace().re/N;
       }
+      Plaq += tPlaq;
     }
     printf("Plaquette %f\n", Plaq/(lattice->volume()*NDIM*(NDIM-1)));
   }
