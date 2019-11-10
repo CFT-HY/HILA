@@ -2,8 +2,8 @@
 OPTS = -DNDIM=4
 
 TRANSFORMER = ../../build/transformer 
-CC = g++ 
-LD = g++
+CC = mpic++ -x c++ -DUSE_MPI
+LD = mpic++ -DUSE_MPI
 
 TRANSFOMER_GPU = ../../build/transformer -DCUDA  --CUDA
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
@@ -25,8 +25,8 @@ SUN_GPU: Makefile SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inlin
 	$(NVLD) $(LDFLAGS) -o SUN_GPU SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inline.gpu.o lattice.gpu.o memory.gpu.o setup_layout_generic.gpu.o map_node_layout_trivial.gpu.o hila_cuda.gpu.o
 	rm -f *.gpu.o
 
-SUN_CPU: Makefile SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o memory.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o
-	$(LD) $(LDFLAGS) -o SUN_CPU SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o memory.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o
+SUN_CPU: Makefile SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o memory.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o com_mpi.cpu.o
+	$(LD) $(LDFLAGS) -o SUN_CPU SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o memory.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o com_mpi.cpu.o
 	rm -f *.cpu.o
 
 
