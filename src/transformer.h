@@ -154,6 +154,7 @@ struct var_info {
   struct var_decl * var_declp;
   std::string type;
   std::string name;
+  std::string new_name;
   bool is_loop_local;
   reduction reduction_type;
   bool is_assigned;

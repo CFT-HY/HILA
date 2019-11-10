@@ -130,20 +130,22 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   
     // Check for reductions and allocate device memory
   for (var_info & v : var_info_list) {
-    if(target.CUDA){
+    if (v.reduction_type != reduction::NONE) {
+      v.new_name = "r_" + v.name;
+      while (t.find(v.new_name,0) != std::string::npos) v.new_name += "_";
+      if(target.CUDA){
       // Allocate memory for a reduction. This will be filled in the kernel
-      if (v.reduction_type != reduction::NONE) {
-        code << v.type << " *r_" << v.name << ";\n";
-        code << "cudaMalloc( (void **)& r_" << v.name << ","
+        code << v.type << " *" << v.new_name << ";\n";
+        code << "cudaMalloc( (void **)& " << v.new_name << ","
              << "sizeof(" << v.type << ") * lattice->volume() );\n";
         code << "check_cuda_error(\"allocate_reduction\");\n";
-      }
-    } else {
-      // Create a temporary variable and initialize
-      if (v.reduction_type == reduction::SUM) {
-        code << v.type << " r_" << v.name << "=0;\n";
-      } else if (v.reduction_type == reduction::PRODUCT) {
-        code << v.type << " r_" << v.name << "=1;\n";
+      } else {
+        // Create a temporary variable and initialize
+        if (v.reduction_type == reduction::SUM) {
+          code << v.type << " " << v.new_name << "=0;\n";
+        } else if (v.reduction_type == reduction::PRODUCT) {
+          code << v.type << " " << v.new_name << "=1;\n";
+        }
       }
     }
   }
@@ -161,23 +163,27 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     if(target.CUDA){
       // Run reduction
       if (v.reduction_type == reduction::SUM) {
-        code << v.name << " += cuda_reduce_sum(r_" << v.name << ", lattice->volume()" <<  ");\n";
+        code << v.type << " " << v.new_name << "_sum += cuda_reduce_sum(" 
+             << v.new_name << ", lattice->volume()" <<  ");\n";
+        v.new_name = v.new_name + "_sum";
       } else if (v.reduction_type == reduction::PRODUCT) {
-        code << v.name << " *= cuda_reduce_product(r_" << v.name << ", lattice->volume()" <<  ");\n";
+        code << v.type << " " << v.new_name << "_prod *= cuda_reduce_product(" 
+             << v.new_name << ", lattice->volume()" <<  ");\n";
+        v.new_name = v.new_name + "_prod";
       }
       // Free memory allocated for the reduction
       if (v.reduction_type != reduction::NONE) {
-        code << "cudaFree( r_" << v.name << ");\n";
+        code << "cudaFree(" << v.new_name << ");\n";
         code << "check_cuda_error(\"free_reduction\");\n";
       }
     }
     // Add reduction over MPI nodes and add to the original variable
     if (v.reduction_type == reduction::SUM) {
-      code << "lattice->reduce_node_sum( r_" << v.name << ", true);\n";
-      code << v.name << " += r_" << v.name << ";\n";
+      code << "lattice->reduce_node_sum(" << v.new_name << ", true);\n";
+      code << v.name << " += " << v.new_name << ";\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code << "lattice->reduce_node_product( r_" << v.name << ", true);\n";
-      code << v.name << " *= r_" << v.name << ";\n";
+      code << "lattice->reduce_node_product(" << v.new_name << ", true);\n";
+      code << v.name << " *= " << v.new_name << ";\n";
     }
   }
           
