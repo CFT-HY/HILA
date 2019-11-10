@@ -321,6 +321,30 @@ int srcBuf::insert_above(Expr *e, const std::string & s, bool incl_before, bool 
 }
 
 
+// Find the end of previous statement and add after it
+int srcBuf::insert_before_stmt(int i, const std::string & s, bool incl_before, bool do_indent) {
+  while (i > 0 ){
+    if( buf[i] == ';' || buf[i] == '}' ){
+      i++;
+      break;
+    }
+    i--;
+  } 
+  std::string new_line = '\n'+s;
+  if(i==0) new_line = new_line+'\n';
+  return insert(i, new_line, incl_before, do_indent);
+}
+
+int srcBuf::insert_before_stmt(SourceLocation sl, const std::string & s,
+                   bool incl_before, bool do_indent) {
+  return insert_before_stmt(get_index(sl), s, incl_before, do_indent);
+}
+
+int srcBuf::insert_before_stmt(Expr *e, const std::string & s, bool incl_before, bool do_indent) {
+  return insert_before_stmt(e->getSourceRange().getBegin(), s, incl_before, do_indent);
+}
+
+
 int srcBuf::comment_line(int i){
   while (i > 0 && buf[i] != '\n' ) i--;
   return insert(i+1, "//", false, false);

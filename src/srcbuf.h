@@ -123,6 +123,12 @@ public:
   int comment_line(SourceLocation sl);
   int comment_line(Expr *e);
 
+// Find the end of previous statement and add after it
+int insert_before_stmt(int i, const std::string & s, bool incl_before, bool do_indent);
+int insert_before_stmt(SourceLocation sl, const std::string & s,
+                   bool incl_before, bool do_indent);
+int insert_before_stmt(Expr *e, const std::string & s, bool incl_before, bool do_indent);
+
 
   // replace is a remove + insert pair, should write with a single operation
   // return: next element from remove

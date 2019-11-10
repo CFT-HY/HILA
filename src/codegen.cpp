@@ -210,16 +210,16 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
       loopBuf.replace(le->fullExpr, varname );
       if( le->is_written ){
         // Mark changed fields - do it BEFORE using vars, possible alloc
-        loopBuf.insert_above(e, get_stmt_str(e) + ".mark_changed(" + parity_in_this_loop + ");", true,   true);
+        loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".mark_changed(" + parity_in_this_loop + ");", true,   true);
     }
       if( le->dirExpr != nullptr ){
         // If a field needs to be communicated, start here
-        loopBuf.insert_above(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
+        loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
            + parity_in_this_loop + ");", true, true);
     }
       if( le->is_read ){
         // If a field is read, check that is has been allocated
-        loopBuf.insert_above(e, "assert(" + get_stmt_str(e) 
+        loopBuf.insert_before_stmt(e, "assert(" + get_stmt_str(e) 
           + ".is_allocated());", true, true);
       }
 
@@ -533,7 +533,7 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
           getter = ".get_value_at(lattice->neighb[" + dstring + "][" 
             + looping_var + "])";
         }
-        loopBuf.insert_above(r->fullExpr, 
+        loopBuf.insert_before_stmt(r->fullExpr, 
           "if("  + is_read + ") {"
           + l.loop_ref_name + "_d[" + dstring + "]=" + l.new_name + getter + ";"
           + is_read + "=false;}", true, true);
@@ -547,7 +547,7 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
         } else {
           getter = ".get_value_at(" + looping_var + ")";
         }
-        loopBuf.insert_above(r->fullExpr, 
+        loopBuf.insert_before_stmt(r->fullExpr, 
           "if("  + is_read + ") {"
           + l.loop_ref_name + "=" + l.new_name + getter + ";"
           + is_read + "=false;}", true, true);
