@@ -220,7 +220,7 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
 
     // Add a simple temp variable to replace the field reference
     std::string varname = "__v_" + std::to_string(i);
-    loopBuf.prepend(type_name + " " + varname + "=0;\n", true);
+    loopBuf.prepend(type_name + " " + varname + ";\n", true);
 
     for( field_ref *le : fi.ref_list ){
       Expr *e = le->nameExpr;
@@ -228,12 +228,12 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
       if( le->is_written ){
         // Mark changed fields - do it BEFORE using vars, possible alloc
         loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".mark_changed(" + parity_in_this_loop + ");", true,   true);
-    }
+      }
       if( le->dirExpr != nullptr ){
         // If a field needs to be communicated, start here
         loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
            + parity_in_this_loop + ");", true, true);
-    }
+      }
       if( le->is_read ){
         // If a field is read, check that is has been allocated
         loopBuf.insert_before_stmt(e, "assert(" + get_stmt_str(e) 
