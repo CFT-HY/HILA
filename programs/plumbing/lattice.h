@@ -206,8 +206,8 @@ public:
 
 
   /* MPI functions and variables. Define here in lattice? */
-  #ifdef USE_MPI
   void initialize_wait_arrays();
+  #ifdef USE_MPI
   MPI_Comm mpi_comm_lat;
   #endif
 
