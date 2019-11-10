@@ -1,6 +1,6 @@
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer -DGPU --GPU
+TRANSFORMER = ../../build/transformer -DGPU -target:GPU
 CC = nvcc -DGPU -x cu -I../../../cub/ 
 
 CFLAGS = -O3 $(OPTS)

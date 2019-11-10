@@ -5,7 +5,7 @@ TRANSFORMER = ../../build/transformer
 CC = mpic++ -x c++ -DUSE_MPI
 LD = mpic++ -DUSE_MPI
 
-TRANSFOMER_GPU = ../../build/transformer -DCUDA  --CUDA
+TRANSFOMER_GPU = ../../build/transformer -DGPU -target:CUDA
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
