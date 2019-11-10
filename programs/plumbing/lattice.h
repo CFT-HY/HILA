@@ -78,6 +78,35 @@ public:
     unsigned sites, evensites, oddsites;
     unsigned buffer;
     std::vector<unsigned>  sitelist;
+
+    // The number of sites that need to be communicated
+    unsigned n_sites(parity par){
+      if(par == ALL){
+        return sites;
+      } else if(par == EVEN){
+        return evensites;
+      } else {
+        return oddsites;
+      }
+    }
+
+    // The local index of a site that is sent to neighbour
+    unsigned site_index(int site, parity par){
+      if(par == ODD){
+        return sitelist[evensites+site];
+      } else {
+        return sitelist[site];
+      }
+    }
+
+    // The offset of the halo from the start of the field array
+    unsigned offset(parity par){
+      if(par == ODD){
+        return buffer + evensites;
+      } else {
+        return buffer;
+      }
+    }
   };
 
   struct comminfo_struct {
@@ -175,27 +204,30 @@ public:
 
   #endif
 
+
+  /* MPI functions and variables. Define here in lattice? */
   #ifdef USE_MPI
   void initialize_wait_arrays();
+  MPI_Comm mpi_comm_lat;
   #endif
 
-  /* Communication routines. Define here in lattice? */
   template <typename T>
   void reduce_node_sum(T & value, bool distribute);
 
   template <typename T>
   void reduce_node_product(T & value, bool distribute);
 
+  // Guarantee 64 bits for these - 32 can overflow!
+  unsigned long long n_gather_done = 0, n_gather_avoided = 0;
+
 };
 
 /// global handle to lattice
 extern lattice_struct * lattice;
 
-#ifdef USE_MPI
-#include "comm_mpi.h"
-#else
-#include "comm_vanilla.h"
-#endif
+
+// Keep track of defined lattices
+extern std::vector<lattice_struct*> lattices;
 
 
 #endif
