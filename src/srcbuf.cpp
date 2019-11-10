@@ -324,7 +324,7 @@ int srcBuf::insert_above(Expr *e, const std::string & s, bool incl_before, bool 
 // Find the end of previous statement and add after it
 int srcBuf::insert_before_stmt(int i, const std::string & s, bool incl_before, bool do_indent) {
   while (i > 0 ){
-    if( buf[i] == ';' || buf[i] == '}' ){
+    if( buf[i] == ';' || buf[i] == '}' || buf[i] == '{' ){
       i++;
       break;
     }
