@@ -114,8 +114,9 @@ int main()
         Plaq += 1-temp.trace().re/N;
       }
     }
-    printf("Plaquette %f\n", Plaq/(lattice->volume()*NDIM*(NDIM-1)));
+    output0 << "Plaquette " << Plaq/(lattice->volume()*NDIM*(NDIM-1)) << "\n";
   }
   
+  finishrun();
   return 0;
 }

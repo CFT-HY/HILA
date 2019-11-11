@@ -3,9 +3,6 @@
 
 #include "../plumbing/globals.h"
 
-extern MPI_Comm mpi_comm_lat;
-
-
 
 
 ///***********************************************************

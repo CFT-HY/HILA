@@ -1,7 +1,7 @@
 OPTS = -DNDIM=4
 
 TRANSFORMER = ../../build/transformer
-CC = clang++-8
+CC = mpic++ -DUSE_MPI
 
 CFLAGS = -O3 $(OPTS)
 CXXFLAGS = -O3 -x c++ $(OPTS)
@@ -10,7 +10,7 @@ CXXFLAGS = -O3 -x c++ $(OPTS)
 	$(CC) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
 
 %.cpt: %.cpp Makefile
-	../../build/transformer $<
+	$(TRANSFORMER) $<
 
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@

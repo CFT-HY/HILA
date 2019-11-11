@@ -129,14 +129,24 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   code << generate_loop_header(S,target,semi_at_end)+ "\n";
   
   
-  if(target.CUDA){
     // Check for reductions and allocate device memory
-    for (var_info & v : var_info_list) {
-      if (v.reduction_type != reduction::NONE) {
-        code << v.type << " *r_" << v.name << ";\n";
-        code << "cudaMalloc( (void **)& r_" << v.name << ","
+  for (var_info & v : var_info_list) {
+    if (v.reduction_type != reduction::NONE) {
+      v.new_name = "r_" + v.name;
+      while (t.find(v.new_name,0) != std::string::npos) v.new_name += "_";
+      if(target.CUDA){
+      // Allocate memory for a reduction. This will be filled in the kernel
+        code << v.type << " *" << v.new_name << ";\n";
+        code << "cudaMalloc( (void **)& " << v.new_name << ","
              << "sizeof(" << v.type << ") * lattice->volume() );\n";
         code << "check_cuda_error(\"allocate_reduction\");\n";
+      } else {
+        // Create a temporary variable and initialize
+        if (v.reduction_type == reduction::SUM) {
+          code << v.type << " " << v.new_name << "=0;\n";
+        } else if (v.reduction_type == reduction::PRODUCT) {
+          code << v.type << " " << v.new_name << "=1;\n";
+        }
       }
     }
   }
@@ -154,20 +164,27 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     if(target.CUDA){
       // Run reduction
       if (v.reduction_type == reduction::SUM) {
-        code << v.name << " += cuda_reduce_sum(r_" << v.name << ", lattice->volume()" <<  ");\n";
+        code << v.type << " " << v.new_name << "_sum += cuda_reduce_sum(" 
+             << v.new_name << ", lattice->volume()" <<  ");\n";
+        v.new_name = v.new_name + "_sum";
       } else if (v.reduction_type == reduction::PRODUCT) {
-        code << v.name << " *= cuda_reduce_product(r_" << v.name << ", lattice->volume()" <<  ");\n";
+        code << v.type << " " << v.new_name << "_prod *= cuda_reduce_product(" 
+             << v.new_name << ", lattice->volume()" <<  ");\n";
+        v.new_name = v.new_name + "_prod";
       }
       // Free memory allocated for the reduction
       if (v.reduction_type != reduction::NONE) {
-        code << "cudaFree( r_" << v.name << ");\n";
+        code << "cudaFree(" << v.new_name << ");\n";
         code << "check_cuda_error(\"free_reduction\");\n";
       }
     }
+    // Add reduction over MPI nodes and add to the original variable
     if (v.reduction_type == reduction::SUM) {
-      code << "lattice->reduce_node_sum(" << v.name << ", true);\n";
+      code << "lattice->reduce_node_sum(" << v.new_name << ", true);\n";
+      code << v.name << " += " << v.new_name << ";\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code << "lattice->reduce_node_product(" << v.name << ", true);\n";
+      code << "lattice->reduce_node_product(" << v.new_name << ", true);\n";
+      code << v.name << " *= " << v.new_name << ";\n";
     }
   }
           
@@ -204,23 +221,23 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
 
     // Add a simple temp variable to replace the field reference
     std::string varname = "__v_" + std::to_string(i);
-    loopBuf.prepend(type_name + " " + varname + "=0;\n", true);
+    loopBuf.prepend(type_name + " " + varname + ";\n", true);
 
     for( field_ref *le : fi.ref_list ){
       Expr *e = le->nameExpr;
       loopBuf.replace(le->fullExpr, varname );
       if( le->is_written ){
         // Mark changed fields - do it BEFORE using vars, possible alloc
-        loopBuf.insert_above(e, get_stmt_str(e) + ".mark_changed(" + parity_in_this_loop + ");", true,   true);
-    }
+        loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".mark_changed(" + parity_in_this_loop + ");", true,   true);
+      }
       if( le->dirExpr != nullptr ){
         // If a field needs to be communicated, start here
-        loopBuf.insert_above(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
+        loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
            + parity_in_this_loop + ");", true, true);
-    }
+      }
       if( le->is_read ){
         // If a field is read, check that is has been allocated
-        loopBuf.insert_above(e, "assert(" + get_stmt_str(e) 
+        loopBuf.insert_before_stmt(e, "assert(" + get_stmt_str(e) 
           + ".is_allocated());", true, true);
       }
 
@@ -239,7 +256,7 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
       va.push_back(vi.name);
       vb.push_back(varname);
       loopBuf.prepend(vi.type + " " + varname + "=" + vi.name + ";\n", true);
-  }
+    }
     i++;
   }
 
@@ -257,6 +274,18 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
 
 
 std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf & loopBuf) {
+
+  // replace reduction variables in the loop
+  for ( var_info & vi : var_info_list ) {
+    if (!vi.is_loop_local) {
+      if(vi.reduction_type != reduction::NONE) {
+        std::string varname = "r_" + vi.name;
+        for (var_ref & vr : vi.refs) {
+          loopBuf.replace( vr.ref, varname );
+        }
+      }
+    }
+  }
   
   replace_field_refs_and_funcs(loopBuf, false);
   
@@ -382,12 +411,14 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   for ( var_info & vi : var_info_list ) {
     if (!vi.is_loop_local) {
       std::string varname = "sv__" + std::to_string(i) + "_";
-      if(target.CUDA && vi.reduction_type != reduction::NONE) {
-        /* Reduction variables in a CUDA kernel are
-         * saved to an array and reduced later. */
-        kernel << ", " << vi.type << " * " << varname;
-        call << ", r_" << vi.name;
-        varname += "[Index]";
+      if(vi.reduction_type != reduction::NONE) {
+        if(target.CUDA){
+          /* Reduction variables in a CUDA kernel are
+           * saved to an array and reduced later. */
+          kernel << ", " << vi.type << " * " << varname;
+          call << ", r_" << vi.name;
+          varname += "[Index]";
+        }
       } else if(vi.is_assigned) {
         kernel << ", " << vi.type << " & " << varname;
         call << ", " << vi.name;
@@ -534,7 +565,7 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
           getter = ".get_value_at(lattice->neighb[" + dstring + "][" 
             + looping_var + "])";
         }
-        loopBuf.insert_above(r->fullExpr, 
+        loopBuf.insert_before_stmt(r->fullExpr, 
           "if("  + is_read + ") {"
           + l.loop_ref_name + "_d[" + dstring + "]=" + l.new_name + getter + ";"
           + is_read + "=false;}", true, true);
@@ -548,7 +579,7 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
         } else {
           getter = ".get_value_at(" + looping_var + ")";
         }
-        loopBuf.insert_above(r->fullExpr, 
+        loopBuf.insert_before_stmt(r->fullExpr, 
           "if("  + is_read + ") {"
           + l.loop_ref_name + "=" + l.new_name + getter + ";"
           + is_read + "=false;}", true, true);

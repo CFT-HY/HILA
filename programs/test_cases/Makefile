@@ -19,7 +19,7 @@ test_conjReduce: Makefile conjReduce.o mersenne_inline.o lattice.o memory.o setu
 	$(CC) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
 	
 %.cpt: %.cpp Makefile
-	../../build/transformer $<
+	$(TRANSFORMER) $<
 
 %.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c
