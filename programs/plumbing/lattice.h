@@ -141,7 +141,7 @@ public:
   #endif
 
   void setup(int siz[NDIM], int & argc, char ***argvp);
-  void setup(const inputs &); //TODO: setup field from inputs reference
+  void setup(input & inputs);
 
   void teardown();
 

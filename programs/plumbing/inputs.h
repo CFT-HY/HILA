@@ -19,7 +19,9 @@
 ///    int nx = input1.get("nx")
 ///    string out = input1.get("outputfname")
 ///   
-///    TODO: Make the class compatible with MPI and cuda code
+///    TODO: edit the constructor so that some root process reads the parameters,
+///    and then speads the data amongst different processes. Ie. the root reads
+///    and processes, then sends the input data to all processes. 
 ////////////////////////////////////////////////////////////////////////
 
 class input {
@@ -58,6 +60,7 @@ class input {
         };
 
         returntype get(const std::string &);
+        void close();
 
     private:
 
@@ -67,6 +70,12 @@ class input {
         void handle(const std::string &);
         //define necessary runtime variables
         void define_essentials();
+
+        void read(const std::string &);
+        //internal state broadcast in mpi implementation
+        #ifdef USE_MPI
+        void broadcast();
+        #endif
 };
 
 #endif

@@ -20,8 +20,12 @@ void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
   }
 
 #ifdef USE_MPI
-  /* Initialize MPI */
+  /* Initialize MPI. Function only initializes machine if not 
+  initialized yet. */
   initialize_machine(argc, argvp);
+  #ifdef SUBLATTICES
+  setup_sublattices(argc, argvp);
+  #endif
 
   /* default comm is the world */
   mpi_comm_lat = MPI_COMM_WORLD;

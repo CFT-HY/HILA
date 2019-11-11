@@ -7,6 +7,7 @@
 
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
+static bool sublattices_setup = false;
 
 /* Machine initialization */
 #include <sys/types.h>
@@ -16,11 +17,6 @@ void initialize_machine(int & argc, char ***argvp)
   if( !mpi_initialized ){
     MPI_Init(&argc, argvp);
     mpi_initialized = true;
-
-#ifdef SUBLATTICES
-    setup_sublattices( argcp, *argvp );
-#endif
-
   }
 }
 

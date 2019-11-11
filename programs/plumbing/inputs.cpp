@@ -2,7 +2,11 @@
 #include<fstream>
 #include<regex>
 #include<type_traits>
+#include<mpi.h>
+#include<vector>
+
 #include "inputs.h"
+#include "comm_mpi.h" //used for broadcasting data between processes
 
 void input::define_essentials(){
     #ifdef NDIM
@@ -17,6 +21,9 @@ void input::define_essentials(){
     #endif
     #endif
     add_essential("nx");
+    #ifdef SUBLATTICES
+    add_essential("sublattices");
+    #endif
 }
 
 ///handle one line of input in parameter file 
@@ -46,6 +53,18 @@ void input::handle(const std::string & line){
 }
 
 input::input(const std::string & fname) {
+    #ifdef USE_MPI
+    initialize_machine(); //if input obj created before setup, mpi has to be ready
+    if (mynode() == 0){
+        read(fname);
+    }
+    broadcast();
+    #else
+    read(fname);
+    #endif
+}
+
+void input::read(const std::string & fname) {
     define_essentials(); 
     std::ifstream inputfile;
     inputfile.open(fname);
@@ -114,3 +133,40 @@ input::returntype input::get(const std::string & variable){
     return returntype(variable, this);
 }
 
+void input::close(){
+    this->~input();
+}
+
+void input::broadcast(){
+    //construct name-value pairs in root node 
+
+    double * vals; //vector containing values for each name
+    char * names; //buffer containing variable names
+
+    unsigned num_values = 0;  
+    unsigned num_chars = 0;
+
+    if (mynode()==0){
+        num_values = values.size()
+        for (auto i = values.begin(); i != values.end(); ++i){
+            num_chars += (unsigned) (*i).first.size();
+        } 
+    }
+
+    MPI_Bcast(&num_values, 1, MPI_Int, 0, MPI_COMM_WORLD); //num_values contains the length of the variable list
+    values = new double[num_values];
+    names = new char[num_chars];
+
+    if (mynode()==0){
+        //add values to buffer 
+    }
+
+    delete [] vals:
+    delete [] names;
+}
+
+
+
+int main(){
+    return 0;
+}
