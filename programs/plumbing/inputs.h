@@ -1,4 +1,7 @@
 
+#ifndef INPUTS
+#define INPUTS
+
 #include<string>
 #include<map>
 #include<list>
@@ -16,6 +19,7 @@
 ///    int nx = input1.get("nx")
 ///    string out = input1.get("outputfname")
 ///   
+///    TODO: Make the class compatible with MPI and cuda code
 ////////////////////////////////////////////////////////////////////////
 
 class input {
@@ -53,14 +57,16 @@ class input {
             }
         };
 
-        returntype get(const std::string & str);
+        returntype get(const std::string &);
 
     private:
 
         std::map<std::string, bool> essentials;
-        void check_essentials(){};
+        void check_essentials();
         //handle one line of input
         void handle(const std::string &);
-        //automatically define necessary runtime variables - not implemented yet
+        //define necessary runtime variables
         void define_essentials();
 };
+
+#endif
