@@ -123,7 +123,7 @@ public:
 
   #ifdef CUDA
   device_lattice_info device_info;
-  setup_lattice_device_info();
+  void setup_lattice_device_info();
   #endif
 
   void setup(int siz[NDIM]);
