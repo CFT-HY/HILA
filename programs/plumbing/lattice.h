@@ -160,14 +160,14 @@ public:
   unsigned remap_node(const unsigned i);
   
   #ifdef EVENFIRST
-  const int loop_begin( parity P){
+  int loop_begin( parity P) const {
     if(P==ODD){
       return this_node.evensites;
     } else {
       return 0;
     }
   }
-  const int loop_end( parity P){
+  int loop_end( parity P) const {
     if(P==EVEN){
       return this_node.evensites;
     } else {
@@ -175,14 +175,14 @@ public:
     }
   }
   #else
-  const int loop_begin( parity P){
+  int loop_begin( parity P) const {
     if(P==EVEN){
       return this_node.evensites;
     } else {
       return 0;
     }
   }
-  const int loop_end( parity P){
+  int loop_end( parity P) const {
     if(P==ODD){
       return this_node.evensites;
     } else {

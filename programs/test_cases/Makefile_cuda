@@ -1,0 +1,34 @@
+# This makefile is used when compiling gpu tests on puhti
+
+OPTS = -DNDIM=4
+
+INCLUDES = 
+
+TRANSFORMER = ../../build/transformer -DCUDA -target:CUDA -DPUHTI_TRANSFOMER -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
+CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -I../../../cub/  $(INCLUDES)
+LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
+
+
+CFLAGS = -O3 $(OPTS)
+CXXFLAGS = -O3 $(OPTS)
+
+%.exe: %.tr.o Makefile mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
+		$(LD) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
+
+%.cpt: %.cpp
+		$(TRANSFORMER) $<
+
+%.tr.o : %.cpt
+		$(CC) $(CXXFLAGS) $< -c -o $@
+
+%.o : ../plumbing/%.cpp
+		$(CC) $(CXXFLAGS) $< -c
+
+%.o : %.c
+		$(CC) $(CFLAGS) $< -c
+
+clean:
+		rm -rf *.cpt
+
+cleanall:
+		rm -rf *.o *.exe
