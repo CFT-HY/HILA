@@ -4,18 +4,37 @@
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
 
+/// A list of all defiend lattices
+std::vector<lattice_struct*> lattices;
 
+
+/// General lattice setup, including MPI setup
 void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
+  /* Add this lattice to the list */
+  lattices.push_back( this );
+
   l_volume = 1;
   for (int i=0; i<NDIM; i++) {
     l_size[i] = siz[i];
     l_volume *= siz[i];
   }
-  
+
+#ifdef USE_MPI
+  /* Initialize MPI */
   initialize_machine(argc, argvp);
 
-  this_node.index = mynode();
-  nodes.number = numnodes();
+  /* default comm is the world */
+  mpi_comm_lat = MPI_COMM_WORLD;
+
+  int index, n_nodes;
+  MPI_Comm_rank( lattices[0]->mpi_comm_lat, &index );
+  MPI_Comm_size( lattices[0]->mpi_comm_lat, &n_nodes );
+  this_node.index = index;
+  nodes.number = n_nodes;
+#else 
+  this_node.index = 0;
+  nodes.number = 1;
+#endif
 
   setup_layout();
   setup_nodes();
@@ -24,12 +43,8 @@ void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
   /* Setup required for local_sites_first */
   //make_lattice_arrays(); 
 
-#ifdef USE_MPI
-
   /* Initialize wait_array structures */
   initialize_wait_arrays();
-#endif
-
 }
 
 void lattice_struct::setup(int siz[NDIM]) {
@@ -468,6 +483,7 @@ void lattice_struct::create_std_gathers()
 
 /************************************************************************/
 
+#ifdef USE_MPI
 /* this formats the wait_array, used by forallsites_waitA()
  * should be made as fast as possible!
  *
@@ -498,4 +514,9 @@ void lattice_struct::initialize_wait_arrays()
   }
 }
 
+#else
+
+void lattice_struct::initialize_wait_arrays(){}
+
+#endif
 

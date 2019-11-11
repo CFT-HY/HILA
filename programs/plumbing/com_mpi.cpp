@@ -1,49 +1,42 @@
+
+#include "../plumbing/globals.h"
+#include "../plumbing/lattice.h"
+#include "../plumbing/field.h"
 #include "../plumbing/comm_mpi.h"
 
-MPI_Comm mpi_comm_lat;
 
-
-
-
+/* Keep track of whether MPI has been initialized */
+static bool mpi_initialized = false;
 
 /* Machine initialization */
 #include <sys/types.h>
 void initialize_machine(int & argc, char ***argvp)
 {
   /* Init MPI */
-  static bool mpi_initialized = false;
   if( !mpi_initialized ){
     MPI_Init(&argc, argvp);
     mpi_initialized = true;
-
-    /* default comm is the world */
-    mpi_comm_lat = MPI_COMM_WORLD;
 
 #ifdef SUBLATTICES
     setup_sublattices( argcp, *argvp );
 #endif
 
-
   }
 }
-
-
-
-
-// Guarantee 64 bits for these - 32 can overflow!
-unsigned long long n_gather_done = 0, n_gather_avoided = 0;
-
-
 
 
 /* version of exit for multinode processes -- kill all nodes */
 void terminate(int status)
 {
-  output0 << "Node " << mynode() << ", status = " << status << "\n";
+  if( !mpi_initialized ){
+    int node;
+    MPI_Comm_rank( lattices[0]->mpi_comm_lat, &node );
+    output0 << "Node " << node << ", status = " << status << "\n";
 #ifdef TIMERS
-  time_stamp("Terminate");
+   time_stamp("Terminate");
 #endif
-  MPI_Abort( mpi_comm_lat, 0);
+   MPI_Abort( lattices[0]->mpi_comm_lat, 0);
+  }
   exit(status);
 }
 
@@ -51,27 +44,31 @@ void terminate(int status)
 /* clean exit from all nodes */
 void finishrun()
 {
+  for( lattice_struct * lattice : lattices ){
 
 #ifdef TIMERS
-  report_comm_timers();
+    report_comm_timers();
 #endif
 
-  if (mynode() == 0) {
-    output0 << " COMMS from node 0: " << n_gather_done << "done,"
-            <<  n_gather_avoided << "(" 
-            << 100.0*n_gather_avoided/(n_gather_avoided+n_gather_done)
-            << "%) optimized away\n";
-  }
+    unsigned long long gathers = lattice->n_gather_done;
+    unsigned long long avoided = lattice->n_gather_avoided;
+    if (lattice->node_number() == 0) {
+      output0 << " COMMS from node 0: " << gathers << " done, "
+              << avoided << "(" 
+              << 100.0*avoided/(avoided+gathers)
+              << "%) optimized away\n";
+    }
 
 #ifdef TIMERS
 #if defined(SUBLATTICES)
-  if (n_sublattices > 1) {
-    time_stamp("Waiting to sync sublattices...");
-  }
+    if (n_sublattices > 1) {
+      time_stamp("Waiting to sync sublattices...");
+    }
 #else
-  time_stamp("Finishing");
+    time_stamp("Finishing");
 #endif
 #endif
+  }
 
   MPI_Finalize();
   exit(0);
@@ -91,7 +88,7 @@ char * machine_type(){
 int mynode()
 {
   int node;
-  MPI_Comm_rank( mpi_comm_lat, &node );
+  MPI_Comm_rank( lattices[0]->mpi_comm_lat, &node );
   return(node);
 }
 
@@ -99,7 +96,7 @@ int mynode()
 int numnodes()
 {
   int nodes;
-  MPI_Comm_size( mpi_comm_lat, &nodes );
+  MPI_Comm_size( lattices[0]->mpi_comm_lat, &nodes );
   return(nodes);
 }
 

@@ -50,6 +50,7 @@ fi
 
 for D in 1 2 3 4 ; do
   sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' Makefile
+  make -f ${MAKEFILE} clean
   for testfile in $tests; do
     test="${testfile%.*}"
     echo $test
