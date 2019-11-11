@@ -163,16 +163,18 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     if(target.CUDA){
       // Run reduction
       if (v.reduction_type == reduction::SUM) {
-        code << v.type << " " << v.new_name << " += cuda_reduce_sum(" 
+        code << v.type << " " << v.new_name << "_global += cuda_reduce_sum(" 
              << v.new_name << ", lattice->volume()" <<  ");\n";
       } else if (v.reduction_type == reduction::PRODUCT) {
-        code << v.type << " " << v.new_name << " *= cuda_reduce_product(" 
+        code << v.type << " " << v.new_name << "_global *= cuda_reduce_product(" 
              << v.new_name << ", lattice->volume()" <<  ");\n";
       }
       // Free memory allocated for the reduction
       if (v.reduction_type != reduction::NONE) {
         code << "cudaFree(" << v.new_name << ");\n";
         code << "check_cuda_error(\"free_reduction\");\n";
+        // Remember the name of the global sum
+        v.new_name = v.new_name + "_global";
       }
     }
     // Add reduction over MPI nodes and add to the original variable
