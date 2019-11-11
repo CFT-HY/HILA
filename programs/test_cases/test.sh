@@ -56,7 +56,7 @@ for D in 1 2 3 4 ; do
     echo $test
     transform_c ${test}.cpp
     compile_c ${test}
-    run_c ${test}
+    #run_c ${test}
     run_mpi_c ${test} 1
     run_mpi_c ${test} 2
     run_mpi_c ${test} 4
