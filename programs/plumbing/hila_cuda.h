@@ -15,7 +15,6 @@
 #define loop_callable __host__ __device__
 
 extern __device__ unsigned * d_neighb[NDIRS];
-void setup_lattice_device_info( unsigned * neighb, int d );
 
 /* Random number generator */
 extern curandState * curandstate;
