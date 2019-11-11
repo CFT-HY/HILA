@@ -12,7 +12,7 @@
 /////////////////////
 
 template<typename A, typename B, typename C>
-void sum_test_function(A a, const B b, const C c){
+void sum_test_function(A &a, const B &b, const C &c){
     onsites(ALL){
         a[X] = b[X] + c[X+XUP];
     }
@@ -130,9 +130,14 @@ int main(){
     assert(sum == 0);
 
     //Test function call inside loop
-    s1[ALL] = 0;
-    s2[ALL] = 1;
-    sum_test_function( s3, s1, s2 );
+    s1[ALL] = 0.0;
+    s2[ALL] = 1.0;
+    sum_test_function( s3, s1, s2 ); //s3 = s1 + s2
+    onsites(ALL){
+        double diff = s3[X].re - 1.0;
+        sum += diff*diff;
+    }
+    assert(sum == 0);
 
     finishrun();
 }
