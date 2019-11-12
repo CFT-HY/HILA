@@ -8,6 +8,7 @@
 #include "../datatypes/cmplx.h"
 #include "../datatypes/general_matrix.h"
 #include "../plumbing/field.h"
+#include "../plumbing/inputs.h"
 
 // Direct output to stdout
 std::ostream &hila::output = std::cout;

@@ -72,9 +72,11 @@ class input {
         void define_essentials();
 
         void read(const std::string &);
+        
         //internal state broadcast in mpi implementation
         #ifdef USE_MPI
-        void broadcast();
+        void broadcast_values();
+        void broadcast_names();
         #endif
 };
 
