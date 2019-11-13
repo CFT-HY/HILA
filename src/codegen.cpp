@@ -403,6 +403,13 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     // TODO: type to field_data
     kernel << "field_storage" << l.type_template << " " << l.new_name;
     call << l.new_name + ".fs->payload";
+
+    for( field_ref *r : l.ref_list ){
+      // Generate new name for direction expression
+      if( r->dirExpr )
+        r->dirname = "d_" + get_stmt_str(r->dirExpr);
+  }
+
   }
 
   i=0;
@@ -426,20 +433,20 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
         call << ", " << vi.name;
       }
       
-      // replace_expr(ep, varname);
       for (var_ref & vr : vi.refs) {
+        // replace_expr(ep, varname);
         loopBuf.replace( vr.ref, varname );
       }
       i++;
     }
   }
 
-  // Directions
+  // Add directions to the declaration
   for (field_info & l : field_info_list) {
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      int i=0;
       call << ", " << get_stmt_str(d.e);
-      kernel << ", const int " << get_stmt_str(d.e);
+      kernel << ", const int d_" << get_stmt_str(d.e);
+      loopBuf.replace( d.e, get_stmt_str(d.e) );
     }
   }
 
@@ -530,9 +537,7 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
     if (le.dirExpr != nullptr) {
-      //loopBuf.replace(parityExpr,
-      //                 "lattice->neighb[" +  get_stmt_str(le.dirExpr) + "][" + looping_var + "]");
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_d["+get_stmt_str(le.dirExpr)+"]");
+      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_d["+le.dirname+"]");
     } else {
       loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
     }
@@ -550,23 +555,20 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
   // Add a getter in above each field reference
   for (field_info & l : field_info_list) {
     for( field_ref *r : l.ref_list ){
-      Expr *d = r->dirExpr;
-      
       // If reference has a direction, use the temp list
-      if(d){
-        std::string dstring = get_stmt_str(d);
-        std::string is_read = l.new_name + "_read_d["+dstring+"]";
+      if(r->dirExpr){
+        std::string is_read = l.new_name + "_read_d["+r->dirname+"]";
         std::string getter;
         if(CUDA){
-          getter = ".get(lattice_info.d_neighb[" + dstring + "]["
-            + looping_var + "], lattice_info.field_alloc_size)";
+          getter = ".get(lattice->d_neighb[" + r->dirname + "]["
+            + looping_var + "], lattice->field_alloc_size)";
         } else {
-          getter = ".get_value_at(lattice->neighb[" + dstring + "][" 
+          getter = ".get_value_at(lattice->neighb[" + r->dirname + "][" 
             + looping_var + "])";
         }
         loopBuf.insert_before_stmt(r->fullExpr, 
           "if("  + is_read + ") {"
-          + l.loop_ref_name + "_d[" + dstring + "]=" + l.new_name + getter + ";"
+          + l.loop_ref_name + "_d[" + r->dirname + "]=" + l.new_name + getter + ";"
           + is_read + "=false;}", true, true);
       
       } else if(r->is_read) { // No direction, use the temp variable
