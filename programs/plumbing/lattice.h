@@ -26,6 +26,15 @@ struct device_lattice_info {
   unsigned field_alloc_size;
   int loop_begin, loop_end;
   location * d_coordinates;
+
+  /* Actual implementation of the coordinates function.
+   * Since this is added by the transformer, the ASTVisitor
+   * will not recognize it as a loop function. Since it's
+   * purely for CUDA, we can just add the __device__ keyword. */
+  loop_callable
+  location coordinates( unsigned idx ){
+    return d_coordinates[idx];
+  }
 };
 #endif
 
@@ -192,19 +201,9 @@ public:
   }
   #endif
 
-
-  #ifndef CUDA
   location coordinates( unsigned idx ){
     return site_location(idx);
   }
-
-  #else
-  location coordinates( unsigned idx ){
-    return device_info.d_coordinates[idx];
-  }
-
-  #endif
-
 
   /* MPI functions and variables. Define here in lattice? */
   void initialize_wait_arrays();

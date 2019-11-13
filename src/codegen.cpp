@@ -115,11 +115,6 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     } else {
       code << "const field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
     }
-    // l.type_template is < type >.  Change this to field_storage_type<T>
-    //if (!target.kernelize) {
-    //  code << "field_storage_type" << l.type_template << " * const " 
-    //       << l.loop_ref_name << " = " << l.new_name << "->fs.payload;\n";
-    //}
   }
 
   
@@ -128,7 +123,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   code << generate_loop_header(S,target,semi_at_end)+ "\n";
   
   
-    // Check for reductions and allocate device memory
+  // Check for reductions and allocate device memory
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
       v.new_name = "r_" + v.name;
@@ -372,7 +367,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
 
   // Generate the function definition and call
   if( target.CUDA ){
-    kernel << "__global__ void " << kernel_name << "( device_lattice_info lattice_info, ";
+    kernel << "__global__ void " << kernel_name << "( device_lattice_info d_lattice, ";
     call << "device_lattice_info lattice_info = lattice->device_info;\n";
     call << "lattice_info.loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
     call << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop << ");\n";
@@ -408,7 +403,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
       // Generate new name for direction expression
       if( r->dirExpr )
         r->dirname = "d_" + get_stmt_str(r->dirExpr);
-  }
+    }
 
   }
 
@@ -457,11 +452,13 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   kernel << ")\n{\n";
 
   if( target.CUDA ){
+    // 
+    kernel << "device_lattice_info *lattice = &d_lattice; \n";
     /* Standard boilerplate in CUDA kernels: calculate site index */
     kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
-           << " + lattice_info.loop_begin; \n";
+           << " + lattice->loop_begin; \n";
     /* The last block may exceed the lattice size. Do nothing in that case. */
-    kernel << "if(Index < lattice_info.loop_end) { \n";
+    kernel << "if(Index < lattice->loop_end) { \n";
     /* Initialize reductions */
     int i=0;
     for ( var_info & vi : var_info_list ) {
@@ -476,8 +473,8 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     }
   } else {
     // Generate the loop
-    kernel << "const int loop_begin = lattice.loop_begin(" << parity_in_this_loop << "); \n";
-    kernel << "const int loop_end   = lattice.loop_end(" << parity_in_this_loop << "); \n";
+    kernel << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << "); \n";
+    kernel << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << "); \n";
 
     kernel << "for(int " << looping_var <<" = loop_begin; " 
            << looping_var << " < loop_end; " << looping_var << "++) {\n";
@@ -513,7 +510,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
     kernel << l.new_name << ".set(" << l.loop_ref_name << ", " 
-           << looping_var << ", lattice_info.field_alloc_size );\n";
+           << looping_var << ", lattice->field_alloc_size );\n";
   }
 
   kernel << "}\n}\n//----------\n";
@@ -576,7 +573,7 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
         std::string is_read = l.new_name + "_read";
         std::string getter;
         if(CUDA){
-          getter = ".get(" + looping_var + ", lattice_info.field_alloc_size)";
+          getter = ".get(" + looping_var + ", lattice->field_alloc_size)";
         } else {
           getter = ".get_value_at(" + looping_var + ")";
         }

@@ -116,7 +116,7 @@ struct dir_ptr {
   Expr * e;
   unsigned count;
 };
-  
+
   
 struct field_info {
   std::string type_template;             // This will be the <T> part of field<T>
