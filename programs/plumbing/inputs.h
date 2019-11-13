@@ -4,24 +4,23 @@
 
 #include<string>
 #include<map>
-#include<list>
 
 ////////////////////////////////////////////////////////////////////////
 /// input - Class for parsing runtime parameter files using std c++ libraries
 /// 
 /// Fulfills two simple functions: 
 ///
-/// 1. parses a text file for variables
-/// 2. allows the programmer to assign these runtime variables by name 
+/// 1. Parses a text file or command line for runtime variables
+/// 2. Allows user to define which variables should be found in parameter files
+/// 3. Allows the user to assign these runtime variables by name 
 ///    using the following syntax:
 ///     
-///    input input1("")
+///    input input1("params.txt")
 ///    int nx = input1.get("nx")
 ///    string out = input1.get("outputfname")
-///   
-///    TODO: edit the constructor so that some root process reads the parameters,
-///    and then speads the data amongst different processes. Ie. the root reads
-///    and processes, then sends the input data to all processes. 
+///
+/// When using MPI, the input data is read by one process and broadcasted to
+/// the others.      
 ////////////////////////////////////////////////////////////////////////
 
 class input {
@@ -29,12 +28,11 @@ class input {
 
         //read runtime parameters from file
         input(const std::string & fname);
+        //read runtime parameters from file and cmd line 
+        input(int & argc, char *** argvp, const std::string & fname){};
         ~input(){};
     
-        std::map<std::string, double> values;
-        std::map<std::string, std::string> names;
-
-        //add an essential variable - triggers complaint if not in parameter file
+        //add an essential variable - triggers complaint if not in parameter file or commandline
         void add_essential(const std::string & );
         template< typename T >
         //same as above, except defines a default value to be used in case it is not found
@@ -62,17 +60,19 @@ class input {
         returntype get(const std::string &);
         void close();
 
+    protected:
+
+        std::map<std::string, double> values;
+        std::map<std::string, std::string> names;
+
     private:
 
         std::map<std::string, bool> essentials;
         void check_essentials();
-        //handle one line of input
         void handle(const std::string &);
-        //define necessary runtime variables
         void define_essentials();
-
         void read(const std::string &);
-        
+
         //internal state broadcast in mpi implementation
         #ifdef USE_MPI
         void broadcast_values();

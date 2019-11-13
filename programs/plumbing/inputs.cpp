@@ -3,7 +3,7 @@
 #include<regex>
 #include<type_traits>
 #include "inputs.h"
-#include "comm_mpi.h" //used for broadcasting data between processes
+#include "comm_mpi.h" 
 
 
 #ifdef USE_MPI
@@ -13,27 +13,9 @@ static int myrank = 0;
 
 #endif
 
-void input::define_essentials(){
-    #ifdef NDIM
-    #if NDIM >= 4
-    add_essential("nt");
-    #endif 
-    #if NDIM >= 3 
-    add_essential("nz");
-    #endif 
-    #if NDIM >= 2
-    add_essential("ny");
-    #endif
-    #endif
-    add_essential("nx"); //nx always needed by default 
-    #ifdef SUBLATTICES
-    add_essential("sublattices");
-    #endif
-}
-
 ///handle one line of input in parameter file 
 void input::handle(const std::string & line){
-    std::regex pattern("\\s*([a-zA-Z_-]+[0-9]*)\\s*=\\s*([^\\s]*)\\s*");
+    std::regex pattern("\\s*([a-zA-Z_-]+[0-9]*)\\s*=\\s*([^\\s]+)\\s*");
     std::smatch results;
     if(!std::regex_match(line, results, pattern)){
         return;
@@ -41,13 +23,13 @@ void input::handle(const std::string & line){
     std::string variable(results[1]);
     std::string value(results[2]);
     bool is_numeric = (!value.empty() && value.find_first_not_of("0123456789.-") == std::string::npos);
-    if (essentials.find(variable)!=essentials.end()) essentials[variable] = true;
+    if (essentials.count(variable)!=0) essentials[variable] = true;
     if (is_numeric) {
         values[variable] = std::stod(value); 
-        std::cout << "read " + variable + " = " << values[variable] << "\n";
+        std::cout << "found " + variable + " = " << values[variable] << "\n";
     } else {
         names[variable] = value; 
-        std::cout << "read " + variable + " = " << names[variable] << "\n";
+        std::cout << "found " + variable + " = " << names[variable] << "\n";
     }
     if (essentials.count(variable)==1){
         essentials[variable] = true;
@@ -55,13 +37,11 @@ void input::handle(const std::string & line){
 }
 
 input::input(const std::string & fname) {
-    define_essentials();
 
     #ifdef USE_MPI
 
     int dummy = 0;
     char ** argvp;
-    int rank = 0;
     initialize_machine(dummy, &argvp); 
     MPI_Comm_rank(MPI::COMM_WORLD, &myrank); 
     if (myrank == 0){
@@ -121,7 +101,7 @@ void input::add_essential(const std::string & var, const T & default_value) {
         break;
 
     default:
-        std::cout << "type of " + var + " not recognized (try int, float, double or string)";
+        std::cout << "type of " + var + " not recognized (try int, float, double or string)\n";
         paramok = false;
         break;
     }
@@ -150,7 +130,7 @@ void input::close(){
     this->~input();
 }
 
-//broadcast the essentials, values, and names
+
 #ifdef USE_MPI
 void input::broadcast_values(){
     double * vals; //buffer containing values for each name
