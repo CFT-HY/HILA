@@ -96,23 +96,26 @@ struct global_state {
   } location;
 };
 
-// struct field_info;
 
+// struct field_info;
 struct field_ref {
   Expr * fullExpr;
   Expr * nameExpr;
   Expr * parityExpr;
   Expr * dirExpr;
+  std::string dirname;
   struct field_info * info;
   // unsigned nameInd, parityInd;
   int direction;
   bool is_written, is_read;
 };
 
+
 struct dir_ptr {
   Expr * e;
   unsigned count;
 };
+
   
 struct field_info {
   std::string type_template;             // This will be the <T> part of field<T>

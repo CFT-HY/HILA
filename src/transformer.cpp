@@ -394,10 +394,24 @@ public:
 
         // Find now '#include "file.h"' -stmt (no obv way!)
         SourceRange SR = SM.getExpansionRange(IL).getAsRange();
-        std::string includestr = TheRewriter.getRewrittenText(SR);
         SourceLocation e = SR.getEnd();
         SourceLocation b = SR.getBegin();
+
+        // Find the end of the include statement, which is an end of line
         // TODO: do this on "buf" instead of original file data
+        for (int i=1; i<100; i++) {
+          const char * p = SM.getCharacterData(e.getLocWithOffset(i));
+          if (p && *p == '\n') {
+            SR = SourceRange(b,e.getLocWithOffset(i));
+            break;
+          }
+        }
+
+        // Get the filename (the part after the includestr)
+        std::string includestr = TheRewriter.getRewrittenText(SR);
+
+        // Find the start of the include statement
+        e = SR.getEnd();
         for (int i=1; i<100; i++) {
           const char * p = SM.getCharacterData(b.getLocWithOffset(-i));
           if (p && *p == '#' && strncmp(p,"#include",8) == 0) {
@@ -405,6 +419,7 @@ public:
             break;
           }
         }
+
         // Remove "#include"
         buf->remove(SR);
         // TheRewriter.RemoveText(SR);
@@ -496,20 +511,22 @@ void get_target_struct(codetype & target) {
   if (cmdline::kernel) {
     target.kernelize = true;
     target.CUDA = false;
+    target.flag_loop_function = false;
   } else if (cmdline::CUDA) {
     target.kernelize = true;
     target.CUDA = true;
+    target.flag_loop_function = true;
   } else if (cmdline::openacc) {
     target.kernelize = false;
     target.openacc = true;
+    target.flag_loop_function = false;
   } else {
     target.kernelize = false;
     target.openacc = false;
+    target.flag_loop_function = false;
   }
 
-  // TODO: this will have to be made automatic, depending on target
   if (cmdline::func_attribute) target.flag_loop_function = true;
-  else target.flag_loop_function = false;
 }
 
 int main(int argc, const char **argv) {

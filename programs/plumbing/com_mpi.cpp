@@ -65,8 +65,7 @@ void finishrun()
 #endif
   }
 
-  MPI_Finalize();
-  exit(0);
+  exit(MPI_Finalize());
 }
 
 

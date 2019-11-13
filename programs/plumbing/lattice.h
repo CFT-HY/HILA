@@ -27,6 +27,15 @@ struct device_lattice_info {
   unsigned field_alloc_size;
   int loop_begin, loop_end;
   location * d_coordinates;
+
+  /* Actual implementation of the coordinates function.
+   * Since this is added by the transformer, the ASTVisitor
+   * will not recognize it as a loop function. Since it's
+   * purely for CUDA, we can just add the __device__ keyword. */
+  loop_callable
+  location coordinates( unsigned idx ){
+    return d_coordinates[idx];
+  }
 };
 #endif
 
@@ -124,6 +133,7 @@ public:
 
   #ifdef CUDA
   device_lattice_info device_info;
+  void setup_lattice_device_info();
   #endif
 
   void setup(int siz[NDIM]);
@@ -161,14 +171,14 @@ public:
   unsigned remap_node(const unsigned i);
   
   #ifdef EVENFIRST
-  const int loop_begin( parity P){
+  int loop_begin( parity P) const {
     if(P==ODD){
       return this_node.evensites;
     } else {
       return 0;
     }
   }
-  const int loop_end( parity P){
+  int loop_end( parity P) const {
     if(P==EVEN){
       return this_node.evensites;
     } else {
@@ -176,14 +186,14 @@ public:
     }
   }
   #else
-  const int loop_begin( parity P){
+  int loop_begin( parity P) const {
     if(P==EVEN){
       return this_node.evensites;
     } else {
       return 0;
     }
   }
-  const int loop_end( parity P){
+  int loop_end( parity P) const {
     if(P==ODD){
       return this_node.evensites;
     } else {
@@ -192,19 +202,9 @@ public:
   }
   #endif
 
-
-  #ifndef CUDA
   location coordinates( unsigned idx ){
     return site_location(idx);
   }
-
-  #else
-  location coordinates( unsigned idx ){
-    return device_info.d_coordinates[idx];
-  }
-
-  #endif
-
 
   /* MPI functions and variables. Define here in lattice? */
   void initialize_wait_arrays();

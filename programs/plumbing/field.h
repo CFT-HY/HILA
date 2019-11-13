@@ -437,8 +437,16 @@ public:
     }
   }
 
+  void mark_changed(const parity p) const {
+    assert(is_allocated());
+    char pc = static_cast<char>(p);
+    assert(p == EVEN || p == ODD || p == ALL);
+    unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
+    for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
+  }
+
   /// Mark the field parity fetched from direction
-  void mark_fetched(int dir, const parity p) {
+  void mark_fetched(int dir, const parity p) const {
     char pc = static_cast<char>(p);
     assert(p == EVEN || p == ODD || p == ALL);
     unsigned up = 0x3 & (static_cast<unsigned>(opp_parity(p)));
@@ -446,7 +454,7 @@ public:
   }
 
   /// Check if the field has been changed since the previous communication
-  bool is_fetched( int dir, parity par){
+  bool is_fetched( int dir, parity par) const{
     assert(dir < NDIRS);
     int par_int = static_cast<unsigned>(opp_parity(par));
     return (fs->is_fetched[dir] ^ par_int) == 0;
@@ -562,7 +570,7 @@ public:
 
 
   // Communication routines
-  void start_move(direction d, parity p);
+  void start_move(direction d, parity p) const;
 };
 
 
@@ -719,7 +727,7 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 
 ///* start_move(): Trivial implementation when no MPI is used
 template<typename T>
-void field<T>::start_move(direction d, parity p) {}
+void field<T>::start_move(direction d, parity p) const {}
 
 
 #else
@@ -734,9 +742,14 @@ void field<T>::start_move(direction d, parity p) {}
 ///* start_move(): Communicate the field from direction d 
 ///  A simple implementation that waits completes the communication
 ///  in the function. Uses accessors to prevent dependency on the 
-///  layout
+///  layout.
+///
+///  NOTE: This will be called even if the field is marked const.
+///  Therefore this function is const, even though it does change
+///  the internal content of the field at the boundaries. From the 
+///  point of view of the user, the value of the field does not change.
 template<typename T>
-void field<T>::start_move(direction d, parity par) {
+void field<T>::start_move(direction d, parity par) const {
   if( is_fetched(d, par) ){
     // Not changed, return directly
     // Keep count of gathers optimized away
@@ -793,7 +806,11 @@ void field<T>::start_move(direction d, parity par) {
     char * buffer = receive_buffer[n];
     for (int j=0; j<sites; j++) {
       T element = *((T*) ( buffer + j*size ));
-      set_value_at(element, offset+j);
+      /* The set_value_at function cannot be used if the field
+       * is const (naturally, since it is intended to change the
+       * field). Instead, we call the field_struct setter
+       * directly. */
+      this->fs->set(element, offset+j);
     }
       
     n++;
