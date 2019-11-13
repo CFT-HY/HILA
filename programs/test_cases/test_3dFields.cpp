@@ -5,8 +5,19 @@
 /// Coverage:
 /// - directions, onsites and foralldir environments
 /// - operations between fields 
-/// - TODO: implement test for foralldir env inside onsites
+/// - foralldir env inside onsites
+/// - referring to an array of fields in a loop
+/// - calling a function with const parameters
+///   - requiring communication of a const field
 /////////////////////
+
+template<typename A, typename B, typename C>
+void sum_test_function(A &a, const B &b, const C &c){
+    onsites(ALL){
+        a[X] = b[X] + c[X+XUP];
+    }
+}
+
 
 int main(){
 
@@ -115,6 +126,16 @@ int main(){
     sum = 0;
     onsites(ALL){
         sum += (s4[2][X]*s4[2][X]).re;
+    }
+    assert(sum == 0);
+
+    //Test function call inside loop
+    s1[ALL] = 0.0;
+    s2[ALL] = 1.0;
+    sum_test_function( s3, s1, s2 ); //s3 = s1 + s2
+    onsites(ALL){
+        double diff = s3[X].re - 1.0;
+        sum += diff*diff;
     }
     assert(sum == 0);
 

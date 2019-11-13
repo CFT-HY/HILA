@@ -19,6 +19,8 @@ void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
     l_volume *= siz[i];
   }
 
+#ifdef USE_MPI
+  /* Initialize MPI */
   initialize_machine(argc, argvp);
 
   /* default comm is the world */
@@ -29,6 +31,10 @@ void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
   MPI_Comm_size( lattices[0]->mpi_comm_lat, &n_nodes );
   this_node.index = index;
   nodes.number = n_nodes;
+#else 
+  this_node.index = 0;
+  nodes.number = 1;
+#endif
 
   setup_layout();
   setup_nodes();
@@ -37,11 +43,8 @@ void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
   /* Setup required for local_sites_first */
   //make_lattice_arrays(); 
 
-#ifdef USE_MPI
-
   /* Initialize wait_array structures */
   initialize_wait_arrays();
-#endif
 }
 
 void lattice_struct::setup(int siz[NDIM]) {
@@ -480,6 +483,7 @@ void lattice_struct::create_std_gathers()
 
 /************************************************************************/
 
+#ifdef USE_MPI
 /* this formats the wait_array, used by forallsites_waitA()
  * should be made as fast as possible!
  *
@@ -510,4 +514,9 @@ void lattice_struct::initialize_wait_arrays()
   }
 }
 
+#else
+
+void lattice_struct::initialize_wait_arrays(){}
+
+#endif
 

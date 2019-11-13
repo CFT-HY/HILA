@@ -225,6 +225,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
 
         require_parity_X(Op->getArg(0));
         lfe.dirExpr = Op->getArg(1);
+        lfe.dirname = get_stmt_str(lfe.dirExpr);
     }
   }
     

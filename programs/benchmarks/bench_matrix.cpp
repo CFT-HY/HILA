@@ -20,7 +20,7 @@ int main(){
     field<matrix<1,N, cmplx<double>> > vector1;
     field<matrix<1,N, cmplx<double>> > vector2;
 
-    matrix1[ALL] = 1; 
+    matrix1[ALL] = 1;
     matrix2[ALL] = 1;
 
     // Time MATRIX * MATRIX
@@ -35,7 +35,7 @@ int main(){
     end = clock();
 
     timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
-    printf("Matrix * Matrix: %g ms \n", timing);
+    output0 << "Matrix * Matrix: " << timing << "ms \n";
 
     matrix1[ALL] = 1; 
     onsites(ALL){
@@ -92,7 +92,7 @@ int main(){
     end = clock();
 
     timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
-    printf("Dirac: %g ms \n", timing);
+    output0 << "Dirac: " << timing << "ms \n";
 
 
     // Conjugate gradient step 
@@ -144,10 +144,10 @@ int main(){
     }
 
     timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
-    printf("CG: %g ms \n", timing);
+    output0 << "CG: " << timing << "ms / iteration\n";
 
 
-    return 0;
+    finishrun();
 }
 
 
