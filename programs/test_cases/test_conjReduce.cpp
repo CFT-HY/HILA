@@ -19,7 +19,11 @@ int main(){
     test_setup();
 
     // Test input class - should be possible to call before or after setup
-    input a("params.txt");
+    input a;
+    a.add_essential("nx");
+    a.add_essential("beta", 1.0);
+
+    a.import("params.txt");
     int nx = a.get("nx");
     std::string out = a.get("output");
 

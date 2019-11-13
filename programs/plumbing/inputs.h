@@ -15,7 +15,8 @@
 /// 3. Allows the user to assign these runtime variables by name 
 ///    using the following syntax:
 ///     
-///    input input1("params.txt")
+///    input input1
+///    input1.import("params.txt")
 ///    int nx = input1.get("nx")
 ///    string out = input1.get("outputfname")
 ///
@@ -26,17 +27,19 @@
 class input {
     public:
 
-        //read runtime parameters from file
-        input(const std::string & fname);
-        //read runtime parameters from file and cmd line 
-        input(int & argc, char *** argvp, const std::string & fname){};
+        input(){};
         ~input(){};
+
+        //read runtime parameters from file
+        void import(const std::string & fname);
+        //read runtime parameters from file and cmd line 
+        void import(int & argc, char *** argvp, const std::string & fname){};
     
         //add an essential variable - triggers complaint if not in parameter file or commandline
         void add_essential(const std::string & );
-        template< typename T >
         //same as above, except defines a default value to be used in case it is not found
-        void add_essential(const std::string &, const T & default_value);
+        template< typename T >
+        void add_essential(std::string const &, T const & default_value);
 
         class returntype {
             public:
@@ -68,6 +71,7 @@ class input {
     private:
 
         std::map<std::string, bool> essentials;
+
         void check_essentials();
         void handle(const std::string &);
         void define_essentials();

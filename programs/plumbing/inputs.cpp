@@ -36,7 +36,7 @@ void input::handle(const std::string & line){
     }
 }
 
-input::input(const std::string & fname) {
+void input::import(const std::string & fname) {
 
     #ifdef USE_MPI
 
@@ -80,32 +80,30 @@ void input::add_essential(const std::string & var) {
 }
 
 template<typename T>
-void input::add_essential(const std::string & var, const T & default_value) {
-    bool paramok = true;
-    switch (typeid(T))
-    {
-    case typeid(std::string):
-        names[var] = default_value;
-        break;
+void input::add_essential(std::string const & var, T const & default_value) {
+    std::cout << "type of default param not recognized for: " + var + "\n";
+    essentials[var] = false;
+}
 
-    case typeid(int):
-        values[var] = default_value;
-        break;
-
-    case typeid(float):
-        values[var] = default_value;
-        break;
-
-    case typeid(double):
-        values[var] = default_value;
-        break;
-
-    default:
-        std::cout << "type of " + var + " not recognized (try int, float, double or string)\n";
-        paramok = false;
-        break;
-    }
-    essentials.insert(std::pair<std::string, bool>(var, paramok));
+template<>
+void input::add_essential(std::string const & var, int const & default_value){
+    values[var] = default_value;
+    essentials[var] = true;
+}
+template<>
+void input::add_essential(std::string const & var, float const & default_value){
+    values[var] = default_value;
+    essentials[var] = true;
+}
+template<>
+void input::add_essential(std::string const & var, double const & default_value){
+    values[var] = default_value;
+    essentials[var] = true;
+}
+template<>
+void input::add_essential(std::string const & var, std::string const & default_value){
+    names[var] = default_value;
+    essentials[var] = true;    
 }
 
 void input::check_essentials(){
