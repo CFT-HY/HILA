@@ -395,10 +395,24 @@ public:
 
         // Find now '#include "file.h"' -stmt (no obv way!)
         SourceRange SR = SM.getExpansionRange(IL).getAsRange();
-        std::string includestr = TheRewriter.getRewrittenText(SR);
         SourceLocation e = SR.getEnd();
         SourceLocation b = SR.getBegin();
+
+        // Find the end of the include statement, which is an end of line
         // TODO: do this on "buf" instead of original file data
+        for (int i=1; i<100; i++) {
+          const char * p = SM.getCharacterData(e.getLocWithOffset(i));
+          if (p && *p == '\n') {
+            SR = SourceRange(b,e.getLocWithOffset(i));
+            break;
+          }
+        }
+
+        // Get the filename (the part after the includestr)
+        std::string includestr = TheRewriter.getRewrittenText(SR);
+
+        // Find the start of the include statement
+        e = SR.getEnd();
         for (int i=1; i<100; i++) {
           const char * p = SM.getCharacterData(b.getLocWithOffset(-i));
           if (p && *p == '#' && strncmp(p,"#include",8) == 0) {
@@ -406,6 +420,7 @@ public:
             break;
           }
         }
+
         // Remove "#include"
         buf->remove(SR);
         // TheRewriter.RemoveText(SR);
