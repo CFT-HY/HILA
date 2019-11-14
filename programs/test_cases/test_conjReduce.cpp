@@ -20,8 +20,10 @@ int main(){
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
 
     // Test that neighbours are fetched correctly
+    // nd is not available on device. It should be
     foralldir(dir){
         onsites(ALL){
+            int nd[4] = { 20, 10, 10, 4 };
             location l = coordinates(X);
             coordinate[X] = l[dir];
             nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
