@@ -400,9 +400,22 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     call << l.new_name + ".fs->payload";
 
     for( field_ref *r : l.ref_list ){
-      // Generate new name for direction expression
-      if( r->dirExpr )
-        r->dirname = "d_" + get_stmt_str(r->dirExpr);
+      // Generate new name for direction expression unless it is loop local
+      if( r->dirExpr ) {
+        // Check for if it is a local variable
+        bool is_local = false;
+        DeclRefExpr *DRE =dyn_cast<DeclRefExpr>(r->dirExpr->IgnoreImplicit());
+        if(DRE && dyn_cast<VarDecl>(DRE->getDecl())){
+          for ( var_info & vi : var_info_list ) if( vi.is_loop_local ){
+            if( vi.decl == dyn_cast<VarDecl>(DRE->getDecl()) ){
+              is_local = true;
+              break;
+            }
+          }
+        }
+        if(!is_local) // Not local: replace variable name
+          r->dirname = "d_" + get_stmt_str(r->dirExpr);
+      }
     }
 
   }
