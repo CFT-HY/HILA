@@ -1231,6 +1231,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);
+    state::loop_function_next = false;
   }
 
   // Check if the function can be called from a loop
