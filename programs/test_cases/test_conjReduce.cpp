@@ -41,7 +41,8 @@ int main(){
     assert(matrices.fs==nullptr); //check that fieldstruct allocated only after assignment
     
 
-    // Check that gathers are counted correctly
+    // If MPI is defined, check that gathers are counted correctly
+    #ifdef USE_MPI
     coordinate[ALL] = 1;
     lattices[0]->n_gather_done = 0;
     lattices[0]->n_gather_avoided = 0;
@@ -52,6 +53,7 @@ int main(){
     nb_coordinate2[ALL] = coordinate[X+XDOWN];
     assert(lattices[0]->n_gather_done==1);
     assert(lattices[0]->n_gather_avoided==1);
+    #endif
     
 
     // Test matrix multiplication and neighbour fetches
