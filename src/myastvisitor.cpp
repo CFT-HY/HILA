@@ -924,6 +924,7 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       for (int i=0; i<loop_functions.size(); i++) if (fd == loop_functions[i]) return true;
     
       llvm::errs() << " ++ callgraph for " << fd->getNameAsString() << '\n';
+      llvm::errs() << "++ " << get_stmt_str((Stmt*) d);
     
       loop_functions.push_back(fd);
       handle_loop_function(fd);
