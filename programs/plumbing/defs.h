@@ -51,7 +51,6 @@ enum direction { XUP, XDOWN, NDIRS };
 /**
  * Increment op for directions
  * */
-
 inline direction & operator++(direction & dir, int dummy){
   const int i = static_cast<int>(dir);
   return dir=static_cast<direction>((i + 1)%NDIRS);
@@ -80,8 +79,13 @@ static inline int is_up_dir(const int d) { return d<NDIM; }
 
 // location type
 
-
-using location = std::array<int,NDIM>;
+struct location {
+    int r[NDIM];
+    int& operator[] (const int i) { return r[i]; }
+    int& operator[] (const direction d) { return r[(int)d]; }
+    const int& operator[] (const int i) const { return r[i]; }
+    const int& operator[] (const direction d) const { return r[(int)d]; }
+};
 
 inline location operator+(const location & a, const location & b) {
   location r;
