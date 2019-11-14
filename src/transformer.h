@@ -47,7 +47,7 @@ namespace state {
   extern bool dump_ast_next; // = false;
   extern bool compile_errors_occurred; // = false;
   extern bool check_loop; // = false;
-  extern bool no_device_code; // = false;
+  extern bool loop_function_next; // = false;
 };
 
 extern llvm::cl::OptionCategory TransformerCat;

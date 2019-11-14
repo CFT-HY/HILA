@@ -986,8 +986,8 @@ bool MyASTVisitor::control_command(VarDecl *var) {
   
   if (n == "_transformer_ctl_dump_ast") {
     state::dump_ast_next = true;
-  } else if(n == "_transformer_ctl_no_device") {
-    state::no_device_code = true;
+  } else if(n == "_transformer_ctl_loop_function") {
+    state::loop_function_next = true;
   } else {
     reportDiag(DiagnosticsEngine::Level::Warning,
                var->getSourceRange().getBegin(),
@@ -1227,6 +1227,11 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     f->dump();
     state::dump_ast_next = false;
   }
+  if( state::loop_function_next ){
+    // This function can be called from a loop,
+    // handle as if it was called from one
+    loop_function_check(f);
+  }
 
   // Check if the function can be called from a loop
   bool loop_callable = true;
@@ -1278,15 +1283,6 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     SourceLocation ST = f->getSourceRange().getBegin();
     global.location.function = ST;
-
-    //if(target.CUDA && !state::no_device_code && loop_callable){
-    //  // Add CUDA directive to allow calling from loops
-    //  std::string n = DeclName.getAsString();
-    //  if (n.find("_host_",0) == std::string::npos)
-    //    writeBuf->insert(ST,"__device__ __host__ ",true,true);
-    //  state::loop_found = true; // Mark this file changed
-    //  state::no_device_code = false;
-    //}
 
     if (cmdline::funcinfo) {
       // Add comment before

@@ -49,7 +49,7 @@ bool state::loop_found = false;
 bool state::dump_ast_next = false;
 bool state::compile_errors_occurred = false;
 bool state::check_loop = false;
-bool state::no_device_code = false;
+bool state::loop_function_next = false;
 
 llvm::cl::OptionCategory TransformerCat(program_name);
 
