@@ -119,7 +119,7 @@ void initial_setup(int & argc, char ***argvp);
 #define numnodes() 1
 inline void initialize_machine(int & argc, char ***argvp) {}
 inline void finishrun() {
-  exit(1);
+  exit(0);
 }
 
 #else
