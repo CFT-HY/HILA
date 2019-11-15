@@ -1,16 +1,6 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-#ifdef PUHTI_TRANSFORMER_CUDA
-#define PUHTI_TRANSFOMER
-#define CUDA
-#endif
-
-#ifdef PUHTI_TRANSFORMER_openacc
-#define PUHTI_TRANSFOMER
-#define openacc
-#endif
-
 // Useful global definitions here -- this file should be included by (almost) all others
 
 #include <array>
@@ -51,7 +41,7 @@ enum direction { XUP, XDOWN, NDIRS };
 /**
  * Increment op for directions
  * */
-
+int _transformer_ctl_loop_function;
 inline direction & operator++(direction & dir, int dummy){
   const int i = static_cast<int>(dir);
   return dir=static_cast<direction>((i + 1)%NDIRS);
@@ -80,8 +70,13 @@ static inline int is_up_dir(const int d) { return d<NDIM; }
 
 // location type
 
-
-using location = std::array<int,NDIM>;
+struct location {
+    int r[NDIM];
+    int& operator[] (const int i) { return r[i]; }
+    int& operator[] (const direction d) { return r[(int)d]; }
+    const int& operator[] (const int i) const { return r[i]; }
+    const int& operator[] (const direction d) const { return r[(int)d]; }
+};
 
 inline location operator+(const location & a, const location & b) {
   location r;
@@ -153,7 +148,6 @@ inline void assert_even_odd_parity( parity p ) {
 
 //#include <openacc.h>
 
-#define loop_callable _Pragma("acc routine seq")
 #define seed_random(seed) seed_mersenne(seed)
 #define hila_random() mersenne()
 
@@ -164,7 +158,7 @@ inline void assert_even_odd_parity( parity p ) {
 #endif
 
 
-#ifdef PUHTI_TRANSFOMER
+#if defined(PUHTI) && defined(TRANSFORMER)
 namespace std {
   // This is missing in c++11, which appears to be what we have on Puhti
   template< bool B, class T = void >

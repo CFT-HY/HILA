@@ -4,14 +4,14 @@ OPTS = -DNDIM=4
 
 INCLUDES = 
 
-#TRANSFORMER = ../../build/transformer -DCUDA -target:CUDA -DPUHTI_TRANSFOMER -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
-TRANSFORMER = ../../build/transformer -target:CUDA -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
+#TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
+TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DTRANSFORMER $(INCLUDES) 
 CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -I../../../cub/  $(INCLUDES)
 LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
 
-CFLAGS = -O3 $(OPTS)
-CXXFLAGS = -O3 $(OPTS)
+CFLAGS = -g $(OPTS)
+CXXFLAGS = -g $(OPTS)
 
 %.exe: %.tr.o Makefile mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o
 		$(LD) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o

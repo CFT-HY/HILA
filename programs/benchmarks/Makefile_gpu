@@ -1,6 +1,6 @@
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer -DPUHTI_TRANSFORMER_CUDA --CUDA
+TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -DCUDA --CUDA
 CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 

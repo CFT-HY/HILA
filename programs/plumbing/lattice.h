@@ -13,7 +13,6 @@
 #include "../plumbing/defs.h"
 #include "../plumbing/memory.h"
 
-using location = std::array<int,NDIM>;
 struct node_info {
   location min,size;
   unsigned evensites, oddsites;
