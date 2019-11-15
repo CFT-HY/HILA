@@ -157,6 +157,7 @@ public:
   int size(int d) { return l_size[d]; }
   long long volume() { return l_volume; }
   int node_number() { return this_node.index; }
+  int n_nodes() { return nodes.number; }
   
   bool is_on_node(const location & c);
   unsigned node_number(const location & c);

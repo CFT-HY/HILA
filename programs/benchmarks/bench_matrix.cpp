@@ -1,7 +1,6 @@
 #include "bench.h"
 
 #define N 3
-#define n_runs_multiplier 1
 
 
 int main(){
@@ -11,8 +10,14 @@ int main(){
     double timing;
     double sum;
 
+    int n_runs_multiplier = NRUNS;
+
     // Runs lattice->setup 
     bench_setup();
+
+    #ifdef USE_MPI
+    n_runs_multiplier *= lattice->n_nodes();
+    #endif
 
     field<matrix<N,N, cmplx<double>> > matrix1;
     field<matrix<N,N, cmplx<double>> > matrix2;
