@@ -270,6 +270,7 @@ class field_storage {
 
     loop_callable
     inline T get(const int idx, const int field_alloc_size) const {
+      assert( idx < field_alloc_size);
       T value;
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
@@ -280,6 +281,7 @@ class field_storage {
     
     loop_callable
     inline void set(T value, const int idx, const int field_alloc_size) {
+      assert( idx < field_alloc_size);
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
