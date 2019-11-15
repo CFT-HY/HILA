@@ -3,6 +3,7 @@
 #define FIELD_H
 #include <iostream>
 #include <string>
+#include <cstring> //Memcpy is here...
 #include <math.h>
 #include <type_traits>
 
@@ -788,7 +789,7 @@ void field<T>::start_move(direction d, parity par) const {
     /* gather data into the buffer */
     for (int j=0; j<sites; j++) {
       T element = get_value_at(to_node.site_index(j, par));
-      memcpy( buffer + j*size, (char *) (&element), size );
+      std::memcpy( buffer + j*size, (char *) (&element), size );
     }
 
     MPI_Send( buffer, sites*size, MPI_BYTE, to_node.index, n,  lattice->mpi_comm_lat);
