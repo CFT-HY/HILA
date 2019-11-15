@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# To get an allocation with a gpu (make sure you are a member of the hila development project):
+# srun --ntasks=1 --account=Project_2001973 --time=0:10:00 --partition=gputest --gres=gpu:v100:1  --pty bash
+# 
+# Go to the folder /projappl/project_2001973/transformer/programs/test_cases/
+# Then run ./testGPU.sh
+#
+
 export ERRORLOG=$(mktemp /tmp/abc-script.XXXXXX)
 export fails=0
 export num_tests=0
@@ -44,7 +51,7 @@ fi
 
 make -f ${MAKEFILE} cleanall
 for D in 1 2 3 4 ; do
-  sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' Makefile
+  sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' ${MAKEFILE}
   for testfile in $tests; do
     test="${testfile%.*}"
     echo $test
