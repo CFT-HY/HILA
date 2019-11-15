@@ -108,6 +108,7 @@ inline location coordinates(parity X){location l; return l;};
 
 
 
+
 // Global functions: setup
 void initial_setup(int argc, char **argv);
 
