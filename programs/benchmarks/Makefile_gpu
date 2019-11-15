@@ -1,9 +1,13 @@
+# This makefile is used when compiling gpu benchmarks on puhti
+
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -DCUDA --CUDA
-CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
-LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
+# The next line is set up for Puhti. If testing on laptop, comment it out and uncomment the line after
+TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
+#TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DTRANSFORMER $(INCLUDES) 
+CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -I../../../cub/  $(INCLUDES)
+LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
 CFLAGS = -O3 $(OPTS)
 CXXFLAGS = -O3  $(OPTS)
@@ -31,3 +35,5 @@ clean:
 
 cleanall:
 	rm -rf *.cpt *.o *.exe
+
+
