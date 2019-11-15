@@ -503,7 +503,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       kernel << type_name << " "  << l.loop_ref_name << "_d[NDIRS];\n";
       kernel << "bool " << l.new_name << "_read_d[NDIRS];\n";
-      kernel << "foralldir(__d){" << l.new_name << "_read_d[__d]=true;}\n";
+      kernel << "for(int __d=0; __d<NDIRS; __d++){" << l.new_name << "_read_d[__d]=true;}\n";
       break; // Only need one direction reference
     }
     // Check for references without a direction. If found, add temp variable
