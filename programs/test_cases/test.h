@@ -43,4 +43,6 @@ inline void test_setup(){
     lattice->setup( nd[0], nd[1], nd[2], nd[3] );
     #endif
     checkLatticeSetup();
+
+    seed_random(1);
 }

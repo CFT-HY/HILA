@@ -20,8 +20,10 @@ int main(){
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
 
     // Test that neighbours are fetched correctly
+    // nd is not available on device. It should be
     foralldir(dir){
         onsites(ALL){
+            int nd[4] = { 20, 10, 10, 4 };
             location l = coordinates(X);
             coordinate[X] = l[dir];
             nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
@@ -39,7 +41,8 @@ int main(){
     assert(matrices.fs==nullptr); //check that fieldstruct allocated only after assignment
     
 
-    // Check that gathers are counted correctly
+    // If MPI is defined, check that gathers are counted correctly
+    #ifdef USE_MPI
     coordinate[ALL] = 1;
     lattices[0]->n_gather_done = 0;
     lattices[0]->n_gather_avoided = 0;
@@ -50,17 +53,19 @@ int main(){
     nb_coordinate2[ALL] = coordinate[X+XDOWN];
     assert(lattices[0]->n_gather_done==1);
     assert(lattices[0]->n_gather_avoided==1);
+    #endif
+    
     
 
     // Test matrix multiplication and neighbour fetches
     // Calculates M(X) * M.congugate(X+dir)
-    onsites(EVEN){
+    onsites(ALL){
         matrix<2,2,double> a;
         double theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
-        a.c[0][0] = cos(theta);
+        a.c[0][0] =  cos(theta);
         a.c[0][1] = -sin(theta);
-        a.c[1][0] = sin(theta);
-        a.c[1][1] = cos(theta);
+        a.c[1][0] =  sin(theta);
+        a.c[1][1] =  cos(theta);
         matrices[X] = a;
     }
     assert(matrices.fs!=nullptr);
@@ -76,6 +81,7 @@ int main(){
 
     //now all sites should be unit matrices
 
+    dsum=0;
     onsites(ALL){
         dsum += matrices[X].trace();
     }

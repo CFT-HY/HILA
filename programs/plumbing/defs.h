@@ -41,7 +41,7 @@ enum direction { XUP, XDOWN, NDIRS };
 /**
  * Increment op for directions
  * */
-int _transformer_ctl_loop_function;
+extern int _transformer_ctl_loop_function;
 inline direction & operator++(direction & dir, int dummy){
   const int i = static_cast<int>(dir);
   return dir=static_cast<direction>((i + 1)%NDIRS);
@@ -119,7 +119,7 @@ void initial_setup(int & argc, char ***argvp);
 #define numnodes() 1
 inline void initialize_machine(int & argc, char ***argvp) {}
 inline void finishrun() {
-  exit(1);
+  exit(0);
 }
 
 #else

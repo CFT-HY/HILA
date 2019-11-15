@@ -3,6 +3,7 @@
 #define FIELD_H
 #include <iostream>
 #include <string>
+#include <cstring> //Memcpy is here...
 #include <math.h>
 #include <type_traits>
 
@@ -270,6 +271,7 @@ class field_storage {
 
     loop_callable
     inline T get(const int idx, const int field_alloc_size) const {
+      assert( idx < field_alloc_size);
       T value;
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
@@ -280,6 +282,7 @@ class field_storage {
     
     loop_callable
     inline void set(T value, const int idx, const int field_alloc_size) {
+      assert( idx < field_alloc_size);
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
@@ -786,7 +789,7 @@ void field<T>::start_move(direction d, parity par) const {
     /* gather data into the buffer */
     for (int j=0; j<sites; j++) {
       T element = get_value_at(to_node.site_index(j, par));
-      memcpy( buffer + j*size, (char *) (&element), size );
+      std::memcpy( buffer + j*size, (char *) (&element), size );
     }
 
     MPI_Send( buffer, sites*size, MPI_BYTE, to_node.index, n,  lattice->mpi_comm_lat);

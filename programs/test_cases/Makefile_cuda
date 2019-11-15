@@ -4,14 +4,15 @@ OPTS = -DNDIM=4
 
 INCLUDES = 
 
-#TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
-TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DTRANSFORMER $(INCLUDES) 
+# The next line is set up for Puhti. If testing on laptop, comment it out and uncomment the line after
+TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
+#TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DTRANSFORMER $(INCLUDES) 
 CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -I../../../cub/  $(INCLUDES)
 LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
 
-CFLAGS = -g $(OPTS)
-CXXFLAGS = -g $(OPTS)
+CFLAGS = -g -G $(OPTS)
+CXXFLAGS = -g -G $(OPTS)
 
 %.exe: %.tr.o Makefile mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o
 		$(LD) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o
