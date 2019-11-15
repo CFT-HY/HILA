@@ -64,11 +64,11 @@ void update(
 }
 
 
-int main()
+int main(int argc, char **argv)
 {
 
   // Basic setup
-  lattice->setup( NX, NY, NZ, NT );
+  lattice->setup( NX, NY, NZ, NT, argc, argv );
   // Define a field
   field<matrix<N,N,cmplx<double>>> U[NDIM];
   field<matrix<N,N,cmplx<double>>> staple;

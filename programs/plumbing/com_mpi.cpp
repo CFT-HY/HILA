@@ -10,15 +10,15 @@ static bool mpi_initialized = false;
 
 /* Machine initialization */
 #include <sys/types.h>
-void initialize_machine(int & argc, char ***argvp)
+void initialize_machine(int &argc, char ***argv)
 {
   /* Init MPI */
   if( !mpi_initialized ){
-    MPI_Init(&argc, argvp);
+    MPI_Init(&argc, argv);
     mpi_initialized = true;
 
 #ifdef SUBLATTICES
-    setup_sublattices( argcp, *argvp );
+    setup_sublattices( argcp, *argv );
 #endif
 
   }

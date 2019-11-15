@@ -23,10 +23,10 @@ long seed = 123456;
 int NX=64, NY=64;
 int VOLUME = NX*NY;
 
-int main()
+int main(int argc, char **argv)
 {
   // Basic setup
-  lattice->setup( NX, NY );
+  lattice->setup( NX, NY, argc, argv );
   // Define a field
   field<double> spin;
 

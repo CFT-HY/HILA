@@ -134,21 +134,19 @@ public:
   void setup_lattice_device_info();
   #endif
 
-  void setup(int siz[NDIM]);
+  void setup(int siz[NDIM], int &argc, char **argv);
   void setup_layout();
   void setup_nodes();
   
   #if NDIM == 4
-  void setup(int nx, int ny, int nz, int nt);
+  void setup(int nx, int ny, int nz, int nt, int &argc, char **argv);
   #elif NDIM == 3  
-  void setup(int nx, int ny, int nz);
+  void setup(int nx, int ny, int nz, int &argc, char **argv);
   #elif NDIM == 2
-  void setup(int nx, int ny);
+  void setup(int nx, int ny, int &argc, char **argv);
   #elif NDIM == 1
-  void setup(int nx); 
+  void setup(int nx, int &argc, char **argv); 
   #endif
-
-  void setup(int siz[NDIM], int & argc, char ***argvp);
 
 
   void teardown();
