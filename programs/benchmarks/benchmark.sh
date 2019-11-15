@@ -9,7 +9,8 @@ elif [ "$1" = "MPI" ]; then
     export MAKEFILE=Makefile
     if [ "$1" = "-n" ]; then
       shift
-      export RUNNER=mpirun -n $1
+      export RUNNER="mpirun -n $1"
+      shift
     else
       export RUNNER=mpirun 
     fi
@@ -30,6 +31,7 @@ fi
 make cleanall
 for benchfile in $benchmarks; do
     benchmark="${benchfile%.*}"
+    echo make -j -f $MAKEFILE -s ${benchmark}.exe
     make -j -f $MAKEFILE -s ${benchmark}.exe 2>/dev/null
     echo ${RUNNER} ./${benchmark}.exe
     ${RUNNER} ./${benchmark}.exe
