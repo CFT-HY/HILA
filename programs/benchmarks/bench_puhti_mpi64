@@ -1,0 +1,3 @@
+rm -rf *.o *.cpt *.exe
+make -j -f Makefile -s bench_matrix.exe
+mpirun -n 64 ./bench_matrix.exe

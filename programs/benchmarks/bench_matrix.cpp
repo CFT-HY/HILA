@@ -3,7 +3,7 @@
 #define N 3
 
 
-int main(){
+int main(int argc, char **argv){
     int n_runs;
     double msecs;
     clock_t init, end;
@@ -13,7 +13,7 @@ int main(){
     int n_runs_multiplier = NRUNS;
 
     // Runs lattice->setup 
-    bench_setup();
+    bench_setup(argc, argv);
 
     #ifdef USE_MPI
     n_runs_multiplier *= lattice->n_nodes();

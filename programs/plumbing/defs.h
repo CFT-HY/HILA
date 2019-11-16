@@ -108,8 +108,9 @@ inline location coordinates(parity X){location l; return l;};
 
 
 
+
 // Global functions: setup
-void initial_setup(int & argc, char ***argvp);
+void initial_setup(int argc, char **argv);
 
 // Communication functions
 #ifndef USE_MPI
@@ -117,7 +118,7 @@ void initial_setup(int & argc, char ***argvp);
 // Trivial, no MPI
 #define mynode() 0
 #define numnodes() 1
-inline void initialize_machine(int & argc, char ***argvp) {}
+inline void initialize_machine(int &argc, char ***argv) {}
 inline void finishrun() {
   exit(0);
 }
@@ -128,7 +129,7 @@ inline void finishrun() {
 int mynode();
 int numnodes();
 void finishrun();
-void initialize_machine(int & argc, char ***argvp);
+void initialize_machine(int &argc, char ***argv);
 
 #endif
 

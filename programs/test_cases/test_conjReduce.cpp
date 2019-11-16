@@ -10,11 +10,11 @@
 
 //TODO: rng definition that works for MPI, GPU and CPU
 
-int main(){
+int main(int argc, char **argv){
     seed_mersenne(4l);
     double dsum = 0;
     int isum = 0;
-    test_setup();
+    test_setup(argc, argv);
 
     field<matrix<2,2,double> > matrices;
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
@@ -42,7 +42,7 @@ int main(){
     
 
     // If MPI is defined, check that gathers are counted correctly
-    #ifdef USE_MPI
+    #ifdef MPI
     coordinate[ALL] = 1;
     lattices[0]->n_gather_done = 0;
     lattices[0]->n_gather_avoided = 0;

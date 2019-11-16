@@ -19,7 +19,7 @@ void sum_test_function(A &a, const B &b, const C &c){
 }
 
 
-int main(){
+int main(int argc, char **argv){
 
     //check that you can increment a direction correctly
     direction d = XUP;
@@ -36,7 +36,7 @@ int main(){
     field<cmplx<double>> s1, s2, s3;
     field<cmplx<double>> s4[3];
 
-    test_setup();
+    test_setup(argc, argv);
 
     // Test field assingment
     s1 = 0.0;
