@@ -317,10 +317,6 @@ class field_storage {
     }
 
     #endif
-
-    // Host accessors to individual elements 
-    void gather_comm_elements( char * buffer, lattice_struct::comm_node_struct to_node, parity par, const int field_alloc_size) const;
-    void scatter_comm_elements( char * buffer, lattice_struct::comm_node_struct to_node, parity par, const int field_alloc_size );
 };
 
 
