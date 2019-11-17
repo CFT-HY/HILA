@@ -321,7 +321,10 @@ class field_storage {
     // Host accessors to individual elements 
     T get_host_element(const int idx, const int field_alloc_size) const;
     void set_host_element( T element, const int idx, const int field_alloc_size );
+    void gather_comm_elements( char * buffer, lattice_struct::comm_node_struct to_node, parity par, const int field_alloc_size) const;
+    void scatter_comm_elements( char * buffer, lattice_struct::comm_node_struct to_node, parity par, const int field_alloc_size );
 };
+
 
 
 
@@ -332,7 +335,7 @@ __global__ void gather_field_element( field_storage<T> field, T *element, const 
 {
   *element = field.get(idx, field_alloc_size);
 }
-
+ 
 /// Kernel that gathers a single element
 template <typename T>
 __global__ void scatter_field_element( field_storage<T> field, T *element, const int idx, const int field_alloc_size )
@@ -357,6 +360,70 @@ void field_storage<T>::set_host_element( T element, const int idx, const int fie
   cudaMemcpy( d_element, &element, sizeof(T), cudaMemcpyHostToDevice );
   scatter_field_element<<< 1, 1 >>>( (*this), d_element, idx, field_alloc_size );
   cudaFree(d_element);
+}
+
+
+template <typename T>
+__global__ void gather_comm_elements_kernel( field_storage<T> field, char *buffer, int * site_index, const int sites, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < sites ) {
+    ((T*) buffer)[Index] = field.get(site_index[Index], field_alloc_size);
+  }
+}
+
+template <typename T>
+void field_storage<T>::gather_comm_elements(
+  char * buffer, 
+  lattice_struct::comm_node_struct to_node, 
+  parity par,
+  const int field_alloc_size) const
+{
+  int *site_index, *d_site_index;
+  char * d_buffer;
+  int sites = to_node.n_sites(par);
+  
+  site_index = (int *)malloc( sites*sizeof(int) );
+  cudaMalloc( (void **)&(d_site_index), sites*sizeof(int));
+  for (int j=0; j<sites; j++) {
+    site_index[j] = to_node.site_index(j, par);
+  }
+  cudaMemcpy( d_site_index, site_index, sites*sizeof(int), cudaMemcpyHostToDevice );
+  free(site_index);
+
+  cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
+  int N_blocks = sites/N_threads + 1; 
+  gather_comm_elements_kernel<<< N_blocks, N_threads >>>( (*this), d_buffer, d_site_index, sites, field_alloc_size );
+  cudaMemcpy( buffer, d_buffer, sites*sizeof(T), cudaMemcpyDeviceToHost );
+
+  cudaFree(d_site_index);
+  cudaFree(d_buffer);
+}
+
+template <typename T>
+__global__ void scatter_comm_elements_kernel( field_storage<T> field, char *buffer, const int offset, const int sites, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < sites ) {
+    field.set( ((T*) buffer)[Index], offset + Index, field_alloc_size);
+  }
+}
+
+template <typename T>
+void field_storage<T>::scatter_comm_elements( 
+  char * buffer, 
+  lattice_struct::comm_node_struct from_node, 
+  parity par,
+  const int field_alloc_size) {
+  char * d_buffer;
+  int sites = from_node.n_sites(par);
+
+  cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
+  cudaMemcpy( d_buffer, buffer, sites*sizeof(T), cudaMemcpyHostToDevice );
+  int N_blocks = sites/N_threads + 1; 
+  scatter_comm_elements_kernel<<< N_blocks, N_threads >>>( (*this), d_buffer, from_node.offset(par), sites, field_alloc_size );
+
+  cudaFree(d_buffer);
 }
 #endif
 
@@ -395,14 +462,35 @@ private:
 
       void allocate_payload() { payload.allocate_field(lattice->field_alloc_size()); }
       void free_payload() { payload.free_field(); }
+      
       #if !defined(CUDA) || defined(TRANSFORMER)
       T get(const int i) const { return  payload.get( i, lattice->field_alloc_size() ); }
       void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() );  }
+      
+      void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+        for (int j=0; j<to_node.n_sites(par); j++) {
+          T element = get(to_node.site_index(j, par));
+          std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
+        }
+      }
+      void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+        for (int j=0; j<from_node.n_sites(par); j++) {
+          T element = *((T*) ( buffer + j*sizeof(T) ));
+          set(element, from_node.offset(par)+j);
+        }
+      }
+
       #else
       T get(const int i) const { return  payload.get_host_element( i, lattice->field_alloc_size() ); }
       void set(T value, const int i) { payload.set_host_element( value, i, lattice->field_alloc_size() );  }
+      
+      void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+        payload.gather_comm_elements(buffer, to_node, par, lattice->field_alloc_size());
+      }
+      void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+        payload.scatter_comm_elements(buffer, from_node, par, lattice->field_alloc_size());
+      }
       #endif
-
   };
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
@@ -828,15 +916,12 @@ void field<T>::start_move(direction d, parity par) const {
   /* HANDLE SENDS: Copy field elements on the boundary to a send buffer and send */
   n=0;
   for( lattice_struct::comm_node_struct to_node : ci.to_node ){
+    /* gather data into the buffer  */
     unsigned sites = to_node.n_sites(par);
     char * buffer = (char *)malloc( sites*size );
+    fs->gather_comm_elements(buffer, to_node, par);
 
-    /* gather data into the buffer */
-    for (int j=0; j<sites; j++) {
-      T element = get_value_at(to_node.site_index(j, par));
-      std::memcpy( buffer + j*size, (char *) (&element), size );
-    }
-
+    /* And send */
     MPI_Send( buffer, sites*size, MPI_BYTE, to_node.index, n,  lattice->mpi_comm_lat);
 
     std::free(buffer);
@@ -849,18 +934,9 @@ void field<T>::start_move(direction d, parity par) const {
     MPI_Status status;
     MPI_Wait(&request[n], &status);
 
-    unsigned sites = from_node.n_sites(par);
-    int offset = from_node.offset(par);
     char * buffer = receive_buffer[n];
-    for (int j=0; j<sites; j++) {
-      T element = *((T*) ( buffer + j*size ));
-      /* The set_value_at function cannot be used if the field
-       * is const (naturally, since it is intended to change the
-       * field). Instead, we call the field_struct setter
-       * directly. */
-      this->fs->set(element, offset+j);
-    }
-      
+    fs->scatter_comm_elements(buffer, from_node, par);
+    
     n++;
   }
 

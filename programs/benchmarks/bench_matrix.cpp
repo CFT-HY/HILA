@@ -39,7 +39,7 @@ int main(int argc, char **argv){
 
     end = clock();
 
-    timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Matrix * Matrix: " << timing << "ms \n";
 
     matrix1[ALL] = 1; 
@@ -61,7 +61,7 @@ int main(int argc, char **argv){
 
     end = clock();
 
-    timing = ((double)(end - init)) *1000 / (CLOCKS_PER_SEC) / n_runs;
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Vector * Matrix: " << timing << " ms \n";
 
 
@@ -79,7 +79,7 @@ int main(int argc, char **argv){
 
     end = clock();
 
-    timing = ((double)(end - init)) *1000 / (CLOCKS_PER_SEC) / n_runs;
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Vector square sum: " << timing << " ms \n";
 
 
@@ -96,7 +96,7 @@ int main(int argc, char **argv){
 
     end = clock();
 
-    timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Dirac: " << timing << "ms \n";
 
 
@@ -148,7 +148,7 @@ int main(int argc, char **argv){
         end = clock();
     }
 
-    timing = ((double)(end - init)) *1000.0 / (CLOCKS_PER_SEC) / n_runs;
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "CG: " << timing << "ms / iteration\n";
 
 
