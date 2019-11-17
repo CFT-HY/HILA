@@ -226,97 +226,104 @@ struct field_storage_type {
 // amount of data.
 template <typename T>
 class field_storage {
-  private:
-    constexpr static int t_elements = sizeof(T) / sizeof(real_t);
-  public:
-    real_t * fieldbuf;
+  constexpr static int t_elements = sizeof(T) / sizeof(real_t);
+  real_t * fieldbuf;
 
-    #ifdef layout_SOA
-    #if !defined(CUDA) || defined(TRANSFORMER)
+  #ifdef layout_SOA
+  // Structure of arrays implementation. Both CUDA and CPU
+  
+  #if !defined(CUDA) || defined(TRANSFORMER)
+  // CPU implementation of field allcation 
     
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
-      #pragma acc enter data create(fieldbuf)
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
-      }
+  void allocate_field( const int field_alloc_size ) {
+    fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
+    #pragma acc enter data create(fieldbuf)
+    if (fieldbuf == nullptr) {
+      std::cout << "Failure in field memory allocation\n";
+      exit(1);
     }
+  }
 
-    void free_field() {
-      #pragma acc exit data delete(fieldbuf)
-      free((void *)fieldbuf);
-      fieldbuf = nullptr;
+  void free_field() {
+    #pragma acc exit data delete(fieldbuf)
+    free((void *)fieldbuf);
+    fieldbuf = nullptr;
+  }
+
+  #else
+  // CUDA implementaion of field allocation
+
+  void allocate_field( const int field_alloc_size ) {
+    cudaMalloc(
+      (void **)&fieldbuf,
+      t_elements*sizeof(real_t) * field_alloc_size
+    );
+    check_cuda_error("allocate_payload");
+    if (fieldbuf == nullptr) {
+      std::cout << "Failure in GPU field memory allocation\n";
+      exit(1);
     }
+  }
 
-    #else
-
-    void allocate_field( const int field_alloc_size ) {
-      cudaMalloc(
-        (void **)&fieldbuf,
-        t_elements*sizeof(real_t) * field_alloc_size
-      );
-      check_cuda_error("allocate_payload");
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in GPU field memory allocation\n";
-        exit(1);
-      }
+  void free_field() {
+    cudaFree(fieldbuf);
+    check_cuda_error("free_payload");
+    fieldbuf = nullptr;
+  }
+  #endif
+  
+  /// Get a single element in a field
+  /// With CUDA this only works in a loop
+  loop_callable
+  inline T get(const int idx, const int field_alloc_size) const {
+    assert( idx < field_alloc_size);
+    T value;
+    real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+    for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
+       value_f[i] = fieldbuf[i*field_alloc_size + idx];
     }
+    return value; 
+  }
 
-    void free_field() {
-      cudaFree(fieldbuf);
-      check_cuda_error("free_payload");
-      fieldbuf = nullptr;
+  /// Set a single element in a field
+  /// With CUDA this only works in a loop  
+  loop_callable
+  inline void set(T value, const int idx, const int field_alloc_size) {
+    assert( idx < field_alloc_size);
+    real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+    for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
+      fieldbuf[i*field_alloc_size + idx] = value_f[i];
     }
-    #endif
+  }
 
-    loop_callable
-    inline T get(const int idx, const int field_alloc_size) const {
-      assert( idx < field_alloc_size);
-      T value;
-      real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
-      for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
-         value_f[i] = fieldbuf[i*field_alloc_size + idx];
-      }
-      return value; 
+
+  #else 
+  // Array of structures implemntation. Only CPU implementation
+
+  void allocate_field( const int field_alloc_size ) {
+    fieldbuf = allocate_field_mem(sizeof(T) * field_alloc_size);
+    if (fieldbuf == nullptr) {
+      std::cout << "Failure in field memory allocation\n";
+      exit(1);
     }
-    
-    loop_callable
-    inline void set(T value, const int idx, const int field_alloc_size) {
-      assert( idx < field_alloc_size);
-      real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
-      for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
-        fieldbuf[i*field_alloc_size + idx] = value_f[i];
-      }
-    }
+  }
 
+  void free_field() {
+    free((void *)fieldbuf);
+    payload = nullptr;
+  }
 
-    #else
+  T get(const int i, const int field_alloc_size) const
+  {
+    return ((T *) payload)[i];
+  }
 
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = allocate_field_mem(sizeof(T) * field_alloc_size);
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
-      }
-    }
+  void set(T value, const int i, const int field_alloc_size) 
+  {
+    ((T *) payload)[i] = value;
+  }
 
-    void free_field() {
-      free((void *)fieldbuf);
-      payload = nullptr;
-    }
-
-    T get(const int i, const int field_alloc_size) const
-    {
-      return ((T *) payload)[i];
-    }
-
-    void set(T value, const int i, const int field_alloc_size) 
-    {
-      ((T *) payload)[i] = value;
-    }
-
-    #endif
+  #endif
 };
 
 
