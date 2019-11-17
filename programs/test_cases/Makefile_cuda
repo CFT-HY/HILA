@@ -24,8 +24,8 @@ LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(MPI_LIBS)
 CFLAGS = -g -G $(OPTS)
 CXXFLAGS = -g -G $(OPTS)
 
-%.exe: %.tr.o Makefile mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o
-		$(LD) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o
+%.exe: %.tr.o Makefile mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
+		$(LD) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
 
 %.cpt: %.cpp
 		$(TRANSFORMER) $<
