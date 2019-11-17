@@ -220,6 +220,7 @@ struct field_storage_type {
 
 
 
+
 // Pointer to field data and accessors. Only this is passed to the
 // CUDA kernels and other accelerators and it only contains a minimal
 // amount of data.
@@ -231,7 +232,7 @@ class field_storage {
     real_t * fieldbuf;
 
     #ifdef layout_SOA
-    #ifndef CUDA
+    #if !defined(CUDA) || defined(TRANSFORMER)
     
     void allocate_field( const int field_alloc_size ) {
       fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
@@ -316,9 +317,48 @@ class field_storage {
     }
 
     #endif
+
+    // Host accessors to individual elements 
+    T get_host_element(const int idx, const int field_alloc_size) const;
+    void set_host_element( T element, const int idx, const int field_alloc_size );
 };
 
 
+
+#if defined(CUDA) && !defined(TRANSFORMER)
+/// Kernel that gathers a single element
+template <typename T>
+__global__ void gather_field_element( field_storage<T> field, T *element, const int idx, const int field_alloc_size )
+{
+  *element = field.get(idx, field_alloc_size);
+}
+
+/// Kernel that gathers a single element
+template <typename T>
+__global__ void scatter_field_element( field_storage<T> field, T *element, const int idx, const int field_alloc_size )
+{
+  field.set(*element, idx, field_alloc_size);
+}
+
+template <typename T>
+T field_storage<T>::get_host_element(const int idx, const int field_alloc_size) const{
+  T * d_element, h_element;
+  cudaMalloc( (void **)&(d_element), sizeof(T));
+  gather_field_element<<< 1, 1 >>>( (*this), d_element, idx, field_alloc_size );
+  cudaMemcpy( &h_element, d_element, sizeof(T), cudaMemcpyDeviceToHost );
+  cudaFree(d_element);
+  return h_element;
+}
+
+template <typename T>
+void field_storage<T>::set_host_element( T element, const int idx, const int field_alloc_size ){
+  T * d_element;
+  cudaMalloc( (void **)&(d_element), sizeof(T));
+  cudaMemcpy( d_element, &element, sizeof(T), cudaMemcpyHostToDevice );
+  scatter_field_element<<< 1, 1 >>>( (*this), d_element, idx, field_alloc_size );
+  cudaFree(d_element);
+}
+#endif
 
 
 
@@ -355,8 +395,14 @@ private:
 
       void allocate_payload() { payload.allocate_field(lattice->field_alloc_size()); }
       void free_payload() { payload.free_field(); }
+      #if !defined(CUDA) || defined(TRANSFORMER)
       T get(const int i) const { return  payload.get( i, lattice->field_alloc_size() ); }
       void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() );  }
+      #else
+      T get(const int i) const { return  payload.get_host_element( i, lattice->field_alloc_size() ); }
+      void set(T value, const int i) { payload.set_host_element( value, i, lattice->field_alloc_size() );  }
+      #endif
+
   };
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
@@ -482,15 +528,13 @@ public:
   //  return (field_element<T>) *this;
   //}
 
-  T get_value_at(int i) const
-  {
-    return this->fs->get(i);
-  }
 
-  void set_value_at(T value, int i)
-  {
-    this->fs->set(value, i);
-  }
+  /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
+  T get_value_at(int i) const { return this->fs->get(i); }
+
+  /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
+  void set_value_at(T value, int i) { this->fs->set(value, i); }
+
 
   // fetch the element at this loc
   // T get(int i) const;
@@ -786,6 +830,7 @@ void field<T>::start_move(direction d, parity par) const {
   for( lattice_struct::comm_node_struct to_node : ci.to_node ){
     unsigned sites = to_node.n_sites(par);
     char * buffer = (char *)malloc( sites*size );
+
     /* gather data into the buffer */
     for (int j=0; j<sites; j++) {
       T element = get_value_at(to_node.site_index(j, par));
