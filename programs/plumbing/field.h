@@ -319,113 +319,10 @@ class field_storage {
     #endif
 
     // Host accessors to individual elements 
-    T get_host_element(const int idx, const int field_alloc_size) const;
-    void set_host_element( T element, const int idx, const int field_alloc_size );
     void gather_comm_elements( char * buffer, lattice_struct::comm_node_struct to_node, parity par, const int field_alloc_size) const;
     void scatter_comm_elements( char * buffer, lattice_struct::comm_node_struct to_node, parity par, const int field_alloc_size );
 };
 
-
-
-
-#if defined(CUDA) && !defined(TRANSFORMER)
-/// Kernel that gathers a single element
-template <typename T>
-__global__ void gather_field_element( field_storage<T> field, T *element, const int idx, const int field_alloc_size )
-{
-  *element = field.get(idx, field_alloc_size);
-}
- 
-/// Kernel that gathers a single element
-template <typename T>
-__global__ void scatter_field_element( field_storage<T> field, T *element, const int idx, const int field_alloc_size )
-{
-  field.set(*element, idx, field_alloc_size);
-}
-
-template <typename T>
-T field_storage<T>::get_host_element(const int idx, const int field_alloc_size) const{
-  T * d_element, h_element;
-  cudaMalloc( (void **)&(d_element), sizeof(T));
-  gather_field_element<<< 1, 1 >>>( (*this), d_element, idx, field_alloc_size );
-  cudaMemcpy( &h_element, d_element, sizeof(T), cudaMemcpyDeviceToHost );
-  cudaFree(d_element);
-  return h_element;
-}
-
-template <typename T>
-void field_storage<T>::set_host_element( T element, const int idx, const int field_alloc_size ){
-  T * d_element;
-  cudaMalloc( (void **)&(d_element), sizeof(T));
-  cudaMemcpy( d_element, &element, sizeof(T), cudaMemcpyHostToDevice );
-  scatter_field_element<<< 1, 1 >>>( (*this), d_element, idx, field_alloc_size );
-  cudaFree(d_element);
-}
-
-
-template <typename T>
-__global__ void gather_comm_elements_kernel( field_storage<T> field, char *buffer, int * site_index, const int sites, const int field_alloc_size )
-{
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
-  if( Index < sites ) {
-    ((T*) buffer)[Index] = field.get(site_index[Index], field_alloc_size);
-  }
-}
-
-template <typename T>
-void field_storage<T>::gather_comm_elements(
-  char * buffer, 
-  lattice_struct::comm_node_struct to_node, 
-  parity par,
-  const int field_alloc_size) const
-{
-  int *site_index, *d_site_index;
-  char * d_buffer;
-  int sites = to_node.n_sites(par);
-  
-  site_index = (int *)malloc( sites*sizeof(int) );
-  cudaMalloc( (void **)&(d_site_index), sites*sizeof(int));
-  for (int j=0; j<sites; j++) {
-    site_index[j] = to_node.site_index(j, par);
-  }
-  cudaMemcpy( d_site_index, site_index, sites*sizeof(int), cudaMemcpyHostToDevice );
-  free(site_index);
-
-  cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
-  int N_blocks = sites/N_threads + 1; 
-  gather_comm_elements_kernel<<< N_blocks, N_threads >>>( (*this), d_buffer, d_site_index, sites, field_alloc_size );
-  cudaMemcpy( buffer, d_buffer, sites*sizeof(T), cudaMemcpyDeviceToHost );
-
-  cudaFree(d_site_index);
-  cudaFree(d_buffer);
-}
-
-template <typename T>
-__global__ void scatter_comm_elements_kernel( field_storage<T> field, char *buffer, const int offset, const int sites, const int field_alloc_size )
-{
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
-  if( Index < sites ) {
-    field.set( ((T*) buffer)[Index], offset + Index, field_alloc_size);
-  }
-}
-
-template <typename T>
-void field_storage<T>::scatter_comm_elements( 
-  char * buffer, 
-  lattice_struct::comm_node_struct from_node, 
-  parity par,
-  const int field_alloc_size) {
-  char * d_buffer;
-  int sites = from_node.n_sites(par);
-
-  cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
-  cudaMemcpy( d_buffer, buffer, sites*sizeof(T), cudaMemcpyHostToDevice );
-  int N_blocks = sites/N_threads + 1; 
-  scatter_comm_elements_kernel<<< N_blocks, N_threads >>>( (*this), d_buffer, from_node.offset(par), sites, field_alloc_size );
-
-  cudaFree(d_buffer);
-}
-#endif
 
 
 
@@ -463,34 +360,17 @@ private:
       void allocate_payload() { payload.allocate_field(lattice->field_alloc_size()); }
       void free_payload() { payload.free_field(); }
       
-      #if !defined(CUDA) || defined(TRANSFORMER)
+      /// Getter for an individual elements. Will not work in CUDA host code,
+      /// but must be defined
       T get(const int i) const { return  payload.get( i, lattice->field_alloc_size() ); }
-      void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() );  }
-      
-      void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-        for (int j=0; j<to_node.n_sites(par); j++) {
-          T element = get(to_node.site_index(j, par));
-          std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
-        }
-      }
-      void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-        for (int j=0; j<from_node.n_sites(par); j++) {
-          T element = *((T*) ( buffer + j*sizeof(T) ));
-          set(element, from_node.offset(par)+j);
-        }
-      }
+      /// Getter for an individual elements. Will not work in CUDA host code,
+      /// but must be defined
+      void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() ); }
 
-      #else
-      T get(const int i) const { return  payload.get_host_element( i, lattice->field_alloc_size() ); }
-      void set(T value, const int i) { payload.set_host_element( value, i, lattice->field_alloc_size() );  }
-      
-      void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-        payload.gather_comm_elements(buffer, to_node, par, lattice->field_alloc_size());
-      }
-      void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-        payload.scatter_comm_elements(buffer, from_node, par, lattice->field_alloc_size());
-      }
-      #endif
+      /// Gather boundary elements for communication
+      void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const;
+      /// Place boundary elements from neighbour
+      void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par);
   };
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
@@ -854,6 +734,10 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 
 
 
+
+
+
+
 /* Communication routines for fields */
 #ifndef USE_MPI
 /* No MPI, trivial implementations */
@@ -873,6 +757,103 @@ void field<T>::start_move(direction d, parity p) const {}
  */
 
 #include "../plumbing/comm_mpi.h"
+
+
+#if !defined(CUDA) || defined(TRANSFORMER)
+/// The standard (Non-CUDA) implementation of gather_comm_elements
+/* Gathers sites at the boundary that need to be communicated to neighbours */
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+  for (int j=0; j<to_node.n_sites(par); j++) {
+    T element = get(to_node.site_index(j, par));
+    std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
+  }
+}
+/// The standard (Non-CUDA) implementation of scatter_comm_elements
+/* Sets the values the neighbour elements from the communication buffer */
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+  for (int j=0; j<from_node.n_sites(par); j++) {
+    T element = *((T*) ( buffer + j*sizeof(T) ));
+    set(element, from_node.offset(par)+j);
+  }
+}
+
+#else
+/* CUDA implementations */
+
+/// A kernel that gathers neighbour elements for communication (using the getter)
+template <typename T>
+__global__ void gather_comm_elements_kernel( field_storage<T> field, char *buffer, int * site_index, const int sites, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < sites ) {
+    ((T*) buffer)[Index] = field.get(site_index[Index], field_alloc_size);
+  }
+}
+
+/// CUDA implementation of gather_comm_elements without CUDA aware MPI
+/// Gathers sites at the boundary that need to be communicated to neighbours
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+  int *site_index, *d_site_index;
+  char * d_buffer;
+  int sites = to_node.n_sites(par);
+  
+  // Copy the list of boundary site indexes to the device
+  site_index = (int *)std::malloc( sites*sizeof(int) );
+  cudaMalloc( (void **)&(d_site_index), sites*sizeof(int));
+  for (int j=0; j<sites; j++) {
+    site_index[j] = to_node.site_index(j, par);
+  }
+  cudaMemcpy( d_site_index, site_index, sites*sizeof(int), cudaMemcpyHostToDevice );
+  std::free(site_index);
+
+  // Call the kernel to build the list of elements
+  cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
+  int N_blocks = sites/N_threads + 1; 
+  gather_comm_elements_kernel<<< N_blocks, N_threads >>>( payload, d_buffer, d_site_index, sites, lattice->field_alloc_size() );
+  
+  // Copy the result to the host
+  cudaMemcpy( buffer, d_buffer, sites*sizeof(T), cudaMemcpyDeviceToHost );
+
+  cudaFree(d_site_index);
+  cudaFree(d_buffer);
+}
+
+
+/// A kernel that scatters the neighbour sites received from a neihbour into 
+/// it's proper place (using the setter)
+template <typename T>
+__global__ void scatter_comm_elements_kernel( field_storage<T> field, char *buffer, const int offset, const int sites, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < sites ) {
+    field.set( ((T*) buffer)[Index], offset + Index, field_alloc_size);
+  }
+}
+
+/// CUDA implementation of gather_comm_elements without CUDA aware MPI
+/// Sets the values the neighbour elements from the communication buffer 
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+  char * d_buffer;
+  int sites = from_node.n_sites(par);
+
+  // Allocate space and copy the buffer to the device
+  cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
+  cudaMemcpy( d_buffer, buffer, sites*sizeof(T), cudaMemcpyHostToDevice );
+
+  // Call the kernel to place the elements 
+  int N_blocks = sites/N_threads + 1; 
+  scatter_comm_elements_kernel<<< N_blocks, N_threads >>>( payload, d_buffer, from_node.offset(par), sites, lattice->field_alloc_size() );
+
+  cudaFree(d_buffer);
+}
+#endif
+
+
+
 
 ///* start_move(): Communicate the field from direction d 
 ///  A simple implementation that waits completes the communication
