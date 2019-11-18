@@ -12,12 +12,15 @@
 #include <mpi.h>
 #endif
 
+#if !defined(CUDA) && !defined(AVX512)
 #define VANILLA
-#define EVENFIRST
+#endif
 
 #ifdef CUDA
 #define layout_SOA
 #endif
+
+#define EVENFIRST
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = float;
@@ -27,6 +30,19 @@ using real_t = float;
 #ifndef NDIM
   #define NDIM 4
 #endif
+
+
+// HACK  -- this is needed for pragma handlin, do not change!
+// #pragma transformer _transformer_cmd_dump_ast_
+
+// HACK
+#ifdef TRANSFORMER
+#define transformer_ctl(a) extern int _transformer_ctl_##a
+#else
+#define transformer_ctl(a)
+#endif
+//void transformer_control(const char *);
+
 
 // Direction and parity
 
@@ -43,7 +59,7 @@ enum direction { XUP, XDOWN, NDIRS };
 /**
  * Increment op for directions
  * */
-extern int _transformer_ctl_loop_function;
+transformer_ctl(loop_function);
 inline direction & operator++(direction & dir, int dummy){
   const int i = static_cast<int>(dir);
   return dir=static_cast<direction>((i + 1)%NDIRS);

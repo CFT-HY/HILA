@@ -10,14 +10,6 @@
 #include "../plumbing/globals.h"
 
 
-// HACK  -- this is needed for pragma handlin, do not change!
-// #pragma transformer _transformer_cmd_dump_ast_
-
-// HACK
-#define transformer_ctl(a) extern int _transformer_ctl_##a
-//void transformer_control(const char *);
-
-
 struct parity_plus_direction {
   parity p;
   direction d;
@@ -227,51 +219,49 @@ struct field_storage_type {
 template <typename T>
 class field_storage {
   public:
-    #ifdef layout_SOA
-  
-    // Structure of arrays implementation. Both CUDA and CPU
-    constexpr static int t_elements = sizeof(T) / sizeof(real_t);
-    real_t * fieldbuf;
-
-    #if !defined(CUDA) || defined(TRANSFORMER)
-    // CPU implementation of field allcation 
+    #ifndef layout_SOA
+      // Array of structures implementation
+    T * fieldbuf;
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
+      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
       #pragma acc enter data create(fieldbuf)
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
-      }
     }
 
     void free_field() {
       #pragma acc exit data delete(fieldbuf)
-      free((void *)fieldbuf);
+      free_field_mem((void *)fieldbuf);
       fieldbuf = nullptr;
     }
 
+    loop_callable
+    T get(const int i, const int field_alloc_size) const
+    {
+      return ((T *) fieldbuf)[i];
+    }
+
+    loop_callable
+    void set(T value, const int i, const int field_alloc_size) 
+    {
+      ((T *) fieldbuf)[i] = value;
+    }
+
+
     #else
-    // CUDA implementaion of field allocation
+    // Structure of arrays implementation
+    constexpr static int t_elements = sizeof(T) / sizeof(real_t);
+    real_t * fieldbuf;
 
     void allocate_field( const int field_alloc_size ) {
-      cudaMalloc(
-        (void **)&fieldbuf,
-        t_elements*sizeof(real_t) * field_alloc_size
-      );
-      check_cuda_error("allocate_payload");
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in GPU field memory allocation\n";
-        exit(1);
-      }
+      fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
+      #pragma acc enter data create(fieldbuf)
     }
 
     void free_field() {
-      cudaFree(fieldbuf);
-      check_cuda_error("free_payload");
+      #pragma acc exit data delete(fieldbuf)
+      free_field_mem((void *)fieldbuf);
       fieldbuf = nullptr;
     }
-    #endif
 
     /// Get a single element in a field
     /// With CUDA this only works in a loop
@@ -296,34 +286,6 @@ class field_storage {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
       }
     }
-
-    #else 
-    // Array of structures implemntation. Only for CPU
-    T * fieldbuf;
-
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (T*)allocate_field_mem(sizeof(T) * field_alloc_size);
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
-      }
-    }
-
-    void free_field() {
-      free((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    T get(const int i, const int field_alloc_size) const
-    {
-      return ((T *) fieldbuf)[i];
-    }
-
-    void set(T value, const int i, const int field_alloc_size) 
-    {
-      ((T *) fieldbuf)[i] = value;
-    }
-
     #endif
 };
 
