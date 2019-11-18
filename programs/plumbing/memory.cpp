@@ -8,13 +8,14 @@
 
 #ifdef VANILLA
 
-void allocate_field_mem(void ** p, size_t size) {
+void * allocate_field_mem(size_t size) {
   // returns nullptr if there are problems
-  *p = malloc(size);
-  if (*p == nullptr) {
+  void * p = malloc(size);
+  if (p == nullptr) {
     std::cout << "Failure in field memory allocation\n";
     exit(1);
   }
+  return p;
 }
 
 void free_field_mem(void * p) {
@@ -28,13 +29,14 @@ void free_field_mem(void * p) {
 // AVX512 sweet spot?
 #define FIELD_ALIGNMENT 512
 
-void allocate_field_mem(void ** p, size_t size) {
+void * allocate_field_mem(size_t size) {
   // guarantee size is a multiple of alignment
   if (size % FIELD_ALIGNMENT) 
     size = size - (size % FIELD_ALIGNMENT) + FIELD_ALIGNMENT;
 
   // returns nullptr if there are problems
-  *p = aligned_alloc( FIELD_ALIGNMENT, size);
+  void * p = aligned_alloc( FIELD_ALIGNMENT, size);
+  return p;
 }
 
 /// 
@@ -48,14 +50,15 @@ void free_field_mem(void * p) {
 #include "../plumbing/hila_cuda.h"
 
 
-void allocate_field_mem(void ** p, size_t size) {
-  // returns nullptr if there are problems
-  cudaMalloc( p, size );
+void * allocate_field_mem(size_t size) {
+  void * p;
+  cudaMalloc( &p, size );
   check_cuda_error("Allocate field memory");
-  if (*p == nullptr) {
+  if (p == nullptr) {
     std::cout << "Failure in field memory allocation\n";
     exit(1);
   }
+  return p;
 }
 
 void free_field_mem(void * p) {

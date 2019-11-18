@@ -227,15 +227,41 @@ struct field_storage_type {
 template <typename T>
 class field_storage {
   public:
-    #ifdef layout_SOA
-  
-    // Structure of arrays implementation. Both CUDA and CPU
+    #ifndef layout_SOA
+      // Array of structures implementation
+    T * fieldbuf;
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
+      #pragma acc enter data create(fieldbuf)
+    }
+
+    void free_field() {
+      #pragma acc exit data delete(fieldbuf)
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    loop_callable
+    T get(const int i, const int field_alloc_size) const
+    {
+      return ((T *) fieldbuf)[i];
+    }
+
+    loop_callable
+    void set(T value, const int i, const int field_alloc_size) 
+    {
+      ((T *) fieldbuf)[i] = value;
+    }
+
+
+    #else
+    // Structure of arrays implementation
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     real_t * fieldbuf;
 
-
     void allocate_field( const int field_alloc_size ) {
-      allocate_field_mem( (void**)&fieldbuf, t_elements*sizeof(real_t) * field_alloc_size );
+      fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
       #pragma acc enter data create(fieldbuf)
     }
 
@@ -268,34 +294,6 @@ class field_storage {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
       }
     }
-
-    #else 
-    // Array of structures implemntation. Only for CPU
-    T * fieldbuf;
-
-    void allocate_field( const int field_alloc_size ) {
-      allocate_field_mem((void**)&fieldbuf, sizeof(T) * field_alloc_size);
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
-      }
-    }
-
-    void free_field() {
-      free((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    T get(const int i, const int field_alloc_size) const
-    {
-      return ((T *) fieldbuf)[i];
-    }
-
-    void set(T value, const int i, const int field_alloc_size) 
-    {
-      ((T *) fieldbuf)[i] = value;
-    }
-
     #endif
 };
 
