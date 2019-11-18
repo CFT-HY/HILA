@@ -10,14 +10,6 @@
 #include "../plumbing/globals.h"
 
 
-// HACK  -- this is needed for pragma handlin, do not change!
-// #pragma transformer _transformer_cmd_dump_ast_
-
-// HACK
-#define transformer_ctl(a) extern int _transformer_ctl_##a
-//void transformer_control(const char *);
-
-
 struct parity_plus_direction {
   parity p;
   direction d;
