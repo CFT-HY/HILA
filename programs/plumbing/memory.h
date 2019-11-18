@@ -3,7 +3,7 @@
 
 // Definitions associated with field allocation
 
-void * allocate_field_mem(size_t size);
+void allocate_field_mem(void ** p, size_t size);
 void free_field_mem(void * p);
 
 #endif
