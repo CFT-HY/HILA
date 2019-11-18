@@ -12,12 +12,15 @@
 #include <mpi.h>
 #endif
 
+#if !defined(CUDA) && !defined(AVX512)
 #define VANILLA
-#define EVENFIRST
+#endif
 
 #ifdef CUDA
 #define layout_SOA
 #endif
+
+#define EVENFIRST
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = float;
