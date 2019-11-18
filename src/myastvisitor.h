@@ -50,7 +50,7 @@ public:
   bool VisitFunctionDecl(FunctionDecl *f);
 
   /// true if function contains parity loop
-  bool functiondecl_loop_found( FunctionDecl *f );
+  bool does_function_contain_loop( FunctionDecl *f );
   
   /// same for function templates
   // bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);

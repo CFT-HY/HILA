@@ -1183,7 +1183,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 
 //////// Functiondecl and templates below
 
-bool MyASTVisitor::functiondecl_loop_found( FunctionDecl *f ) {
+bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
   // Currently simple: buffer the function and traverse through it
 
   srcBuf buf(&TheRewriter,f);
@@ -1256,7 +1256,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-      if (functiondecl_loop_found(f)) {
+      if (does_function_contain_loop(f)) {
         loop_callable = false;
       }
 
@@ -1273,7 +1273,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
         
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
 
-        if (functiondecl_loop_found(f)) {
+        if (does_function_contain_loop(f)) {
           specialize_function_or_method(f);
         } else {
           state::skip_children = 1;  // no reason to look at it further
