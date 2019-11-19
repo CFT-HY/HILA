@@ -667,8 +667,8 @@ SourceRange MyASTVisitor::getSourceRangeAtPreviousOfLine( SourceLocation l ){
         r.setEnd(l);
         found_line_break = true;
       } else {
-        // Second line break
-        r.setBegin(l);
+        // Second line break, set as start. Don't include the line break
+        r.setBegin(l.getLocWithOffset(1));
         return r;
       }
     }
