@@ -1,4 +1,4 @@
-OPTS = -DNDIM=3
+OPTS = -DNDIM=4
 
 TRANSFORMER = ../../build/transformer -DMPI
 CC = mpic++ -DUSE_MPI

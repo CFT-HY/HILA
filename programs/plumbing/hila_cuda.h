@@ -12,8 +12,6 @@
 
 #define N_threads 64
 
-#define loop_callable __host__ __device__
-
 extern __device__ unsigned * d_neighb[NDIRS];
 
 /* Random number generator */
@@ -22,7 +20,9 @@ __device__ extern curandState * d_curandstate;
 
 __global__ void seed_random_kernel( curandState * state, unsigned long seed );
 void seed_random(unsigned long seed);
-loop_callable double hila_random();
+
+#pragma transformer loop_function
+double hila_random();
 
 static inline void check_cuda_error(std::string message){
   cudaError code = cudaGetLastError();
@@ -111,8 +111,6 @@ T cuda_reduce_sum(  T * vector, int N ){
 //}
 
 #else
-
-#define loop_callable 
 
 // define cuda functions in order to avoid compilation errors
 // in transformer
