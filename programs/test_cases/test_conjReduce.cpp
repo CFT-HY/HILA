@@ -18,6 +18,9 @@ int main(int argc, char **argv){
 
     field<matrix<2,2,double> > matrices;
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
+    
+    //check that fieldstruct allocated only after assignment
+    assert(matrices.fs==nullptr);
 
     // Test that neighbours are fetched correctly
     // nd is not available on device. It should be
@@ -36,10 +39,7 @@ int main(int argc, char **argv){
             isum += diff*diff;
         }
         assert(isum==0); // Value fetched from neighbour is correct
-    }
-
-    assert(matrices.fs==nullptr); //check that fieldstruct allocated only after assignment
-    
+    }    
 
     // If MPI is defined, check that gathers are counted correctly
     #ifdef MPI
