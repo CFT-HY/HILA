@@ -6,6 +6,9 @@
 #include <string>
 
 
+std::vector<FunctionDecl *> loop_functions = {};
+
+
 // Go through each parameter of function calls and handle
 // any field references.
 // Assume non-const references can be assigned to.
@@ -100,8 +103,13 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       fd = const_cast<FunctionDecl *>(cfd);
       
       // check if we already have this function
-      for (int i=0; i<loop_functions.size(); i++) if (fd == loop_functions[i]) return true;
-    
+      for (int i=0; i<loop_functions.size(); i++) {
+        if (fd == loop_functions[i]) return true;
+        // Check if the source location matches -- this can be needed for template funcs with different arguments
+        if ( fd->getSourceRange().getBegin() == 
+             loop_functions[i]->getSourceRange().getBegin() ) return true;
+      }
+
       llvm::errs() << " ++ callgraph for " << fd->getNameAsString() << '\n';
     
       loop_functions.push_back(fd);
