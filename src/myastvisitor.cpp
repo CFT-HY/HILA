@@ -943,14 +943,18 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
   
   FunctionDecl *fd = dyn_cast<FunctionDecl>(d);
   if (fd) {
-
     // fd may point to declaration (prototype) without a body.
-    // First handle the declaration
+    // First handle it here in either case
+
+    // Check if it is in a system header. If so, skip
+    SourceManager &SM = Context->getSourceManager();
+    bool handle_decl = !SM.isInSystemHeader(fd->getBeginLoc());
+
     // check if we already have this declaration
-    bool not_done=true;
     for (int i=0; i<loop_functions.size(); i++) if(fd == loop_functions[i])
-      not_done=false;
-    if(not_done){
+      handle_decl = false;
+    
+    if(handle_decl){
       loop_functions.push_back(fd);
       handle_loop_function(fd);
     }
@@ -965,10 +969,10 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       FunctionDecl *fbd = const_cast<FunctionDecl *>(cfd);
       
       // check if we already have this function
-      bool not_done=true;
+      bool handle_decl = true;
       for (int i=0; i<loop_functions.size(); i++) if(fd == loop_functions[i])
-        not_done=false;
-      if(not_done){
+        handle_decl=false;
+      if( handle_decl ){
     
         llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
 
