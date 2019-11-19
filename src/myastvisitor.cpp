@@ -568,11 +568,44 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfLine( SourceLocation l ) {
   return l;
 }
 
-
 SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   int i = TheRewriter.getRangeSize(r);
   return r.getBegin().getLocWithOffset(i-1);
 }
+
+
+/// Find the source range of the previous line from source location
+SourceRange MyASTVisitor::getSourceRangeAtPreviousOfLine( SourceLocation l ){
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  SourceRange r = SourceRange(l,l);
+  bool found_line_break = false;
+  
+  // Move backward from location l and find two linebreaks
+  // These are the beginning and the end of the brevious line
+  for (int i=0; i<1000; i++) {
+    bool invalid = false;
+    const char * c = SM.getCharacterData(l,&invalid);
+    if (invalid) {
+      // Invalid character found. This is probably the beginning of a file
+      r.setBegin(l.getLocWithOffset(1));
+      return(r);
+    }
+    if (*c == '\n'){
+      if(!found_line_break) {
+        // First line break
+        r.setEnd(l);
+        found_line_break = true;
+      } else {
+        // Second line break, set as start. Don't include the line break
+        r.setBegin(l.getLocWithOffset(1));
+        return r;
+      }
+    }
+    l=l.getLocWithOffset(-1);
+  }
+  return r;
+}
+
 
 // By overriding these methods in MyASTVisitor we can control which nodes are visited. 
 
@@ -872,6 +905,12 @@ bool MyASTVisitor::control_command(VarDecl *var) {
                "Unknown command for transformer_ctl(), ignoring");
   }
   // remove the command
+  SourceRange sr = var->getSourceRange();
+  if (sr.getBegin().isMacroID()){
+    CharSourceRange csr = TheRewriter.getSourceMgr().getImmediateExpansionRange( sr.getBegin() );
+    sr = csr.getAsRange();
+  }
+  writeBuf->remove(sr);
   return true;
 }
 
@@ -1095,6 +1134,21 @@ bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
 }
 
 
+bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
+  SourceRange sr = getSourceRangeAtPreviousOfLine(f->getSourceRange().getBegin());
+  std::string line = TheRewriter.getRewrittenText( sr );
+
+  static std::string loop_pragma("#pragma transformer loop_function");
+  if(line.length() >= loop_pragma.length() && line.find(loop_pragma) != std::string::npos){
+    llvm::errs() << "FOUND pragma before " << f->getNameAsString() << "\n";
+    llvm::errs() << line << "\n";
+    return true;
+  }
+
+  return false;
+}
+
+
 bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
@@ -1105,7 +1159,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     f->dump();
     state::dump_ast_next = false;
   }
-  if( state::loop_function_next ){
+  if( state::loop_function_next || has_loop_function_pragma(f) ){
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);

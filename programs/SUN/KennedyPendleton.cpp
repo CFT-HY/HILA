@@ -16,7 +16,7 @@
 
 
 //this is might be too much to have in a single kernel
-loop_callable
+#pragma transformer loop_function
 void KennedyPendleton(
   matrix<2,2,cmplx<double>> &U,
   matrix<2,2,cmplx<double>> &staple

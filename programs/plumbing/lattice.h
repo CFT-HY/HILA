@@ -30,7 +30,7 @@ struct device_lattice_info {
    * Since this is added by the transformer, the ASTVisitor
    * will not recognize it as a loop function. Since it's
    * purely for CUDA, we can just add the __device__ keyword. */
-  loop_callable
+  #pragma transformer loop_function
   location coordinates( unsigned idx ){
     return d_coordinates[idx];
   }

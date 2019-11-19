@@ -26,7 +26,8 @@ void seed_random(unsigned long seed){
 }
 
 /* Generate random numbers on device or host */
-loop_callable double hila_random(){
+#pragma transformer loop_function
+double hila_random(){
   #ifdef __CUDA_ARCH__
   return curand_uniform( &d_curandstate[threadIdx.x] );
   #else

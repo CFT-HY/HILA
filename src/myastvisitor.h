@@ -49,6 +49,9 @@ public:
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
 
+  // True if a "loop_function" pragma statement is found
+  bool has_loop_function_pragma(FunctionDecl *f);
+
   /// true if function contains parity loop
   bool does_function_contain_loop( FunctionDecl *f );
   
@@ -194,7 +197,10 @@ public:
   SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
   /// another utility (cannot trust r.getEnd())
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
-  
+
+  /// utility used in finding pragmas on the previous line
+  SourceRange getSourceRangeAtPreviousOfLine( SourceLocation l );
+
   void set_writeBuf(const FileID fid);
 
   SourceRange get_templatefunc_decl_range(FunctionTemplateDecl *tf, FunctionDecl *f); 

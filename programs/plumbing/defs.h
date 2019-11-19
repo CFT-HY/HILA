@@ -173,7 +173,6 @@ inline void assert_even_odd_parity( parity p ) {
 #else
 #define seed_random(seed) seed_mersenne(seed)
 #define hila_random() mersenne()
-#define loop_callable
 #endif
 
 

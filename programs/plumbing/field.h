@@ -234,13 +234,13 @@ class field_storage {
       fieldbuf = nullptr;
     }
 
-    loop_callable
+    #pragma transformer loop_function
     T get(const int i, const int field_alloc_size) const
     {
       return ((T *) fieldbuf)[i];
     }
 
-    loop_callable
+    #pragma transformer loop_function
     void set(T value, const int i, const int field_alloc_size) 
     {
       ((T *) fieldbuf)[i] = value;
@@ -265,7 +265,7 @@ class field_storage {
 
     /// Get a single element in a field
     /// With CUDA this only works in a loop
-    loop_callable
+    #pragma transformer loop_function
     inline T get(const int idx, const int field_alloc_size) const {
       assert( idx < field_alloc_size);
       T value;
@@ -278,7 +278,7 @@ class field_storage {
 
     /// Set a single element in a field
     /// With CUDA this only works in a loop  
-    loop_callable
+    #pragma transformer loop_function
     inline void set(T value, const int idx, const int field_alloc_size) {
       assert( idx < field_alloc_size);
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));

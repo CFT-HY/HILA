@@ -30,7 +30,8 @@ struct cmatrix {
 
   template <typename scalart,
             std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
-  loop_callable cmatrix<n,T> & operator= (const scalart rhs) {
+  #pragma transformer loop_function
+  cmatrix<n,T> & operator= (const scalart rhs) {
     for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
       if (i == j) c[i][j] = static_cast<T>(rhs);
       else c[i][j] = static_cast<T>(0);
@@ -50,7 +51,7 @@ struct cmatrix {
 
 
 template <int n, typename T>
-loop_callable cmatrix<n,T> operator* (const cmatrix<n,T> &A, const cmatrix<n,T> &B) {
+cmatrix<n,T> operator* (const cmatrix<n,T> &A, const cmatrix<n,T> &B) {
   cmatrix<n,T> res;
   // not sure if this order is the best, but at least the j-loop
   // is in contiquous memory
@@ -64,7 +65,7 @@ loop_callable cmatrix<n,T> operator* (const cmatrix<n,T> &A, const cmatrix<n,T> 
 }
 
 template <int n, typename T>
-loop_callable cmatrix<n,T> operator+ (const cmatrix<n,T> &A, const cmatrix<n,T> &B) {
+cmatrix<n,T> operator+ (const cmatrix<n,T> &A, const cmatrix<n,T> &B) {
   cmatrix<n,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
     res.c[i][j] =  A.c[i][j] + B.c[i][j];
@@ -75,7 +76,7 @@ loop_callable cmatrix<n,T> operator+ (const cmatrix<n,T> &A, const cmatrix<n,T> 
 // multiply by a scalar 
 template <int n, typename T, typename scalart,
           std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >
-loop_callable cmatrix<n,T> operator*(const cmatrix<n,T> &A, const scalart s) {
+cmatrix<n,T> operator*(const cmatrix<n,T> &A, const scalart s) {
   cmatrix<n,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
     res.c[i][j] = s * A.c[i][j];
@@ -85,7 +86,7 @@ loop_callable cmatrix<n,T> operator*(const cmatrix<n,T> &A, const scalart s) {
 
 template <int n, typename T, typename scalart,
           std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >
-loop_callable cmatrix<n,T> operator*(const scalart s, const cmatrix<n,T> &A) {
+cmatrix<n,T> operator*(const scalart s, const cmatrix<n,T> &A) {
   return operator*(A,s);
 }
 
