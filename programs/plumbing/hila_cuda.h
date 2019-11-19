@@ -17,12 +17,10 @@ extern __device__ unsigned * d_neighb[NDIRS];
 /* Random number generator */
 extern curandState * curandstate;
 __device__ extern curandState * d_curandstate;
-
 __global__ void seed_random_kernel( curandState * state, unsigned long seed );
 void seed_random(unsigned long seed);
+__host__ __device__ double hila_random();
 
-#pragma transformer loop_function
-double hila_random();
 
 static inline void check_cuda_error(std::string message){
   cudaError code = cudaGetLastError();
