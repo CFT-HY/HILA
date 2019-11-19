@@ -6,6 +6,7 @@
 //--- conjugation for general type T -> template specialized for complex types
 
 template<typename T>
+#pragma transformer loop_function
 inline T typeConj(T val){
   return val; 
 }
