@@ -1,4 +1,4 @@
-OPTS = -DNDIM=3
+OPTS = -DNDIM=4
 
 TRANSFORMER = ../../build/transformer -DMPI
 CC = mpic++ -DUSE_MPI
@@ -15,8 +15,8 @@ test_transformer: Makefile conjReduce.cpp ../../build/transformer
 test_conjReduce: Makefile inputs.o conjReduce.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o 
 	$(CC) -o conjReduce inputs.o conjReduce.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
 
-%.exe: %.tr.o Makefile mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
-	$(CC) -o $@ $< mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
+%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
+	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
 
 %.cpt: %.cpp Makefile
 	$(TRANSFORMER) $<
