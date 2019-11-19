@@ -12,6 +12,7 @@
 #include <assert.h>
 #include "../plumbing/defs.h"
 #include "../plumbing/memory.h"
+#include "../plumbing/inputs.h"
 
 struct node_info {
   location min,size;
@@ -135,6 +136,7 @@ public:
   #endif
 
   void setup(int siz[NDIM], int &argc, char **argv);
+  void setup(input & inputs);
   void setup_layout();
   void setup_nodes();
   

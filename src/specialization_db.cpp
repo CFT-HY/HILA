@@ -26,12 +26,6 @@
 #include "specialization_db.h"
 #include "stringops.h"
 
-struct spec {
-  std::string decl;
-  std::string file;
-  std::time_t timestamp;
-};
-
 static std::vector<spec> specializations = {};
 
 static bool db_loaded = false;

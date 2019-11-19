@@ -24,6 +24,7 @@
 
 #include "transformer.h"
 #include "myastvisitor.h"
+#include "stringops.h"
 
 std::string looping_var;
 std::string parity_name;

@@ -2,7 +2,6 @@
 #include <cstring>
 #include "stringops.h"
 
-
 /// this routine changes the input to alphanumeric + _, for naming purposes
 std::string clean_name(const std::string & s) {
   

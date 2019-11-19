@@ -1,4 +1,5 @@
 #include "test.h"
+#include<string>
 /////////////////////
 /// test_case 1
 /// Coverage:
@@ -15,6 +16,15 @@ int main(int argc, char **argv){
     double dsum = 0;
     int isum = 0;
     test_setup(argc, argv);
+
+    // Test input class - should be possible to call before or after setup
+    input a;
+    a.add_essential("nx");
+    a.add_essential("beta", 1.0);
+
+    a.import("params.txt");
+    int nx = a.get("nx");
+    std::string out = a.get("output");
 
     field<matrix<2,2,double> > matrices;
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
