@@ -943,41 +943,59 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
   
   FunctionDecl *fd = dyn_cast<FunctionDecl>(d);
   if (fd) {
-    
-    // fd may point to declaration (prototype) without a body.  
+
+    // fd may point to declaration (prototype) without a body.
+    // First handle the declaration
+    // check if we already have this declaration
+    bool not_done=true;
+    for (int i=0; i<loop_functions.size(); i++) if(fd == loop_functions[i])
+      not_done=false;
+    if(not_done){
+      loop_functions.push_back(fd);
+      handle_loop_function(fd);
+    }
+
+    // Now find the declaration of the function body
     // Argument of hasBody becomes the pointer to definition if it is in this compilation unit
     // needs to be const FunctionDecl *
     const FunctionDecl * cfd;
     if (fd->hasBody(cfd)) {
   
       // take away const
-      fd = const_cast<FunctionDecl *>(cfd);
+      FunctionDecl *fbd = const_cast<FunctionDecl *>(cfd);
       
       // check if we already have this function
-      for (int i=0; i<loop_functions.size(); i++) if (fd == loop_functions[i]) return true;
+      bool not_done=true;
+      for (int i=0; i<loop_functions.size(); i++) if(fd == loop_functions[i])
+        not_done=false;
+      if(not_done){
     
-      llvm::errs() << " ++ callgraph for " << fd->getNameAsString() << '\n';
-    
-      loop_functions.push_back(fd);
-      handle_loop_function(fd);
+        llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
 
-      // And check also functions called by this func
-      CallGraph CG;
-      // addToCallGraph takes Decl *: cast 
-      CG.addToCallGraph( dyn_cast<Decl>(fd) );
-      // CG.dump();
-      int i = 0;
-      for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
-        // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
-        // root i==0 is "null function", skip
-        if (i > 0) {
-          Decl * nd = iter->second->getDecl();
-          assert(nd != nullptr);
-          if (nd != fd) {
-            loop_function_check(nd);
+        loop_functions.push_back(fbd);
+
+        // Handle if this is different from the first declaration
+        if(fd != fbd)
+          handle_loop_function(fbd);
+
+        // And check also functions called by this func
+        CallGraph CG;
+        // addToCallGraph takes Decl *: cast 
+        CG.addToCallGraph( dyn_cast<Decl>(fbd) );
+        // CG.dump();
+        int i = 0;
+        for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
+          // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
+          // root i==0 is "null function", skip
+          if (i > 0) {
+            Decl * nd = iter->second->getDecl();
+            assert(nd != nullptr);
+            if (nd != fd) {
+              loop_function_check(nd);
+            }
           }
+          // llvm::errs() << "   ++ loop_function loop " << i << '\n';
         }
-        // llvm::errs() << "   ++ loop_function loop " << i << '\n';
       }
       return true;
     } else {
@@ -1262,8 +1280,6 @@ bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
 
   static std::string loop_pragma("#pragma transformer loop_function");
   if(line.length() >= loop_pragma.length() && line.find(loop_pragma) != std::string::npos){
-    llvm::errs() << "FOUND pragma before " << f->getNameAsString() << "\n";
-    llvm::errs() << line << "\n";
     return true;
   }
 
