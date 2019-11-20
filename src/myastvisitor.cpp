@@ -131,7 +131,10 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
 
 /// -- Handler utility functions -- 
 
-/// This routine goes through one field reference and pushes the info to lists
+//////////////////////////////////////////////////////////////////////////////
+/// Go through one field reference within parity loop and store relevant info
+//////////////////////////////////////////////////////////////////////////////
+
 bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound) {
     
   e = e->IgnoreParens();
@@ -300,80 +303,6 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
   }
 }
 
-// Go through each parameter of function calls and handle
-// any field references.
-// Assume non-const references can be assigned to.
-void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
-  int i=0;
-
-  // Get the call expression
-  CallExpr *Call = dyn_cast<CallExpr>(s);
-
-  // Handle special loop functions
-  if( handle_special_loop_function(Call) ){
-    return;
-  }
-
-  // Get the declaration of the function
-  Decl* decl = Call->getCalleeDecl();
-  FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
-
-  // Store functions used in loops, recursively...
-  loop_function_check(decl);
-  for( Expr * E : Call->arguments() ){
-    if( is_field_parity_expr(E) ) {
-      if(i < D->getNumParams()){
-        const ParmVarDecl * pv = D->getParamDecl(i);
-        QualType q = pv->getOriginalType ();
-
-        // Check for const qualifier
-        if( q.isConstQualified ()) {
-          //llvm::errs() << "  -Const \n";
-        } else {
-          handle_field_parity_expr(E, true, false);
-        }
-      }
-    }
-    i++;
-  }
-}
-
-void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
-  // we should mark the function, but it is not necessarily in the
-  // main file buffer
-
-  if (target.flag_loop_function) {
-  
-    SourceManager &SM = TheRewriter.getSourceMgr();
-    SourceLocation sl = fd->getSourceRange().getBegin();
-    FileID FID = SM.getFileID(sl);
-    set_fid_modified(FID);
-
-    srcBuf * sb = get_file_buffer(TheRewriter, FID);
-    if (target.CUDA) {
-      sb->insert(sl, "__device__ __host__ ",true,true);
-    } else if (target.openacc) {
-      sb->insert(sl, "/* some ACC pragma here */");
-    }
-  }
-}
-
-bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
-  // If the function is in a list of defined loop functions, add it to a list
-  // Return true if the expression is a special function and
-  std::string name = Call->getDirectCallee()->getNameInfo().getAsString();
-  if( name == "coordinates" ){
-    llvm::errs() << get_stmt_str(Call) << '\n';
-    special_function_call sfc;
-    sfc.fullExpr = Call;
-    sfc.scope = state::scope_level;
-    sfc.replace_expression = "lattice->coordinates";
-    sfc.add_loop_var = true;
-    special_function_call_list.push_back(sfc);
-    return 1;
-  }
-  return 0;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 /// handle_full_loop_stmt() is the starting point for the analysis of all
@@ -639,11 +568,44 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfLine( SourceLocation l ) {
   return l;
 }
 
-
 SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   int i = TheRewriter.getRangeSize(r);
   return r.getBegin().getLocWithOffset(i-1);
 }
+
+
+/// Find the source range of the previous line from source location
+SourceRange MyASTVisitor::getSourceRangeAtPreviousOfLine( SourceLocation l ){
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  SourceRange r = SourceRange(l,l);
+  bool found_line_break = false;
+  
+  // Move backward from location l and find two linebreaks
+  // These are the beginning and the end of the brevious line
+  for (int i=0; i<1000; i++) {
+    bool invalid = false;
+    const char * c = SM.getCharacterData(l,&invalid);
+    if (invalid) {
+      // Invalid character found. This is probably the beginning of a file
+      r.setBegin(l.getLocWithOffset(1));
+      return(r);
+    }
+    if (*c == '\n'){
+      if(!found_line_break) {
+        // First line break
+        r.setEnd(l);
+        found_line_break = true;
+      } else {
+        // Second line break, set as start. Don't include the line break
+        r.setBegin(l.getLocWithOffset(1));
+        return r;
+      }
+    }
+    l=l.getLocWithOffset(-1);
+  }
+  return r;
+}
+
 
 // By overriding these methods in MyASTVisitor we can control which nodes are visited. 
 
@@ -905,58 +867,6 @@ void MyASTVisitor::check_var_info_list() {
   }
 }
 
-bool MyASTVisitor::loop_function_check(Decl *d) {
-  assert(d != nullptr);
-  
-  FunctionDecl *fd = dyn_cast<FunctionDecl>(d);
-  if (fd) {
-    
-    // fd may point to declaration (prototype) without a body.  
-    // Argument of hasBody becomes the pointer to definition if it is in this compilation unit
-    // needs to be const FunctionDecl *
-    const FunctionDecl * cfd;
-    if (fd->hasBody(cfd)) {
-  
-      // take away const
-      fd = const_cast<FunctionDecl *>(cfd);
-      
-      // check if we already have this function
-      for (int i=0; i<loop_functions.size(); i++) if (fd == loop_functions[i]) return true;
-    
-      llvm::errs() << " ++ callgraph for " << fd->getNameAsString() << '\n';
-    
-      loop_functions.push_back(fd);
-      handle_loop_function(fd);
-
-      // And check also functions called by this func
-      CallGraph CG;
-      // addToCallGraph takes Decl *: cast 
-      CG.addToCallGraph( dyn_cast<Decl>(fd) );
-      // CG.dump();
-      int i = 0;
-      for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
-        // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
-        // root i==0 is "null function", skip
-        if (i > 0) {
-          Decl * nd = iter->second->getDecl();
-          assert(nd != nullptr);
-          if (nd != fd) {
-            loop_function_check(nd);
-          }
-        }
-        // llvm::errs() << "   ++ loop_function loop " << i << '\n';
-      }
-      return true;
-    } else {
-      // Now function has no body - could be in other compilation unit or in system library.
-      // TODO: should we handle these?
-      // llvm::errs() << "   Function has no body!\n";
-    }
-  } else {
-    // now not a function - should not happen
-  }
-  return false;
-}
 
 /// flag_error = true by default in myastvisitor.h
 SourceRange MyASTVisitor::getRangeWithSemi(Stmt * S, bool flag_error) {
@@ -986,14 +896,20 @@ bool MyASTVisitor::control_command(VarDecl *var) {
   
   if (n == "_transformer_ctl_dump_ast") {
     state::dump_ast_next = true;
-  } else if(n == "_transformer_ctl_no_device") {
-    state::no_device_code = true;
+  } else if(n == "_transformer_ctl_loop_function") {
+    state::loop_function_next = true;
   } else {
     reportDiag(DiagnosticsEngine::Level::Warning,
                var->getSourceRange().getBegin(),
                "Unknown command for transformer_ctl(), ignoring");
   }
   // remove the command
+  SourceRange sr = var->getSourceRange();
+  if (sr.getBegin().isMacroID()){
+    CharSourceRange csr = TheRewriter.getSourceMgr().getImmediateExpansionRange( sr.getBegin() );
+    sr = csr.getAsRange();
+  }
+  writeBuf->remove(sr);
   return true;
 }
 
@@ -1180,7 +1096,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 
 //////// Functiondecl and templates below
 
-bool MyASTVisitor::functiondecl_loop_found( FunctionDecl *f ) {
+bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
   // Currently simple: buffer the function and traverse through it
 
   srcBuf buf(&TheRewriter,f);
@@ -1217,6 +1133,19 @@ bool MyASTVisitor::functiondecl_loop_found( FunctionDecl *f ) {
 }
 
 
+bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
+  SourceRange sr = getSourceRangeAtPreviousOfLine(f->getSourceRange().getBegin());
+  std::string line = TheRewriter.getRewrittenText( sr );
+
+  static std::string loop_pragma("#pragma transformer loop_function");
+  if(line.length() >= loop_pragma.length() && line.find(loop_pragma) != std::string::npos){
+    return true;
+  }
+
+  return false;
+}
+
+
 bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
@@ -1226,6 +1155,12 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     llvm::errs() << "**** Dumping funcdecl:\n";
     f->dump();
     state::dump_ast_next = false;
+  }
+  if( state::loop_function_next || has_loop_function_pragma(f) ){
+    // This function can be called from a loop,
+    // handle as if it was called from one
+    loop_function_check(f);
+    state::loop_function_next = false;
   }
 
   // Check if the function can be called from a loop
@@ -1247,7 +1182,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-      if (functiondecl_loop_found(f)) {
+      if (does_function_contain_loop(f)) {
         loop_callable = false;
       }
 
@@ -1264,7 +1199,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
         
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
 
-        if (functiondecl_loop_found(f)) {
+        if (does_function_contain_loop(f)) {
           specialize_function_or_method(f);
         } else {
           state::skip_children = 1;  // no reason to look at it further
@@ -1278,15 +1213,6 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     SourceLocation ST = f->getSourceRange().getBegin();
     global.location.function = ST;
-
-    //if(target.CUDA && !state::no_device_code && loop_callable){
-    //  // Add CUDA directive to allow calling from loops
-    //  std::string n = DeclName.getAsString();
-    //  if (n.find("_host_",0) == std::string::npos)
-    //    writeBuf->insert(ST,"__device__ __host__ ",true,true);
-    //  state::loop_found = true; // Mark this file changed
-    //  state::no_device_code = false;
-    //}
 
     if (cmdline::funcinfo) {
       // Add comment before

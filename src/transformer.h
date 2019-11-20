@@ -47,7 +47,7 @@ namespace state {
   extern bool dump_ast_next; // = false;
   extern bool compile_errors_occurred; // = false;
   extern bool check_loop; // = false;
-  extern bool no_device_code; // = false;
+  extern bool loop_function_next; // = false;
 };
 
 extern llvm::cl::OptionCategory TransformerCat;
@@ -206,6 +206,5 @@ extern std::list<var_info> var_info_list;
 extern std::list<var_decl> var_decl_list;
 extern std::list<special_function_call> special_function_call_list;
 extern std::vector<Expr *> remove_expr_list;
-extern std::vector<FunctionDecl *> loop_functions;
 
 #endif

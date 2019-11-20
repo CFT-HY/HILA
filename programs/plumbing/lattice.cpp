@@ -9,7 +9,7 @@ std::vector<lattice_struct*> lattices;
 
 
 /// General lattice setup, including MPI setup
-void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
+void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
   /* Add this lattice to the list */
   lattices.push_back( this );
 
@@ -20,12 +20,8 @@ void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
   }
 
 #ifdef USE_MPI
-  /* Initialize MPI. Function only initializes machine if not 
-  initialized yet. */
-  initialize_machine(argc, argvp);
-  #ifdef SUBLATTICES
-  setup_sublattices(argc, argvp);
-  #endif
+  /* Initialize MPI */
+  initialize_machine(argc, &argv);
 
   /* default comm is the world */
   mpi_comm_lat = MPI_COMM_WORLD;
@@ -51,31 +47,26 @@ void lattice_struct::setup(int siz[NDIM], int & argc, char ***argvp) {
   initialize_wait_arrays();
 }
 
-void lattice_struct::setup(int siz[NDIM]) {
-  int argc=0; char **argv;
-  setup(siz, argc, &argv);
-}
-
 
 #if NDIM==4
-void lattice_struct::setup(int nx, int ny, int nz, int nt) {
+void lattice_struct::setup(int nx, int ny, int nz, int nt, int &argc, char **argv) {
   int s[NDIM] = {nx, ny, nz, nt};
-  setup(s);
+  setup(s, argc, argv);
 }
 #elif NDIM==3
-void lattice_struct::setup(int nx, int ny, int nz) {
+void lattice_struct::setup(int nx, int ny, int nz, int &argc, char **argv) {
   int s[NDIM] = {nx, ny, nz};
-  setup(s);
+  setup(s, argc, argv);
 }
 #elif NDIM==2
-void lattice_struct::setup(int nx, int ny) {
+void lattice_struct::setup(int nx, int ny, int &argc, char **argv) {
   int s[NDIM] = {nx, ny};
-  setup(s);
+  setup(s, argc, argv);
 }
 #elif NDIM==1
-void lattice_struct::setup(int nx) {
+void lattice_struct::setup(int nx, int &argc, char **argv) {
   int s[NDIM] = {nx};
-  setup(s);
+  setup(s, argc, argv);
 }
 #endif
 
@@ -303,7 +294,7 @@ void lattice_struct::create_std_gathers()
   // be allocated on "device" memory too!
   
   for (int d=0; d<NDIRS; d++) {
-    neighb[d] = (unsigned *)allocate_field_mem(this_node.sites * sizeof(unsigned));
+    neighb[d] = (unsigned *)std::malloc(this_node.sites * sizeof(unsigned));
   }
   
   comminfo.resize(NDIRS);

@@ -5,11 +5,11 @@ TRANSFORMER = ../../build/transformer
 CC = mpic++ -x c++ -DUSE_MPI
 LD = mpic++ -DUSE_MPI
 
-TRANSFOMER_GPU = ../../build/transformer -DGPU -target:CUDA
+TRANSFORMER_GPU = ../../build/transformer -DGPU -target:CUDA
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
-TRANSFOMER_openacc = ../../build/transformer -Dopenacc --target:openacc
+TRANSFORMER_openacc = ../../build/transformer -Dopenacc --target:openacc
 PGCC = pgc++ -acc
 PGLD = pgc++ -acc
 
@@ -45,7 +45,7 @@ SUN.tr.cpu.cpp: Makefile SUN.cpp
 
 
 SUN.tr.gpu.cpp: Makefile SUN.cpp 
-	$(TRANSFOMER_GPU) SUN.cpp -o=SUN.tr.gpu.cpp
+	$(TRANSFORMER_GPU) SUN.cpp -o=SUN.tr.gpu.cpp
 
 %.gpu.o : %.cpp
 	$(NVCC) $(CXXFLAGS) $< -c -o $@
@@ -58,7 +58,7 @@ SUN.tr.gpu.cpp: Makefile SUN.cpp
 
 
 SUN.tr.oac.cpp: Makefile SUN.cpp 
-	$(TRANSFOMER_openacc) SUN.cpp -o=SUN.tr.oac.cpp
+	$(TRANSFORMER_openacc) SUN.cpp -o=SUN.tr.oac.cpp
 
 %.oac.o : %.cpp
 	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@

@@ -38,7 +38,6 @@ std::list<var_info> var_info_list = {};
 std::list<var_decl> var_decl_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::vector<Expr *> remove_expr_list = {};
-std::vector<FunctionDecl *> loop_functions = {};
 
 unsigned state::skip_children = 0;
 unsigned state::scope_level = 0;
@@ -49,7 +48,7 @@ bool state::loop_found = false;
 bool state::dump_ast_next = false;
 bool state::compile_errors_occurred = false;
 bool state::check_loop = false;
-bool state::no_device_code = false;
+bool state::loop_function_next = false;
 
 ///definition of command line options
 llvm::cl::OptionCategory TransformerCat(program_name);
@@ -260,14 +259,30 @@ public:
   // HandleTranslationUnit is called after the AST for the whole TU is completed
   virtual void HandleTranslationUnit(ASTContext & ctx) override {
     // dump ast here -- HERE THE SPECIALIZATIONS ARE PRESENT!
-    // ctx.getTranslationUnitDecl()->dump();
+    //ctx.getTranslationUnitDecl()->dump();
 
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
+    //tud->dump();
 
-    for (DeclContext::decl_iterator d = tud->decls_begin(); d != tud->decls_end(); d++) {
+    // Traverse each declaration in the translation unit
+    for (Decl* d : tud->decls() ) {
 
+      // We only want to traverse user files. We achieve this by
+      // first checking if the location of the declaration is not
+      // in a system file or a virtual file.
+      
+      // Find the beginning location of the Declaration
       SourceLocation beginloc = d->getBeginLoc();
+      // Macro source range doesn't point to it's actual location in the file
+      // Find where the macro is called
+      if (beginloc.isMacroID()) {
+        Preprocessor &pp = myCompilerInstance->getPreprocessor();
+        // Is there an easier way?
+        CharSourceRange CSR = Visitor.getRewriter().getSourceMgr().getImmediateExpansionRange( beginloc );
+        beginloc = CSR.getBegin();
+      }
+
       // analyze only user files (these should be named)
       if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
       //if (!SM.isInSystemHeader(beginloc)) {
@@ -279,12 +294,12 @@ public:
         // get our own file edit buffer (unless it exists)
         Visitor.set_writeBuf(SM.getFileID(beginloc));
 
-        // Traverse the declaration using our AST visitor.
-
-        global.location.top = d->getSourceRange().getBegin();  // save this for source location
+        // save this for source location
+        global.location.top = d->getSourceRange().getBegin();  
         global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
 
-        Visitor.TraverseDecl(*d);
+        // Traverse the declaration using our AST visitor.
+        Visitor.TraverseDecl(d);
         // llvm::errs() << "Dumping level " << i++ << "\n";
         if (cmdline::dump_ast) {
           if (!cmdline::no_include || SM.isInMainFile(beginloc))

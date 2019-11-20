@@ -1,0 +1,15 @@
+rm -rf *.o *.cpt *.exe
+make -j -f Makefile -s bench_matrix.exe
+mpirun -n 4 ./bench_matrix.exe
+Standard lattice layout:
+ 4 dimensions
+ Node remapping: TRIVIAL (no effort made to reorder)
+
+ Sites on node: 32 x 32 x 16 x 16
+ Processor layout: 1 x 1 x 2 x 2
+Matrix * Matrix: 84ms 
+Vector * Matrix: 32.25 ms 
+Vector square sum: 30 ms 
+Dirac: 325ms 
+CG: 445ms / iteration
+ COMMS from node 0: 44 done, 52(54.1667%) optimized away

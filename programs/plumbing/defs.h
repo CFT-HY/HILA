@@ -1,16 +1,6 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-#ifdef PUHTI_TRANSFORMER_CUDA
-#define PUHTI_TRANSFOMER
-#define CUDA
-#endif
-
-#ifdef PUHTI_TRANSFORMER_openacc
-#define PUHTI_TRANSFOMER
-#define openacc
-#endif
-
 // Useful global definitions here -- this file should be included by (almost) all others
 
 #include <array>
@@ -22,10 +12,15 @@
 #include <mpi.h>
 #endif
 
+#if !defined(CUDA) && !defined(AVX512)
 #define VANILLA
+#endif
+
+#ifdef CUDA
+#define layout_SOA
+#endif
 
 #define EVENFIRST
-#define layout_SOA
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = float;
@@ -35,6 +30,19 @@ using real_t = float;
 #ifndef NDIM
   #define NDIM 4
 #endif
+
+
+// HACK  -- this is needed for pragma handlin, do not change!
+// #pragma transformer _transformer_cmd_dump_ast_
+
+// HACK
+#ifdef TRANSFORMER
+#define transformer_ctl(a) extern int _transformer_ctl_##a
+#else
+#define transformer_ctl(a)
+#endif
+//void transformer_control(const char *);
+
 
 // Direction and parity
 
@@ -51,7 +59,7 @@ enum direction { XUP, XDOWN, NDIRS };
 /**
  * Increment op for directions
  * */
-
+transformer_ctl(loop_function);
 inline direction & operator++(direction & dir, int dummy){
   const int i = static_cast<int>(dir);
   return dir=static_cast<direction>((i + 1)%NDIRS);
@@ -80,8 +88,13 @@ static inline int is_up_dir(const int d) { return d<NDIM; }
 
 // location type
 
-
-using location = std::array<int,NDIM>;
+struct location {
+    int r[NDIM];
+    int& operator[] (const int i) { return r[i]; }
+    int& operator[] (const direction d) { return r[(int)d]; }
+    const int& operator[] (const int i) const { return r[i]; }
+    const int& operator[] (const direction d) const { return r[(int)d]; }
+};
 
 inline location operator+(const location & a, const location & b) {
   location r;
@@ -113,8 +126,9 @@ inline location coordinates(parity X){location l; return l;};
 
 
 
+
 // Global functions: setup
-void initial_setup(int & argc, char ***argvp);
+void initial_setup(int argc, char **argv);
 
 // Communication functions
 #ifndef USE_MPI
@@ -122,9 +136,9 @@ void initial_setup(int & argc, char ***argvp);
 // Trivial, no MPI
 #define mynode() 0
 #define numnodes() 1
-inline void initialize_machine(int & argc, char ***argvp) {}
+inline void initialize_machine(int &argc, char ***argv) {}
 inline void finishrun() {
-  exit(1);
+  exit(0);
 }
 
 #else
@@ -133,7 +147,7 @@ inline void finishrun() {
 int mynode();
 int numnodes();
 void finishrun();
-void initialize_machine(int & argc, char ***argvp);
+void initialize_machine(int &argc, char ***argv);
 
 #endif
 
@@ -153,18 +167,16 @@ inline void assert_even_odd_parity( parity p ) {
 
 //#include <openacc.h>
 
-#define loop_callable _Pragma("acc routine seq")
 #define seed_random(seed) seed_mersenne(seed)
 #define hila_random() mersenne()
 
 #else
 #define seed_random(seed) seed_mersenne(seed)
 #define hila_random() mersenne()
-#define loop_callable
 #endif
 
 
-#ifdef PUHTI_TRANSFOMER
+#if defined(PUHTI) && defined(TRANSFORMER)
 namespace std {
   // This is missing in c++11, which appears to be what we have on Puhti
   template< bool B, class T = void >

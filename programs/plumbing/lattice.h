@@ -14,7 +14,6 @@
 #include "../plumbing/memory.h"
 #include "../plumbing/inputs.h"
 
-using location = std::array<int,NDIM>;
 struct node_info {
   location min,size;
   unsigned evensites, oddsites;
@@ -32,7 +31,7 @@ struct device_lattice_info {
    * Since this is added by the transformer, the ASTVisitor
    * will not recognize it as a loop function. Since it's
    * purely for CUDA, we can just add the __device__ keyword. */
-  loop_callable
+  #pragma transformer loop_function
   location coordinates( unsigned idx ){
     return d_coordinates[idx];
   }
@@ -136,22 +135,21 @@ public:
   void setup_lattice_device_info();
   #endif
 
-  void setup(int siz[NDIM]);
+  void setup(int siz[NDIM], int &argc, char **argv);
+  void setup(input & inputs);
   void setup_layout();
   void setup_nodes();
   
   #if NDIM == 4
-  void setup(int nx, int ny, int nz, int nt);
+  void setup(int nx, int ny, int nz, int nt, int &argc, char **argv);
   #elif NDIM == 3  
-  void setup(int nx, int ny, int nz);
+  void setup(int nx, int ny, int nz, int &argc, char **argv);
   #elif NDIM == 2
-  void setup(int nx, int ny);
+  void setup(int nx, int ny, int &argc, char **argv);
   #elif NDIM == 1
-  void setup(int nx); 
+  void setup(int nx, int &argc, char **argv); 
   #endif
 
-  void setup(int siz[NDIM], int & argc, char ***argvp);
-  void setup(input & inputs);
 
   void teardown();
 
@@ -159,6 +157,7 @@ public:
   int size(int d) { return l_size[d]; }
   long long volume() { return l_volume; }
   int node_number() { return this_node.index; }
+  int n_nodes() { return nodes.number; }
   
   bool is_on_node(const location & c);
   unsigned node_number(const location & c);

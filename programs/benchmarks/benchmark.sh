@@ -1,11 +1,23 @@
 #!/bin/bash
 
-if [ "$1" = "-f" ]; then
+if [ "$1" = "CUDA" ]; then
     shift
-    export MAKEFILE=$1
+    export MAKEFILE=Makefile_gpu
+    export RUNNER=
+elif [ "$1" = "MPI" ]; then
     shift
-else
     export MAKEFILE=Makefile
+    if [ "$1" = "-n" ]; then
+      shift
+      export RUNNER="mpirun -n $1"
+      shift
+    else
+      export RUNNER=mpirun 
+    fi
+else
+    shift
+    export MAKEFILE=Makefile
+    export RUNNER="mpirun -n 1"
 fi
 
 
@@ -19,8 +31,10 @@ fi
 make cleanall
 for benchfile in $benchmarks; do
     benchmark="${benchfile%.*}"
-    make -f $MAKEFILE -s ${benchmark}.exe 2>/dev/null
-    ./${benchmark}.exe
+    echo make -j -f $MAKEFILE -s ${benchmark}.exe
+    make -j -f $MAKEFILE -s ${benchmark}.exe 2>/dev/null
+    echo ${RUNNER} ./${benchmark}.exe
+    ${RUNNER} ./${benchmark}.exe
 done
 
 exit 0

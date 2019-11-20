@@ -24,12 +24,14 @@ extern long seed;
 extern int NX, NY, NZ, NT;
 extern int VOLUME;
 
-loop_callable double monte(
+#pragma transformer loop_function
+double monte(
   matrix<N,N,cmplx<double>> &U, 
   matrix<N,N,cmplx<double>> &staple,
   double beta);
 
-loop_callable void KennedyPendleton(
+#pragma transformer loop_function
+void KennedyPendleton(
   matrix<2,2,cmplx<double>> &U,
   matrix<2,2,cmplx<double>> &staple
 );

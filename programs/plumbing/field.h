@@ -3,18 +3,11 @@
 #define FIELD_H
 #include <iostream>
 #include <string>
+#include <cstring> //Memcpy is here...
 #include <math.h>
 #include <type_traits>
 
 #include "../plumbing/globals.h"
-
-
-// HACK  -- this is needed for pragma handlin, do not change!
-// #pragma transformer _transformer_cmd_dump_ast_
-
-// HACK
-#define transformer_ctl(a) extern int _transformer_ctl_##a
-//void transformer_control(const char *);
 
 
 struct parity_plus_direction {
@@ -219,57 +212,62 @@ struct field_storage_type {
 
 
 
+
 // Pointer to field data and accessors. Only this is passed to the
 // CUDA kernels and other accelerators and it only contains a minimal
 // amount of data.
 template <typename T>
 class field_storage {
-  private:
-    constexpr static int t_elements = sizeof(T) / sizeof(real_t);
   public:
-    real_t * fieldbuf;
+    #ifndef layout_SOA
+      // Array of structures implementation
+    T * fieldbuf;
 
-    #ifdef layout_SOA
-    #ifndef CUDA
-    
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (real_t *) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
+      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
       #pragma acc enter data create(fieldbuf)
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
-      }
     }
 
     void free_field() {
       #pragma acc exit data delete(fieldbuf)
-      free((void *)fieldbuf);
+      free_field_mem((void *)fieldbuf);
       fieldbuf = nullptr;
     }
 
+    #pragma transformer loop_function
+    T get(const int i, const int field_alloc_size) const
+    {
+      return ((T *) fieldbuf)[i];
+    }
+
+    #pragma transformer loop_function
+    void set(T value, const int i, const int field_alloc_size) 
+    {
+      ((T *) fieldbuf)[i] = value;
+    }
+
+
     #else
+    // Structure of arrays implementation
+    constexpr static int t_elements = sizeof(T) / sizeof(real_t);
+    real_t * fieldbuf;
 
     void allocate_field( const int field_alloc_size ) {
-      cudaMalloc(
-        (void **)&fieldbuf,
-        t_elements*sizeof(real_t) * field_alloc_size
-      );
-      check_cuda_error("allocate_payload");
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in GPU field memory allocation\n";
-        exit(1);
-      }
+      fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
+      #pragma acc enter data create(fieldbuf)
     }
 
     void free_field() {
-      cudaFree(fieldbuf);
-      check_cuda_error("free_payload");
+      #pragma acc exit data delete(fieldbuf)
+      free_field_mem((void *)fieldbuf);
       fieldbuf = nullptr;
     }
-    #endif
 
-    loop_callable
+    /// Get a single element in a field
+    /// With CUDA this only works in a loop
+    #pragma transformer loop_function
     inline T get(const int idx, const int field_alloc_size) const {
+      assert( idx < field_alloc_size);
       T value;
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
@@ -277,44 +275,19 @@ class field_storage {
       }
       return value; 
     }
-    
-    loop_callable
+
+    /// Set a single element in a field
+    /// With CUDA this only works in a loop  
+    #pragma transformer loop_function
     inline void set(T value, const int idx, const int field_alloc_size) {
+      assert( idx < field_alloc_size);
       real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
       for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
       }
     }
-
-
-    #else
-
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = allocate_field_mem(sizeof(T) * field_alloc_size);
-      if (fieldbuf == nullptr) {
-        std::cout << "Failure in field memory allocation\n";
-        exit(1);
-      }
-    }
-
-    void free_field() {
-      free((void *)fieldbuf);
-      payload = nullptr;
-    }
-
-    T get(const int i, const int field_alloc_size) const
-    {
-      return ((T *) payload)[i];
-    }
-
-    void set(T value, const int i, const int field_alloc_size) 
-    {
-      ((T *) payload)[i] = value;
-    }
-
     #endif
 };
-
 
 
 
@@ -352,8 +325,18 @@ private:
 
       void allocate_payload() { payload.allocate_field(lattice->field_alloc_size()); }
       void free_payload() { payload.free_field(); }
+      
+      /// Getter for an individual elements. Will not work in CUDA host code,
+      /// but must be defined
       T get(const int i) const { return  payload.get( i, lattice->field_alloc_size() ); }
-      void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() );  }
+      /// Getter for an individual elements. Will not work in CUDA host code,
+      /// but must be defined
+      void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() ); }
+
+      /// Gather boundary elements for communication
+      void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const;
+      /// Place boundary elements from neighbour
+      void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par);
   };
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
@@ -479,15 +462,13 @@ public:
   //  return (field_element<T>) *this;
   //}
 
-  T get_value_at(int i) const
-  {
-    return this->fs->get(i);
-  }
 
-  void set_value_at(T value, int i)
-  {
-    this->fs->set(value, i);
-  }
+  /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
+  T get_value_at(int i) const { return this->fs->get(i); }
+
+  /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
+  void set_value_at(T value, int i) { this->fs->set(value, i); }
+
 
   // fetch the element at this loc
   // T get(int i) const;
@@ -719,6 +700,10 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 
 
 
+
+
+
+
 /* Communication routines for fields */
 #ifndef USE_MPI
 /* No MPI, trivial implementations */
@@ -738,6 +723,103 @@ void field<T>::start_move(direction d, parity p) const {}
  */
 
 #include "../plumbing/comm_mpi.h"
+
+
+#if !defined(CUDA) || defined(TRANSFORMER)
+/// The standard (Non-CUDA) implementation of gather_comm_elements
+/* Gathers sites at the boundary that need to be communicated to neighbours */
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+  for (int j=0; j<to_node.n_sites(par); j++) {
+    T element = get(to_node.site_index(j, par));
+    std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
+  }
+}
+/// The standard (Non-CUDA) implementation of scatter_comm_elements
+/* Sets the values the neighbour elements from the communication buffer */
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+  for (int j=0; j<from_node.n_sites(par); j++) {
+    T element = *((T*) ( buffer + j*sizeof(T) ));
+    set(element, from_node.offset(par)+j);
+  }
+}
+
+#else
+/* CUDA implementations */
+
+/// A kernel that gathers neighbour elements for communication (using the getter)
+template <typename T>
+__global__ void gather_comm_elements_kernel( field_storage<T> field, char *buffer, int * site_index, const int sites, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < sites ) {
+    ((T*) buffer)[Index] = field.get(site_index[Index], field_alloc_size);
+  }
+}
+
+/// CUDA implementation of gather_comm_elements without CUDA aware MPI
+/// Gathers sites at the boundary that need to be communicated to neighbours
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+  int *site_index, *d_site_index;
+  char * d_buffer;
+  int sites = to_node.n_sites(par);
+  
+  // Copy the list of boundary site indexes to the device
+  site_index = (int *)std::malloc( sites*sizeof(int) );
+  cudaMalloc( (void **)&(d_site_index), sites*sizeof(int));
+  for (int j=0; j<sites; j++) {
+    site_index[j] = to_node.site_index(j, par);
+  }
+  cudaMemcpy( d_site_index, site_index, sites*sizeof(int), cudaMemcpyHostToDevice );
+  std::free(site_index);
+
+  // Call the kernel to build the list of elements
+  cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
+  int N_blocks = sites/N_threads + 1; 
+  gather_comm_elements_kernel<<< N_blocks, N_threads >>>( payload, d_buffer, d_site_index, sites, lattice->field_alloc_size() );
+  
+  // Copy the result to the host
+  cudaMemcpy( buffer, d_buffer, sites*sizeof(T), cudaMemcpyDeviceToHost );
+
+  cudaFree(d_site_index);
+  cudaFree(d_buffer);
+}
+
+
+/// A kernel that scatters the neighbour sites received from a neihbour into 
+/// it's proper place (using the setter)
+template <typename T>
+__global__ void scatter_comm_elements_kernel( field_storage<T> field, char *buffer, const int offset, const int sites, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < sites ) {
+    field.set( ((T*) buffer)[Index], offset + Index, field_alloc_size);
+  }
+}
+
+/// CUDA implementation of gather_comm_elements without CUDA aware MPI
+/// Sets the values the neighbour elements from the communication buffer 
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+  char * d_buffer;
+  int sites = from_node.n_sites(par);
+
+  // Allocate space and copy the buffer to the device
+  cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
+  cudaMemcpy( d_buffer, buffer, sites*sizeof(T), cudaMemcpyHostToDevice );
+
+  // Call the kernel to place the elements 
+  int N_blocks = sites/N_threads + 1; 
+  scatter_comm_elements_kernel<<< N_blocks, N_threads >>>( payload, d_buffer, from_node.offset(par), sites, lattice->field_alloc_size() );
+
+  cudaFree(d_buffer);
+}
+#endif
+
+
+
 
 ///* start_move(): Communicate the field from direction d 
 ///  A simple implementation that waits completes the communication
@@ -781,14 +863,12 @@ void field<T>::start_move(direction d, parity par) const {
   /* HANDLE SENDS: Copy field elements on the boundary to a send buffer and send */
   n=0;
   for( lattice_struct::comm_node_struct to_node : ci.to_node ){
+    /* gather data into the buffer  */
     unsigned sites = to_node.n_sites(par);
     char * buffer = (char *)malloc( sites*size );
-    /* gather data into the buffer */
-    for (int j=0; j<sites; j++) {
-      T element = get_value_at(to_node.site_index(j, par));
-      memcpy( buffer + j*size, (char *) (&element), size );
-    }
+    fs->gather_comm_elements(buffer, to_node, par);
 
+    /* And send */
     MPI_Send( buffer, sites*size, MPI_BYTE, to_node.index, n,  lattice->mpi_comm_lat);
 
     std::free(buffer);
@@ -801,18 +881,9 @@ void field<T>::start_move(direction d, parity par) const {
     MPI_Status status;
     MPI_Wait(&request[n], &status);
 
-    unsigned sites = from_node.n_sites(par);
-    int offset = from_node.offset(par);
     char * buffer = receive_buffer[n];
-    for (int j=0; j<sites; j++) {
-      T element = *((T*) ( buffer + j*size ));
-      /* The set_value_at function cannot be used if the field
-       * is const (naturally, since it is intended to change the
-       * field). Instead, we call the field_struct setter
-       * directly. */
-      this->fs->set(element, offset+j);
-    }
-      
+    fs->scatter_comm_elements(buffer, from_node, par);
+    
     n++;
   }
 

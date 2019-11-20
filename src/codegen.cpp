@@ -401,9 +401,22 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     call << l.new_name + ".fs->payload";
 
     for( field_ref *r : l.ref_list ){
-      // Generate new name for direction expression
-      if( r->dirExpr )
-        r->dirname = "d_" + get_stmt_str(r->dirExpr);
+      // Generate new name for direction expression unless it is loop local
+      if( r->dirExpr ) {
+        // Check for if it is a local variable
+        bool is_local = false;
+        DeclRefExpr *DRE =dyn_cast<DeclRefExpr>(r->dirExpr->IgnoreImplicit());
+        if(DRE && dyn_cast<VarDecl>(DRE->getDecl())){
+          for ( var_info & vi : var_info_list ) if( vi.is_loop_local ){
+            if( vi.decl == dyn_cast<VarDecl>(DRE->getDecl()) ){
+              is_local = true;
+              break;
+            }
+          }
+        }
+        if(!is_local) // Not local: replace variable name
+          r->dirname = "d_" + get_stmt_str(r->dirExpr);
+      }
     }
 
   }
@@ -491,7 +504,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       kernel << type_name << " "  << l.loop_ref_name << "_d[NDIRS];\n";
       kernel << "bool " << l.new_name << "_read_d[NDIRS];\n";
-      kernel << "foralldir(__d){" << l.new_name << "_read_d[__d]=true;}\n";
+      kernel << "for(int __d=0; __d<NDIRS; __d++){" << l.new_name << "_read_d[__d]=true;}\n";
       break; // Only need one direction reference
     }
     // Check for references without a direction. If found, add temp variable

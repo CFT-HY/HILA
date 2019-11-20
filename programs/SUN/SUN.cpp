@@ -46,14 +46,15 @@ void calc_staples(
 }
 
  
+#pragma transformer loop_function
 template<typename T>
-loop_callable void update(
+void update(
   T &U, const T &staple, double beta
 ){
   monte( U, staple, beta );
 }
 
-loop_callable 
+#pragma transformer loop_function
 void update(
   matrix<2,2,cmplx<double>> &U,
   const matrix<2,2,cmplx<double>> &staple,
@@ -64,11 +65,11 @@ void update(
 }
 
 
-int main()
+int main(int argc, char **argv)
 {
 
   // Basic setup
-  lattice->setup( NX, NY, NZ, NT );
+  lattice->setup( NX, NY, NZ, NT, argc, argv );
   // Define a field
   field<matrix<N,N,cmplx<double>>> U[NDIM];
   field<matrix<N,N,cmplx<double>>> staple;
