@@ -132,30 +132,31 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
 
 
 /// Checks that an expression is does not refer to loop local variables
-bool LoopLocalChecker::TraverseStmt(Stmt *s) {
+bool LoopLocalChecker::VisitDeclRefExpr(DeclRefExpr *e) {
   // Just check the reference here, then recursively walk the tree
 
   // It must be declared already. Get the declaration and check
   // the variable list. (If it's not in the list, it's not local)
-  DeclRefExpr *DRE =dyn_cast<DeclRefExpr>(s->IgnoreImplicit());
-  if(DRE && dyn_cast<VarDecl>(DRE->getDecl())){
-    llvm::errs() << "LPC variable reference: " <<  get_stmt_str(s) << "\n" ;
-
-    for ( var_info & vi : var_info_list ) if( vi.is_loop_local ){
-      if( vi.decl == dyn_cast<VarDecl>(DRE->getDecl()) ){
-        // It is local! Generate a warning
-        reportDiag(DiagnosticsEngine::Level::Fatal,
-             DRE->getSourceRange().getBegin(),
-            "Field reference depends on loop-local variable");
-        break;
-      }
+  llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
+  for ( var_info & vi : var_info_list ) if( vi.is_loop_local ){
+    if( vi.decl == dyn_cast<VarDecl>(e->getDecl()) ){
+      // It is local! Generate a warning
+      reportDiag(DiagnosticsEngine::Level::Error,
+           e->getSourceRange().getBegin(),
+          "Field reference depends on loop-local variable");
+      break;
     }
   }
-
-  // Walk the rest of the tree recursively 
+  return true;
+}
+  
+// Walk the tree recursively 
+bool LoopLocalChecker::TraverseStmt(Stmt *s) {
   RecursiveASTVisitor<LoopLocalChecker>::TraverseStmt(s);
   return true;
 }
+
+
 
 
 /// -- Handler utility functions -- 

@@ -235,7 +235,7 @@ public:
   using GeneralVisitor::GeneralVisitor;
 
   bool TraverseStmt(Stmt *s);
-
+  bool VisitDeclRefExpr(DeclRefExpr * e);
 };
 
 
