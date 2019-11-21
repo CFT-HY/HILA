@@ -132,7 +132,7 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
 
 
 /// Checks that an expression is does not refer to loop local variables
-bool LoopLocalChecker::VisitDeclRefExpr(DeclRefExpr *e) {
+bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
   // It must be declared already. Get the declaration and check
   // the variable list. (If it's not in the list, it's not local)
   //llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
@@ -149,8 +149,8 @@ bool LoopLocalChecker::VisitDeclRefExpr(DeclRefExpr *e) {
 }
   
 // Walk the tree recursively 
-bool LoopLocalChecker::TraverseStmt(Stmt *s) {
-  RecursiveASTVisitor<LoopLocalChecker>::TraverseStmt(s);
+bool FieldRefChecker::TraverseStmt(Stmt *s) {
+  RecursiveASTVisitor<FieldRefChecker>::TraverseStmt(s);
   return true;
 }
 
@@ -183,7 +183,11 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     llvm::errs() << "Should not happen! Error in field parity\n";
     exit(1);
   }
-  
+
+  // Check that there are no local variable references up the AST
+  FieldRefChecker frc(TheRewriter, Context);
+  frc.TraverseStmt(lfe.fullExpr);
+
   //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr); 
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
   
@@ -199,10 +203,6 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       require_parity_X(lfe.parityExpr);
     }
   }
-
-  // Check that there are no local variable references up the AST
-  LoopLocalChecker lpc(TheRewriter, Context);
-  lpc.TraverseStmt(lfe.nameExpr);
 
   lfe.is_written = is_assign;
   lfe.is_read = (is_compound || !is_assign);
@@ -258,10 +258,6 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
         require_parity_X(Op->getArg(0));
         lfe.dirExpr = Op->getArg(1);
         lfe.dirname = get_stmt_str(lfe.dirExpr);
-
-        // Check that the direction is not loop local.
-        LoopLocalChecker lpc(TheRewriter, Context);
-        lpc.TraverseStmt(lfe.dirExpr);
     }
   }
     

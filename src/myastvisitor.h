@@ -230,7 +230,7 @@ public:
 /// An AST Visitor for checking constraints for a field
 /// reference expression. Walks the tree to check each
 /// variable reference
-class LoopLocalChecker : public GeneralVisitor, public RecursiveASTVisitor<LoopLocalChecker> {
+class FieldRefChecker : public GeneralVisitor, public RecursiveASTVisitor<FieldRefChecker> {
 public:
   using GeneralVisitor::GeneralVisitor;
 
