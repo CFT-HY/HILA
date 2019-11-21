@@ -133,8 +133,6 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
 
 /// Checks that an expression is does not refer to loop local variables
 bool LoopLocalChecker::VisitDeclRefExpr(DeclRefExpr *e) {
-  // Just check the reference here, then recursively walk the tree
-
   // It must be declared already. Get the declaration and check
   // the variable list. (If it's not in the list, it's not local)
   //llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
