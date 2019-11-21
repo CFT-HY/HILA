@@ -101,6 +101,9 @@ OBJECTS = \
   $(BUILDDIR)/transformer.o \
   $(BUILDDIR)/stringops.o \
   $(BUILDDIR)/codegen.o \
+  $(BUILDDIR)/codegen_cpu.o \
+  $(BUILDDIR)/codegen_cuda.o \
+  $(BUILDDIR)/codegen_openacc.o \
   $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/myastvisitor.o \
   $(BUILDDIR)/loop_function.o \

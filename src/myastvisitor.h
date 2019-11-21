@@ -195,10 +195,9 @@ public:
   void generate_code(Stmt *S, codetype & target);
 
   /// Generate a header for starting communication and marking fields changed
-  std::string generate_loop_header(Stmt *S, codetype & target, bool semi_at_end);
-  
-  std::string generate_kernel(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
-  std::string generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();

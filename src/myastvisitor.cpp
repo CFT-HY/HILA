@@ -1481,7 +1481,7 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
   }
   
   return true;
-}                           
+}
 
 #if 0
 bool MyASTVisitor::
@@ -1497,6 +1497,9 @@ VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
   return true;
 }
 #endif
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////////
 /// Check that all template specialization type arguments are defined at the point
