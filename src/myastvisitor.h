@@ -22,17 +22,44 @@
 /// - codegen.cpp 
 //////////////////////////////////////////////
 
-class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 
-private:  
+class GeneralVisitor {
+protected:  
   Rewriter &TheRewriter;
   ASTContext *Context;
+public:
+  GeneralVisitor(Rewriter &R) : TheRewriter(R) {}
+  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
+
+  template <unsigned N>
+  void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
+                  const char (&msg)[N],
+                  const char *s1 = nullptr,
+                  const char *s2 = nullptr,
+                  const char *s3 = nullptr );
+
+
+  std::string get_stmt_str(const Stmt *s) {
+    return TheRewriter.getRewrittenText(s->getSourceRange());
+  }
+
+  std::string get_expr_type(const Expr *e) {
+    // This is somehow needed for printing type without "class" id
+    // TODO: perhaps reanalyse and make more robust?
+    PrintingPolicy pp(Context->getLangOpts());
+    return e->getType().getUnqualifiedType().getAsString(pp);
+  }
+};
+
+
+class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisitor> {
+
+private:
   srcBuf *writeBuf;
   srcBuf *toplevelBuf;
   
 public:
-  MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
-  MyASTVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
+  using GeneralVisitor::GeneralVisitor;
 
   bool shouldVisitTemplateInstantiations() const { return true; }
   // is false by default, but still goes?
@@ -107,24 +134,6 @@ public:
   bool is_field_parity_expr(Expr *e);
 
   bool is_array_expr(Expr *E); 
-
-  template <unsigned N>
-  void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
-                  const char (&msg)[N],
-                  const char *s1 = nullptr,
-                  const char *s2 = nullptr,
-                  const char *s3 = nullptr );
-
-  std::string get_stmt_str(const Stmt *s) {
-    return TheRewriter.getRewrittenText(s->getSourceRange());
-  }
-
-  std::string get_expr_type(const Expr *e) {
-    // This is somehow needed for printing type without "class" id
-    // TODO: perhaps reanalyse and make more robust?
-    PrintingPolicy pp(Context->getLangOpts());
-    return e->getType().getUnqualifiedType().getAsString(pp);
-  }
   
   /// this tries to "fingerprint" expressions and see if they're duplicate
   bool is_duplicate_expr(const Expr * a, const Expr * b);
@@ -165,6 +174,8 @@ public:
   bool isStmtWithSemi(Stmt * S);  
   SourceRange getRangeWithSemi(Stmt * S, bool flag_error = true);
   
+  void requireGloballyDefined(Expr * e);
+
   void set_sourceloc_modified(const SourceLocation sl);
 
   /// Entry point for the full field loop
@@ -214,5 +225,19 @@ public:
   SourceRange get_func_decl_range(FunctionDecl *f);
 
 };
+
+
+/// An AST Visitor for checking constraints for a field
+/// reference expression. Walks the tree to check each
+/// variable reference
+class LoopLocalChecker : public GeneralVisitor, public RecursiveASTVisitor<LoopLocalChecker> {
+public:
+  using GeneralVisitor::GeneralVisitor;
+
+  bool TraverseStmt(Stmt *s);
+
+};
+
+
 
 #endif

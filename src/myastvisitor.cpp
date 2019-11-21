@@ -129,6 +129,35 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
   return false;
 }
 
+
+
+/// Checks that an expression is does not refer to loop local variables
+bool LoopLocalChecker::TraverseStmt(Stmt *s) {
+  // Just check the reference here, then recursively walk the tree
+
+  // It must be declared already. Get the declaration and check
+  // the variable list. (If it's not in the list, it's not local)
+  DeclRefExpr *DRE =dyn_cast<DeclRefExpr>(s->IgnoreImplicit());
+  if(DRE && dyn_cast<VarDecl>(DRE->getDecl())){
+    llvm::errs() << "LPC variable reference: " <<  get_stmt_str(s) << "\n" ;
+
+    for ( var_info & vi : var_info_list ) if( vi.is_loop_local ){
+      if( vi.decl == dyn_cast<VarDecl>(DRE->getDecl()) ){
+        // It is local! Generate a warning
+        reportDiag(DiagnosticsEngine::Level::Fatal,
+             DRE->getSourceRange().getBegin(),
+            "Field reference depends on loop-local variable");
+        break;
+      }
+    }
+  }
+
+  // Walk the rest of the tree recursively 
+  RecursiveASTVisitor<LoopLocalChecker>::TraverseStmt(s);
+  return true;
+}
+
+
 /// -- Handler utility functions -- 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -171,6 +200,10 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       require_parity_X(lfe.parityExpr);
     }
   }
+
+  // Check that there are no local variable references up the AST
+  LoopLocalChecker lpc(TheRewriter, Context);
+  lpc.TraverseStmt(lfe.nameExpr);
 
   lfe.is_written = is_assign;
   lfe.is_read = (is_compound || !is_assign);
@@ -226,6 +259,10 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
         require_parity_X(Op->getArg(0));
         lfe.dirExpr = Op->getArg(1);
         lfe.dirname = get_stmt_str(lfe.dirExpr);
+
+        // Check that the direction is not loop local.
+        LoopLocalChecker lpc(TheRewriter, Context);
+        lpc.TraverseStmt(lfe.dirExpr);
     }
   }
     
@@ -650,7 +687,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
 }
 
 template <unsigned N>
-void MyASTVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
+void GeneralVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
                               const char (&msg)[N],
                               const char *s1,
                               const char *s2,
