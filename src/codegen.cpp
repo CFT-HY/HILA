@@ -113,17 +113,28 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     // if (l.dir_list.size() > 0) {
     if (l.is_written) {
       code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
+      code << l.new_name << ".mark_changed(" + parity_in_this_loop + ");\n";      
     } else {
       code << "const field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
     }
-  }
 
+    // Check that read fields are allocated
+    if( l.is_read ){
+      code << "assert(" << l.new_name << ".is_allocated());\n";
+    }
+
+    // If neighbour references exist, communicate them
+    for (dir_ptr & d : l.dir_list) if(d.count > 0){
+      code << l.new_name << ".start_move("
+           << get_stmt_str(d.e) << ", " << parity_in_this_loop << ");\n";
+    }
+  }
   
   // Generate a header that starts communication and checks
   // that fields are allocated
-  code << generate_loop_header(S,target,semi_at_end)+ "\n";
+  //code << generate_loop_header(S,target,semi_at_end)+ "\n";
   
-  
+
   // Check for reductions and allocate device memory
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
@@ -195,7 +206,6 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     
   writeBuf->insert(S->getBeginLoc(), indent_string(code.str()), true, true);
 
-  
 }
 
 
@@ -314,15 +324,14 @@ std::string MyASTVisitor::generate_in_place(Stmt *S, codetype & target, bool sem
     // First check for direction references. If any found, create list of temp
     // variables
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << type_name << " "  << l.loop_ref_name << "_d[NDIRS];\n";
-      code << "std::array<bool, NDIRS> " << l.new_name << "_read_d;\n";
-      code << l.new_name << "_read_d.fill(true);\n";
-      break; // Only need one direction reference
+      code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
+           << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
+           << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
     }
     // Check for references without a direction. If found, add temp variable
     for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-      code << type_name << " "  << l.loop_ref_name << ";\n";
-      code << "bool "  << l.new_name << "_read = true;\n";
+      code << type_name << " " << l.loop_ref_name << " = " 
+           << l.new_name << ".get_value_at(" << looping_var << ");\n";
       break;  // Only one needed
     }
   }
@@ -554,7 +563,7 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
     if (le.dirExpr != nullptr) {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_d["+le.dirname+"]");
+      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
     } else {
       loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
     }
@@ -574,33 +583,28 @@ void MyASTVisitor::replace_field_refs_and_funcs(srcBuf & loopBuf, bool CUDA) {
     for( field_ref *r : l.ref_list ){
       // If reference has a direction, use the temp list
       if(r->dirExpr){
-        std::string is_read = l.new_name + "_read_d["+r->dirname+"]";
-        std::string getter;
         if(CUDA){
+          std::string is_read = l.new_name + "_read_d["+r->dirname+"]";
+          std::string getter;
           getter = ".get(lattice->d_neighb[" + r->dirname + "]["
             + looping_var + "], lattice->field_alloc_size)";
-        } else {
-          getter = ".get_value_at(lattice->neighb[" + r->dirname + "][" 
-            + looping_var + "])";
+          loopBuf.insert_before_stmt(r->fullExpr, 
+            "if("  + is_read + ") {"
+            + l.loop_ref_name + "_d[" + r->dirname + "]=" + l.new_name + getter + ";"
+            + is_read + "=false;}", true, true);
         }
-        loopBuf.insert_before_stmt(r->fullExpr, 
-          "if("  + is_read + ") {"
-          + l.loop_ref_name + "_d[" + r->dirname + "]=" + l.new_name + getter + ";"
-          + is_read + "=false;}", true, true);
       
       } else if(r->is_read) { // No direction, use the temp variable
       
-        std::string is_read = l.new_name + "_read";
-        std::string getter;
         if(CUDA){
+          std::string is_read = l.new_name + "_read";
+          std::string getter;
           getter = ".get(" + looping_var + ", lattice->field_alloc_size)";
-        } else {
-          getter = ".get_value_at(" + looping_var + ")";
+          loopBuf.insert_before_stmt(r->fullExpr, 
+            "if("  + is_read + ") {"
+            + l.loop_ref_name + "=" + l.new_name + getter + ";"
+            + is_read + "=false;}", true, true);
         }
-        loopBuf.insert_before_stmt(r->fullExpr, 
-          "if("  + is_read + ") {"
-          + l.loop_ref_name + "=" + l.new_name + getter + ";"
-          + is_read + "=false;}", true, true);
       }
     }
   }

@@ -147,7 +147,7 @@ bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
   }
   return true;
 }
-  
+
 // Walk the tree recursively 
 bool FieldRefChecker::TraverseStmt(Stmt *s) {
   RecursiveASTVisitor<FieldRefChecker>::TraverseStmt(s);
