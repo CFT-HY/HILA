@@ -137,7 +137,7 @@ bool LoopLocalChecker::VisitDeclRefExpr(DeclRefExpr *e) {
 
   // It must be declared already. Get the declaration and check
   // the variable list. (If it's not in the list, it's not local)
-  llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
+  //llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
   for ( var_info & vi : var_info_list ) if( vi.is_loop_local ){
     if( vi.decl == dyn_cast<VarDecl>(e->getDecl()) ){
       // It is local! Generate a warning
