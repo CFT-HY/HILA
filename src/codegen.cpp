@@ -387,6 +387,7 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
 
   // print field call list
   int i = -1;
+  int j=0;
   for (field_info & l : field_info_list) {
     i++;
     
@@ -414,8 +415,13 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
             }
           }
         }
-        if(!is_local) // Not local: replace variable name
-          r->dirname = "d_" + get_stmt_str(r->dirExpr);
+        if(!is_local){ // Not local: replace variable name
+          r->dirname = "d_" + std::to_string(j) + get_stmt_str(r->dirExpr);
+          call << ", " << get_stmt_str(r->dirExpr);
+          kernel << ", const int " << r->dirname;
+          loopBuf.replace( r->dirExpr, r->dirname );
+          j++;
+        }
       }
     }
 
@@ -451,12 +457,12 @@ std::string MyASTVisitor::generate_kernel(Stmt *S, codetype & target, bool semi_
   }
 
   // Add directions to the declaration
+  i=0;
   for (field_info & l : field_info_list) {
-    for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      call << ", " << get_stmt_str(d.e);
-      kernel << ", const int d_" << get_stmt_str(d.e);
-      loopBuf.replace( d.e, get_stmt_str(d.e) );
+    for( field_ref *r : l.ref_list ){
     }
+
+    
   }
 
   // finally, change the references to variables in the body
