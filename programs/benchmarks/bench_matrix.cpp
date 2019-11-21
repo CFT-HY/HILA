@@ -1,7 +1,7 @@
 #include "bench.h"
 
 #define N 3
-
+constexpr int mintime = CLOCKS_PER_SEC;
 
 int main(int argc, char **argv){
     int n_runs=1;
@@ -25,7 +25,7 @@ int main(int argc, char **argv){
 
     // Time MATRIX * MATRIX
     init = end = 0;
-    for(n_runs=1; (end-init) < CLOCKS_PER_SEC/2; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
       for( int i=0; i<n_runs; i++){
           matrix3[ALL] = matrix1[X]*matrix2[X];
@@ -45,7 +45,7 @@ int main(int argc, char **argv){
 
     // Time VECTOR * MATRIX
     init = end = 0;
-    for(n_runs=1; (end-init) < CLOCKS_PER_SEC/2; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
       for( int i=0; i<n_runs; i++){
           vector1[ALL] = vector1[X]*matrix1[X];
@@ -58,7 +58,7 @@ int main(int argc, char **argv){
 
     // Time VECTOR * MATRIX
     init = end = 0;
-    for(n_runs=1; (end-init) < CLOCKS_PER_SEC/2; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
       
       sum=0;
@@ -69,27 +69,46 @@ int main(int argc, char **argv){
       }
       
       end = clock();
-    }    
+    }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Vector square sum: " << timing << " ms \n";
 
 
-    // Time naive Dirac operator 
+    field<matrix<N,N, cmplx<double>> > U[NDIM];
+    foralldir(d) U[d] = 1;
+
+    // Time naive Dirac operator
     init = end = 0;
-    for(n_runs=1; (end-init) < CLOCKS_PER_SEC/2; n_runs*=2){
+    dirac_stagggered(U, 0.1, vector1, vector2);
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
       for( int i=0; i<n_runs; i++){
-        dirac_stagggered(matrix1, 0.1, vector1, vector2);
+        dirac_stagggered(U, 0.1, vector1, vector2);
       }
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Dirac: " << timing << "ms \n";
 
+    // Time naive Dirac operator with direction loop expanded
+    #if (NDIM==4) 
+    init = end = 0;
+    dirac_stagggered_4dir(U, 0.1, vector1, vector2);
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+        dirac_stagggered_4dir(U, 0.1, vector1, vector2);
+      }
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Dirac 4 dirs: " << timing << "ms \n";
+    #endif
+    
 
     // Conjugate gradient step 
     init = end = 0;
-    for(n_runs=1; (end-init) < CLOCKS_PER_SEC/2; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
 
       for( int i=0; i<n_runs; i++){
@@ -102,7 +121,7 @@ int main(int argc, char **argv){
              }
         }
             
-        dirac_stagggered(matrix1, 0.1, p, Dp);
+        dirac_stagggered(U, 0.1, p, Dp);
 
         double pDDp = 0;
         double rr = 0;
