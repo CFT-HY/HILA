@@ -115,11 +115,11 @@ int main(int argc, char **argv){
 
     // Conjugate gradient step 
     init = end = 0;
+    field<matrix<1,N, cmplx<double>> > r, rnew, p, Dp;
     for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
 
       for( int i=0; i<n_runs; i++){
-        field<matrix<1,N, cmplx<double>> > r, rnew, p, Dp;
         double pDDp = 0, rr = 0, rrnew = 0;
         double alpha, beta;
 
