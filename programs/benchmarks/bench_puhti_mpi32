@@ -4,9 +4,10 @@ Standard lattice layout:
 
  Sites on node: 16 x 16 x 16 x 8
  Processor layout: 2 x 2 x 2 x 4
-Matrix * Matrix: 10.5312ms 
-Vector * Matrix: 4.78125 ms 
-Vector square sum: 4.0625 ms 
-Dirac: 49.6875ms 
-CG: 72.1875ms / iteration
- COMMS from node 0: 268 done, 500(65.1042%) optimized away
+Matrix * Matrix: 1.67969ms 
+Vector * Matrix: 0.595703 ms 
+Vector square sum: 0.0610352 ms 
+Dirac 4 dirs: 4.6875ms 
+Dirac: 6.875ms 
+CG: 8.04688ms / iteration
+ COMMS from node 0: 1028 done, 6640(86.5936%) optimized away
