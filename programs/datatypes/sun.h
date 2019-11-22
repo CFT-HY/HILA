@@ -25,13 +25,14 @@ class SU<2, radix> {
 
         SU();
         ~SU();
-        void normalize(); //normalize elements
-        void reunitarize();
-        void random(); //generate random SU2 element 
+        SU<2,radix> & normalize(); //normalize elements
+        SU<2,radix> & reunitarize();
+        SU<2,radix> & random(); //generate random SU2 element 
+        SU<2,radix> & inv(); //invert matrix and return reference to self
         radix sqr(); //calculate square of all elements
         radix det(); //determinant
         radix tr(); //trace 
-        SU<2,radix> & inv(); //invert matrix
+
         SU<2,radix> operator + (const SU<2,radix> &); //return copies of result 
         SU<2,radix> operator - (const SU<2,radix> &);
         SU<2,radix> operator * (const SU<2,radix> &);
@@ -47,6 +48,6 @@ class SU<2, radix> {
         SU<2,radix> & operator = (const SU<2,radix> &);
 
     private:
-    
+
         radix a, b, c, d;      
 };
