@@ -832,6 +832,9 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 ///  point of view of the user, the value of the field does not change.
 template<typename T>
 void field<T>::start_move(direction d, parity par) const {
+  static int tag = 0;
+  tag = (tag+1)%1000000000;
+  //printf("node %d, comm %d dir %d\n", mynode(), tag, (int)d);
   if( is_fetched(d, par) ){
     // Not changed, return directly
     // Keep count of gathers optimized away
@@ -859,8 +862,10 @@ void field<T>::start_move(direction d, parity par) const {
     unsigned sites = from_node.n_sites(par);
     receive_buffer[n] = (char *)malloc( sites*size );
 
-    MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE,
-	         from_node.index, n, lattice->mpi_comm_lat, &receive_request[n] );
+    //printf("node %d, recv tag %d from %d\n", mynode(), tag, from_node.index);
+
+    MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE, from_node.index, 
+	             tag, lattice->mpi_comm_lat, &receive_request[n] );
     n++;
   }
 
@@ -872,9 +877,12 @@ void field<T>::start_move(direction d, parity par) const {
     send_buffer[n] = (char *)malloc( sites*size );
     fs->gather_comm_elements(send_buffer[n], to_node, par);
 
+    //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.index);
     /* And send */
-    MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.index, n,
-               lattice->mpi_comm_lat, &send_request[n]);
+    MPI_Send( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
+               tag, lattice->mpi_comm_lat);
+    //printf("node %d, sent tag %d\n", mynode(), tag);
+    std::free(send_buffer[n]);
     n++;
   }
 
@@ -882,20 +890,15 @@ void field<T>::start_move(direction d, parity par) const {
   n=0;
   for( lattice_struct::comm_node_struct from_node : ci.from_node ){
     MPI_Status status;
+    //printf("node %d, waiting for recv tag %d\n", mynode(), tag);
     MPI_Wait(&receive_request[n], &status);
+    //printf("node %d, received tag %d\n", mynode(), tag);
 
     fs->scatter_comm_elements(receive_buffer[n], from_node, par);
     
     n++;
   }
 
-  /* Unallocate once sends are complete */
-  n=0;
-  for( lattice_struct::comm_node_struct to_node : ci.to_node ){
-    MPI_Status status;
-    MPI_Wait(&send_request[n], &status);
-    std::free(send_buffer[n]);
-  }
 
   /* Mark the parity fetched from direction dir */
   mark_fetched(d, par);

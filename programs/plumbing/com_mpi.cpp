@@ -21,6 +21,12 @@ void initialize_machine(int &argc, char ***argv)
     setup_sublattices( argcp, *argv );
 #endif
 
+#ifdef CUDA
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+    initialize_cuda( rank );
+#endif
+
   }
 }
 

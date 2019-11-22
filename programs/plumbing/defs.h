@@ -197,8 +197,13 @@ inline void synchronize(){
 #else
 
 inline void synchronize(){
+  static int n=1;
+  //printf("node %d, in barrier %d\n", mynode(), n);
   synchronize_threads();
+  //printf("node %d, waiting for mpi in barrier %d\n", mynode(), n);
   MPI_Barrier(MPI_COMM_WORLD); 
+  //printf("node %d, barrier cleared %d\n", mynode(), n);
+  n++;
 }
 
 #endif
