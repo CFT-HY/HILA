@@ -32,6 +32,13 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 
+// Add the __host__ __device__ keywords to functions called a loop
+void MyASTVisitor::handle_loop_function_openacc(SourceLocation sl) {
+  FileID FID = TheRewriter.getSourceMgr().getFileID(sl);
+  set_fid_modified(FID);
+  srcBuf * sb = get_file_buffer(TheRewriter, FID);
+  sb->insert(sl, "#pragma acc routine \n",true,true);
+}
 
 
 

@@ -32,6 +32,15 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 
+// Add the __host__ __device__ keywords to functions called a loop
+void MyASTVisitor::handle_loop_function_cuda(SourceLocation sl) {
+  FileID FID = TheRewriter.getSourceMgr().getFileID(sl);
+  set_fid_modified(FID);
+  srcBuf * sb = get_file_buffer(TheRewriter, FID);
+  sb->insert(sl, "__device__ __host__ ",true,true);
+}
+
+
 /// Help routine to write (part of) a name for a kernel
 std::string MyASTVisitor::make_kernel_name() {
   return 
@@ -42,7 +51,6 @@ std::string MyASTVisitor::make_kernel_name() {
                            // getSpellingLineNumber(global.location.loop));
                            getFileOffset(global.location.loop));
 }
-
 
 
 
