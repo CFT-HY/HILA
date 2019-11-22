@@ -96,30 +96,26 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
 
   i=0;
   // and non-field vars
-  for ( var_info & vi : var_info_list ) {
-    if (!vi.is_loop_local) {
-      // Rename the variable
-      vi.new_name = "sv__" + std::to_string(i) + "_";
+  for ( var_info & vi : var_info_list ) if(!vi.is_loop_local) {
+    // Rename the variable
+    vi.new_name = "sv__" + std::to_string(i) + "_";
+    i++;
 
-      if(vi.reduction_type != reduction::NONE) {
-        // Reduction variables in a CUDA kernel are
-        // saved to an array and reduced later. 
-        kernel << ", " << vi.type << " * " << vi.new_name;
-        code << ", d_r_" << vi.name;
-        vi.new_name = vi.new_name+"[Index]";
-
-      } else if(vi.is_assigned) {
-          kernel << ", " << vi.type << " & " << vi.new_name;
-          code << ", " << vi.name;
-      } else {
-          kernel << ", const " << vi.type << " " << vi.new_name;
-          code << ", " << vi.name;
-      }
-      // Replace references in the loop body
-      for (var_ref & vr : vi.refs) {
-        loopBuf.replace( vr.ref, vi.new_name );
-      }
-      i++;
+    if(vi.reduction_type != reduction::NONE) {
+      // Generate a temporary array for the reduction 
+      kernel << ", " << vi.type << " * " << vi.new_name;
+      code << ", d_r_" << vi.name;
+      vi.new_name = vi.new_name+"[Index]";
+    } else if(vi.is_assigned) {
+      kernel << ", " << vi.type << " & " << vi.new_name;
+      code << ", " << vi.name;
+    } else {
+      kernel << ", const " << vi.type << " " << vi.new_name;
+      code << ", " << vi.name;
+    }
+    // Replace references in the loop body
+    for (var_ref & vr : vi.refs) {
+      loopBuf.replace( vr.ref, vi.new_name );
     }
   }
 
