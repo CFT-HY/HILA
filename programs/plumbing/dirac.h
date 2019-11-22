@@ -7,7 +7,7 @@
 #include "../plumbing/field.h"
 
 template<typename mtype, typename vtype>
-void dirac_stagggered(
+void dirac_stagggered_alldim(
     const mtype gauge[NDIM],
     const double mass,
     const vtype &v_in,
@@ -54,7 +54,7 @@ void dirac_stagggered(
 /// A staggered Dirac operator with one unrolled loop instead of
 /// loops for all directions. Used in benchmarks.
 template<typename mtype, typename vtype>
-void dirac_stagggered_4dir(
+void dirac_stagggered_4dim(
     const mtype gauge[NDIM],
     const double mass,
     const vtype &v_in,
@@ -97,5 +97,32 @@ void dirac_stagggered_4dir(
     }
 }
 #endif
+
+
+#if NDIM==4
+template<typename mtype, typename vtype>
+void dirac_stagggered(
+    const mtype gauge[NDIM],
+    const double mass,
+    const vtype &v_in,
+    vtype &v_out)
+{
+    dirac_stagggered_4dim(gauge, mass, v_in, v_out);
+}
+
+#else
+
+template<typename mtype, typename vtype>
+void dirac_stagggered(
+    const mtype gauge[NDIM],
+    const double mass,
+    const vtype &v_in,
+    vtype &v_out)
+{
+    dirac_stagggered_alldim(gauge, mass, v_in, v_out);
+}
+
+#endif
+
 
 #endif

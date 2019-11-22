@@ -108,6 +108,12 @@ T cuda_reduce_sum(  T * vector, int N ){
 //  return sum;
 //}
 
+
+inline void synchronize_threads(){
+  cudaDeviceSynchronize();
+}
+
+
 #else
 
 // define cuda functions in order to avoid compilation errors
@@ -118,6 +124,8 @@ T cuda_reduce_sum(  T * vector, int N ){
 #define cudaMalloc(a,b) 0
 #define cudaFree(a) while(0)
 #define check_cuda_error(a) while(0)
+
+inline void synchronize_threads(){}
 
 #endif
 

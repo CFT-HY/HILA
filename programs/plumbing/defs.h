@@ -59,7 +59,7 @@ enum direction { XUP, XDOWN, NDIRS };
 /**
  * Increment op for directions
  * */
-transformer_ctl(loop_function);
+#pragma transformer loop_function
 inline direction & operator++(direction & dir, int dummy){
   const int i = static_cast<int>(dir);
   return dir=static_cast<direction>((i + 1)%NDIRS);
@@ -143,7 +143,6 @@ inline void finishrun() {
 
 #else
 
-// Basic MPI implementation
 int mynode();
 int numnodes();
 void finishrun();
@@ -165,14 +164,16 @@ inline void assert_even_odd_parity( parity p ) {
 
 #elif defined(openacc)
 
-//#include <openacc.h>
-
 #define seed_random(seed) seed_mersenne(seed)
 #define hila_random() mersenne()
+inline void synchronize_threads(){}
 
 #else
+
 #define seed_random(seed) seed_mersenne(seed)
 #define hila_random() mersenne()
+inline void synchronize_threads(){}
+
 #endif
 
 
@@ -183,6 +184,27 @@ namespace std {
   using enable_if_t = typename std::enable_if<B,T>::type;
 }
 #endif
+
+
+
+// Synchronization
+#ifndef USE_MPI
+
+inline void synchronize(){
+  synchronize_threads();
+}
+
+#else
+
+inline void synchronize(){
+  synchronize_threads();
+  MPI_Barrier(MPI_COMM_WORLD); 
+}
+
+#endif
+
+
+
 
 
 #endif
