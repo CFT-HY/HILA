@@ -64,6 +64,15 @@ void lattice_struct::setup_lattice_device_info()
 
 
 
+void initialize_cuda( int rank ){
+  int n_devices, my_device;
+  cudaGetDeviceCount(&n_devices);
+  /* This assumes that each node has the same number of mpi ranks and GPUs */
+  my_device = rank%n_devices;
+  printf("Rank %d choosing device %d out of %d\n", rank, my_device, n_devices);
+  cudaSetDevice(rank);
+}
+
 
 
 
