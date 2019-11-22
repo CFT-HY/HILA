@@ -70,7 +70,7 @@ void initialize_cuda( int rank ){
   /* This assumes that each node has the same number of mpi ranks and GPUs */
   my_device = rank%n_devices;
   printf("Rank %d choosing device %d out of %d\n", rank, my_device, n_devices);
-  cudaSetDevice(rank);
+  cudaSetDevice(my_device);
 }
 
 
