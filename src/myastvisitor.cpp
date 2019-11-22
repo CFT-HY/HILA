@@ -129,6 +129,34 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
   return false;
 }
 
+
+
+/// Checks that an expression is does not refer to loop local variables
+bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
+  // It must be declared already. Get the declaration and check
+  // the variable list. (If it's not in the list, it's not local)
+  //llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
+  for ( var_info & vi : var_info_list ) if( vi.is_loop_local ){
+    if( vi.decl == dyn_cast<VarDecl>(e->getDecl()) ){
+      // It is local! Generate a warning
+      reportDiag(DiagnosticsEngine::Level::Error,
+           e->getSourceRange().getBegin(),
+          "Field reference depends on loop-local variable");
+      break;
+    }
+  }
+  return true;
+}
+
+// Walk the tree recursively 
+bool FieldRefChecker::TraverseStmt(Stmt *s) {
+  RecursiveASTVisitor<FieldRefChecker>::TraverseStmt(s);
+  return true;
+}
+
+
+
+
 /// -- Handler utility functions -- 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -155,7 +183,11 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     llvm::errs() << "Should not happen! Error in field parity\n";
     exit(1);
   }
-  
+
+  // Check that there are no local variable references up the AST
+  FieldRefChecker frc(TheRewriter, Context);
+  frc.TraverseStmt(lfe.fullExpr);
+
   //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr); 
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
   
@@ -224,8 +256,15 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
         llvm::errs() << " ++++++ found parity + dir\n";
 
         require_parity_X(Op->getArg(0));
-        lfe.dirExpr = Op->getArg(1);
+        lfe.dirExpr = Op->getArg(1)->IgnoreImplicit();
         lfe.dirname = get_stmt_str(lfe.dirExpr);
+
+        // If the direction is a variable, add it to the list
+        DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
+        static std::string assignop;
+        if(DRE && isa<VarDecl>(DRE->getDecl())) {
+          handle_var_ref(DRE, false, assignop);
+        }
     }
   }
     
@@ -650,7 +689,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
 }
 
 template <unsigned N>
-void MyASTVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
+void GeneralVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
                               const char (&msg)[N],
                               const char *s1,
                               const char *s2,
@@ -1449,7 +1488,7 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
   }
   
   return true;
-}                           
+}
 
 #if 0
 bool MyASTVisitor::
@@ -1465,6 +1504,9 @@ VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
   return true;
 }
 #endif
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////////
 /// Check that all template specialization type arguments are defined at the point

@@ -22,17 +22,44 @@
 /// - codegen.cpp 
 //////////////////////////////////////////////
 
-class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
 
-private:  
+class GeneralVisitor {
+protected:  
   Rewriter &TheRewriter;
   ASTContext *Context;
+public:
+  GeneralVisitor(Rewriter &R) : TheRewriter(R) {}
+  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
+
+  template <unsigned N>
+  void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
+                  const char (&msg)[N],
+                  const char *s1 = nullptr,
+                  const char *s2 = nullptr,
+                  const char *s3 = nullptr );
+
+
+  std::string get_stmt_str(const Stmt *s) {
+    return TheRewriter.getRewrittenText(s->getSourceRange());
+  }
+
+  std::string get_expr_type(const Expr *e) {
+    // This is somehow needed for printing type without "class" id
+    // TODO: perhaps reanalyse and make more robust?
+    PrintingPolicy pp(Context->getLangOpts());
+    return e->getType().getUnqualifiedType().getAsString(pp);
+  }
+};
+
+
+class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisitor> {
+
+private:
   srcBuf *writeBuf;
   srcBuf *toplevelBuf;
   
 public:
-  MyASTVisitor(Rewriter &R) : TheRewriter(R) {}
-  MyASTVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
+  using GeneralVisitor::GeneralVisitor;
 
   bool shouldVisitTemplateInstantiations() const { return true; }
   // is false by default, but still goes?
@@ -107,24 +134,6 @@ public:
   bool is_field_parity_expr(Expr *e);
 
   bool is_array_expr(Expr *E); 
-
-  template <unsigned N>
-  void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
-                  const char (&msg)[N],
-                  const char *s1 = nullptr,
-                  const char *s2 = nullptr,
-                  const char *s3 = nullptr );
-
-  std::string get_stmt_str(const Stmt *s) {
-    return TheRewriter.getRewrittenText(s->getSourceRange());
-  }
-
-  std::string get_expr_type(const Expr *e) {
-    // This is somehow needed for printing type without "class" id
-    // TODO: perhaps reanalyse and make more robust?
-    PrintingPolicy pp(Context->getLangOpts());
-    return e->getType().getUnqualifiedType().getAsString(pp);
-  }
   
   /// this tries to "fingerprint" expressions and see if they're duplicate
   bool is_duplicate_expr(const Expr * a, const Expr * b);
@@ -165,6 +174,8 @@ public:
   bool isStmtWithSemi(Stmt * S);  
   SourceRange getRangeWithSemi(Stmt * S, bool flag_error = true);
   
+  void requireGloballyDefined(Expr * e);
+
   void set_sourceloc_modified(const SourceLocation sl);
 
   /// Entry point for the full field loop
@@ -184,16 +195,19 @@ public:
   void generate_code(Stmt *S, codetype & target);
 
   /// Generate a header for starting communication and marking fields changed
-  std::string generate_loop_header(Stmt *S, codetype & target, bool semi_at_end);
-  
-  std::string generate_kernel(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
-  std::string generate_in_place(Stmt *S, codetype & target, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
+
+  /// Handle functions called in a loop
+  void handle_loop_function_cuda(SourceLocation sl);
+  void handle_loop_function_openacc(SourceLocation sl);
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();
 
   /// Change field references within loops
-  void replace_field_refs_and_funcs(srcBuf &sb, bool CUDA);
+  void replace_field_refs_and_funcs(srcBuf &sb);
 
   /// shortcut for "pragma"-like transformer_control("cmd")-functin
   // bool handle_control_stmt(Stmt *s);
@@ -214,5 +228,19 @@ public:
   SourceRange get_func_decl_range(FunctionDecl *f);
 
 };
+
+
+/// An AST Visitor for checking constraints for a field
+/// reference expression. Walks the tree to check each
+/// variable reference
+class FieldRefChecker : public GeneralVisitor, public RecursiveASTVisitor<FieldRefChecker> {
+public:
+  using GeneralVisitor::GeneralVisitor;
+
+  bool TraverseStmt(Stmt *s);
+  bool VisitDeclRefExpr(DeclRefExpr * e);
+};
+
+
 
 #endif

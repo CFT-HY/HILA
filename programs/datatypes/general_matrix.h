@@ -12,16 +12,19 @@ inline T typeConj(T val){
 }
 
 template<typename Accuracy> 
+#pragma transformer loop_function
 inline cmplx<Accuracy> typeConj(cmplx<Accuracy> val){
   return val.conj();
 }
 
 template<typename T>
+#pragma transformer loop_function
 inline double type_norm_sq(T val){
   return val*val;
 }
 
 template<typename T> 
+#pragma transformer loop_function
 inline double type_norm_sq(cmplx<T> val){
   return val.norm_sq();
 }
@@ -168,6 +171,7 @@ class matrix {
 //templates needed for naive calculation of determinants
 
 template<int n, int m, typename T> 
+#pragma transformer loop_function
 matrix<n - 1, m - 1, T> Minor(const matrix<n, m, T> & bigger, int i, int j){
   matrix<n - 1, m - 1, T> result;
   int index = 0;
@@ -180,6 +184,7 @@ matrix<n - 1, m - 1, T> Minor(const matrix<n, m, T> & bigger, int i, int j){
 }
 
 template<int n, int m, typename T> 
+#pragma transformer loop_function
 T det(const matrix<n, m, T> & mat){
   static_assert(n==m, "determinants defined only for square matrices");
   T result = 1.0;
@@ -194,12 +199,14 @@ T det(const matrix<n, m, T> & mat){
 }
 
 template<typename T> 
+#pragma transformer loop_function
 T det(const matrix<2,2,T> & mat){
   return mat.c[0][0]*mat.c[1][1] - mat.c[1][0]*mat.c[0][1];
 }
 
 //matrix multiplication for 2 by 2 matrices ; 
 template<typename T> 
+#pragma transformer loop_function
 matrix<2,2,T> operator* (const matrix<2,2,T> &A, const matrix<2,2,T> &B) {
   matrix<2,2,T> res = 1;
   res.c[0][0] = A.c[0][0]*B.c[0][0] + A.c[0][1]*B.c[1][0];
@@ -211,6 +218,7 @@ matrix<2,2,T> operator* (const matrix<2,2,T> &A, const matrix<2,2,T> &B) {
 
 //general naive matrix multiplication 
 template <int n, int m, int p, typename T> 
+#pragma transformer loop_function
 matrix<n,p,T> operator* (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
   matrix<p,m,T> Btrans = B.transpose(); //do matrix multiplication on rows of transpose matrix (should reduce cache misses)
   matrix<n,p,T> res;
@@ -225,6 +233,7 @@ matrix<n,p,T> operator* (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
 
 //dot product definitions for vectors
 template<int n, typename T> 
+#pragma transformer loop_function
 T operator* (const matrix<1, n, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
@@ -234,6 +243,7 @@ T operator* (const matrix<1, n, T> & vecA, const matrix<n, 1, T> & vecB) {
 }
 
 template<int n, typename T> 
+#pragma transformer loop_function
 T operator* (const matrix<1, n, T> & vecA, const matrix<1, n, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
@@ -243,6 +253,7 @@ T operator* (const matrix<1, n, T> & vecA, const matrix<1, n, T> & vecB) {
 }
 
 template<int n, typename T> 
+#pragma transformer loop_function
 T operator* (const matrix<n, 1, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result; 
   result=0;
@@ -254,6 +265,7 @@ T operator* (const matrix<n, 1, T> & vecA, const matrix<n, 1, T> & vecB) {
 
 //component wise addition
 template <int n, int m, typename T> 
+#pragma transformer loop_function
 matrix<n,m,T> operator+ (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
   matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -264,6 +276,7 @@ matrix<n,m,T> operator+ (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
 
 //component wise subtraction
 template <int n, int m, typename T> 
+#pragma transformer loop_function
 matrix<n,m,T> operator- (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
   matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -274,6 +287,7 @@ matrix<n,m,T> operator- (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
 
 // multiplication by a scalar
 template <int n, int m, typename T, typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 > 
+#pragma transformer loop_function
 matrix<n,m,T> operator* (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -283,6 +297,7 @@ matrix<n,m,T> operator* (const matrix<n,m,T> &A, const scalart s) {
 }
 
 template <int n, int m, typename T, typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 > 
+#pragma transformer loop_function
 matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -292,12 +307,14 @@ matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
 }
 
 template <int n, int m, typename T, typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 > 
+#pragma transformer loop_function
 matrix<n,m,T> operator*(const scalart s, const matrix<n,m,T> &A) {
   return operator*(A,s);
 }
 
 
 template <int n, int m, typename T>
+#pragma transformer loop_function
 std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
   for (int i=0; i<n; i++){
     strm << "\n"; 
