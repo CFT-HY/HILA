@@ -199,6 +199,10 @@ public:
   std::string generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
 
+  /// Handle functions called in a loop
+  void handle_loop_function_cuda(SourceLocation sl);
+  void handle_loop_function_openacc(SourceLocation sl);
+
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();
 

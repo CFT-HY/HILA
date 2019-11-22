@@ -51,20 +51,11 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
   // we should mark the function, but it is not necessarily in the
   // main file buffer
-
-  if (target.flag_loop_function) {
-  
-    SourceManager &SM = TheRewriter.getSourceMgr();
-    SourceLocation sl = fd->getSourceRange().getBegin();
-    FileID FID = SM.getFileID(sl);
-    set_fid_modified(FID);
-
-    srcBuf * sb = get_file_buffer(TheRewriter, FID);
-    if (target.CUDA) {
-      sb->insert(sl, "__device__ __host__ ",true,true);
-    } else if (target.openacc) {
-      sb->insert(sl, "/* some ACC pragma here */");
-    }
+  SourceLocation sl = fd->getSourceRange().getBegin();
+  if (target.CUDA) {
+    handle_loop_function_cuda(sl);
+  } else if (target.openacc) {
+    handle_loop_function_openacc(sl);
   }
 }
 
