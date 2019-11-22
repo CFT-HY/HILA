@@ -256,8 +256,15 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
         llvm::errs() << " ++++++ found parity + dir\n";
 
         require_parity_X(Op->getArg(0));
-        lfe.dirExpr = Op->getArg(1);
+        lfe.dirExpr = Op->getArg(1)->IgnoreImplicit();
         lfe.dirname = get_stmt_str(lfe.dirExpr);
+
+        // If the direction is a variable, add it to the list
+        DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
+        static std::string assignop;
+        if(DRE && isa<VarDecl>(DRE->getDecl())) {
+          handle_var_ref(DRE, false, assignop);
+        }
     }
   }
     

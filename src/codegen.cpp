@@ -126,13 +126,13 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
-      v.new_name = "r_" + v.name;
-      while (t.find(v.new_name,0) != std::string::npos) v.new_name += "_";
+      v.reduction_name = "r_" + v.name;
+      while (t.find(v.reduction_name,0) != std::string::npos) v.reduction_name += "_";
       // Create a temporary variable and initialize
       if (v.reduction_type == reduction::SUM) {
-        code << v.type << " " << v.new_name << "=0;\n";
+        code << v.type << " " << v.reduction_name << "=0;\n";
       } else if (v.reduction_type == reduction::PRODUCT) {
-        code << v.type << " " << v.new_name << "=1;\n";
+        code << v.type << " " << v.reduction_name << "=1;\n";
       }
     }
   }
@@ -149,11 +149,11 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   // Check reduction variables
   for (var_info & v : var_info_list) {
     if (v.reduction_type == reduction::SUM) {
-      code << "lattice->reduce_node_sum(" << v.new_name << ", true);\n";
-      code << v.name << " += " << v.new_name << ";\n";
+      code << "lattice->reduce_node_sum(" << v.reduction_name << ", true);\n";
+      code << v.name << " += " << v.reduction_name << ";\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code << "lattice->reduce_node_product(" << v.new_name << ", true);\n";
-      code << v.name << " *= " << v.new_name << ";\n";
+      code << "lattice->reduce_node_product(" << v.reduction_name << ", true);\n";
+      code << v.name << " *= " << v.reduction_name << ";\n";
     }
   }
           

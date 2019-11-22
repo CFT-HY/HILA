@@ -60,8 +60,8 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
       // Allocate memory for a reduction. This will be filled in the kernel
-      code << v.type << " * d_" << v.new_name << ";\n";
-      code << "cudaMalloc( (void **)& d_" << v.new_name << ","
+      code << v.type << " * d_" << v.reduction_name << ";\n";
+      code << "cudaMalloc( (void **)& d_" << v.reduction_name << ","
            << "sizeof(" << v.type << ") * lattice->volume() );\n";
       code << "check_cuda_error(\"allocate_reduction\");\n";
     }
@@ -80,10 +80,8 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
 
 
   // print field call list
-  int i = -1;
-  int j=0;
+  int i = 0;
   for (field_info & l : field_info_list) {
-    i++;
     
     if (i>0) {
       kernel << ", ";
@@ -91,51 +89,41 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
     }
     
     if (!l.is_written) kernel << "const ";
-    // TODO: type to field_data
     kernel << "field_storage" << l.type_template << " " << l.new_name;
     code << l.new_name + ".fs->payload";
-
-    for( field_ref *r : l.ref_list ){
-      // Generate new name for direction expression
-      if( r->dirExpr ) {
-        r->dirname = "d_" + std::to_string(j);
-        code << ", " << get_stmt_str(r->dirExpr);
-        kernel << ", const int " << r->dirname;
-        loopBuf.replace( r->dirExpr, r->dirname );
-        j++;
-      }
-    }
-
+    i++;
   }
 
   i=0;
   // and non-field vars
   for ( var_info & vi : var_info_list ) {
     if (!vi.is_loop_local) {
-      std::string varname = "sv__" + std::to_string(i) + "_";
+      // Rename the variable
+      vi.new_name = "sv__" + std::to_string(i) + "_";
+
       if(vi.reduction_type != reduction::NONE) {
-        /* Reduction variables in a CUDA kernel are
-         * saved to an array and reduced later. */
-        kernel << ", " << vi.type << " * " << varname;
+        // Reduction variables in a CUDA kernel are
+        // saved to an array and reduced later. 
+        kernel << ", " << vi.type << " * " << vi.new_name;
         code << ", d_r_" << vi.name;
-        varname += "[Index]";
+        vi.new_name = vi.new_name+"[Index]";
+
       } else if(vi.is_assigned) {
-        kernel << ", " << vi.type << " & " << varname;
-        code << ", " << vi.name;
+          kernel << ", " << vi.type << " & " << vi.new_name;
+          code << ", " << vi.name;
       } else {
-        kernel << ", const " << vi.type << " " << varname;
-        code << ", " << vi.name;
+          kernel << ", const " << vi.type << " " << vi.new_name;
+          code << ", " << vi.name;
       }
-      
+      // Replace references in the loop body
       for (var_ref & vr : vi.refs) {
-        // replace_expr(ep, varname);
-        loopBuf.replace( vr.ref, varname );
+        loopBuf.replace( vr.ref, vi.new_name );
       }
       i++;
     }
   }
 
-  // finally, change the references to variables in the body
+  // change the references to field expressions in the body
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
     if (le.dirExpr != nullptr) {
@@ -164,6 +152,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
   /* The last block may exceed the lattice size. Do nothing in that case. */
   kernel << "if(Index < lattice->loop_end) { \n";
   
+
   /* Initialize reductions */
   i=0;
   for ( var_info & vi : var_info_list ) {
@@ -177,18 +166,25 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
     }
   }
 
+  
   // Create temporary field element variables
   for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
 
-    // First check for direction references. If any found, create list of temp
-    // variables
+    // First create temp variables fields fetched from a direction
     for( field_ref *r : l.ref_list ) if( r->dirExpr ) {
-      // Generate new name for direction expression
+      std::string dirname = get_stmt_str(r->dirExpr);
+
+      // Check if the direction is a variable. These have been renamed.
+      for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
+        if( vr.ref == r->dirExpr ) {
+          dirname = vi.new_name;
+      }
+      // Create the temp variable and call the getter
       kernel << type_name << " "  << l.loop_ref_name << "_" << r->dirname
              << "=" << l.new_name << ".get(lattice->d_neighb[" 
-             << r->dirname << "][" << looping_var 
+             << dirname << "][" << looping_var 
              << "], lattice->field_alloc_size);\n";
     }
     // Check for references without a direction. If found, add temp variable
@@ -200,9 +196,12 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
     }
   }
 
+  
+  // Dump the loop body 
   kernel << loopBuf.dump();
   if (semi_at_end) kernel << ';';
   kernel << '\n';
+
 
   // Call setters
   for (field_info & l : field_info_list) if(l.is_written){
@@ -225,15 +224,15 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
   for (var_info & v : var_info_list) {
     // Run reduction
     if (v.reduction_type == reduction::SUM) {
-      code << v.new_name << " = cuda_reduce_sum( d_"
-           << v.new_name << ", lattice->volume()" <<  ");\n";
+      code << v.reduction_name << " = cuda_reduce_sum( d_"
+           << v.reduction_name << ", lattice->volume()" <<  ");\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code << v.new_name << " = cuda_reduce_product( d_"
-           << v.new_name << ", lattice->volume()" <<  ");\n";
+      code << v.reduction_name << " = cuda_reduce_product( d_"
+           << v.reduction_name << ", lattice->volume()" <<  ");\n";
     }
     // Free memory allocated for the reduction
     if (v.reduction_type != reduction::NONE) {
-      code << "cudaFree(d_" << v.new_name << ");\n";
+      code << "cudaFree(d_" << v.reduction_name << ");\n";
       code << "check_cuda_error(\"free_reduction\");\n";
     }
   }
