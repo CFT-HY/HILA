@@ -159,6 +159,7 @@ struct var_info {
   std::string new_name;
   bool is_loop_local;
   reduction reduction_type;
+  std::string reduction_name;
   bool is_assigned;
 };
 

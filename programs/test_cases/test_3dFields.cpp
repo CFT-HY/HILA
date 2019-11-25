@@ -85,36 +85,6 @@ int main(int argc, char **argv){
 	assert(sum==0);
 
 
-    // Test foralldir loop in a onsites environment
-    onsites(ALL){
-        double csum = 0;
-        foralldir(d){
-            csum += coordinates(X)[d];
-        }
-        s1[X] = csum;
-        s2[X] = 0;
-        s3[X] = 0;
-    }
-
-    foralldir(d){
-        onsites(ALL){
-            s2[X] += s1[X + d];
-        }
-    }
-
-    onsites(ALL){
-        foralldir(d){
-            s3[X] += s1[X + d];
-        }
-    }
-
-    sum = 0;
-    onsites(ALL){
-        double diff = (s2[X]-s3[X]).re;
-        sum += diff*diff;
-    }
-    assert(sum == 0);
-
 
     // Test referring to an array of fields
 

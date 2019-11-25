@@ -179,6 +179,7 @@ struct cmplx {
 };
 
 template <typename T>
+#pragma transformer loop_function
 cmplx<T> operator+(const cmplx<T> & a, const cmplx<T> & b) {
   return cmplx<T>(a.re + b.re, a.im + b.im);
 }
@@ -186,18 +187,21 @@ cmplx<T> operator+(const cmplx<T> & a, const cmplx<T> & b) {
   // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
           std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+#pragma transformer loop_function
 cmplx<T> operator+(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re + a, c.im);
 }
 
 template <typename T, typename A,
           std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+#pragma transformer loop_function
 cmplx<T> operator+(const A &a, const cmplx<T> & c) {
   return cmplx<T>(c.re + a, c.im);
 }
 
 // -
 template <typename T>
+#pragma transformer loop_function
 cmplx<T> operator-(const cmplx<T> & a, const cmplx<T> & b) {
   return cmplx<T>(a.re - b.re, a.im - b.im);
 }
@@ -205,12 +209,14 @@ cmplx<T> operator-(const cmplx<T> & a, const cmplx<T> & b) {
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
           std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+#pragma transformer loop_function
 cmplx<T> operator-(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re - a, c.im);
 }
 
 template <typename T, typename A,
           std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+#pragma transformer loop_function
 cmplx<T> operator-(const A &a, const cmplx<T> & c) {
   return cmplx<T>(a - c.re, -c.im);
 }
@@ -218,6 +224,7 @@ cmplx<T> operator-(const A &a, const cmplx<T> & c) {
 
 // *
 template <typename T>
+#pragma transformer loop_function
 cmplx<T> operator*(const cmplx<T> & a, const cmplx<T> & b) {
   return cmplx<T>(a.re*b.re - a.im*b.im, a.im*b.re + a.re*b.im);
 }
@@ -225,12 +232,14 @@ cmplx<T> operator*(const cmplx<T> & a, const cmplx<T> & b) {
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
           std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+#pragma transformer loop_function
 cmplx<T> operator*(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re * a, c.im * a);
 }
 
 template <typename T, typename A,
           std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+#pragma transformer loop_function
 cmplx<T> operator*(const A &a, const cmplx<T> & c) {
   return cmplx<T>(a * c.re, a * c.im);
 }
@@ -238,6 +247,7 @@ cmplx<T> operator*(const A &a, const cmplx<T> & c) {
 
 // /   a/b = ab*/|b|^2
 template <typename T>
+#pragma transformer loop_function
 cmplx<T> operator/(const cmplx<T> & a, const cmplx<T> & b) {
   T n = b.norm();
   return cmplx<T>( (a.re*b.re + a.im*b.im)/n, (a.im*b.re - a.re*b.im)/n );
@@ -246,6 +256,7 @@ cmplx<T> operator/(const cmplx<T> & a, const cmplx<T> & b) {
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
           std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+#pragma transformer loop_function
 cmplx<T> operator/(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re / a, c.im / a);
 }
@@ -253,6 +264,7 @@ cmplx<T> operator/(const cmplx<T> & c, const A & a) {
 // a/c = ac*/|c|^2
 template <typename T, typename A,
           std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+#pragma transformer loop_function
 cmplx<T> operator/(const A &a, const cmplx<T> & c) {
   T n = c.norm();
   return cmplx<T>((a * c.re)/n, -(a * c.im)/n);
@@ -261,15 +273,18 @@ cmplx<T> operator/(const A &a, const cmplx<T> & c) {
 
 // Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
 // Underscore seems to be required here
+#pragma transformer loop_function
 constexpr cmplx<double> operator""_i(long double a) {
   return cmplx<double>{0.0,a};
 }
 
+#pragma transformer loop_function
 constexpr cmplx<double> operator""_i(unsigned long long a) {
   return cmplx<double>(0.0,static_cast<double>(a));
 }
 
 template <typename T>
+#pragma transformer loop_function
 std::ostream& operator<<(std::ostream &strm, const cmplx<T> A) {
   return strm << "(" << A.re << ", " << A.im << ")";
 }
