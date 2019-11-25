@@ -76,7 +76,10 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
   return 0;
 }
 
-
+////////////////////////////////////////////////////////////////////
+/// Check if the function is allowed to be within field loops.
+/// Returns true if OK to be included; false (and flags error) if not
+////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::loop_function_check(Decl *d) {
   assert(d != nullptr);
@@ -111,11 +114,9 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       // check if we already have this function
       bool handle_decl = true;
       for (int i=0; i<loop_functions.size(); i++){
-        if(fd == loop_functions[i])
-          handle_decl=false;
-        if ( fd->getSourceRange().getBegin() == 
-             loop_functions[i]->getSourceRange().getBegin() )
-          handle_decl=false;
+        if ( fd == loop_functions[i] || 
+             fd->getSourceRange().getBegin() == loop_functions[i]->getSourceRange().getBegin() )
+          handle_decl = false;
       } 
       if( handle_decl ){
     

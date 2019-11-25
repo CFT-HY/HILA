@@ -257,9 +257,8 @@ public:
 
 
   // HandleTranslationUnit is called after the AST for the whole TU is completed
+  // Need to use this interface to ensure that specializations are present
   virtual void HandleTranslationUnit(ASTContext & ctx) override {
-    // dump ast here -- HERE THE SPECIALIZATIONS ARE PRESENT!
-    //ctx.getTranslationUnitDecl()->dump();
 
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
