@@ -83,7 +83,7 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
 
 /// is the stmt pointing now to assignment
 bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
-  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s))
+  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
       // TODO: there should be some more elegant way to do this
       const char *sp = getOperatorSpelling(OP->getOperator());
@@ -92,25 +92,35 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
       else iscompound = false;
       if (opcodestr)
         *opcodestr = getOperatorSpelling(OP->getOperator());
+
+      // Need to mark the method if necessary
+      handle_function_call_in_loop(s);
+
       return true;
     }
-  
-  // TODO: this is for templated expr, I think -- should be removed (TEST IT)
-  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s))
+  }
+
+  // TODO: this is for templated expr, I think -- should be removed (STILL USED; WHY)
+  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
     if (B->isAssignmentOp()) {
       iscompound = B->isCompoundAssignmentOp();
       if (opcodestr)
         *opcodestr = B->getOpcodeStr();
       return true;
     }
+  }
 
   return false;
 }
 
 // is the stmt pointing now to a function call
 bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
-  if (CallExpr *Call = dyn_cast<CallExpr>(s)){
-    //llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+  if (auto *Call = dyn_cast<CallExpr>(s)){
+    llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+    return true;
+  }
+  if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
+    llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
     return true;
   }
   return false;
@@ -614,13 +624,13 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
 
 
 /// Find the source range of the previous line from source location
-SourceRange MyASTVisitor::getSourceRangeAtPreviousOfLine( SourceLocation l ){
+SourceRange MyASTVisitor::getSourceRangeAtPreviousLine( SourceLocation l ){
   SourceManager &SM = TheRewriter.getSourceMgr();
   SourceRange r = SourceRange(l,l);
   bool found_line_break = false;
   
   // Move backward from location l and find two linebreaks
-  // These are the beginning and the end of the brevious line
+  // These are the beginning and the end of the previous line
   for (int i=0; i<1000; i++) {
     bool invalid = false;
     const char * c = SM.getCharacterData(l,&invalid);
@@ -1173,11 +1183,13 @@ bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
 
 
 bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
-  SourceRange sr = getSourceRangeAtPreviousOfLine(f->getSourceRange().getBegin());
+  SourceRange sr = getSourceRangeAtPreviousLine(f->getSourceRange().getBegin());
   std::string line = TheRewriter.getRewrittenText( sr );
+  // require that #pragma starts the line
+  line = remove_initial_whitespace(line);
 
   static std::string loop_pragma("#pragma transformer loop_function");
-  if(line.length() >= loop_pragma.length() && line.find(loop_pragma) != std::string::npos){
+  if (line.find(loop_pragma) == 0){
     return true;
   }
 
