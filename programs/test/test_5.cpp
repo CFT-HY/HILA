@@ -12,11 +12,12 @@ cmplx<double> f(cmplx<double> x) {return e(x);}
 int main()
 {
   
-  field<cmplx<double>> a[2];
+  field<cmplx<double>> a;
   field<double> t(1.0);
 
   onsites(ALL) {
-    a[0][X] += 2.0;
+    cmplx<double> d = 2;
+    a[X] += a[X];
   }
   
   return 0;

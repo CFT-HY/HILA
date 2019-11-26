@@ -222,7 +222,7 @@ public:
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
 
   /// utility used in finding pragmas on the previous line
-  SourceRange getSourceRangeAtPreviousOfLine( SourceLocation l );
+  SourceRange getSourceRangeAtPreviousLine( SourceLocation l );
 
   void set_writeBuf(const FileID fid);
 

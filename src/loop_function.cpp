@@ -26,6 +26,10 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 
   // Get the declaration of the function
   Decl* decl = Call->getCalleeDecl();
+
+  //llvm::errs() << " callee:\n";
+  //decl->dump();
+
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   // Store functions used in loops, recursively...
