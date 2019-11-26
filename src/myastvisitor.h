@@ -162,6 +162,8 @@ public:
   void handle_function_call_in_loop(Stmt * s);
   
   bool loop_function_check(Decl *fd);
+
+  bool handle_loop_function_if_needed(FunctionDecl *fd);
   
   void handle_loop_function(FunctionDecl *fd);
 

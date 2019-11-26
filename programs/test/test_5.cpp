@@ -16,10 +16,7 @@ int main()
   field<double> t(1.0);
 
   onsites(ALL) {
-    for (int i=0; i<2; i++) {
-      a[i][X] = a[1-i][X];
-      a[1-i][X] = 1;
-    }
+    a[0][X] += 2.0;
   }
   
   return 0;
