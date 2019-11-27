@@ -661,12 +661,7 @@ SourceRange MyASTVisitor::getSourceRangeAtPreviousLine( SourceLocation l ){
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
   if (state::check_loop && state::loop_found) return true;
-  
-  if (state::skip_next > 0) {
-    state::skip_next--;
-    return true;
-  }
-  
+    
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;
     
@@ -681,11 +676,6 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
 bool MyASTVisitor::TraverseDecl(Decl *D) {
 
   if (state::check_loop && state::loop_found) return true;
-
-  if (state::skip_next > 0) {
-    state::skip_next--;
-    return true;
-  }
 
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;

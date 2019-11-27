@@ -41,7 +41,6 @@ std::vector<Expr *> remove_expr_list = {};
 
 unsigned state::skip_children = 0;
 unsigned state::scope_level = 0;
-int state::skip_next = 0;
 bool state::in_loop_body = false;
 bool state::accept_field_parity = false;
 bool state::loop_found = false;
