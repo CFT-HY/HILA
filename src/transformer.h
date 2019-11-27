@@ -40,7 +40,6 @@ struct codetype {
 namespace state {
   extern unsigned skip_children; //= 0;
   extern unsigned scope_level; // = 0;
-  extern int skip_next; // = 0;
   extern bool in_loop_body; // = false;
   extern bool accept_field_parity; // = false;
   extern bool loop_found; // = false;

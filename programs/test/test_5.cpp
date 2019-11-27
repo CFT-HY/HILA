@@ -16,7 +16,7 @@ int main()
   field<double> t(1.0);
 
   onsites(ALL) {
-    cmplx<double> d = 2;
+    cmplx<double> d(2,2);
     a[X] += a[X];
   }
   
