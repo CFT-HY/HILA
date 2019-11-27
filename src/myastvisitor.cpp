@@ -93,7 +93,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
       if (opcodestr)
         *opcodestr = getOperatorSpelling(OP->getOperator());
 
-      // Need to mark the method if necessary
+      // Need to mark/handle the assignment method if necessary
       handle_function_call_in_loop(s);
 
       return true;
@@ -984,6 +984,13 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
                  "Static or external variable declarations not allowed within field loops");
+      return true;
+    }
+
+    if (var->isStaticLocal()) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 var->getSourceRange().getBegin(),
+                 "Cannot declare static variables inside field loops");
       return true;
     }
 
