@@ -14,10 +14,11 @@ std::vector<FunctionDecl *> loop_functions = {};
 // Assume non-const references can be assigned to.
 
 void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
-  int i=0;
 
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
+
+  assert(Call && "Loop function call not valid");
 
   // Handle special loop functions
   if( handle_special_loop_function(Call) ){
@@ -34,6 +35,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 
   // Store functions used in loops, recursively...
   loop_function_check(decl);
+  int i=0;
   for( Expr * E : Call->arguments() ){
     if( is_field_parity_expr(E) ) {
       if(i < D->getNumParams()){
@@ -51,6 +53,44 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
     i++;
   }
 }
+
+void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
+
+  // Get the call expression
+  CXXConstructExpr *CtorE = dyn_cast<CXXConstructExpr>(s);
+
+  assert(CtorE && "Constructor call in loop not valid");
+
+  // Get the declaration of the constructor
+  CXXConstructorDecl* decl = CtorE->getConstructor();
+
+  //llvm::errs() << " callee:\n";
+  //decl->dump();
+
+  // Store functions used in loops, recursively...
+  loop_function_check(decl);
+
+  // FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
+
+  // int i=0;
+  // for( Expr * E : Call->arguments() ){
+  //   if( is_field_parity_expr(E) ) {
+  //     if(i < D->getNumParams()){
+  //       const ParmVarDecl * pv = D->getParamDecl(i);
+  //       QualType q = pv->getOriginalType ();
+
+  //       // Check for const qualifier
+  //       if( q.isConstQualified ()) {
+  //         //llvm::errs() << "  -Const \n";
+  //       } else {
+  //         handle_field_parity_expr(E, true, false);
+  //       }
+  //     }
+  //   }
+  //   i++;
+  // }
+}
+
 
 void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
   // we should mark the function, but it is not necessarily in the

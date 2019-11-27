@@ -94,7 +94,11 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
         *opcodestr = getOperatorSpelling(OP->getOperator());
 
       // Need to mark/handle the assignment method if necessary
-      handle_function_call_in_loop(s);
+      if( is_function_call_stmt(s) ){
+        handle_function_call_in_loop(s);
+      } else if ( is_constructor_stmt(s) ){
+        handle_constructor_in_loop(s);
+      }
 
       return true;
     }
@@ -119,6 +123,9 @@ bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
     llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
     return true;
   }
+  return false;
+}
+bool MyASTVisitor::is_constructor_stmt(Stmt * s) {
   if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
     llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
     return true;
@@ -435,8 +442,15 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // function can assign to the a field parameter (is not const).
   if( is_function_call_stmt(s) ){
     handle_function_call_in_loop(s);
+    // let this ripple trough, for now ...
+    // return true;
   }
-  
+
+  if ( is_constructor_stmt(s) ){
+    handle_constructor_in_loop(s);
+    // return true;
+  }
+   
   // catch then expressions
       
   if (Expr *E = dyn_cast<Expr>(s)) {
@@ -519,11 +533,11 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       state::skip_children = 1;          
       return true;
     }
-    // this point not reached
   } // Expr checking branch - now others...
 
   // This reached only if s is not Expr
 
+ 
   // start {...} -block or other compound
   if (isa<CompoundStmt>(s) || isa<ForStmt>(s) || isa<IfStmt>(s)
       || isa<WhileStmt>(s)) {
