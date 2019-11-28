@@ -151,3 +151,12 @@ SU2<radix> & SU2<radix>::operator *= (const radix & rhs){
     return *this;
 };
 
+
+SU2<radix> SU2<radix>::operator * (const radix & rhs){ 
+    SU2<radix> r;
+    r.a = a*static_cast<regex>(rhs);
+    r.b = b*static_cast<regex>(rhs);
+    r.c = c*static_cast<regex>(rhs);
+    r.d = d*static_cast<regex>(rhs);
+    return r;
+};
