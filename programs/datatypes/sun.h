@@ -17,9 +17,8 @@
 #define MYSINF(X) sin(X)
 #define MYCOSF(X) cos(X)
 
-
 template<typename radix>
-inline radix gaussian_ran2 (radix* out2) 
+radix gaussian_ran2 (radix* out2) 
 {
   double phi, urnd, r;
   phi = 2.0 * 3.141592654 * (double) hila_random();
@@ -46,38 +45,56 @@ inline radix gaussian_ran2 (radix* out2)
 
 template<int n, typename radix>
 class SU : public matrix<n,n,cmplx<radix>> {
-    public: 
-        void reunitarize();
+    public:
+        SU<n, radix> conjugate();
+        SU<n, radix> reunitarize();
+        radix det();
 };
 
+template<typename radix> 
+class conjugate;
+
 template<typename radix>
-class SU2<radix> { 
+class SU2 { 
     public: 
 
         SU2() : a(0), b(0), c(0), d(1) {}
-        SU2(radix * vals) : a(vals[0]), b(vals[1]), c(vals[2]), d(vals[3]) {}
+        SU2(radix * vals) : a(vals[0]), b(vals[1]), c(vals[2]), d(vals[3]) { normalize(); }
         ~SU2(){}
 
         SU2<radix> & normalize(); //normalize elements
-        SU2<radix> & reunitarize(); 
+        SU2<radix> & reunitarize(); //same as normalize 
         SU2<radix> & random(); //generate random SU2 element 
-        SU2<radix> & inv(); //invert matrix and return reference to self
+        SU2<radix> & inv(); //invert matrix
         SU2<radix> & adj(); 
         
-        inline radix sqr(); //calculate square of all elements
-        inline radix tr(); //trace 
+        radix sqr(); //calculate square of all elements
+        radix tr(); //trace 
         radix det(); //determinant
+
+        SU2<radix> & operator = (const SU2<radix> &);
+        SU2<radix> & operator = (const conjugate<radix> &)
 
         SU2<radix> operator + (const SU2<radix> &); //basic operations. These versions return separate copy of result
         SU2<radix> operator - (const SU2<radix> &);
-        inline SU2<radix> operator * (const SU2<radix> &);
-        SU2<radix> operator * (const radix &);
-        SU2<radix> operator / (const radix &);
+        SU2<radix> operator * (const SU2<radix> &);
+
+        SU2<radix> operator + (const conjugate<radix> &); //same ops for conjugate versions
+        SU2<radix> operator - (const conjugate<radix> &);
+        SU2<radix> operator * (const conjugate<radix> &);
+
         SU2<radix> & operator += (const SU2<radix> &); //same ops as above, except store result in lhs matrix
         SU2<radix> & operator -= (const SU2<radix> &);
         SU2<radix> & operator *= (const SU2<radix> &);
+
+        SU2<radix> & operator += (const conjugate<radix> &); //same ops as above, except store result in lhs matrix
+        SU2<radix> & operator -= (const conjugate<radix> &);
+        SU2<radix> & operator *= (const conjugate<radix> &);
+
         SU2<radix> & operator *= (const radix &);
-        SU2<radix> & operator = (const SU2<radix> &);
+
+        SU2<radix> operator * (const radix &);
+        SU2<radix> operator / (const radix &);
 
     private:
 
@@ -85,9 +102,31 @@ class SU2<radix> {
 
 };
 
+
+//conjugate class - conjugation not performed on matrix, 
+//but rather the operations are defined differently
+
+template<typename radix>
+class conjugate {
+    conjugate(const SU2<radix> & rhs){
+        ref = rhs;
+    }
+    SU2<radix> & ref;
+};
+
 template<typename radix>
 radix SU2<radix>::sqr(){
     return a*a + b*b + c*c + d*d;
+}
+
+template<typename radix>
+radix SU2<radix>::det(){
+    return a*a + b*b + c*c + d*d;
+}
+
+template<typename radix>
+radix SU2<radix>::tr(){
+    return 2*d;
 }
 
 template<typename radix>
@@ -119,14 +158,15 @@ SU2<radix> & SU2<radix>::random(){
 
 template<typename radix>
 SU2<radix> & SU2<radix>::inv(){
-    a *= static_cast<regex>(-1);
-    b *= static_cast<regex>(-1);
-    c *= static_cast<regex>(-1);
-    d *= static_cast<regex>(-1);
+    a *= static_cast<radix>(-1);
+    b *= static_cast<radix>(-1);
+    c *= static_cast<radix>(-1);
+    d *= static_cast<radix>(-1);
     return *this;
 }
 
-inline SU2<radix> SU2<radix>::operator * (const SU2<radix> & y){
+template<typename radix>
+SU2<radix> SU2<radix>::operator * (const SU2<radix> & y){
     SU2<radix> r;
     r.a = nn_a(*this,y); 
     r.b = nn_b(*this,y); 
@@ -135,7 +175,8 @@ inline SU2<radix> SU2<radix>::operator * (const SU2<radix> & y){
     return r;
 };
 
-inline SU2<radix> SU2<radix>::operator *= (const SU2<radix> & y){
+template<typename radix>
+SU2<radix> & SU2<radix>::operator *= (const SU2<radix> & y){
     a = nn_a(*this,y); 
     b = nn_b(*this,y); 
     c = nn_c(*this,y); 
@@ -143,20 +184,21 @@ inline SU2<radix> SU2<radix>::operator *= (const SU2<radix> & y){
     return *this;
 };
 
+template<typename radix>
 SU2<radix> & SU2<radix>::operator *= (const radix & rhs){ 
-    a *= static_cast<regex>(rhs);
-    b *= static_cast<regex>(rhs);
-    c *= static_cast<regex>(rhs);
-    d *= static_cast<regex>(rhs);
+    a *= static_cast<radix>(rhs);
+    b *= static_cast<radix>(rhs);
+    c *= static_cast<radix>(rhs);
+    d *= static_cast<radix>(rhs);
     return *this;
 };
 
-
+template<typename radix>
 SU2<radix> SU2<radix>::operator * (const radix & rhs){ 
     SU2<radix> r;
-    r.a = a*static_cast<regex>(rhs);
-    r.b = b*static_cast<regex>(rhs);
-    r.c = c*static_cast<regex>(rhs);
-    r.d = d*static_cast<regex>(rhs);
+    r.a = a*static_cast<radix>(rhs);
+    r.b = b*static_cast<radix>(rhs);
+    r.c = c*static_cast<radix>(rhs);
+    r.d = d*static_cast<radix>(rhs);
     return r;
 };
