@@ -11,6 +11,21 @@
 #define nn_c(x,y) (x.d*y.c + x.c*y.d - x.a*y.b + x.b*y.a)
 #define nn_d(x,y) (x.d*y.d - x.a*y.a - x.b*y.b - x.c*y.c)
 
+#define na_a(x,y) (-x.d*y.a + x.a*y.d + x.b*y.c - x.c*y.b)
+#define na_b(x,y) (-x.d*y.b + x.b*y.d + x.c*y.a - x.a*y.c)
+#define na_c(x,y) (-x.d*y.c + x.c*y.d + x.a*y.b - x.b*y.a)
+#define na_d(x,y) ( x.d*y.d + x.a*y.a + x.b*y.b + x.c*y.c)
+
+#define an_a(x,y) ( x.d*y.a - x.a*y.d + x.b*y.c - x.c*y.b)
+#define an_b(x,y) ( x.d*y.b - x.b*y.d + x.c*y.a - x.a*y.c)
+#define an_c(x,y) ( x.d*y.c - x.c*y.d + x.a*y.b - x.b*y.a)
+#define an_d(x,y) ( x.d*y.d + x.a*y.a + x.b*y.b + x.c*y.c)
+
+#define aa_a(x,y) (-x.d*y.a - x.a*y.d - x.b*y.c + x.c*y.b)
+#define aa_b(x,y) (-x.d*y.b - x.b*y.d - x.c*y.a + x.a*y.c)
+#define aa_c(x,y) (-x.d*y.c - x.c*y.d - x.a*y.b + x.b*y.a)
+#define aa_d(x,y) ( x.d*y.d - x.a*y.a - x.b*y.b - x.c*y.c)
+
 // gaussian rng generation routines ----------------------
 
 #define VARIANCE 0.5
@@ -68,20 +83,23 @@ class SU2 {
         SU2<radix> & inv(); //invert matrix
         SU2<radix> & adj(); 
         
-        radix sqr(); //calculate square of all elements
-        radix tr(); //trace 
-        radix det(); //determinant
+        radix sqr() const; //calculate square of all elements
+        radix tr() const; //trace 
+        radix det() const; //determinant
 
         SU2<radix> & operator = (const SU2<radix> &);
-        SU2<radix> & operator = (const conjugate<radix> &)
+        SU2<radix> & operator = (const conjugate<radix> &);
 
-        SU2<radix> operator + (const SU2<radix> &); //basic operations. These versions return separate copy of result
+        friend SU2<radix> operator * (const SU2<radix> & x, const SU2<radix> & y);
+        friend SU2<radix> operator * (const SU2<radix> & x, const conjugate<radix> & y);
+        friend SU2<radix> operator * (const conjugate<radix> & x, const SU2<radix> & y);
+        friend SU2<radix> operator * (const conjugate<radix> & x, const conjugate<radix> & y);
+
+        SU2<radix> operator + (const SU2<radix> &); //basic operations. These versions return new matrix as result
         SU2<radix> operator - (const SU2<radix> &);
-        SU2<radix> operator * (const SU2<radix> &);
 
         SU2<radix> operator + (const conjugate<radix> &); //same ops for conjugate versions
         SU2<radix> operator - (const conjugate<radix> &);
-        SU2<radix> operator * (const conjugate<radix> &);
 
         SU2<radix> & operator += (const SU2<radix> &); //same ops as above, except store result in lhs matrix
         SU2<radix> & operator -= (const SU2<radix> &);
@@ -96,36 +114,35 @@ class SU2 {
         SU2<radix> operator * (const radix &);
         SU2<radix> operator / (const radix &);
 
+
     private:
 
         radix a, b, c, d;  
 
 };
 
-
-//conjugate class - conjugation not performed on matrix, 
+//conjugate class - conjugation not performed on data elements of matrix, 
 //but rather the operations are defined differently
 
 template<typename radix>
 class conjugate {
-    conjugate(const SU2<radix> & rhs){
-        ref = rhs;
-    }
-    SU2<radix> & ref;
+    public:
+    conjugate (const SU2<radix> & rhs) : ref(rhs) {} ;
+    const SU2<radix> & ref;
 };
 
 template<typename radix>
-radix SU2<radix>::sqr(){
+radix SU2<radix>::sqr() const {
     return a*a + b*b + c*c + d*d;
 }
 
 template<typename radix>
-radix SU2<radix>::det(){
+radix SU2<radix>::det() const {
     return a*a + b*b + c*c + d*d;
 }
 
 template<typename radix>
-radix SU2<radix>::tr(){
+radix SU2<radix>::tr() const {
     return 2*d;
 }
 
@@ -165,15 +182,38 @@ SU2<radix> & SU2<radix>::inv(){
     return *this;
 }
 
-template<typename radix>
-SU2<radix> SU2<radix>::operator * (const SU2<radix> & y){
+template<typename radix> 
+SU2<radix> operator * (const SU2<radix> & x, const SU2<radix> & y){
     SU2<radix> r;
-    r.a = nn_a(*this,y); 
-    r.b = nn_b(*this,y); 
-    r.c = nn_c(*this,y); 
-    r.d = nn_d(*this,y); 
+    r.a = nn_a(x,y); r.b = nn_b(x,y); 
+    r.c = nn_c(x,y); r.d = nn_d(x,y);
     return r;
-};
+}
+
+template<typename radix> 
+SU2<radix> operator * (const SU2<radix> & x, const conjugate<radix> & y){
+    SU2<radix> r;
+    r.a = na_a(x,y); r.b = na_b(x,y); \
+    r.c = na_c(x,y); r.d = na_d(x,y);
+    return r;
+}
+
+template<typename radix> 
+SU2<radix> operator * (const conjugate<radix> & x, const SU2<radix> & y){
+    SU2<radix> r;
+    r.a = an_a(x,y); r.b = an_b(x,y); \
+    r.c = an_c(x,y); r.d = an_d(x,y);
+    return r;
+}
+
+
+template<typename radix> 
+SU2<radix> operator * (const conjugate<radix> & x, const conjugate<radix> & y){
+    SU2<radix> r;
+    r.a = aa_a(x,y); r.b = aa_b(x,y); \
+    r.c = aa_c(x,y); r.d = aa_d(x,y);
+    return r;
+}
 
 template<typename radix>
 SU2<radix> & SU2<radix>::operator *= (const SU2<radix> & y){
