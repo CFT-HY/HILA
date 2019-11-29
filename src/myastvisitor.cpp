@@ -195,10 +195,16 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     lfe.fullExpr   = ASE;
     lfe.nameExpr   = ASE->getLHS();
     lfe.parityExpr = ASE->getRHS();
-    llvm::errs() << lfe.fullExpr << lfe.nameExpr << lfe.parityExpr;
+    //llvm::errs() << lfe.fullExpr << " " << lfe.nameExpr << " " << lfe.parityExpr << "\n";
   } else {
     llvm::errs() << "Should not happen! Error in field parity\n";
     exit(1);
+  }
+
+  // Check if the expression is already handled
+  for( field_ref r : field_ref_list)
+    if( r.fullExpr == lfe.fullExpr  ){
+      return(true);
   }
 
   // Check that there are no local variable references up the AST
