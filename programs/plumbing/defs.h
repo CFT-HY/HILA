@@ -122,7 +122,7 @@ inline parity location_parity(const location & a) {
 }
 
 // Replaced by transformer
-inline location coordinates(parity X){location l; return l;};
+location coordinates(parity X);
 
 
 
