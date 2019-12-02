@@ -90,8 +90,15 @@ void dirac_stagggered_4dim(
         initialized = true;
     }
 
+    // Start getting neighbours
+    foralldir(dir){
+        direction odir = opp_dir( (direction)dir );
+        v_in.start_move(dir);
+        v_in.start_move(odir);
+        gauge[dir].start_move(odir);
+    }
 
-    // Apply the mass diagonally
+    // Run neighbour fetches and multiplications
     onsites(ALL){
       v_out[X] = mass * v_in[X];
       v_out[X] += 0.5*eta[XUP][X]*v_in[X+XUP]*gauge[XUP][X];
