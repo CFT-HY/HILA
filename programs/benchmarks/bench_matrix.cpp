@@ -91,13 +91,14 @@ int main(int argc, char **argv){
       init = clock();
       for( int i=0; i<n_runs; i++){
         //printf("node %d, dirac_stagggered %d\n", mynode(), i);
+        vector1.mark_changed(ALL); // Assure communication is included
         dirac_stagggered(U, 0.1, vector1, vector2);
       }
       synchronize();
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "Dirac 4 dirs: " << timing << "ms \n";
+    output0 << "Dirac: " << timing << "ms \n";
 
 
     // Time naive Dirac operator with direction loop expanded
@@ -108,13 +109,14 @@ int main(int argc, char **argv){
     for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
       for( int i=0; i<n_runs; i++){
+        vector1.mark_changed(ALL); // Assure communication is included
         dirac_stagggered_alldim(U, 0.1, vector1, vector2);
       }
       synchronize();
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "Dirac: " << timing << "ms \n";
+    output0 << "Dirac separate loops: " << timing << "ms \n";
     #endif
     
 

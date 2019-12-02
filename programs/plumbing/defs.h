@@ -81,6 +81,21 @@ static inline parity opp_parity(const parity p) {
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
 }
 
+/// Return a vector for iterating over  parities included in par
+/// If par is ALL, this returns vector of EVEN and ODD, otherwise
+/// just par
+static std::vector<parity> loop_parities(parity par){
+  std::vector<parity> parities;
+  if( par == ALL){
+    parities.insert(parities.end(), { EVEN, ODD });
+  } else {
+    parities.insert(parities.end(), { par });
+  }
+  return parities;
+}
+
+
+
 #define foralldir(d) for(direction d=XUP; d<NDIM; d++) 
 
 static inline int is_up_dir(const int d) { return d<NDIM; }
