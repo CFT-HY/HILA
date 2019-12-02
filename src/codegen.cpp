@@ -118,7 +118,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
     // If neighbour references exist, communicate them
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << l.new_name << ".start_move("
+      code << l.new_name << ".wait_move("
            << get_stmt_str(d.e) << ", " << parity_in_this_loop << ");\n";
     }
   }
@@ -207,7 +207,7 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
       }
       if( le->dirExpr != nullptr ){
         // If a field needs to be communicated, start here
-        loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
+        loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".wait_move(" + get_stmt_str(le->dirExpr) + ", " 
            + parity_in_this_loop + ");", true, true);
       }
       if( le->is_read ){

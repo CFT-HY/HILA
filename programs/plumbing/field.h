@@ -9,6 +9,9 @@
 
 #include "../plumbing/globals.h"
 
+#ifdef USE_MPI
+#include "../plumbing/comm_mpi.h"
+#endif
 
 struct parity_plus_direction {
   parity p;
@@ -322,8 +325,30 @@ private:
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
       lattice_struct * lattice;
       unsigned is_fetched[NDIRS];
+      bool move_started[4*NDIRS];
+#ifdef USE_MPI      
+      std::vector<MPI_Request> receive_request[4*NDIRS];
+      std::vector<MPI_Request> send_request[4*NDIRS];
+      std::vector<char *> receive_buffer[4*NDIRS];
+      std::vector<char *> send_buffer[4*NDIRS];
+      void set_buffer_sizes(){
+        for(int d=0; d<NDIRS; d++) for(parity par: {EVEN,ODD,ALL}) {
+          int tag = d + NDIRS*(int)par;
+          lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+          receive_buffer[tag].resize(ci.from_node.size());
+          send_buffer[tag].resize(ci.to_node.size());
+          receive_request[tag].resize(ci.from_node.size());
+          send_request[tag].resize(ci.to_node.size());
+        }
+      }
+#else
+      void set_buffer_sizes(){};
+#endif
 
-      void allocate_payload() { payload.allocate_field(lattice->field_alloc_size()); }
+      void allocate_payload() { 
+        payload.allocate_field(lattice->field_alloc_size());
+        set_buffer_sizes();
+      }
       void free_payload() { payload.free_field(); }
       
       /// Getter for an individual elements. Will not work in CUDA host code,
@@ -395,7 +420,6 @@ public:
     fs = new field_struct;
     fs->lattice = lattice;
     fs->allocate_payload();
-
     mark_changed(ALL);
   }
 
@@ -417,6 +441,7 @@ public:
       assert(p == EVEN || p == ODD || p == ALL);
       unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
       for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
+      for (int i=0; i<4*NDIRS; i++) fs->move_started[i] = false;
     }
   }
 
@@ -426,6 +451,7 @@ public:
     assert(p == EVEN || p == ODD || p == ALL);
     unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
     for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
+    for (int i=0; i<4*NDIRS; i++) fs->move_started[i] = false;
   }
 
   /// Mark the field parity fetched from direction
@@ -441,6 +467,18 @@ public:
     assert(dir < NDIRS);
     int par_int = static_cast<unsigned>(opp_parity(par));
     return (fs->is_fetched[dir] ^ par_int) == 0;
+  }
+
+  /// Check if communication has started
+  bool is_move_started( int dir, parity par) const{
+    assert(dir < NDIRS);
+    return fs->move_started[(int)par + 2*dir];
+  }
+
+  /* Mark communication started */
+  void mark_move_started( int dir, parity par) const{
+    assert(dir < NDIRS);
+    fs->move_started[(int)par + 2*dir] = true;
   }
   
 
@@ -552,6 +590,7 @@ public:
 
   // Communication routines
   void start_move(direction d, parity p) const;
+  void wait_move(direction d, parity p) const;
 };
 
 
@@ -713,6 +752,8 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 ///* start_move(): Trivial implementation when no MPI is used
 template<typename T>
 void field<T>::start_move(direction d, parity p) const {}
+template<typename T>
+void field<T>::wait_move(direction d, parity p) const {}
 
 
 #else
@@ -721,8 +762,6 @@ void field<T>::start_move(direction d, parity p) const {}
  * can be ignored by the transformer. Since the transformer does not
  * have access to mpi.h, it cannot process this branch.
  */
-
-#include "../plumbing/comm_mpi.h"
 
 
 #if !defined(CUDA) || defined(TRANSFORMER)
@@ -821,46 +860,33 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 
 
 
-///* start_move(): Communicate the field from direction d 
-///  A simple implementation that waits completes the communication
-///  in the function. Uses accessors to prevent dependency on the 
-///  layout.
-///
-///  NOTE: This will be called even if the field is marked const.
-///  Therefore this function is const, even though it does change
-///  the internal content of the field at the boundaries. From the 
-///  point of view of the user, the value of the field does not change.
+/// wait_move(): Communicate the field at parity par from direction
+///  d. Uses accessors to prevent dependency on the layout.
 template<typename T>
 void field<T>::start_move(direction d, parity par) const {
-  static int tag = 0;
-  tag = (tag+1)%1000000000;
-  //printf("node %d, comm %d dir %d\n", mynode(), tag, (int)d);
-  if( is_fetched(d, par) ){
+  if( is_move_started(d, par) ){
     // Not changed, return directly
     // Keep count of gathers optimized away
     lattice->n_gather_avoided += 1;
     return;
   }
 
-  // The field has been changed and needs to be communicated
-
+  // Communication hasn't been started yet, do it now
+  int tag = d + NDIRS*(int)par;
   constexpr int size = sizeof(T);
 
   lattice_struct::comminfo_struct ci = lattice->comminfo[d];
-  std::vector<char *> receive_buffer;
-  std::vector<char *> send_buffer;
-  std::vector<MPI_Request> receive_request;
-  std::vector<MPI_Request> send_request;
   int n = 0;
-  receive_buffer.resize(ci.from_node.size());
-  send_buffer.resize(ci.to_node.size());
-  receive_request.resize(ci.from_node.size());
-  send_request.resize(ci.to_node.size());
+  std::vector<MPI_Request> & receive_request = fs->receive_request[tag];
+  std::vector<MPI_Request> & send_request = fs->send_request[tag];
+  std::vector<char *> & receive_buffer = fs->receive_buffer[tag];
+  std::vector<char *> & send_buffer = fs->send_buffer[tag];
 
   /* HANDLE RECEIVES: loop over nodes which will send here */
   for( lattice_struct::comm_node_struct from_node : ci.from_node ){
     unsigned sites = from_node.n_sites(par);
-    receive_buffer[n] = (char *)malloc( sites*size );
+    if(receive_buffer[n] == NULL)
+      receive_buffer[n] = (char *)malloc( sites*size );
 
     //printf("node %d, recv tag %d from %d\n", mynode(), tag, from_node.index);
 
@@ -886,8 +912,39 @@ void field<T>::start_move(direction d, parity par) const {
     n++;
   }
 
+  mark_move_started(d, par);
+}
+
+
+///* wait_move(): Wait for communication at parity par from
+///  direction d completes the communication in the function.
+///  If the communication has not started yet, also calls
+///  start_move()
+///
+///  NOTE: This will be called even if the field is marked const.
+///  Therefore this function is const, even though it does change
+///  the internal content of the field at the boundaries. From the 
+///  point of view of the user, the value of the field does not change.
+template<typename T>
+void field<T>::wait_move(direction d, parity par) const {
+  int tag = d + NDIRS*(int)par;
+
+  if( is_fetched(d, par) ){
+    // Not changed, return directly
+    // Keep count of gathers optimized away
+    lattice->n_gather_avoided += 1;
+    return;
+  }
+
+  // This will start the communication if it has not been started yet
+  start_move(d, par);
+
+  lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+  std::vector<MPI_Request> & receive_request = fs->receive_request[tag];
+  std::vector<char *> & receive_buffer = fs->receive_buffer[tag];
+
   /* Wait for the data here */
-  n=0;
+  int n = 0;
   for( lattice_struct::comm_node_struct from_node : ci.from_node ){
     MPI_Status status;
     //printf("node %d, waiting for recv tag %d\n", mynode(), tag);
@@ -895,10 +952,8 @@ void field<T>::start_move(direction d, parity par) const {
     //printf("node %d, received tag %d\n", mynode(), tag);
 
     fs->scatter_comm_elements(receive_buffer[n], from_node, par);
-    
     n++;
   }
-
 
   /* Mark the parity fetched from direction dir */
   mark_fetched(d, par);
@@ -911,6 +966,6 @@ void field<T>::start_move(direction d, parity par) const {
 
 
 
-
 #endif
+
 
