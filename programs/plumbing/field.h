@@ -13,6 +13,8 @@
 #include "../plumbing/comm_mpi.h"
 #endif
 
+static int next_mpi_field_tag = 0;
+
 struct parity_plus_direction {
   parity p;
   direction d;
@@ -331,7 +333,8 @@ private:
       std::vector<MPI_Request> send_request[3*NDIRS];
       std::vector<char *> receive_buffer[3*NDIRS];
       std::vector<char *> send_buffer[3*NDIRS];
-      void set_buffer_sizes(){
+      int mpi_tag;
+      void initialize_communication(){
         for(int d=0; d<NDIRS; d++) for(parity par: {EVEN,ODD}) {
           int tag = d + NDIRS*(int)par;
           lattice_struct::comminfo_struct ci = lattice->comminfo[d];
@@ -340,14 +343,16 @@ private:
           receive_request[tag].resize(ci.from_node.size());
           send_request[tag].resize(ci.to_node.size());
         }
+        mpi_tag = next_mpi_field_tag;
+        next_mpi_field_tag++;
       }
 #else
-      void set_buffer_sizes(){};
+      void initialize_communication(){};
 #endif
 
       void allocate_payload() { 
         payload.allocate_field(lattice->field_alloc_size());
-        set_buffer_sizes();
+        initialize_communication();
       }
       void free_payload() { payload.free_field(); }
       
@@ -874,15 +879,16 @@ void field<T>::start_move(direction d, parity p) const {
     }
 
     // Communication hasn't been started yet, do it now
-    int tag = d + NDIRS*(int)par;
+    int index = d + NDIRS*(int)par;
+    int tag =  fs->mpi_tag*3*NDIRS + index;
     constexpr int size = sizeof(T);
 
     lattice_struct::comminfo_struct ci = lattice->comminfo[d];
     int n = 0;
-    std::vector<MPI_Request> & receive_request = fs->receive_request[tag];
-    std::vector<MPI_Request> & send_request = fs->send_request[tag];
-    std::vector<char *> & receive_buffer = fs->receive_buffer[tag];
-    std::vector<char *> & send_buffer = fs->send_buffer[tag];
+    std::vector<MPI_Request> & receive_request = fs->receive_request[index];
+    std::vector<MPI_Request> & send_request = fs->send_request[index];
+    std::vector<char *> & receive_buffer = fs->receive_buffer[index];
+    std::vector<char *> & send_buffer = fs->send_buffer[index];
 
     /* HANDLE RECEIVES: loop over nodes which will send here */
     for( lattice_struct::comm_node_struct from_node : ci.from_node ){
@@ -935,7 +941,8 @@ void field<T>::wait_move(direction d, parity p) const {
   // Loop over parities
   // (if p=ALL, do both EVEN and ODD otherwise just p);
   for( parity par: loop_parities(p) ) {
-    int tag = d + NDIRS*(int)par;
+    int index = d + NDIRS*(int)par;
+    int tag =  fs->mpi_tag*3*NDIRS + index;
 
     if( is_fetched(d, par) ){
       // Not changed, return directly
@@ -948,8 +955,8 @@ void field<T>::wait_move(direction d, parity p) const {
     start_move(d, par);
 
     lattice_struct::comminfo_struct ci = lattice->comminfo[d];
-    std::vector<MPI_Request> & receive_request = fs->receive_request[tag];
-    std::vector<char *> & receive_buffer = fs->receive_buffer[tag];
+    std::vector<MPI_Request> & receive_request = fs->receive_request[index];
+    std::vector<char *> & receive_buffer = fs->receive_buffer[index];
 
     /* Wait for the data here */
     int n = 0;
