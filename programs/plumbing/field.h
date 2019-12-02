@@ -590,6 +590,7 @@ public:
 
   // Communication routines
   void start_move(direction d, parity p) const;
+  void start_move(direction d) const {start_move(d, ALL);}
   void wait_move(direction d, parity p) const;
 };
 
@@ -901,15 +902,16 @@ void field<T>::start_move(direction d, parity p) const {
     for( lattice_struct::comm_node_struct to_node : ci.to_node ){
       /* gather data into the buffer  */
       unsigned sites = to_node.n_sites(par);
-      send_buffer[n] = (char *)malloc( sites*size );
+      if(send_buffer[n] == NULL)
+        send_buffer[n] = (char *)malloc( sites*size );
+
       fs->gather_comm_elements(send_buffer[n], to_node, par);
 
       //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.index);
       /* And send */
-      MPI_Send( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
-               tag, lattice->mpi_comm_lat);
+      MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
+               tag, lattice->mpi_comm_lat, &receive_request[n]);
       //printf("node %d, sent tag %d\n", mynode(), tag);
-      std::free(send_buffer[n]);
       n++;
     }
 

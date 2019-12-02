@@ -35,18 +35,26 @@ void dirac_stagggered_alldim(
         initialized = true;
     }
     
+    // Start getting neighbours
+    foralldir(dir){
+        direction odir = opp_dir( (direction)dir );
+        v_in.start_move(dir);
+        v_in.start_move(odir);
+        gauge[dir].start_move(odir);
+    }
 
     // Apply the mass diagonally
     v_out[ALL] = mass * v_in[X];
 
+    // Run neighbour fetches and multiplications
     foralldir(dir){
         direction odir = opp_dir( (direction)dir );
-        direction odir2 = opp_dir( (direction)dir );
         // Positive directions: get the vector and multiply by matrix stored here
         v_out[ALL] += 0.5*eta[dir][X]*v_in[X+dir]*gauge[dir][X];
         // Negative directions: get both form neighbour
-        v_out[ALL] -= 0.5*eta[dir][X]*v_in[X+odir]*gauge[dir][X+odir2].conjugate() ;
+        v_out[ALL] -= 0.5*eta[dir][X]*v_in[X+odir]*gauge[dir][X+odir].conjugate();
     }
+
 }
 
 
@@ -81,7 +89,7 @@ void dirac_stagggered_4dim(
         }
         initialized = true;
     }
-    
+
 
     // Apply the mass diagonally
     onsites(ALL){
