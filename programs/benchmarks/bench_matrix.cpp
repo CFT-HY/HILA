@@ -91,6 +91,7 @@ int main(int argc, char **argv){
       init = clock();
       for( int i=0; i<n_runs; i++){
         //printf("node %d, dirac_stagggered %d\n", mynode(), i);
+        vector1.mark_changed(ALL); // Assure communication is included
         dirac_stagggered(U, 0.1, vector1, vector2);
       }
       synchronize();
@@ -108,6 +109,7 @@ int main(int argc, char **argv){
     for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
       for( int i=0; i<n_runs; i++){
+        vector1.mark_changed(ALL); // Assure communication is included
         dirac_stagggered_alldim(U, 0.1, vector1, vector2);
       }
       synchronize();
