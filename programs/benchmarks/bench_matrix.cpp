@@ -97,7 +97,7 @@ int main(int argc, char **argv){
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "Dirac 4 dirs: " << timing << "ms \n";
+    output0 << "Dirac: " << timing << "ms \n";
 
 
     // Time naive Dirac operator with direction loop expanded
@@ -114,7 +114,7 @@ int main(int argc, char **argv){
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "Dirac: " << timing << "ms \n";
+    output0 << "Dirac separate loops: " << timing << "ms \n";
     #endif
     
 
