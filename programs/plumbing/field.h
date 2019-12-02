@@ -906,20 +906,20 @@ void field<T>::start_move(direction d, parity p) const {
     /* HANDLE SENDS: Copy field elements on the boundary to a send buffer and send */
     n=0;
     for( lattice_struct::comm_node_struct to_node : ci.to_node ){
-      /* gather data into the buffer  */
-      unsigned sites = to_node.n_sites(par);
-      if(send_buffer[n] == NULL)
-        send_buffer[n] = (char *)malloc( sites*size );
+       /* gather data into the buffer  */
+       unsigned sites = to_node.n_sites(par);
+       if(send_buffer[n] == NULL)
+         send_buffer[n] = (char *)malloc( sites*size );
 
-      fs->gather_comm_elements(send_buffer[n], to_node, par);
-
-      //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.index);
-      /* And send */
-      MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
-               tag, lattice->mpi_comm_lat, &receive_request[n]);
-      //printf("node %d, sent tag %d\n", mynode(), tag);
-      n++;
-    }
+       fs->gather_comm_elements(send_buffer[n], to_node, par);
+ 
+       //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.index);
+       /* And send */
+       MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
+               tag, lattice->mpi_comm_lat, &send_request[n]);
+       //printf("node %d, sent tag %d\n", mynode(), tag);
+       n++;
+     }
 
     mark_move_started(d, par);
   }
