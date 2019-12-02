@@ -8,6 +8,5 @@ int main(){
 	b.random();
 	c.random();
 	c = (a*conjugate<float>(b));
-	1*int(5)*float(5);
 	return 0;
 }
