@@ -83,7 +83,20 @@ int main(int argc, char **argv){
 	    sum += diff*diff;
     }
 	assert(sum==0);
+    
 
+    // Test starting communication manually
+
+    s1[EVEN] = 1.0;
+    s2[EVEN] = 1.0;
+    s2[ODD] = -s1[X+XUP];
+    s2.start_move(XUP,ODD);
+
+    sum = 0;
+    onsites(ALL){
+	    sum += s2[X].re;
+    }
+	assert(sum==0);
 
 
     // Test referring to an array of fields
