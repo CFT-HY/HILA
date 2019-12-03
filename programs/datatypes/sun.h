@@ -54,41 +54,49 @@ radix gaussian_ran2 (radix* out2)
 /// templates have to be visible to the tranlation units that use them
 //////////////////
 
-//TODO: SU(2) vector class + conversion to and from matrix rep.
-//TODO: write template for lhs scalar times matrix 
-
 template<int n, typename radix>
-class SU : public matrix<n,n,cmplx<radix>> {
-    public:
-        SU<n, radix> conjugate();
-        SU<n, radix> reunitarize();
-        radix det();
-};
+class SU : public matrix<n,n,cmplx<radix>>{};
 
 template<typename radix> 
-class adjoint;
+class SU2; 
+//adjoint su2 matrix 
+template<typename radix> 
+class adjoint; 
+
+template<typename radix> 
+class SU2vector {
+    public:
+    cmplx<radix> c[2];
+    SU2vector(const SU2<raxix> & m){
+        v.c[0].re = m.b;				    
+        v.c[0].im = m.a;			       	
+        v.c[1].re = m.d;			       	
+        v.c[1].im =-m.c;
+    }
+};
 
 template<typename radix>
 class SU2 { 
     public: 
 
         SU2() : a(0), b(0), c(0), d(1) {}
+
         SU2(radix * vals) : a(vals[0]), b(vals[1]), c(vals[2]), d(vals[3]) { normalize(); }
-        ~SU2(){}
 
-        SU2<radix> & normalize();
-        SU2<radix> & reunitarize();  
-        SU2<radix> & random(); 
-        SU2<radix> & inv(); 
-        SU2<radix> & adj(); 
-        
-        radix sqr() const;
-        radix tr() const;
-        radix det() const; 
+        SU2(const SU2vector & rhs){
+            b = v.c[0].re;				
+            a = v.c[0].im;				
+            d = v.c[1].re;				
+            c =-v.c[1].im;           
+        };
 
-        SU2<radix> & operator = (const SU2<radix> &);
-        SU2<radix> & operator = (const adjoint<radix> &);
- 
+        SU2(const SU2<raxix> & rhs){
+            b = rhs.b;				
+            a = rhs.a;				
+            d = rhs.d;				
+            c = rhs.c;           
+        };
+
         friend SU2<radix> operator * (const SU2<radix> & x, const SU2<radix> & y){
             SU2<radix> r;
             r.a = nn_a(x,y); r.b = nn_b(x,y); 
@@ -117,12 +125,21 @@ class SU2 {
             return r;
         }
 
+        SU2<radix> & operator = (const SU2<radix> &);
+        SU2<radix> & operator = (const adjoint<radix> &);
+        SU2<radix> & operator = (const SU2vector<radix> &);
+        SU2<radix> & normalize();
+        SU2<radix> & reunitarize();  
+        SU2<radix> & random(); 
+        SU2<radix> & inv(); 
+        SU2<radix> & adj(); 
+        
+        radix sqr() const;
+        radix tr() const;
+        radix det() const; 
+
         SU2<radix> operator + (const SU2<radix> &); //basic operations. These versions return new matrix as result
         SU2<radix> operator - (const SU2<radix> &);
-
-        SU2<radix> operator + (const adjoint<radix> &); //same ops for adjoint versions
-        SU2<radix> operator - (const adjoint<radix> &);
-
         SU2<radix> & operator += (const SU2<radix> &); //same ops as above, except store result in lhs matrix
         SU2<radix> & operator -= (const SU2<radix> &);
         SU2<radix> & operator *= (const SU2<radix> &);
@@ -134,13 +151,8 @@ class SU2 {
         SU2<radix> & operator *= (const radix &);
 
         SU2<radix> operator * (const radix &);
-        SU2<radix> operator / (const radix &);
-
-
     private:
-
         radix a, b, c, d;  
-
 };
 
 template<typename radix>
@@ -221,15 +233,24 @@ SU2<radix> & SU2<radix>::operator = (const adjoint<radix> & rhs){
 
 template<typename radix>
 SU2<radix> & SU2<radix>::operator *= (const SU2<radix> & y){
-    a = nn_a(*this,y); 
-    b = nn_b(*this,y); 
-    c = nn_c(*this,y); 
-    d = nn_d(*this,y); 
+    a = nn_a((*this),y); 
+    b = nn_b((*this),y); 
+    c = nn_c((*this),y); 
+    d = nn_d((*this),y); 
     return *this;
 }
 
 template<typename radix>
-SU2<radix> & SU2<radix>::operator *= (const radix & rhs){ 
+SU2<radix> & SU2<radix>::operator *= (const adjoint<radix> & y){
+    a = na_a((*this),y); 
+    b = na_b((*this),y); 
+    c = na_c((*this),y); 
+    d = na_d((*this),y); 
+    return *this;
+}
+
+template<typename radix, typename radix2>
+SU2<radix> & SU2<radix>::operator *= (const radix2 & rhs){ 
     a *= static_cast<radix>(rhs);
     b *= static_cast<radix>(rhs);
     c *= static_cast<radix>(rhs);
@@ -244,6 +265,20 @@ SU2<radix> SU2<radix>::operator * (const radix & rhs){
     r.b = b*static_cast<radix>(rhs);
     r.c = c*static_cast<radix>(rhs);
     r.d = d*static_cast<radix>(rhs);
+    return r;
+};
+
+SU2<radix> operator + (const SU2<radix> & y){
+    SU2<radix> r;
+    r.a = x.a + y.a; r.b = x.b + y.b; \
+    r.c = x.c + y.c; r.d = x.d + y.d;
+    return r;
+};
+
+SU2<radix> operator - (const SU2<radix> &){
+    SU2<radix> r;
+    r.a = x.a - y.a; r.b = x.b - y.b; \
+    r.c = x.c - y.c; r.d = x.d - y.d;
     return r;
 };
 
