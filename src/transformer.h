@@ -32,6 +32,7 @@ enum class parity { none, even, odd, all, x };
 struct codetype {
   bool kernelize;
   bool CUDA;
+  bool AVX;
   bool openacc;
   bool flag_loop_function;
 };
@@ -66,6 +67,7 @@ namespace cmdline {
   extern llvm::cl::opt<bool> kernel;
   extern llvm::cl::opt<bool> vanilla;
   extern llvm::cl::opt<bool> CUDA;
+  extern llvm::cl::opt<bool> AVX;
   extern llvm::cl::opt<bool> openacc;
   extern llvm::cl::opt<bool> func_attribute;
 };

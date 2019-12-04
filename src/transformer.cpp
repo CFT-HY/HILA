@@ -106,6 +106,10 @@ llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
           llvm::cl::desc("Generate CUDA kernels"),
           llvm::cl::cat(TransformerCat));
 
+llvm::cl::opt<bool> cmdline::AVX("target:AVX",
+          llvm::cl::desc("Generate AVX instructions in loops"),
+          llvm::cl::cat(TransformerCat));
+
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
           llvm::cl::desc("Offload to GPU using openMP"),
           llvm::cl::cat(TransformerCat));
@@ -532,6 +536,9 @@ void get_target_struct(codetype & target) {
   } else if (cmdline::openacc) {
     target.kernelize = false;
     target.openacc = true;
+    target.flag_loop_function = false;
+  } else if (cmdline::AVX) {
+    target.AVX = true;
     target.flag_loop_function = false;
   } else {
     target.kernelize = false;

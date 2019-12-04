@@ -204,6 +204,9 @@ public:
   std::string generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_avx(Stmt *S, bool semi_at_end, srcBuf &sb);
+
+  void generate_field_element_type(std::string typestr);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(SourceLocation sl);
