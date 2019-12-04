@@ -64,9 +64,14 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
           loopBuf.replace( vr.ref, varname );
         }
       }
+    } else {
+      // locally declared variables should be vector type if possible
+      std::string declaration_string = TheRewriter.getRewrittenText(vi.decl->getSourceRange());
+      replace_basetype_with_vector( declaration_string );
+      loopBuf.replace( vi.decl->getSourceRange(), declaration_string);
     }
   }
-  
+
   
   // Create temporary field element variables
   for (field_info & l : field_info_list) {

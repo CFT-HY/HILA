@@ -346,7 +346,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
         if (d.scope >= 0 && vi.decl == d.decl) {
           llvm::errs() << "loop local var ref! " << vi.name << '\n';
           vi.is_loop_local = true;
-          vi.var_declp = &d;   
+          vi.var_declp = &d;
           break;
         }
       }
