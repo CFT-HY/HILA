@@ -145,6 +145,8 @@ public:
   
   bool is_function_call_stmt(Stmt * s);
 
+  bool is_constructor_stmt(Stmt * s);
+
   bool is_loop_extern_var_ref(Expr *E);
   
   parity get_parity_val(const Expr *pExpr);
@@ -161,7 +163,11 @@ public:
 
   void handle_function_call_in_loop(Stmt * s);
   
+  void handle_constructor_in_loop(Stmt * s);
+
   bool loop_function_check(Decl *fd);
+
+  bool handle_loop_function_if_needed(FunctionDecl *fd);
   
   void handle_loop_function(FunctionDecl *fd);
 
@@ -220,7 +226,7 @@ public:
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
 
   /// utility used in finding pragmas on the previous line
-  SourceRange getSourceRangeAtPreviousOfLine( SourceLocation l );
+  SourceRange getSourceRangeAtPreviousLine( SourceLocation l );
 
   void set_writeBuf(const FileID fid);
 

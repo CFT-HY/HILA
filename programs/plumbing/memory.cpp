@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "defs.h"
 #include "memory.h"
-
+#include <iostream>
 
 // Memory alignment for "vanilla"
 

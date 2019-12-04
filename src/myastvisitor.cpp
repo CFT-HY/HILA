@@ -83,7 +83,7 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
 
 /// is the stmt pointing now to assignment
 bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
-  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s))
+  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
       // TODO: there should be some more elegant way to do this
       const char *sp = getOperatorSpelling(OP->getOperator());
@@ -92,25 +92,42 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
       else iscompound = false;
       if (opcodestr)
         *opcodestr = getOperatorSpelling(OP->getOperator());
+
+      // Need to mark/handle the assignment method if necessary
+      if( is_function_call_stmt(s) ){
+        handle_function_call_in_loop(s);
+      } else if ( is_constructor_stmt(s) ){
+        handle_constructor_in_loop(s);
+      }
+
       return true;
     }
-  
-  // TODO: this is for templated expr, I think -- should be removed (TEST IT)
-  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s))
+  }
+
+  // TODO: this is for templated expr, I think -- should be removed (STILL USED; WHY)
+  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
     if (B->isAssignmentOp()) {
       iscompound = B->isCompoundAssignmentOp();
       if (opcodestr)
         *opcodestr = B->getOpcodeStr();
       return true;
     }
+  }
 
   return false;
 }
 
 // is the stmt pointing now to a function call
 bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
-  if (CallExpr *Call = dyn_cast<CallExpr>(s)){
-    //llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+  if (auto *Call = dyn_cast<CallExpr>(s)){
+    llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+    return true;
+  }
+  return false;
+}
+bool MyASTVisitor::is_constructor_stmt(Stmt * s) {
+  if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
+    llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
     return true;
   }
   return false;
@@ -178,10 +195,16 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     lfe.fullExpr   = ASE;
     lfe.nameExpr   = ASE->getLHS();
     lfe.parityExpr = ASE->getRHS();
-    llvm::errs() << lfe.fullExpr << lfe.nameExpr << lfe.parityExpr;
+    //llvm::errs() << lfe.fullExpr << " " << lfe.nameExpr << " " << lfe.parityExpr << "\n";
   } else {
     llvm::errs() << "Should not happen! Error in field parity\n";
     exit(1);
+  }
+
+  // Check if the expression is already handled
+  for( field_ref r : field_ref_list)
+    if( r.fullExpr == lfe.fullExpr  ){
+      return(true);
   }
 
   // Check that there are no local variable references up the AST
@@ -425,8 +448,15 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // function can assign to the a field parameter (is not const).
   if( is_function_call_stmt(s) ){
     handle_function_call_in_loop(s);
+    // let this ripple trough, for now ...
+    // return true;
   }
-  
+
+  if ( is_constructor_stmt(s) ){
+    handle_constructor_in_loop(s);
+    // return true;
+  }
+   
   // catch then expressions
       
   if (Expr *E = dyn_cast<Expr>(s)) {
@@ -509,11 +539,11 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       state::skip_children = 1;          
       return true;
     }
-    // this point not reached
   } // Expr checking branch - now others...
 
   // This reached only if s is not Expr
 
+ 
   // start {...} -block or other compound
   if (isa<CompoundStmt>(s) || isa<ForStmt>(s) || isa<IfStmt>(s)
       || isa<WhileStmt>(s)) {
@@ -614,13 +644,13 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
 
 
 /// Find the source range of the previous line from source location
-SourceRange MyASTVisitor::getSourceRangeAtPreviousOfLine( SourceLocation l ){
+SourceRange MyASTVisitor::getSourceRangeAtPreviousLine( SourceLocation l ){
   SourceManager &SM = TheRewriter.getSourceMgr();
   SourceRange r = SourceRange(l,l);
   bool found_line_break = false;
   
   // Move backward from location l and find two linebreaks
-  // These are the beginning and the end of the brevious line
+  // These are the beginning and the end of the previous line
   for (int i=0; i<1000; i++) {
     bool invalid = false;
     const char * c = SM.getCharacterData(l,&invalid);
@@ -651,12 +681,7 @@ SourceRange MyASTVisitor::getSourceRangeAtPreviousOfLine( SourceLocation l ){
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
   if (state::check_loop && state::loop_found) return true;
-  
-  if (state::skip_next > 0) {
-    state::skip_next--;
-    return true;
-  }
-  
+    
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;
     
@@ -671,11 +696,6 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
 bool MyASTVisitor::TraverseDecl(Decl *D) {
 
   if (state::check_loop && state::loop_found) return true;
-
-  if (state::skip_next > 0) {
-    state::skip_next--;
-    return true;
-  }
 
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;
@@ -977,6 +997,13 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
       return true;
     }
 
+    if (var->isStaticLocal()) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 var->getSourceRange().getBegin(),
+                 "Cannot declare static variables inside field loops");
+      return true;
+    }
+
     if (is_field_decl(var)) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
@@ -1173,11 +1200,13 @@ bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
 
 
 bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
-  SourceRange sr = getSourceRangeAtPreviousOfLine(f->getSourceRange().getBegin());
+  SourceRange sr = getSourceRangeAtPreviousLine(f->getSourceRange().getBegin());
   std::string line = TheRewriter.getRewrittenText( sr );
+  // require that #pragma starts the line
+  line = remove_initial_whitespace(line);
 
   static std::string loop_pragma("#pragma transformer loop_function");
-  if(line.length() >= loop_pragma.length() && line.find(loop_pragma) != std::string::npos){
+  if (line.find(loop_pragma) == 0){
     return true;
   }
 

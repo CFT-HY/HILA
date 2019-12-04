@@ -41,7 +41,6 @@ std::vector<Expr *> remove_expr_list = {};
 
 unsigned state::skip_children = 0;
 unsigned state::scope_level = 0;
-int state::skip_next = 0;
 bool state::in_loop_body = false;
 bool state::accept_field_parity = false;
 bool state::loop_found = false;
@@ -257,9 +256,8 @@ public:
 
 
   // HandleTranslationUnit is called after the AST for the whole TU is completed
+  // Need to use this interface to ensure that specializations are present
   virtual void HandleTranslationUnit(ASTContext & ctx) override {
-    // dump ast here -- HERE THE SPECIALIZATIONS ARE PRESENT!
-    //ctx.getTranslationUnitDecl()->dump();
 
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
