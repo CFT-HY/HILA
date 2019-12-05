@@ -32,6 +32,7 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 
+
 /// Replace base datatypes with vectorized datatypes
 void replace_basetype_with_vector(std::string & element_type) {
   size_t begin;
@@ -135,3 +136,22 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   return code.str();
 }
 
+
+void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
+  std::string fst_spec;
+  if(typestr.find("double",0) != std::string::npos){
+    std::string newtype = typestr;
+    replace_basetype_with_vector(newtype);
+    fst_spec = "\ntemplate<>\nstruct field_storage_type<"
+        + typestr + ">{\n"
+        + "  " + newtype + "  c;\n"
+        + "  operator " + newtype + "(){return c;}"
+        + "\n};\n";
+  }
+
+  // insert after new line
+  SourceLocation l =
+  getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
+
+  writeBuf->insert(l, fst_spec, true, false);
+ }

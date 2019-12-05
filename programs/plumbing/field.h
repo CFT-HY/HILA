@@ -213,6 +213,11 @@ using field_element = T;
 template <typename T>
 struct field_storage_type {
   T c;
+  operator T() {return c;} // Cast to type T
+  field_storage_type (const T& x) {c=x;} // Cast to T to storage element 
+  field_storage_type& operator= (const T& x) { // Assign T to storage element
+    this->c=x; return *this;
+  }
 };
 
 
@@ -269,16 +274,17 @@ class field_storage {
       fieldbuf = nullptr;
     }
 
-    T get(const int i, const int field_alloc_size) const
+    field_storage_type<T> get(const int i, const int field_alloc_size) const
     {
-      return fieldbuf[i];
+      return fieldbuf[i/vector_len];
     }
 
-    void set(T value, const int i, const int field_alloc_size) 
+    void set(field_storage_type<T> value, const int i, const int field_alloc_size) 
     {
-      fieldbuf[i] = value;
+      fieldbuf[i/vector_len] = value;
     }
 };
+
 #endif
 #else
 
@@ -390,10 +396,14 @@ private:
       
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      T get(const int i) const { return  payload.get( i, lattice->field_alloc_size() ); }
+      field_storage_type<T> get(const int i) const {
+        return  payload.get( i, lattice->field_alloc_size() );
+      }
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() ); }
+      void set(field_storage_type<T> value, const int i) {
+        payload.set( value, i, lattice->field_alloc_size() );
+      }
 
       /// Gather boundary elements for communication
       void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const;

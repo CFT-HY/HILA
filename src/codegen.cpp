@@ -174,19 +174,14 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
 
 void MyASTVisitor::generate_field_element_type(std::string typestr){
-  // NOTE: this has to be moved to codegen, different for diff. codes
   if (field_storage_type_decl == nullptr) {
     llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
     exit(1);
   }
-  std::string fst_spec = "template<>\nstruct field_storage_type<"
-        + typestr +"> {\n  " + typestr + " c[10];\n};\n";
 
-  // insert after new line
-  SourceLocation l =
-  getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
-  // TheRewriter.InsertText(l, fst_spec, true,true);
-  writeBuf->insert(l, fst_spec, true, false);
+  if(target.AVX){
+    generate_field_element_type_AVX(typestr);
+  }
  }
 
 
