@@ -555,8 +555,10 @@ int main(int argc, const char **argv) {
   // msg handling, should we get rid of it?
 
   // av takes over from argv
-  const char **av = new const char *[argc+2];
+  const char **av = new const char *[argc+3];
   argc = rearrange_cmdline(argc, argv, av);
+  av[argc++] = "-DTRANSFORMER";  // add global defn
+
 
   OptionsParser op(argc, av, TransformerCat);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
