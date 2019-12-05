@@ -8,6 +8,14 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
+#if defined(AVX512) || defined(AVX) || defined(SSE)
+#define VECTORIZED
+#endif
+
+#ifdef VECTORIZED
+#include <immintrin.h>
+#endif
+
 #ifdef USE_MPI
 #include <mpi.h>
 #endif

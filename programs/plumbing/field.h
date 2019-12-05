@@ -216,15 +216,14 @@ struct field_storage_type {
 };
 
 
-
-
 // Pointer to field data and accessors. Only this is passed to the
 // CUDA kernels and other accelerators and it only contains a minimal
 // amount of data.
+#ifndef layout_SOA
+#ifndef AVX
 template <typename T>
 class field_storage {
   public:
-    #ifndef layout_SOA
       // Array of structures implementation
     T * fieldbuf;
 
@@ -250,9 +249,42 @@ class field_storage {
     {
       ((T *) fieldbuf)[i] = value;
     }
+};
 
+#else
 
-    #else
+template <typename T>
+class field_storage {
+  public:
+    // Use the vectorized field storage type
+    field_storage_type<T> * fieldbuf;
+    constexpr static int vector_len = field_storage_type<T> / sizeof(T);
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (field_storage_type<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
+    }
+
+    void free_field() {
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    T get(const int i, const int field_alloc_size) const
+    {
+      return fieldbuf[i];
+    }
+
+    void set(T value, const int i, const int field_alloc_size) 
+    {
+      fieldbuf[i] = value;
+    }
+};
+#endif
+#else
+
+template <typename T>
+class field_storage {
+  public:
     // Structure of arrays implementation
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     real_t * fieldbuf;
@@ -291,8 +323,8 @@ class field_storage {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
       }
     }
-    #endif
 };
+#endif
 
 
 
