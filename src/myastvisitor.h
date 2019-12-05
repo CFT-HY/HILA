@@ -207,6 +207,7 @@ public:
   std::string generate_code_avx(Stmt *S, bool semi_at_end, srcBuf &sb);
 
   void generate_field_element_type(std::string typestr);
+  void generate_field_element_type_AVX(std::string typestr);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(SourceLocation sl);
