@@ -232,10 +232,10 @@ template <typename T>
 class field_storage {
   public:
       // Array of structures implementation
-    T * fieldbuf;
+    element<T> * fieldbuf;
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
+      fieldbuf = (element<T>*) allocate_field_mem( sizeof(element<T>) * field_alloc_size);
       #pragma acc enter data create(fieldbuf)
     }
 
@@ -246,15 +246,15 @@ class field_storage {
     }
 
     #pragma transformer loop_function
-    T get(const int i, const int field_alloc_size) const
+    element<T> get(const int i, const int field_alloc_size) const
     {
-      return ((T *) fieldbuf)[i];
+      return ((element<T> *) fieldbuf)[i];
     }
 
     #pragma transformer loop_function
-    void set(T value, const int i, const int field_alloc_size) 
+    void set(element<T> value, const int i, const int field_alloc_size) 
     {
-      ((T *) fieldbuf)[i] = value;
+      ((element<T> *) fieldbuf)[i] = value;
     }
 };
 
