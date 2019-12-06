@@ -1472,8 +1472,8 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
-    } else if (D->getNameAsString() == "field_storage_type") {
-      field_storage_type_decl = D;
+    } else if (D->getNameAsString() == "element") {
+      element_decl = D;
     } else {
     }
 
@@ -1487,7 +1487,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   return true;
 }
 
-// Find the field_storage_type typealias here -- could not work
+// Find the element typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
 bool MyASTVisitor::VisitDecl( Decl * D) {
   if (state::check_loop && state::loop_found) return true;
@@ -1499,7 +1499,7 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
   }
 
   auto t = dyn_cast<TypeAliasTemplateDecl>(D);
-  if (t && t->getNameAsString() == "field_storage_type") {
+  if (t && t->getNameAsString() == "element") {
     llvm::errs() << "Got field storage\n";
   }
   

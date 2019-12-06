@@ -211,7 +211,7 @@ using field_element = T;
 // Type alias would be nice, but one cannot specialize those!
 // Placemarker, will be specialized by transformer
 template <typename T>
-struct field_storage_type {
+struct element {
   T c;
 };
 
@@ -257,11 +257,11 @@ template <typename T>
 class field_storage {
   public:
     // Use the vectorized field storage type
-    field_storage_type<T> * fieldbuf;
-    constexpr static int vector_len = field_storage_type<T> / sizeof(T);
+    element<T> * fieldbuf;
+    constexpr static int vector_len = element<T> / sizeof(T);
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (field_storage_type<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
+      fieldbuf = (element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
     }
 
     void free_field() {
@@ -269,12 +269,12 @@ class field_storage {
       fieldbuf = nullptr;
     }
 
-    field_storage_type<T> get(const int i, const int field_alloc_size) const
+    element<T> get(const int i, const int field_alloc_size) const
     {
       return fieldbuf[i/vector_len];
     }
 
-    void set(field_storage_type<T> value, const int i, const int field_alloc_size) 
+    void set(element<T> value, const int i, const int field_alloc_size) 
     {
       fieldbuf[i/vector_len] = value;
     }
@@ -391,12 +391,12 @@ private:
       
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      field_storage_type<T> get(const int i) const {
+      element<T> get(const int i) const {
         return  payload.get( i, lattice->field_alloc_size() );
       }
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      void set(field_storage_type<T> value, const int i) {
+      void set(element<T> value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
       }
 

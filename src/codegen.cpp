@@ -174,8 +174,8 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
 
 void MyASTVisitor::generate_field_element_type(std::string typestr){
-  if (field_storage_type_decl == nullptr) {
-    llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
+  if (element_decl == nullptr) {
+    llvm::errs() << " **** internal error: element undefined in field\n";
     exit(1);
   }
 

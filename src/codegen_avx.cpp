@@ -142,7 +142,7 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
   if(typestr.find("double",0) != std::string::npos){
     std::string newtype = typestr;
     replace_basetype_with_vector(newtype);
-    fst_spec = "\ntemplate<>\nstruct field_storage_type<"
+    fst_spec = "\ntemplate<>\nstruct element<"
         + typestr + ">{\n"
         + "  " + newtype + "  c;\n"
         + "  operator " + newtype + "(){return c;}"
@@ -151,7 +151,7 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
 
   // insert after new line
   SourceLocation l =
-  getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
+  getSourceLocationAtEndOfLine( element_decl->getSourceRange().getEnd() );
 
   writeBuf->insert(l, fst_spec, true, false);
  }
