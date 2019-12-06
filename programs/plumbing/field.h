@@ -265,7 +265,7 @@ class field_storage {
   public:
     // Use the vectorized field storage type
     element<T> * fieldbuf;
-    constexpr static int vector_len = element<T> / sizeof(T);
+    constexpr static int vector_len = sizeof(element<T>) / sizeof(T);
 
     void allocate_field( const int field_alloc_size ) {
       fieldbuf = (element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
