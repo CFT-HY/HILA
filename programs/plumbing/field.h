@@ -220,6 +220,8 @@ struct element {
   element& operator= (const T& x) {
     this->c=x; return *this;
   }
+  
+  operator T() { return c; }
 };
 
 
@@ -551,10 +553,10 @@ public:
 
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  T get_value_at(int i) const { return this->fs->get(i); }
+  element<T> get_value_at(int i) const { return this->fs->get(i); }
 
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
-  void set_value_at(T value, int i) { this->fs->set(value, i); }
+  void set_value_at(element<T> value, int i) { this->fs->set(value, i); }
 
 
   // fetch the element at this loc
