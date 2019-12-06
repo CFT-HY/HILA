@@ -1194,6 +1194,11 @@ bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
 
   static std::string loop_pragma("#pragma transformer loop_function");
   if (line.find(loop_pragma) == 0){
+
+    // got it, comment out -- check that it has not been commented out before
+    int loc = writeBuf->find_original(sr.getBegin(),'#');
+    std::string s = writeBuf->get(loc,loc+1);
+    if (s.at(0) == '#') writeBuf->insert(loc ,"//== ",true,false);
     return true;
   }
 
@@ -1211,7 +1216,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     f->dump();
     state::dump_ast_next = false;
   }
-  if( state::loop_function_next || has_loop_function_pragma(f) ){
+  if(!state::check_loop && (state::loop_function_next || has_loop_function_pragma(f))) {
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);
