@@ -142,6 +142,10 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
 
 void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
+  // insert after a new line
+  SourceLocation l =
+  getSourceLocationAtEndOfLine( element_decl->getSourceRange().getEnd() );
+
   // Find template parameter name (only 1 allowed)
   auto template_parameter = element_decl->getTemplateParameters()->begin()[0];
   std::string templ_type = template_parameter->getNameAsString();
@@ -159,14 +163,5 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
   // Add the template<> declaration
   bodyBuffer.prepend("template<" + typestr + ">\n", true);
 
-  // insert after a new line
-  SourceLocation l =
-  getSourceLocationAtEndOfLine( element_decl->getSourceRange().getEnd() );
-
   writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);
-
-  std::string element_alias = "template <"+typestr+">\n"
-    + "using field_element = "+vectortype+";\n";
-
-  writeBuf->insert(l, "\n"+element_alias, true, false);
 }
