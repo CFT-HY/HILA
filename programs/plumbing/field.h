@@ -213,11 +213,6 @@ using field_element = T;
 template <typename T>
 struct field_storage_type {
   T c;
-  operator T() {return c;} // Cast to type T
-  field_storage_type (const T& x) {c=x;} // Cast to T to storage element 
-  field_storage_type& operator= (const T& x) { // Assign T to storage element
-    this->c=x; return *this;
-  }
 };
 
 
