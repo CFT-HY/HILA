@@ -164,4 +164,9 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
   getSourceLocationAtEndOfLine( element_decl->getSourceRange().getEnd() );
 
   writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);
- }
+
+  std::string element_alias = "template <"+typestr+">\n"
+    + "using field_element = "+vectortype+";\n";
+
+  writeBuf->insert(l, "\n"+element_alias, true, false);
+}
