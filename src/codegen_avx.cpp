@@ -38,11 +38,11 @@ void replace_basetype_with_vector(std::string & element_type) {
   size_t begin;
   begin = element_type.find("double");
   if(begin != std::string::npos){
-    element_type.replace(begin, 6, "__m256d");
+    element_type.replace(begin, 6, "avxdvector");
   }
   begin = element_type.find("float");
   if(begin != std::string::npos){
-    element_type.replace(begin, 6, "__m256f");
+    element_type.replace(begin, 6, "avxfvector");
   }
 }
   
