@@ -138,20 +138,26 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
 
 void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
-  std::string fst_spec;
-  if(typestr.find("double",0) != std::string::npos){
-    std::string newtype = typestr;
-    replace_basetype_with_vector(newtype);
-    fst_spec = "\ntemplate<>\nstruct element<"
-        + typestr + ">{\n"
-        + "  " + newtype + "  c;\n"
-        + "  operator " + newtype + "(){return c;}"
-        + "\n};\n";
-  }
+  // Find template parameter name (only 1 allowed)
+  auto template_parameter = element_decl->getTemplateParameters()->begin()[0];
+  std::string templ_type = template_parameter->getNameAsString();
+  
+  // Replace the original type with a vector type
+  std::string vectortype = typestr;
+  replace_basetype_with_vector(vectortype);
 
-  // insert after new line
+  // Get the body of the element definition
+  srcBuf bodyBuffer; // (&TheRewriter,S);
+  bodyBuffer.copy_from_range(writeBuf,element_decl->getTemplatedDecl()->getSourceRange());
+
+  bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
+
+  // Add the template<> declaration
+  bodyBuffer.prepend("template<" + typestr + ">\n", true);
+
+  // insert after a new line
   SourceLocation l =
   getSourceLocationAtEndOfLine( element_decl->getSourceRange().getEnd() );
 
-  writeBuf->insert(l, fst_spec, true, false);
+  writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);
  }

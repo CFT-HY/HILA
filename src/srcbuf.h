@@ -63,6 +63,8 @@ public:
     assert(l>=0 && l<true_size);
     return l;
   }
+
+  unsigned size() {return true_size;}
   
   void create( Rewriter *R, const SourceRange &sr);
   void create( Rewriter * R, Expr *e );

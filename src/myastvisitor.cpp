@@ -597,7 +597,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     // Type of field<> can never be field?  This always is true
     if( typestr.find("field<") ){ // Skip for field templates
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
-
+ 
       // write storage_type specialization
       generate_field_element_type(typestr);
     }
