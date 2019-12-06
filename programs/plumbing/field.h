@@ -213,6 +213,13 @@ using field_element = T;
 template <typename T>
 struct element {
   T c;
+
+  // Cast to T to element 
+  element (const T& x) {c=x;} 
+  // Assignment of T to element
+  element& operator= (const T& x) {
+    this->c=x; return *this;
+  }
 };
 
 
