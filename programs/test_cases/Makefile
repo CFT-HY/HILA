@@ -1,7 +1,7 @@
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer -DMPI
-CC = mpic++ -DUSE_MPI -mavx2
+TRANSFORMER = ../../build/transformer -DAVX -target:AVX
+CC = mpic++ -DUSE_MPI -mavx2 -DAVX
 
 CFLAGS = -g $(OPTS)
 CXXFLAGS = -g -x c++ $(OPTS)
