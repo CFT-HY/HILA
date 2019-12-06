@@ -221,7 +221,7 @@ struct element {
     this->c=x; return *this;
   }
   
-  operator T() { return c; }
+  operator T() { return c; } // this should be added by transformer to disable incorrect assignments in loops 
 };
 
 

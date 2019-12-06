@@ -19,15 +19,15 @@ struct avxdvector {
   // Cast to base type interpred as a sum, implements
   // the sum reduction
   #pragma transformer loop_function
-  operator double() { 
-    __m256d s = _mm256_hadd_pd(c,c);
-    return ((double*)&s)[0] + ((double*)&s)[2];
-  }
-
-  #pragma transformer loop_function
   avxdvector & operator+= (const avxdvector & lhs) {
     c += lhs.c;
     return *this;
+  }
+
+  #pragma transformer loop_function
+  double reduce_sum(){
+    __m256d s = _mm256_hadd_pd(c,c);
+    return ((double*)&s)[0] + ((double*)&s)[2];
   }
 };
 
@@ -37,13 +37,6 @@ struct avxdvector {
 #pragma transformer loop_function
 avxdvector operator+(const avxdvector & a, const avxdvector & b) {
   return avxdvector(_mm256_add_pd(a.c, b.c));
-}
-
-
-#pragma transformer loop_function
-double operator+(double & a, const avxdvector & b) {
-  __m256d s = _mm256_hadd_pd(b.c,b.c);
-  return a + ((double*)&s)[0] + ((double*)&s)[2];
 }
 
 

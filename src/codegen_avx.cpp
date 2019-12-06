@@ -55,6 +55,28 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
 
+  // Create temporary variables for reductions
+  for (var_info & v : var_info_list) {
+    if (v.reduction_type != reduction::NONE) {
+  
+      v.new_name = "v_" + v.reduction_name;
+  
+      // Allocate memory for a reduction. This will be filled in the kernel
+      std::string reduction_type = v.type;
+      replace_basetype_with_vector(reduction_type);
+      if (v.reduction_type == reduction::SUM) {
+        code << reduction_type << " " << v.new_name << "(0);\n";
+      } else if (v.reduction_type == reduction::PRODUCT) {
+        code << reduction_type << " " << v.new_name << "(1);\n";
+      }
+
+      // Replace references in the loop body
+      for (var_ref & vr : v.refs) {
+        loopBuf.replace( vr.ref, v.new_name );
+      }
+    }
+  }
+
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";
@@ -62,15 +84,8 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
   // replace reduction variables in the loop
   for ( var_info & vi : var_info_list ) {
-    if (!vi.is_loop_local) {
-      if(vi.reduction_type != reduction::NONE) {
-        std::string varname = "r_" + vi.name;
-        for (var_ref & vr : vi.refs) {
-          loopBuf.replace( vr.ref, varname );
-        }
-      }
-    } else {
-      // locally declared variables should be vector type if possible
+    if (vi.is_loop_local) {
+      // Converts all locally declared variables to vectors. Is this OK?
       std::string declaration_string = TheRewriter.getRewrittenText(vi.decl->getSourceRange());
       replace_basetype_with_vector( declaration_string );
       loopBuf.replace( vi.decl->getSourceRange(), declaration_string);
@@ -136,6 +151,16 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   }
 
   code << "}\n";
+
+
+  // Final reduction of the temporary reduction variables
+  for (var_info & v : var_info_list) {
+    if (v.reduction_type == reduction::SUM) {
+      code << v.reduction_name << " = " << v.new_name << ".reduce_sum();\n";
+    } else if (v.reduction_type == reduction::PRODUCT) {
+      code << v.reduction_name << " = " << v.new_name << "reduce_prod();\n";
+    }
+  }
 
   return code.str();
 }
