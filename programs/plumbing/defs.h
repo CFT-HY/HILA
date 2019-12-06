@@ -8,13 +8,13 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
-#if defined(AVX512) || defined(AVX) || defined(SSE)
+
+#ifdef AVX
 #define VECTORIZED
+#include <immintrin.h>
+#include "../plumbing/AVX.h"
 #endif
 
-#ifdef VECTORIZED
-#include <immintrin.h>
-#endif
 
 #ifdef USE_MPI
 #include <mpi.h>
