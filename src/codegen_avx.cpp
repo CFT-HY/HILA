@@ -158,10 +158,20 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
   srcBuf bodyBuffer; // (&TheRewriter,S);
   bodyBuffer.copy_from_range(writeBuf,element_decl->getTemplatedDecl()->getSourceRange());
 
+  // Replace templated type with new vector type
   bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
 
+  // Add specialization parameters
+  bodyBuffer.replace_token(0, bodyBuffer.size()-1,
+                  element_decl->getQualifiedNameAsString(),
+                  element_decl->getQualifiedNameAsString() + "<"+typestr+">");
+
   // Add the template<> declaration
-  bodyBuffer.prepend("template<" + typestr + ">\n", true);
+  bodyBuffer.prepend("template<>\n", true);
+  bodyBuffer.append(";\n", true); // semicolon at end
 
   writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);
+
+  // Mark source buffer modified
+  set_sourceloc_modified( l );
 }
