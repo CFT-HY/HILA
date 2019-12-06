@@ -29,6 +29,15 @@ struct avxdvector {
     __m256d s = _mm256_hadd_pd(c,c);
     return ((double*)&s)[0] + ((double*)&s)[2];
   }
+
+  #pragma transformer loop_function
+  double reduce_prod(){
+    double m = 1;
+    for(int i=0; i<4; i++){
+      m*=((double*)&c)[i];
+    } 
+    return m;
+  }
 };
 
 
