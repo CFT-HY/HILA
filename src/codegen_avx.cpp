@@ -198,5 +198,5 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
   writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);
 
   // Mark source buffer modified
-  set_sourceloc_modified( l );
+  // set_sourceloc_modified( l );
 }

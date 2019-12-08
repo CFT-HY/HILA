@@ -309,9 +309,9 @@ public:
         }
 
         // We keep track here only of files which were touched
-        if (state::loop_found) {
-          set_fid_modified( SM.getFileID(beginloc) );
-        }
+        // if (state::loop_found) {
+        //   set_fid_modified( SM.getFileID(beginloc) );
+        // }
       }
     }
 
@@ -482,7 +482,13 @@ public:
       if (!cmdline::no_include) {
 
         // Modified files should be substituted on top of #include -directives
-        // first, ensure that the full include chain is present in file_id_list
+        // First, find buffers which are modified
+        
+        for ( file_buffer & fb : file_buffer_list ) {
+          if (fb.sbuf.is_modified()) set_fid_modified(fb.fid);
+        }
+
+        // then, ensure that the full include chain is present in file_id_list
         // Use iterator here, because the list can grow!
 
         for ( FileID f : file_id_list ) {

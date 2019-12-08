@@ -1,5 +1,3 @@
-// -*- mode: c++ -*-
-
 #include <sstream>
 #include <string>
 
@@ -38,7 +36,7 @@ void srcBuf::create( Rewriter *R, const SourceRange &sr) {
   ext_ind.resize(original_size+2,1);  // default=1
   ext_ind[original_size] = ext_ind[original_size+1] = 0;  // skip these
   write_ok = true;
-    
+  modified = false;
   // tokens.clear();
 }
 
@@ -60,6 +58,7 @@ void srcBuf::clear() {
   extents.clear();
   free_ext.clear();
   prependbuf = "";
+  modified = false;
   // tokens.clear();
 }
 
@@ -172,6 +171,7 @@ void srcBuf::remove_extent(int i) {
     if (ext_ind[i] > 0) ext_ind[i] = 1;
     else ext_ind[i] = 0;
   }
+  modified = true;
 }
 
 std::string * srcBuf::get_extent_ptr(int i) {
@@ -192,6 +192,7 @@ int srcBuf::remove(int index1, int index2) {
       ext_ind[i] = 0;
     }
   }
+  modified = true;
   return index2+1;
 }
 
@@ -236,6 +237,8 @@ int srcBuf::insert(int i, const std::string & s_in, bool incl_before, bool do_in
 
   if (!write_ok) return i+1;
   
+  modified = true;
+
   if (i == original_size) {
     // Now append at end, OK
     true_size = original_size + 1;
@@ -385,6 +388,7 @@ void srcBuf::prepend( const std::string &s, bool do_indent ) {
   if (!write_ok) return;
   prependbuf = s + prependbuf;
   full_length += s.length();
+  modified = true;
 }
 
 void srcBuf::copy_from_range(srcBuf * src, SourceRange range) {
