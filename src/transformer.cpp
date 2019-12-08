@@ -203,26 +203,6 @@ reduction get_reduction_type(bool is_assign,
 
 /////////////////////////////////////////////////////////////////////////////
 
-// This struct will be used to keep track of #include-chains.
-
-std::vector<FileID> file_id_list = {};
-
-// Tiny utility to search for the list
-
-bool search_fid(const FileID FID) {
-  for (const FileID f : file_id_list) {
-    if (f == FID) return true;
-  }
-  return false;
-}
-
-void set_fid_modified(const FileID FID) {
-  if (search_fid(FID) == false) {
-    // new file to be added
-    file_id_list.push_back(FID);
-    // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
-  }
-}
 
 // file_buffer_list stores the edited source of all files
 
@@ -371,6 +351,27 @@ public:
 };
 
 #endif
+
+// This struct will be used to keep track of #include-chains.
+
+std::vector<FileID> file_id_list = {};
+
+// Tiny utility to search for the list
+
+bool search_fid(const FileID FID) {
+  for (const FileID f : file_id_list) {
+    if (f == FID) return true;
+  }
+  return false;
+}
+
+void set_fid_modified(const FileID FID) {
+  if (search_fid(FID) == false) {
+    // new file to be added
+    file_id_list.push_back(FID);
+    // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+  }
+}
 
 
 // For each source file provided to the tool, a new FrontendAction is created.
