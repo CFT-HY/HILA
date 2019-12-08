@@ -208,21 +208,36 @@ template <typename T>
 using field_element = T;
 
 
-// Type alias would be nice, but one cannot specialize those!
-// Placemarker, will be specialized by transformer
+/// placeholder for in loop elements, specialized by the transformer
+/// In AVX, these replace base types with vector types, so that
+/// so that element
+/// element<type<double>> -> type<d_vector>
+/// element<double> -> d_vector
+///
+/// This allows direct assignment from element<type<double>> to
+/// type<element<double>>, both of which become type<d_vector>
+/// 
+/// Cannot figure out how to disable setting field[X] = T.
+/// Need to do this in the transformer.
 template <typename T>
 struct element {
   T c;
 
   // Cast to T to element 
   element (const T& x) {c=x;} 
+  element (T& x) {c=x;} 
   // Assignment of T to element
   element& operator= (const T& x) {
     this->c=x; return *this;
   }
-  
-  operator T() { return c; } // this should be added by transformer to disable incorrect assignments in loops 
+
+  // Transformer sees field-parity expressions as type T. This is 
+  // necessary if loops contain member function calls on elements.
+  // However, it must then be possible to cast these to elements
+  // so that the user can set field[X] = element<T>
+  operator T() const { return c; } 
 };
+
 
 
 // Pointer to field data and accessors. Only this is passed to the
