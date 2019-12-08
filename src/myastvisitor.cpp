@@ -1062,12 +1062,14 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           state::loop_found = true;
           return true;
         }
+
+        
         
         CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( startloc );
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
         bool internal_error = true;
 
-        llvm::errs() << "macro str " << macro << '\n';
+        // llvm::errs() << "macro str " << macro << '\n';
         
         DeclStmt * init = dyn_cast<DeclStmt>(f->getInit());
         if (init && init->isSingleDecl() ) {
@@ -1096,7 +1098,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           reportDiag(DiagnosticsEngine::Level::Error,
                      f->getSourceRange().getBegin(),
                      "\'onsites\'-macro: not a parity type argument" );
-          return false;
+          return true;
         }
       }
     }        

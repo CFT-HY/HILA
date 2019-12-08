@@ -287,11 +287,6 @@ public:
           if (!cmdline::no_include || SM.isInMainFile(beginloc))
             d->dump();
         }
-
-        // We keep track here only of files which were touched
-        // if (state::loop_found) {
-        //   set_fid_modified( SM.getFileID(beginloc) );
-        // }
       }
     }
 
