@@ -2,6 +2,23 @@
 #ifndef WVEC
 #define WVEC 
 
+///////////////////////////////////////////////////////
+//                 Wilson vectors 
+// e.g.                                              */
+// wilson_propagator prop;                           */
+// prop.c[ci].d[si].d[sf].c[cf]                      */
+// ----------------------->    complex               */
+// ----------------->          suN_vector            */
+// ----------->                wilson_vector         */
+// ----->                      spin_wilson_vector    */
+// e.g.                                              */
+// wilson_matrix matr;                               */
+// matr.d[si].c[ci].d[sf].c[cf]                      */
+// ----------------------->    complex               */
+// ----------------->          suN_vector            */
+// ----------->                wilson_vector         */
+// ----->                      color_wilson_vector   */
+
 #ifndef GAMMA_DIM
 #define GAMMA_DIM 2
 #endif
@@ -10,23 +27,35 @@
 #define COLORVEC_DIM 2
 #endif
 
-template<typename T>
-class vector {
-    vector();
-}; 
+
+template<typename vectortype> 
+class wvector {
+    vectortype [GAMMA_DIM]d;
+};
+
+template<typename vectortype> 
+class halfwvector {
+    vectortype [GAMMA_DIM/2]d;
+};
 
 template<typename T> 
-class wvector {
-    vector<T> [GAMMA_DIM]d;
+class colorwvector {
+    wvector<T> c[COLORVEC_DIM]; 
 };
 
-class halfwvector {
-    vector<T> [GAMMA_DIM/2]d;
+template<typename T> 
+class spinwvector {
+    wvector<T> d[GAMMA_DIM];
 };
 
-class colorwvector; //wilson_vector c[COLORVEC_DIM]
-class spinwvector; //wilson_vector d[GAMMA_DIM]
-class wmatrix; //color_wilson_vector d[GAMMA_DIM]
-class wpropagator; //spin_wilson_vector c[COLORVEC_DIM]
+template<typename T>
+class wmatrix {
+    colorwvector<T> d[GAMMA_DIM];
+};
+
+template<typename T>
+class wpropagator{
+    spinwvector<T> c[COLORVEC_DIM];    
+};
 
 #endif 

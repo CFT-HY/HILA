@@ -55,7 +55,7 @@ radix gaussian_ran2 (radix* out2)
 //////////////////
 
 template<int n, typename radix>
-class SU : public matrix<n,n,cmplx<radix>>{};
+using SU = matrix<n,n,complex<radix> >
 
 template<typename radix> 
 class SU2; 
@@ -132,7 +132,7 @@ class SU2 {
         SU2<radix> & reunitarize();  
         SU2<radix> & random(); 
         SU2<radix> & inv(); 
-        SU2<radix> & adj(); 
+        adjoint<radix> & adj(); 
         
         radix sqr() const;
         radix tr() const;
@@ -149,11 +149,11 @@ class SU2 {
         SU2<radix> & operator *= (const adjoint<radix> &);
 
         SU2<radix> & operator *= (const radix &);
-
         SU2<radix> operator * (const radix &);
     private:
         radix a, b, c, d;  
 };
+
 
 template<typename radix>
 class adjoint {
@@ -161,6 +161,11 @@ class adjoint {
     adjoint (const SU2<radix> & rhs) : ref(rhs) {} ;
     const SU2<radix> & ref;
 };
+
+template<typename radix>
+adjoint<radix> & SU2<radix> adj(){
+    return adjoint(*this);
+}; 
 
 template<typename radix>
 radix SU2<radix>::sqr() const {
