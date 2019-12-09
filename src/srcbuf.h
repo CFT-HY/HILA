@@ -1,4 +1,3 @@
-// -*- mode: c++ -*-
 #ifndef TRANSFORMER_SRCBUF_H
 #define TRANSFORMER_SRCBUF_H
 
@@ -40,6 +39,7 @@ private:
   std::vector<int> free_ext;
   std::string prependbuf;
   bool write_ok;
+  bool modified;
   // std::vector<srcbuftoken> tokens;
   Rewriter * myRewriter;
   unsigned first_offset, full_length, original_size, true_size;
@@ -88,6 +88,7 @@ public:
   std::string dump();
 
   bool isOn();
+  bool is_modified() { return modified; }
 
   char get_original(int i);
   int find_original(int idx, const char c);
@@ -125,11 +126,11 @@ public:
   int comment_line(SourceLocation sl);
   int comment_line(Expr *e);
 
-// Find the end of previous statement and add after it
-int insert_before_stmt(int i, const std::string & s, bool incl_before, bool do_indent);
-int insert_before_stmt(SourceLocation sl, const std::string & s,
-                   bool incl_before, bool do_indent);
-int insert_before_stmt(Expr *e, const std::string & s, bool incl_before, bool do_indent);
+  // Find the end of previous statement and add after it
+  int insert_before_stmt(int i, const std::string & s, bool incl_before, bool do_indent);
+  int insert_before_stmt(SourceLocation sl, const std::string & s,
+                         bool incl_before, bool do_indent);
+  int insert_before_stmt(Expr *e, const std::string & s, bool incl_before, bool do_indent);
 
 
   // replace is a remove + insert pair, should write with a single operation

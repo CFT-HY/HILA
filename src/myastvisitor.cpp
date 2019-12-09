@@ -417,8 +417,6 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   state::skip_children = 1;
 
   state::loop_found = true;
-  // flag the buffer to be included
-  set_sourceloc_modified( ls->getSourceRange().getBegin() );
   
   return true;
 }
@@ -1064,12 +1062,14 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           state::loop_found = true;
           return true;
         }
+
+        
         
         CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( startloc );
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
         bool internal_error = true;
 
-        llvm::errs() << "macro str " << macro << '\n';
+        // llvm::errs() << "macro str " << macro << '\n';
         
         DeclStmt * init = dyn_cast<DeclStmt>(f->getInit());
         if (init && init->isSingleDecl() ) {
@@ -1098,7 +1098,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           reportDiag(DiagnosticsEngine::Level::Error,
                      f->getSourceRange().getBegin(),
                      "\'onsites\'-macro: not a parity type argument" );
-          return false;
+          return true;
         }
       }
     }        
@@ -1198,7 +1198,7 @@ bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
     // got it, comment out -- check that it has not been commented out before
     int loc = writeBuf->find_original(sr.getBegin(),'#');
     std::string s = writeBuf->get(loc,loc+1);
-    if (s.at(0) == '#') writeBuf->insert(loc ,"//== ",true,false);
+    if (s.at(0) == '#') writeBuf->insert(loc ,"//-- ",true,false);
     return true;
   }
 
@@ -1645,12 +1645,6 @@ void MyASTVisitor::set_writeBuf(const FileID fid) {
   toplevelBuf = writeBuf;
 }
 
-
-void MyASTVisitor::set_sourceloc_modified(const SourceLocation sl) {
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  FileID FID = SM.getFileID(sl);
-  set_fid_modified(FID);
-}
 
 
 
