@@ -7,7 +7,7 @@
 #include "../plumbing/mersenne.h" //has to be included
 #include <cmath>
 
-// matrix multiplication routines ------------------------
+// SU2 matrix multiplication routines ------------------------
 
 #define nn_a(x,y) (x.d*y.a + x.a*y.d - x.b*y.c + x.c*y.b)
 #define nn_b(x,y) (x.d*y.b + x.b*y.d - x.c*y.a + x.a*y.c)
@@ -59,9 +59,9 @@ using SU = matrix<n,n,complex<radix> >
 
 template<typename radix> 
 class SU2; 
-//adjoint su2 matrix 
+
 template<typename radix> 
-class adjoint; 
+class SU2adjoint; 
 
 template<typename radix> 
 class SU2vector {
@@ -104,21 +104,21 @@ class SU2 {
             return r;
         }
  
-        friend SU2<radix> operator * (const SU2<radix> & x, const adjoint<radix> & y){
+        friend SU2<radix> operator * (const SU2<radix> & x, const SU2adjoint<radix> & y){
             SU2<radix> r;
             r.a = na_a(x,y.ref); r.b = na_b(x,y.ref); \
             r.c = na_c(x,y.ref); r.d = na_d(x,y.ref);
             return r;
         }
  
-        friend SU2<radix> operator * (const adjoint<radix> & x, const SU2<radix> & y){
+        friend SU2<radix> operator * (const SU2adjoint<radix> & x, const SU2<radix> & y){
             SU2<radix> r;
             r.a = an_a(x.ref,y); r.b = an_b(x.ref,y); \
             r.c = an_c(x.ref,y); r.d = an_d(x.ref,y);
             return r;
         }
 
-        friend SU2<radix> operator * (const adjoint<radix> & x, const adjoint<radix> & y){
+        friend SU2<radix> operator * (const SU2adjoint<radix> & x, const SU2adjoint<radix> & y){
             SU2<radix> r;
             r.a = aa_a(x.ref, y.ref); r.b = aa_b(x.ref, y.ref); \
             r.c = aa_c(x.ref, y.ref); r.d = aa_d(x.ref, y.ref);
@@ -126,13 +126,13 @@ class SU2 {
         }
 
         SU2<radix> & operator = (const SU2<radix> &);
-        SU2<radix> & operator = (const adjoint<radix> &);
+        SU2<radix> & operator = (const SU2adjoint<radix> &);
         SU2<radix> & operator = (const SU2vector<radix> &);
         SU2<radix> & normalize();
         SU2<radix> & reunitarize();  
         SU2<radix> & random(); 
         SU2<radix> & inv(); 
-        adjoint<radix> & adj(); 
+        SU2adjoint<radix> & adj(); 
         
         radix sqr() const;
         radix tr() const;
@@ -144,9 +144,9 @@ class SU2 {
         SU2<radix> & operator -= (const SU2<radix> &);
         SU2<radix> & operator *= (const SU2<radix> &);
 
-        SU2<radix> & operator += (const adjoint<radix> &); //same ops as above, except store result in lhs matrix
-        SU2<radix> & operator -= (const adjoint<radix> &);
-        SU2<radix> & operator *= (const adjoint<radix> &);
+        SU2<radix> & operator += (const SU2adjoint<radix> &); //same ops as above, except store result in lhs matrix
+        SU2<radix> & operator -= (const SU2adjoint<radix> &);
+        SU2<radix> & operator *= (const SU2adjoint<radix> &);
 
         SU2<radix> & operator *= (const radix &);
         SU2<radix> operator * (const radix &);
@@ -156,15 +156,15 @@ class SU2 {
 
 
 template<typename radix>
-class adjoint {
+class SU2adjoint {
     public:
-    adjoint (const SU2<radix> & rhs) : ref(rhs) {} ;
+    SU2adjoint (const SU2<radix> & rhs) : ref(rhs) {} ;
     const SU2<radix> & ref;
 };
 
 template<typename radix>
-adjoint<radix> & SU2<radix> adj(){
-    return adjoint(*this);
+SU2adjoint<radix> & SU2<radix> adj(){
+    return SU2adjoint(*this);
 }; 
 
 template<typename radix>
@@ -228,7 +228,7 @@ SU2<radix> & SU2<radix>::operator = (const SU2<radix> & rhs){
 };
 
 template<typename radix>
-SU2<radix> & SU2<radix>::operator = (const adjoint<radix> & rhs){
+SU2<radix> & SU2<radix>::operator = (const SU2adjoint<radix> & rhs){
     a = -rhs.a;
     b = -rhs.b;
     c = -rhs.c;
@@ -246,7 +246,7 @@ SU2<radix> & SU2<radix>::operator *= (const SU2<radix> & y){
 }
 
 template<typename radix>
-SU2<radix> & SU2<radix>::operator *= (const adjoint<radix> & y){
+SU2<radix> & SU2<radix>::operator *= (const SU2adjoint<radix> & y){
     a = na_a((*this),y); 
     b = na_b((*this),y); 
     c = na_c((*this),y); 
