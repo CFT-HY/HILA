@@ -82,9 +82,8 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
        << looping_var << " < loop_end; " << looping_var << "++) {\n";
 
 
-  // replace reduction variables in the loop
   for ( var_info & vi : var_info_list ) {
-    if (vi.is_loop_local) {
+    if(vi.type.rfind("element",0) != std::string::npos) {
       // Converts all locally declared variables to vectors. Is this OK?
       std::string declaration_string = TheRewriter.getRewrittenText(vi.decl->getSourceRange());
       replace_basetype_with_vector( declaration_string );

@@ -204,8 +204,7 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 
 #endif
 
-template <typename T>
-using field_element = T;
+
 
 
 /// placeholder for in loop elements, specialized by the transformer
@@ -219,24 +218,32 @@ using field_element = T;
 /// 
 /// Cannot figure out how to disable setting field[X] = T.
 /// Need to do this in the transformer.
+//template <typename T>
+//struct element {
+//  T c;
+//
+//  // Cast to T to element 
+//  element (const T& x) {c=x;} 
+//  element (T& x) {c=x;} 
+//  // Assignment of T to element
+//  element& operator= (const T& x) {
+//    this->c=x; return *this;
+//  }
+//
+//  // Transformer sees field-parity expressions as type T. This is 
+//  // necessary if loops contain member function calls on elements.
+//  // However, it must then be possible to cast these to elements
+//  // so that the user can set field[X] = element<T>
+//  operator T() const { return c; } 
+//};
+
+
 template <typename T>
-struct element {
-  T c;
+using element = T;
 
-  // Cast to T to element 
-  element (const T& x) {c=x;} 
-  element (T& x) {c=x;} 
-  // Assignment of T to element
-  element& operator= (const T& x) {
-    this->c=x; return *this;
-  }
+template <typename T>
+using field_element = element<T>;
 
-  // Transformer sees field-parity expressions as type T. This is 
-  // necessary if loops contain member function calls on elements.
-  // However, it must then be possible to cast these to elements
-  // so that the user can set field[X] = element<T>
-  operator T() const { return c; } 
-};
 
 
 
@@ -560,11 +567,8 @@ public:
   // T& operator[] (const int i) { return data[i]; }
 
   // these give the field_element -- WILL BE modified by transformer
-  field_element<T>& operator[] (const parity p) const;
-  field_element<T>& operator[] (const parity_plus_direction p) const;
-  //{ 
-  //  return (field_element<T>) *this;
-  //}
+  element<T>& operator[] (const parity p) const;
+  element<T>& operator[] (const parity_plus_direction p) const;
 
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
