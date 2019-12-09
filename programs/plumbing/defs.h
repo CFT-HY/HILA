@@ -8,6 +8,13 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
+
+#ifdef AVX
+#define VECTORIZED
+#include "../plumbing/AVX.h"
+#endif
+
+
 #ifdef USE_MPI
 #include <mpi.h>
 #endif

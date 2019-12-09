@@ -208,28 +208,51 @@ template <typename T>
 using field_element = T;
 
 
-// Type alias would be nice, but one cannot specialize those!
-// Placemarker, will be specialized by transformer
+/// placeholder for in loop elements, specialized by the transformer
+/// In AVX, these replace base types with vector types, so that
+/// so that element
+/// element<type<double>> -> type<d_vector>
+/// element<double> -> d_vector
+///
+/// This allows direct assignment from element<type<double>> to
+/// type<element<double>>, both of which become type<d_vector>
+/// 
+/// Cannot figure out how to disable setting field[X] = T.
+/// Need to do this in the transformer.
 template <typename T>
-struct field_storage_type {
+struct element {
   T c;
-};
 
+  // Cast to T to element 
+  element (const T& x) {c=x;} 
+  element (T& x) {c=x;} 
+  // Assignment of T to element
+  element& operator= (const T& x) {
+    this->c=x; return *this;
+  }
+
+  // Transformer sees field-parity expressions as type T. This is 
+  // necessary if loops contain member function calls on elements.
+  // However, it must then be possible to cast these to elements
+  // so that the user can set field[X] = element<T>
+  operator T() const { return c; } 
+};
 
 
 
 // Pointer to field data and accessors. Only this is passed to the
 // CUDA kernels and other accelerators and it only contains a minimal
 // amount of data.
+#ifndef layout_SOA
+#ifndef AVX
 template <typename T>
 class field_storage {
   public:
-    #ifndef layout_SOA
       // Array of structures implementation
-    T * fieldbuf;
+    element<T> * fieldbuf;
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
+      fieldbuf = (element<T>*) allocate_field_mem( sizeof(element<T>) * field_alloc_size);
       #pragma acc enter data create(fieldbuf)
     }
 
@@ -240,19 +263,53 @@ class field_storage {
     }
 
     #pragma transformer loop_function
-    T get(const int i, const int field_alloc_size) const
+    element<T> get(const int i, const int field_alloc_size) const
     {
-      return ((T *) fieldbuf)[i];
+      return ((element<T> *) fieldbuf)[i];
     }
 
     #pragma transformer loop_function
-    void set(T value, const int i, const int field_alloc_size) 
+    void set(element<T> value, const int i, const int field_alloc_size) 
     {
-      ((T *) fieldbuf)[i] = value;
+      ((element<T> *) fieldbuf)[i] = value;
+    }
+};
+
+#else
+
+template <typename T>
+class field_storage {
+  public:
+    // Use the vectorized field storage type
+    element<T> * fieldbuf;
+    constexpr static int vector_len = sizeof(element<T>) / sizeof(T);
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
     }
 
+    void free_field() {
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
 
-    #else
+    element<T> get(const int i, const int field_alloc_size) const
+    {
+      return fieldbuf[i/vector_len];
+    }
+
+    void set(element<T> value, const int i, const int field_alloc_size) 
+    {
+      fieldbuf[i/vector_len] = value;
+    }
+};
+
+#endif
+#else
+
+template <typename T>
+class field_storage {
+  public:
     // Structure of arrays implementation
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     real_t * fieldbuf;
@@ -291,8 +348,8 @@ class field_storage {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
       }
     }
-    #endif
 };
+#endif
 
 
 
@@ -358,10 +415,14 @@ private:
       
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      T get(const int i) const { return  payload.get( i, lattice->field_alloc_size() ); }
+      element<T> get(const int i) const {
+        return  payload.get( i, lattice->field_alloc_size() );
+      }
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() ); }
+      void set(element<T> value, const int i) {
+        payload.set( value, i, lattice->field_alloc_size() );
+      }
 
       /// Gather boundary elements for communication
       void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const;
@@ -507,10 +568,10 @@ public:
 
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  T get_value_at(int i) const { return this->fs->get(i); }
+  element<T> get_value_at(int i) const { return this->fs->get(i); }
 
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
-  void set_value_at(T value, int i) { this->fs->set(value, i); }
+  void set_value_at(element<T> value, int i) { this->fs->set(value, i); }
 
 
   // fetch the element at this loc

@@ -346,7 +346,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
         if (d.scope >= 0 && vi.decl == d.decl) {
           llvm::errs() << "loop local var ref! " << vi.name << '\n';
           vi.is_loop_local = true;
-          vi.var_declp = &d;   
+          vi.var_declp = &d;
           break;
         }
       }
@@ -417,8 +417,6 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   state::skip_children = 1;
 
   state::loop_found = true;
-  // flag the buffer to be included
-  set_sourceloc_modified( ls->getSourceRange().getBegin() );
   
   return true;
 }
@@ -597,22 +595,9 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     // Type of field<> can never be field?  This always is true
     if( typestr.find("field<") ){ // Skip for field templates
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
-
+ 
       // write storage_type specialization
-      // NOTE: this has to be moved to codegen, different for diff. codes
-      if (field_storage_type_decl == nullptr) {
-        llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
-        exit(1);
-      }
-
-      std::string fst_spec = "template<>\nstruct field_storage_type<"
-        + typestr +"> {\n  " + typestr + " c[10];\n};\n";
-
-      // insert after new line
-      SourceLocation l =
-      getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
-      // TheRewriter.InsertText(l, fst_spec, true,true);
-      writeBuf->insert(l, fst_spec, true, false);
+      generate_field_element_type(typestr);
     }
     
   }
@@ -1077,12 +1062,14 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           state::loop_found = true;
           return true;
         }
+
+        
         
         CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( startloc );
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
         bool internal_error = true;
 
-        llvm::errs() << "macro str " << macro << '\n';
+        // llvm::errs() << "macro str " << macro << '\n';
         
         DeclStmt * init = dyn_cast<DeclStmt>(f->getInit());
         if (init && init->isSingleDecl() ) {
@@ -1111,7 +1098,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           reportDiag(DiagnosticsEngine::Level::Error,
                      f->getSourceRange().getBegin(),
                      "\'onsites\'-macro: not a parity type argument" );
-          return false;
+          return true;
         }
       }
     }        
@@ -1207,6 +1194,11 @@ bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
 
   static std::string loop_pragma("#pragma transformer loop_function");
   if (line.find(loop_pragma) == 0){
+
+    // got it, comment out -- check that it has not been commented out before
+    int loc = writeBuf->find_original(sr.getBegin(),'#');
+    std::string s = writeBuf->get(loc,loc+1);
+    if (s.at(0) == '#') writeBuf->insert(loc ,"//-- ",true,false);
     return true;
   }
 
@@ -1224,7 +1216,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     f->dump();
     state::dump_ast_next = false;
   }
-  if( state::loop_function_next || has_loop_function_pragma(f) ){
+  if(!state::check_loop && (state::loop_function_next || has_loop_function_pragma(f))) {
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);
@@ -1485,8 +1477,8 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
-    } else if (D->getNameAsString() == "field_storage_type") {
-      field_storage_type_decl = D;
+    } else if (D->getNameAsString() == "element") {
+      element_decl = D;
     } else {
     }
 
@@ -1500,7 +1492,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   return true;
 }
 
-// Find the field_storage_type typealias here -- could not work
+// Find the element typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
 bool MyASTVisitor::VisitDecl( Decl * D) {
   if (state::check_loop && state::loop_found) return true;
@@ -1512,7 +1504,7 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
   }
 
   auto t = dyn_cast<TypeAliasTemplateDecl>(D);
-  if (t && t->getNameAsString() == "field_storage_type") {
+  if (t && t->getNameAsString() == "element") {
     llvm::errs() << "Got field storage\n";
   }
   
@@ -1653,12 +1645,6 @@ void MyASTVisitor::set_writeBuf(const FileID fid) {
   toplevelBuf = writeBuf;
 }
 
-
-void MyASTVisitor::set_sourceloc_modified(const SourceLocation sl) {
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  FileID FID = SM.getFileID(sl);
-  set_fid_modified(FID);
-}
 
 
 

@@ -142,6 +142,8 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     code << generate_code_cuda(S,semi_at_end,loopBuf);
   } else if( target.openacc ){
     code << generate_code_openacc(S,semi_at_end,loopBuf);
+  } else if(target.AVX) {
+    code << generate_code_avx(S,semi_at_end,loopBuf);
   } else {
     code << generate_code_cpu(S,semi_at_end,loopBuf);
   }
@@ -171,6 +173,16 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 }
 
 
+void MyASTVisitor::generate_field_element_type(std::string typestr){
+  if (element_decl == nullptr) {
+    llvm::errs() << " **** internal error: element undefined in field\n";
+    exit(1);
+  }
+
+  if(target.AVX){
+    generate_field_element_type_AVX(typestr);
+  }
+ }
 
 
 

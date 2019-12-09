@@ -29,7 +29,7 @@
 
 //definitions for global variables
 ClassTemplateDecl * field_decl = nullptr; 
-ClassTemplateDecl * field_storage_type_decl = nullptr;   
+ClassTemplateDecl * element_decl = nullptr;   
 const std::string field_element_type = "field_element<";
 const std::string field_type = "field<";
 std::list<field_ref> field_ref_list = {};
@@ -104,6 +104,10 @@ llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
 
 llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
           llvm::cl::desc("Generate CUDA kernels"),
+          llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::AVX("target:AVX",
+          llvm::cl::desc("Generate AVX instructions in loops"),
           llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
@@ -199,26 +203,6 @@ reduction get_reduction_type(bool is_assign,
 
 /////////////////////////////////////////////////////////////////////////////
 
-// This struct will be used to keep track of #include-chains.
-
-std::vector<FileID> file_id_list = {};
-
-// Tiny utility to search for the list
-
-bool search_fid(const FileID FID) {
-  for (const FileID f : file_id_list) {
-    if (f == FID) return true;
-  }
-  return false;
-}
-
-void set_fid_modified(const FileID FID) {
-  if (search_fid(FID) == false) {
-    // new file to be added
-    file_id_list.push_back(FID);
-    // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
-  }
-}
 
 // file_buffer_list stores the edited source of all files
 
@@ -303,11 +287,6 @@ public:
           if (!cmdline::no_include || SM.isInMainFile(beginloc))
             d->dump();
         }
-
-        // We keep track here only of files which were touched
-        if (state::loop_found) {
-          set_fid_modified( SM.getFileID(beginloc) );
-        }
       }
     }
 
@@ -368,6 +347,27 @@ public:
 
 #endif
 
+// This struct will be used to keep track of #include-chains.
+
+std::vector<FileID> file_id_list = {};
+
+// Tiny utility to search for the list
+
+bool search_fid(const FileID FID) {
+  for (const FileID f : file_id_list) {
+    if (f == FID) return true;
+  }
+  return false;
+}
+
+void set_fid_modified(const FileID FID) {
+  if (search_fid(FID) == false) {
+    // new file to be added
+    file_id_list.push_back(FID);
+    // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+  }
+}
+
 
 // For each source file provided to the tool, a new FrontendAction is created.
 class MyFrontendAction : public ASTFrontendAction {
@@ -389,7 +389,7 @@ public:
 
     file_id_list.clear();
     file_buffer_list.clear();
-    field_decl = field_storage_type_decl = nullptr;
+    field_decl = element_decl = nullptr;
 
     return (true);
   }
@@ -478,7 +478,13 @@ public:
       if (!cmdline::no_include) {
 
         // Modified files should be substituted on top of #include -directives
-        // first, ensure that the full include chain is present in file_id_list
+        // First, find buffers which are modified
+        
+        for ( file_buffer & fb : file_buffer_list ) {
+          if (fb.sbuf.is_modified()) set_fid_modified(fb.fid);
+        }
+
+        // then, ensure that the full include chain is present in file_id_list
         // Use iterator here, because the list can grow!
 
         for ( FileID f : file_id_list ) {
@@ -533,6 +539,9 @@ void get_target_struct(codetype & target) {
     target.kernelize = false;
     target.openacc = true;
     target.flag_loop_function = false;
+  } else if (cmdline::AVX) {
+    target.AVX = true;
+    target.flag_loop_function = false;
   } else {
     target.kernelize = false;
     target.openacc = false;
@@ -548,8 +557,10 @@ int main(int argc, const char **argv) {
   // msg handling, should we get rid of it?
 
   // av takes over from argv
-  const char **av = new const char *[argc+2];
+  const char **av = new const char *[argc+3];
   argc = rearrange_cmdline(argc, argv, av);
+  av[argc++] = "-DTRANSFORMER";  // add global defn
+
 
   OptionsParser op(argc, av, TransformerCat);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());

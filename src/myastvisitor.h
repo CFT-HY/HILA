@@ -182,8 +182,6 @@ public:
   
   void requireGloballyDefined(Expr * e);
 
-  void set_sourceloc_modified(const SourceLocation sl);
-
   /// Entry point for the full field loop
   bool handle_full_loop_stmt(Stmt *ls, bool field_parity_ok );
 
@@ -204,6 +202,10 @@ public:
   std::string generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_avx(Stmt *S, bool semi_at_end, srcBuf &sb);
+
+  void generate_field_element_type(std::string typestr);
+  void generate_field_element_type_AVX(std::string typestr);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(SourceLocation sl);

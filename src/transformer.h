@@ -32,6 +32,7 @@ enum class parity { none, even, odd, all, x };
 struct codetype {
   bool kernelize;
   bool CUDA;
+  bool AVX;
   bool openacc;
   bool flag_loop_function;
 };
@@ -66,6 +67,7 @@ namespace cmdline {
   extern llvm::cl::opt<bool> kernel;
   extern llvm::cl::opt<bool> vanilla;
   extern llvm::cl::opt<bool> CUDA;
+  extern llvm::cl::opt<bool> AVX;
   extern llvm::cl::opt<bool> openacc;
   extern llvm::cl::opt<bool> func_attribute;
 };
@@ -194,7 +196,7 @@ extern codetype target;
 /// global variable declarations - definitions on transformer.cpp
 
 extern ClassTemplateDecl * field_decl;   // Ptr to field primary def in AST
-extern ClassTemplateDecl * field_storage_type_decl;   // Ptr to field primary def in AST
+extern ClassTemplateDecl * element_decl;   // Ptr to field primary def in AST
 extern const std::string field_element_type;
 extern const std::string field_type;
 
