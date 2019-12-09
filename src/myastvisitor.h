@@ -148,6 +148,8 @@ public:
   bool is_constructor_stmt(Stmt * s);
 
   bool is_loop_extern_var_ref(Expr *E);
+
+  void check_allowed_assignment(Stmt * s);
   
   parity get_parity_val(const Expr *pExpr);
     
@@ -249,6 +251,15 @@ public:
   bool VisitDeclRefExpr(DeclRefExpr * e);
 };
 
+/// An AST Visitor for checking constraints for assigments
+/// in lattice loops
+class LoopAssignChecker : public GeneralVisitor, public RecursiveASTVisitor<LoopAssignChecker> {
+public:
+  using GeneralVisitor::GeneralVisitor;
+
+  bool TraverseStmt(Stmt *s);
+  bool VisitDeclRefExpr(DeclRefExpr * e);
+};
 
 
 #endif

@@ -148,12 +148,13 @@ bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
 
 
 
-/// Checks that an expression is does not refer to loop local variables
+/// Check the validity a variable reference in a loop
 bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
   // It must be declared already. Get the declaration and check
   // the variable list. (If it's not in the list, it's not local)
-  //llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
+  // llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
   for ( var_info & vi : var_info_list ) if( vi.is_loop_local ){
+    // Checks that an expression is does not refer to loop local variables
     if( vi.decl == dyn_cast<VarDecl>(e->getDecl()) ){
       // It is local! Generate a warning
       reportDiag(DiagnosticsEngine::Level::Error,
@@ -165,10 +166,44 @@ bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
   return true;
 }
 
+
 // Walk the tree recursively 
 bool FieldRefChecker::TraverseStmt(Stmt *s) {
   RecursiveASTVisitor<FieldRefChecker>::TraverseStmt(s);
   return true;
+}
+
+// Walk the tree recursively 
+bool LoopAssignChecker::TraverseStmt(Stmt *s) {
+  RecursiveASTVisitor<LoopAssignChecker>::TraverseStmt(s);
+  return true;
+}
+
+/// Check the validity a variable reference in a loop
+bool LoopAssignChecker::VisitDeclRefExpr(DeclRefExpr *e) {
+  std::string type = e->getType().getAsString();
+  type = remove_all_whitespace(type);
+  if(type.rfind("element<",0) != std::string::npos){
+    reportDiag(DiagnosticsEngine::Level::Error,
+      e->getSourceRange().getBegin(),
+      "Cannot assing an element to a non-element type");
+  }
+  return true;
+}
+
+/// Check if an assignment is allowed
+void MyASTVisitor::check_allowed_assignment(Stmt * s) {
+  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
+    if(OP->getNumArgs() == 2){
+      // Walk the right hand side to check for element types. None are allowed.
+      std::string type = OP->getArg(0)->getType().getAsString();
+      type = remove_all_whitespace(type);
+      if(type.rfind("element<",0) == std::string::npos){
+        LoopAssignChecker lac(TheRewriter, Context);
+        lac.TraverseStmt(OP->getArg(1));
+      }
+    }
+  }
 }
 
 
@@ -421,6 +456,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   return true;
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////
 ///  act on statements within the parity loops.  This is called 
 ///  from VisitStmt() if the status state::in_loop_body is true
@@ -437,6 +473,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
   // And also assignments to other vars: t += norm2(lf[X]) etc.
   if (is_assignment_expr(s,&assignop,is_compound)) {
+    check_allowed_assignment(s);
     is_assignment = true;
     // next visit here will be to the assigned to variable
     return true;
