@@ -79,7 +79,7 @@ int main(int argc, char **argv){
 
     sum = 0;
     onsites(ALL){
-        double diff = s1[X].re - (NDIM+1);
+        element<double> diff = s1[X].re - (NDIM+1);
 	    sum += diff*diff;
     }
 	assert(sum==0);
@@ -117,7 +117,7 @@ int main(int argc, char **argv){
     s2[ALL] = 1.0;
     sum_test_function( s3, s1, s2 ); //s3 = s1 + s2
     onsites(ALL){
-        double diff = s3[X].re - 1.0;
+        element<double> diff = s3[X].re - 1.0;
         sum += diff*diff;
     }
     assert(sum == 0);
