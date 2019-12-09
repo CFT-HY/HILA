@@ -1514,8 +1514,8 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
-    } else if (D->getNameAsString() == "element") {
-      element_decl = D;
+    } else if (D->getNameAsString() == "field_element") {
+      field_element_decl = D;
     } else {
     }
 

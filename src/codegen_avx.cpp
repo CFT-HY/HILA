@@ -168,10 +168,10 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
   // insert after a new line
   SourceLocation l =
-  getSourceLocationAtEndOfLine( element_decl->getSourceRange().getEnd() );
+  getSourceLocationAtEndOfLine( field_element_decl->getSourceRange().getEnd() );
 
   // Find template parameter name (only 1 allowed)
-  auto template_parameter = element_decl->getTemplateParameters()->begin()[0];
+  auto template_parameter = field_element_decl->getTemplateParameters()->begin()[0];
   std::string templ_type = template_parameter->getNameAsString();
   
   // Replace the original type with a vector type
@@ -180,15 +180,15 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
 
   // Get the body of the element definition
   srcBuf bodyBuffer; // (&TheRewriter,S);
-  bodyBuffer.copy_from_range(writeBuf,element_decl->getTemplatedDecl()->getSourceRange());
+  bodyBuffer.copy_from_range(writeBuf,field_element_decl->getTemplatedDecl()->getSourceRange());
 
   // Replace templated type with new vector type
   bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
 
   // Add specialization parameters
   bodyBuffer.replace_token(0, bodyBuffer.size()-1,
-                  element_decl->getQualifiedNameAsString(),
-                  element_decl->getQualifiedNameAsString() + "<"+typestr+">");
+                  field_element_decl->getQualifiedNameAsString(),
+                  field_element_decl->getQualifiedNameAsString() + "<"+typestr+">");
 
   // Add the template<> declaration
   bodyBuffer.prepend("template<>\n", true);

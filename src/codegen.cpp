@@ -174,14 +174,14 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
 
 void MyASTVisitor::generate_field_element_type(std::string typestr){
-  //if (element_decl == nullptr) {
-  //  llvm::errs() << " **** internal error: element undefined in field\n";
-  //  exit(1);
-  //}
+  if (field_element_decl == nullptr) {
+    llvm::errs() << " **** internal error: element undefined in field\n";
+    exit(1);
+  }
 
-  //if(target.AVX){
-  //  generate_field_element_type_AVX(typestr);
-  //}
+  if(target.AVX){
+    generate_field_element_type_AVX(typestr);
+  }
  }
 
 
