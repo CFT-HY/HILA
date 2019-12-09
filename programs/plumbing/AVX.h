@@ -38,6 +38,9 @@ struct avxdvector {
     } 
     return m;
   }
+
+  avxdvector operator-() const {return _mm256_xor_pd(c, _mm256_set1_pd(-0.0)); }
+
 };
 
 
