@@ -118,7 +118,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 
     // If neighbour references exist, communicate them
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << l.new_name << ".start_move("
+      code << l.new_name << ".wait_move("
            << get_stmt_str(d.e) << ", " << parity_in_this_loop << ");\n";
     }
   }
@@ -142,6 +142,8 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     code << generate_code_cuda(S,semi_at_end,loopBuf);
   } else if( target.openacc ){
     code << generate_code_openacc(S,semi_at_end,loopBuf);
+  } else if(target.AVX) {
+    code << generate_code_avx(S,semi_at_end,loopBuf);
   } else {
     code << generate_code_cpu(S,semi_at_end,loopBuf);
   }
@@ -171,6 +173,16 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
 }
 
 
+void MyASTVisitor::generate_field_element_type(std::string typestr){
+  if (element_decl == nullptr) {
+    llvm::errs() << " **** internal error: element undefined in field\n";
+    exit(1);
+  }
+
+  if(target.AVX){
+    generate_field_element_type_AVX(typestr);
+  }
+ }
 
 
 
@@ -207,7 +219,7 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
       }
       if( le->dirExpr != nullptr ){
         // If a field needs to be communicated, start here
-        loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".start_move(" + get_stmt_str(le->dirExpr) + ", " 
+        loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".wait_move(" + get_stmt_str(le->dirExpr) + ", " 
            + parity_in_this_loop + ");", true, true);
       }
       if( le->is_read ){

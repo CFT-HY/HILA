@@ -83,7 +83,7 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
 
 /// is the stmt pointing now to assignment
 bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
-  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s))
+  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
       // TODO: there should be some more elegant way to do this
       const char *sp = getOperatorSpelling(OP->getOperator());
@@ -92,25 +92,42 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
       else iscompound = false;
       if (opcodestr)
         *opcodestr = getOperatorSpelling(OP->getOperator());
+
+      // Need to mark/handle the assignment method if necessary
+      if( is_function_call_stmt(s) ){
+        handle_function_call_in_loop(s);
+      } else if ( is_constructor_stmt(s) ){
+        handle_constructor_in_loop(s);
+      }
+
       return true;
     }
-  
-  // TODO: this is for templated expr, I think -- should be removed (TEST IT)
-  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s))
+  }
+
+  // TODO: this is for templated expr, I think -- should be removed (STILL USED; WHY)
+  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
     if (B->isAssignmentOp()) {
       iscompound = B->isCompoundAssignmentOp();
       if (opcodestr)
         *opcodestr = B->getOpcodeStr();
       return true;
     }
+  }
 
   return false;
 }
 
 // is the stmt pointing now to a function call
 bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
-  if (CallExpr *Call = dyn_cast<CallExpr>(s)){
-    //llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+  if (auto *Call = dyn_cast<CallExpr>(s)){
+    llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+    return true;
+  }
+  return false;
+}
+bool MyASTVisitor::is_constructor_stmt(Stmt * s) {
+  if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
+    llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
     return true;
   }
   return false;
@@ -178,10 +195,16 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     lfe.fullExpr   = ASE;
     lfe.nameExpr   = ASE->getLHS();
     lfe.parityExpr = ASE->getRHS();
-    llvm::errs() << lfe.fullExpr << lfe.nameExpr << lfe.parityExpr;
+    //llvm::errs() << lfe.fullExpr << " " << lfe.nameExpr << " " << lfe.parityExpr << "\n";
   } else {
     llvm::errs() << "Should not happen! Error in field parity\n";
     exit(1);
+  }
+
+  // Check if the expression is already handled
+  for( field_ref r : field_ref_list)
+    if( r.fullExpr == lfe.fullExpr  ){
+      return(true);
   }
 
   // Check that there are no local variable references up the AST
@@ -323,7 +346,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
         if (d.scope >= 0 && vi.decl == d.decl) {
           llvm::errs() << "loop local var ref! " << vi.name << '\n';
           vi.is_loop_local = true;
-          vi.var_declp = &d;   
+          vi.var_declp = &d;
           break;
         }
       }
@@ -394,8 +417,6 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   state::skip_children = 1;
 
   state::loop_found = true;
-  // flag the buffer to be included
-  set_sourceloc_modified( ls->getSourceRange().getBegin() );
   
   return true;
 }
@@ -425,8 +446,15 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // function can assign to the a field parameter (is not const).
   if( is_function_call_stmt(s) ){
     handle_function_call_in_loop(s);
+    // let this ripple trough, for now ...
+    // return true;
   }
-  
+
+  if ( is_constructor_stmt(s) ){
+    handle_constructor_in_loop(s);
+    // return true;
+  }
+   
   // catch then expressions
       
   if (Expr *E = dyn_cast<Expr>(s)) {
@@ -509,11 +537,11 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       state::skip_children = 1;          
       return true;
     }
-    // this point not reached
   } // Expr checking branch - now others...
 
   // This reached only if s is not Expr
 
+ 
   // start {...} -block or other compound
   if (isa<CompoundStmt>(s) || isa<ForStmt>(s) || isa<IfStmt>(s)
       || isa<WhileStmt>(s)) {
@@ -567,22 +595,9 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     // Type of field<> can never be field?  This always is true
     if( typestr.find("field<") ){ // Skip for field templates
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
-
+ 
       // write storage_type specialization
-      // NOTE: this has to be moved to codegen, different for diff. codes
-      if (field_storage_type_decl == nullptr) {
-        llvm::errs() << " **** internal error: field_storage_type undefined in field\n";
-        exit(1);
-      }
-
-      std::string fst_spec = "template<>\nstruct field_storage_type<"
-        + typestr +"> {\n  " + typestr + " c[10];\n};\n";
-
-      // insert after new line
-      SourceLocation l =
-      getSourceLocationAtEndOfLine( field_storage_type_decl->getSourceRange().getEnd() );
-      // TheRewriter.InsertText(l, fst_spec, true,true);
-      writeBuf->insert(l, fst_spec, true, false);
+      generate_field_element_type(typestr);
     }
     
   }
@@ -614,13 +629,13 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
 
 
 /// Find the source range of the previous line from source location
-SourceRange MyASTVisitor::getSourceRangeAtPreviousOfLine( SourceLocation l ){
+SourceRange MyASTVisitor::getSourceRangeAtPreviousLine( SourceLocation l ){
   SourceManager &SM = TheRewriter.getSourceMgr();
   SourceRange r = SourceRange(l,l);
   bool found_line_break = false;
   
   // Move backward from location l and find two linebreaks
-  // These are the beginning and the end of the brevious line
+  // These are the beginning and the end of the previous line
   for (int i=0; i<1000; i++) {
     bool invalid = false;
     const char * c = SM.getCharacterData(l,&invalid);
@@ -651,12 +666,7 @@ SourceRange MyASTVisitor::getSourceRangeAtPreviousOfLine( SourceLocation l ){
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
   if (state::check_loop && state::loop_found) return true;
-  
-  if (state::skip_next > 0) {
-    state::skip_next--;
-    return true;
-  }
-  
+    
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;
     
@@ -671,11 +681,6 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
 bool MyASTVisitor::TraverseDecl(Decl *D) {
 
   if (state::check_loop && state::loop_found) return true;
-
-  if (state::skip_next > 0) {
-    state::skip_next--;
-    return true;
-  }
 
   // if state::skip_children > 0 we'll skip all until return to level up
   if (state::skip_children > 0) state::skip_children++;
@@ -977,6 +982,13 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
       return true;
     }
 
+    if (var->isStaticLocal()) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 var->getSourceRange().getBegin(),
+                 "Cannot declare static variables inside field loops");
+      return true;
+    }
+
     if (is_field_decl(var)) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
@@ -1050,12 +1062,14 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           state::loop_found = true;
           return true;
         }
+
+        
         
         CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( startloc );
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
         bool internal_error = true;
 
-        llvm::errs() << "macro str " << macro << '\n';
+        // llvm::errs() << "macro str " << macro << '\n';
         
         DeclStmt * init = dyn_cast<DeclStmt>(f->getInit());
         if (init && init->isSingleDecl() ) {
@@ -1084,7 +1098,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           reportDiag(DiagnosticsEngine::Level::Error,
                      f->getSourceRange().getBegin(),
                      "\'onsites\'-macro: not a parity type argument" );
-          return false;
+          return true;
         }
       }
     }        
@@ -1173,11 +1187,18 @@ bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
 
 
 bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
-  SourceRange sr = getSourceRangeAtPreviousOfLine(f->getSourceRange().getBegin());
+  SourceRange sr = getSourceRangeAtPreviousLine(f->getSourceRange().getBegin());
   std::string line = TheRewriter.getRewrittenText( sr );
+  // require that #pragma starts the line
+  line = remove_initial_whitespace(line);
 
   static std::string loop_pragma("#pragma transformer loop_function");
-  if(line.length() >= loop_pragma.length() && line.find(loop_pragma) != std::string::npos){
+  if (line.find(loop_pragma) == 0){
+
+    // got it, comment out -- check that it has not been commented out before
+    int loc = writeBuf->find_original(sr.getBegin(),'#');
+    std::string s = writeBuf->get(loc,loc+1);
+    if (s.at(0) == '#') writeBuf->insert(loc ,"//-- ",true,false);
     return true;
   }
 
@@ -1195,7 +1216,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     f->dump();
     state::dump_ast_next = false;
   }
-  if( state::loop_function_next || has_loop_function_pragma(f) ){
+  if(!state::check_loop && (state::loop_function_next || has_loop_function_pragma(f))) {
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);
@@ -1456,8 +1477,8 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
-    } else if (D->getNameAsString() == "field_storage_type") {
-      field_storage_type_decl = D;
+    } else if (D->getNameAsString() == "element") {
+      element_decl = D;
     } else {
     }
 
@@ -1471,7 +1492,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   return true;
 }
 
-// Find the field_storage_type typealias here -- could not work
+// Find the element typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
 bool MyASTVisitor::VisitDecl( Decl * D) {
   if (state::check_loop && state::loop_found) return true;
@@ -1483,7 +1504,7 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
   }
 
   auto t = dyn_cast<TypeAliasTemplateDecl>(D);
-  if (t && t->getNameAsString() == "field_storage_type") {
+  if (t && t->getNameAsString() == "element") {
     llvm::errs() << "Got field storage\n";
   }
   
@@ -1624,12 +1645,6 @@ void MyASTVisitor::set_writeBuf(const FileID fid) {
   toplevelBuf = writeBuf;
 }
 
-
-void MyASTVisitor::set_sourceloc_modified(const SourceLocation sl) {
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  FileID FID = SM.getFileID(sl);
-  set_fid_modified(FID);
-}
 
 
 

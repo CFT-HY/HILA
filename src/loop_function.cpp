@@ -14,10 +14,11 @@ std::vector<FunctionDecl *> loop_functions = {};
 // Assume non-const references can be assigned to.
 
 void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
-  int i=0;
 
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
+
+  assert(Call && "Loop function call not valid");
 
   // Handle special loop functions
   if( handle_special_loop_function(Call) ){
@@ -26,10 +27,15 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 
   // Get the declaration of the function
   Decl* decl = Call->getCalleeDecl();
+
+  //llvm::errs() << " callee:\n";
+  //decl->dump();
+
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   // Store functions used in loops, recursively...
   loop_function_check(decl);
+  int i=0;
   for( Expr * E : Call->arguments() ){
     if( is_field_parity_expr(E) ) {
       if(i < D->getNumParams()){
@@ -47,6 +53,44 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
     i++;
   }
 }
+
+void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
+
+  // Get the call expression
+  CXXConstructExpr *CtorE = dyn_cast<CXXConstructExpr>(s);
+
+  assert(CtorE && "Constructor call in loop not valid");
+
+  // Get the declaration of the constructor
+  CXXConstructorDecl* decl = CtorE->getConstructor();
+
+  //llvm::errs() << " callee:\n";
+  //decl->dump();
+
+  // Store functions used in loops, recursively...
+  loop_function_check(decl);
+
+  // FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
+
+  // int i=0;
+  // for( Expr * E : Call->arguments() ){
+  //   if( is_field_parity_expr(E) ) {
+  //     if(i < D->getNumParams()){
+  //       const ParmVarDecl * pv = D->getParamDecl(i);
+  //       QualType q = pv->getOriginalType ();
+
+  //       // Check for const qualifier
+  //       if( q.isConstQualified ()) {
+  //         //llvm::errs() << "  -Const \n";
+  //       } else {
+  //         handle_field_parity_expr(E, true, false);
+  //       }
+  //     }
+  //   }
+  //   i++;
+  // }
+}
+
 
 void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
   // we should mark the function, but it is not necessarily in the
@@ -77,6 +121,36 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
 }
 
 
+///////////////////////////////////////////////////////////////////////////////
+/// Utility for checking if need to handle decls and do it
+///////////////////////////////////////////////////////////////////////////////
+
+bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
+  // Check if it is in a system header. If so, skip
+  SourceManager &SM = Context->getSourceManager();
+  bool handle_decl = !SM.isInSystemHeader(fd->getBeginLoc());
+
+  // check if we already have this declaration - either the pointer is the same
+  // or the source location (actually, source location should do all, no need for 
+  // FunctionDecl *, but it does not hurt)
+  for (int i=0; handle_decl && i<loop_functions.size(); i++) { 
+    if (fd == loop_functions[i] || 
+        fd->getSourceRange().getBegin() == loop_functions[i]->getSourceRange().getBegin() )
+      handle_decl = false;
+  }
+  if (handle_decl) {
+    loop_functions.push_back(fd);
+    handle_loop_function(fd);
+  }
+  return handle_decl;
+}
+
+
+
+////////////////////////////////////////////////////////////////////
+/// Check if the function is allowed to be within field loops.
+/// Returns true if OK to be included; false (and flags error) if not
+////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::loop_function_check(Decl *d) {
   assert(d != nullptr);
@@ -86,18 +160,7 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
     // fd may point to declaration (prototype) without a body.
     // First handle it here in either case
 
-    // Check if it is in a system header. If so, skip
-    SourceManager &SM = Context->getSourceManager();
-    bool handle_decl = !SM.isInSystemHeader(fd->getBeginLoc());
-
-    // check if we already have this declaration
-    for (int i=0; i<loop_functions.size(); i++) if(fd == loop_functions[i])
-      handle_decl = false;
-    
-    if(handle_decl){
-      loop_functions.push_back(fd);
-      handle_loop_function(fd);
-    }
+    bool is_new_func = handle_loop_function_if_needed(fd);
 
     // Now find the declaration of the function body
     // Argument of hasBody becomes the pointer to definition if it is in this compilation unit
@@ -108,28 +171,17 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
       // take away const
       FunctionDecl *fbd = const_cast<FunctionDecl *>(cfd);
       
-      // check if we already have this function
-      bool handle_decl = true;
-      for (int i=0; i<loop_functions.size(); i++){
-        if(fd == loop_functions[i])
-          handle_decl=false;
-        if ( fd->getSourceRange().getBegin() == 
-             loop_functions[i]->getSourceRange().getBegin() )
-          handle_decl=false;
-      } 
-      if( handle_decl ){
-    
-        llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
+      if (fbd != fd) {
+        is_new_func = handle_loop_function_if_needed(fbd);
+      }
 
-        loop_functions.push_back(fbd);
-
-        // Handle if this is different from the first declaration
-        if(fd != fbd)
-          handle_loop_function(fbd);
-
+      // Now is_new_func is true if the function body has not been scanned before
+      if (is_new_func) {
         // And check also functions called by this func
         CallGraph CG;
         // addToCallGraph takes Decl *: cast 
+        // llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
+
         CG.addToCallGraph( dyn_cast<Decl>(fbd) );
         // CG.dump();
         int i = 0;

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include "defs.h"
 #include "memory.h"
-
+#include <iostream>
 
 // Memory alignment for "vanilla"
 
@@ -24,10 +24,16 @@ void free_field_mem(void * p) {
 }
 
 
-#elif AVX512
+#elif VECTORIZED
 
-// AVX512 sweet spot?
+// sweet spot?
+#ifdef AVX512
 #define FIELD_ALIGNMENT 512
+#elif AVX
+#define FIELD_ALIGNMENT 256
+#else
+#define FIELD_ALIGNMENT 128
+#endif
 
 void * allocate_field_mem(size_t size) {
   // guarantee size is a multiple of alignment

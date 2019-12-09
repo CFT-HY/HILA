@@ -145,6 +145,8 @@ public:
   
   bool is_function_call_stmt(Stmt * s);
 
+  bool is_constructor_stmt(Stmt * s);
+
   bool is_loop_extern_var_ref(Expr *E);
   
   parity get_parity_val(const Expr *pExpr);
@@ -161,7 +163,11 @@ public:
 
   void handle_function_call_in_loop(Stmt * s);
   
+  void handle_constructor_in_loop(Stmt * s);
+
   bool loop_function_check(Decl *fd);
+
+  bool handle_loop_function_if_needed(FunctionDecl *fd);
   
   void handle_loop_function(FunctionDecl *fd);
 
@@ -175,8 +181,6 @@ public:
   SourceRange getRangeWithSemi(Stmt * S, bool flag_error = true);
   
   void requireGloballyDefined(Expr * e);
-
-  void set_sourceloc_modified(const SourceLocation sl);
 
   /// Entry point for the full field loop
   bool handle_full_loop_stmt(Stmt *ls, bool field_parity_ok );
@@ -198,6 +202,10 @@ public:
   std::string generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_avx(Stmt *S, bool semi_at_end, srcBuf &sb);
+
+  void generate_field_element_type(std::string typestr);
+  void generate_field_element_type_AVX(std::string typestr);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(SourceLocation sl);
@@ -220,7 +228,7 @@ public:
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
 
   /// utility used in finding pragmas on the previous line
-  SourceRange getSourceRangeAtPreviousOfLine( SourceLocation l );
+  SourceRange getSourceRangeAtPreviousLine( SourceLocation l );
 
   void set_writeBuf(const FileID fid);
 

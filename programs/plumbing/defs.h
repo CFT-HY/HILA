@@ -8,6 +8,13 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
+
+#ifdef AVX
+#define VECTORIZED
+#include "../plumbing/AVX.h"
+#endif
+
+
 #ifdef USE_MPI
 #include <mpi.h>
 #endif
@@ -81,6 +88,21 @@ static inline parity opp_parity(const parity p) {
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
 }
 
+/// Return a vector for iterating over  parities included in par
+/// If par is ALL, this returns vector of EVEN and ODD, otherwise
+/// just par
+static std::vector<parity> loop_parities(parity par){
+  std::vector<parity> parities;
+  if( par == ALL){
+    parities.insert(parities.end(), { EVEN, ODD });
+  } else {
+    parities.insert(parities.end(), { par });
+  }
+  return parities;
+}
+
+
+
 #define foralldir(d) for(direction d=XUP; d<NDIM; d++) 
 
 static inline int is_up_dir(const int d) { return d<NDIM; }
@@ -122,7 +144,7 @@ inline parity location_parity(const location & a) {
 }
 
 // Replaced by transformer
-inline location coordinates(parity X){location l; return l;};
+location coordinates(parity X);
 
 
 
@@ -197,8 +219,13 @@ inline void synchronize(){
 #else
 
 inline void synchronize(){
+  static int n=1;
+  //printf("node %d, in barrier %d\n", mynode(), n);
   synchronize_threads();
+  //printf("node %d, waiting for mpi in barrier %d\n", mynode(), n);
   MPI_Barrier(MPI_COMM_WORLD); 
+  //printf("node %d, barrier cleared %d\n", mynode(), n);
+  n++;
 }
 
 #endif

@@ -9,6 +9,11 @@
 
 #include "../plumbing/globals.h"
 
+#ifdef USE_MPI
+#include "../plumbing/comm_mpi.h"
+#endif
+
+static int next_mpi_field_tag = 0;
 
 struct parity_plus_direction {
   parity p;
@@ -203,28 +208,51 @@ template <typename T>
 using field_element = T;
 
 
-// Type alias would be nice, but one cannot specialize those!
-// Placemarker, will be specialized by transformer
+/// placeholder for in loop elements, specialized by the transformer
+/// In AVX, these replace base types with vector types, so that
+/// so that element
+/// element<type<double>> -> type<d_vector>
+/// element<double> -> d_vector
+///
+/// This allows direct assignment from element<type<double>> to
+/// type<element<double>>, both of which become type<d_vector>
+/// 
+/// Cannot figure out how to disable setting field[X] = T.
+/// Need to do this in the transformer.
 template <typename T>
-struct field_storage_type {
+struct element {
   T c;
-};
 
+  // Cast to T to element 
+  element (const T& x) {c=x;} 
+  element (T& x) {c=x;} 
+  // Assignment of T to element
+  element& operator= (const T& x) {
+    this->c=x; return *this;
+  }
+
+  // Transformer sees field-parity expressions as type T. This is 
+  // necessary if loops contain member function calls on elements.
+  // However, it must then be possible to cast these to elements
+  // so that the user can set field[X] = element<T>
+  operator T() const { return c; } 
+};
 
 
 
 // Pointer to field data and accessors. Only this is passed to the
 // CUDA kernels and other accelerators and it only contains a minimal
 // amount of data.
+#ifndef layout_SOA
+#ifndef AVX
 template <typename T>
 class field_storage {
   public:
-    #ifndef layout_SOA
       // Array of structures implementation
-    T * fieldbuf;
+    element<T> * fieldbuf;
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
+      fieldbuf = (element<T>*) allocate_field_mem( sizeof(element<T>) * field_alloc_size);
       #pragma acc enter data create(fieldbuf)
     }
 
@@ -235,19 +263,53 @@ class field_storage {
     }
 
     #pragma transformer loop_function
-    T get(const int i, const int field_alloc_size) const
+    element<T> get(const int i, const int field_alloc_size) const
     {
-      return ((T *) fieldbuf)[i];
+      return ((element<T> *) fieldbuf)[i];
     }
 
     #pragma transformer loop_function
-    void set(T value, const int i, const int field_alloc_size) 
+    void set(element<T> value, const int i, const int field_alloc_size) 
     {
-      ((T *) fieldbuf)[i] = value;
+      ((element<T> *) fieldbuf)[i] = value;
+    }
+};
+
+#else
+
+template <typename T>
+class field_storage {
+  public:
+    // Use the vectorized field storage type
+    element<T> * fieldbuf;
+    constexpr static int vector_len = sizeof(element<T>) / sizeof(T);
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
     }
 
+    void free_field() {
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
 
-    #else
+    element<T> get(const int i, const int field_alloc_size) const
+    {
+      return fieldbuf[i/vector_len];
+    }
+
+    void set(element<T> value, const int i, const int field_alloc_size) 
+    {
+      fieldbuf[i/vector_len] = value;
+    }
+};
+
+#endif
+#else
+
+template <typename T>
+class field_storage {
+  public:
     // Structure of arrays implementation
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     real_t * fieldbuf;
@@ -286,8 +348,8 @@ class field_storage {
         fieldbuf[i*field_alloc_size + idx] = value_f[i];
       }
     }
-    #endif
 };
+#endif
 
 
 
@@ -322,16 +384,45 @@ private:
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
       lattice_struct * lattice;
       unsigned is_fetched[NDIRS];
+      bool move_started[3*NDIRS];
+#ifdef USE_MPI
+      std::vector<MPI_Request> receive_request[3*NDIRS];
+      std::vector<MPI_Request> send_request[3*NDIRS];
+      std::vector<char *> receive_buffer[3*NDIRS];
+      std::vector<char *> send_buffer[3*NDIRS];
+      int mpi_tag;
+      void initialize_communication(){
+        for(int d=0; d<NDIRS; d++) for(parity par: {EVEN,ODD}) {
+          int tag = d + NDIRS*(int)par;
+          lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+          receive_buffer[tag].resize(ci.from_node.size());
+          send_buffer[tag].resize(ci.to_node.size());
+          receive_request[tag].resize(ci.from_node.size());
+          send_request[tag].resize(ci.to_node.size());
+        }
+        mpi_tag = next_mpi_field_tag;
+        next_mpi_field_tag++;
+      }
+#else
+      void initialize_communication(){};
+#endif
 
-      void allocate_payload() { payload.allocate_field(lattice->field_alloc_size()); }
+      void allocate_payload() { 
+        payload.allocate_field(lattice->field_alloc_size());
+        initialize_communication();
+      }
       void free_payload() { payload.free_field(); }
       
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      T get(const int i) const { return  payload.get( i, lattice->field_alloc_size() ); }
+      element<T> get(const int i) const {
+        return  payload.get( i, lattice->field_alloc_size() );
+      }
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      void set(T value, const int i) { payload.set( value, i, lattice->field_alloc_size() ); }
+      void set(element<T> value, const int i) {
+        payload.set( value, i, lattice->field_alloc_size() );
+      }
 
       /// Gather boundary elements for communication
       void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const;
@@ -395,7 +486,6 @@ public:
     fs = new field_struct;
     fs->lattice = lattice;
     fs->allocate_payload();
-
     mark_changed(ALL);
   }
 
@@ -417,6 +507,7 @@ public:
       assert(p == EVEN || p == ODD || p == ALL);
       unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
       for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
+      for (int i=0; i<3*NDIRS; i++) fs->move_started[i] = false;
     }
   }
 
@@ -426,6 +517,7 @@ public:
     assert(p == EVEN || p == ODD || p == ALL);
     unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
     for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
+    for (int i=0; i<3*NDIRS; i++) fs->move_started[i] = false;
   }
 
   /// Mark the field parity fetched from direction
@@ -441,6 +533,18 @@ public:
     assert(dir < NDIRS);
     int par_int = static_cast<unsigned>(opp_parity(par));
     return (fs->is_fetched[dir] ^ par_int) == 0;
+  }
+
+  /// Check if communication has started
+  bool is_move_started( int dir, parity par) const{
+    assert(dir < NDIRS);
+    return fs->move_started[(int)par + 2*dir];
+  }
+
+  /* Mark communication started */
+  void mark_move_started( int dir, parity par) const{
+    assert(dir < NDIRS);
+    fs->move_started[(int)par + 2*dir] = true;
   }
   
 
@@ -464,10 +568,10 @@ public:
 
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  T get_value_at(int i) const { return this->fs->get(i); }
+  element<T> get_value_at(int i) const { return this->fs->get(i); }
 
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
-  void set_value_at(T value, int i) { this->fs->set(value, i); }
+  void set_value_at(element<T> value, int i) { this->fs->set(value, i); }
 
 
   // fetch the element at this loc
@@ -552,6 +656,8 @@ public:
 
   // Communication routines
   void start_move(direction d, parity p) const;
+  void start_move(direction d) const {start_move(d, ALL);}
+  void wait_move(direction d, parity p) const;
 };
 
 
@@ -713,6 +819,8 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 ///* start_move(): Trivial implementation when no MPI is used
 template<typename T>
 void field<T>::start_move(direction d, parity p) const {}
+template<typename T>
+void field<T>::wait_move(direction d, parity p) const {}
 
 
 #else
@@ -721,8 +829,6 @@ void field<T>::start_move(direction d, parity p) const {}
  * can be ignored by the transformer. Since the transformer does not
  * have access to mpi.h, it cannot process this branch.
  */
-
-#include "../plumbing/comm_mpi.h"
 
 
 #if !defined(CUDA) || defined(TRANSFORMER)
@@ -820,84 +926,123 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 
 
 
+/// wait_move(): Communicate the field at parity par from direction
+///  d. Uses accessors to prevent dependency on the layout.
+template<typename T>
+void field<T>::start_move(direction d, parity p) const {
 
-///* start_move(): Communicate the field from direction d 
-///  A simple implementation that waits completes the communication
-///  in the function. Uses accessors to prevent dependency on the 
-///  layout.
+  for( parity par: loop_parities(p) ) {
+    if( is_move_started(d, par) ){
+      // Not changed, return directly
+      // Keep count of gathers optimized away
+      lattice->n_gather_avoided += 1;
+      return;
+    }
+
+    // Communication hasn't been started yet, do it now
+    int index = d + NDIRS*(int)par;
+    int tag =  fs->mpi_tag*3*NDIRS + index;
+    constexpr int size = sizeof(T);
+
+    lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+    int n = 0;
+    std::vector<MPI_Request> & receive_request = fs->receive_request[index];
+    std::vector<MPI_Request> & send_request = fs->send_request[index];
+    std::vector<char *> & receive_buffer = fs->receive_buffer[index];
+    std::vector<char *> & send_buffer = fs->send_buffer[index];
+
+    /* HANDLE RECEIVES: loop over nodes which will send here */
+    for( lattice_struct::comm_node_struct from_node : ci.from_node ){
+      unsigned sites = from_node.n_sites(par);
+      if(receive_buffer[n] == NULL)
+        receive_buffer[n] = (char *)malloc( sites*size );
+
+      //printf("node %d, recv tag %d from %d\n", mynode(), tag, from_node.index);
+
+      MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE, from_node.index, 
+	             tag, lattice->mpi_comm_lat, &receive_request[n] );
+      n++;
+    }
+
+    /* HANDLE SENDS: Copy field elements on the boundary to a send buffer and send */
+    n=0;
+    for( lattice_struct::comm_node_struct to_node : ci.to_node ){
+       /* gather data into the buffer  */
+       unsigned sites = to_node.n_sites(par);
+       if(send_buffer[n] == NULL)
+         send_buffer[n] = (char *)malloc( sites*size );
+
+       fs->gather_comm_elements(send_buffer[n], to_node, par);
+ 
+       //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.index);
+       /* And send */
+       MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
+               tag, lattice->mpi_comm_lat, &send_request[n]);
+       //printf("node %d, sent tag %d\n", mynode(), tag);
+       n++;
+     }
+
+    mark_move_started(d, par);
+  }
+}
+
+
+///* wait_move(): Wait for communication at parity par from
+///  direction d completes the communication in the function.
+///  If the communication has not started yet, also calls
+///  start_move()
 ///
 ///  NOTE: This will be called even if the field is marked const.
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field at the boundaries. From the 
 ///  point of view of the user, the value of the field does not change.
 template<typename T>
-void field<T>::start_move(direction d, parity par) const {
-  if( is_fetched(d, par) ){
-    // Not changed, return directly
-    // Keep count of gathers optimized away
-    lattice->n_gather_avoided += 1;
-    return;
+void field<T>::wait_move(direction d, parity p) const {
+
+  // Loop over parities
+  // (if p=ALL, do both EVEN and ODD otherwise just p);
+  for( parity par: loop_parities(p) ) {
+    int index = d + NDIRS*(int)par;
+    int tag =  fs->mpi_tag*3*NDIRS + index;
+
+    if( is_fetched(d, par) ){
+      // Not changed, return directly
+      // Keep count of gathers optimized away
+      lattice->n_gather_avoided += 1;
+      return;
+    }
+
+    // This will start the communication if it has not been started yet
+    start_move(d, par);
+
+    lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+    std::vector<MPI_Request> & receive_request = fs->receive_request[index];
+    std::vector<char *> & receive_buffer = fs->receive_buffer[index];
+
+    /* Wait for the data here */
+    int n = 0;
+    for( lattice_struct::comm_node_struct from_node : ci.from_node ){
+      MPI_Status status;
+      //printf("node %d, waiting for recv tag %d\n", mynode(), tag);
+      MPI_Wait(&receive_request[n], &status);
+      //printf("node %d, received tag %d\n", mynode(), tag);
+
+      fs->scatter_comm_elements(receive_buffer[n], from_node, par);
+      n++;
+    }
+
+    /* Mark the parity fetched from direction dir */
+    mark_fetched(d, par);
+
+    /* Keep count of communications */
+    lattice->n_gather_done += 1;
   }
-
-  // The field has been changed and needs to be communicated
-
-  constexpr int size = sizeof(T);
-
-  lattice_struct::comminfo_struct ci = lattice->comminfo[d];
-  std::vector<char *> receive_buffer;
-  std::vector<MPI_Request> request;
-  int n = 0;
-  receive_buffer.resize(ci.from_node.size());
-  request.resize(ci.from_node.size());
-
-  /* HANDLE RECEIVES: loop over nodes which will send here */
-  for( lattice_struct::comm_node_struct from_node : ci.from_node ){
-    unsigned sites = from_node.n_sites(par);
-    receive_buffer[n] = (char *)malloc( sites*size );
-
-    MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE,
-	         from_node.index, n, lattice->mpi_comm_lat, &request[n] );
-    n++;
-  }
-
-  /* HANDLE SENDS: Copy field elements on the boundary to a send buffer and send */
-  n=0;
-  for( lattice_struct::comm_node_struct to_node : ci.to_node ){
-    /* gather data into the buffer  */
-    unsigned sites = to_node.n_sites(par);
-    char * buffer = (char *)malloc( sites*size );
-    fs->gather_comm_elements(buffer, to_node, par);
-
-    /* And send */
-    MPI_Send( buffer, sites*size, MPI_BYTE, to_node.index, n,  lattice->mpi_comm_lat);
-
-    std::free(buffer);
-    n++;
-  }
-
-  /* Wait for the data here */
-  n=0;
-  for( lattice_struct::comm_node_struct from_node : ci.from_node ){
-    MPI_Status status;
-    MPI_Wait(&request[n], &status);
-
-    char * buffer = receive_buffer[n];
-    fs->scatter_comm_elements(buffer, from_node, par);
-    
-    n++;
-  }
-
-  /* Mark the parity fetched from direction dir */
-  mark_fetched(d, par);
-
-  /* Keep count of communications */
-  lattice->n_gather_done += 1;
 }
 
 #endif
 
 
 
-
 #endif
+
 

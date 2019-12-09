@@ -1,0 +1,14 @@
+Rank 0 choosing device 0 out of 1
+Standard lattice layout:
+ 4 dimensions
+ Node remapping: TRIVIAL (no effort made to reorder)
+
+ Sites on node: 32 x 32 x 32 x 32
+ Processor layout: 1 x 1 x 1 x 1
+Matrix * Matrix: 6.52344ms 
+Vector * Matrix: 2.69531 ms 
+Vector square sum: 0.771484 ms 
+Dirac 4 dirs: 29.375ms 
+Dirac: 32.8125ms 
+CG: 36.25ms / iteration
+ COMMS from node 0: 260 done, 1264(82.9396%) optimized away
