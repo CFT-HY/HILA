@@ -31,6 +31,7 @@ extern std::string parity_name;
 
 extern std::string parity_in_this_loop;
 
+static int vector_lenght = 4;
 
 
 /// Replace base datatypes with vectorized datatypes
@@ -51,16 +52,10 @@ void replace_basetype_with_vector(std::string & element_type) {
 std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   std::stringstream code;
   
-  // Set the start and end points
-  code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
-  code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
-
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
-  
       v.new_name = "v_" + v.reduction_name;
-  
       // Allocate memory for a reduction. This will be filled in the kernel
       std::string reduction_type = v.type;
       replace_basetype_with_vector(reduction_type);
@@ -69,27 +64,17 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
       } else if (v.reduction_type == reduction::PRODUCT) {
         code << reduction_type << " " << v.new_name << "(1);\n";
       }
-
-      // Replace references in the loop body
-      for (var_ref & vr : v.refs) {
-        loopBuf.replace( vr.ref, v.new_name );
-      }
     }
   }
+
+  // Set the start and end points
+  code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
+  code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 
-       << looping_var << " < loop_end; " << looping_var << "++) {\n";
-
-
-  for ( var_info & vi : var_info_list ) {
-    if(vi.type.rfind("element",0) != std::string::npos) {
-      // Converts all locally declared variables to vectors. Is this OK?
-      std::string declaration_string = TheRewriter.getRewrittenText(vi.decl->getSourceRange());
-      replace_basetype_with_vector( declaration_string );
-      loopBuf.replace( vi.decl->getSourceRange(), declaration_string);
-    }
-  }
+       << looping_var << " < loop_end; " << looping_var << "+="
+       << vector_lenght << ") {\n";
 
   
   // Create temporary field element variables
@@ -113,7 +98,6 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
     }
   }
 
-
   // Replace field references in loop body
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
@@ -130,6 +114,26 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
     } else {
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression);
+    }
+  }
+
+  for ( var_info & vi : var_info_list ) {
+    if(vi.type.rfind("element",0) != std::string::npos) {
+      // Converts all locally declared variables to vectors. Is this OK?
+      // The declaration can contain an assignment operation, we should only
+      // replace the type in the beginning
+      std::string type_string = vi.decl->getType().getAsString();
+      int length = type_string.length();
+
+      replace_basetype_with_vector( type_string );
+      int i = loopBuf.get_index(vi.decl->getBeginLoc());
+      loopBuf.replace( i, i+length, type_string + " ");
+    }
+    if (vi.reduction_type != reduction::NONE) {
+      // Replace references in the loop body
+      for (var_ref & vr : vi.refs) {
+        loopBuf.replace( vr.ref, vi.new_name );
+      }
     }
   }
 
