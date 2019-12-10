@@ -8,7 +8,7 @@
 ////////////////////////////////////////////////////////////////////////
 /// input - Class for parsing runtime parameter files using std c++ libraries
 /// 
-/// Fulfills two simple functions: 
+/// Fulfills three simple functions: 
 ///
 /// 1. Parses a text file or command line for runtime variables
 /// 2. Allows user to define which variables should be found in parameter files
@@ -34,7 +34,7 @@ class input {
         void import(const std::string & fname);
         //read runtime parameters from file and cmd line 
         void import(int & argc, char *** argvp, const std::string & fname){};
-    
+
         //add an essential variable - triggers complaint if not in parameter file or commandline
         void add_essential(const std::string & );
         //same as above, except defines a default value to be used in case it is not found
