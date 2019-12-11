@@ -46,11 +46,10 @@ int main(int argc, char **argv){
     // Test sum and move constructor
     s1 = s2 + s3;
 
-    // Test field assignment to field element (reduction)
     onsites(ALL){
         sum+=s1[X].re;
     }
-    assert(sum==2*(double)lattice->volume());
+    assert(sum==2*(double)lattice->volume() && "onsites reduction");
     s1=0; s2=0; s3=0;
     sum = 0;
 
@@ -64,7 +63,7 @@ int main(int argc, char **argv){
     onsites(ALL){
         sum+=s1[X].re;
     }
-    assert(sum==(double)lattice->volume());
+    assert(sum==(double)lattice->volume() && "test setting field with parity");
 
     foralldir(d){
         onsites(ODD){
