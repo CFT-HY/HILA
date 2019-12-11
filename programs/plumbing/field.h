@@ -277,12 +277,12 @@ class field_storage {
 
     field_element<T> get(const int i, const int field_alloc_size) const
     {
-      return fieldbuf[i/vector_len];
+      return fieldbuf[i];
     }
 
     void set(field_element<T> value, const int i, const int field_alloc_size) 
     {
-      fieldbuf[i/vector_len] = value;
+      fieldbuf[i] = value;
     }
 };
 
