@@ -809,28 +809,31 @@ void field<T>::wait_move(direction d, parity p) const {}
  * have access to mpi.h, it cannot process this branch.
  */
 
+#ifdef TRANSFORMER
+//Trivial definitions to allow transformer to compile
 
-#if !defined(CUDA) || defined(TRANSFORMER)
-/// The standard (Non-CUDA) implementation of gather_comm_elements
+#elif defined(VECTORIZED)
+
+
+/// Vectorized implementation of fetching boundary elements
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
 void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-  for (int j=0; j<to_node.n_sites(par); j++) {
+    for (int j=0; j<to_node.n_sites(par); j++) {
     T element = get(to_node.site_index(j, par));
     std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
   }
 }
-/// The standard (Non-CUDA) implementation of scatter_comm_elements
+
+/// Vectorized implementation of setting boundary elements
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
 void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-  for (int j=0; j<from_node.n_sites(par); j++) {
-    T element = *((T*) ( buffer + j*sizeof(T) ));
-    set(element, from_node.offset(par)+j);
-  }
 }
 
-#else
+
+#elif defined(CUDA)
+
 /* CUDA implementations */
 
 /// A kernel that gathers neighbour elements for communication (using the getter)
@@ -901,6 +904,29 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 
   cudaFree(d_buffer);
 }
+
+
+#else
+
+/// The standard (Non-CUDA) implementation of gather_comm_elements
+/* Gathers sites at the boundary that need to be communicated to neighbours */
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+  for (int j=0; j<to_node.n_sites(par); j++) {
+    T element = get(to_node.site_index(j, par));
+    std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
+  }
+}
+/// The standard (Non-CUDA) implementation of scatter_comm_elements
+/* Sets the values the neighbour elements from the communication buffer */
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+  for (int j=0; j<from_node.n_sites(par); j++) {
+    T element = *((T*) ( buffer + j*sizeof(T) ));
+    set(element, from_node.offset(par)+j);
+  }
+}
+
 #endif
 
 
