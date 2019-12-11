@@ -76,7 +76,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " 
-       << looping_var << "++) {\n";
+       << looping_var << "+=4) {\n";
 
   
   // Create temporary field element variables

@@ -276,7 +276,7 @@ class field_storage {
   public:
     // Use the vectorized field storage type
     field_element<T> * fieldbuf;
-    constexpr static int vector_len = sizeof(field_element<T>) / sizeof(T);
+    constexpr static int vector_length = sizeof(field_element<T>) / sizeof(T);
 
     void allocate_field( const int field_alloc_size ) {
       fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
@@ -329,6 +329,7 @@ class field_storage {
       ((field_element<T> *) fieldbuf)[i] = value;
     }
 };
+
 
 #endif
 
@@ -393,16 +394,24 @@ private:
         initialize_communication();
       }
       void free_payload() { payload.free_field(); }
-      
+
+      // Map a local lattice index into a vectorized index
+      int map_index(int i) const{
+        return i/payload.vector_length;
+      }
+
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
       field_element<T> get(const int i) const {
-        return  payload.get( i, lattice->field_alloc_size() );
+        int index = map_index(i);
+        return  payload.get( index, lattice->field_alloc_size() );
       }
+
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
       void set(field_element<T> value, const int i) {
-        payload.set( value, i, lattice->field_alloc_size() );
+        int index = map_index(i);
+        payload.set( value, index, lattice->field_alloc_size() );
       }
 
       /// Gather boundary elements for communication
