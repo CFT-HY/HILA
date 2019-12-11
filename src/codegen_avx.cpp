@@ -122,14 +122,13 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   for ( var_info & vi : var_info_list ) {
     if(vi.type.rfind("element",0) != std::string::npos) {
       // Converts all locally declared variables to vectors. Is this OK?
-      // The declaration can contain an assignment operation, we should only
-      // replace the type in the beginning
-      std::string type_string = vi.decl->getType().getAsString();
-      int length = type_string.length();
+      // First get the type name in the declaration
+      auto typeexpr = vi.decl->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+      std::string type_string = TheRewriter.getRewrittenText(typeexpr);
 
       replace_basetype_with_vector( type_string );
-      int i = loopBuf.get_index(vi.decl->getBeginLoc());
-      loopBuf.replace( i, i+length, type_string + " ");
+
+      loopBuf.replace( typeexpr, type_string + " ");
     }
     if (vi.reduction_type != reduction::NONE) {
       // Replace references in the loop body
