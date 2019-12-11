@@ -225,70 +225,7 @@ struct field_element{
 // Pointer to field data and accessors. Only this is passed to the
 // CUDA kernels and other accelerators and it only contains a minimal
 // amount of data.
-#ifndef layout_SOA
-#ifndef AVX
-template <typename T>
-class field_storage {
-  public:
-      // Array of structures implementation
-    field_element<T> * fieldbuf;
-
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
-      #pragma acc enter data create(fieldbuf)
-    }
-
-    void free_field() {
-      #pragma acc exit data delete(fieldbuf)
-      free_field_mem((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    #pragma transformer loop_function
-    field_element<T> get(const int i, const int field_alloc_size) const
-    {
-      return ((field_element<T> *) fieldbuf)[i];
-    }
-
-    #pragma transformer loop_function
-    void set(field_element<T> value, const int i, const int field_alloc_size) 
-    {
-      ((field_element<T> *) fieldbuf)[i] = value;
-    }
-};
-
-#else
-
-template <typename T>
-class field_storage {
-  public:
-    // Use the vectorized field storage type
-    field_element<T> * fieldbuf;
-    constexpr static int vector_len = sizeof(field_element<T>) / sizeof(T);
-
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
-    }
-
-    void free_field() {
-      free_field_mem((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    field_element<T> get(const int i, const int field_alloc_size) const
-    {
-      return fieldbuf[i];
-    }
-
-    void set(field_element<T> value, const int i, const int field_alloc_size) 
-    {
-      fieldbuf[i] = value;
-    }
-};
-
-#endif
-#else
-
+#ifdef layout_SOA
 template <typename T>
 class field_storage {
   public:
@@ -331,6 +268,68 @@ class field_storage {
       }
     }
 };
+
+#elif defined(AVX)
+
+template <typename T>
+class field_storage {
+  public:
+    // Use the vectorized field storage type
+    field_element<T> * fieldbuf;
+    constexpr static int vector_len = sizeof(field_element<T>) / sizeof(T);
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
+    }
+
+    void free_field() {
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    field_element<T> get(const int i, const int field_alloc_size) const
+    {
+      return fieldbuf[i];
+    }
+
+    void set(field_element<T> value, const int i, const int field_alloc_size) 
+    {
+      fieldbuf[i] = value;
+    }
+};
+
+#else
+
+template <typename T>
+class field_storage {
+  public:
+      // Array of structures implementation
+    field_element<T> * fieldbuf;
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
+      #pragma acc enter data create(fieldbuf)
+    }
+
+    void free_field() {
+      #pragma acc exit data delete(fieldbuf)
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    #pragma transformer loop_function
+    field_element<T> get(const int i, const int field_alloc_size) const
+    {
+      return ((field_element<T> *) fieldbuf)[i];
+    }
+
+    #pragma transformer loop_function
+    void set(field_element<T> value, const int i, const int field_alloc_size) 
+    {
+      ((field_element<T> *) fieldbuf)[i] = value;
+    }
+};
+
 #endif
 
 
