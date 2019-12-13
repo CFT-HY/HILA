@@ -73,13 +73,13 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   // Set the start and end points
   // A single vector covers 4 sites in AVX. These must all have the same parity.
   // So we devide the start and end points here by 4.
-  code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
-  code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
+  code << "const int loop_begin = lattice->vectorized_lattice.loop_begin(" << parity_in_this_loop << ", 4);\n";
+  code << "const int loop_end   = lattice->vectorized_lattice.loop_end(" << parity_in_this_loop << ", 4);\n";
 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 
        << looping_var << " < loop_end; " 
-       << looping_var << "+=4) {\n";
+       << looping_var << "++) {\n";
 
   
   // Create temporary field element variables
