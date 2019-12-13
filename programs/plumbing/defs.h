@@ -10,7 +10,6 @@
 
 
 #ifdef AVX
-#define VECTORIZED
 #include "../plumbing/AVX.h"
 #endif
 

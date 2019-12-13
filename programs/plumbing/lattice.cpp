@@ -45,6 +45,9 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 
   /* Initialize wait_array structures */
   initialize_wait_arrays();
+
+  /* Initialize the list of vectorized lattices */
+  vectorized_lattice.set_size(l_size);
 }
 
 
@@ -514,4 +517,5 @@ void lattice_struct::initialize_wait_arrays()
 void lattice_struct::initialize_wait_arrays(){}
 
 #endif
+
 

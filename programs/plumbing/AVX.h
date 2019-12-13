@@ -3,6 +3,9 @@
 
 #include <immintrin.h>
 
+#define VECTORIZED
+constexpr int max_vector_size = 8;
+
 
 /// A new vector class is necessary, the intrinsic types
 /// are not always proper types. This encapsulates them

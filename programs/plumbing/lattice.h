@@ -39,6 +39,68 @@ struct device_lattice_info {
 #endif
 
 
+/// Splits the local lattice into equal sections for vectorization
+/// Contains a list of neighbour arrays for each possible vector size
+struct vectorized_lattice_struct {
+  std::vector<std::array<unsigned*,NDIRS>> neighbours;
+  std::vector<unsigned> vector_sizes;
+  std::vector<std::array<int,NDIM>> local_size;
+  std::vector<std::array<int,NDIM>> splits;
+  int l_size[NDIM];
+
+  void set_size(int l[NDIM]) {
+    for(int d=0; d<NDIM; d++)
+      l_size[d] = l[d];
+  }
+
+  std::array<unsigned*,NDIRS> init_neighbours(int vector_size){
+    std::array<int,NDIM> _local_size;
+    std::array<int,NDIM> _splits;
+
+    vector_sizes.push_back(vector_size);
+
+    // Initialize
+    for(int d=0; d<NDIM; d++){
+      _local_size[d] = l_size[d];
+      _splits[d] = 1;
+    }
+    while( vector_size > 1 ){
+      // find longest direction
+      int msize=1, d=0;
+      for( int i=0; i<NDIM; i++ ){
+        if( _local_size[i] > msize )
+          d=i;
+      }
+      // split
+      vector_size /= 2; _local_size[d] /= 2; _splits[d] *= 2;
+    }
+    assert(vector_size == 1 && "cannot handle vector size not divisible by 2");
+    
+    std::array<unsigned*,NDIRS> new_neighbours;
+    for(int d=0; d<NDIM; d++){
+      new_neighbours[d] = (unsigned *) malloc(sizeof(unsigned));
+    }
+    neighbours.push_back(new_neighbours);
+
+    return new_neighbours;
+  }
+
+  /// Return a list of neighbours for a lattice divided into a given vector size
+  std::array<unsigned*,NDIRS> neighbour_list(int vector_size){
+    for( int i=0; i<neighbours.size(); i++ ){
+      printf("vector size %d \n",vector_sizes[i]);
+      if( vector_size == vector_sizes[i] ){
+        return neighbours[i];
+      }
+    }
+    std::array<unsigned*,NDIRS> new_neighbours = init_neighbours(vector_size);
+    return(new_neighbours);
+  }
+
+};
+
+
+
 class lattice_struct {
 private:
   // expose these directly, by far the simplest interface - who cares about c++ practices
@@ -126,6 +188,8 @@ public:
   };
 
   std::vector<comminfo_struct> comminfo;
+
+  vectorized_lattice_struct vectorized_lattice;
 
   unsigned * neighb[NDIRS];
   unsigned char *wait_arr_;

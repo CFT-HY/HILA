@@ -67,6 +67,9 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
     }
   }
 
+  // Get a pointer to the neighbour list
+  code << "std::array<unsigned*,NDIRS> neighbour_list = lattice->vectorized_lattice.neighbour_list(4);\n";
+
   // Set the start and end points
   // A single vector covers 4 sites in AVX. These must all have the same parity.
   // So we devide the start and end points here by 4.
@@ -89,7 +92,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
     // variables
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
-           << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
+           << " = " << l.new_name << ".get_value_at(neighbour_list[" 
            << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
     }
     // Check for references without a direction. If found, add temp variable
