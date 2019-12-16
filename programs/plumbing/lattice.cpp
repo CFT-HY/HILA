@@ -4,7 +4,7 @@
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
 
-/// A list of all defiend lattices
+/// A list of all defined lattices
 std::vector<lattice_struct*> lattices;
 
 
@@ -47,7 +47,8 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
   initialize_wait_arrays();
 
   /* Initialize the list of vectorized lattices */
-  vectorized_lattice.setup(l_size, coordinates(0));
+  vectorized_lattice = (vectorized_lattice_struct*) malloc(sizeof(vectorized_lattice_struct));
+  vectorized_lattice->setup(this, 4);
 }
 
 

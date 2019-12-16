@@ -19,6 +19,8 @@ struct node_info {
   unsigned evensites, oddsites;
 };
 
+struct vectorized_lattice_struct;
+
 
 #ifdef CUDA
 struct device_lattice_info {
@@ -39,164 +41,6 @@ struct device_lattice_info {
 #endif
 
 
-/// Splits the local lattice into equal sections for vectorization
-/// Contains a list of neighbour arrays for each possible vector size
-struct vectorized_lattice_struct {
-  std::vector<std::array<unsigned*,NDIRS>> neighbours;
-  std::vector<std::array<int,NDIM>> size;
-  std::vector<std::array<int,NDIM>> splits;
-  std::vector<int> sites, evensites, oddsites;
-  std::vector<unsigned> vector_sizes;
-  std::vector<std::vector<location>> coordinates;
-  int l_size[NDIM];
-  bool evenfirst;
-
-  void setup(int l[NDIM], location first) {
-    int s=0;
-    for(int d=0; d<NDIM; d++){
-      l_size[d] = l[d];
-      s += first[0];
-    }
-    
-    evenfirst = s%2 == 0;
-  }
-
-  unsigned get_index(location l, int vector_index){
-    int s = (int)evenfirst; // start at 0 for even first, 1 for odd first
-    int l_index = l[NDIM-1];
-    for (int d=NDIM-2; d>=0; d--){
-      l_index = l_index*size[vector_index][d] + l[d];
-      s += l[d];
-    }
-    if( s%2==0 ){
-      l_index /= 2;
-    } else {
-      l_index = evensites[vector_index] + l_index/2;
-    }
-    return l_index;
-  }
-
-  void init_neighbours(int vector_size){
-    std::array<int,NDIM> _size;
-    std::array<int,NDIM> _splits;
-    int _sites, _evensites, _oddsites;
-    int vector_index = vector_sizes.size();
-
-    vector_sizes.push_back(vector_size);
-
-    // Initialize
-    for(int d=0; d<NDIM; d++){
-      _size[d] = l_size[d];
-      _splits[d] = 1;
-    }
-    while( vector_size > 1 ){
-      // find longest that will be even after split (divisible by 4)
-      int msize=1, d=0;
-      for( int i=0; i<NDIM; i++ ){
-        if( _size[i] > msize && _size[i]%4==0 )
-          d=i;
-      }
-      // split
-      vector_size /= 2; _size[d] /= 2; _splits[d] *= 2;
-    }
-    assert(vector_size == 1 && "cannot split local lattice to vector size");
-    size.push_back(_size);
-
-    _sites = 1;
-    for( int i=0; i<NDIM; i++ ){
-      _sites *= _size[i];
-    }
-    if( _sites%2 == 0 ){
-      _evensites = _oddsites = _sites/2;
-    } else {
-      _evensites = _sites/2 + (int)evenfirst;
-      _oddsites  = _sites/2 + (int)(!evenfirst);      
-    }
-
-    sites.push_back(_sites);
-    evensites.push_back(_evensites);
-    oddsites.push_back(_oddsites);
-    
-    
-    // Map index to coordinates
-    std::vector<location> _coordinates;
-    _coordinates.resize(_sites);
-    for(unsigned i = 0; i<_sites; i++){
-      location l;
-      unsigned l_index=i, s;
-      foralldir(d){
-        l[d] = l_index % _size[d];
-        l_index /= _size[d];
-      }
-      _coordinates[get_index(l, vector_index)] = l;
-    }
-    coordinates.push_back(_coordinates);
-  
-  
-    // Setup neighbour array
-    std::array<unsigned*,NDIRS> _neighbours;
-    for(int d=0; d<NDIM; d++){
-      _neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*_sites);
-      for(unsigned i = 0; i<_sites; i++){
-        location l = _coordinates[i];
-        location nb = l;
-        if (is_up_dir(d)) {
-          nb[d] = (l[d] + 1) % _size[d];
-        } else {
-          direction k = opp_dir(d);
-          nb[k] = (l[k] + _size[k] - 1) % _size[k];
-        }
-        _neighbours[d][i] = get_index(nb, vector_index);
-      }
-      
-    }
-    neighbours.push_back(_neighbours);
-  }
-
-
-  // Return a list of neighbours for a lattice divided into a given vector size
-  std::array<unsigned*,NDIRS> neighbour_list(int vector_size){
-    int i;
-    for( i=0; i<neighbours.size(); i++ ){
-      if( vector_size == vector_sizes[i] )
-        break;
-    }
-    if( i >= neighbours.size() )
-      init_neighbours(vector_size);
-    return neighbours[i];
-  }
-
-  int loop_begin( parity P, int vector_size) {
-    int i;
-    for( i=0; i<neighbours.size(); i++ ){
-      if( vector_size == vector_sizes[i] )
-        break;
-    }
-    if( i >= neighbours.size() )
-      init_neighbours(vector_size);
-    if(P==ODD){
-      return evensites[i];
-    } else {
-      return 0;
-    }
-  }
-
-  int loop_end( parity P, int vector_size) {
-    int i;
-    for( i=0; i<neighbours.size(); i++ ){
-      if( vector_size == vector_sizes[i] )
-        break;
-    }
-    if( i >= neighbours.size() )
-      init_neighbours(vector_size);
-    if(P==EVEN){
-      return evensites[i];
-    } else {
-      return sites[i];
-    }
-  }
-
-};
 
 
 
@@ -288,7 +132,7 @@ public:
 
   std::vector<comminfo_struct> comminfo;
 
-  vectorized_lattice_struct vectorized_lattice;
+  vectorized_lattice_struct *vectorized_lattice;
 
   unsigned * neighb[NDIRS];
   unsigned char *wait_arr_;
@@ -318,6 +162,7 @@ public:
 
   int size(direction d) { return l_size[d]; }
   int size(int d) { return l_size[d]; }
+  int local_size(int d) { return this_node.size[d]; }
   long long volume() { return l_volume; }
   int node_number() { return this_node.index; }
   int n_nodes() { return nodes.number; }
@@ -329,6 +174,8 @@ public:
   location site_location(unsigned index);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
   void create_std_gathers();
+  
+  bool first_site_even() { return this_node.first_site_even; };
 
   unsigned remap_node(const unsigned i);
   
@@ -391,6 +238,143 @@ extern lattice_struct * lattice;
 
 // Keep track of defined lattices
 extern std::vector<lattice_struct*> lattices;
+
+
+
+
+
+/// Splits the local lattice into equal sections for vectorization
+/// Contains a list of neighbour arrays for each possible vector size
+struct vectorized_lattice_struct  {
+  public:
+    std::array<unsigned*,NDIRS> neighbours;
+    std::array<int,NDIM> size;
+    std::array<int,NDIM> split;
+    int sites, evensites, oddsites;
+    unsigned vector_size;
+    std::vector<location> coordinates;
+    lattice_struct * lattice;
+    bool first_site_even;
+
+    unsigned get_index(location l){
+      int s = (int)first_site_even; // start at 0 for even first, 1 for odd first
+      int l_index = l[NDIM-1];
+      for (int d=NDIM-2; d>=0; d--){
+        l_index = l_index*size[d] + (l[d] +size[d])%size[d];
+        s +=  (l[d] +size[d])%size[d];
+      }
+      if( s%2==0 ){
+        l_index /= 2;
+      } else {
+        l_index = evensites + l_index/2;
+      }
+      return l_index;
+    }
+
+
+    void setup(lattice_struct * _lattice, int _vector_size) {
+      // Initialize
+      lattice =  _lattice;
+      vector_size = _vector_size;
+      first_site_even = lattice->first_site_even();
+
+      for(int d=0; d<NDIM; d++){
+        size[d] = lattice->local_size(d);
+        split[d] = 1;
+      }
+
+      int v = vector_size;
+      while( v > 1 ){
+        // find longest that will be even after split (divisible by 4)
+        int msize=1, d=0;
+        for( int i=0; i<NDIM; i++ ){
+          if( size[i] > msize && size[i]%4==0 )
+            d=i;
+        }
+        // split
+        v /= 2; size[d] /= 2; split[d] *= 2;
+      }
+      assert(v == 1 && "cannot split local lattice to vector size");
+
+      sites = 1;
+      for( int i=0; i<NDIM; i++ ){
+        sites *= size[i];
+      }
+      if( sites%2 == 0 ){
+        evensites = oddsites = sites/2;
+      } else {
+        evensites = sites/2 + (int)first_site_even;
+        oddsites  = sites/2 + (int)(!first_site_even);      
+      }
+
+
+      // Map index to local coordinates
+      coordinates.resize(sites);
+      for(unsigned i = 0; i<sites; i++){
+        location l;
+        unsigned l_index=i, s;
+        foralldir(d){
+          l[d] = l_index % size[d];
+          l_index /= size[d];
+        }
+        coordinates[get_index(l)] = l;
+      }
+
+
+      // Setup neighbour array
+      for(int d=0; d<NDIM; d++){
+        neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
+        for(unsigned i = 0; i<sites; i++){
+          location l = coordinates[i];
+          location nb = l;
+          int k;
+          if (is_up_dir(d)) {
+            k = d;
+            nb[d] = l[d] + 1;
+          } else {
+            k = opp_dir(d);
+            nb[k] = l[k] - 1;
+          }
+          if( nb[k] > 0 && nb[k] < size[k] ) {
+            neighbours[d][i] = get_index(nb);
+          } else {
+            // This is outside this split lattice (partly outside the node)
+            // Fetching is already set up. Here we set up the reorganisation of
+            // vectors
+            neighbours[d][i] = 0;
+          }
+        }
+      }
+    }
+
+
+    // Return a list of neighbours for a lattice divided into a given vector size
+    std::array<unsigned*,NDIRS> neighbour_list(int _vector_size){
+      assert(_vector_size == 4);
+      return neighbours;
+    }
+
+    int loop_begin( parity P, int _vector_size) {
+      assert(_vector_size == 4);
+      if(P==ODD){
+        return evensites;
+      } else {
+        return 0;
+      }
+    }
+
+    int loop_end( parity P, int _vector_size) {
+      assert(_vector_size == 4);
+      if(P==EVEN){
+        return evensites;
+      } else {
+        return sites;
+      }
+    }
+
+};
+
+
 
 
 #endif
