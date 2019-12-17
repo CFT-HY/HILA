@@ -11,6 +11,7 @@
 
 #ifdef AVX
 #include "../plumbing/AVX.h"
+#define VECTORIZED
 #endif
 
 
