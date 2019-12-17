@@ -269,7 +269,7 @@ class field_storage {
     }
 };
 
-#elif defined(AVX)
+#elif defined(VECTORIZED)
 
 template <typename T>
 class field_storage {
@@ -363,7 +363,7 @@ private:
     public:
       constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);;
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
-#ifndef AVX
+#ifndef VECTORIZED
       lattice_struct * lattice;
 #else
       vectorized_lattice_struct * lattice;
@@ -470,7 +470,7 @@ public:
       exit(1);  // TODO - more ordered exit?
     }
     fs = new field_struct;
-#ifndef AVX
+#ifndef VECTORIZED
     fs->lattice = lattice;
 #else
     fs->lattice = lattice->get_vectorized_lattice(fs->vector_size);
