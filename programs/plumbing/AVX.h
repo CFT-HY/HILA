@@ -38,7 +38,7 @@ struct avxdvector {
     double m = 1;
     for(int i=0; i<4; i++){
       m*=((double*)&c)[i];
-    } 
+    }
     return m;
   }
 

@@ -794,11 +794,63 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 
 
 
+#ifdef VECTORIZED
+
+#include "../plumbing/comm_vanilla.h"
+
+/// Vectorized implementation of fetching boundary elements
+/* Gathers sites at the boundary that need to be communicated to neighbours */
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+}
+
+/// Vectorized implementation of setting boundary elements
+/* Sets the values the neighbour elements from the communication buffer */
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+}
+
+template<typename T>
+void field<T>::start_move(direction d, parity p) const {}
+
+/// Vectorized lattice implemenation of wait_move()
+/// Needs to collect neighbour vectors
+template<typename T>
+void field<T>::wait_move(direction d, parity p) const {
+  // Loop over the boundary sites
+  for( vectorized_lattice_struct::halo_site hs: fs->lattice->halo_sites ){
+    int offset = 1, length;
+    for(int d=0; d<hs.dir; d++)
+      offset *= fs->lattice->split[d];
+    length = offset*fs->lattice->split[hs.dir];
+
+    int perm[fs->vector_size];
+    for( int i=0; i<fs->vector_size; i++ ){
+      perm[i] = length*(i/length) + (i+offset)%(length);
+    }
+
+    //temp.permute(offset);
+    field_element<T> temp = fs->get(hs.nb_index);
+    __m256d * t = (__m256d *) &temp;
+    constexpr static int elements = sizeof(T) / sizeof(double);
+    for( int v=0; v<elements; v++ ){
+      // vtype:permute(...)
+      for( int i=0; i<fs->vector_size; i++ )
+        t[v][i] =  t[v][perm[i]];
+    }
+    fs->set(temp, fs->lattice->sites + hs.halo_index);
+  }
+}
+
+
+
+#else
+
 
 
 
 /* Communication routines for fields */
-#ifndef USE_MPI
+#if !defined(USE_MPI) || defined(TRANSFORMER) 
 /* No MPI, trivial implementations */
 
 #include "../plumbing/comm_vanilla.h"
@@ -817,30 +869,7 @@ void field<T>::wait_move(direction d, parity p) const {}
  * have access to mpi.h, it cannot process this branch.
  */
 
-#ifdef TRANSFORMER
-// These may include functions or syntax that transformer does not understand
-
-#elif defined(VECTORIZED)
-
-
-/// Vectorized implementation of fetching boundary elements
-/* Gathers sites at the boundary that need to be communicated to neighbours */
-template<typename T>
-void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-    for (int j=0; j<to_node.n_sites(par); j++) {
-    T element = get(to_node.site_index(j, par));
-    std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
-  }
-}
-
-/// Vectorized implementation of setting boundary elements
-/* Sets the values the neighbour elements from the communication buffer */
-template<typename T>
-void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-}
-
-
-#elif defined(CUDA)
+#ifdef CUDA
 
 /* CUDA implementations */
 
@@ -916,6 +945,7 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 
 #else
 
+
 /// The standard (Non-CUDA) implementation of gather_comm_elements
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
@@ -934,6 +964,7 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
     set(element, from_node.offset(par)+j);
   }
 }
+
 
 #endif
 
@@ -1052,10 +1083,12 @@ void field<T>::wait_move(direction d, parity p) const {
   }
 }
 
-#endif
-
-
 
 #endif
+
+#endif // VECTORIZED
+
+
+#endif // FIELD_H
 
 
