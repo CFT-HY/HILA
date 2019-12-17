@@ -8,6 +8,7 @@
 
 int main(){
 
+    cmplx<float> a, b;
     matrix<6,6,cmplx<float>> A = 1, D = 2;
     matrix<6,6,cmplx<float>> B;
     matrix<6,6,cmplx<float>> C;
@@ -16,6 +17,8 @@ int main(){
     vector.fill(1.0);
     vector2.fill(-1.0);
 
+    a = conj(b);
+    A = conj(B);
     C=A*B;
     A+=D;
     A-=D;

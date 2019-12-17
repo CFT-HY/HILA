@@ -3,18 +3,12 @@
 #include<type_traits>
 #include "../datatypes/cmplx.h"
 
-//--- conjugation for general type T -> template specialized for complex types
+//--- 
 
 template<typename T>
 #pragma transformer loop_function
-inline T typeConj(T val){
-  return val; 
-}
-
-template<typename Accuracy> 
-#pragma transformer loop_function
-inline cmplx<Accuracy> typeConj(cmplx<Accuracy> val){
-  return val.conj();
+inline T conj(T rhs){
+  return rhs; //simply return self by default 
 }
 
 template<typename T>
@@ -132,7 +126,7 @@ class matrix {
   matrix<m,n,T> conjugate() const {
     matrix<m,n,T> res;
     for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
-      res.c[i][j] =  typeConj(c[j][i]);
+      res.c[i][j] =  conj(c[j][i]);
     }
     return res;
   }
@@ -181,6 +175,17 @@ matrix<n - 1, m - 1, T> Minor(const matrix<n, m, T> & bigger, int i, int j){
     index++;
   }
   return result;
+}
+
+
+template<int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<m, n, T> conj(const matrix<n, m, T> & rhs){
+  matrix<m,n,T> res;
+    for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
+      res.c[i][j] =  conj(rhs.c[j][i]);
+    }
+    return res;
 }
 
 template<int n, int m, typename T> 
@@ -237,7 +242,7 @@ template<int n, typename T>
 T operator* (const matrix<1, n, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
-    result += vecA.c[0][i]*(typeConj(vecB.c[i][0]));
+    result += vecA.c[0][i]*(conjugate(vecB.c[i][0]));
   }
   return result;
 }
@@ -247,7 +252,7 @@ template<int n, typename T>
 T operator* (const matrix<1, n, T> & vecA, const matrix<1, n, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
-    result += vecA.c[0][i]*(typeConj(vecB.c[0][i]));
+    result += vecA.c[0][i]*(conjugate(vecB.c[0][i]));
   }
   return result;
 }
@@ -258,7 +263,7 @@ T operator* (const matrix<n, 1, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result; 
   result=0;
   for (int i = 0; i < n; i++){
-    result += vecA.c[i][0]*(typeConj(vecB.c[i][0]));
+    result += vecA.c[i][0]*(conj(vecB.c[i][0]));
   }
   return result;
 }

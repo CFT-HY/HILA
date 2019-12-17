@@ -289,5 +289,11 @@ std::ostream& operator<<(std::ostream &strm, const cmplx<T> A) {
   return strm << "(" << A.re << ", " << A.im << ")";
 }
 
+template<typename Accuracy> 
+#pragma transformer loop_function
+inline cmplx<Accuracy> conj(cmplx<Accuracy> val){
+  return val.conj();
+}
+
 #endif
 

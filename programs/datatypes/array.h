@@ -1,5 +1,6 @@
 #include "sun.h"
 #include "cmplx.h"
+#include "general_matrix.h"
 
 template<typename T, int n>
 class array {
@@ -26,7 +27,7 @@ class array {
 
         friend array<T, n> operator * (const array<T, n> & x, const array<T, n> & y){
             array<T, n> r;
-            for (int i = 0; i < n; i++) r.c[i] =  typeConj(x.c[i])*y.c[i];
+            for (int i = 0; i < n; i++) r.c[i] = conj(x.c[i])*y.c[i];
             return r;
         }
 
