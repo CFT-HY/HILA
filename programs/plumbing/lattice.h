@@ -215,6 +215,12 @@ public:
     return site_location(idx);
   }
 
+  lattice_struct::comminfo_struct get_comminfo(int d){
+    return comminfo[d];
+  }
+
+  vectorized_lattice_struct * get_vectorized_lattice(int vector_size);
+
   /* MPI functions and variables. Define here in lattice? */
   void initialize_wait_arrays();
   #ifdef USE_MPI
@@ -229,8 +235,6 @@ public:
 
   // Guarantee 64 bits for these - 32 can overflow!
   unsigned long long n_gather_done = 0, n_gather_avoided = 0;
-
-  vectorized_lattice_struct * get_vectorized_lattice(int vector_size);
 
 };
 
@@ -258,6 +262,18 @@ struct vectorized_lattice_struct  {
     lattice_struct * lattice;
     bool first_site_even;
 
+    /// Return the communication info
+    lattice_struct::comminfo_struct comminfo(int d){
+      return lattice->get_comminfo(d);
+    }
+
+    /// Return the number of sites that need to be allocated
+    /// (1 vector for each site)
+    unsigned field_alloc_size() {
+      return alloc_size;
+    }
+
+    /// Translate a local location vector into an index 
     unsigned get_index(location l){
       int s = (int)first_site_even; // start at 0 for even first, 1 for odd first
       int l_index = l[NDIM-1];
@@ -273,7 +289,10 @@ struct vectorized_lattice_struct  {
       return l_index;
     }
 
-
+    /// Set up the vectorized lattice:
+    /// * Split the lattice and record size and splits
+    /// * Map indeces into local coordinates
+    /// * Set up neighbour vector references
     void setup(lattice_struct * _lattice, int _vector_size) {
       // Initialize
       lattice =  _lattice;
@@ -353,11 +372,12 @@ struct vectorized_lattice_struct  {
     }
 
 
-    // Return a list of neighbours for a lattice divided into a given vector size
+    /// Return a list of neighbours for a lattice divided into a given vector size
     std::array<unsigned*,NDIRS> neighbour_list(){
       return neighbours;
     }
 
+    /// First index in a lattice loop
     int loop_begin( parity P) {
       if(P==ODD){
         return evensites;
@@ -366,6 +386,7 @@ struct vectorized_lattice_struct  {
       }
     }
 
+    // Last index in a lattice loop
     int loop_end( parity P) {
       if(P==EVEN){
         return evensites;

@@ -279,7 +279,7 @@ class field_storage {
     constexpr static int vector_length = sizeof(field_element<T>) / sizeof(T);
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
+      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
     }
 
     void free_field() {
@@ -360,11 +360,14 @@ private:
   /// The following struct holds the data + information about the field
   /// TODO: field-specific boundary conditions?
   class field_struct {
-    private:
-      constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     public:
+      constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);;
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
+#ifndef AVX
       lattice_struct * lattice;
+#else
+      vectorized_lattice_struct * lattice;
+#endif
       unsigned is_fetched[NDIRS];
       bool move_started[3*NDIRS];
 #ifdef USE_MPI
@@ -376,7 +379,7 @@ private:
       void initialize_communication(){
         for(int d=0; d<NDIRS; d++) for(parity par: {EVEN,ODD}) {
           int tag = d + NDIRS*(int)par;
-          lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+          lattice_struct::comminfo_struct ci = lattice->get_comminfo(d);
           receive_buffer[tag].resize(ci.from_node.size());
           send_buffer[tag].resize(ci.to_node.size());
           receive_request[tag].resize(ci.from_node.size());
@@ -395,23 +398,16 @@ private:
       }
       void free_payload() { payload.free_field(); }
 
-      // Map a local lattice index into a vectorized index
-      int map_index(int i) const{
-        return i/payload.vector_length;
-      }
-
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
       field_element<T> get(const int i) const {
-        int index = map_index(i);
-        return  payload.get( index, lattice->field_alloc_size() );
+        return payload.get( i, lattice->field_alloc_size() );
       }
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
       void set(field_element<T> value, const int i) {
-        int index = map_index(i);
-        payload.set( value, index, lattice->field_alloc_size() );
+        payload.set( value, i, lattice->field_alloc_size() );
       }
 
       /// Gather boundary elements for communication
@@ -474,7 +470,11 @@ public:
       exit(1);  // TODO - more ordered exit?
     }
     fs = new field_struct;
+#ifndef AVX
     fs->lattice = lattice;
+#else
+    fs->lattice = lattice->get_vectorized_lattice(fs->vector_size);
+#endif
     fs->allocate_payload();
     mark_changed(ALL);
   }
@@ -818,7 +818,7 @@ void field<T>::wait_move(direction d, parity p) const {}
  */
 
 #ifdef TRANSFORMER
-//Trivial definitions to allow transformer to compile
+// These may include functions or syntax that transformer does not understand
 
 #elif defined(VECTORIZED)
 
