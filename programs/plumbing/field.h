@@ -204,109 +204,28 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 
 #endif
 
-template <typename T>
-using field_element = T;
 
 
-/// placeholder for in loop elements, specialized by the transformer
-/// In AVX, these replace base types with vector types, so that
-/// so that element
-/// element<type<double>> -> type<d_vector>
-/// element<double> -> d_vector
-///
-/// This allows direct assignment from element<type<double>> to
-/// type<element<double>>, both of which become type<d_vector>
-/// 
-/// Cannot figure out how to disable setting field[X] = T.
-/// Need to do this in the transformer.
 template <typename T>
-struct element {
+using element = T;
+
+template <typename T>
+struct field_element{
   T c;
 
-  // Cast to T to element 
-  element (const T& x) {c=x;} 
-  element (T& x) {c=x;} 
-  // Assignment of T to element
-  element& operator= (const T& x) {
-    this->c=x; return *this;
-  }
-
-  // Transformer sees field-parity expressions as type T. This is 
-  // necessary if loops contain member function calls on elements.
-  // However, it must then be possible to cast these to elements
-  // so that the user can set field[X] = element<T>
-  operator T() const { return c; } 
+  field_element(const T& x): c(x) {}
+  operator T(){return c;}
 };
+
+
+
 
 
 
 // Pointer to field data and accessors. Only this is passed to the
 // CUDA kernels and other accelerators and it only contains a minimal
 // amount of data.
-#ifndef layout_SOA
-#ifndef AVX
-template <typename T>
-class field_storage {
-  public:
-      // Array of structures implementation
-    element<T> * fieldbuf;
-
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (element<T>*) allocate_field_mem( sizeof(element<T>) * field_alloc_size);
-      #pragma acc enter data create(fieldbuf)
-    }
-
-    void free_field() {
-      #pragma acc exit data delete(fieldbuf)
-      free_field_mem((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    #pragma transformer loop_function
-    element<T> get(const int i, const int field_alloc_size) const
-    {
-      return ((element<T> *) fieldbuf)[i];
-    }
-
-    #pragma transformer loop_function
-    void set(element<T> value, const int i, const int field_alloc_size) 
-    {
-      ((element<T> *) fieldbuf)[i] = value;
-    }
-};
-
-#else
-
-template <typename T>
-class field_storage {
-  public:
-    // Use the vectorized field storage type
-    element<T> * fieldbuf;
-    constexpr static int vector_len = sizeof(element<T>) / sizeof(T);
-
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (element<T>*) allocate_field_mem( sizeof(T) * field_alloc_size);
-    }
-
-    void free_field() {
-      free_field_mem((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    element<T> get(const int i, const int field_alloc_size) const
-    {
-      return fieldbuf[i/vector_len];
-    }
-
-    void set(element<T> value, const int i, const int field_alloc_size) 
-    {
-      fieldbuf[i/vector_len] = value;
-    }
-};
-
-#endif
-#else
-
+#ifdef layout_SOA
 template <typename T>
 class field_storage {
   public:
@@ -349,6 +268,69 @@ class field_storage {
       }
     }
 };
+
+#elif defined(AVX)
+
+template <typename T>
+class field_storage {
+  public:
+    // Use the vectorized field storage type
+    field_element<T> * fieldbuf;
+    constexpr static int vector_length = sizeof(field_element<T>) / sizeof(T);
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
+    }
+
+    void free_field() {
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    field_element<T> get(const int i, const int field_alloc_size) const
+    {
+      return fieldbuf[i];
+    }
+
+    void set(field_element<T> value, const int i, const int field_alloc_size) 
+    {
+      fieldbuf[i] = value;
+    }
+};
+
+#else
+
+template <typename T>
+class field_storage {
+  public:
+      // Array of structures implementation
+    field_element<T> * fieldbuf;
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
+      #pragma acc enter data create(fieldbuf)
+    }
+
+    void free_field() {
+      #pragma acc exit data delete(fieldbuf)
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    #pragma transformer loop_function
+    field_element<T> get(const int i, const int field_alloc_size) const
+    {
+      return ((field_element<T> *) fieldbuf)[i];
+    }
+
+    #pragma transformer loop_function
+    void set(field_element<T> value, const int i, const int field_alloc_size) 
+    {
+      ((field_element<T> *) fieldbuf)[i] = value;
+    }
+};
+
+
 #endif
 
 
@@ -378,11 +360,14 @@ private:
   /// The following struct holds the data + information about the field
   /// TODO: field-specific boundary conditions?
   class field_struct {
-    private:
-      constexpr static int t_elements = sizeof(T) / sizeof(real_t);
     public:
+      constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);;
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
+#ifndef AVX
       lattice_struct * lattice;
+#else
+      vectorized_lattice_struct * lattice;
+#endif
       unsigned is_fetched[NDIRS];
       bool move_started[3*NDIRS];
 #ifdef USE_MPI
@@ -394,7 +379,7 @@ private:
       void initialize_communication(){
         for(int d=0; d<NDIRS; d++) for(parity par: {EVEN,ODD}) {
           int tag = d + NDIRS*(int)par;
-          lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+          lattice_struct::comminfo_struct ci = lattice->get_comminfo(d);
           receive_buffer[tag].resize(ci.from_node.size());
           send_buffer[tag].resize(ci.to_node.size());
           receive_request[tag].resize(ci.from_node.size());
@@ -412,15 +397,16 @@ private:
         initialize_communication();
       }
       void free_payload() { payload.free_field(); }
-      
+
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      element<T> get(const int i) const {
-        return  payload.get( i, lattice->field_alloc_size() );
+      field_element<T> get(const int i) const {
+        return payload.get( i, lattice->field_alloc_size() );
       }
+
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      void set(element<T> value, const int i) {
+      void set(field_element<T> value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
       }
 
@@ -484,7 +470,11 @@ public:
       exit(1);  // TODO - more ordered exit?
     }
     fs = new field_struct;
+#ifndef AVX
     fs->lattice = lattice;
+#else
+    fs->lattice = lattice->get_vectorized_lattice(fs->vector_size);
+#endif
     fs->allocate_payload();
     mark_changed(ALL);
   }
@@ -560,18 +550,15 @@ public:
   // T& operator[] (const int i) { return data[i]; }
 
   // these give the field_element -- WILL BE modified by transformer
-  field_element<T>& operator[] (const parity p) const;
-  field_element<T>& operator[] (const parity_plus_direction p) const;
-  //{ 
-  //  return (field_element<T>) *this;
-  //}
+  element<T>& operator[] (const parity p) const;
+  element<T>& operator[] (const parity_plus_direction p) const;
 
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  element<T> get_value_at(int i) const { return this->fs->get(i); }
+  field_element<T> get_value_at(int i) const { return this->fs->get(i); }
 
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
-  void set_value_at(element<T> value, int i) { this->fs->set(value, i); }
+  void set_value_at(field_element<T> value, int i) { this->fs->set(value, i); }
 
 
   // fetch the element at this loc
@@ -784,17 +771,17 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 // template <typename T>
 // class reduction {
 // private:
-//   field_element<T> value;
+//   field_field_element<T> value;
   
 // public:
-//   void sum(const field_element<T> & rhs) { value += rhs; }
-//   void operator+=(const field_element<T> & rhs) { value += rhs; }
-//   void product(const field_element<T> & rhs) { value *= rhs; }
-//   void operator*=(const field_element<T> & rhs) { value *= rhs; }
+//   void sum(const field_field_element<T> & rhs) { value += rhs; }
+//   void operator+=(const field_field_element<T> & rhs) { value += rhs; }
+//   void product(const field_field_element<T> & rhs) { value *= rhs; }
+//   void operator*=(const field_field_element<T> & rhs) { value *= rhs; }
 
 //   // TODO - short vectors!
-//   void max(const field_element<T> & rhs) { if (rhs > value) value = rhs; }
-//   void min(const field_element<T> & rhs) { if (rhs < value) value = rhs; }
+//   void max(const field_field_element<T> & rhs) { if (rhs > value) value = rhs; }
+//   void min(const field_field_element<T> & rhs) { if (rhs < value) value = rhs; }
 
 //   // TODO - short vectors!
 //   T get() { return value.get_value(); }
@@ -830,28 +817,31 @@ void field<T>::wait_move(direction d, parity p) const {}
  * have access to mpi.h, it cannot process this branch.
  */
 
+#ifdef TRANSFORMER
+// These may include functions or syntax that transformer does not understand
 
-#if !defined(CUDA) || defined(TRANSFORMER)
-/// The standard (Non-CUDA) implementation of gather_comm_elements
+#elif defined(VECTORIZED)
+
+
+/// Vectorized implementation of fetching boundary elements
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
 void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-  for (int j=0; j<to_node.n_sites(par); j++) {
+    for (int j=0; j<to_node.n_sites(par); j++) {
     T element = get(to_node.site_index(j, par));
     std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
   }
 }
-/// The standard (Non-CUDA) implementation of scatter_comm_elements
+
+/// Vectorized implementation of setting boundary elements
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
 void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-  for (int j=0; j<from_node.n_sites(par); j++) {
-    T element = *((T*) ( buffer + j*sizeof(T) ));
-    set(element, from_node.offset(par)+j);
-  }
 }
 
-#else
+
+#elif defined(CUDA)
+
 /* CUDA implementations */
 
 /// A kernel that gathers neighbour elements for communication (using the getter)
@@ -922,6 +912,29 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 
   cudaFree(d_buffer);
 }
+
+
+#else
+
+/// The standard (Non-CUDA) implementation of gather_comm_elements
+/* Gathers sites at the boundary that need to be communicated to neighbours */
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+  for (int j=0; j<to_node.n_sites(par); j++) {
+    T element = get(to_node.site_index(j, par));
+    std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
+  }
+}
+/// The standard (Non-CUDA) implementation of scatter_comm_elements
+/* Sets the values the neighbour elements from the communication buffer */
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+  for (int j=0; j<from_node.n_sites(par); j++) {
+    T element = *((T*) ( buffer + j*sizeof(T) ));
+    set(element, from_node.offset(par)+j);
+  }
+}
+
 #endif
 
 

@@ -3,6 +3,9 @@
 
 #include <immintrin.h>
 
+#define VECTORIZED
+constexpr int max_vector_size = 8;
+
 
 /// A new vector class is necessary, the intrinsic types
 /// are not always proper types. This encapsulates them
@@ -14,7 +17,7 @@ struct avxdvector {
   avxdvector(const avxdvector & a) =default;
 
   constexpr avxdvector(__m256d x):c(x) {}
-  avxdvector(double x):c(_mm256_broadcast_sd(&x)) {}
+  avxdvector(const double & x):c(_mm256_broadcast_sd(&x)) {}
 
   // Cast to base type interpred as a sum, implements
   // the sum reduction
@@ -38,14 +41,32 @@ struct avxdvector {
     } 
     return m;
   }
+
+  avxdvector operator-() const {return _mm256_xor_pd(c, _mm256_set1_pd(-0.0)); }
+
 };
 
 
 /* Define operations for the vector type */
 
 #pragma transformer loop_function
-avxdvector operator+(const avxdvector & a, const avxdvector & b) {
+inline avxdvector operator+(const avxdvector & a, const avxdvector & b) {
   return avxdvector(_mm256_add_pd(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxdvector operator-(const avxdvector & a, const avxdvector & b) {
+  return avxdvector(_mm256_sub_pd(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxdvector operator*(const avxdvector & a, const avxdvector & b) {
+  return avxdvector(_mm256_mul_pd(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxdvector operator/(const avxdvector & a, const avxdvector & b) {
+  return avxdvector(_mm256_div_pd(a.c, b.c));
 }
 
 

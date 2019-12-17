@@ -19,8 +19,8 @@ check(){
 }
 
 transform_c(){
-    echo ../../build/transformer $1
-    ../../build/transformer $1 2>/dev/null
+    echo make $1
+    make $1 2>/dev/null
     check transform
 }
 
@@ -54,7 +54,7 @@ for D in 1 2 3 4 ; do
   for testfile in $tests; do
     test="${testfile%.*}"
     echo $test
-    transform_c ${test}.cpp
+    transform_c ${test}.cpt
     compile_c ${test}
     #run_c ${test}
     run_mpi_c ${test} 1
