@@ -68,13 +68,14 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   }
 
   // Get a pointer to the neighbour list
-  code << "std::array<unsigned*,NDIRS> neighbour_list = lattice->vectorized_lattice->neighbour_list(4);\n";
+  code << "vectorized_lattice_struct * vectorized_lattice = lattice->get_vectorized_lattice(4);\n";
+  code << "std::array<unsigned*,NDIRS> neighbour_list = vectorized_lattice->neighbour_list();\n";
 
   // Set the start and end points
   // A single vector covers 4 sites in AVX. These must all have the same parity.
   // So we devide the start and end points here by 4.
-  code << "const int loop_begin = lattice->vectorized_lattice->loop_begin(" << parity_in_this_loop << ", 4);\n";
-  code << "const int loop_end   = lattice->vectorized_lattice->loop_end(" << parity_in_this_loop << ", 4);\n";
+  code << "const int loop_begin = vectorized_lattice->loop_begin(" << parity_in_this_loop << ");\n";
+  code << "const int loop_end   = vectorized_lattice->loop_end(" << parity_in_this_loop << ");\n";
 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 

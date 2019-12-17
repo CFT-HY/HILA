@@ -45,10 +45,6 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 
   /* Initialize wait_array structures */
   initialize_wait_arrays();
-
-  /* Initialize the list of vectorized lattices */
-  vectorized_lattice = (vectorized_lattice_struct*) malloc(sizeof(vectorized_lattice_struct));
-  vectorized_lattice->setup(this, 4);
 }
 
 
@@ -518,5 +514,25 @@ void lattice_struct::initialize_wait_arrays()
 void lattice_struct::initialize_wait_arrays(){}
 
 #endif
+
+
+
+
+
+vectorized_lattice_struct * lattice_struct::get_vectorized_lattice(int vector_size){
+  // Check if the vectorized lattice has been created
+  for( vectorized_lattice_struct * vl : vectorized_lattices ) {
+    if( vl->vector_size == vector_size )
+      return vl;
+  }
+
+  // Not found, setup here
+  vectorized_lattice_struct * vectorized_lattice = 
+    (vectorized_lattice_struct *) malloc(sizeof(vectorized_lattice_struct));
+  vectorized_lattice->setup(this, vector_size);
+  vectorized_lattices.push_back(vectorized_lattice);
+  return vectorized_lattice;
+}
+
 
 

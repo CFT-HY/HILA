@@ -132,7 +132,7 @@ public:
 
   std::vector<comminfo_struct> comminfo;
 
-  vectorized_lattice_struct *vectorized_lattice;
+  std::vector<vectorized_lattice_struct*> vectorized_lattices;
 
   unsigned * neighb[NDIRS];
   unsigned char *wait_arr_;
@@ -230,6 +230,8 @@ public:
   // Guarantee 64 bits for these - 32 can overflow!
   unsigned long long n_gather_done = 0, n_gather_avoided = 0;
 
+  vectorized_lattice_struct * get_vectorized_lattice(int vector_size);
+
 };
 
 /// global handle to lattice
@@ -250,7 +252,7 @@ struct vectorized_lattice_struct  {
     std::array<unsigned*,NDIRS> neighbours;
     std::array<int,NDIM> size;
     std::array<int,NDIM> split;
-    int sites, evensites, oddsites;
+    int sites, evensites, oddsites, alloc_size;
     unsigned vector_size;
     std::vector<location> coordinates;
     lattice_struct * lattice;
@@ -322,6 +324,8 @@ struct vectorized_lattice_struct  {
 
 
       // Setup neighbour array
+      int halo_index = 0;
+      std::vector<unsigned> orig_site(sites);
       for(int d=0; d<NDIM; d++){
         neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
         for(unsigned i = 0; i<sites; i++){
@@ -339,23 +343,22 @@ struct vectorized_lattice_struct  {
             neighbours[d][i] = get_index(nb);
           } else {
             // This is outside this split lattice (partly outside the node)
-            // Fetching is already set up. Here we set up the reorganisation of
-            // vectors
-            neighbours[d][i] = 0;
+            // Fetching has already been set up
+            neighbours[d][i] = sites + halo_index;
+            halo_index++;
           }
         }
       }
+      alloc_size = sites + halo_index;
     }
 
 
     // Return a list of neighbours for a lattice divided into a given vector size
-    std::array<unsigned*,NDIRS> neighbour_list(int _vector_size){
-      assert(_vector_size == 4);
+    std::array<unsigned*,NDIRS> neighbour_list(){
       return neighbours;
     }
 
-    int loop_begin( parity P, int _vector_size) {
-      assert(_vector_size == 4);
+    int loop_begin( parity P) {
       if(P==ODD){
         return evensites;
       } else {
@@ -363,8 +366,7 @@ struct vectorized_lattice_struct  {
       }
     }
 
-    int loop_end( parity P, int _vector_size) {
-      assert(_vector_size == 4);
+    int loop_end( parity P) {
       if(P==EVEN){
         return evensites;
       } else {
