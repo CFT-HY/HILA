@@ -46,11 +46,10 @@ int main(int argc, char **argv){
     // Test sum and move constructor
     s1 = s2 + s3;
 
-    // Test field assignment to field element (reduction)
     onsites(ALL){
         sum+=s1[X].re;
     }
-    assert(sum==2*(double)lattice->volume());
+    assert(sum==2*(double)lattice->volume() && "onsites reduction");
     s1=0; s2=0; s3=0;
     sum = 0;
 
@@ -64,7 +63,7 @@ int main(int argc, char **argv){
     onsites(ALL){
         sum+=s1[X].re;
     }
-    assert(sum==(double)lattice->volume());
+    assert(sum==(double)lattice->volume() && "test setting field with parity");
 
     foralldir(d){
         onsites(ODD){
@@ -79,10 +78,10 @@ int main(int argc, char **argv){
 
     sum = 0;
     onsites(ALL){
-        double diff = s1[X].re - (NDIM+1);
+        element<double> diff = s1[X].re - (NDIM+1);
 	    sum += diff*diff;
     }
-	assert(sum==0);
+	assert(sum==0 && "test neighbour fetch");
     
 
     // Test starting communication manually
@@ -117,7 +116,7 @@ int main(int argc, char **argv){
     s2[ALL] = 1.0;
     sum_test_function( s3, s1, s2 ); //s3 = s1 + s2
     onsites(ALL){
-        double diff = s3[X].re - 1.0;
+        element<double> diff = s3[X].re - 1.0;
         sum += diff*diff;
     }
     assert(sum == 0);

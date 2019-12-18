@@ -29,7 +29,7 @@
 
 //definitions for global variables
 ClassTemplateDecl * field_decl = nullptr; 
-ClassTemplateDecl * element_decl = nullptr;   
+ClassTemplateDecl * field_element_decl = nullptr;   
 const std::string field_element_type = "field_element<";
 const std::string field_type = "field<";
 std::list<field_ref> field_ref_list = {};
@@ -389,7 +389,7 @@ public:
 
     file_id_list.clear();
     file_buffer_list.clear();
-    field_decl = element_decl = nullptr;
+    field_decl = field_element_decl = nullptr;
 
     return (true);
   }

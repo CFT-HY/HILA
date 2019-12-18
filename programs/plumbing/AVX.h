@@ -3,6 +3,9 @@
 
 #include <immintrin.h>
 
+#define VECTORIZED
+constexpr int max_vector_size = 8;
+
 
 /// A new vector class is necessary, the intrinsic types
 /// are not always proper types. This encapsulates them
@@ -14,7 +17,7 @@ struct avxdvector {
   avxdvector(const avxdvector & a) =default;
 
   constexpr avxdvector(__m256d x):c(x) {}
-  avxdvector(double x):c(_mm256_broadcast_sd(&x)) {}
+  avxdvector(const double & x):c(_mm256_broadcast_sd(&x)) {}
 
   // Cast to base type interpred as a sum, implements
   // the sum reduction
@@ -35,17 +38,55 @@ struct avxdvector {
     double m = 1;
     for(int i=0; i<4; i++){
       m*=((double*)&c)[i];
-    } 
+    }
     return m;
   }
+
+  avxdvector operator-() const {return _mm256_xor_pd(c, _mm256_set1_pd(-0.0)); }
+
 };
 
 
 /* Define operations for the vector type */
 
 #pragma transformer loop_function
-avxdvector operator+(const avxdvector & a, const avxdvector & b) {
+inline avxdvector operator+(const avxdvector & a, const avxdvector & b) {
   return avxdvector(_mm256_add_pd(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxdvector operator-(const avxdvector & a, const avxdvector & b) {
+  return avxdvector(_mm256_sub_pd(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxdvector operator*(const avxdvector & a, const avxdvector & b) {
+  return avxdvector(_mm256_mul_pd(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxdvector operator/(const avxdvector & a, const avxdvector & b) {
+  return avxdvector(_mm256_div_pd(a.c, b.c));
+}
+
+
+namespace vectorized
+{
+  template<int vector_len>
+  inline void permute(int *perm, void * element, int n_elements){}
+
+  template<>
+  inline void permute<4>(int *perm, void * element, int n_elements){
+    __m256d * e = (__m256d *) element;
+    for( int v=0; v<n_elements; v++ ){
+      __m256d t = e[v];
+      for( int i=0; i<4; i++ )
+        e[v][i] =  t[perm[i]];
+    }
+  }
+
+  // Vector length in bytes
+  constexpr int sizeofvector = 32;
 }
 
 

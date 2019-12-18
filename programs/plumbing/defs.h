@@ -10,8 +10,8 @@
 
 
 #ifdef AVX
-#define VECTORIZED
 #include "../plumbing/AVX.h"
+#define VECTORIZED
 #endif
 
 
@@ -232,6 +232,22 @@ inline void synchronize(){
 
 
 
+
+///Implements test for arithmetic operators in types, similar to 
+///std::is_arithmetic but works for classes
+template<class...> struct voidify { using type = void; };
+template<class... Ts> using void_t = typename voidify<Ts...>::type;
+
+template<class T, class = void>
+struct supports_arithmetic_operations : std::false_type {};
+
+template<class T>
+struct supports_arithmetic_operations<T,
+          void_t<decltype(std::declval<T>() + std::declval<T>()),
+                 decltype(std::declval<T>() - std::declval<T>()),
+                 decltype(std::declval<T>() * std::declval<T>()),
+                 decltype(std::declval<T>() / std::declval<T>())>> 
+          : std::true_type {};
 
 
 #endif

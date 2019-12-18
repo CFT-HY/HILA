@@ -3,12 +3,11 @@
 #include<regex>
 #include<type_traits>
 #include "inputs.h"
-#include "comm_mpi.h" 
 
 
 #ifdef USE_MPI
 
-#include<mpi.h>
+#include "comm_mpi.h" 
 static int myrank = 0;
 
 #endif

@@ -31,6 +31,7 @@ extern std::string parity_name;
 
 extern std::string parity_in_this_loop;
 
+static int vector_lenght = 4;
 
 
 /// Replace base datatypes with vectorized datatypes
@@ -51,16 +52,10 @@ void replace_basetype_with_vector(std::string & element_type) {
 std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   std::stringstream code;
   
-  // Set the start and end points
-  code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
-  code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
-
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
-  
       v.new_name = "v_" + v.reduction_name;
-  
       // Allocate memory for a reduction. This will be filled in the kernel
       std::string reduction_type = v.type;
       replace_basetype_with_vector(reduction_type);
@@ -69,28 +64,23 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
       } else if (v.reduction_type == reduction::PRODUCT) {
         code << reduction_type << " " << v.new_name << "(1);\n";
       }
-
-      // Replace references in the loop body
-      for (var_ref & vr : v.refs) {
-        loopBuf.replace( vr.ref, v.new_name );
-      }
     }
   }
+
+  // Get a pointer to the neighbour list
+  code << "vectorized_lattice_struct * vectorized_lattice = lattice->get_vectorized_lattice(4);\n";
+  code << "std::array<unsigned*,NDIRS> neighbour_list = vectorized_lattice->neighbour_list();\n";
+
+  // Set the start and end points
+  // A single vector covers 4 sites in AVX. These must all have the same parity.
+  // So we devide the start and end points here by 4.
+  code << "const int loop_begin = vectorized_lattice->loop_begin(" << parity_in_this_loop << ");\n";
+  code << "const int loop_end   = vectorized_lattice->loop_end(" << parity_in_this_loop << ");\n";
 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 
-       << looping_var << " < loop_end; " << looping_var << "++) {\n";
-
-
-  // replace reduction variables in the loop
-  for ( var_info & vi : var_info_list ) {
-    if (vi.is_loop_local) {
-      // Converts all locally declared variables to vectors. Is this OK?
-      std::string declaration_string = TheRewriter.getRewrittenText(vi.decl->getSourceRange());
-      replace_basetype_with_vector( declaration_string );
-      loopBuf.replace( vi.decl->getSourceRange(), declaration_string);
-    }
-  }
+       << looping_var << " < loop_end; " 
+       << looping_var << "++) {\n";
 
   
   // Create temporary field element variables
@@ -103,7 +93,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
     // variables
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
-           << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
+           << " = " << l.new_name << ".get_value_at(neighbour_list[" 
            << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
     }
     // Check for references without a direction. If found, add temp variable
@@ -113,7 +103,6 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
       break;  // Only one needed
     }
   }
-
 
   // Replace field references in loop body
   for ( field_ref & le : field_ref_list ) {
@@ -131,6 +120,25 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
     } else {
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression);
+    }
+  }
+
+  for ( var_info & vi : var_info_list ) {
+    if(vi.type.rfind("element",0) != std::string::npos) {
+      // Converts all locally declared variables to vectors. Is this OK?
+      // First get the type name in the declaration
+      auto typeexpr = vi.decl->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+      std::string type_string = TheRewriter.getRewrittenText(typeexpr);
+
+      replace_basetype_with_vector( type_string );
+
+      loopBuf.replace( typeexpr, type_string + " ");
+    }
+    if (vi.reduction_type != reduction::NONE) {
+      // Replace references in the loop body
+      for (var_ref & vr : vi.refs) {
+        loopBuf.replace( vr.ref, vi.new_name );
+      }
     }
   }
 
@@ -169,10 +177,10 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
   // insert after a new line
   SourceLocation l =
-  getSourceLocationAtEndOfLine( element_decl->getSourceRange().getEnd() );
+  getSourceLocationAtEndOfLine( field_element_decl->getSourceRange().getEnd() );
 
   // Find template parameter name (only 1 allowed)
-  auto template_parameter = element_decl->getTemplateParameters()->begin()[0];
+  auto template_parameter = field_element_decl->getTemplateParameters()->begin()[0];
   std::string templ_type = template_parameter->getNameAsString();
   
   // Replace the original type with a vector type
@@ -181,15 +189,15 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
 
   // Get the body of the element definition
   srcBuf bodyBuffer; // (&TheRewriter,S);
-  bodyBuffer.copy_from_range(writeBuf,element_decl->getTemplatedDecl()->getSourceRange());
+  bodyBuffer.copy_from_range(writeBuf,field_element_decl->getTemplatedDecl()->getSourceRange());
 
   // Replace templated type with new vector type
   bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
 
   // Add specialization parameters
   bodyBuffer.replace_token(0, bodyBuffer.size()-1,
-                  element_decl->getQualifiedNameAsString(),
-                  element_decl->getQualifiedNameAsString() + "<"+typestr+">");
+                  field_element_decl->getQualifiedNameAsString(),
+                  field_element_decl->getQualifiedNameAsString() + "<"+typestr+">");
 
   // Add the template<> declaration
   bodyBuffer.prepend("template<>\n", true);

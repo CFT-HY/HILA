@@ -19,6 +19,8 @@ struct node_info {
   unsigned evensites, oddsites;
 };
 
+struct vectorized_lattice_struct;
+
 
 #ifdef CUDA
 struct device_lattice_info {
@@ -37,6 +39,9 @@ struct device_lattice_info {
   }
 };
 #endif
+
+
+
 
 
 class lattice_struct {
@@ -127,6 +132,8 @@ public:
 
   std::vector<comminfo_struct> comminfo;
 
+  std::vector<vectorized_lattice_struct*> vectorized_lattices;
+
   unsigned * neighb[NDIRS];
   unsigned char *wait_arr_;
 
@@ -155,6 +162,7 @@ public:
 
   int size(direction d) { return l_size[d]; }
   int size(int d) { return l_size[d]; }
+  int local_size(int d) { return this_node.size[d]; }
   long long volume() { return l_volume; }
   int node_number() { return this_node.index; }
   int n_nodes() { return nodes.number; }
@@ -166,6 +174,8 @@ public:
   location site_location(unsigned index);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
   void create_std_gathers();
+  
+  bool first_site_even() { return this_node.first_site_even; };
 
   unsigned remap_node(const unsigned i);
   
@@ -205,6 +215,12 @@ public:
     return site_location(idx);
   }
 
+  lattice_struct::comminfo_struct get_comminfo(int d){
+    return comminfo[d];
+  }
+
+  vectorized_lattice_struct * get_vectorized_lattice(int vector_size);
+
   /* MPI functions and variables. Define here in lattice? */
   void initialize_wait_arrays();
   #ifdef USE_MPI
@@ -228,6 +244,196 @@ extern lattice_struct * lattice;
 
 // Keep track of defined lattices
 extern std::vector<lattice_struct*> lattices;
+
+
+
+
+
+/// Splits the local lattice into equal sections for vectorization
+/// Contains a list of neighbour arrays for each possible vector size
+struct vectorized_lattice_struct  {
+  public:
+    std::array<unsigned*,NDIRS> neighbours;
+    std::array<int,NDIM> size;
+    std::array<int,NDIM> split;
+    int sites, evensites, oddsites, alloc_size;
+    unsigned vector_size;
+    std::vector<location> coordinates;
+    lattice_struct * lattice;
+    bool first_site_even;
+
+    std::array<int*, NDIM> boundary_permutation;
+
+    struct halo_site {
+      unsigned nb_index;
+      unsigned halo_index;
+      direction dir;
+    };
+    std::vector<halo_site> halo_sites;
+
+    /// Return the communication info
+    lattice_struct::comminfo_struct comminfo(int d){
+      return lattice->get_comminfo(d);
+    }
+
+    /// Return the number of sites that need to be allocated
+    /// (1 vector for each site)
+    unsigned field_alloc_size() {
+      return alloc_size;
+    }
+
+    /// Translate a local location vector into an index 
+    unsigned get_index(location l){
+      int s = (int)first_site_even; // start at 0 for even first, 1 for odd first
+      int l_index = l[NDIM-1];
+      for (int d=NDIM-2; d>=0; d--){
+        l_index = l_index*size[d] + (l[d] +size[d])%size[d];
+        s +=  (l[d] +size[d])%size[d];
+      }
+      if( s%2==0 ){
+        l_index /= 2;
+      } else {
+        l_index = evensites + l_index/2;
+      }
+      return l_index;
+    }
+
+    /// Set up the vectorized lattice:
+    /// * Split the lattice and record size and splits
+    /// * Map indeces into local coordinates
+    /// * Set up neighbour vector references
+    void setup(lattice_struct * _lattice, int _vector_size) {
+      // Initialize
+      lattice =  _lattice;
+      vector_size = _vector_size;
+      first_site_even = lattice->first_site_even();
+
+      for(int d=0; d<NDIM; d++){
+        size[d] = lattice->local_size(d);
+        split[d] = 1;
+      }
+
+      int v = vector_size;
+      while( v > 1 ){
+        // find longest that will be even after split (divisible by 4)
+        int msize=1, d=0;
+        for( int i=0; i<NDIM; i++ ){
+          if( size[i] > msize && size[i]%4==0 )
+            d=i;
+        }
+        // split
+        v /= 2; size[d] /= 2; split[d] *= 2;
+      }
+      assert(v == 1 && "cannot split local lattice to vector size");
+
+      sites = 1;
+      for( int i=0; i<NDIM; i++ ){
+        sites *= size[i];
+      }
+      if( sites%2 == 0 ){
+        evensites = oddsites = sites/2;
+      } else {
+        evensites = sites/2 + (int)first_site_even;
+        oddsites  = sites/2 + (int)(!first_site_even);      
+      }
+
+
+      // Map index to local coordinates
+      coordinates.resize(sites);
+      for(unsigned i = 0; i<sites; i++){
+        location l;
+        unsigned l_index=i, s;
+        foralldir(d){
+          l[d] = l_index % size[d];
+          l_index /= size[d];
+        }
+        coordinates[get_index(l)] = l;
+      }
+
+
+      // Setup neighbour array
+      int halo_index = 0;
+      std::vector<unsigned> orig_site(sites);
+      for(int d=0; d<NDIM; d++){
+        neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
+        for(unsigned i = 0; i<sites; i++){
+          location l = coordinates[i];
+          location nb = l;
+          int k;
+          if (is_up_dir(d)) {
+            k = d;
+            nb[d] = l[d] + 1;
+          } else {
+            k = opp_dir(d);
+            nb[k] = l[k] - 1;
+          }
+          if( nb[k] > 0 && nb[k] < size[k] ) {
+            neighbours[d][i] = get_index(nb);
+          } else {
+            // This is outside this split lattice (partly outside the node)
+            neighbours[d][i] = sites + halo_index;
+            // Find the corresponding site on the other side of the lattice
+            halo_site hs;
+            hs.nb_index = get_index(nb);
+            hs.halo_index = halo_index;
+            hs.dir = (direction)d;
+            halo_sites.push_back(hs);
+            halo_index++;
+          }
+        }
+      }
+      alloc_size = sites + halo_index;
+
+      // Setup permutation vectors for setting the halo
+      int offset = 1, length;
+      for(int d=0; d<NDIM; d++){
+        boundary_permutation[d] = (int *) malloc(sizeof(int)*vector_size);
+        length = offset*split[d];
+        for( int i=0; i<vector_size; i++ ){
+          boundary_permutation[d][i] = length*(i/length) + (i+offset)%(length);
+        }
+
+        offset *= split[d];
+      }
+    }
+
+
+    /// Return a list of neighbours for a lattice divided into a given vector size
+    std::array<unsigned*,NDIRS> neighbour_list(){
+      return neighbours;
+    }
+
+    /// First index in a lattice loop
+    int loop_begin( parity P) {
+      if(P==ODD){
+        return evensites;
+      } else {
+        return 0;
+      }
+    }
+
+    // Last index in a lattice loop
+    int loop_end( parity P) {
+      if(P==EVEN){
+        return evensites;
+      } else {
+        return sites;
+      }
+    }
+
+    template <typename T>
+    void reduce_node_sum(T & value, bool distribute){
+      lattice->reduce_node_sum(value, distribute);
+    };
+
+    template <typename T>
+    void reduce_node_product(T & value, bool distribute){
+      lattice->reduce_node_product(value, distribute);
+    };
+
+};
+
+
 
 
 #endif
