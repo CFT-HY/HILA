@@ -1,6 +1,4 @@
-#include "sun.h"
-#include "cmplx.h"
-#include "general_matrix.h"
+
 
 template<typename T, int n>
 class array {
