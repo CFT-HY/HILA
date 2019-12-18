@@ -215,6 +215,13 @@ public:
     return site_location(idx);
   }
 
+  location local_coordinates( unsigned idx ){
+    location l = site_location(idx);
+    foralldir(d)
+      l[d] = l[d] - this_node.min[d];
+    return l;
+  }
+
   lattice_struct::comminfo_struct get_comminfo(int d){
     return comminfo[d];
   }
@@ -275,39 +282,12 @@ struct vectorized_lattice_struct  {
     };
     std::vector<halo_site> halo_sites;
 
-    /// Return the communication info
-    lattice_struct::comminfo_struct get_comminfo(int d){
-      return lattice->get_comminfo(d);
-    }
-
-    /// Return the number of sites that need to be allocated
-    /// (1 vector for each site)
-    unsigned field_alloc_size() {
-      return alloc_size;
-    }
-
-    /// Translate a local location vector into an index 
-    unsigned get_index(location l){
-      int s = 1-(int)first_site_even; // start at 0 for even first, 1 for odd first
-      int l_index = (l[NDIM-1] +size[NDIM-1])%size[NDIM-1];
-      s += (l[NDIM-1] +size[NDIM-1])%size[NDIM-1];
-      for (int d=NDIM-2; d>=0; d--){
-        l_index = l_index*size[d] + (l[d] +size[d])%size[d];
-        s += (l[d] +size[d])%size[d];
-      }
-      if( s%2==0 ){
-        l_index /= 2;
-      } else {
-        l_index = evensites + l_index/2;
-      }
-      return l_index;
-    }
 
     /// Set up the vectorized lattice:
     /// * Split the lattice and record size and splits
     /// * Map indeces into local coordinates
     /// * Set up neighbour vector references
-    void setup(lattice_struct * _lattice, int _vector_size) {
+    vectorized_lattice_struct(lattice_struct * _lattice, int _vector_size) {
       // Initialize
       lattice =  _lattice;
       vector_size = _vector_size;
@@ -421,7 +401,7 @@ struct vectorized_lattice_struct  {
       lattice_index.resize(lattice->field_alloc_size());
       vector_index.resize(lattice->field_alloc_size());
       for(unsigned i = lattice->loop_begin(ALL); i<lattice->loop_end(ALL); i++){
-        location fl = lattice->coordinates(i);
+        location fl = lattice->local_coordinates(i);
         location vl;
         int step=1, v_index=0;
         for( int d=0; d<NDIM; d++ ){
@@ -444,6 +424,37 @@ struct vectorized_lattice_struct  {
           }
         }
       }
+    }
+
+
+    /// Return the communication info
+    lattice_struct::comminfo_struct get_comminfo(int d){
+      return lattice->get_comminfo(d);
+    }
+
+
+    /// Return the number of sites that need to be allocated
+    /// (1 vector for each site)
+    unsigned field_alloc_size() {
+      return alloc_size;
+    }
+
+
+    /// Translate a local location vector into an index 
+    unsigned get_index(location l){
+      int s = 1-(int)first_site_even; // start at 0 for even first, 1 for odd first
+      int l_index = (l[NDIM-1] +size[NDIM-1])%size[NDIM-1];
+      s += (l[NDIM-1] +size[NDIM-1])%size[NDIM-1];
+      for (int d=NDIM-2; d>=0; d--){
+        l_index = l_index*size[d] + (l[d] +size[d])%size[d];
+        s += (l[d] +size[d])%size[d];
+      }
+      if( s%2==0 ){
+        l_index /= 2;
+      } else {
+        l_index = evensites + l_index/2;
+      }
+      return l_index;
     }
 
 
