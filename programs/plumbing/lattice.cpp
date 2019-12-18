@@ -527,8 +527,7 @@ vectorized_lattice_struct * lattice_struct::get_vectorized_lattice(int vector_si
   }
 
   // Not found, setup here
-  vectorized_lattice_struct * vectorized_lattice = 
-    (vectorized_lattice_struct *) malloc(sizeof(vectorized_lattice_struct));
+  vectorized_lattice_struct * vectorized_lattice = new vectorized_lattice_struct();
   vectorized_lattice->setup(this, vector_size);
   vectorized_lattices.push_back(vectorized_lattice);
   return vectorized_lattice;
