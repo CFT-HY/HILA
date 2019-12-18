@@ -250,7 +250,6 @@ extern std::vector<lattice_struct*> lattices;
 
 
 /// Splits the local lattice into equal sections for vectorization
-/// Contains a list of neighbour arrays for each possible vector size
 struct vectorized_lattice_struct  {
   public:
     std::array<unsigned*,NDIRS> neighbours;
@@ -262,6 +261,11 @@ struct vectorized_lattice_struct  {
     lattice_struct * lattice;
     bool first_site_even;
 
+    // Map full lattice index into a vectorized lattice index
+    // and a vector index
+    std::vector<int> lattice_index;
+    std::vector<int> vector_index;
+
     std::array<int*, NDIM> boundary_permutation;
 
     struct halo_site {
@@ -272,7 +276,7 @@ struct vectorized_lattice_struct  {
     std::vector<halo_site> halo_sites;
 
     /// Return the communication info
-    lattice_struct::comminfo_struct comminfo(int d){
+    lattice_struct::comminfo_struct get_comminfo(int d){
       return lattice->get_comminfo(d);
     }
 
@@ -284,11 +288,11 @@ struct vectorized_lattice_struct  {
 
     /// Translate a local location vector into an index 
     unsigned get_index(location l){
-      int s = (int)first_site_even; // start at 0 for even first, 1 for odd first
+      int s = 1-(int)first_site_even; // start at 0 for even first, 1 for odd first
       int l_index = l[NDIM-1];
       for (int d=NDIM-2; d>=0; d--){
         l_index = l_index*size[d] + (l[d] +size[d])%size[d];
-        s +=  (l[d] +size[d])%size[d];
+        s += (l[d] +size[d])%size[d];
       }
       if( s%2==0 ){
         l_index /= 2;
@@ -316,15 +320,17 @@ struct vectorized_lattice_struct  {
       int v = vector_size;
       while( v > 1 ){
         // find longest that will be even after split (divisible by 4)
-        int msize=1, d=0;
+        int msize=1, d=-1;
         for( int i=0; i<NDIM; i++ ){
-          if( size[i] > msize && size[i]%4==0 )
+          if( size[i] > msize && size[i]%4==0 ) {
             d=i;
+            msize = size[i];
+          }
         }
+        assert(d>=0 && "cannot split local lattice to vector size");
         // split
         v /= 2; size[d] /= 2; split[d] *= 2;
       }
-      assert(v == 1 && "cannot split local lattice to vector size");
 
       sites = 1;
       for( int i=0; i<NDIM; i++ ){
@@ -337,23 +343,21 @@ struct vectorized_lattice_struct  {
         oddsites  = sites/2 + (int)(!first_site_even);      
       }
 
-
       // Map index to local coordinates
       coordinates.resize(sites);
       for(unsigned i = 0; i<sites; i++){
         location l;
-        unsigned l_index=i, s;
-        foralldir(d){
+        unsigned l_index=i;
+        for(int d=0; d<NDIM; d++){
           l[d] = l_index % size[d];
           l_index /= size[d];
         }
-        coordinates[get_index(l)] = l;
+        int index = get_index(l);
+        coordinates[index] = l;
       }
-
 
       // Setup neighbour array
       int halo_index = 0;
-      std::vector<unsigned> orig_site(sites);
       for(int d=0; d<NDIM; d++){
         neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
         for(unsigned i = 0; i<sites; i++){
@@ -383,6 +387,23 @@ struct vectorized_lattice_struct  {
         }
       }
       alloc_size = sites + halo_index;
+
+
+      // Map full lattice index to local index
+      for(unsigned i = 0; i<lattice->volume(); i++){
+        location fl = lattice->coordinates(i);
+        location vl;
+        int step=1, v_index=0;
+        for( int d=0; d<NDIM; d++ ){
+          vl[d] = fl[d] % size[d];
+          v_index += step * (fl[d] / size[d]);
+          step *= split[d];
+        }
+        lattice_index.push_back( get_index(vl) );
+        vector_index.push_back(v_index);
+        // Check for neighbours in the halo
+      }
+
 
       // Setup permutation vectors for setting the halo
       int offset = 1, length;
