@@ -13,11 +13,28 @@ inline T conj(T rhs){
 
 template<typename T>
 #pragma transformer loop_function
-inline double type_norm_sq(T val){
+inline double norm_sq(T val){
   return val*val;
 }
 
 //---
+
+template <const int n, const int m, typename T>
+class matrix;
+
+template <const int n, const int m, typename T>
+class conjugateMatrix {
+  public: 
+  conjugateMatrix(const matrix<n,m,T> & rhs) : ref(rhs) {};
+  const matrix<n,m,T> & ref;
+};
+
+template <const int n, const int m, typename T>
+class transposeMatrix {
+  public:
+  transposeMatrix(const matrix<n,m,T> & rhs) : ref(rhs) {};
+  const matrix<n,m,T> & ref;
+};
 
 template <const int n, const int m, typename T>
 class matrix {
@@ -139,7 +156,7 @@ class matrix {
   double norm_sq(){
     double result = 0.0;
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-      result += type_norm_sq(c[i][j]);
+      result += norm_sq(c[i][j]);
     }
     return result;
   }
@@ -215,17 +232,169 @@ matrix<2,2,T> operator* (const matrix<2,2,T> &A, const matrix<2,2,T> &B) {
   return res;
 }
 
-//general naive matrix multiplication 
+//general matrix * matrix multiplication 
 template <int n, int m, int p, typename T> 
 #pragma transformer loop_function
-matrix<n,p,T> operator* (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
+matrix<n,p,T> operator * (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
   matrix<p,m,T> Btrans = B.transpose(); //do matrix multiplication on rows of transpose matrix (should reduce cache misses)
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
-    res.c[i][j] = (0);
+    res.c[i][j] = 0;
     for (int k = 0; k < m; k++){
       res.c[i][j] += (A.c[i][k] * Btrans.c[j][k]);
     }
+  }
+  return res;
+}
+
+//multiplication for matrix * transpose matrix  
+template <int n, int m, int p, typename T> 
+#pragma transformer loop_function
+matrix<n,p,T> operator * (const matrix<n,m,T> & A, const transposeMatrix<p,m,T> & B) {
+  matrix<n,p,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
+    res.c[i][j] = 0;
+    for (int k = 0; k < m; k++){
+      res.c[i][j] += (A.c[i][k]*B.ref.c[j][k]);
+    }
+  }
+  return res;
+}
+
+//multiplication for transpose * matrix  
+template <int n, int m, int p, typename T> 
+#pragma transformer loop_function
+matrix<n,p,T> operator * (const transposeMatrix<m,n,T> & A, const matrix<m,p,T> & B) {
+  matrix<n,p,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
+    res.c[i][j] = 0;
+    for (int k = 0; k < m; k++){
+      res.c[i][j] += (A.ref.c[k][i]*B.c[k][j]);
+    }
+  }
+  return res;
+}
+
+
+//transpose * transpose
+template <int n, int m, int p, typename T> 
+#pragma transformer loop_function
+matrix<n,p,T> operator * (const transposeMatrix<m,n,T> & A, const transposeMatrix<p,m,T> & B) {
+  matrix<n,p,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
+    res.c[i][j] = 0;
+    for (int k = 0; k < m; k++){
+      res.c[i][j] += (A.ref.c[k][i]*B.ref.c[j][k]);
+    }
+  }
+  return res;
+}
+
+//multiplication for matrix * conjugate matrix  
+template <int n, int m, int p, typename T> 
+#pragma transformer loop_function
+matrix<n,p,T> operator * (const matrix<n,m,T> & A, const conjugateMatrix<p,m,T> & B) {
+  matrix<n,p,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
+    res.c[i][j] = 0;
+    for (int k = 0; k < m; k++){
+      res.c[i][j] += (A.c[i][k]*conj(B.ref.c[j][k]));
+    }
+  }
+  return res;
+}
+
+//multiplication for conjugate * matrix  
+template <int n, int m, int p, typename T> 
+#pragma transformer loop_function
+matrix<n,p,T> operator * (const conjugateMatrix<m,n,T> & A, const matrix<m,p,T> & B) {
+  matrix<n,p,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
+    res.c[i][j] = 0;
+    for (int k = 0; k < m; k++){
+      res.c[i][j] += (conj(A.ref.c[k][i])*B.c[k][j]);
+    }
+  }
+  return res;
+}
+
+
+//conjugate * conjugate
+template <int n, int m, int p, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator * (const conjugateMatrix<m,n,T> & A, const conjugateMatrix<p,m,T> & B) {
+  matrix<n,p,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
+    res.c[i][j] = 0;
+    for (int k = 0; k < m; k++){
+      res.c[i][j] += (conj(A.ref.c[k][i])*conj(B.ref.c[j][k]));
+    }
+  }
+  return res;
+}
+
+//addition for matrix + conjugate matrix  
+template <int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator + (const matrix<n,m,T> & A, const conjugateMatrix<m,n,T> & B) {
+  matrix<n,m,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+    res.c[i][j] = A.c[i][j] + conj(B.ref.c[j][i]);
+  }
+  return res;
+}
+
+//addition for conjugate + matrix  
+template <int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator + (const conjugateMatrix<m,n,T> & A, const matrix<n,m,T> & B) {
+  matrix<n,m,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+    res.c[i][j] = conj(A.ref.c[j][i]) + B.c[i][j];
+  }
+  return res;
+}
+
+//addition for conjugate + conjugate
+template <int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator + (const conjugateMatrix<m,n,T> & A, const conjugateMatrix<n,m,T> & B) {
+  matrix<n,m,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+      res.c[i][j] = conj(A.ref.c[j][i]) + conj(B.ref.c[j][i]);
+  }
+  return res;
+}
+
+//addition for matrix + conjugate matrix  
+template <int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator - (const matrix<n,m,T> & A, const conjugateMatrix<m,n,T> & B) {
+  matrix<n,m,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+    res.c[i][j] = A.c[i][j] - conj(B.ref.c[j][i]);
+  }
+  return res;
+}
+
+//addition for conjugate + matrix  
+template <int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const matrix<n,m,T> & B) {
+  matrix<n,m,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+    res.c[i][j] = conj(A.ref.c[j][i]) - B.c[i][j];
+  }
+  return res;
+}
+
+//addition for conjugate + conjugate
+template <int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const conjugateMatrix<n,m,T> & B) {
+  matrix<n,m,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+      res.c[i][j] = conj(A.ref.c[j][i]) - conj(B.ref.c[j][i]);
   }
   return res;
 }
@@ -236,7 +405,7 @@ template<int n, typename T>
 T operator* (const matrix<1, n, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
-    result += vecA.c[0][i]*(conjugate(vecB.c[i][0]));
+    result += vecA.c[0][i]*(conj(vecB.c[i][0]));
   }
   return result;
 }
@@ -246,7 +415,7 @@ template<int n, typename T>
 T operator* (const matrix<1, n, T> & vecA, const matrix<1, n, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
-    result += vecA.c[0][i]*(conjugate(vecB.c[0][i]));
+    result += vecA.c[0][i]*(conj(vecB.c[0][i]));
   }
   return result;
 }
@@ -325,5 +494,18 @@ std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
   strm << "\n"; 
   return strm;
 }
+
+template<int n, int m, typename T> 
+inline transposeMatrix<n,m,T> trans(matrix<n,m,T> & ref){
+  transposeMatrix<n,m,T> result(ref);
+  return result;
+}
+
+template<int n, int m, typename T> 
+inline conjugateMatrix<n,m,T> conj(matrix<n,m,T> & ref){
+  conjugateMatrix<n,m,T> result(ref);
+  return result;
+}
+
 
 #endif
