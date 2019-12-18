@@ -25,15 +25,21 @@ class matrix;
 template <const int n, const int m, typename T>
 class conjugateMatrix {
   public: 
-  conjugateMatrix(const matrix<n,m,T> & rhs) : ref(rhs) {};
-  const matrix<n,m,T> & ref;
+    conjugateMatrix(const matrix<n,m,T> & rhs) : ref(rhs) {};
+    const matrix<n,m,T> & ref;
+  private:
+    conjugateMatrix(){}
+    conjugateMatrix<n,m,T> & operator = (const conjugateMatrix & rhs){}
 };
 
 template <const int n, const int m, typename T>
 class transposeMatrix {
   public:
-  transposeMatrix(const matrix<n,m,T> & rhs) : ref(rhs) {};
-  const matrix<n,m,T> & ref;
+    transposeMatrix(const matrix<n,m,T> & rhs) : ref(rhs) {};
+    const matrix<n,m,T> & ref;
+  private:
+    transposeMatrix(){}
+    transposeMatrix<n,m,T> & operator = (const transposeMatrix & rhs){}
 };
 
 template <const int n, const int m, typename T>
