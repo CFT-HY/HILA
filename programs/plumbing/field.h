@@ -269,7 +269,7 @@ class field_storage {
     }
 };
 
-#elif defined(AVX)
+#elif defined(VECTORIZED)
 
 template <typename T>
 class field_storage {
@@ -363,7 +363,7 @@ private:
     public:
       constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);;
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
-#ifndef AVX
+#ifndef VECTORIZED
       lattice_struct * lattice;
 #else
       vectorized_lattice_struct * lattice;
@@ -470,7 +470,7 @@ public:
       exit(1);  // TODO - more ordered exit?
     }
     fs = new field_struct;
-#ifndef AVX
+#ifndef VECTORIZED
     fs->lattice = lattice;
 #else
     fs->lattice = lattice->get_vectorized_lattice(fs->vector_size);
@@ -794,11 +794,48 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 
 
 
+#ifdef VECTORIZED
+
+#include "../plumbing/comm_vanilla.h"
+
+/// Vectorized implementation of fetching boundary elements
+/* Gathers sites at the boundary that need to be communicated to neighbours */
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+}
+
+/// Vectorized implementation of setting boundary elements
+/* Sets the values the neighbour elements from the communication buffer */
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+}
+
+template<typename T>
+void field<T>::start_move(direction d, parity p) const {}
+
+/// Vectorized lattice implemenation of wait_move()
+/// Needs to collect neighbour vectors
+template<typename T>
+void field<T>::wait_move(direction d, parity p) const {
+  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
+  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
+  // Loop over the boundary sites
+  for( vectorized_lattice_struct::halo_site hs: fs->lattice->halo_sites ){
+    field_element<T> temp = fs->get(hs.nb_index);
+    vectorized::permute<vector_size>(fs->lattice->boundary_permutation[d], &temp, elements);
+    fs->set(temp, fs->lattice->sites + hs.halo_index);
+  }
+}
+
+
+
+#else
+
 
 
 
 /* Communication routines for fields */
-#ifndef USE_MPI
+#if !defined(USE_MPI) || defined(TRANSFORMER) 
 /* No MPI, trivial implementations */
 
 #include "../plumbing/comm_vanilla.h"
@@ -817,30 +854,7 @@ void field<T>::wait_move(direction d, parity p) const {}
  * have access to mpi.h, it cannot process this branch.
  */
 
-#ifdef TRANSFORMER
-// These may include functions or syntax that transformer does not understand
-
-#elif defined(VECTORIZED)
-
-
-/// Vectorized implementation of fetching boundary elements
-/* Gathers sites at the boundary that need to be communicated to neighbours */
-template<typename T>
-void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-    for (int j=0; j<to_node.n_sites(par); j++) {
-    T element = get(to_node.site_index(j, par));
-    std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
-  }
-}
-
-/// Vectorized implementation of setting boundary elements
-/* Sets the values the neighbour elements from the communication buffer */
-template<typename T>
-void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-}
-
-
-#elif defined(CUDA)
+#ifdef CUDA
 
 /* CUDA implementations */
 
@@ -916,6 +930,7 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 
 #else
 
+
 /// The standard (Non-CUDA) implementation of gather_comm_elements
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
@@ -934,6 +949,7 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
     set(element, from_node.offset(par)+j);
   }
 }
+
 
 #endif
 
@@ -1052,10 +1068,12 @@ void field<T>::wait_move(direction d, parity p) const {
   }
 }
 
-#endif
-
-
 
 #endif
+
+#endif // VECTORIZED
+
+
+#endif // FIELD_H
 
 

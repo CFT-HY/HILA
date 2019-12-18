@@ -262,6 +262,15 @@ struct vectorized_lattice_struct  {
     lattice_struct * lattice;
     bool first_site_even;
 
+    std::array<int*, NDIM> boundary_permutation;
+
+    struct halo_site {
+      unsigned nb_index;
+      unsigned halo_index;
+      direction dir;
+    };
+    std::vector<halo_site> halo_sites;
+
     /// Return the communication info
     lattice_struct::comminfo_struct comminfo(int d){
       return lattice->get_comminfo(d);
@@ -362,13 +371,30 @@ struct vectorized_lattice_struct  {
             neighbours[d][i] = get_index(nb);
           } else {
             // This is outside this split lattice (partly outside the node)
-            // Fetching has already been set up
             neighbours[d][i] = sites + halo_index;
+            // Find the corresponding site on the other side of the lattice
+            halo_site hs;
+            hs.nb_index = get_index(nb);
+            hs.halo_index = halo_index;
+            hs.dir = (direction)d;
+            halo_sites.push_back(hs);
             halo_index++;
           }
         }
       }
       alloc_size = sites + halo_index;
+
+      // Setup permutation vectors for setting the halo
+      int offset = 1, length;
+      for(int d=0; d<NDIM; d++){
+        boundary_permutation[d] = (int *) malloc(sizeof(int)*vector_size);
+        length = offset*split[d];
+        for( int i=0; i<vector_size; i++ ){
+          boundary_permutation[d][i] = length*(i/length) + (i+offset)%(length);
+        }
+
+        offset *= split[d];
+      }
     }
 
 
@@ -394,6 +420,16 @@ struct vectorized_lattice_struct  {
         return sites;
       }
     }
+
+    template <typename T>
+    void reduce_node_sum(T & value, bool distribute){
+      lattice->reduce_node_sum(value, distribute);
+    };
+
+    template <typename T>
+    void reduce_node_product(T & value, bool distribute){
+      lattice->reduce_node_product(value, distribute);
+    };
 
 };
 
