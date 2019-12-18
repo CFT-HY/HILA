@@ -289,7 +289,8 @@ struct vectorized_lattice_struct  {
     /// Translate a local location vector into an index 
     unsigned get_index(location l){
       int s = 1-(int)first_site_even; // start at 0 for even first, 1 for odd first
-      int l_index = l[NDIM-1];
+      int l_index = (l[NDIM-1] +size[NDIM-1])%size[NDIM-1];
+      s += (l[NDIM-1] +size[NDIM-1])%size[NDIM-1];
       for (int d=NDIM-2; d>=0; d--){
         l_index = l_index*size[d] + (l[d] +size[d])%size[d];
         s += (l[d] +size[d])%size[d];
@@ -371,7 +372,7 @@ struct vectorized_lattice_struct  {
             k = opp_dir(d);
             nb[k] = l[k] - 1;
           }
-          if( nb[k] > 0 && nb[k] < size[k] ) {
+          if( nb[k] >= 0 && nb[k] < size[k] ) {
             neighbours[d][i] = get_index(nb);
           } else {
             // This is outside this split lattice (partly outside the node)
@@ -424,8 +425,8 @@ struct vectorized_lattice_struct  {
         location vl;
         int step=1, v_index=0;
         for( int d=0; d<NDIM; d++ ){
-          vl[d] = fl[d] % size[d];
-          v_index += step * (fl[d] / size[d]);
+          vl[d] = (fl[d] % lattice->local_size(d) ) % size[d];
+          v_index += step * ((fl[d] % lattice->local_size(d)) / size[d]);
           step *= split[d];
         }
         lattice_index[i] = get_index(vl);
@@ -439,7 +440,7 @@ struct vectorized_lattice_struct  {
             int fl_index = lattice->neighb[d][i];
             int l_index = neighbours[d][get_index(vl)];
             lattice_index[fl_index] = l_index;
-            vector_index[fl_index] = boundary_permutation[d][v_index];
+            vector_index[fl_index] = v_index;
           }
         }
       }
