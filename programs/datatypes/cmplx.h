@@ -295,5 +295,11 @@ inline cmplx<Accuracy> conj(cmplx<Accuracy> val){
   return val.conj();
 }
 
+template<typename T> 
+#pragma transformer loop_function
+inline double type_norm_sq(cmplx<T> val){
+  return val.norm_sq();
+}
+
 #endif
 

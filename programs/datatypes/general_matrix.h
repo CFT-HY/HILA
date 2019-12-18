@@ -8,19 +8,13 @@
 template<typename T>
 #pragma transformer loop_function
 inline T conj(T rhs){
-  return rhs; //simply return self by default 
+  return rhs; 
 }
 
 template<typename T>
 #pragma transformer loop_function
 inline double type_norm_sq(T val){
   return val*val;
-}
-
-template<typename T> 
-#pragma transformer loop_function
-inline double type_norm_sq(cmplx<T> val){
-  return val.norm_sq();
 }
 
 //---
