@@ -17,8 +17,8 @@ int main(){
     vector.fill(1.0);
     vector2.fill(-1.0);
 
-    a = conj(b);
-    A = conj(B);
+    a = a*conj(b);
+    A = A*conj(B);
     C=A*B;
     A+=D;
     A-=D;
