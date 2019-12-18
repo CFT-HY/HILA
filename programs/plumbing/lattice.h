@@ -262,6 +262,8 @@ struct vectorized_lattice_struct  {
     lattice_struct * lattice;
     bool first_site_even;
 
+    std::array<int*, NDIM> boundary_permutation;
+
     struct halo_site {
       unsigned nb_index;
       unsigned halo_index;
@@ -381,6 +383,18 @@ struct vectorized_lattice_struct  {
         }
       }
       alloc_size = sites + halo_index;
+
+      // Setup permutation vectors for setting the halo
+      int offset = 1, length;
+      for(int d=0; d<NDIM; d++){
+        boundary_permutation[d] = (int *) malloc(sizeof(int)*vector_size);
+        length = offset*split[d];
+        for( int i=0; i<vector_size; i++ ){
+          boundary_permutation[d][i] = length*(i/length) + (i+offset)%(length);
+        }
+
+        offset *= split[d];
+      }
     }
 
 

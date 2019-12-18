@@ -817,27 +817,12 @@ void field<T>::start_move(direction d, parity p) const {}
 /// Needs to collect neighbour vectors
 template<typename T>
 void field<T>::wait_move(direction d, parity p) const {
+  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
+  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
   // Loop over the boundary sites
   for( vectorized_lattice_struct::halo_site hs: fs->lattice->halo_sites ){
-    int offset = 1, length;
-    for(int d=0; d<hs.dir; d++)
-      offset *= fs->lattice->split[d];
-    length = offset*fs->lattice->split[hs.dir];
-
-    int perm[fs->vector_size];
-    for( int i=0; i<fs->vector_size; i++ ){
-      perm[i] = length*(i/length) + (i+offset)%(length);
-    }
-
-    //temp.permute(offset);
     field_element<T> temp = fs->get(hs.nb_index);
-    __m256d * t = (__m256d *) &temp;
-    constexpr static int elements = sizeof(T) / sizeof(double);
-    for( int v=0; v<elements; v++ ){
-      // vtype:permute(...)
-      for( int i=0; i<fs->vector_size; i++ )
-        t[v][i] =  t[v][perm[i]];
-    }
+    vectorized::permute<vector_size>(fs->lattice->boundary_permutation[d], &temp, elements);
     fs->set(temp, fs->lattice->sites + hs.halo_index);
   }
 }
