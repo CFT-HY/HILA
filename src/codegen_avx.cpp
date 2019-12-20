@@ -39,11 +39,11 @@ void replace_basetype_with_vector(std::string & element_type) {
   size_t begin;
   begin = element_type.find("double");
   if(begin != std::string::npos){
-    element_type.replace(begin, 6, "avxdvector");
+    element_type.replace(begin, 6, "Vec4d");
   }
   begin = element_type.find("float");
   if(begin != std::string::npos){
-    element_type.replace(begin, 6, "avxfvector");
+    element_type.replace(begin, 6, "Vec8f");
   }
 }
   
@@ -164,9 +164,9 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   // Final reduction of the temporary reduction variables
   for (var_info & v : var_info_list) {
     if (v.reduction_type == reduction::SUM) {
-      code << v.reduction_name << " = " << v.new_name << ".reduce_sum();\n";
+      code << v.reduction_name << " = reduce_sum(" << v.new_name << ");\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code << v.reduction_name << " = " << v.new_name << "reduce_prod();\n";
+      code << v.reduction_name << " = reduce_prod(" << v.new_name << ");\n";
     }
   }
 
