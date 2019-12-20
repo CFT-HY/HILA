@@ -45,6 +45,10 @@ void replace_basetype_with_vector(std::string & element_type) {
   if(begin != std::string::npos){
     element_type.replace(begin, 6, "Vec8f");
   }
+  begin = element_type.find("int");
+  if(begin != std::string::npos){
+    element_type.replace(begin, 6, "Vec16i");
+  }
 }
   
 
