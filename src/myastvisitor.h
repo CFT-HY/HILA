@@ -126,7 +126,7 @@ public:
   // bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
   // bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
   
-  bool is_field_element_expr(Expr *E);
+  bool is_field_storage_expr(Expr *E);
   bool is_field_expr(Expr *E);
   bool is_field_decl(ValueDecl *D);
 
@@ -206,8 +206,8 @@ public:
   std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_avx(Stmt *S, bool semi_at_end, srcBuf &sb);
 
-  void generate_field_element_type(std::string typestr);
-  void generate_field_element_type_AVX(std::string typestr);
+  void generate_field_storage_type(std::string typestr);
+  void generate_field_storage_type_AVX(std::string typestr);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(SourceLocation sl);

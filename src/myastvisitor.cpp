@@ -29,8 +29,8 @@ std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
 
 /// -- Identifier utility functions --
 
-bool MyASTVisitor::is_field_element_expr(Expr *E) {
-  return( E && E->getType().getAsString().find(field_element_type) != std::string::npos);
+bool MyASTVisitor::is_field_storage_expr(Expr *E) {
+  return( E && E->getType().getAsString().find(field_storage_type) != std::string::npos);
 }
 
 bool MyASTVisitor::is_field_expr(Expr *E) {
@@ -645,7 +645,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
  
       // write storage_type specialization
-      generate_field_element_type(typestr);
+      generate_field_storage_type(typestr);
     }
     
   }
@@ -1525,8 +1525,8 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
-    } else if (D->getNameAsString() == "field_element") {
-      field_element_decl = D;
+    } else if (D->getNameAsString() == "field_storage") {
+      field_storage_decl = D;
     } else {
     }
 

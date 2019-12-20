@@ -208,6 +208,8 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 template <typename T>
 using element = T;
 
+/// Utility for returning mapping a field element type into 
+/// a corresponding vector. This is not used directly as a type
 template <typename T>
 struct field_element{
   T c;
@@ -215,6 +217,7 @@ struct field_element{
   field_element(const T& x): c(x) {}
   operator T(){return c;}
 };
+
 
 
 
@@ -268,45 +271,16 @@ class field_storage {
     }
 };
 
-#elif defined(VECTORIZED)
-
-template <typename T>
-class field_storage {
-  public:
-    // Use the vectorized field storage type
-    field_element<T> * fieldbuf;
-    constexpr static int vector_length = sizeof(field_element<T>) / sizeof(T);
-
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
-    }
-
-    void free_field() {
-      free_field_mem((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    field_element<T> get(const int i, const int field_alloc_size) const
-    {
-      return fieldbuf[i];
-    }
-
-    void set(field_element<T> value, const int i, const int field_alloc_size) 
-    {
-      fieldbuf[i] = value;
-    }
-};
-
 #else
 
 template <typename T>
 class field_storage {
   public:
       // Array of structures implementation
-    field_element<T> * fieldbuf;
+    element<T> * fieldbuf;
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
+      fieldbuf = (element<T>*) allocate_field_mem( sizeof(element<T>) * field_alloc_size);
       #pragma acc enter data create(fieldbuf)
     }
 
@@ -317,15 +291,15 @@ class field_storage {
     }
 
     #pragma transformer loop_function
-    field_element<T> get(const int i, const int field_alloc_size) const
+    element<T> get(const int i, const int field_alloc_size) const
     {
-      return ((field_element<T> *) fieldbuf)[i];
+      return ((element<T> *) fieldbuf)[i];
     }
 
     #pragma transformer loop_function
-    void set(field_element<T> value, const int i, const int field_alloc_size) 
+    void set(element<T> value, const int i, const int field_alloc_size) 
     {
-      ((field_element<T> *) fieldbuf)[i] = value;
+      ((element<T> *) fieldbuf)[i] = value;
     }
 };
 
@@ -945,14 +919,14 @@ void field<T>::wait_move(direction d, parity p) const {
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
 void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
-  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
+  constexpr static int vector_size = sizeof(field_element<T>)/sizeof(T);
   constexpr static int base_type_size = vectorized::sizeofvector / vector_size;
+  constexpr static int elements = sizeof(T) / base_type_size;
   for (int j=0; j<to_node.n_sites(par); j++) {
     int index = to_node.site_index(j, par);
     int l_index = lattice->lattice_index[index];
     int v_index = lattice->vector_index[index];
-    field_element<T> element = get(l_index);
+    auto element = get(l_index);
     for( int e=0; e<elements; e++ ){
       char * vector_elem = (char *) (&element) + (e*vector_size + v_index) * base_type_size;
       char * buffer_elem = buffer + j*sizeof(T) + e * base_type_size;
@@ -965,14 +939,14 @@ void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct:
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
 void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
-  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
+  constexpr static int vector_size = sizeof(field_element<T>)/sizeof(T);
   constexpr static int base_type_size = vectorized::sizeofvector / vector_size;
+  constexpr static int elements = sizeof(T) / base_type_size;
   for (int j=0; j<from_node.n_sites(par); j++) {
     int index = from_node.offset(par)+j;
     int l_index = lattice->lattice_index[index];
     int v_index = lattice->vector_index[index];
-    field_element<T> element = get(l_index);
+    auto element = get(l_index);
     for( int e=0; e<elements; e++ ){
       char * vector_elem = (char *) (&element) + (e*vector_size + v_index) * base_type_size;
       char * buffer_elem = buffer + j*sizeof(T) + e * base_type_size;
@@ -990,7 +964,7 @@ void field<T>::field_struct::set_local_boundary_elements(){
   constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
   // Loop over the boundary sites
   for( vectorized_lattice_struct::halo_site hs: lattice->halo_sites ){
-    field_element<T> temp = get(hs.nb_index);
+    auto temp = get(hs.nb_index);
     vectorized::permute<vector_size>(lattice->boundary_permutation[hs.dir], &temp, elements);
     set(temp, lattice->sites + hs.halo_index);
   }

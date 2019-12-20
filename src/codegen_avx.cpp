@@ -174,13 +174,13 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 }
 
 
-void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
+void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   // insert after a new line
   SourceLocation l =
-  getSourceLocationAtEndOfLine( field_element_decl->getSourceRange().getEnd() );
+  getSourceLocationAtEndOfLine( field_storage_decl->getSourceRange().getEnd() );
 
   // Find template parameter name (only 1 allowed)
-  auto template_parameter = field_element_decl->getTemplateParameters()->begin()[0];
+  auto template_parameter = field_storage_decl->getTemplateParameters()->begin()[0];
   std::string templ_type = template_parameter->getNameAsString();
   
   // Replace the original type with a vector type
@@ -189,22 +189,35 @@ void MyASTVisitor::generate_field_element_type_AVX(std::string typestr){
 
   // Get the body of the element definition
   srcBuf bodyBuffer; // (&TheRewriter,S);
-  bodyBuffer.copy_from_range(writeBuf,field_element_decl->getTemplatedDecl()->getSourceRange());
+  bodyBuffer.copy_from_range(writeBuf,field_storage_decl->getTemplatedDecl()->getSourceRange());
 
   // Replace templated type with new vector type
   bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
 
   // Add specialization parameters
   bodyBuffer.replace_token(0, bodyBuffer.size()-1,
-                  field_element_decl->getQualifiedNameAsString(),
-                  field_element_decl->getQualifiedNameAsString() + "<"+typestr+">");
+                  field_storage_decl->getQualifiedNameAsString(),
+                  field_storage_decl->getQualifiedNameAsString() + "<"+typestr+">");
 
   // Add the template<> declaration
   bodyBuffer.prepend("template<>\n", true);
   bodyBuffer.append(";\n", true); // semicolon at end
+
+
+  // Add a simple template mapping from element type to vector size
+  std::stringstream field_element_code;
+  field_element_code << "template<> \n";
+  field_element_code << "struct field_element<"<<typestr<<"> {\n";
+  field_element_code << "  "<< vectortype << " c;\n";
+  field_element_code << "};\n";
+
+  bodyBuffer.append(field_element_code.str(), true);
+
 
   writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);
 
   // Mark source buffer modified
   // set_sourceloc_modified( l );
 }
+
+
