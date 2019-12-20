@@ -25,6 +25,37 @@ inline double reduce_sum(Vec8f v){
   return sum;
 }
 
+#pragma transformer loop_function
+inline double reduce_sum(Vec16i v){
+  float sum = 0;
+  for(int i=0; i<16; i++)
+    sum += v[i];
+  return sum;
+}
+
+#pragma transformer loop_function
+inline double reduce_prod(Vec4d v){
+  float sum = 1;
+  for(int i=0; i<4; i++)
+    sum *= v[i];
+  return sum;
+}
+
+#pragma transformer loop_function
+inline double reduce_prod(Vec8f v){
+  float sum = 1;
+  for(int i=0; i<8; i++)
+    sum *= v[i];
+  return sum;
+}
+
+#pragma transformer loop_function
+inline double reduce_prod(Vec16i v){
+  float sum = 1;
+  for(int i=0; i<16; i++)
+    sum *= v[i];
+  return sum;
+}
 
 
 namespace vectorized
