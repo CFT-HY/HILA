@@ -400,13 +400,14 @@ private:
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      field_element<T> get(const int i) const {
+      auto get(const int i) const {
         return payload.get( i, lattice->field_alloc_size() );
       }
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      void set(field_element<T> value, const int i) {
+      template<typename A>
+      void set(A value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
       }
 
@@ -555,13 +556,12 @@ public:
   element<T>& operator[] (const parity p) const;
   element<T>& operator[] (const parity_plus_direction p) const;
 
-
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  field_element<T> get_value_at(int i) const { return this->fs->get(i); }
+  auto get_value_at(int i) const { return this->fs->get(i); }
 
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
-  void set_value_at(field_element<T> value, int i) { this->fs->set(value, i); }
-
+  template<typename A>
+  void set_value_at(A value, int i) { this->fs->set( value, i); }
 
   // fetch the element at this loc
   // T get(int i) const;
