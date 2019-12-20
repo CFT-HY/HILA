@@ -1,4 +1,3 @@
-// -*- mode: c++ -*-
 #ifndef FIELD_H
 #define FIELD_H
 #include <iostream>
