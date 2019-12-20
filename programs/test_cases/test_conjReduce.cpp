@@ -43,7 +43,7 @@ int main(int argc, char **argv){
         nb_coordinate2[ALL] = coordinate[X+dir];
     
         onsites(ALL){
-            int diff = nb_coordinate1[X]-nb_coordinate2[X];
+            element<int> diff = nb_coordinate1[X]-nb_coordinate2[X];
             isum += diff*diff;
         }
         assert(isum==0); // Value fetched from neighbour is correct
