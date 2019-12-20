@@ -47,6 +47,7 @@ struct avxdvector {
 };
 
 
+
 /* Define operations for the vector type */
 
 #pragma transformer loop_function
@@ -67,6 +68,72 @@ inline avxdvector operator*(const avxdvector & a, const avxdvector & b) {
 #pragma transformer loop_function
 inline avxdvector operator/(const avxdvector & a, const avxdvector & b) {
   return avxdvector(_mm256_div_pd(a.c, b.c));
+}
+
+
+
+/// A new vector class is necessary, the intrinsic types
+/// are not always proper types. This encapsulates them
+/// and defines basic arithmetic
+struct avxfvector {
+  __m256 c;
+
+  avxfvector() = default;
+  avxfvector(const avxfvector & a) =default;
+
+  constexpr avxfvector(__m256 x):c(x) {}
+  avxfvector(const float & x):c(_mm256_broadcast_ss(&x)) {}
+
+  // Cast to base type interpred as a sum, implements
+  // the sum reduction
+  #pragma transformer loop_function
+  avxfvector & operator+= (const avxfvector & lhs) {
+    c += lhs.c;
+    return *this;
+  }
+
+  #pragma transformer loop_function
+  float reduce_sum(){
+    float sum = 0;
+    for(int i=0; i<8; i++)
+      sum += c[i];
+    return sum;
+  }
+
+  #pragma transformer loop_function
+  float reduce_prod(){
+    float m = 1;
+    for(int i=0; i<4; i++){
+      m*=((float*)&c)[i];
+    }
+    return m;
+  }
+
+  avxfvector operator-() const {return _mm256_xor_ps(c, _mm256_set1_ps(-0.0)); }
+
+};
+
+
+/* Define operations for the vector type */
+
+#pragma transformer loop_function
+inline avxfvector operator+(const avxfvector & a, const avxfvector & b) {
+  return avxfvector(_mm256_add_ps(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxfvector operator-(const avxfvector & a, const avxfvector & b) {
+  return avxfvector(_mm256_sub_ps(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxfvector operator*(const avxfvector & a, const avxfvector & b) {
+  return avxfvector(_mm256_mul_ps(a.c, b.c));
+}
+
+#pragma transformer loop_function
+inline avxfvector operator/(const avxfvector & a, const avxfvector & b) {
+  return avxfvector(_mm256_div_ps(a.c, b.c));
 }
 
 
