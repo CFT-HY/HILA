@@ -263,7 +263,8 @@ struct vectorized_lattice_struct  {
     std::array<int,NDIM> split;
     int sites, evensites, oddsites, alloc_size;
     unsigned vector_size;
-    std::vector<location> coordinates;
+    std::vector<location> coordinate_list;
+    std::vector<int**> coordinate;
     lattice_struct * lattice;
     bool first_site_even;
 
@@ -285,7 +286,7 @@ struct vectorized_lattice_struct  {
 
     /// Set up the vectorized lattice:
     /// * Split the lattice and record size and splits
-    /// * Map indeces into local coordinates
+    /// * Map indeces into local coordinate_list
     /// * Set up neighbour vector references
     vectorized_lattice_struct(lattice_struct * _lattice, int _vector_size) {
       // Initialize
@@ -324,8 +325,9 @@ struct vectorized_lattice_struct  {
         oddsites  = sites/2 + (int)(!first_site_even);      
       }
 
-      // Map index to local coordinates
-      coordinates.resize(sites);
+      // Map index to local coordinate_list
+      coordinate_list.resize(sites);
+      coordinate.resize(sites);
       for(unsigned i = 0; i<sites; i++){
         location l;
         unsigned l_index=i;
@@ -334,7 +336,7 @@ struct vectorized_lattice_struct  {
           l_index /= size[d];
         }
         int index = get_index(l);
-        coordinates[index] = l;
+        coordinate_list[index] = l;
       }
 
       // Setup neighbour array
@@ -342,7 +344,7 @@ struct vectorized_lattice_struct  {
       for(int d=0; d<NDIRS; d++){
         neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
         for(unsigned i = 0; i<sites; i++){
-          location l = coordinates[i];
+          location l = coordinate_list[i];
           location nb = l;
           int k;
           if (is_up_dir(d)) {
@@ -437,6 +439,30 @@ struct vectorized_lattice_struct  {
     /// (1 vector for each site)
     unsigned field_alloc_size() {
       return alloc_size;
+    }
+
+
+    /// Return the coordinates of each vector nested as
+    /// coordinate[direction][vector_index]
+
+    //location coordinates(int idx){
+    //  location r;
+    //  for(int d=0; d<NDIM; d++){
+    //    r[d] = coordinate_list[index];
+    //  }
+    //  return r;
+    //}
+
+    std::array<Vec16i,NDIM> coordinates(int idx){
+      std::array<Vec16i,NDIM> r;
+      int step=1;
+      for(int d=0; d<NDIM; d++){
+        for(int v=0; v<vector_size; v++){
+          r[d].insert(v, coordinate_list[idx][d] + size[d]*((v/step)%split[d]));
+        }
+        step *= split[d];
+      }
+      return r;
     }
 
 
