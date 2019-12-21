@@ -111,11 +111,12 @@ static inline int is_up_dir(const int d) { return d<NDIM; }
 // location type
 
 struct location {
-    int r[NDIM];
-    int& operator[] (const int i) { return r[i]; }
-    int& operator[] (const direction d) { return r[(int)d]; }
-    const int& operator[] (const int i) const { return r[i]; }
-    const int& operator[] (const direction d) const { return r[(int)d]; }
+  int r[NDIM];
+  int& operator[] (const int i) { return r[i]; }
+  int& operator[] (const direction d) { return r[(int)d]; }
+  const int& operator[] (const int i) const { return r[i]; }
+  const int& operator[] (const direction d) const { return r[(int)d]; }
+  operator std::array<int,NDIM>(){std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
 };
 
 inline location operator+(const location & a, const location & b) {
