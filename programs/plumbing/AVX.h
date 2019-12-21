@@ -58,6 +58,18 @@ inline double reduce_prod(Vec16i v){
 }
 
 
+/// Define modulo operator for integer vector
+#pragma transformer loop_function
+inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
+{
+  Vec16i r;
+  for(int i=0; i<16; i++)
+    r.insert(i, lhs[i] % rhs);
+  return r;
+}
+
+
+
 namespace vectorized
 {
   template<int vector_len>
