@@ -34,6 +34,10 @@ extern std::string parity_in_this_loop;
 
 std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   std::stringstream code;
+
+  // Set loop lattice
+  std::string fieldname = field_info_list.front().old_name;
+  code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
   
   // Set the start and end points
   code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
