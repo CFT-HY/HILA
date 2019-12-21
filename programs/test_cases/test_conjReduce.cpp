@@ -35,7 +35,7 @@ int main(int argc, char **argv){
     // Test that neighbours are fetched correctly
     foralldir(dir){
         onsites(ALL){
-            location l = coordinates(X);
+            element<std::array<int,4>> l = coordinates(X);
             coordinate[X] = l[dir];
             nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
         }
@@ -46,7 +46,7 @@ int main(int argc, char **argv){
             element<int> diff = nb_coordinate1[X]-nb_coordinate2[X];
             isum += diff*diff;
         }
-        assert(isum==0); // Value fetched from neighbour is correct
+        assert(isum==0 && "Value fetched from neighbour is correct");
     }
 
     // If MPI is defined, check that gathers are counted correctly
@@ -68,7 +68,7 @@ int main(int argc, char **argv){
     // Test matrix multiplication and neighbour fetches
     // Calculates M(X) * M.congugate(X+dir)
     onsites(ALL){
-        matrix<2,2,double> a;
+        element<matrix<2,2,double>> a;
         double theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
         a.c[0][0] =  cos(theta);
         a.c[0][1] = -sin(theta);
