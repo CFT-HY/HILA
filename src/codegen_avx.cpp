@@ -47,7 +47,7 @@ void replace_basetype_with_vector(std::string & element_type) {
   }
   begin = element_type.find("int");
   if(begin != std::string::npos){
-    element_type.replace(begin, 3, "Vec16i");
+    element_type.replace(begin, 3, "Vec8i");
   }
 }
   
@@ -196,10 +196,11 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   replace_basetype_with_vector(vectortype);
 
   // Get the body of the element definition
-  srcBuf bodyBuffer; // (&TheRewriter,S);
+  srcBuf bodyBuffer;
   bodyBuffer.copy_from_range(writeBuf,field_storage_decl->getTemplatedDecl()->getSourceRange());
 
   // Replace templated type with new vector type
+  llvm::errs() << "TYPES " << templ_type << " " << vectortype << "\n";
   bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
 
   // Add specialization parameters
