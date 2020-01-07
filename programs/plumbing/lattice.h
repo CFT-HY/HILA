@@ -377,18 +377,46 @@ struct vectorized_lattice_struct  {
 
 
       // Setup permutation vectors for setting the halo
-      int offset = 1, length;
       for(int d=0; d<NDIM; d++){
-        int k = opp_dir(d);
         boundary_permutation[d] = (int *) malloc(sizeof(int)*vector_size);
-        boundary_permutation[k] = (int *) malloc(sizeof(int)*vector_size);
-        length = offset*split[d];
-        for( int i=0; i<vector_size; i++ ){
-          boundary_permutation[d][i] = length*(i/length) + (i+offset)%(length);
-          boundary_permutation[k][i] = length*(i/length) + (i-offset+length)%(length);
+        boundary_permutation[opp_dir(d)] = (int *) malloc(sizeof(int)*vector_size);
+      }
+      // This needs to be done only once, so use the most straightforward method
+      // Check each vector index in each direction separately. Find the location
+      // of the vectorized sublattice and figure out each neighbour from there.
+      for(int v=0; v<vector_size; v++){
+        location vl, nb;
+        int v_ind = v;
+        // Find location of this vector index
+        for(int d=0; d<NDIM; d++){
+          vl[d] = v_ind % split[d];
+          v_ind /= split[d];
         }
+        for(int d=0; d<NDIM; d++){
+          // Find neighbour in positive direction
+          for(int d2=0; d2<NDIM; d2++)
+            nb[d2] = vl[d2];
+          nb[d] = (vl[d] + 1) % split[d];
+          int nb_index = nb[0];
+          int step = split[0];
+          for(int d2=1; d2<NDIM; d2++){
+            nb_index += step*nb[d2];
+            step *= split[d2];
+          }
+          boundary_permutation[d][v] = nb_index;
 
-        offset *= split[d];
+          // And negative direction
+          for(int d2=0; d2<NDIM; d2++)
+            nb[d2] = vl[d2];
+          nb[d] = (vl[d] + split[d] - 1) % split[d];
+          nb_index = nb[0];
+          step = split[0];
+          for(int d2=1; d2<NDIM; d2++){
+            nb_index += step*nb[d2];
+            step *= split[d2];
+          }
+          boundary_permutation[opp_dir(d)][v] = nb_index;
+        }
       }
       
       printf(" Vectorized lattice size: (%d %d %d %d)\n",
@@ -396,11 +424,11 @@ struct vectorized_lattice_struct  {
       printf(" Vectorized lattice split: (%d %d %d %d)\n",
         split[0], split[1], split[2], split[3]);
       for(int d=0; d<NDIRS; d++){
-        printf(" permutation %d: (%d %d %d %d)\n", (int)d,
-        boundary_permutation[d][0],
-        boundary_permutation[d][1],
-        boundary_permutation[d][2],
-        boundary_permutation[d][3]);
+        printf(" permutation %d: (",(int)d);
+        for(int v=0;v<vector_size; v++){
+          printf("%d, ", boundary_permutation[d][v]);
+        }
+        printf(")\n");
       }
 
       // Map full lattice index to local index
@@ -457,8 +485,8 @@ struct vectorized_lattice_struct  {
     //  return r;
     //}
 
-    std::array<Vec16i,NDIM> coordinates(int idx){
-      std::array<Vec16i,NDIM> r;
+    std::array<Vec8i,NDIM> coordinates(int idx){
+      std::array<Vec8i,NDIM> r;
       int step=1;
       for(int d=0; d<NDIM; d++){
         for(int v=0; v<vector_size; v++){
