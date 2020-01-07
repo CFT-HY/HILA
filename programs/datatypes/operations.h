@@ -1,3 +1,7 @@
+
+#ifndef OPS_H
+#define OPS_H
+
 ///////////////////////////////////////////
 // These routines define the default
 // behaviour of trans, conj, etc.
@@ -26,3 +30,5 @@ template<typename T>
 inline double norm_sq(T val){
   return val*val;
 }
+
+#endif 

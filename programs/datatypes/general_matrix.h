@@ -2,26 +2,13 @@
 #define MATRIX_H
 #include<type_traits>
 #include "../datatypes/cmplx.h"
+#include "operations.h"
 
-//--- 
-
-template<typename T>
-#pragma transformer loop_function
-inline T conj(T rhs){
-  return rhs; 
-}
-
-template<typename T>
-#pragma transformer loop_function
-inline double norm_sq(T val){
-  return val*val;
-}
-
-//---
-
+//forward decl 
 template <const int n, const int m, typename T>
 class matrix;
 
+//conjugate matrix class for special ops
 template <const int n, const int m, typename T>
 class conjugateMatrix {
   public: 
@@ -32,6 +19,7 @@ class conjugateMatrix {
     conjugateMatrix<n,m,T> & operator = (const conjugateMatrix & rhs){}
 };
 
+//transpose matrix class for special ops
 template <const int n, const int m, typename T>
 class transposeMatrix {
   public:
