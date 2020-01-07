@@ -60,7 +60,6 @@ class matrix {
     return *this;
   }
 
-
   //copy constructor from scalar  
   template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
   #pragma transformer loop_function
@@ -194,17 +193,6 @@ matrix<n - 1, m - 1, T> Minor(const matrix<n, m, T> & bigger, int i, int j){
   return result;
 }
 
-
-template<int n, int m, typename T> 
-#pragma transformer loop_function
-matrix<m, n, T> conj(const matrix<n, m, T> & rhs){
-  matrix<m,n,T> res;
-    for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
-      res.c[i][j] =  conj(rhs.c[j][i]);
-    }
-    return res;
-}
-
 template<int n, int m, typename T> 
 #pragma transformer loop_function
 T det(const matrix<n, m, T> & mat){
@@ -242,12 +230,11 @@ matrix<2,2,T> operator* (const matrix<2,2,T> &A, const matrix<2,2,T> &B) {
 template <int n, int m, int p, typename T> 
 #pragma transformer loop_function
 matrix<n,p,T> operator * (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
-  matrix<p,m,T> Btrans = B.transpose(); //do matrix multiplication on rows of transpose matrix (should reduce cache misses)
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
     res.c[i][j] = 0;
     for (int k = 0; k < m; k++){
-      res.c[i][j] += (A.c[i][k] * Btrans.c[j][k]);
+      res.c[i][j] += (A.c[i][k] * B.c[k][j]);
     }
   }
   return res;
@@ -372,7 +359,7 @@ matrix<n,m,T> operator + (const conjugateMatrix<m,n,T> & A, const conjugateMatri
   return res;
 }
 
-//addition for matrix + conjugate matrix  
+//subtraction for matrix - conjugate matrix  
 template <int n, int m, typename T> 
 #pragma transformer loop_function
 matrix<n,m,T> operator - (const matrix<n,m,T> & A, const conjugateMatrix<m,n,T> & B) {
@@ -383,7 +370,7 @@ matrix<n,m,T> operator - (const matrix<n,m,T> & A, const conjugateMatrix<m,n,T> 
   return res;
 }
 
-//addition for conjugate + matrix  
+//subtraction for conjugate - matrix  
 template <int n, int m, typename T> 
 #pragma transformer loop_function
 matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const matrix<n,m,T> & B) {
@@ -394,7 +381,7 @@ matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const matrix<n,m,T> 
   return res;
 }
 
-//addition for conjugate + conjugate
+//subtraction for conjugate - conjugate
 template <int n, int m, typename T> 
 #pragma transformer loop_function
 matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const conjugateMatrix<n,m,T> & B) {
