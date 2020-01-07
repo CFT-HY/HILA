@@ -26,9 +26,9 @@ inline double reduce_sum(Vec8f v){
 }
 
 #pragma transformer loop_function
-inline double reduce_sum(Vec16i v){
+inline double reduce_sum(Vec8i v){
   float sum = 0;
-  for(int i=0; i<16; i++)
+  for(int i=0; i<8; i++)
     sum += v[i];
   return sum;
 }
@@ -50,9 +50,9 @@ inline double reduce_prod(Vec8f v){
 }
 
 #pragma transformer loop_function
-inline double reduce_prod(Vec16i v){
+inline double reduce_prod(Vec8i v){
   float sum = 1;
-  for(int i=0; i<16; i++)
+  for(int i=0; i<8; i++)
     sum *= v[i];
   return sum;
 }
@@ -60,10 +60,10 @@ inline double reduce_prod(Vec16i v){
 
 /// Define modulo operator for integer vector
 #pragma transformer loop_function
-inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
+inline Vec8i operator%( const Vec8i &lhs, const int &rhs)
 {
-  Vec16i r;
-  for(int i=0; i<16; i++)
+  Vec8i r;
+  for(int i=0; i<8; i++)
     r.insert(i, lhs[i] % rhs);
   return r;
 }
@@ -73,7 +73,9 @@ inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
 namespace vectorized
 {
   template<int vector_len>
-  inline void permute(int *perm, void * element, int n_elements){}
+  inline void permute(int *perm, void * element, int n_elements){
+    assert(false && "permute not implemented for vector size");
+  }
 
   template<>
   inline void permute<4>(int *perm, void * element, int n_elements){
@@ -81,6 +83,16 @@ namespace vectorized
     for( int v=0; v<n_elements; v++ ){
       __m256d t = e[v];
       for( int i=0; i<4; i++ )
+        e[v][i] =  t[perm[i]];
+    }
+  }
+
+  template<>
+  inline void permute<8>(int *perm, void * element, int n_elements){
+    __m256 * e = (__m256 *) element;
+    for( int v=0; v<n_elements; v++ ){
+      __m256 t = e[v];
+      for( int i=0; i<8; i++ )
         e[v][i] =  t[perm[i]];
     }
   }
