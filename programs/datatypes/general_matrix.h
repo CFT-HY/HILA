@@ -48,17 +48,6 @@ class matrix {
     return *this;
   }
 
-  //copy constructor from scalar  
-  template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma transformer loop_function
-  matrix(const scalart rhs) {
-    static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
-    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-      if (i == j) c[i][j] = (rhs);
-      else c[i][j] = (0);
-    }
-  }
-
   //*=, +=, -= operators
   #pragma transformer loop_function
   matrix<n,m,T> & operator+=(const matrix<n,m,T> & rhs){
