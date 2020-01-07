@@ -256,6 +256,10 @@ extern std::vector<lattice_struct*> lattices;
 
 
 
+
+
+#ifdef VECTORIZED
+
 /// Splits the local lattice into equal sections for vectorization
 struct vectorized_lattice_struct  {
   public:
@@ -520,6 +524,7 @@ struct vectorized_lattice_struct  {
 };
 
 
+#endif //VECTORIZED
 
 
 #endif
