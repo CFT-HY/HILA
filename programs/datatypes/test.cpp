@@ -7,6 +7,6 @@ int main(){
 	a.random();
 	b.random();
 	c.random();
-	c = (a*conjugate<float>(b));
+	c = (a*conj(b));
 	return 0;
 }
