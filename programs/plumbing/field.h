@@ -361,7 +361,7 @@ private:
   /// TODO: field-specific boundary conditions?
   class field_struct {
     public:
-      constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);;
+      constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
 #ifndef VECTORIZED
       lattice_struct * lattice;
@@ -400,13 +400,14 @@ private:
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      field_element<T> get(const int i) const {
+      auto get(const int i) const {
         return payload.get( i, lattice->field_alloc_size() );
       }
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      void set(field_element<T> value, const int i) {
+      template<typename A>
+      void set(A value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
       }
 
@@ -414,6 +415,8 @@ private:
       void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const;
       /// Place boundary elements from neighbour
       void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par);
+      /// Place boundary elements from local lattice (used in vectorized version)
+      void set_local_boundary_elements();
   };
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
@@ -553,13 +556,12 @@ public:
   element<T>& operator[] (const parity p) const;
   element<T>& operator[] (const parity_plus_direction p) const;
 
-
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  field_element<T> get_value_at(int i) const { return this->fs->get(i); }
+  auto get_value_at(int i) const { return this->fs->get(i); }
 
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
-  void set_value_at(field_element<T> value, int i) { this->fs->set(value, i); }
-
+  template<typename A>
+  void set_value_at(A value, int i) { this->fs->set( value, i); }
 
   // fetch the element at this loc
   // T get(int i) const;
@@ -794,67 +796,211 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
 
 
 
-#ifdef VECTORIZED
-
-#include "../plumbing/comm_vanilla.h"
-
-/// Vectorized implementation of fetching boundary elements
-/* Gathers sites at the boundary that need to be communicated to neighbours */
-template<typename T>
-void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-}
-
-/// Vectorized implementation of setting boundary elements
-/* Sets the values the neighbour elements from the communication buffer */
-template<typename T>
-void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-}
-
-template<typename T>
-void field<T>::start_move(direction d, parity p) const {}
-
-/// Vectorized lattice implemenation of wait_move()
-/// Needs to collect neighbour vectors
-template<typename T>
-void field<T>::wait_move(direction d, parity p) const {
-  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
-  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
-  // Loop over the boundary sites
-  for( vectorized_lattice_struct::halo_site hs: fs->lattice->halo_sites ){
-    field_element<T> temp = fs->get(hs.nb_index);
-    vectorized::permute<vector_size>(fs->lattice->boundary_permutation[d], &temp, elements);
-    fs->set(temp, fs->lattice->sites + hs.halo_index);
-  }
-}
-
-
-
-#else
-
-
-
-
-/* Communication routines for fields */
-#if !defined(USE_MPI) || defined(TRANSFORMER) 
-/* No MPI, trivial implementations */
-
-#include "../plumbing/comm_vanilla.h"
-
-///* start_move(): Trivial implementation when no MPI is used
-template<typename T>
-void field<T>::start_move(direction d, parity p) const {}
-template<typename T>
-void field<T>::wait_move(direction d, parity p) const {}
-
-
-#else
+#if defined(USE_MPI) && !defined(TRANSFORMER) 
 /* MPI implementations
  * For simplicity, these functions do not use field expressions and
  * can be ignored by the transformer. Since the transformer does not
  * have access to mpi.h, it cannot process this branch.
  */
 
-#ifdef CUDA
+/// wait_move(): Communicate the field at parity par from direction
+///  d. Uses accessors to prevent dependency on the layout.
+template<typename T>
+void field<T>::start_move(direction d, parity p) const {
+
+  for( parity par: loop_parities(p) ) {
+    if( is_move_started(d, par) ){
+      // Not changed, return directly
+      // Keep count of gathers optimized away
+      lattice->n_gather_avoided += 1;
+      return;
+    }
+
+    // Communication hasn't been started yet, do it now
+    int index = d + NDIRS*(int)par;
+    int tag =  fs->mpi_tag*3*NDIRS + index;
+    constexpr int size = sizeof(T);
+
+    lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+    int n = 0;
+    std::vector<MPI_Request> & receive_request = fs->receive_request[index];
+    std::vector<MPI_Request> & send_request = fs->send_request[index];
+    std::vector<char *> & receive_buffer = fs->receive_buffer[index];
+    std::vector<char *> & send_buffer = fs->send_buffer[index];
+
+    /* HANDLE RECEIVES: loop over nodes which will send here */
+    for( lattice_struct::comm_node_struct from_node : ci.from_node ){
+      unsigned sites = from_node.n_sites(par);
+      if(receive_buffer[n] == NULL)
+        receive_buffer[n] = (char *)malloc( sites*size );
+
+      //printf("node %d, recv tag %d from %d\n", mynode(), tag, from_node.index);
+
+      MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE, from_node.index, 
+	             tag, lattice->mpi_comm_lat, &receive_request[n] );
+      n++;
+    }
+
+    /* HANDLE SENDS: Copy field elements on the boundary to a send buffer and send */
+    n=0;
+    for( lattice_struct::comm_node_struct to_node : ci.to_node ){
+       /* gather data into the buffer  */
+       unsigned sites = to_node.n_sites(par);
+       if(send_buffer[n] == NULL)
+         send_buffer[n] = (char *)malloc( sites*size );
+
+       fs->gather_comm_elements(send_buffer[n], to_node, par);
+ 
+       //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.index);
+       /* And send */
+       MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
+               tag, lattice->mpi_comm_lat, &send_request[n]);
+       //printf("node %d, sent tag %d\n", mynode(), tag);
+       n++;
+     }
+
+    mark_move_started(d, par);
+  }
+}
+
+///* wait_move(): Wait for communication at parity par from
+///  direction d completes the communication in the function.
+///  If the communication has not started yet, also calls
+///  start_move()
+///
+///  NOTE: This will be called even if the field is marked const.
+///  Therefore this function is const, even though it does change
+///  the internal content of the field, the halo. From the point
+///  of view of the user, the value of the field does not change.
+template<typename T>
+void field<T>::wait_move(direction d, parity p) const {
+
+  // Loop over parities
+  // (if p=ALL, do both EVEN and ODD otherwise just p);
+  for( parity par: loop_parities(p) ) {
+    int index = d + NDIRS*(int)par;
+    int tag =  fs->mpi_tag*3*NDIRS + index;
+
+    if( is_fetched(d, par) ){
+      // Not changed, return directly
+      // Keep count of gathers optimized away
+      lattice->n_gather_avoided += 1;
+      return;
+    }
+
+    // This will start the communication if it has not been started yet
+    start_move(d, par);
+
+    // Update local elements in the halo (necessary for vectorized version)
+    fs->set_local_boundary_elements();
+
+    lattice_struct::comminfo_struct ci = lattice->comminfo[d];
+    std::vector<MPI_Request> & receive_request = fs->receive_request[index];
+    std::vector<char *> & receive_buffer = fs->receive_buffer[index];
+
+    /* Wait for the data here */
+    int n = 0;
+    for( lattice_struct::comm_node_struct from_node : ci.from_node ){
+      MPI_Status status;
+      //printf("node %d, waiting for recv tag %d\n", mynode(), tag);
+      MPI_Wait(&receive_request[n], &status);
+      //printf("node %d, received tag %d\n", mynode(), tag);
+
+      fs->scatter_comm_elements(receive_buffer[n], from_node, par);
+      n++;
+    }
+
+    /* Mark the parity fetched from direction dir */
+    mark_fetched(d, par);
+
+    /* Keep count of communications */
+    lattice->n_gather_done += 1;
+  }
+}
+
+
+#else
+
+///* Trivial implementation when no MPI is used
+#include "../plumbing/comm_vanilla.h"
+template<typename T>
+void field<T>::start_move(direction d, parity p) const {}
+template<typename T>
+void field<T>::wait_move(direction d, parity p) const {
+  // Update local elements in the halo (necessary for vectorized version)
+  fs->set_local_boundary_elements();
+}
+
+
+#endif
+
+
+
+
+
+
+#ifdef VECTORIZED
+
+#ifdef USE_MPI
+/// Vectorized implementation of fetching boundary elements
+/* Gathers sites at the boundary that need to be communicated to neighbours */
+template<typename T>
+void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
+  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
+  constexpr static int base_type_size = vectorized::sizeofvector / vector_size;
+  for (int j=0; j<to_node.n_sites(par); j++) {
+    int index = to_node.site_index(j, par);
+    int l_index = lattice->lattice_index[index];
+    int v_index = lattice->vector_index[index];
+    field_element<T> element = get(l_index);
+    for( int e=0; e<elements; e++ ){
+      char * vector_elem = (char *) (&element) + (e*vector_size + v_index) * base_type_size;
+      char * buffer_elem = buffer + j*sizeof(T) + e * base_type_size;
+      std::memcpy( buffer_elem, vector_elem, base_type_size );
+    }
+  }
+}
+
+/// Vectorized implementation of setting boundary elements
+/* Sets the values the neighbour elements from the communication buffer */
+template<typename T>
+void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
+  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
+  constexpr static int base_type_size = vectorized::sizeofvector / vector_size;
+  for (int j=0; j<from_node.n_sites(par); j++) {
+    int index = from_node.offset(par)+j;
+    int l_index = lattice->lattice_index[index];
+    int v_index = lattice->vector_index[index];
+    field_element<T> element = get(l_index);
+    for( int e=0; e<elements; e++ ){
+      char * vector_elem = (char *) (&element) + (e*vector_size + v_index) * base_type_size;
+      char * buffer_elem = buffer + j*sizeof(T) + e * base_type_size;
+      std::memcpy( vector_elem, buffer_elem, base_type_size );
+    }
+    set(element, l_index);
+  }
+}
+
+#endif
+
+template<typename T>
+void field<T>::field_struct::set_local_boundary_elements(){
+  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
+  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
+  // Loop over the boundary sites
+  for( vectorized_lattice_struct::halo_site hs: lattice->halo_sites ){
+    field_element<T> temp = get(hs.nb_index);
+    vectorized::permute<vector_size>(lattice->boundary_permutation[hs.dir], &temp, elements);
+    set(temp, lattice->sites + hs.halo_index);
+  }
+}
+
+
+
+#elif CUDA
+
 
 /* CUDA implementations */
 
@@ -927,6 +1073,9 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
   cudaFree(d_buffer);
 }
 
+template<typename T>
+void field<T>::field_struct::set_local_boundary_elements(){}
+
 
 #else
 
@@ -950,128 +1099,13 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
   }
 }
 
+template<typename T>
+void field<T>::field_struct::set_local_boundary_elements(){}
+
 
 #endif
 
 
-
-/// wait_move(): Communicate the field at parity par from direction
-///  d. Uses accessors to prevent dependency on the layout.
-template<typename T>
-void field<T>::start_move(direction d, parity p) const {
-
-  for( parity par: loop_parities(p) ) {
-    if( is_move_started(d, par) ){
-      // Not changed, return directly
-      // Keep count of gathers optimized away
-      lattice->n_gather_avoided += 1;
-      return;
-    }
-
-    // Communication hasn't been started yet, do it now
-    int index = d + NDIRS*(int)par;
-    int tag =  fs->mpi_tag*3*NDIRS + index;
-    constexpr int size = sizeof(T);
-
-    lattice_struct::comminfo_struct ci = lattice->comminfo[d];
-    int n = 0;
-    std::vector<MPI_Request> & receive_request = fs->receive_request[index];
-    std::vector<MPI_Request> & send_request = fs->send_request[index];
-    std::vector<char *> & receive_buffer = fs->receive_buffer[index];
-    std::vector<char *> & send_buffer = fs->send_buffer[index];
-
-    /* HANDLE RECEIVES: loop over nodes which will send here */
-    for( lattice_struct::comm_node_struct from_node : ci.from_node ){
-      unsigned sites = from_node.n_sites(par);
-      if(receive_buffer[n] == NULL)
-        receive_buffer[n] = (char *)malloc( sites*size );
-
-      //printf("node %d, recv tag %d from %d\n", mynode(), tag, from_node.index);
-
-      MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE, from_node.index, 
-	             tag, lattice->mpi_comm_lat, &receive_request[n] );
-      n++;
-    }
-
-    /* HANDLE SENDS: Copy field elements on the boundary to a send buffer and send */
-    n=0;
-    for( lattice_struct::comm_node_struct to_node : ci.to_node ){
-       /* gather data into the buffer  */
-       unsigned sites = to_node.n_sites(par);
-       if(send_buffer[n] == NULL)
-         send_buffer[n] = (char *)malloc( sites*size );
-
-       fs->gather_comm_elements(send_buffer[n], to_node, par);
- 
-       //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.index);
-       /* And send */
-       MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
-               tag, lattice->mpi_comm_lat, &send_request[n]);
-       //printf("node %d, sent tag %d\n", mynode(), tag);
-       n++;
-     }
-
-    mark_move_started(d, par);
-  }
-}
-
-
-///* wait_move(): Wait for communication at parity par from
-///  direction d completes the communication in the function.
-///  If the communication has not started yet, also calls
-///  start_move()
-///
-///  NOTE: This will be called even if the field is marked const.
-///  Therefore this function is const, even though it does change
-///  the internal content of the field at the boundaries. From the 
-///  point of view of the user, the value of the field does not change.
-template<typename T>
-void field<T>::wait_move(direction d, parity p) const {
-
-  // Loop over parities
-  // (if p=ALL, do both EVEN and ODD otherwise just p);
-  for( parity par: loop_parities(p) ) {
-    int index = d + NDIRS*(int)par;
-    int tag =  fs->mpi_tag*3*NDIRS + index;
-
-    if( is_fetched(d, par) ){
-      // Not changed, return directly
-      // Keep count of gathers optimized away
-      lattice->n_gather_avoided += 1;
-      return;
-    }
-
-    // This will start the communication if it has not been started yet
-    start_move(d, par);
-
-    lattice_struct::comminfo_struct ci = lattice->comminfo[d];
-    std::vector<MPI_Request> & receive_request = fs->receive_request[index];
-    std::vector<char *> & receive_buffer = fs->receive_buffer[index];
-
-    /* Wait for the data here */
-    int n = 0;
-    for( lattice_struct::comm_node_struct from_node : ci.from_node ){
-      MPI_Status status;
-      //printf("node %d, waiting for recv tag %d\n", mynode(), tag);
-      MPI_Wait(&receive_request[n], &status);
-      //printf("node %d, received tag %d\n", mynode(), tag);
-
-      fs->scatter_comm_elements(receive_buffer[n], from_node, par);
-      n++;
-    }
-
-    /* Mark the parity fetched from direction dir */
-    mark_fetched(d, par);
-
-    /* Keep count of communications */
-    lattice->n_gather_done += 1;
-  }
-}
-
-
-#endif
-
-#endif // VECTORIZED
 
 
 #endif // FIELD_H
