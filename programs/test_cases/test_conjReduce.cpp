@@ -35,13 +35,13 @@ int main(int argc, char **argv){
     // Test that neighbours are fetched correctly
     foralldir(dir){
         onsites(ALL){
-            element<std::array<int,4>> l = coordinates(X);
-            coordinate[X] = l[dir];
-            nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
+          element<std::array<int,4>> l = coordinates(X);
+          coordinate[X] = l[dir];
+          nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
         }
-    
+
         nb_coordinate2[ALL] = coordinate[X+dir];
-    
+
         onsites(ALL){
             element<int> diff = nb_coordinate1[X]-nb_coordinate2[X];
             isum += diff*diff;
@@ -94,7 +94,7 @@ int main(int argc, char **argv){
         dsum += matrices[X].trace();
     }
 
-    assert(((int) dsum) == lattice->volume()*2);
+    assert(((int) dsum) == lattice->volume()*2 && "Matrix conjugate multiplication");
     
     finishrun();
 }
