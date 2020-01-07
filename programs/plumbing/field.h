@@ -233,7 +233,7 @@ class field_storage {
   public:
     // Structure of arrays implementation
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
-    real_t * fieldbuf;
+    real_t * fieldbuf = NULL;
 
     void allocate_field( const int field_alloc_size ) {
       fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
@@ -276,11 +276,12 @@ class field_storage {
 template <typename T>
 class field_storage {
   public:
-      // Array of structures implementation
-    element<T> * fieldbuf;
+
+    // Array of structures implementation
+    T * fieldbuf = NULL;
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (element<T>*) allocate_field_mem( sizeof(element<T>) * field_alloc_size);
+      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
       #pragma acc enter data create(fieldbuf)
     }
 
@@ -291,15 +292,20 @@ class field_storage {
     }
 
     #pragma transformer loop_function
-    element<T> get(const int i, const int field_alloc_size) const
+    T get(const int i, const int field_alloc_size) const
     {
-      return ((element<T> *) fieldbuf)[i];
+      // There is some problem with directly assigning intrinsic vectors, at least.
+      // This is a universal workaround, but could be fixed by assigning element
+      // by element
+      T value;
+      std::memcpy( &value, fieldbuf+i, sizeof(T) );
+      return value;
     }
 
     #pragma transformer loop_function
-    void set(element<T> value, const int i, const int field_alloc_size) 
+    void set(T value, const int i, const int field_alloc_size) 
     {
-      ((element<T> *) fieldbuf)[i] = value;
+      std::memcpy( fieldbuf+i, &value, sizeof(T) );
     }
 };
 
