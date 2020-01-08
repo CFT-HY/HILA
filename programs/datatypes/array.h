@@ -33,4 +33,4 @@ class array {
             static_assert(i < n, "array subscript out of bounds!");
             return c[i]; 
         }
-}
+};

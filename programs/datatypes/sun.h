@@ -3,9 +3,32 @@
 
 #include "cmplx.h"
 #include "general_matrix.h"
+#include "sun_vector.h"
 #include "../plumbing/defs.h"
 #include "../plumbing/mersenne.h" //has to be included
 #include <cmath>
+
+// SU3 crossprod calculation routines 
+
+#define CMULJJ(a,b,c) do { (c).re =  (a).re*(b).re - (a).im*(b).im; \
+   		        (c).im = -(a).re*(b).im - (a).im*(b).re; } while(0)
+#define CMULJJ_ADD(a,b,c) do { (c).re +=  (a).re*(b).re - (a).im*(b).im; \
+   		            (c).im += -(a).re*(b).im - (a).im*(b).re; } while(0)
+#define CMULJJ_SUB(a,b,c) do { (c).re -=  (a).re*(b).re - (a).im*(b).im; \
+   	                (c).im += (a).re*(b).im + (a).im*(b).re; } while(0)
+
+#define su3_vector_crossprod_conj(av, bv, res)  \
+do {                                            \
+                                                \
+    CMULJJ((av).c[1], (bv).c[2], (res).c[0]);         \
+    CMULJJ_SUB((av).c[2], (bv).c[1], (res).c[0]);     \
+                                                \
+    CMULJJ((av).c[2], (bv).c[0], (res).c[1]);         \
+    CMULJJ_SUB((av).c[0], (bv).c[2], (res).c[1]);     \
+                                                \
+    CMULJJ((av).c[0], (bv).c[1], (res).c[2]);         \
+    CMULJJ_SUB((av).c[1], (bv).c[0], (res).c[2]);     \
+} while (0)
 
 // SU2 matrix multiplication routines ------------------------
 
@@ -61,17 +84,31 @@ template<typename radix>
 class SU2; 
 
 template<typename radix> 
+class SU3; 
+
+template<typename radix> 
 class SU2adjoint; 
 
 template<typename radix> 
-class SU2vector {
+class SU3 : public matrix<3,3,cmplx<radix> > {
     public:
-    cmplx<radix> c[2];
-    SU2vector(const SU2<radix> & m){
-        c[0].re = m.b;				    
-        c[0].im = m.a;			       	
-        c[1].re = m.d;			       	
-        c[1].im =-m.c;
+    //constructor from two Su vectors
+    SU3 (const SU_vector<3, radix> & a, const SU_vector<3, radix> & b){
+        SU_vector<3, radix> c; //last column of matrix to be made from cross product
+        const SU_vector<3, radix> ai[3] = { a, b, c };
+        int i,j;
+        su3_vector_crossprod_conj(a,b,c);
+        #ifdef CUDA
+        #pragma unroll
+        #endif
+        for (i = 0; i < 3; i++){
+        #ifdef CUDA
+        #pragma unroll
+        #endif
+            for (j = 0; j < 3; j++){
+                this->c[i][j] = ai[i].c[j];
+            }
+        }
     }
 };
 
