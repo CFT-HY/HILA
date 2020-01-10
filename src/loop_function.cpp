@@ -117,6 +117,16 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
     special_function_call_list.push_back(sfc);
     return 1;
   }
+  if( name == "hila_random" ){
+    llvm::errs() << get_stmt_str(Call) << '\n';
+    special_function_call sfc;
+    sfc.fullExpr = Call;
+    sfc.scope = state::scope_level;
+    sfc.replace_expression = "hila_random";
+    sfc.add_loop_var = false;
+    special_function_call_list.push_back(sfc);
+    return 1;
+  }
   return 0;
 }
 

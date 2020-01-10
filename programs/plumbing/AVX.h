@@ -1,8 +1,12 @@
 #ifndef AVX_H
 #define AVX_H
 
+#include "../plumbing/defs.h"
 #include <immintrin.h>
 #include "../vectorclass/vectorclass.h"
+#include "../vectorclass/vectormath_exp.h"
+#include "../vectorclass/vectormath_trig.h"
+#include "../vectorclass/vectormath_hyp.h"
 
 
 #define VECTORIZED
@@ -65,6 +69,25 @@ inline Vec8i operator%( const Vec8i &lhs, const int &rhs)
   Vec8i r;
   for(int i=0; i<8; i++)
     r.insert(i, lhs[i] % rhs);
+  return r;
+}
+
+
+#pragma transformer loop_function
+inline Vec4d hila_random_Vec4d(){
+  Vec4d r;
+  for(int i=0; i<4; i++){
+    r.insert(i,mersenne());
+  }
+  return r;
+}
+
+#pragma transformer loop_function
+inline Vec8f hila_random_Vec8f(){
+  Vec8f r;
+  for(int i=0; i<8; i++){
+    r.insert(i,mersenne());
+  }
   return r;
 }
 

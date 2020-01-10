@@ -69,7 +69,7 @@ int main(int argc, char **argv){
     // Calculates M(X) * M.congugate(X+dir)
     onsites(ALL){
         element<matrix<2,2,double>> a;
-        double theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
+        element<double> theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
         a.c[0][0] =  cos(theta);
         a.c[0][1] = -sin(theta);
         a.c[1][0] =  sin(theta);

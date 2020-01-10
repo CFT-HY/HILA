@@ -55,6 +55,21 @@ void replace_basetype_with_vector(std::string & element_type) {
 
 std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   std::stringstream code;
+
+  // Find the vector size
+  std::string base_vector_type;
+  std::string type = field_info_list.front().type_template;
+  if(type.find("double") != std::string::npos) {
+    base_vector_type = "Vec4d";
+  } else if(type.find("float") != std::string::npos){
+    base_vector_type = "Vec8f";
+  } else if(type.find("int") != std::string::npos){
+    base_vector_type = "Vec8i";
+  } else {
+    llvm::errs() << "Cannot find vector size\n";
+    llvm::errs() << "Field type " << type << "\n";
+    exit(1);
+  }
   
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
@@ -124,6 +139,9 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
+    if( sfc.replace_expression == "hila_random" ){
+      loopBuf.replace(sfc.fullExpr, "hila_random_"+base_vector_type+"()");
+    } else 
     if( sfc.add_loop_var ){
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
     } else {

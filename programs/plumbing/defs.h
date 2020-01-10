@@ -194,7 +194,7 @@ inline void synchronize_threads(){}
 #else
 
 #define seed_random(seed) seed_mersenne(seed)
-#define hila_random() mersenne()
+inline double hila_random(){ return mersenne(); }
 inline void synchronize_threads(){}
 
 #endif
