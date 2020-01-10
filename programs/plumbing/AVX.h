@@ -72,6 +72,14 @@ inline Vec8i operator%( const Vec8i &lhs, const int &rhs)
   return r;
 }
 
+inline Vec4i operator%( const Vec4i &lhs, const int &rhs)
+{
+  Vec4i r;
+  for(int i=0; i<8; i++)
+    r.insert(i, lhs[i] % rhs);
+  return r;
+}
+
 
 #pragma transformer loop_function
 inline Vec4d hila_random_Vec4d(){

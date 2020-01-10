@@ -451,10 +451,9 @@ struct vectorized_lattice_struct  {
           int fl_index = lattice->neighb[d][i];
           if( fl_index >= lattice->volume() ){
             // There is an off-node neighbour. Map this to a halo-index
-            int fl_index = lattice->neighb[d][i];
             int l_index = neighbours[d][get_index(vl)];
             lattice_index[fl_index] = l_index;
-            vector_index[fl_index] = v_index;
+            vector_index[fl_index] = boundary_permutation[d][v_index];
           }
         }
       }
@@ -476,17 +475,25 @@ struct vectorized_lattice_struct  {
 
     /// Return the coordinates of each vector nested as
     /// coordinate[direction][vector_index]
-
-    //location coordinates(int idx){
-    //  location r;
-    //  for(int d=0; d<NDIM; d++){
-    //    r[d] = coordinate_list[index];
-    //  }
-    //  return r;
-    //}
-
-    std::array<Vec8i,NDIM> coordinates(int idx){
+    std::array<Vec8i,NDIM> coordinates_Vec8i(int idx){
+      assert(vector_size == 8);
       std::array<Vec8i,NDIM> r;
+      int step=1;
+      for(int d=0; d<NDIM; d++){
+        for(int v=0; v<vector_size; v++){
+          r[d].insert(v, coordinate_list[idx][d] + size[d]*((v/step)%split[d]));
+        }
+        step *= split[d];
+      }
+      return r;
+    }
+    std::array<Vec8i,NDIM> coordinates_Vec8f(int idx){
+      return coordinates_Vec8i(idx);
+    }
+
+    std::array<Vec4i,NDIM> coordinates_Vec4d(int idx){
+      assert(vector_size == 4);
+      std::array<Vec4i,NDIM> r;
       int step=1;
       for(int d=0; d<NDIM; d++){
         for(int v=0; v<vector_size; v++){
