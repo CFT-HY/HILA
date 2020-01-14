@@ -8,7 +8,6 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
-
 #ifdef AVX
 #include "../plumbing/AVX.h"
 #define VECTORIZED
@@ -237,35 +236,24 @@ inline void synchronize(){
 ///Implements test for arithmetic operators in types, similar to 
 ///std::is_arithmetic but allows vector types
 
-template<class T, class = void>
-struct is_arithmetic : std::false_type {};
+#ifndef VECTORIZED
+template< class T >
+struct is_arithmetic : std::integral_constant<
+  bool,
+  std::is_arithmetic<T>::value
+> {};
+#else
+template< class T >
+struct is_arithmetic : std::integral_constant<
+  bool,
+  std::is_arithmetic<T>::value ||
+  std::is_same<T,Vec4d>::value ||
+  std::is_same<T,Vec8f>::value ||
+  std::is_same<T,Vec8i>::value
+> {};
+#endif
 
-template<>
-struct is_arithmetic<double>  : std::true_type {};
 
-template<>
-struct is_arithmetic<long double>  : std::true_type {};
-
-template<>
-struct is_arithmetic<int>  : std::true_type {};
-
-template<>
-struct is_arithmetic<unsigned>  : std::true_type {};
-
-template<>
-struct is_arithmetic<size_t>  : std::true_type {};
-
-template<>
-struct is_arithmetic<float>  : std::true_type {};
-
-template<>
-struct is_arithmetic<Vec4d>  : std::true_type {};
-
-template<>
-struct is_arithmetic<Vec8f>  : std::true_type {};
-
-template<>
-struct is_arithmetic<Vec8i>  : std::true_type {};
 
 
 #endif
