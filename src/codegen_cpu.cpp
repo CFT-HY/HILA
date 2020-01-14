@@ -97,7 +97,7 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf & 
     if( sfc.add_loop_var ){
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
     } else {
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression);
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"()");
     }
   }
 

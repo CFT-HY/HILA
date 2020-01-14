@@ -122,7 +122,7 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
     special_function_call sfc;
     sfc.fullExpr = Call;
     sfc.scope = state::scope_level;
-    sfc.replace_expression = "hila_random()";
+    sfc.replace_expression = "hila_random";
     sfc.add_loop_var = false;
     special_function_call_list.push_back(sfc);
     return 1;
