@@ -33,7 +33,7 @@ int main(int argc, char **argv){
       synchronize();
       end = clock();
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Matrix * Matrix: " << timing << "ms \n";
 
 
@@ -66,7 +66,7 @@ int main(int argc, char **argv){
       sum=0;
       for( int i=0; i<n_runs; i++){
         onsites(ALL){
-          sum += vector1[X].norm_sq();
+          sum += norm_sq(vector1[X]);
         }
       }
       synchronize();
@@ -141,8 +141,8 @@ int main(int argc, char **argv){
         dirac_stagggered(U, 0.1, p, Dp);
 
         onsites(ALL){
-            rr += r[X].norm_sq();
-            pDDp += Dp[X].norm_sq();
+            rr += norm_sq(r[X]);
+            pDDp += norm_sq(Dp[X]);
         }
 
         alpha = rr / pDDp;
@@ -150,7 +150,7 @@ int main(int argc, char **argv){
         onsites(ALL){
           vector2[X] = r[X] + alpha*p[X];
           r[X] = r[X] - alpha*Dp[X];
-          rrnew += r[X].norm_sq();
+          rrnew += norm_sq(r[X]);
         }
 
         beta = rrnew/rr;

@@ -1,4 +1,5 @@
-OPTS = -DNDIM=4
+ADDITION = -DMSIZE=10
+OPTS = -DNDIM=3 $(ADDITION)
 
 #The next line work on puhti
 #TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ -DNRUNS=1
@@ -12,7 +13,7 @@ CXXFLAGS = -O3 -x c++ $(OPTS)
 	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
 
 %.cpt: %.cpp Makefile
-	$(TRANSFORMER) $<
+	$(TRANSFORMER) $(ADDITION) $<
 
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
