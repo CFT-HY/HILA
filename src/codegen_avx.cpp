@@ -234,6 +234,28 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
 
 void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
+  // Find the vector size
+  int vector_size = 1;
+  std::string base_type;
+  std::string base_vector_type;
+  if(typestr.find("double") != std::string::npos) {
+    base_type = "double";
+    base_vector_type = "Vec4d";
+    vector_size = 4;
+  } else if(typestr.find("float") != std::string::npos){
+    base_type = "float";
+    base_vector_type = "Vec8f";
+    vector_size = 8;
+  } else if(typestr.find("int") != std::string::npos){
+    base_type = "int";
+    base_vector_type = "Vec8i";
+    vector_size = 8;
+  } else {
+    llvm::errs() << "Cannot find vector size\n";
+    llvm::errs() << "Field type " << typestr << "\n";
+    exit(1);
+  }
+
   // insert after a new line
   SourceLocation l =
   getSourceLocationAtEndOfLine( field_storage_decl->getSourceRange().getEnd() );
@@ -267,8 +289,13 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   // Add a simple template mapping from element type to vector size
   std::stringstream field_element_code;
   field_element_code << "template<> \n";
-  field_element_code << "struct field_element<"<<typestr<<"> {\n";
-  field_element_code << "  "<< vectortype << " c;\n";
+  field_element_code << "struct field_info<"<<typestr<<"> {\n";
+  field_element_code << " constexpr static int vector_size = "<< std::to_string(vector_size) <<";\n";
+  field_element_code << " constexpr static int base_type_size = sizeof(" << base_type << ");\n";
+  field_element_code << " constexpr static int elements = sizeof(" << typestr 
+                     << ")/sizeof(" << base_type << ");\n";
+  field_element_code << " using base_type = " << base_type << ";\n";
+  field_element_code << " using vector_type = " << base_vector_type << ";\n";
   field_element_code << "};\n";
 
   bodyBuffer.append(field_element_code.str(), true);

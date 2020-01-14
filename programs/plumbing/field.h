@@ -211,11 +211,12 @@ using element = T;
 /// Utility for returning mapping a field element type into 
 /// a corresponding vector. This is not used directly as a type
 template <typename T>
-struct field_element{
-  T c;
+struct field_info{
+  constexpr static int vector_size = 1;
+  constexpr static int base_type_size = 1;
+  constexpr static int elements = 1;
 
-  field_element(const T& x): c(x) {}
-  operator T(){return c;}
+  using basetype = real_t;
 };
 
 
@@ -340,7 +341,7 @@ private:
   /// TODO: field-specific boundary conditions?
   class field_struct {
     public:
-      constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
+      constexpr static int vector_size = field_info<T>::vector_size;
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
 #ifndef VECTORIZED
       lattice_struct * lattice;
@@ -531,7 +532,7 @@ public:
   // placemarker, should not be here
   // T& operator[] (const int i) { return data[i]; }
 
-  // these give the field_element -- WILL BE modified by transformer
+  // these give the element -- WILL BE modified by transformer
   element<T>& operator[] (const parity p) const;
   element<T>& operator[] (const parity_plus_direction p) const;
 
@@ -925,18 +926,20 @@ void field<T>::wait_move(direction d, parity p) const {
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
 void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-  constexpr static int vector_size = sizeof(field_element<T>)/sizeof(T);
-  constexpr static int base_type_size = vectorized::sizeofvector / vector_size;
-  constexpr static int elements = sizeof(T) / base_type_size;
+  constexpr int vector_size = field_info<T>::vector_size;
+  constexpr int base_type_size = field_info<T>::base_type_size;
+  constexpr int elements = field_info<T>::elements;
   for (int j=0; j<to_node.n_sites(par); j++) {
     int index = to_node.site_index(j, par);
     int l_index = lattice->lattice_index[index];
     int v_index = lattice->vector_index[index];
     auto element = get(l_index);
     for( int e=0; e<elements; e++ ){
-      char * vector_elem = (char *) (&element) + (e*vector_size + v_index) * base_type_size;
+      typename field_info<T>::vector_type *pvector = (typename field_info<T>::vector_type*) (&element);
+      typename field_info<T>::base_type basenumber = pvector[e].extract(v_index);
       char * buffer_elem = buffer + j*sizeof(T) + e * base_type_size;
-      std::memcpy( buffer_elem, vector_elem, base_type_size );
+      
+      std::memcpy( buffer_elem, &basenumber, base_type_size );
     }
   }
 }
@@ -945,18 +948,21 @@ void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct:
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
 void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-  constexpr static int vector_size = sizeof(field_element<T>)/sizeof(T);
-  constexpr static int base_type_size = vectorized::sizeofvector / vector_size;
-  constexpr static int elements = sizeof(T) / base_type_size;
+  constexpr int vector_size = field_info<T>::vector_size;
+  constexpr int base_type_size = field_info<T>::base_type_size;
+  constexpr int elements = field_info<T>::elements;
   for (int j=0; j<from_node.n_sites(par); j++) {
     int index = from_node.offset(par)+j;
     int l_index = lattice->lattice_index[index];
     int v_index = lattice->vector_index[index];
     auto element = get(l_index);
     for( int e=0; e<elements; e++ ){
-      char * vector_elem = (char *) (&element) + (e*vector_size + v_index) * base_type_size;
+      typename field_info<T>::vector_type *pvector = (typename field_info<T>::vector_type*) (&element);
+      typename field_info<T>::base_type basenumber;
       char * buffer_elem = buffer + j*sizeof(T) + e * base_type_size;
-      std::memcpy( vector_elem, buffer_elem, base_type_size );
+      
+      std::memcpy( &basenumber, buffer_elem, base_type_size );
+      pvector[e].insert(basenumber, v_index);
     }
     set(element, l_index);
   }
@@ -966,8 +972,8 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 
 template<typename T>
 void field<T>::field_struct::set_local_boundary_elements(){
-  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
-  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
+  constexpr int vector_size = field_info<T>::vector_size;
+  constexpr int elements = field_info<T>::elements;
   // Loop over the boundary sites
   for( vectorized_lattice_struct::halo_site hs: lattice->halo_sites ){
     auto temp = get(hs.nb_index);
