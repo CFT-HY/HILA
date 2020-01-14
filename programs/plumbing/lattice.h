@@ -269,6 +269,7 @@ struct vectorized_lattice_struct  {
     int sites, evensites, oddsites, alloc_size;
     unsigned vector_size;
     std::vector<location> coordinate_list;
+    location min; // Coordinate of first site
     std::vector<int**> coordinate;
     lattice_struct * lattice;
     bool first_site_even;
@@ -284,6 +285,7 @@ struct vectorized_lattice_struct  {
     struct halo_site {
       unsigned nb_index;
       unsigned halo_index;
+      parity par;
       direction dir;
     };
     std::vector<halo_site> halo_sites;
@@ -298,6 +300,7 @@ struct vectorized_lattice_struct  {
       lattice =  _lattice;
       vector_size = _vector_size;
       first_site_even = lattice->first_site_even();
+      min = lattice->coordinates(0);
 
       for(int d=0; d<NDIM; d++){
         size[d] = lattice->local_size(d);
@@ -369,6 +372,11 @@ struct vectorized_lattice_struct  {
             hs.nb_index = get_index(nb);
             hs.halo_index = halo_index;
             hs.dir = (direction)d;
+            if( i < evensites ){
+              hs.par = EVEN;
+            } else {
+              hs.par = ODD;
+            }
             halo_sites.push_back(hs);
             halo_index++;
           }
@@ -420,17 +428,17 @@ struct vectorized_lattice_struct  {
         }
       }
       
-      printf(" Vectorized lattice size: (%d %d %d %d)\n",
-        size[0], size[1], size[2], size[3]);
-      printf(" Vectorized lattice split: (%d %d %d %d)\n",
-        split[0], split[1], split[2], split[3]);
-      for(int d=0; d<NDIRS; d++){
-        printf(" permutation %d: (",(int)d);
-        for(int v=0;v<vector_size; v++){
-          printf("%d, ", boundary_permutation[d][v]);
-        }
-        printf(")\n");
-      }
+      //printf(" Vectorized lattice size: (%d %d %d %d)\n",
+      //  size[0], size[1], size[2], size[3]);
+      //printf(" Vectorized lattice split: (%d %d %d %d)\n",
+      //  split[0], split[1], split[2], split[3]);
+      //for(int d=0; d<NDIRS; d++){
+      //  printf(" permutation %d: (",(int)d);
+      //  for(int v=0;v<vector_size; v++){
+      //    printf("%d, ", boundary_permutation[d][v]);
+      //  }
+      //  printf(")\n");
+      //}
 
       // Map full lattice index to local index
       lattice_index.resize(lattice->field_alloc_size());
@@ -454,7 +462,7 @@ struct vectorized_lattice_struct  {
             // There is an off-node neighbour. Map this to a halo-index
             int l_index = neighbours[d][get_index(vl)];
             lattice_index[fl_index] = l_index;
-            vector_index[fl_index] = v_index;
+            vector_index[fl_index] = v_index; 
           }
         }
       }
@@ -481,8 +489,9 @@ struct vectorized_lattice_struct  {
       std::array<Vec8i,NDIM> r;
       int step=1;
       for(int d=0; d<NDIM; d++){
+        int first = coordinate_list[idx][d] + min[d];
         for(int v=0; v<vector_size; v++){
-          r[d].insert(v, coordinate_list[idx][d] + size[d]*((v/step)%split[d]));
+          r[d].insert(v, first + size[d]*((v/step)%split[d]));
         }
         step *= split[d];
       }
@@ -497,8 +506,9 @@ struct vectorized_lattice_struct  {
       std::array<Vec4i,NDIM> r;
       int step=1;
       for(int d=0; d<NDIM; d++){
+        int first = coordinate_list[idx][d] + min[d];
         for(int v=0; v<vector_size; v++){
-          r[d].insert(v, coordinate_list[idx][d] + size[d]*((v/step)%split[d]));
+          r[d].insert(v, first + size[d]*((v/step)%split[d]));
         }
         step *= split[d];
       }
