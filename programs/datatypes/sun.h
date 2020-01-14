@@ -1,5 +1,5 @@
-#ifndef SUNM
-#define SUNM
+#ifndef SUN_M
+#define SUN_M
 
 #include "cmplx.h"
 #include "general_matrix.h"
@@ -8,7 +8,7 @@
 #include "../plumbing/mersenne.h" //has to be included
 #include <cmath>
 
-// SU3 crossprod calculation routines 
+// SU3 crossproduct calculation routines 
 
 #define CMULJJ(a,b,c) do { (c).re =  (a).re*(b).re - (a).im*(b).im; \
    		        (c).im = -(a).re*(b).im - (a).im*(b).re; } while(0)
@@ -110,6 +110,10 @@ class SU3 : public matrix<3,3,cmplx<radix> > {
             }
         }
     }
+
+    SU3 & random(){
+        return *this; //add this feature later: generate random SU3 element 
+    }
 };
 
 template<typename radix>
@@ -195,9 +199,18 @@ class SU2 {
 template<typename radix>
 class SU2adjoint {
     public:
-    SU2adjoint (const SU2<radix> & rhs) : ref(rhs) {} ;
-    const SU2<radix> & ref;
+        SU2adjoint (const SU2<radix> & rhs) : ref(rhs) {} ;
+        const SU2<radix> & ref;
+    private:
+        SU2adjoint(){}
+        SU2adjoint<radix> & operator = (const SU2adjoint & rhs){}
 };
+
+template<typename radix> 
+inline SU2adjoint<radix> conj(SU2<radix> & ref){
+  SU2adjoint<radix> result(ref);
+  return result;
+}
 
 template<typename radix>
 SU2adjoint<radix> & SU2<radix>::adj(){

@@ -135,12 +135,11 @@ class matrix {
   }
 
   #pragma transformer loop_function
-  double norm_sq(){
-    double result = 0.0;
+  matrix<n, m, T> & random(){
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-      result += norm_sq(c[i][j]);
+      c[i][j] = static_cast<T>(hila_random());
     }
-    return result;
+    return *this;
   }
 
   std::string str() const {
@@ -477,5 +476,13 @@ inline conjugateMatrix<n,m,T> conj(matrix<n,m,T> & ref){
   return result;
 }
 
+template<int n, int m, typename T>
+inline double norm_sq(matrix<n,m,T> & rhs){
+    double result = 0.0;
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+      result += norm_sq(rhs.c[i][j]);
+    }
+    return result;
+  }
 
 #endif

@@ -13,14 +13,13 @@ template<typename radix>
 class SU2; 
 
 template<typename radix> 
-class SU2vector {
+class SU2vector : public SU_vector<2, radix> {
     public:
-    cmplx<radix> c[2];
     SU2vector(const SU2<radix> & m){
-        c[0].re = m.b;				    
-        c[0].im = m.a;			       	
-        c[1].re = m.d;			       	
-        c[1].im =-m.c;
+        this->c[0].re = m.b;				    
+        this->c[0].im = m.a;			       	
+        this->c[1].re = m.d;			       	
+        this->c[1].im =-m.c;
     }
 };
 
