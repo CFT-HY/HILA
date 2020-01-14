@@ -166,6 +166,7 @@ public:
   long long volume() { return l_volume; }
   int node_number() { return this_node.index; }
   int n_nodes() { return nodes.number; }
+  long long local_volume() {return volume()/n_nodes();}
   
   bool is_on_node(const location & c);
   unsigned node_number(const location & c);
@@ -361,7 +362,7 @@ struct vectorized_lattice_struct  {
           if( nb[k] >= 0 && nb[k] < size[k] ) {
             neighbours[d][i] = get_index(nb);
           } else {
-            // This is outside this split lattice (partly outside the node)
+            // This is outside this split lattice (maybe partly outside the node)
             neighbours[d][i] = sites + halo_index;
             // Find the corresponding site on the other side of the lattice
             halo_site hs;
@@ -439,8 +440,8 @@ struct vectorized_lattice_struct  {
         location vl;
         int step=1, v_index=0;
         for( int d=0; d<NDIM; d++ ){
-          vl[d] = (fl[d] % lattice->local_size(d) ) % size[d];
-          v_index += step * ((fl[d] % lattice->local_size(d)) / size[d]);
+          vl[d] = fl[d] % size[d];
+          v_index += step * (fl[d] / size[d]);
           step *= split[d];
         }
         lattice_index[i] = get_index(vl);
@@ -449,11 +450,11 @@ struct vectorized_lattice_struct  {
         // Check for neighbours in the halo
         for(int d=0; d<NDIRS; d++){
           int fl_index = lattice->neighb[d][i];
-          if( fl_index >= lattice->volume() ){
+          if( fl_index >= lattice->local_volume() ){
             // There is an off-node neighbour. Map this to a halo-index
             int l_index = neighbours[d][get_index(vl)];
             lattice_index[fl_index] = l_index;
-            vector_index[fl_index] = boundary_permutation[d][v_index];
+            vector_index[fl_index] = v_index;
           }
         }
       }
