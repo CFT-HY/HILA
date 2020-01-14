@@ -235,20 +235,37 @@ inline void synchronize(){
 
 
 ///Implements test for arithmetic operators in types, similar to 
-///std::is_arithmetic but works for classes
-template<class...> struct voidify { using type = void; };
-template<class... Ts> using void_t = typename voidify<Ts...>::type;
+///std::is_arithmetic but allows vector types
 
 template<class T, class = void>
-struct supports_arithmetic_operations : std::false_type {};
+struct is_arithmetic : std::false_type {};
 
-template<class T>
-struct supports_arithmetic_operations<T,
-          void_t<decltype(std::declval<T>() + std::declval<T>()),
-                 decltype(std::declval<T>() - std::declval<T>()),
-                 decltype(std::declval<T>() * std::declval<T>()),
-                 decltype(std::declval<T>() / std::declval<T>())>> 
-          : std::true_type {};
+template<>
+struct is_arithmetic<double>  : std::true_type {};
+
+template<>
+struct is_arithmetic<long double>  : std::true_type {};
+
+template<>
+struct is_arithmetic<int>  : std::true_type {};
+
+template<>
+struct is_arithmetic<unsigned>  : std::true_type {};
+
+template<>
+struct is_arithmetic<size_t>  : std::true_type {};
+
+template<>
+struct is_arithmetic<float>  : std::true_type {};
+
+template<>
+struct is_arithmetic<Vec4d>  : std::true_type {};
+
+template<>
+struct is_arithmetic<Vec8f>  : std::true_type {};
+
+template<>
+struct is_arithmetic<Vec8i>  : std::true_type {};
 
 
 #endif
