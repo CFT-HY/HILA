@@ -25,10 +25,10 @@ void input::handle(const std::string & line){
     if (essentials.count(variable)!=0) essentials[variable] = true;
     if (is_numeric) {
         values[variable] = std::stod(value); 
-        std::cout << "found " + variable + " = " << values[variable] << "\n";
+        hila::output << "found " + variable + " = " << values[variable] << "\n";
     } else {
         names[variable] = value; 
-        std::cout << "found " + variable + " = " << names[variable] << "\n";
+        hila::output << "found " + variable + " = " << names[variable] << "\n";
     }
     if (essentials.count(variable)==1){
         essentials[variable] = true;
@@ -69,7 +69,7 @@ void input::read(const std::string & fname) {
             getline(inputfile, line, '\n');
         }
     } else {
-        std::cout << "input file couldn't be opened. Checking default params...\n";
+        hila::output << "input file couldn't be opened. Checking default params...\n";
     }
     inputfile.close();
 }
@@ -80,7 +80,7 @@ void input::add_essential(const std::string & var) {
 
 template<typename T>
 void input::add_essential(std::string const & var, T const & default_value) {
-    std::cout << "type of default param not recognized for: " + var + "\n";
+    hila::output << "type of default param not recognized for: " + var + "\n";
     essentials[var] = false;
 }
 
@@ -109,13 +109,17 @@ void input::check_essentials(){
     bool fail = false;
     for (auto i = essentials.begin(); i != essentials.end(); ++i){
         if (!(*i).second){
-            std::cout << "required parameter " + (*i).first + " not found\n"; 
+            hila::output << "required parameter " + (*i).first + " not found\n"; 
             fail = true;
         }
     }
     if (fail){
-        std::cout << "exiting...";
-        exit(1); //should be changed to the field exit routine if field specified
+        hila::output << "exiting...\n";
+        #ifdef USE_MPI
+        finishrun();
+        #else
+        exit(1);
+        #endif
     }
 }
 
