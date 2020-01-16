@@ -3,14 +3,7 @@
 #define OPS_H
 
 ///////////////////////////////////////////
-// The routines are used as operation modifiers
-// i.e. they change how +,-,* are performed
-// between members of the same data type.   
-// By default they do not change any behaviour 
-// unless they are specialized for a dtype. 
-// For example A*trans(B) multiplies A by the
-// transpose of the elements of B when they are 
-// matrices. 
+// General operation definitions for dtypes
 ////////////////////////////////////////////
 
 //complex conjugate
@@ -30,7 +23,7 @@ inline T trans(T rhs){
 template<typename T>
 #pragma transformer loop_function
 inline double norm_sq(T val){
-  return val*val;
+  return static_cast<double>(val*val);
 }
 
 #endif 
