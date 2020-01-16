@@ -51,6 +51,20 @@ int main(int argc, char **argv){
     timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "conj(matrix) * matrix * conj(matrix): " << timing << "ms \n";
 
+    // Time matrix.conjugate() * matrix * matrix.conjugate() 
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          matrix4[ALL] = (matrix1[X].conjugate())*matrix2[X]*(matrix3[X].conjugate());
+      }
+      synchronize();
+      end = clock();
+    }
+
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "matrix.conjugate() * matrix * matrix.conjugate(): " << timing << "ms \n";
+
     finishrun();
 }
 

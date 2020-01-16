@@ -71,6 +71,7 @@ if [ ${fails} -eq 0 ]; then
 else
 	echo ${fails}/${num_tests} tests failed
 	cat $ERRORLOG
+	exit 1
 fi
 
 rm $ERRORLOG
