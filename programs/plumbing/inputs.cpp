@@ -3,7 +3,7 @@
 #include<regex>
 #include<type_traits>
 #include "inputs.h"
-
+#include "globals.h"
 
 #ifdef USE_MPI
 
