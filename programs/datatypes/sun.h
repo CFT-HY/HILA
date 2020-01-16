@@ -173,22 +173,18 @@ class SU2 {
         SU2<radix> & reunitarize();  
         SU2<radix> & random(); 
         SU2<radix> & inv(); 
-        SU2adjoint<radix> & adj(); 
-        
+        SU2adjoint<radix> & adj();         
         radix sqr() const;
         radix tr() const;
         radix det() const; 
-
         SU2<radix> operator + (const SU2<radix> &); //basic operations. These versions return new matrix as result
         SU2<radix> operator - (const SU2<radix> &);
         SU2<radix> & operator += (const SU2<radix> &); //same ops as above, except store result in lhs matrix
         SU2<radix> & operator -= (const SU2<radix> &);
         SU2<radix> & operator *= (const SU2<radix> &);
-
         SU2<radix> & operator += (const SU2adjoint<radix> &); //same ops as above, except store result in lhs matrix
         SU2<radix> & operator -= (const SU2adjoint<radix> &);
         SU2<radix> & operator *= (const SU2adjoint<radix> &);
-
         SU2<radix> & operator *= (const radix &);
         SU2<radix> operator * (const radix &);
     private:

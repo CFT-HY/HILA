@@ -14,12 +14,6 @@ template <typename T = double>
 struct cmplx {
   T re,im;
   
-  // assignment is automatically OK, by c-standard
-  //   cmplx operator=(cmplx rhs) { 
-  //     re = rhs.re; im = rhs.im; 
-  //     return *this; 
-  //   }
-  
   cmplx<T>() = default;
   
   cmplx<T>(const cmplx<T> & a) =default;
@@ -37,22 +31,12 @@ struct cmplx {
   constexpr cmplx<T>(const scalar_t val): re(static_cast<T>(val)), im(static_cast<T>(0)) {}
 
   // constructor c(a,b)
-//   template <typename A, typename B,
-//             std::enable_if_t<std::is_arithmetic<A>::value, int> = 0,
-//             std::enable_if_t<std::is_arithmetic<B>::value, int> = 0 >
-//   constexpr cmplx<T>(const A & a, const B & b) {
-//     re = static_cast<T>(a);
-//     im = static_cast<T>(b);
-//   }
-
-  // constructor c(a,b)
   template <typename A, typename B,
             std::enable_if_t<std::is_arithmetic<A>::value, int> = 0,
             std::enable_if_t<std::is_arithmetic<B>::value, int> = 0 >
   #pragma transformer loop_function
   constexpr cmplx<T>(const A & a, const B & b): re(static_cast<T>(a)), im(static_cast<T>(b)) {}
 
-  
   ~cmplx<T>() =default;
   
   // automatic casting from cmplx<T> -> cmplx<A>
@@ -62,13 +46,6 @@ struct cmplx {
   operator cmplx<A>() const { 
     return cmplx<A>( static_cast<A>(re), static_cast<A>(im) );
   }
-
-//   // assignment from std::complex<A>  TODO: perhaps remove?
-//   template <typename A>
-//   cmplx<T> & operator=(const std::complex<A> & c) {
-//     re = static_cast<T>(c.real()); im = static_cast<T>(c.imag());
-//     return *this;
-//   }
 
   // Assignment from cmplx<A>
   template <typename A,
