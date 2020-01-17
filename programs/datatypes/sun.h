@@ -78,7 +78,40 @@ radix gaussian_ran2 (radix* out2)
 //////////////////
 
 template<int n, typename radix>
-using SU = matrix<n,n,cmplx<radix> >;
+class SU : public matrix<n,n,cmplx<radix> >{
+    public:
+    void reunitarize(){ //implement later
+        make_unitary();
+        fix_det();
+    };
+    void make_unitary(){};
+    void fix_det(){};
+
+    //generate a random SU(N) element - generate traceless hermitian matrix A
+    //then expand exp(A) up to the term "depth", which is 5 by default  
+    void random(int depth = 5){
+        matrix<n,n,cmplx<radix> > A;
+        matrix<n,n,cmplx<radix> > res = 1; 
+        cmplx<radix> tr, factor = 1;
+        for (int i = 0; i < n; i++) {
+            A.c[i][i] = cmplx<radix>(2*hila_random(), 0.0);
+            for (int j = 0; j < i; j++){
+                cmplx<radix> a(2*hila_random(), 2*hila_random());
+                A.c[i][j] = a;
+                A.c[j][i] = a.conj();
+            }
+        }
+        cmplx<radix> tr = A.trace();
+        for (int i = 0; i < n; i++){
+            A.c[i][i] - tr/n; 
+        }
+        for (int i = 0; i < approx; i++){
+            res += A*factor;
+            factor *= (i + 2);
+        }
+        (*this) = res; //call default assignment op
+    }
+}
 
 template<typename radix> 
 class SU2; 
@@ -90,9 +123,9 @@ template<typename radix>
 class SU2adjoint; 
 
 template<typename radix> 
-class SU3 : public matrix<3,3,cmplx<radix> > {
+class SU3 : public SU<3,radix> {
     public:
-    //constructor from two Su vectors
+    //constructor from two SU3 vectors
     SU3 (const SU_vector<3, radix> & a, const SU_vector<3, radix> & b){
         SU_vector<3, radix> c; //last column of matrix to be made from cross product
         const SU_vector<3, radix> ai[3] = { a, b, c };
@@ -109,10 +142,6 @@ class SU3 : public matrix<3,3,cmplx<radix> > {
                 this->c[i][j] = ai[i].c[j];
             }
         }
-    }
-
-    SU3 & random(){
-        return *this; //add this feature later: generate random SU3 element 
     }
 };
 
