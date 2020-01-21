@@ -78,7 +78,7 @@ radix gaussian_ran2 (radix* out2)
 //////////////////
 
 template<int n, typename radix>
-class SU : public matrix<n,n,cmplx<radix> >{
+class SU : public matrix<n,n,cmplx<radix> >{
     public:
     void reunitarize(){ //implement later
         make_unitary();
@@ -101,17 +101,17 @@ class SU : public matrix<n,n,cmplx<radix> >{
                 A.c[j][i] = a.conj();
             }
         }
-        cmplx<radix> tr = A.trace();
+        tr = A.trace();
         for (int i = 0; i < n; i++){
             A.c[i][i] - tr/n; 
         }
-        for (int i = 0; i < approx; i++){
+        for (int i = 0; i < depth; i++){
             res += A*factor;
             factor *= (i + 2);
         }
         (*this) = res; //call default assignment op
     }
-}
+};
 
 template<typename radix> 
 class SU2; 
