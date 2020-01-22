@@ -41,9 +41,8 @@ class matrix {
   #pragma transformer loop_function
   matrix<n,m,T> & operator= (const scalart rhs) {
     static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
-    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-      if (i == j) c[i][j] = (rhs);
-      else c[i][j] = (0);
+    for (int i=0; i<n; i++) {
+      c[i][i] = (rhs);
     }
     return *this;
   }
@@ -199,6 +198,29 @@ matrix<2,2,T> operator* (const matrix<2,2,T> &A, const matrix<2,2,T> &B) {
   res.c[0][1] = A.c[0][0]*B.c[0][1] + A.c[0][1]*B.c[1][1];
   res.c[1][1] = A.c[1][0]*B.c[0][1] + A.c[1][1]*B.c[1][1];
   res.c[1][0] = A.c[1][0]*B.c[0][0] + A.c[1][1]*B.c[1][0];
+  return res;
+}
+
+//matrix power 
+template <int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator ^ (const matrix<n,m,T> & A, const int pow) {
+  matrix<n,m,T> res;
+  res = 1;
+  for (int i = 0; i < pow; i++){
+    res *= A;
+  }
+  return res;
+}
+
+//matrix * scalar 
+template <int n, int m, typename T> 
+#pragma transformer loop_function
+matrix<n,m,T> operator * (const matrix<n,m,T> & A, const T & B) {
+  matrix<n,m,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+    res.c[i][j] = A.c[i][j] * B;
+  }
   return res;
 }
 
