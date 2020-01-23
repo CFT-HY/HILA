@@ -49,8 +49,15 @@ void replace_basetype_with_vector(std::string & element_type) {
   if(begin != std::string::npos){
     element_type.replace(begin, 3, "Vec8i");
   }
+  begin = element_type.find("location");
+  if(begin != std::string::npos){
+    element_type.replace(begin, 3, "std::array<Vec8i,NDIM>");
+  }
 }
 
+
+/// Replace base datatypes with vectorized datatypes opf
+/// specific vector length
 void replace_basetype_with_vector(std::string & element_type, int vector_size) {
   size_t begin;
   if( vector_size == 4 ){
@@ -66,6 +73,10 @@ void replace_basetype_with_vector(std::string & element_type, int vector_size) {
     if(begin != std::string::npos){
       element_type.replace(begin, 3, "Vec4i");
     }
+    begin = element_type.find("location");
+    if(begin != std::string::npos){
+      element_type.replace(begin, 3, "std::array<Vec4i,NDIM>");
+    }
   }
   if( vector_size == 8 ){
     begin = element_type.find("double");
@@ -80,9 +91,38 @@ void replace_basetype_with_vector(std::string & element_type, int vector_size) {
     if(begin != std::string::npos){
       element_type.replace(begin, 3, "Vec8i");
     }
+    begin = element_type.find("location");
+    if(begin != std::string::npos){
+      element_type.replace(begin, 3, "std::array<Vec8i,NDIM>");
+    }
   }
 }
-  
+
+/// Map general type strings into vectorized types
+void vector_size_and_type(std::string &original_type, std::string &base_type, std::string &vector_type, int & vector_size){
+  if(original_type.find("double") != std::string::npos) {
+    base_type = "double";
+    vector_type = "Vec4d";
+    vector_size = 4;
+  } else if(original_type.find("float") != std::string::npos){
+    base_type = "float";
+    vector_type = "Vec8f";
+    vector_size = 8;
+  } else if(original_type.find("int") != std::string::npos){
+    base_type = "int";
+    vector_type = "Vec8i";
+    vector_size = 8;
+  } else if(original_type.find("location") != std::string::npos){
+    base_type = "int";
+    vector_type = "Vec8i";
+    vector_size = 8;
+  } else {
+    llvm::errs() << "Cannot find vector size\n";
+    llvm::errs() << "Field type " << original_type << "\n";
+    exit(1);
+  }
+}
+
 
 
 std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
@@ -90,22 +130,9 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
   // Find the vector size
   int vector_size = 1;
-  std::string base_vector_type;
+  std::string base_type, base_vector_type;
   std::string type = field_info_list.front().type_template;
-  if(type.find("double") != std::string::npos) {
-    base_vector_type = "Vec4d";
-    vector_size = 4;
-  } else if(type.find("float") != std::string::npos){
-    base_vector_type = "Vec8f";
-    vector_size = 8;
-  } else if(type.find("int") != std::string::npos){
-    base_vector_type = "Vec8i";
-    vector_size = 8;
-  } else {
-    llvm::errs() << "Cannot find vector size\n";
-    llvm::errs() << "Field type " << type << "\n";
-    exit(1);
-  }
+  vector_size_and_type(type, base_type, base_vector_type, vector_size);
   
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
@@ -238,23 +265,7 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   int vector_size = 1;
   std::string base_type;
   std::string base_vector_type;
-  if(typestr.find("double") != std::string::npos) {
-    base_type = "double";
-    base_vector_type = "Vec4d";
-    vector_size = 4;
-  } else if(typestr.find("float") != std::string::npos){
-    base_type = "float";
-    base_vector_type = "Vec8f";
-    vector_size = 8;
-  } else if(typestr.find("int") != std::string::npos){
-    base_type = "int";
-    base_vector_type = "Vec8i";
-    vector_size = 8;
-  } else {
-    llvm::errs() << "Cannot find vector size\n";
-    llvm::errs() << "Field type " << typestr << "\n";
-    exit(1);
-  }
+  vector_size_and_type(typestr, base_type, base_vector_type, vector_size);
 
   // insert after a new line
   SourceLocation l =
