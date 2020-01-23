@@ -158,6 +158,11 @@ bool LoopFunctionHandler::VisitVarDecl(VarDecl *var){
     functionBuffer.replace(var->getSourceRange(), 
       vector_type+" "+var->getNameAsString() );
     contains_elements = true;
+  } else {
+    if(var->hasInit()){
+      LoopAssignChecker lac(TheRewriter, Context);
+      lac.TraverseStmt(var->getInit());
+    }
   }
   return true;
 }
@@ -186,6 +191,7 @@ bool LoopFunctionHandler::VisitBinaryOperator(BinaryOperator *op){
   }
   return true;
 }
+
 
 
 
