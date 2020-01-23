@@ -125,6 +125,47 @@ void vector_size_and_type(std::string &original_type, std::string &base_type, st
 
 
 
+
+
+/// This should allow calling with element<>-type parameters from
+/// loops. Generate a copy with elements replaced with vectors.
+void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
+  SourceRange sr = fd->getSourceRange();
+  FileID FID = TheRewriter.getSourceMgr().getFileID(sr.getBegin());
+  // set_fid_modified(FID);
+  srcBuf * sb = get_file_buffer(TheRewriter, FID);
+  set_writeBuf(FID);
+
+  srcBuf functionBuffer;
+  functionBuffer.copy_from_range(writeBuf,sr);
+
+  // Track wether the function actually contains elements.
+  // if not, no new function should be written
+  bool contains_elements = false;
+
+  for( clang::ParmVarDecl *par : fd->parameters() ){
+    PrintingPolicy pp(Context->getLangOpts());
+    std::string typestring = par->getType().getAsString(pp);
+    llvm::errs() << "TYPE: " << typestring << "\n";
+
+    if(typestring.rfind("element",0) != std::string::npos){
+      // This is an element type, replace it with vector
+      std::string vector_type = typestring;
+      replace_basetype_with_vector(vector_type);
+      functionBuffer.replace(par->getSourceRange(), vector_type + " " +  par->getNameAsString());
+
+      contains_elements = true;
+    }
+  }
+
+  if(contains_elements) {
+    sb->insert(sr.getEnd().getLocWithOffset(1), "\n"+functionBuffer.dump(), true, false);
+  }
+}
+
+
+
+
 std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   std::stringstream code;
 
@@ -158,8 +199,6 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   code << "std::array<unsigned*,NDIRS> neighbour_list = loop_lattice->neighbour_list();\n";
 
   // Set the start and end points
-  // A single vector covers 4 sites in AVX. These must all have the same parity.
-  // So we devide the start and end points here by 4.
   code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = loop_lattice->loop_end(" << parity_in_this_loop << ");\n";
 

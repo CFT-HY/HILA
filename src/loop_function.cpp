@@ -95,17 +95,18 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
   // we should mark the function, but it is not necessarily in the
   // main file buffer
-  SourceLocation sl = fd->getSourceRange().getBegin();
   if (target.CUDA) {
-    handle_loop_function_cuda(sl);
+    handle_loop_function_cuda(fd);
   } else if (target.openacc) {
-    handle_loop_function_openacc(sl);
+    handle_loop_function_openacc(fd);
+  } else if (target.AVX) {
+    handle_loop_function_avx(fd);
   }
 }
 
 bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
   // If the function is in a list of defined loop functions, add it to a list
-  // Return true if the expression is a special function and
+  // Return true if the expression is a special function
   std::string name = Call->getDirectCallee()->getNameInfo().getAsString();
   if( name == "coordinates" ){
     llvm::errs() << get_stmt_str(Call) << '\n';

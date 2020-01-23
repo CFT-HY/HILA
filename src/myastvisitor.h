@@ -210,8 +210,9 @@ public:
   void generate_field_storage_type_AVX(std::string typestr);
 
   /// Handle functions called in a loop
-  void handle_loop_function_cuda(SourceLocation sl);
-  void handle_loop_function_openacc(SourceLocation sl);
+  void handle_loop_function_cuda(FunctionDecl *fd);
+  void handle_loop_function_openacc(FunctionDecl *fd);
+  void handle_loop_function_avx(FunctionDecl *fd);
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();
