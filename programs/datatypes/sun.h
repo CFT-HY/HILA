@@ -8,7 +8,7 @@
 #include "../plumbing/mersenne.h" //has to be included
 #include <cmath>
 
-// SU3 crossproduct calculation routines 
+// Macros for sped-up operations 
 
 #define CMULJJ(a,b,c) do { (c).re =  (a).re*(b).re - (a).im*(b).im; \
    		        (c).im = -(a).re*(b).im - (a).im*(b).re; } while(0)
@@ -84,32 +84,49 @@ class SU : public matrix<n,n,cmplx<radix> >{
         make_unitary();
         fix_det();
     };
-    void make_unitary(){};
-    void fix_det(){};
 
-    //generate a random SU(N) element - generate traceless hermitian matrix A
-    //then expand exp(A) up to the term "depth", which is 5 by default  
-    void random(int depth = 5){
-        matrix<n,n,cmplx<radix> > A;
-        matrix<n,n,cmplx<radix> > res = 1; 
-        cmplx<radix> tr, factor = 1;
+    void make_unitary(){};
+
+    void fix_det()
+    {
+        cmplx<radix> d,factor;
+        radix t;
+        int i,j;
+
+        d = det(*(this));
+        t = d.arg() / static_cast<radix>(n);
+        factor = cmplx<radix>( cos(-t), sin(-t) );
+        for (j=0; j<n; j++) for (i=0; i<n; i++){
+            this->c[j][i] = this->c[j][i]*factor;
+        }
+    }
+
+    void random(const int depth = 20){ 
+        matrix<n,n,cmplx<radix>> A, An, res;
+        An = 1; 
+        res = 1;
+        cmplx<radix> tr(1,0), factor(1, 0);
         for (int i = 0; i < n; i++) {
-            A.c[i][i] = cmplx<radix>(2*hila_random(), 0.0);
+            A.c[i][i] = cmplx<radix>(hila_random(), 0.0);
             for (int j = 0; j < i; j++){
-                cmplx<radix> a(2*hila_random(), 2*hila_random());
+                cmplx<radix> a(static_cast<radix>(hila_random()), static_cast<radix>(hila_random()));
                 A.c[i][j] = a;
                 A.c[j][i] = a.conj();
             }
         }
-        tr = A.trace();
+        tr = A.trace()*(static_cast<radix>(1)/static_cast<radix>(n));
         for (int i = 0; i < n; i++){
-            A.c[i][i] - tr/n; 
+            A.c[i][i] -= tr; 
         }
-        for (int i = 0; i < depth; i++){
-            res += A*factor;
-            factor *= (i + 2);
+        An = A;
+        for (int k = 1; k<=depth; k++){
+            factor = factor*cmplx<radix>(0, 1)*(static_cast<radix>(1)/static_cast<radix>(k));
+            res += An*factor;
+            An *= A;
         }
-        (*this) = res; //call default assignment op
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+            (*this).c[i][j] = res.c[i][j];
+        }
     }
 };
 

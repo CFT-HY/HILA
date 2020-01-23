@@ -41,8 +41,12 @@ class matrix {
   #pragma transformer loop_function
   matrix<n,m,T> & operator= (const scalart rhs) {
     static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
-    for (int i=0; i<n; i++) {
-      c[i][i] = (rhs);
+    for (int i=0; i<n; i++){
+      c[i][i] = rhs;
+      for (int j = 0; j < i; j++){
+        c[i][j] = static_cast<T>(0.0); //ensure that matrix is zero initialized
+        c[j][i] = static_cast<T>(0.0);
+      }
     }
     return *this;
   }
@@ -168,11 +172,12 @@ matrix<n - 1, m - 1, T> Minor(const matrix<n, m, T> & bigger, int i, int j){
   return result;
 }
 
+//determinant -> use LU factorization later 
 template<int n, int m, typename T> 
 #pragma transformer loop_function
 T det(const matrix<n, m, T> & mat){
   static_assert(n==m, "determinants defined only for square matrices");
-  T result = 1.0;
+  T result = 0.0;
   T parity = 1.0; //assumes that copy constructor from scalar has been defined for T 
   T opposite = -1.0; 
   for (int i = 0; i < n; i++){
