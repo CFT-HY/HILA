@@ -143,6 +143,8 @@ public:
     return true;
   }
   bool VisitVarDecl(VarDecl *var);
+  bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *op);
+  bool VisitBinaryOperator(BinaryOperator *op);
 };
 
 
@@ -153,11 +155,38 @@ bool LoopFunctionHandler::VisitVarDecl(VarDecl *var){
   if(typestring.rfind("element",0) != std::string::npos){
     std::string vector_type = typestring;
     replace_basetype_with_vector(vector_type);
-    functionBuffer.replace(var->getSourceRange(), vector_type);
+    functionBuffer.replace(var->getSourceRange(), 
+      vector_type+" "+var->getNameAsString() );
     contains_elements = true;
   }
   return true;
 }
+
+
+bool LoopFunctionHandler::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *op){
+  if(op && op->isAssignmentOp()){
+    std::string type = op->getArg(0)->getType().getAsString();
+    type = remove_all_whitespace(type);
+    if(type.rfind("element<",0) == std::string::npos){
+      LoopAssignChecker lac(TheRewriter, Context);
+      lac.TraverseStmt(op);
+    }
+  }
+  return true;
+}
+
+bool LoopFunctionHandler::VisitBinaryOperator(BinaryOperator *op){
+  if(op && op->isAssignmentOp()){
+    std::string type = op->getLHS()->getType().getAsString();
+    type = remove_all_whitespace(type);
+    if(type.rfind("element<",0) == std::string::npos){
+      LoopAssignChecker lac(TheRewriter, Context);
+      lac.TraverseStmt(op);
+    }
+  }
+  return true;
+}
+
 
 
 /// Replace element types with vector. Leaves other types untouched.
