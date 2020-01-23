@@ -35,7 +35,7 @@ static int vector_lenght = 4;
 
 
 /// Replace base datatypes with vectorized datatypes
-void replace_basetype_with_vector(std::string & element_type) {
+static void replace_basetype_with_vector(std::string & element_type) {
   size_t begin;
   begin = element_type.find("double");
   if(begin != std::string::npos){
@@ -58,7 +58,7 @@ void replace_basetype_with_vector(std::string & element_type) {
 
 /// Replace base datatypes with vectorized datatypes opf
 /// specific vector length
-void replace_basetype_with_vector(std::string & element_type, int vector_size) {
+static void replace_basetype_with_vector(std::string & element_type, int vector_size) {
   size_t begin;
   if( vector_size == 4 ){
     begin = element_type.find("double");
@@ -99,7 +99,7 @@ void replace_basetype_with_vector(std::string & element_type, int vector_size) {
 }
 
 /// Map general type strings into vectorized types
-void vector_size_and_type(std::string &original_type, std::string &base_type, std::string &vector_type, int & vector_size){
+static void vector_size_and_type(std::string &original_type, std::string &base_type, std::string &vector_type, int & vector_size){
   if(original_type.find("double") != std::string::npos) {
     base_type = "double";
     vector_type = "Vec4d";
@@ -127,15 +127,61 @@ void vector_size_and_type(std::string &original_type, std::string &base_type, st
 
 
 
+/// An AST walker for finding and handling variable declarations
+/// in a loop function
+class LoopFunctionHandler : public GeneralVisitor, public RecursiveASTVisitor<LoopFunctionHandler> {
+public:
+  using GeneralVisitor::GeneralVisitor;
+
+  // Keep track of whether there are elements
+  bool contains_elements = false;
+  //Buffer for the function copy
+  srcBuf functionBuffer;
+
+  bool TraverseStmt(Stmt *s){
+    RecursiveASTVisitor<LoopFunctionHandler>::TraverseStmt(s);
+    return true;
+  }
+  bool VisitVarDecl(VarDecl *var);
+};
+
+
+bool LoopFunctionHandler::VisitVarDecl(VarDecl *var){
+  std::string typestring = var->getType().getAsString();
+  
+  // This variable is an element, replace with vector
+  if(typestring.rfind("element",0) != std::string::npos){
+    std::string vector_type = typestring;
+    replace_basetype_with_vector(vector_type);
+    functionBuffer.replace(var->getSourceRange(), vector_type);
+    contains_elements = true;
+  }
+  return true;
+}
+
+
+/// Replace element types with vector. Leaves other types untouched.
+static bool replace_element_with_vector(SourceRange sr, std::string typestring, srcBuf &functionBuffer){
+  if(typestring.rfind("element",0) != std::string::npos){
+    std::string vector_type = typestring;
+    replace_basetype_with_vector(vector_type);
+    functionBuffer.replace(sr, vector_type);
+    return true;
+  }
+  return false;
+}
+
+
 /// This should allow calling with element<>-type parameters from
 /// loops. Generate a copy with elements replaced with vectors.
 void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   SourceRange sr = fd->getSourceRange();
   FileID FID = TheRewriter.getSourceMgr().getFileID(sr.getBegin());
-  // set_fid_modified(FID);
   srcBuf * sb = get_file_buffer(TheRewriter, FID);
+  PrintingPolicy pp(Context->getLangOpts());
   set_writeBuf(FID);
 
+  // Copy the function to a buffer
   srcBuf functionBuffer;
   functionBuffer.copy_from_range(writeBuf,sr);
 
@@ -143,23 +189,23 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   // if not, no new function should be written
   bool contains_elements = false;
 
+  // Handle each parameter
   for( clang::ParmVarDecl *par : fd->parameters() ){
-    PrintingPolicy pp(Context->getLangOpts());
     std::string typestring = par->getType().getAsString(pp);
-    llvm::errs() << "TYPE: " << typestring << "\n";
-
-    if(typestring.rfind("element",0) != std::string::npos){
-      // This is an element type, replace it with vector
-      std::string vector_type = typestring;
-      replace_basetype_with_vector(vector_type);
-      functionBuffer.replace(par->getSourceRange(), vector_type + " " +  par->getNameAsString());
-
-      contains_elements = true;
-    }
+    contains_elements += replace_element_with_vector(par->getSourceRange(), typestring+" "+par->getNameAsString(), functionBuffer);
   }
 
-  if(contains_elements) {
-    sb->insert(sr.getEnd().getLocWithOffset(1), "\n"+functionBuffer.dump(), true, false);
+  // Handle return type
+  std::string typestring = fd->getReturnType().getAsString(pp);
+  contains_elements += replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, functionBuffer);
+
+  LoopFunctionHandler lfh(TheRewriter, Context);
+  lfh.contains_elements = contains_elements;
+  lfh.functionBuffer = functionBuffer;
+  lfh.TraverseStmt(fd->getBody());
+  
+  if(lfh.contains_elements) {
+    sb->insert(sr.getEnd().getLocWithOffset(1), "\n"+lfh.functionBuffer.dump(), true, false);
   }
 }
 
