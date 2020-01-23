@@ -13,57 +13,50 @@
 constexpr static int max_vector_size = 8;
 
 
-#pragma transformer loop_function
 inline double reduce_sum(Vec4d v){
   float sum = 0;
   for(int i=0; i<4; i++)
-    sum += v[i];
+    sum += v.extract(i);
   return sum;
 }
 
-#pragma transformer loop_function
 inline double reduce_sum(Vec8f v){
   float sum = 0;
   for(int i=0; i<8; i++)
-    sum += v[i];
+    sum += v.extract(i);
   return sum;
 }
 
-#pragma transformer loop_function
 inline double reduce_sum(Vec8i v){
   float sum = 0;
   for(int i=0; i<8; i++)
-    sum += v[i];
+    sum += v.extract(i);
   return sum;
 }
 
-#pragma transformer loop_function
 inline double reduce_prod(Vec4d v){
   float sum = 1;
   for(int i=0; i<4; i++)
-    sum *= v[i];
+    sum *= v.extract(i);
   return sum;
 }
 
-#pragma transformer loop_function
 inline double reduce_prod(Vec8f v){
   float sum = 1;
   for(int i=0; i<8; i++)
-    sum *= v[i];
+    sum *= v.extract(i);
   return sum;
 }
 
-#pragma transformer loop_function
 inline double reduce_prod(Vec8i v){
   float sum = 1;
   for(int i=0; i<8; i++)
-    sum *= v[i];
+    sum *= v.extract(i);
   return sum;
 }
 
 
 /// Define modulo operator for integer vector
-#pragma transformer loop_function
 inline Vec8i operator%( const Vec8i &lhs, const int &rhs)
 {
   Vec8i r;
@@ -81,7 +74,6 @@ inline Vec4i operator%( const Vec4i &lhs, const int &rhs)
 }
 
 
-#pragma transformer loop_function
 inline Vec4d hila_random_Vec4d(){
   Vec4d r;
   for(int i=0; i<4; i++){
@@ -90,7 +82,6 @@ inline Vec4d hila_random_Vec4d(){
   return r;
 }
 
-#pragma transformer loop_function
 inline Vec8f hila_random_Vec8f(){
   Vec8f r;
   for(int i=0; i<8; i++){
