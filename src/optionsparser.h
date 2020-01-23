@@ -48,7 +48,7 @@ namespace clang {
       OptionsParser(int &argc, const char **argv,
                     llvm::cl::OptionCategory &Category,
                     const char *Overview = nullptr)
-        : OptionsParser(argc, argv, Category, llvm::cl::OneOrMore,
+        : OptionsParser(argc, argv, Category, llvm::cl::ZeroOrMore,
                         Overview) {}
  
      

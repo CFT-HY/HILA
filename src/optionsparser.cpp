@@ -83,8 +83,9 @@ OptionsParser::OptionsParser(
       llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
 
   llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
-  if (Err) {
-    llvm::errs() << llvm::toString(std::move(Err));
+  if (Err || SourcePathList.empty()) {
+    if (Err) llvm::errs() << llvm::toString(std::move(Err));
+    if (SourcePathList.empty()) llvm::errs() << argv[0] << ": no input files specified\n";
     exit(1);
   }
 }
