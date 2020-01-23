@@ -61,8 +61,7 @@ llvm::Error OptionsParser::init(
   // Stop initializing if command-line option parsing failed.
   if (!cl::ParseCommandLineOptions(argc, argv, Overview, &OS)) {
     OS.flush();
-    return llvm::make_error<llvm::StringError>( // "[OptionsParser]: " +
-                                               ErrorMessage,
+    return llvm::make_error<llvm::StringError>(ErrorMessage,
                                                llvm::inconvertibleErrorCode());
   }
  
@@ -78,26 +77,15 @@ llvm::Error OptionsParser::init(
   
   return llvm::Error::success();
 }
- 
-// llvm::Expected<OptionsParser> OptionsParser::create(
-//      int &argc, const char **argv, llvm::cl::OptionCategory &Category,
-//      llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
-//   OptionsParser Parser;
-//   llvm::Error Err =
-//     Parser.init(argc, argv, Category, OccurrencesFlag, Overview);
-//   if (Err)
-//     return std::move(Err);
-//   return std::move(Parser);
-// }
- 
+  
 OptionsParser::OptionsParser(
       int &argc, const char **argv, cl::OptionCategory &Category,
       llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
 
   llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
   if (Err) {
-    llvm::report_fatal_error(// "OptionsParser: failed to parse command-line arguments. " +
-                             llvm::toString(std::move(Err)));
+    llvm::errs() << llvm::toString(std::move(Err));
+    exit(1);
   }
 }
 
