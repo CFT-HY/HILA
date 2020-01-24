@@ -106,8 +106,21 @@ llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
           llvm::cl::desc("Generate CUDA kernels"),
           llvm::cl::cat(TransformerCat));
 
+llvm::cl::opt<bool> cmdline::AVX512("target:AVX512",
+          llvm::cl::desc("Generate AVX512 instructions in loops"),
+          llvm::cl::cat(TransformerCat));
+
 llvm::cl::opt<bool> cmdline::AVX("target:AVX",
           llvm::cl::desc("Generate AVX instructions in loops"),
+          llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::SSE("target:SSE",
+          llvm::cl::desc("Generate SSE instructions in loops"),
+          llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<int> cmdline::VECTORIZE("target:VECTORIZE",
+          llvm::cl::desc("Generate VECTOR instructions in loops with given vectorsize \n"
+          "For example -target:VECTORIZE=32 is equivalent to -target:AVX"),
           llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
@@ -540,7 +553,20 @@ void get_target_struct(codetype & target) {
     target.openacc = true;
     target.flag_loop_function = false;
   } else if (cmdline::AVX) {
-    target.AVX = true;
+    target.VECTORIZE = true;
+    target.vector_size = 32;
+    target.flag_loop_function = false;
+  } else if (cmdline::AVX512) {
+    target.VECTORIZE = true;
+    target.vector_size = 64;
+    target.flag_loop_function = false;
+  } else if (cmdline::SSE) {
+    target.VECTORIZE = true;
+    target.vector_size = 16;
+    target.flag_loop_function = false;
+  } else if (cmdline::VECTORIZE) {
+    target.VECTORIZE = true;
+    target.vector_size = cmdline::VECTORIZE;
     target.flag_loop_function = false;
   } else {
     target.kernelize = false;

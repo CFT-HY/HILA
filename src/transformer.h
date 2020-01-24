@@ -30,11 +30,12 @@ enum class parity { none, even, odd, all, x };
 
 // variables describing the type of code to be generated
 struct codetype {
-  bool kernelize;
-  bool CUDA;
-  bool AVX;
-  bool openacc;
-  bool flag_loop_function;
+  bool kernelize=false;
+  bool CUDA=false;
+  bool VECTORIZE=false;
+  int vector_size=1;
+  bool openacc=false;
+  bool flag_loop_function=false;
 };
 
 // collection of variables holding the state of parsing - definition in transformer.cpp
@@ -67,9 +68,12 @@ namespace cmdline {
   extern llvm::cl::opt<bool> kernel;
   extern llvm::cl::opt<bool> vanilla;
   extern llvm::cl::opt<bool> CUDA;
+  extern llvm::cl::opt<bool> AVX512;
   extern llvm::cl::opt<bool> AVX;
+  extern llvm::cl::opt<bool> SSE;
   extern llvm::cl::opt<bool> openacc;
   extern llvm::cl::opt<bool> func_attribute;
+  extern llvm::cl::opt<int> VECTORIZE;
 };
 
 struct loop_parity_struct {

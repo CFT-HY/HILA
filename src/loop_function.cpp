@@ -99,7 +99,7 @@ void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
     handle_loop_function_cuda(fd);
   } else if (target.openacc) {
     handle_loop_function_openacc(fd);
-  } else if (target.AVX) {
+  } else if (target.VECTORIZE) {
     handle_loop_function_avx(fd);
   }
 }
