@@ -1,9 +1,9 @@
 OPTS = -DNDIM=4
 
 #The next line work on puhti
-#TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ -DNRUNS=1
-TRANSFORMER = ../../build/transformer -DNRUNS=1
-CC = mpic++ -DUSE_MPI -DNRUNS=1
+#TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ 
+TRANSFORMER = ../../build/transformer
+CC = mpic++ -DUSE_MPI
 
 CFLAGS = -O3 $(OPTS)
 CXXFLAGS = -O3 -x c++ --std=c++14 $(OPTS)
