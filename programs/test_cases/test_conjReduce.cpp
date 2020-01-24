@@ -35,7 +35,7 @@ int main(int argc, char **argv){
     // Test that neighbours are fetched correctly
     foralldir(dir){
         onsites(ALL){
-          element<std::array<int,NDIM>> l = coordinates(X);
+          element<location> l = coordinates(X);
           coordinate[X] = l[dir];
           nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
         }
