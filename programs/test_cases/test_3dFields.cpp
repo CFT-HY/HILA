@@ -9,6 +9,7 @@
 /// - referring to an array of fields in a loop
 /// - calling a function with const parameters
 ///   - requiring communication of a const field
+/// - calling a function from a loop
 /////////////////////
 
 template<typename A, typename B, typename C>
