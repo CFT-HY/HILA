@@ -133,8 +133,6 @@ class LoopFunctionHandler : public GeneralVisitor, public RecursiveASTVisitor<Lo
 public:
   using GeneralVisitor::GeneralVisitor;
 
-  // Keep track of whether there are elements
-  bool contains_elements = false;
   //Buffer for the function copy
   srcBuf functionBuffer;
 
@@ -157,7 +155,6 @@ bool LoopFunctionHandler::VisitVarDecl(VarDecl *var){
     replace_basetype_with_vector(vector_type);
     functionBuffer.replace(var->getSourceRange(), 
       vector_type+" "+var->getNameAsString() );
-    contains_elements = true;
   } else {
     if(var->hasInit()){
       LoopAssignChecker lac(TheRewriter, Context);
@@ -212,35 +209,41 @@ static bool replace_element_with_vector(SourceRange sr, std::string typestring, 
 void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   SourceRange sr = fd->getSourceRange();
   FileID FID = TheRewriter.getSourceMgr().getFileID(sr.getBegin());
-  srcBuf * sb = get_file_buffer(TheRewriter, FID);
+  srcBuf * sourceBuf = get_file_buffer(TheRewriter, FID);
   PrintingPolicy pp(Context->getLangOpts());
-  set_writeBuf(FID);
 
-  // Copy the function to a buffer
-  srcBuf functionBuffer;
-  functionBuffer.copy_from_range(writeBuf,sr);
+  LoopFunctionHandler lfh(TheRewriter, Context);
 
   // Track wether the function actually contains elements.
   // if not, no new function should be written
   bool contains_elements = false;
 
+  // Copy the function to a buffer
+  lfh.functionBuffer.copy_from_range(sourceBuf,sr);
+
   // Handle each parameter
   for( clang::ParmVarDecl *par : fd->parameters() ){
     std::string typestring = par->getType().getAsString(pp);
-    contains_elements += replace_element_with_vector(par->getSourceRange(), typestring+" "+par->getNameAsString(), functionBuffer);
+    contains_elements += replace_element_with_vector(par->getSourceRange(), typestring+" "+par->getNameAsString(), lfh.functionBuffer);
   }
 
   // Handle return type
+  // Note: C++ cannot specialize only based on return type. Therefore we
+  // only write a new function if the parameters contain elements
   std::string typestring = fd->getReturnType().getAsString(pp);
-  contains_elements += replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, functionBuffer);
+  replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, lfh.functionBuffer);
 
-  LoopFunctionHandler lfh(TheRewriter, Context);
-  lfh.contains_elements = contains_elements;
-  lfh.functionBuffer = functionBuffer;
   lfh.TraverseStmt(fd->getBody());
   
-  if(lfh.contains_elements) {
-    sb->insert(sr.getEnd().getLocWithOffset(1), "\n"+lfh.functionBuffer.dump(), true, false);
+  
+  if(contains_elements) {
+    std::string buffer = lfh.functionBuffer.dump();
+    if( !(fd->hasBody()) ){
+      // Declaration does not contain a body, needs a semicolon
+      buffer += ";";
+    }
+    buffer += "\n";
+    sourceBuf->insert(sr.getBegin(), buffer, true, true);
   }
 }
 
