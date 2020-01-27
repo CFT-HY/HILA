@@ -105,8 +105,10 @@ class SU : public matrix<n,n,cmplx<radix> >{
         }
     }
 
-    //generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix
-    void random(const int depth = 20){ 
+    //generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix. 
+    //more iterations are needed to generate larger elements: 12 works well for n < 10. 
+
+    void random(const int depth = 12){ 
         matrix<n,n,cmplx<radix>> A, An, res;
         An = 1; 
         res = 1;
@@ -114,7 +116,7 @@ class SU : public matrix<n,n,cmplx<radix> >{
         for (int i = 0; i < n; i++) {
             A.c[i][i] = cmplx<radix>(hila_random(), 0.0);
             for (int j = 0; j < i; j++){
-                cmplx<radix> a(static_cast<radix>(hila_random()), static_cast<radix>(hila_random()));
+                cmplx<radix> a(static_cast<radix>(hila_random()/n), static_cast<radix>(hila_random()/n));
                 A.c[i][j] = a;
                 A.c[j][i] = a.conj();
             }

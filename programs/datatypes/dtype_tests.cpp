@@ -8,10 +8,10 @@
 
 int main(){
     seed_mersenne(12);
-    SU<20, double> a;
-    for (int i = 3; i < 30; i++){
+    SU<4, double> a;
+    for (int i = 3; i < 50; i++){
         a.random(i);
-        std::cout << i << '\t' << a.det_lu().abs() << '\n';
+        std::cout << a;
     }
     return 0;
 }
