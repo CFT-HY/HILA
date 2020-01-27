@@ -14,44 +14,56 @@ constexpr static int max_vector_size = 8;
 
 
 inline double reduce_sum(Vec4d v){
-  float sum = 0;
+  double sum = 0;
+  double store[4];
+  v.store(&(store[0]));
   for(int i=0; i<4; i++)
-    sum += v.extract(i);
+    sum += store[i];
   return sum;
 }
 
 inline double reduce_sum(Vec8f v){
-  float sum = 0;
+  double sum = 0;
+  float store[8];
+  v.store(&(store[0]));
   for(int i=0; i<8; i++)
-    sum += v.extract(i);
+    sum += store[i];
   return sum;
 }
 
 inline double reduce_sum(Vec8i v){
-  float sum = 0;
+  double sum = 0;
+  int store[8];
+  v.store(&(store[0]));
   for(int i=0; i<8; i++)
-    sum += v.extract(i);
+    sum += store[i];
   return sum;
 }
 
 inline double reduce_prod(Vec4d v){
-  float sum = 1;
+  double sum = 1;
+  double store[4];
+  v.store(&(store[0]));
   for(int i=0; i<4; i++)
-    sum *= v.extract(i);
+    sum *= store[i];
   return sum;
 }
 
 inline double reduce_prod(Vec8f v){
-  float sum = 1;
+  double sum = 0;
+  float store[8];
+  v.store(&(store[0]));
   for(int i=0; i<8; i++)
-    sum *= v.extract(i);
+    sum *= store[i];
   return sum;
 }
 
 inline double reduce_prod(Vec8i v){
-  float sum = 1;
+  double sum = 0;
+  int store[8];
+  v.store(&(store[0]));
   for(int i=0; i<8; i++)
-    sum *= v.extract(i);
+    sum *= store[i];
   return sum;
 }
 
@@ -60,33 +72,43 @@ inline double reduce_prod(Vec8i v){
 inline Vec8i operator%( const Vec8i &lhs, const int &rhs)
 {
   Vec8i r;
+  int tvec1[8], tvec2[8];
+  lhs.store(&(tvec1[0]));
   for(int i=0; i<8; i++)
-    r.insert(i, lhs[i] % rhs);
+    tvec2[i] = tvec1[i] % rhs;
+  r.load(&(tvec2[0]));
   return r;
 }
 
 inline Vec4i operator%( const Vec4i &lhs, const int &rhs)
 {
   Vec4i r;
-  for(int i=0; i<8; i++)
-    r.insert(i, lhs[i] % rhs);
+  int tvec1[4], tvec2[4];
+  lhs.store(&(tvec1[0]));
+  for(int i=0; i<4; i++)
+    tvec2[i] = tvec1[i] % rhs;
+  r.load(&(tvec2[0]));
   return r;
 }
 
 
 inline Vec4d hila_random_Vec4d(){
   Vec4d r;
+  double tvec[4];
   for(int i=0; i<4; i++){
-    r.insert(i,mersenne());
+    tvec[i] = mersenne();
   }
+  r.load(&(tvec[0]));
   return r;
 }
 
 inline Vec8f hila_random_Vec8f(){
   Vec8f r;
+  float tvec[8];
   for(int i=0; i<8; i++){
-    r.insert(i,mersenne());
+    tvec[i] = mersenne();
   }
+  r.load(&(tvec[0]));
   return r;
 }
 
@@ -101,26 +123,28 @@ namespace vectorized
 
   template<>
   inline void permute<4>(int *perm, void * element, int n_elements){
-    __m256d * e = (__m256d *) element;
+    Vec4d * e = (Vec4d *) element;
     for( int v=0; v<n_elements; v++ ){
-      __m256d t = e[v];
+      double t1[4], t2[4];
+      e[v].store(&(t1[0]));
       for( int i=0; i<4; i++ )
-        e[v][i] =  t[perm[i]];
+        t2[i] =  t1[perm[i]];
+      e[v].load(&(t2[0]));
     }
   }
 
   template<>
   inline void permute<8>(int *perm, void * element, int n_elements){
-    __m256 * e = (__m256 *) element;
+    Vec8f * e = (Vec8f *) element;
     for( int v=0; v<n_elements; v++ ){
-      __m256 t = e[v];
+      float t1[8], t2[8];
+      e[v].store(&(t1[0]));
       for( int i=0; i<8; i++ )
-        e[v][i] =  t[perm[i]];
+        t2[i] =  t1[perm[i]];
+      e[v].load(&(t2[0]));
     }
   }
 
-  // Vector length in bytes
-  constexpr int sizeofvector = 32;
 }
 
 

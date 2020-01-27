@@ -189,7 +189,7 @@ struct cmplx {
   }
 
   #pragma transformer loop_function
-  double norm_sq(){
+  auto norm_sq(){
     return re*re + im*im;;
   }
 };
