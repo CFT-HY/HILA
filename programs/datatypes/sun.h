@@ -71,15 +71,19 @@ radix gaussian_ran2 (radix* out2)
 
 //--------------------------------------------------------
 
-//////////////////
-/// SU(N) matrix class
-/// Implementations are found in this header file, since non-specialized
-/// templates have to be visible to the tranlation units that use them
-//////////////////
+//////////////////////////////////////////////////////////
+///
+/// SU(N) class
+/// Implementations are found in this header file, since 
+/// non-specialized templates have to be visible to the 
+/// tranlation units that use them.
+///
+//////////////////////////////////////////////////////////
 
 template<int n, typename radix>
 class SU : public matrix<n,n,cmplx<radix> >{
     public:
+
     void reunitarize(){ //implement later
         make_unitary();
         fix_det();
@@ -101,6 +105,7 @@ class SU : public matrix<n,n,cmplx<radix> >{
         }
     }
 
+    //generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix
     void random(const int depth = 20){ 
         matrix<n,n,cmplx<radix>> A, An, res;
         An = 1; 
@@ -127,6 +132,83 @@ class SU : public matrix<n,n,cmplx<radix> >{
         for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
             (*this).c[i][j] = res.c[i][j];
         }
+    }
+
+    // find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff 
+    cmplx<radix> det_lu(){
+
+        int i, imax, j, k;
+        radix big, d, temp, dum;
+        cmplx<radix> cdum, csum, ctmp1;
+        radix vv[n];
+        cmplx<radix> a[n][n];
+        cmplx<radix> one;
+
+        one=cmplx<radix>(1,0);
+
+        d=1;
+
+        imax = -1;
+
+        for (i=0; i<n; i++) for(j=0; j<n; j++) a[i][j] = this->c[i][j];
+
+        for (i=0; i<n; i++) {
+            big = 0;
+            for(j=0; j<n; j++) {
+            if ((temp = a[i][j].abs()) > big) big = temp;
+            }
+            if (big == 0.0) exit(1);
+            vv[i] = 1.0/big;
+        }
+
+        for (j=0; j<n; j++) {
+            for (i=0; i<j; i++) {
+            csum = a[i][j];
+            for (k=0; k<i; k++) {
+                csum -= a[i][k]*a[k][j];
+            }
+            a[i][j] = csum;
+            }
+
+            big = 0;
+            for (i=j; i<n; i++) {
+            csum = a[i][j];
+            for (k=0; k<j; k++) {
+                csum -= a[i][k]*a[k][j];
+            }
+            a[i][j] = csum;
+            if ((dum = vv[i]*csum.abs()) >= big) {
+                big = dum;
+                imax = i;
+            }
+            }
+
+            if (j != imax) {
+            for (k=0; k<n; k++) {
+            cdum = a[imax][k];
+            a[imax][k] = a[j][k];
+            a[j][k] = cdum;
+            }
+            d = -d;
+            vv[imax] = vv[j];
+            }
+
+            if (a[j][j].abs() == static_cast<radix>(0.0)) a[j][j] = cmplx<radix>(1e-20,0);
+
+            if (j != n-1) {
+                cdum = one/a[j][j]; //check cmplx division
+                for (i=j+1; i<n; i++) {
+                    a[i][j] = a[i][j]*cdum;
+                }
+            }
+        }
+
+        csum = cmplx<radix>(d,0.0);
+        for (j=0; j<n; j++) {
+            csum = csum*a[j][j];
+        }
+
+        return (csum);
     }
 };
 
