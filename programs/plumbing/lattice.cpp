@@ -519,6 +519,8 @@ void lattice_struct::initialize_wait_arrays(){}
 
 
 
+#ifdef VECTORIZED
+
 vectorized_lattice_struct * lattice_struct::get_vectorized_lattice(int vector_size){
   // Check if the vectorized lattice has been created
   for( vectorized_lattice_struct * vl : vectorized_lattices ) {
@@ -532,5 +534,5 @@ vectorized_lattice_struct * lattice_struct::get_vectorized_lattice(int vector_si
   return vectorized_lattice;
 }
 
-
+#endif
 

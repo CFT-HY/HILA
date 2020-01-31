@@ -29,8 +29,8 @@ std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
 
 /// -- Identifier utility functions --
 
-bool MyASTVisitor::is_field_element_expr(Expr *E) {
-  return( E && E->getType().getAsString().find(field_element_type) != std::string::npos);
+bool MyASTVisitor::is_field_storage_expr(Expr *E) {
+  return( E && E->getType().getAsString().find(field_storage_type) != std::string::npos);
 }
 
 bool MyASTVisitor::is_field_expr(Expr *E) {
@@ -201,6 +201,10 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
       if(type.rfind("element<",0) == std::string::npos){
         LoopAssignChecker lac(TheRewriter, Context);
         lac.TraverseStmt(OP->getArg(1));
+      } else {
+        llvm::errs() << " ** Element type : " << type << '\n';
+        PrintingPolicy pp(Context->getLangOpts());
+        llvm::errs() << " ** Canonical type without keywords: " << OP->getArg(0)->getType().getCanonicalType().getAsString(pp) << '\n';
       }
     }
   }
@@ -371,9 +375,16 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
       vi.refs.push_back(vr);
       vi.decl = decl;
       vi.name = decl->getName();
-      // This is somehow needed for printing type without "class" id
+      // Printing policy is somehow needed for printing type without "class" id
+      // Unqualified takes away "consts" etc and Canonical typdefs/using.
+      // Also need special handling for element type
       PrintingPolicy pp(Context->getLangOpts());
       vi.type = DRE->getType().getUnqualifiedType().getAsString(pp);
+      vi.type = remove_all_whitespace(vi.type);
+      bool is_elem = (vi.type.find("element<") == 0);
+      vi.type = DRE->getType().getUnqualifiedType().getCanonicalType().getAsString(pp);
+      if (is_elem) vi.type = "element<" + vi.type + ">";
+      llvm::errs() << " + Got " << vi.type << '\n';
 
       // is it loop-local?
       vi.is_loop_local = false;
@@ -634,7 +645,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
  
       // write storage_type specialization
-      generate_field_element_type(typestr);
+      generate_field_storage_type(typestr);
     }
     
   }
@@ -1514,8 +1525,8 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (D->getNameAsString() == "field") {
       handle_field_specializations(D);
-    } else if (D->getNameAsString() == "field_element") {
-      field_element_decl = D;
+    } else if (D->getNameAsString() == "field_storage") {
+      field_storage_decl = D;
     } else {
     }
 

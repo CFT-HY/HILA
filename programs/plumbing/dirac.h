@@ -20,16 +20,14 @@ void dirac_stagggered_alldim(
     if(!initialized){
         foralldir(d){
             onsites(ALL){
-                location l = coordinates(X);
-                int sumcoord = 0;
+                element<location> l = coordinates(X);
+                element<int> sumcoord = 0;
                 for(int d2=0;d2<d;d2++){
                     sumcoord += l[d];
                 }
-                if( sumcoord %2 ){
-                    eta[d][X] = 1;
-                } else {
-                    eta[d][X] =-1;
-                }
+                // +1 if sumcoord divisible by 2, -1 otherwise
+                // If statements not yet implemented for vectors
+                eta[d][X] = (sumcoord%2)*2-1; 
             }
         }
         initialized = true;
@@ -75,16 +73,14 @@ void dirac_stagggered_4dim(
     if(!initialized){
         foralldir(d){
             onsites(ALL){
-                location l = coordinates(X);
-                int sumcoord = 0;
+                element<location> l = coordinates(X);
+                element<int> sumcoord = 0;
                 for(int d2=0;d2<d;d2++){
                     sumcoord += l[d];
                 }
-                if( sumcoord %2 ){
-                    eta[d][X] = 1;
-                } else {
-                    eta[d][X] =-1;
-                }
+                // +1 if sumcoord divisible by 2, -1 otherwise
+                // If statements not yet implemented for vectors
+                eta[d][X] = (sumcoord%2)*2-1; 
             }
         }
         initialized = true;

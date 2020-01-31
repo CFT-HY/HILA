@@ -20,20 +20,29 @@ struct cmplx {
 
   // constructor from single complex 
   template <typename A,
-            std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
   #pragma transformer loop_function
   constexpr cmplx<T>(const cmplx<A> a): re(static_cast<T>(a.re)), im(static_cast<T>(a.im)) {}
 
   // constructor from single scalar value 
   template <typename scalar_t,
-            std::enable_if_t<std::is_arithmetic<scalar_t>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<scalar_t>::value, int> = 0 >
   #pragma transformer loop_function
   constexpr cmplx<T>(const scalar_t val): re(static_cast<T>(val)), im(static_cast<T>(0)) {}
 
   // constructor c(a,b)
+//   template <typename A, typename B,
+//             std::enable_if_t<is_arithmetic<A>::value, int> = 0,
+//             std::enable_if_t<is_arithmetic<B>::value, int> = 0 >
+//   constexpr cmplx<T>(const A & a, const B & b) {
+//     re = static_cast<T>(a);
+//     im = static_cast<T>(b);
+//   }
+
+  // constructor c(a,b)
   template <typename A, typename B,
-            std::enable_if_t<std::is_arithmetic<A>::value, int> = 0,
-            std::enable_if_t<std::is_arithmetic<B>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<A>::value, int> = 0,
+            std::enable_if_t<is_arithmetic<B>::value, int> = 0 >
   #pragma transformer loop_function
   constexpr cmplx<T>(const A & a, const B & b): re(static_cast<T>(a)), im(static_cast<T>(b)) {}
 
@@ -49,7 +58,7 @@ struct cmplx {
 
   // Assignment from cmplx<A>
   template <typename A,
-            std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
   #pragma transformer loop_function
   cmplx<T> & operator=(cmplx<A> s) {
     re = static_cast<T>(s.re);
@@ -58,7 +67,7 @@ struct cmplx {
   }
   
   template <typename scalar_t,
-            std::enable_if_t<std::is_arithmetic<scalar_t>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<scalar_t>::value, int> = 0 >
   #pragma transformer loop_function
   cmplx<T> & operator=(scalar_t s) {
     re = static_cast<T>(s);
@@ -106,7 +115,7 @@ struct cmplx {
 
   // TODO: for avx vector too -- #define new template macro
   template <typename A,
-            std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
   #pragma transformer loop_function
   cmplx<T> & operator+= (const A & a) {
     re += static_cast<T>(a);
@@ -122,7 +131,7 @@ struct cmplx {
   
   // TODO: for vector too
   template <typename A,
-            std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
   #pragma transformer loop_function
   cmplx<T> & operator-= (const A & a) {
     re -= static_cast<T>(a);
@@ -138,7 +147,7 @@ struct cmplx {
   
   // TODO: for vector too
   template <typename A,
-            std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
   #pragma transformer loop_function
   cmplx<T> & operator*= (const A & a) {
     re *= static_cast<T>(a);
@@ -157,7 +166,7 @@ struct cmplx {
   
   // TODO: for vector too
   template <typename A,
-            std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
   #pragma transformer loop_function
   cmplx<T> & operator/= (const A & a) {
     re /= static_cast<T>(a);
@@ -166,7 +175,7 @@ struct cmplx {
   }
 
   #pragma transformer loop_function
-  double norm_sq(){
+  auto norm_sq(){
     return re*re + im*im;;
   }
 };
@@ -179,14 +188,14 @@ cmplx<T> operator+(const cmplx<T> & a, const cmplx<T> & b) {
 
   // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
-          std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+          std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator+(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re + a, c.im);
 }
 
 template <typename T, typename A,
-          std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+          std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator+(const A &a, const cmplx<T> & c) {
   return cmplx<T>(c.re + a, c.im);
@@ -201,14 +210,14 @@ cmplx<T> operator-(const cmplx<T> & a, const cmplx<T> & b) {
 
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
-          std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+          std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator-(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re - a, c.im);
 }
 
 template <typename T, typename A,
-          std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+          std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator-(const A &a, const cmplx<T> & c) {
   return cmplx<T>(a - c.re, -c.im);
@@ -224,14 +233,14 @@ cmplx<T> operator*(const cmplx<T> & a, const cmplx<T> & b) {
 
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
-          std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+          std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator*(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re * a, c.im * a);
 }
 
 template <typename T, typename A,
-          std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+          std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator*(const A &a, const cmplx<T> & c) {
   return cmplx<T>(a * c.re, a * c.im);
@@ -248,7 +257,7 @@ cmplx<T> operator/(const cmplx<T> & a, const cmplx<T> & b) {
 
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
-          std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+          std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator/(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re / a, c.im / a);
@@ -256,7 +265,7 @@ cmplx<T> operator/(const cmplx<T> & c, const A & a) {
 
 // a/c = ac*/|c|^2
 template <typename T, typename A,
-          std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
+          std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator/(const A &a, const cmplx<T> & c) {
   T n = c.norm();

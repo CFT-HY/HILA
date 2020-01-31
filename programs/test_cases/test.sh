@@ -1,10 +1,26 @@
 #!/bin/bash
 
+# Testing on GPU:s on Puhti:
+# To get an allocation with a gpu (make sure you are a member of the hila development project):
+# srun --ntasks=1 --account=Project_2001973 --time=0:10:00 --partition=gputest --gres=gpu:v100:1  --pty bash
+# 
+# Go to the folder /projappl/project_2001973/transformer/programs/test_cases/
+# Then run ./testGPU.sh
+#
+
 export ERRORLOG=$(mktemp /tmp/abc-script.XXXXXX)
 export fails=0
 export num_tests=0
 
-MAKEFILE=Makefile
+if [ "$1" = "CUDA" ]; then
+    export MAKEFILE=Makefile_gpu
+elif [ "$1" = "AVX" ]; then
+    export MAKEFILE=Makefile_avx
+else
+    export MAKEFILE=Makefile
+fi
+shift
+
 
 check(){
     if [ $? -eq 0 ];
@@ -19,8 +35,8 @@ check(){
 }
 
 transform_c(){
-    echo make $1
-    make $1 2>/dev/null
+    echo make -f ${MAKEFILE} $1
+    make -f ${MAKEFILE} $1 2>/dev/null
     check transform
 }
 
@@ -49,8 +65,8 @@ else
 fi
 
 for D in 1 2 3 4 ; do
-  sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' Makefile
-  make -f ${MAKEFILE} clean
+  sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' ${MAKEFILE}
+  make -f ${MAKEFILE} clean cleanall
   for testfile in $tests; do
     test="${testfile%.*}"
     echo $test
@@ -62,7 +78,7 @@ for D in 1 2 3 4 ; do
     run_mpi_c ${test} 4
     rm ${test}.exe ${test}.cpt
   done
-  make -f ${MAKEFILE} clean
+  make -f ${MAKEFILE} clean cleanall
 done
 
 

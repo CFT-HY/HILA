@@ -9,6 +9,9 @@ cmplx<double> d(cmplx<double> x) {return x;}
 cmplx<double> e(cmplx<double> x) {return d(x);}
 cmplx<double> f(cmplx<double> x) {return e(x);}
 
+using ft = cmplx<double>;
+
+
 int main()
 {
   
@@ -16,8 +19,10 @@ int main()
   field<double> t(1.0);
 
   onsites(ALL) {
-    cmplx<double> d(2,2);
-    a[X] += a[X];
+    ft d(2,2);
+    element<ft> t;
+    t = a[X];
+    a[X] = t;
   }
   
   return 0;

@@ -4,6 +4,9 @@ if [ "$1" = "CUDA" ]; then
     shift
     export MAKEFILE=Makefile_gpu
     export RUNNER=
+elif [ "$1" = "AVX" ]; then
+    shift
+    export MAKEFILE=Makefile_avx
 elif [ "$1" = "MPI" ]; then
     shift
     export MAKEFILE=Makefile
@@ -34,7 +37,7 @@ for benchfile in $benchmarks; do
     echo make -j -f $MAKEFILE -s ${benchmark}.exe
     make -j -f $MAKEFILE -s ${benchmark}.exe 2>/dev/null
     echo ${RUNNER} ./${benchmark}.exe
-    ${RUNNER} ./${benchmark}.exe
+    ${RUNNER} ./${benchmark}.exe 
 done
 
 exit 0
