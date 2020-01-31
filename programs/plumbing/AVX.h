@@ -117,12 +117,12 @@ inline Vec8f hila_random_Vec8f(){
 namespace vectorized
 {
   template<int vector_len>
-  inline void permute(int *perm, void * element, int n_elements){
+  inline void permute(int *perm, void * element, const int n_elements){
     assert(false && "permute not implemented for vector size");
   }
 
   template<>
-  inline void permute<4>(int *perm, void * element, int n_elements){
+  inline void permute<4>(int *perm, void * element, const int n_elements){
     Vec4d * e = (Vec4d *) element;
     for( int v=0; v<n_elements; v++ ){
       double t1[4], t2[4];
@@ -134,7 +134,7 @@ namespace vectorized
   }
 
   template<>
-  inline void permute<8>(int *perm, void * element, int n_elements){
+  inline void permute<8>(int *perm, void * element, const  int n_elements){
     Vec8f * e = (Vec8f *) element;
     for( int v=0; v<n_elements; v++ ){
       float t1[8], t2[8];
