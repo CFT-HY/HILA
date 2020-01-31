@@ -3,7 +3,7 @@ OPTS = -DNDIM=4
 #The next line work on puhti
 #TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ 
 TRANSFORMER = ../../build/transformer
-CC = mpic++ -DUSE_MPI
+CC = mpic++ -DUSE_MPI -mavx2 -mfma
 
 CFLAGS = -O3 $(OPTS)
 CXXFLAGS = -O3 -x c++ --std=c++14 $(OPTS)
@@ -17,6 +17,9 @@ CXXFLAGS = -O3 -x c++ --std=c++14 $(OPTS)
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
+%.tr.s : %.cpt
+	$(CC) $(CXXFLAGS) $< -S -o $@
+
 %.o : ../plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
@@ -24,7 +27,7 @@ CXXFLAGS = -O3 -x c++ --std=c++14 $(OPTS)
 	$(CC) $(CFLAGS) $< -c
 
 clean:
-	rm -rf *.o *.cpt
+	rm -rf *.o *.cpt *.tr.s
 
 cleanall:
-	rm -rf *.o *.cpt *.exe
+	rm -rf *.o *.cpt *.exe *.tr.s
