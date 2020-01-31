@@ -200,50 +200,5 @@ inline Vec16f hila_random_Vec16f(){
 }
 
 
-namespace vectorized
-{
-  template<int vector_len>
-  inline void permute(int *perm, void * element, const int n_elements){
-    assert(false && "permute not implemented for vector size");
-  }
-
-  template<>
-  inline void permute<4>(int *perm, void * element, const int n_elements){
-    Vec4d * e = (Vec4d *) element;
-    for( int v=0; v<n_elements; v++ ){
-      double t1[4], t2[4];
-      e[v].store(&(t1[0]));
-      for( int i=0; i<4; i++ )
-        t2[i] =  t1[perm[i]];
-      e[v].load(&(t2[0]));
-    }
-  }
-
-  template<>
-  inline void permute<8>(int *perm, void * element, const  int n_elements){
-    Vec8f * e = (Vec8f *) element;
-    for( int v=0; v<n_elements; v++ ){
-      float t1[8], t2[8];
-      e[v].store(&(t1[0]));
-      for( int i=0; i<8; i++ )
-        t2[i] =  t1[perm[i]];
-      e[v].load(&(t2[0]));
-    }
-  }
-
-  template<>
-  inline void permute<16>(int *perm, void * element, const  int n_elements){
-    Vec16f * e = (Vec16f *) element;
-    for( int v=0; v<n_elements; v++ ){
-      float t1[16], t2[16];
-      e[v].store(&(t1[0]));
-      for( int i=0; i<16; i++ )
-        t2[i] =  t1[perm[i]];
-      e[v].load(&(t2[0]));
-    }
-  }
-
-}
-
 
 #endif

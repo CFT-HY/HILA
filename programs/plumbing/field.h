@@ -1004,11 +1004,22 @@ template<typename T>
 void field<T>::field_struct::set_local_boundary_elements(parity par){
   constexpr int vector_size = field_info<T>::vector_size;
   constexpr int elements = field_info<T>::elements;
+  using vectortype = typename field_info<T>::vector_type;
+  using basetype = typename field_info<T>::base_type;
   // Loop over the boundary sites
   for( vectorized_lattice_struct::halo_site hs: lattice->halo_sites )
-    if(par == ALL || par == hs.par ) {
+  if(par == ALL || par == hs.par ) {
+    //vectorized::permute<vector_size>(lattice->boundary_permutation[hs.dir], &temp, elements);
     auto temp = get(hs.nb_index);
-    vectorized::permute<vector_size>(lattice->boundary_permutation[hs.dir], &temp, elements);
+    int *perm = lattice->boundary_permutation[hs.dir];
+    vectortype * e = (vectortype*) &temp;
+    for( int v=0; v<elements; v++ ){
+      basetype t1[vector_size], t2[vector_size];
+      e[v].store(&(t1[0]));
+      for( int i=0; i<vector_size; i++ )
+        t2[i] =  t1[perm[i]];
+      e[v].load(&(t2[0]));
+    }
     set(temp, lattice->sites + hs.halo_index);
   }
 }
