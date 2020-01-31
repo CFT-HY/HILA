@@ -75,6 +75,26 @@ int main(int argc, char **argv){
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Vector square sum: " << timing << " ms \n";
 
+    // Time COMMUNICATION of a MATRIX
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+      init = clock();
+      
+      sum=0;
+      for( int i=0; i<n_runs; i++){
+        onsites(ALL){
+          matrix2[X] = matrix1[X+XUP];
+        }
+        onsites(ALL){
+          matrix1[X] = matrix2[X+XUP];
+        }
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / 2 / (double)n_runs;
+    output0 << "Matrix nearest neighbour communication: " << timing << " ms \n";
+
     //printf("node %d, create gauge\n", mynode());
 
     // Define a gauge matrix
