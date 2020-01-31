@@ -33,23 +33,21 @@ int main(int argc, char **argv){
     assert(matrices.fs==nullptr);
 
     // Test that neighbours are fetched correctly
-    // nd is not available on device. It should be
     foralldir(dir){
         onsites(ALL){
-            int nd[4] = { 20, 10, 10, 4 };
-            location l = coordinates(X);
-            coordinate[X] = l[dir];
-            nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
+          element<location> l = coordinates(X);
+          coordinate[X] = l[dir];
+          nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
         }
 
         nb_coordinate2[ALL] = coordinate[X+dir];
 
         onsites(ALL){
-            int diff = nb_coordinate1[X]-nb_coordinate2[X];
+            element<int> diff = nb_coordinate1[X]-nb_coordinate2[X];
             isum += diff*diff;
         }
-        assert(isum==0); // Value fetched from neighbour is correct
-    }    
+        assert(isum==0 && "Value fetched from neighbour is correct");
+    }
 
     // If MPI is defined, check that gathers are counted correctly
     #ifdef MPI
@@ -70,8 +68,8 @@ int main(int argc, char **argv){
     // Test matrix multiplication and neighbour fetches
     // Calculates M(X) * M.congugate(X+dir)
     onsites(ALL){
-        matrix<2,2,double> a;
-        double theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
+        element<matrix<2,2,double>> a;
+        element<double> theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
         a.c[0][0] =  cos(theta);
         a.c[0][1] = -sin(theta);
         a.c[1][0] =  sin(theta);
@@ -96,7 +94,7 @@ int main(int argc, char **argv){
         dsum += matrices[X].trace();
     }
 
-    assert(((int) dsum) == lattice->volume()*2);
+    assert(((int) dsum) == lattice->volume()*2 && "Matrix conjugate multiplication");
     
     finishrun();
 }

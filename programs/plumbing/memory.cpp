@@ -26,13 +26,13 @@ void free_field_mem(void * p) {
 
 #elif VECTORIZED
 
-// sweet spot?
+
 #ifdef AVX512
-#define FIELD_ALIGNMENT 512
+#define FIELD_ALIGNMENT 64
 #elif AVX
-#define FIELD_ALIGNMENT 256
+#define FIELD_ALIGNMENT 32
 #else
-#define FIELD_ALIGNMENT 128
+#define FIELD_ALIGNMENT 16
 #endif
 
 void * allocate_field_mem(size_t size) {

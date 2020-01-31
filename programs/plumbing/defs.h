@@ -8,7 +8,6 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
-
 #ifdef AVX
 #include "../plumbing/AVX.h"
 #define VECTORIZED
@@ -111,11 +110,12 @@ static inline int is_up_dir(const int d) { return d<NDIM; }
 // location type
 
 struct location {
-    int r[NDIM];
-    int& operator[] (const int i) { return r[i]; }
-    int& operator[] (const direction d) { return r[(int)d]; }
-    const int& operator[] (const int i) const { return r[i]; }
-    const int& operator[] (const direction d) const { return r[(int)d]; }
+  int r[NDIM];
+  int& operator[] (const int i) { return r[i]; }
+  int& operator[] (const direction d) { return r[(int)d]; }
+  const int& operator[] (const int i) const { return r[i]; }
+  const int& operator[] (const direction d) const { return r[(int)d]; }
+  operator std::array<int,NDIM>(){std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
 };
 
 inline location operator+(const location & a, const location & b) {
@@ -193,7 +193,7 @@ inline void synchronize_threads(){}
 #else
 
 #define seed_random(seed) seed_mersenne(seed)
-#define hila_random() mersenne()
+inline double hila_random(){ return mersenne(); }
 inline void synchronize_threads(){}
 
 #endif
@@ -234,20 +234,26 @@ inline void synchronize(){
 
 
 ///Implements test for arithmetic operators in types, similar to 
-///std::is_arithmetic but works for classes
-template<class...> struct voidify { using type = void; };
-template<class... Ts> using void_t = typename voidify<Ts...>::type;
+///std::is_arithmetic but allows vector types
 
-template<class T, class = void>
-struct supports_arithmetic_operations : std::false_type {};
+#ifndef VECTORIZED
+template< class T >
+struct is_arithmetic : std::integral_constant<
+  bool,
+  std::is_arithmetic<T>::value
+> {};
+#else
+template< class T >
+struct is_arithmetic : std::integral_constant<
+  bool,
+  std::is_arithmetic<T>::value ||
+  std::is_same<T,Vec4d>::value ||
+  std::is_same<T,Vec8f>::value ||
+  std::is_same<T,Vec8i>::value
+> {};
+#endif
 
-template<class T>
-struct supports_arithmetic_operations<T,
-          void_t<decltype(std::declval<T>() + std::declval<T>()),
-                 decltype(std::declval<T>() - std::declval<T>()),
-                 decltype(std::declval<T>() * std::declval<T>()),
-                 decltype(std::declval<T>() / std::declval<T>())>> 
-          : std::true_type {};
+
 
 
 #endif

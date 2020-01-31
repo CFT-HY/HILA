@@ -1,93 +1,204 @@
 #ifndef AVX_H
 #define AVX_H
 
+#include "../plumbing/defs.h"
 #include <immintrin.h>
+#include "../vectorclass/vectorclass.h"
+#include "../vectorclass/vectormath_exp.h"
+#include "../vectorclass/vectormath_trig.h"
+#include "../vectorclass/vectormath_hyp.h"
+
 
 #define VECTORIZED
-constexpr int max_vector_size = 8;
+constexpr static int max_vector_size = 8;
 
 
-/// A new vector class is necessary, the intrinsic types
-/// are not always proper types. This encapsulates them
-/// and defines basic arithmetic
-struct avxdvector {
-  __m256d c;
-
-  avxdvector() = default;
-  avxdvector(const avxdvector & a) =default;
-
-  constexpr avxdvector(__m256d x):c(x) {}
-  avxdvector(const double & x):c(_mm256_broadcast_sd(&x)) {}
-
-  // Cast to base type interpred as a sum, implements
-  // the sum reduction
-  #pragma transformer loop_function
-  avxdvector & operator+= (const avxdvector & lhs) {
-    c += lhs.c;
-    return *this;
-  }
-
-  #pragma transformer loop_function
-  double reduce_sum(){
-    __m256d s = _mm256_hadd_pd(c,c);
-    return ((double*)&s)[0] + ((double*)&s)[2];
-  }
-
-  #pragma transformer loop_function
-  double reduce_prod(){
-    double m = 1;
-    for(int i=0; i<4; i++){
-      m*=((double*)&c)[i];
-    }
-    return m;
-  }
-
-  avxdvector operator-() const {return _mm256_xor_pd(c, _mm256_set1_pd(-0.0)); }
-
-};
-
-
-/* Define operations for the vector type */
-
-#pragma transformer loop_function
-inline avxdvector operator+(const avxdvector & a, const avxdvector & b) {
-  return avxdvector(_mm256_add_pd(a.c, b.c));
+inline double reduce_sum(Vec4d v){
+  double sum = 0;
+  double store[4];
+  v.store(&(store[0]));
+  for(int i=0; i<4; i++)
+    sum += store[i];
+  return sum;
 }
 
-#pragma transformer loop_function
-inline avxdvector operator-(const avxdvector & a, const avxdvector & b) {
-  return avxdvector(_mm256_sub_pd(a.c, b.c));
+inline double reduce_sum(Vec8f v){
+  double sum = 0;
+  float store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum += store[i];
+  return sum;
 }
 
-#pragma transformer loop_function
-inline avxdvector operator*(const avxdvector & a, const avxdvector & b) {
-  return avxdvector(_mm256_mul_pd(a.c, b.c));
+inline double reduce_sum(Vec8i v){
+  double sum = 0;
+  int store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum += store[i];
+  return sum;
 }
 
-#pragma transformer loop_function
-inline avxdvector operator/(const avxdvector & a, const avxdvector & b) {
-  return avxdvector(_mm256_div_pd(a.c, b.c));
+inline double reduce_sum(Vec8d v){
+  double sum = 0;
+  double store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum += store[i];
+  return sum;
+}
+
+inline double reduce_sum(Vec16f v){
+  double sum = 0;
+  float store[16];
+  v.store(&(store[0]));
+  for(int i=0; i<16; i++)
+    sum += store[i];
+  return sum;
+}
+
+inline double reduce_sum(Vec16i v){
+  double sum = 0;
+  int store[16];
+  v.store(&(store[0]));
+  for(int i=0; i<16; i++)
+    sum += store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec4d v){
+  double sum = 1;
+  double store[4];
+  v.store(&(store[0]));
+  for(int i=0; i<4; i++)
+    sum *= store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec8f v){
+  double sum = 0;
+  float store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum *= store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec8i v){
+  double sum = 0;
+  int store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum *= store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec8d v){
+  double sum = 1;
+  double store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum *= store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec16f v){
+  double sum = 0;
+  float store[16];
+  v.store(&(store[0]));
+  for(int i=0; i<16; i++)
+    sum *= store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec16i v){
+  double sum = 0;
+  int store[16];
+  v.store(&(store[0]));
+  for(int i=0; i<16; i++)
+    sum *= store[i];
+  return sum;
 }
 
 
-namespace vectorized
+/// Define modulo operator for integer vector
+inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
 {
-  template<int vector_len>
-  inline void permute(int *perm, void * element, int n_elements){}
-
-  template<>
-  inline void permute<4>(int *perm, void * element, int n_elements){
-    __m256d * e = (__m256d *) element;
-    for( int v=0; v<n_elements; v++ ){
-      __m256d t = e[v];
-      for( int i=0; i<4; i++ )
-        e[v][i] =  t[perm[i]];
-    }
-  }
-
-  // Vector length in bytes
-  constexpr int sizeofvector = 32;
+  Vec16i r;
+  int tvec1[16], tvec2[16];
+  lhs.store(&(tvec1[0]));
+  for(int i=0; i<16; i++)
+    tvec2[i] = tvec1[i] % rhs;
+  r.load(&(tvec2[0]));
+  return r;
 }
+
+
+inline Vec8i operator%( const Vec8i &lhs, const int &rhs)
+{
+  Vec8i r;
+  int tvec1[8], tvec2[8];
+  lhs.store(&(tvec1[0]));
+  for(int i=0; i<8; i++)
+    tvec2[i] = tvec1[i] % rhs;
+  r.load(&(tvec2[0]));
+  return r;
+}
+
+inline Vec4i operator%( const Vec4i &lhs, const int &rhs)
+{
+  Vec4i r;
+  int tvec1[4], tvec2[4];
+  lhs.store(&(tvec1[0]));
+  for(int i=0; i<4; i++)
+    tvec2[i] = tvec1[i] % rhs;
+  r.load(&(tvec2[0]));
+  return r;
+}
+
+
+inline Vec4d hila_random_Vec4d(){
+  Vec4d r;
+  double tvec[4];
+  for(int i=0; i<4; i++){
+    tvec[i] = mersenne();
+  }
+  r.load(&(tvec[0]));
+  return r;
+}
+
+inline Vec8f hila_random_Vec8f(){
+  Vec8f r;
+  float tvec[8];
+  for(int i=0; i<8; i++){
+    tvec[i] = mersenne();
+  }
+  r.load(&(tvec[0]));
+  return r;
+}
+
+
+inline Vec8d hila_random_Vec8d(){
+  Vec8d r;
+  double tvec[8];
+  for(int i=0; i<8; i++){
+    tvec[i] = mersenne();
+  }
+  r.load(&(tvec[0]));
+  return r;
+}
+
+inline Vec16f hila_random_Vec16f(){
+  Vec16f r;
+  float tvec[16];
+  for(int i=0; i<16; i++){
+    tvec[i] = mersenne();
+  }
+  r.load(&(tvec[0]));
+  return r;
+}
+
 
 
 #endif

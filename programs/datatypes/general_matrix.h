@@ -19,13 +19,13 @@ inline cmplx<Accuracy> typeConj(cmplx<Accuracy> val){
 
 template<typename T>
 #pragma transformer loop_function
-inline double type_norm_sq(T val){
+inline auto type_norm_sq(T val){
   return val*val;
 }
 
 template<typename T> 
 #pragma transformer loop_function
-inline double type_norm_sq(cmplx<T> val){
+inline auto type_norm_sq(cmplx<T> val){
   return val.norm_sq();
 }
 
@@ -38,7 +38,7 @@ class matrix {
 
   matrix() = default;
 
-  template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
   #pragma transformer loop_function
   matrix<n,m,T> & operator= (const scalart rhs) {
     static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
@@ -51,7 +51,7 @@ class matrix {
 
 
   //copy constructor from scalar  
-  template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
   #pragma transformer loop_function
   matrix(const scalart rhs) {
     static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
@@ -78,7 +78,7 @@ class matrix {
     return *this;
   }
 
-  template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
   #pragma transformer loop_function
   matrix<n,m,T> & operator*=(const scalart rhs){
     T val;
@@ -108,7 +108,7 @@ class matrix {
   }
 
   //numpy style matrix fill 
-  template <typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 > 
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
   #pragma transformer loop_function
   matrix<n,m,T> & fill(const scalart rhs) {
     for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
@@ -148,9 +148,9 @@ class matrix {
   }
 
   #pragma transformer loop_function
-  double norm_sq(){
-    double result = 0.0;
-    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+  auto norm_sq(){
+    auto result = type_norm_sq(c[0][0]);
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0&&j>0) {
       result += type_norm_sq(c[i][j]);
     }
     return result;
@@ -286,7 +286,7 @@ matrix<n,m,T> operator- (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
 }
 
 // multiplication by a scalar
-template <int n, int m, typename T, typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 > 
+template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
 #pragma transformer loop_function
 matrix<n,m,T> operator* (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
@@ -296,7 +296,7 @@ matrix<n,m,T> operator* (const matrix<n,m,T> &A, const scalart s) {
   return res;
 }
 
-template <int n, int m, typename T, typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 > 
+template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
 #pragma transformer loop_function
 matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
@@ -306,7 +306,7 @@ matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
   return res;
 }
 
-template <int n, int m, typename T, typename scalart, std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 > 
+template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
 #pragma transformer loop_function
 matrix<n,m,T> operator*(const scalart s, const matrix<n,m,T> &A) {
   return operator*(A,s);

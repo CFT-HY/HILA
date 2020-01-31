@@ -453,7 +453,8 @@ int srcBuf::replace_tokens(int start, int end,
         for (i++ ; i<=end && buf[i] != '\n'; i++) ;
       } else if (buf[i] == '"') {
         // don't mess with strings
-        for (i++ ; i<=end && buf[i] != '"'; i++) if (buf[i] == '\\') i++;
+        for (i++ ; i<=end && buf[i] != '"'; i++) if(buf[i] == '\\') i++;
+        i++;
       } else if (buf[i] == '\'') {
         // char constant
         if (buf[i+1] == '\\') i++;

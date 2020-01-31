@@ -1,4 +1,3 @@
-// -*- mode: c++ -*-
 #ifndef FIELD_H
 #define FIELD_H
 #include <iostream>
@@ -209,13 +208,20 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 template <typename T>
 using element = T;
 
+/// Utility for returning mapping a field element type into 
+/// a corresponding vector. This is not used directly as a type
 template <typename T>
-struct field_element{
-  T c;
+struct field_info{
+  constexpr static int vector_size = 1;
+  constexpr static int base_type_size = 1;
+  constexpr static int elements = 1;
 
-  field_element(const T& x): c(x) {}
-  operator T(){return c;}
+  using base_type = double;
+#ifdef VECTORIZED
+  using vector_type = Vec4d;
+#endif
 };
+
 
 
 
@@ -231,7 +237,7 @@ class field_storage {
   public:
     // Structure of arrays implementation
     constexpr static int t_elements = sizeof(T) / sizeof(real_t);
-    real_t * fieldbuf;
+    real_t * fieldbuf = NULL;
 
     void allocate_field( const int field_alloc_size ) {
       fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
@@ -269,45 +275,17 @@ class field_storage {
     }
 };
 
-#elif defined(VECTORIZED)
-
-template <typename T>
-class field_storage {
-  public:
-    // Use the vectorized field storage type
-    field_element<T> * fieldbuf;
-    constexpr static int vector_length = sizeof(field_element<T>) / sizeof(T);
-
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
-    }
-
-    void free_field() {
-      free_field_mem((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    field_element<T> get(const int i, const int field_alloc_size) const
-    {
-      return fieldbuf[i];
-    }
-
-    void set(field_element<T> value, const int i, const int field_alloc_size) 
-    {
-      fieldbuf[i] = value;
-    }
-};
-
 #else
 
 template <typename T>
 class field_storage {
   public:
-      // Array of structures implementation
-    field_element<T> * fieldbuf;
+
+    // Array of structures implementation
+    T * fieldbuf = NULL;
 
     void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (field_element<T>*) allocate_field_mem( sizeof(field_element<T>) * field_alloc_size);
+      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
       #pragma acc enter data create(fieldbuf)
     }
 
@@ -317,17 +295,55 @@ class field_storage {
       fieldbuf = nullptr;
     }
 
+#ifndef VECTORIZED
     #pragma transformer loop_function
-    field_element<T> get(const int i, const int field_alloc_size) const
+    T get(const int i, const int field_alloc_size) const
     {
-      return ((field_element<T> *) fieldbuf)[i];
+      // There is some problem with directly assigning intrinsic vectors, at least.
+      // This is a universal workaround, but could be fixed by assigning element
+      // by element
+      T value = fieldbuf[i];
+      return value;
     }
 
     #pragma transformer loop_function
-    void set(field_element<T> value, const int i, const int field_alloc_size) 
+    void set(const T value, const int i, const int field_alloc_size) 
     {
-      ((field_element<T> *) fieldbuf)[i] = value;
+      fieldbuf[i] = value;
     }
+#else
+    #pragma transformer loop_function
+    T get(const int i, const int field_alloc_size) const
+    {
+      // There is some problem with directly assigning intrinsic vectors, at least.
+      // This is a universal workaround, but could be fixed by assigning element
+      // by element
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      T value;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].load(vp+e*field_info<T>::vector_size);
+      }
+      //std::memcpy( &value, fieldbuf+i, sizeof(T) );
+      return value;
+    }
+
+    #pragma transformer loop_function
+    void set(const T value, const int i, const int field_alloc_size) 
+    {
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].store((vp + e*field_info<T>::vector_size));
+      }
+      //std::memcpy( fieldbuf+i, &value, sizeof(T) );
+    }
+
+#endif
 };
 
 
@@ -361,7 +377,7 @@ private:
   /// TODO: field-specific boundary conditions?
   class field_struct {
     public:
-      constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
+      constexpr static int vector_size = field_info<T>::vector_size;
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
 #ifndef VECTORIZED
       lattice_struct * lattice;
@@ -400,13 +416,14 @@ private:
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      field_element<T> get(const int i) const {
+      auto get(const int i) const {
         return payload.get( i, lattice->field_alloc_size() );
       }
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      void set(field_element<T> value, const int i) {
+      template<typename A>
+      void set(A value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
       }
 
@@ -415,7 +432,7 @@ private:
       /// Place boundary elements from neighbour
       void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par);
       /// Place boundary elements from local lattice (used in vectorized version)
-      void set_local_boundary_elements();
+      void set_local_boundary_elements(parity par);
   };
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
@@ -551,17 +568,16 @@ public:
   // placemarker, should not be here
   // T& operator[] (const int i) { return data[i]; }
 
-  // these give the field_element -- WILL BE modified by transformer
+  // these give the element -- WILL BE modified by transformer
   element<T>& operator[] (const parity p) const;
   element<T>& operator[] (const parity_plus_direction p) const;
 
-
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  field_element<T> get_value_at(int i) const { return this->fs->get(i); }
+  auto get_value_at(int i) const { return this->fs->get(i); }
 
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
-  void set_value_at(field_element<T> value, int i) { this->fs->set(value, i); }
-
+  template<typename A>
+  void set_value_at(A value, int i) { this->fs->set( value, i); }
 
   // fetch the element at this loc
   // T get(int i) const;
@@ -892,7 +908,7 @@ void field<T>::wait_move(direction d, parity p) const {
     start_move(d, par);
 
     // Update local elements in the halo (necessary for vectorized version)
-    fs->set_local_boundary_elements();
+    fs->set_local_boundary_elements(par);
 
     lattice_struct::comminfo_struct ci = lattice->comminfo[d];
     std::vector<MPI_Request> & receive_request = fs->receive_request[index];
@@ -928,7 +944,8 @@ void field<T>::start_move(direction d, parity p) const {}
 template<typename T>
 void field<T>::wait_move(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)
-  fs->set_local_boundary_elements();
+  // Does not need to happen every time; should use tracking like in MPI
+  fs->set_local_boundary_elements(ALL);
 }
 
 
@@ -946,18 +963,17 @@ void field<T>::wait_move(direction d, parity p) const {
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
 void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
-  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
-  constexpr static int base_type_size = vectorized::sizeofvector / vector_size;
   for (int j=0; j<to_node.n_sites(par); j++) {
     int index = to_node.site_index(j, par);
-    int l_index = lattice->lattice_index[index];
     int v_index = lattice->vector_index[index];
-    field_element<T> element = get(l_index);
-    for( int e=0; e<elements; e++ ){
-      char * vector_elem = (char *) (&element) + (e*vector_size + v_index) * base_type_size;
-      char * buffer_elem = buffer + j*sizeof(T) + e * base_type_size;
-      std::memcpy( buffer_elem, vector_elem, base_type_size );
+    auto element = get(lattice->lattice_index[index]);
+    auto pvector = (typename field_info<T>::vector_type*) (&element);
+
+    for( int e=0; e<field_info<T>::elements; e++ ){
+      auto basenumber = pvector[e].extract(v_index);
+      auto * number_buffer = (typename field_info<T>::base_type *) buffer;
+
+      number_buffer[j*field_info<T>::elements + e] = basenumber;
     }
   }
 }
@@ -966,33 +982,44 @@ void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct:
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
 void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
-  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
-  constexpr static int base_type_size = vectorized::sizeofvector / vector_size;
   for (int j=0; j<from_node.n_sites(par); j++) {
     int index = from_node.offset(par)+j;
-    int l_index = lattice->lattice_index[index];
     int v_index = lattice->vector_index[index];
-    field_element<T> element = get(l_index);
-    for( int e=0; e<elements; e++ ){
-      char * vector_elem = (char *) (&element) + (e*vector_size + v_index) * base_type_size;
-      char * buffer_elem = buffer + j*sizeof(T) + e * base_type_size;
-      std::memcpy( vector_elem, buffer_elem, base_type_size );
+    auto element = get(lattice->lattice_index[index]);
+    auto pvector = (typename field_info<T>::vector_type*) (&element);
+
+    for( int e=0; e<field_info<T>::elements; e++ ){
+      auto number_buffer = (typename field_info<T>::base_type *) buffer;
+      auto basenumber = number_buffer[j*field_info<T>::elements + e];
+
+      pvector[e].insert(v_index, basenumber);
     }
-    set(element, l_index);
+    set(element, lattice->lattice_index[index]);
   }
 }
 
 #endif
 
 template<typename T>
-void field<T>::field_struct::set_local_boundary_elements(){
-  constexpr static int vector_size = sizeof(field_element<T>) / sizeof(T);
-  constexpr static int elements = sizeof(field_element<T>) / vectorized::sizeofvector;
+void field<T>::field_struct::set_local_boundary_elements(parity par){
+  constexpr int vector_size = field_info<T>::vector_size;
+  constexpr int elements = field_info<T>::elements;
+  using vectortype = typename field_info<T>::vector_type;
+  using basetype = typename field_info<T>::base_type;
   // Loop over the boundary sites
-  for( vectorized_lattice_struct::halo_site hs: lattice->halo_sites ){
-    field_element<T> temp = get(hs.nb_index);
-    vectorized::permute<vector_size>(lattice->boundary_permutation[hs.dir], &temp, elements);
+  for( vectorized_lattice_struct::halo_site hs: lattice->halo_sites )
+  if(par == ALL || par == hs.par ) {
+    //vectorized::permute<vector_size>(lattice->boundary_permutation[hs.dir], &temp, elements);
+    auto temp = get(hs.nb_index);
+    int *perm = lattice->boundary_permutation[hs.dir];
+    vectortype * e = (vectortype*) &temp;
+    for( int v=0; v<elements; v++ ){
+      basetype t1[vector_size], t2[vector_size];
+      e[v].store(&(t1[0]));
+      for( int i=0; i<vector_size; i++ )
+        t2[i] =  t1[perm[i]];
+      e[v].load(&(t2[0]));
+    }
     set(temp, lattice->sites + hs.halo_index);
   }
 }
@@ -1074,7 +1101,7 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 }
 
 template<typename T>
-void field<T>::field_struct::set_local_boundary_elements(){}
+void field<T>::field_struct::set_local_boundary_elements(parity par){}
 
 
 #else
@@ -1100,7 +1127,7 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 }
 
 template<typename T>
-void field<T>::field_struct::set_local_boundary_elements(){}
+void field<T>::field_struct::set_local_boundary_elements(parity par){}
 
 
 #endif

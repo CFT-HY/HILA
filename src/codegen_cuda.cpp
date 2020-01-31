@@ -33,7 +33,8 @@ extern std::string parity_in_this_loop;
 
 
 // Add the __host__ __device__ keywords to functions called a loop
-void MyASTVisitor::handle_loop_function_cuda(SourceLocation sl) {
+void MyASTVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
+  SourceLocation sl = fd->getSourceRange().getBegin();
   FileID FID = TheRewriter.getSourceMgr().getFileID(sl);
   // set_fid_modified(FID);
   srcBuf * sb = get_file_buffer(TheRewriter, FID);
@@ -63,6 +64,12 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
 
   // Get kernel name - use line number or file offset (must be deterministic)
   std::string kernel_name = MyASTVisitor::make_kernel_name();
+
+
+  // Set loop lattice
+  std::string fieldname = field_info_list.front().old_name;
+  code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
+  
 
   // Check for reductions and allocate device memory
   for (var_info & v : var_info_list) {
@@ -142,7 +149,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
     if( sfc.add_loop_var ){
       loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
     } else {
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression);
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"()");
     }
   }
 
