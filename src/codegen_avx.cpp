@@ -426,8 +426,7 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   bodyBuffer.prepend("template<>\n", true);
   bodyBuffer.append(";\n", true); // semicolon at end
 
-
-  // Add a simple template mapping from element type to vector size
+    // Add a simple template mapping from element type to vector size
   std::stringstream field_element_code;
   field_element_code << "template<> \n";
   field_element_code << "struct field_info<"<<typestr<<"> {\n";
@@ -439,7 +438,17 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   field_element_code << " using vector_type = " << base_vector_type << ";\n";
   field_element_code << "};\n";
 
-  bodyBuffer.append(field_element_code.str(), true);
+  field_element_code << "template<> \n";
+  field_element_code << "struct field_info<"<<vectortype<<"> {\n";
+  field_element_code << " constexpr static int vector_size = "<< std::to_string(vector_size) <<";\n";
+  field_element_code << " constexpr static int base_type_size = sizeof(" << base_type << ");\n";
+  field_element_code << " constexpr static int elements = sizeof(" << typestr 
+                     << ")/sizeof(" << base_type << ");\n";
+  field_element_code << " using base_type = " << base_type << ";\n";
+  field_element_code << " using vector_type = " << base_vector_type << ";\n";
+  field_element_code << "};\n";
+
+  bodyBuffer.prepend(field_element_code.str(), true);
 
 
   writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);

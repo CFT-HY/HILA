@@ -216,7 +216,10 @@ struct field_info{
   constexpr static int base_type_size = 1;
   constexpr static int elements = 1;
 
-  using basetype = real_t;
+  using base_type = double;
+#ifdef VECTORIZED
+  using vector_type = Vec4d;
+#endif
 };
 
 
@@ -292,22 +295,55 @@ class field_storage {
       fieldbuf = nullptr;
     }
 
+#ifndef VECTORIZED
     #pragma transformer loop_function
     T get(const int i, const int field_alloc_size) const
     {
       // There is some problem with directly assigning intrinsic vectors, at least.
       // This is a universal workaround, but could be fixed by assigning element
       // by element
-      T value;
-      std::memcpy( &value, fieldbuf+i, sizeof(T) );
+      T value = fieldbuf[i];
       return value;
     }
 
     #pragma transformer loop_function
-    void set(T value, const int i, const int field_alloc_size) 
+    void set(const T value, const int i, const int field_alloc_size) 
     {
-      std::memcpy( fieldbuf+i, &value, sizeof(T) );
+      fieldbuf[i] = value;
     }
+#else
+    #pragma transformer loop_function
+    T get(const int i, const int field_alloc_size) const
+    {
+      // There is some problem with directly assigning intrinsic vectors, at least.
+      // This is a universal workaround, but could be fixed by assigning element
+      // by element
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      T value;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].load(vp+e*field_info<T>::vector_size);
+      }
+      //std::memcpy( &value, fieldbuf+i, sizeof(T) );
+      return value;
+    }
+
+    #pragma transformer loop_function
+    void set(const T value, const int i, const int field_alloc_size) 
+    {
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].store((vp + e*field_info<T>::vector_size));
+      }
+      //std::memcpy( fieldbuf+i, &value, sizeof(T) );
+    }
+
+#endif
 };
 
 
