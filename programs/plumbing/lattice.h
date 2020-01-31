@@ -484,6 +484,23 @@ struct vectorized_lattice_struct  {
 
     /// Return the coordinates of each vector nested as
     /// coordinate[direction][vector_index]
+    std::array<Vec16i,NDIM> coordinates_Vec16i(int idx){
+      assert(vector_size == 16);
+      std::array<Vec16i,NDIM> r;
+      int step=1;
+      for(int d=0; d<NDIM; d++){
+        int first = coordinate_list[idx][d] + min[d];
+        for(int v=0; v<vector_size; v++){
+          r[d].insert(v, first + size[d]*((v/step)%split[d]));
+        }
+        step *= split[d];
+      }
+      return r;
+    }
+    std::array<Vec8i,NDIM> coordinates_Vec16f(int idx){
+      return coordinates_Vec8i(idx);
+    }
+
     std::array<Vec8i,NDIM> coordinates_Vec8i(int idx){
       assert(vector_size == 8);
       std::array<Vec8i,NDIM> r;
@@ -498,6 +515,9 @@ struct vectorized_lattice_struct  {
       return r;
     }
     std::array<Vec8i,NDIM> coordinates_Vec8f(int idx){
+      return coordinates_Vec8i(idx);
+    }
+    std::array<Vec8i,NDIM> coordinates_Vec8d(int idx){
       return coordinates_Vec8i(idx);
     }
 
