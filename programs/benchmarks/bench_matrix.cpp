@@ -3,13 +3,15 @@
 #define N 3
 constexpr int mintime = CLOCKS_PER_SEC;
 
+
+
 int main(int argc, char **argv){
     int n_runs=1;
     double msecs;
     clock_t init, end;
     double timing;
     double sum;
-
+    float fsum;
 
     // Runs lattice->setup 
     bench_setup(argc, argv);
@@ -19,9 +21,16 @@ int main(int argc, char **argv){
     field<matrix<N,N, cmplx<double>> > matrix3;
     field<matrix<1,N, cmplx<double>> > vector1;
     field<matrix<1,N, cmplx<double>> > vector2;
+    field<matrix<N,N, cmplx<float>> > fmatrix1;
+    field<matrix<N,N, cmplx<float>> > fmatrix2;
+    field<matrix<N,N, cmplx<float>> > fmatrix3;
+    field<matrix<1,N, cmplx<float>> > fvector1;
+    field<matrix<1,N, cmplx<float>> > fvector2;
 
     matrix1[ALL] = 1;
     matrix2[ALL] = 1;
+    fmatrix1[ALL] = 1;
+    fmatrix2[ALL] = 1;
 
     // Time MATRIX * MATRIX
     init = end = 0;
@@ -37,10 +46,24 @@ int main(int argc, char **argv){
     output0 << "Matrix * Matrix: " << timing << "ms \n";
 
 
+    // Time MATRIX * MATRIX
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          fmatrix3[ALL] = fmatrix1[X]*fmatrix2[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Single Precision Matrix * Matrix: " << timing << "ms \n";
+
+
     matrix1[ALL] = 1; 
     onsites(ALL){
         for(int i=0; i<N; i++){
-            vector1[X].c[0][1]=1;
+            vector1[X].c[0][i]=1;
         }
     }
 
@@ -57,8 +80,22 @@ int main(int argc, char **argv){
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Vector * Matrix: " << timing << " ms \n";
 
-
     // Time VECTOR * MATRIX
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          fvector1[ALL] = fvector1[X]*fmatrix1[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Single Precision Vector * Matrix: " << timing << " ms \n";
+
+
+
+    // Time VECTOR NORM
     init = end = 0;
     for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
@@ -69,18 +106,40 @@ int main(int argc, char **argv){
           sum += vector1[X].norm_sq();
         }
       }
+      volatile double volatile_sum = sum;
       synchronize();
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Vector square sum: " << timing << " ms \n";
 
+    // Time FLOAT VECTOR NORM
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+      init = clock();
+      fsum=0;
+      for( int i=0; i<n_runs; i++){
+        onsites(ALL){
+          for(int j=0; j<N; j++){
+            fvector1[X].c[0][j]=1;
+          }
+        }
+        onsites(ALL){
+          fsum += fvector1[X].norm_sq();
+        }
+        volatile double volatile_sum = fsum;
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Single Precision vector square sum: " << timing << " ms \n";
+
     // Time COMMUNICATION of a MATRIX
     init = end = 0;
     for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
       
-      sum=0;
       for( int i=0; i<n_runs; i++){
         onsites(ALL){
           matrix2[X] = matrix1[X+XUP];
