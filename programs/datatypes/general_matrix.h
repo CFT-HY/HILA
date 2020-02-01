@@ -220,12 +220,13 @@ matrix<2,2,T> operator* (const matrix<2,2,T> &A, const matrix<2,2,T> &B) {
 template <int n, int m, int p, typename T> 
 #pragma transformer loop_function
 matrix<n,p,T> operator* (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
-  matrix<p,m,T> Btrans = B.transpose(); //do matrix multiplication on rows of transpose matrix (should reduce cache misses)
+  //matrix<p,m,T> Btrans = B.transpose(); //do matrix multiplication on rows of transpose matrix (should reduce cache misses)
+  //Increases cache pressure by creating a copy (why does it do this in memory?)
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
     res.c[i][j] = (0);
     for (int k = 0; k < m; k++){
-      res.c[i][j] += (A.c[i][k] * Btrans.c[j][k]);
+      res.c[i][j] += (A.c[i][k] * B.c[k][j]);
     }
   }
   return res;
