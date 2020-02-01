@@ -751,7 +751,12 @@ public:
     }
      // Assignment from integer:
     Vec8d & operator = (Vec8i const x) {
-        zmm = _mm512_cvtepi32_pd(i);
+        zmm = _mm512_cvtepi32_pd(__m256i(x));
+        return *this;
+    }
+    // Scalar double assignment
+    Vec8d & operator = (double const x) {
+        zmm = Vec8d(x);
         return *this;
     }
     // Assignment operator to convert from type __m512d used in intrinsics:
