@@ -139,15 +139,12 @@ int main(int argc, char **argv){
     init = end = 0;
     for(n_runs=1; (end-init) < mintime; n_runs*=2){
       init = clock();
-      
+
       for( int i=0; i<n_runs; i++){
-        onsites(ALL){
-          matrix2[X] = matrix1[X+XUP];
-        }
-        onsites(ALL){
-          matrix1[X] = matrix2[X+XUP];
-        }
+        matrix1.mark_changed(ALL);
+        matrix1.wait_move(TUP,ALL);
       }
+      
       synchronize();
       end = clock();
     }
