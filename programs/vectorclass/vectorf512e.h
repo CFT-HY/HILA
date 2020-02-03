@@ -968,6 +968,19 @@ public:
         z0 = a0;
         z1 = a1;
     }
+    // Assignment from integer vector:
+    Vec8d & operator = (Vec8i const x) {
+        Vec4i x0 = x.get_high();
+        Vec4i x1 = x.get_low();
+        z0 = to_double(x0);
+        z1 = to_double(x1);
+        return *this;
+    }
+    // Scalar double assignment
+    Vec8d & operator = (double const x) {
+        z0 = z1 = Vec4d(x);
+        return *this;
+    }
     // Member function to load from array (unaligned)
     Vec8d & load(double const * p) {
         z0.load(p);

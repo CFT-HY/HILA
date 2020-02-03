@@ -312,10 +312,21 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
            << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
     }
     // Check for references without a direction. If found, add temp variable
+    bool local_ref = false;
+    bool local_is_read = false;
     for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-      code << type_name << " " << l.loop_ref_name << " = " 
+      local_ref = true;
+      if( r->is_read ){
+        local_is_read = true;
+      }
+    }
+    if(local_ref) {
+      if( local_is_read ){
+        code << type_name << " " << l.loop_ref_name << " = " 
            << l.new_name << ".get_value_at(" << looping_var << ");\n";
-      break;  // Only one needed
+      } else {
+        code << type_name << " " << l.loop_ref_name << ";\n";
+      }
     }
   }
 
@@ -426,8 +437,7 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   bodyBuffer.prepend("template<>\n", true);
   bodyBuffer.append(";\n", true); // semicolon at end
 
-
-  // Add a simple template mapping from element type to vector size
+    // Add a simple template mapping from element type to vector size
   std::stringstream field_element_code;
   field_element_code << "template<> \n";
   field_element_code << "struct field_info<"<<typestr<<"> {\n";
@@ -439,7 +449,17 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   field_element_code << " using vector_type = " << base_vector_type << ";\n";
   field_element_code << "};\n";
 
-  bodyBuffer.append(field_element_code.str(), true);
+  field_element_code << "template<> \n";
+  field_element_code << "struct field_info<"<<vectortype<<"> {\n";
+  field_element_code << " constexpr static int vector_size = "<< std::to_string(vector_size) <<";\n";
+  field_element_code << " constexpr static int base_type_size = sizeof(" << base_type << ");\n";
+  field_element_code << " constexpr static int elements = sizeof(" << typestr 
+                     << ")/sizeof(" << base_type << ");\n";
+  field_element_code << " using base_type = " << base_type << ";\n";
+  field_element_code << " using vector_type = " << base_vector_type << ";\n";
+  field_element_code << "};\n";
+
+  bodyBuffer.prepend(field_element_code.str(), true);
 
 
   writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);

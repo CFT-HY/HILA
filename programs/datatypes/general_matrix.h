@@ -162,7 +162,7 @@ class matrix {
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0&&j>0) {
       result += type_norm_sq(c[i][j]);
     }
-    return *this;
+    return result;
   }
 
   std::string str() const {

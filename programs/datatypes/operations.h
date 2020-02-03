@@ -22,8 +22,14 @@ inline T trans(T rhs){
 
 template<typename T>
 #pragma transformer loop_function
-inline double norm_sq(T val){
-  return static_cast<double>(val*val);
+inline auto type_norm_sq(T val){
+  return val*val;
+}
+
+template<typename T> 
+#pragma transformer loop_function
+inline auto type_norm_sq(cmplx<T> val){
+  return val.norm_sq();
 }
 
 #endif 

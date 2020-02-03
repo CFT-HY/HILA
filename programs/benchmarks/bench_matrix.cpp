@@ -3,13 +3,15 @@
 #define N 3
 constexpr int mintime = CLOCKS_PER_SEC;
 
+
+
 int main(int argc, char **argv){
     int n_runs=1;
     double msecs;
     clock_t init, end;
     double timing;
     double sum;
-
+    float fsum;
 
     // Runs lattice->setup 
     bench_setup(argc, argv);
@@ -19,16 +21,25 @@ int main(int argc, char **argv){
     field<matrix<N,N, cmplx<double>> > matrix3;
     field<matrix<1,N, cmplx<double>> > vector1;
     field<matrix<1,N, cmplx<double>> > vector2;
+    field<matrix<N,N, cmplx<float>> > fmatrix1;
+    field<matrix<N,N, cmplx<float>> > fmatrix2;
+    field<matrix<N,N, cmplx<float>> > fmatrix3;
+    field<matrix<1,N, cmplx<float>> > fvector1;
+    field<matrix<1,N, cmplx<float>> > fvector2;
 
     matrix1[ALL] = 1;
     matrix2[ALL] = 1;
+    fmatrix1[ALL] = 1;
+    fmatrix2[ALL] = 1;
+
 
     // Time MATRIX * MATRIX
     init = end = 0;
-    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime;){
+      n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
-          matrix3[ALL] = matrix1[X]*matrix2[X];
+        matrix3[ALL] = matrix1[X]*matrix2[X];
       }
       synchronize();
       end = clock();
@@ -37,16 +48,32 @@ int main(int argc, char **argv){
     output0 << "Matrix * Matrix: " << timing << "ms \n";
 
 
+    // Time MATRIX * MATRIX
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime;){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          fmatrix3[ALL] = fmatrix1[X]*fmatrix2[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Single Precision Matrix * Matrix: " << timing << "ms \n";
+
+
     matrix1[ALL] = 1; 
     onsites(ALL){
         for(int i=0; i<N; i++){
-            vector1[X].c[0][1]=1;
+            vector1[X].c[0][i]=1;
         }
     }
 
     // Time VECTOR * MATRIX
     init = end = 0;
-    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
           vector1[ALL] = vector1[X]*matrix1[X];
@@ -57,10 +84,26 @@ int main(int argc, char **argv){
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Vector * Matrix: " << timing << " ms \n";
 
-
     // Time VECTOR * MATRIX
     init = end = 0;
-    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime;){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          fvector1[ALL] = fvector1[X]*fmatrix1[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Single Precision Vector * Matrix: " << timing << " ms \n";
+
+
+
+    // Time VECTOR NORM
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
       init = clock();
       
       sum=0;
@@ -69,11 +112,51 @@ int main(int argc, char **argv){
           sum += norm_sq(vector1[X]);
         }
       }
+      volatile double volatile_sum = sum;
       synchronize();
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Vector square sum: " << timing << " ms \n";
+
+    // Time FLOAT VECTOR NORM
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+      init = clock();
+      fsum=0;
+      for( int i=0; i<n_runs; i++){
+        onsites(ALL){
+          for(int j=0; j<N; j++){
+            fvector1[X].c[0][j]=1;
+          }
+        }
+        onsites(ALL){
+          fsum += fvector1[X].norm_sq();
+        }
+        volatile double volatile_sum = fsum;
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Single Precision vector square sum: " << timing << " ms \n";
+
+    // Time COMMUNICATION of a MATRIX
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+
+      for( int i=0; i<n_runs; i++){
+        matrix1.mark_changed(ALL);
+        matrix1.wait_move(XUP,ALL);
+      }
+      
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / 2 / (double)n_runs;
+    output0 << "Matrix nearest neighbour communication: " << timing << " ms \n";
 
     //printf("node %d, create gauge\n", mynode());
 
@@ -87,7 +170,8 @@ int main(int argc, char **argv){
     //printf("node %d, dirac_stagggered 0\n", mynode());
     dirac_stagggered(U, 0.1, vector1, vector2);
     synchronize();
-    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
         //printf("node %d, dirac_stagggered %d\n", mynode(), i);
@@ -106,7 +190,8 @@ int main(int argc, char **argv){
     init = end = 0;
     dirac_stagggered_alldim(U, 0.1, vector1, vector2);
     synchronize();
-    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
         vector1.mark_changed(ALL); // Assure communication is included
@@ -123,7 +208,8 @@ int main(int argc, char **argv){
     // Conjugate gradient step 
     init = end = 0;
     field<matrix<1,N, cmplx<double>> > r, rnew, p, Dp;
-    for(n_runs=1; (end-init) < mintime; n_runs*=2){
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
       init = clock();
 
       for( int i=0; i<n_runs; i++){

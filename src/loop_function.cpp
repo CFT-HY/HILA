@@ -13,7 +13,7 @@ std::vector<FunctionDecl *> loop_functions = {};
 // any field references.
 // Assume non-const references can be assigned to.
 
-void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
+void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund) {
 
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
@@ -46,13 +46,20 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
         if( q.isConstQualified ()) {
           //llvm::errs() << "  -Const \n";
         } else {
-          handle_field_parity_expr(E, true, false);
+          // Handle field parity expressions in a function as
+          // it was read and written to
+          handle_field_parity_expr(E, is_assignment, is_compund);
         }
       }
     }
     i++;
   }
 }
+
+void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
+  handle_function_call_in_loop(s,true,true);
+}
+
 
 void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 

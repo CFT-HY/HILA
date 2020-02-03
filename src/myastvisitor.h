@@ -163,6 +163,7 @@ public:
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
 
+  void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
   
   void handle_constructor_in_loop(Stmt * s);

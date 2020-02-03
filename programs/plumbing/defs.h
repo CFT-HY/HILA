@@ -249,7 +249,10 @@ struct is_arithmetic : std::integral_constant<
   std::is_arithmetic<T>::value ||
   std::is_same<T,Vec4d>::value ||
   std::is_same<T,Vec8f>::value ||
-  std::is_same<T,Vec8i>::value
+  std::is_same<T,Vec8i>::value ||
+  std::is_same<T,Vec8d>::value ||
+  std::is_same<T,Vec16f>::value ||
+  std::is_same<T,Vec16i>::value 
 > {};
 #endif
 

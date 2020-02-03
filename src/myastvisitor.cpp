@@ -95,14 +95,14 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 
       // Need to mark/handle the assignment method if necessary
       if( is_function_call_stmt(s) ){
-        handle_function_call_in_loop(s);
+        handle_function_call_in_loop(s, true, iscompound);
       } else if ( is_constructor_stmt(s) ){
         handle_constructor_in_loop(s);
       }
 
       return true;
     }
-  }
+  } 
 
   // TODO: this is for templated expr, I think -- should be removed (STILL USED; WHY)
   if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
@@ -268,7 +268,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
 
   lfe.is_written = is_assign;
   lfe.is_read = (is_compound || !is_assign);
-    
+  
   // next ref must have wildcard parity
   state::accept_field_parity = false;
         
