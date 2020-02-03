@@ -149,7 +149,7 @@ int main(int argc, char **argv){
 
       for( int i=0; i<n_runs; i++){
         matrix1.mark_changed(ALL);
-        matrix1.wait_move(TUP,ALL);
+        matrix1.wait_move(XUP,ALL);
       }
       
       synchronize();
