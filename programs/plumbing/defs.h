@@ -18,7 +18,7 @@
 #include <mpi.h>
 #endif
 
-#if !defined(CUDA) && !defined(AVX512)
+#if !defined(CUDA) && !defined(AVX)
 #define VANILLA
 #endif
 

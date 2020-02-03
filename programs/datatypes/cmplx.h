@@ -176,7 +176,7 @@ struct cmplx {
 
   #pragma transformer loop_function
   auto norm_sq(){
-    return re*re + im*im;;
+    return re*re + im*im;
   }
 };
 
@@ -299,9 +299,10 @@ inline cmplx<Accuracy> conj(cmplx<Accuracy> val){
 
 template<typename T> 
 #pragma transformer loop_function
-inline double norm_sq(cmplx<T> val){
+inline auto norm_sq(cmplx<T> val){
   return val.norm_sq();
 }
+
 
 #endif
 

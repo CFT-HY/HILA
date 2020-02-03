@@ -1,5 +1,5 @@
 ADDITION = -DMSIZE=5
-OPTS = -DNDIM=3 $(ADDITION)
+OPTS = -DNDIM=4 $(ADDITION)
 
 #The next line work on puhti
 #TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ 

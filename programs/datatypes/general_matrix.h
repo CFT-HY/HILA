@@ -1,8 +1,8 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 #include<type_traits>
-#include "../datatypes/cmplx.h"
 #include "operations.h"
+#include "../datatypes/cmplx.h"
 
 //forward decl 
 template <const int n, const int m, typename T>
@@ -158,9 +158,9 @@ class matrix {
   }
 
   auto norm_sq(){
-    auto result = type_norm_sq(c[0][0]);
+    auto result = c[0][0].norm_sq();
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0&&j>0) {
-      result += type_norm_sq(c[i][j]);
+      result += c[i][j].norm_sq();
     }
     return result;
   }
@@ -524,12 +524,12 @@ inline conjugateMatrix<n,m,T> conj(matrix<n,m,T> & ref){
 }
 
 template<int n, int m, typename T>
-inline double norm_sq(matrix<n,m,T> & rhs){
-    double result = 0.0;
-    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-      result += norm_sq(rhs.c[i][j]);
-    }
-    return result;
+inline auto norm_sq(matrix<n,m,T> & rhs){
+  auto result = norm_sq(rhs.c[0][0]);
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0&&j>0) {
+    result += norm_sq(rhs.c[i][j]);
   }
+  return result;
+}
 
 #endif
