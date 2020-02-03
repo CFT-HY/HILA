@@ -27,7 +27,6 @@
 #define COLORVEC_DIM 2
 #endif
 
-
 template<typename vectortype> 
 class wvector {
     vectortype [GAMMA_DIM]d;
