@@ -408,9 +408,6 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   std::string base_vector_type;
   vector_map::size_and_type(typestr, base_type, base_vector_type, vector_size);
 
-  // insert after a new line
-  SourceLocation l =
-  getSourceLocationAtEndOfLine( field_storage_decl->getSourceRange().getEnd() );
 
   // Find template parameter name (only 1 allowed)
   auto template_parameter = field_storage_decl->getTemplateParameters()->begin()[0];
@@ -461,8 +458,28 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
 
   bodyBuffer.prepend(field_element_code.str(), true);
 
+  // insert above the field template 
+  SourceLocation l = 
+  getSourceLocationAtEndOfLine( field_decl->getSourceRange().getBegin() );
+  
+  // Find line above template<> by going up 2 lines
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  bool line2 = false;
+  for (int i=0; i<10000; i++) {
+    l = l.getLocWithOffset(-1);
+    bool invalid = false;
+    const char * c = SM.getCharacterData(l,&invalid);
+    if (invalid) {
+      llvm::errs() << program_name + ": no new line above field<T>, internal error\n";
+      break;
+    }
+    if (*c == '\n' && line2) break;
+    if (*c == '\n' && !line2) line2=true;
+  }
+  l = l.getLocWithOffset(1);
 
-  writeBuf->insert(l, "\n"+bodyBuffer.dump(), true, false);
+  // Insert after the new line character
+  writeBuf->insert(l, bodyBuffer.dump()+"\n", false, true);
 
   // Mark source buffer modified
   // set_sourceloc_modified( l );
