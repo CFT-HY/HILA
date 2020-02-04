@@ -28,6 +28,7 @@ int main(int argc, char **argv){
 
     field<matrix<2,2,double> > matrices;
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
+    field<SU<4, double>> sufield;
     
     //check that fieldstruct allocated only after assignment
     assert(matrices.fs==nullptr);

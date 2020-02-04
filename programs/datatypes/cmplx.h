@@ -8,17 +8,11 @@
 #include <iostream>
 #include <math.h>
 #include <type_traits>
-
+#include "../plumbing/defs.h"
 
 template <typename T = double>
 struct cmplx {
   T re,im;
-  
-  // assignment is automatically OK, by c-standard
-  //   cmplx operator=(cmplx rhs) { 
-  //     re = rhs.re; im = rhs.im; 
-  //     return *this; 
-  //   }
   
   cmplx<T>() = default;
   
@@ -52,7 +46,6 @@ struct cmplx {
   #pragma transformer loop_function
   constexpr cmplx<T>(const A & a, const B & b): re(static_cast<T>(a)), im(static_cast<T>(b)) {}
 
-  
   ~cmplx<T>() =default;
   
   // automatic casting from cmplx<T> -> cmplx<A>
@@ -62,13 +55,6 @@ struct cmplx {
   operator cmplx<A>() const { 
     return cmplx<A>( static_cast<A>(re), static_cast<A>(im) );
   }
-
-//   // assignment from std::complex<A>  TODO: perhaps remove?
-//   template <typename A>
-//   cmplx<T> & operator=(const std::complex<A> & c) {
-//     re = static_cast<T>(c.real()); im = static_cast<T>(c.imag());
-//     return *this;
-//   }
 
   // Assignment from cmplx<A>
   template <typename A,
@@ -190,7 +176,7 @@ struct cmplx {
 
   #pragma transformer loop_function
   auto norm_sq(){
-    return re*re + im*im;;
+    return re*re + im*im;
   }
 };
 
@@ -304,6 +290,19 @@ template <typename T>
 std::ostream& operator<<(std::ostream &strm, const cmplx<T> A) {
   return strm << "(" << A.re << ", " << A.im << ")";
 }
+
+template<typename Accuracy> 
+#pragma transformer loop_function
+inline cmplx<Accuracy> conj(cmplx<Accuracy> val){
+  return val.conj();
+}
+
+template<typename T> 
+#pragma transformer loop_function
+inline auto norm_sq(cmplx<T> val){
+  return val.norm_sq();
+}
+
 
 #endif
 

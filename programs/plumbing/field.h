@@ -216,7 +216,10 @@ struct field_info{
   constexpr static int base_type_size = 1;
   constexpr static int elements = 1;
 
-  using basetype = real_t;
+  using base_type = double;
+#ifdef VECTORIZED
+  using vector_type = Vec4d;
+#endif
 };
 
 
@@ -292,22 +295,55 @@ class field_storage {
       fieldbuf = nullptr;
     }
 
+#ifndef VECTORIZED
     #pragma transformer loop_function
-    T get(const int i, const int field_alloc_size) const
+     inline T get(const int i, const int field_alloc_size) const
     {
       // There is some problem with directly assigning intrinsic vectors, at least.
       // This is a universal workaround, but could be fixed by assigning element
       // by element
-      T value;
-      std::memcpy( &value, fieldbuf+i, sizeof(T) );
+      T value = fieldbuf[i];
       return value;
     }
 
     #pragma transformer loop_function
-    void set(T value, const int i, const int field_alloc_size) 
+    inline void set(const T &value, const int i, const int field_alloc_size) 
     {
-      std::memcpy( fieldbuf+i, &value, sizeof(T) );
+      fieldbuf[i] = value;
     }
+#else
+    #pragma transformer loop_function
+    inline T get(const int i, const int field_alloc_size) const
+    {
+      // There is some problem with directly assigning intrinsic vectors, at least.
+      // This is a universal workaround, but could be fixed by assigning element
+      // by element
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      T value;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].load(vp+e*field_info<T>::vector_size);
+      }
+      //std::memcpy( &value, fieldbuf+i, sizeof(T) );
+      return value;
+    }
+
+    #pragma transformer loop_function
+    inline void set(const T value, const int i, const int field_alloc_size) 
+    {
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].store((vp + e*field_info<T>::vector_size));
+      }
+      //std::memcpy( fieldbuf+i, &value, sizeof(T) );
+    }
+
+#endif
 };
 
 
@@ -380,14 +416,14 @@ private:
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
-      auto get(const int i) const {
+      inline auto get(const int i) const {
         return payload.get( i, lattice->field_alloc_size() );
       }
 
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
       template<typename A>
-      void set(A value, const int i) {
+      inline void set(const A & value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
       }
 
@@ -534,11 +570,11 @@ public:
   element<T>& operator[] (const parity_plus_direction p) const;
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  auto get_value_at(int i) const { return this->fs->get(i); }
+  inline auto get_value_at(int i) const { return this->fs->get(i); }
 
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
   template<typename A>
-  void set_value_at(A value, int i) { this->fs->set( value, i); }
+  inline void set_value_at(const A & value, int i) { this->fs->set( value, i); }
 
   // fetch the element at this loc
   // T get(int i) const;
@@ -965,12 +1001,24 @@ template<typename T>
 void field<T>::field_struct::set_local_boundary_elements(parity par){
   constexpr int vector_size = field_info<T>::vector_size;
   constexpr int elements = field_info<T>::elements;
+  using vectortype = typename field_info<T>::vector_type;
+  using basetype = typename field_info<T>::base_type;
   // Loop over the boundary sites
   for( vectorized_lattice_struct::halo_site hs: lattice->halo_sites )
-    if(par == ALL || par == hs.par ) {
+  if(par == ALL || par == hs.par ) {
+    int *perm = lattice->boundary_permutation[hs.dir];
+    //vectorized::permute<vector_size>(lattice->boundary_permutation[hs.dir], &temp, elements);
     auto temp = get(hs.nb_index);
-    vectorized::permute<vector_size>(lattice->boundary_permutation[hs.dir], &temp, elements);
-    set(temp, lattice->sites + hs.halo_index);
+    auto dest = payload.fieldbuf + lattice->sites + hs.halo_index;
+    vectortype * e = (vectortype*) &temp;
+    basetype * d = (basetype*) dest;
+    for( int v=0; v<elements; v++ ){
+      basetype t1[vector_size], t2[vector_size];
+      e[v].store(&(t1[0]));
+      for( int i=0; i<vector_size; i++ )
+         d[v*vector_size+i] =  t1[perm[i]];
+    }
+    //set(temp, lattice->sites + hs.halo_index);
   }
 }
 

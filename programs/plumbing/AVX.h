@@ -40,6 +40,33 @@ inline double reduce_sum(Vec8i v){
   return sum;
 }
 
+inline double reduce_sum(Vec8d v){
+  double sum = 0;
+  double store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum += store[i];
+  return sum;
+}
+
+inline double reduce_sum(Vec16f v){
+  double sum = 0;
+  float store[16];
+  v.store(&(store[0]));
+  for(int i=0; i<16; i++)
+    sum += store[i];
+  return sum;
+}
+
+inline double reduce_sum(Vec16i v){
+  double sum = 0;
+  int store[16];
+  v.store(&(store[0]));
+  for(int i=0; i<16; i++)
+    sum += store[i];
+  return sum;
+}
+
 inline double reduce_prod(Vec4d v){
   double sum = 1;
   double store[4];
@@ -67,8 +94,47 @@ inline double reduce_prod(Vec8i v){
   return sum;
 }
 
+inline double reduce_prod(Vec8d v){
+  double sum = 1;
+  double store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum *= store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec16f v){
+  double sum = 0;
+  float store[16];
+  v.store(&(store[0]));
+  for(int i=0; i<16; i++)
+    sum *= store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec16i v){
+  double sum = 0;
+  int store[16];
+  v.store(&(store[0]));
+  for(int i=0; i<16; i++)
+    sum *= store[i];
+  return sum;
+}
+
 
 /// Define modulo operator for integer vector
+inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
+{
+  Vec16i r;
+  int tvec1[16], tvec2[16];
+  lhs.store(&(tvec1[0]));
+  for(int i=0; i<16; i++)
+    tvec2[i] = tvec1[i] % rhs;
+  r.load(&(tvec2[0]));
+  return r;
+}
+
+
 inline Vec8i operator%( const Vec8i &lhs, const int &rhs)
 {
   Vec8i r;
@@ -113,39 +179,26 @@ inline Vec8f hila_random_Vec8f(){
 }
 
 
-
-namespace vectorized
-{
-  template<int vector_len>
-  inline void permute(int *perm, void * element, int n_elements){
-    assert(false && "permute not implemented for vector size");
+inline Vec8d hila_random_Vec8d(){
+  Vec8d r;
+  double tvec[8];
+  for(int i=0; i<8; i++){
+    tvec[i] = mersenne();
   }
-
-  template<>
-  inline void permute<4>(int *perm, void * element, int n_elements){
-    Vec4d * e = (Vec4d *) element;
-    for( int v=0; v<n_elements; v++ ){
-      double t1[4], t2[4];
-      e[v].store(&(t1[0]));
-      for( int i=0; i<4; i++ )
-        t2[i] =  t1[perm[i]];
-      e[v].load(&(t2[0]));
-    }
-  }
-
-  template<>
-  inline void permute<8>(int *perm, void * element, int n_elements){
-    Vec8f * e = (Vec8f *) element;
-    for( int v=0; v<n_elements; v++ ){
-      float t1[8], t2[8];
-      e[v].store(&(t1[0]));
-      for( int i=0; i<8; i++ )
-        t2[i] =  t1[perm[i]];
-      e[v].load(&(t2[0]));
-    }
-  }
-
+  r.load(&(tvec[0]));
+  return r;
 }
+
+inline Vec16f hila_random_Vec16f(){
+  Vec16f r;
+  float tvec[16];
+  for(int i=0; i<16; i++){
+    tvec[i] = mersenne();
+  }
+  r.load(&(tvec[0]));
+  return r;
+}
+
 
 
 #endif
