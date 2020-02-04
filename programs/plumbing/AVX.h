@@ -8,6 +8,8 @@
 #include "../vectorclass/vectormath_trig.h"
 #include "../vectorclass/vectormath_hyp.h"
 
+#include "../plumbing/memory.h"
+
 
 #define VECTORIZED
 constexpr static int max_vector_size = 8;
@@ -198,6 +200,77 @@ inline Vec16f hila_random_Vec16f(){
   r.load(&(tvec[0]));
   return r;
 }
+
+
+
+
+
+
+
+
+/// Utility for returning mapping a field element type into 
+/// a corresponding vector. This is not used directly as a type
+template <typename T>
+struct field_info{
+  constexpr static int vector_size = 1;
+  constexpr static int base_type_size = 1;
+  constexpr static int elements = 1;
+
+  using base_type = double;
+  using vector_type = Vec4d;
+};
+
+
+
+template <typename T>
+class field_storage {
+  public:
+
+    // Array of structures implementation
+    T * fieldbuf = NULL;
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
+      #pragma acc enter data create(fieldbuf)
+    }
+
+    void free_field() {
+      #pragma acc exit data delete(fieldbuf)
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    #pragma transformer loop_function
+    inline T get(const int i, const int field_alloc_size) const
+    {
+      // There is some problem with directly assigning intrinsic vectors, at least.
+      // This is a universal workaround, but could be fixed by assigning element
+      // by element
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      T value;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].load(vp+e*field_info<T>::vector_size);
+      }
+      //std::memcpy( &value, fieldbuf+i, sizeof(T) );
+      return value;
+    }
+
+    #pragma transformer loop_function
+    inline void set(const T value, const int i, const int field_alloc_size) 
+    {
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].store((vp + e*field_info<T>::vector_size));
+      }
+      //std::memcpy( fieldbuf+i, &value, sizeof(T) );
+    }
+};
 
 
 
