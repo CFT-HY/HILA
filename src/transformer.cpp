@@ -541,15 +541,12 @@ private:
 
 void get_target_struct(codetype & target) {
   if (cmdline::kernel) {
-    target.kernelize = true;
     target.CUDA = false;
     target.flag_loop_function = false;
   } else if (cmdline::CUDA) {
-    target.kernelize = true;
     target.CUDA = true;
     target.flag_loop_function = true;
   } else if (cmdline::openacc) {
-    target.kernelize = false;
     target.openacc = true;
     target.flag_loop_function = false;
   } else if (cmdline::AVX) {
@@ -569,7 +566,6 @@ void get_target_struct(codetype & target) {
     target.vector_size = cmdline::VECTORIZE;
     target.flag_loop_function = false;
   } else {
-    target.kernelize = false;
     target.openacc = false;
     target.flag_loop_function = false;
   }

@@ -30,7 +30,6 @@ enum class parity { none, even, odd, all, x };
 
 // variables describing the type of code to be generated
 struct codetype {
-  bool kernelize=false;
   bool CUDA=false;
   bool VECTORIZE=false;
   int vector_size=1;
