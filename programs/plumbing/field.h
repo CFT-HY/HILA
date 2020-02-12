@@ -294,15 +294,15 @@ private:
 
       /// Gather boundary elements for communication
       void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-        payload.gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par);
+        payload.gather_comm_elements(buffer, to_node, par);
       };
       /// Place boundary elements from neighbour
       void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-        payload.scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par);
+        payload.gather_comm_elements(buffer, from_node, par);
       };
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(parity par){
-        payload.set_local_boundary_elements(parity par);
+        payload.set_local_boundary_elements(par);
       };
   };
 
@@ -638,48 +638,6 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
   tmp[ALL] = lhs[X] / rhs;
   return tmp;
 }
-
-// template <typename T>
-// field<T> operator+( const double lhs, const field<T> &rhs) {
-//   field<T> tmp;
-//   tmp[ALL] = lhs + rhs[X];
-//   return tmp;
-// }
-
-// template <typename T>
-// field<T> operator+( const field<T> &lhs, const double rhs) {
-  
-//   return lhs;
-// }
-
-//field<T> operator*( const field<T> &lhs, const field<T> &rhs) {
-//  return lhs;
-//}
-
-
-// template <typename T>
-// class reduction {
-// private:
-//   field_field_element<T> value;
-  
-// public:
-//   void sum(const field_field_element<T> & rhs) { value += rhs; }
-//   void operator+=(const field_field_element<T> & rhs) { value += rhs; }
-//   void product(const field_field_element<T> & rhs) { value *= rhs; }
-//   void operator*=(const field_field_element<T> & rhs) { value *= rhs; }
-
-//   // TODO - short vectors!
-//   void max(const field_field_element<T> & rhs) { if (rhs > value) value = rhs; }
-//   void min(const field_field_element<T> & rhs) { if (rhs < value) value = rhs; }
-
-//   // TODO - short vectors!
-//   T get() { return value.get_value(); }
-
-//   // implicit conversion
-//   operator T() { return get(); }
-  
-// };
-
 
 
 

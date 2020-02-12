@@ -104,11 +104,11 @@ class field_storage {
 /// Vectorized implementation of fetching boundary elements
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
-void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
   for (int j=0; j<to_node.n_sites(par); j++) {
     int index = to_node.site_index(j, par);
     int v_index = lattice->vector_index[index];
-    auto element = get(lattice->lattice_index[index]);
+    auto element = get(lattice->lattice_index[index], lattice->field_alloc_size());
     auto pvector = (typename field_info<T>::vector_type*) (&element);
 
     for( int e=0; e<field_info<T>::elements; e++ ){
@@ -123,11 +123,11 @@ void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct:
 /// Vectorized implementation of setting boundary elements
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
-void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+void field_storage<T>::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
   for (int j=0; j<from_node.n_sites(par); j++) {
     int index = from_node.offset(par)+j;
     int v_index = lattice->vector_index[index];
-    auto element = get(lattice->lattice_index[index]);
+    auto element = get(lattice->lattice_index[index], lattice->field_alloc_size());
     auto pvector = (typename field_info<T>::vector_type*) (&element);
 
     for( int e=0; e<field_info<T>::elements; e++ ){
@@ -143,7 +143,7 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 #endif
 
 template<typename T>
-void field<T>::field_struct::set_local_boundary_elements(parity par){
+void field_storage<T>::set_local_boundary_elements(parity par){
   constexpr int vector_size = field_info<T>::vector_size;
   constexpr int elements = field_info<T>::elements;
   using vectortype = typename field_info<T>::vector_type;
@@ -187,7 +187,7 @@ __global__ void gather_comm_elements_kernel( field_storage<T> field, char *buffe
 /// CUDA implementation of gather_comm_elements without CUDA aware MPI
 /// Gathers sites at the boundary that need to be communicated to neighbours
 template<typename T>
-void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
   int *site_index, *d_site_index;
   char * d_buffer;
   int sites = to_node.n_sites(par);
@@ -204,7 +204,7 @@ void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct:
   // Call the kernel to build the list of elements
   cudaMalloc( (void **)&(d_buffer), sites*sizeof(T));
   int N_blocks = sites/N_threads + 1; 
-  gather_comm_elements_kernel<<< N_blocks, N_threads >>>( payload, d_buffer, d_site_index, sites, lattice->field_alloc_size() );
+  gather_comm_elements_kernel<<< N_blocks, N_threads >>>(*this, d_buffer, d_site_index, sites, lattice->field_alloc_size() );
   
   // Copy the result to the host
   cudaMemcpy( buffer, d_buffer, sites*sizeof(T), cudaMemcpyDeviceToHost );
@@ -228,7 +228,7 @@ __global__ void scatter_comm_elements_kernel( field_storage<T> field, char *buff
 /// CUDA implementation of gather_comm_elements without CUDA aware MPI
 /// Sets the values the neighbour elements from the communication buffer 
 template<typename T>
-void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+void field_storage<T>::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
   char * d_buffer;
   int sites = from_node.n_sites(par);
 
@@ -238,13 +238,13 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 
   // Call the kernel to place the elements 
   int N_blocks = sites/N_threads + 1; 
-  scatter_comm_elements_kernel<<< N_blocks, N_threads >>>( payload, d_buffer, from_node.offset(par), sites, lattice->field_alloc_size() );
+  scatter_comm_elements_kernel<<< N_blocks, N_threads >>>( *this, d_buffer, from_node.offset(par), sites, lattice->field_alloc_size() );
 
   cudaFree(d_buffer);
 }
 
 template<typename T>
-void field<T>::field_struct::set_local_boundary_elements(parity par){}
+void field_storage<T>::set_local_boundary_elements(parity par){}
 
 
 #else
@@ -253,16 +253,16 @@ void field<T>::field_struct::set_local_boundary_elements(parity par){}
 /// The standard (Non-CUDA) implementation of gather_comm_elements
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
-void field<T>::field_struct::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
   for (int j=0; j<to_node.n_sites(par); j++) {
-    T element = get(to_node.site_index(j, par));
+    T element = get(to_node.site_index(j, par), lattice->field_alloc_size());
     std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
   }
 }
 /// The standard (Non-CUDA) implementation of scatter_comm_elements
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
-void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+void field_storage<T>::scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
   for (int j=0; j<from_node.n_sites(par); j++) {
     T element = *((T*) ( buffer + j*sizeof(T) ));
     set(element, from_node.offset(par)+j);
@@ -270,10 +270,10 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 }
 
 template<typename T>
-void field<T>::field_struct::set_local_boundary_elements(parity par){}
+void field_storage<T>::set_local_boundary_elements(parity par){}
 
 
 #endif
 
 
-#endif
+#endif //field storage
