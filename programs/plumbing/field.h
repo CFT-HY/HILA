@@ -990,7 +990,7 @@ void field<T>::field_struct::set_local_boundary_elements(parity par){
 
 
 #elif CUDA
-
+#ifndef TRANSFORMER // No need to touch these and transformer does not like cuda
 
 /* CUDA implementations */
 
@@ -1066,6 +1066,7 @@ void field<T>::field_struct::scatter_comm_elements(char * buffer, lattice_struct
 template<typename T>
 void field<T>::field_struct::set_local_boundary_elements(parity par){}
 
+#endif
 
 #else
 
