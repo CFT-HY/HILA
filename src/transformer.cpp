@@ -147,32 +147,24 @@ codetype target;
 void get_target_struct(codetype & target) {
   if (cmdline::kernel) {
     target.CUDA = false;
-    target.flag_loop_function = false;
   } else if (cmdline::CUDA) {
     target.CUDA = true;
-    target.flag_loop_function = true;
   } else if (cmdline::openacc) {
     target.openacc = true;
-    target.flag_loop_function = false;
   } else if (cmdline::AVX) {
     target.VECTORIZE = true;
     target.vector_size = 32;
-    target.flag_loop_function = false;
   } else if (cmdline::AVX512) {
     target.VECTORIZE = true;
     target.vector_size = 64;
-    target.flag_loop_function = false;
   } else if (cmdline::SSE) {
     target.VECTORIZE = true;
     target.vector_size = 16;
-    target.flag_loop_function = false;
   } else if (cmdline::VECTORIZE) {
     target.VECTORIZE = true;
     target.vector_size = cmdline::VECTORIZE;
-    target.flag_loop_function = false;
   } else {
     target.openacc = false;
-    target.flag_loop_function = false;
   }
 }
 

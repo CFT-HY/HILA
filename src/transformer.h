@@ -34,7 +34,6 @@ struct codetype {
   bool VECTORIZE=false;
   int vector_size=1;
   bool openacc=false;
-  bool flag_loop_function=false;
 };
 
 // collection of variables holding the state of parsing - definition in transformer.cpp
