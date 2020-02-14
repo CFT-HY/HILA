@@ -147,7 +147,7 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   }
   if (handle_decl) {
     loop_functions.push_back(fd);
-    handle_loop_function(fd);
+    backend_handle_loop_function(fd);
   }
   return handle_decl;
 }
