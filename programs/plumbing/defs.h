@@ -10,7 +10,6 @@
 
 #ifdef AVX
 #include "../plumbing/AVX.h"
-#define VECTORIZED
 #endif
 
 
@@ -18,7 +17,7 @@
 #include <mpi.h>
 #endif
 
-#if !defined(CUDA) && !defined(AVX512)
+#if !defined(CUDA) && !defined(AVX)
 #define VANILLA
 #endif
 

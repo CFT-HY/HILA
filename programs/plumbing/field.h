@@ -204,12 +204,12 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 #endif
 
 
-
 template <typename T>
 using element = T;
 
 /// Utility for returning mapping a field element type into 
 /// a corresponding vector. This is not used directly as a type
+#ifndef VECTORIZED
 template <typename T>
 struct field_info{
   constexpr static int vector_size = 1;
@@ -217,11 +217,8 @@ struct field_info{
   constexpr static int elements = 1;
 
   using base_type = double;
-#ifdef VECTORIZED
-  using vector_type = Vec4d;
-#endif
 };
-
+#endif
 
 
 
@@ -231,6 +228,8 @@ struct field_info{
 // Pointer to field data and accessors. Only this is passed to the
 // CUDA kernels and other accelerators and it only contains a minimal
 // amount of data.
+#ifndef VECTORIZED
+
 #ifdef layout_SOA
 template <typename T>
 class field_storage {
@@ -295,7 +294,6 @@ class field_storage {
       fieldbuf = nullptr;
     }
 
-#ifndef VECTORIZED
     #pragma transformer loop_function
      inline T get(const int i, const int field_alloc_size) const
     {
@@ -311,42 +309,9 @@ class field_storage {
     {
       fieldbuf[i] = value;
     }
-#else
-    #pragma transformer loop_function
-    T get(const int i, const int field_alloc_size) const
-    {
-      // There is some problem with directly assigning intrinsic vectors, at least.
-      // This is a universal workaround, but could be fixed by assigning element
-      // by element
-      using vectortype = typename field_info<T>::vector_type;
-      using basetype = typename field_info<T>::base_type;
-      T value;
-      basetype *vp = (basetype *) (fieldbuf + i);
-      vectortype *valuep = (vectortype *)(&value);
-      for( int e=0; e<field_info<T>::elements; e++ ){
-        valuep[e].load(vp+e*field_info<T>::vector_size);
-      }
-      //std::memcpy( &value, fieldbuf+i, sizeof(T) );
-      return value;
-    }
-
-    #pragma transformer loop_function
-    void set(const T value, const int i, const int field_alloc_size) 
-    {
-      using vectortype = typename field_info<T>::vector_type;
-      using basetype = typename field_info<T>::base_type;
-      basetype *vp = (basetype *) (fieldbuf + i);
-      vectortype *valuep = (vectortype *)(&value);
-      for( int e=0; e<field_info<T>::elements; e++ ){
-        valuep[e].store((vp + e*field_info<T>::vector_size));
-      }
-      //std::memcpy( fieldbuf+i, &value, sizeof(T) );
-    }
-
-#endif
 };
 
-
+#endif
 #endif
 
 
@@ -512,7 +477,6 @@ public:
   void mark_changed(const parity p) {
     if (fs == nullptr) allocate();
     else {
-      char pc = static_cast<char>(p);
       assert(p == EVEN || p == ODD || p == ALL);
       unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
       for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
@@ -522,7 +486,6 @@ public:
 
   void mark_changed(const parity p) const {
     assert(is_allocated());
-    char pc = static_cast<char>(p);
     assert(p == EVEN || p == ODD || p == ALL);
     unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
     for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
@@ -531,7 +494,6 @@ public:
 
   /// Mark the field parity fetched from direction
   void mark_fetched(int dir, const parity p) const {
-    char pc = static_cast<char>(p);
     assert(p == EVEN || p == ODD || p == ALL);
     unsigned up = 0x3 & (static_cast<unsigned>(opp_parity(p)));
     fs->is_fetched[dir] |= up;

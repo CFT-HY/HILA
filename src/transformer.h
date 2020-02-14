@@ -28,30 +28,17 @@ const std::string default_output_suffix("cpt");
 enum class reduction { NONE, SUM, PRODUCT };
 enum class parity { none, even, odd, all, x };
 
+
+/// The following section contains command line options and functions
+/// for implementing a backend
+
 // variables describing the type of code to be generated
 struct codetype {
-  bool kernelize=false;
   bool CUDA=false;
   bool VECTORIZE=false;
   int vector_size=1;
   bool openacc=false;
-  bool flag_loop_function=false;
 };
-
-// collection of variables holding the state of parsing - definition in transformer.cpp
-namespace state {
-  extern unsigned skip_children; //= 0;
-  extern unsigned scope_level; // = 0;
-  extern bool in_loop_body; // = false;
-  extern bool accept_field_parity; // = false;
-  extern bool loop_found; // = false;
-  extern bool dump_ast_next; // = false;
-  extern bool compile_errors_occurred; // = false;
-  extern bool check_loop; // = false;
-  extern bool loop_function_next; // = false;
-};
-
-extern llvm::cl::OptionCategory TransformerCat;
 
 namespace cmdline {
   // command line options
@@ -75,6 +62,23 @@ namespace cmdline {
   extern llvm::cl::opt<bool> func_attribute;
   extern llvm::cl::opt<int> VECTORIZE;
 };
+
+
+// collection of variables holding the state of parsing - definition in transformer.cpp
+namespace state {
+  extern unsigned skip_children; //= 0;
+  extern unsigned scope_level; // = 0;
+  extern bool in_loop_body; // = false;
+  extern bool accept_field_parity; // = false;
+  extern bool loop_found; // = false;
+  extern bool dump_ast_next; // = false;
+  extern bool compile_errors_occurred; // = false;
+  extern bool check_loop; // = false;
+  extern bool loop_function_next; // = false;
+};
+
+extern llvm::cl::OptionCategory TransformerCat;
+
 
 struct loop_parity_struct {
   const Expr * expr;

@@ -24,7 +24,7 @@ void free_field_mem(void * p) {
 }
 
 
-#elif VECTORIZED
+#elif defined(VECTORIZED)
 
 
 #ifdef AVX512
