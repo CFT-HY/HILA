@@ -138,7 +138,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   }
 
   // Place the content of the loop
-  backend_generate_code(S,semi_at_end,loopBuf);
+  code << backend_generate_code(S,semi_at_end,loopBuf);
   
   
   // Check reduction variables
