@@ -145,9 +145,7 @@ codetype target;
 
 /// Check command line arguments and set appropriate flags in target
 void get_target_struct(codetype & target) {
-  if (cmdline::kernel) {
-    target.CUDA = false;
-  } else if (cmdline::CUDA) {
+  if (cmdline::CUDA) {
     target.CUDA = true;
   } else if (cmdline::openacc) {
     target.openacc = true;
@@ -163,8 +161,6 @@ void get_target_struct(codetype & target) {
   } else if (cmdline::VECTORIZE) {
     target.VECTORIZE = true;
     target.vector_size = cmdline::VECTORIZE;
-  } else {
-    target.openacc = false;
   }
 }
 
