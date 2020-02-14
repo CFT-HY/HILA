@@ -194,7 +194,7 @@ std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semi_at_end, srcBu
   return code.str();
 }
 
-/// Call the backend function for generatign the field storage type
+/// Call the backend function for generating the field storage type
 void MyASTVisitor::backend_generate_field_storage_type(std::string typestr){
   // check that field_storage_type has been found
   if (field_storage_decl == nullptr) {
