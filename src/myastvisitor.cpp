@@ -645,7 +645,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
  
       // write storage_type specialization
-      generate_field_storage_type(typestr);
+      backend_generate_field_storage_type(typestr);
     }
     
   }

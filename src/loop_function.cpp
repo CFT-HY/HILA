@@ -99,17 +99,6 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 }
 
 
-void MyASTVisitor::handle_loop_function(FunctionDecl *fd) {
-  // we should mark the function, but it is not necessarily in the
-  // main file buffer
-  if (target.CUDA) {
-    handle_loop_function_cuda(fd);
-  } else if (target.openacc) {
-    handle_loop_function_openacc(fd);
-  } else if (target.VECTORIZE) {
-    handle_loop_function_avx(fd);
-  }
-}
 
 bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
   // If the function is in a list of defined loop functions, add it to a list
