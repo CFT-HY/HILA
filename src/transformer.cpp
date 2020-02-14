@@ -143,6 +143,40 @@ loop_parity_struct loop_parity;
 codetype target;
 
 
+/// Check command line arguments and set appropriate flags in target
+void get_target_struct(codetype & target) {
+  if (cmdline::kernel) {
+    target.CUDA = false;
+    target.flag_loop_function = false;
+  } else if (cmdline::CUDA) {
+    target.CUDA = true;
+    target.flag_loop_function = true;
+  } else if (cmdline::openacc) {
+    target.openacc = true;
+    target.flag_loop_function = false;
+  } else if (cmdline::AVX) {
+    target.VECTORIZE = true;
+    target.vector_size = 32;
+    target.flag_loop_function = false;
+  } else if (cmdline::AVX512) {
+    target.VECTORIZE = true;
+    target.vector_size = 64;
+    target.flag_loop_function = false;
+  } else if (cmdline::SSE) {
+    target.VECTORIZE = true;
+    target.vector_size = 16;
+    target.flag_loop_function = false;
+  } else if (cmdline::VECTORIZE) {
+    target.VECTORIZE = true;
+    target.vector_size = cmdline::VECTORIZE;
+    target.flag_loop_function = false;
+  } else {
+    target.openacc = false;
+    target.flag_loop_function = false;
+  }
+}
+
+
 
 /// Call the backend function for handling loop functions
 void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
@@ -590,40 +624,6 @@ private:
   // ASTContext  TheContext;
 };
 
-
-void get_target_struct(codetype & target) {
-  if (cmdline::kernel) {
-    target.CUDA = false;
-    target.flag_loop_function = false;
-  } else if (cmdline::CUDA) {
-    target.CUDA = true;
-    target.flag_loop_function = true;
-  } else if (cmdline::openacc) {
-    target.openacc = true;
-    target.flag_loop_function = false;
-  } else if (cmdline::AVX) {
-    target.VECTORIZE = true;
-    target.vector_size = 32;
-    target.flag_loop_function = false;
-  } else if (cmdline::AVX512) {
-    target.VECTORIZE = true;
-    target.vector_size = 64;
-    target.flag_loop_function = false;
-  } else if (cmdline::SSE) {
-    target.VECTORIZE = true;
-    target.vector_size = 16;
-    target.flag_loop_function = false;
-  } else if (cmdline::VECTORIZE) {
-    target.VECTORIZE = true;
-    target.vector_size = cmdline::VECTORIZE;
-    target.flag_loop_function = false;
-  } else {
-    target.openacc = false;
-    target.flag_loop_function = false;
-  }
-
-  if (cmdline::func_attribute) target.flag_loop_function = true;
-}
 
 
 
