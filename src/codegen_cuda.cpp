@@ -134,6 +134,17 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
     }
   }
 
+  // In kernelized code we need to handle array expressions as well
+  for ( array_ref & ar : array_ref_list ) {
+    // Rename the expression
+    ar.new_name = "sv__" + std::to_string(i) + "_";
+    i++;
+    kernel << ", " << ar.type << " " << ar.new_name ;
+    code << ", " << get_stmt_str(ar.ref);
+    loopBuf.replace( ar.ref, ar.new_name );
+  }
+  
+
   // change the references to field expressions in the body
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );

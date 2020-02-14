@@ -180,6 +180,12 @@ struct var_decl {
   int scope;
 };
 
+struct array_ref {
+  ArraySubscriptExpr *ref;
+  std::string new_name;
+  std::string type;
+};
+
 
 struct special_function_call {
   Expr * fullExpr;
@@ -214,6 +220,7 @@ extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;
 extern std::list<var_info> var_info_list;
 extern std::list<var_decl> var_decl_list;
+extern std::list<array_ref> array_ref_list;
 extern std::list<special_function_call> special_function_call_list;
 extern std::vector<Expr *> remove_expr_list;
 

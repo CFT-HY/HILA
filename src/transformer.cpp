@@ -36,6 +36,7 @@ std::list<field_ref> field_ref_list = {};
 std::list<field_info> field_info_list = {};
 std::list<var_info> var_info_list = {};
 std::list<var_decl> var_decl_list = {};
+std::list<array_ref> array_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::vector<Expr *> remove_expr_list = {};
 
