@@ -26,23 +26,6 @@ const parity_plus_direction operator-(const parity par, const direction d);
 // This is a marker for transformer -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)
 
-//class parity {
-//  parity() {}
-//  parity( parity &par ) { p = par.p; }
-//  parity( parity_enum pare ) { p = pare; }
-//  
-//  parity & operator=(const parity &par) { p = par.p; return *this; }
-//  parity & operator=(const parity_enum par) { p = par; return *this; }
-//  const parity_plus_direction operator+(const direction &d) { parity_plus_direction pd; return(pd); }
-//  const parity_plus_direction operator-(const direction &d) { parity_plus_direction pd; return(pd); }
-//};
-
-// #define onallsites(i) for (int i=0; i<N; i++) 
-
-
-// fwd definition
-// template <typename T> class field;
-
 #if 0
 // field_element class: virtual class, no storage allocated,
 // wiped out by the transformer
@@ -79,16 +62,6 @@ class field_element  {
     v *= rhs.v; return *this;}
   field_element<T>& operator/= (const field_element<T>& rhs) {
     v /= rhs.v; return *this;}
-
-  //field_element<T>& operator+= (const T rhs) {
-  //  v += rhs; return *this;}
-  //field_element<T>& operator-= (const T rhs) {
-  //  v -= rhs; return *this;}
-  //field_element<T>& operator*= (const T rhs) {
-  //  v *= rhs; return *this;}
-  //field_element<T>& operator/= (const T rhs) {
-  //  v /= rhs; return *this;}
-
   field_element<T>& operator+= (const double rhs) {
     v += rhs; return *this;}
   field_element<T>& operator-= (const double rhs) {
@@ -117,12 +90,6 @@ class field_element  {
 template <typename T>
 field_element<T> operator+( const field_element<T> &lhs, const field_element<T> &rhs);
 
-//template <typename T>
-//field_element<T> operator+( const T &lhs, const field_element<T> &rhs);
-
-//template <typename T>
-//field_element<T> operator+( const field_element<T> &lhs,  const T &rhs);
-
 template <typename T,typename L>
 field_element<T> operator+( const L &lhs, const field_element<T> &rhs);
 
@@ -139,13 +106,6 @@ field_element<T> operator-( const L &lhs, const field_element<T> &rhs);
 template <typename T,typename R>
 field_element<T> operator-( const field_element<T> &lhs,  const R &rhs);
 
-// template <typename T>
-// field_element<T> operator-( double lhs, const field_element<T> &rhs);
-
-// template <typename T>
-// field_element<T> operator-( const field_element<T> &lhs, double rhs);
-
-// *
 template <typename T>
 field_element<T> operator*( const field_element<T> &lhs, const field_element<T> &rhs);
 
@@ -155,14 +115,6 @@ field_element<T> operator*( const L &lhs, const field_element<T> &rhs);
 template <typename T,typename R>
 field_element<T> operator*( const field_element<T> &lhs,  const R &rhs);
 
-// template <typename T>
-// field_element<T> operator*( double lhs, const field_element<T> &rhs);
-
-// template <typename T>
-// field_element<T> operator*( const field_element<T> &lhs, double rhs);
-
-
-// /    Division is not implemented for all types, but define generically here
 template <typename T>
 field_element<T> operator/( const field_element<T> &lhs, const field_element<T> &rhs);
 
@@ -171,11 +123,6 @@ field_element<T> operator/( const L &lhs, const field_element<T> &rhs);
 
 template <typename T,typename R>
 field_element<T> operator/( const field_element<T> &lhs,  const R &rhs);
-
-// template <typename T>
-// field_element<T> operator/( const field_element<T> &lhs, double rhs);
-
-
 
 // a function
 template <typename T>
@@ -232,8 +179,7 @@ using t_mul  = decltype(std::declval<A>() * std::declval<B>());
 template<typename A, typename B>
 using t_div  = decltype(std::declval<A>() / std::declval<B>());
 
-// ** class field
-
+// field class 
 template <typename T>
 class field {
 private:
@@ -285,8 +231,6 @@ private:
         return payload.get( i, lattice->field_alloc_size() );
       }
 
-      /// Getter for an individual elements. Will not work in CUDA host code,
-      /// but must be defined
       template<typename A>
       inline void set(const A & value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
@@ -296,10 +240,12 @@ private:
       void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
         payload.gather_comm_elements(buffer, to_node, par);
       };
+
       /// Place boundary elements from neighbour
-      void scatter_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-        payload.gather_comm_elements(buffer, from_node, par);
+      void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+        payload.place_comm_elements(buffer, from_node, par);
       };
+      
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(parity par){
         payload.set_local_boundary_elements(par);
@@ -751,7 +697,7 @@ void field<T>::wait_move(direction d, parity p) const {
       MPI_Wait(&receive_request[n], &status);
       //printf("node %d, received tag %d\n", mynode(), tag);
 
-      fs->scatter_comm_elements(receive_buffer[n], from_node, par);
+      fs->place_comm_elements(receive_buffer[n], from_node, par);
       n++;
     }
 
