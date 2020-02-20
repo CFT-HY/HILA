@@ -27,11 +27,11 @@ class field_storage {
     #pragma transformer loop_function
     inline void set(const T &value, unsigned int i);
 
-    virtual void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const;
+    void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const;
     /// Place boundary elements from neighbour
-    virtual void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par);
+    void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par);
     /// Place boundary elements from local lattice (used in vectorized version)
-    virtual void set_local_boundary_elements(parity par);
+    void set_local_boundary_elements(parity par);
 
 };
 
