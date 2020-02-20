@@ -28,7 +28,7 @@ inline void checkLatticeSetup(){
         //check that neighbor arrays are allocated
 		assert(lattice->neighb[dir]!=nullptr);
         #ifdef CUDA
-        assert(lattice->device_info.d_neighb[dir]!=nullptr);
+        assert(lattice->backend_lattice->d_neighb[dir]!=nullptr);
         #endif
 	}
     for(int dir = 0; dir < NDIM; dir++){

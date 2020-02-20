@@ -37,4 +37,4 @@ clean:
 	rm -rf *.cpt *.o
 
 cleanall:
-	rm -rf *.o *.exe
+	rm -rf *.cpt *.o *.exe

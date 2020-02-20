@@ -13,7 +13,7 @@ export fails=0
 export num_tests=0
 
 if [ "$1" = "CUDA" ]; then
-    export MAKEFILE=Makefile_gpu
+    export MAKEFILE=Makefile_cuda
 elif [ "$1" = "AVX" ]; then
     export MAKEFILE=Makefile_avx
 else
@@ -41,7 +41,7 @@ transform_c(){
 }
 
 compile_c(){
-    make -f ${MAKEFILE} -s ${1}.exe 2>/dev/null
+    make -f ${MAKEFILE} -j -s ${1}.exe 2>/dev/null
     check compile
 }
 

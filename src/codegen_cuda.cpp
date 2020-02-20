@@ -86,8 +86,8 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
   kernel << "//----------\n";
 
   // Generate the function definition and call
-  kernel << "__global__ void " << kernel_name << "( device_lattice_info d_lattice, ";
-  code << "device_lattice_info lattice_info = lattice->device_info;\n";
+  kernel << "__global__ void " << kernel_name << "( backend_lattice_struct d_lattice, ";
+  code << "backend_lattice_struct lattice_info = *(lattice->backend_lattice);\n";
   code << "lattice_info.loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop << ");\n";
   code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin)/N_threads + 1;\n";
@@ -167,7 +167,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
   // Begin the function
   kernel << ")\n{\n";
 
-  kernel << "device_lattice_info *loop_lattice = &d_lattice; \n";
+  kernel << "backend_lattice_struct *loop_lattice = &d_lattice; \n";
   /* Standard boilerplate in CUDA kernels: calculate site index */
   kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
          << " + loop_lattice->loop_begin; \n";

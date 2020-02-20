@@ -468,10 +468,9 @@ void lattice_struct::create_std_gathers()
   /* Finally, set the site to the final offset (better be right!) */
   this_node.field_alloc_size = c_offset;
 
-  #ifdef CUDA
-  /* Setup lattice info on device */
-  setup_lattice_device_info();
-  #endif
+  /* Setup backend-specific lattice info if necessary */
+  backend_lattice = new backend_lattice_struct;
+  backend_lattice->setup(*this);
 }
 
 

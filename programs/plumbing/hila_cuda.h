@@ -113,6 +113,7 @@ inline void synchronize_threads(){
   cudaDeviceSynchronize();
 }
 
+
 void initialize_cuda(int rank);
 
 #else
@@ -130,5 +131,6 @@ inline void synchronize_threads(){}
 void initialize_cuda(int rank){};
 
 #endif
+
 
 #endif
