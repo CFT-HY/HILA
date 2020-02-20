@@ -35,12 +35,13 @@ check(){
 }
 
 transform_c(){
-    echo make -f ${MAKEFILE} $1
-    make -f ${MAKEFILE} $1 2>/dev/null
+    echo make -f ${MAKEFILE} -s $1
+    make -f ${MAKEFILE} -s $1 2>/dev/null
     check transform
 }
 
 compile_c(){
+    echo make -f ${MAKEFILE} -j -s ${1}.exe
     make -f ${MAKEFILE} -j -s ${1}.exe 2>/dev/null
     check compile
 }
@@ -66,7 +67,7 @@ fi
 
 for D in 1 2 3 4 ; do
   sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' ${MAKEFILE}
-  make -f ${MAKEFILE} clean cleanall
+  make cleanall
   for testfile in $tests; do
     test="${testfile%.*}"
     echo $test
@@ -78,7 +79,7 @@ for D in 1 2 3 4 ; do
     run_mpi_c ${test} 4
     rm ${test}.exe ${test}.cpt
   done
-  make -f ${MAKEFILE} clean cleanall
+  make cleanall
 done
 
 
