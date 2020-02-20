@@ -130,6 +130,8 @@ void initialize_cuda(int rank);
 inline void synchronize_threads(){}
 void initialize_cuda(int rank){};
 
+//definition of field_storage routines 
+
 #endif
 
 
