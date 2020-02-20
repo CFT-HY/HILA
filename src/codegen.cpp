@@ -138,15 +138,8 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   }
 
   // Place the content of the loop
-  if( target.CUDA ){
-    code << generate_code_cuda(S,semi_at_end,loopBuf);
-  } else if( target.openacc ){
-    code << generate_code_openacc(S,semi_at_end,loopBuf);
-  } else if(target.VECTORIZE) {
-    code << generate_code_avx(S,semi_at_end,loopBuf);
-  } else {
-    code << generate_code_cpu(S,semi_at_end,loopBuf);
-  }
+  code << backend_generate_code(S,semi_at_end,loopBuf);
+  
   
   // Check reduction variables
   for (var_info & v : var_info_list) {
@@ -172,17 +165,6 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   writeBuf->insert(S->getBeginLoc(), indent_string(code.str()), true, true);
 }
 
-
-void MyASTVisitor::generate_field_storage_type(std::string typestr){
-  if (field_storage_decl == nullptr) {
-    llvm::errs() << " **** internal error: element undefined in field\n";
-    exit(1);
-  }
-
-  if(target.VECTORIZE){
-    generate_field_storage_type_AVX(typestr);
-  }
-}
 
 
 

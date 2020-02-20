@@ -162,6 +162,7 @@ public:
   bool handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
+  void handle_array_var_ref(ArraySubscriptExpr *E);
 
   void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
@@ -200,6 +201,9 @@ public:
   /// Code generation headers start here
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
+  std::string backend_generate_code(Stmt *S, bool semi_at_end, srcBuf & loopBuf);
+  void backend_handle_loop_function(FunctionDecl *fd);
+  void backend_generate_field_storage_type(std::string typestr);
 
   /// Generate a header for starting communication and marking fields changed
   std::string generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf &sb);
@@ -207,7 +211,7 @@ public:
   std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
   std::string generate_code_avx(Stmt *S, bool semi_at_end, srcBuf &sb);
 
-  void generate_field_storage_type(std::string typestr);
+  /// Generate the field storage type and add before field
   void generate_field_storage_type_AVX(std::string typestr);
 
   /// Handle functions called in a loop

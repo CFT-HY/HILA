@@ -134,6 +134,17 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
     }
   }
 
+  // In kernelized code we need to handle array expressions as well
+  for ( array_ref & ar : array_ref_list ) {
+    // Rename the expression
+    ar.new_name = "sv__" + std::to_string(i) + "_";
+    i++;
+    kernel << ", " << ar.type << " " << ar.new_name ;
+    code << ", " << get_stmt_str(ar.ref);
+    loopBuf.replace( ar.ref, ar.new_name );
+  }
+  
+
   // change the references to field expressions in the body
   for ( field_ref & le : field_ref_list ) {
     //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
@@ -156,12 +167,12 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
   // Begin the function
   kernel << ")\n{\n";
 
-  kernel << "device_lattice_info *lattice = &d_lattice; \n";
+  kernel << "device_lattice_info *loop_lattice = &d_lattice; \n";
   /* Standard boilerplate in CUDA kernels: calculate site index */
   kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
-         << " + lattice->loop_begin; \n";
+         << " + loop_lattice->loop_begin; \n";
   /* The last block may exceed the lattice size. Do nothing in that case. */
-  kernel << "if(Index < lattice->loop_end) { \n";
+  kernel << "if(Index < loop_lattice->loop_end) { \n";
   
 
   /* Initialize reductions */
@@ -194,15 +205,15 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
       }
       // Create the temp variable and call the getter
       kernel << type_name << " "  << l.loop_ref_name << "_" << r->dirname
-             << "=" << l.new_name << ".get(lattice->d_neighb[" 
+             << "=" << l.new_name << ".get(loop_lattice->d_neighb[" 
              << dirname << "][" << looping_var 
-             << "], lattice->field_alloc_size);\n";
+             << "], loop_lattice->field_alloc_size);\n";
     }
     // Check for references without a direction. If found, add temp variable
     for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
       kernel << type_name << " "  << l.loop_ref_name << "=" 
              << l.new_name << ".get(" << looping_var 
-             << ", lattice->field_alloc_size)" << ";\n";
+             << ", loop_lattice->field_alloc_size)" << ";\n";
       break;  // Only one needed
     }
   }
@@ -219,7 +230,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
     kernel << l.new_name << ".set(" << l.loop_ref_name << ", " 
-           << looping_var << ", lattice->field_alloc_size );\n";
+           << looping_var << ", loop_lattice->field_alloc_size );\n";
   }
 
   kernel << "}\n}\n//----------\n";
@@ -236,10 +247,10 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
     // Run reduction
     if (v.reduction_type == reduction::SUM) {
       code << v.reduction_name << " = cuda_reduce_sum( d_"
-           << v.reduction_name << ", lattice->volume()" <<  ");\n";
+           << v.reduction_name << ", loop_lattice->volume()" <<  ");\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
       code << v.reduction_name << " = cuda_reduce_product( d_"
-           << v.reduction_name << ", lattice->volume()" <<  ");\n";
+           << v.reduction_name << ", loop_lattice->volume()" <<  ");\n";
     }
     // Free memory allocated for the reduction
     if (v.reduction_type != reduction::NONE) {

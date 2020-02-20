@@ -36,6 +36,7 @@ std::list<field_ref> field_ref_list = {};
 std::list<field_info> field_info_list = {};
 std::list<var_info> var_info_list = {};
 std::list<var_decl> var_decl_list = {};
+std::list<array_ref> array_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::vector<Expr *> remove_expr_list = {};
 
@@ -94,6 +95,9 @@ llvm::cl::opt<std::string> cmdline::output_filename("o",
                   llvm::cl::value_desc("name"),
                   llvm::cl::cat(TransformerCat));
 
+
+// List of targets that can be specified in command line arguments
+
 llvm::cl::opt<bool> cmdline::kernel("target:vanilla-kernel",
          llvm::cl::desc("Generate kernels"),
          llvm::cl::cat(TransformerCat));
@@ -107,25 +111,28 @@ llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
           llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::AVX512("target:AVX512",
-          llvm::cl::desc("Generate AVX512 instructions in loops"),
+          llvm::cl::desc("Generate AVX512 vectorized loops"),
           llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::AVX("target:AVX",
-          llvm::cl::desc("Generate AVX instructions in loops"),
+          llvm::cl::desc("Generate AVX vectorized loops"),
           llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::SSE("target:SSE",
-          llvm::cl::desc("Generate SSE instructions in loops"),
+          llvm::cl::desc("Generate SSE vectorized loops"),
           llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<int> cmdline::VECTORIZE("target:VECTORIZE",
-          llvm::cl::desc("Generate VECTOR instructions in loops with given vectorsize \n"
+          llvm::cl::desc("Generate vectorized loops with given vector size \n"
           "For example -target:VECTORIZE=32 is equivalent to -target:AVX"),
           llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
-          llvm::cl::desc("Offload to GPU using openMP"),
+          llvm::cl::desc("Offload to GPU using openACC"),
           llvm::cl::cat(TransformerCat));
+
+
+// Debug and Utility arguments
 
 llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
          llvm::cl::desc("write pragmas/attributes to functions called from loops"),
@@ -135,6 +142,74 @@ CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
 loop_parity_struct loop_parity;
 codetype target;
+
+
+/// Check command line arguments and set appropriate flags in target
+void get_target_struct(codetype & target) {
+  if (cmdline::CUDA) {
+    target.CUDA = true;
+  } else if (cmdline::openacc) {
+    target.openacc = true;
+  } else if (cmdline::AVX) {
+    target.VECTORIZE = true;
+    target.vector_size = 32;
+  } else if (cmdline::AVX512) {
+    target.VECTORIZE = true;
+    target.vector_size = 64;
+  } else if (cmdline::SSE) {
+    target.VECTORIZE = true;
+    target.vector_size = 16;
+  } else if (cmdline::VECTORIZE) {
+    target.VECTORIZE = true;
+    target.vector_size = cmdline::VECTORIZE;
+  }
+}
+
+
+
+/// Call the backend function for handling loop functions
+void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
+  // we should mark the function, but it is not necessarily in the
+  // main file buffer
+  if (target.CUDA) {
+    handle_loop_function_cuda(fd);
+  } else if (target.openacc) {
+    handle_loop_function_openacc(fd);
+  } else if (target.VECTORIZE) {
+    handle_loop_function_avx(fd);
+  }
+}
+
+/// Call the backend function for generating loop code
+std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+  std::stringstream code;
+  if( target.CUDA ){
+    code << generate_code_cuda(S,semi_at_end,loopBuf);
+  } else if( target.openacc ){
+    code << generate_code_openacc(S,semi_at_end,loopBuf);
+  } else if(target.VECTORIZE) {
+    code << generate_code_avx(S,semi_at_end,loopBuf);
+  } else {
+    code << generate_code_cpu(S,semi_at_end,loopBuf);
+  }
+  return code.str();
+}
+
+/// Call the backend function for generating the field storage type
+void MyASTVisitor::backend_generate_field_storage_type(std::string typestr){
+  // check that field_storage_type has been found
+  if (field_storage_decl == nullptr) {
+    llvm::errs() << " **** internal error: element undefined in field\n";
+    exit(1);
+  }
+
+  if(target.VECTORIZE){
+    generate_field_storage_type_AVX(typestr);
+  }
+}
+
+
+
 
 #if 0
 // It is very hard to anything with pragmas in clang.  Requires modification of
@@ -539,39 +614,10 @@ private:
 };
 
 
-void get_target_struct(codetype & target) {
-  if (cmdline::kernel) {
-    target.CUDA = false;
-    target.flag_loop_function = false;
-  } else if (cmdline::CUDA) {
-    target.CUDA = true;
-    target.flag_loop_function = true;
-  } else if (cmdline::openacc) {
-    target.openacc = true;
-    target.flag_loop_function = false;
-  } else if (cmdline::AVX) {
-    target.VECTORIZE = true;
-    target.vector_size = 32;
-    target.flag_loop_function = false;
-  } else if (cmdline::AVX512) {
-    target.VECTORIZE = true;
-    target.vector_size = 64;
-    target.flag_loop_function = false;
-  } else if (cmdline::SSE) {
-    target.VECTORIZE = true;
-    target.vector_size = 16;
-    target.flag_loop_function = false;
-  } else if (cmdline::VECTORIZE) {
-    target.VECTORIZE = true;
-    target.vector_size = cmdline::VECTORIZE;
-    target.flag_loop_function = false;
-  } else {
-    target.openacc = false;
-    target.flag_loop_function = false;
-  }
 
-  if (cmdline::func_attribute) target.flag_loop_function = true;
-}
+
+
+
 
 int main(int argc, const char **argv) {
 

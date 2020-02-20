@@ -412,6 +412,59 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
 }
 
 
+// handle an array subscript expression
+void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E) {
+  PrintingPolicy pp(Context->getLangOpts());
+
+  // Check if it's local
+  bool is_loop_local = false;
+  E->dump();
+  E->getBase()->IgnoreImplicit()->dump();
+  Expr * RE = E->getBase()->IgnoreImplicit();
+  while(!dyn_cast<DeclRefExpr>(RE)){
+    if(dyn_cast<ArraySubscriptExpr>(RE)){
+      ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(RE);
+      RE = ASE->getBase()->IgnoreImplicit();
+    } else if(dyn_cast<MemberExpr>(RE)){
+      MemberExpr * ME = dyn_cast<MemberExpr>(RE);
+      RE = ME->getBase()->IgnoreImplicit();
+    } else {
+      llvm::errs() << "Cannot figure out base of the variable expression\n";
+      exit(1);
+    }
+    llvm::errs() << "while \n";
+    RE->dump();
+  }
+  DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(RE);
+  DRE->dump();
+  VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
+  decl->dump();
+  for (var_decl & d : var_decl_list) {
+    if (d.scope >= 0 && decl == d.decl) {
+      llvm::errs() << "loop local var ref! \n";
+      is_loop_local = true;
+      break;
+    }
+  }
+
+  // If it's defined outside the loop, it may need to be handled
+  // (communicated to kernels, for example). So record it here.
+  if(!is_loop_local){
+    array_ref ar;
+    ar.ref = E;
+    
+    // Find the type of the full expression (that is an element of the array)
+    const Type *t = E->getType().getTypePtr();
+    llvm::errs() << E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp) << "\n";
+    ar.type = E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp);
+  
+    array_ref_list.push_back(ar);
+  }
+}
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////
 /// handle_full_loop_stmt() is the starting point for the analysis of all
 /// "parity" -loops
@@ -425,6 +478,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   special_function_call_list.clear();
   var_info_list.clear();
   var_decl_list.clear();
+  array_ref_list.clear();
   remove_expr_list.clear();
   global.location.loop = ls->getSourceRange().getBegin();
   
@@ -562,13 +616,12 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
                    << TheRewriter.getRewrittenText(E->getSourceRange()) << "\n";
       //state::skip_children = 1;
       auto a = dyn_cast<ArraySubscriptExpr>(E);
-      Expr *base = a->getBase();
-      
-      //check_loop_local_vars = true;
-      //TraverseStmt(
+
+      // At this point this should be an allowed expression?
+      handle_array_var_ref(a);
       
       return true;
-      }
+    }
 #endif          
         
     if (0){
@@ -645,7 +698,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
  
       // write storage_type specialization
-      generate_field_storage_type(typestr);
+      backend_generate_field_storage_type(typestr);
     }
     
   }

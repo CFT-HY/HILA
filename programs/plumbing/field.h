@@ -329,7 +329,6 @@ public:
   void mark_changed(const parity p) {
     if (fs == nullptr) allocate();
     else {
-      char pc = static_cast<char>(p);
       assert(p == EVEN || p == ODD || p == ALL);
       unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
       for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
@@ -339,7 +338,6 @@ public:
 
   void mark_changed(const parity p) const {
     assert(is_allocated());
-    char pc = static_cast<char>(p);
     assert(p == EVEN || p == ODD || p == ALL);
     unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
     for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
@@ -348,7 +346,6 @@ public:
 
   /// Mark the field parity fetched from direction
   void mark_fetched(int dir, const parity p) const {
-    char pc = static_cast<char>(p);
     assert(p == EVEN || p == ODD || p == ALL);
     unsigned up = 0x3 & (static_cast<unsigned>(opp_parity(p)));
     fs->is_fetched[dir] |= up;
