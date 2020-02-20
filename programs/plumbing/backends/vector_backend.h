@@ -11,7 +11,7 @@ void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_
     int index = to_node.site_index(j, par);
     int v_index = vlat->vector_index[index];
     auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
-    auto pvector = (typename field_info<T>::vector_type*) (&element);
+    auto pvector = (typename field_info<T>::base_vector_type*) (&element);
 
     for( int e=0; e<field_info<T>::elements; e++ ){
       auto basenumber = pvector[e].extract(v_index);
@@ -31,7 +31,7 @@ void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_n
     int index = from_node.offset(par)+j;
     int v_index = vlat->vector_index[index];
     auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
-    auto pvector = (typename field_info<T>::vector_type*) (&element);
+    auto pvector = (typename field_info<T>::base_vector_type*) (&element);
 
     for( int e=0; e<field_info<T>::elements; e++ ){
       auto number_buffer = (typename field_info<T>::base_type *) buffer;
@@ -47,7 +47,7 @@ template<typename T>
 void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * lattice){
   constexpr int vector_size = field_info<T>::vector_size;
   constexpr int elements = field_info<T>::elements;
-  using vectortype = typename field_info<T>::vector_type;
+  using vectortype = typename field_info<T>::base_vector_type;
   using basetype = typename field_info<T>::base_type;
   vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(field_info<T>::vector_size);
   // Loop over the boundary sites

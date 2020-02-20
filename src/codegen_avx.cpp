@@ -420,20 +420,20 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
 
   // Get the body of the element definition
   srcBuf bodyBuffer;
-  bodyBuffer.copy_from_range(writeBuf,field_storage_decl->getTemplatedDecl()->getSourceRange());
+  //bodyBuffer.copy_from_range(writeBuf,field_storage_decl->getTemplatedDecl()->getSourceRange());
 
   // Replace templated type with new vector type
-  llvm::errs() << "TYPES " << templ_type << " " << vectortype << "\n";
-  bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
+  //llvm::errs() << "TYPES " << templ_type << " " << vectortype << "\n";
+  //bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
 
   // Add specialization parameters
-  bodyBuffer.replace_token(0, bodyBuffer.size()-1,
-                  field_storage_decl->getQualifiedNameAsString(),
-                  field_storage_decl->getQualifiedNameAsString() + "<"+typestr+">");
+  //bodyBuffer.replace_token(0, bodyBuffer.size()-1,
+  //                field_storage_decl->getQualifiedNameAsString(),
+  //                field_storage_decl->getQualifiedNameAsString() + "<"+typestr+">");
 
   // Add the template<> declaration
-  bodyBuffer.prepend("template<>\n", true);
-  bodyBuffer.append(";\n", true); // semicolon at end
+  //bodyBuffer.prepend("template<>\n", true);
+  //bodyBuffer.append(";\n", true); // semicolon at end
 
     // Add a simple template mapping from element type to vector size
   std::stringstream field_element_code;
@@ -445,6 +445,7 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
                      << ")/sizeof(" << base_type << ");\n";
   field_element_code << " using base_type = " << base_type << ";\n";
   field_element_code << " using vector_type = " << base_vector_type << ";\n";
+  field_element_code << " using vector_type = " << vectortype << ";\n";
   field_element_code << "};\n";
 
   field_element_code << "template<> \n";

@@ -355,14 +355,14 @@ class field_storage {
     }
 
     #pragma transformer loop_function
-    inline T get(const int i, const int field_alloc_size) const
+    inline typename field_info<T>::vector_type get(const int i, const int field_alloc_size) const
     {
       // There is some problem with directly assigning intrinsic vectors, at least.
       // This is a universal workaround, but could be fixed by assigning element
       // by element
-      using vectortype = typename field_info<T>::vector_type;
+      using vectortype = typename field_info<T>::base_vector_type;
       using basetype = typename field_info<T>::base_type;
-      T value;
+      typename field_info<T>::vector_type value;
       basetype *vp = (basetype *) (fieldbuf + i);
       vectortype *valuep = (vectortype *)(&value);
       for( int e=0; e<field_info<T>::elements; e++ ){
@@ -373,9 +373,9 @@ class field_storage {
     }
 
     #pragma transformer loop_function
-    inline void set(const T value, const int i, const int field_alloc_size) 
+    inline void set(const typename field_info<T>::vector_type value, const int i, const int field_alloc_size) 
     {
-      using vectortype = typename field_info<T>::vector_type;
+      using vectortype = typename field_info<T>::base_vector_type;
       using basetype = typename field_info<T>::base_type;
       basetype *vp = (basetype *) (fieldbuf + i);
       vectortype *valuep = (vectortype *)(&value);

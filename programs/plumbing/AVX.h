@@ -217,6 +217,7 @@ struct field_info{
   constexpr static int elements = 1;
 
   using base_type = double;
+  using base_vector_type = Vec4d;
   using vector_type = Vec4d;
 };
 
