@@ -283,7 +283,8 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   // Set loop lattice
   std::string fieldname = field_info_list.front().old_name;
   code << "vectorized_lattice_struct * loop_lattice = "
-       << fieldname << ".fs->lattice;\n";
+       << fieldname << ".fs->lattice->get_vectorized_lattice("
+       << vector_size <<");\n";
 
   // Get a pointer to the neighbour list
   code << "std::array<unsigned*,NDIRS> neighbour_list = loop_lattice->neighbour_list();\n";

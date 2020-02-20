@@ -1,7 +1,10 @@
 #ifndef _BACKEND_LATTICE_H_
 #define _BACKEND_LATTICE_H_
 
-#include "../lattice.h"
+
+struct backend_lattice_struct {
+  void setup(lattice_struct lattice){}
+};
 
 /// Splits the local lattice into equal sections for vectorization
 struct vectorized_lattice_struct  {
@@ -330,6 +333,63 @@ struct vectorized_lattice_struct  {
     };
 
 };
+
+
+
+template <typename T>
+class field_storage {
+  public:
+
+    // Array of structures implementation
+    T * fieldbuf = NULL;
+
+    void allocate_field( const int field_alloc_size ) {
+      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
+      #pragma acc enter data create(fieldbuf)
+    }
+
+    void free_field() {
+      #pragma acc exit data delete(fieldbuf)
+      free_field_mem((void *)fieldbuf);
+      fieldbuf = nullptr;
+    }
+
+    #pragma transformer loop_function
+    inline T get(const int i, const int field_alloc_size) const
+    {
+      // There is some problem with directly assigning intrinsic vectors, at least.
+      // This is a universal workaround, but could be fixed by assigning element
+      // by element
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      T value;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].load(vp+e*field_info<T>::vector_size);
+      }
+      //std::memcpy( &value, fieldbuf+i, sizeof(T) );
+      return value;
+    }
+
+    #pragma transformer loop_function
+    inline void set(const T value, const int i, const int field_alloc_size) 
+    {
+      using vectortype = typename field_info<T>::vector_type;
+      using basetype = typename field_info<T>::base_type;
+      basetype *vp = (basetype *) (fieldbuf + i);
+      vectortype *valuep = (vectortype *)(&value);
+      for( int e=0; e<field_info<T>::elements; e++ ){
+        valuep[e].store((vp + e*field_info<T>::vector_size));
+      }
+      //std::memcpy( fieldbuf+i, &value, sizeof(T) );
+    }
+
+    void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const;
+    void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice);
+    void set_local_boundary_elements(parity par, lattice_struct * lattice);
+};
+
 
 
 #endif

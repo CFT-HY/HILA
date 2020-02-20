@@ -16,7 +16,7 @@ __global__ void gather_comm_elements_kernel( field_storage<T> field, char *buffe
 /// CUDA implementation of gather_comm_elements without CUDA aware MPI
 /// Gathers sites at the boundary that need to be communicated to neighbours
 template<typename T>
-void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
+void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const {
   int *site_index, *d_site_index;
   char * d_buffer;
   int sites = to_node.n_sites(par);

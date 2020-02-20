@@ -1,8 +1,6 @@
 #ifndef _BACKEND_LATTICE_H_
 #define _BACKEND_LATTICE_H_
 
-#include "../lattice.h"
-
 
 /* Lattice related data that needs to be communicated
  * to kernels

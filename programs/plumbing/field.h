@@ -7,7 +7,7 @@
 #include <type_traits>
 
 #include "../plumbing/globals.h"
-#include "field_storage.h"
+#include "../plumbing/field_storage.h"
 
 #ifdef USE_MPI
 #include "../plumbing/comm_mpi.h"
@@ -190,11 +190,7 @@ private:
     public:
       constexpr static int vector_size = field_info<T>::vector_size;
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
-#ifndef VECTORIZED
       lattice_struct * lattice;
-#else
-      vectorized_lattice_struct * lattice;
-#endif
       unsigned is_fetched[NDIRS];
       bool move_started[3*NDIRS];
 #ifdef USE_MPI
@@ -238,17 +234,17 @@ private:
 
       /// Gather boundary elements for communication
       void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const {
-        payload.gather_comm_elements(buffer, to_node, par);
+        payload.gather_comm_elements(buffer, to_node, par, lattice);
       };
 
       /// Place boundary elements from neighbour
       void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
-        payload.place_comm_elements(buffer, from_node, par);
+        payload.place_comm_elements(buffer, from_node, par, lattice);
       };
       
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(parity par){
-        payload.set_local_boundary_elements(par);
+        payload.set_local_boundary_elements(par, lattice);
       };
   };
 
@@ -306,11 +302,7 @@ public:
       exit(1);  // TODO - more ordered exit?
     }
     fs = new field_struct;
-    #ifndef VECTORIZED
     fs->lattice = lattice;
-    #else
-    fs->lattice = lattice->get_vectorized_lattice(fs->vector_size);
-    #endif
     fs->allocate_payload();
     mark_changed(ALL);
   }

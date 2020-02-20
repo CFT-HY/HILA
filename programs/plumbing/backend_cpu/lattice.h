@@ -1,8 +1,6 @@
 #ifndef _BACKEND_LATTICE_H_
 #define _BACKEND_LATTICE_H_
 
-#include "../lattice.h"
-
 
 /* Some backends need specialized lattice data
  * in loops. These are implemented here.
