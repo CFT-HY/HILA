@@ -357,9 +357,6 @@ class field_storage {
     #pragma transformer loop_function
     inline typename field_info<T>::vector_type get(const int i, const int field_alloc_size) const
     {
-      // There is some problem with directly assigning intrinsic vectors, at least.
-      // This is a universal workaround, but could be fixed by assigning element
-      // by element
       using vectortype = typename field_info<T>::base_vector_type;
       using basetype = typename field_info<T>::base_type;
       typename field_info<T>::vector_type value;
@@ -368,7 +365,6 @@ class field_storage {
       for( int e=0; e<field_info<T>::elements; e++ ){
         valuep[e].load(vp+e*field_info<T>::vector_size);
       }
-      //std::memcpy( &value, fieldbuf+i, sizeof(T) );
       return value;
     }
 
@@ -382,7 +378,6 @@ class field_storage {
       for( int e=0; e<field_info<T>::elements; e++ ){
         valuep[e].store((vp + e*field_info<T>::vector_size));
       }
-      //std::memcpy( fieldbuf+i, &value, sizeof(T) );
     }
 
     void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const;

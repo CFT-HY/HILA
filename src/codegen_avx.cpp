@@ -444,8 +444,8 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   field_element_code << " constexpr static int elements = sizeof(" << typestr 
                      << ")/sizeof(" << base_type << ");\n";
   field_element_code << " using base_type = " << base_type << ";\n";
-  field_element_code << " using vector_type = " << base_vector_type << ";\n";
   field_element_code << " using vector_type = " << vectortype << ";\n";
+  field_element_code << " using base_vector_type = " << base_vector_type << ";\n";
   field_element_code << "};\n";
 
   field_element_code << "template<> \n";
@@ -455,10 +455,11 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   field_element_code << " constexpr static int elements = sizeof(" << typestr 
                      << ")/sizeof(" << base_type << ");\n";
   field_element_code << " using base_type = " << base_type << ";\n";
-  field_element_code << " using vector_type = " << base_vector_type << ";\n";
+  field_element_code << " using vector_type = " << vectortype << ";\n";
+  field_element_code << " using base_vector_type = " << base_vector_type << ";\n";
   field_element_code << "};\n";
 
-  bodyBuffer.prepend(field_element_code.str(), true);
+  //bodyBuffer.prepend(field_element_code.str(), true);
 
   // insert above the field template 
   SourceLocation l = 
@@ -481,7 +482,7 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   l = l.getLocWithOffset(1);
 
   // Insert after the new line character
-  writeBuf->insert(l, bodyBuffer.dump()+"\n", false, true);
+  writeBuf->insert(l, field_element_code.str() + "\n", false, true);
 
   // Mark source buffer modified
   // set_sourceloc_modified( l );

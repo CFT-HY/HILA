@@ -39,7 +39,7 @@ void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_n
 
       pvector[e].insert(v_index, basenumber);
     }
-    set(element, vlat->lattice_index[index]);
+    set(element, vlat->lattice_index[index], vlat->field_alloc_size());
   }
 }
 
@@ -49,13 +49,12 @@ void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * 
   constexpr int elements = field_info<T>::elements;
   using vectortype = typename field_info<T>::base_vector_type;
   using basetype = typename field_info<T>::base_type;
-  vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(field_info<T>::vector_size);
+  vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(vector_size);
   // Loop over the boundary sites
   for( vectorized_lattice_struct::halo_site hs: vlat->halo_sites )
   if(par == ALL || par == hs.par ) {
     int *perm = vlat->boundary_permutation[hs.dir];
-    //vectorized::permute<vector_size>(vlat->boundary_permutation[hs.dir], &temp, elements);
-    auto temp = get(hs.nb_index);
+    auto temp = get(hs.nb_index, vlat->field_alloc_size());
     auto dest = fieldbuf + vlat->sites + hs.halo_index;
     vectortype * e = (vectortype*) &temp;
     basetype * d = (basetype*) dest;
