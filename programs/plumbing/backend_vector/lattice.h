@@ -361,10 +361,12 @@ class field_storage {
     {
       using vectortype = typename field_info<T>::base_vector_type;
       using basetype = typename field_info<T>::base_type;
+      constexpr int elements = field_info<T>::elements;
+      constexpr int vector_size = field_info<T>::vector_size;
       typename field_info<T>::vector_type value;
-      basetype *vp = (basetype *) (fieldbuf + i);
+      basetype *vp = (basetype *) (fieldbuf + i*vector_size);
       vectortype *valuep = (vectortype *)(&value);
-      for( int e=0; e<field_info<T>::elements; e++ ){
+      for( int e=0; e<elements; e++ ){
         valuep[e].load(vp+e*field_info<T>::vector_size);
       }
       return value;
@@ -375,9 +377,11 @@ class field_storage {
     {
       using vectortype = typename field_info<T>::base_vector_type;
       using basetype = typename field_info<T>::base_type;
-      basetype *vp = (basetype *) (fieldbuf + i);
+      constexpr int elements = field_info<T>::elements;
+      constexpr int vector_size = field_info<T>::vector_size;
+      basetype *vp = (basetype *) (fieldbuf + i*vector_size);
       vectortype *valuep = (vectortype *)(&value);
-      for( int e=0; e<field_info<T>::elements; e++ ){
+      for( int e=0; e<elements; e++ ){
         valuep[e].store((vp + e*field_info<T>::vector_size));
       }
     }

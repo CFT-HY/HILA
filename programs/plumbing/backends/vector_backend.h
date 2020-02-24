@@ -55,16 +55,15 @@ void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * 
   if(par == ALL || par == hs.par ) {
     int *perm = vlat->boundary_permutation[hs.dir];
     auto temp = get(hs.nb_index, vlat->field_alloc_size());
-    auto dest = fieldbuf + vlat->sites + hs.halo_index;
+    auto dest = fieldbuf + vector_size*(vlat->sites + hs.halo_index);
     vectortype * e = (vectortype*) &temp;
     basetype * d = (basetype*) dest;
     for( int v=0; v<elements; v++ ){
       basetype t1[vector_size], t2[vector_size];
       e[v].store(&(t1[0]));
       for( int i=0; i<vector_size; i++ )
-         d[v*vector_size+i] =  t1[perm[i]];
+       d[v*vector_size+i] =  t1[perm[i]];
     }
-    //set(temp, vlat->sites + hs.halo_index);
   }
 }
 
