@@ -426,9 +426,17 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E) {
     } else if(dyn_cast<MemberExpr>(RE)){
       MemberExpr * ME = dyn_cast<MemberExpr>(RE);
       RE = ME->getBase()->IgnoreImplicit();
+    } else if(dyn_cast<CXXOperatorCallExpr>(RE)) {
+      CXXOperatorCallExpr * OCE = dyn_cast<CXXOperatorCallExpr>(RE);
+      if(strcmp(getOperatorSpelling(OCE->getOperator()),"[]") == 0){
+        RE = OCE->getArg(0)->IgnoreImplicit();
+      } else {
+        // It's not a variable
+        return;
+      }
     } else {
-      llvm::errs() << "Cannot figure out base of the variable expression\n";
-      exit(1);
+      // It's not a variable
+      return;
     }
   }
   DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(RE);
