@@ -343,8 +343,10 @@ class field_storage {
     // Array of structures implementation
     T * fieldbuf = NULL;
 
-    void allocate_field( const int field_alloc_size ) {
-      fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
+    void allocate_field( lattice_struct * lattice ) {
+      constexpr int vector_size = field_info<T>::vector_size;
+      vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(vector_size);
+      fieldbuf = (T*) allocate_field_mem( sizeof(T) * vector_size * vlat->field_alloc_size());
       #pragma acc enter data create(fieldbuf)
     }
 

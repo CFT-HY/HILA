@@ -216,7 +216,7 @@ private:
 #endif
 
       void allocate_payload() { 
-        payload.allocate_field(lattice->field_alloc_size());
+        payload.allocate_field(lattice);
         initialize_communication();
       }
       void free_payload() { payload.free_field(); }

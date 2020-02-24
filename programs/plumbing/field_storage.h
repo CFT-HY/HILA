@@ -18,7 +18,7 @@ class field_storage {
     T * fieldbuf = NULL;
     #endif
 
-    void allocate_field( const int field_alloc_size );
+    void allocate_field( lattice_struct * lattice );
     void free_field();
     #pragma transformer loop_function
     inline T get(const int i, const int field_alloc_size) const;
@@ -63,8 +63,8 @@ template<typename T>
 inline void field_storage<T>::set(const T &value, unsigned int i) {}
 
 template<typename T>
-void field_storage<T>::allocate_field(const int field_alloc_size) {
-  fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * field_alloc_size );
+void field_storage<T>::allocate_field(lattice_struct * lattice) {
+  fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size );
   #pragma acc enter data create(fieldbuf)
 
 }
@@ -98,8 +98,8 @@ inline void field_storage<T>::set(const T &value, unsigned int i)
 }
 
 template<typename T>
-void field_storage<T>::allocate_field(const int field_alloc_size) {
-    fieldbuf = (T*) allocate_field_mem( sizeof(T) * field_alloc_size);
+void field_storage<T>::allocate_field(lattice_struct * lattice) {
+    fieldbuf = (T*) allocate_field_mem( sizeof(T) *lattice->field_alloc_size);
     #pragma acc enter data create(fieldbuf)
 }
 
