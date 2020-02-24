@@ -1,6 +1,62 @@
 #ifndef VECTOR_BACKEND
 #define VECTOR_BACKEND
 
+template<typename T>
+void field_storage<T>::allocate_field( lattice_struct * lattice ) {
+  constexpr int vector_size = field_info<T>::vector_size;
+  vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(vector_size);
+  fieldbuf = (T*) allocate_field_mem( sizeof(T) * vector_size * vlat->field_alloc_size());
+  #pragma acc enter data create(fieldbuf)
+}
+
+template<typename T>
+void field_storage<T>::free_field() {
+  #pragma acc exit data delete(fieldbuf)
+  free_field_mem((void *)fieldbuf);
+  fieldbuf = nullptr;
+}
+
+
+template<typename T>
+auto field_storage<T>::get(const int i, const int field_alloc_size) const
+{
+  using vectortype = typename field_info<T>::base_vector_type;
+  using basetype = typename field_info<T>::base_type;
+  constexpr int elements = field_info<T>::elements;
+  constexpr int vector_size = field_info<T>::vector_size;
+  typename field_info<T>::vector_type value;
+  basetype *vp = (basetype *) (fieldbuf + i*vector_size);
+  vectortype *valuep = (vectortype *)(&value);
+  for( int e=0; e<elements; e++ ){
+    valuep[e].load(vp+e*field_info<T>::vector_size);
+  }
+  return value;
+}
+
+
+//const typename 
+template<typename T>
+template<typename A>
+inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size) 
+{
+  using vectortype = typename field_info<T>::base_vector_type;
+  using basetype = typename field_info<T>::base_type;
+  constexpr int elements = field_info<T>::elements;
+  constexpr int vector_size = field_info<T>::vector_size;
+  basetype *vp = (basetype *) (fieldbuf + i*vector_size);
+  vectortype *valuep = (vectortype *)(&value);
+  for( int e=0; e<elements; e++ ){
+    valuep[e].store((vp + e*field_info<T>::vector_size));
+  }
+}
+
+
+
+
+
+
+
+
 
 /// Vectorized implementation of fetching boundary elements
 /* Gathers sites at the boundary that need to be communicated to neighbours */

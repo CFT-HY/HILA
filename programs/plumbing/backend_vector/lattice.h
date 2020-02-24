@@ -336,61 +336,6 @@ struct vectorized_lattice_struct  {
 
 
 
-template <typename T>
-class field_storage {
-  public:
-
-    // Array of structures implementation
-    T * fieldbuf = NULL;
-
-    void allocate_field( lattice_struct * lattice ) {
-      constexpr int vector_size = field_info<T>::vector_size;
-      vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(vector_size);
-      fieldbuf = (T*) allocate_field_mem( sizeof(T) * vector_size * vlat->field_alloc_size());
-      #pragma acc enter data create(fieldbuf)
-    }
-
-    void free_field() {
-      #pragma acc exit data delete(fieldbuf)
-      free_field_mem((void *)fieldbuf);
-      fieldbuf = nullptr;
-    }
-
-    #pragma transformer loop_function
-    inline typename field_info<T>::vector_type get(const int i, const int field_alloc_size) const
-    {
-      using vectortype = typename field_info<T>::base_vector_type;
-      using basetype = typename field_info<T>::base_type;
-      constexpr int elements = field_info<T>::elements;
-      constexpr int vector_size = field_info<T>::vector_size;
-      typename field_info<T>::vector_type value;
-      basetype *vp = (basetype *) (fieldbuf + i*vector_size);
-      vectortype *valuep = (vectortype *)(&value);
-      for( int e=0; e<elements; e++ ){
-        valuep[e].load(vp+e*field_info<T>::vector_size);
-      }
-      return value;
-    }
-
-    #pragma transformer loop_function
-    inline void set(const typename field_info<T>::vector_type value, const int i, const int field_alloc_size) 
-    {
-      using vectortype = typename field_info<T>::base_vector_type;
-      using basetype = typename field_info<T>::base_type;
-      constexpr int elements = field_info<T>::elements;
-      constexpr int vector_size = field_info<T>::vector_size;
-      basetype *vp = (basetype *) (fieldbuf + i*vector_size);
-      vectortype *valuep = (vectortype *)(&value);
-      for( int e=0; e<elements; e++ ){
-        valuep[e].store((vp + e*field_info<T>::vector_size));
-      }
-    }
-
-    void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const;
-    void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice);
-    void set_local_boundary_elements(parity par, lattice_struct * lattice);
-};
-
 
 
 #endif
