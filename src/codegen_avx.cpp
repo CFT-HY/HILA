@@ -411,8 +411,8 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
 
 
   // Find template parameter name (only 1 allowed)
-  auto template_parameter = field_storage_decl->getTemplateParameters()->begin()[0];
-  std::string templ_type = template_parameter->getNameAsString();
+  //auto template_parameter = field_storage_decl->getTemplateParameters()->begin()[0];
+  //std::string templ_type = template_parameter->getNameAsString();
   
   // Replace the original type with a vector type
   std::string vectortype = typestr;
