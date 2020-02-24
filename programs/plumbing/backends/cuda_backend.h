@@ -3,6 +3,46 @@
 
 /* CUDA implementations */
 
+
+template<typename T> 
+inline T field_storage<T>::get(const int i, const int field_alloc_size) const {
+  assert( idx < field_alloc_size);
+  T value;
+  real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+  for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
+     value_f[i] = fieldbuf[i*field_alloc_size + idx];
+   }
+  return value; 
+}
+
+template<typename T>
+inline void field_storage<T>::set(const T &value, const int i, const int field_alloc_size){
+  assert( idx < field_alloc_size);
+  real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+  for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
+    fieldbuf[i*field_alloc_size + idx] = value_f[i];
+  }
+}
+
+template<typename T>
+inline void field_storage<T>::set(const T &value, unsigned int i) {}
+
+template<typename T>
+void field_storage<T>::allocate_field(lattice_struct * lattice) {
+  fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
+  #pragma acc enter data create(fieldbuf)
+
+}
+
+template<typename T>
+void field_storage<T>::free_field() {
+  #pragma acc exit data delete(fieldbuf)
+  free_field_mem((void *)fieldbuf);
+  fieldbuf = nullptr;
+}
+
+
+
 /// A kernel that gathers neighbour elements for communication (using the getter)
 template <typename T>
 __global__ void gather_comm_elements_kernel( field_storage<T> field, char *buffer, int * site_index, const int sites, const int field_alloc_size )
