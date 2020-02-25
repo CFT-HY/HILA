@@ -40,15 +40,15 @@ Import backend
 
 #ifdef VECTORIZED
 
-#include "../plumbing/backends/vector_backend.h"
+#include "backend_vector/field_storage_backend.h"
 
-#elif CUDA
+#elif defined(CUDA)
 
-#include "../plumbing/backends/cuda_backend.h"
+#include "backend_cuda/field_storage_backend.h"
 
-#else
+#elif defined(VANILLA)
 
-#include "../plumbing/backends/vanilla_backend.h"
+#include "backend_cpu/field_storage_backend.h"
 
 #endif
 
