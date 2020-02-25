@@ -197,12 +197,6 @@ std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semi_at_end, srcBu
 
 /// Call the backend function for generating the field storage type
 void MyASTVisitor::backend_generate_field_storage_type(std::string typestr){
-  // check that field_storage_type has been found
-  if (field_storage_decl == nullptr) {
-    llvm::errs() << " **** internal error: element undefined in field\n";
-    exit(1);
-  }
-
   if(target.VECTORIZE){
     generate_field_storage_type_AVX(typestr);
   }
