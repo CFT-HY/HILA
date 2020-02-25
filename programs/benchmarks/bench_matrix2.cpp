@@ -36,10 +36,10 @@ int main(int argc, char **argv){
     field<matrix<MADD(6),MADD(6), cmplx<double>> > matrix4;
 
     onsites(ALL){
-      matrix<MADD(0),MADD(0), cmplx<double>> rand1;
-      matrix<MADD(2),MADD(2), cmplx<double>> rand2;
-      matrix<MADD(4),MADD(4), cmplx<double>> rand3;
-      matrix<MADD(6),MADD(6), cmplx<double>> rand4;
+      element<matrix<MADD(0),MADD(0), cmplx<double>>> rand1;
+      element<matrix<MADD(2),MADD(2), cmplx<double>>> rand2;
+      element<matrix<MADD(4),MADD(4), cmplx<double>>> rand3;
+      element<matrix<MADD(6),MADD(6), cmplx<double>>> rand4;
 
       rand1.random();
       rand2.random();
