@@ -66,7 +66,7 @@ int main(int argc, char **argv){
     matrix1[ALL] = 1; 
     onsites(ALL){
         for(int i=0; i<N; i++){
-            vector1[X].c[0][i]=1;
+          vector1[X].c[0][i]=1;
         }
     }
 

@@ -402,6 +402,14 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
 
 void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
+  if(!field_decl){
+    llvm::errs() << "Field declaration not found! You must include field.h\n";
+    exit(1);
+  }
+  //SourceLocation field_loc = field_decl->getSourceRange().getBegin();
+  //FileID FID = TheRewriter.getSourceMgr().getFileID(field_loc);
+  //srcBuf * filebuffer = get_file_buffer(TheRewriter, FID);
+
   // Find the vector size
   vector_map::set_vector_target(target);
   int vector_size = 1;
