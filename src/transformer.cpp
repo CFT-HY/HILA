@@ -40,15 +40,8 @@ std::list<array_ref> array_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::vector<Expr *> remove_expr_list = {};
 
-unsigned state::skip_children = 0;
-unsigned state::scope_level = 0;
-bool state::in_loop_body = false;
-bool state::accept_field_parity = false;
 bool state::loop_found = false;
-bool state::dump_ast_next = false;
 bool state::compile_errors_occurred = false;
-bool state::check_loop = false;
-bool state::loop_function_next = false;
 
 ///definition of command line options
 llvm::cl::OptionCategory TransformerCat(program_name);
