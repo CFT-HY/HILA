@@ -1,4 +1,5 @@
-OPTS = -DNDIM=4
+ADDITION = -DMSIZE=5
+OPTS = -DNDIM=4  $(ADDITION)
 
 TRANSFORMER = ../../build/transformer -DAVX -target:AVX
 CC = mpic++  -mavx2 -mfma -DAVX -DUSE_MPI
