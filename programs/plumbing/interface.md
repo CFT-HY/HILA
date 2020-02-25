@@ -1,36 +1,33 @@
 # Interface Descriptions
 
-Below you will find the necessary class methods that will have to be implemented for each backend. 
-This document is also aimed at explaining the structure of the field class that is at the heart of 
-the framework. 
+The purpose of this document is to give all the information about the structure of the field class and it's constituent interfaces that is necessary to implement a new backend. Below you will find a simplified description of the architecture of the field class and a list of methods that need to be implemented for each new backend.  
 
-## class field_struct
+## Architecture of the field class 
 
-### Methods
+To put it briefly, the field entity is composed of 3 layers. The bottom layer field_storage contains the raw data buffer associated with the field, and provides the routines for editing this data. The second layer, field_struct, is a wrapper on top of field_storage that adds various variables on MPI communications and a communication initialization routine, and a pointer to the lattice that the whole field entity relies on. The final layer (class field) provides the high level user interface, as well as the field related routines that are written by the transformer. 
 
-### Class Members
+## Methods that need to be implemented for each backend 
 
-* field_storage named payload : basically a class where raw data is stored and which is responsible for retrieving and scattering elements between MPI processes
-* lattice_struct name lattice : contains information about the lattice geometry and memory alignment, which is needed by the above class to retrieve elements correctly. Currently this information is passed to payload through the field_struct class -> removes global dependency. 
+Each of these methods are template methods with a type parameter T. 
 
-
-## class field_storage 
-
-### Methods
+### field_storage::
 
 * inline T get(const int i, const int field_alloc_size) :  define how elements are retrieved from data buffer 
 
 * inline void set(const T &value, const int i, const int field_alloc_size) : define how elements are set into data buffer.
 
-* void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const : gather the elements with parity "par" that are communicated with "to_node" into "buffer". 
+* void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const : define how to gather all elements with parity "par" into "buffer" that will be communicated with "to_node". The comm_node struct contains all necessary information about the destination node.  
 
-* void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par) : place the elements in buffer, received from "from_node" into their correct places  
+* void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par) : place the elements of parity par from buffer into their correct places in this field_storage. from_node contains information about the node that sent the information. 
 
-* void allocate_field( const int field_alloc_size ) : allocate field memory
+* void allocate_field( const int field_alloc_size ) : allocate the data buffer.
 
-* void free_field() : free memory 
+* void free_field() : free the memory in the data buffer.  
 
-Note: field_alloc_size is a variable offered by the lattice_struct class that tells how much memory to allocate in storage. This depends on a number of factors which are handled by the lattice_struct. 
+
+## notes:
+
+Different backends are selected and added to the code with preprocessor directives. After the methods above have been defined in a header file, add an include statement with this header file after a suitable preprocessor directive after the field_struct interface has been declared. Note that for now all backends are mutually exclusive. 
 
 
 
