@@ -3,6 +3,9 @@
 #define N 3
 constexpr int mintime = CLOCKS_PER_SEC;
 
+#ifndef SEED
+#define SEED 100
+#endif
 
 
 int main(int argc, char **argv){
@@ -15,6 +18,7 @@ int main(int argc, char **argv){
 
     // Runs lattice->setup 
     bench_setup(argc, argv);
+    seed_random(SEED);
 
     field<matrix<N,N, cmplx<double>> > matrix1;
     field<matrix<N,N, cmplx<double>> > matrix2;
@@ -27,10 +31,36 @@ int main(int argc, char **argv){
     field<matrix<1,N, cmplx<float>> > fvector1;
     field<matrix<1,N, cmplx<float>> > fvector2;
 
-    matrix1[ALL] = 1;
-    matrix2[ALL] = 1;
-    fmatrix1[ALL] = 1;
-    fmatrix2[ALL] = 1;
+
+    // NOTE: This is because of the failure of transformer to recognize
+    // the member function call as changing the object!
+    matrix1.mark_changed(ALL);
+    matrix2.mark_changed(ALL);
+    matrix3.mark_changed(ALL);
+    vector1.mark_changed(ALL);
+    vector2.mark_changed(ALL);
+    fmatrix1.mark_changed(ALL);
+    fmatrix2.mark_changed(ALL);
+    fmatrix3.mark_changed(ALL);
+    fvector1.mark_changed(ALL);
+    fvector2.mark_changed(ALL);
+
+    // Generate random values
+    onsites(ALL){
+      matrix1[X].random();
+      matrix2[X].random();
+      matrix3[X].random();
+      vector1[X].random();
+      vector2[X].random();
+    }
+
+    onsites(ALL){
+      fmatrix1[X].random();
+      fmatrix2[X].random();
+      fmatrix3[X].random();
+      fvector1[X].random();
+      fvector2[X].random();
+    }
 
 
     // Time MATRIX * MATRIX
@@ -62,21 +92,13 @@ int main(int argc, char **argv){
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
     output0 << "Single Precision Matrix * Matrix: " << timing << "ms \n";
 
-
-    matrix1[ALL] = 1; 
-    onsites(ALL){
-        for(int i=0; i<N; i++){
-          vector1[X].c[0][i]=1;
-        }
-    }
-
     // Time VECTOR * MATRIX
     init = end = 0;
     for(n_runs=1; (end-init) < mintime; ){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
-          vector1[ALL] = vector1[X]*matrix1[X];
+          vector2[ALL] = vector1[X]*matrix1[X];
       }
       synchronize();
       end = clock();
@@ -90,7 +112,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
-          fvector1[ALL] = fvector1[X]*fmatrix1[X];
+          fvector2[ALL] = fvector1[X]*fmatrix1[X];
       }
       synchronize();
       end = clock();
@@ -162,10 +184,17 @@ int main(int argc, char **argv){
 
     // Define a gauge matrix
     field<matrix<N,N, cmplx<double>> > U[NDIM];
-    foralldir(d) U[d][ALL] = 1;
+    foralldir(d) {
+      U[d].mark_changed(ALL);
+      onsites(ALL){
+        U[d][X].random();
+        vector1[X].random();
+        vector2[X].random();
+      }
+    }
 
 
-    // Time naive Dirac operator
+    // Time staggered Dirac operator
     init = end = 0;
     //printf("node %d, dirac_stagggered 0\n", mynode());
     dirac_stagggered(U, 0.1, vector1, vector2);
@@ -185,7 +214,7 @@ int main(int argc, char **argv){
     output0 << "Dirac: " << timing << "ms \n";
 
 
-    // Time naive Dirac operator with direction loop expanded
+    // Time staggered Dirac operator with direction loop expanded
     #if (NDIM==4) 
     init = end = 0;
     dirac_stagggered_alldim(U, 0.1, vector1, vector2);
@@ -210,22 +239,24 @@ int main(int argc, char **argv){
     field<matrix<1,N, cmplx<double>> > r, rnew, p, Dp;
     for(n_runs=1; (end-init) < mintime; ){
       n_runs*=2;
-      init = clock();
 
-      for( int i=0; i<n_runs; i++){
-        double pDDp = 0, rr = 0, rrnew = 0;
-        double alpha, beta;
+      double pDDp = 0, rr = 0, rrnew = 0;
+      double alpha, beta;
 
-        onsites(ALL){
-          r[X] = vector1[X];
-          p[X] = vector1[X];
-          for(int i=0; i<N; i++){
-             vector2[X].c[0][i] = 0;
-          }
+      onsites(ALL){
+        r[X] = vector1[X];
+        p[X] = vector1[X];
+        for(int i=0; i<N; i++){
+           vector2[X].c[0][i] = 0;
         }
-            
+      }
+
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+        
         dirac_stagggered(U, 0.1, p, Dp);
 
+        rr=pDDp=0;
         onsites(ALL){
             rr += norm_sq(r[X]);
             pDDp += norm_sq(Dp[X]);
@@ -233,6 +264,7 @@ int main(int argc, char **argv){
 
         alpha = rr / pDDp;
 
+        rrnew = 0;
         onsites(ALL){
           vector2[X] = r[X] + alpha*p[X];
           r[X] = r[X] - alpha*Dp[X];
