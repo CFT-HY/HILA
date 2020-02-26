@@ -11,7 +11,7 @@ CXXFLAGS = -O3 -x c++ --std=c++17 $(OPTS)
 	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
 
 %.cpt: %.cpp Makefile
-	$(TRANSFORMER) $<
+	$(TRANSFORMER) $<  $(ADDITION)
 
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
