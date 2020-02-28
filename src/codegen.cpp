@@ -74,7 +74,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   // basic set up: 1st loop_parity, if it is known const set it up,
   // else copy it to a variable name
 
-  const std::string t = loopBuf.dump();
+  const std::string t = loopBuf.dump(); 
 
   looping_var = "Index";
   while (t.find(looping_var,0) != std::string::npos) looping_var += "_";

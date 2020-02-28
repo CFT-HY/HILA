@@ -256,7 +256,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   lfe.dirExpr  = nullptr;  // no neighb expression
     
   if (get_expr_type(lfe.parityExpr) == "parity") {
-    if (state::accept_field_parity) {
+    if (parsing_state.accept_field_parity) {
       // 1st parity statement on a single line lattice loop
       loop_parity.expr  = lfe.parityExpr;
       loop_parity.value = get_parity_val(loop_parity.expr);
@@ -270,7 +270,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   lfe.is_read = (is_compound || !is_assign);
   
   // next ref must have wildcard parity
-  state::accept_field_parity = false;
+  parsing_state.accept_field_parity = false;
         
   if (get_expr_type(lfe.parityExpr) == "parity_plus_direction") {
 
@@ -484,13 +484,13 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   remove_expr_list.clear();
   global.location.loop = ls->getSourceRange().getBegin();
   
-  state::accept_field_parity = field_parity_ok;
+  parsing_state.accept_field_parity = field_parity_ok;
     
   // the following is for taking the parity from next elem
-  state::scope_level = 0;
-  state::in_loop_body = true;
+  parsing_state.scope_level = 0;
+  parsing_state.in_loop_body = true;
   TraverseStmt(ls);
-  state::in_loop_body = false;
+  parsing_state.in_loop_body = false;
 
   // Remove exprs which we do not want
   for (Expr * e : remove_expr_list) writeBuf->remove(e);
@@ -516,7 +516,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   global.full_loop_text = "";
 
   // don't go again through the arguments
-  state::skip_children = 1;
+  parsing_state.skip_children = 1;
 
   state::loop_found = true;
   
@@ -565,7 +565,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     
     // Avoid treating constexprs as variables
      if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
-       state::skip_children = 1;   // nothing to be done
+       parsing_state.skip_children = 1;   // nothing to be done
        return true;
      }
     
@@ -579,7 +579,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
 
-      state::skip_children = 1;
+      parsing_state.skip_children = 1;
       return true;
     }
 
@@ -588,7 +588,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
                  "Field expressions without [..] not allowed within field loop");
-      state::skip_children = 1;  // once is enough
+      parsing_state.skip_children = 1;  // once is enough
       return true;
     }
 
@@ -599,11 +599,11 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
         handle_var_ref(DRE,is_assignment,assignop);
         is_assignment = false;
       
-        state::skip_children = 1;
+        parsing_state.skip_children = 1;
         llvm::errs() << "Variable ref: "
                      << TheRewriter.getRewrittenText(E->getSourceRange()) << '\n';
 
-        state::skip_children = 1;
+        parsing_state.skip_children = 1;
         return true;
       }
       // TODO: function ref?
@@ -616,7 +616,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (isa<ArraySubscriptExpr>(E)) {
       llvm::errs() << "  It's array expr "
                    << TheRewriter.getRewrittenText(E->getSourceRange()) << "\n";
-      //state::skip_children = 1;
+      //parsing_state.skip_children = 1;
       auto a = dyn_cast<ArraySubscriptExpr>(E);
 
       // At this point this should be an allowed expression?
@@ -637,7 +637,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // TODO: find really uniq variable references
       //var_ref_list.push_back( handle_var_ref(E) );
 
-      state::skip_children = 1;          
+      parsing_state.skip_children = 1;          
       return true;
     }
   } // Expr checking branch - now others...
@@ -656,12 +656,12 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       return true;
     }
     
-    state::scope_level++;
+    parsing_state.scope_level++;
     passthrough = true;     // next visit will be to the same node, skip
     TraverseStmt(s);
-    state::scope_level--;
-    remove_vars_out_of_scope(state::scope_level);
-    state::skip_children = 1;
+    parsing_state.scope_level--;
+    remove_vars_out_of_scope(parsing_state.scope_level);
+    parsing_state.skip_children = 1;
     return true;
   }
     
@@ -768,30 +768,30 @@ SourceRange MyASTVisitor::getSourceRangeAtPreviousLine( SourceLocation l ){
 
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
-  if (state::check_loop && state::loop_found) return true;
+  if (parsing_state.check_loop && state::loop_found) return true;
     
   // if state::skip_children > 0 we'll skip all until return to level up
-  if (state::skip_children > 0) state::skip_children++;
+  if (parsing_state.skip_children > 0) parsing_state.skip_children++;
     
   // go via the original routine...
-  if (!state::skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
+  if (!parsing_state.skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
 
-  if (state::skip_children > 0) state::skip_children--;
+  if (parsing_state.skip_children > 0) parsing_state.skip_children--;
       
   return true;
 }
 
 bool MyASTVisitor::TraverseDecl(Decl *D) {
 
-  if (state::check_loop && state::loop_found) return true;
+  if (parsing_state.check_loop && state::loop_found) return true;
 
   // if state::skip_children > 0 we'll skip all until return to level up
-  if (state::skip_children > 0) state::skip_children++;
+  if (parsing_state.skip_children > 0) parsing_state.skip_children++;
     
   // go via the original routine...
-  if (!state::skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseDecl(D);
+  if (!parsing_state.skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseDecl(D);
 
-  if (state::skip_children > 0) state::skip_children--;
+  if (parsing_state.skip_children > 0) parsing_state.skip_children--;
 
   return true;
 }
@@ -1042,9 +1042,9 @@ bool MyASTVisitor::control_command(VarDecl *var) {
   if (n.find("_transformer_ctl_",0) == std::string::npos) return false;
   
   if (n == "_transformer_ctl_dump_ast") {
-    state::dump_ast_next = true;
+    parsing_state.dump_ast_next = true;
   } else if(n == "_transformer_ctl_loop_function") {
-    state::loop_function_next = true;
+    parsing_state.loop_function_next = true;
   } else {
     reportDiag(DiagnosticsEngine::Level::Warning,
                var->getSourceRange().getBegin(),
@@ -1066,16 +1066,16 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   // catch the transformer_ctl -commands here
   if (control_command(var)) return true;
   
-  if (state::check_loop && state::loop_found) return true;
+  if (parsing_state.check_loop && state::loop_found) return true;
 
-  if (state::dump_ast_next) {
+  if (parsing_state.dump_ast_next) {
     // llvm::errs() << "**** Dumping declaration:\n" + get_stmt_str(s)+'\n';
     var->dump();
-    state::dump_ast_next = false;
+    parsing_state.dump_ast_next = false;
   }
 
   
-  if (state::in_loop_body) {
+  if (parsing_state.in_loop_body) {
     // for now care only loop body variable declarations
 
     if (!var->hasLocalStorage()) {
@@ -1096,7 +1096,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
                  "Cannot declare field variables within field loops");
-      state::skip_children = 1;
+      parsing_state.skip_children = 1;
       return true;
     }
 
@@ -1105,7 +1105,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     vd.decl = var;
     vd.name = var->getName();
     vd.type = var->getType().getAsString();
-    vd.scope = state::scope_level;
+    vd.scope = parsing_state.scope_level;
     var_decl_list.push_back(vd);
     
     llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
@@ -1130,21 +1130,21 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
 ///////////////////////////////////////////////////////////////////////////////
 /// VisitStmt is called for each statement in AST.  Thus, when traversing the
 /// AST or part of it we start here, and branch off depending on the statements
-/// and state flags
+/// and parsing_state.lags
 ///////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::VisitStmt(Stmt *s) {
 
-  if (state::check_loop && state::loop_found) return true;
+  if (parsing_state.check_loop && state::loop_found) return true;
   
-  if (state::dump_ast_next) {
+  if (parsing_state.dump_ast_next) {
     llvm::errs() << "**** Dumping statement:\n" + get_stmt_str(s)+'\n';
     s->dump();
-    state::dump_ast_next = false;
+    parsing_state.dump_ast_next = false;
   }
 
   // Entry point when inside field[par] = .... body
-  if (state::in_loop_body) {
+  if (parsing_state.in_loop_body) {
     return handle_loop_body_stmt(s);
   }
     
@@ -1161,7 +1161,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
       if (pp.getImmediateMacroName(startloc) == loop_call) {
         // Now we know it is onsites-macro
 
-        if (state::check_loop) {
+        if (parsing_state.check_loop) {
           state::loop_found = true;
           return true;
         }
@@ -1220,7 +1220,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     // now we have a[par] += ...  -stmt.  Arg(0) is
     // the lhs of the assignment
     
-    if (state::check_loop) {
+    if (parsing_state.check_loop) {
       state::loop_found = true;
       return true;
     }
@@ -1235,7 +1235,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   
   BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
   if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS())) {
-    if (state::check_loop) {
+    if (parsing_state.check_loop) {
       state::loop_found = true;
       return true;
     }
@@ -1270,9 +1270,9 @@ bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
     // llvm::errs() << "About to check function " << f->getNameAsString() << '\n';
     // llvm::errs() << buf.dump() << '\n';
     
-    state::check_loop = true;
+    parsing_state.check_loop = true;
     TraverseStmt(f->getBody());
-    state::check_loop = false;
+    parsing_state.check_loop = false;
     
     // llvm::errs() << "Func check done\n";
     
@@ -1314,16 +1314,16 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // also only non-templated functions
   // this does not really do anything
 
-  if (state::dump_ast_next) {
+  if (parsing_state.dump_ast_next) {
     llvm::errs() << "**** Dumping funcdecl:\n";
     f->dump();
-    state::dump_ast_next = false;
+    parsing_state.dump_ast_next = false;
   }
-  if(!state::check_loop && (state::loop_function_next || has_loop_function_pragma(f))) {
+  if(!parsing_state.check_loop && (parsing_state.loop_function_next || has_loop_function_pragma(f))) {
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);
-    state::loop_function_next = false;
+    parsing_state.loop_function_next = false;
   }
 
   // Check if the function can be called from a loop
@@ -1357,7 +1357,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
         
       case FunctionDecl::TemplatedKind::TK_FunctionTemplate:
         // not descent inside templates
-        state::skip_children = 1;
+        parsing_state.skip_children = 1;
         break;
         
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
@@ -1365,7 +1365,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
         if (does_function_contain_loop(f)) {
           specialize_function_or_method(f);
         } else {
-          state::skip_children = 1;  // no reason to look at it further
+          parsing_state.skip_children = 1;  // no reason to look at it further
         }
         break;
         
@@ -1514,7 +1514,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   writeBuf = writeBuf_saved;
   funcBuf.clear();
   // don't descend again
-  state::skip_children = 1;
+  parsing_state.skip_children = 1;
 }
 
 
@@ -1540,10 +1540,10 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
 
 bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   
-  if (state::dump_ast_next) {
+  if (parsing_state.dump_ast_next) {
     llvm::errs() << "**** Dumping class template declaration: \'" << D->getNameAsString() << "\'\n";
     D->dump();
-    state::dump_ast_next = false;
+    parsing_state.dump_ast_next = false;
   }
 
   // go through with real definitions or as a part of chain
@@ -1598,12 +1598,12 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 // Find the element typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
 bool MyASTVisitor::VisitDecl( Decl * D) {
-  if (state::check_loop && state::loop_found) return true;
+  if (parsing_state.check_loop && state::loop_found) return true;
 
-  if (state::dump_ast_next) {
+  if (parsing_state.dump_ast_next) {
     llvm::errs() << "**** Dumping declaration:\n";
     D->dump();
-    state::dump_ast_next = false;
+    parsing_state.dump_ast_next = false;
   }
 
   auto t = dyn_cast<TypeAliasTemplateDecl>(D);
