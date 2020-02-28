@@ -112,7 +112,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
-          vector2[ALL] = vector1[X]*matrix1[X];
+        vector2[ALL] = vector1[X]*matrix1[X];
       }
       synchronize();
       end = clock();
@@ -231,14 +231,14 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator with direction loop expanded
     #if (NDIM==4) 
     init = end = 0;
-    dirac_stagggered_alldim(U, 0.1, vector1, vector2);
+    dirac_stagggered_4dim(U, 0.1, vector1, vector2);
     synchronize();
     for(n_runs=1; (end-init) < mintime; ){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
         vector1.mark_changed(ALL); // Assure communication is included
-        dirac_stagggered_alldim(U, 0.1, vector1, vector2);
+        dirac_stagggered_4dim(U, 0.1, vector1, vector2);
       }
       synchronize();
       end = clock();
@@ -272,8 +272,8 @@ int main(int argc, char **argv){
 
         rr=pDDp=0;
         onsites(ALL){
-            rr += norm_sq(r[X]);
-            pDDp += norm_sq(Dp[X]);
+          rr += norm_sq(r[X]);
+          pDDp += norm_sq(Dp[X]);
         }
 
         alpha = rr / pDDp;
