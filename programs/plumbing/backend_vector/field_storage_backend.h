@@ -24,11 +24,12 @@ auto field_storage<T>::get(const int i, const int field_alloc_size) const
   using basetype = typename field_info<T>::base_type;
   constexpr int elements = field_info<T>::elements;
   constexpr int vector_size = field_info<T>::vector_size;
+
   typename field_info<T>::vector_type value;
   basetype *vp = (basetype *) (fieldbuf + i*vector_size);
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
-    valuep[e].load(vp+e*field_info<T>::vector_size);
+    valuep[e].load(vp+e*vector_size);
   }
   return value;
 }
@@ -43,10 +44,11 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
   using basetype = typename field_info<T>::base_type;
   constexpr int elements = field_info<T>::elements;
   constexpr int vector_size = field_info<T>::vector_size;
+
   basetype *vp = (basetype *) (fieldbuf + i*vector_size);
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
-    valuep[e].store((vp + e*field_info<T>::vector_size));
+    valuep[e].store((vp + e*vector_size));
   }
 }
 

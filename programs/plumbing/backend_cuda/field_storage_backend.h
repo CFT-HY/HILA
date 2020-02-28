@@ -12,7 +12,7 @@ inline T field_storage<T>::get(const int i, const int field_alloc_size) const {
   for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
      value_f[i] = fieldbuf[i*field_alloc_size + idx];
    }
-  return value; 
+  return value;
 }
 
 template<typename T>
