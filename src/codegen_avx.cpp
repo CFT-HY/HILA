@@ -402,6 +402,8 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
 
 void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
+
+
   // Find the vector size
   vector_map::set_vector_target(target);
   int vector_size = 1;
@@ -409,35 +411,12 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   std::string base_vector_type;
   vector_map::size_and_type(typestr, base_type, base_vector_type, vector_size);
 
-
-  // Find template parameter name (only 1 allowed)
-  auto template_parameter = field_storage_decl->getTemplateParameters()->begin()[0];
-  std::string templ_type = template_parameter->getNameAsString();
-  
   // Replace the original type with a vector type
   std::string vectortype = typestr;
   vector_map::replace(vectortype);
 
-  // Get the body of the element definition
-  srcBuf bodyBuffer;
-  //bodyBuffer.copy_from_range(writeBuf,field_storage_decl->getTemplatedDecl()->getSourceRange());
-
-  // Replace templated type with new vector type
-  //llvm::errs() << "TYPES " << templ_type << " " << vectortype << "\n";
-  //bodyBuffer.replace_token(0, bodyBuffer.size()-1, templ_type, vectortype );
-
-  // Add specialization parameters
-  //bodyBuffer.replace_token(0, bodyBuffer.size()-1,
-  //                field_storage_decl->getQualifiedNameAsString(),
-  //                field_storage_decl->getQualifiedNameAsString() + "<"+typestr+">");
-
-  // Add the template<> declaration
-  //bodyBuffer.prepend("template<>\n", true);
-  //bodyBuffer.append(";\n", true); // semicolon at end
-
-    // Add a simple template mapping from element type to vector size
   std::stringstream field_element_code;
-  field_element_code << "template<> \n";
+  field_element_code << "\ntemplate<> \n";
   field_element_code << "struct field_info<"<<typestr<<"> {\n";
   field_element_code << " constexpr static int vector_size = "<< std::to_string(vector_size) <<";\n";
   field_element_code << " constexpr static int base_type_size = sizeof(" << base_type << ");\n";
@@ -459,33 +438,8 @@ void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
   field_element_code << " using base_vector_type = " << base_vector_type << ";\n";
   field_element_code << "};\n";
 
-  //bodyBuffer.prepend(field_element_code.str(), true);
-
-  // insert above the field template 
-  SourceLocation l = 
-  getSourceLocationAtEndOfLine( field_decl->getSourceRange().getBegin() );
-  
-  // Find line above template<> by going up 2 lines
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  bool line2 = false;
-  for (int i=0; i<10000; i++) {
-    l = l.getLocWithOffset(-1);
-    bool invalid = false;
-    const char * c = SM.getCharacterData(l,&invalid);
-    if (invalid) {
-      llvm::errs() << program_name + ": no new line above field<T>, internal error\n";
-      break;
-    }
-    if (*c == '\n' && line2) break;
-    if (*c == '\n' && !line2) line2=true;
-  }
-  l = l.getLocWithOffset(1);
-
-  // Insert after the new line character
-  writeBuf->insert(l, field_element_code.str() + "\n", false, true);
-
-  // Mark source buffer modified
-  // set_sourceloc_modified( l );
+  // Insert in the top level buffer
+  toplevelBuf->insert(global.location.top.getLocWithOffset(-1), indent_string(field_element_code.str()),true,false);
 }
 
 

@@ -31,15 +31,15 @@ int main(int argc, char **argv){
     seed_random(SEED);
 
     field<matrix<MADD(0),MADD(0), cmplx<double>> > matrix1;
-    field<matrix<MADD(2),MADD(2), cmplx<double>> > matrix2;
-    field<matrix<MADD(4),MADD(4), cmplx<double>> > matrix3;
+    field<matrix<MADD(1),MADD(1), cmplx<double>> > matrix2;
+    field<matrix<MADD(3),MADD(3), cmplx<double>> > matrix3;
     field<matrix<MADD(6),MADD(6), cmplx<double>> > matrix4;
 
     onsites(ALL){
-      matrix<MADD(0),MADD(0), cmplx<double>> rand1;
-      matrix<MADD(2),MADD(2), cmplx<double>> rand2;
-      matrix<MADD(4),MADD(4), cmplx<double>> rand3;
-      matrix<MADD(6),MADD(6), cmplx<double>> rand4;
+      element<matrix<MADD(0),MADD(0), cmplx<double>>> rand1;
+      element<matrix<MADD(1),MADD(1), cmplx<double>>> rand2;
+      element<matrix<MADD(3),MADD(3), cmplx<double>>> rand3;
+      element<matrix<MADD(6),MADD(6), cmplx<double>>> rand4;
 
       rand1.random();
       rand2.random();
@@ -76,7 +76,7 @@ int main(int argc, char **argv){
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "matrix size " << (int) MSIZE + 2 << "*"  << (int) MSIZE + 2 << " : "<< timing << " ms \n";
+    output0 << "matrix size " << (int) MSIZE + 1 << "*"  << (int) MSIZE + 1 << " : "<< timing << " ms \n";
 
     // Time conj(matrix) * matrix * conj(matrix) 
     init = end = 0;
@@ -89,7 +89,7 @@ int main(int argc, char **argv){
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "matrix size " << (int) MSIZE + 4  << "*"  << (int) MSIZE + 4  << " : "<< timing << " ms \n";
+    output0 << "matrix size " << (int) MSIZE + 3  << "*"  << (int) MSIZE + 3  << " : "<< timing << " ms \n";
 
     init = end = 0;
     for(n_runs=1; (end-init) < mintime; n_runs*=2){
@@ -130,7 +130,7 @@ int main(int argc, char **argv){
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "matrix size " << (int) MSIZE + 2 << "*"  << (int) MSIZE + 2 << " : "<< timing << " ms \n";
+    output0 << "matrix size " << (int) MSIZE + 1 << "*"  << (int) MSIZE + 1 << " : "<< timing << " ms \n";
 
     // Time matrix) * .conjugate()atrix * matrix) 
     init = end = 0;
@@ -143,7 +143,7 @@ int main(int argc, char **argv){
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "matrix size " << (int) MSIZE + 4  << "*"  << (int) MSIZE + 4  << " : "<< timing << " ms \n";
+    output0 << "matrix size " << (int) MSIZE + 3  << "*"  << (int) MSIZE + 3  << " : "<< timing << " ms \n";
 
     init = end = 0;
     for(n_runs=1; (end-init) < mintime; n_runs*=2){

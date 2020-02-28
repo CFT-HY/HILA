@@ -418,8 +418,6 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E) {
 
   // Check if it's local
   bool is_loop_local = false;
-  E->dump();
-  E->getBase()->IgnoreImplicit()->dump();
   Expr * RE = E->getBase()->IgnoreImplicit();
   while(!dyn_cast<DeclRefExpr>(RE)){
     if(dyn_cast<ArraySubscriptExpr>(RE)){
@@ -428,17 +426,21 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E) {
     } else if(dyn_cast<MemberExpr>(RE)){
       MemberExpr * ME = dyn_cast<MemberExpr>(RE);
       RE = ME->getBase()->IgnoreImplicit();
+    } else if(dyn_cast<CXXOperatorCallExpr>(RE)) {
+      CXXOperatorCallExpr * OCE = dyn_cast<CXXOperatorCallExpr>(RE);
+      if(strcmp(getOperatorSpelling(OCE->getOperator()),"[]") == 0){
+        RE = OCE->getArg(0)->IgnoreImplicit();
+      } else {
+        // It's not a variable
+        return;
+      }
     } else {
-      llvm::errs() << "Cannot figure out base of the variable expression\n";
-      exit(1);
+      // It's not a variable
+      return;
     }
-    llvm::errs() << "while \n";
-    RE->dump();
   }
   DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(RE);
-  DRE->dump();
   VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
-  decl->dump();
   for (var_decl & d : var_decl_list) {
     if (d.scope >= 0 && decl == d.decl) {
       llvm::errs() << "loop local var ref! \n";

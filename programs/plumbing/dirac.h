@@ -14,6 +14,7 @@ void dirac_stagggered_alldim(
     vtype &v_out)
 {
     static field<double> eta[NDIM]; // The staggered phase
+    static vtype vtemp; // A temporary vector field
     static bool initialized = false;
 
     // Initialize the staggered eta field
@@ -37,7 +38,6 @@ void dirac_stagggered_alldim(
     foralldir(dir){
         direction odir = opp_dir( (direction)dir );
         v_in.start_move(dir);
-        v_in.start_move(odir);
         gauge[dir].start_move(odir);
     }
 
@@ -47,10 +47,10 @@ void dirac_stagggered_alldim(
     // Run neighbour fetches and multiplications
     foralldir(dir){
         direction odir = opp_dir( (direction)dir );
-        // Positive directions: get the vector and multiply by matrix stored here
-        v_out[ALL] += 0.5*eta[dir][X]*v_in[X+dir]*gauge[dir][X];
-        // Negative directions: get both form neighbour
-        v_out[ALL] -= 0.5*eta[dir][X]*v_in[X+odir]*gauge[dir][X+odir].conjugate();
+        // First mulltiply the by conjugate before communicating the matrix
+        vtemp[ALL] = v_in[X]*gauge[dir][X].conjugate();
+        v_out[ALL] += 0.5*eta[dir][X]*v_in[X+dir]*gauge[dir][X]
+                    - 0.5*eta[dir][X]*vtemp[X+odir];
     }
 
 }
@@ -67,6 +67,7 @@ void dirac_stagggered_4dim(
     vtype &v_out)
 {
     static field<double> eta[NDIM]; // The staggered phase
+    static vtype vtemp[NDIM]; // A temporary vector fields
     static bool initialized = false;
 
     // Initialize the staggered eta field
@@ -86,12 +87,11 @@ void dirac_stagggered_4dim(
         initialized = true;
     }
 
-    // Start getting neighbours
-    foralldir(dir){
-        direction odir = opp_dir( (direction)dir );
-        v_in.start_move(dir);
-        v_in.start_move(odir);
-        gauge[dir].start_move(odir);
+    onsites(ALL){
+      vtemp[XUP][X] = v_in[X]*gauge[XUP][X].conjugate();
+      vtemp[YUP][X] = v_in[X]*gauge[YUP][X].conjugate();
+      vtemp[ZUP][X] = v_in[X]*gauge[ZUP][X].conjugate();
+      vtemp[TUP][X] = v_in[X]*gauge[TUP][X].conjugate();
     }
 
     // Run neighbour fetches and multiplications
@@ -101,10 +101,10 @@ void dirac_stagggered_4dim(
       v_out[X] += 0.5*eta[YUP][X]*v_in[X+YUP]*gauge[YUP][X];
       v_out[X] += 0.5*eta[ZUP][X]*v_in[X+ZUP]*gauge[ZUP][X];
       v_out[X] += 0.5*eta[TUP][X]*v_in[X+TUP]*gauge[TUP][X];
-      v_out[X] -= 0.5*eta[XUP][X]*v_in[X+XDOWN]*gauge[XUP][X+XDOWN].conjugate();
-      v_out[X] -= 0.5*eta[YUP][X]*v_in[X+YDOWN]*gauge[YUP][X+YDOWN].conjugate();
-      v_out[X] -= 0.5*eta[ZUP][X]*v_in[X+ZDOWN]*gauge[ZUP][X+ZDOWN].conjugate();
-      v_out[X] -= 0.5*eta[TUP][X]*v_in[X+TDOWN]*gauge[TUP][X+TDOWN].conjugate();
+      v_out[X] -= 0.5*eta[XUP][X]*vtemp[XUP][X+XDOWN];
+      v_out[X] -= 0.5*eta[YUP][X]*vtemp[YUP][X+YDOWN];
+      v_out[X] -= 0.5*eta[ZUP][X]*vtemp[ZUP][X+ZDOWN];
+      v_out[X] -= 0.5*eta[TUP][X]*vtemp[TUP][X+TDOWN];
     }
 }
 #endif

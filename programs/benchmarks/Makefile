@@ -1,4 +1,4 @@
-ADDITION = -DMSIZE=5
+ADDITION = -DMSIZE=2
 OPTS = -DNDIM=4 $(ADDITION)
 
 #The next line work on puhti

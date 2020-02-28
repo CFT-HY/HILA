@@ -155,19 +155,6 @@ void operator *= (T& lhs, field_element<T>& rhs) {
 template <typename T>
 using element = T;
 
-/// Utility for returning mapping a field element type into 
-/// a corresponding vector. This is not used directly as a type
-#ifndef VECTORIZED
-template <typename T>
-struct field_info{
-  constexpr static int vector_size = 1;
-  constexpr static int base_type_size = 1;
-  constexpr static int elements = 1;
-
-  using base_type = double;
-};
-#endif
-
 // These are helpers, to make generic templates
 // e.g. t_plus<A,B> gives the type of the operator a + b, where a is of type A and b B.
 template<typename A, typename B>
@@ -188,7 +175,6 @@ private:
   /// TODO: field-specific boundary conditions?
   class field_struct {
     public:
-      constexpr static int vector_size = field_info<T>::vector_size;
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
       lattice_struct * lattice;
       unsigned is_fetched[NDIRS];

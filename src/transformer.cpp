@@ -190,12 +190,6 @@ std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semi_at_end, srcBu
 
 /// Call the backend function for generating the field storage type
 void MyASTVisitor::backend_generate_field_storage_type(std::string typestr){
-  // check that field_storage_type has been found
-  if (field_storage_decl == nullptr) {
-    llvm::errs() << " **** internal error: element undefined in field\n";
-    exit(1);
-  }
-
   if(target.VECTORIZE){
     generate_field_storage_type_AVX(typestr);
   }
@@ -560,6 +554,8 @@ public:
 
         // Modified files should be substituted on top of #include -directives
         // First, find buffers which are modified
+
+        file_id_list.clear();
         
         for ( file_buffer & fb : file_buffer_list ) {
           if (fb.sbuf.is_modified()) set_fid_modified(fb.fid);
@@ -568,7 +564,10 @@ public:
         // then, ensure that the full include chain is present in file_id_list
         // Use iterator here, because the list can grow!
 
-        for ( FileID f : file_id_list ) {
+        for( int fi=0; fi < file_id_list.size(); fi++ ){
+          FileID f = file_id_list[fi];
+          llvm::errs() << "Checking file "
+               << SM.getFilename(SM.getLocForStartOfFile(f)) << '\n';
           check_include_path(f);
         }
 

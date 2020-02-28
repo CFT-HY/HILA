@@ -24,14 +24,12 @@ inline void field_storage<T>::set(const T &value, const int i, const int field_a
   }
 }
 
-template<typename T>
-inline void field_storage<T>::set(const T &value, unsigned int i) {}
 
 template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
+  constexpr static int t_elements = sizeof(T) / sizeof(real_t);
   fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
   #pragma acc enter data create(fieldbuf)
-
 }
 
 template<typename T>

@@ -10,7 +10,7 @@ class field_storage {
   public:
 
     #ifdef layout_SOA 
-    constexpr static int t_elements = sizeof(T) / sizeof(real_t);
+    
     real_t * fieldbuf = NULL;
     #else
     T * fieldbuf = NULL;
@@ -19,9 +19,10 @@ class field_storage {
     void allocate_field( lattice_struct * lattice );
     void free_field();
     #pragma transformer loop_function
-    inline T get(const int i, const int field_alloc_size) const;
+    auto get(const int i, const int field_alloc_size) const;
     #pragma transformer loop_function
-    inline void set(const T &value, const int i, const int field_alloc_size);
+    template<typename A>
+    inline void set(const A &value, const int i, const int field_alloc_size);
     #pragma transformer loop_function
     inline void set(const T &value, unsigned int i);
 
