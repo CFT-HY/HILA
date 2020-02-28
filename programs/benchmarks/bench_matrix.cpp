@@ -244,7 +244,7 @@ int main(int argc, char **argv){
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "Dirac separate loops: " << timing << "ms \n";
+    output0 << "Dirac one loop: " << timing << "ms \n";
     #endif
     
 
