@@ -6,19 +6,14 @@
 #include "../datatypes/general_matrix.h"
 #include "../plumbing/field.h"
 
-template<typename mtype, typename vtype>
-void dirac_stagggered(
-  const mtype gauge[NDIM],
-  const double mass,
-  const vtype &v_in,
-  vtype &v_out)
-{
-  static field<double> eta[NDIM]; // The staggered phase
-  static vtype vtemp[NDIRS]; // A temporary vector field
-  static bool initialized = false;
 
+static int dirac_staggered_initialized = false;
+static field<double> staggered_eta[NDIM];
+
+
+inline void init_staggered_eta(){
   // Initialize the staggered eta field
-  if(!initialized){
+  if(!dirac_staggered_initialized){
     foralldir(d){
       onsites(ALL){
         element<location> l = coordinates(X);
@@ -28,11 +23,23 @@ void dirac_stagggered(
         }
         // +1 if sumcoord divisible by 2, -1 otherwise
         // If statements not yet implemented for vectors
-        eta[d][X] = (sumcoord%2)*2-1; 
+        staggered_eta[d][X] = (sumcoord%2)*2-1; 
       }
     }
-    initialized = true;
+    dirac_staggered_initialized = true;
   }
+}
+
+
+template<typename mtype, typename vtype>
+void dirac_stagggered(
+  const mtype gauge[NDIM],
+  const double mass,
+  const vtype &v_in,
+  vtype &v_out)
+{
+  static vtype vtemp[NDIRS]; // A temporary vector field
+  init_staggered_eta();
     
   // Start getting neighbours
   foralldir(dir){
@@ -52,11 +59,59 @@ void dirac_stagggered(
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
-    v_out[ALL] += 0.5*eta[dir][X]*v_in[X+dir]*gauge[dir][X]
-                - 0.5*eta[dir][X]*vtemp[dir][X+odir];
+    v_out[ALL] += 0.5*staggered_eta[dir][X] * (
+      v_in[X+dir]*gauge[dir][X] - vtemp[dir][X+odir]
+    );
+  }
+}
+
+
+template<typename mtype, typename vtype>
+void dirac_stagggered_dagger(
+  const mtype gauge[NDIM],
+  const double mass,
+  const vtype &v_in,
+  vtype &v_out)
+{
+  static vtype vtemp[NDIRS]; // A temporary vector field
+  init_staggered_eta();
+    
+  // Start getting neighbours
+  foralldir(dir){
+    direction odir = opp_dir( (direction)dir );
+    v_in.start_move(dir);
   }
 
+  // Apply the mass diagonally
+  v_out[ALL] = mass * v_in[X];
+
+  // Run neighbour fetches and multiplications
+  foralldir(dir){
+    direction odir = opp_dir( (direction)dir );
+    // First mulltiply the by conjugate before communicating the matrix
+    vtemp[dir][ALL] = v_in[X]*gauge[dir][X].conjugate();
+    vtemp[dir].start_move(odir);
+  }
+  foralldir(dir){
+    direction odir = opp_dir( (direction)dir );
+    v_out[ALL] -= 0.5*staggered_eta[dir][X] * (
+      v_in[X+dir]*gauge[dir][X] - vtemp[dir][X+odir]
+    );
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #if (NDIM==4)
