@@ -177,8 +177,8 @@ private:
     public:
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
       lattice_struct * lattice;
-      unsigned is_fetched[NDIRS];
-      bool move_started[3*NDIRS];
+      bool is_fetched[2*NDIRS];
+      bool move_started[2*NDIRS];
 #ifdef USE_MPI
       std::vector<MPI_Request> receive_request[3*NDIRS];
       std::vector<MPI_Request> send_request[3*NDIRS];
@@ -308,45 +308,55 @@ public:
     if (fs == nullptr) allocate();
     else {
       assert(p == EVEN || p == ODD || p == ALL);
-      unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
-      for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
-      for (int i=0; i<3*NDIRS; i++) fs->move_started[i] = false;
+      if(p==EVEN) for (int i=0; i<2*NDIRS; i+=2) fs->is_fetched[i] = false;
+      if(p==ODD)  for (int i=1; i<2*NDIRS; i+=2) fs->is_fetched[i] = false;
+      if(p==ALL)  for (int i=0; i<2*NDIRS; i+=1) fs->is_fetched[i] = false;
+      if(p==EVEN) for (int i=0; i<2*NDIRS; i+=2) fs->move_started[i] = false;
+      if(p==ODD)  for (int i=1; i<2*NDIRS; i+=2) fs->move_started[i] = false;
+      if(p==ALL)  for (int i=0; i<2*NDIRS; i+=1) fs->move_started[i] = false;
     }
   }
 
   void mark_changed(const parity p) const {
     assert(is_allocated());
     assert(p == EVEN || p == ODD || p == ALL);
-    unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
-    for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
-    for (int i=0; i<3*NDIRS; i++) fs->move_started[i] = false;
+    if(p==EVEN) for (int i=0; i<2*NDIRS; i+=2) fs->is_fetched[i] = false;
+    if(p==ODD)  for (int i=1; i<2*NDIRS; i+=2) fs->is_fetched[i] = false;
+    if(p==ALL)  for (int i=0; i<2*NDIRS; i+=1) fs->is_fetched[i] = false;
+    if(p==EVEN) for (int i=0; i<2*NDIRS; i+=2) fs->move_started[i] = false;
+    if(p==ODD)  for (int i=1; i<2*NDIRS; i+=2) fs->move_started[i] = false;
+    if(p==ALL)  for (int i=0; i<2*NDIRS; i+=1) fs->move_started[i] = false;
   }
 
   /// Mark the field parity fetched from direction
   void mark_fetched(int dir, const parity p) const {
     assert(p == EVEN || p == ODD || p == ALL);
-    unsigned up = 0x3 & (static_cast<unsigned>(opp_parity(p)));
-    fs->is_fetched[dir] |= up;
+    if(p==EVEN || p==ALL) fs->is_fetched[2*dir] = true;
+    if(p==ODD || p==ALL ) fs->is_fetched[2*dir+1] = true;
+    
   }
 
   /// Check if the field has been changed since the previous communication
   bool is_fetched( int dir, parity par) const{
     assert(dir < NDIRS);
-    int par_int = static_cast<unsigned>(opp_parity(par));
-    return (fs->is_fetched[dir] ^ par_int) == 0;
+    bool * fd = fs->is_fetched + 2*dir;
+    return (par==ALL && fd[0] && fd[1] ) || (par==EVEN && fd[0]) || (par==ODD && fd[1]);
+  }
+
+  /* Mark communication started */
+  void mark_move_started( int dir, parity p) const{
+    assert(dir < NDIRS);
+    if(p==EVEN || p==ALL) fs->move_started[2*dir] = true;
+    if(p==ODD  || p==ALL) fs->move_started[2*dir+1] = true;
   }
 
   /// Check if communication has started
   bool is_move_started( int dir, parity par) const{
     assert(dir < NDIRS);
-    return fs->move_started[(int)par + 2*dir];
+    bool * sd = fs->move_started + 2*dir;
+    return (par==ALL && sd[0] && sd[1] ) || (par==EVEN && sd[0]) || (par==ODD && sd[1]);
   }
 
-  /* Mark communication started */
-  void mark_move_started( int dir, parity par) const{
-    assert(dir < NDIRS);
-    fs->move_started[(int)par + 2*dir] = true;
-  }
   
 
   void assert_is_initialized() {
