@@ -73,7 +73,7 @@ inline direction & operator++(direction & dir, int dummy){
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
 
-enum class parity : unsigned { none, even, odd, all, x };
+enum class parity : unsigned { none = 0, even, odd, all, x };
 // use here #define instead of const parity. Makes EVEN a protected symbol
 const parity EVEN = parity::even;
 const parity ODD  = parity::odd;
@@ -116,7 +116,8 @@ class coordinate_vector {
   const int& operator[] (const int i) const { return r[i]; }
   const int& operator[] (const direction d) const { return r[(int)d]; }
 
-  parity parity() {
+  // Parity of this coordinate
+  parity coordinate_parity() {
     int s = 0;
     foralldir(d) s += r[d];
     if (s % 2 == 0) return parity::even;
@@ -145,10 +146,45 @@ inline coordinate_vector operator-(const coordinate_vector & a) {
   return r;
 }
 
+inline coordinate_vector operator*(const int i, const coordinate_vector & a) {
+  coordinate_vector r;
+  foralldir(d) r[d] = i*a[d];
+  return r;
+}
+
+inline coordinate_vector operator*(const coordinate_vector & a, const int i) {
+  return i*a;
+}
+
+inline coordinate_vector operator/(const coordinate_vector & a, const int i) {
+  coordinate_vector r;
+  foralldir(d) r[d] = a[d]/i;
+  return r;
+}
+
 // Replaced by transformer
 coordinate_vector coordinates(parity X);
 
 
+/// Parity + dir -type: used in expressions of type f[X+dir]
+/// It's a dummy type, will be removed by transformer
+struct parity_plus_direction {
+  parity p;
+  direction d;
+};
+
+/// Declarations, no need to implement these (type removed by transformer)
+const parity_plus_direction operator+(const parity par, const direction d);
+const parity_plus_direction operator-(const parity par, const direction d);
+
+/// Parity + coordinate offset, used in f[X+coordinate_vector] or f[X+dir1+dir2] etc.
+struct parity_plus_offset {
+  parity p;
+  coordinate_vector cv;
+};
+
+const parity_plus_offset operator+(const parity par, const coordinate_vector & cv);
+const parity_plus_offset operator+(const parity_plus_direction, const direction d);
 
 
 // Global functions: setup

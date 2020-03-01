@@ -17,13 +17,6 @@
 
 static int next_mpi_field_tag = 0;
 
-struct parity_plus_direction {
-  parity p;
-  direction d;
-};
-
-const parity_plus_direction operator+(const parity par, const direction d);
-const parity_plus_direction operator-(const parity par, const direction d);
 
 // This is a marker for transformer -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)

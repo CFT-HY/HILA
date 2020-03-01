@@ -214,7 +214,7 @@ void lattice_struct::setup_nodes() {
     if (v % 2 == 0)
       ni.evensites = ni.oddsites = v/2;
     else {
-      if (l.parity() == EVEN) {
+      if (l.coordinate_parity() == EVEN) {
         ni.evensites = v/2 + 1; 
         ni.oddsites = v/2;
       } else {
@@ -361,7 +361,7 @@ void lattice_struct::create_std_gathers()
 	      // Now site is off-node, this lead to fetching
 	      nnodes[num] = node_number(ln);
 	      index[num]  = site_index(ln, nnodes[num] );
-	      nparity[num] = l.parity();  // parity of THIS
+	      nparity[num] = l.coordinate_parity();  // parity of THIS
 	      here[num]   = i;
 	      num++;
       }
