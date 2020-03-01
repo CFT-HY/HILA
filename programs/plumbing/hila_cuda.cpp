@@ -54,11 +54,11 @@ void backend_lattice_struct::setup(lattice_struct lattice)
   }
 
   /* Setup the location field */
-  cudaMalloc( (void **)&(d_coordinates), lattice.local_volume() * sizeof(location));
+  cudaMalloc( (void **)&(d_coordinates), lattice.local_volume() * sizeof(coordinate_vector));
   check_cuda_error("cudaMalloc device coordinate array");
-  tmp = (location*) malloc( lattice.local_volume() * sizeof(location) );
+  tmp = (coordinate_vector*) malloc( lattice.local_volume() * sizeof(coordinate_vector) );
   for(int i=0; i<lattice.local_volume(); i++) tmp[i] = lattice.coordinates(i);
-  cudaMemcpy( d_coordinates, tmp, lattice.local_volume() * sizeof(location), cudaMemcpyHostToDevice );
+  cudaMemcpy( d_coordinates, tmp, lattice.local_volume() * sizeof(coordinate_vector), cudaMemcpyHostToDevice );
   check_cuda_error("cudaMemcpy device coordinate array");
   free(tmp);
 

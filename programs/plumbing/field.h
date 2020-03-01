@@ -7,7 +7,9 @@
 #include <type_traits>
 
 #include "../plumbing/globals.h"
+#include "../plumbing/defs.h"
 #include "../plumbing/field_storage.h"
+#include "../plumbing/lattice.h"
 
 #ifdef USE_MPI
 #include "../plumbing/comm_mpi.h"

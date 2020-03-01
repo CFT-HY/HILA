@@ -99,8 +99,6 @@ static std::vector<parity> loop_parities(parity par){
   return parities;
 }
 
-
-
 #define foralldir(d) for(direction d=XUP; d<NDIM; d++) 
 
 static inline int is_up_dir(const int d) { return d<NDIM; }
@@ -108,42 +106,47 @@ static inline int is_up_dir(const int d) { return d<NDIM; }
 
 // location type
 
-struct location {
+class coordinate_vector {
+ private:
   int r[NDIM];
+
+ public:
   int& operator[] (const int i) { return r[i]; }
   int& operator[] (const direction d) { return r[(int)d]; }
   const int& operator[] (const int i) const { return r[i]; }
   const int& operator[] (const direction d) const { return r[(int)d]; }
+
+  parity parity() {
+    int s = 0;
+    foralldir(d) s += r[d];
+    if (s % 2 == 0) return parity::even;
+    else return parity::odd;
+  }
+
+  // cast to std::array
   operator std::array<int,NDIM>(){std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
 };
 
-inline location operator+(const location & a, const location & b) {
-  location r;
+inline coordinate_vector operator+(const coordinate_vector & a, const coordinate_vector & b) {
+  coordinate_vector r;
   foralldir(d) r[d] = a[d] + b[d];
   return r;
 }
 
-inline location operator-(const location & a, const location & b) {
-  location r;
+inline coordinate_vector operator-(const coordinate_vector & a, const coordinate_vector & b) {
+  coordinate_vector r;
   foralldir(d) r[d] = a[d] - b[d];
   return r;
 }
 
-inline location operator-(const location & a) {
-  location r;
+inline coordinate_vector operator-(const coordinate_vector & a) {
+  coordinate_vector r;
   foralldir(d) r[d] = -a[d];
   return r;
 }
 
-inline parity location_parity(const location & a) {
-  int s = 0;
-  foralldir(d) s += a[d];
-  if (s % 2 == 0) return parity::even;
-  else return parity::odd;
-}
-
 // Replaced by transformer
-location coordinates(parity X);
+coordinate_vector coordinates(parity X);
 
 
 

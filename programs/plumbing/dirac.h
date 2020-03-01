@@ -16,7 +16,7 @@ inline void init_staggered_eta(){
   if(!dirac_staggered_initialized){
     foralldir(d){
       onsites(ALL){
-        element<location> l = coordinates(X);
+        element<coordinate_vector> l = coordinates(X);
         element<int> sumcoord = 0;
         for(int d2=0;d2<d;d2++){
           sumcoord += l[d];
@@ -132,7 +132,7 @@ void dirac_stagggered_4dim(
   if(!initialized){
     foralldir(d){
       onsites(ALL){
-        element<location> l = coordinates(X);
+        element<coordinate_vector> l = coordinates(X);
         element<int> sumcoord = 0;
         for(int d2=0;d2<d;d2++){
           sumcoord += l[d];

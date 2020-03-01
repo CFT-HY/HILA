@@ -15,7 +15,7 @@
 #include "../plumbing/inputs.h"
 
 struct node_info {
-  location min,size;
+  coordinate_vector min,size;
   unsigned evensites, oddsites;
 };
 
@@ -49,10 +49,10 @@ private:
     unsigned index;
     unsigned sites, evensites, oddsites;
     unsigned field_alloc_size;          // how many sites/node in allocations 
-    location min, size;                 // node local coordinate ranges
+    coordinate_vector min, size;                 // node local coordinate ranges
     unsigned nn[NDIRS];                 // nn-node of node down/up to dirs
     bool first_site_even;               // is location min even or odd?
-    std::vector<location> coordinates;
+    std::vector<coordinate_vector> coordinates;
 
     void setup(node_info & ni, lattice_struct & lattice);
   } this_node;
@@ -155,11 +155,11 @@ public:
   int n_nodes() { return nodes.number; }
   long long local_volume() {return this_node.sites;}
   
-  bool is_on_node(const location & c);
-  unsigned node_number(const location & c);
-  unsigned site_index(const location & c);
-  unsigned site_index(const location & c, const unsigned node);
-  location site_location(unsigned index);
+  bool is_on_node(const coordinate_vector & c);
+  unsigned node_number(const coordinate_vector & c);
+  unsigned site_index(const coordinate_vector & c);
+  unsigned site_index(const coordinate_vector & c, const unsigned node);
+  coordinate_vector site_location(unsigned index);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
   void create_std_gathers();
   
@@ -199,12 +199,12 @@ public:
   }
   #endif
 
-  location coordinates( unsigned idx ){
+  coordinate_vector coordinates( unsigned idx ){
     return site_location(idx);
   }
 
-  location local_coordinates( unsigned idx ){
-    location l = site_location(idx);
+  coordinate_vector local_coordinates( unsigned idx ){
+    coordinate_vector l = site_location(idx);
     foralldir(d)
       l[d] = l[d] - this_node.min[d];
     return l;
