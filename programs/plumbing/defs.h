@@ -52,22 +52,29 @@ using real_t = float;
 // Direction and parity
 
 #if NDIM==4
-enum direction :unsigned { XUP, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRS };
+enum direction :unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRS };
 #elif NDIM==3
-enum direction { XUP, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRS };
+enum direction :unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRS };
 #elif NDIM==2
-enum direction { XUP, YUP, YDOWN, XDOWN, NDIRS };
+enum direction :unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRS };
 #elif NDIM==1
-enum direction { XUP, XDOWN, NDIRS };
+enum direction :unsigned { XUP = 0, XDOWN, NDIRS };
 #endif
 
-/**
- * Increment op for directions
- * */
+// Increment/decrement ops for directions
+// Post-increment 
 #pragma transformer loop_function
-inline direction & operator++(direction & dir, int dummy){
-  const int i = static_cast<int>(dir);
-  return dir=static_cast<direction>((i + 1)%NDIRS);
+inline direction operator++(direction & dir, int dummy){
+  const unsigned d = dir;
+  dir = static_cast<direction>(d + 1);
+  return static_cast<direction>(d);
+}
+
+// Pre-increment
+#pragma transformer loop_function
+inline direction & operator++(direction & dir) {
+  dir = static_cast<direction>(dir + 1);
+  return dir;
 }
 
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
@@ -99,7 +106,7 @@ static std::vector<parity> loop_parities(parity par){
   return parities;
 }
 
-#define foralldir(d) for(direction d=XUP; d<NDIM; d++) 
+#define foralldir(d) for(direction d=XUP; d<NDIM; ++d)
 
 static inline int is_up_dir(const int d) { return d<NDIM; }
 
