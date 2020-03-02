@@ -164,7 +164,7 @@ using t_div  = decltype(std::declval<A>() / std::declval<B>());
 // field class 
 template <typename T>
 class field {
-private:
+ private:
 
   /// The following struct holds the data + information about the field
   /// TODO: field-specific boundary conditions?
@@ -231,7 +231,7 @@ private:
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
   
-public:
+ public:
 
   field_struct * fs;
   
@@ -365,9 +365,10 @@ public:
   // placemarker, should not be here
   // T& operator[] (const int i) { return data[i]; }
 
-  // these give the element -- WILL BE modified by transformer
+  // declarations -- WILL BE implemented by transformer, not written here
   element<T>& operator[] (const parity p) const;
   element<T>& operator[] (const parity_plus_direction p) const;
+  element<T>& operator[] (const parity_plus_offset p) const;
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
   inline auto get_value_at(int i) const { return this->fs->get(i); }

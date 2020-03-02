@@ -52,14 +52,16 @@ using real_t = float;
 // Direction and parity
 
 #if NDIM==4
-enum direction :unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRS };
+enum direction :unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==3
-enum direction :unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRS };
+enum direction :unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==2
-enum direction :unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRS };
+enum direction :unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==1
-enum direction :unsigned { XUP = 0, XDOWN, NDIRS };
+enum direction :unsigned { XUP = 0, XDOWN, NDIRECTIONS };
 #endif
+
+constexpr unsigned NDIRS = NDIRECTIONS;
 
 // Increment/decrement ops for directions
 // Post-increment 
@@ -111,6 +113,12 @@ static std::vector<parity> loop_parities(parity par){
 static inline int is_up_dir(const int d) { return d<NDIM; }
 
 
+inline int parallel_dir(direction d1, direction d2) {
+  if (d1 == d2) return 1;
+  else if (d1 == opp_dir(d2)) return -1;
+  else return 0;
+}
+
 // location type
 
 class coordinate_vector {
@@ -118,6 +126,16 @@ class coordinate_vector {
   int r[NDIM];
 
  public:
+  coordinate_vector() = default;
+  coordinate_vector(const coordinate_vector & v) {
+    foralldir(d) r[d] = v[d];
+  }
+
+  // initialize with direction -- useful for automatic conversion
+  coordinate_vector(const direction & dir) {
+    foralldir(d) r[d] = parallel_dir(d,dir);
+  }
+
   int& operator[] (const int i) { return r[i]; }
   int& operator[] (const direction d) { return r[(int)d]; }
   const int& operator[] (const int i) const { return r[i]; }
@@ -172,6 +190,36 @@ inline coordinate_vector operator/(const coordinate_vector & a, const int i) {
 // Replaced by transformer
 coordinate_vector coordinates(parity X);
 
+/// Special direction operators: dir + dir -> coordinate_vector
+inline coordinate_vector operator+(const direction d1, const direction d2) {
+  coordinate_vector r;
+  foralldir(d) {
+    r[d]  = parallel_dir(d1,d);
+    r[d] += parallel_dir(d2,d);
+  }
+  return r;
+}
+
+inline coordinate_vector operator-(const direction d1, const direction d2) {
+  coordinate_vector r;
+  foralldir(d) {
+    r[d]  = parallel_dir(d1,d);
+    r[d] -= parallel_dir(d2,d);
+  }
+  return r;
+}
+
+/// Special operators: int*direction -> coordinate_vector
+inline coordinate_vector operator*(const int i, const direction dir) {
+  coordinate_vector r;
+  foralldir(d) r[d] = i*parallel_dir(d,dir);
+  return r;
+}
+
+inline coordinate_vector operator*(const direction d, const int i) {
+  return i*d;
+}
+
 
 /// Parity + dir -type: used in expressions of type f[X+dir]
 /// It's a dummy type, will be removed by transformer
@@ -191,7 +239,16 @@ struct parity_plus_offset {
 };
 
 const parity_plus_offset operator+(const parity par, const coordinate_vector & cv);
+const parity_plus_offset operator-(const parity par, const coordinate_vector & cv);
 const parity_plus_offset operator+(const parity_plus_direction, const direction d);
+const parity_plus_offset operator-(const parity_plus_direction, const direction d);
+const parity_plus_offset operator+(const parity_plus_direction, const coordinate_vector & cv);
+const parity_plus_offset operator-(const parity_plus_direction, const coordinate_vector & cv);
+const parity_plus_offset operator+(const parity_plus_offset, const direction d);
+const parity_plus_offset operator-(const parity_plus_offset, const direction d);
+const parity_plus_offset operator+(const parity_plus_offset, const coordinate_vector & cv);
+const parity_plus_offset operator-(const parity_plus_offset, const coordinate_vector & cv);
+
 
 
 // Global functions: setup
