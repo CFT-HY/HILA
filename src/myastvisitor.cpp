@@ -1289,14 +1289,12 @@ bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
 }
 
 
-bool MyASTVisitor::has_loop_function_pragma(FunctionDecl *f) {
+bool MyASTVisitor::has_pragma(Decl *f, const char * s) {
   SourceRange sr = getSourceRangeAtPreviousLine(f->getSourceRange().getBegin());
   std::string line = TheRewriter.getRewrittenText( sr );
-  // require that #pragma starts the line
-  line = remove_initial_whitespace(line);
 
-  static std::string loop_pragma("#pragma transformer loop_function");
-  if (line.find(loop_pragma) == 0){
+  const std::vector<std::string> a{"#pragma", "transformer", s};
+  if (contains_word_list(line,a)) {
 
     // got it, comment out -- check that it has not been commented out before
     int loc = writeBuf->find_original(sr.getBegin(),'#');
@@ -1319,7 +1317,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     f->dump();
     parsing_state.dump_ast_next = false;
   }
-  if(!parsing_state.check_loop && (parsing_state.loop_function_next || has_loop_function_pragma(f))) {
+  if(!parsing_state.check_loop && (parsing_state.loop_function_next || has_pragma(f,"loop_function"))) {
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);
