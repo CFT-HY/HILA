@@ -299,7 +299,7 @@ inline cmplx<Accuracy> conj(cmplx<Accuracy> val){
 
 template<typename T> 
 #pragma transformer loop_function
-inline auto norm_sq(cmplx<T> val){
+inline auto norm_squared(cmplx<T> val){
   return val.norm_sq();
 }
 

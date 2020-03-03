@@ -24,12 +24,44 @@
 
 
 class GeneralVisitor {
-protected:  
+protected:
+
   Rewriter &TheRewriter;
   ASTContext *Context;
+
+  //flags used during AST parsing 
+  struct {
+    unsigned skip_children;
+    unsigned scope_level; 
+    bool in_loop_body;
+    bool accept_field_parity;
+    bool dump_ast_next;
+    bool check_loop;
+    bool loop_function_next;
+  } parsing_state;
+  
 public:
-  GeneralVisitor(Rewriter &R) : TheRewriter(R) {}
-  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { Context=C; }
+
+  GeneralVisitor(Rewriter &R) : TheRewriter(R) {
+    parsing_state.skip_children = 0;
+    parsing_state.scope_level = 0;
+    parsing_state.in_loop_body = false;
+    parsing_state.accept_field_parity = false;
+    parsing_state.dump_ast_next = false;
+    parsing_state.check_loop = false;
+    parsing_state.loop_function_next = false;
+  }
+
+  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { 
+    parsing_state.skip_children = 0;
+    parsing_state.scope_level = 0;
+    parsing_state.in_loop_body = false;
+    parsing_state.accept_field_parity = false;
+    parsing_state.dump_ast_next = false;
+    parsing_state.check_loop = false;
+    parsing_state.loop_function_next = false;
+    Context=C; 
+  }
 
   template <unsigned N>
   void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
@@ -57,7 +89,7 @@ class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisi
 private:
   srcBuf *writeBuf;
   srcBuf *toplevelBuf;
-  
+
 public:
   using GeneralVisitor::GeneralVisitor;
 
@@ -83,8 +115,8 @@ public:
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
 
-  // True if a "loop_function" pragma statement is found
-  bool has_loop_function_pragma(FunctionDecl *f);
+  /// True if the decl is preceded by "#pragma transformer <string>" where s is the string
+  bool has_pragma(Decl *d,const char *s);
 
   /// true if function contains parity loop
   bool does_function_contain_loop( FunctionDecl *f );

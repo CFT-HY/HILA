@@ -1,20 +1,71 @@
 #ifndef AVX_H
 #define AVX_H
 
-#include "../plumbing/defs.h"
+#include "../../plumbing/defs.h"
 #include <immintrin.h>
-#include "../vectorclass/vectorclass.h"
-#include "../vectorclass/vectormath_exp.h"
-#include "../vectorclass/vectormath_trig.h"
-#include "../vectorclass/vectormath_hyp.h"
-
-#include "../plumbing/memory.h"
-
+#include "../../vectorclass/vectorclass.h"
+#include "../../vectorclass/vectormath_exp.h"
+#include "../../vectorclass/vectormath_trig.h"
+#include "../../vectorclass/vectormath_hyp.h"
 
 #define VECTORIZED
-constexpr static int max_vector_size = 8;
 
 
+// Define random number generator
+#define seed_random(seed) seed_mersenne(seed)
+inline double hila_random(){ return mersenne(); }
+
+// Trivial synchronization
+inline void synchronize_threads(){}
+
+
+
+/// Implements test for basic in types, similar to 
+/// std::is_arithmetic, but allows the backend to add
+/// it's own basic tyes (such as AVX vectors)
+template< class T >
+struct is_arithmetic : std::integral_constant<
+  bool,
+  std::is_arithmetic<T>::value ||
+  std::is_same<T,Vec4d>::value ||
+  std::is_same<T,Vec8f>::value ||
+  std::is_same<T,Vec8i>::value ||
+  std::is_same<T,Vec8d>::value ||
+  std::is_same<T,Vec16f>::value ||
+  std::is_same<T,Vec16i>::value 
+> {};
+
+
+
+
+/*** The next section contains basic operations for vectors ***/
+
+// Norm squared
+inline Vec4d norm_squared(Vec4d val){
+  return val*val;
+}
+
+inline Vec8f norm_squared(Vec8f val){
+  return val*val;
+}
+
+inline Vec8i norm_squared(Vec8i val){
+  return val*val;
+}
+
+inline Vec8d norm_squared(Vec8d val){
+  return val*val;
+}
+
+inline Vec16f norm_squared(Vec16f val){
+  return val*val;
+}
+
+inline Vec16i norm_squared(Vec16i val){
+  return val*val;
+}
+
+// Reductions
 inline double reduce_sum(Vec4d v){
   double sum = 0;
   double store[4];
@@ -124,7 +175,7 @@ inline double reduce_prod(Vec16i v){
 }
 
 
-/// Define modulo operator for integer vector
+// Define modulo operator for integer vector
 inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
 {
   Vec16i r;
@@ -160,6 +211,7 @@ inline Vec4i operator%( const Vec4i &lhs, const int &rhs)
 }
 
 
+// Random numbers
 inline Vec4d hila_random_Vec4d(){
   Vec4d r;
   double tvec[4];

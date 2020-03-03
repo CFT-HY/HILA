@@ -1,5 +1,6 @@
 #include <string>
 #include <cstring>
+#include <vector>
 #include "stringops.h"
 
 /// this routine changes the input to alphanumeric + _, for naming purposes
@@ -45,7 +46,37 @@ std::string remove_all_whitespace(const std::string & line) {
   out.resize(j);
   return out;
 }
-    
+
+// returns true if line contains the word list at the beginning
+bool contains_word_list(const std::string & line, const std::vector<std::string> & list) {
+  const char *p = line.c_str();
+  for (const std::string & r : list) {
+    while (isspace(*p)) p++;
+    if (r.compare(0,r.length(), p) != 0) return false;
+    p += r.length();
+  }
+  return true;
+}
+
+// remove extra whitespace chars
+std::string remove_extra_whitespace(const std::string & line) {
+  std::string out = line; // init string 
+  int j=0;
+  bool previous_char_space = true;  // guarantees leading space removed
+  for (char p : line) {
+
+    if (!std::isspace(p)) {
+      out[j++] = p;
+      previous_char_space = false;
+    } else {
+      if (!previous_char_space) out[j++] = ' ';   // substitute w. real ' '
+      previous_char_space = true;
+    }
+  }
+  if (j>0 && out[j-1] == ' ') j--;  // remove trailing space
+  out.resize(j);
+  return out;
+}   
 
 std::string indent_string(const std::string & s) {
   

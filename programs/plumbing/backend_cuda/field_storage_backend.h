@@ -1,26 +1,28 @@
 #ifndef CUDA_BACKEND
 #define CUDA_BACKEND
 
-/* CUDA implementations */
+#include "../defs.h"
+#include "../field_storage.h"
 
+/* CUDA implementations */
 
 template<typename T> 
 inline T field_storage<T>::get(const int i, const int field_alloc_size) const {
-  assert( idx < field_alloc_size);
+  assert( i < field_alloc_size);
   T value;
   real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
-  for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
-     value_f[i] = fieldbuf[i*field_alloc_size + idx];
+  for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
+     value_f[e] = fieldbuf[e*field_alloc_size + i];
    }
-  return value; 
+  return value;
 }
 
 template<typename T>
 inline void field_storage<T>::set(const T &value, const int i, const int field_alloc_size){
-  assert( idx < field_alloc_size);
+  assert( i < field_alloc_size);
   real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
-  for (int i=0; i<(sizeof(T)/sizeof(real_t)); i++) {
-    fieldbuf[i*field_alloc_size + idx] = value_f[i];
+  for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
+    fieldbuf[e*field_alloc_size + i] = value_f[e];
   }
 }
 
@@ -28,14 +30,20 @@ inline void field_storage<T>::set(const T &value, const int i, const int field_a
 template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
   constexpr static int t_elements = sizeof(T) / sizeof(real_t);
-  fieldbuf = (real_t*) allocate_field_mem( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
-  #pragma acc enter data create(fieldbuf)
+  cudaMalloc( &fieldbuf, t_elements*sizeof(real_t) * lattice->field_alloc_size() );
+  check_cuda_error("Allocate field memory");
+  if (fieldbuf == nullptr) {
+    std::cout << "Failure in field memory allocation\n";
+    exit(1);
+  }
 }
 
 template<typename T>
 void field_storage<T>::free_field() {
-  #pragma acc exit data delete(fieldbuf)
-  free_field_mem((void *)fieldbuf);
+  if (fieldbuf != nullptr){
+    cudaFree(fieldbuf);
+    check_cuda_error("Free field memory");
+  }
   fieldbuf = nullptr;
 }
 

@@ -112,7 +112,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
-          vector2[ALL] = vector1[X]*matrix1[X];
+        vector2[ALL] = vector1[X]*matrix1[X];
       }
       synchronize();
       end = clock();
@@ -145,7 +145,7 @@ int main(int argc, char **argv){
       sum=0;
       for( int i=0; i<n_runs; i++){
         onsites(ALL){
-          sum += norm_sq(vector1[X]);
+          sum += norm_squared(vector1[X]);
         }
       }
       volatile double volatile_sum = sum;
@@ -231,20 +231,20 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator with direction loop expanded
     #if (NDIM==4) 
     init = end = 0;
-    dirac_stagggered_alldim(U, 0.1, vector1, vector2);
+    dirac_stagggered_4dim(U, 0.1, vector1, vector2);
     synchronize();
     for(n_runs=1; (end-init) < mintime; ){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
         vector1.mark_changed(ALL); // Assure communication is included
-        dirac_stagggered_alldim(U, 0.1, vector1, vector2);
+        dirac_stagggered_4dim(U, 0.1, vector1, vector2);
       }
       synchronize();
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "Dirac separate loops: " << timing << "ms \n";
+    output0 << "Dirac one loop: " << timing << "ms \n";
     #endif
     
 
@@ -272,8 +272,8 @@ int main(int argc, char **argv){
 
         rr=pDDp=0;
         onsites(ALL){
-            rr += norm_sq(r[X]);
-            pDDp += norm_sq(Dp[X]);
+          rr += r[X].norm_sq();
+          pDDp += Dp[X].norm_sq();
         }
 
         alpha = rr / pDDp;
@@ -282,7 +282,7 @@ int main(int argc, char **argv){
         onsites(ALL){
           vector2[X] = r[X] + alpha*p[X];
           r[X] = r[X] - alpha*Dp[X];
-          rrnew += norm_sq(r[X]);
+          rrnew += r[X].norm_sq();
         }
 
         beta = rrnew/rr;

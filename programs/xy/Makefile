@@ -10,8 +10,8 @@ CXXFLAGS = -O3 -x c++ $(OPTS)
 
 
 
-ising: Makefile xy.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o
-	$(LD) -o xy xy.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o 
+ising: Makefile xy.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o
+	$(LD) -o xy xy.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o 
 
 ising.cpt: Makefile xy.cpp
 	../../build/transformer xy.cpp
