@@ -115,8 +115,8 @@ public:
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
 
-  // True if a "loop_function" pragma statement is found
-  bool has_loop_function_pragma(FunctionDecl *f);
+  /// True if the decl is preceded by "#pragma transformer <string>" where s is the string
+  bool has_pragma(Decl *d,const char *s);
 
   /// true if function contains parity loop
   bool does_function_contain_loop( FunctionDecl *f );

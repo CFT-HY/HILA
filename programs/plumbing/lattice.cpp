@@ -83,7 +83,7 @@ void lattice_struct::setup(int nx, int &argc, char **argv) {
 /// algorithm!
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::node_number(const location & loc)
+unsigned lattice_struct::node_number(const coordinate_vector & loc)
 {
   unsigned i;
   int dir;
@@ -103,7 +103,7 @@ unsigned lattice_struct::node_number(const location & loc)
 /// Is the coordinate on THIS node 
 ///////////////////////////////////////////////////////////////////////
 
-bool lattice_struct::is_on_node(const location & loc)
+bool lattice_struct::is_on_node(const coordinate_vector & loc)
 {
   int d;
 
@@ -120,7 +120,7 @@ bool lattice_struct::is_on_node(const location & loc)
 /// Note: loc really has to be on this node
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const location & loc)
+unsigned lattice_struct::site_index(const coordinate_vector & loc)
 {
   int dir,l,s;
   unsigned i;
@@ -147,7 +147,7 @@ unsigned lattice_struct::site_index(const location & loc)
 /// compare to above
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
+unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigned nodeid)
 {
   int dir,l,s;
   unsigned i;
@@ -175,7 +175,7 @@ unsigned lattice_struct::site_index(const location & loc, const unsigned nodeid)
 /// invert the this_node index -> location
 ///////////////////////////////////////////////////////////////////////
 
-location lattice_struct::site_location(unsigned index)
+coordinate_vector lattice_struct::site_location(unsigned index)
 {
   return this_node.coordinates[index];
 }
@@ -195,12 +195,12 @@ void lattice_struct::setup_nodes() {
   nodes.nodelist.resize(nodes.number);
 
   // n keeps track of the node "root coordinates"
-  location n;
+  coordinate_vector n;
   foralldir(d) n[d] = 0;
 
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {
-    location l;
+    coordinate_vector l;
     foralldir(d) l[d] = nodes.divisors[d][n[d]];
 
     int nn = node_number(l);
@@ -214,7 +214,7 @@ void lattice_struct::setup_nodes() {
     if (v % 2 == 0)
       ni.evensites = ni.oddsites = v/2;
     else {
-      if (location_parity(l) == EVEN) {
+      if (l.coordinate_parity() == EVEN) {
         ni.evensites = v/2 + 1; 
         ni.oddsites = v/2;
       } else {
@@ -260,7 +260,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
    
   // neighbour node indices
   foralldir(d) {
-    location l = min;
+    coordinate_vector l = min;
     l[d] = (min[d] + size[d]) % lattice.l_size[d];
     nn[d] = lattice.node_number(l);
     l[d] = (lattice.l_size[d] + min[d] - 1) % lattice.l_size[d];
@@ -270,7 +270,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   // map site indexes to locations
   coordinates.resize(sites);
   for(unsigned i = 0; i<sites; i++){
-    location l;
+    coordinate_vector l;
     unsigned l_index=i;
     foralldir(d){
       l[d] = l_index % size[d] + min[d];
@@ -336,7 +336,7 @@ void lattice_struct::create_std_gathers()
     // pass over sites
     int num = 0;  // number of sites off node
     for (int i=0; i<this_node.sites; i++) {
-      location ln, l;
+      coordinate_vector ln, l;
       ln = l = site_location(i);
       // set ln to be the neighbour of the site
       if (is_up_dir(d)) {
@@ -361,7 +361,7 @@ void lattice_struct::create_std_gathers()
 	      // Now site is off-node, this lead to fetching
 	      nnodes[num] = node_number(ln);
 	      index[num]  = site_index(ln, nnodes[num] );
-	      nparity[num]    = location_parity(l);  // parity of THIS
+	      nparity[num] = l.coordinate_parity();  // parity of THIS
 	      here[num]   = i;
 	      num++;
       }

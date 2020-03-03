@@ -7,7 +7,9 @@
 #include <type_traits>
 
 #include "../plumbing/globals.h"
+#include "../plumbing/defs.h"
 #include "../plumbing/field_storage.h"
+#include "../plumbing/lattice.h"
 
 #ifdef USE_MPI
 #include "../plumbing/comm_mpi.h"
@@ -15,13 +17,6 @@
 
 static int next_mpi_field_tag = 0;
 
-struct parity_plus_direction {
-  parity p;
-  direction d;
-};
-
-const parity_plus_direction operator+(const parity par, const direction d);
-const parity_plus_direction operator-(const parity par, const direction d);
 
 // This is a marker for transformer -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)
@@ -169,7 +164,7 @@ using t_div  = decltype(std::declval<A>() / std::declval<B>());
 // field class 
 template <typename T>
 class field {
-private:
+ private:
 
   /// The following struct holds the data + information about the field
   /// TODO: field-specific boundary conditions?
@@ -236,7 +231,7 @@ private:
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
   
-public:
+ public:
 
   field_struct * fs;
   
@@ -370,9 +365,10 @@ public:
   // placemarker, should not be here
   // T& operator[] (const int i) { return data[i]; }
 
-  // these give the element -- WILL BE modified by transformer
+  // declarations -- WILL BE implemented by transformer, not written here
   element<T>& operator[] (const parity p) const;
   element<T>& operator[] (const parity_plus_direction p) const;
+  element<T>& operator[] (const parity_plus_offset p) const;
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
   inline auto get_value_at(int i) const { return this->fs->get(i); }
