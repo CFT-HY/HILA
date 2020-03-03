@@ -9,7 +9,7 @@
 #include "../plumbing/mersenne.h"
 
 #ifdef AVX
-#include "../plumbing/AVX.h"
+#include "../plumbing/backend_vector/defs.h"
 #endif
 
 
