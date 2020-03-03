@@ -23,7 +23,7 @@ inline T trans(T rhs){
 
 template<typename T>
 #pragma transformer loop_function
-inline T norm_squared(T val){
+inline auto norm_squared(T val){
   return val.norm_sq();
 }
 
