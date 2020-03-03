@@ -12,14 +12,6 @@
 #include <mpi.h>
 #endif
 
-#if !defined(CUDA) && !defined(AVX)
-#define VANILLA
-#endif
-
-#ifdef CUDA
-#define layout_SOA
-#endif
-
 #define EVENFIRST
 
 // TODO: default type real_t definition somewhere (makefile?)

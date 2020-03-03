@@ -9,12 +9,7 @@ template <typename T>
 class field_storage {
   public:
 
-    #ifdef layout_SOA 
-    
-    real_t * fieldbuf = NULL;
-    #else
-    T * fieldbuf = NULL;
-    #endif
+    void * fieldbuf = NULL;
 
     void allocate_field( lattice_struct * lattice );
     void free_field();
@@ -23,8 +18,6 @@ class field_storage {
     #pragma transformer loop_function
     template<typename A>
     inline void set(const A &value, const int i, const int field_alloc_size);
-    #pragma transformer loop_function
-    inline void set(const T &value, unsigned int i);
 
     void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const;
     /// Place boundary elements from neighbour

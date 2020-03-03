@@ -16,7 +16,7 @@
 # directories of LLVM, Clang in tools/clang/, etc.
 #
 
-LLVM_SRC_PATH := ../llvm
+LLVM_SRC_PATH := /projappl/project_2001973/llvm
 
 # LLVM_BUILD_PATH is the directory in which you built LLVM - where you ran
 # configure or cmake.
@@ -100,7 +100,7 @@ HEADERS = \
 OBJECTS = \
   $(BUILDDIR)/transformer.o \
   $(BUILDDIR)/stringops.o \
-  $(BUILDDIR)/.o \
+  $(BUILDDIR)/codegen.o \
   $(BUILDDIR)/codegen_cpu.o \
   $(BUILDDIR)/codegen_cuda.o \
   $(BUILDDIR)/codegen_avx.o \

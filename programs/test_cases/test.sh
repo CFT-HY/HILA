@@ -76,7 +76,7 @@ for D in 1 2 3 4 ; do
     #run_c ${test}
     run_mpi_c ${test} 1
     run_mpi_c ${test} 2
-    run_mpi_c ${test} 4
+    #run_mpi_c ${test} 4
     rm ${test}.exe ${test}.cpt
   done
   make cleanall

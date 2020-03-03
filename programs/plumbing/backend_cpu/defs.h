@@ -3,6 +3,9 @@
 
 #include "../../plumbing/defs.h"
 
+#define VANILLA
+
+
 // Define random number generator
 #define seed_random(seed) seed_mersenne(seed)
 inline double hila_random(){ return mersenne(); }

@@ -11,7 +11,6 @@
 #undef NDEBUG
 #include <assert.h>
 #include "../plumbing/defs.h"
-#include "../plumbing/memory.h"
 #include "../plumbing/inputs.h"
 
 struct node_info {

@@ -8,8 +8,6 @@
 #include "../../vectorclass/vectormath_trig.h"
 #include "../../vectorclass/vectormath_hyp.h"
 
-#include "../../plumbing/memory.h"
-
 #define VECTORIZED
 
 
