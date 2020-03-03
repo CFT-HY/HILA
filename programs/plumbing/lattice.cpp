@@ -518,20 +518,3 @@ void lattice_struct::initialize_wait_arrays(){}
 
 
 
-#ifdef VECTORIZED
-
-vectorized_lattice_struct * lattice_struct::get_vectorized_lattice(int vector_size){
-  // Check if the vectorized lattice has been created
-  for( vectorized_lattice_struct * vl : vectorized_lattices ) {
-    if( vl->vector_size == vector_size )
-      return vl;
-  }
-
-  // Not found, setup here
-  vectorized_lattice_struct * vectorized_lattice = new vectorized_lattice_struct(this, vector_size);
-  vectorized_lattices.push_back(vectorized_lattice);
-  return vectorized_lattice;
-}
-
-#endif
-

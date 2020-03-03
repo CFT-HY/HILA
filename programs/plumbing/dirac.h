@@ -38,12 +38,11 @@ void dirac_stagggered(
   const vtype &v_in,
   vtype &v_out)
 {
-  static vtype vtemp[NDIRS]; // A temporary vector field
+  static vtype vtemp[NDIM]; // A temporary vector field
   init_staggered_eta();
     
   // Start getting neighbours
   foralldir(dir){
-    direction odir = opp_dir( (direction)dir );
     v_in.start_move(dir);
   }
 

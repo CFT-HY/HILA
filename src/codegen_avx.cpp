@@ -44,7 +44,7 @@ namespace vector_map {
       return "float";
     } else if(original_type.find("int") != std::string::npos){
       return "int";
-    } else if(original_type.find("location") != std::string::npos){
+    } else if(original_type.find("coordinate_vector") != std::string::npos){
       return "int";
     } else {
       llvm::errs() << "Cannot find vector size\n";
@@ -61,7 +61,7 @@ namespace vector_map {
       return bytes/4;
     } else if(original_type.find("int") != std::string::npos){
       return bytes/4;
-    } else if(original_type.find("location") != std::string::npos){
+    } else if(original_type.find("coordinate_vector") != std::string::npos){
       return bytes/4;
     } else {
       llvm::errs() << "Cannot find vector size\n";
@@ -86,9 +86,9 @@ namespace vector_map {
     if(begin != std::string::npos){
       element_type.replace(begin, 3, "Vec"+std::to_string(vector_size)+"i");
     }
-    begin = element_type.find("location");
+    begin = element_type.find("coordinate_vector");
     if(begin != std::string::npos){
-      element_type.replace(begin, 8, "std::array<Vec"+std::to_string(vector_size)+"i,NDIM>");
+      element_type.replace(begin, 17, "std::array<Vec"+std::to_string(vector_size)+"i,NDIM>");
     }
   }
 
@@ -111,7 +111,7 @@ namespace vector_map {
       base_type = "int";
       vector_size = bytes/4;
       vector_type = "Vec"+std::to_string(vector_size)+"i";
-    } else if(original_type.find("location") != std::string::npos){
+    } else if(original_type.find("coordinate_vector") != std::string::npos){
       base_type = "int";
       vector_size = bytes/4;
       vector_type = "Vec"+std::to_string(vector_size)+"i";
@@ -283,7 +283,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   // Set loop lattice
   std::string fieldname = field_info_list.front().old_name;
   code << "vectorized_lattice_struct * loop_lattice = "
-       << fieldname << ".fs->lattice->get_vectorized_lattice("
+       << fieldname << ".fs->lattice->backend_lattice->get_vectorized_lattice("
        << vector_size <<");\n";
 
   // Get a pointer to the neighbour list
@@ -402,8 +402,6 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
 
 void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
-
-
   // Find the vector size
   vector_map::set_vector_target(target);
   int vector_size = 1;
