@@ -9,8 +9,8 @@ struct vectorized_lattice_struct  {
     std::array<int,NDIM> split;
     int sites, evensites, oddsites, alloc_size;
     unsigned vector_size;
-    std::vector<location> coordinate_list;
-    location min; // Coordinate of first site
+    std::vector<coordinate_vector> coordinate_list;
+    coordinate_vector min; // Coordinate of first site
     std::vector<int**> coordinate;
     lattice_struct * lattice;
     bool first_site_even;
@@ -78,7 +78,7 @@ struct vectorized_lattice_struct  {
       coordinate_list.resize(sites);
       coordinate.resize(sites);
       for(unsigned i = 0; i<sites; i++){
-        location l;
+        coordinate_vector l;
         unsigned l_index=i;
         for(int d=0; d<NDIM; d++){
           l[d] = l_index % size[d];
@@ -93,8 +93,8 @@ struct vectorized_lattice_struct  {
       for(int d=0; d<NDIRS; d++){
         neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
         for(unsigned i = 0; i<sites; i++){
-          location l = coordinate_list[i];
-          location nb = l;
+          coordinate_vector l = coordinate_list[i];
+          coordinate_vector nb = l;
           int k;
           if (is_up_dir(d)) {
             k = d;
@@ -132,12 +132,12 @@ struct vectorized_lattice_struct  {
         boundary_permutation[opp_dir(d)] = (int *) malloc(sizeof(int)*vector_size);
       }
       // This needs to be done only once, so use the most straightforward method
-      // Check each vector index in each direction separately. Find the location
+      // Check each vector index in each direction separately. Find the coordinate_vector
       // of the vectorized sublattice and figure out each neighbour from there.
       for(int v=0; v<vector_size; v++){
-        location vl, nb;
+        coordinate_vector vl, nb;
         int v_ind = v;
-        // Find location of this vector index
+        // Find coordinate_vector of this vector index
         for(int d=0; d<NDIM; d++){
           vl[d] = v_ind % split[d];
           v_ind /= split[d];
@@ -185,8 +185,8 @@ struct vectorized_lattice_struct  {
       lattice_index.resize(lattice->field_alloc_size());
       vector_index.resize(lattice->field_alloc_size());
       for(unsigned i = lattice->loop_begin(ALL); i<lattice->loop_end(ALL); i++){
-        location fl = lattice->local_coordinates(i);
-        location vl;
+        coordinate_vector fl = lattice->local_coordinates(i);
+        coordinate_vector vl;
         int step=1, v_index=0;
         for( int d=0; d<NDIM; d++ ){
           vl[d] = fl[d] % size[d];
@@ -277,8 +277,8 @@ struct vectorized_lattice_struct  {
     }
 
 
-    /// Translate a local location vector into an index 
-    unsigned get_index(location l){
+    /// Translate a local coordinate_vector into an index 
+    unsigned get_index(coordinate_vector l){
       int s = 1-(int)first_site_even; // start at 0 for even first, 1 for odd first
       int l_index = (l[NDIM-1] +size[NDIM-1])%size[NDIM-1];
       s += (l[NDIM-1] +size[NDIM-1])%size[NDIM-1];
@@ -334,8 +334,12 @@ struct vectorized_lattice_struct  {
 
 struct backend_lattice_struct {
   std::vector<vectorized_lattice_struct*> vectorized_lattices;
+  lattice_struct lattice;
 
-  void setup(lattice_struct lattice);
+  void setup(lattice_struct _lattice){
+    lattice = _lattice;
+  }
+
   vectorized_lattice_struct * get_vectorized_lattice(int vector_size) {
     // Check if the vectorized lattice has been created
     for( vectorized_lattice_struct * vl : vectorized_lattices ) {
@@ -344,7 +348,7 @@ struct backend_lattice_struct {
     }
 
     // Not found, setup here
-    vectorized_lattice_struct * vectorized_lattice = new vectorized_lattice_struct(this, vector_size);
+    vectorized_lattice_struct * vectorized_lattice = new vectorized_lattice_struct(&lattice, vector_size);
     vectorized_lattices.push_back(vectorized_lattice);
     return vectorized_lattice;
   }
