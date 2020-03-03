@@ -50,19 +50,27 @@ bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
   return ( IDa == IDb );
 }
 
+bool MyASTVisitor::is_parity_index_type(Expr *E) {
+  std::string s = get_expr_type(E);
+  if (s == "parity" || s == "parity_plus_direction" || s == "parity_plus_offset") 
+    return true;
+  else 
+    return false;
+}
+
 // Checks if E is a parity Expr. Catches both parity and parity_plus_direction 
 bool MyASTVisitor::is_field_parity_expr(Expr *E) {
   E = E->IgnoreParens();
   CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+
   if (OC &&
       strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
       is_field_expr(OC->getArg(0))) {
-    std::string s = get_expr_type(OC->getArg(1)); 
-    if (s == "parity" || s == "parity_plus_direction") {
-      // llvm::errs() << " <<<Parity type " << get_expr_type(OC->getArg(1)) << '\n';
-      return true;
-    }
+
+    return is_parity_index_type(OC->getArg(1));
+
   } else {
+
     // This is for templated expressions
     // for some reason, expr a[X] "getBase() gives X, getIdx() a...
     if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
@@ -70,11 +78,7 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
       
       if (is_field_expr(ASE->getLHS()->IgnoreParens())) {
         // llvm::errs() << " FP: and field\n";
-        std::string s = get_expr_type(ASE->getRHS());
-        if (s == "parity" || s == "parity_plus_direction") {
-          // llvm::errs() << " <<<Parity type " << get_expr_type(ASE->getRHS()) << '\n';
-          return true;
-        }
+        return is_parity_index_type(ASE->getRHS());
       }
     }
   }
@@ -85,6 +89,7 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
 bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
+
       // TODO: there should be some more elegant way to do this
       const char *sp = getOperatorSpelling(OP->getOperator());
       if ((sp[0] == '+' || sp[0] == '-' || sp[0] == '*' || sp[0] == '/')
@@ -272,12 +277,14 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   // next ref must have wildcard parity
   parsing_state.accept_field_parity = false;
         
-  if (get_expr_type(lfe.parityExpr) == "parity_plus_direction") {
+  std::string parity_expr_type = get_expr_type(lfe.parityExpr);
+  if (parity_expr_type == "parity_plus_direction" || 
+      parity_expr_type == "parity_plus_offset") {
 
     if (is_assign) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "Neighbour offset not allowed on the LHS of an assignment");
+                 "Parity + offset not allowed on the LHS of an assignment");
     }
 
     // Now need to split the expr to parity and dir-bits
@@ -287,7 +294,6 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     e = e->IgnoreImplicit();
     CXXOperatorCallExpr* Op = dyn_cast<CXXOperatorCallExpr>(e);
     // descent into expression
-    // TODO: must allow for arbitrary offset!
 
     if (!Op) {
       CXXConstructExpr * Ce = dyn_cast<CXXConstructExpr>(e);
@@ -302,7 +308,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     if (!Op) {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "Internal error: could not decipher parity + dir statement" );
+                 "Internal error: could not parse parity + direction/offset -statement" );
       exit(1);
     }
       
@@ -312,21 +318,22 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     // }
 
     if (Op &&
-        (strcmp(getOperatorSpelling(Op->getOperator()),"+") == 0 ||
-         strcmp(getOperatorSpelling(Op->getOperator()),"-") == 0) &&
+        ( strcmp(getOperatorSpelling(Op->getOperator()),"+") == 0 ||
+          strcmp(getOperatorSpelling(Op->getOperator()),"-") == 0) &&
         get_expr_type(Op->getArg(0)) == "parity") {
-        llvm::errs() << " ++++++ found parity + dir\n";
+      llvm::errs() << " ++++++ found parity + dir\n";
 
-        require_parity_X(Op->getArg(0));
-        lfe.dirExpr = Op->getArg(1)->IgnoreImplicit();
-        lfe.dirname = get_stmt_str(lfe.dirExpr);
+      require_parity_X(Op->getArg(0));
+      lfe.dirExpr = Op->getArg(1)->IgnoreImplicit();
+      lfe.dirname = get_stmt_str(lfe.dirExpr);
+      lfe.is_offset = (parity_expr_type == "parity_plus_offset");
 
-        // If the direction is a variable, add it to the list
-        DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
-        static std::string assignop;
-        if(DRE && isa<VarDecl>(DRE->getDecl())) {
-          handle_var_ref(DRE, false, assignop);
-        }
+      // If the direction is a variable, add it to the list
+      DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
+      static std::string assignop;
+      if(DRE && isa<VarDecl>(DRE->getDecl())) {
+        handle_var_ref(DRE, false, assignop);
+      }
     }
   }
     
@@ -899,6 +906,7 @@ bool MyASTVisitor::check_field_ref_list() {
 
     if (p.is_written) lfip->is_written = true;
     if (p.is_read)    lfip->is_read    = true;
+    if (p.is_offset)  lfip->contains_offset = true;
       
     // save expr record
     lfip->ref_list.push_back(&p);
@@ -929,6 +937,7 @@ bool MyASTVisitor::check_field_ref_list() {
         dir_ptr dp;
         dp.e = p.dirExpr;
         dp.count = 1;
+        dp.is_offset = p.is_offset;
         p.direction = lfip->dir_list.size();
 
         lfip->dir_list.push_back(dp);
@@ -940,16 +949,24 @@ bool MyASTVisitor::check_field_ref_list() {
   
   for (field_info & l : field_info_list) {
     if (l.is_written && l.dir_list.size() > 0) {
-      if (loop_parity.value == parity::all) {
+      if (loop_parity.value == parity::all || l.contains_offset) {
         // There's error, find culprits
         for (field_ref * p : l.ref_list) {
           if (p->dirExpr != nullptr && !p->is_written) {
-            reportDiag(DiagnosticsEngine::Level::Error,
-                       p->parityExpr->getSourceRange().getBegin(),
-                       "Accessing field '%0' undefined when assigning to '%1' with parity ALL, flagging as error",
-                       get_stmt_str(p->fullExpr).c_str(),
-                       l.old_name.c_str());
-            no_errors = false;
+            if (!l.contains_offset) {
+              reportDiag(DiagnosticsEngine::Level::Error,
+                         p->parityExpr->getSourceRange().getBegin(),
+                         "Accessing field '%0' not allowed simultaneously with assignment '%1' with parity ALL",
+                         get_stmt_str(p->fullExpr).c_str(),
+                         l.old_name.c_str());
+            } else {
+              reportDiag(DiagnosticsEngine::Level::Error,
+                         p->parityExpr->getSourceRange().getBegin(),
+                         "Accessing field with offset '%0' not allowed simultaneously with assignment'%1'",
+                         get_stmt_str(p->fullExpr).c_str(),
+                         l.old_name.c_str());
+            }
+            no_errors = false;  
           }
         }
 
@@ -961,7 +978,7 @@ bool MyASTVisitor::check_field_ref_list() {
               
           }
         }
-      } else if (loop_parity.value == parity::none) {
+      } else if (loop_parity.value == parity::none && !l.contains_offset) {
         // not sure if there's an error, emit an assertion
         global.assert_loop_parity = true;
         reportDiag(DiagnosticsEngine::Level::Note,

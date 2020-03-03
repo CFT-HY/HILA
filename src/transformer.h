@@ -108,12 +108,14 @@ struct field_ref {
   // unsigned nameInd, parityInd;
   int direction;
   bool is_written, is_read;
+  bool is_offset;           // true if dirExpr is for offset instead of direction
 };
 
 
 struct dir_ptr {
   Expr * e;
   unsigned count;
+  bool is_offset;           // is dir offset?
 };
 
   
@@ -122,13 +124,14 @@ struct field_info {
   std::string old_name;                  // "name" of field variable, can be an expression
   std::string new_name;                  // replacement field name
   std::string loop_ref_name;             // var which refers to payload, loop_ref_name v = new_name->fs.payload
-  bool is_written, is_read;              // is the field read from or written to in this loop
   std::vector<dir_ptr> dir_list;         // nb directions TODO: more general gather ptr
   std::vector<field_ref *> ref_list;     // where the var is referred at
+  bool is_written, is_read;              // is the field read from or written to in this loop
+  bool contains_offset;                  // if the field is referred with an offset (non-nn) index
 
   field_info() {
     type_template = old_name = new_name = loop_ref_name = "";
-    is_written = is_read = false;
+    is_written = is_read = contains_offset = false;
     dir_list = {};
     ref_list = {};
   }

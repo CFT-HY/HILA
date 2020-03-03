@@ -162,8 +162,11 @@ public:
   bool is_field_expr(Expr *E);
   bool is_field_decl(ValueDecl *D);
 
-  // catches both parity and parity_plus_direction 
-  bool is_field_parity_expr(Expr *e);
+  /// allowed index types: parity, parity_plus_direction, parity_plus_offset
+  bool is_parity_index_type(Expr *E);
+
+  // catches field[parity-type] expressions, incl. _plus -versions
+  bool is_field_parity_expr(Expr *E);
 
   bool is_array_expr(Expr *E); 
   
