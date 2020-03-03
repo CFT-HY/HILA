@@ -24,8 +24,9 @@ int main()
   
   onsites(ALL) {
     ft d(2,2);
+    direction dd = XUP;
     element<ft> t;
-    t = a[X+YUP+ZUP];
+    t = a[X+dd];
     b[X] = t;
   }
   

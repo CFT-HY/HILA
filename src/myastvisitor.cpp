@@ -251,9 +251,6 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       return(true);
   }
 
-  // Check that there are no local variable references up the AST
-  FieldRefChecker frc(TheRewriter, Context);
-  frc.TraverseStmt(lfe.fullExpr);
 
   //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr); 
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
@@ -329,11 +326,15 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       lfe.is_offset = (parity_expr_type == "parity_plus_offset");
 
       // If the direction is a variable, add it to the list
-      DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
-      static std::string assignop;
-      if(DRE && isa<VarDecl>(DRE->getDecl())) {
-        handle_var_ref(DRE, false, assignop);
-      }
+      // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
+      // static std::string assignop;
+      // if(DRE && isa<VarDecl>(DRE->getDecl())) {
+      //   handle_var_ref(DRE, false, assignop);
+      // }
+
+      // traverse the dir-expression to find var-references etc.
+      TraverseStmt(lfe.dirExpr);
+
     }
   }
     
@@ -341,6 +342,10 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   //              << " parity " << get_stmt_str(lfe.parityExpr)
   //              << "\n";
 
+
+  // Check that there are no local variable references up the AST
+  FieldRefChecker frc(TheRewriter, Context);
+  frc.TraverseStmt(lfe.fullExpr);
    
   field_ref_list.push_back(lfe);
       
@@ -606,7 +611,6 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
         handle_var_ref(DRE,is_assignment,assignop);
         is_assignment = false;
       
-        parsing_state.skip_children = 1;
         llvm::errs() << "Variable ref: "
                      << TheRewriter.getRewrittenText(E->getSourceRange()) << '\n';
 

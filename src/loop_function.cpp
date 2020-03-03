@@ -13,7 +13,7 @@ std::vector<FunctionDecl *> loop_functions = {};
 // any field references.
 // Assume non-const references can be assigned to.
 
-void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund) {
+void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compound) {
 
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
@@ -48,7 +48,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
         } else {
           // Handle field parity expressions in a function as
           // it was read and written to
-          handle_field_parity_expr(E, is_assignment, is_compund);
+          handle_field_parity_expr(E, is_assignment, is_compound);
         }
       }
     }
