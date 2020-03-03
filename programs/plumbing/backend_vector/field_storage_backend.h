@@ -1,18 +1,34 @@
 #ifndef VECTOR_BACKEND
 #define VECTOR_BACKEND
 
+#include "../defs.h"
+#include "../field_storage.h"
+
+#ifdef AVX512
+#define FIELD_ALIGNMENT 64
+#elif AVX
+#define FIELD_ALIGNMENT 32
+#else
+#define FIELD_ALIGNMENT 16
+#endif
+
+
 template<typename T>
 void field_storage<T>::allocate_field( lattice_struct * lattice ) {
   constexpr int vector_size = field_info<T>::vector_size;
   vectorized_lattice_struct * vlat = lattice->backend_lattice->get_vectorized_lattice(vector_size);
-  fieldbuf = (T*) allocate_field_mem( sizeof(T) * vector_size * vlat->field_alloc_size());
-  #pragma acc enter data create(fieldbuf)
+
+  int size = sizeof(T) * vector_size * vlat->field_alloc_size();
+  if (size % FIELD_ALIGNMENT) 
+    size = size - (size % FIELD_ALIGNMENT) + FIELD_ALIGNMENT;
+  fieldbuf = (T*) aligned_alloc( FIELD_ALIGNMENT, size);
 }
 
 template<typename T>
 void field_storage<T>::free_field() {
   #pragma acc exit data delete(fieldbuf)
-  free_field_mem((void *)fieldbuf);
+  if(fieldbuf != nullptr)
+    free(fieldbuf);
   fieldbuf = nullptr;
 }
 
@@ -35,7 +51,7 @@ auto field_storage<T>::get(const int i, const int field_alloc_size) const
 }
 
 
-//const typename 
+
 template<typename T>
 template<typename A>
 inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size) 

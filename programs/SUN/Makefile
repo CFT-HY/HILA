@@ -17,16 +17,16 @@ CXXFLAGS = -O3  $(OPTS)
 LDFLAGS = 
 
 
-SUN_openacc: Makefile SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o memory.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o
-	$(PGLD) $(LDFLAGS) -o SUN_openacc SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o memory.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o
+SUN_openacc: Makefile SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o
+	$(PGLD) $(LDFLAGS) -o SUN_openacc SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o
 	rm -f *.oac.o
 
-SUN_GPU: Makefile SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inline.gpu.o lattice.gpu.o memory.gpu.o setup_layout_generic.gpu.o map_node_layout_trivial.gpu.o hila_cuda.gpu.o
-	$(NVLD) $(LDFLAGS) -o SUN_GPU SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inline.gpu.o lattice.gpu.o memory.gpu.o setup_layout_generic.gpu.o map_node_layout_trivial.gpu.o hila_cuda.gpu.o
+SUN_GPU: Makefile SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inline.gpu.o lattice.gpu.o setup_layout_generic.gpu.o map_node_layout_trivial.gpu.o hila_cuda.gpu.o
+	$(NVLD) $(LDFLAGS) -o SUN_GPU SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inline.gpu.o lattice.gpu.o  setup_layout_generic.gpu.o map_node_layout_trivial.gpu.o hila_cuda.gpu.o
 	rm -f *.gpu.o
 
-SUN_CPU: Makefile SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o memory.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o com_mpi.cpu.o
-	$(LD) $(LDFLAGS) -o SUN_CPU SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o memory.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o com_mpi.cpu.o
+SUN_CPU: Makefile SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o com_mpi.cpu.o
+	$(LD) $(LDFLAGS) -o SUN_CPU SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o com_mpi.cpu.o
 	rm -f *.cpu.o
 
 
