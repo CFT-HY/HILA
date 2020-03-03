@@ -8,11 +8,6 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
-#ifdef AVX
-#include "../plumbing/backend_vector/defs.h"
-#endif
-
-
 #ifdef USE_MPI
 #include <mpi.h>
 #endif
@@ -250,11 +245,35 @@ const parity_plus_offset operator+(const parity_plus_offset, const coordinate_ve
 const parity_plus_offset operator-(const parity_plus_offset, const coordinate_vector & cv);
 
 
+inline void assert_even_odd_parity( parity p ) {
+    assert(p == EVEN || p == ODD || p == ALL);
+}
+
 
 // Global functions: setup
 void initial_setup(int argc, char **argv);
 
-// Communication functions
+
+
+
+
+// Backend defs-headers
+
+#if defined(CUDA)
+#include "../plumbing/defs.h"
+#elif defined(AVX)
+#include "../plumbing/backend_vector/defs.h"
+#else
+#include "../plumbing/backend_cpu/defs.h"
+#endif
+
+
+
+
+
+// MPI Related functions and definitions
+#define MAX_GATHERS 1000
+
 #ifndef USE_MPI
 
 // Trivial, no MPI
@@ -274,31 +293,6 @@ void initialize_machine(int &argc, char ***argv);
 
 #endif
 
-#define MAX_GATHERS 1000
-
-
-inline void assert_even_odd_parity( parity p ) {
-    assert(p == EVEN || p == ODD || p == ALL);
-}
-
-
-
-#ifndef CUDA
-#define seed_random(seed) seed_mersenne(seed)
-inline double hila_random(){ return mersenne(); }
-inline void synchronize_threads(){}
-#endif
-
-
-#if defined(PUHTI) && defined(TRANSFORMER)
-namespace std {
-  // This is missing in c++11, which appears to be what we have on Puhti
-  template< bool B, class T = void >
-  using enable_if_t = typename std::enable_if<B,T>::type;
-}
-#endif
-
-
 
 // Synchronization
 #ifndef USE_MPI
@@ -311,11 +305,8 @@ inline void synchronize(){
 
 inline void synchronize(){
   static int n=1;
-  //printf("node %d, in barrier %d\n", mynode(), n);
   synchronize_threads();
-  //printf("node %d, waiting for mpi in barrier %d\n", mynode(), n);
   MPI_Barrier(MPI_COMM_WORLD); 
-  //printf("node %d, barrier cleared %d\n", mynode(), n);
   n++;
 }
 
@@ -324,30 +315,12 @@ inline void synchronize(){
 
 
 
-///Implements test for arithmetic operators in types, similar to 
-///std::is_arithmetic but allows vector types
-
-#ifndef VECTORIZED
-template< class T >
-struct is_arithmetic : std::integral_constant<
-  bool,
-  std::is_arithmetic<T>::value
-> {};
-#else
-template< class T >
-struct is_arithmetic : std::integral_constant<
-  bool,
-  std::is_arithmetic<T>::value ||
-  std::is_same<T,Vec4d>::value ||
-  std::is_same<T,Vec8f>::value ||
-  std::is_same<T,Vec8i>::value ||
-  std::is_same<T,Vec8d>::value ||
-  std::is_same<T,Vec16f>::value ||
-  std::is_same<T,Vec16i>::value 
-> {};
+// Useful c++14 template missing in Puhti compilation of transformer
+#if defined(PUHTI) && defined(TRANSFORMER)
+namespace std {
+  template< bool B, class T = void >
+  using enable_if_t = typename std::enable_if<B,T>::type;
+}
 #endif
-
-
-
 
 #endif
