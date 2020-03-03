@@ -42,7 +42,7 @@ auto field_storage<T>::get(const int i, const int field_alloc_size) const
   constexpr int vector_size = field_info<T>::vector_size;
 
   typename field_info<T>::vector_type value;
-  basetype *vp = (basetype *) (fieldbuf + i*vector_size);
+  basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
     valuep[e].load(vp+e*vector_size);
@@ -61,7 +61,7 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
   constexpr int elements = field_info<T>::elements;
   constexpr int vector_size = field_info<T>::vector_size;
 
-  basetype *vp = (basetype *) (fieldbuf + i*vector_size);
+  basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
     valuep[e].store((vp + e*vector_size));
@@ -129,7 +129,7 @@ void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * 
   if(par == ALL || par == hs.par ) {
     int *perm = vlat->boundary_permutation[hs.dir];
     auto temp = get(hs.nb_index, vlat->field_alloc_size());
-    auto dest = fieldbuf + vector_size*(vlat->sites + hs.halo_index);
+    auto dest = (basetype *) (fieldbuf) + elements*vector_size*(vlat->sites + hs.halo_index);
     vectortype * e = (vectortype*) &temp;
     basetype * d = (basetype*) dest;
     for( int v=0; v<elements; v++ ){
