@@ -19,8 +19,6 @@ struct node_info {
   unsigned evensites, oddsites;
 };
 
-struct vectorized_lattice_struct;
-
 /* Some backends need specialized lattice data
  * in loops. Forward declaration here and
  * implementations in backend headers.
@@ -122,8 +120,6 @@ public:
 
   std::vector<comminfo_struct> comminfo;
 
-  std::vector<vectorized_lattice_struct*> vectorized_lattices;
-
   unsigned * neighb[NDIRS];
   unsigned char *wait_arr_;
 
@@ -213,8 +209,6 @@ public:
   lattice_struct::comminfo_struct get_comminfo(int d){
     return comminfo[d];
   }
-
-  vectorized_lattice_struct * get_vectorized_lattice(int vector_size);
 
   /* MPI functions and variables. Define here in lattice? */
   void initialize_wait_arrays();

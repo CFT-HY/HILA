@@ -2,10 +2,6 @@
 #define _BACKEND_LATTICE_H_
 
 
-struct backend_lattice_struct {
-  void setup(lattice_struct lattice){}
-};
-
 /// Splits the local lattice into equal sections for vectorization
 struct vectorized_lattice_struct  {
   public:
@@ -334,6 +330,25 @@ struct vectorized_lattice_struct  {
 
 };
 
+
+
+struct backend_lattice_struct {
+  std::vector<vectorized_lattice_struct*> vectorized_lattices;
+
+  void setup(lattice_struct lattice);
+  vectorized_lattice_struct * get_vectorized_lattice(int vector_size) {
+    // Check if the vectorized lattice has been created
+    for( vectorized_lattice_struct * vl : vectorized_lattices ) {
+      if( vl->vector_size == vector_size )
+        return vl;
+    }
+
+    // Not found, setup here
+    vectorized_lattice_struct * vectorized_lattice = new vectorized_lattice_struct(this, vector_size);
+    vectorized_lattices.push_back(vectorized_lattice);
+    return vectorized_lattice;
+  }
+};
 
 
 
