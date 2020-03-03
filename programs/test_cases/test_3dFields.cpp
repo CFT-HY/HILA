@@ -33,13 +33,13 @@ int main(int argc, char **argv){
 
     //check that you can increment a direction correctly
     direction d = XUP;
-    direction d2 = (direction) (NDIRS - 1);
+    direction d2 = (direction) (NDIRS - 2);
     #if NDIM > 1
     d++; 
     d2++;
     assert(d==YUP);
     assert(XUP==0);
-    assert(d2==XUP);
+    assert(d2==XDOWN);
     #endif
 
     double sum = 0;
