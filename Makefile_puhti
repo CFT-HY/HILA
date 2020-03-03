@@ -100,7 +100,6 @@ HEADERS = \
 OBJECTS = \
   $(BUILDDIR)/transformer.o \
   $(BUILDDIR)/stringops.o \
-  $(BUILDDIR)/.o \
   $(BUILDDIR)/codegen_cpu.o \
   $(BUILDDIR)/codegen_cuda.o \
   $(BUILDDIR)/codegen_avx.o \
