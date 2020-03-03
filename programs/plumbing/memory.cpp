@@ -53,7 +53,7 @@ void free_field_mem(void * p) {
 
 
 #elif defined(CUDA) && !defined(TRANSFORMER)
-#include "../plumbing/hila_cuda.h"
+#include "../plumbing/backend_cuda/defs.h"
 
 
 void * allocate_field_mem(size_t size) {

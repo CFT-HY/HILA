@@ -283,21 +283,10 @@ inline void assert_even_odd_parity( parity p ) {
 
 
 
-#ifdef CUDA
-#include "../plumbing/hila_cuda.h"
-
-#elif defined(openacc)
-
-#define seed_random(seed) seed_mersenne(seed)
-#define hila_random() mersenne()
-inline void synchronize_threads(){}
-
-#else
-
+#ifndef CUDA
 #define seed_random(seed) seed_mersenne(seed)
 inline double hila_random(){ return mersenne(); }
 inline void synchronize_threads(){}
-
 #endif
 
 

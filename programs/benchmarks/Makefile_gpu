@@ -40,6 +40,9 @@ test: Makefile_gpu conjReduce
 %.o : ../plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
+%.o : ../plumbing/backend_cuda/%.cpp
+	$(CC) $(CXXFLAGS) $< -c
+
 %.o : %.c
 	$(CC) $(CFLAGS) $< -c
 
