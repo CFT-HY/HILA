@@ -46,7 +46,7 @@ void initial_setup(int & argc, char ***argvp)
    * of the glib malloc substantially.  The memory use is cyclic,
    * so we can just sit on the max memory.
    */
-  mallopt( M_MMAP_MAX, 0 );  /* don't use mmap */
+  //mallopt( M_MMAP_MAX, 0 );  /* don't use mmap */
   /* HACK: don't release memory by calling sbrk */
   mallopt( M_TRIM_THRESHOLD, -1 );
 #endif

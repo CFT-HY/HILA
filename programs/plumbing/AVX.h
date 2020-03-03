@@ -15,6 +15,36 @@
 constexpr static int max_vector_size = 8;
 
 
+
+
+/*** The next section contains basic operations for vectors ***/
+
+// Norm squared
+inline Vec4d norm_squared(Vec4d val){
+  return val*val;
+}
+
+inline Vec8f norm_squared(Vec8f val){
+  return val*val;
+}
+
+inline Vec8i norm_squared(Vec8i val){
+  return val*val;
+}
+
+inline Vec8d norm_squared(Vec8d val){
+  return val*val;
+}
+
+inline Vec16f norm_squared(Vec16f val){
+  return val*val;
+}
+
+inline Vec16i norm_squared(Vec16i val){
+  return val*val;
+}
+
+// Reductions
 inline double reduce_sum(Vec4d v){
   double sum = 0;
   double store[4];
@@ -124,7 +154,7 @@ inline double reduce_prod(Vec16i v){
 }
 
 
-/// Define modulo operator for integer vector
+// Define modulo operator for integer vector
 inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
 {
   Vec16i r;
@@ -160,6 +190,7 @@ inline Vec4i operator%( const Vec4i &lhs, const int &rhs)
 }
 
 
+// Random numbers
 inline Vec4d hila_random_Vec4d(){
   Vec4d r;
   double tvec[4];

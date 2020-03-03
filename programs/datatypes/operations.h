@@ -20,11 +20,21 @@ inline T trans(T rhs){
   return rhs;
 }
 
-template<typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0>
+
+template<typename T>
 #pragma transformer loop_function
-inline auto norm_sq(T val){
+inline T norm_squared(T val){
+  return val.norm_sq();
+}
+
+inline double norm_squared(double val){
   return val*val;
 }
+
+inline float norm_squared(float val){
+  return val*val;
+}
+
 
 
 #endif 
