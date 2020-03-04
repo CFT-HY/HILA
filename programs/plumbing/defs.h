@@ -20,7 +20,7 @@ using real_t = float;
 // move these somewhere - use consts?
 // Have this defined in the program?
 #ifndef NDIM
-  #define NDIM 4
+#define NDIM 4
 #endif
 
 
@@ -39,35 +39,40 @@ using real_t = float;
 // Direction and parity
 
 #if NDIM==4
-enum direction :unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==3
-enum direction :unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==2
-enum direction :unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==1
-enum direction :unsigned { XUP = 0, XDOWN, NDIRECTIONS };
+enum direction : unsigned { XUP = 0, XDOWN, NDIRECTIONS };
 #endif
 
-constexpr unsigned NDIRS = NDIRECTIONS;
+constexpr unsigned NDIRS = NDIRECTIONS;    // 
 
-// Increment/decrement ops for directions
-// Post-increment 
+// Increment for directions
+
 #pragma transformer loop_function
-inline direction operator++(direction & dir, int dummy){
-  const unsigned d = dir;
-  dir = static_cast<direction>(d + 1);
-  return static_cast<direction>(d);
+static inline direction next_direction(direction dir) {
+  return static_cast<direction>(static_cast<unsigned>(dir)+1);
 }
 
-// Pre-increment
-#pragma transformer loop_function
-inline direction & operator++(direction & dir) {
-  dir = static_cast<direction>(dir + 1);
-  return dir;
-}
+#define foralldir(d) for(direction d=XUP; d<NDIM; d=next_direction(d))
 
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
+static inline direction operator-(const direction d) { return opp_dir(d); }
+
+static inline int is_up_dir(const int d) { return d<NDIM; }
+
+inline int dir_dot_product(direction d1, direction d2) {
+  if (d1 == d2) return 1;
+  else if (d1 == opp_dir(d2)) return -1;
+  else return 0;
+}
+
+
+// PARITY type definition
 
 enum class parity : unsigned { none = 0, even, odd, all, x };
 // use here #define instead of const parity. Makes EVEN a protected symbol
@@ -95,18 +100,7 @@ static std::vector<parity> loop_parities(parity par){
   return parities;
 }
 
-#define foralldir(d) for(direction d=XUP; d<NDIM; ++d)
-
-static inline int is_up_dir(const int d) { return d<NDIM; }
-
-
-inline int dir_dot_product(direction d1, direction d2) {
-  if (d1 == d2) return 1;
-  else if (d1 == opp_dir(d2)) return -1;
-  else return 0;
-}
-
-// location type
+// COORDINATE_VECTOR
 
 class coordinate_vector {
  private:
@@ -114,10 +108,9 @@ class coordinate_vector {
 
  public:
   coordinate_vector() = default;
-  coordinate_vector(const coordinate_vector & v) = default;
-  // {
-  //   foralldir(d) r[d] = v[d];
-  // }
+  coordinate_vector(const coordinate_vector & v) {
+    foralldir(d) r[d] = v[d];
+  }
 
   // initialize with direction -- useful for automatic conversion
   coordinate_vector(const direction & dir) {
