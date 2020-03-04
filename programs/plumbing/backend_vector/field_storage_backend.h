@@ -86,35 +86,39 @@ struct vector_info{
 
 
 /// Replaces basetypes with vectors in a given templated class
-template<typename A, typename B>
-struct replace_type {};
 
-// B is a templated class, so construct a vectorized type
-template<typename A, template<typename T> class C, typename B>
-struct replace_type<A, C<B>> {
-  using type = C<A>;
-};
-
-template<typename A, template<int a, typename T> class C, int a, typename B>
-struct replace_type<A, C<a, B>> {
-  using type = C<a, A>;
-};
-
-template<typename A, template<int a, int b, typename T> class C, int a, int b,  typename B>
-struct replace_type<A, C<a, b, B>> {
-  using type = C<a, b, A>;
-};
-
-// First case, B is not a class, so just return the vector type
+/// First base definition for replace_type, which recursively looks for the
+/// base type and replaces it in the end
+/// Here is not a basic type, so we need to replace it
 template<typename A, class Enable = void>
-struct vectorize_struct{
-  using type = typename replace_type<typename vector_info<A>::type, A>::type;
-};
+struct vectorize_struct{};
 
+/// A is a basic type, so just return the matching vector type
 template<typename A>
 struct vectorize_struct<A, typename std::enable_if_t<is_arithmetic<A>::value>> {
   using type = typename vector_info<A>::type;
 };
+
+
+// B is a templated class, so construct a vectorized type
+template<template<typename B> class C, typename B>
+struct vectorize_struct<C<B>>{
+  using vectorized_B = typename vectorize_struct<B>::type;
+  using type = C<vectorized_B>;
+};
+
+template<template<int a, typename B> class C, int a, typename B>
+struct vectorize_struct<C<a,B>>{
+  using vectorized_B = typename  vectorize_struct<B>::type;
+  using type = C<a, vectorized_B>;
+};
+
+template<template<int a, int b, typename B> class C, int a, int b,  typename B>
+struct vectorize_struct<C<a,b,B>>{
+  using vectorized_B = typename  vectorize_struct<B>::type;
+  using type = C<a, b, vectorized_B>;
+};
+
 
 
 
