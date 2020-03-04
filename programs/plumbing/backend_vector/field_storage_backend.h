@@ -239,15 +239,11 @@ void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * 
   for( vectorized_lattice_struct::halo_site hs: vlat->halo_sites )
   if(par == ALL || par == hs.par ) {
     int *perm = vlat->boundary_permutation[hs.dir];
-    auto temp = get(hs.nb_index, vlat->field_alloc_size());
-    auto dest = (basetype *) (fieldbuf) + elements*vector_size*(vlat->sites + hs.halo_index);
-    vectortype * e = (vectortype*) &temp;
-    basetype * d = (basetype*) dest;
-    for( int v=0; v<elements; v++ ){
-      basetype t1[vector_size], t2[vector_size];
-      e[v].store(&(t1[0]));
+    basetype * s = (basetype *) (fieldbuf) + elements*vector_size*hs.nb_index;
+    basetype * d = (basetype *) (fieldbuf) + elements*vector_size*(vlat->sites + hs.halo_index);
+    for( int e=0; e<elements; e++ ){
       for( int i=0; i<vector_size; i++ )
-       d[v*vector_size+i] =  t1[perm[i]];
+       d[e*vector_size+i] =  s[e*vector_size + perm[i]];
     }
   }
 }
