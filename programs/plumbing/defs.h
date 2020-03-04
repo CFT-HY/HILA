@@ -100,7 +100,7 @@ static std::vector<parity> loop_parities(parity par){
 static inline int is_up_dir(const int d) { return d<NDIM; }
 
 
-inline int parallel_dir(direction d1, direction d2) {
+inline int dir_dot_product(direction d1, direction d2) {
   if (d1 == d2) return 1;
   else if (d1 == opp_dir(d2)) return -1;
   else return 0;
@@ -114,13 +114,14 @@ class coordinate_vector {
 
  public:
   coordinate_vector() = default;
-  coordinate_vector(const coordinate_vector & v) {
-    foralldir(d) r[d] = v[d];
-  }
+  coordinate_vector(const coordinate_vector & v) = default;
+  // {
+  //   foralldir(d) r[d] = v[d];
+  // }
 
   // initialize with direction -- useful for automatic conversion
   coordinate_vector(const direction & dir) {
-    foralldir(d) r[d] = parallel_dir(d,dir);
+    foralldir(d) r[d] = dir_dot_product(d,dir);
   }
 
   int& operator[] (const int i) { return r[i]; }
@@ -181,8 +182,8 @@ coordinate_vector coordinates(parity X);
 inline coordinate_vector operator+(const direction d1, const direction d2) {
   coordinate_vector r;
   foralldir(d) {
-    r[d]  = parallel_dir(d1,d);
-    r[d] += parallel_dir(d2,d);
+    r[d]  = dir_dot_product(d1,d);
+    r[d] += dir_dot_product(d2,d);
   }
   return r;
 }
@@ -190,8 +191,8 @@ inline coordinate_vector operator+(const direction d1, const direction d2) {
 inline coordinate_vector operator-(const direction d1, const direction d2) {
   coordinate_vector r;
   foralldir(d) {
-    r[d]  = parallel_dir(d1,d);
-    r[d] -= parallel_dir(d2,d);
+    r[d]  = dir_dot_product(d1,d);
+    r[d] -= dir_dot_product(d2,d);
   }
   return r;
 }
@@ -199,7 +200,7 @@ inline coordinate_vector operator-(const direction d1, const direction d2) {
 /// Special operators: int*direction -> coordinate_vector
 inline coordinate_vector operator*(const int i, const direction dir) {
   coordinate_vector r;
-  foralldir(d) r[d] = i*parallel_dir(d,dir);
+  foralldir(d) r[d] = i*dir_dot_product(d,dir);
   return r;
 }
 
