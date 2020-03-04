@@ -8,7 +8,7 @@
 
 template <typename T = double>
 struct scalar {
-  using base_type = typename basetypeclass<T>::type;
+  using base_type = typename basetypestruct<T>::type;
   T value;
   
   // assignment is automatically OK, by c-standard

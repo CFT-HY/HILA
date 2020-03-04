@@ -3,7 +3,7 @@
 template<typename T, int n>
 class array {
     public:
-        using base_type = typename basetypeclass<T>::type;
+        using base_type = typename basetypestruct<T>::type;
         T c[n];
         array() = default;
         void as_matrix();

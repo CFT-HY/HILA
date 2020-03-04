@@ -83,7 +83,7 @@ radix gaussian_ran2 (radix* out2)
 template<int n, typename radix>
 class SU : public matrix<n,n,cmplx<radix> >{
     public:
-    using base_type = typename basetypeclass<radix>::type;
+    using base_type = typename basetypestruct<radix>::type;
 
     void reunitarize(){ //implement later
         make_unitary();
@@ -227,7 +227,7 @@ class SU2adjoint;
 template<typename radix> 
 class SU3 : public SU<3,radix> {
     public:
-    using base_type = typename basetypeclass<radix>::type;
+    using base_type = typename basetypestruct<radix>::type;
     //constructor from two SU3 vectors
     SU3 (const SU_vector<3, radix> & a, const SU_vector<3, radix> & b){
         SU_vector<3, radix> c; //last column of matrix to be made from cross product
@@ -251,7 +251,7 @@ class SU3 : public SU<3,radix> {
 template<typename radix>
 class SU2 { 
     public: 
-        using base_type = typename basetypeclass<radix>::type;
+        using base_type = typename basetypestruct<radix>::type;
 
         SU2() : a(0), b(0), c(0), d(1) {}
 
