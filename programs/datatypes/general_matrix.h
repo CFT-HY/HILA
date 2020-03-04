@@ -30,9 +30,13 @@ class transposeMatrix {
     transposeMatrix<n,m,T> & operator = (const transposeMatrix & rhs){}
 };
 
+
+
 template <const int n, const int m, typename T>
 class matrix {
   public:
+  using base_type = typename basetypeclass<T>::type;
+
   T c[n][m];
 
   matrix() = default;

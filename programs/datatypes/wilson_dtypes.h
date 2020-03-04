@@ -29,31 +29,37 @@
 
 template<typename vectortype> 
 class wvector {
+    using base_type = typename basetypeclass<vectortype>::type;
     vectortype [GAMMA_DIM]d;
 };
 
 template<typename vectortype> 
 class halfwvector {
+    using base_type = typename basetypeclass<vectortype>::type;
     vectortype [GAMMA_DIM/2]d;
 };
 
 template<typename T> 
 class colorwvector {
+    using base_type = typename basetypeclass<T>::type;
     wvector<T> c[COLORVEC_DIM]; 
 };
 
 template<typename T> 
 class spinwvector {
+    using base_type = typename basetypeclass<T>::type;
     wvector<T> d[GAMMA_DIM];
 };
 
 template<typename T>
 class wmatrix {
+    using base_type = typename basetypeclass<T>::type;
     colorwvector<T> d[GAMMA_DIM];
 };
 
 template<typename T>
 class wpropagator{
+    using base_type = typename basetypeclass<T>::type;
     spinwvector<T> c[COLORVEC_DIM];    
 };
 

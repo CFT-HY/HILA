@@ -315,4 +315,19 @@ namespace std {
 }
 #endif
 
+
+/// Utility for selecting the numeric base type of a class
+template<class T, class Enable = void>
+struct basetypeclass {
+  using type = typename T::base_type;
+};
+
+template<typename T>
+struct basetypeclass< T, typename std::enable_if_t<is_arithmetic<T>::value>> {
+  using type = T;
+};
+
+
+
+
 #endif

@@ -12,6 +12,7 @@
 
 template <typename T = double>
 struct cmplx {
+  using base_type = typename basetypeclass<T>::type;
   T re,im;
   
   cmplx<T>() = default;
