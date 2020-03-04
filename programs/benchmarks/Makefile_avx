@@ -3,7 +3,7 @@ OPTS = -DNDIM=4  $(ADDITION)
 
 #TRANSFORMER = ../../build/transformer -DPUHTI -DAVX -target:VECTORIZE=64 -I../../../llvm/lib/clang/8.0.1/include/ 
 TRANSFORMER = ../../build/transformer -DAVX -target:AVX
-CC = mpic++ -DUSE_MPI -mavx512f -mavx2 -mfma -DPUHTI -DAVX
+CC = mpic++  -DUSE_MPI -mavx2 -mfma -DAVX
 
 CFLAGS = -Ofast $(OPTS)
 CXXFLAGS = -Ofast -x c++ --std=c++17 $(OPTS)
