@@ -85,6 +85,39 @@ struct vector_info{
 
 
 
+/// Replaces basetypes with vectors in a given templated class
+template<typename A, typename B>
+struct replace_type {};
+
+// B is a templated class, so construct a vectorized type
+template<typename A, template<typename T> class C, typename B>
+struct replace_type<A, C<B>> {
+  using type = C<A>;
+};
+
+template<typename A, template<int a, typename T> class C, int a, typename B>
+struct replace_type<A, C<a, B>> {
+  using type = C<a, A>;
+};
+
+template<typename A, template<int a, int b, typename T> class C, int a, int b,  typename B>
+struct replace_type<A, C<a, b, B>> {
+  using type = C<a, b, A>;
+};
+
+// First case, B is not a class, so just return the vector type
+template<typename A, class Enable = void>
+struct vectorize_struct{
+  using type = typename replace_type<typename vector_info<A>::type, A>::type;
+};
+
+template<typename A>
+struct vectorize_struct<A, typename std::enable_if_t<is_arithmetic<A>::value>> {
+  using type = typename vector_info<A>::type;
+};
+
+
+
 
 template<typename T>
 void field_storage<T>::allocate_field( lattice_struct * lattice ) {
@@ -111,10 +144,11 @@ auto field_storage<T>::get(const int i, const int field_alloc_size) const
 {
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
+  using vectorized_type = typename vectorize_struct<T>::type;
   constexpr int elements = vector_info<T>::elements;
   constexpr int vector_size = vector_info<T>::vector_size;
 
-  typename field_info<T>::vector_type value;
+  vectorized_type value;
   basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
