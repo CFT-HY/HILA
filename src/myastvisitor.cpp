@@ -976,7 +976,7 @@ bool MyASTVisitor::check_field_ref_list() {
 
         for (field_ref * p : l.ref_list) {
           if (p->is_written && p->dirExpr == nullptr) {
-            reportDiag(DiagnosticsEngine::Level::Note,
+            reportDiag(DiagnosticsEngine::Level::Remark,
                        p->fullExpr->getSourceRange().getBegin(),
                        "Location of assignment");
               
@@ -985,9 +985,9 @@ bool MyASTVisitor::check_field_ref_list() {
       } else if (loop_parity.value == parity::none && !l.contains_offset) {
         // not sure if there's an error, emit an assertion
         global.assert_loop_parity = true;
-        reportDiag(DiagnosticsEngine::Level::Note,
+        reportDiag(DiagnosticsEngine::Level::Remark,
                    l.ref_list.front()->fullExpr->getSourceRange().getBegin(),
-                   "Assign to '%0' and access with offset may be undefined with parity '%1', inserting assertion",
+                   "Assignment and simultaneous nearest-neighbour access to field '%0' is allowed only when parity '%1'is EVEN or ODD. Inserting assertion",
                    l.old_name.c_str(),
                    loop_parity.text.c_str());
       }
@@ -1016,7 +1016,7 @@ void MyASTVisitor::check_var_info_list() {
           }
           int j=0;
           for (auto & vr : vi.refs) {
-            if (j!=i) reportDiag(DiagnosticsEngine::Level::Note,
+            if (j!=i) reportDiag(DiagnosticsEngine::Level::Remark,
                                  vr.ref->getSourceRange().getBegin(),
                                  "Other reference to \'%0\'", vi.name.c_str());
             j++;
