@@ -140,6 +140,7 @@ public:
 
   //Buffer for the function copy
   srcBuf functionBuffer;
+  int vector_size;
 
   bool TraverseStmt(Stmt *s){
     RecursiveASTVisitor<LoopFunctionHandler>::TraverseStmt(s);
@@ -154,12 +155,18 @@ public:
 bool LoopFunctionHandler::VisitVarDecl(VarDecl *var){
   std::string typestring = var->getType().getAsString();
   
-  // This variable is an element, replace with vector
-  if(typestring.rfind("element",0) != std::string::npos){
+  size_t begin;
+  begin = typestring.rfind("element",0);
+  if(begin != std::string::npos){
+    // This variable is an element, replace with vector
     std::string vector_type = typestring;
-    vector_map::replace(vector_type);
-    functionBuffer.replace(var->getSourceRange(), 
-      vector_type+" "+var->getNameAsString() );
+    if(begin != std::string::npos){
+      vector_type.replace(begin, 7, "vectorize_struct");
+      vector_type.replace(vector_type.find_last_of(">"), 1, ", "+std::to_string(vector_size)+">::type");
+    }
+
+    functionBuffer.replace(var->getSourceRange(), vector_type+" "+var->getNameAsString() );
+
   } else {
     if(var->hasInit()){
       LoopAssignChecker lac(TheRewriter, Context);
@@ -221,14 +228,10 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   srcBuf * sourceBuf = get_file_buffer(TheRewriter, FID);
   PrintingPolicy pp(Context->getLangOpts());
 
-  LoopFunctionHandler lfh(TheRewriter, Context);
 
   // Track wether the function actually contains elements.
   // if not, no new function should be written
   bool generate_function = false;
-
-  // Copy the function to a buffer
-  lfh.functionBuffer.copy_from_range(sourceBuf,sr);
 
   // Check allowed vector sizes
   int smallest=1, largest=0;
@@ -252,6 +255,10 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   }
 
   if(generate_function) for( int vector_size = smallest; vector_size <= largest; vector_size*=2 ){
+    LoopFunctionHandler lfh(TheRewriter, Context);
+    lfh.functionBuffer.copy_from_range(sourceBuf,sr);
+    lfh.vector_size = vector_size;
+
     // Handle each parameter
     for( clang::ParmVarDecl *par : fd->parameters() ){
       std::string typestring = par->getType().getAsString(pp);
