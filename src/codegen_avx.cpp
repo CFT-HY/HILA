@@ -69,7 +69,12 @@ bool LoopFunctionHandler::VisitVarDecl(VarDecl *var){
       vector_type.replace(vector_type.find_last_of(">"), 1, ", "+std::to_string(vector_size)+">::type");
     }
 
-    functionBuffer.replace(var->getSourceRange(), vector_type+" "+var->getNameAsString() );
+    if( var->isDirectInit() ){
+      std::string init = TheRewriter.getRewrittenText(var->getInit()->getSourceRange());
+      functionBuffer.replace(var->getSourceRange(), vector_type+" "+var->getNameAsString() + "=" + init );
+    } else {
+      functionBuffer.replace(var->getSourceRange(), vector_type+" "+var->getNameAsString());
+    }
 
   } else {
     if(var->hasInit()){

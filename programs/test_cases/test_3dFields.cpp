@@ -26,7 +26,7 @@ T test_template_function(T a){
 
 element<cmplx<double>> test_nontemplate_function(element<cmplx<double>> a){
   element<cmplx<double>> b = a;
-  return 2*b;
+  return 2*a;
 }
 
 
