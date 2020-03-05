@@ -109,6 +109,7 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
     special_function_call sfc;
     sfc.fullExpr = Call;
     sfc.scope = parsing_state.scope_level;
+    sfc.name = name;
     sfc.replace_expression = "loop_lattice->coordinates";
     sfc.add_loop_var = true;
     special_function_call_list.push_back(sfc);
@@ -119,6 +120,7 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
     special_function_call sfc;
     sfc.fullExpr = Call;
     sfc.scope = parsing_state.scope_level;
+    sfc.name = name;
     sfc.replace_expression = "hila_random";
     sfc.add_loop_var = false;
     special_function_call_list.push_back(sfc);

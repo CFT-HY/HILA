@@ -200,7 +200,13 @@ bool LoopFunctionHandler::VisitBinaryOperator(BinaryOperator *op){
 static bool replace_element_with_vector(SourceRange sr, std::string typestring, srcBuf &functionBuffer){
   if(typestring.rfind("element",0) != std::string::npos){
     std::string vector_type = typestring;
-    vector_map::replace(vector_type);
+    
+    size_t begin;
+    begin = vector_type.find("element");
+    if(begin != std::string::npos){
+      vector_type.replace(begin, 7, "vector_type");
+    }
+    
     functionBuffer.replace(sr, vector_type);
     return true;
   }
@@ -258,33 +264,29 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   std::stringstream code;
 
-  // Find the vector size
-  vector_map::set_vector_target(target);
-  int vector_size = 1;
-  std::string base_type, base_vector_type;
-  std::string type = field_info_list.front().type_template;
-  vector_map::size_and_type(type, base_type, base_vector_type, vector_size);
+  // The base type of the loop is the base type of the first variable
+  std::string basetype = "loop_base_type";
+  code << "using " << basetype << " = typename base_type_struct"
+       << field_info_list.front().type_template+"::type;\n";
+  code << "constexpr int vector_size = vector_info<" << basetype << ">::vector_size;\n";
   
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
       v.new_name = "v_" + v.reduction_name;
       // Allocate memory for a reduction. This will be filled in the kernel
-      std::string reduction_type = v.type;
-      vector_map::replace(reduction_type);
       if (v.reduction_type == reduction::SUM) {
-        code << reduction_type << " " << v.new_name << "(0);\n";
+        code << "vector_type<" << v.type << "> " << v.new_name << "(0);\n";
       } else if (v.reduction_type == reduction::PRODUCT) {
-        code << reduction_type << " " << v.new_name << "(1);\n";
+        code << "vector_type<" << v.type << "> " << v.new_name << "(1);\n";
       }
     }
   }
 
   // Set loop lattice
-  std::string fieldname = field_info_list.front().old_name;
-  code << "vectorized_lattice_struct * loop_lattice = "
-       << fieldname << ".fs->lattice->backend_lattice->get_vectorized_lattice("
-       << vector_size <<");\n";
+  std::string fieldname = field_info_list.front().new_name;
+  code << "auto * loop_lattice = "
+       << fieldname << ".fs->lattice->backend_lattice->get_vectorized_lattice<vector_size>();\n";
 
   // Get a pointer to the neighbour list
   code << "std::array<unsigned*,NDIRS> neighbour_list = loop_lattice->neighbour_list();\n";
@@ -294,7 +296,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   code << "const int loop_end   = loop_lattice->loop_end(" << parity_in_this_loop << ");\n";
 
   // Start the loop
-  code << "for(int " << looping_var <<" = loop_begin; " 
+  code << "for(int " << looping_var <<" = loop_begin; "
        << looping_var << " < loop_end; " 
        << looping_var << "++) {\n";
 
@@ -302,13 +304,12 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   // Create temporary field element variables
   for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
-    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-    vector_map::replace(type_name);
 
     // First check for direction references. If any found, create list of temp
     // variables
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
+      code << "vector_type" << type_name << " " 
+           << l.loop_ref_name << "_" << get_stmt_str(d.e)
            << " = " << l.new_name << ".get_value_at(neighbour_list[" 
            << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
     }
@@ -323,10 +324,12 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
     }
     if(local_ref) {
       if( local_is_read ){
-        code << type_name << " " << l.loop_ref_name << " = " 
-           << l.new_name << ".get_value_at(" << looping_var << ");\n";
+        code << "vector_type" << type_name << " "
+             << l.loop_ref_name << " = " 
+             << l.new_name << ".get_value_at(" << looping_var << ");\n";
       } else {
-        code << type_name << " " << l.loop_ref_name << ";\n";
+        code << "vector_type" << type_name << " "
+             << l.loop_ref_name << ";\n";
       }
     }
   }
@@ -343,21 +346,27 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
-    if( sfc.add_loop_var ){
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"_"+base_vector_type+"("+looping_var+")");
+    if( sfc.name == "coordinates" ) {
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
+    } else if( sfc.add_loop_var ) {
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"_vector<" + basetype + ">("+looping_var+")");
     } else {
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"_"+base_vector_type+"()");
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"_vector<" + basetype + ">()");
     }
   }
 
   for ( var_info & vi : var_info_list ) {
     if(vi.type.rfind("element",0) != std::string::npos) {
-      // Converts all locally declared variables to vectors. Is this OK?
-      // First get the type name in the declaration
+      // Converts all locally declared variables to vectors.
+      // Basically replaces "element" with "vector_type"
       auto typeexpr = vi.decl->getTypeSourceInfo()->getTypeLoc().getSourceRange();
       std::string type_string = TheRewriter.getRewrittenText(typeexpr);
 
-      vector_map::replace( type_string, vector_size );
+      size_t begin;
+      begin = type_string.find("element");
+      if(begin != std::string::npos){
+        type_string.replace(begin, 7, "vector_type");
+      }
 
       loopBuf.replace( typeexpr, type_string + " ");
     }

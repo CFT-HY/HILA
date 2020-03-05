@@ -4,10 +4,6 @@
 #include "../defs.h"
 #include "../field_storage.h"
 
-#ifndef VECTOR_SIZE
-#define VECTOR_SIZE 32
-#endif
-
 
 /// Utility for selecting a vector type
 template<typename T>
@@ -75,7 +71,7 @@ struct vector_base_type_struct<coordinate_vector> {
 /// Get the vector type for any larger type (such as cmplx, matrix...)
 template<typename T>
 struct vector_info{
-  using base_type = typename basetypestruct<T>::type; 
+  using base_type = typename base_type_struct<T>::type; 
   using type = typename vector_base_type_struct<base_type>::type;
 
   static constexpr int vector_size = vector_base_type_struct<base_type>::vector_size;
@@ -120,13 +116,28 @@ struct vectorize_struct<C<a,b,B>>{
 };
 
 
+/// Match coordinate vectors explicitly
+template<>
+struct vectorize_struct<coordinate_vector> {
+  using type = std::array<vector_base_type_struct<int>::type,NDIM>;
+};
+
+
+
+/// Define loop element
+template <typename T>
+using vector_type = typename vectorize_struct<T>::type;
+
+
+
+
 
 
 
 template<typename T>
 void field_storage<T>::allocate_field( lattice_struct * lattice ) {
   constexpr int vector_size = vector_info<T>::vector_size;
-  vectorized_lattice_struct * vlat = lattice->backend_lattice->get_vectorized_lattice(vector_size);
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_size>();
 
   int size = sizeof(T) * vector_size * vlat->field_alloc_size();
   if (size % VECTOR_SIZE) 
@@ -175,7 +186,7 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
   basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
-    valuep[e].store((vp + e*vector_size));
+    valuep[e].store(vp + e*vector_size);
   }
 }
 
@@ -191,7 +202,8 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
 void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const {
-  vectorized_lattice_struct * vlat = lattice->backend_lattice->get_vectorized_lattice(vector_info<T>::vector_size);
+  constexpr int vector_size = vector_info<T>::vector_size;
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
   for (int j=0; j<to_node.n_sites(par); j++) {
     int index = to_node.site_index(j, par);
     int v_index = vlat->vector_index[index];
@@ -211,7 +223,8 @@ void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
 void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice){
-  vectorized_lattice_struct * vlat = lattice->backend_lattice->get_vectorized_lattice(vector_info<T>::vector_size);
+  constexpr int vector_size = vector_info<T>::vector_size;
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
   for (int j=0; j<from_node.n_sites(par); j++) {
     int index = from_node.offset(par)+j;
     int v_index = vlat->vector_index[index];
@@ -234,9 +247,9 @@ void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * 
   constexpr int elements = vector_info<T>::elements;
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
-  vectorized_lattice_struct * vlat = lattice->backend_lattice->get_vectorized_lattice(vector_size);
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_size>();
   // Loop over the boundary sites
-  for( vectorized_lattice_struct::halo_site hs: vlat->halo_sites )
+  for( typename vectorized_lattice_struct<vector_size>::halo_site hs: vlat->halo_sites )
   if(par == ALL || par == hs.par ) {
     int *perm = vlat->boundary_permutation[hs.dir];
     basetype * s = (basetype *) (fieldbuf) + elements*vector_size*hs.nb_index;
