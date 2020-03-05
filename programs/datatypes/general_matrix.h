@@ -35,7 +35,7 @@ class transposeMatrix {
 template <const int n, const int m, typename T>
 class matrix {
   public:
-  using base_type = typename basetypestruct<T>::type;
+  using base_type = typename base_type_struct<T>::type;
 
   T c[n][m];
 
