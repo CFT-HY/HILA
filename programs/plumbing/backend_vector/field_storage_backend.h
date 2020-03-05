@@ -86,35 +86,39 @@ struct vector_info{
 
 
 /// Replaces basetypes with vectors in a given templated class
-template<typename A, typename B>
-struct replace_type {};
 
-// B is a templated class, so construct a vectorized type
-template<typename A, template<typename T> class C, typename B>
-struct replace_type<A, C<B>> {
-  using type = C<A>;
-};
-
-template<typename A, template<int a, typename T> class C, int a, typename B>
-struct replace_type<A, C<a, B>> {
-  using type = C<a, A>;
-};
-
-template<typename A, template<int a, int b, typename T> class C, int a, int b,  typename B>
-struct replace_type<A, C<a, b, B>> {
-  using type = C<a, b, A>;
-};
-
-// First case, B is not a class, so just return the vector type
+/// First base definition for replace_type, which recursively looks for the
+/// base type and replaces it in the end
+/// Here is not a basic type, so we need to replace it
 template<typename A, class Enable = void>
-struct vectorize_struct{
-  using type = typename replace_type<typename vector_info<A>::type, A>::type;
-};
+struct vectorize_struct{};
 
+/// A is a basic type, so just return the matching vector type
 template<typename A>
 struct vectorize_struct<A, typename std::enable_if_t<is_arithmetic<A>::value>> {
   using type = typename vector_info<A>::type;
 };
+
+
+// B is a templated class, so construct a vectorized type
+template<template<typename B> class C, typename B>
+struct vectorize_struct<C<B>>{
+  using vectorized_B = typename vectorize_struct<B>::type;
+  using type = C<vectorized_B>;
+};
+
+template<template<int a, typename B> class C, int a, typename B>
+struct vectorize_struct<C<a,B>>{
+  using vectorized_B = typename  vectorize_struct<B>::type;
+  using type = C<a, vectorized_B>;
+};
+
+template<template<int a, int b, typename B> class C, int a, int b,  typename B>
+struct vectorize_struct<C<a,b,B>>{
+  using vectorized_B = typename  vectorize_struct<B>::type;
+  using type = C<a, b, vectorized_B>;
+};
+
 
 
 
@@ -235,15 +239,11 @@ void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * 
   for( vectorized_lattice_struct::halo_site hs: vlat->halo_sites )
   if(par == ALL || par == hs.par ) {
     int *perm = vlat->boundary_permutation[hs.dir];
-    auto temp = get(hs.nb_index, vlat->field_alloc_size());
-    auto dest = (basetype *) (fieldbuf) + elements*vector_size*(vlat->sites + hs.halo_index);
-    vectortype * e = (vectortype*) &temp;
-    basetype * d = (basetype*) dest;
-    for( int v=0; v<elements; v++ ){
-      basetype t1[vector_size], t2[vector_size];
-      e[v].store(&(t1[0]));
+    basetype * s = (basetype *) (fieldbuf) + elements*vector_size*hs.nb_index;
+    basetype * d = (basetype *) (fieldbuf) + elements*vector_size*(vlat->sites + hs.halo_index);
+    for( int e=0; e<elements; e++ ){
       for( int i=0; i<vector_size; i++ )
-       d[v*vector_size+i] =  t1[perm[i]];
+       d[e*vector_size+i] =  s[e*vector_size + perm[i]];
     }
   }
 }

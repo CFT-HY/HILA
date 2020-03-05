@@ -2,8 +2,8 @@ ADDITION = -DMSIZE=2
 OPTS = -DNDIM=4 $(ADDITION)
 
 #The next line work on puhti
-TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ 
-#TRANSFORMER = ../../build/transformer
+#TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ 
+TRANSFORMER = ../../build/transformer
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 
 CFLAGS = -Ofast $(OPTS)
