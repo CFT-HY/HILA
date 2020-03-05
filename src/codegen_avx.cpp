@@ -204,7 +204,8 @@ static bool replace_element_with_vector(SourceRange sr, std::string typestring, 
     size_t begin;
     begin = vector_type.find("element");
     if(begin != std::string::npos){
-      vector_type.replace(begin, 7, "vector_type");
+      vector_type.replace(begin, 7, "vectorize_struct");
+      vector_type.replace(vector_type.find_last_of(">"), 1, ", vector_size>::type");
     }
     
     functionBuffer.replace(sr, vector_type);
@@ -365,7 +366,8 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
       size_t begin;
       begin = type_string.find("element");
       if(begin != std::string::npos){
-        type_string.replace(begin, 7, "vector_type");
+        type_string.replace(begin, 7, "vectorize_struct");
+        type_string.replace(type_string.find_last_of(">"), 1, ", vector_size>::type");
       }
 
       loopBuf.replace( typeexpr, type_string + " ");

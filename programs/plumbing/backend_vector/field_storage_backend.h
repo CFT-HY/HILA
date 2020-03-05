@@ -6,34 +6,41 @@
 
 
 /// Utility for selecting a vector type
-template<typename T>
+template<typename T, int vector_len>
 struct vector_base_type_struct {};
 
 /// Specializations of the vector type selector
 #if VECTOR_SIZE == 32
 template<>
-struct vector_base_type_struct<double> {
+struct vector_base_type_struct<double, 4> {
   using type = Vec4d;
-  static constexpr int vector_size = 4;
 };
 
 template<>
-struct vector_base_type_struct<float> {
+struct vector_base_type_struct<float, 8> {
   using type = Vec8f;
-  static constexpr int vector_size = 8;
 };
 
 template<>
-struct vector_base_type_struct<int> {
+struct vector_base_type_struct<int, 8> {
   using type = Vec8i;
-  static constexpr int vector_size = 8;
 };
 
 template<>
-struct vector_base_type_struct<coordinate_vector> {
+struct vector_base_type_struct<coordinate_vector, 8> {
   using type = Vec8i;
-  static constexpr int vector_size = 8;
 };
+
+template<>
+struct vector_base_type_struct<int, 4> {
+  using type = Vec4i;
+};
+
+template<>
+struct vector_base_type_struct<coordinate_vector, 4> {
+  using type = Vec4i;
+};
+
 
 
 #elif VECTOR_SIZE == 64
@@ -65,6 +72,7 @@ struct vector_base_type_struct<coordinate_vector> {
   static constexpr int vector_size = 16;
 };
 
+
 #endif
 
 
@@ -72,9 +80,9 @@ struct vector_base_type_struct<coordinate_vector> {
 template<typename T>
 struct vector_info{
   using base_type = typename base_type_struct<T>::type; 
-  using type = typename vector_base_type_struct<base_type>::type;
+  static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
 
-  static constexpr int vector_size = vector_base_type_struct<base_type>::vector_size;
+  using type = typename vector_base_type_struct<base_type, vector_size>::type;
   static constexpr int elements = sizeof(T)/sizeof(base_type);
   static constexpr int base_type_size = sizeof(base_type);
 };
@@ -86,47 +94,52 @@ struct vector_info{
 /// First base definition for replace_type, which recursively looks for the
 /// base type and replaces it in the end
 /// Here is not a basic type, so we need to replace it
-template<typename A, class Enable = void>
+template<typename A, int vector_size, class Enable = void>
 struct vectorize_struct{};
 
 /// A is a basic type, so just return the matching vector type
-template<typename A>
-struct vectorize_struct<A, typename std::enable_if_t<is_arithmetic<A>::value>> {
-  using type = typename vector_info<A>::type;
+template<typename A, int vector_size>
+struct vectorize_struct<A, vector_size, typename std::enable_if_t<is_arithmetic<A>::value>> {
+  using type = typename vector_base_type_struct<A,vector_size>::type;
 };
 
 
 // B is a templated class, so construct a vectorized type
-template<template<typename B> class C, typename B>
-struct vectorize_struct<C<B>>{
-  using vectorized_B = typename vectorize_struct<B>::type;
+template<template<typename B> class C, typename B, int vector_size>
+struct vectorize_struct<C<B>, vector_size>{
+  using vectorized_B = typename vectorize_struct<B, vector_size>::type;
   using type = C<vectorized_B>;
 };
 
-template<template<int a, typename B> class C, int a, typename B>
-struct vectorize_struct<C<a,B>>{
-  using vectorized_B = typename  vectorize_struct<B>::type;
+template<template<int a, typename B> class C, int a, typename B, int vector_size>
+struct vectorize_struct<C<a,B>, vector_size>{
+  using vectorized_B = typename  vectorize_struct<B, vector_size>::type;
   using type = C<a, vectorized_B>;
 };
 
-template<template<int a, int b, typename B> class C, int a, int b,  typename B>
-struct vectorize_struct<C<a,b,B>>{
-  using vectorized_B = typename  vectorize_struct<B>::type;
+template<template<int a, int b, typename B> class C, int a, int b,  typename B, int vector_size>
+struct vectorize_struct<C<a,b,B>, vector_size>{
+  using vectorized_B = typename  vectorize_struct<B, vector_size>::type;
   using type = C<a, b, vectorized_B>;
 };
 
 
 /// Match coordinate vectors explicitly
 template<>
-struct vectorize_struct<coordinate_vector> {
-  using type = std::array<vector_base_type_struct<int>::type,NDIM>;
+struct vectorize_struct<coordinate_vector, 4> {
+  using type = std::array<Vec4i,NDIM>;
+};
+
+template<>
+struct vectorize_struct<coordinate_vector, 8> {
+  using type = std::array<Vec8i,NDIM>;
 };
 
 
 
 /// Define loop element
 template <typename T>
-using vector_type = typename vectorize_struct<T>::type;
+using vector_type = typename vectorize_struct<T,vector_info<T>::vector_size>::type;
 
 
 
@@ -159,7 +172,7 @@ auto field_storage<T>::get(const int i, const int field_alloc_size) const
 {
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
-  using vectorized_type = typename vectorize_struct<T>::type;
+  using vectorized_type = typename vector_info<T>::type;
   constexpr int elements = vector_info<T>::elements;
   constexpr int vector_size = vector_info<T>::vector_size;
 
