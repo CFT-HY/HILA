@@ -401,43 +401,5 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 }
 
 
-void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
-  // Find the vector size
-  vector_map::set_vector_target(target);
-  int vector_size = 1;
-  std::string base_type;
-  std::string base_vector_type;
-  vector_map::size_and_type(typestr, base_type, base_vector_type, vector_size);
-
-  // Replace the original type with a vector type
-  std::string vectortype = typestr;
-  vector_map::replace(vectortype);
-
-  std::stringstream field_element_code;
-  field_element_code << "\ntemplate<> \n";
-  field_element_code << "struct field_info<"<<typestr<<"> {\n";
-  field_element_code << " constexpr static int vector_size = "<< std::to_string(vector_size) <<";\n";
-  field_element_code << " constexpr static int base_type_size = sizeof(" << base_type << ");\n";
-  field_element_code << " constexpr static int elements = sizeof(" << typestr 
-                     << ")/sizeof(" << base_type << ");\n";
-  field_element_code << " using base_type = " << base_type << ";\n";
-  field_element_code << " using vector_type = " << vectortype << ";\n";
-  field_element_code << " using base_vector_type = " << base_vector_type << ";\n";
-  field_element_code << "};\n";
-
-  field_element_code << "template<> \n";
-  field_element_code << "struct field_info<"<<vectortype<<"> {\n";
-  field_element_code << " constexpr static int vector_size = "<< std::to_string(vector_size) <<";\n";
-  field_element_code << " constexpr static int base_type_size = sizeof(" << base_type << ");\n";
-  field_element_code << " constexpr static int elements = sizeof(" << typestr 
-                     << ")/sizeof(" << base_type << ");\n";
-  field_element_code << " using base_type = " << base_type << ";\n";
-  field_element_code << " using vector_type = " << vectortype << ";\n";
-  field_element_code << " using base_vector_type = " << base_vector_type << ";\n";
-  field_element_code << "};\n";
-
-  // Insert in the top level buffer
-  toplevelBuf->insert(global.location.top.getLocWithOffset(-1), indent_string(field_element_code.str()),true,false);
-}
 
 

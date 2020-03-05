@@ -188,13 +188,6 @@ std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semi_at_end, srcBu
   return code.str();
 }
 
-/// Call the backend function for generating the field storage type
-void MyASTVisitor::backend_generate_field_storage_type(std::string typestr){
-  if(target.VECTORIZE){
-    generate_field_storage_type_AVX(typestr);
-  }
-}
-
 
 
 
