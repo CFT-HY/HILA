@@ -32,6 +32,7 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 
+
 namespace vector_map {
 
   static int bytes;
@@ -197,22 +198,18 @@ bool LoopFunctionHandler::VisitBinaryOperator(BinaryOperator *op){
 
 
 /// Replace element types with vector. Leaves other types untouched.
-static bool replace_element_with_vector(SourceRange sr, std::string typestring, std::string namestring, srcBuf &functionBuffer){
+static void replace_element_with_vector(SourceRange sr, std::string typestring, std::string namestring, int vector_size, srcBuf &functionBuffer){
   if(typestring.rfind("element",0) != std::string::npos){
     std::string vector_type = typestring;
-    std::string vector_size = "vector_info<" + typestring + ">::vector_size";
-    
     size_t begin;
     begin = vector_type.find("element");
     if(begin != std::string::npos){
       vector_type.replace(begin, 7, "vectorize_struct");
-      vector_type.replace(vector_type.find_last_of(">"), 1, ", "+vector_size+">::type");
+      vector_type.replace(vector_type.find_last_of(">"), 1, ", "+std::to_string(vector_size)+">::type");
     }
     
     functionBuffer.replace(sr, vector_type+" "+namestring);
-    return true;
   }
-  return false;
 }
 
 
@@ -223,33 +220,52 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   FileID FID = TheRewriter.getSourceMgr().getFileID(sr.getBegin());
   srcBuf * sourceBuf = get_file_buffer(TheRewriter, FID);
   PrintingPolicy pp(Context->getLangOpts());
-  vector_map::set_vector_target(target);
 
   LoopFunctionHandler lfh(TheRewriter, Context);
 
   // Track wether the function actually contains elements.
   // if not, no new function should be written
-  bool contains_elements = false;
+  bool generate_function = false;
 
   // Copy the function to a buffer
   lfh.functionBuffer.copy_from_range(sourceBuf,sr);
 
-  // Handle each parameter
+  // Check allowed vector sizes
+  int smallest=1, largest=0;
   for( clang::ParmVarDecl *par : fd->parameters() ){
     std::string typestring = par->getType().getAsString(pp);
-    contains_elements += replace_element_with_vector(par->getSourceRange(), typestring, par->getNameAsString(), lfh.functionBuffer);
+    if(typestring.find("double") != std::string::npos){
+      smallest = 4;
+      largest = 8;
+    }
+    if( typestring.find("float") != std::string::npos ||
+        typestring.find("int") != std::string::npos || 
+        typestring.find("coordinate_vector") != std::string::npos ){
+      smallest = 8;
+      largest = 16;
+    }
+
+    // Check if there are elements in the first place
+    if(typestring.find("element") != std::string::npos)
+      generate_function = true;
+
   }
 
-  // Handle return type
-  // Note: C++ cannot specialize only based on return type. Therefore we
-  // only write a new function if the parameters contain elements
-  std::string typestring = fd->getReturnType().getAsString(pp);
-  replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, "", lfh.functionBuffer);
+  if(generate_function) for( int vector_size = smallest; vector_size <= largest; vector_size*=2 ){
+    // Handle each parameter
+    for( clang::ParmVarDecl *par : fd->parameters() ){
+      std::string typestring = par->getType().getAsString(pp);
+      replace_element_with_vector(par->getSourceRange(), typestring, par->getNameAsString(), vector_size, lfh.functionBuffer);
+    }
 
-  lfh.TraverseStmt(fd->getBody());
-  
-  
-  if(contains_elements) {
+    // Handle return type
+    // Note: C++ cannot specialize only based on return type. Therefore we
+    // only write a new function if the parameters contain elements
+    std::string typestring = fd->getReturnType().getAsString(pp);
+    replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, "", vector_size, lfh.functionBuffer);
+
+    lfh.TraverseStmt(fd->getBody());
+
     std::string buffer = lfh.functionBuffer.dump();
     if( !(fd->hasBody()) ){
       // Declaration does not contain a body, needs a semicolon
