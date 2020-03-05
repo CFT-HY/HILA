@@ -197,18 +197,19 @@ bool LoopFunctionHandler::VisitBinaryOperator(BinaryOperator *op){
 
 
 /// Replace element types with vector. Leaves other types untouched.
-static bool replace_element_with_vector(SourceRange sr, std::string typestring, srcBuf &functionBuffer){
+static bool replace_element_with_vector(SourceRange sr, std::string typestring, std::string namestring, srcBuf &functionBuffer){
   if(typestring.rfind("element",0) != std::string::npos){
     std::string vector_type = typestring;
+    std::string vector_size = "vector_info<" + typestring + ">::vector_size";
     
     size_t begin;
     begin = vector_type.find("element");
     if(begin != std::string::npos){
       vector_type.replace(begin, 7, "vectorize_struct");
-      vector_type.replace(vector_type.find_last_of(">"), 1, ", vector_size>::type");
+      vector_type.replace(vector_type.find_last_of(">"), 1, ", "+vector_size+">::type");
     }
     
-    functionBuffer.replace(sr, vector_type);
+    functionBuffer.replace(sr, vector_type+" "+namestring);
     return true;
   }
   return false;
@@ -236,14 +237,14 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   // Handle each parameter
   for( clang::ParmVarDecl *par : fd->parameters() ){
     std::string typestring = par->getType().getAsString(pp);
-    contains_elements += replace_element_with_vector(par->getSourceRange(), typestring+" "+par->getNameAsString(), lfh.functionBuffer);
+    contains_elements += replace_element_with_vector(par->getSourceRange(), typestring, par->getNameAsString(), lfh.functionBuffer);
   }
 
   // Handle return type
   // Note: C++ cannot specialize only based on return type. Therefore we
   // only write a new function if the parameters contain elements
   std::string typestring = fd->getReturnType().getAsString(pp);
-  replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, lfh.functionBuffer);
+  replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, "", lfh.functionBuffer);
 
   lfh.TraverseStmt(fd->getBody());
   

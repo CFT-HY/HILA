@@ -5,15 +5,18 @@
 #include "../field_storage.h"
 
 
-/// Utility for selecting a vector type
+/// Utility for selecting a vector type by base type and length
 template<typename T, int vector_len>
 struct vector_base_type_struct {};
 
-/// Specializations of the vector type selector
-#if VECTOR_SIZE == 32
 template<>
 struct vector_base_type_struct<double, 4> {
   using type = Vec4d;
+};
+
+template<>
+struct vector_base_type_struct<double, 8> {
+  using type = Vec8d;
 };
 
 template<>
@@ -22,13 +25,8 @@ struct vector_base_type_struct<float, 8> {
 };
 
 template<>
-struct vector_base_type_struct<int, 8> {
-  using type = Vec8i;
-};
-
-template<>
-struct vector_base_type_struct<coordinate_vector, 8> {
-  using type = Vec8i;
+struct vector_base_type_struct<float, 16> {
+  using type = Vec16f;
 };
 
 template<>
@@ -37,53 +35,46 @@ struct vector_base_type_struct<int, 4> {
 };
 
 template<>
+struct vector_base_type_struct<int, 8> {
+  using type = Vec8i;
+};
+
+template<>
+struct vector_base_type_struct<int, 16> {
+  using type = Vec16i;
+};
+
+template<>
 struct vector_base_type_struct<coordinate_vector, 4> {
   using type = Vec4i;
 };
 
-
-
-#elif VECTOR_SIZE == 64
-template<typename T>
-struct vector_base_type_struct {
-};
-
 template<>
-struct vector_base_type_struct<double> {
-  using type = Vec8d;
-  static constexpr int vector_size = 8;
-};
-
-template<>
-struct vector_base_type_struct<float> {
-  using type = Vec16f;
-  static constexpr int vector_size = 16;
-};
-
-template<>
-struct vector_base_type_struct<int> {
-  using type = Vec16i;
-  static constexpr int vector_size = 16;
-};
-
-template<>
-struct vector_base_type_struct<coordinate_vector> {
-  using type = Vec16i;
-  static constexpr int vector_size = 16;
+struct vector_base_type_struct<coordinate_vector, 8> {
+  using type = Vec8i;
 };
 
 
-#endif
 
 
-/// Get the vector type for any larger type (such as cmplx, matrix...)
+
+
+/// Maps any type to a base vector type
 template<typename T>
 struct vector_info{
+  // Get base type first
   using base_type = typename base_type_struct<T>::type; 
+
+  // Find vector length
   static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
 
+  // Find the vector type from above
   using type = typename vector_base_type_struct<base_type, vector_size>::type;
+
+  // Number of elements in the full type
   static constexpr int elements = sizeof(T)/sizeof(base_type);
+
+  // Size of the base type
   static constexpr int base_type_size = sizeof(base_type);
 };
 
@@ -93,7 +84,7 @@ struct vector_info{
 
 /// First base definition for replace_type, which recursively looks for the
 /// base type and replaces it in the end
-/// Here is not a basic type, so we need to replace it
+/// General template, never matched
 template<typename A, int vector_size, class Enable = void>
 struct vectorize_struct{};
 
@@ -102,7 +93,6 @@ template<typename A, int vector_size>
 struct vectorize_struct<A, vector_size, typename std::enable_if_t<is_arithmetic<A>::value>> {
   using type = typename vector_base_type_struct<A,vector_size>::type;
 };
-
 
 // B is a templated class, so construct a vectorized type
 template<template<typename B> class C, typename B, int vector_size>
@@ -127,17 +117,22 @@ struct vectorize_struct<C<a,b,B>, vector_size>{
 /// Match coordinate vectors explicitly
 template<>
 struct vectorize_struct<coordinate_vector, 4> {
-  using type = std::array<Vec4i,NDIM>;
+  using type = std::array<Vec4i, NDIM>;
 };
 
 template<>
 struct vectorize_struct<coordinate_vector, 8> {
-  using type = std::array<Vec8i,NDIM>;
+  using type = std::array<Vec8i, NDIM>;
+};
+
+template<>
+struct vectorize_struct<coordinate_vector, 16> {
+  using type = std::array<Vec16i, NDIM>;
 };
 
 
 
-/// Define loop element
+/// Short version of mapping type to longest possible vector
 template <typename T>
 using vector_type = typename vectorize_struct<T,vector_info<T>::vector_size>::type;
 
@@ -172,9 +167,9 @@ auto field_storage<T>::get(const int i, const int field_alloc_size) const
 {
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
-  using vectorized_type = typename vector_info<T>::type;
   constexpr int elements = vector_info<T>::elements;
   constexpr int vector_size = vector_info<T>::vector_size;
+  using vectorized_type = vector_type<T>;
 
   vectorized_type value;
   basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
