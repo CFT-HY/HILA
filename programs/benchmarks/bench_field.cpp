@@ -8,6 +8,9 @@ constexpr int mintime = CLOCKS_PER_SEC;
 #endif
 
 
+
+
+
 int main(int argc, char **argv){
     int n_runs=1;
     double msecs;
@@ -19,6 +22,74 @@ int main(int argc, char **argv){
     // Runs lattice->setup 
     bench_setup(argc, argv);
     seed_random(SEED);
+
+
+    field<double> dfield1, dfield2, dfield3;
+    field<float> ffield1, ffield2, ffield3;
+    onsites(ALL){
+      dfield1[X] = hila_random();
+      dfield2[X] = hila_random();
+      dfield3[X] = hila_random();
+    }
+    onsites(ALL){
+      ffield1[X] = hila_random();
+      ffield2[X] = hila_random();
+      ffield3[X] = hila_random();
+    }
+
+    // Benchmark simple scalar field operation (Memory bandwith)
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          dfield1[ALL] = dfield2[X]*dfield3[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Double multiply : "<< timing << " ms \n";
+
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          dfield1[ALL] = dfield2[X] + dfield3[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Double add : "<< timing << " ms \n";
+
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          ffield1[ALL] = ffield2[X]*ffield3[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Float multiply : "<< timing << " ms \n";
+
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          ffield1[ALL] = ffield2[X] + ffield3[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Float add : "<< timing << " ms \n";
+
 
     field<matrix<N,N, cmplx<double>> > matrix1;
     field<matrix<N,N, cmplx<double>> > matrix2;

@@ -3,12 +3,12 @@
 
 
 /// Splits the local lattice into equal sections for vectorization
+template<int vector_size>
 struct vectorized_lattice_struct  {
   public:
     std::array<int,NDIM> size;
     std::array<int,NDIM> split;
     int sites, evensites, oddsites, alloc_size;
-    unsigned vector_size;
     std::vector<coordinate_vector> coordinate_list;
     coordinate_vector min; // Coordinate of first site
     std::vector<int**> coordinate;
@@ -23,23 +23,20 @@ struct vectorized_lattice_struct  {
     std::array<unsigned*,NDIRS> neighbours;
     std::array<int*, NDIRS> boundary_permutation;
 
-    struct halo_site {
-      unsigned nb_index;
-      unsigned halo_index;
-      parity par;
-      direction dir;
+    struct halo_sites_struct {
+      unsigned first_index;
+      std::vector<unsigned> nb_index;
     };
-    std::vector<halo_site> halo_sites;
+    halo_sites_struct halo_sites[2][NDIRS];
 
 
     /// Set up the vectorized lattice:
     /// * Split the lattice and record size and splits
     /// * Map indeces into local coordinate_list
     /// * Set up neighbour vector references
-    vectorized_lattice_struct(lattice_struct * _lattice, int _vector_size) {
+    vectorized_lattice_struct(lattice_struct * _lattice) {
       // Initialize
       lattice =  _lattice;
-      vector_size = _vector_size;
       first_site_even = lattice->first_site_even();
       min = lattice->coordinates(0);
 
@@ -88,38 +85,34 @@ struct vectorized_lattice_struct  {
         coordinate_list[index] = l;
       }
 
-      // Setup neighbour array
+      // Setup neighbour array and halo copy
       int halo_index = 0;
-      for(int d=0; d<NDIRS; d++){
+      for(int d=0; d<NDIRS; d++) {
         neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
-        for(unsigned i = 0; i<sites; i++){
-          coordinate_vector l = coordinate_list[i];
-          coordinate_vector nb = l;
-          int k;
-          if (is_up_dir(d)) {
-            k = d;
-            nb[d] = l[d] + 1;
-          } else {
-            k = opp_dir(d);
-            nb[k] = l[k] - 1;
-          }
-          if( nb[k] >= 0 && nb[k] < size[k] ) {
-            neighbours[d][i] = get_index(nb);
-          } else {
-            // This is outside this split lattice (maybe partly outside the node)
-            neighbours[d][i] = sites + halo_index;
-            // Find the corresponding site on the other side of the lattice
-            halo_site hs;
-            hs.nb_index = get_index(nb);
-            hs.halo_index = halo_index;
-            hs.dir = (direction)d;
-            if( i < evensites ){
-              hs.par = EVEN;
+        // Loop over parities
+        for( int par_int = 0; par_int < 2; par_int++ ){ 
+          halo_sites[par_int][d].first_index = halo_index;
+          // Check each site in the parity (for each direction separately)
+          for(unsigned i = par_int*evensites; i<evensites+par_int*oddsites; i++){
+            coordinate_vector l = coordinate_list[i];
+            coordinate_vector nb = l;
+            int k;
+            if (is_up_dir(d)) {
+              k = d;
+              nb[d] = l[d] + 1;
             } else {
-              hs.par = ODD;
+              k = opp_dir(d);
+              nb[k] = l[k] - 1;
             }
-            halo_sites.push_back(hs);
-            halo_index++;
+            if( nb[k] >= 0 && nb[k] < size[k] ) {
+              neighbours[d][i] = get_index(nb);
+            } else {
+              // This is outside this split lattice (maybe partly outside the node)
+              // Add to halo site list
+              neighbours[d][i] = sites + halo_index;
+              halo_sites[par_int][d].nb_index.push_back(get_index(nb));
+              halo_index++;
+            }
           }
         }
       }
@@ -169,17 +162,6 @@ struct vectorized_lattice_struct  {
         }
       }
       
-      //printf(" Vectorized lattice size: (%d %d %d %d)\n",
-      //  size[0], size[1], size[2], size[3]);
-      //printf(" Vectorized lattice split: (%d %d %d %d)\n",
-      //  split[0], split[1], split[2], split[3]);
-      //for(int d=0; d<NDIRS; d++){
-      //  printf(" permutation %d: (",(int)d);
-      //  for(int v=0;v<vector_size; v++){
-      //    printf("%d, ", boundary_permutation[d][v]);
-      //  }
-      //  printf(")\n");
-      //}
 
       // Map full lattice index to local index
       lattice_index.resize(lattice->field_alloc_size());
@@ -225,56 +207,7 @@ struct vectorized_lattice_struct  {
 
     /// Return the coordinates of each vector nested as
     /// coordinate[direction][vector_index]
-    std::array<Vec16i,NDIM> coordinates_Vec16i(int idx){
-      assert(vector_size == 16);
-      std::array<Vec16i,NDIM> r;
-      int step=1;
-      for(int d=0; d<NDIM; d++){
-        int first = coordinate_list[idx][d] + min[d];
-        for(int v=0; v<vector_size; v++){
-          r[d].insert(v, first + size[d]*((v/step)%split[d]));
-        }
-        step *= split[d];
-      }
-      return r;
-    }
-    std::array<Vec8i,NDIM> coordinates_Vec16f(int idx){
-      return coordinates_Vec8i(idx);
-    }
-
-    std::array<Vec8i,NDIM> coordinates_Vec8i(int idx){
-      assert(vector_size == 8);
-      std::array<Vec8i,NDIM> r;
-      int step=1;
-      for(int d=0; d<NDIM; d++){
-        int first = coordinate_list[idx][d] + min[d];
-        for(int v=0; v<vector_size; v++){
-          r[d].insert(v, first + size[d]*((v/step)%split[d]));
-        }
-        step *= split[d];
-      }
-      return r;
-    }
-    std::array<Vec8i,NDIM> coordinates_Vec8f(int idx){
-      return coordinates_Vec8i(idx);
-    }
-    std::array<Vec8i,NDIM> coordinates_Vec8d(int idx){
-      return coordinates_Vec8i(idx);
-    }
-
-    std::array<Vec4i,NDIM> coordinates_Vec4d(int idx){
-      assert(vector_size == 4);
-      std::array<Vec4i,NDIM> r;
-      int step=1;
-      for(int d=0; d<NDIM; d++){
-        int first = coordinate_list[idx][d] + min[d];
-        for(int v=0; v<vector_size; v++){
-          r[d].insert(v, first + size[d]*((v/step)%split[d]));
-        }
-        step *= split[d];
-      }
-      return r;
-    }
+    auto coordinates(int idx);
 
 
     /// Translate a local coordinate_vector into an index 
@@ -331,26 +264,72 @@ struct vectorized_lattice_struct  {
 };
 
 
+template<>
+inline auto vectorized_lattice_struct<4>::coordinates(int idx){
+  std::array<Vec4i,NDIM> r;
+  int step=1;
+  for(int d=0; d<NDIM; d++){
+    int first = coordinate_list[idx][d] + min[d];
+    for(int v=0; v<4; v++){
+      r[d].insert(v, first + size[d]*((v/step)%split[d]));
+    }
+    step *= split[d];
+  }
+  return r;
+}
+
+template<>
+inline auto vectorized_lattice_struct<8>::coordinates(int idx){
+  std::array<Vec8i,NDIM> r;
+  int step=1;
+  for(int d=0; d<NDIM; d++){
+    int first = coordinate_list[idx][d] + min[d];
+    for(int v=0; v<8; v++){
+      r[d].insert(v, first + size[d]*((v/step)%split[d]));
+    }
+    step *= split[d];
+  }
+  return r;
+}
+
+template<>
+inline auto vectorized_lattice_struct<16>::coordinates(int idx){
+  std::array<Vec16i,NDIM> r;
+  int step=1;
+  for(int d=0; d<NDIM; d++){
+    int first = coordinate_list[idx][d] + min[d];
+    for(int v=0; v<16; v++){
+      r[d].insert(v, first + size[d]*((v/step)%split[d]));
+    }
+    step *= split[d];
+  }
+  return r;
+}
+
+
+
+
+
+
 
 struct backend_lattice_struct {
-  std::vector<vectorized_lattice_struct*> vectorized_lattices;
   lattice_struct lattice;
 
   void setup(lattice_struct _lattice){
     lattice = _lattice;
   }
 
-  vectorized_lattice_struct * get_vectorized_lattice(int vector_size) {
-    // Check if the vectorized lattice has been created
-    for( vectorized_lattice_struct * vl : vectorized_lattices ) {
-      if( vl->vector_size == vector_size )
-        return vl;
+  template< int vector_size >
+  vectorized_lattice_struct<vector_size> * get_vectorized_lattice() {
+    // Create one if not already created
+    static bool init = true;
+    static vectorized_lattice_struct<vector_size> * vlat; 
+    if(init){
+      vlat = new vectorized_lattice_struct<vector_size>(&lattice);
+      init = false;
     }
 
-    // Not found, setup here
-    vectorized_lattice_struct * vectorized_lattice = new vectorized_lattice_struct(&lattice, vector_size);
-    vectorized_lattices.push_back(vectorized_lattice);
-    return vectorized_lattice;
+    return vlat;
   }
 };
 

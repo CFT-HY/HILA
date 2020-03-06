@@ -10,6 +10,9 @@
 
 #define VECTORIZED
 
+#ifndef VECTOR_SIZE
+#define VECTOR_SIZE 32
+#endif
 
 // Define random number generator
 #define seed_random(seed) seed_mersenne(seed)
@@ -175,6 +178,25 @@ inline double reduce_prod(Vec16i v){
 }
 
 
+
+/// If vector elements are implemented in the c++ code,
+/// reductions to base variables need to be supported.
+/// Will this lead to problematic behavior?
+template<typename Vec>
+inline double& operator+=(double &lhs, const Vec rhs)
+{
+  lhs += reduce_prod(rhs);
+  return lhs;
+}
+
+template<typename Vec>
+inline float& operator+=(float &lhs, const Vec rhs)
+{
+  lhs += reduce_prod(rhs);
+  return lhs;
+}
+
+
 // Define modulo operator for integer vector
 inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
 {
@@ -212,17 +234,11 @@ inline Vec4i operator%( const Vec4i &lhs, const int &rhs)
 
 
 // Random numbers
-inline Vec4d hila_random_Vec4d(){
-  Vec4d r;
-  double tvec[4];
-  for(int i=0; i<4; i++){
-    tvec[i] = mersenne();
-  }
-  r.load(&(tvec[0]));
-  return r;
-}
-
-inline Vec8f hila_random_Vec8f(){
+// Since you cannot specialize by return type,
+// it needs to be a struct...
+#if VECTOR_SIZE == 32
+template<typename T>
+inline auto hila_random_vector(){
   Vec8f r;
   float tvec[8];
   for(int i=0; i<8; i++){
@@ -230,20 +246,24 @@ inline Vec8f hila_random_Vec8f(){
   }
   r.load(&(tvec[0]));
   return r;
-}
+};
 
-
-inline Vec8d hila_random_Vec8d(){
-  Vec8d r;
-  double tvec[8];
-  for(int i=0; i<8; i++){
+template<>
+inline auto hila_random_vector<double>(){
+  Vec4d r;
+  double tvec[4];
+  for(int i=0; i<4; i++){
     tvec[i] = mersenne();
   }
   r.load(&(tvec[0]));
   return r;
-}
+};
 
-inline Vec16f hila_random_Vec16f(){
+
+#elif VECTOR_SIZE == 64
+
+template<typename T>
+inline auto hila_random_vector(){
   Vec16f r;
   float tvec[16];
   for(int i=0; i<16; i++){
@@ -251,27 +271,20 @@ inline Vec16f hila_random_Vec16f(){
   }
   r.load(&(tvec[0]));
   return r;
-}
-
-
-
-
-
-
-
-
-/// Utility for returning mapping a field element type into 
-/// a corresponding vector. This is not used directly as a type
-template <typename T>
-struct field_info{
-  constexpr static int vector_size = 1;
-  constexpr static int base_type_size = 1;
-  constexpr static int elements = 1;
-
-  using base_type = double;
-  using base_vector_type = Vec4d;
-  using vector_type = Vec4d;
 };
+
+template<>
+inline auto hila_random_vector<double>(){
+  Vec8d r;
+  double tvec[8];
+  for(int i=0; i<8; i++){
+    tvec[i] = mersenne();
+  }
+  r.load(&(tvec[0]));
+  return r;
+};
+
+#endif
 
 
 

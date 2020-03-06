@@ -183,6 +183,7 @@ struct array_ref {
 struct special_function_call {
   Expr * fullExpr;
   std::string full_expr;
+  std::string name;
   std::string replace_expression;
   bool add_loop_var;
   int scope;

@@ -32,101 +32,6 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 
-namespace vector_map {
-
-  static int bytes;
-
-  /// Find the base element type in a field element
-  static std::string type(std::string &original_type){
-    if(original_type.find("double") != std::string::npos) {
-      return "double";
-    } else if(original_type.find("float") != std::string::npos){
-      return "float";
-    } else if(original_type.find("int") != std::string::npos){
-      return "int";
-    } else if(original_type.find("coordinate_vector") != std::string::npos){
-      return "int";
-    } else {
-      llvm::errs() << "Cannot find vector size\n";
-      llvm::errs() << "Field type " << original_type << "\n";
-      exit(1);
-    }
-  }
-
-  /// Get vector size based on the base element type
-  static int size(std::string &original_type){
-    if(original_type.find("double") != std::string::npos) {
-      return bytes/8;
-    } else if(original_type.find("float") != std::string::npos){
-      return bytes/4;
-    } else if(original_type.find("int") != std::string::npos){
-      return bytes/4;
-    } else if(original_type.find("coordinate_vector") != std::string::npos){
-      return bytes/4;
-    } else {
-      llvm::errs() << "Cannot find vector size\n";
-      llvm::errs() << "Field type " << original_type << "\n";
-      exit(1);
-    }
-  }
-
-  /// Replace base datatypes with vectorized datatypes of
-  /// specific vector length
-  static void replace(std::string & element_type, int vector_size) {
-    size_t begin;
-    begin = element_type.find("double");
-    if(begin != std::string::npos){
-      element_type.replace(begin, 6, "Vec"+std::to_string(vector_size)+"d");
-    }
-    begin = element_type.find("float");
-    if(begin != std::string::npos){
-      element_type.replace(begin, 5, "Vec"+std::to_string(vector_size)+"f");
-    }
-    begin = element_type.find("int");
-    if(begin != std::string::npos){
-      element_type.replace(begin, 3, "Vec"+std::to_string(vector_size)+"i");
-    }
-    begin = element_type.find("coordinate_vector");
-    if(begin != std::string::npos){
-      element_type.replace(begin, 17, "std::array<Vec"+std::to_string(vector_size)+"i,NDIM>");
-    }
-  }
-
-  /// Replace base datatypes with vectorized datatypes
-  static void replace(std::string & element_type) {
-    replace(element_type, size(element_type));
-  }
-
-  /// Map general type strings into vectorized types
-  static void size_and_type(std::string &original_type, std::string &base_type, std::string &vector_type, int & vector_size){
-    if(original_type.find("double") != std::string::npos) {
-      base_type = "double";
-      vector_size = bytes/8;
-      vector_type = "Vec"+std::to_string(vector_size)+"d";
-    } else if(original_type.find("float") != std::string::npos){
-      base_type = "float";
-      vector_size = bytes/4;
-      vector_type = "Vec"+std::to_string(vector_size)+"f";
-    } else if(original_type.find("int") != std::string::npos){
-      base_type = "int";
-      vector_size = bytes/4;
-      vector_type = "Vec"+std::to_string(vector_size)+"i";
-    } else if(original_type.find("coordinate_vector") != std::string::npos){
-      base_type = "int";
-      vector_size = bytes/4;
-      vector_type = "Vec"+std::to_string(vector_size)+"i";
-    } else {
-      llvm::errs() << "Cannot find vector size\n";
-      llvm::errs() << "Field type " << original_type << "\n";
-      exit(1);
-    }
-  }
-
-  static void set_vector_target(codetype & target){
-    bytes = target.vector_size;
-  }
-}
-
 
 
 
@@ -139,6 +44,7 @@ public:
 
   //Buffer for the function copy
   srcBuf functionBuffer;
+  int vector_size;
 
   bool TraverseStmt(Stmt *s){
     RecursiveASTVisitor<LoopFunctionHandler>::TraverseStmt(s);
@@ -153,12 +59,23 @@ public:
 bool LoopFunctionHandler::VisitVarDecl(VarDecl *var){
   std::string typestring = var->getType().getAsString();
   
-  // This variable is an element, replace with vector
-  if(typestring.rfind("element",0) != std::string::npos){
+  size_t begin;
+  begin = typestring.rfind("element",0);
+  if(begin != std::string::npos){
+    // This variable is an element, replace with vector
     std::string vector_type = typestring;
-    vector_map::replace(vector_type);
-    functionBuffer.replace(var->getSourceRange(), 
-      vector_type+" "+var->getNameAsString() );
+    if(begin != std::string::npos){
+      vector_type.replace(begin, 7, "vectorize_struct");
+      vector_type.replace(vector_type.find_last_of(">"), 1, ", "+std::to_string(vector_size)+">::type");
+    }
+
+    if( var->isDirectInit() ){
+      std::string init = TheRewriter.getRewrittenText(var->getInit()->getSourceRange());
+      functionBuffer.replace(var->getSourceRange(), vector_type+" "+var->getNameAsString() + "=" + init );
+    } else {
+      functionBuffer.replace(var->getSourceRange(), vector_type+" "+var->getNameAsString());
+    }
+
   } else {
     if(var->hasInit()){
       LoopAssignChecker lac(TheRewriter, Context);
@@ -197,14 +114,18 @@ bool LoopFunctionHandler::VisitBinaryOperator(BinaryOperator *op){
 
 
 /// Replace element types with vector. Leaves other types untouched.
-static bool replace_element_with_vector(SourceRange sr, std::string typestring, srcBuf &functionBuffer){
+static void replace_element_with_vector(SourceRange sr, std::string typestring, std::string namestring, int vector_size, srcBuf &functionBuffer){
   if(typestring.rfind("element",0) != std::string::npos){
     std::string vector_type = typestring;
-    vector_map::replace(vector_type);
-    functionBuffer.replace(sr, vector_type);
-    return true;
+    size_t begin;
+    begin = vector_type.find("element");
+    if(begin != std::string::npos){
+      vector_type.replace(begin, 7, "vectorize_struct");
+      vector_type.replace(vector_type.find_last_of(">"), 1, ", "+std::to_string(vector_size)+">::type");
+    }
+    
+    functionBuffer.replace(sr, vector_type+" "+namestring);
   }
-  return false;
 }
 
 
@@ -215,33 +136,52 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   FileID FID = TheRewriter.getSourceMgr().getFileID(sr.getBegin());
   srcBuf * sourceBuf = get_file_buffer(TheRewriter, FID);
   PrintingPolicy pp(Context->getLangOpts());
-  vector_map::set_vector_target(target);
 
-  LoopFunctionHandler lfh(TheRewriter, Context);
 
   // Track wether the function actually contains elements.
   // if not, no new function should be written
-  bool contains_elements = false;
+  bool generate_function = false;
 
-  // Copy the function to a buffer
-  lfh.functionBuffer.copy_from_range(sourceBuf,sr);
-
-  // Handle each parameter
+  // Check allowed vector sizes
+  int smallest=1, largest=0;
   for( clang::ParmVarDecl *par : fd->parameters() ){
     std::string typestring = par->getType().getAsString(pp);
-    contains_elements += replace_element_with_vector(par->getSourceRange(), typestring+" "+par->getNameAsString(), lfh.functionBuffer);
+    if(typestring.find("double") != std::string::npos){
+      smallest = 4;
+      largest = 8;
+    }
+    if( typestring.find("float") != std::string::npos ||
+        typestring.find("int") != std::string::npos || 
+        typestring.find("coordinate_vector") != std::string::npos ){
+      smallest = 8;
+      largest = 16;
+    }
+
+    // Check if there are elements in the first place
+    if(typestring.find("element") != std::string::npos)
+      generate_function = true;
+
   }
 
-  // Handle return type
-  // Note: C++ cannot specialize only based on return type. Therefore we
-  // only write a new function if the parameters contain elements
-  std::string typestring = fd->getReturnType().getAsString(pp);
-  replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, lfh.functionBuffer);
+  if(generate_function) for( int vector_size = smallest; vector_size <= largest; vector_size*=2 ){
+    LoopFunctionHandler lfh(TheRewriter, Context);
+    lfh.functionBuffer.copy_from_range(sourceBuf,sr);
+    lfh.vector_size = vector_size;
 
-  lfh.TraverseStmt(fd->getBody());
-  
-  
-  if(contains_elements) {
+    // Handle each parameter
+    for( clang::ParmVarDecl *par : fd->parameters() ){
+      std::string typestring = par->getType().getAsString(pp);
+      replace_element_with_vector(par->getSourceRange(), typestring, par->getNameAsString(), vector_size, lfh.functionBuffer);
+    }
+
+    // Handle return type
+    // Note: C++ cannot specialize only based on return type. Therefore we
+    // only write a new function if the parameters contain elements
+    std::string typestring = fd->getReturnType().getAsString(pp);
+    replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, "", vector_size, lfh.functionBuffer);
+
+    lfh.TraverseStmt(fd->getBody());
+
     std::string buffer = lfh.functionBuffer.dump();
     if( !(fd->hasBody()) ){
       // Declaration does not contain a body, needs a semicolon
@@ -258,33 +198,29 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
   std::stringstream code;
 
-  // Find the vector size
-  vector_map::set_vector_target(target);
-  int vector_size = 1;
-  std::string base_type, base_vector_type;
-  std::string type = field_info_list.front().type_template;
-  vector_map::size_and_type(type, base_type, base_vector_type, vector_size);
+  // The base type of the loop is the base type of the first variable
+  std::string basetype = "loop_base_type";
+  code << "using " << basetype << " = typename base_type_struct"
+       << field_info_list.front().type_template+"::type;\n";
+  code << "constexpr int vector_size = vector_info<" << basetype << ">::vector_size;\n";
   
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
       v.new_name = "v_" + v.reduction_name;
       // Allocate memory for a reduction. This will be filled in the kernel
-      std::string reduction_type = v.type;
-      vector_map::replace(reduction_type);
       if (v.reduction_type == reduction::SUM) {
-        code << reduction_type << " " << v.new_name << "(0);\n";
+        code << "vector_type<" << v.type << "> " << v.new_name << "(0);\n";
       } else if (v.reduction_type == reduction::PRODUCT) {
-        code << reduction_type << " " << v.new_name << "(1);\n";
+        code << "vector_type<" << v.type << "> " << v.new_name << "(1);\n";
       }
     }
   }
 
   // Set loop lattice
-  std::string fieldname = field_info_list.front().old_name;
-  code << "vectorized_lattice_struct * loop_lattice = "
-       << fieldname << ".fs->lattice->backend_lattice->get_vectorized_lattice("
-       << vector_size <<");\n";
+  std::string fieldname = field_info_list.front().new_name;
+  code << "auto * loop_lattice = "
+       << fieldname << ".fs->lattice->backend_lattice->get_vectorized_lattice<vector_size>();\n";
 
   // Get a pointer to the neighbour list
   code << "std::array<unsigned*,NDIRS> neighbour_list = loop_lattice->neighbour_list();\n";
@@ -294,7 +230,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   code << "const int loop_end   = loop_lattice->loop_end(" << parity_in_this_loop << ");\n";
 
   // Start the loop
-  code << "for(int " << looping_var <<" = loop_begin; " 
+  code << "for(int " << looping_var <<" = loop_begin; "
        << looping_var << " < loop_end; " 
        << looping_var << "++) {\n";
 
@@ -302,13 +238,12 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
   // Create temporary field element variables
   for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
-    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-    vector_map::replace(type_name);
 
     // First check for direction references. If any found, create list of temp
     // variables
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
+      code << "vector_type" << type_name << " " 
+           << l.loop_ref_name << "_" << get_stmt_str(d.e)
            << " = " << l.new_name << ".get_value_at(neighbour_list[" 
            << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
     }
@@ -323,10 +258,12 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
     }
     if(local_ref) {
       if( local_is_read ){
-        code << type_name << " " << l.loop_ref_name << " = " 
-           << l.new_name << ".get_value_at(" << looping_var << ");\n";
+        code << "vector_type" << type_name << " "
+             << l.loop_ref_name << " = " 
+             << l.new_name << ".get_value_at(" << looping_var << ");\n";
       } else {
-        code << type_name << " " << l.loop_ref_name << ";\n";
+        code << "vector_type" << type_name << " "
+             << l.loop_ref_name << ";\n";
       }
     }
   }
@@ -343,21 +280,28 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
-    if( sfc.add_loop_var ){
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"_"+base_vector_type+"("+looping_var+")");
+    if( sfc.name == "coordinates" ) {
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
+    } else if( sfc.add_loop_var ) {
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"_vector<" + basetype + ">("+looping_var+")");
     } else {
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"_"+base_vector_type+"()");
+      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"_vector<" + basetype + ">()");
     }
   }
 
   for ( var_info & vi : var_info_list ) {
     if(vi.type.rfind("element",0) != std::string::npos) {
-      // Converts all locally declared variables to vectors. Is this OK?
-      // First get the type name in the declaration
+      // Converts all locally declared variables to vectors.
+      // Basically replaces "element" with "vector_type"
       auto typeexpr = vi.decl->getTypeSourceInfo()->getTypeLoc().getSourceRange();
       std::string type_string = TheRewriter.getRewrittenText(typeexpr);
 
-      vector_map::replace( type_string, vector_size );
+      size_t begin;
+      begin = type_string.find("element");
+      if(begin != std::string::npos){
+        type_string.replace(begin, 7, "vectorize_struct");
+        type_string.replace(type_string.find_last_of(">"), 1, ", vector_size>::type");
+      }
 
       loopBuf.replace( typeexpr, type_string + " ");
     }
@@ -401,43 +345,5 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 }
 
 
-void MyASTVisitor::generate_field_storage_type_AVX(std::string typestr){
-  // Find the vector size
-  vector_map::set_vector_target(target);
-  int vector_size = 1;
-  std::string base_type;
-  std::string base_vector_type;
-  vector_map::size_and_type(typestr, base_type, base_vector_type, vector_size);
-
-  // Replace the original type with a vector type
-  std::string vectortype = typestr;
-  vector_map::replace(vectortype);
-
-  std::stringstream field_element_code;
-  field_element_code << "\ntemplate<> \n";
-  field_element_code << "struct field_info<"<<typestr<<"> {\n";
-  field_element_code << " constexpr static int vector_size = "<< std::to_string(vector_size) <<";\n";
-  field_element_code << " constexpr static int base_type_size = sizeof(" << base_type << ");\n";
-  field_element_code << " constexpr static int elements = sizeof(" << typestr 
-                     << ")/sizeof(" << base_type << ");\n";
-  field_element_code << " using base_type = " << base_type << ";\n";
-  field_element_code << " using vector_type = " << vectortype << ";\n";
-  field_element_code << " using base_vector_type = " << base_vector_type << ";\n";
-  field_element_code << "};\n";
-
-  field_element_code << "template<> \n";
-  field_element_code << "struct field_info<"<<vectortype<<"> {\n";
-  field_element_code << " constexpr static int vector_size = "<< std::to_string(vector_size) <<";\n";
-  field_element_code << " constexpr static int base_type_size = sizeof(" << base_type << ");\n";
-  field_element_code << " constexpr static int elements = sizeof(" << typestr 
-                     << ")/sizeof(" << base_type << ");\n";
-  field_element_code << " using base_type = " << base_type << ";\n";
-  field_element_code << " using vector_type = " << vectortype << ";\n";
-  field_element_code << " using base_vector_type = " << base_vector_type << ";\n";
-  field_element_code << "};\n";
-
-  // Insert in the top level buffer
-  toplevelBuf->insert(global.location.top.getLocWithOffset(-1), indent_string(field_element_code.str()),true,false);
-}
 
 
