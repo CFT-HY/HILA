@@ -42,7 +42,7 @@ void MyASTVisitor::handle_loop_function_openacc(FunctionDecl *fd) {
 
 
 
-std::string MyASTVisitor::generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
 
   // replace reduction variables in the loop
   for ( var_info & vi : var_info_list ) {
@@ -116,7 +116,7 @@ std::string MyASTVisitor::generate_code_openacc(Stmt *S, bool semi_at_end, srcBu
 
   // Dump the main loop code here
   code << loopBuf.dump();
-  if (semi_at_end) code << ";";
+  if (semicolon_at_end) code << ";";
   code << "\n";
 
   // Call setters

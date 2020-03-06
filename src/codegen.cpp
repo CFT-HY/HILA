@@ -64,7 +64,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   //                << loopBuf.dump() << "\"\n";
   
   // is it compound stmt: { } -no ; needed
-  bool semi_at_end = !(isa<CompoundStmt>(S));
+  bool semicolon_at_end = !(isa<CompoundStmt>(S));
  
   // Build replacement in variable "code"
   // Encapsulate everything within {}
@@ -138,7 +138,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   }
 
   // Place the content of the loop
-  code << backend_generate_code(S,semi_at_end,loopBuf);
+  code << backend_generate_code(S,semicolon_at_end,loopBuf);
   
   
   // Check reduction variables
@@ -156,7 +156,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   code << "}\n//----------";
   
   // Remove old code + replace
-  if (semi_at_end) {
+  if (semicolon_at_end) {
     writeBuf->remove(getRangeWithSemi(S));
   } else {
     writeBuf->remove(S->getSourceRange());
@@ -172,7 +172,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
  * This is a copy of the loop body with modifications, only ran once
  */
 /*
-std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool semi_at_end) {
+std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool semicolon_at_end) {
   srcBuf loopBuf;
   loopBuf.copy_from_range(writeBuf,S->getSourceRange());
   std::vector<std::string> va = {}, vb = {};
@@ -229,7 +229,7 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
   loopBuf.replace_tokens( va, vb );
   loopBuf.prepend("{",true);
 
-  if(semi_at_end){
+  if(semicolon_at_end){
     return loopBuf.dump() + ";}\n"; 
   } else {
     return loopBuf.dump() + "}\n";

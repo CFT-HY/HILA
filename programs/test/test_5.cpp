@@ -24,7 +24,7 @@ int main()
 
   parity p = ODD;
   
-  onsites(ALL) {
+  onsites(p) {
     ft d(2,2);
     coordinate_vector dd = XUP + YUP;
     element<ft> t;

@@ -32,7 +32,7 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 
-std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
   std::stringstream code;
 
   // Set loop lattice
@@ -114,7 +114,7 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf & 
 
   // Dump the main loop code here
   code << loopBuf.dump();
-  if (semi_at_end) code << ";";
+  if (semicolon_at_end) code << ";";
   code << "\n";
 
 

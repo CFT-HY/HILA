@@ -236,14 +236,14 @@ public:
   /// Code generation headers start here
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
-  std::string backend_generate_code(Stmt *S, bool semi_at_end, srcBuf & loopBuf);
+  std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf);
   void backend_handle_loop_function(FunctionDecl *fd);
 
   /// Generate a header for starting communication and marking fields changed
-  std::string generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf &sb);
-  std::string generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &sb);
-  std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
-  std::string generate_code_avx(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(FunctionDecl *fd);
