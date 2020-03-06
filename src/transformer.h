@@ -106,7 +106,6 @@ struct field_ref {
   std::string dirname;
   struct field_info * info;
   // unsigned nameInd, parityInd;
-  int direction;
   bool is_written, is_read;
   bool is_offset;           // true if dirExpr is for offset instead of direction
 };

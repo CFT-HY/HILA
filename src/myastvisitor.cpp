@@ -872,8 +872,6 @@ bool MyASTVisitor::check_field_ref_list() {
     
   for( field_ref & p : field_ref_list ) {
 
-    p.direction = -1;  // reset the direction
-    
     std::string name = get_stmt_str(p.nameExpr);
       
     field_info * lfip = nullptr;
@@ -930,7 +928,6 @@ bool MyASTVisitor::check_field_ref_list() {
       for (dir_ptr & d : lfip->dir_list) {
         if (is_duplicate_expr(d.e, p.dirExpr)) {
           d.count++;
-          p.direction = i;
           found = true;
           break;
         }
@@ -942,7 +939,6 @@ bool MyASTVisitor::check_field_ref_list() {
         dp.e = p.dirExpr;
         dp.count = 1;
         dp.is_offset = p.is_offset;
-        p.direction = lfip->dir_list.size();
 
         lfip->dir_list.push_back(dp);
       }
