@@ -175,7 +175,7 @@ auto field_storage<T>::get(const int i, const int field_alloc_size) const
   basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
-    valuep[e].load(vp+e*vector_size);
+    valuep[e].load_a(vp+e*vector_size);
   }
   return value;
 }
@@ -194,7 +194,7 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
   basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
-    valuep[e].store(vp + e*vector_size);
+    valuep[e].store_a(vp + e*vector_size);
   }
 }
 
