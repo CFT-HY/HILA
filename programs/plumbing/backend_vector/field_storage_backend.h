@@ -257,14 +257,18 @@ void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * 
   using basetype = typename vector_info<T>::base_type;
   vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_size>();
   // Loop over the boundary sites
-  for( typename vectorized_lattice_struct<vector_size>::halo_site hs: vlat->halo_sites )
-  if(par == ALL || par == hs.par ) {
-    int *perm = vlat->boundary_permutation[hs.dir];
-    basetype * s = (basetype *) (fieldbuf) + elements*vector_size*hs.nb_index;
-    basetype * d = (basetype *) (fieldbuf) + elements*vector_size*(vlat->sites + hs.halo_index);
-    for( int e=0; e<elements; e++ ){
-      for( int i=0; i<vector_size; i++ )
-       d[e*vector_size+i] =  s[e*vector_size + perm[i]];
+  for( parity p : loop_parities(par)) foralldir(dir){
+    int par_int = (int) p -1; 
+    int *perm = vlat->boundary_permutation[dir];
+    auto hs = vlat->halo_sites[par_int][dir];
+    
+    for( int idx = 0; idx < hs.nb_index.size(); idx++ ) {
+      basetype * s = (basetype *) (fieldbuf) + elements*vector_size*hs.nb_index[idx];
+      basetype * d = (basetype *) (fieldbuf) + elements*vector_size*(vlat->sites + hs.first_index+idx);
+      for( int e=0; e<elements; e++ ){
+        for( int i=0; i<vector_size; i++ )
+         d[e*vector_size+i] =  s[e*vector_size + perm[i]];
+      }
     }
   }
 }

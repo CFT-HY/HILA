@@ -23,13 +23,11 @@ struct vectorized_lattice_struct  {
     std::array<unsigned*,NDIRS> neighbours;
     std::array<int*, NDIRS> boundary_permutation;
 
-    struct halo_site {
-      unsigned nb_index;
-      unsigned halo_index;
-      parity par;
-      direction dir;
+    struct halo_sites_struct {
+      unsigned first_index;
+      std::vector<unsigned> nb_index;
     };
-    std::vector<halo_site> halo_sites;
+    halo_sites_struct halo_sites[2][NDIRS];
 
 
     /// Set up the vectorized lattice:
@@ -87,38 +85,34 @@ struct vectorized_lattice_struct  {
         coordinate_list[index] = l;
       }
 
-      // Setup neighbour array
+      // Setup neighbour array and halo copy
       int halo_index = 0;
-      for(int d=0; d<NDIRS; d++){
+      for(int d=0; d<NDIRS; d++) {
         neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
-        for(unsigned i = 0; i<sites; i++){
-          coordinate_vector l = coordinate_list[i];
-          coordinate_vector nb = l;
-          int k;
-          if (is_up_dir(d)) {
-            k = d;
-            nb[d] = l[d] + 1;
-          } else {
-            k = opp_dir(d);
-            nb[k] = l[k] - 1;
-          }
-          if( nb[k] >= 0 && nb[k] < size[k] ) {
-            neighbours[d][i] = get_index(nb);
-          } else {
-            // This is outside this split lattice (maybe partly outside the node)
-            neighbours[d][i] = sites + halo_index;
-            // Find the corresponding site on the other side of the lattice
-            halo_site hs;
-            hs.nb_index = get_index(nb);
-            hs.halo_index = halo_index;
-            hs.dir = (direction)d;
-            if( i < evensites ){
-              hs.par = EVEN;
+        // Loop over parities
+        for( int par_int = 0; par_int < 2; par_int++ ){ 
+          halo_sites[par_int][d].first_index = halo_index;
+          // Check each site in the parity (for each direction separately)
+          for(unsigned i = par_int*evensites; i<evensites+par_int*oddsites; i++){
+            coordinate_vector l = coordinate_list[i];
+            coordinate_vector nb = l;
+            int k;
+            if (is_up_dir(d)) {
+              k = d;
+              nb[d] = l[d] + 1;
             } else {
-              hs.par = ODD;
+              k = opp_dir(d);
+              nb[k] = l[k] - 1;
             }
-            halo_sites.push_back(hs);
-            halo_index++;
+            if( nb[k] >= 0 && nb[k] < size[k] ) {
+              neighbours[d][i] = get_index(nb);
+            } else {
+              // This is outside this split lattice (maybe partly outside the node)
+              // Add to halo site list
+              neighbours[d][i] = sites + halo_index;
+              halo_sites[par_int][d].nb_index.push_back(get_index(nb));
+              halo_index++;
+            }
           }
         }
       }
@@ -332,6 +326,7 @@ struct backend_lattice_struct {
     static vectorized_lattice_struct<vector_size> * vlat; 
     if(init){
       vlat = new vectorized_lattice_struct<vector_size>(&lattice);
+      init = false;
     }
 
     return vlat;
