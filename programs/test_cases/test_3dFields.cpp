@@ -145,5 +145,19 @@ int main(int argc, char **argv){
     }
     assert(sum == 0);
 
+
+    // Test array reduction
+    field<double> dfield;
+    dfield[ALL] = 1;
+    double *arraysum = (double*) malloc(nd[TUP]*sizeof(double));
+    onsites(ALL){
+      element<coordinate_vector> l = coordinates(X);
+      element<int> t = l[TUP];
+      arraysum[t] += dfield[X];
+    }
+    for(int t=0; t<nd[TUP]; t++){
+      assert(arraysum[t] == nd[XUP]*nd[YUP]*nd[ZUP]);
+    }
+
     finishrun();
 }
