@@ -257,7 +257,8 @@ void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * 
   using basetype = typename vector_info<T>::base_type;
   vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_size>();
   // Loop over the boundary sites
-  for( parity p : loop_parities(par)) foralldir(dir){
+  for( parity p : loop_parities(par)) 
+  for( int dir=0; dir<NDIRS; dir++){
     int par_int = (int) p -1; 
     int *perm = vlat->boundary_permutation[dir];
     auto hs = vlat->halo_sites[par_int][dir];
