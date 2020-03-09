@@ -23,7 +23,7 @@ class field_storage {
     /// Place boundary elements from neighbour
     void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
-    void set_local_boundary_elements(parity par, lattice_struct * lattice);
+    void set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice);
 
 };
 
