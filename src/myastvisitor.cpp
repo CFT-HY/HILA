@@ -953,48 +953,47 @@ bool MyASTVisitor::check_field_ref_list() {
   
   for (field_info & l : field_info_list) {
     if (l.is_written && l.dir_list.size() > 0) {
-      if (loop_parity.value == parity::all || l.contains_offset) {
-        // There's error, find culprits
-        for (field_ref * p : l.ref_list) {
-          if (p->dirExpr != nullptr && !p->is_written) {
-            if (!l.contains_offset) {
-              reportDiag(DiagnosticsEngine::Level::Error,
-                         p->parityExpr->getSourceRange().getBegin(),
-                         "Accessing field '%0' not allowed simultaneously with assignment '%1' with parity ALL",
-                         get_stmt_str(p->fullExpr).c_str(),
-                         l.old_name.c_str());
-            } else {
-              reportDiag(DiagnosticsEngine::Level::Error,
-                         p->parityExpr->getSourceRange().getBegin(),
-                         "Accessing field with offset '%0' not allowed simultaneously with assignment'%1'",
-                         get_stmt_str(p->fullExpr).c_str(),
-                         l.old_name.c_str());
-            }
-            no_errors = false;  
+ 
+      // There may be error, find culprits
+      bool found_error = false;
+      for (field_ref * p : l.ref_list) {
+        if (p->dirExpr != nullptr && !p->is_written && !p->is_offset) {
+          if (loop_parity.value == parity::all) {
+
+            reportDiag(DiagnosticsEngine::Level::Error,
+                       p->parityExpr->getSourceRange().getBegin(),
+                       "Simultaneous access '%0' and assignment '%1' not allowed with parity ALL",
+                       get_stmt_str(p->fullExpr).c_str(),
+                       l.old_name.c_str());
+            no_errors = false;
+            found_error = true;
+
+          } else if (loop_parity.value == parity::none) {
+            reportDiag(DiagnosticsEngine::Level::Remark,
+                       p->parityExpr->getSourceRange().getBegin(),
+                       "Simultaneous access '%0' and assignment '%1' is allowed only with parity %2 is EVEN or ODD.  Inserting assertion",
+                       get_stmt_str(p->fullExpr).c_str(),
+                       l.old_name.c_str(),
+                       loop_parity.text.c_str());
+            found_error = true;
           }
         }
+      }
 
+      if (found_error) {
         for (field_ref * p : l.ref_list) {
           if (p->is_written && p->dirExpr == nullptr) {
             reportDiag(DiagnosticsEngine::Level::Remark,
                        p->fullExpr->getSourceRange().getBegin(),
                        "Location of assignment");
-              
           }
         }
-      } else if (loop_parity.value == parity::none && !l.contains_offset) {
-        // not sure if there's an error, emit an assertion
-        global.assert_loop_parity = true;
-        reportDiag(DiagnosticsEngine::Level::Remark,
-                   l.ref_list.front()->fullExpr->getSourceRange().getBegin(),
-                   "Assignment and simultaneous nearest-neighbour access to field '%0' is allowed only when parity '%1'is EVEN or ODD. Inserting assertion",
-                   l.old_name.c_str(),
-                   loop_parity.text.c_str());
       }
-    }
+    } 
   }
   return no_errors;
 }
+
 
 /// Check now that the references to variables are according to rules
 void MyASTVisitor::check_var_info_list() {

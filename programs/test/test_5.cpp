@@ -25,10 +25,8 @@ int main()
   parity p = ODD;
   
   onsites(p) {
-    ft d(2,2);
-    coordinate_vector dd = XUP + YUP;
-    element<ft> t;
-    b[X] = a[X+v] + a[X];
+ 
+    a[X] = a[X+v];
   }
   
   return 0;
