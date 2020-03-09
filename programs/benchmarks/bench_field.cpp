@@ -256,13 +256,15 @@ int main(int argc, char **argv){
 
       for( int i=0; i<n_runs; i++){
         matrix1.mark_changed(ALL);
-        matrix1.wait_move(XUP,ALL);
+        for(int dir=0; dir<NDIRS; dir++){
+          matrix1.wait_move((direction)dir,ALL);
+        }
       }
       
       synchronize();
       end = clock();
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / 2 / (double)n_runs;
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / 2 / NDIRS / (double)n_runs;
     output0 << "Matrix nearest neighbour communication: " << timing << " ms \n";
 
     //printf("node %d, create gauge\n", mynode());
