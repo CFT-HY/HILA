@@ -71,13 +71,16 @@ namespace state {
 extern llvm::cl::OptionCategory TransformerCat;
 
 
+// Stores the parity of the current loop: Expr, value (if known), Expr as string
+
 struct loop_parity_struct {
   const Expr * expr;
   parity value;
   std::string text;
 };
 
-//class storing global variables
+//class storing global state variables used in parsing
+
 struct global_state {
   std::string main_file_name = "";
   bool assert_loop_parity = false;
@@ -97,26 +100,57 @@ struct global_state {
 };
 
 
-// struct field_info;
+// field_ref contains info about references to field vars within loops
+
 struct field_ref {
-  Expr * fullExpr;
-  Expr * nameExpr;
-  Expr * parityExpr;
-  Expr * dirExpr;
-  std::string dirname;
-  struct field_info * info;
+  Expr * fullExpr;              // full expression a[X+d]
+  Expr * nameExpr;              // name "a"
+  Expr * parityExpr;            // expr within [], here "X+d"
+  Expr * dirExpr;               // here "d", nullptr if no direction
+  std::string dirname;          // dir as a string "d"
+  struct field_info * info;     // ptr to field info struct
   // unsigned nameInd, parityInd;
   bool is_written, is_read;
-  bool is_offset;           // true if dirExpr is for offset instead of direction
+  bool is_offset;               // true if dirExpr is for offset instead of direction
+
+  field_ref() {
+    fullExpr = nameExpr = parityExpr = dirExpr = nullptr;
+    dirname = "";
+    info = nullptr;
+    is_written = is_read = is_offset = false;
+  }
+
+  ~field_ref() {
+    dirname.clear();
+  }
 };
 
+
+// dir_ptr is a "subfield" of field_info, storing direction/offset of field ref
+// There may be several equivalent field[dir] -references within the loop, 
+// these are described the same dir_ptr struct
 
 struct dir_ptr {
-  Expr * e;
-  unsigned count;
-  bool is_offset;           // is dir offset?
+  Expr * e;                 // direction expression (1st of equivalent ones)
+  std::vector<field_ref *> ref_list;  // pointers references equivalent to this field[dir]
+  unsigned count;           // how many genuine direction refs?  if count==0 this is offset
+  bool is_offset;           // is this dir offset?
+
+  dir_ptr() {
+    ref_list = {};
+    e = nullptr;
+    count = 0;
+    is_offset = false;
+  }
+
+  ~dir_ptr() {
+    ref_list.clear();
+  }
 };
 
+
+// main struct for storing info about each field variable inside loops
+// one field_info for each loop variable
   
 struct field_info {
   std::string type_template;             // This will be the <T> part of field<T>
@@ -208,7 +242,7 @@ extern ClassTemplateDecl * field_storage_decl;   // Ptr to field primary def in 
 extern const std::string field_storage_type;
 extern const std::string field_type;
 
-// TODO: THESE SHOULD PROBABLY BE CHANGED INTO vectors,
+// global lists used in modifying the field loops
 // but they contain pointers to list elements.  pointers to vector elems are not good!
 extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;

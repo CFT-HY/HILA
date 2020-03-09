@@ -28,8 +28,7 @@ int main()
     ft d(2,2);
     coordinate_vector dd = XUP + YUP;
     element<ft> t;
-    a[X] = a[X+XUP];
-    b[X] = t;
+    b[X] = a[X+v] + a[X];
   }
   
   return 0;

@@ -217,7 +217,7 @@ public:
 
   /// Does ; follow the statement?
   bool isStmtWithSemi(Stmt * S);  
-  SourceRange getRangeWithSemi(Stmt * S, bool flag_error = true);
+  SourceRange getRangeWithSemicolon(Stmt * S, bool flag_error = true);
   
   void requireGloballyDefined(Expr * e);
 
@@ -236,6 +236,8 @@ public:
   /// Code generation headers start here
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
+  void handle_field_plus_offsets(std::stringstream &code, srcBuf & loopbuf, std::string & par );
+
   std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf);
   void backend_handle_loop_function(FunctionDecl *fd);
 

@@ -228,6 +228,8 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     
   e = e->IgnoreParens();
   field_ref lfe;
+
+  // we know here that Expr is of field-parity type
   if (CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(e)) {
     lfe.fullExpr   = OC;
     // take name 
@@ -324,6 +326,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       lfe.dirExpr = Op->getArg(1)->IgnoreImplicit();
       lfe.dirname = get_stmt_str(lfe.dirExpr);
       lfe.is_offset = (parity_expr_type == "parity_plus_offset");
+
 
       // If the direction is a variable, add it to the list
       // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
@@ -919,23 +922,27 @@ bool MyASTVisitor::check_field_ref_list() {
         no_errors = false;
       }
 
-      // does this dir with this name exist before?
-      unsigned i = 0;
+      // does this dir with this field name exist before?
+      // Use is_duplicate_expr() to resolve the ptr, it has (some) intelligence to
+      // find equivalent constant expressions
+      // TODO: use better method?
       bool found = false;
-      for (dir_ptr & d : lfip->dir_list) {
-        if (is_duplicate_expr(d.e, p.dirExpr)) {
-          d.count++;
+      for (dir_ptr & dp : lfip->dir_list) {
+        if (is_duplicate_expr(dp.e, p.dirExpr)) {
+          dp.count += (p.is_offset == false);   // for nn-neighbours
+          dp.ref_list.push_back(&p);
           found = true;
+
           break;
         }
-        i++;
       }
         
       if (!found) {
         dir_ptr dp;
         dp.e = p.dirExpr;
-        dp.count = 1;
+        dp.count = (p.is_offset == false);
         dp.is_offset = p.is_offset;
+        dp.ref_list.push_back(&p);
 
         lfip->dir_list.push_back(dp);
       }
@@ -1030,7 +1037,7 @@ void MyASTVisitor::check_var_info_list() {
 
 
 /// flag_error = true by default in myastvisitor.h
-SourceRange MyASTVisitor::getRangeWithSemi(Stmt * S, bool flag_error) {
+SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
   SourceRange range(S->getBeginLoc(),
                     Lexer::findLocationAfterToken(S->getEndLoc(),
                                                   tok::semi,
@@ -1239,7 +1246,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
       return true;
     }
 
-    SourceRange full_range = getRangeWithSemi(OP,false);
+    SourceRange full_range = getRangeWithSemicolon(OP,false);
     global.full_loop_text = TheRewriter.getRewrittenText(full_range);
         
     handle_full_loop_stmt(OP, true);
@@ -1254,7 +1261,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
       return true;
     }
     
-    SourceRange full_range = getRangeWithSemi(BO,false);
+    SourceRange full_range = getRangeWithSemicolon(BO,false);
     global.full_loop_text = TheRewriter.getRewrittenText(full_range);        
   
     handle_full_loop_stmt(BO, true);
