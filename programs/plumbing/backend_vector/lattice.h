@@ -89,6 +89,22 @@ struct vectorized_lattice_struct  {
       int halo_index = 0;
       for(int d=0; d<NDIRS; d++) {
         neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
+        int updir;
+        if (is_up_dir(d)) {
+          updir = d;
+        } else {
+          updir = opp_dir(d);
+        }
+
+        // If the lattice is split by MPI or by vectorization we need
+        // to create a halo copy of neighbours that cross the boundary
+        // Check here if that is the case for this direction
+        bool need_halo = false;
+        if( lattice->comminfo[d].from_node.size() > 0 
+            || split[updir] > 1 ){
+          need_halo = true;
+        }
+
         // Loop over parities
         for( int par_int = 0; par_int < 2; par_int++ ){ 
           int first_index = halo_index;
@@ -100,22 +116,25 @@ struct vectorized_lattice_struct  {
           for(unsigned i = par_int*evensites; i<evensites+par_int*oddsites; i++){
             coordinate_vector l = coordinate_list[i];
             coordinate_vector nb = l;
-            int k;
             if (is_up_dir(d)) {
-              k = d;
               nb[d] = l[d] + 1;
             } else {
-              k = opp_dir(d);
-              nb[k] = l[k] - 1;
+              nb[updir] = l[updir] - 1;
             }
-            if( nb[k] >= 0 && nb[k] < size[k] ) {
+            if( nb[updir] >= 0 && nb[updir] < size[updir] ) {
               neighbours[d][i] = get_index(nb);
             } else {
-              // This is outside this split lattice (maybe partly outside the node)
-              // Add to halo site list
-              nb_index.push_back(get_index(nb));
-              halo_temp.push_back(i);
-              halo_index++;
+              // This is outside this split lattice (maybe partly outside the node)              
+              if( need_halo ) {
+                // Add to halo site list
+                nb_index.push_back(get_index(nb));
+                halo_temp.push_back(i);
+                halo_index++;
+              } else {
+                // It's accross the boundary but we can treat it like
+                // a normal neighbour
+                neighbours[d][i] = get_index(nb);
+              }
             }
           }
 

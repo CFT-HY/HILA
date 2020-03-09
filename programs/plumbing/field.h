@@ -224,8 +224,8 @@ class field {
       };
       
       /// Place boundary elements from local lattice (used in vectorized version)
-      void set_local_boundary_elements(parity par){
-        payload.set_local_boundary_elements(par, lattice);
+      void set_local_boundary_elements(direction dir, parity par){
+        payload.set_local_boundary_elements(dir, par, lattice);
       };
   };
 
@@ -664,7 +664,7 @@ void field<T>::wait_move(direction d, parity p) const {
     start_move(d, par);
 
     // Update local elements in the halo (necessary for vectorized version)
-    fs->set_local_boundary_elements(par);
+    fs->set_local_boundary_elements(d, par);
 
     lattice_struct::comminfo_struct ci = lattice->comminfo[d];
     std::vector<MPI_Request> & receive_request = fs->receive_request[index];
@@ -701,7 +701,7 @@ template<typename T>
 void field<T>::wait_move(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)
   // Does not need to happen every time; should use tracking like in MPI
-  fs->set_local_boundary_elements(ALL);
+  fs->set_local_boundary_elements(d, p);
 }
 
 
