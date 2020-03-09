@@ -20,7 +20,7 @@ using real_t = float;
 // move these somewhere - use consts?
 // Have this defined in the program?
 #ifndef NDIM
-  #define NDIM 4
+#define NDIM 4
 #endif
 
 
@@ -39,42 +39,47 @@ using real_t = float;
 // Direction and parity
 
 #if NDIM==4
-enum direction :unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==3
-enum direction :unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==2
-enum direction :unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==1
-enum direction :unsigned { XUP = 0, XDOWN, NDIRECTIONS };
+enum direction : unsigned { XUP = 0, XDOWN, NDIRECTIONS };
 #endif
 
-constexpr unsigned NDIRS = NDIRECTIONS;
+constexpr unsigned NDIRS = NDIRECTIONS;    // 
 
-// Increment/decrement ops for directions
-// Post-increment 
+// Increment for directions
+
 #pragma transformer loop_function
-inline direction operator++(direction & dir, int dummy){
-  const unsigned d = dir;
-  dir = static_cast<direction>(d + 1);
-  return static_cast<direction>(d);
+static inline direction next_direction(direction dir) {
+  return static_cast<direction>(static_cast<unsigned>(dir)+1);
 }
 
-// Pre-increment
-#pragma transformer loop_function
-inline direction & operator++(direction & dir) {
-  dir = static_cast<direction>(dir + 1);
-  return dir;
-}
+#define foralldir(d) for(direction d=XUP; d<NDIM; d=next_direction(d))
 
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
+static inline direction operator-(const direction d) { return opp_dir(d); }
+
+static inline int is_up_dir(const int d) { return d<NDIM; }
+
+inline int dir_dot_product(direction d1, direction d2) {
+  if (d1 == d2) return 1;
+  else if (d1 == opp_dir(d2)) return -1;
+  else return 0;
+}
+
+
+// PARITY type definition
 
 enum class parity : unsigned { none = 0, even, odd, all, x };
 // use here #define instead of const parity. Makes EVEN a protected symbol
-const parity EVEN = parity::even;
-const parity ODD  = parity::odd;
-const parity ALL  = parity::all;
-const parity X    = parity::x;
+constexpr parity EVEN = parity::even;      // bit pattern:  100
+constexpr parity ODD  = parity::odd;       //               010
+constexpr parity ALL  = parity::all;       //               110
+constexpr parity X    = parity::x;         //               001
 
 // turns EVEN <-> ODD, ALL remains.  X->none, none->none
 static inline parity opp_parity(const parity p) {
@@ -95,18 +100,7 @@ static std::vector<parity> loop_parities(parity par){
   return parities;
 }
 
-#define foralldir(d) for(direction d=XUP; d<NDIM; ++d)
-
-static inline int is_up_dir(const int d) { return d<NDIM; }
-
-
-inline int parallel_dir(direction d1, direction d2) {
-  if (d1 == d2) return 1;
-  else if (d1 == opp_dir(d2)) return -1;
-  else return 0;
-}
-
-// location type
+// COORDINATE_VECTOR
 
 class coordinate_vector {
  private:
@@ -120,7 +114,7 @@ class coordinate_vector {
 
   // initialize with direction -- useful for automatic conversion
   coordinate_vector(const direction & dir) {
-    foralldir(d) r[d] = parallel_dir(d,dir);
+    foralldir(d) r[d] = dir_dot_product(d,dir);
   }
 
   int& operator[] (const int i) { return r[i]; }
@@ -181,8 +175,8 @@ coordinate_vector coordinates(parity X);
 inline coordinate_vector operator+(const direction d1, const direction d2) {
   coordinate_vector r;
   foralldir(d) {
-    r[d]  = parallel_dir(d1,d);
-    r[d] += parallel_dir(d2,d);
+    r[d]  = dir_dot_product(d1,d);
+    r[d] += dir_dot_product(d2,d);
   }
   return r;
 }
@@ -190,8 +184,8 @@ inline coordinate_vector operator+(const direction d1, const direction d2) {
 inline coordinate_vector operator-(const direction d1, const direction d2) {
   coordinate_vector r;
   foralldir(d) {
-    r[d]  = parallel_dir(d1,d);
-    r[d] -= parallel_dir(d2,d);
+    r[d]  = dir_dot_product(d1,d);
+    r[d] -= dir_dot_product(d2,d);
   }
   return r;
 }
@@ -199,7 +193,7 @@ inline coordinate_vector operator-(const direction d1, const direction d2) {
 /// Special operators: int*direction -> coordinate_vector
 inline coordinate_vector operator*(const int i, const direction dir) {
   coordinate_vector r;
-  foralldir(d) r[d] = i*parallel_dir(d,dir);
+  foralldir(d) r[d] = i*dir_dot_product(d,dir);
   return r;
 }
 
@@ -238,7 +232,7 @@ const parity_plus_offset operator-(const parity_plus_offset, const coordinate_ve
 
 
 inline void assert_even_odd_parity( parity p ) {
-    assert(p == EVEN || p == ODD || p == ALL);
+    assert(p == EVEN || p == ODD);
 }
 
 

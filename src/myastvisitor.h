@@ -162,8 +162,11 @@ public:
   bool is_field_expr(Expr *E);
   bool is_field_decl(ValueDecl *D);
 
-  // catches both parity and parity_plus_direction 
-  bool is_field_parity_expr(Expr *e);
+  /// allowed index types: parity, parity_plus_direction, parity_plus_offset
+  bool is_parity_index_type(Expr *E);
+
+  // catches field[parity-type] expressions, incl. _plus -versions
+  bool is_field_parity_expr(Expr *E);
 
   bool is_array_expr(Expr *E); 
   
@@ -214,7 +217,7 @@ public:
 
   /// Does ; follow the statement?
   bool isStmtWithSemi(Stmt * S);  
-  SourceRange getRangeWithSemi(Stmt * S, bool flag_error = true);
+  SourceRange getRangeWithSemicolon(Stmt * S, bool flag_error = true);
   
   void requireGloballyDefined(Expr * e);
 
@@ -233,14 +236,16 @@ public:
   /// Code generation headers start here
   /// Starting point for new code
   void generate_code(Stmt *S, codetype & target);
-  std::string backend_generate_code(Stmt *S, bool semi_at_end, srcBuf & loopBuf);
+  void handle_field_plus_offsets(std::stringstream &code, srcBuf & loopbuf, std::string & par );
+
+  std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf);
   void backend_handle_loop_function(FunctionDecl *fd);
 
   /// Generate a header for starting communication and marking fields changed
-  std::string generate_code_cpu(Stmt *S, bool semi_at_end, srcBuf &sb);
-  std::string generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &sb);
-  std::string generate_code_openacc(Stmt *S, bool semi_at_end, srcBuf &sb);
-  std::string generate_code_avx(Stmt *S, bool semi_at_end, srcBuf &sb);
+  std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(FunctionDecl *fd);
