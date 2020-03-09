@@ -91,7 +91,11 @@ struct vectorized_lattice_struct  {
         neighbours[d] = (unsigned *) malloc(sizeof(unsigned)*sites);
         // Loop over parities
         for( int par_int = 0; par_int < 2; par_int++ ){ 
-          halo_sites[par_int][d].first_index = halo_index;
+          int first_index = halo_index;
+          halo_sites[par_int][d].first_index = first_index;
+          std::vector<unsigned> halo_temp;
+          std::vector<unsigned> & nb_index = halo_sites[par_int][d].nb_index;
+          
           // Check each site in the parity (for each direction separately)
           for(unsigned i = par_int*evensites; i<evensites+par_int*oddsites; i++){
             coordinate_vector l = coordinate_list[i];
@@ -109,11 +113,33 @@ struct vectorized_lattice_struct  {
             } else {
               // This is outside this split lattice (maybe partly outside the node)
               // Add to halo site list
-              neighbours[d][i] = sites + halo_index;
-              halo_sites[par_int][d].nb_index.push_back(get_index(nb));
+              nb_index.push_back(get_index(nb));
+              halo_temp.push_back(i);
               halo_index++;
             }
           }
+
+          // Bubble sort the halo array according to the
+          // neighbor index
+          if(nb_index.size() > 0)
+          for (int i=0; i < nb_index.size(); i++) {
+            for (int k=0; k < nb_index.size()-i-1; k++) {
+              if( nb_index[k] > nb_index[k+1] ){
+                int t;
+                t=nb_index[k];
+                nb_index[k] = nb_index[k+1];
+                nb_index[k+1] = t;
+                t=halo_temp[k];
+                halo_temp[k] = halo_temp[k+1];
+                halo_temp[k+1] = t;
+              }
+            }
+          }
+
+          for( int i=0; i<halo_temp.size(); i++ ) {
+            neighbours[d][halo_temp[i]] = sites + first_index + i;
+          }
+          
         }
       }
       alloc_size = sites + halo_index;
