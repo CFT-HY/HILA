@@ -30,9 +30,13 @@ class transposeMatrix {
     transposeMatrix<n,m,T> & operator = (const transposeMatrix & rhs){}
 };
 
+
+
 template <const int n, const int m, typename T>
 class matrix {
   public:
+  using base_type = typename base_type_struct<T>::type;
+
   T c[n][m];
 
   matrix() = default;
@@ -158,9 +162,9 @@ class matrix {
   }
 
   auto norm_sq(){
-    auto result = c[0][0].norm_sq();
+    auto result = norm_squared(c[0][0]);
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0&&j>0) {
-      result += c[i][j].norm_sq();
+      result += norm_squared(c[i][j]);
     }
     return result;
   }
@@ -524,10 +528,10 @@ inline conjugateMatrix<n,m,T> conj(matrix<n,m,T> & ref){
 }
 
 template<int n, int m, typename T>
-inline auto norm_sq(matrix<n,m,T> & rhs){
-  auto result = norm_sq(rhs.c[0][0]);
+inline auto norm_squared(matrix<n,m,T> & rhs){
+  auto result = norm_squared(rhs.c[0][0]);
   for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0&&j>0) {
-    result += norm_sq(rhs.c[i][j]);
+    result += norm_squared(rhs.c[i][j]);
   }
   return result;
 }

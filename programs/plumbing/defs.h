@@ -8,21 +8,8 @@
 #include <assert.h> 
 #include "../plumbing/mersenne.h"
 
-#ifdef AVX
-#include "../plumbing/AVX.h"
-#endif
-
-
 #ifdef USE_MPI
 #include <mpi.h>
-#endif
-
-#if !defined(CUDA) && !defined(AVX)
-#define VANILLA
-#endif
-
-#ifdef CUDA
-#define layout_SOA
 #endif
 
 #define EVENFIRST
@@ -33,7 +20,7 @@ using real_t = float;
 // move these somewhere - use consts?
 // Have this defined in the program?
 #ifndef NDIM
-  #define NDIM 4
+#define NDIM 4
 #endif
 
 
@@ -52,33 +39,47 @@ using real_t = float;
 // Direction and parity
 
 #if NDIM==4
-enum direction :unsigned { XUP, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRS };
+enum direction : unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==3
-enum direction { XUP, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRS };
+enum direction : unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==2
-enum direction { XUP, YUP, YDOWN, XDOWN, NDIRS };
+enum direction : unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRECTIONS };
 #elif NDIM==1
-enum direction { XUP, XDOWN, NDIRS };
+enum direction : unsigned { XUP = 0, XDOWN, NDIRECTIONS };
 #endif
 
-/**
- * Increment op for directions
- * */
+constexpr unsigned NDIRS = NDIRECTIONS;    // 
+
+// Increment for directions
+
 #pragma transformer loop_function
-inline direction & operator++(direction & dir, int dummy){
-  const int i = static_cast<int>(dir);
-  return dir=static_cast<direction>((i + 1)%NDIRS);
+static inline direction next_direction(direction dir) {
+  return static_cast<direction>(static_cast<unsigned>(dir)+1);
 }
+
+#define foralldir(d) for(direction d=XUP; d<NDIM; d=next_direction(d))
 
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
+static inline direction operator-(const direction d) { return opp_dir(d); }
 
-enum class parity : unsigned { none, even, odd, all, x };
+static inline int is_up_dir(const int d) { return d<NDIM; }
+
+inline int dir_dot_product(direction d1, direction d2) {
+  if (d1 == d2) return 1;
+  else if (d1 == opp_dir(d2)) return -1;
+  else return 0;
+}
+
+
+// PARITY type definition
+
+enum class parity : unsigned { none = 0, even, odd, all, x };
 // use here #define instead of const parity. Makes EVEN a protected symbol
-const parity EVEN = parity::even;
-const parity ODD  = parity::odd;
-const parity ALL  = parity::all;
-const parity X    = parity::x;
+constexpr parity EVEN = parity::even;      // bit pattern:  100
+constexpr parity ODD  = parity::odd;       //               010
+constexpr parity ALL  = parity::all;       //               110
+constexpr parity X    = parity::x;         //               001
 
 // turns EVEN <-> ODD, ALL remains.  X->none, none->none
 static inline parity opp_parity(const parity p) {
@@ -99,59 +100,166 @@ static std::vector<parity> loop_parities(parity par){
   return parities;
 }
 
+// COORDINATE_VECTOR
 
-
-#define foralldir(d) for(direction d=XUP; d<NDIM; d++) 
-
-static inline int is_up_dir(const int d) { return d<NDIM; }
-
-
-// location type
-
-struct location {
+class coordinate_vector {
+ private:
   int r[NDIM];
+
+ public:
+  coordinate_vector() = default;
+  coordinate_vector(const coordinate_vector & v) {
+    foralldir(d) r[d] = v[d];
+  }
+
+  // initialize with direction -- useful for automatic conversion
+  coordinate_vector(const direction & dir) {
+    foralldir(d) r[d] = dir_dot_product(d,dir);
+  }
+
   int& operator[] (const int i) { return r[i]; }
   int& operator[] (const direction d) { return r[(int)d]; }
   const int& operator[] (const int i) const { return r[i]; }
   const int& operator[] (const direction d) const { return r[(int)d]; }
+
+  // Parity of this coordinate
+  parity coordinate_parity() {
+    int s = 0;
+    foralldir(d) s += r[d];
+    if (s % 2 == 0) return parity::even;
+    else return parity::odd;
+  }
+
+  // cast to std::array
   operator std::array<int,NDIM>(){std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
 };
 
-inline location operator+(const location & a, const location & b) {
-  location r;
+inline coordinate_vector operator+(const coordinate_vector & a, const coordinate_vector & b) {
+  coordinate_vector r;
   foralldir(d) r[d] = a[d] + b[d];
   return r;
 }
 
-inline location operator-(const location & a, const location & b) {
-  location r;
+inline coordinate_vector operator-(const coordinate_vector & a, const coordinate_vector & b) {
+  coordinate_vector r;
   foralldir(d) r[d] = a[d] - b[d];
   return r;
 }
 
-inline location operator-(const location & a) {
-  location r;
+inline coordinate_vector operator-(const coordinate_vector & a) {
+  coordinate_vector r;
   foralldir(d) r[d] = -a[d];
   return r;
 }
 
-inline parity location_parity(const location & a) {
-  int s = 0;
-  foralldir(d) s += a[d];
-  if (s % 2 == 0) return parity::even;
-  else return parity::odd;
+inline coordinate_vector operator*(const int i, const coordinate_vector & a) {
+  coordinate_vector r;
+  foralldir(d) r[d] = i*a[d];
+  return r;
+}
+
+inline coordinate_vector operator*(const coordinate_vector & a, const int i) {
+  return i*a;
+}
+
+inline coordinate_vector operator/(const coordinate_vector & a, const int i) {
+  coordinate_vector r;
+  foralldir(d) r[d] = a[d]/i;
+  return r;
 }
 
 // Replaced by transformer
-location coordinates(parity X);
+coordinate_vector coordinates(parity X);
+
+/// Special direction operators: dir + dir -> coordinate_vector
+inline coordinate_vector operator+(const direction d1, const direction d2) {
+  coordinate_vector r;
+  foralldir(d) {
+    r[d]  = dir_dot_product(d1,d);
+    r[d] += dir_dot_product(d2,d);
+  }
+  return r;
+}
+
+inline coordinate_vector operator-(const direction d1, const direction d2) {
+  coordinate_vector r;
+  foralldir(d) {
+    r[d]  = dir_dot_product(d1,d);
+    r[d] -= dir_dot_product(d2,d);
+  }
+  return r;
+}
+
+/// Special operators: int*direction -> coordinate_vector
+inline coordinate_vector operator*(const int i, const direction dir) {
+  coordinate_vector r;
+  foralldir(d) r[d] = i*dir_dot_product(d,dir);
+  return r;
+}
+
+inline coordinate_vector operator*(const direction d, const int i) {
+  return i*d;
+}
 
 
+/// Parity + dir -type: used in expressions of type f[X+dir]
+/// It's a dummy type, will be removed by transformer
+struct parity_plus_direction {
+  parity p;
+  direction d;
+};
+
+/// Declarations, no need to implement these (type removed by transformer)
+const parity_plus_direction operator+(const parity par, const direction d);
+const parity_plus_direction operator-(const parity par, const direction d);
+
+/// Parity + coordinate offset, used in f[X+coordinate_vector] or f[X+dir1+dir2] etc.
+struct parity_plus_offset {
+  parity p;
+  coordinate_vector cv;
+};
+
+const parity_plus_offset operator+(const parity par, const coordinate_vector & cv);
+const parity_plus_offset operator-(const parity par, const coordinate_vector & cv);
+const parity_plus_offset operator+(const parity_plus_direction, const direction d);
+const parity_plus_offset operator-(const parity_plus_direction, const direction d);
+const parity_plus_offset operator+(const parity_plus_direction, const coordinate_vector & cv);
+const parity_plus_offset operator-(const parity_plus_direction, const coordinate_vector & cv);
+const parity_plus_offset operator+(const parity_plus_offset, const direction d);
+const parity_plus_offset operator-(const parity_plus_offset, const direction d);
+const parity_plus_offset operator+(const parity_plus_offset, const coordinate_vector & cv);
+const parity_plus_offset operator-(const parity_plus_offset, const coordinate_vector & cv);
+
+
+inline void assert_even_odd_parity( parity p ) {
+    assert(p == EVEN || p == ODD);
+}
 
 
 // Global functions: setup
 void initial_setup(int argc, char **argv);
 
-// Communication functions
+
+
+
+
+// Backend defs-headers
+
+#if defined(CUDA)
+#include "../plumbing/defs.h"
+#elif defined(AVX)
+#include "../plumbing/backend_vector/defs.h"
+#else
+#include "../plumbing/backend_cpu/defs.h"
+#endif
+
+
+
+
+
+// MPI Related functions and definitions
+#define MAX_GATHERS 1000
+
 #ifndef USE_MPI
 
 // Trivial, no MPI
@@ -171,42 +279,6 @@ void initialize_machine(int &argc, char ***argv);
 
 #endif
 
-#define MAX_GATHERS 1000
-
-
-inline void assert_even_odd_parity( parity p ) {
-    assert(p == EVEN || p == ODD || p == ALL);
-}
-
-
-
-#ifdef CUDA
-#include "../plumbing/hila_cuda.h"
-
-#elif defined(openacc)
-
-#define seed_random(seed) seed_mersenne(seed)
-#define hila_random() mersenne()
-inline void synchronize_threads(){}
-
-#else
-
-#define seed_random(seed) seed_mersenne(seed)
-inline double hila_random(){ return mersenne(); }
-inline void synchronize_threads(){}
-
-#endif
-
-
-#if defined(PUHTI) && defined(TRANSFORMER)
-namespace std {
-  // This is missing in c++11, which appears to be what we have on Puhti
-  template< bool B, class T = void >
-  using enable_if_t = typename std::enable_if<B,T>::type;
-}
-#endif
-
-
 
 // Synchronization
 #ifndef USE_MPI
@@ -219,11 +291,8 @@ inline void synchronize(){
 
 inline void synchronize(){
   static int n=1;
-  //printf("node %d, in barrier %d\n", mynode(), n);
   synchronize_threads();
-  //printf("node %d, waiting for mpi in barrier %d\n", mynode(), n);
   MPI_Barrier(MPI_COMM_WORLD); 
-  //printf("node %d, barrier cleared %d\n", mynode(), n);
   n++;
 }
 
@@ -232,28 +301,25 @@ inline void synchronize(){
 
 
 
-///Implements test for arithmetic operators in types, similar to 
-///std::is_arithmetic but allows vector types
-
-#ifndef VECTORIZED
-template< class T >
-struct is_arithmetic : std::integral_constant<
-  bool,
-  std::is_arithmetic<T>::value
-> {};
-#else
-template< class T >
-struct is_arithmetic : std::integral_constant<
-  bool,
-  std::is_arithmetic<T>::value ||
-  std::is_same<T,Vec4d>::value ||
-  std::is_same<T,Vec8f>::value ||
-  std::is_same<T,Vec8i>::value ||
-  std::is_same<T,Vec8d>::value ||
-  std::is_same<T,Vec16f>::value ||
-  std::is_same<T,Vec16i>::value 
-> {};
+// Useful c++14 template missing in Puhti compilation of transformer
+#if defined(PUHTI) && defined(TRANSFORMER)
+namespace std {
+  template< bool B, class T = void >
+  using enable_if_t = typename std::enable_if<B,T>::type;
+}
 #endif
+
+
+/// Utility for selecting the numeric base type of a class
+template<class T, class Enable = void>
+struct base_type_struct {
+  using type = typename T::base_type;
+};
+
+template<typename T>
+struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> {
+  using type = T;
+};
 
 
 

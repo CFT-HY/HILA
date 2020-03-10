@@ -8,6 +8,9 @@ constexpr int mintime = CLOCKS_PER_SEC;
 #endif
 
 
+
+
+
 int main(int argc, char **argv){
     int n_runs=1;
     double msecs;
@@ -20,6 +23,74 @@ int main(int argc, char **argv){
     bench_setup(argc, argv);
     seed_random(SEED);
 
+
+    field<double> dfield1, dfield2, dfield3;
+    field<float> ffield1, ffield2, ffield3;
+    onsites(ALL){
+      dfield1[X] = hila_random();
+      dfield2[X] = hila_random();
+      dfield3[X] = hila_random();
+    }
+    onsites(ALL){
+      ffield1[X] = hila_random();
+      ffield2[X] = hila_random();
+      ffield3[X] = hila_random();
+    }
+
+    // Benchmark simple scalar field operation (Memory bandwith)
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          dfield1[ALL] = dfield2[X]*dfield3[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Double multiply : "<< timing << " ms \n";
+
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          dfield1[ALL] = dfield2[X] + dfield3[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Double add : "<< timing << " ms \n";
+
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          ffield1[ALL] = ffield2[X]*ffield3[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Float multiply : "<< timing << " ms \n";
+
+    init = end = 0;
+    for(n_runs=1; (end-init) < mintime; ){
+      n_runs*=2;
+      init = clock();
+      for( int i=0; i<n_runs; i++){
+          ffield1[ALL] = ffield2[X] + ffield3[X];
+      }
+      synchronize();
+      end = clock();
+    }
+    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    output0 << "Float add : "<< timing << " ms \n";
+
+
     field<matrix<N,N, cmplx<double>> > matrix1;
     field<matrix<N,N, cmplx<double>> > matrix2;
     field<matrix<N,N, cmplx<double>> > matrix3;
@@ -30,20 +101,6 @@ int main(int argc, char **argv){
     field<matrix<N,N, cmplx<float>> > fmatrix3;
     field<matrix<1,N, cmplx<float>> > fvector1;
     field<matrix<1,N, cmplx<float>> > fvector2;
-
-
-    // NOTE: This is because of the failure of transformer to recognize
-    // the member function call as changing the object!
-    matrix1.mark_changed(ALL);
-    matrix2.mark_changed(ALL);
-    matrix3.mark_changed(ALL);
-    vector1.mark_changed(ALL);
-    vector2.mark_changed(ALL);
-    fmatrix1.mark_changed(ALL);
-    fmatrix2.mark_changed(ALL);
-    fmatrix3.mark_changed(ALL);
-    fvector1.mark_changed(ALL);
-    fvector2.mark_changed(ALL);
 
     // Generate random values
     onsites(ALL){
@@ -112,7 +169,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
-          vector2[ALL] = vector1[X]*matrix1[X];
+        vector2[ALL] = vector1[X]*matrix1[X];
       }
       synchronize();
       end = clock();
@@ -145,7 +202,7 @@ int main(int argc, char **argv){
       sum=0;
       for( int i=0; i<n_runs; i++){
         onsites(ALL){
-          sum += norm_sq(vector1[X]);
+          sum += norm_squared(vector1[X]);
         }
       }
       volatile double volatile_sum = sum;
@@ -185,13 +242,15 @@ int main(int argc, char **argv){
 
       for( int i=0; i<n_runs; i++){
         matrix1.mark_changed(ALL);
-        matrix1.wait_move(XUP,ALL);
+        for(int dir=0; dir<NDIRS; dir++){
+          matrix1.wait_move((direction)dir,ALL);
+        }
       }
       
       synchronize();
       end = clock();
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / 2 / (double)n_runs;
+    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / 2 / NDIRS / (double)n_runs;
     output0 << "Matrix nearest neighbour communication: " << timing << " ms \n";
 
     //printf("node %d, create gauge\n", mynode());
@@ -199,7 +258,6 @@ int main(int argc, char **argv){
     // Define a gauge matrix
     field<matrix<N,N, cmplx<double>> > U[NDIM];
     foralldir(d) {
-      U[d].mark_changed(ALL);
       onsites(ALL){
         U[d][X].random();
         vector1[X].random();
@@ -218,7 +276,7 @@ int main(int argc, char **argv){
       init = clock();
       for( int i=0; i<n_runs; i++){
         //printf("node %d, dirac_stagggered %d\n", mynode(), i);
-        vector1.mark_changed(ALL); // Assure communication is included
+        vector1.mark_changed(ALL); // Ensure communication is included
         dirac_stagggered(U, 0.1, vector1, vector2);
       }
       synchronize();
@@ -231,20 +289,20 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator with direction loop expanded
     #if (NDIM==4) 
     init = end = 0;
-    dirac_stagggered_alldim(U, 0.1, vector1, vector2);
+    dirac_stagggered_4dim(U, 0.1, vector1, vector2);
     synchronize();
     for(n_runs=1; (end-init) < mintime; ){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
-        vector1.mark_changed(ALL); // Assure communication is included
-        dirac_stagggered_alldim(U, 0.1, vector1, vector2);
+        vector1.mark_changed(ALL); // Ensure communication is included
+        dirac_stagggered_4dim(U, 0.1, vector1, vector2);
       }
       synchronize();
       end = clock();
     }
     timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
-    output0 << "Dirac separate loops: " << timing << "ms \n";
+    output0 << "Dirac one loop: " << timing << "ms \n";
     #endif
     
 
@@ -272,8 +330,8 @@ int main(int argc, char **argv){
 
         rr=pDDp=0;
         onsites(ALL){
-            rr += norm_sq(r[X]);
-            pDDp += norm_sq(Dp[X]);
+          rr += r[X].norm_sq();
+          pDDp += Dp[X].norm_sq();
         }
 
         alpha = rr / pDDp;
@@ -282,7 +340,7 @@ int main(int argc, char **argv){
         onsites(ALL){
           vector2[X] = r[X] + alpha*p[X];
           r[X] = r[X] - alpha*Dp[X];
-          rrnew += norm_sq(r[X]);
+          rrnew += r[X].norm_sq();
         }
 
         beta = rrnew/rr;

@@ -1,18 +1,163 @@
 #ifndef VECTOR_BACKEND
 #define VECTOR_BACKEND
 
+#include "../defs.h"
+#include "../field_storage.h"
+
+
+/// Utility for selecting a vector type by base type and length
+template<typename T, int vector_len>
+struct vector_base_type_struct {};
+
+template<>
+struct vector_base_type_struct<double, 4> {
+  using type = Vec4d;
+};
+
+template<>
+struct vector_base_type_struct<double, 8> {
+  using type = Vec8d;
+};
+
+template<>
+struct vector_base_type_struct<float, 8> {
+  using type = Vec8f;
+};
+
+template<>
+struct vector_base_type_struct<float, 16> {
+  using type = Vec16f;
+};
+
+template<>
+struct vector_base_type_struct<int, 4> {
+  using type = Vec4i;
+};
+
+template<>
+struct vector_base_type_struct<int, 8> {
+  using type = Vec8i;
+};
+
+template<>
+struct vector_base_type_struct<int, 16> {
+  using type = Vec16i;
+};
+
+template<>
+struct vector_base_type_struct<coordinate_vector, 4> {
+  using type = Vec4i;
+};
+
+template<>
+struct vector_base_type_struct<coordinate_vector, 8> {
+  using type = Vec8i;
+};
+
+
+
+
+
+
+/// Maps any type to a base vector type
+template<typename T>
+struct vector_info{
+  // Get base type first
+  using base_type = typename base_type_struct<T>::type; 
+
+  // Find vector length
+  static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
+
+  // Find the vector type from above
+  using type = typename vector_base_type_struct<base_type, vector_size>::type;
+
+  // Number of elements in the full type
+  static constexpr int elements = sizeof(T)/sizeof(base_type);
+
+  // Size of the base type
+  static constexpr int base_type_size = sizeof(base_type);
+};
+
+
+
+/// Replaces basetypes with vectors in a given templated class
+
+/// First base definition for replace_type, which recursively looks for the
+/// base type and replaces it in the end
+/// General template, never matched
+template<typename A, int vector_size, class Enable = void>
+struct vectorize_struct{};
+
+/// A is a basic type, so just return the matching vector type
+template<typename A, int vector_size>
+struct vectorize_struct<A, vector_size, typename std::enable_if_t<is_arithmetic<A>::value>> {
+  using type = typename vector_base_type_struct<A,vector_size>::type;
+};
+
+// B is a templated class, so construct a vectorized type
+template<template<typename B> class C, typename B, int vector_size>
+struct vectorize_struct<C<B>, vector_size>{
+  using vectorized_B = typename vectorize_struct<B, vector_size>::type;
+  using type = C<vectorized_B>;
+};
+
+template<template<int a, typename B> class C, int a, typename B, int vector_size>
+struct vectorize_struct<C<a,B>, vector_size>{
+  using vectorized_B = typename  vectorize_struct<B, vector_size>::type;
+  using type = C<a, vectorized_B>;
+};
+
+template<template<int a, int b, typename B> class C, int a, int b,  typename B, int vector_size>
+struct vectorize_struct<C<a,b,B>, vector_size>{
+  using vectorized_B = typename  vectorize_struct<B, vector_size>::type;
+  using type = C<a, b, vectorized_B>;
+};
+
+
+/// Match coordinate vectors explicitly
+template<>
+struct vectorize_struct<coordinate_vector, 4> {
+  using type = std::array<Vec4i, NDIM>;
+};
+
+template<>
+struct vectorize_struct<coordinate_vector, 8> {
+  using type = std::array<Vec8i, NDIM>;
+};
+
+template<>
+struct vectorize_struct<coordinate_vector, 16> {
+  using type = std::array<Vec16i, NDIM>;
+};
+
+
+
+/// Short version of mapping type to longest possible vector
+template <typename T>
+using vector_type = typename vectorize_struct<T,vector_info<T>::vector_size>::type;
+
+
+
+
+
+
+
 template<typename T>
 void field_storage<T>::allocate_field( lattice_struct * lattice ) {
-  constexpr int vector_size = field_info<T>::vector_size;
-  vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(vector_size);
-  fieldbuf = (T*) allocate_field_mem( sizeof(T) * vector_size * vlat->field_alloc_size());
-  #pragma acc enter data create(fieldbuf)
+  constexpr int vector_size = vector_info<T>::vector_size;
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_size>();
+
+  int size = sizeof(T) * vector_size * vlat->field_alloc_size();
+  if (size % VECTOR_SIZE) 
+    size = size - (size % VECTOR_SIZE) + VECTOR_SIZE;
+  fieldbuf = (T*) aligned_alloc( VECTOR_SIZE, size);
 }
 
 template<typename T>
 void field_storage<T>::free_field() {
   #pragma acc exit data delete(fieldbuf)
-  free_field_mem((void *)fieldbuf);
+  if(fieldbuf != nullptr)
+    free(fieldbuf);
   fieldbuf = nullptr;
 }
 
@@ -20,33 +165,36 @@ void field_storage<T>::free_field() {
 template<typename T>
 auto field_storage<T>::get(const int i, const int field_alloc_size) const
 {
-  using vectortype = typename field_info<T>::base_vector_type;
-  using basetype = typename field_info<T>::base_type;
-  constexpr int elements = field_info<T>::elements;
-  constexpr int vector_size = field_info<T>::vector_size;
-  typename field_info<T>::vector_type value;
-  basetype *vp = (basetype *) (fieldbuf + i*vector_size);
+  using vectortype = typename vector_info<T>::type;
+  using basetype = typename vector_info<T>::base_type;
+  constexpr int elements = vector_info<T>::elements;
+  constexpr int vector_size = vector_info<T>::vector_size;
+  using vectorized_type = vector_type<T>;
+
+  vectorized_type value;
+  basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
-    valuep[e].load(vp+e*field_info<T>::vector_size);
+    valuep[e].load_a(vp+e*vector_size);
   }
   return value;
 }
 
 
-//const typename 
+
 template<typename T>
 template<typename A>
 inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size) 
 {
-  using vectortype = typename field_info<T>::base_vector_type;
-  using basetype = typename field_info<T>::base_type;
-  constexpr int elements = field_info<T>::elements;
-  constexpr int vector_size = field_info<T>::vector_size;
-  basetype *vp = (basetype *) (fieldbuf + i*vector_size);
+  using vectortype = typename vector_info<T>::type;
+  using basetype = typename vector_info<T>::base_type;
+  constexpr int elements = vector_info<T>::elements;
+  constexpr int vector_size = vector_info<T>::vector_size;
+
+  basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
-    valuep[e].store((vp + e*field_info<T>::vector_size));
+    valuep[e].store_a(vp + e*vector_size);
   }
 }
 
@@ -62,18 +210,19 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
 /* Gathers sites at the boundary that need to be communicated to neighbours */
 template<typename T>
 void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const {
-  vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(field_info<T>::vector_size);
+  constexpr int vector_size = vector_info<T>::vector_size;
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
   for (int j=0; j<to_node.n_sites(par); j++) {
     int index = to_node.site_index(j, par);
     int v_index = vlat->vector_index[index];
     auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
-    auto pvector = (typename field_info<T>::base_vector_type*) (&element);
+    auto pvector = (typename vector_info<T>::type*) (&element);
 
-    for( int e=0; e<field_info<T>::elements; e++ ){
+    for( int e=0; e<vector_info<T>::elements; e++ ){
       auto basenumber = pvector[e].extract(v_index);
-      auto * number_buffer = (typename field_info<T>::base_type *) buffer;
+      auto * number_buffer = (typename vector_info<T>::base_type *) buffer;
 
-      number_buffer[j*field_info<T>::elements + e] = basenumber;
+      number_buffer[j*vector_info<T>::elements + e] = basenumber;
     }
   }
 }
@@ -82,16 +231,17 @@ void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_
 /* Sets the values the neighbour elements from the communication buffer */
 template<typename T>
 void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice){
-  vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(field_info<T>::vector_size);
+  constexpr int vector_size = vector_info<T>::vector_size;
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
   for (int j=0; j<from_node.n_sites(par); j++) {
     int index = from_node.offset(par)+j;
     int v_index = vlat->vector_index[index];
     auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
-    auto pvector = (typename field_info<T>::base_vector_type*) (&element);
+    auto pvector = (typename vector_info<T>::type*) (&element);
 
-    for( int e=0; e<field_info<T>::elements; e++ ){
-      auto number_buffer = (typename field_info<T>::base_type *) buffer;
-      auto basenumber = number_buffer[j*field_info<T>::elements + e];
+    for( int e=0; e<vector_info<T>::elements; e++ ){
+      auto number_buffer = (typename vector_info<T>::base_type *) buffer;
+      auto basenumber = number_buffer[j*vector_info<T>::elements + e];
 
       pvector[e].insert(v_index, basenumber);
     }
@@ -100,25 +250,32 @@ void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_n
 }
 
 template<typename T>
-void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * lattice){
-  constexpr int vector_size = field_info<T>::vector_size;
-  constexpr int elements = field_info<T>::elements;
-  using vectortype = typename field_info<T>::base_vector_type;
-  using basetype = typename field_info<T>::base_type;
-  vectorized_lattice_struct * vlat = lattice->get_vectorized_lattice(vector_size);
-  // Loop over the boundary sites
-  for( vectorized_lattice_struct::halo_site hs: vlat->halo_sites )
-  if(par == ALL || par == hs.par ) {
-    int *perm = vlat->boundary_permutation[hs.dir];
-    auto temp = get(hs.nb_index, vlat->field_alloc_size());
-    auto dest = fieldbuf + vector_size*(vlat->sites + hs.halo_index);
-    vectortype * e = (vectortype*) &temp;
-    basetype * d = (basetype*) dest;
-    for( int v=0; v<elements; v++ ){
-      basetype t1[vector_size], t2[vector_size];
-      e[v].store(&(t1[0]));
-      for( int i=0; i<vector_size; i++ )
-       d[v*vector_size+i] =  t1[perm[i]];
+void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){
+  constexpr int vector_size = vector_info<T>::vector_size;
+  constexpr int elements = vector_info<T>::elements;
+  using vectortype = typename vector_info<T>::type;
+  using basetype = typename vector_info<T>::base_type;
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_size>();
+
+  // The halo copy and permutation is only necessary if vectorization
+  // splits the lattice in this direction
+  if( vlat->split[dir] > 1 ) {
+
+    // Loop over the boundary sites
+    for( parity p : loop_parities(par)){
+      int par_int = (int) p -1; 
+      int *perm = vlat->boundary_permutation[dir];
+      auto hs = vlat->halo_sites[par_int][dir];
+
+      for( int idx = 0; idx < hs.nb_index.size(); idx++ ) {
+        basetype * fp = static_cast<basetype *>(fieldbuf);
+        basetype * s = fp + elements*vector_size*hs.nb_index[idx];
+        basetype * d = fp + elements*vector_size*(vlat->sites + hs.first_index+idx);
+        for( int e=0; e<elements; e++ ){
+          for( int i=0; i<vector_size; i++ )
+           d[e*vector_size+i] =  s[e*vector_size + perm[i]];
+        }
+      }
     }
   }
 }

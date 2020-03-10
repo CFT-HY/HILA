@@ -8,6 +8,7 @@
 
 template <int n, typename T = real_t>
 struct cmatrix {
+  using base_type = typename base_type_struct<T>::type;
   cmplx<T> c[n][n];
 
   // do nothing constructor

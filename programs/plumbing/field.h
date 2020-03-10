@@ -7,7 +7,9 @@
 #include <type_traits>
 
 #include "../plumbing/globals.h"
+#include "../plumbing/defs.h"
 #include "../plumbing/field_storage.h"
+#include "../plumbing/lattice.h"
 
 #ifdef USE_MPI
 #include "../plumbing/comm_mpi.h"
@@ -15,13 +17,6 @@
 
 static int next_mpi_field_tag = 0;
 
-struct parity_plus_direction {
-  parity p;
-  direction d;
-};
-
-const parity_plus_direction operator+(const parity par, const direction d);
-const parity_plus_direction operator-(const parity par, const direction d);
 
 // This is a marker for transformer -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)
@@ -169,7 +164,7 @@ using t_div  = decltype(std::declval<A>() / std::declval<B>());
 // field class 
 template <typename T>
 class field {
-private:
+ private:
 
   /// The following struct holds the data + information about the field
   /// TODO: field-specific boundary conditions?
@@ -177,8 +172,8 @@ private:
     public:
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
       lattice_struct * lattice;
-      unsigned is_fetched[NDIRS];
-      bool move_started[3*NDIRS];
+      bool is_fetched[2*NDIRS];
+      bool move_started[2*NDIRS];
 #ifdef USE_MPI
       std::vector<MPI_Request> receive_request[3*NDIRS];
       std::vector<MPI_Request> send_request[3*NDIRS];
@@ -229,14 +224,14 @@ private:
       };
       
       /// Place boundary elements from local lattice (used in vectorized version)
-      void set_local_boundary_elements(parity par){
-        payload.set_local_boundary_elements(par, lattice);
+      void set_local_boundary_elements(direction dir, parity par){
+        payload.set_local_boundary_elements(dir, par, lattice);
       };
   };
 
   static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
   
-public:
+ public:
 
   field_struct * fs;
   
@@ -308,45 +303,55 @@ public:
     if (fs == nullptr) allocate();
     else {
       assert(p == EVEN || p == ODD || p == ALL);
-      unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
-      for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
-      for (int i=0; i<3*NDIRS; i++) fs->move_started[i] = false;
+      if(p==EVEN) for (int i=0; i<2*NDIRS; i+=2) fs->is_fetched[i] = false;
+      if(p==ODD)  for (int i=1; i<2*NDIRS; i+=2) fs->is_fetched[i] = false;
+      if(p==ALL)  for (int i=0; i<2*NDIRS; i+=1) fs->is_fetched[i] = false;
+      if(p==EVEN) for (int i=0; i<2*NDIRS; i+=2) fs->move_started[i] = false;
+      if(p==ODD)  for (int i=1; i<2*NDIRS; i+=2) fs->move_started[i] = false;
+      if(p==ALL)  for (int i=0; i<2*NDIRS; i+=1) fs->move_started[i] = false;
     }
   }
 
   void mark_changed(const parity p) const {
     assert(is_allocated());
     assert(p == EVEN || p == ODD || p == ALL);
-    unsigned up = 0x3 & (!(static_cast<unsigned>(opp_parity(p))));
-    for (int i=0; i<NDIRS; i++) fs->is_fetched[i] &= up;
-    for (int i=0; i<3*NDIRS; i++) fs->move_started[i] = false;
+    if(p==EVEN) for (int i=0; i<2*NDIRS; i+=2) fs->is_fetched[i] = false;
+    if(p==ODD)  for (int i=1; i<2*NDIRS; i+=2) fs->is_fetched[i] = false;
+    if(p==ALL)  for (int i=0; i<2*NDIRS; i+=1) fs->is_fetched[i] = false;
+    if(p==EVEN) for (int i=0; i<2*NDIRS; i+=2) fs->move_started[i] = false;
+    if(p==ODD)  for (int i=1; i<2*NDIRS; i+=2) fs->move_started[i] = false;
+    if(p==ALL)  for (int i=0; i<2*NDIRS; i+=1) fs->move_started[i] = false;
   }
 
   /// Mark the field parity fetched from direction
   void mark_fetched(int dir, const parity p) const {
     assert(p == EVEN || p == ODD || p == ALL);
-    unsigned up = 0x3 & (static_cast<unsigned>(opp_parity(p)));
-    fs->is_fetched[dir] |= up;
+    if(p==EVEN || p==ALL) fs->is_fetched[2*dir] = true;
+    if(p==ODD || p==ALL ) fs->is_fetched[2*dir+1] = true;
+    
   }
 
   /// Check if the field has been changed since the previous communication
   bool is_fetched( int dir, parity par) const{
     assert(dir < NDIRS);
-    int par_int = static_cast<unsigned>(opp_parity(par));
-    return (fs->is_fetched[dir] ^ par_int) == 0;
+    bool * fd = fs->is_fetched + 2*dir;
+    return (par==ALL && fd[0] && fd[1] ) || (par==EVEN && fd[0]) || (par==ODD && fd[1]);
+  }
+
+  /* Mark communication started */
+  void mark_move_started( int dir, parity p) const{
+    assert(dir < NDIRS);
+    if(p==EVEN || p==ALL) fs->move_started[2*dir] = true;
+    if(p==ODD  || p==ALL) fs->move_started[2*dir+1] = true;
   }
 
   /// Check if communication has started
   bool is_move_started( int dir, parity par) const{
     assert(dir < NDIRS);
-    return fs->move_started[(int)par + 2*dir];
+    bool * sd = fs->move_started + 2*dir;
+    return (par==ALL && sd[0] && sd[1] ) || (par==EVEN && sd[0]) || (par==ODD && sd[1]);
   }
 
-  /* Mark communication started */
-  void mark_move_started( int dir, parity par) const{
-    assert(dir < NDIRS);
-    fs->move_started[(int)par + 2*dir] = true;
-  }
   
 
   void assert_is_initialized() {
@@ -360,9 +365,10 @@ public:
   // placemarker, should not be here
   // T& operator[] (const int i) { return data[i]; }
 
-  // these give the element -- WILL BE modified by transformer
+  // declarations -- WILL BE implemented by transformer, not written here
   element<T>& operator[] (const parity p) const;
   element<T>& operator[] (const parity_plus_direction p) const;
+  element<T>& operator[] (const parity_plus_offset p) const;
 
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
   inline auto get_value_at(int i) const { return this->fs->get(i); }
@@ -658,7 +664,7 @@ void field<T>::wait_move(direction d, parity p) const {
     start_move(d, par);
 
     // Update local elements in the halo (necessary for vectorized version)
-    fs->set_local_boundary_elements(par);
+    fs->set_local_boundary_elements(d, par);
 
     lattice_struct::comminfo_struct ci = lattice->comminfo[d];
     std::vector<MPI_Request> & receive_request = fs->receive_request[index];
@@ -695,7 +701,7 @@ template<typename T>
 void field<T>::wait_move(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)
   // Does not need to happen every time; should use tracking like in MPI
-  fs->set_local_boundary_elements(ALL);
+  fs->set_local_boundary_elements(d, p);
 }
 
 

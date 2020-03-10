@@ -40,15 +40,8 @@ std::list<array_ref> array_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::vector<Expr *> remove_expr_list = {};
 
-unsigned state::skip_children = 0;
-unsigned state::scope_level = 0;
-bool state::in_loop_body = false;
-bool state::accept_field_parity = false;
 bool state::loop_found = false;
-bool state::dump_ast_next = false;
 bool state::compile_errors_occurred = false;
-bool state::check_loop = false;
-bool state::loop_function_next = false;
 
 ///definition of command line options
 llvm::cl::OptionCategory TransformerCat(program_name);
@@ -181,25 +174,18 @@ void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
 }
 
 /// Call the backend function for generating loop code
-std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
   std::stringstream code;
   if( target.CUDA ){
-    code << generate_code_cuda(S,semi_at_end,loopBuf);
+    code << generate_code_cuda(S,semicolon_at_end,loopBuf);
   } else if( target.openacc ){
-    code << generate_code_openacc(S,semi_at_end,loopBuf);
+    code << generate_code_openacc(S,semicolon_at_end,loopBuf);
   } else if(target.VECTORIZE) {
-    code << generate_code_avx(S,semi_at_end,loopBuf);
+    code << generate_code_avx(S,semicolon_at_end,loopBuf);
   } else {
-    code << generate_code_cpu(S,semi_at_end,loopBuf);
+    code << generate_code_cpu(S,semicolon_at_end,loopBuf);
   }
   return code.str();
-}
-
-/// Call the backend function for generating the field storage type
-void MyASTVisitor::backend_generate_field_storage_type(std::string typestr){
-  if(target.VECTORIZE){
-    generate_field_storage_type_AVX(typestr);
-  }
 }
 
 

@@ -15,14 +15,18 @@ using ft = cmplx<double>;
 int main()
 {
   
-  field<cmplx<double>> a;
+  field<cmplx<double>> a,b;
   field<double> t(1.0);
 
-  onsites(ALL) {
-    ft d(2,2);
-    element<ft> t;
-    t = a[X];
-    a[X] = t;
+  coordinate_vector v = XUP - 2*YUP;
+  coordinate_vector y;
+  y = v;
+
+  parity p = ODD;
+  
+  onsites(p) {
+ 
+    a[X] = a[X+v];
   }
   
   return 0;

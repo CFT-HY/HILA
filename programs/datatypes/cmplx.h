@@ -12,6 +12,7 @@
 
 template <typename T = double>
 struct cmplx {
+  using base_type = typename base_type_struct<T>::type;
   T re,im;
   
   cmplx<T>() = default;
@@ -299,7 +300,7 @@ inline cmplx<Accuracy> conj(cmplx<Accuracy> val){
 
 template<typename T> 
 #pragma transformer loop_function
-inline auto norm_sq(cmplx<T> val){
+inline auto norm_squared(cmplx<T> val){
   return val.norm_sq();
 }
 

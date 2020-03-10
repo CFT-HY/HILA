@@ -2,7 +2,9 @@
 
 # Before compiling on Puhti, load gcc, cuda-mpi and cuda
 # module load gcc/8.3.0 hpcx-mpi/2.5.0-cuda cuda/10.1.168
-# 
+# To run interactively on 2 GPUs run
+# srun --ntasks=2  --time=00:10:00 --pty --account=Project_2001973 --partition=gpu --gres=gpu:v100:2 bash
+#
 # On other systems run mpicc -showme:link and include the 
 # Replace MPI_LIBS below with the -L and -l parameters it
 # prints.
@@ -24,8 +26,8 @@ LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(MPI_LIBS)
 CFLAGS = -g -G $(OPTS)
 CXXFLAGS = -g -G $(OPTS)
 
-%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
-		$(LD) -o $@ $< inputs.o mersenne_inline.o lattice.o memory.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
+%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
+		$(LD) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
 
 %.cpt: %.cpp
 		$(TRANSFORMER) $<
@@ -35,6 +37,11 @@ CXXFLAGS = -g -G $(OPTS)
 
 %.o : ../plumbing/%.cpp
 		$(CC) $(CXXFLAGS) $< -c
+
+
+%.o : ../plumbing/backend_cuda/%.cpp
+	$(CC) $(CXXFLAGS) $< -c
+
 
 %.o : %.c
 		$(CC) $(CFLAGS) $< -c
