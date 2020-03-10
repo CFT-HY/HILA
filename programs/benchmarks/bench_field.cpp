@@ -1,7 +1,9 @@
 #include "bench.h"
 
 #define N 3
-constexpr int mintime = CLOCKS_PER_SEC;
+
+//Minimum time 
+constexpr double mintime = 1000;
 
 #ifndef SEED
 #define SEED 100
@@ -14,7 +16,7 @@ constexpr int mintime = CLOCKS_PER_SEC;
 int main(int argc, char **argv){
     int n_runs=1;
     double msecs;
-    clock_t init, end;
+    struct timeval start, end;
     double timing;
     double sum;
     float fsum;
@@ -38,56 +40,60 @@ int main(int argc, char **argv){
     }
 
     // Benchmark simple scalar field operation (Memory bandwith)
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; ){
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
           dfield1[ALL] = dfield2[X]*dfield3[X];
       }
-      synchronize();
-      end = clock();
+      synchronize();;
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Double multiply : "<< timing << " ms \n";
 
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; ){
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
           dfield1[ALL] = dfield2[X] + dfield3[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Double add : "<< timing << " ms \n";
 
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; ){
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
           ffield1[ALL] = ffield2[X]*ffield3[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Float multiply : "<< timing << " ms \n";
 
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; ){
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
           ffield1[ALL] = ffield2[X] + ffield3[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Float add : "<< timing << " ms \n";
 
 
@@ -120,84 +126,89 @@ int main(int argc, char **argv){
     }
 
     // Interesting case of using the same memory three times
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; ){
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
           matrix1[ALL] = matrix1[X]*matrix1[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Matrix1 = Matrix1 * Matrix1 : "<< timing << " ms \n";
 
 
     // Time MATRIX * MATRIX
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime;){
+    timing = 0;
+    for(n_runs=1; timing < mintime;){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         matrix3[ALL] = matrix1[X]*matrix2[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double) CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Matrix * Matrix: " << timing << "ms \n";
 
 
     // Time MATRIX * MATRIX
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime;){
+    timing = 0;
+    for(n_runs=1; timing < mintime;){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
           fmatrix3[ALL] = fmatrix1[X]*fmatrix2[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Single Precision Matrix * Matrix: " << timing << "ms \n";
 
     // Time VECTOR * MATRIX
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; ){
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         vector2[ALL] = vector1[X]*matrix1[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Vector * Matrix: " << timing << " ms \n";
 
     // Time VECTOR * MATRIX
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime;){
+    timing = 0;
+    for(n_runs=1; timing < mintime;){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
           fvector2[ALL] = fvector1[X]*fmatrix1[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Single Precision Vector * Matrix: " << timing << " ms \n";
 
 
 
     // Time VECTOR NORM
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; ){
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       
       sum=0;
       for( int i=0; i<n_runs; i++){
@@ -207,15 +218,16 @@ int main(int argc, char **argv){
       }
       volatile double volatile_sum = sum;
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Vector square sum: " << timing << " ms \n";
 
     // Time FLOAT VECTOR NORM
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; n_runs*=2){
-      init = clock();
+    timing = 0;
+    for(n_runs=1; timing < mintime; n_runs*=2){
+      gettimeofday(&start, NULL);
       fsum=0;
       for( int i=0; i<n_runs; i++){
         onsites(ALL){
@@ -229,16 +241,17 @@ int main(int argc, char **argv){
         volatile double volatile_sum = fsum;
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Single Precision vector square sum: " << timing << " ms \n";
 
     // Time COMMUNICATION of a MATRIX
-    init = end = 0;
-    for(n_runs=1; (end-init) < mintime; ){
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
 
       for( int i=0; i<n_runs; i++){
         matrix1.mark_changed(ALL);
@@ -248,9 +261,10 @@ int main(int argc, char **argv){
       }
       
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / 2 / NDIRS / (double)n_runs;
+    timing = timing / 2 / NDIRS / (double)n_runs;
     output0 << "Matrix nearest neighbour communication: " << timing << " ms \n";
 
     //printf("node %d, create gauge\n", mynode());
@@ -267,49 +281,51 @@ int main(int argc, char **argv){
 
 
     // Time staggered Dirac operator
-    init = end = 0;
+    timing = 0;
     //printf("node %d, dirac_stagggered 0\n", mynode());
     dirac_stagggered(U, 0.1, vector1, vector2);
     synchronize();
-    for(n_runs=1; (end-init) < mintime; ){
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         //printf("node %d, dirac_stagggered %d\n", mynode(), i);
         vector1.mark_changed(ALL); // Ensure communication is included
         dirac_stagggered(U, 0.1, vector1, vector2);
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Dirac: " << timing << "ms \n";
 
 
     // Time staggered Dirac operator with direction loop expanded
     #if (NDIM==4) 
-    init = end = 0;
+    timing = 0;
     dirac_stagggered_4dim(U, 0.1, vector1, vector2);
     synchronize();
-    for(n_runs=1; (end-init) < mintime; ){
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         vector1.mark_changed(ALL); // Ensure communication is included
         dirac_stagggered_4dim(U, 0.1, vector1, vector2);
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "Dirac one loop: " << timing << "ms \n";
     #endif
     
 
     // Conjugate gradient step 
-    init = end = 0;
+    timing = 0;
     field<matrix<1,N, cmplx<double>> > r, rnew, p, Dp;
-    for(n_runs=1; (end-init) < mintime; ){
+    for(n_runs=1; timing < mintime; ){
       n_runs*=2;
 
       double pDDp = 0, rr = 0, rrnew = 0;
@@ -323,7 +339,7 @@ int main(int argc, char **argv){
         }
       }
 
-      init = clock();
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         
         dirac_stagggered(U, 0.1, p, Dp);
@@ -347,10 +363,11 @@ int main(int argc, char **argv){
         p[ALL] = r[X] + beta*p[X];
       }
       synchronize();
-      end = clock();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
     }
 
-    timing = (end - init) *1000.0 / ((double)CLOCKS_PER_SEC) / (double)n_runs;
+    timing = timing / (double)n_runs;
     output0 << "CG: " << timing << "ms / iteration\n";
 
 

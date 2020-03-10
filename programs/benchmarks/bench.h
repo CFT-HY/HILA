@@ -2,7 +2,8 @@
 #include <string>
 #include <math.h>
 #include <assert.h>
-#include <time.h>
+#include <sys/time.h>
+#include <ctime>
 
 #include "../plumbing/defs.h"
 #include "../datatypes/general_matrix.h"
@@ -29,4 +30,11 @@ inline void bench_setup(int &argc, char **argv){
     #elif NDIM==4
     lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
     #endif
+}
+
+// Calculate time difference in milliseconds
+static inline double timediff(timeval start, timeval end){
+  long long t1 = start.tv_usec + 1000000*(long long)start.tv_sec;
+  long long t2 = end.tv_usec + 1000000*(long long)end.tv_sec;
+  return 1e-3*(double)(t2-t1);
 }
