@@ -2,14 +2,9 @@
 
 #define N 3
 
-//Minimum time 
-constexpr double mintime = 1000;
-
 #ifndef SEED
 #define SEED 100
 #endif
-
-
 
 
 

@@ -10,9 +10,6 @@
 
 #define MADD(x) (MSIZE + x)
 
-//Minimum time per benchmark in milliseconds
-constexpr double mintime = 1000;
-
 ///////////////////////////////////////
 // benchmark conjugate operations for 
 // increasing matrix sizes starting 

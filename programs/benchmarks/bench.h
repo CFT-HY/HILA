@@ -11,6 +11,13 @@
 #include "../plumbing/field.h"
 #include "../plumbing/dirac.h"
 
+
+// Minimum time to run each benchmark
+// in microseconds
+constexpr double mintime = 1000;
+
+
+
 // Direct output to stdout
 std::ostream &hila::output = std::cout;
 
@@ -34,7 +41,7 @@ inline void bench_setup(int &argc, char **argv){
 
 // Calculate time difference in milliseconds
 static inline double timediff(timeval start, timeval end){
-  long long t1 = start.tv_usec + 1000000*(long long)start.tv_sec;
-  long long t2 = end.tv_usec + 1000000*(long long)end.tv_sec;
+  long long t1 = (long long)(start.tv_usec) + 1000000*(long long)(start).tv_sec;
+  long long t2 = (long long)(end.tv_usec) + 1000000*(long long)(end).tv_sec;
   return 1e-3*(double)(t2-t1);
 }
