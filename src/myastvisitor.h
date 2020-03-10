@@ -180,6 +180,8 @@ public:
   
   bool is_function_call_stmt(Stmt * s);
 
+  bool is_member_call_stmt(Stmt * s);
+
   bool is_constructor_stmt(Stmt * s);
 
   bool is_loop_extern_var_ref(Expr *E);
@@ -201,7 +203,9 @@ public:
 
   void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
-  
+
+  void handle_member_call_in_loop(Stmt * s);
+
   void handle_constructor_in_loop(Stmt * s);
 
   bool loop_function_check(Decl *fd);

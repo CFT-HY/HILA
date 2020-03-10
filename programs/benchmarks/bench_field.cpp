@@ -102,20 +102,6 @@ int main(int argc, char **argv){
     field<matrix<1,N, cmplx<float>> > fvector1;
     field<matrix<1,N, cmplx<float>> > fvector2;
 
-
-    // NOTE: This is because of the failure of transformer to recognize
-    // the member function call as changing the object!
-    matrix1.mark_changed(ALL);
-    matrix2.mark_changed(ALL);
-    matrix3.mark_changed(ALL);
-    vector1.mark_changed(ALL);
-    vector2.mark_changed(ALL);
-    fmatrix1.mark_changed(ALL);
-    fmatrix2.mark_changed(ALL);
-    fmatrix3.mark_changed(ALL);
-    fvector1.mark_changed(ALL);
-    fvector2.mark_changed(ALL);
-
     // Generate random values
     onsites(ALL){
       matrix1[X].random();
@@ -272,7 +258,6 @@ int main(int argc, char **argv){
     // Define a gauge matrix
     field<matrix<N,N, cmplx<double>> > U[NDIM];
     foralldir(d) {
-      U[d].mark_changed(ALL);
       onsites(ALL){
         U[d][X].random();
         vector1[X].random();
@@ -291,7 +276,7 @@ int main(int argc, char **argv){
       init = clock();
       for( int i=0; i<n_runs; i++){
         //printf("node %d, dirac_stagggered %d\n", mynode(), i);
-        vector1.mark_changed(ALL); // Assure communication is included
+        vector1.mark_changed(ALL); // Ensure communication is included
         dirac_stagggered(U, 0.1, vector1, vector2);
       }
       synchronize();
@@ -310,7 +295,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       init = clock();
       for( int i=0; i<n_runs; i++){
-        vector1.mark_changed(ALL); // Assure communication is included
+        vector1.mark_changed(ALL); // Ensure communication is included
         dirac_stagggered_4dim(U, 0.1, vector1, vector2);
       }
       synchronize();

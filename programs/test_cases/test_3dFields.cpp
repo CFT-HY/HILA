@@ -36,8 +36,8 @@ int main(int argc, char **argv){
     direction d = XUP;
     direction d2 = (direction) (NDIRS - 2);
     #if NDIM > 1
-    d++; 
-    d2++;
+    d=next_direction(d); 
+    d2=next_direction(d2);
     assert(d==YUP);
     assert(XUP==0);
     assert(d2==XDOWN);

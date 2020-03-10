@@ -130,6 +130,13 @@ bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
   }
   return false;
 }
+bool MyASTVisitor::is_member_call_stmt(Stmt * s) {
+  if (auto *Call = dyn_cast<CXXMemberCallExpr>(s)){
+    llvm::errs() << "Member call found: " << get_stmt_str(s) << '\n';
+    return true;
+  }
+  return false;
+}
 bool MyASTVisitor::is_constructor_stmt(Stmt * s) {
   if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
     llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
@@ -569,20 +576,26 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // return true;
   }
 
+  // Check c++ methods
+  if( is_member_call_stmt(s) ){
+    handle_member_call_in_loop(s);
+    // let this ripple trough, for now ...
+    // return true;
+  }
+
   if ( is_constructor_stmt(s) ){
     handle_constructor_in_loop(s);
     // return true;
   }
    
   // catch then expressions
-      
   if (Expr *E = dyn_cast<Expr>(s)) {
     
     // Avoid treating constexprs as variables
-     if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
+    if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
        parsing_state.skip_children = 1;   // nothing to be done
        return true;
-     }
+    }
     
     //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs

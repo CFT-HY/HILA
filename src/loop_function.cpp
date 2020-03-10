@@ -35,6 +35,8 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
 
   // Store functions used in loops, recursively...
   loop_function_check(decl);
+
+  // Handle parameters
   int i=0;
   for( Expr * E : Call->arguments() ){
     if( is_field_parity_expr(E) ) {
@@ -43,11 +45,8 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
         QualType q = pv->getOriginalType ();
 
         // Check for const qualifier
-        if( q.isConstQualified ()) {
-          //llvm::errs() << "  -Const \n";
-        } else {
-          // Handle field parity expressions in a function as
-          // it was read and written to
+        if( !q.isConstQualified ()) {
+          // Mark it as changed
           handle_field_parity_expr(E, is_assignment, is_compound);
         }
       }
@@ -59,6 +58,52 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
 void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   handle_function_call_in_loop(s,true,true);
 }
+
+
+
+void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
+
+  // Get the call expression
+  CXXMemberCallExpr *Call = dyn_cast<CXXMemberCallExpr>(s);
+
+  assert(Call && "Loop method call not valid");
+
+  // Get the declaration of the function
+  Decl* decl = Call->getCalleeDecl();
+  FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
+
+  // Store functions used in loops, recursively...
+  loop_function_check(decl);
+  
+  // Handle parameters
+  int i=0;
+  for( Expr * E : Call->arguments() ){
+    if( is_field_parity_expr(E) ) {
+      const ParmVarDecl * pv = D->getParamDecl(i);
+      QualType q = pv->getOriginalType ();
+        
+      // Check for const qualifier
+      if( !q.isConstQualified ()) {
+        // Mark it as changed
+        handle_field_parity_expr(E, true, true);
+      }
+    }
+    i++;
+  }
+
+  // Handle the object itself
+  Expr * E = Call->getImplicitObjectArgument();
+  if( is_field_parity_expr(E) ) {
+    QualType q = E->getType();
+
+    // Check for const qualifier
+    if( !q.isConstQualified ()) {
+      // Mark it as changed
+      handle_field_parity_expr(E, true, true);
+    }
+  }
+}
+
 
 
 void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
@@ -76,26 +121,6 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 
   // Store functions used in loops, recursively...
   loop_function_check(decl);
-
-  // FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
-
-  // int i=0;
-  // for( Expr * E : Call->arguments() ){
-  //   if( is_field_parity_expr(E) ) {
-  //     if(i < D->getNumParams()){
-  //       const ParmVarDecl * pv = D->getParamDecl(i);
-  //       QualType q = pv->getOriginalType ();
-
-  //       // Check for const qualifier
-  //       if( q.isConstQualified ()) {
-  //         //llvm::errs() << "  -Const \n";
-  //       } else {
-  //         handle_field_parity_expr(E, true, false);
-  //       }
-  //     }
-  //   }
-  //   i++;
-  // }
 }
 
 
