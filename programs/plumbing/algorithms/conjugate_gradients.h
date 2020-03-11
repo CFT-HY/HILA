@@ -61,8 +61,8 @@ class CG_engine<staggered_dirac>{
             rr=pDDp=0;
 
             onsites(ALL){
-                rr += norm_sq(r[X]);
-                pDDp += norm_sq(Dp[X]);
+                rr += norm_squared(r[X]);
+                pDDp += norm_squared(Dp[X]);
             }
 
             alpha = rr / pDDp;
@@ -71,7 +71,7 @@ class CG_engine<staggered_dirac>{
             onsites(ALL){
                 sol[X] = sol[X] + alpha*p[X]; //update solution vector
                 r[X] = r[X] - alpha*Dp[X]; //update residuals
-                rrnew += norm_sq(r[X]);
+                rrnew += norm_squared(r[X]);
             }
 
             if (rrnew < 10) return;
