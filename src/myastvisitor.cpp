@@ -649,6 +649,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // At this point this should be an allowed expression?
       handle_array_var_ref(a);
       
+      // We don't want to handle the array variable or the index separately
+      parsing_state.skip_children = 1;
       return true;
     }
 #endif          
