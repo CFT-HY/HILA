@@ -195,7 +195,7 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 
 
 
-std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
   std::stringstream code;
 
   // The base type of the loop is the base type of the first variable
@@ -315,7 +315,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semi_at_end, srcBuf & 
 
   // Dump the main loop code here
   code << loopBuf.dump();
-  if (semi_at_end) code << ";";
+  if (semicolon_at_end) code << ";";
   code << "\n";
 
 

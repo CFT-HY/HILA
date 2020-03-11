@@ -104,7 +104,7 @@ void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_n
   }
 }
 template<typename T>
-void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * lattice){}
+void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){}
 
 
 #endif

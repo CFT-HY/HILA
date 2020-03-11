@@ -21,12 +21,12 @@ int main()
   coordinate_vector v = XUP - 2*YUP;
   coordinate_vector y;
   y = v;
+
+  parity p = ODD;
   
-  onsites(ALL) {
-    ft d(2,2);
-    element<ft> t;
-    t = a[X+YUP+ZUP];
-    b[X] = t;
+  onsites(p) {
+ 
+    a[X] = a[X+v];
   }
   
   return 0;

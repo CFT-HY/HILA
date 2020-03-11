@@ -55,7 +55,7 @@ std::string MyASTVisitor::make_kernel_name() {
 
 
 
-std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
   
   // "Code" is inserted at the location of the loop statement
   // and the kernel is build in "kernel"
@@ -221,7 +221,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semi_at_end, srcBuf &
   
   // Dump the loop body 
   kernel << loopBuf.dump();
-  if (semi_at_end) kernel << ';';
+  if (semicolon_at_end) kernel << ';';
   kernel << '\n';
 
 

@@ -250,25 +250,31 @@ void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_n
 }
 
 template<typename T>
-void field_storage<T>::set_local_boundary_elements(parity par, lattice_struct * lattice){
+void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){
   constexpr int vector_size = vector_info<T>::vector_size;
   constexpr int elements = vector_info<T>::elements;
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
   vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_size>();
-  // Loop over the boundary sites
-  for( parity p : loop_parities(par)) 
-  for( int dir=0; dir<NDIRS; dir++){
-    int par_int = (int) p -1; 
-    int *perm = vlat->boundary_permutation[dir];
-    auto hs = vlat->halo_sites[par_int][dir];
-    
-    for( int idx = 0; idx < hs.nb_index.size(); idx++ ) {
-      basetype * s = (basetype *) (fieldbuf) + elements*vector_size*hs.nb_index[idx];
-      basetype * d = (basetype *) (fieldbuf) + elements*vector_size*(vlat->sites + hs.first_index+idx);
-      for( int e=0; e<elements; e++ ){
-        for( int i=0; i<vector_size; i++ )
-         d[e*vector_size+i] =  s[e*vector_size + perm[i]];
+
+  // The halo copy and permutation is only necessary if vectorization
+  // splits the lattice in this direction
+  if( vlat->split[dir] > 1 ) {
+
+    // Loop over the boundary sites
+    for( parity p : loop_parities(par)){
+      int par_int = (int) p -1; 
+      int *perm = vlat->boundary_permutation[dir];
+      auto hs = vlat->halo_sites[par_int][dir];
+
+      for( int idx = 0; idx < hs.nb_index.size(); idx++ ) {
+        basetype * fp = static_cast<basetype *>(fieldbuf);
+        basetype * s = fp + elements*vector_size*hs.nb_index[idx];
+        basetype * d = fp + elements*vector_size*(vlat->sites + hs.first_index+idx);
+        for( int e=0; e<elements; e++ ){
+          for( int i=0; i<vector_size; i++ )
+           d[e*vector_size+i] =  s[e*vector_size + perm[i]];
+        }
       }
     }
   }

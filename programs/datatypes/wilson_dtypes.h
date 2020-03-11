@@ -2,6 +2,9 @@
 #ifndef WVEC
 #define WVEC 
 
+#include "sun_vector.h"
+#include <cmath>
+
 ///////////////////////////////////////////////////////
 //                 Wilson vectors 
 // e.g.                                              */
@@ -26,6 +29,12 @@
 #ifndef COLORVEC_DIM
 #define COLORVEC_DIM 2
 #endif
+
+template<int Nc, typename T> 
+class wilson_vector {
+    SU_vector<floor(Nc/2), T> c[Nc]; 
+};
+
 
 template<typename vectortype> 
 class wvector {

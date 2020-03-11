@@ -257,13 +257,6 @@ class SU2 {
 
         SU2(radix * vals) : a(vals[0]), b(vals[1]), c(vals[2]), d(vals[3]) { normalize(); }
 
-        SU2(const SU2vector<radix> & rhs){
-            b = rhs.c[0].re;				
-            a = rhs.c[0].im;				
-            d = rhs.c[1].re;				
-            c =-rhs.c[1].im;           
-        };
-
         SU2(const SU2<radix> & rhs){
             b = rhs.b;				
             a = rhs.a;				
@@ -301,7 +294,6 @@ class SU2 {
 
         SU2<radix> & operator = (const SU2<radix> &);
         SU2<radix> & operator = (const SU2adjoint<radix> &);
-        SU2<radix> & operator = (const SU2vector<radix> &);
         SU2<radix> & normalize();
         SU2<radix> & reunitarize();  
         SU2<radix> & random(); 

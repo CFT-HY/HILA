@@ -174,16 +174,16 @@ void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
 }
 
 /// Call the backend function for generating loop code
-std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semi_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
   std::stringstream code;
   if( target.CUDA ){
-    code << generate_code_cuda(S,semi_at_end,loopBuf);
+    code << generate_code_cuda(S,semicolon_at_end,loopBuf);
   } else if( target.openacc ){
-    code << generate_code_openacc(S,semi_at_end,loopBuf);
+    code << generate_code_openacc(S,semicolon_at_end,loopBuf);
   } else if(target.VECTORIZE) {
-    code << generate_code_avx(S,semi_at_end,loopBuf);
+    code << generate_code_avx(S,semicolon_at_end,loopBuf);
   } else {
-    code << generate_code_cpu(S,semi_at_end,loopBuf);
+    code << generate_code_cpu(S,semicolon_at_end,loopBuf);
   }
   return code.str();
 }
