@@ -199,18 +199,21 @@ struct var_info {
   bool is_assigned;
 };
 
+// Stores onformation for a single reference to an array
+// These are similar to variable references, but often
+// need to be handled differently
+struct array_ref {
+  ArraySubscriptExpr *ref;
+  std::string new_name;
+  std::string type;
+};
+
 
 struct var_decl {
   VarDecl *decl;
   std::string name;
   std::string type;
   int scope;
-};
-
-struct array_ref {
-  ArraySubscriptExpr *ref;
-  std::string new_name;
-  std::string type;
 };
 
 

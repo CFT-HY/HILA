@@ -434,14 +434,13 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
 }
 
 
-// handle an array subscript expression
-void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E) {
-  PrintingPolicy pp(Context->getLangOpts());
 
-  // Check if it's local
-  bool is_loop_local = false;
-  Expr * RE = E->getBase()->IgnoreImplicit();
+/// Find the the base of a compound variable expression
+DeclRefExpr * find_base_variable(Expr * E){
+  Expr * RE = E;
+
   while(!dyn_cast<DeclRefExpr>(RE)){
+    // RE may be a compound expression. We want the base variable.
     if(dyn_cast<ArraySubscriptExpr>(RE)){
       ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(RE);
       RE = ASE->getBase()->IgnoreImplicit();
@@ -454,35 +453,80 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E) {
         RE = OCE->getArg(0)->IgnoreImplicit();
       } else {
         // It's not a variable
-        return;
+        return nullptr;
       }
     } else {
       // It's not a variable
-      return;
+      return nullptr;
     }
   }
-  DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(RE);
-  VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
+  return dyn_cast<DeclRefExpr>(RE);
+}
+
+
+bool is_variable_loop_local(VarDecl * decl){
   for (var_decl & d : var_decl_list) {
     if (d.scope >= 0 && decl == d.decl) {
       llvm::errs() << "loop local var ref! \n";
-      is_loop_local = true;
-      break;
+      return true;
     }
   }
+  return false;
+}
 
-  // If it's defined outside the loop, it may need to be handled
-  // (communicated to kernels, for example). So record it here.
-  if(!is_loop_local){
-    array_ref ar;
-    ar.ref = E;
+
+
+// handle an array subscript expression
+void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
+                                        bool is_assign,
+                                        std::string &assignop) {
+  PrintingPolicy pp(Context->getLangOpts());
+
+  // Check if it's local
+  DeclRefExpr * DRE = find_base_variable(E);
+  VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
+  bool array_local = is_variable_loop_local(decl);
+
+  // Also check the index
+  DRE = dyn_cast<DeclRefExpr>(E->getIdx()->IgnoreImplicit());
+  decl = dyn_cast<VarDecl>(DRE->getDecl());
+  bool index_local = is_variable_loop_local(decl);
+
+  if(!array_local){
+    llvm::errs() << "Non-local array\n";
+    if(!index_local){
+      llvm::errs() << "Non-local index\n";
+      // It's defined completely outside the loop. Can be replaced with a
+      // temporary variable
+      array_ref ar;
+      ar.ref = E;
+      
+      // Find the type of the full expression (that is an element of the array)
+      auto type = E->getType().getCanonicalType().getUnqualifiedType();
+      ar.type = type.getAsString(pp);
     
-    // Find the type of the full expression (that is an element of the array)
-    const Type *t = E->getType().getTypePtr();
-    llvm::errs() << E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp) << "\n";
-    ar.type = E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp);
-  
-    array_ref_list.push_back(ar);
+      array_ref_list.push_back(ar);
+    } else {
+      llvm::errs() << "Local index\n";
+      // The array is defined outside, but the index is local. This is 
+      // the most problematic case. For now, only allow this if it's a
+      // histogram reduction
+
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 E->getSourceRange().getBegin(),
+                 "Cannot mix loop local index and predefined array." );
+    }
+  } else {
+    llvm::errs() << "Local array\n";
+    if( !index_local ){
+      llvm::errs() << "Local index\n";
+      // The index needs to be communicated to the loop. It's a normal variable,
+      // so we can handle it as such
+      handle_var_ref(DRE, is_assign, assignop);
+    } else {
+      llvm::errs() << "Local index\n";
+      // Array and index are local. This does not require any action.
+    }
   }
 }
 
@@ -647,7 +691,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       auto a = dyn_cast<ArraySubscriptExpr>(E);
 
       // At this point this should be an allowed expression?
-      handle_array_var_ref(a);
+      handle_array_var_ref(a, is_assignment, assignop);
       
       // We don't want to handle the array variable or the index separately
       parsing_state.skip_children = 1;
