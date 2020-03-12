@@ -82,6 +82,17 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     }
   }
 
+  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
+    if (vrf.reduction_type != reduction::NONE) {
+      // Allocate memory for a reduction. This will be filled in the kernel
+      code << vrf.type << " * d_" << vrf.vector_name << ";\n";
+      code << "cudaMalloc( (void **)& d_" << vrf.vector_name << ","
+           << vrf.vector_name << ".size() * sizeof("
+           << vrf.type << ") * lattice->volume() );\n";
+      code << "check_cuda_error(\"allocate_reduction\");\n";
+    }
+  }
+
   
   kernel << "//----------\n";
 

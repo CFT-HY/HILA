@@ -514,7 +514,7 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
 
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
-                 "Cannot mix loop local index and predefined array." );
+                 "Cannot mix loop local index and predefined array. You must use std::vector in a vector reduction." );
     }
   } else {
     llvm::errs() << "Local array\n";
@@ -627,10 +627,12 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // return true;
   }
 
+
   if ( is_constructor_stmt(s) ){
     handle_constructor_in_loop(s);
     // return true;
   }
+  
    
   // catch then expressions
   if (Expr *E = dyn_cast<Expr>(s)) {
@@ -681,7 +683,6 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     }
 
 
-
 #if 1
 
     if (isa<ArraySubscriptExpr>(E)) {
@@ -697,8 +698,49 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       parsing_state.skip_children = 1;
       return true;
     }
-#endif          
+
+    // Check for a vector reduction
+    if( is_assignment && isa<CXXOperatorCallExpr>(s) ){
+      CXXOperatorCallExpr * OC = dyn_cast<CXXOperatorCallExpr>(s);
+      std::string type = OC->getArg(0)->getType().getAsString();
+      if( type.rfind("std::vector<",0) != std::string::npos ){
+        // It's an assignment to a vector element
+        // Still need to check if it's a reduction
+        DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(OC->getArg(0)->IgnoreImplicit());
+        VarDecl * vector_decl = dyn_cast<VarDecl>(DRE->getDecl());
+        bool array_local = is_variable_loop_local(vector_decl);
         
+        DRE = dyn_cast<DeclRefExpr>(OC->getArg(1)->IgnoreImplicit());
+        VarDecl * index_decl = dyn_cast<VarDecl>(DRE->getDecl());
+        bool index_local = is_variable_loop_local(index_decl);
+
+        if( !array_local && index_local ) {
+          llvm::errs() << "Found a vector reduction\n";
+          vector_reduction_ref vrf;
+          vrf.ref = OC;
+          vrf.vector_name = vector_decl->getName();
+          vrf.index_name = index_decl->getName();
+          if( type.rfind("float",0) != std::string::npos ){
+            vrf.type = "float";
+          } else {
+            vrf.type = "double";
+          }
+          if (assignop == "+=") {
+            vrf.reduction_type = reduction::SUM;
+          } else if (assignop == "*="){
+            vrf.reduction_type = reduction::PRODUCT;
+          } else {
+            vrf.reduction_type = reduction::NONE;
+          }
+          vector_reduction_ref_list.push_back(vrf);
+          parsing_state.skip_children = 1;
+        }
+
+      }
+    }
+
+#endif
+    
     if (0){
 
       // not field type non-const expr
@@ -706,7 +748,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // loop-local variable refs inside? If so, we cannot evaluate this as "whole"
 
       // check_local_loop_var_refs = 1;
-        
+      
       // TODO: find really uniq variable references
       //var_ref_list.push_back( handle_var_ref(E) );
 
