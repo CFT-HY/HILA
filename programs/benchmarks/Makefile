@@ -9,6 +9,9 @@ CC = mpic++ -DUSE_MPI -mavx2 -mfma
 CFLAGS = -Ofast $(OPTS)
 CXXFLAGS = -Ofast -x c++ --std=c++17 $(OPTS)
 
+# Don't remove cpt-files
+.PRECIOUS: %.cpt
+
 %.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
 	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
 

@@ -70,7 +70,8 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
     return is_parity_index_type(OC->getArg(1));
 
   } else {
-
+    // DON'T DO TEMPLATES NOW!  ONLY SPECIALIZATIONS
+    #if 0
     // This is for templated expressions
     // for some reason, expr a[X] "getBase() gives X, getIdx() a...
     if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
@@ -81,6 +82,7 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
         return is_parity_index_type(ASE->getRHS());
       }
     }
+    #endif
   }
   return false;   
 }
@@ -1335,48 +1337,47 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     }        
     return true;      
   }
-
                                    
   //  Starting point for fundamental operation
   //  field[par] = ....  version with field<class>
+  //  Arg(0)  is the LHS of assignment
   
-  // isStmtWithSemi(s);
-
   CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
-  
-  if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0))) {
-    // now we have a[par] += ...  -stmt.  Arg(0) is
-    // the lhs of the assignment
+  bool found = false;
+  if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0))) found = true;
+  else {
+    // check also field<double> or some other non-class var
+    BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
+    if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS())) found = true;
+  }
+
+  if (found) {
     
     if (parsing_state.check_loop) {
       state::loop_found = true;
       return true;
     }
 
-    SourceRange full_range = getRangeWithSemicolon(OP,false);
+    SourceRange full_range = getRangeWithSemicolon(s,false);
     global.full_loop_text = TheRewriter.getRewrittenText(full_range);
         
-    handle_full_loop_stmt(OP, true);
+    handle_full_loop_stmt(s, true);
     return true;
-  } 
-  // now the above when type is field<double> or some other non-class element
-  
-  BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
-  if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS())) {
-    if (parsing_state.check_loop) {
-      state::loop_found = true;
-      return true;
+  }
+
+  //  Finally, if we get to a field[parity] -expression without a loop or assignment flag error
+  if (!parsing_state.check_loop) {
+    Expr * E = dyn_cast<Expr>(s);
+    if (E && is_field_parity_expr(E)) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 E->getSourceRange().getBegin(),
+                 "field[parity] -expression is allowed only in assignment statements or inside onsites(parity) compound statements");
     }
-    
-    SourceRange full_range = getRangeWithSemicolon(BO,false);
-    global.full_loop_text = TheRewriter.getRewrittenText(full_range);        
-  
-    handle_full_loop_stmt(BO, true);
-    return true;    
   }
 
   return true;
 }
+
 
 //////// Functiondecl and templates below
 
@@ -1663,6 +1664,8 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
   
   return f->getSourceRange();
 }
+
+
 
 bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   
