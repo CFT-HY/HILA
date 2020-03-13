@@ -25,6 +25,12 @@ class field_storage {
     /// Place boundary elements from local lattice (used in vectorized version)
     void set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice);
 
+    // HACK:
+    #if defined(VANILLA)
+    T * get_buffer() {
+      return static_cast<T*>(fieldbuf);
+    }
+    #endif
 };
 
 

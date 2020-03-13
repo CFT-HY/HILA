@@ -370,6 +370,11 @@ class field {
   element<T>& operator[] (const parity_plus_direction p) const;
   element<T>& operator[] (const parity_plus_offset p) const;
 
+  #if defined(VANILLA)
+  // TEMPORARY HACK: return ptr to bare array
+  inline auto field_buffer() const { return this->fs->payload.get_buffer(); }
+  #endif
+
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
   inline auto get_value_at(int i) const { return this->fs->get(i); }
 
