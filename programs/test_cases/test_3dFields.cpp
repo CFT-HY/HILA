@@ -150,6 +150,7 @@ int main(int argc, char **argv){
     field<double> dfield;
     dfield[ALL] = 1;
 
+#if NDIM == 4
     std::vector<double> arraysum(nd[TUP]);
     std::fill(arraysum.begin(), arraysum.end(), 0);
 
@@ -163,7 +164,7 @@ int main(int argc, char **argv){
     for(int t=0; t<nd[TUP]; t++){
       assert(arraysum[t] == nd[XUP]*nd[YUP]*nd[ZUP]);
     }
-
+#endif
 
     finishrun();
 }
