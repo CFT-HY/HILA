@@ -488,9 +488,16 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
   bool array_local = is_variable_loop_local(decl);
 
   // Also check the index
+  bool index_local;
   DRE = dyn_cast<DeclRefExpr>(E->getIdx()->IgnoreImplicit());
-  decl = dyn_cast<VarDecl>(DRE->getDecl());
-  bool index_local = is_variable_loop_local(decl);
+  if(DRE){
+    decl = dyn_cast<VarDecl>(DRE->getDecl());
+    index_local = is_variable_loop_local(decl);
+  } else {
+    // This happens when the index is not a variable.
+    // It's probably a compile time constant
+    index_local = true;
+  }
 
   if(!array_local){
     llvm::errs() << "Non-local array\n";
