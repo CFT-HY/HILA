@@ -76,10 +76,10 @@ inline int dir_dot_product(direction d1, direction d2) {
 
 enum class parity : unsigned { none = 0, even, odd, all, x };
 // use here #define instead of const parity. Makes EVEN a protected symbol
-constexpr parity EVEN = parity::even;      // bit pattern:  100
+constexpr parity EVEN = parity::even;      // bit pattern:  001
 constexpr parity ODD  = parity::odd;       //               010
-constexpr parity ALL  = parity::all;       //               110
-constexpr parity X    = parity::x;         //               001
+constexpr parity ALL  = parity::all;       //               011
+constexpr parity X    = parity::x;         //               100
 
 // turns EVEN <-> ODD, ALL remains.  X->none, none->none
 static inline parity opp_parity(const parity p) {
