@@ -246,7 +246,7 @@ void initial_setup(int argc, char **argv);
 // Backend defs-headers
 
 #if defined(CUDA)
-#include "../plumbing/defs.h"
+#include "../plumbing/backend_cuda/defs.h"
 #elif defined(AVX)
 #include "../plumbing/backend_vector/defs.h"
 #else

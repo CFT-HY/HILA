@@ -15,8 +15,8 @@ class field_storage {
     void free_field();
     #pragma transformer loop_function
     auto get(const int i, const int field_alloc_size) const;
-    #pragma transformer loop_function
     template<typename A>
+    #pragma transformer loop_function
     inline void set(const A &value, const int i, const int field_alloc_size);
 
     void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const;

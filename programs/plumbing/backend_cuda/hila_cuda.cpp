@@ -1,6 +1,6 @@
 #include "../../plumbing/defs.h"
 #include "../../plumbing/lattice.h"
-#include "../../plumbing/backend_cuda/hila_cuda.h"
+#include "../../plumbing/backend_cuda/defs.h"
 
 /* Random number generator */
 curandState * curandstate;
@@ -13,17 +13,17 @@ __global__ void seed_random_kernel( curandState * state, unsigned long seed )
 {
   int x = threadIdx.x + blockIdx.x * blockDim.x;
   d_curandstate = state;
-  curand_init ( seed, x, 0, &d_curandstate[id] );
+  curand_init ( seed, x, 0, &d_curandstate[x] );
 }
 
 /* Set seed on device and host */
 void seed_random(unsigned long seed){
-  int n_blocks = lattice->local_size / N_threads;
+  int n_blocks = lattice->local_volume() / N_threads;
   int n_sites = N_threads*n_blocks;
   int myseed = seed + mynode()*n_sites;
   cudaMalloc( &curandstate, n_sites*sizeof( curandState ) );
   check_cuda_error("seed_random malloc");
-  seed_random_kernel<<< 1, n_sites >>>( curandstate, seed );
+  seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, seed );
   check_cuda_error("seed_random kernel");
   seed_mersenne(seed+n_sites);
 }
@@ -42,7 +42,7 @@ double hila_random(){
 
 void backend_lattice_struct::setup(lattice_struct lattice)
 {
-  location * tmp;
+  coordinate_vector * tmp;
 
   /* Setup neighbour fields in all directions */
   for (int d=0; d<NDIRS; d++) {
