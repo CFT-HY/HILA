@@ -455,8 +455,13 @@ class field {
 
   // Communication routines
   void start_move(direction d, parity p) const;
-  void start_move(direction d) const {start_move(d, ALL);}
+  void start_move(direction d) const { start_move(d, ALL);}
   void wait_move(direction d, parity p) const;
+
+  // and declaration of shift methods
+  field<T> shift(const coordinate_vector &v, parity par) const;
+  field<T> shift(const coordinate_vector &v) const { return shift(v,ALL); }
+
 };
 
 
@@ -562,6 +567,54 @@ auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
   return tmp;
 }
 
+
+#define NAIVE_SHIFT
+#if defined(NAIVE_SHIFT)
+
+// Define shift method here too - this is a placeholder, very inefficient
+// works by repeatedly nn-copying the field
+
+template<typename T>
+field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
+  field<T> r1, r2;
+  r2 = *this;
+  foralldir(d) {
+    if (abs(v[d]) > 0) {
+      direction dir;
+      if (v[d] > 0) dir = d; else dir = -d;
+    
+      for (int i=0; i<abs(v[d]); i++) {
+        r1[ALL] = r2[X+dir];
+        r2 = r1;
+      }
+    }
+  }
+  return r2;
+}
+
+#elif !defined(USE_MPI)
+
+template<typename T>
+field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
+  field<T> result;
+
+  onsites(par)
+  r2 = *this;
+  foralldir(d) {
+    if (abs(v[d]) > 0) {
+      direction dir;
+      if (v[d] > 0) dir = d; else dir = -d;
+    
+      for (int i=0; i<abs(v[d]); i++) {
+        r1[ALL] = r2[X+dir];
+        r2 = r1;
+      }
+    }
+  }
+  return r2;
+}
+
+#endif
 
 
 #if defined(USE_MPI) && !defined(TRANSFORMER) 
@@ -701,7 +754,14 @@ void field<T>::wait_move(direction d, parity p) const {
 }
 
 
+
+
+
+
+
 #endif
+
+
 
 
 #endif // FIELD_H
