@@ -194,31 +194,60 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
 
-    // First create temp variables fields fetched from a direction
-    for( field_ref *r : l.ref_list ) if( r->dirExpr ) {
-      std::string dirname = get_stmt_str(r->dirExpr);
+    if (l.is_read_nb) {
+      // this field is nn-read
+      for (dir_ptr & d : l.dir_list) {
+        std::string dirname = get_stmt_str(d.e);
 
-      // Check if the direction is a variable. These have been renamed.
-      for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
-        if( vr.ref == r->dirExpr ) {
-          dirname = vi.new_name;
-      }
-      // Create the temp variable and call the getter
-      kernel << type_name << " "  << l.loop_ref_name << "_" << r->dirname
-             << "=" << l.new_name << ".get(loop_lattice->d_neighb[" 
-             << dirname << "][" << looping_var 
-             << "], loop_lattice->field_alloc_size);\n";
+        // Check if the direction is a variable. These have been renamed.
+        for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
+          if( vr.ref == d.e ) 
+            dirname = vi.new_name;
+
+        // Create the temp variable and call the getter
+        kernel << type_name << " "  << l.loop_ref_name << "_" << dirname
+               << " = " << l.new_name << ".get(loop_lattice->d_neighb[" 
+               << dirname << "][" << looping_var 
+               << "], loop_lattice->field_alloc_size);\n";
+      }       
     }
-    // Check for references without a direction. If found, add temp variable
-    for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-      kernel << type_name << " "  << l.loop_ref_name << "=" 
+
+    if (l.is_read_atX) {
+      // local read
+      kernel << type_name << " "  << l.loop_ref_name << " = " 
              << l.new_name << ".get(" << looping_var 
-             << ", loop_lattice->field_alloc_size)" << ";\n";
-      break;  // Only one needed
-    }
-  }
+             << ", loop_lattice->field_alloc_size);\n";
 
-  
+    } else if (l.is_written) {
+      // and a var which is not read
+      kernel << type_name << " "  << l.loop_ref_name << ";\n";
+    }
+
+    // // First create temp variables fields fetched from a direction
+    // for( field_ref *r : l.ref_list ) if( r->dirExpr ) {
+    //   std::string dirname = get_stmt_str(r->dirExpr);
+
+    //   // Check if the direction is a variable. These have been renamed.
+    //   for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
+    //     if( vr.ref == r->dirExpr ) {
+    //       dirname = vi.new_name;
+    //   }
+    //   // Create the temp variable and call the getter
+    //   kernel << type_name << " "  << l.loop_ref_name << "_" << r->dirname
+    //          << "=" << l.new_name << ".get(loop_lattice->d_neighb[" 
+    //          << dirname << "][" << looping_var 
+    //          << "], loop_lattice->field_alloc_size);\n";
+    // }
+    // // Check for references without a direction. If found, add temp variable
+    // for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
+    //   kernel << type_name << " "  << l.loop_ref_name << "=" 
+    //          << l.new_name << ".get(" << looping_var 
+    //          << ", loop_lattice->field_alloc_size)" << ";\n";
+    //   break;  // Only one needed
+    // }
+
+  } 
+
   // Dump the loop body 
   kernel << loopBuf.dump();
   if (semicolon_at_end) kernel << ';';

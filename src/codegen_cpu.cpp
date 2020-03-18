@@ -68,29 +68,25 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
 
     // First check for direction references. If any found, create list of temp
     // variables
-    for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
-           << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
-           << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
-    }
-    // Check for references without a direction. If found, add temp variable
-    bool local_ref = false;
-    bool local_is_read = false;
-    for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-      local_ref = true;
-      if( r->is_read ){
-        local_is_read = true;
+    if (l.is_read_nb) {
+      for (dir_ptr & d : l.dir_list) if(d.count > 0){
+        code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
+             << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
+             << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
       }
     }
-    if(local_ref) {
-      if( local_is_read ){
-        code << type_name << " " << l.loop_ref_name << " = " 
+    
+    // and then get (possible) local refs
+    if (l.is_read_atX) {
+      // now reading var without nb. reference
+      code << type_name << " " << l.loop_ref_name << " = " 
            << l.new_name << ".get_value_at(" << looping_var << ");\n";
-      } else {
-        code << type_name << " " << l.loop_ref_name << ";\n";
-      }
+
+    } else if (l.is_written) {
+      code << type_name << " " << l.loop_ref_name << ";\n";
     }
   }
+
 
 
   // Replace field references in loop body
