@@ -145,15 +145,15 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   }
   
 
-  // change the references to field expressions in the body
-  for ( field_ref & le : field_ref_list ) {
-    //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
-    if (le.dirExpr != nullptr) {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
-    } else {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
-    }
-  }
+  // // change the references to field expressions in the body
+  // for ( field_ref & le : field_ref_list ) {
+  //   //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
+  //   if (le.dirExpr != nullptr) {
+  //     loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
+  //   } else {
+  //     loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
+  //   }
+  // }
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
@@ -187,7 +187,6 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
       i++;
     }
   }
-
   
   // Create temporary field element variables
   for (field_info & l : field_info_list) {
@@ -205,10 +204,15 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
             dirname = vi.new_name;
 
         // Create the temp variable and call the getter
-        kernel << type_name << " "  << l.loop_ref_name << "_" << dirname
+        kernel << type_name << " "  << d.name 
                << " = " << l.new_name << ".get(loop_lattice->d_neighb[" 
                << dirname << "][" << looping_var 
                << "], loop_lattice->field_alloc_size);\n";
+
+        // and replace references in loop body
+        for (field_ref * ref : d.ref_list) {
+          loopBuf.replace(ref->fullExpr, d.name); 
+        }     
       }       
     }
 
@@ -221,6 +225,11 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     } else if (l.is_written) {
       // and a var which is not read
       kernel << type_name << " "  << l.loop_ref_name << ";\n";
+    }
+
+    // and finally replace references in body 
+    for (field_ref * ref : l.ref_list) if (ref->dirExpr == nullptr) {
+      loopBuf.replace(ref->fullExpr, l.loop_ref_name);
     }
 
     // // First create temp variables fields fetched from a direction

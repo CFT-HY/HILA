@@ -101,6 +101,12 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     // Perhaps simpler FA, FB, FC. ?  The following helps avoid collisions
     while (t.find(l.new_name,0) != std::string::npos) l.new_name += "_";
     l.loop_ref_name = l.new_name + "_index";
+
+    // Create neighbour ref names 
+    int i=0;
+    for (dir_ptr & d : l.dir_list) {
+      d.name = l.new_name + "_dir" + std::to_string(++i);
+    }
     
     // variable links if needed
     // if (l.dir_list.size() > 0) {

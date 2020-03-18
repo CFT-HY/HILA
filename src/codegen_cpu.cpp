@@ -70,9 +70,15 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
     // variables
     if (l.is_read_nb) {
       for (dir_ptr & d : l.dir_list) if(d.count > 0){
-        code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
+        // generate access stmt
+        code << type_name << " " << d.name
              << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
              << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
+
+        // and replace references in loop body
+        for (field_ref * ref : d.ref_list) {
+          loopBuf.replace(ref->fullExpr, d.name);
+        }
       }
     }
     
@@ -85,19 +91,24 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
     } else if (l.is_written) {
       code << type_name << " " << l.loop_ref_name << ";\n";
     }
-  }
 
-
-
-  // Replace field references in loop body
-  for ( field_ref & le : field_ref_list ) {
-    //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
-    if (le.dirExpr != nullptr) {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
-    } else {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
+    // and finally replace references in body 
+    for (field_ref * ref : l.ref_list) if (ref->dirExpr == nullptr) {
+      loopBuf.replace(ref->fullExpr, l.loop_ref_name);
     }
   }
+
+
+
+  // // Replace field references in loop body
+  // for ( field_ref & le : field_ref_list ) {
+  //   //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
+  //   if (le.dirExpr != nullptr) {
+  //     loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
+  //   } else {
+  //     loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
+  //   }
+  // }
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){

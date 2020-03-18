@@ -137,16 +137,19 @@ struct dir_ptr {
   std::vector<field_ref *> ref_list;  // pointers references equivalent to this field[dir]
   unsigned count;           // how many genuine direction refs?  if count==0 this is offset
   bool is_offset;           // is this dir offset?
+  std::string name;         // new name for this field[X+dir] -variable
 
   dir_ptr() {
     ref_list = {};
     e = nullptr;
     count = 0;
     is_offset = false;
+    name.clear();
   }
 
   ~dir_ptr() {
     ref_list.clear();
+    name.clear();
   }
 };
 
