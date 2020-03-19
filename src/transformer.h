@@ -110,6 +110,7 @@ struct field_ref {
   std::string dirname;          // dir as a string "d"
   struct field_info * info;     // ptr to field info struct
   // unsigned nameInd, parityInd;
+  int  sequence;                // sequence of the full stmt where ref appears
   bool is_written, is_read;
   bool is_offset;               // true if dirExpr is for offset instead of direction
 
@@ -118,6 +119,7 @@ struct field_ref {
     dirname = "";
     info = nullptr;
     is_written = is_read = is_offset = false;
+    sequence = 0;
   }
 
   ~field_ref() {
@@ -135,16 +137,19 @@ struct dir_ptr {
   std::vector<field_ref *> ref_list;  // pointers references equivalent to this field[dir]
   unsigned count;           // how many genuine direction refs?  if count==0 this is offset
   bool is_offset;           // is this dir offset?
+  std::string name;         // new name for this field[X+dir] -variable
 
   dir_ptr() {
     ref_list = {};
     e = nullptr;
     count = 0;
     is_offset = false;
+    name.clear();
   }
 
   ~dir_ptr() {
     ref_list.clear();
+    name.clear();
   }
 };
 
@@ -159,12 +164,16 @@ struct field_info {
   std::string loop_ref_name;             // var which refers to payload, loop_ref_name v = new_name->fs.payload
   std::vector<dir_ptr> dir_list;         // nb directions TODO: more general gather ptr
   std::vector<field_ref *> ref_list;     // where the var is referred at
-  bool is_written, is_read;              // is the field read from or written to in this loop
+  bool is_written;                       // is the field written to in this loop
+  bool is_read_atX;                      // local read, i.e. field[X]
+  bool is_read_nb;                       // is_read_nb: read using neighbours or offsets
   bool contains_offset;                  // if the field is referred with an offset (non-nn) index
+  int  first_assign_seq;                 // the sequence of the first assignment
 
   field_info() {
     type_template = old_name = new_name = loop_ref_name = "";
-    is_written = is_read = contains_offset = false;
+    is_written = is_read_nb = is_read_atX = contains_offset = false;
+    first_assign_seq = 0;
     dir_list = {};
     ref_list = {};
   }

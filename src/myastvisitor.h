@@ -31,12 +31,14 @@ protected:
 
   //flags used during AST parsing 
   struct {
-    unsigned skip_children;
-    unsigned scope_level; 
-    bool in_loop_body;
-    bool accept_field_parity;
-    bool dump_ast_next;
-    bool check_loop;
+    unsigned skip_children;     // if > 0 skip children of this ast node
+    unsigned scope_level;       // level of variable scoping: {}
+    int  ast_depth;             // depth of ast nodes within loop body.  ast_depth = 0 at top level
+    int  stmt_sequence;         // sequence number of full statements in loops.  Full stmts separated by ;
+    bool in_loop_body;          // true if in field loop
+    bool accept_field_parity;   // if parity of loop not resolved yet
+    bool dump_ast_next;         
+    bool check_loop;            // true if just checking existence of a field loop
     bool loop_function_next;
   } parsing_state;
   
@@ -45,6 +47,8 @@ public:
   GeneralVisitor(Rewriter &R) : TheRewriter(R) {
     parsing_state.skip_children = 0;
     parsing_state.scope_level = 0;
+    parsing_state.ast_depth = 0;
+    parsing_state.stmt_sequence = 0;
     parsing_state.in_loop_body = false;
     parsing_state.accept_field_parity = false;
     parsing_state.dump_ast_next = false;

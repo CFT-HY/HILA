@@ -241,42 +241,45 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
 
     // First check for direction references. If any found, create list of temp
     // variables
-    for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << "vector_type" << type_name << " " 
-           << l.loop_ref_name << "_" << get_stmt_str(d.e)
-           << " = " << l.new_name << ".get_value_at(neighbour_list[" 
-           << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
+    if (l.is_read_nb) {
+      for (dir_ptr & d : l.dir_list) if(d.count > 0){
+        code << "vector_type" << type_name << " " 
+             << d.name
+             << " = " << l.new_name << ".get_value_at(neighbour_list[" 
+             << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
+
+        // and replace references in loop body
+        for (field_ref * ref : d.ref_list) {
+          loopBuf.replace(ref->fullExpr, d.name);
+        }
+      } 
     }
-    // Check for references without a direction. If found, add temp variable
-    bool local_ref = false;
-    bool local_is_read = false;
-    for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-      local_ref = true;
-      if( r->is_read ){
-        local_is_read = true;
-      }
+
+    // // Check for references without a direction. If found, add temp variable
+    // bool local_ref = false;
+    // bool local_is_read = false;
+    // for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
+    //   local_ref = true;
+    //   if( r->is_read ){
+    //     local_is_read = true;
+    //   }
+    // }
+
+    if (l.is_read_atX) {
+      code << "vector_type" << type_name << " "
+           << l.loop_ref_name << " = " 
+           << l.new_name << ".get_value_at(" << looping_var << ");\n";
+    } else if (l.is_written) {
+      code << "vector_type" << type_name << " "
+           << l.loop_ref_name << ";\n";
     }
-    if(local_ref) {
-      if( local_is_read ){
-        code << "vector_type" << type_name << " "
-             << l.loop_ref_name << " = " 
-             << l.new_name << ".get_value_at(" << looping_var << ");\n";
-      } else {
-        code << "vector_type" << type_name << " "
-             << l.loop_ref_name << ";\n";
-      }
+
+    // and finally replace these references in body 
+    for (field_ref * ref : l.ref_list) if (ref->dirExpr == nullptr) {
+      loopBuf.replace(ref->fullExpr, l.loop_ref_name);
     }
   }
 
-  // Replace field references in loop body
-  for ( field_ref & le : field_ref_list ) {
-    //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
-    if (le.dirExpr != nullptr) {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
-    } else {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
-    }
-  }
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
