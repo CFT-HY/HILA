@@ -4,29 +4,8 @@
 #include "../defs.h"
 #include "../field_storage.h"
 
+
 /* CUDA implementations */
-
-template<typename T> 
-inline T field_storage<T>::get(const int i, const int field_alloc_size) const {
-  assert( i < field_alloc_size);
-  T value;
-  real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
-  for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
-     value_f[e] = fieldbuf[e*field_alloc_size + i];
-   }
-  return value;
-}
-
-template<typename T>
-inline void field_storage<T>::set(const T &value, const int i, const int field_alloc_size){
-  assert( i < field_alloc_size);
-  real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
-  for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
-    fieldbuf[e*field_alloc_size + i] = value_f[e];
-  }
-}
-
-
 template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
   constexpr static int t_elements = sizeof(T) / sizeof(real_t);
@@ -48,6 +27,33 @@ void field_storage<T>::free_field() {
 }
 
 
+
+
+#ifdef __CUDACC__
+
+template<typename T> 
+__device__ __host__ auto field_storage<T>::get(const int i, const int field_alloc_size) const {
+  assert( i < field_alloc_size);
+  T value;
+  real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
+  real_t *fp = static_cast<real_t *>(fieldbuf);
+  for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
+     value_f[e] = fp[e*field_alloc_size + i];
+   }
+  return value;
+}
+
+
+template<typename T>
+template<typename A>
+__device__ __host__ inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size){
+  assert( i < field_alloc_size);
+  real_t *value_f = (real_t *)(&value);
+  real_t *fp = static_cast<real_t *>(fieldbuf);
+  for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
+    fp[e*field_alloc_size + i] = value_f[e];
+  }
+}
 
 /// A kernel that gathers neighbour elements for communication (using the getter)
 template <typename T>
@@ -103,7 +109,7 @@ __global__ void scatter_comm_elements_kernel( field_storage<T> field, char *buff
 /// CUDA implementation of gather_comm_elements without CUDA aware MPI
 /// Sets the values the neighbour elements from the communication buffer 
 template<typename T>
-void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par){
+void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice){
   char * d_buffer;
   int sites = from_node.n_sites(par);
 
@@ -119,6 +125,8 @@ void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_n
 }
 
 template<typename T>
-void field_storage<T>::set_local_boundary_elements(direction dir, parity par){}
+void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){}
+
+#endif //__CUDACC__
 
 #endif

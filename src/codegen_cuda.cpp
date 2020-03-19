@@ -83,14 +83,20 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   }
 
   for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
-    if (vrf.reduction_type != reduction::NONE) {
-      // Allocate memory for a reduction. This will be filled in the kernel
-      code << vrf.type << " * d_" << vrf.vector_name << ";\n";
-      code << "cudaMalloc( (void **)& d_" << vrf.vector_name << ", "
-           << vrf.vector_name << ".size() * sizeof("
-           << vrf.type << ") * lattice->volume() );\n";
-      code << "check_cuda_error(\"allocate_reduction\");\n";
+    // Allocate memory for a reduction and initialize
+    code << vrf.type << " * d_" << vrf.vector_name << ";\n";
+    code << "cudaMalloc( (void **)& d_" << vrf.vector_name << ", "
+         << vrf.vector_name << ".size() * sizeof("
+         << vrf.type << ") * lattice->volume() );\n";
+    if (vrf.reduction_type == reduction::SUM) {
+      code << "cuda_set_zero(d_" << vrf.vector_name
+           << ", " << vrf.vector_name << ".size()* lattice->volume());\n";
     }
+    if (vrf.reduction_type == reduction::PRODUCT) {
+      code << "cuda_set_one(d_" << vrf.vector_name
+           << ", " << vrf.vector_name << ".size()* lattice->volume());\n";
+    }
+    code << "check_cuda_error(\"allocate_reduction\");\n";
   }
 
   
@@ -149,7 +155,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
     if (vrf.reduction_type != reduction::NONE) {
       kernel << ", " << vrf.type << " * " << vrf.vector_name;
-      code << ", d_r_" << vrf.vector_name;
+      code << ", d_" << vrf.vector_name;
       vrf.new_vector_name = vrf.vector_name
               + "[ (loop_lattice->loop_end - loop_lattice->loop_begin)*"
               + vrf.index_name + " + Index]";
@@ -210,13 +216,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
       i++;
     }
   }
-  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
-    if (vrf.reduction_type == reduction::SUM) {
-      kernel << vrf.new_vector_name << " = 0;\n";
-    } if (vrf.reduction_type == reduction::PRODUCT) {
-      kernel << vrf.new_vector_name << " = 1;\n";
-    }
-  }
+
 
   
   // Create temporary field element variables
@@ -291,10 +291,13 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
     if (vrf.reduction_type == reduction::SUM) {
       code << "cuda_multireduce_sum( " << vrf.vector_name 
-           << ", d_" << vrf.vector_name <<  " );\n";
+           << ", d_" << vrf.vector_name 
+           << ", loop_lattice->volume() );\n";
+
     } if (vrf.reduction_type == reduction::PRODUCT) {
       code << "cuda_multireduce_mul( " << vrf.vector_name 
-           << ", d_" << vrf.vector_name <<  " );\n";
+           << ", d_" << vrf.vector_name 
+           << ", loop_lattice->volume() );\n";
     }
     if (vrf.reduction_type != reduction::NONE) {
       code << "cudaFree(d_" << vrf.vector_name << ");\n";
