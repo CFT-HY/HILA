@@ -1,6 +1,7 @@
 #include <string>
 #include <cstring>
 #include <vector>
+#include <iostream>
 #include "stringops.h"
 
 /// this routine changes the input to alphanumeric + _, for naming purposes
@@ -52,8 +53,12 @@ bool contains_word_list(const std::string & line, const std::vector<std::string>
   const char *p = line.c_str();
   for (const std::string & r : list) {
     while (isspace(*p)) p++;
-    if (r.compare(0,r.length(), p) != 0) return false;
-    p += r.length();
+    const char *rp = r.c_str();
+    for (int i=0; i<r.length(); i++) {
+      if (*rp != *p) return false;
+      ++rp;
+      ++p;
+    }
   }
   return true;
 }
