@@ -34,7 +34,7 @@ using real_t = float;
 #define TOKENCONCATENATE2(x, y) TOKENCONCATENATE(x, y)
 #define transformer_ctl_dump_ast() int TOKENCONCATENATE2( _transformer_ctl_dump_ast_ , __LINE__)
 #else
-#define transformer_ctl(a)
+#define transformer_ctl_dump_ast()
 #endif
 //void transformer_control(const char *);
 
