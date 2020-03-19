@@ -126,13 +126,9 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
 
 
   // Add cals to setters 
-  for (field_info & l : field_info_list){
-    std::string type_name = l.type_template;
-    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-    if(l.is_written) {
-      code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " 
-           << looping_var << ");\n";
-    }
+  for (field_info & l : field_info_list) if(l.is_written) {
+    code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " 
+         << looping_var << ");\n";
   }
 
   code << "}\n";

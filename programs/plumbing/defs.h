@@ -29,7 +29,10 @@ using real_t = float;
 
 // HACK
 #ifdef TRANSFORMER
-#define transformer_ctl(a) extern int _transformer_ctl_##a
+// a bit of preprocessor hackery... apparently 2 levels of indirection needed
+#define TOKENCONCATENATE(x, y) x ## y
+#define TOKENCONCATENATE2(x, y) TOKENCONCATENATE(x, y)
+#define transformer_ctl_dump_ast() int TOKENCONCATENATE2( _transformer_ctl_dump_ast_ , __LINE__)
 #else
 #define transformer_ctl(a)
 #endif

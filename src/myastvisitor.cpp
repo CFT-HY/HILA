@@ -1114,11 +1114,10 @@ bool MyASTVisitor::control_command(VarDecl *var) {
   std::string n = var->getNameAsString();
   if (n.find("_transformer_ctl_",0) == std::string::npos) return false;
   
-  if (n == "_transformer_ctl_dump_ast") {
+  if (n.find("_transformer_ctl_dump_ast",0) != std::string::npos) {
     parsing_state.dump_ast_next = true;
-  } else if(n == "_transformer_ctl_loop_function") {
-    parsing_state.loop_function_next = true;
   } else {
+    llvm::errs() << "CTL string: " << n << '\n';
     reportDiag(DiagnosticsEngine::Level::Warning,
                var->getSourceRange().getBegin(),
                "Unknown command for transformer_ctl(), ignoring");
@@ -1142,8 +1141,8 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   if (parsing_state.check_loop && state::loop_found) return true;
 
   if (parsing_state.dump_ast_next) {
-    // llvm::errs() << "**** Dumping declaration:\n" + get_stmt_str(s)+'\n';
-    var->dump();
+    llvm::errs() << "**** AST dump of declaration: \'" << TheRewriter.getRewrittenText(var->getSourceRange()) << "\'\n";
+    var->dumpColor();
     parsing_state.dump_ast_next = false;
   }
 
@@ -1210,9 +1209,10 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 
   if (parsing_state.check_loop && state::loop_found) return true;
   
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** Dumping statement:\n" + get_stmt_str(s)+'\n';
-    s->dump();
+  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
+    llvm::errs() << "**** AST dump of statement \'" << get_stmt_str(s) << "\'\n";
+    s->dumpColor();
+    llvm::errs() << "*****************************\n";
     parsing_state.dump_ast_next = false;
   }
 
@@ -1382,9 +1382,10 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // also only non-templated functions
   // this does not really do anything
 
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** Dumping funcdecl:\n";
-    f->dump();
+  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
+    llvm::errs() << "**** AST dump of function: " << f->getNameInfo().getName() << '\n';
+    f->dumpColor();
+    llvm::errs() << "*******************************\n";
     parsing_state.dump_ast_next = false;
   }
   if(!parsing_state.check_loop && (parsing_state.loop_function_next || has_pragma(f,"loop_function"))) {
@@ -1610,9 +1611,10 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
 
 bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** Dumping class template declaration: \'" << D->getNameAsString() << "\'\n";
-    D->dump();
+  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
+    llvm::errs() << "**** AST dump of class template declaration: \'" << D->getNameAsString() << "\'\n";
+    D->dumpColor();
+    llvm::errs() << "*******************************\n";
     parsing_state.dump_ast_next = false;
   }
 
@@ -1670,9 +1672,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 bool MyASTVisitor::VisitDecl( Decl * D) {
   if (parsing_state.check_loop && state::loop_found) return true;
 
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** Dumping declaration:\n";
-    D->dump();
+  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
+    llvm::errs() << "**** AST dump of declaration: \'" << TheRewriter.getRewrittenText(D->getSourceRange()) << "\'\n";
+    D->dumpColor();
+    llvm::errs() << "**********************************\n";
     parsing_state.dump_ast_next = false;
   }
 
