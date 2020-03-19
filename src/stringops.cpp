@@ -49,11 +49,14 @@ std::string remove_all_whitespace(const std::string & line) {
 
 // returns true if line contains the word list at the beginning
 bool contains_word_list(const std::string & line, const std::vector<std::string> & list) {
-  const char *p = line.c_str();
+  int i=0;
   for (const std::string & r : list) {
-    while (isspace(*p)) p++;
-    if (r.compare(0,r.length(), p) != 0) return false;
-    p += r.length();
+    while (isspace(line[i])) i++;
+    std::string word = line.substr(i,r.length());
+    if (r.compare(word) != 0){
+      return false;
+    }
+    i += r.length();
   }
   return true;
 }
