@@ -13,17 +13,17 @@ __global__ void seed_random_kernel( curandState * state, unsigned long seed )
 {
   int x = threadIdx.x + blockIdx.x * blockDim.x;
   d_curandstate = state;
-  curand_init ( seed, x, 0, &d_curandstate[x] );
+  curand_init( seed, x, 0, &d_curandstate[x] );
 }
 
 /* Set seed on device and host */
 void seed_random(unsigned long seed){
-  int n_blocks = lattice->local_volume() / N_threads;
-  int n_sites = N_threads*n_blocks;
-  int myseed = seed + mynode()*n_sites;
+  unsigned long n_blocks = lattice->local_volume() / N_threads + 1;
+  unsigned long n_sites = N_threads*n_blocks;
+  unsigned long myseed = seed + mynode()*lattice->local_volume();
   cudaMalloc( &curandstate, n_sites*sizeof( curandState ) );
   check_cuda_error("seed_random malloc");
-  seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, seed );
+  seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, myseed );
   check_cuda_error("seed_random kernel");
   seed_mersenne(seed+n_sites);
 }
