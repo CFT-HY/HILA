@@ -92,8 +92,8 @@ int main(int argc, char **argv){
         element<double> diff = s1[X].re - (NDIM+1);
 	    sum += diff*diff;
     }
-	  assert(sum==0 && "test neighbour fetch");
-    
+	assert(sum==0 && "test neighbour fetch");
+
 
     // Test starting communication manually
 
