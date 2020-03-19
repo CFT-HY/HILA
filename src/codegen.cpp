@@ -155,11 +155,20 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   // Check reduction variables
   for (var_info & v : var_info_list) {
     if (v.reduction_type == reduction::SUM) {
-      code << "lattice->reduce_node_sum(" << v.reduction_name << ", true);\n";
+      code << "lattice->reduce_node_sum( &" << v.reduction_name << ", 1, true);\n";
       code << v.name << " += " << v.reduction_name << ";\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code << "lattice->reduce_node_product(" << v.reduction_name << ", true);\n";
+      code << "lattice->reduce_node_product( &" << v.reduction_name << ", 1, true);\n";
       code << v.name << " *= " << v.reduction_name << ";\n";
+    }
+  }
+  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
+    if (vrf.reduction_type == reduction::SUM) {
+      code << "lattice->reduce_node_sum(" << vrf.vector_name << ".data(), " 
+           << vrf.vector_name << ".size(), true);\n";
+    } if (vrf.reduction_type == reduction::PRODUCT) {
+      code << "lattice->reduce_node_product(" << vrf.vector_name << ".data(), " 
+           << vrf.vector_name << ".size(), true);\n";
     }
   }
           

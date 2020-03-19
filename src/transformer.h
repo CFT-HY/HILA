@@ -208,18 +208,34 @@ struct var_info {
   bool is_assigned;
 };
 
+// Stores onformation for a single reference to an array
+// These are similar to variable references, but often
+// need to be handled differently
+struct array_ref {
+  ArraySubscriptExpr *ref;
+  std::string new_name;
+  std::string type;
+};
+
+
+// store necessary information for vector reductions
+struct vector_reduction_ref {
+  CXXOperatorCallExpr *ref;
+  std::string type;
+  std::string index_name;
+  std::string vector_name;
+  std::string new_vector_name;
+  reduction reduction_type;
+  std::string reduction_name;
+};
+
+
 
 struct var_decl {
   VarDecl *decl;
   std::string name;
   std::string type;
   int scope;
-};
-
-struct array_ref {
-  ArraySubscriptExpr *ref;
-  std::string new_name;
-  std::string type;
 };
 
 
@@ -258,6 +274,7 @@ extern std::list<field_info> field_info_list;
 extern std::list<var_info> var_info_list;
 extern std::list<var_decl> var_decl_list;
 extern std::list<array_ref> array_ref_list;
+extern std::list<vector_reduction_ref> vector_reduction_ref_list;
 extern std::list<special_function_call> special_function_call_list;
 extern std::vector<Expr *> remove_expr_list;
 
