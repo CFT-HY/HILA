@@ -63,10 +63,19 @@ T cuda_reduce_sum(  T * vector, int N ){
 
 
 template<typename T>
-void cuda_multireduce_sum( std::vector<T> vector, T * d_array ){
+void cuda_multireduce_sum( std::vector<T> &vector, T * d_array, int N ){
+  for( int v=0; v<vector.size(); v++ ){
+    vector[v] += cuda_reduce_sum( d_array + v*N, N );
+  }
 }
 
 
+template<typename T>
+void cuda_multireduce_product( std::vector<T> vector, T * d_array, int N ){
+  for( int v=0; v<vector.size(); v++ ){
+    vector[v] += cuda_reduce_product( d_array + v*N, N );
+  }
+}
 
 
 template<typename T>

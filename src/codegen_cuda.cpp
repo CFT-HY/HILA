@@ -291,10 +291,13 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
     if (vrf.reduction_type == reduction::SUM) {
       code << "cuda_multireduce_sum( " << vrf.vector_name 
-           << ", d_" << vrf.vector_name <<  " );\n";
+           << ", d_" << vrf.vector_name 
+           << ", loop_lattice->volume() );\n";
+
     } if (vrf.reduction_type == reduction::PRODUCT) {
       code << "cuda_multireduce_mul( " << vrf.vector_name 
-           << ", d_" << vrf.vector_name <<  " );\n";
+           << ", d_" << vrf.vector_name 
+           << ", loop_lattice->volume() );\n";
     }
     if (vrf.reduction_type != reduction::NONE) {
       code << "cudaFree(d_" << vrf.vector_name << ");\n";
