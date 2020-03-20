@@ -797,6 +797,10 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
 
     // got it, comment out -- check that it has not been commented out before
     int loc = writeBuf->find_original(pragmaloc,'#');
+    if (loc < 0) {
+      llvm::errs() << "internal error in pragma handling\n";
+      exit(1);
+    }
     std::string s = writeBuf->get(loc,loc+1);
     if (s.at(0) == '#') writeBuf->insert(loc ,"//-- ",true,false);
 
