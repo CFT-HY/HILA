@@ -202,7 +202,7 @@ public:
   bool handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
-  void handle_array_var_ref(ArraySubscriptExpr *E);
+  void handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
 
   void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);

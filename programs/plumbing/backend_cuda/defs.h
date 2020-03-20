@@ -62,6 +62,53 @@ T cuda_reduce_sum(  T * vector, int N ){
 }
 
 
+template<typename T>
+void cuda_multireduce_sum( std::vector<T> &vector, T * d_array, int N ){
+  for( int v=0; v<vector.size(); v++ ){
+    vector[v] += cuda_reduce_sum( d_array + v*N, N );
+  }
+}
+
+
+template<typename T>
+void cuda_multireduce_product( std::vector<T> vector, T * d_array, int N ){
+  for( int v=0; v<vector.size(); v++ ){
+    vector[v] += cuda_reduce_product( d_array + v*N, N );
+  }
+}
+
+
+template<typename T>
+__global__ void cuda_set_zero_kernel( T * vector, int elems)
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < elems ){
+    vector[Index] = 0;
+  }
+}
+
+template<typename T>
+__global__ void cuda_set_one_kernel( T * vector, int elems)
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < elems ){
+    vector[Index] = 0;
+  }
+}
+
+template<typename T>
+void cuda_set_one_kernel( T * vec, size_t N ){
+  int blocks = N/N_threads + 1;
+  cuda_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
+}
+
+template<typename T>
+void cuda_set_zero( T * vec, size_t N ){
+  int blocks = N/N_threads + 1;
+  cuda_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
+}
+
+
 // A simple hand-written reduction that does not require a library
 //
 //template<typename T>
@@ -117,6 +164,8 @@ inline void synchronize_threads(){
 void initialize_cuda(int rank);
 
 #else
+// This is not the CUDA compiler
+// Maybe transformer?
 
 // define cuda functions in order to avoid compilation errors
 // in transformer
@@ -127,12 +176,15 @@ void initialize_cuda(int rank);
 #define cudaFree(a) while(0)
 #define check_cuda_error(a) while(0)
 
-inline void synchronize_threads(){}
+inline void synchronize_threads(){};
 void initialize_cuda(int rank){};
 
-//definition of field_storage routines 
+
+
 
 #endif
+
+
 
 
 
