@@ -37,7 +37,6 @@ protected:
     int  stmt_sequence;         // sequence number of full statements in loops.  Full stmts separated by ;
     bool in_loop_body;          // true if in field loop
     bool accept_field_parity;   // if parity of loop not resolved yet
-    bool dump_ast_next;         
     bool check_loop;            // true if just checking existence of a field loop
     bool loop_function_next;
   } parsing_state;
@@ -47,11 +46,10 @@ public:
   GeneralVisitor(Rewriter &R) : TheRewriter(R) {
     parsing_state.skip_children = 0;
     parsing_state.scope_level = 0;
-    parsing_state.ast_depth = 0;
+    parsing_state.ast_depth = 1;
     parsing_state.stmt_sequence = 0;
     parsing_state.in_loop_body = false;
     parsing_state.accept_field_parity = false;
-    parsing_state.dump_ast_next = false;
     parsing_state.check_loop = false;
     parsing_state.loop_function_next = false;
   }
@@ -61,7 +59,6 @@ public:
     parsing_state.scope_level = 0;
     parsing_state.in_loop_body = false;
     parsing_state.accept_field_parity = false;
-    parsing_state.dump_ast_next = false;
     parsing_state.check_loop = false;
     parsing_state.loop_function_next = false;
     Context=C; 
@@ -120,7 +117,9 @@ public:
   bool VisitFunctionDecl(FunctionDecl *f);
 
   /// True if the decl is preceded by "#pragma transformer <string>" where s is the string
-  bool has_pragma(Decl *d,const char *s);
+  bool has_pragma(Decl *d, const char *s);
+  bool has_pragma(Stmt *S, const char *s);
+  bool has_pragma(const SourceLocation sl, const char *s);
 
   /// true if function contains parity loop
   bool does_function_contain_loop( FunctionDecl *f );
@@ -265,11 +264,6 @@ public:
 
   /// Change field references within loops
   void replace_field_refs_and_funcs(srcBuf &sb);
-
-  /// shortcut for "pragma"-like transformer_control("cmd")-functin
-  // bool handle_control_stmt(Stmt *s);
-  bool control_command(VarDecl *var);
-
   
   /// utility used in inserting stuff after new line in buffer
   SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
@@ -277,12 +271,16 @@ public:
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
 
   /// utility used in finding pragmas on the previous line
-  SourceRange getSourceRangeAtPreviousLine( SourceLocation l );
+  bool is_preceded_by_pragma( SourceLocation l, std::string & args, SourceLocation & ploc );
 
   void set_writeBuf(const FileID fid);
 
   SourceRange get_templatefunc_decl_range(FunctionTemplateDecl *tf, FunctionDecl *f); 
   SourceRange get_func_decl_range(FunctionDecl *f);
+
+  void ast_dump(const Stmt *s);
+  void ast_dump(const Decl *d);
+  void ast_dump_header(const char *s, const SourceRange sr);
 
 };
 

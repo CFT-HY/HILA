@@ -24,21 +24,6 @@ using real_t = float;
 #endif
 
 
-// HACK  -- this is needed for pragma handlin, do not change!
-// #pragma transformer _transformer_cmd_dump_ast_
-
-// HACK
-#ifdef TRANSFORMER
-// a bit of preprocessor hackery... apparently 2 levels of indirection needed
-#define TOKENCONCATENATE(x, y) x ## y
-#define TOKENCONCATENATE2(x, y) TOKENCONCATENATE(x, y)
-#define transformer_ctl_dump_ast() int TOKENCONCATENATE2( _transformer_ctl_dump_ast_ , __LINE__)
-#else
-#define transformer_ctl_dump_ast()
-#endif
-//void transformer_control(const char *);
-
-
 // Direction and parity
 
 #if NDIM==4

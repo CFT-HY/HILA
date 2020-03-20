@@ -7,9 +7,14 @@
 
 cmplx<double> d(cmplx<double> x) {return x;}
 cmplx<double> e(cmplx<double> x) {return d(x);}
+#pragma transformer ast dump
 cmplx<double> f(const cmplx<double> & x) { return e(x);}
 
-transformer_ctl_dump_ast();
+class tmp {
+  int i,j;
+};
+
+
 using ft = cmplx<double>;
 
 template <typename T>
@@ -24,20 +29,21 @@ int main()
 {
   
   field<cmplx<double>> a,b,c;
-  transformer_ctl_dump_ast();
+#pragma transformer ast dump
   int i;
-  transformer_ctl_dump_ast();
   field<double> t(1.0);
 
-  coordinate_vector v = XUP - 2*YUP;
+  coordinate_vector 
+  v = XUP - 2*YUP;
   
-  transformer_ctl_dump_ast();
   parity p = ODD;
-  
+
   a = b.shift(v);
-  
+
+  #pragma transformer ast dump
   onsites(p) {
 
+    #pragma transformer ast dump
     a[X] = f(b[X]);
     c[X] = a[X];
    

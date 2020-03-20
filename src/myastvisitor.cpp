@@ -568,7 +568,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // depth = 1 is the "top level" statement, should give fully formed
   // c++ statements separated by ';'.  These act as sequencing points
   // This is used to obtain assignment and read ordering
-  if (parsing_state.ast_depth == 1) parsing_state.stmt_sequence++;
+  if (parsing_state.ast_depth == 0) parsing_state.stmt_sequence++;
 
  
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
@@ -698,13 +698,12 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     parsing_state.scope_level++;
     passthrough = true;     // next visit will be to the same node, skip
 
-    // Save and reset ast_depth, so that depth == 1 again for the block.
-    int save_ast_depth = parsing_state.ast_depth;
-    parsing_state.ast_depth = -1;   // this forces the block content to be level 0
+    // Reset ast_depth, so that depth == 0 again for the block.
+    if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1; 
 
     TraverseStmt(s);
 
-    parsing_state.ast_depth = save_ast_depth;
+    parsing_state.ast_depth = 0;
 
     parsing_state.scope_level--;
     remove_vars_out_of_scope(parsing_state.scope_level);
@@ -775,40 +774,109 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
 }
 
 
-/// Find the source range of the previous line from source location
-SourceRange MyASTVisitor::getSourceRangeAtPreviousLine( SourceLocation l ){
+
+bool MyASTVisitor::has_pragma(Stmt *S, const char * n) {
+  return has_pragma( S->getSourceRange().getBegin(), n);
+}
+
+bool MyASTVisitor::has_pragma(Decl *F, const char * n) {
+  return has_pragma( F->getSourceRange().getBegin(), n);
+}
+
+bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
+  std::string arg;
+  SourceLocation pragmaloc,sl = l;
+
+  // if macro, get the unexpanded loc
+  if (sl.isMacroID()) {
+    CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( sl );
+    sl = CSR.getBegin();
+  }
+
+  if (is_preceded_by_pragma(sl, arg, pragmaloc) && (arg.find(n) != std::string::npos) ) {
+
+    // got it, comment out -- check that it has not been commented out before
+    int loc = writeBuf->find_original(pragmaloc,'#');
+    std::string s = writeBuf->get(loc,loc+1);
+    if (s.at(0) == '#') writeBuf->insert(loc ,"//-- ",true,false);
+
+    return true;
+  }
+
+  return false;
+}
+
+
+/// Check if the SourceLocation l is preceded by "#pragma transformer" on previous line.
+/// There cannot be anything except whitespace between l and the beginning of line
+/// Pragma_args will point to the beginning of arguments of pragma
+bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & arguments, 
+                                          SourceLocation & pragmaloc ) {
+  SourceLocation l = l0;
+  SourceLocation lend;
   SourceManager &SM = TheRewriter.getSourceMgr();
-  SourceRange r = SourceRange(l,l);
   bool found_line_break = false;
+  bool got_non_space_chars = false;
   
   // Move backward from location l and find two linebreaks
   // These are the beginning and the end of the previous line
-  for (int i=0; i<1000; i++) {
+  constexpr int maxiter = 5000;
+  for (int i=0; i<maxiter; i++) {
+    l=l.getLocWithOffset(-1);
+
     bool invalid = false;
     const char * c = SM.getCharacterData(l,&invalid);
     if (invalid) {
       // Invalid character found. This is probably the beginning of a file
-      r.setBegin(l.getLocWithOffset(1));
-      return(r);
+      return false;
     }
     if (*c == '\n'){
       if(!found_line_break) {
-        // First line break
-        r.setEnd(l);
+        // this is the 1st line break
         found_line_break = true;
       } else {
-        // Second line break, set as start. Don't include the line break
-        r.setBegin(l.getLocWithOffset(1));
-        return r;
+        // Second line break, exit here if this line was not empty
+        if (got_non_space_chars) break;
       }
+    } else {
+      if (!got_non_space_chars && !isspace(*c)) {
+        // non-space chars before the beginning of line where l was
+        if (!found_line_break) return false;
+
+        // now we got non-empty line above
+        got_non_space_chars = true;
+        lend = l;    // end loc of non-trivial txt
+      } 
     }
-    l=l.getLocWithOffset(-1);
+    if (i == maxiter-1) {
+      llvm::errs() << "Search error in is_preceded_by_pragma\n";
+      return false;
+    }
   }
-  return r;
+
+  // l points to \n, skip
+  l = l.getLocWithOffset(1);
+  // Now l points to the beginning of prospective #pragma transformer -line
+  // Get first the source text 
+  std::string txt = TheRewriter.getRewrittenText(SourceRange(l,lend));
+
+  txt = remove_extra_whitespace(txt);
+  std::string comp = "#pragma transformer";
+  if (txt.compare(0,comp.length(),comp) == 0) {
+    // found it, set return value
+    arguments = txt.substr(comp.length()+1, std::string::npos);
+    pragmaloc = l;
+    return true;
+  }
+  
+  return false; 
 }
 
 
-// By overriding these methods in MyASTVisitor we can control which nodes are visited. 
+/// These are the main traverse methods
+/// By overriding these methods in MyASTVisitor we can control which nodes are visited.
+/// These are control points for the depth of the traversal;
+///  check_loop, skip_children,  ast_depth
 
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
@@ -821,7 +889,7 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
   if (!parsing_state.skip_children) {
     parsing_state.ast_depth++;
     RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
-    parsing_state.ast_depth--;
+    if (parsing_state.ast_depth > 0) parsing_state.ast_depth--;
   }
 
   if (parsing_state.skip_children > 0) parsing_state.skip_children--;
@@ -840,7 +908,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
   if (!parsing_state.skip_children) {
     parsing_state.ast_depth++;
     RecursiveASTVisitor<MyASTVisitor>::TraverseDecl(D);
-    parsing_state.ast_depth--;
+    if (parsing_state.ast_depth > 0) parsing_state.ast_depth--;
   }
 
   if (parsing_state.skip_children > 0) parsing_state.skip_children--;
@@ -1110,42 +1178,10 @@ SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
   return range;
 }
 
-bool MyASTVisitor::control_command(VarDecl *var) {
-  std::string n = var->getNameAsString();
-  if (n.find("_transformer_ctl_",0) == std::string::npos) return false;
-  
-  if (n.find("_transformer_ctl_dump_ast",0) != std::string::npos) {
-    parsing_state.dump_ast_next = true;
-  } else {
-    llvm::errs() << "CTL string: " << n << '\n';
-    reportDiag(DiagnosticsEngine::Level::Warning,
-               var->getSourceRange().getBegin(),
-               "Unknown command for transformer_ctl(), ignoring");
-  }
-  // remove the command
-  SourceRange sr = var->getSourceRange();
-  if (sr.getBegin().isMacroID()){
-    CharSourceRange csr = TheRewriter.getSourceMgr().getImmediateExpansionRange( sr.getBegin() );
-    sr = csr.getAsRange();
-  }
-  writeBuf->remove(sr);
-  return true;
-}
-
 
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
-
-  // catch the transformer_ctl -commands here
-  if (control_command(var)) return true;
   
   if (parsing_state.check_loop && state::loop_found) return true;
-
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** AST dump of declaration: \'" << TheRewriter.getRewrittenText(var->getSourceRange()) << "\'\n";
-    var->dumpColor();
-    parsing_state.dump_ast_next = false;
-  }
-
   
   if (parsing_state.in_loop_body) {
     // for now care only loop body variable declarations
@@ -1193,6 +1229,44 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   return true;
 }
 
+void MyASTVisitor::ast_dump_header(const char *s, const SourceRange sr_in) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  SourceRange sr = sr_in;
+  unsigned linenumber = SM.getSpellingLineNumber(sr.getBegin());
+
+  // check if it is macro
+  if (sr.getBegin().isMacroID()) {
+    CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( sr.getBegin() );
+    sr = CSR.getAsRange();
+  }
+
+  std::string source = TheRewriter.getRewrittenText(sr);
+  auto n = source.find('\n');
+
+  if (n == std::string::npos) {
+    llvm::errs() << "**** AST dump of " << s << " \'" << source << "\' on line "
+                 << linenumber << '\n';
+  } else {
+    llvm::errs() << "**** AST dump of " << s << " starting with \'" 
+                 << source.substr(0,n) << "\' on line " << linenumber << '\n';
+  }
+}
+
+
+void MyASTVisitor::ast_dump(const Stmt *S) {
+  ast_dump_header("statement", S->getSourceRange());
+  S->dumpColor();
+  llvm::errs() << "*****************************\n";
+}
+
+
+void MyASTVisitor::ast_dump(const Decl *D) {
+  ast_dump_header("declaration", D->getSourceRange());
+  D->dumpColor();
+  llvm::errs() << "*****************************\n";
+}
+
+
 
 void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
   while (var_decl_list.size() > 0 && var_decl_list.back().scope > level)
@@ -1209,11 +1283,10 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 
   if (parsing_state.check_loop && state::loop_found) return true;
   
-  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
-    llvm::errs() << "**** AST dump of statement \'" << get_stmt_str(s) << "\'\n";
-    s->dumpColor();
-    llvm::errs() << "*****************************\n";
-    parsing_state.dump_ast_next = false;
+ 
+  if ( !parsing_state.check_loop && parsing_state.ast_depth == 1 &&
+       has_pragma(s,"ast dump") ) {
+    ast_dump(s);
   }
 
   // Entry point when inside field[par] = .... body
@@ -1306,6 +1379,9 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     return true;
   }
 
+  // And, for correct level for pragma handling - turns to 0 for stmts inside
+  if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1;
+
   //  Finally, if we get to a field[parity] -expression without a loop or assignment flag error
   if (!parsing_state.check_loop) {
     Expr * E = dyn_cast<Expr>(s);
@@ -1359,35 +1435,11 @@ bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
 }
 
 
-bool MyASTVisitor::has_pragma(Decl *f, const char * s) {
-  SourceRange sr = getSourceRangeAtPreviousLine(f->getSourceRange().getBegin());
-  std::string line = TheRewriter.getRewrittenText( sr );
-
-  const std::vector<std::string> a{"#pragma", "transformer", s};
-  if (contains_word_list(line,a)) {
-
-    // got it, comment out -- check that it has not been commented out before
-    int loc = writeBuf->find_original(sr.getBegin(),'#');
-    std::string s = writeBuf->get(loc,loc+1);
-    if (s.at(0) == '#') writeBuf->insert(loc ,"//-- ",true,false);
-    return true;
-  }
-
-  return false;
-}
-
-
 bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
   // this does not really do anything
 
-  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
-    llvm::errs() << "**** AST dump of function: " << f->getNameInfo().getName() << '\n';
-    f->dumpColor();
-    llvm::errs() << "*******************************\n";
-    parsing_state.dump_ast_next = false;
-  }
   if(!parsing_state.check_loop && (parsing_state.loop_function_next || has_pragma(f,"loop_function"))) {
     // This function can be called from a loop,
     // handle as if it was called from one
@@ -1610,13 +1662,6 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
 
 
 bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
-  
-  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
-    llvm::errs() << "**** AST dump of class template declaration: \'" << D->getNameAsString() << "\'\n";
-    D->dumpColor();
-    llvm::errs() << "*******************************\n";
-    parsing_state.dump_ast_next = false;
-  }
 
   // go through with real definitions or as a part of chain
   if (D->isThisDeclarationADefinition()) { // } || state::class_level > 0) {
@@ -1672,11 +1717,9 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 bool MyASTVisitor::VisitDecl( Decl * D) {
   if (parsing_state.check_loop && state::loop_found) return true;
 
-  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
-    llvm::errs() << "**** AST dump of declaration: \'" << TheRewriter.getRewrittenText(D->getSourceRange()) << "\'\n";
-    D->dumpColor();
-    llvm::errs() << "**********************************\n";
-    parsing_state.dump_ast_next = false;
+  if ( !parsing_state.check_loop && parsing_state.ast_depth == 1 &&
+       has_pragma(D,"ast dump") ) {
+    ast_dump(D);
   }
 
   auto t = dyn_cast<TypeAliasTemplateDecl>(D);
