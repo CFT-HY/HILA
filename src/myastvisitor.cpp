@@ -891,13 +891,18 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
   if (is_preceded_by_pragma(sl, arg, pragmaloc) && (arg.find(n) != std::string::npos) ) {
 
     // got it, comment out -- check that it has not been commented out before
-    int loc = writeBuf->find_original(pragmaloc,'#');
+    // the buffer may not be writeBuf, so be careful
+
+    FileID FID = TheRewriter.getSourceMgr().getFileID(pragmaloc);
+    srcBuf * sb = get_file_buffer(TheRewriter, FID);
+
+    int loc = sb->find_original(pragmaloc,'#');
     if (loc < 0) {
       llvm::errs() << "internal error in pragma handling\n";
       exit(1);
     }
-    std::string s = writeBuf->get(loc,loc+1);
-    if (s.at(0) == '#') writeBuf->insert(loc ,"//-- ",true,false);
+    std::string s = sb->get(loc,loc+1);
+    if (s.at(0) == '#') sb->insert(loc ,"//-- ",true,false);
 
     return true;
   }
@@ -954,7 +959,7 @@ bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & argu
   }
 
   // l points to \n, skip
-  l = l.getLocWithOffset(1);
+  //l = l.getLocWithOffset(1);
   // Now l points to the beginning of prospective #pragma transformer -line
   // Get first the source text 
   std::string txt = TheRewriter.getRewrittenText(SourceRange(l,lend));
@@ -965,6 +970,9 @@ bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & argu
     // found it, set return value
     arguments = txt.substr(comp.length()+1, std::string::npos);
     pragmaloc = l;
+    // llvm::errs() << "PRAGMA LINE " << txt << " in file " 
+    //              << SM.getFilename(l) << " at line "
+    //              << SM.getSpellingLineNumber(l) << '\n';
     return true;
   }
   
@@ -1539,11 +1547,10 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // also only non-templated functions
   // this does not really do anything
 
-  if(!parsing_state.check_loop && (parsing_state.loop_function_next || has_pragma(f,"loop_function"))) {
+  if (!parsing_state.check_loop && has_pragma(f,"loop_function")) {
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);
-    parsing_state.loop_function_next = false;
   }
 
   // Check if the function can be called from a loop

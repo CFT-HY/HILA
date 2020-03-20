@@ -13,8 +13,10 @@ class field_storage {
 
     void allocate_field( lattice_struct * lattice );
     void free_field();
+
     #pragma transformer loop_function
     auto get(const int i, const int field_alloc_size) const;
+
     template<typename A>
     #pragma transformer loop_function
     inline void set(const A &value, const int i, const int field_alloc_size);

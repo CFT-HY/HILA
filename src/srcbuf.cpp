@@ -131,6 +131,7 @@ std::string srcBuf::dump() {
 bool srcBuf::isOn() { return buf.size() > 0; }
 
 char srcBuf:: get_original(int i) {
+  assert(i>=0 && i < original_size && "srcBuf::get_original error");
   return buf.at(i);
 }
   
