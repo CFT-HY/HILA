@@ -172,8 +172,9 @@ class field {
     public:
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
       lattice_struct * lattice;
-      unsigned is_fetched[NDIRS];
-      unsigned move_started[NDIRS];
+      unsigned is_fetched[NDIRS];     // is communication done
+      unsigned move_started[NDIRS];   // is communication going on
+      unsigned assigned_to;           // keeps track of first assignment to parities
 #ifdef USE_MPI
       std::vector<MPI_Request> receive_request[3*NDIRS];
       std::vector<MPI_Request> send_request[3*NDIRS];
@@ -285,7 +286,8 @@ class field {
     fs = new field_struct;
     fs->lattice = lattice;
     fs->allocate_payload();
-    mark_changed(ALL);
+    mark_changed(ALL);      // guarantees communications will be done
+    fs->assigned_to = 0;    // and this means that it is not assigned
   }
 
   void free() {
@@ -297,36 +299,42 @@ class field {
   }
 
   bool is_allocated() const { return (fs != nullptr); }
+
+  bool is_initialized(parity p) const { 
+    return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
+  }
   
   /// call this BEFORE the var is written to
   void mark_changed(const parity p) {
     if (fs == nullptr) allocate();
     else {
-      // turn off bits corresponding to parity p; ALL = Ox3
-      assert(0x3u & static_cast<unsigned>(p));
-      for (int i=0; i<NDIRS; i++) fs->is_fetched[i]   &= (0x3u & ~static_cast<unsigned>(p));
-      for (int i=0; i<NDIRS; i++) fs->move_started[i] &= (0x3u & ~static_cast<unsigned>(p));
+      // turn off bits corresponding to parity p
+      assert( parity_bits(p) );
+      for (int i=0; i<NDIRS; i++) fs->is_fetched[i]   &= parity_bits_inverse(p);
+      for (int i=0; i<NDIRS; i++) fs->move_started[i] &= parity_bits_inverse(p);
     }
+    fs->assigned_to |= parity_bits(p);
   }
 
   // Is const version of mark_changed needed?  Sounds strange
   void mark_changed(const parity p) const {
     assert(is_allocated());
-    assert(0x3u & static_cast<unsigned>(p));
-    for (int i=0; i<NDIRS; i++) fs->is_fetched[i]   &= (0x3u & ~static_cast<unsigned>(p));
-    for (int i=0; i<NDIRS; i++) fs->move_started[i] &= (0x3u & ~static_cast<unsigned>(p));
+    assert( parity_bits(p) );
+    for (int i=0; i<NDIRS; i++) fs->is_fetched[i]   &= parity_bits_inverse(p);
+    for (int i=0; i<NDIRS; i++) fs->move_started[i] &= parity_bits_inverse(p);
+    fs->assigned_to |= parity_bits(p);
   }
 
   /// Mark the field parity fetched from direction
-  void mark_fetched(int dir, const parity p) const {
-    assert(static_cast<unsigned>(p) & 0x3u);
-    fs->is_fetched[dir] |= static_cast<unsigned>(p);
+  void mark_fetched( int dir, const parity p) const {
+    assert( parity_bits(p) );
+    fs->is_fetched[dir] |= parity_bits(p);
   }
 
   /// Check if the field has been changed since the previous communication
-  bool is_fetched( int dir, parity par) const{
+  bool is_fetched( int dir, parity par) const {
     assert(dir < NDIRS);
-    unsigned p = static_cast<unsigned>(par);
+    unsigned p = parity_bits(par);
     // true if all par-bits are on 
     return (fs->is_fetched[dir] & p) == p ;
   }
@@ -334,23 +342,16 @@ class field {
   /* Mark communication started */
   void mark_move_started( int dir, parity p) const{
     assert(dir < NDIRS);
-    fs->move_started[dir] |= static_cast<unsigned>(p);
+    fs->move_started[dir] |= parity_bits(p);
   }
 
   /// Check if communication has started
   bool is_move_started( int dir, parity par) const{
     assert(dir < NDIRS);
-    unsigned p = static_cast<unsigned>(par);
+    unsigned p = parity_bits(par);
     return (fs->move_started[dir] & p) == p ;
   }
 
-  
-  void assert_is_initialized() {
-    if (fs == nullptr) {
-      std::cout << "field variable used before it is assigned to\n";
-      exit(1);
-    }
-  }
   
   // Overloading [] 
   // placemarker, should not be here
@@ -598,7 +599,9 @@ template<typename T>
 field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
   field<T> result;
 
-  onsites(par)
+  onsites(par) {
+    if 
+  }
   r2 = *this;
   foralldir(d) {
     if (abs(v[d]) > 0) {

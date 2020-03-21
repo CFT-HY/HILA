@@ -69,11 +69,21 @@ constexpr parity ODD  = parity::odd;       //               010
 constexpr parity ALL  = parity::all;       //               011
 constexpr parity X    = parity::x;         //               100
 
+// utilities for getting the bit patterns
+static inline unsigned parity_bits(parity p) {
+  return 0x3 & static_cast<unsigned>(p);
+}
+static inline unsigned parity_bits_inverse(parity p) {
+  return 0x3 & ~static_cast<unsigned>(p);
+}
+
 // turns EVEN <-> ODD, ALL remains.  X->none, none->none
 static inline parity opp_parity(const parity p) {
-  unsigned u = 0x3 & static_cast<unsigned>(p);
+  unsigned u = parity_bits(p);
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
 }
+
+static inline bool is_even_odd_parity( parity p ) { return (p == EVEN || p == ODD); }
 
 /// Return a vector for iterating over  parities included in par
 /// If par is ALL, this returns vector of EVEN and ODD, otherwise
@@ -226,11 +236,6 @@ const parity_plus_offset operator+(const parity_plus_offset, const direction d);
 const parity_plus_offset operator-(const parity_plus_offset, const direction d);
 const parity_plus_offset operator+(const parity_plus_offset, const coordinate_vector & cv);
 const parity_plus_offset operator-(const parity_plus_offset, const coordinate_vector & cv);
-
-
-inline void assert_even_odd_parity( parity p ) {
-    assert(p == EVEN || p == ODD);
-}
 
 
 // Global functions: setup
