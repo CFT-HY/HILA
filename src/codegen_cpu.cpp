@@ -40,8 +40,8 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
   code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
   
   // Set the start and end points
-  code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
-  code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
+  code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";
+  code << "const int loop_end   = loop_lattice->loop_end(" << parity_in_this_loop << ");\n";
 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 

@@ -88,7 +88,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     code << "const parity " << parity_name << " = " << loop_parity.text << ";\n";
 
     if (global.assert_loop_parity) {
-      code << "assert_even_odd_parity(" << parity_name << ");\n";
+      code << "assert( is_even_odd_parity(" << parity_name << ") && \"Parity should be EVEN or ODD\");\n";
     }
     parity_in_this_loop = parity_name;
       
@@ -110,17 +110,26 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     
     // variable links if needed
     // if (l.dir_list.size() > 0) {
-    if (l.is_written) {
-      code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
-      code << l.new_name << ".mark_changed(" + parity_in_this_loop + ");\n";      
-    } else {
-      code << "const field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
-    }
+    if (!l.is_written) code << "const ";
+    code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
+  }
 
-    // Check that read fields are allocated
-    if( l.is_read_nb || l.is_read_atX ) {
-      code << "assert(" << l.new_name << ".is_allocated());\n";
+
+  // mark modified fields
+  for (field_info & l : field_info_list) if (l.is_written) {
+    code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
+  }
+
+  // Check that read fields are initialized
+  for (field_info & l : field_info_list) if (l.is_read_nb || l.is_read_atX) {
+    std::string init_par;
+    if ( loop_parity.value == parity::all || (l.is_read_nb && l.is_read_atX)) {
+      init_par = "ALL";
+    } else {
+      if (l.is_read_atX) init_par = parity_in_this_loop;
+      else init_par = "opp_parity(" + parity_in_this_loop + ")";
     }
+    code << "assert(" << l.new_name << ".is_initialized(" << init_par << "));\n";
   }
 
   // change the f[X+offset] -references, generate code
@@ -141,9 +150,9 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
       while (t.find(v.reduction_name,0) != std::string::npos) v.reduction_name += "_";
       // Create a temporary variable and initialize
       if (v.reduction_type == reduction::SUM) {
-        code << v.type << " " << v.reduction_name << "=0;\n";
+        code << v.type << " " << v.reduction_name << " = 0;\n";
       } else if (v.reduction_type == reduction::PRODUCT) {
-        code << v.type << " " << v.reduction_name << "=1;\n";
+        code << v.type << " " << v.reduction_name << " = 1;\n";
       }
     }
   }
