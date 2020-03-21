@@ -175,6 +175,12 @@ inline coordinate_vector operator/(const coordinate_vector & a, const int i) {
   return r;
 }
 
+inline coordinate_vector operator%(const coordinate_vector & a, const int i) {
+  coordinate_vector r;
+  foralldir(d) r[d] = a[d]%i;
+  return r;
+}
+
 // Replaced by transformer
 coordinate_vector coordinates(parity X);
 
