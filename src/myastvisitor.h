@@ -239,6 +239,10 @@ public:
   // add handle to get rewriter too - for source control
   Rewriter &getRewriter() { return TheRewriter; }
 
+  // shofthand for obtaining file buffer within this class
+  srcBuf * get_file_srcBuf( SourceLocation sl ) {
+    return get_file_buffer( TheRewriter, TheRewriter.getSourceMgr().getFileID(sl) ); 
+  }
 
   /// Code generation headers start here
   /// Starting point for new code

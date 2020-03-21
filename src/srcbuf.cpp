@@ -12,7 +12,11 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
 
+/// See comments in srcbuf.h
+
 #include "srcbuf.h"
+
+
 
 int srcBuf::get_offset( SourceLocation s ) {
   SourceManager &SM = myRewriter->getSourceMgr();

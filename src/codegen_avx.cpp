@@ -133,8 +133,7 @@ static void replace_element_with_vector(SourceRange sr, std::string typestring, 
 /// loops. Generate a copy with elements replaced with vectors.
 void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   SourceRange sr = fd->getSourceRange();
-  FileID FID = TheRewriter.getSourceMgr().getFileID(sr.getBegin());
-  srcBuf * sourceBuf = get_file_buffer(TheRewriter, FID);
+  srcBuf * sourceBuf = get_file_srcBuf( sr.getBegin() );
   PrintingPolicy pp(Context->getLangOpts());
 
 

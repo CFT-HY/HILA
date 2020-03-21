@@ -2,10 +2,11 @@
 #define TRANSFORMER_SRCBUF_H
 
 // New buffer interface.  Libtooling contains a  ReplaceText and RemoveText
-// in libtooling
-// NOTE: It's probably due to the funny use of SourceRange in Expr and Stmt.
-// Easy to make errors
+// in libtooling, but it is much easier to leave that to be original and
+// edit own copy
 
+// This is a simple buffer, keeps track of modifications to the original
+// text which remains in unmodified form.
 // This stores the original text in string buffer buf.  In addtion,
 // "vector<int> ext_ind" of length buf is allocated, and extents are
 // stored in "vector<string> extents"
@@ -15,19 +16,11 @@
 // ext_ind[i] < -1: content of extents[-ext_ind[i]-2] is inserted before buf[i],
 //                  and buf[i] skipped 
 //
-// Example:  buf="0123456789", eind="1111211111", extents[0] = "cat"
+// Example:  buf="0123456789", ext_ind="1111211111", extents[0] = "cat"
 //           would read as "0123cat456789"
-//       or, if eind="1111(-2)0011" otherwise as above reads "0123cat789"
+//       or, if ext_ind="1111(-2)0011" otherwise as above reads "0123cat789"
 
 
-// struct srcbuftoken {
-//   Expr * srcExpr;
-//   int begin;
-//   int end;
-// };
-
-
-// node is Stmt, Decl or Expr - depending on the type of context
 
 using namespace clang;
 
@@ -45,7 +38,7 @@ private:
   unsigned first_offset, full_length, original_size, true_size;
 
 public:
-  srcBuf() { buf.clear(); }
+  srcBuf() { clear(); }
 
   ~srcBuf() { clear(); }
 

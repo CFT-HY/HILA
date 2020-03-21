@@ -10,29 +10,30 @@ cmplx<double> e(cmplx<double> x) {return d(x);}
 #pragma transformer ast dump
 cmplx<double> f(const cmplx<double> & x) { return e(x);}
 
-class tmp {
-  int i,j;
-};
-
 
 using ft = cmplx<double>;
 
 template <typename T>
-field<T> ret(field<T> & a) {
-  field<T> b;
-  b[ALL] = a[X];
-  return b;
-}
+class tmp {
+private:
+  T in;
+public:
+  #pragma transformer loop_function
+  T ret(const T & a) {
+    return a+in;
+  }
+};
 
 
 int main()
 {
   
   field<cmplx<double>> a,b,c;
-#pragma transformer ast dump
   int i;
   field<double> t(1.0);
-
+  tmp<double> x;
+  tmp<cmplx<double>> y;
+  
   coordinate_vector 
   v = XUP - 2*YUP;
   
@@ -40,9 +41,11 @@ int main()
 
   a = b.shift(v);
 
-  #pragma transformer ast dump
   onsites(p) {
 
+    a[X] = y.ret(b[X]);
+    t[X] = x.ret(t[X]);
+    
     #pragma transformer ast dump
     a[X] = f(b[X]);
     c[X] = a[X];

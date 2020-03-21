@@ -893,8 +893,7 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
     // got it, comment out -- check that it has not been commented out before
     // the buffer may not be writeBuf, so be careful
 
-    FileID FID = TheRewriter.getSourceMgr().getFileID(pragmaloc);
-    srcBuf * sb = get_file_buffer(TheRewriter, FID);
+    srcBuf * sb = get_file_srcBuf(pragmaloc);
 
     int loc = sb->find_original(pragmaloc,'#');
     if (loc < 0) {
