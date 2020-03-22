@@ -25,6 +25,9 @@ std::string indent_string(const std::string & s);
 /// Convert string to a valid c++ comment.  Indentation is not changed
 std::string comment_string(const std::string & s);
 
+/// remove initial X from X+dir string.  Optional is_X gives true if X was there
+std::string remove_X(const std::string & s, bool * is_X = nullptr);
+
 /// Remove "class " keyword from type which sometimes pops there
 std::string remove_class_from_type( const std::string & s);
 

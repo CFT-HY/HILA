@@ -242,14 +242,18 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
     // variables
     if (l.is_read_nb) {
       for (dir_ptr & d : l.dir_list) if(d.count > 0){
+        std::string dirname;
+        if (d.is_constant_direction) dirname = d.direxpr_s;  // orig. string
+        else dirname = remove_X( loopBuf.get(d.parityExpr->getSourceRange()) ); // mapped name was get_stmt_str(d.e);
+
         code << "vector_type" << type_name << " " 
-             << d.name
+             << d.name_with_dir
              << " = " << l.new_name << ".get_value_at(neighbour_list[" 
-             << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
+             << dirname << "][" << looping_var << "]);\n";
 
         // and replace references in loop body
         for (field_ref * ref : d.ref_list) {
-          loopBuf.replace(ref->fullExpr, d.name);
+          loopBuf.replace(ref->fullExpr, d.name_with_dir);
         }
       } 
     }
@@ -274,7 +278,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
     }
 
     // and finally replace these references in body 
-    for (field_ref * ref : l.ref_list) if (ref->dirExpr == nullptr) {
+    for (field_ref * ref : l.ref_list) if (!ref->is_direction) {
       loopBuf.replace(ref->fullExpr, l.loop_ref_name);
     }
   }

@@ -226,24 +226,26 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     if (l.is_read_nb) {
       // this field is nn-read
       for (dir_ptr & d : l.dir_list) {
-        std::string dirname = get_stmt_str(d.e);
+        std::string dirname;
+        if (d.is_constant_direction) dirname = d.direxpr_s;  // orig. string
+        else dirname = remove_X( loopBuf.get(d.parityExpr->getSourceRange()) ); // mapped name was get_stmt_str(d.e);
 
         // Check if the direction is a variable. These have been renamed.
-        for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
-          if( vr.ref == d.e ) 
-            dirname = vi.new_name;
+        // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
+        //   if( vr.ref == d.e ) 
+        //     dirname = vi.new_name;
 
         // Create the temp variable and call the getter
-        kernel << type_name << " "  << d.name 
+        kernel << type_name << " "  << d.name_with_dir 
                << " = " << l.new_name << ".get(loop_lattice->d_neighb[" 
                << dirname << "][" << looping_var 
                << "], loop_lattice->field_alloc_size);\n";
 
         // and replace references in loop body
         for (field_ref * ref : d.ref_list) {
-          loopBuf.replace(ref->fullExpr, d.name); 
-        }     
-      }       
+          loopBuf.replace(ref->fullExpr, d.name_with_dir); 
+        }
+      }     
     }
 
     if (l.is_read_atX) {
@@ -258,7 +260,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     }
 
     // and finally replace references in body 
-    for (field_ref * ref : l.ref_list) if (ref->dirExpr == nullptr) {
+    for (field_ref * ref : l.ref_list) if (!ref->is_direction) {
       loopBuf.replace(ref->fullExpr, l.loop_ref_name);
     }
 

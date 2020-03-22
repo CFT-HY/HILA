@@ -256,6 +256,8 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     exit(1);
   }
 
+  llvm::errs() << get_expr_type(lfe.fullExpr) << " " << get_expr_type(lfe.nameExpr) 
+               << " " << get_expr_type(lfe.parityExpr) << "\n";
   // Check if the expression is already handled
   for( field_ref r : field_ref_list)
     if( r.fullExpr == lfe.fullExpr  ){
@@ -266,9 +268,14 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr); 
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
   
-  lfe.dirExpr  = nullptr;  // no neighb expression
-    
-  if (get_expr_type(lfe.parityExpr) == "parity") {
+  lfe.is_written = is_assign;
+  lfe.is_read = (is_compound || !is_assign);
+  lfe.sequence = parsing_state.stmt_sequence;
+
+
+  std::string parity_expr_type = get_expr_type(lfe.parityExpr);
+
+  if (parity_expr_type == "parity") {
     if (parsing_state.accept_field_parity) {
       // 1st parity statement on a single line lattice loop
       loop_parity.expr  = lfe.parityExpr;
@@ -278,15 +285,10 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       require_parity_X(lfe.parityExpr);
     }
   }
-
-  lfe.is_written = is_assign;
-  lfe.is_read = (is_compound || !is_assign);
-  lfe.sequence = parsing_state.stmt_sequence;
   
   // next ref must have wildcard parity
   parsing_state.accept_field_parity = false;
         
-  std::string parity_expr_type = get_expr_type(lfe.parityExpr);
   if (parity_expr_type == "parity_plus_direction" || 
       parity_expr_type == "parity_plus_offset") {
 
@@ -297,59 +299,75 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     }
 
     // Now need to split the expr to parity and dir-bits
-    // Need to descent quite deeply into the expr chain
-    Expr* e = lfe.parityExpr->IgnoreParens();
-    // The next line is necessary with the clang version on Puhti
-    e = e->IgnoreImplicit();
-    CXXOperatorCallExpr* Op = dyn_cast<CXXOperatorCallExpr>(e);
-    // descent into expression
+    // Because of offsets this is pretty complicated to do in AST.
+    // We now know that the expr is of type
+    // [X+direction]  or  [X+coordinate_vector] -- just
+    // use the textual form of the expression!
 
-    if (!Op) {
-      CXXConstructExpr * Ce = dyn_cast<CXXConstructExpr>(e);
-      if (Ce) {
-        // llvm::errs() << " ---- got Ce, args " << Ce->getNumArgs() << '\n';
-        if (Ce->getNumArgs() == 1) {
-          e = Ce->getArg(0)->IgnoreImplicit();
-          Op = dyn_cast<CXXOperatorCallExpr>(e);
+    bool has_X;
+    lfe.direxpr_s = remove_X( get_stmt_str(lfe.parityExpr), &has_X );
+
+    if (!has_X) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 lfe.parityExpr->getSourceRange().getBegin(),
+                 "Parity must be \'X\'");
+    }
+
+    llvm::errs() << "Direxpr " << lfe.direxpr_s << '\n';
+
+    lfe.is_direction = true;
+
+    if (parity_expr_type == "parity_plus_offset") {
+
+      // It's an offset, no checking here to be done
+      lfe.is_offset = true;
+
+    } else {
+
+      // Now make a check if the reference is just constant (XUP etc.)
+      // Need to descent quite deeply into the expr chain
+      Expr* e = lfe.parityExpr->IgnoreParens()->IgnoreImplicit();
+      CXXOperatorCallExpr* Op = dyn_cast<CXXOperatorCallExpr>(e);
+      if (!Op) {
+        if (CXXConstructExpr * Ce = dyn_cast<CXXConstructExpr>(e)) {
+          // llvm::errs() << " ---- got Ce, args " << Ce->getNumArgs() << '\n';
+          if (Ce->getNumArgs() == 1) {
+            e = Ce->getArg(0)->IgnoreImplicit();
+            Op = dyn_cast<CXXOperatorCallExpr>(e);
+          }
         }
       }
-    }
-    if (!Op) {
-      reportDiag(DiagnosticsEngine::Level::Fatal,
-                 lfe.parityExpr->getSourceRange().getBegin(),
-                 "Internal error: could not parse parity + direction/offset -statement" );
-      exit(1);
-    }
       
-    // if (!Op) {
-    //   e = e->IgnoreImplicit();
-    //   Op = dyn_cast<CXXOperatorCallExpr>(e);        
-    // }
+      if (!Op) {
+        reportDiag(DiagnosticsEngine::Level::Fatal,
+                   lfe.parityExpr->getSourceRange().getBegin(),
+                   "Internal error: could not parse parity + direction/offset -statement" );
+        exit(1);
+      }
 
-    if (Op &&
-        ( strcmp(getOperatorSpelling(Op->getOperator()),"+") == 0 ||
-          strcmp(getOperatorSpelling(Op->getOperator()),"-") == 0) &&
-        get_expr_type(Op->getArg(0)) == "parity") {
-      llvm::errs() << " ++++++ found parity + dir\n";
+      Expr *dirE = Op->getArg(1)->IgnoreImplicit();
+      llvm::APSInt result;
+      if (dirE->isIntegerConstantExpr(result, *Context)) {
+        // Got constant
+        lfe.is_constant_direction = true;
+        lfe.constant_value = result.getExtValue();
+        llvm::errs() << " GOT DIR CONST, value " << lfe.constant_value << "  expr " << lfe.direxpr_s << '\n';
+      } else {
+        lfe.is_constant_direction = false;
+        llvm::errs() << "GOT DIR NOT-CONST " << lfe.direxpr_s << '\n';
+      
+        // If the direction is a variable, add it to the list
+        // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
+        // static std::string assignop;
+        // if(DRE && isa<VarDecl>(DRE->getDecl())) {
+        //   handle_var_ref(DRE, false, assignop);
+        // }
 
-      require_parity_X(Op->getArg(0));
-      lfe.dirExpr = Op->getArg(1)->IgnoreImplicit();
-      lfe.dirname = get_stmt_str(lfe.dirExpr);
-      lfe.is_offset = (parity_expr_type == "parity_plus_offset");
-
-
-      // If the direction is a variable, add it to the list
-      // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
-      // static std::string assignop;
-      // if(DRE && isa<VarDecl>(DRE->getDecl())) {
-      //   handle_var_ref(DRE, false, assignop);
-      // }
-
-      // traverse the dir-expression to find var-references etc.
-      TraverseStmt(lfe.dirExpr);
-
+        // traverse the dir-expression to find var-references etc.
+        TraverseStmt(lfe.parityExpr);
+      }
     }
-  }
+  } // end of "direction"-branch
     
   // llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
   //              << " parity " << get_stmt_str(lfe.parityExpr)
@@ -584,7 +602,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
                "Parity of the full loop cannot be \'X\'");
   }
   
-  generate_code(ls, target);
+  generate_code(ls);
   
   // Buf.clear();
           
@@ -619,7 +637,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // depth = 1 is the "top level" statement, should give fully formed
   // c++ statements separated by ';'.  These act as sequencing points
   // This is used to obtain assignment and read ordering
-  if (parsing_state.ast_depth == 0) parsing_state.stmt_sequence++;
+  if (parsing_state.ast_depth == 1) parsing_state.stmt_sequence++;
 
  
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
@@ -1128,19 +1146,19 @@ bool MyASTVisitor::check_field_ref_list() {
     // note special treatment of file[X] -read: it is real read only if it 
     // comes before or at the same time than assign
     if (p.is_read) {
-      if (p.dirExpr != nullptr) {
+      if (p.is_direction) {
         fip->is_read_nb = true;
       } else if ( !fip->is_written || fip->first_assign_seq >= p.sequence) {
         fip->is_read_atX = true;
       }
     }
 
-    if (p.is_offset)  fip->contains_offset = true;
+    if (p.is_offset) fip->is_read_offset = true;
       
     // save expr record
     fip->ref_list.push_back(&p);
 
-    if (p.dirExpr != nullptr) {
+    if (p.is_direction) {
 
       if (p.is_written) {
         reportDiag(DiagnosticsEngine::Level::Error,
@@ -1155,25 +1173,33 @@ bool MyASTVisitor::check_field_ref_list() {
       // TODO: use better method?
       bool found = false;
       for (dir_ptr & dp : fip->dir_list) {
-        if (is_duplicate_expr(dp.e, p.dirExpr)) {
-          dp.count += (p.is_offset == false);   // for nn-neighbours
-          dp.ref_list.push_back(&p);
-          found = true;
+        if (p.is_constant_direction) {
+          found = (dp.is_constant_direction && dp.constant_value == p.constant_value);
+        } else {
+          found = is_duplicate_expr(dp.parityExpr, p.parityExpr);
+        }
 
+        if (found) {
+          dp.count += (p.is_offset == false); // only nn in count
+          dp.ref_list.push_back(&p);
           break;
         }
       }
-        
+      
       if (!found) {
         dir_ptr dp;
-        dp.e = p.dirExpr;
+        dp.parityExpr = p.parityExpr;
         dp.count = (p.is_offset == false);
         dp.is_offset = p.is_offset;
+        dp.is_constant_direction = p.is_constant_direction;
+        dp.constant_value = p.constant_value;
+        dp.direxpr_s = p.direxpr_s;     // copy the string expr of direction
+
         dp.ref_list.push_back(&p);
 
         fip->dir_list.push_back(dp);
       }
-    } // dirExpr
+    } // direction
   } // p-loop
   
   // check for f[ALL] = f[X+dir] -type use, which is undefined
@@ -1184,7 +1210,7 @@ bool MyASTVisitor::check_field_ref_list() {
       // There may be error, find culprits
       bool found_error = false;
       for (field_ref * p : l.ref_list) {
-        if (p->dirExpr != nullptr && !p->is_written && !p->is_offset) {
+        if (p->is_direction && !p->is_written && !p->is_offset) {
           if (loop_parity.value == parity::all) {
 
             reportDiag(DiagnosticsEngine::Level::Error,
@@ -1209,7 +1235,7 @@ bool MyASTVisitor::check_field_ref_list() {
 
       if (found_error) {
         for (field_ref * p : l.ref_list) {
-          if (p->is_written && p->dirExpr == nullptr) {
+          if (p->is_written && p->is_direction) {
             reportDiag(DiagnosticsEngine::Level::Remark,
                        p->fullExpr->getSourceRange().getBegin(),
                        "Location of assignment");

@@ -50,6 +50,7 @@ static inline direction next_direction(direction dir) {
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
 static inline direction operator-(const direction d) { return opp_dir(d); }
+static inline direction operator+(const direction d) { return d; }
 
 static inline int is_up_dir(const int d) { return d<NDIM; }
 

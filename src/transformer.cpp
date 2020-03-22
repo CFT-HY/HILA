@@ -135,7 +135,7 @@ llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
 CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
 loop_parity_struct loop_parity;
-codetype target;
+codetype target;     // declared extern (global)
 
 
 /// Check command line arguments and set appropriate flags in target
@@ -158,37 +158,6 @@ void get_target_struct(codetype & target) {
     target.vector_size = cmdline::VECTORIZE;
   }
 }
-
-
-
-/// Call the backend function for handling loop functions
-void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
-  // we should mark the function, but it is not necessarily in the
-  // main file buffer
-  if (target.CUDA) {
-    handle_loop_function_cuda(fd);
-  } else if (target.openacc) {
-    handle_loop_function_openacc(fd);
-  } else if (target.VECTORIZE) {
-    handle_loop_function_avx(fd);
-  }
-}
-
-/// Call the backend function for generating loop code
-std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
-  std::stringstream code;
-  if( target.CUDA ){
-    code << generate_code_cuda(S,semicolon_at_end,loopBuf);
-  } else if( target.openacc ){
-    code << generate_code_openacc(S,semicolon_at_end,loopBuf);
-  } else if(target.VECTORIZE) {
-    code << generate_code_avx(S,semicolon_at_end,loopBuf);
-  } else {
-    code << generate_code_cpu(S,semicolon_at_end,loopBuf);
-  }
-  return code.str();
-}
-
 
 
 

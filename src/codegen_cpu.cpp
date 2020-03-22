@@ -36,12 +36,15 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
   std::stringstream code;
 
   // Set loop lattice
-  std::string fieldname = field_info_list.front().old_name;
+  std::string fieldname = field_info_list.front().new_name;
   code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
   
   // Set the start and end points
   code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = loop_lattice->loop_end(" << parity_in_this_loop << ");\n";
+
+  // and the openacc loop header
+  if (target.openacc) generate_openacc_loop_header(code);
 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 
@@ -69,15 +72,19 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
     // First check for direction references. If any found, create list of temp
     // variables
     if (l.is_read_nb) {
-      for (dir_ptr & d : l.dir_list) if(d.count > 0){
+      for (dir_ptr & d : l.dir_list) {
+        std::string dirname;
+        if (d.is_constant_direction) dirname = d.direxpr_s;  // orig. string
+        else dirname = remove_X( loopBuf.get(d.parityExpr->getSourceRange()) ); // mapped name was get_stmt_str(d.e);
+
         // generate access stmt
-        code << type_name << " " << d.name
+        code << type_name << " " << d.name_with_dir
              << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
-             << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
+             << dirname << "][" << looping_var << "]);\n";
 
         // and replace references in loop body
         for (field_ref * ref : d.ref_list) {
-          loopBuf.replace(ref->fullExpr, d.name);
+          loopBuf.replace(ref->fullExpr, d.name_with_dir);
         }
       }
     }
@@ -93,7 +100,7 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
     }
 
     // and finally replace references in body 
-    for (field_ref * ref : l.ref_list) if (ref->dirExpr == nullptr) {
+    for (field_ref * ref : l.ref_list) if (!ref->is_direction) {
       loopBuf.replace(ref->fullExpr, l.loop_ref_name);
     }
   }
@@ -125,7 +132,7 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
   code << "\n";
 
 
-  // Add cals to setters 
+  // Add calls to setters 
   for (field_info & l : field_info_list) if(l.is_written) {
     code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " 
          << looping_var << ");\n";

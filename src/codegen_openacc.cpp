@@ -39,43 +39,7 @@ void MyASTVisitor::handle_loop_function_openacc(FunctionDecl *fd) {
   sb->insert(sl, "#pragma acc routine \n",true,true);
 }
 
-
-
-std::string MyASTVisitor::generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
-
-  // replace reduction variables in the loop
-  for ( var_info & vi : var_info_list ) {
-    if (!vi.is_loop_local) {
-      if(vi.reduction_type != reduction::NONE) {
-        std::string varname = "r_" + vi.name;
-        for (var_ref & vr : vi.refs) {
-          loopBuf.replace( vr.ref, varname );
-        }
-      }
-    }
-  }
-  
-  for ( field_ref & le : field_ref_list ) {
-    //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
-    if (le.dirExpr != nullptr) {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
-    } else {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
-    }
-  }
-
-  // Handle calls to special in-loop functions
-  for ( special_function_call & sfc : special_function_call_list ){
-    if( sfc.add_loop_var ){
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
-    } else {
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression);
-    }
-  }
-    
-  std::stringstream code;
-  code << "const int loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
-  code << "const int loop_end   = lattice->loop_end(" << parity_in_this_loop << ");\n";
+void MyASTVisitor::generate_openacc_loop_header(std::stringstream & code) {
 
   // Add openacc pragmas
   code << "#pragma acc parallel loop";
@@ -88,49 +52,6 @@ std::string MyASTVisitor::generate_code_openacc(Stmt *S, bool semicolon_at_end, 
     }
   }
   code << "\n";
-
-  // Generate the loop
-  code << "for(int " << looping_var <<" = loop_begin; " 
-       << looping_var << " < loop_end; " << looping_var << "++) {\n";
-  
-  // Create temporary field element variables
-  for (field_info & l : field_info_list) {
-    std::string type_name = l.type_template;
-    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-
-    // First check for direction references. If any found, create list of temp
-    // variables
-    for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << type_name << " " << l.loop_ref_name << "_" << get_stmt_str(d.e)
-           << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
-           << get_stmt_str(d.e) << "][" << looping_var << "]);\n";
-    }
-    // Check for references without a direction. If found, add temp variable
-    for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-      code << type_name << " " << l.loop_ref_name << " = " 
-           << l.new_name << ".get_value_at(" << looping_var << ");\n";
-      break;  // Only one needed
-    }
-  }
-
-  // Dump the main loop code here
-  code << loopBuf.dump();
-  if (semicolon_at_end) code << ";";
-  code << "\n";
-
-  // Call setters
-  for (field_info & l : field_info_list){
-    std::string type_name = l.type_template;
-    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-    if(l.is_written) {
-      code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " 
-           << looping_var << ");\n";
-    }
-  }
-
-  code << "}\n";
-
-  return code.str();
 }
 
 

@@ -130,6 +130,25 @@ std::string comment_string(const std::string & s) {
 }
 
 
+/// From parity + dir -expression remove X, i.e.
+/// X + dir -> dir
+/// X - dir -> -dir
+std::string remove_X(const std::string & s, bool * was_there) {
+  std::string r = remove_extra_whitespace(s);
+  if (r.size() == 0 || r[0] != 'X') {
+    if (was_there != nullptr) *was_there = false;
+    return r;
+  }
+  if (was_there != nullptr) *was_there = true;
+  int i = 1;
+  if (i < r.size() && std::isspace(r[i])) i++;
+  if (i < r.size() && s[i] == '+') {
+    i++;
+    if (i < r.size() && std::isspace(r[i])) i++;
+  }
+  return r.substr(i,std::string::npos );
+}
+
 /// Types ofen seem to have "class name" -names, harmful
 std::string remove_class_from_type(const std::string & s) {
   size_t i = s.find("class ",0);

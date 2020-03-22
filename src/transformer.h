@@ -40,6 +40,8 @@ struct codetype {
   bool openacc=false;
 };
 
+extern codetype target;  // make this global var
+
 namespace cmdline {
   // command line options
   extern llvm::cl::opt<bool> dump_ast;
@@ -105,25 +107,29 @@ struct global_state {
 struct field_ref {
   Expr * fullExpr;              // full expression a[X+d]
   Expr * nameExpr;              // name "a"
-  Expr * parityExpr;            // expr within [], here "X+d"
-  Expr * dirExpr;               // here "d", nullptr if no direction
-  std::string dirname;          // dir as a string "d"
+  Expr * parityExpr;            // expr within [], here "X+d" or "X+XUP+YUP"
+  // Expr * dirExpr;               // expr of the directon -- non-null only for nn-dirs! NOT VERY USEFUL
+  std::string direxpr_s;        // original dir expr: "d" or "XUP+YUP" etc.
   struct field_info * info;     // ptr to field info struct
   // unsigned nameInd, parityInd;
   int  sequence;                // sequence of the full stmt where ref appears
   bool is_written, is_read;
-  bool is_offset;               // true if dirExpr is for offset instead of direction
+  bool is_direction;            // true if ref contains nn OR offset direction - used as a general flag
+  bool is_constant_direction;   // true if dir is const. XUP etc.
+  bool is_offset;               // true if dir is for offset instead of simple direction
+  unsigned constant_value;
 
   field_ref() {
-    fullExpr = nameExpr = parityExpr = dirExpr = nullptr;
-    dirname = "";
+    fullExpr = nameExpr = parityExpr = nullptr;
+    direxpr_s.clear();
     info = nullptr;
-    is_written = is_read = is_offset = false;
+    is_written = is_read = is_offset = is_direction = is_constant_direction = false;
     sequence = 0;
+    
   }
 
   ~field_ref() {
-    dirname.clear();
+    direxpr_s.clear();
   }
 };
 
@@ -133,23 +139,29 @@ struct field_ref {
 // these are described the same dir_ptr struct
 
 struct dir_ptr {
-  Expr * e;                 // direction expression (1st of equivalent ones)
+  Expr *parityExpr;         // pointer to full parity+dir expression (1st of equivalent ones)
+  // Expr *dirExpr;            // non-null only for non-const. nn  NOT USEFUL
+  std::string direxpr_s;     // direction expression string (1st of equivalent ones)
   std::vector<field_ref *> ref_list;  // pointers references equivalent to this field[dir]
   unsigned count;           // how many genuine direction refs?  if count==0 this is offset
   bool is_offset;           // is this dir offset?
-  std::string name;         // new name for this field[X+dir] -variable
+  bool is_constant_direction;  // if constant nn
+  unsigned constant_value;  // value of it
+  std::string name_with_dir;         // new name for this field[X+dir] -variable
 
   dir_ptr() {
     ref_list = {};
-    e = nullptr;
+    parityExpr = nullptr;
     count = 0;
-    is_offset = false;
-    name.clear();
+    is_offset = is_constant_direction = false;
+    name_with_dir.clear();
+    direxpr_s.clear();
   }
 
   ~dir_ptr() {
     ref_list.clear();
-    name.clear();
+    name_with_dir.clear();
+    direxpr_s.clear();
   }
 };
 
@@ -166,13 +178,13 @@ struct field_info {
   std::vector<field_ref *> ref_list;     // where the var is referred at
   bool is_written;                       // is the field written to in this loop
   bool is_read_atX;                      // local read, i.e. field[X]
-  bool is_read_nb;                       // is_read_nb: read using neighbours or offsets
-  bool contains_offset;                  // if the field is referred with an offset (non-nn) index
+  bool is_read_nb;                       // read using nn-neighbours 
+  bool is_read_offset;                  // read with an offset (non-nn) index
   int  first_assign_seq;                 // the sequence of the first assignment
 
   field_info() {
     type_template = old_name = new_name = loop_ref_name = "";
-    is_written = is_read_nb = is_read_atX = contains_offset = false;
+    is_written = is_read_nb = is_read_atX = is_read_offset = false;
     first_assign_seq = 0;
     dir_list = {};
     ref_list = {};

@@ -52,7 +52,7 @@ inline std::string unique_name( const std::string t,  std::string n){
 
 
 /// The main entry point for code generation
-void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
+void MyASTVisitor::generate_code(Stmt *S) {
   srcBuf loopBuf; // (&TheRewriter,S);
   loopBuf.copy_from_range(writeBuf,S->getSourceRange());
   
@@ -88,12 +88,14 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     code << "const parity " << parity_name << " = " << loop_parity.text << ";\n";
 
     if (global.assert_loop_parity) {
-      code << "assert( is_even_odd_parity(" << parity_name << ") && \"Parity should be EVEN or ODD\");\n";
+      code << "assert( is_even_odd_parity(" << parity_name << ") && \"Parity should be EVEN or ODD in this loop\");\n";
     }
     parity_in_this_loop = parity_name;
       
   } 
   else parity_in_this_loop = parity_str(loop_parity.value);
+
+  // then, generate new names for field variables in loop
 
   for (field_info & l : field_info_list) {
     // Generate new variable name, may be needed -- use here simple receipe
@@ -105,11 +107,10 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     // Create neighbour ref names 
     int i=0;
     for (dir_ptr & d : l.dir_list) {
-      d.name = l.new_name + "_dir" + std::to_string(++i);
+      d.name_with_dir = l.new_name + "_dir" + std::to_string(++i);
     }
     
-    // variable links if needed
-    // if (l.dir_list.size() > 0) {
+    // make a ref to the field name
     if (!l.is_written) code << "const ";
     code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
   }
@@ -139,7 +140,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     // If neighbour references exist, communicate them
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       code << l.new_name << ".wait_move("
-           << get_stmt_str(d.e) << ", " << parity_in_this_loop << ");\n";
+           << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
     }
   }
   
@@ -204,11 +205,13 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
 
   for (auto it = field_info_list.begin(); it != field_info_list.end(); ) {
 
-    if (!it->contains_offset) {
+    if (!it->is_read_offset) {
       // std case, no offset
       ++it;
 
     } else{
+
+      llvm::errs() << "CHECKING OFFSET\n";
 
       int i_offset = 0;
       for (dir_ptr & d : it->dir_list) if (d.is_offset) {
@@ -233,15 +236,15 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
 
         // copy the shifted var
         code << "const field" + it->type_template + " " + offset_field_name  
-             + " = " + it->new_name + ".shift(" + d.ref_list.at(0)->dirname 
+             + " = " + it->new_name + ".shift(" + d.ref_list.at(0)->direxpr_s
              + ", " + paritystr + ");\n";
 
         // and rewrite references to the offset field
         for (field_ref * fr : new_fi.ref_list) {
           loopBuf.replace(fr->nameExpr, offset_field_name);
           loopBuf.replace(fr->parityExpr, "X");
-          fr->dirExpr = nullptr;  // no direction
-          fr->dirname = {};
+          fr->direxpr_s.clear();
+          fr->is_direction = false;  // no direction
           fr->info = & field_info_list.back();   // info points to new field_info
           fr->is_written = false;
           fr->is_read = true;
@@ -253,26 +256,22 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
 
       // Remove dir_ptrs which are offset
       // need to do this only if there are no-offset dirs
-      if (i_offset < it->dir_list.size()) {
-        std::vector<dir_ptr> dp;
-        for (dir_ptr & d : it->dir_list) { 
-          if (!d.is_offset) dp.push_back(d);
-        }
-        it->dir_list = dp;
-      } else { 
-        it->dir_list.clear();
+      std::vector<dir_ptr> dp;
+      for (dir_ptr & d : it->dir_list) { 
+        if (!d.is_offset) dp.push_back(d);
       }
+      it->dir_list.clear();
+      it->dir_list = dp;
     
       // if all references to this field var are offsets, remove the ref.
       // reset the status too
-      it->is_read_nb = it->is_read_atX = it->is_written = it->contains_offset = false;
+      it->is_read_nb = it->is_read_offset = false;
       std::vector<field_ref *>new_ref_list = {};
       for (field_ref * fr : it->ref_list) {
-        if (!fr->is_offset) {
 
+        if (!fr->is_offset) {
           new_ref_list.push_back(fr);
-          if (fr->is_read)    it->is_read_atX = true;
-          if (fr->is_written) it->is_written = true;
+          if (fr->is_direction) it->is_read_nb = true;
 
         } else {
           // turn offset off, this ref is to the newly defined field (see above)
@@ -288,7 +287,7 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
 
       } else {
         // now remove the field altogether from list
-        // iterator will point to the next element in the list
+        // iterator will point to the next element in the list after erase
         it = field_info_list.erase(it);
 
       }
@@ -296,6 +295,39 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
     }
   } 
 }
+
+
+/// Call the backend function for handling loop functions
+void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
+  // we should mark the function, but it is not necessarily in the
+  // main file buffer
+  if (target.CUDA) {
+    handle_loop_function_cuda(fd);
+  } else if (target.openacc) {
+    handle_loop_function_openacc(fd);
+  } else if (target.VECTORIZE) {
+    handle_loop_function_avx(fd);
+  }
+}
+
+/// Call the backend function for generating loop code
+std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
+  std::stringstream code;
+  if( target.CUDA ){
+    code << generate_code_cuda(S,semicolon_at_end,loopBuf);
+  } else if( target.openacc ){
+    code << generate_code_cpu(S,semicolon_at_end,loopBuf);   // use cpu method for acc
+  } else if(target.VECTORIZE) {
+    code << generate_code_avx(S,semicolon_at_end,loopBuf);
+  } else {
+    code << generate_code_cpu(S,semicolon_at_end,loopBuf);
+  }
+  return code.str();
+}
+
+
+
+
 
 
 /* Generate a header that marks field references read or written.
