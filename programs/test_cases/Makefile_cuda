@@ -11,7 +11,7 @@
 #
 MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi 
 
-OPTS = -DNDIM=4
+OPTS = -DNDIM=1
 
 INCLUDES = 
 
@@ -26,11 +26,13 @@ LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(MPI_LIBS)
 CFLAGS = -g -G $(OPTS)
 CXXFLAGS = -g -G $(OPTS)
 
+.PRECIOUS: %.cpt %.o
+
 %.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
 		$(LD) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
 
 %.cpt: %.cpp
-		$(TRANSFORMER) $<
+		$(TRANSFORMER) $(OPTS) $<
 
 %.tr.o : %.cpt
 		$(CC) $(CXXFLAGS) $< -c -o $@

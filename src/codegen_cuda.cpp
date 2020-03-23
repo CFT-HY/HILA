@@ -82,6 +82,23 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     }
   }
 
+  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
+    // Allocate memory for a reduction and initialize
+    code << vrf.type << " * d_" << vrf.vector_name << ";\n";
+    code << "cudaMalloc( (void **)& d_" << vrf.vector_name << ", "
+         << vrf.vector_name << ".size() * sizeof("
+         << vrf.type << ") * lattice->volume() );\n";
+    if (vrf.reduction_type == reduction::SUM) {
+      code << "cuda_set_zero(d_" << vrf.vector_name
+           << ", " << vrf.vector_name << ".size()* lattice->volume());\n";
+    }
+    if (vrf.reduction_type == reduction::PRODUCT) {
+      code << "cuda_set_one(d_" << vrf.vector_name
+           << ", " << vrf.vector_name << ".size()* lattice->volume());\n";
+    }
+    code << "check_cuda_error(\"allocate_reduction\");\n";
+  }
+
   
   kernel << "//----------\n";
 
@@ -134,6 +151,18 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     }
   }
 
+  // Add array reductions to the argument list
+  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
+    if (vrf.reduction_type != reduction::NONE) {
+      kernel << ", " << vrf.type << " * " << vrf.vector_name;
+      code << ", d_" << vrf.vector_name;
+      vrf.new_vector_name = vrf.vector_name
+              + "[ (loop_lattice->loop_end - loop_lattice->loop_begin)*"
+              + vrf.index_name + " + Index]";
+    }
+    loopBuf.replace( vrf.ref, vrf.new_vector_name );
+  }
+
   // In kernelized code we need to handle array expressions as well
   for ( array_ref & ar : array_ref_list ) {
     // Rename the expression
@@ -145,15 +174,15 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   }
   
 
-  // change the references to field expressions in the body
-  for ( field_ref & le : field_ref_list ) {
-    //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
-    if (le.dirExpr != nullptr) {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
-    } else {
-      loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
-    }
-  }
+  // // change the references to field expressions in the body
+  // for ( field_ref & le : field_ref_list ) {
+  //   //loopBuf.replace( le.nameExpr, le.info->loop_ref_name );
+  //   if (le.dirExpr != nullptr) {
+  //     loopBuf.replace(le.fullExpr, le.info->loop_ref_name+"_"+le.dirname);
+  //   } else {
+  //     loopBuf.replace(le.fullExpr, le.info->loop_ref_name);
+  //   }
+  // }
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
@@ -188,37 +217,77 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     }
   }
 
+
   
   // Create temporary field element variables
   for (field_info & l : field_info_list) {
     std::string type_name = l.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
 
-    // First create temp variables fields fetched from a direction
-    for( field_ref *r : l.ref_list ) if( r->dirExpr ) {
-      std::string dirname = get_stmt_str(r->dirExpr);
+    if (l.is_read_nb) {
+      // this field is nn-read
+      for (dir_ptr & d : l.dir_list) {
+        std::string dirname = get_stmt_str(d.e);
 
-      // Check if the direction is a variable. These have been renamed.
-      for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
-        if( vr.ref == r->dirExpr ) {
-          dirname = vi.new_name;
-      }
-      // Create the temp variable and call the getter
-      kernel << type_name << " "  << l.loop_ref_name << "_" << r->dirname
-             << "=" << l.new_name << ".get(loop_lattice->d_neighb[" 
-             << dirname << "][" << looping_var 
-             << "], loop_lattice->field_alloc_size);\n";
+        // Check if the direction is a variable. These have been renamed.
+        for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
+          if( vr.ref == d.e ) 
+            dirname = vi.new_name;
+
+        // Create the temp variable and call the getter
+        kernel << type_name << " "  << d.name 
+               << " = " << l.new_name << ".get(loop_lattice->d_neighb[" 
+               << dirname << "][" << looping_var 
+               << "], loop_lattice->field_alloc_size);\n";
+
+        // and replace references in loop body
+        for (field_ref * ref : d.ref_list) {
+          loopBuf.replace(ref->fullExpr, d.name); 
+        }     
+      }       
     }
-    // Check for references without a direction. If found, add temp variable
-    for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-      kernel << type_name << " "  << l.loop_ref_name << "=" 
+
+    if (l.is_read_atX) {
+      // local read
+      kernel << type_name << " "  << l.loop_ref_name << " = " 
              << l.new_name << ".get(" << looping_var 
-             << ", loop_lattice->field_alloc_size)" << ";\n";
-      break;  // Only one needed
-    }
-  }
+             << ", loop_lattice->field_alloc_size);\n";
 
-  
+    } else if (l.is_written) {
+      // and a var which is not read
+      kernel << type_name << " "  << l.loop_ref_name << ";\n";
+    }
+
+    // and finally replace references in body 
+    for (field_ref * ref : l.ref_list) if (ref->dirExpr == nullptr) {
+      loopBuf.replace(ref->fullExpr, l.loop_ref_name);
+    }
+
+    // // First create temp variables fields fetched from a direction
+    // for( field_ref *r : l.ref_list ) if( r->dirExpr ) {
+    //   std::string dirname = get_stmt_str(r->dirExpr);
+
+    //   // Check if the direction is a variable. These have been renamed.
+    //   for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
+    //     if( vr.ref == r->dirExpr ) {
+    //       dirname = vi.new_name;
+    //   }
+    //   // Create the temp variable and call the getter
+    //   kernel << type_name << " "  << l.loop_ref_name << "_" << r->dirname
+    //          << "=" << l.new_name << ".get(loop_lattice->d_neighb[" 
+    //          << dirname << "][" << looping_var 
+    //          << "], loop_lattice->field_alloc_size);\n";
+    // }
+    // // Check for references without a direction. If found, add temp variable
+    // for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
+    //   kernel << type_name << " "  << l.loop_ref_name << "=" 
+    //          << l.new_name << ".get(" << looping_var 
+    //          << ", loop_lattice->field_alloc_size)" << ";\n";
+    //   break;  // Only one needed
+    // }
+
+  } 
+
   // Dump the loop body 
   kernel << loopBuf.dump();
   if (semicolon_at_end) kernel << ';';
@@ -255,6 +324,22 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     // Free memory allocated for the reduction
     if (v.reduction_type != reduction::NONE) {
       code << "cudaFree(d_" << v.reduction_name << ");\n";
+      code << "check_cuda_error(\"free_reduction\");\n";
+    }
+  }
+  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
+    if (vrf.reduction_type == reduction::SUM) {
+      code << "cuda_multireduce_sum( " << vrf.vector_name 
+           << ", d_" << vrf.vector_name 
+           << ", loop_lattice->volume() );\n";
+
+    } if (vrf.reduction_type == reduction::PRODUCT) {
+      code << "cuda_multireduce_mul( " << vrf.vector_name 
+           << ", d_" << vrf.vector_name 
+           << ", loop_lattice->volume() );\n";
+    }
+    if (vrf.reduction_type != reduction::NONE) {
+      code << "cudaFree(d_" << vrf.vector_name << ");\n";
       code << "check_cuda_error(\"free_reduction\");\n";
     }
   }

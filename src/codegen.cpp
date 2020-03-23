@@ -101,6 +101,12 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     // Perhaps simpler FA, FB, FC. ?  The following helps avoid collisions
     while (t.find(l.new_name,0) != std::string::npos) l.new_name += "_";
     l.loop_ref_name = l.new_name + "_index";
+
+    // Create neighbour ref names 
+    int i=0;
+    for (dir_ptr & d : l.dir_list) {
+      d.name = l.new_name + "_dir" + std::to_string(++i);
+    }
     
     // variable links if needed
     // if (l.dir_list.size() > 0) {
@@ -112,7 +118,7 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
     }
 
     // Check that read fields are allocated
-    if( l.is_read ){
+    if( l.is_read_nb || l.is_read_atX ) {
       code << "assert(" << l.new_name << ".is_allocated());\n";
     }
   }
@@ -149,11 +155,20 @@ void MyASTVisitor::generate_code(Stmt *S, codetype & target) {
   // Check reduction variables
   for (var_info & v : var_info_list) {
     if (v.reduction_type == reduction::SUM) {
-      code << "lattice->reduce_node_sum(" << v.reduction_name << ", true);\n";
+      code << "lattice->reduce_node_sum( &" << v.reduction_name << ", 1, true);\n";
       code << v.name << " += " << v.reduction_name << ";\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
-      code << "lattice->reduce_node_product(" << v.reduction_name << ", true);\n";
+      code << "lattice->reduce_node_product( &" << v.reduction_name << ", 1, true);\n";
       code << v.name << " *= " << v.reduction_name << ";\n";
+    }
+  }
+  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
+    if (vrf.reduction_type == reduction::SUM) {
+      code << "lattice->reduce_node_sum(" << vrf.vector_name << ".data(), " 
+           << vrf.vector_name << ".size(), true);\n";
+    } if (vrf.reduction_type == reduction::PRODUCT) {
+      code << "lattice->reduce_node_product(" << vrf.vector_name << ".data(), " 
+           << vrf.vector_name << ".size(), true);\n";
     }
   }
           
@@ -201,7 +216,8 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
         new_fi.loop_ref_name = offset_field_name + "_index";
         new_fi.ref_list = d.ref_list;
         new_fi.dir_list = {};
-        new_fi.is_read = true;
+        new_fi.is_read_nb = false;
+        new_fi.is_read_atX = true;
 
         // push it on stack
         field_info_list.push_back(new_fi);
@@ -240,13 +256,13 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
     
       // if all references to this field var are offsets, remove the ref.
       // reset the status too
-      it->is_read = it->is_written = it->contains_offset = false;
+      it->is_read_nb = it->is_read_atX = it->is_written = it->contains_offset = false;
       std::vector<field_ref *>new_ref_list = {};
       for (field_ref * fr : it->ref_list) {
         if (!fr->is_offset) {
 
           new_ref_list.push_back(fr);
-          if (fr->is_read)    it->is_read = true;
+          if (fr->is_read)    it->is_read_atX = true;
           if (fr->is_written) it->is_written = true;
 
         } else {

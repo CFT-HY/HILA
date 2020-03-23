@@ -281,6 +281,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
 
   lfe.is_written = is_assign;
   lfe.is_read = (is_compound || !is_assign);
+  lfe.sequence = parsing_state.stmt_sequence;
   
   // next ref must have wildcard parity
   parsing_state.accept_field_parity = false;
@@ -436,14 +437,13 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
 }
 
 
-// handle an array subscript expression
-void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E) {
-  PrintingPolicy pp(Context->getLangOpts());
 
-  // Check if it's local
-  bool is_loop_local = false;
-  Expr * RE = E->getBase()->IgnoreImplicit();
+/// Find the the base of a compound variable expression
+DeclRefExpr * find_base_variable(Expr * E){
+  Expr * RE = E;
+
   while(!dyn_cast<DeclRefExpr>(RE)){
+    // RE may be a compound expression. We want the base variable.
     if(dyn_cast<ArraySubscriptExpr>(RE)){
       ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(RE);
       RE = ASE->getBase()->IgnoreImplicit();
@@ -456,35 +456,87 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E) {
         RE = OCE->getArg(0)->IgnoreImplicit();
       } else {
         // It's not a variable
-        return;
+        return nullptr;
       }
     } else {
       // It's not a variable
-      return;
+      return nullptr;
     }
   }
-  DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(RE);
-  VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
+  return dyn_cast<DeclRefExpr>(RE);
+}
+
+
+bool is_variable_loop_local(VarDecl * decl){
   for (var_decl & d : var_decl_list) {
     if (d.scope >= 0 && decl == d.decl) {
       llvm::errs() << "loop local var ref! \n";
-      is_loop_local = true;
-      break;
+      return true;
     }
   }
+  return false;
+}
 
-  // If it's defined outside the loop, it may need to be handled
-  // (communicated to kernels, for example). So record it here.
-  if(!is_loop_local){
-    array_ref ar;
-    ar.ref = E;
+
+
+// handle an array subscript expression
+void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
+                                        bool is_assign,
+                                        std::string &assignop) {
+  PrintingPolicy pp(Context->getLangOpts());
+
+  // Check if it's local
+  DeclRefExpr * DRE = find_base_variable(E);
+  VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
+  bool array_local = is_variable_loop_local(decl);
+
+  // Also check the index
+  bool index_local;
+  DRE = dyn_cast<DeclRefExpr>(E->getIdx()->IgnoreImplicit());
+  if(DRE){
+    decl = dyn_cast<VarDecl>(DRE->getDecl());
+    index_local = is_variable_loop_local(decl);
+  } else {
+    // This happens when the index is not a variable.
+    // It's probably a compile time constant
+    index_local = true;
+  }
+
+  if(!array_local){
+    llvm::errs() << "Non-local array\n";
+    if(!index_local){
+      llvm::errs() << "Non-local index\n";
+      // It's defined completely outside the loop. Can be replaced with a
+      // temporary variable
+      array_ref ar;
+      ar.ref = E;
+      
+      // Find the type of the full expression (that is an element of the array)
+      auto type = E->getType().getCanonicalType().getUnqualifiedType();
+      ar.type = type.getAsString(pp);
     
-    // Find the type of the full expression (that is an element of the array)
-    const Type *t = E->getType().getTypePtr();
-    llvm::errs() << E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp) << "\n";
-    ar.type = E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp);
-  
-    array_ref_list.push_back(ar);
+      array_ref_list.push_back(ar);
+    } else {
+      llvm::errs() << "Local index\n";
+      // The array is defined outside, but the index is local. This is 
+      // the most problematic case. For now, only allow this if it's a
+      // histogram reduction
+
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 E->getSourceRange().getBegin(),
+                 "Cannot mix loop local index and predefined array. You must use std::vector in a vector reduction." );
+    }
+  } else {
+    llvm::errs() << "Local array\n";
+    if( !index_local ){
+      llvm::errs() << "Local index\n";
+      // The index needs to be communicated to the loop. It's a normal variable,
+      // so we can handle it as such
+      handle_var_ref(DRE, is_assign, assignop);
+    } else {
+      llvm::errs() << "Local index\n";
+      // Array and index are local. This does not require any action.
+    }
   }
 }
 
@@ -513,8 +565,11 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // the following is for taking the parity from next elem
   parsing_state.scope_level = 0;
   parsing_state.in_loop_body = true;
+  parsing_state.ast_depth = 0;   // renormalize to the beginning of loop
+  parsing_state.stmt_sequence = 0;
   TraverseStmt(ls);
   parsing_state.in_loop_body = false;
+  parsing_state.ast_depth = 0;
 
   // Remove exprs which we do not want
   for (Expr * e : remove_expr_list) writeBuf->remove(e);
@@ -560,6 +615,12 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   static bool is_assignment = false;
   static bool is_compound = false;
   static std::string assignop;
+
+  // depth = 1 is the "top level" statement, should give fully formed
+  // c++ statements separated by ';'.  These act as sequencing points
+  // This is used to obtain assignment and read ordering
+  if (parsing_state.ast_depth == 1) parsing_state.stmt_sequence++;
+
  
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
   // And also assignments to other vars: t += norm2(lf[X]) etc.
@@ -585,10 +646,12 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // return true;
   }
 
+
   if ( is_constructor_stmt(s) ){
     handle_constructor_in_loop(s);
     // return true;
   }
+  
    
   // catch then expressions
   if (Expr *E = dyn_cast<Expr>(s)) {
@@ -639,7 +702,6 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     }
 
 
-
 #if 1
 
     if (isa<ArraySubscriptExpr>(E)) {
@@ -649,12 +711,55 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       auto a = dyn_cast<ArraySubscriptExpr>(E);
 
       // At this point this should be an allowed expression?
-      handle_array_var_ref(a);
+      handle_array_var_ref(a, is_assignment, assignop);
       
+      // We don't want to handle the array variable or the index separately
+      parsing_state.skip_children = 1;
       return true;
     }
-#endif          
+
+    // Check for a vector reduction
+    if( is_assignment && isa<CXXOperatorCallExpr>(s) ){
+      CXXOperatorCallExpr * OC = dyn_cast<CXXOperatorCallExpr>(s);
+      std::string type = OC->getArg(0)->getType().getAsString();
+      if( type.rfind("std::vector<",0) != std::string::npos ){
+        // It's an assignment to a vector element
+        // Still need to check if it's a reduction
+        DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(OC->getArg(0)->IgnoreImplicit());
+        VarDecl * vector_decl = dyn_cast<VarDecl>(DRE->getDecl());
+        bool array_local = is_variable_loop_local(vector_decl);
         
+        DRE = dyn_cast<DeclRefExpr>(OC->getArg(1)->IgnoreImplicit());
+        VarDecl * index_decl = dyn_cast<VarDecl>(DRE->getDecl());
+        bool index_local = is_variable_loop_local(index_decl);
+
+        if( !array_local && index_local ) {
+          llvm::errs() << "Found a vector reduction\n";
+          vector_reduction_ref vrf;
+          vrf.ref = OC;
+          vrf.vector_name = vector_decl->getName();
+          vrf.index_name = index_decl->getName();
+          if( type.rfind("float",0) != std::string::npos ){
+            vrf.type = "float";
+          } else {
+            vrf.type = "double";
+          }
+          if (assignop == "+=") {
+            vrf.reduction_type = reduction::SUM;
+          } else if (assignop == "*="){
+            vrf.reduction_type = reduction::PRODUCT;
+          } else {
+            vrf.reduction_type = reduction::NONE;
+          }
+          vector_reduction_ref_list.push_back(vrf);
+          parsing_state.skip_children = 1;
+        }
+
+      }
+    }
+
+#endif
+    
     if (0){
 
       // not field type non-const expr
@@ -662,7 +767,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // loop-local variable refs inside? If so, we cannot evaluate this as "whole"
 
       // check_local_loop_var_refs = 1;
-        
+      
       // TODO: find really uniq variable references
       //var_ref_list.push_back( handle_var_ref(E) );
 
@@ -687,7 +792,15 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     
     parsing_state.scope_level++;
     passthrough = true;     // next visit will be to the same node, skip
+
+    // Save and reset ast_depth, so that depth == 1 again for the block.
+    int save_ast_depth = parsing_state.ast_depth;
+    parsing_state.ast_depth = -1;   // this forces the block content to be level 0
+
     TraverseStmt(s);
+
+    parsing_state.ast_depth = save_ast_depth;
+
     parsing_state.scope_level--;
     remove_vars_out_of_scope(parsing_state.scope_level);
     parsing_state.skip_children = 1;
@@ -800,7 +913,11 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
   if (parsing_state.skip_children > 0) parsing_state.skip_children++;
     
   // go via the original routine...
-  if (!parsing_state.skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
+  if (!parsing_state.skip_children) {
+    parsing_state.ast_depth++;
+    RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
+    parsing_state.ast_depth--;
+  }
 
   if (parsing_state.skip_children > 0) parsing_state.skip_children--;
       
@@ -815,7 +932,11 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
   if (parsing_state.skip_children > 0) parsing_state.skip_children++;
     
   // go via the original routine...
-  if (!parsing_state.skip_children) RecursiveASTVisitor<MyASTVisitor>::TraverseDecl(D);
+  if (!parsing_state.skip_children) {
+    parsing_state.ast_depth++;
+    RecursiveASTVisitor<MyASTVisitor>::TraverseDecl(D);
+    parsing_state.ast_depth--;
+  }
 
   if (parsing_state.skip_children > 0) parsing_state.skip_children--;
 
@@ -889,18 +1010,18 @@ bool MyASTVisitor::check_field_ref_list() {
 
     std::string name = get_stmt_str(p.nameExpr);
       
-    field_info * lfip = nullptr;
+    field_info * fip = nullptr;
 
     // search for duplicates: if found, lfip is non-null
 
     for (field_info & li : field_info_list) {
       if (name.compare(li.old_name) == 0) {
-        lfip = &li;
+        fip = &li;
         break;
       }
     }
 
-    if (lfip == nullptr) {
+    if (fip == nullptr) {
       field_info lfv;
       lfv.old_name = name;
       lfv.type_template = get_expr_type(p.nameExpr);
@@ -911,22 +1032,34 @@ bool MyASTVisitor::check_field_ref_list() {
         no_errors = false;
       }
       lfv.type_template.erase(0,5);  // Remove "field"  from field<T>
-      lfv.is_written = p.is_written;
-      lfv.is_read    = p.is_read;
       
       field_info_list.push_back(lfv);
-      lfip = & field_info_list.back();
+      fip = & field_info_list.back();
     }
     // now lfip points to the right info element
     // copy that to lf reference
-    p.info = lfip;
+    p.info = fip;
 
-    if (p.is_written) lfip->is_written = true;
-    if (p.is_read)    lfip->is_read    = true;
-    if (p.is_offset)  lfip->contains_offset = true;
+    if (p.is_written && !fip->is_written) {
+      // first write to this field var
+      fip->first_assign_seq = p.sequence;
+      fip->is_written = true;
+    }
+
+    // note special treatment of file[X] -read: it is real read only if it 
+    // comes before or at the same time than assign
+    if (p.is_read) {
+      if (p.dirExpr != nullptr) {
+        fip->is_read_nb = true;
+      } else if ( !fip->is_written || fip->first_assign_seq >= p.sequence) {
+        fip->is_read_atX = true;
+      }
+    }
+
+    if (p.is_offset)  fip->contains_offset = true;
       
     // save expr record
-    lfip->ref_list.push_back(&p);
+    fip->ref_list.push_back(&p);
 
     if (p.dirExpr != nullptr) {
 
@@ -942,7 +1075,7 @@ bool MyASTVisitor::check_field_ref_list() {
       // find equivalent constant expressions
       // TODO: use better method?
       bool found = false;
-      for (dir_ptr & dp : lfip->dir_list) {
+      for (dir_ptr & dp : fip->dir_list) {
         if (is_duplicate_expr(dp.e, p.dirExpr)) {
           dp.count += (p.is_offset == false);   // for nn-neighbours
           dp.ref_list.push_back(&p);
@@ -959,7 +1092,7 @@ bool MyASTVisitor::check_field_ref_list() {
         dp.is_offset = p.is_offset;
         dp.ref_list.push_back(&p);
 
-        lfip->dir_list.push_back(dp);
+        fip->dir_list.push_back(dp);
       }
     } // dirExpr
   } // p-loop
@@ -1076,11 +1209,10 @@ bool MyASTVisitor::control_command(VarDecl *var) {
   std::string n = var->getNameAsString();
   if (n.find("_transformer_ctl_",0) == std::string::npos) return false;
   
-  if (n == "_transformer_ctl_dump_ast") {
+  if (n.find("_transformer_ctl_dump_ast",0) != std::string::npos) {
     parsing_state.dump_ast_next = true;
-  } else if(n == "_transformer_ctl_loop_function") {
-    parsing_state.loop_function_next = true;
   } else {
+    llvm::errs() << "CTL string: " << n << '\n';
     reportDiag(DiagnosticsEngine::Level::Warning,
                var->getSourceRange().getBegin(),
                "Unknown command for transformer_ctl(), ignoring");
@@ -1104,8 +1236,8 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   if (parsing_state.check_loop && state::loop_found) return true;
 
   if (parsing_state.dump_ast_next) {
-    // llvm::errs() << "**** Dumping declaration:\n" + get_stmt_str(s)+'\n';
-    var->dump();
+    llvm::errs() << "**** AST dump of declaration: \'" << TheRewriter.getRewrittenText(var->getSourceRange()) << "\'\n";
+    var->dumpColor();
     parsing_state.dump_ast_next = false;
   }
 
@@ -1172,9 +1304,10 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 
   if (parsing_state.check_loop && state::loop_found) return true;
   
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** Dumping statement:\n" + get_stmt_str(s)+'\n';
-    s->dump();
+  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
+    llvm::errs() << "**** AST dump of statement \'" << get_stmt_str(s) << "\'\n";
+    s->dumpColor();
+    llvm::errs() << "*****************************\n";
     parsing_state.dump_ast_next = false;
   }
 
@@ -1201,8 +1334,6 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           return true;
         }
 
-        
-        
         CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( startloc );
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
         bool internal_error = true;
@@ -1346,9 +1477,10 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // also only non-templated functions
   // this does not really do anything
 
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** Dumping funcdecl:\n";
-    f->dump();
+  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
+    llvm::errs() << "**** AST dump of function: " << f->getNameInfo().getName() << '\n';
+    f->dumpColor();
+    llvm::errs() << "*******************************\n";
     parsing_state.dump_ast_next = false;
   }
   if(!parsing_state.check_loop && (parsing_state.loop_function_next || has_pragma(f,"loop_function"))) {
@@ -1574,9 +1706,10 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
 
 bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** Dumping class template declaration: \'" << D->getNameAsString() << "\'\n";
-    D->dump();
+  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
+    llvm::errs() << "**** AST dump of class template declaration: \'" << D->getNameAsString() << "\'\n";
+    D->dumpColor();
+    llvm::errs() << "*******************************\n";
     parsing_state.dump_ast_next = false;
   }
 
@@ -1634,9 +1767,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 bool MyASTVisitor::VisitDecl( Decl * D) {
   if (parsing_state.check_loop && state::loop_found) return true;
 
-  if (parsing_state.dump_ast_next) {
-    llvm::errs() << "**** Dumping declaration:\n";
-    D->dump();
+  if (parsing_state.dump_ast_next && !parsing_state.check_loop) {
+    llvm::errs() << "**** AST dump of declaration: \'" << TheRewriter.getRewrittenText(D->getSourceRange()) << "\'\n";
+    D->dumpColor();
+    llvm::errs() << "**********************************\n";
     parsing_state.dump_ast_next = false;
   }
 

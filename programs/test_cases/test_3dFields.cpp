@@ -92,8 +92,8 @@ int main(int argc, char **argv){
         element<double> diff = s1[X].re - (NDIM+1);
 	    sum += diff*diff;
     }
-	  assert(sum==0 && "test neighbour fetch");
-    
+	assert(sum==0 && "test neighbour fetch");
+
 
     // Test starting communication manually
 
@@ -144,6 +144,27 @@ int main(int argc, char **argv){
         sum += diff1*diff1 + diff2*diff2;
     }
     assert(sum == 0);
+
+
+    // Test array reduction
+    field<double> dfield;
+    dfield[ALL] = 1;
+
+#if NDIM == 4
+    std::vector<double> arraysum(nd[TUP]);
+    std::fill(arraysum.begin(), arraysum.end(), 0);
+
+    onsites(ALL){
+      element<coordinate_vector> l = coordinates(X);
+      element<int> t = l[TUP];
+      
+      arraysum[t] += dfield[X];
+    }
+    
+    for(int t=0; t<nd[TUP]; t++){
+      assert(arraysum[t] == nd[XUP]*nd[YUP]*nd[ZUP]);
+    }
+#endif
 
     finishrun();
 }

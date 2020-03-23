@@ -286,7 +286,6 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
 /// This is for the index array neighbours
 /// TODO: implement some other neighbour schemas!
 /////////////////////////////////////////////////////////////////////
-#define swap(a,b) {int t; t=a; a=b; b=t; }
 
 void lattice_struct::create_std_gathers()
 {
@@ -408,7 +407,7 @@ void lattice_struct::create_std_gathers()
 	          itmp[n++] = i;
 	          // bubble sort the tmp-array according to the index on the neighbour node
 	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
-	            swap( itmp[k], itmp[k-1] );
+	            std::swap( itmp[k], itmp[k-1] );
 	        }
 	        unsigned off = fn.buffer;
           if (par == ODD) off += fn.evensites;

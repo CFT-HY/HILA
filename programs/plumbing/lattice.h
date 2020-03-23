@@ -216,10 +216,10 @@ public:
   #endif
 
   template <typename T>
-  void reduce_node_sum(T & value, bool distribute);
+  void reduce_node_sum(T * value, int N, bool distribute);
 
   template <typename T>
-  void reduce_node_product(T & value, bool distribute);
+  void reduce_node_product(T * value, int N, bool distribute);
 
   // Guarantee 64 bits for these - 32 can overflow!
   unsigned long long n_gather_done = 0, n_gather_avoided = 0;

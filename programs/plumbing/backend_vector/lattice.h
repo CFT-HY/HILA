@@ -297,13 +297,13 @@ struct vectorized_lattice_struct  {
     }
 
     template <typename T>
-    void reduce_node_sum(T & value, bool distribute){
-      lattice->reduce_node_sum(value, distribute);
+    void reduce_node_sum(T * value, int N, bool distribute){
+      lattice->reduce_node_sum(value, N, distribute);
     };
 
     template <typename T>
-    void reduce_node_product(T & value, bool distribute){
-      lattice->reduce_node_product(value, distribute);
+    void reduce_node_product(T * value, int N, bool distribute){
+      lattice->reduce_node_product(value, N, distribute);
     };
 
 };
