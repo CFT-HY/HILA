@@ -580,9 +580,11 @@ int main(int argc, const char **argv) {
   // msg handling, should we get rid of it?
 
   // av takes over from argv
-  const char **av = new const char *[argc+3];
+  const char **av = new const char *[argc+6];
   argc = rearrange_cmdline(argc, argv, av);
+  av[argc++] = "-std=c++17";     // use c++17 std
   av[argc++] = "-DTRANSFORMER";  // add global defn
+  av[argc] = nullptr;
 
 
   OptionsParser op(argc, av, TransformerCat);
