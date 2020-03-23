@@ -82,12 +82,12 @@ struct cmplx {
   T imag() const { return im; }
 
   #pragma transformer loop_function
-  T norm() const { return re*re + im*im; }
+  T squarenorm() const { return re*re + im*im; }
   // TODO: make this work for vector type!  Not double
   
   //currently this gives a compilation error
   #pragma transformer loop_function
-  double abs() const { return sqrt(static_cast<double>(norm()) ); }
+  double abs() const { return sqrt(static_cast<double>(squarenorm()) ); }
   #pragma transformer loop_function
   double arg() const { return atan2(static_cast<double>(im),static_cast<double>(re)); }
 
@@ -141,8 +141,9 @@ struct cmplx {
   
   #pragma transformer loop_function
   cmplx<T> & operator*= (const cmplx<T> & lhs) {
-    re = re * lhs.re - im * lhs.im;
+    T r = re * lhs.re - im * lhs.im;
     im = im * lhs.re + re * lhs.im;
+    re = r;
     return *this;
   }
   
@@ -159,9 +160,10 @@ struct cmplx {
   // a/b = a b*/|b|^2 = (a.re*b.re + a.im*b.im + i(a.im*b.re - a.re*b.im))/|b|^2
   #pragma transformer loop_function
   cmplx<T> & operator/= (const cmplx<T> & lhs) {
-    T n = lhs.norm();
-    re = (re * lhs.re + im * lhs.im)/n;
-    im = (im * lhs.re - re * lhs.im)/n;
+    T n = lhs.squarenorm();
+    T r = (re * lhs.re + im * lhs.im)/n;
+    im  = (im * lhs.re - re * lhs.im)/n;
+    re = r;
     return *this;
   }
   
@@ -175,10 +177,6 @@ struct cmplx {
     return *this;
   }
 
-  #pragma transformer loop_function
-  auto norm_sq(){
-    return re*re + im*im;
-  }
 };
 
 template <typename T>
@@ -252,7 +250,7 @@ cmplx<T> operator*(const A &a, const cmplx<T> & c) {
 template <typename T>
 #pragma transformer loop_function
 cmplx<T> operator/(const cmplx<T> & a, const cmplx<T> & b) {
-  T n = b.norm();
+  T n = b.squarenorm();
   return cmplx<T>( (a.re*b.re + a.im*b.im)/n, (a.im*b.re - a.re*b.im)/n );
 }
 
@@ -269,7 +267,7 @@ template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
 #pragma transformer loop_function
 cmplx<T> operator/(const A &a, const cmplx<T> & c) {
-  T n = c.norm();
+  T n = c.squarenorm();
   return cmplx<T>((a * c.re)/n, -(a * c.im)/n);
 }
 
@@ -301,7 +299,7 @@ inline cmplx<Accuracy> conj(cmplx<Accuracy> val){
 template<typename T> 
 #pragma transformer loop_function
 inline auto norm_squared(cmplx<T> val){
-  return val.norm_sq();
+  return val.squarenorm();
 }
 
 
