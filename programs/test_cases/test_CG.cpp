@@ -26,11 +26,6 @@ int main(int argc, char **argv){
       }
     }
 
-    //doesn't work as of now because transformer doesn't translate
-    //nested onsites environments correctly. 
-
-    //in the cpt file we have unhandled onsites() loop statements
-
     CG_engine<staggered_dirac> engine;
     engine.solve(U, 0.1, b, sol);
 
