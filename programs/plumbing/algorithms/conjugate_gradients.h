@@ -12,8 +12,7 @@
 #include "../dirac.h"
 #include<iostream>
 
-#define MAXITERS 1
-//valid operators for CG engine 
+#define MAXITERS 10
 struct staggered_dirac;
 
 template<typename T>
@@ -37,7 +36,7 @@ class CG_engine{
     {}
 };
 
-template<>
+template<> //not optimized yet
 class CG_engine<staggered_dirac>{
     public:
     template<typename mtype, typename vtype> 
@@ -45,39 +44,37 @@ class CG_engine<staggered_dirac>{
         const mtype gauge[NDIM],
         const double mass,
         const vtype &b,
-        vtype &sol)
+        vtype &x_0)
     {
         vtype r, p, Dp;
         double pDDp = 0, rr = 0, rrnew = 0;
         double alpha, beta;
-
+        dirac_stagggered(gauge, mass, x_0, Dp);
         onsites(ALL){
-            r[X] = b[X];
+            r[X] = b[X] - Dp[X];
             p[X] = b[X];
         }
 
-        for (int i = 0; i < MAXITERS; i++){
-            dirac_stagggered(gauge, mass, p, Dp); //give current p, get transformed version in Dp
-            rr=pDDp=0;
-
+        for (int = 0; i < MAXITERS; i++){
+            dirac_stagggered(gauge, mass, p, Dp);
+            rr=pDDP=rrnew=0;
+            //note: unsure about whether it should be pDDp or pDp  
             onsites(ALL){
                 rr += norm_squared(r[X]);
-                pDDp += norm_squared(Dp[X]);
+                pDDp += p[X].conjugate()*Dp[X];
             }
 
-            alpha = rr / pDDp;
-            rrnew = 0;
+            alpha=rr/pDDp;
 
             onsites(ALL){
-                sol[X] = sol[X] + alpha*p[X]; //update solution vector
-                r[X] = r[X] - alpha*Dp[X]; //update residuals
-                rrnew += norm_squared(r[X]);
+                x_0[X] = x_0[X] + alpha*p[X];
+                r[X] = r[X] - alpha*Dp[X]; 
             }
-
-            if (rrnew < 10) return;
-
+            onsites(ALL){ 
+                rrnew += norm_squared(r[X]); 
+            }
             beta = rrnew/rr;
-            p[ALL] = r[X] + beta*p[X];
+            p[ALL] = beta*p[X] + r[X];
         }
     }
 
