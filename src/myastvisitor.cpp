@@ -723,6 +723,9 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
         VarDecl * index_decl = dyn_cast<VarDecl>(DRE->getDecl());
         bool index_local = is_variable_loop_local(index_decl);
 
+        // Handle the index as a variable (it's local, so the name won't change)
+        handle_var_ref(DRE,false,assignop);
+
         if( !array_local && index_local ) {
           llvm::errs() << "Found a vector reduction\n";
           vector_reduction_ref vrf;
