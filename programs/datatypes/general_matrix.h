@@ -4,6 +4,14 @@
 #include "operations.h"
 #include "../datatypes/cmplx.h"
 
+
+// Do this macro here to ease "switching" between using
+// mul_add operation and the normal sum
+// THE mul_add METHOD SEEMS TO BE SLOWER?  
+#define MUL_SUM(a, b, c) c += a*b
+// #define MUL_SUM(a, b, c) c = mul_add(a, b, c)
+
+
 //forward decl 
 template <const int n, const int m, typename T>
 class matrix;
@@ -253,6 +261,8 @@ matrix<n,m,T> operator * (const matrix<n,m,T> & A, const T & B) {
   return res;
 }
 
+
+
 //general matrix * matrix multiplication 
 template <int n, int m, int p, typename T> 
 #pragma transformer loop_function
@@ -261,7 +271,8 @@ matrix<n,p,T> operator * (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
     res.c[i][j] = 0;
     for (int k = 0; k < m; k++){
-      res.c[i][j] += (A.c[i][k] * B.c[k][j]);
+      // res.c[i][j] += (A.c[i][k] * B.c[k][j]);
+      MUL_SUM( A.c[i][k] , B.c[k][j] , res.c[i][j] );
     }
   }
   return res;
@@ -275,7 +286,8 @@ matrix<n,p,T> operator * (const matrix<n,m,T> & A, const transposeMatrix<p,m,T> 
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
     res.c[i][j] = 0;
     for (int k = 0; k < m; k++){
-      res.c[i][j] += (A.c[i][k]*B.ref.c[j][k]);
+      // res.c[i][j] += (A.c[i][k]*B.ref.c[j][k]);
+      MUL_SUM(A.c[i][k] , B.ref.c[j][k], res.c[i][j]);
     }
   }
   return res;
@@ -289,7 +301,8 @@ matrix<n,p,T> operator * (const transposeMatrix<m,n,T> & A, const matrix<m,p,T> 
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
     res.c[i][j] = 0;
     for (int k = 0; k < m; k++){
-      res.c[i][j] += (A.ref.c[k][i]*B.c[k][j]);
+      //res.c[i][j] += (A.ref.c[k][i]*B.c[k][j]);
+      MUL_SUM(A.ref.c[k][i] , B.c[k][j], res.c[i][j]);
     }
   }
   return res;
@@ -304,7 +317,8 @@ matrix<n,p,T> operator * (const transposeMatrix<m,n,T> & A, const transposeMatri
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
     res.c[i][j] = 0;
     for (int k = 0; k < m; k++){
-      res.c[i][j] += (A.ref.c[k][i]*B.ref.c[j][k]);
+      // res.c[i][j] += (A.ref.c[k][i]*B.ref.c[j][k]);
+      MUL_SUM(A.ref.c[k][i] , B.ref.c[j][k], res.c[i][j]);
     }
   }
   return res;
@@ -318,7 +332,8 @@ matrix<n,p,T> operator * (const matrix<n,m,T> & A, const conjugateMatrix<p,m,T> 
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
     res.c[i][j] = 0;
     for (int k = 0; k < m; k++){
-      res.c[i][j] += (A.c[i][k]*conj(B.ref.c[j][k]));
+      // res.c[i][j] += (A.c[i][k]*conj(B.ref.c[j][k]));
+      MUL_SUM( A.c[i][k] , conj(B.ref.c[j][k]), res.c[i][j] );
     }
   }
   return res;
@@ -332,7 +347,8 @@ matrix<n,p,T> operator * (const conjugateMatrix<m,n,T> & A, const matrix<m,p,T> 
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
     res.c[i][j] = 0;
     for (int k = 0; k < m; k++){
-      res.c[i][j] += (conj(A.ref.c[k][i])*B.c[k][j]);
+      // res.c[i][j] += (conj(A.ref.c[k][i])*B.c[k][j]);
+      MUL_SUM( conj(A.ref.c[k][i]) , B.c[k][j], res.c[i][j] );
     }
   }
   return res;
