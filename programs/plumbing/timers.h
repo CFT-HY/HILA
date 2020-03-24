@@ -19,7 +19,7 @@ public:
   void reset();
   double start();
   double end();
-  void report(const char * label);
+  void report(const char * label, int print_header = -1);
   
 };
 

@@ -26,22 +26,22 @@ double timer::end() {
   } else return 0.0;
 }
 
-void timer::report(const char * label) {
+void timer::report(const char * label, int print_header) {
   if (mynode() == 0) {
     static bool first = true;
-    char line[100];
+    char line[200];
 
-    if (first) {
+    if (print_header > 0 || (first && print_header == -1)) {
       first = false;
-      hila::output << "                       total(sec)          calls   usec/call  fraction\n";
+      hila::output << "TIMER:                 total(sec)          calls   usec/call  fraction\n";
     }
     // time used during the counter activity
     t_initial = gettime() - t_initial;
     if (count > 0) {
-      std::snprintf(line,100," %16s: %14.3f %14llu %11.3f %8.4f\n",
+      std::snprintf(line,200," %16s: %14.3f %14llu %11.3f %8.4f\n",
                     label, t->total, t->count, 1e6 * t->total/t->count, t->total/t->initial );
     } else {
-      std::snprintf(line,100," %16s: no timed calls made\n",label);
+      std::snprintf(line,200," %16s: no timed calls made\n",label);
     }
     hila::output << line;      
   }
