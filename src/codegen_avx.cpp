@@ -204,7 +204,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
        << field_info_list.front().type_template+"::type;\n";
   code << "constexpr int vector_size = vector_info<" << basetype << ">::vector_size;\n";
   
-  // Create temporary variables for reductions
+  // Create temporary variables for reductions (vector reduction is in the loop)
   for (var_info & v : var_info_list) {
     if (v.reduction_type != reduction::NONE) {
       v.new_name = "v_" + v.reduction_name;
@@ -233,6 +233,21 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
   code << "for(int " << looping_var <<" = loop_begin; "
        << looping_var << " < loop_end; " 
        << looping_var << "++) {\n";
+
+
+  // Add vector reduction variable here, inside the loop
+  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
+    // Allocate memory for a reduction and initialize
+    if (vrf.reduction_type == reduction::SUM) {
+      code << "vectorize_struct<" <<vrf.type << ", vector_size>::type v_" 
+           << vrf.vector_name << "(0);\n";
+    }
+    if (vrf.reduction_type == reduction::PRODUCT) {
+      code << "vectorize_struct<" <<vrf.type << ", vector_size>::type v_" 
+           << vrf.vector_name << "(1);\n";
+    }
+    loopBuf.replace( vrf.ref, "v_"+vrf.vector_name );
+  }
 
   
   // Create temporary field element variables
@@ -316,9 +331,42 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
     }
   }
 
+
+  // Vector reductions must be in the sames scope as the loop body. Otherwise the index may be undefined. Therefore add it before the closing }
+  if (!semicolon_at_end){
+    // Remove the last }
+    loopBuf.remove(loopBuf.size()-2, loopBuf.size()-1);
+  }
+
   // Dump the main loop code here
   code << loopBuf.dump();
   if (semicolon_at_end) code << ";";
+  code << "\n";
+
+
+  // Add vector reductions
+  int i=0;
+  for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
+    // run reduction over the vector
+    code << "int v_index_" << i << "[vector_size];\n";
+    code << vrf.index_name << ".store(&v_index_" << i << "[0]);\n";
+    code << vrf.type << " a_" << vrf.vector_name << "[vector_size];\n";
+    code << "v_" << vrf.vector_name << ".store(&a_" << vrf.vector_name << "[0]);\n";
+    code << "for( int i=0; i<vector_size; i++){\n";
+    if (vrf.reduction_type == reduction::SUM) {
+      code << vrf.vector_name << "[v_index_" << i << "[i]] += " 
+           << "a_" << vrf.vector_name << "[i];\n";
+    }
+    if (vrf.reduction_type == reduction::PRODUCT) {
+      code << vrf.vector_name << "[v_index_" << i << "[i]] *= " 
+           << "a_" << vrf.vector_name << "[i];\n";
+    }
+    code << "}\n";
+  }
+
+  if (!semicolon_at_end){
+    code << "}";
+  }
   code << "\n";
 
 
