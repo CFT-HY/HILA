@@ -256,8 +256,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     exit(1);
   }
 
-  llvm::errs() << get_expr_type(lfe.fullExpr) << " " << get_expr_type(lfe.nameExpr) 
-               << " " << get_expr_type(lfe.parityExpr) << "\n";
+
   // Check if the expression is already handled
   for( field_ref r : field_ref_list)
     if( r.fullExpr == lfe.fullExpr  ){
@@ -503,6 +502,10 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
                                         std::string &assignop) {
   PrintingPolicy pp(Context->getLangOpts());
 
+  // array refs are OK if they're inside the field element type,
+  // for example  f[X].c[i][j]
+  // Try to find these
+
   // Check if it's local
   DeclRefExpr * DRE = find_base_variable(E);
   VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
@@ -536,9 +539,13 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
       array_ref_list.push_back(ar);
     } else {
       llvm::errs() << "Local index\n";
+
       // The array is defined outside, but the index is local. This is 
-      // the most problematic case. For now, only allow this if it's a
+      // the most problematic case.
+      // For now, only allow this if it's a
       // histogram reduction
+
+      return;
 
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
@@ -732,7 +739,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       handle_array_var_ref(a, is_assignment, assignop);
       
       // We don't want to handle the array variable or the index separately
-      parsing_state.skip_children = 1;
+      //parsing_state.skip_children = 1;
       return true;
     }
 

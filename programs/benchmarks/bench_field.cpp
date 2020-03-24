@@ -231,7 +231,7 @@ int main(int argc, char **argv){
           }
         }
         onsites(ALL){
-          fsum += fvector1[X].squarenorm();
+          fsum += fvector1[X].norm_sq();
         }
         volatile double volatile_sum = fsum;
       }
@@ -330,6 +330,7 @@ int main(int argc, char **argv){
         r[X] = vector1[X];
         p[X] = vector1[X];
         for(int i=0; i<N; i++){
+          #pragma transformer ast dump
            vector2[X].c[0][i] = 0;
         }
       }
@@ -341,8 +342,8 @@ int main(int argc, char **argv){
 
         rr=pDDp=0;
         onsites(ALL){
-          rr += r[X].squarenorm();
-          pDDp += Dp[X].squarenorm();
+          rr += r[X].norm_sq();
+          pDDp += Dp[X].norm_sq();
         }
 
         alpha = rr / pDDp;
@@ -351,7 +352,7 @@ int main(int argc, char **argv){
         onsites(ALL){
           vector2[X] = r[X] + alpha*p[X];
           r[X] = r[X] - alpha*Dp[X];
-          rrnew += r[X].squarenorm();
+          rrnew += r[X].norm_sq();
         }
 
         beta = rrnew/rr;

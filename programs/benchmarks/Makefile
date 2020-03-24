@@ -7,7 +7,7 @@ TRANSFORMER = ../../build/transformer
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 
 CFLAGS = -Ofast $(OPTS)
-CXXFLAGS = -Ofast -x c++ --std=c++17 $(OPTS)
+CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
 
 # Don't remove cpt-files
 .PRECIOUS: %.cpt
