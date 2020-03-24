@@ -168,7 +168,7 @@ std::string remove_class_from_type(const std::string & s) {
 int rearrange_cmdline(int argc, const char **argv, const char **av) {
 
   bool found_ddash = false;
-  av[argc+1] = nullptr;  // I read somewhere that in c++ argv[argc] = 0
+  av[argc+1] = nullptr;      // I read somewhere that in c++ argv[argc] = 0
   static char s[3] = "--";   // needs to be static because ptrs
   int ddashloc = 0;
 
