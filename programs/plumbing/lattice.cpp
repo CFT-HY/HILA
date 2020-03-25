@@ -134,7 +134,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc)
   }
 
   // now i contains the `running index' for site
-#if defined(EVENFIRST)
+#if defined(EVEN_SITES_FIRST)
   if (s%2 == 0) return( i/2 );    /* even site index */
   else return( i/2 + this_node.evensites );  /* odd site */
 #else
@@ -162,7 +162,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
   }
 
   // now i contains the `running index' for site
-#if defined(EVENFIRST)
+#if defined(EVEN_SITES_FIRST)
   if (s%2 == 0) return( i/2 );    /* even site index */
   else return( i/2 + ni.evensites );  /* odd site */
 #else

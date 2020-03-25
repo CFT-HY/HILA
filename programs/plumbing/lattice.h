@@ -33,8 +33,8 @@ struct backend_lattice_struct;
 
 class lattice_struct {
 private:
-  // expose these directly, by far the simplest interface - who cares about c++ practices
-  // use also ints instead of unsigned, just to avoid surprises in arithmetics
+ 
+  // Use ints instead of unsigned, just to avoid surprises in arithmetics
   // I shall assume here that int is 32 bits, and long long 64 bits.  I guess these are
   // pretty much standard for now
   // Alternative: int_32t and int_64t (or int_fast_32t  and int_fast_64t, even more generally) 
@@ -46,7 +46,7 @@ private:
     unsigned index;
     unsigned sites, evensites, oddsites;
     unsigned field_alloc_size;          // how many sites/node in allocations 
-    coordinate_vector min, size;                 // node local coordinate ranges
+    coordinate_vector min, size;        // node local coordinate ranges
     unsigned nn[NDIRS];                 // nn-node of node down/up to dirs
     bool first_site_even;               // is location min even or odd?
     std::vector<coordinate_vector> coordinates;
@@ -162,7 +162,7 @@ public:
 
   unsigned remap_node(const unsigned i);
   
-  #ifdef EVENFIRST
+  #ifdef EVEN_SITES_FIRST
   int loop_begin( parity P) const {
     if(P==ODD){
       return this_node.evensites;
@@ -178,6 +178,7 @@ public:
     }
   }
   #else
+  
   int loop_begin( parity P) const {
     if(P==EVEN){
       return this_node.evensites;

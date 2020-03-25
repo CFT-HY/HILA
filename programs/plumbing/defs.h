@@ -12,7 +12,7 @@
 #include <mpi.h>
 #endif
 
-#define EVENFIRST
+#define EVEN_SITES_FIRST
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = float;
