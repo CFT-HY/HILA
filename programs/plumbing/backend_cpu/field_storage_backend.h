@@ -90,12 +90,21 @@ void field_storage<T>::free_field() {
 
 
 template<typename T>
+void field_storage<T>::gather_elements(char * buffer, std::vector<int> index_list, lattice_struct * lattice) const {
+  for (int index : index_list) {
+    T element = get(index, lattice->field_alloc_size());
+    std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
+  }
+}
+
+template<typename T>
 void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const {
   for (int j=0; j<to_node.n_sites(par); j++) {
     T element = get(to_node.site_index(j, par), lattice->field_alloc_size());
     std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
   }
 }
+
 template<typename T>
 void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice){
   for (int j=0; j<from_node.n_sites(par); j++) {
@@ -103,6 +112,7 @@ void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_n
     set(element, from_node.offset(par)+j, lattice->field_alloc_size());
   }
 }
+
 template<typename T>
 void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){}
 

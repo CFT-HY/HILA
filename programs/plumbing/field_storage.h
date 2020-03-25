@@ -22,6 +22,7 @@ class field_storage {
     inline void set(const A &value, const int i, const int field_alloc_size);
 
     void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const;
+    void gather_elements(char * buffer, std::vector<int> index_list, lattice_struct * lattice) const;
     /// Place boundary elements from neighbour
     void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
