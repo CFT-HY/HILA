@@ -99,12 +99,6 @@ void field_storage<T>::gather_elements(char * buffer, std::vector<unsigned> inde
   }
 }
 
-template<typename T>
-void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const {
-  std::vector<unsigned> index_list = to_node.get_site_list(par);
-  gather_elements(buffer, index_list, lattice);
-}
-
 
 template<typename T>
 void field_storage<T>::place_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) {
@@ -112,15 +106,6 @@ void field_storage<T>::place_elements(char * buffer, std::vector<unsigned> index
     T element = *((T*) ( buffer + j*sizeof(T) ));
     set(element, index_list[j], lattice->field_alloc_size());
   }
-}
-
-template<typename T>
-void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice){
-  std::vector<unsigned> index_list(from_node.n_sites(par));
-  for (int j=0; j<from_node.n_sites(par); j++) {
-    index_list[j] = from_node.offset(par)+j;
-  }
-  place_elements(buffer, index_list, lattice);
 }
 
 template<typename T>

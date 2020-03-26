@@ -55,7 +55,7 @@ __device__ __host__ inline void field_storage<T>::set(const A &value, const int 
   }
 }
 
-/// A kernel that gathers neighbour elements for communication (using the getter)
+/// A kernel that gathers elements
 template <typename T>
 __global__ void gather_elements_kernel( field_storage<T> field, char *buffer, unsigned * site_index, const int sites, const int field_alloc_size )
 {
@@ -65,8 +65,7 @@ __global__ void gather_elements_kernel( field_storage<T> field, char *buffer, un
   }
 }
 
-/// CUDA implementation of gather_comm_elements without CUDA aware MPI
-/// Gathers sites at the boundary that need to be communicated to neighbours
+/// CUDA implementation of gather_elements without CUDA aware MPI
 template<typename T>
 void field_storage<T>::gather_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) const {
   unsigned *d_site_index;
@@ -89,17 +88,10 @@ void field_storage<T>::gather_elements(char * buffer, std::vector<unsigned> inde
   cudaFree(d_buffer);
 }
 
-template<typename T>
-void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const {
-  std::vector<unsigned> index_list = to_node.get_site_list(par);
-  gather_elements(buffer, index_list, lattice);
-}
 
 
 
-
-/// A kernel that scatters the neighbour sites received from a neihbour into 
-/// it's proper place (using the setter)
+/// A kernel that scatters the elements
 template <typename T>
 __global__ void scatter_elements_kernel( field_storage<T> field, char *buffer, unsigned * site_index, const int sites, const int field_alloc_size )
 {
@@ -109,8 +101,7 @@ __global__ void scatter_elements_kernel( field_storage<T> field, char *buffer, u
   }
 }
 
-/// CUDA implementation of gather_comm_elements without CUDA aware MPI
-/// Sets the values the neighbour elements from the communication buffer 
+/// CUDA implementation of gather_elements without CUDA aware MPI
 template<typename T>
 void field_storage<T>::place_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) {
   unsigned *d_site_index;
@@ -133,14 +124,7 @@ void field_storage<T>::place_elements(char * buffer, std::vector<unsigned> index
   cudaFree(d_site_index);
 }
 
-template<typename T>
-void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice){
-  std::vector<unsigned> index_list(from_node.n_sites(par));
-  for (int j=0; j<from_node.n_sites(par); j++) {
-    index_list[j] = from_node.offset(par)+j;
-  }
-  place_elements(buffer, index_list, lattice);
-}
+
 
 template<typename T>
 void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){}
