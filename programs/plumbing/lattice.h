@@ -80,6 +80,17 @@ public:
     unsigned buffer;
     std::vector<unsigned>  sitelist;
 
+    // Get a vector containing the sites of parity par
+    std::vector<unsigned> get_site_list(parity par){
+      if(par == ALL){
+        return std::vector<unsigned>(sitelist.begin(), sitelist.end());
+      } else if(par == EVEN){
+        return std::vector<unsigned>(sitelist.begin(), sitelist.begin()+evensites);
+      } else {
+        return std::vector<unsigned>(sitelist.begin() + evensites, sitelist.end());
+      }
+    }
+
     // The number of sites that need to be communicated
     unsigned n_sites(parity par){
       if(par == ALL){
