@@ -11,7 +11,10 @@
 #undef NDEBUG
 #include <assert.h>
 #include "../plumbing/defs.h"
+#include "../plumbing/coordinates.h"
 #include "../plumbing/inputs.h"
+
+
 
 struct node_info {
   coordinate_vector min,size;
@@ -38,12 +41,12 @@ private:
   // I shall assume here that int is 32 bits, and long long 64 bits.  I guess these are
   // pretty much standard for now
   // Alternative: int_32t and int_64t (or int_fast_32t  and int_fast_64t, even more generally) 
-  int l_size[NDIM];
+  coordinate_vector l_size;
   long long l_volume;
 
   // Information about the node stored on this process
   struct node_struct {
-    unsigned index;
+    int rank;                           // rank of this node
     unsigned sites, evensites, oddsites;
     unsigned field_alloc_size;          // how many sites/node in allocations 
     coordinate_vector min, size;        // node local coordinate ranges
@@ -56,15 +59,15 @@ private:
 
   // information about all nodes
   struct allnodes {
-    unsigned number;
-    unsigned ndir[NDIM];  // number of node divisions to dir
+    int number;                            // number of nodes
+    unsigned n_divisions[NDIM];            // number of node divisions to dir
     // lattice division: div[d] will have num_dir[d]+1 elements, last size
     // TODO: is this needed at all?
     std::vector<unsigned> divisors[NDIM];
     std::vector<node_info> nodelist;
 
-    unsigned * map_array;                  // mapping (optional)
-    unsigned * map_inverse;                // inv of it
+    unsigned * RESTRICT map_array;                  // mapping (optional)
+    unsigned * RESTRICT map_inverse;                // inv of it
     
     void create_remap();                   // create remap_node
     unsigned remap(unsigned i);            // use remap
@@ -75,10 +78,10 @@ private:
 public:
 
   struct comm_node_struct {
-    unsigned index;
+    unsigned rank;                         // rank of communicated with node
     unsigned sites, evensites, oddsites;
     unsigned buffer;
-    std::vector<unsigned>  sitelist;
+    std::vector<unsigned> sitelist;
 
     // The number of sites that need to be communicated
     unsigned n_sites(parity par){
@@ -111,16 +114,19 @@ public:
   };
 
   struct comminfo_struct {
-    int label;
     unsigned * index;
     std::vector<comm_node_struct> from_node;
     std::vector<comm_node_struct> to_node;
   };
 
-  std::vector<comminfo_struct> comminfo;
+  // nearest neighbour comminfo struct
+  comminfo_struct comminfo[NDIRS];
 
-  unsigned * neighb[NDIRS];
-  unsigned char *wait_arr_;
+  
+
+
+  unsigned * RESTRICT neighb[NDIRS];
+  unsigned char * RESTRICT wait_arr_;
 
   backend_lattice_struct *backend_lattice;
 
@@ -144,19 +150,23 @@ public:
 
   int size(direction d) { return l_size[d]; }
   int size(int d) { return l_size[d]; }
+  coordinate_vector size() {return l_size;}
+
   int local_size(int d) { return this_node.size[d]; }
   long long volume() { return l_volume; }
-  int node_number() { return this_node.index; }
+  int node_rank() { return this_node.rank; }
   int n_nodes() { return nodes.number; }
   long long local_volume() {return this_node.sites;}
   
   bool is_on_node(const coordinate_vector & c);
-  unsigned node_number(const coordinate_vector & c);
+  int  node_rank(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c, const unsigned node);
-  coordinate_vector site_location(unsigned index);
+  coordinate_vector site_coordinates(unsigned index);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
+
   void create_std_gathers();
+  comminfo_struct create_general_gather( const coordinate_vector & r);
   
   bool first_site_even() { return this_node.first_site_even; };
 
@@ -196,11 +206,11 @@ public:
   #endif
 
   coordinate_vector coordinates( unsigned idx ){
-    return site_location(idx);
+    return site_coordinates(idx);
   }
 
   coordinate_vector local_coordinates( unsigned idx ){
-    coordinate_vector l = site_location(idx);
+    coordinate_vector l = site_coordinates(idx);
     foralldir(d)
       l[d] = l[d] - this_node.min[d];
     return l;
@@ -239,11 +249,11 @@ extern std::vector<lattice_struct*> lattices;
 
 
 #ifdef VANILLA
-#include "backend_cpu/lattice.h"
+#include "../plumbing/backend_cpu/lattice.h"
 #elif defined(CUDA)
-#include "backend_cuda/lattice.h"
+#include "../plumbing/backend_cuda/lattice.h"
 #elif defined(VECTORIZED)
-#include "backend_vector/lattice.h"
+#include "../plumbing/backend_vector/lattice.h"
 #endif
 
 

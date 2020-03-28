@@ -48,7 +48,7 @@ void lattice_struct::setup_layout( )
   
   for (i=0; i<NDIM; i++) {
     nodesiz[i] = size(i);
-    nodes.ndir[i] = 1;
+    nodes.n_divisions[i] = 1;
   }
   
   for (int n=NPRIMES-1; n>=0; n--) for(i=0; i<nfactors[n]; i++) {
@@ -71,7 +71,7 @@ void lattice_struct::setup_layout( )
     // b) In sf t-division is cheaper (1 non-communicating slice)
     
     for (dir=NDIM-1; dir>=0; dir--)
-      if (nodesiz[dir]==msize && nodes.ndir[dir]>1 && 
+      if (nodesiz[dir]==msize && nodes.n_divisions[dir]>1 && 
           nodesiz[dir]%prime[n] == 0) break;
 
     /* If not previously sliced, take one direction to slice */
@@ -85,16 +85,16 @@ void lattice_struct::setup_layout( )
     }
 
     /* Now slice it */
-    nodesiz[dir] /= prime[n]; nodes.ndir[dir] *= prime[n];
+    nodesiz[dir] /= prime[n]; nodes.n_divisions[dir] *= prime[n];
 
   }
   
   // set up struct nodes variables
   nodes.number = numnodes();
   foralldir(dir) {
-    nodes.divisors[dir].resize(nodes.ndir[dir]+1);
+    nodes.divisors[dir].resize(nodes.n_divisions[dir]+1);
     // trivial, evenly spaced divisors -- note: last element == size(dir)
-    for (int i=0; i<=nodes.ndir[dir]; i++) 
+    for (int i=0; i<=nodes.n_divisions[dir]; i++) 
       nodes.divisors[dir].at(i) = i*nodesiz[dir];
   }
 
@@ -116,7 +116,7 @@ void lattice_struct::setup_layout( )
     output0 << "\n Processor layout: ";
     foralldir(dir) {
       if (dir > 0) { output0 << " x "; }
-      output0 << nodes.ndir[dir];
+      output0 << nodes.n_divisions[dir];
     }
     output0 << '\n';
   }

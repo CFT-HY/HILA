@@ -1,4 +1,7 @@
+
+
 #include "bench.h"
+#include "../plumbing/timers.h"
 
 #ifndef MSIZE
 #define MSIZE 3
@@ -28,6 +31,8 @@ int main(int argc, char **argv){
     // Seed rng generator
     seed_random(SEED);
 
+    timer timer1;
+    
     field<matrix<MADD(0),MADD(0), cmplx<double>> > matrix1;
     field<matrix<MADD(1),MADD(1), cmplx<double>> > matrix2;
     field<matrix<MADD(3),MADD(3), cmplx<double>> > matrix3;
@@ -55,6 +60,8 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "matrix size " << (int) MSIZE << "*"  << (int) MSIZE << " : "<< timing << " ms \n";
 
+    timer1.start();
+    
     // Time conj(matrix) * matrix * conj(matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){
@@ -70,6 +77,9 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "matrix size " << (int) MSIZE + 1 << "*"  << (int) MSIZE + 1 << " : "<< timing << " ms \n";
 
+    timer1.end();
+    timer1.report("Timer 1");
+    
     // Time conj(matrix) * matrix * conj(matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){

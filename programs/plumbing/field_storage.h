@@ -9,7 +9,7 @@ template <typename T>
 class field_storage {
   public:
 
-    void * fieldbuf = NULL;
+    void * RESTRICT fieldbuf = nullptr;
 
     void allocate_field( lattice_struct * lattice );
     void free_field();
@@ -29,7 +29,7 @@ class field_storage {
 
     // HACK:
     #if defined(VANILLA)
-    T * get_buffer() {
+    T * RESTRICT get_buffer() {
       return static_cast<T*>(fieldbuf);
     }
     #endif
