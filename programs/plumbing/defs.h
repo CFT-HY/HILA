@@ -6,7 +6,8 @@
 #include <iostream>
 #include <array>
 #include <vector>
-#include <assert.h> 
+#include <assert.h>
+#include <sstream>
 
 #ifdef USE_MPI
 #include <mpi.h>

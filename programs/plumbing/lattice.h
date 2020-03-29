@@ -117,6 +117,7 @@ public:
     unsigned * index;
     std::vector<comm_node_struct> from_node;
     std::vector<comm_node_struct> to_node;
+    unsigned receive_buf_size;                    // only for general gathers
   };
 
   // nearest neighbour comminfo struct
@@ -167,6 +168,9 @@ public:
 
   void create_std_gathers();
   comminfo_struct create_general_gather( const coordinate_vector & r);
+  std::vector<comm_node_struct> 
+  create_comm_node_vector( coordinate_vector offset, unsigned * index, bool receive);
+
   
   bool first_site_even() { return this_node.first_site_even; };
 
