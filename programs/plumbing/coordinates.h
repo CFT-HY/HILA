@@ -109,9 +109,12 @@ class coordinate_vector {
   coordinate_vector() = default;
 
   #pragma transformer loop_function
-  coordinate_vector(const coordinate_vector & v) {
-    foralldir(d) r[d] = v[d];
-  }
+  coordinate_vector(const coordinate_vector & v) = default;
+  // coordinate_vector(const coordinate_vector & v) {
+  //   foralldir(d) r[d] = v[d];
+  // }
+
+  ~coordinate_vector() = default;
 
   #pragma transformer loop_function
   coordinate_vector(const int i) { set(i); }
