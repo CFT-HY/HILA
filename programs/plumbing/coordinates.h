@@ -181,14 +181,14 @@ class coordinate_vector {
   #pragma transformer loop_function
   coordinate_vector & operator+=(const direction dir) {
     if (is_up_dir(dir)) ++r[dir]; 
-    else --r[dir];
+    else --r[opp_dir(dir)];
     return *this;
   }
 
   #pragma transformer loop_function
   coordinate_vector & operator-=(const direction dir) {
     if (is_up_dir(dir)) --r[dir]; 
-    else ++r[dir];
+    else ++r[opp_dir(dir)];
     return *this;
   }
 
