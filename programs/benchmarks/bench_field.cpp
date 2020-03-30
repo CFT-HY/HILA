@@ -330,7 +330,6 @@ int main(int argc, char **argv){
         r[X] = vector1[X];
         p[X] = vector1[X];
         for(int i=0; i<N; i++){
-          #pragma transformer ast dump
            vector2[X].c[0][i] = 0;
         }
       }
