@@ -149,21 +149,27 @@ public:
 
   void teardown();
 
+  // Std accessors:
+  // volume
+  long long volume() { return l_volume; }
+
+  // size routines
   int size(direction d) { return l_size[d]; }
   int size(int d) { return l_size[d]; }
   coordinate_vector size() {return l_size;}
 
+  coordinate_vector mod_size(const coordinate_vector & v) { return mod(v, l_size); }
+
   int local_size(int d) { return this_node.size[d]; }
-  long long volume() { return l_volume; }
+  long long local_volume() {return this_node.sites;}
+
   int node_rank() { return this_node.rank; }
   int n_nodes() { return nodes.number; }
-  long long local_volume() {return this_node.sites;}
   
   bool is_on_node(const coordinate_vector & c);
   int  node_rank(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c, const unsigned node);
-  coordinate_vector site_coordinates(unsigned index);
   unsigned field_alloc_size() {return this_node.field_alloc_size; }
 
   void create_std_gathers();
@@ -209,15 +215,12 @@ public:
   }
   #endif
 
-  coordinate_vector coordinates( unsigned idx ){
-    return site_coordinates(idx);
+  inline const coordinate_vector & coordinates( unsigned idx ){
+    return this_node.coordinates[idx];
   }
 
   coordinate_vector local_coordinates( unsigned idx ){
-    coordinate_vector l = site_coordinates(idx);
-    foralldir(d)
-      l[d] = l[d] - this_node.min[d];
-    return l;
+    return coordinates(idx) - this_node.min;
   }
 
   lattice_struct::comminfo_struct get_comminfo(int d){

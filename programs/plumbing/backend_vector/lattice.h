@@ -358,10 +358,10 @@ inline auto vectorized_lattice_struct<16>::coordinates(int idx){
 
 
 struct backend_lattice_struct {
-  lattice_struct lattice;
+  lattice_struct * latticep;
 
-  void setup(lattice_struct _lattice){
-    lattice = _lattice;
+  void setup(lattice_struct & _lattice){
+    latticep = &_lattice;
   }
 
   template< int vector_size >
@@ -370,7 +370,7 @@ struct backend_lattice_struct {
     static bool init = true;
     static vectorized_lattice_struct<vector_size> * vlat; 
     if(init){
-      vlat = new vectorized_lattice_struct<vector_size>(&lattice);
+      vlat = new vectorized_lattice_struct<vector_size>(latticep);
       init = false;
     }
 

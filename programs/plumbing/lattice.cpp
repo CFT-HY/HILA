@@ -5,7 +5,9 @@
 #include "../plumbing/lattice.h"
 #include "../plumbing/field.h"
 
-void std_gather_test();
+
+void test_std_gathers();
+
 
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
@@ -16,7 +18,7 @@ std::vector<lattice_struct*> lattices;
 
 /// General lattice setup, including MPI setup
 void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
-  /* Add this lattice to the list */
+  // Add this lattice to the list 
   lattices.push_back( this );
 
   l_volume = 1;
@@ -42,13 +44,16 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 
   setup_layout();
   setup_nodes();
-  /* then, set up the comm arrays */
-  create_std_gathers();
-  /* Setup required for local_sites_first */
-  //make_lattice_arrays(); 
 
-  /* Initialize wait_array structures */
+  // set up the comm arrays 
+  create_std_gathers();
+
+  // Initialize wait_array structures - has to be after std gathers()
   initialize_wait_arrays();
+
+  test_std_gathers();
+
+
 }
 
 
@@ -179,10 +184,12 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 /// invert the this_node index -> location (only on this node)
 ///////////////////////////////////////////////////////////////////////
 
-coordinate_vector lattice_struct::site_coordinates(unsigned index)
-{
-  return this_node.coordinates[index];
-}
+// this is defined in lattice.h
+
+//const coordinate_vector & lattice_struct::coordinates(unsigned index)
+//{
+//  return this_node.coordinates[index];
+//}
 
 
 /////////////////////////////////////////////////////////////////////
@@ -249,18 +256,14 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   
   rank = mynode();
 
-  foralldir(d) {
-    min[d]  = ni.min[d];
-    size[d] = ni.size[d];
-  }
+  min  = ni.min;
+  size = ni.size;
+
   evensites = ni.evensites;
   oddsites  = ni.oddsites;
   sites     = ni.evensites + ni.oddsites;
 
-  int i = 0;
-  foralldir(d) i += min[d];
-  if (i % 2 == 0) first_site_even = true;
-  else            first_site_even = false;
+  first_site_even = (min.coordinate_parity() == EVEN);
    
   // neighbour node indices
   foralldir(d) {
@@ -292,14 +295,17 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
 
 void lattice_struct::create_std_gathers()
 {
+
   // allocate neighbour arrays - TODO: these should 
   // be allocated on "device" memory too!
-  
+
   for (int d=0; d<NDIRS; d++) {
     neighb[d] = (unsigned *)memalloc(this_node.sites * sizeof(unsigned));
   }
   
   unsigned c_offset = this_node.sites;  // current offset in field-arrays
+
+
 
   // allocate work arrays, will be released later
   std::vector<unsigned> nranks(this_node.sites); // node number
@@ -340,9 +346,12 @@ void lattice_struct::create_std_gathers()
     int num = 0;  // number of sites off node
     for (int i=0; i<this_node.sites; i++) {
       coordinate_vector ln, l;
-      l = site_coordinates(i);
+      l = coordinates(i);
       // set ln to be the neighbour of the site
       ln = mod(l + d, size());
+      //ln = l;
+      //if (is_up_dir(d)) ln[d] = (l[d] + 1) % size(d);
+      //else ln[d] = (l[d] + size(-d) - 1) % size(-d);
  
 #ifdef SCHROED_FUN
       if (d == NDIM-1 && l[NDIM-1] == size(NDIM-1)-1) {
@@ -462,6 +471,7 @@ void lattice_struct::create_std_gathers()
   /* Setup backend-specific lattice info if necessary */
   backend_lattice = new backend_lattice_struct;
   backend_lattice->setup(*this);
+
 }
 
 
@@ -487,14 +497,14 @@ void lattice_struct::initialize_wait_arrays()
    * at that dir is out of the local volume
    */
 
-  wait_arr_  = (unsigned char *)malloc( this_node.sites * sizeof(unsigned char) );
+  wait_arr_  = (unsigned char *)memalloc( this_node.sites * sizeof(unsigned char) );
 
   for (int i=0; i<this_node.sites; i++) {
     wait_arr_[i] = 0;    /* basic, no wait */
     foralldir(dir) {
-      int odir = opp_dir(dir);
-      if ( neighb[dir][i] >= this_node.sites ) wait_arr_[i] = wait_arr_[i] | (1<<dir) ;
-      if ( neighb[odir][i]>= this_node.sites ) wait_arr_[i] = wait_arr_[i] | (1<<odir) ;
+      direction odir = -dir;
+      if ( neighb[dir][i]  >= this_node.sites ) wait_arr_[i] = wait_arr_[i] | (1<<dir) ;
+      if ( neighb[odir][i] >= this_node.sites ) wait_arr_[i] = wait_arr_[i] | (1<<odir) ;
     }
   }
 }
@@ -536,7 +546,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
   int num = 0;  // number of sites off node
   for (int i=0; i<this_node.sites; i++) {
     coordinate_vector ln, l;
-    l  = site_coordinates(i);
+    l  = coordinates(i);
     ln = mod( l + offset, size() );
  
     if (is_on_node(ln)) {
@@ -601,7 +611,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
 
     for (int i=0; i<this_node.sites; i++) {
       coordinate_vector ln, l;
-      l  = site_coordinates(i);
+      l  = coordinates(i);
       ln = mod( l + offset, size() );
  
       if (!is_on_node(ln)) {
@@ -631,7 +641,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
         // find the node which sends this 
         while (node_v[n].rank != r) n++;
 
-        coordinate_vector l = site_coordinates(i);
+        coordinate_vector l = coordinates(i);
         if (l.coordinate_parity() == EVEN)
           index[i] = node_v[n].buffer + (np_even[n]++);
         else 
@@ -669,9 +679,27 @@ lattice_struct::comminfo_struct lattice_struct::create_general_gather( const coo
 #endif
 
 
-void std_gather_test()
+void test_std_gathers()
 {
-  field<coordinate_vector> t;
+
+  extern lattice_struct * lattice;
+  field<int> t;
+  
+  foralldir(d) {
+    t[ALL] = coordinates(X)[d];
+
+    int diff = 0;
+    onsites(ALL) {
+      element<int> i = (t[X] + 1 + lattice->size(d)) % lattice->size(d)  - t[X+d];
+
+      diff += i;
+    }
+
+    if (diff != 0) {
+      hila::output << "Std gather test error!  Direction " << (unsigned)d;
+      exit(-1);
+    }
+  }
 }
 
 
