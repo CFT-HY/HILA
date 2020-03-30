@@ -181,14 +181,14 @@ class coordinate_vector {
   #pragma transformer loop_function
   coordinate_vector & operator+=(const direction dir) {
     if (is_up_dir(dir)) ++r[dir]; 
-    else --r[dir];
+    else --r[-dir];
     return *this;
   }
 
   #pragma transformer loop_function
   coordinate_vector & operator-=(const direction dir) {
     if (is_up_dir(dir)) --r[dir]; 
-    else ++r[dir];
+    else ++r[-dir];
     return *this;
   }
 
@@ -260,14 +260,15 @@ inline coordinate_vector mod(const coordinate_vector & a, const coordinate_vecto
 
 // dot product, just in case...
 inline int dot(const coordinate_vector & d1, const coordinate_vector & d2) {
-  int r = 1;
+  int r = 0;
   foralldir(d) r += d1[d]*d2[d];
   return r;
 }
 
+inline int norm_sq(const coordinate_vector & d) {
+  return dot(d,d);
+}
 
-// Replaced by transformer
-coordinate_vector coordinates(parity X);
 
 /// Special direction operators: dir + dir -> coordinate_vector
 inline coordinate_vector operator+(const direction d1, const direction d2) {
@@ -318,7 +319,6 @@ inline coordinate_vector operator-( const direction dir, coordinate_vector cv ) 
   return cv;
 }
 
-
 /// Parity + dir -type: used in expressions of type f[X+dir]
 /// It's a dummy type, will be removed by transformer
 struct parity_plus_direction {
@@ -336,6 +336,7 @@ struct parity_plus_offset {
   coordinate_vector cv;
 };
 
+// and prototypes, these operators are not defined anywhere but needed for types
 const parity_plus_offset operator+(const parity par, const coordinate_vector & cv);
 const parity_plus_offset operator-(const parity par, const coordinate_vector & cv);
 const parity_plus_offset operator+(const parity_plus_direction, const direction d);
@@ -346,6 +347,13 @@ const parity_plus_offset operator+(const parity_plus_offset, const direction d);
 const parity_plus_offset operator-(const parity_plus_offset, const direction d);
 const parity_plus_offset operator+(const parity_plus_offset, const coordinate_vector & cv);
 const parity_plus_offset operator-(const parity_plus_offset, const coordinate_vector & cv);
+
+
+/// Prototypes for coordinates, replaced by transformer
+const coordinate_vector & coordinates(parity p);
+const coordinate_vector & coordinates(parity_plus_direction pd);
+const coordinate_vector & coordinates(parity_plus_offset po);
+
 
 
 #endif
