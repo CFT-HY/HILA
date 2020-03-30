@@ -1,5 +1,11 @@
 
+
+
 #include "../plumbing/globals.h"
+#include "../plumbing/lattice.h"
+#include "../plumbing/field.h"
+
+void std_gather_test();
 
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
@@ -26,13 +32,11 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
   /* default comm is the world */
   mpi_comm_lat = MPI_COMM_WORLD;
 
-  int index, n_nodes;
-  MPI_Comm_rank( lattices[0]->mpi_comm_lat, &index );
-  MPI_Comm_size( lattices[0]->mpi_comm_lat, &n_nodes );
-  this_node.index = index;
-  nodes.number = n_nodes;
+  MPI_Comm_rank( lattices[0]->mpi_comm_lat, &this_node.rank );
+  MPI_Comm_size( lattices[0]->mpi_comm_lat, &nodes.number );
+
 #else 
-  this_node.index = 0;
+  this_node.rank = 0;
   nodes.number = 1;
 #endif
 
@@ -71,27 +75,27 @@ void lattice_struct::setup(int nx, int &argc, char **argv) {
 #endif
 
 ///////////////////////////////////////////////////////////////////////
-/// The routines is_on_node(), node_number(), site_index()
+/// The routines is_on_node(), node_rank(), site_index()
 /// implement the "layout" of the nodes and sites of the lattice.
 /// To be changed in different implementations!
 ///////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////
-/// Get the node number for coordinates 
+/// Get the node rank for coordinates 
 /// This is the fundamental routine which defines how the nodes
 /// are mapped.  map_node_layout needs to be compatible with this
 /// algorithm!
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::node_number(const coordinate_vector & loc)
+int lattice_struct::node_rank(const coordinate_vector & loc)
 {
-  unsigned i;
+  int i;
   int dir;
 
-  i = (loc[NDIM-1] * nodes.ndir[NDIM-1]) / l_size[NDIM-1];
+  i = (loc[NDIM-1] * nodes.n_divisions[NDIM-1]) / l_size[NDIM-1];
   for (dir=NDIM-2; dir>=0; dir--) {
-    i = i*nodes.ndir[dir] +
-        ((loc[dir] * nodes.ndir[dir]) / l_size[dir]);
+    i = i*nodes.n_divisions[dir] +
+        ((loc[dir] * nodes.n_divisions[dir]) / l_size[dir]);
   }
   /* do we want to remap this?  YES PLEASE */
   i = nodes.remap(i);
@@ -134,7 +138,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc)
   }
 
   // now i contains the `running index' for site
-#if defined(EVENFIRST)
+#if defined(EVEN_SITES_FIRST)
   if (s%2 == 0) return( i/2 );    /* even site index */
   else return( i/2 + this_node.evensites );  /* odd site */
 #else
@@ -162,7 +166,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
   }
 
   // now i contains the `running index' for site
-#if defined(EVENFIRST)
+#if defined(EVEN_SITES_FIRST)
   if (s%2 == 0) return( i/2 );    /* even site index */
   else return( i/2 + ni.evensites );  /* odd site */
 #else
@@ -172,14 +176,13 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 
 
 ///////////////////////////////////////////////////////////////////////
-/// invert the this_node index -> location
+/// invert the this_node index -> location (only on this node)
 ///////////////////////////////////////////////////////////////////////
 
-coordinate_vector lattice_struct::site_location(unsigned index)
+coordinate_vector lattice_struct::site_coordinates(unsigned index)
 {
   return this_node.coordinates[index];
 }
-
 
 
 /////////////////////////////////////////////////////////////////////
@@ -195,15 +198,14 @@ void lattice_struct::setup_nodes() {
   nodes.nodelist.resize(nodes.number);
 
   // n keeps track of the node "root coordinates"
-  coordinate_vector n;
-  foralldir(d) n[d] = 0;
+  coordinate_vector n(0);
 
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {
     coordinate_vector l;
     foralldir(d) l[d] = nodes.divisors[d][n[d]];
 
-    int nn = node_number(l);
+    int nn = node_rank(l);
     node_info & ni = nodes.nodelist[nn];
     int v = 1;
     foralldir(d) {
@@ -214,6 +216,7 @@ void lattice_struct::setup_nodes() {
     if (v % 2 == 0)
       ni.evensites = ni.oddsites = v/2;
     else {
+      // now node ni has odd number of sites
       if (l.coordinate_parity() == EVEN) {
         ni.evensites = v/2 + 1; 
         ni.oddsites = v/2;
@@ -226,24 +229,25 @@ void lattice_struct::setup_nodes() {
     // now to the next divisor - add to the lowest dir until all done
     foralldir(d) {
       n[d]++;
-      if (n[d] < nodes.ndir[d]) break;
+      if (n[d] < nodes.n_divisions[d]) break;
       n[d] = 0;
     }
     
     // use the opportunity to set up this_node when it is met
     if (nn == mynode()) this_node.setup(ni, *lattice);
+
     
   }
 }
 
 
 ////////////////////////////////////////////////////////////////////////
-/// Fill in this_node fields -- node_number() must be set up OK
+/// Fill in this_node fields -- node_rank() must be set up OK
 ////////////////////////////////////////////////////////////////////////
 void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice)
 {
   
-  index = mynode();
+  rank = mynode();
 
   foralldir(d) {
     min[d]  = ni.min[d];
@@ -260,24 +264,23 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
    
   // neighbour node indices
   foralldir(d) {
-    coordinate_vector l = min;
+    coordinate_vector l = min;   // this is here on purpose
     l[d] = (min[d] + size[d]) % lattice.l_size[d];
-    nn[d] = lattice.node_number(l);
+    nn[d] = lattice.node_rank(l);
     l[d] = (lattice.l_size[d] + min[d] - 1) % lattice.l_size[d];
-    nn[opp_dir(d)] = lattice.node_number(l);
+    nn[opp_dir(d)] = lattice.node_rank(l);
   }
 
-  // map site indexes to locations
+  // map site indexes to locations -- coordinates array
   coordinates.resize(sites);
+  coordinate_vector l = min;
   for(unsigned i = 0; i<sites; i++){
-    coordinate_vector l;
-    unsigned l_index=i;
-    foralldir(d){
-      l[d] = l_index % size[d] + min[d];
-      l_index /= size[d];
+    coordinates[ lattice.site_index(l) ] = l;
+    // walk through the coordinates
+    foralldir(d) {
+      if (++l[d] < (min[d]+size[d])) break;
+      l[d] = min[d];
     }
-    l_index = lattice.site_index(l);
-    coordinates[l_index] = l;
   }
 }
 
@@ -293,15 +296,13 @@ void lattice_struct::create_std_gathers()
   // be allocated on "device" memory too!
   
   for (int d=0; d<NDIRS; d++) {
-    neighb[d] = (unsigned *)std::malloc(this_node.sites * sizeof(unsigned));
+    neighb[d] = (unsigned *)memalloc(this_node.sites * sizeof(unsigned));
   }
   
-  comminfo.resize(NDIRS);
-  for (auto & c : comminfo) c.label = -1;  // reset
   unsigned c_offset = this_node.sites;  // current offset in field-arrays
 
   // allocate work arrays, will be released later
-  std::vector<unsigned> nnodes(this_node.sites); // node number
+  std::vector<unsigned> nranks(this_node.sites); // node number
   std::vector<unsigned> index(this_node.sites);  // index on node
   std::vector<parity>   nparity(this_node.sites); // parity 
   std::vector<unsigned> here(this_node.sites);   // index of original site
@@ -323,27 +324,25 @@ void lattice_struct::create_std_gathers()
     c_offset += 1;
   else sf_special_boundary = -(1<<30);
 
-  output0 << "SPECIAL BOUNDARY LAYOUT for SF");
+  output0 << "SPECIAL BOUNDARY LAYOUT for SF";
 #endif
 
-  for (int d=0; d<NDIRS; d++) {
+
+  // We set the communication and the neigbour-array here
+
+  for (direction d=XUP; d<NDIRS; ++d) {
 
     comminfo_struct & ci = comminfo[d];
-    ci.index = neighb[d];  // the neighbour array - not needed really
-    ci.label = d;          // and label it 
+
+    ci.index = neighb[d];    // this is not really used for nn gathers
 
     // pass over sites
     int num = 0;  // number of sites off node
     for (int i=0; i<this_node.sites; i++) {
       coordinate_vector ln, l;
-      ln = l = site_location(i);
+      l = site_coordinates(i);
       // set ln to be the neighbour of the site
-      if (is_up_dir(d)) {
-        ln[d] = (l[d] + 1) % size(d);
-      } else {
-        direction k = opp_dir(d);
-        ln[k] = (l[k] + size(k) - 1) % size(k);
-      }
+      ln = mod(l + d, size());
  
 #ifdef SCHROED_FUN
       if (d == NDIM-1 && l[NDIM-1] == size(NDIM-1)-1) {
@@ -358,8 +357,8 @@ void lattice_struct::create_std_gathers()
         neighb[d][i] = site_index(ln);
       } else {
 	      // Now site is off-node, this lead to fetching
-	      nnodes[num] = node_number(ln);
-	      index[num]  = site_index(ln, nnodes[num] );
+	      nranks[num] = node_rank(ln);
+	      index[num]  = site_index(ln, nranks[num] );
 	      nparity[num] = l.coordinate_parity();  // parity of THIS
 	      here[num]   = i;
 	      num++;
@@ -374,11 +373,11 @@ void lattice_struct::create_std_gathers()
       for (int i=0; i<num; i++) {
 	      // chase the list until the node found
         int j;
-        for (j=0; j<ci.from_node.size() && nnodes[i] != ci.from_node[j].index; j++);
+        for (j=0; j<ci.from_node.size() && nranks[i] != ci.from_node[j].rank; j++);
 	      if (j == ci.from_node.size()) {
 	        // NEW NODE to receive from
           comm_node_struct s;
-          s.index = nnodes[i];
+          s.rank = nranks[i];
           s.sites = s.evensites = s.oddsites = 0;
           ci.from_node.push_back(s);
 	      }
@@ -394,16 +393,16 @@ void lattice_struct::create_std_gathers()
         c_offset += fn.sites;  // and increase the offset
       }
 
-      // and NOW, finish the NEIGHBOR array 
+      // and NOW, finish the NEIGHBOR array to point to "extra" sites 
 
       for (comm_node_struct & fn : ci.from_node) {
         // Now, accumulate the locations to itmp-array, and sort the
-        // array according to the index of the sending node .
+        // array according to the index of the sending node
         // First even neighbours
 
         for (parity par : {EVEN,ODD}) {
           int n,i;
-	        for (n=i=0; i<num; i++) if (nnodes[i] == fn.index && nparity[i] == par) {
+	        for (n=i=0; i<num; i++) if (nranks[i] == fn.rank && nparity[i] == par) {
 	          itmp[n++] = i;
 	          // bubble sort the tmp-array according to the index on the neighbour node
 	          for (int k=n-1; k > 0 && index[itmp[k]] < index[itmp[k-1]]; k--)
@@ -418,22 +417,15 @@ void lattice_struct::create_std_gathers()
       }
     } // num > 0 
 
-#if 0
-    //Check that we are not dividing odd lattices, breaks communication
-    if (num > n_sublattices) if((nx%2==1)||(ny%2==1)||(nz%2==1)||(nt%2==1))
-    halt("Odd number of sites cannot be devided into nodes.");
-#endif
-
     // receive done, now opposite send. This is just the gather
     // inverted
-    int od = opp_dir(d);
-    comminfo[od].to_node = {};
+    comminfo[-d].to_node = {};
 
     if (num > 0) {
       const std::vector<comm_node_struct> & fn = comminfo[d].from_node;
       for (int j=0; j<fn.size(); j++) {
         comm_node_struct s;
-        s.index = fn[j].index;
+        s.rank = fn[j].rank;
         s.sites = fn[j].sites;
         /* Note the swap !  even/odd refers to type of gather */
         s.evensites = fn[j].oddsites;
@@ -445,7 +437,7 @@ void lattice_struct::create_std_gathers()
         int n=0;
         s.sitelist.resize(s.sites);
         for (parity par : {ODD, EVEN}) {
-	        for (int i=0; i<num; i++) if (nnodes[i] == s.index && nparity[i] == par) {
+	        for (int i=0; i<num; i++) if (nranks[i] == s.rank && nparity[i] == par) {
             (s.sitelist)[n++] = here[i];
 	        }
           if (par == ODD && n != s.evensites) {
@@ -458,7 +450,7 @@ void lattice_struct::create_std_gathers()
           }
 	      }
 
-        comminfo[od].to_node.push_back(s);
+        comminfo[-d].to_node.push_back(s);
 
       }
     }
@@ -513,6 +505,174 @@ void lattice_struct::initialize_wait_arrays(){}
 
 #endif
 
+
+/////////////////////////////////////////////////////////////////////
+/// Create the neighbour index arrays 
+/// This is for the index array neighbours
+/// TODO: implement some other neighbour schemas!
+/////////////////////////////////////////////////////////////////////
+
+#if 1
+
+/// This is a helper routine, returning a vector of comm_node_structs for all nodes
+/// involved with communication. 
+/// If receive == true, this is "receive" end and index will be filled.
+/// For receive == false the is "send" half is done.
+
+std::vector<lattice_struct::comm_node_struct> 
+lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * index, bool receive) {
+
+  // for send flip the offset
+  if (!receive) offset = -offset;
+
+  // temp work array: np = node points
+  std::vector<unsigned> np_even(nodes.number);   // std::vector initializes to zero
+  std::vector<unsigned> np_odd(nodes.number);
+
+  // we'll go through the sites twice, in order to first resolve the size of the needed
+  // buffers, then to fill them.  Trying to avoid memory fragmentation a bit
+
+  // pass over sites
+  int num = 0;  // number of sites off node
+  for (int i=0; i<this_node.sites; i++) {
+    coordinate_vector ln, l;
+    l  = site_coordinates(i);
+    ln = mod( l + offset, size() );
+ 
+    if (is_on_node(ln)) {
+      if (receive) index[i] = site_index(ln);
+    } else {
+	    // Now site is off-node, this will leads to fetching
+      // use ci.index to store the node rank
+      unsigned r = node_rank(ln);
+
+      if (receive) {
+        index[i] = this_node.sites + r;
+
+        // using parity of THIS
+        if (l.coordinate_parity() == EVEN) np_even[r]++;
+        else np_odd[r]++;
+
+      } else {
+        // on the sending side - we use parity of target
+        if (ln.coordinate_parity() == EVEN) np_even[r]++;  
+        else np_odd[r]++;
+      }
+
+      num++;
+    }
+  }
+
+  // count the number of nodes taking part
+  unsigned nnodes = 0;
+  for (int r=0; r<nodes.number; r++) {
+    if (np_even[r] > 0 || np_odd[r] > 0) nnodes++;
+  }
+
+  // allocate the vector
+  std::vector<comm_node_struct> node_v(nnodes);
+
+  int n = 0;
+  int c_buffer = 0;
+  for (int r = 0; r<nodes.number; r++) {
+    if (np_even[r] > 0 || np_odd[r] > 0) {
+      // add the rank
+      node_v[n].rank = r;
+      node_v[n].evensites = np_even[r];
+      node_v[n].oddsites  = np_odd[r];
+      node_v[n].sites = np_even[r] + np_odd[r];
+
+      // pre-allocate the sitelist for sufficient size
+      if (!receive) node_v[n].sitelist.resize(node_v[n].sites);
+
+      node_v[n].buffer = c_buffer;        // running idx to comm buffer - used from receive
+      c_buffer += node_v[n].sites;
+      n++;
+    }
+  }
+
+  // ci.receive_buf_size = c_buffer;  // total buf size
+
+  // we'll reuse np_even and np_odd as counting arrays below
+  for (int i=0; i<nnodes; i++) np_even[i] = np_odd[i] = 0;
+
+  if (!receive) {
+    // sending end -- create sitelists
+
+    for (int i=0; i<this_node.sites; i++) {
+      coordinate_vector ln, l;
+      l  = site_coordinates(i);
+      ln = mod( l + offset, size() );
+ 
+      if (!is_on_node(ln)) {
+        unsigned r = node_rank(ln);
+        int n = 0;
+        // find the node from the list 
+        while (node_v[n].rank != r) n++;
+        // we'll fill the buffers according to the parity of receieving node
+        // first even, then odd sites in the buffer
+        int k;
+        if (ln.coordinate_parity() == EVEN) k = np_even[n]++;
+        else k = node_v[n].evensites + np_odd[n]++;
+
+        // and set the ptr to the site to be communicated
+        node_v[n].sitelist.at(k) = i;        
+      }
+    }
+
+  } else {
+    // receive end
+    // fill in the index pointers
+
+    for (int i=0; i<this_node.sites; i++) {
+      if (index[i] >= this_node.sites) {
+        int r = index[i] - this_node.sites;
+        int n = 0;
+        // find the node which sends this 
+        while (node_v[n].rank != r) n++;
+
+        coordinate_vector l = site_coordinates(i);
+        if (l.coordinate_parity() == EVEN)
+          index[i] = node_v[n].buffer + (np_even[n]++);
+        else 
+          index[i] = node_v[n].buffer + node_v[n].evensites + (np_odd[n]++);
+      }
+    }
+  }
+
+  return node_v;
+}
+
+
+
+
+lattice_struct::comminfo_struct lattice_struct::create_general_gather( const coordinate_vector & offset )
+{
+  // allocate neighbour arrays - TODO: these should 
+  // be allocated on "device" memory too!
+    
+  comminfo_struct ci;
+
+  // communication buffer
+  ci.index = (unsigned *)memalloc(this_node.sites*sizeof(unsigned));
+
+  ci.from_node = create_comm_node_vector(offset, ci.index, true);  // create receive end
+  ci.to_node   = create_comm_node_vector(offset, nullptr, false);  // create sending end
+
+  // set the total receive buffer size from the last vector
+  const comm_node_struct & r = ci.from_node[ci.from_node.size()-1];
+  ci.receive_buf_size = r.buffer + r.sites;
+
+  return ci;
+}
+
+#endif
+
+
+void std_gather_test()
+{
+  field<coordinate_vector> t;
+}
 
 
 

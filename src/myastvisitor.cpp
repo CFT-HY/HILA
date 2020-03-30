@@ -1534,6 +1534,32 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     }
   }
 
+  // and add special handling for special function calls here
+
+  if (CallExpr * CE = dyn_cast<CallExpr>(s)) {
+    if (FunctionDecl * FD = CE->getDirectCallee()) {
+
+      // is it memalloc(size) -call -> substitute with
+      // memalloc( size, filename, linenumber)
+      // don't know if this is really useful
+
+      if (FD->getNameAsString() == "memalloc" && CE->getNumArgs() == 1) {
+        SourceLocation sl = CE->getRParenLoc();
+        SourceManager &SM = TheRewriter.getSourceMgr();
+        // generate new args
+        std::string name(SM.getFilename(sl));
+        std::size_t i = name.rfind('/');
+        if (i != std::string::npos) name = name.substr(i);
+
+        std::string args(", \"");
+        args.append(name).append( "\", " ).append(
+            std::to_string( SM.getSpellingLineNumber(sl)));
+
+        writeBuf->insert(sl,args);
+      }
+    } 
+  }
+
   return true;
 }
 

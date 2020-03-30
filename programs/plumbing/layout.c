@@ -326,7 +326,7 @@ static int* domap(int* nodesize, node_struct* node)
       int parity = EVEN;
       for (dir = 0; dir < NDIM; dir++)
           tmpxs[dir] = xs[dir] +  node->xmin[dir];
-#ifdef EVENFIRST
+#ifdef EVEN_SITES_FIRST
       parity = coordinate_parity(tmpxs);
 #endif
 
@@ -408,7 +408,7 @@ int node_index(int loc[NDIM], node_struct *node)
   if (!node->map){
     int nodesize[NDIM];
     foralldir(dir) nodesize[dir] = node->nodesize[dir];
-#if defined(EVENFIRST) && !LOCAL_SITES_FIRST
+#if defined(EVEN_SITES_FIRST) && !LOCAL_SITES_FIRST
     for (dir = NDIM-1; dir >= 0; dir--) {
       if ((nodesize[dir] % 2) == 0){
         nodesize[dir] /= 2;
@@ -430,7 +430,7 @@ int node_index(int loc[NDIM], node_struct *node)
     #endif
   i = node->map[i];
 #else // LOCAL_SITES_FIRST
-    #if defined(EVENFIRST)
+    #if defined(EVEN_SITES_FIRST)
       i = 2*node->map[i/2];
     #else
       i = node->map[i];
@@ -439,7 +439,7 @@ int node_index(int loc[NDIM], node_struct *node)
 #endif // USE_MORTON_CODE || LOCAL_SITES_FIRST
   /* now i contains the `running index' for site */
 // NOTE: LOCAL_SITES_FIRST compute explicitly the even-odd mapping!
-#if defined(EVENFIRST) && !(LOCAL_SITES_FIRST)
+#if defined(EVEN_SITES_FIRST) && !(LOCAL_SITES_FIRST)
   if (s%2 == 0) return( i/2 );    /* even site index */
   else return( i/2 + node->evensites );  /* odd site */
 #else
@@ -690,7 +690,7 @@ void make_lattice_arrays(lattice_struct * l)
   {
       int i, dir;
       int border = 0;
-#ifdef EVENFIRST
+#ifdef EVEN_SITES_FIRST
       forevensites(i){
           int isOnBorder = is_on_node_border(site[i].x);
           if (isOnBorder)
@@ -749,7 +749,7 @@ void make_lattice_arrays(lattice_struct * l)
                   halt("Found a border site in the inner-volume!");
           }
       }
-#else // EVENFIRST
+#else // EVEN_SITES_FIRST
       forallsites(i){
           int isOnBorder = is_on_node_border(site[i].x);
           if (isOnBorder)
@@ -770,7 +770,7 @@ void make_lattice_arrays(lattice_struct * l)
                   halt("Found a border site in the inner-volume!");
           }
       }
-#endif // EVENFIRST
+#endif // EVEN_SITES_FIRST
   }
 #endif // LOCAL_SITES_FIRST
   /* and test it - Note: This test has been moved back, since CUDA-arrays have not

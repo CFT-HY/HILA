@@ -230,7 +230,7 @@ class field {
       };
   };
 
-  static_assert( std::is_trivial<T>::value, "Field expects only trivial elements");
+  static_assert( std::is_pod<T>::value, "Field expects only pod-type elements (plain data): default constructor, copy and delete");
   
  public:
 
@@ -641,7 +641,7 @@ void field<T>::start_move(direction d, parity p) const {
     }
 
     // Communication hasn't been started yet, do it now
-    int index = d + NDIRS*(int)par;
+    int index = static_cast<int>(d) + NDIRS*static_cast<int>(par);
     int tag =  fs->mpi_tag*3*NDIRS + index;
     constexpr int size = sizeof(T);
 
@@ -658,9 +658,9 @@ void field<T>::start_move(direction d, parity p) const {
       if(receive_buffer[n] == NULL)
         receive_buffer[n] = (char *)malloc( sites*size );
 
-      //printf("node %d, recv tag %d from %d\n", mynode(), tag, from_node.index);
+      //printf("node %d, recv tag %d from %d\n", mynode(), tag, from_node.rank);
 
-      MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE, from_node.index, 
+      MPI_Irecv( receive_buffer[n], sites*size, MPI_BYTE, from_node.rank, 
 	             tag, lattice->mpi_comm_lat, &receive_request[n] );
       n++;
     }
@@ -675,9 +675,9 @@ void field<T>::start_move(direction d, parity p) const {
 
        fs->gather_comm_elements(send_buffer[n], to_node, par);
  
-       //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.index);
+       //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.rank);
        /* And send */
-       MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.index, 
+       MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.rank, 
                tag, lattice->mpi_comm_lat, &send_request[n]);
        //printf("node %d, sent tag %d\n", mynode(), tag);
        n++;
@@ -702,7 +702,7 @@ void field<T>::wait_move(direction d, parity p) const {
   // Loop over parities
   // (if p=ALL, do both EVEN and ODD otherwise just p);
   for( parity par: loop_parities(p) ) {
-    int index = d + NDIRS*(int)par;
+    int index = static_cast<int>(d) + NDIRS*static_cast<int>(par);
     int tag =  fs->mpi_tag*3*NDIRS + index;
 
     if( is_fetched(d, par) ){
