@@ -1,10 +1,10 @@
 #ifndef SUN_M
 #define SUN_M
 
-#include "cmplx.h"
-#include "general_matrix.h"
-#include "sun_vector.h"
 #include "../plumbing/defs.h"
+#include "../datatypes/cmplx.h"
+#include "../datatypes/general_matrix.h"
+#include "../datatypes/sun_vector.h"
 #include "../plumbing/mersenne.h" //has to be included
 #include <cmath>
 
@@ -84,6 +84,18 @@ template<int n, typename radix>
 class SU : public matrix<n,n,cmplx<radix> >{
     public:
     using base_type = typename base_type_struct<radix>::type;
+
+    SU() = default;
+
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    #pragma transformer loop_function
+    SU(const scalart rhs) {
+      for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+        if (i == j) matrix<n,n,cmplx<radix>>::c[i][j] = (rhs);
+        else matrix<n,n,cmplx<radix>>::c[i][j] = (0);
+      }
+    }
+
 
     void reunitarize(){ //implement later
         make_unitary();

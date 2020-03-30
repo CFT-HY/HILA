@@ -206,16 +206,13 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
 
 
 
-
-
-/// Vectorized implementation of fetching boundary elements
-/* Gathers sites at the boundary that need to be communicated to neighbours */
+/// Vectorized implementation of fetching elements
 template<typename T>
-void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par, lattice_struct * lattice) const {
+void field_storage<T>::gather_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) const {
   constexpr int vector_size = vector_info<T>::vector_size;
   vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
-  for (int j=0; j<to_node.n_sites(par); j++) {
-    int index = to_node.site_index(j, par);
+  for (int j=0; j<index_list.size(); j++) {
+    int index = index_list[j];
     int v_index = vlat->vector_index[index];
     auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
     auto pvector = (typename vector_info<T>::type*) (&element);
@@ -229,14 +226,15 @@ void field_storage<T>::gather_comm_elements(char * buffer, lattice_struct::comm_
   }
 }
 
-/// Vectorized implementation of setting boundary elements
-/* Sets the values the neighbour elements from the communication buffer */
+
+
+/// Vectorized implementation of setting elements
 template<typename T>
-void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par, lattice_struct * lattice){
+void field_storage<T>::place_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) {
   constexpr int vector_size = vector_info<T>::vector_size;
   vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
-  for (int j=0; j<from_node.n_sites(par); j++) {
-    int index = from_node.offset(par)+j;
+  for (int j=0; j<index_list.size(); j++) {
+    int index = index_list[j];
     int v_index = vlat->vector_index[index];
     auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
     auto pvector = (typename vector_info<T>::type*) (&element);
@@ -250,6 +248,7 @@ void field_storage<T>::place_comm_elements(char * buffer, lattice_struct::comm_n
     set(element, vlat->lattice_index[index], vlat->field_alloc_size());
   }
 }
+
 
 template<typename T>
 void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){
