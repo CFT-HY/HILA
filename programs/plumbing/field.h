@@ -463,6 +463,9 @@ class field {
   field<T> shift(const coordinate_vector &v, parity par) const;
   field<T> shift(const coordinate_vector &v) const { return shift(v,ALL); }
 
+  // General getters and setters
+  void set_elements( T * elements, std::vector<unsigned> index_list) const;
+  void set_elements( T * elements, std::vector<coordinate_vector> coord_list) const;
 };
 
 
@@ -620,6 +623,24 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
 #endif
 
 
+
+/// Functions for manipulating lists of elements
+template<typename T>
+void field<T>::set_elements( T * elements, std::vector<unsigned> index_list) const {
+  fs->payload.gather_elements(elements, index_list, fs->lattice);
+}
+
+template<typename T>
+void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
+  std::vector<unsigned> index_list(coord_list.size());
+  for (int j=0; j<coord_list.size(); j++) {
+    index_list[j] = fs->lattice->site_index(coord_list[j]);
+  }
+  fs->payload.gather_elements(elements, index_list, fs->lattice);
+}
+
+
+
 #if defined(USE_MPI) && !defined(TRANSFORMER) 
 /* MPI implementations
  * For simplicity, these functions do not use field expressions and
@@ -676,6 +697,7 @@ void field<T>::start_move(direction d, parity p) const {
        fs->gather_comm_elements(send_buffer[n], to_node, par);
  
        //printf("node %d, send tag %d to %d\n", mynode(), tag, to_node.rank);
+
        /* And send */
        MPI_Isend( send_buffer[n], sites*size, MPI_BYTE, to_node.rank, 
                tag, lattice->mpi_comm_lat, &send_request[n]);
@@ -711,6 +733,8 @@ void field<T>::wait_move(direction d, parity p) const {
       lattice->n_gather_avoided += 1;
       return;
     }
+
+    //printf("wait_move tag %d node %d\n",tag,mynode());
 
     // This will start the communication if it has not been started yet
     start_move(d, par);
