@@ -294,7 +294,7 @@ public:
 
       includelocs.push_back(ci);
 
-      llvm::errs() << " GOT INCLUDE " << FileName << '\n';
+      //  llvm::errs() << " GOT INCLUDE " << FileName << '\n';
     }
     
   }
@@ -491,7 +491,7 @@ void set_fid_modified(const FileID FID) {
     file_id_list.push_back(FID);
 
     SourceManager &SM = myCompilerInstance->getSourceManager();
-    llvm::errs() << "NEW BUFFER ADDED " << SM.getFileEntryForID(FID)->getName() << '\n';
+    // llvm::errs() << "NEW BUFFER ADDED " << SM.getFileEntryForID(FID)->getName() << '\n';
   }
 }
 
@@ -530,7 +530,6 @@ public:
     srcBuf * buf = get_file_buffer(TheRewriter, fid);
     for (auto & inc : includelocs) {
       if (inc.fid == fid) {
-        llvm::errs() << "CHANGING NAME\n";
         buf->replace( SourceRange(inc.FilenameRange.getBegin(),inc.FilenameRange.getEnd()),
                       std::string("\"") + inc.newName + "\"" );
         n++;

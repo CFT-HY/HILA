@@ -1555,7 +1555,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
         args.append(name).append( "\", " ).append(
             std::to_string( SM.getSpellingLineNumber(sl)));
 
-        writeBuf->insert(sl,args);
+        // if (!writeBuf->is_edited(sl)) writeBuf->insert(sl,args);
       }
     } 
   }
