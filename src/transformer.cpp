@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
+// #include <filesystem>  <- this should be used for pathname resolution, but llvm-9 does not properly handle
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -43,6 +44,7 @@ std::vector<Expr *> remove_expr_list = {};
 
 bool state::loop_found = false;
 bool state::compile_errors_occurred = false;
+
 
 ///definition of command line options
 llvm::cl::OptionCategory TransformerCat(program_name);
@@ -240,6 +242,135 @@ reduction get_reduction_type(bool is_assign,
 }
 
 /////////////////////////////////////////////////////////////////////////////
+/// Preprocessor callbacks are used to find include locs
+
+
+struct includeloc_struct {
+    SourceLocation HashLoc;
+    StringRef FileName;
+    const FileEntry * File;
+    FileID fid;
+    FileID fid_included;
+    CharSourceRange FilenameRange;
+    std::string newName;
+};
+
+// block of static vars, easiest to move information
+static std::list<includeloc_struct> includelocs;
+
+#include <unistd.h>
+
+class MyPPCallbacks : public PPCallbacks {
+public:
+
+  
+  // make static vars directly callable
+
+  /// This hook is called when #include (or #import) is processed
+  void InclusionDirective(SourceLocation HashLoc,
+                          const Token & IncludeTok,
+                          StringRef FileName,
+                          bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          const FileEntry * File,
+                          StringRef SearchPath,
+                          StringRef RelativePath,
+                          const Module * Imported,
+                          SrcMgr::CharacteristicKind FileType) 
+  {
+
+    SourceManager &SM = myCompilerInstance->getSourceManager();
+
+    if (IsAngled == false && FileType == SrcMgr::CharacteristicKind::C_User) {
+      // normal user file included, add to a candidate
+      includeloc_struct ci;
+      ci.HashLoc  = HashLoc;
+      ci.FileName = FileName;
+      ci.File     = File;
+      ci.fid      = SM.getFileID(HashLoc);   // FileID of the include-stmt file
+
+      ci.FilenameRange = FilenameRange;
+      ci.newName  = File->tryGetRealPathName();
+
+      includelocs.push_back(ci);
+
+      llvm::errs() << " GOT INCLUDE " << FileName << '\n';
+    }
+    
+  }
+
+
+  /// This triggers when the preprocessor changes file (#include, exit from it)
+  /// Use this to track the chain of non-system include files
+
+  // void FileChanged(SourceLocation Loc, FileChangeReason Reason, SrcMgr::CharacteristicKind FileType,
+  //                  FileID PrevFID) {
+
+  //   SourceManager &SM = myCompilerInstance->getSourceManager();
+
+  //   if (Reason == PPCallbacks::EnterFile) {
+
+  //     // entering a new file -- is this file OK?
+  //     if (next_include_ok && FileType == SrcMgr::CharacteristicKind::C_User &&
+  //         Loc.isValid() && !SM.isInSystemHeader(Loc)) {
+  //       // Fine to include, push it on list
+
+  //       last_ok_fid = SM.getFileID(Loc);
+  //       // and note it as ok fid
+  //       current_includeloc.fid_included = last_ok_fid;
+
+  //       includelocs.push_back(current_includeloc);
+
+  //       this_file_ok = true;
+
+  //       llvm::errs() << "FILE CHANGED to " << SM.getFilename(Loc) << " isvalid " << next_include_ok << '\n';
+  //     } else {
+  //       this_file_ok = false;
+  //     }
+
+  //   } else if (Reason == PPCallbacks::ExitFile) {
+
+  //     FileID fid = SM.getFileID(Loc);
+  //     if (this_file_ok || fid == last_ok_fid || SM.isInMainFile(Loc)) {
+  //       // everything is peachy, continue - flag the this_file_ok which takes us up to main file
+  //       this_file_ok = true;
+  //     }
+  //   }
+  // }
+
+  // /// Called for any skipped include file, mark also these points
+  // /// 
+
+  // //  NOTE: LLVM 10 seems to change FileEntry -> FileEntryRef
+  // //  TODO: Check the actual version, compare with 9
+  // #if LLVM_VERSION_MAJOR < 10
+  // void FileSkipped( const FileEntry & SkippedFile, const Token & FilenameTok,
+	// 	                SrcMgr::CharacteristicKind FileType )
+  // #else 
+  // void FileSkipped( const FileEntryRef & SkippedFile, const Token & FilenameTok,
+	// 	                SrcMgr::CharacteristicKind FileType )
+  // #endif
+  // {
+  //   SourceManager &SM = myCompilerInstance->getSourceManager();
+
+  //   if (next_include_ok && FileType == SrcMgr::CharacteristicKind::C_User) {
+  //     // this is an include candidate but skipped.  Mark the location
+
+  //     skippedlocs.push_back(current_includeloc);
+
+  //     llvm::errs() << "SKIPPED INCLUDE to " << current_includeloc.FileName << '\n';
+
+  //   }
+  // }
+
+
+  // This triggers when range is skipped due to #if (0) .. #endif
+  //   void SourceRangeSkipped(SourceRange Range, SourceLocation endLoc) {
+  //     // llvm::errs() << "RANGE skipped\n";
+  //   }
+};
+
+
 
 
 // file_buffer_list stores the edited source of all files
@@ -303,9 +434,8 @@ public:
         beginloc = CSR.getBegin();
       }
 
-      // analyze only user files (these should be named)
       if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
-      //if (!SM.isInSystemHeader(beginloc)) {
+
         // llvm::errs() << "Processing file " << SM.getFilename(beginloc) << "\n";
         // TODO: ensure that we go only through files which are needed!
 
@@ -341,49 +471,6 @@ private:
 };
 
 
-//#define NEED_PP_CALLBACKS
-#ifdef NEED_PP_CALLBACKS
-
-class MyPPCallbacks : public PPCallbacks {
-public:
-  SourceLocation This_hashloc;
-  std::string This_name;
-
-  // This hook is called when #include (or #import) is processed
-  void InclusionDirective(SourceLocation HashLoc,
-                          const Token & IncludeTok,
-                          StringRef FileName,
-                          bool IsAngled,
-                          CharSourceRange FilenameRange,
-                          const FileEntry * File,
-                          StringRef SearchPath,
-                          StringRef RelativePath,
-                          const Module * Imported,
-                          SrcMgr::CharacteristicKind FileType) { }
-
-  // This triggers when the preprocessor changes file (#include, exit from it)
-  // Use this to track the chain of non-system include files
-  void FileChanged(SourceLocation Loc, FileChangeReason Reason, SrcMgr::CharacteristicKind FileType,
-                   FileID PrevFID) {
-    SourceManager &SM = myCompilerInstance->getSourceManager();
-    if (Reason == PPCallbacks::EnterFile &&
-        FileType == SrcMgr::CharacteristicKind::C_User &&
-        Loc.isValid() &&
-        !SM.isInSystemHeader(Loc) &&
-        !SM.isInMainFile(Loc) ) {
-
-      llvm::errs() << "FILE CHANGED to " << SM.getFilename(Loc) << '\n';
-
-    }
-  }
-
-  // This triggers when range is skipped due to #if (0) .. #endif
-  //   void SourceRangeSkipped(SourceRange Range, SourceLocation endLoc) {
-  //     // llvm::errs() << "RANGE skipped\n";
-  //   }
-};
-
-#endif
 
 // This struct will be used to keep track of #include-chains.
 
@@ -402,7 +489,9 @@ void set_fid_modified(const FileID FID) {
   if (search_fid(FID) == false) {
     // new file to be added
     file_id_list.push_back(FID);
-    // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+
+    SourceManager &SM = myCompilerInstance->getSourceManager();
+    llvm::errs() << "NEW BUFFER ADDED " << SM.getFileEntryForID(FID)->getName() << '\n';
   }
 }
 
@@ -415,13 +504,14 @@ public:
   virtual bool BeginSourceFileAction(CompilerInstance &CI) override {
     llvm::errs() << "** Starting operation on source file "+getCurrentFile()+"\n";
 
-#ifdef NEED_PP_CALLBACKS
     // Insert preprocessor callback functions to the stream.  This enables
     // tracking included files, ranges etc.
     Preprocessor &pp = CI.getPreprocessor();
     std::unique_ptr<MyPPCallbacks> callbacks(new MyPPCallbacks());
     pp.addPPCallbacks(std::move(callbacks));
-#endif
+
+    // init global variables PP callbacks use
+    includelocs.clear();
 
     global.main_file_name = getCurrentFile();
 
@@ -432,12 +522,35 @@ public:
     return (true);
   }
 
+  //////////////////////////
+  
+  int change_include_names(FileID fid) {
+
+    int n = 0;
+    srcBuf * buf = get_file_buffer(TheRewriter, fid);
+    for (auto & inc : includelocs) {
+      if (inc.fid == fid) {
+        llvm::errs() << "CHANGING NAME\n";
+        buf->replace( SourceRange(inc.FilenameRange.getBegin(),inc.FilenameRange.getEnd()),
+                      std::string("\"") + inc.newName + "\"" );
+        n++;
+      }
+    }
+    return n;
+  }
+
   void insert_includes_to_file_buffer(FileID myFID) {
     // this is where to write
+
+    // change filenames to be included
+    change_include_names(myFID);
+
     srcBuf * buf = get_file_buffer(TheRewriter, myFID);
     // find files to be included
     SourceManager &SM = TheRewriter.getSourceMgr();
+
     for (FileID f : file_id_list) {
+
       SourceLocation IL = SM.getIncludeLoc(f);
       if (IL.isValid() && myFID == SM.getFileID(IL)) {
         // file f is included, but do #include there first
@@ -463,11 +576,15 @@ public:
 
         // Find the start of the include statement
         e = SR.getEnd();
-        for (int i=1; i<100; i++) {
+        for (int i=1; i<200; i++) {
           const char * p = SM.getCharacterData(b.getLocWithOffset(-i));
-          if (p && *p == '#' && strncmp(p,"#include",8) == 0) {
-            SR = SourceRange(b.getLocWithOffset(-i),e);
-            break;
+          if (p && *p == '#') {
+            ++p;
+            while (std::isspace(*p)) ++p;
+            if (strncmp(p,"include",7) == 0) {
+              SR = SourceRange(b.getLocWithOffset(-i),e);
+              break;
+            }
           }
         }
 
@@ -475,10 +592,12 @@ public:
         buf->remove(SR);
         // TheRewriter.RemoveText(SR);
 
+
+        srcBuf * buf_from = get_file_buffer(TheRewriter, f);
+
         // and finally insert
         // SourceRange r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
-        srcBuf * buf_from = get_file_buffer(TheRewriter, f);
-        // TheRewriter.InsertText(SR.getBegin(),
+         // TheRewriter.InsertText(SR.getBegin(),
         buf->insert(SR.getBegin(),
                     "// start include "+includestr
                     + "---------------------------------\n"
@@ -486,6 +605,8 @@ public:
                     "// end include "+includestr
                     + "---------------------------------\n",
                     false);
+
+      } else {
 
       }
     }
@@ -533,6 +654,8 @@ public:
                << SM.getFilename(SM.getLocForStartOfFile(f)) << '\n';
           check_include_path(f);
         }
+
+        //        change_include_names(SM.getMainFileID());
 
         insert_includes_to_file_buffer(SM.getMainFileID());
       }
