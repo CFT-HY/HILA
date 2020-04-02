@@ -49,47 +49,57 @@ bool state::compile_errors_occurred = false;
 ///definition of command line options
 llvm::cl::OptionCategory TransformerCat(program_name);
 
-llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
-          llvm::cl::cat(TransformerCat));
+llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", 
+      llvm::cl::desc("Dump AST tree"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::no_include("noincl",
-             llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
-             llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<std::string> cmdline::dummy_def("D", 
-            llvm::cl::value_desc("name"),
-            llvm::cl::desc("Define name/symbol for preprocessor"),
-            llvm::cl::cat(TransformerCat));
+      llvm::cl::value_desc("name"),
+      llvm::cl::desc("Define name/symbol for preprocessor"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<std::string> cmdline::dummy_incl("I", 
-             llvm::cl::desc("Directory for include file search"),
-             llvm::cl::value_desc("directory"),
-             llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Directory for include file search"),
+      llvm::cl::value_desc("directory"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::function_spec_no_inline("function-spec-no-inline",
-                          llvm::cl::desc("Do not mark generated function specializations \"inline\""),
-                          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Do not mark generated function specializations \"inline\""),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::method_spec_no_inline("method-spec-no-inline",
-                        llvm::cl::desc("Do not mark generated method specializations \"inline\""),
-                        llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Do not mark generated method specializations \"inline\""),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<bool> cmdline::funcinfo("ident-functions",
-           llvm::cl::desc("Comment function call types in output"),
-           llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Comment function call types in output"),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<bool> cmdline::no_output("no-output",
-            llvm::cl::desc("No output file, for syntax check"),
-            llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("No output file, for syntax check"),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<bool> cmdline::syntax_only("syntax-only",
-              llvm::cl::desc("Same as no-output"),
-              llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Same as no-output"),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<std::string> cmdline::output_filename("o",
-                  llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
-                  llvm::cl::value_desc("name"),
-                  llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
+      llvm::cl::value_desc("name"),
+      llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::no_mpi("no-mpi",
+      llvm::cl::desc("Do not generate MPI specific code (single node)"),
+      llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::no_interleaved_comm("no-interleave",
+      llvm::cl::desc("Do not interleave communications with computation"),
+      llvm::cl::cat(TransformerCat));
+
 
 
 // List of targets that can be specified in command line arguments

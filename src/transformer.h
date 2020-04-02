@@ -63,6 +63,8 @@ namespace cmdline {
   extern llvm::cl::opt<bool> openacc;
   extern llvm::cl::opt<bool> func_attribute;
   extern llvm::cl::opt<int> VECTORIZE;
+  extern llvm::cl::opt<bool> no_interleaved_comm;
+  extern llvm::cl::opt<bool> no_mpi;
 };
 
 namespace state {

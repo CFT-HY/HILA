@@ -136,13 +136,30 @@ void MyASTVisitor::generate_code(Stmt *S) {
   // change the f[X+offset] -references, generate code
   handle_field_plus_offsets( code, loopBuf, parity_name );
 
+  bool first = true;
+  bool generate_wait_loops;
+  if (cmdline::no_interleaved_comm || cmdline::no_mpi) 
+    generate_wait_loops = false;
+  else 
+    generate_wait_loops = true;
+
   for (field_info & l : field_info_list) {
     // If neighbour references exist, communicate them
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << l.new_name << ".wait_move("
-           << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
+      if (!generate_wait_loops) {
+        code << l.new_name << ".get("
+             << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
+      } else {
+        if (first) code << "dir_mask_t  _dir_mask_ = 0;\n";
+        first = false;        
+
+        code << "_dir_mask_ |= " << l.new_name << ".start_get("
+             << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
+      }
     }
   }
+
+  if (first) generate_wait_loops = false;   // no communication needed in the 1st place
   
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
@@ -159,7 +176,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
   }
 
   // Place the content of the loop
-  code << backend_generate_code(S,semicolon_at_end,loopBuf);
+  code << backend_generate_code(S,semicolon_at_end,loopBuf,generate_wait_loops);
   
   
   // Check reduction variables
@@ -311,16 +328,17 @@ void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
 }
 
 /// Call the backend function for generating loop code
-std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf,
+                                                bool generate_wait_loops) {
   std::stringstream code;
   if( target.CUDA ){
     code << generate_code_cuda(S,semicolon_at_end,loopBuf);
-  } else if( target.openacc ){
-    code << generate_code_cpu(S,semicolon_at_end,loopBuf);   // use cpu method for acc
+  } else if( target.openacc){
+    code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);   // use cpu method for acc
   } else if(target.VECTORIZE) {
     code << generate_code_avx(S,semicolon_at_end,loopBuf);
   } else {
-    code << generate_code_cpu(S,semicolon_at_end,loopBuf);
+    code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);
   }
   return code.str();
 }

@@ -249,11 +249,11 @@ public:
   void generate_code(Stmt *S);
   void handle_field_plus_offsets(std::stringstream &code, srcBuf & loopbuf, std::string & par );
 
-  std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf);
+  std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait);
   void backend_handle_loop_function(FunctionDecl *fd);
 
   /// Generate a header for starting communication and marking fields changed
-  std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
   std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb);
   void generate_openacc_loop_header(std::stringstream & code);
   //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);

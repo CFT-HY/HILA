@@ -43,7 +43,7 @@ void dirac_stagggered(
     
   // Start getting neighbours
   foralldir(dir){
-    v_in.start_move(dir);
+    v_in.start_get(dir);
   }
 
   // Apply the mass diagonally
@@ -54,7 +54,7 @@ void dirac_stagggered(
     direction odir = opp_dir( (direction)dir );
     // First mulltiply the by conjugate before communicating the matrix
     vtemp[dir][ALL] = v_in[X]*gauge[dir][X].conjugate();
-    vtemp[dir].start_move(odir);
+    vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
@@ -78,7 +78,7 @@ void dirac_stagggered_dagger(
   // Start getting neighbours
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
-    v_in.start_move(dir);
+    v_in.start_get(dir);
   }
 
   // Apply the mass diagonally
@@ -89,7 +89,7 @@ void dirac_stagggered_dagger(
     direction odir = opp_dir( (direction)dir );
     // First mulltiply the by conjugate before communicating the matrix
     vtemp[dir][ALL] = v_in[X]*gauge[dir][X].conjugate();
-    vtemp[dir].start_move(odir);
+    vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );

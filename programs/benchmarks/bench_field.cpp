@@ -1,4 +1,5 @@
 #include "bench.h"
+#include "../plumbing/coordinates.h"
 
 #define N 3
 
@@ -56,7 +57,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
           dfield1[ALL] = dfield2[X] + dfield3[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -251,7 +252,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
         matrix1.mark_changed(ALL);
         for(int dir=0; dir<NDIRS; dir++){
-          matrix1.wait_move((direction)dir,ALL);
+          matrix1.get((direction)dir,ALL);
         }
       }
       

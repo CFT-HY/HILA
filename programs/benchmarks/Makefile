@@ -3,7 +3,7 @@ OPTS = -DNDIM=4 $(ADDITION)
 
 #The next line work on puhti
 #TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ 
-TRANSFORMER = ../../build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+TRANSFORMER = ../../build/transformer  -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
 
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 

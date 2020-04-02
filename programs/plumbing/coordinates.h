@@ -60,6 +60,11 @@ inline int dir_dot_product(direction d1, direction d2) {
   else return 0;
 }
 
+/// dir_mask_t  type  used in masking directions
+/// unsigned char is ok up to 4 dim (2*4 bits)
+using dir_mask_t = unsigned char;
+
+inline dir_mask_t get_dir_mask(const direction d) { return (dir_mask_t)(1<<d); }
 
 /// enum class parity type definition
 
