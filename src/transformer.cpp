@@ -45,6 +45,7 @@ std::vector<Expr *> remove_expr_list = {};
 bool state::loop_found = false;
 bool state::compile_errors_occurred = false;
 
+bool skip_this_translation_unit = false;
 
 ///definition of command line options
 llvm::cl::OptionCategory TransformerCat(program_name);
@@ -239,7 +240,9 @@ class heLppPragmaHandler : public PragmaHandler {
 };
 
 static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("heLpp","heL pragma description");
-#endif
+
+#endif  // pragmahandler
+
 
 reduction get_reduction_type(bool is_assign,
                              std::string & assignop,
@@ -267,8 +270,6 @@ struct includeloc_struct {
 
 // block of static vars, easiest to move information
 static std::list<includeloc_struct> includelocs;
-
-#include <unistd.h>
 
 class MyPPCallbacks : public PPCallbacks {
 public:
@@ -304,11 +305,25 @@ public:
 
       includelocs.push_back(ci);
 
-      //  llvm::errs() << " GOT INCLUDE " << FileName << '\n';
     }
     
   }
 
+  void PragmaDirective( SourceLocation Loc, PragmaIntroducerKind Introducer ) {
+    SourceManager &SM = myCompilerInstance->getSourceManager();
+    if (SM.isInMainFile(Loc) && Introducer == clang::PIK_HashPragma) {
+      bool invalid;
+      const char * src = SM.getCharacterData(Loc,&invalid);
+      if (invalid || *src != '#') return;
+      src++;   // skip hash
+      const char * end = strchr(src,'\n');
+      if (end == nullptr) return;
+      std::string line(src,end-src);
+      std::vector<std::string> w { "pragma","transformer","skip" };
+      if (contains_word_list(line,w)) skip_this_translation_unit = true;
+    }
+  }
+	
 
   /// This triggers when the preprocessor changes file (#include, exit from it)
   /// Use this to track the chain of non-system include files
@@ -459,7 +474,9 @@ public:
         global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
 
         // Traverse the declaration using our AST visitor.
-        Visitor.TraverseDecl(d);
+        // if theres "#pragma skip don't do it"
+        if (!skip_this_translation_unit) Visitor.TraverseDecl(d);
+
         // llvm::errs() << "Dumping level " << i++ << "\n";
         if (cmdline::dump_ast) {
           if (!cmdline::no_include || SM.isInMainFile(beginloc))
@@ -525,6 +542,7 @@ public:
 
     global.main_file_name = getCurrentFile();
 
+    skip_this_translation_unit = false;
     file_id_list.clear();
     file_buffer_list.clear();
     field_decl = field_storage_decl = nullptr;

@@ -350,10 +350,10 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
         // Got constant
         lfe.is_constant_direction = true;
         lfe.constant_value = result.getExtValue();
-        llvm::errs() << " GOT DIR CONST, value " << lfe.constant_value << "  expr " << lfe.direxpr_s << '\n';
+        // llvm::errs() << " GOT DIR CONST, value " << lfe.constant_value << "  expr " << lfe.direxpr_s << '\n';
       } else {
         lfe.is_constant_direction = false;
-        llvm::errs() << "GOT DIR NOT-CONST " << lfe.direxpr_s << '\n';
+        // llvm::errs() << "GOT DIR NOT-CONST " << lfe.direxpr_s << '\n';
       
         // If the direction is a variable, add it to the list
         // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
@@ -426,7 +426,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
       bool is_elem = (vi.type.find("element<") == 0);
       vi.type = DRE->getType().getUnqualifiedType().getCanonicalType().getAsString(pp);
       if (is_elem) vi.type = "element<" + vi.type + ">";
-      llvm::errs() << " + Got " << vi.type << '\n';
+      // llvm::errs() << " + Got " << vi.type << '\n';
 
       // is it loop-local?
       vi.is_loop_local = false;
@@ -992,14 +992,20 @@ bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & argu
   std::string txt = TheRewriter.getRewrittenText(SourceRange(l,lend));
 
   txt = remove_extra_whitespace(txt);
+
   std::string comp = "#pragma transformer";
   if (txt.compare(0,comp.length(),comp) == 0) {
     // found it, set return value
     arguments = txt.substr(comp.length()+1, std::string::npos);
     pragmaloc = l;
-    // llvm::errs() << "PRAGMA LINE " << txt << " in file " 
-    //              << SM.getFilename(l) << " at line "
-    //              << SM.getSpellingLineNumber(l) << '\n';
+    return true;
+  }
+  // there could be space between # and pragma
+  comp = "# pragma transformer";
+  if (txt.compare(0,comp.length(),comp) == 0) {
+    // found it, set return value
+    arguments = txt.substr(comp.length()+1, std::string::npos);
+    pragmaloc = l;
     return true;
   }
   
