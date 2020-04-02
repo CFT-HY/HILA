@@ -38,7 +38,6 @@ void input::handle(const std::string & line){
 void input::import(const std::string & fname) {
 
     #ifdef USE_MPI
-
     int dummy = 0;
     char ** argvp;
     initialize_machine(dummy, &argvp); 

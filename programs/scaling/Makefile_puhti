@@ -16,7 +16,7 @@ test_conjReduce: Makefile inputs.o conjReduce.o mersenne_inline.o lattice.o setu
 	$(CC) -o conjReduce inputs.o conjReduce.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o
 
 run_test: onsim.exe
-	srun --ntasks=2 --time=00:15:00 --account=project_2001973 --partition=test --mem-per-cpu=1G onsim.exe
+	srun --ntasks=2 --time=00:15:00 --account=project_2001973 --partition=test --mem-per-cpu=1G onsim.exe sim_params.txt
 
 %.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
 	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
