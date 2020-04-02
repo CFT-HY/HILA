@@ -91,7 +91,9 @@ class field {
         }
       }
 #else
-      void initialize_communication(){};
+      // empty stubs
+      void initialize_communication(){}
+      void free_communication(){}
 #endif
 
       void allocate_payload() { 
@@ -749,11 +751,11 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)
   // Does not need to happen every time; should use tracking like in MPI
   fs->set_local_boundary_elements(d, p);
-  return 0
+  return 0;
 }
 
 template<typename T>
-void field<T>:wait_get(direction d, parity p) const {}
+void field<T>::wait_get(direction d, parity p) const {}
 
 
 #endif  // MPI
