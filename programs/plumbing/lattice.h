@@ -168,7 +168,9 @@ public:
   long long volume() { return l_volume; }
   int node_rank() { return this_node.rank; }
   int n_nodes() { return nodes.number; }
+  std::vector<node_info> nodelist() { return nodes.nodelist; }
   long long local_volume() {return this_node.sites;}
+  coordinate_vector min_coordinate(){ return this_node.min; }
   
   bool is_on_node(const coordinate_vector & c);
   int  node_rank(const coordinate_vector & c);
