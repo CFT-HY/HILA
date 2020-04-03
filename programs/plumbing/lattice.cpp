@@ -43,6 +43,7 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 #endif
 
   setup_layout();
+
   setup_nodes();
 
   // set up the comm arrays 
@@ -88,8 +89,14 @@ void lattice_struct::setup(int nx, int &argc, char **argv) {
 ///////////////////////////////////////////////////////////////////////
 /// Get the node rank for coordinates 
 /// This is the fundamental routine which defines how the nodes
-/// are mapped.  map_node_layout needs to be compatible with this
-/// algorithm!
+/// are mapped.  map_node_layout MUST BE compatible with this
+/// algorithm!  So if you change this, change that too
+/// 
+/// Here the node number along one direction is calculated with
+///    loc * n_divisions/l_size  (with integer division)
+/// example: with l_size=14 and n_divisions=3,
+/// the dividers are at 0, 5, 10, 14
+/// 
 ///////////////////////////////////////////////////////////////////////
 
 int lattice_struct::node_rank(const coordinate_vector & loc)
