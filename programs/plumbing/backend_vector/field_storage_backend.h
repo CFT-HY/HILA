@@ -2,55 +2,56 @@
 #define VECTOR_BACKEND
 
 #include "../defs.h"
+#include "../lattice.h"
 #include "../field_storage.h"
 
 
 /// Utility for selecting a vector type by base type and length
 template<typename T, int vector_len>
-struct vector_base_type_struct {};
+struct vector_base_type {};
 
 template<>
-struct vector_base_type_struct<double, 4> {
+struct vector_base_type<double, 4> {
   using type = Vec4d;
 };
 
 template<>
-struct vector_base_type_struct<double, 8> {
+struct vector_base_type<double, 8> {
   using type = Vec8d;
 };
 
 template<>
-struct vector_base_type_struct<float, 8> {
+struct vector_base_type<float, 8> {
   using type = Vec8f;
 };
 
 template<>
-struct vector_base_type_struct<float, 16> {
+struct vector_base_type<float, 16> {
   using type = Vec16f;
 };
 
 template<>
-struct vector_base_type_struct<int, 4> {
+struct vector_base_type<int, 4> {
   using type = Vec4i;
 };
 
 template<>
-struct vector_base_type_struct<int, 8> {
+struct vector_base_type<int, 8> {
   using type = Vec8i;
 };
 
 template<>
-struct vector_base_type_struct<int, 16> {
+struct vector_base_type<int, 16> {
   using type = Vec16i;
 };
 
 template<>
-struct vector_base_type_struct<coordinate_vector, 4> {
+struct vector_base_type<coordinate_vector, 4> {
   using type = Vec4i;
 };
 
 template<>
-struct vector_base_type_struct<coordinate_vector, 8> {
+struct vector_base_type<coordinate_vector, 8> {
   using type = Vec8i;
 };
 
@@ -69,7 +70,7 @@ struct vector_info{
   static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
 
   // Find the vector type from above
-  using type = typename vector_base_type_struct<base_type, vector_size>::type;
+  using type = typename vector_base_type<base_type, vector_size>::type;
 
   // Number of elements in the full type
   static constexpr int elements = sizeof(T)/sizeof(base_type);
@@ -91,7 +92,7 @@ struct vectorize_struct{};
 /// A is a basic type, so just return the matching vector type
 template<typename A, int vector_size>
 struct vectorize_struct<A, vector_size, typename std::enable_if_t<is_arithmetic<A>::value>> {
-  using type = typename vector_base_type_struct<A,vector_size>::type;
+  using type = typename vector_base_type<A,vector_size>::type;
 };
 
 // B is a templated class, so construct a vectorized type
@@ -208,10 +209,11 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
 
 /// Vectorized implementation of fetching elements
 template<typename T>
-void field_storage<T>::gather_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) const {
+void field_storage<T>::gather_elements(char * RESTRICT buffer, const unsigned * RESTRICT index_list, 
+                                       int n, const lattice_struct * RESTRICT lattice) const {
   constexpr int vector_size = vector_info<T>::vector_size;
   vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
-  for (int j=0; j<index_list.size(); j++) {
+  for (int j=0; j<n; j++) {
     int index = index_list[j];
     int v_index = vlat->vector_index[index];
     auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
@@ -230,10 +232,11 @@ void field_storage<T>::gather_elements(char * buffer, std::vector<unsigned> inde
 
 /// Vectorized implementation of setting elements
 template<typename T>
-void field_storage<T>::place_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) {
+void field_storage<T>::place_elements(char * RESTRICT buffer, const unsigned * RESTRICT index_list, int n,
+                                      const lattice_struct * RESTRICT lattice) {
   constexpr int vector_size = vector_info<T>::vector_size;
   vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
-  for (int j=0; j<index_list.size(); j++) {
+  for (int j=0; j<n; j++) {
     int index = index_list[j];
     int v_index = vlat->vector_index[index];
     auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());

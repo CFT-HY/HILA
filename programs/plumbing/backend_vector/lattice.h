@@ -1,6 +1,7 @@
 #ifndef _BACKEND_LATTICE_H_
 #define _BACKEND_LATTICE_H_
 
+#include "../lattice.h"
 
 /// Splits the local lattice into equal sections for vectorization
 template<int vector_size>
@@ -100,7 +101,7 @@ struct vectorized_lattice_struct  {
         // to create a halo copy of neighbours that cross the boundary
         // Check here if that is the case for this direction
         bool need_halo = false;
-        if( lattice->comminfo[d].from_node.size() > 0 
+        if( lattice->nn_comminfo[d].from_node.rank != mynode()
             || split[updir] > 1 ){
           need_halo = true;
         }
@@ -238,7 +239,7 @@ struct vectorized_lattice_struct  {
 
 
     /// Return the communication info
-    lattice_struct::comminfo_struct get_comminfo(int d){
+    lattice_struct::nn_comminfo_struct get_comminfo(int d){
       return lattice->get_comminfo(d);
     }
 
