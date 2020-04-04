@@ -54,6 +54,8 @@ static inline direction operator+(const direction d) { return d; }
 static inline int is_up_dir(const direction d) { return d<NDIM; }
 static inline int is_up_dir(const int d) { return d<NDIM; }
 
+static inline direction abs(direction dir) { if (is_up_dir(dir)) return dir; else return -dir; }
+
 inline int dir_dot_product(direction d1, direction d2) {
   if (d1 == d2) return 1;
   else if (d1 == opp_dir(d2)) return -1;
@@ -74,6 +76,12 @@ constexpr parity EVEN = parity::even;      // bit pattern:  001
 constexpr parity ODD  = parity::odd;       //               010
 constexpr parity ALL  = parity::all;       //               011
 constexpr parity X    = parity::x;         //               100
+
+// this is used in diagnostics - make static inline so can be defd here
+static inline const char * parity_name(parity p) {
+  const char * parity_name_s[5] = {"parity::none", "EVEN", "ODD", "ALL", "X"};
+  return parity_name_s[(int)p]; 
+}
 
 // utilities for getting the bit patterns
 static inline unsigned parity_bits(parity p) {
