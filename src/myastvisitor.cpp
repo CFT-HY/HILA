@@ -692,7 +692,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // return true;
   }
 
-  // Check c++ methods
+  // Check c++ methods  -- HMM: it seems above function call stmt catches these first
   if( is_member_call_stmt(s) ){
     handle_member_call_in_loop(s);
     // let this ripple trough, for now ...
@@ -1097,20 +1097,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
   return true;
 }
 
-template <unsigned N>
-void GeneralVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
-                              const char (&msg)[N],
-                              const char *s1,
-                              const char *s2,
-                              const char *s3 ) {
-  // we'll do reporting only when output is on, avoid double reports
-  auto & DE = Context->getDiagnostics();    
-  auto ID = DE.getCustomDiagID(lev, msg );
-  auto DB = DE.Report(SL, ID);
-  if (s1 != nullptr) DB.AddString(s1);
-  if (s2 != nullptr) DB.AddString(s2);
-  if (s3 != nullptr) DB.AddString(s3);
-}
+
 
 parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
   SourceLocation SL;

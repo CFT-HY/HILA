@@ -1,4 +1,3 @@
-// -*- mode: c++ -*-
 #ifndef MYASTVISITOR_H
 #define MYASTVISITOR_H
 
@@ -64,12 +63,29 @@ public:
     Context=C; 
   }
 
+  // template <unsigned N>
+  // void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
+  //                 const char (&msg)[N],
+  //                 const char *s1 = nullptr,
+  //                 const char *s2 = nullptr,
+  //                 const char *s3 = nullptr );
+
+
   template <unsigned N>
   void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
                   const char (&msg)[N],
                   const char *s1 = nullptr,
                   const char *s2 = nullptr,
-                  const char *s3 = nullptr );
+                  const char *s3 = nullptr) {
+    // we'll do reporting only when output is on, avoid double reports
+    auto & DE = Context->getDiagnostics();    
+    auto ID = DE.getCustomDiagID(lev, msg );
+    auto DB = DE.Report(SL, ID);
+    if (s1 != nullptr) DB.AddString(s1);
+    if (s2 != nullptr) DB.AddString(s2);
+    if (s3 != nullptr) DB.AddString(s3);
+  }
+
 
 
   std::string get_stmt_str(const Stmt *s) {

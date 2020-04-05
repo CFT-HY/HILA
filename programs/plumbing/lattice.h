@@ -241,6 +241,15 @@ public:
     return this_node.coordinates[idx];
   }
 
+  inline parity site_parity( unsigned idx ) {
+  #ifdef EVENFIRST
+    if (idx < this_node.evensites) return EVEN;
+    else return ODD;
+  #else 
+    return this_node.coordinates[idx].coordinate_parity();
+  #endif
+  }
+
   coordinate_vector local_coordinates( unsigned idx ){
     return coordinates(idx) - this_node.min;
   }
@@ -272,10 +281,9 @@ extern lattice_struct * lattice;
 // Keep track of defined lattices
 extern std::vector<lattice_struct*> lattices;
 
-#ifdef USE_MPI
 // and the MPI tag generator
-int get_next_mpi_tag();
-#endif
+int get_next_msg_tag();
+
 
 
 

@@ -471,6 +471,22 @@ void lattice_struct::create_std_gathers()
 
 
 
+///  Get message tags cyclically -- defined outside classes, so that it is global and unique
+
+#define MSG_TAG_MIN  10000
+#define MSG_TAG_MAX  (1<<28)     // a big int number
+
+int get_next_msg_tag() {
+  static int tag = MSG_TAG_MIN;
+  ++tag;
+  if (tag > MSG_TAG_MAX) tag = MSG_TAG_MIN;
+  return tag;
+}
+
+
+
+
+
 /************************************************************************/
 
 #ifdef USE_MPI
@@ -675,6 +691,10 @@ lattice_struct::gen_comminfo_struct lattice_struct::create_general_gather( const
 
 #endif
 
+//////////////////////////////////////////////////////////////////////////////
+/// Test the standard gather here
+//////////////////////////////////////////////////////////////////////////////
+
 template <typename T>
 struct test_tt {
   T r[NDIM];
@@ -693,7 +713,7 @@ void test_std_gathers()
   
   onsites(ALL) {
     foralldir(d) {
-      t[X].r[d] = coordinates(X)[d];
+      t[X].r[d] = X.coordinates()[d];
     }
   }
 
@@ -722,18 +742,5 @@ void test_std_gathers()
   }
 }
 
-#ifdef USE_MPI
-///  Get MPI tags cyclically -- defined outside classes, so that it is global and unique
 
-#define MPI_TAG_MIN  10000
-#define MPI_TAG_MAX  (1<<28)     // a big int number
-
-int get_next_mpi_tag() {
-  static int tag = MPI_TAG_MIN;
-  ++tag;
-  if (tag > MPI_TAG_MAX) tag = MPI_TAG_MIN;
-  return tag;
-}
-
-#endif
 

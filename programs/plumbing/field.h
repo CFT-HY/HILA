@@ -549,7 +549,7 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
 
 #if defined(USE_MPI)
 /* MPI implementations
- * For simplicity, these functions do not use field expressions and
+ * For simplicity, these functions do not use field expressions andb
  * can be ignored by the transformer. Since the transformer does not
  * have access to mpi.h, it cannot process this branch.
  */
@@ -563,7 +563,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
   // get the mpi message tag right away, to ensure that we are always synchronized with the
   // mpi calls -- some nodes might not need comms, but the tags must be in sync
 
-  int tag = get_next_mpi_tag();
+  int tag = get_next_msg_tag();
 
   lattice_struct::nn_comminfo_struct  & ci = lattice->nn_comminfo[d];
   lattice_struct::comm_node_struct & from_node = ci.from_node;

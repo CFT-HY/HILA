@@ -350,9 +350,10 @@ inline coordinate_vector operator-( const direction dir, coordinate_vector cv ) 
 /////////////////////////////////////////////////////////////////////
 
 class X_index_type {
-  coordinate_vector coordinates();
-  int coordinate(direction d);
-  ::parity parity();
+  public:
+    const coordinate_vector & coordinates() const;
+    int coordinate(direction d) const;
+    ::parity parity() const;
 };
 
 /// this defines the "point" dummy variable!
@@ -383,10 +384,10 @@ const X_plus_offset operator+(const X_plus_offset, const coordinate_vector & cv)
 const X_plus_offset operator-(const X_plus_offset, const coordinate_vector & cv);
 
 
-/// Prototypes for coordinates, replaced by transformer
+/// Prototypes for coordinates, replaced by transformer -- TO BE REMOVED!
 const coordinate_vector & coordinates(X_index_type x);
-const coordinate_vector & coordinates(X_plus_direction xd);
-const coordinate_vector & coordinates(X_plus_offset xo);
+// const coordinate_vector & coordinates(X_plus_direction xd);
+// const coordinate_vector & coordinates(X_plus_offset xo);
 
 
 
