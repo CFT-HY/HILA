@@ -39,7 +39,6 @@ std::string parity_str(parity p)
   case parity::even : return "parity::even";
   case parity::odd  : return "parity::odd";
   case parity::all  : return "parity::all";
-  case parity::x    : return "parity::x";
   }
 }
 

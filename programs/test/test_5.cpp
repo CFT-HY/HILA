@@ -10,6 +10,8 @@ cmplx<double> e(cmplx<double> x) {return d(x);}
 // #pragma transformer ast dump
 cmplx<double> f(const cmplx<double> & x) { return e(x);}
 
+  #   pragma transformer    skip
+
 
 using ft = cmplx<double>;
 
@@ -18,6 +20,9 @@ class v2 {
 public:
   cmplx<T> a[2];
 };
+
+
+#pragma kissa
 
 
 int main()

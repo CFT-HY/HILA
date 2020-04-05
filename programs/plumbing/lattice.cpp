@@ -167,7 +167,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 {
   int dir,l,s;
   unsigned i;
-  node_info & ni = nodes.nodelist[nodeid];
+  const node_info & ni = nodes.nodelist[nodeid];
   
   i = l = loc[NDIM-1] - ni.min[NDIM-1];
   s = loc[NDIM-1];
@@ -482,6 +482,8 @@ void lattice_struct::create_std_gathers()
  * Site OK if ((wait_arr ^ xor_mask ) & and_mask) == 0
  */
 
+static_assert(NDIM <= 4 && 
+  "Dimensions at most 4 in dir_mask_t = unsigned char!  Use larger type to circumvent");
 
 void lattice_struct::initialize_wait_arrays()
 {
@@ -673,40 +675,48 @@ lattice_struct::gen_comminfo_struct lattice_struct::create_general_gather( const
 
 #endif
 
+template <typename T>
+struct test_tt {
+  T r[NDIM];
+
+  using base_type = typename base_type_struct<T>::type;
+};
+
+using test_t = test_tt<int>;
 
 void test_std_gathers()
 {
 
   extern lattice_struct * lattice;
-  field<int> t;
+  field<test_t> t;
+  field<double> f;
   
+  onsites(ALL) {
+    foralldir(d) {
+      t[X].r[d] = coordinates(X)[d];
+    }
+  }
+
   for (parity p : {EVEN,ODD,ALL}) {
 
     foralldir(d) {
-      t[ALL] = coordinates(X)[d];
+      direction d2;
+      for (d2=d; is_up_dir(d2); d2=-d) {
+      
+        int diff = 0;
+        int add;
+        if (is_up_dir(d2)) add = 1; else add = -1;
+        onsites(p) {
+          element<int> i = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d) - t[X+d2].r[d];
+          diff += i;
 
-      int diff = 0;
-      onsites(p) {
-        element<int> i = (t[X] + 1 + lattice->size(d)) % lattice->size(d)  - t[X+d];
+        }
 
-        diff += i;
-      }
-
-      if (diff != 0) {
-        hila::output << "Std gather test error! Parity " << (unsigned)p << " forward direction " << (unsigned)d;
-        exit(-1);
-      }
-
-      diff = 0;
-      onsites(p) {
-        element<int> i = (t[X] - 1 + lattice->size(d)) % lattice->size(d)  - t[X-d];
-
-        diff += i;
-      }
-
-      if (diff != 0) {
-        hila::output << "Std gather test error! Parity " << (unsigned)p << " backward direction " << (unsigned)d;
-        exit(-1);
+        if (diff != 0) {
+          hila::output << "Std gather test error! Node " << mynode() 
+                       << " Parity " << parity_name(p) << " direction " << (unsigned)d2 << '\n';
+          exit(-1);
+        }
       }
     }
   }

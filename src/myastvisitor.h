@@ -165,11 +165,17 @@ public:
   bool is_field_expr(Expr *E);
   bool is_field_decl(ValueDecl *D);
 
-  /// allowed index types: parity, parity_plus_direction, parity_plus_offset
+  /// allowed index types: parity
   bool is_parity_index_type(Expr *E);
 
   // catches field[parity-type] expressions, incl. _plus -versions
   bool is_field_parity_expr(Expr *E);
+
+  /// allowed index types: X, X_plus_direction, X_plus_offset
+  bool is_X_index_type(Expr *E);
+
+  // catches field[X] and field[X+dir] expressions, incl. _plus -versions
+  bool is_field_with_X_expr(Expr *E);
 
   bool is_array_expr(Expr *E); 
   
@@ -192,14 +198,12 @@ public:
   void check_allowed_assignment(Stmt * s);
   
   parity get_parity_val(const Expr *pExpr);
-    
-  void require_parity_X(Expr * pExpr);
-  
+      
   bool check_field_ref_list();
 
   void check_var_info_list();
   
-  bool handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound);
+  bool handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
   void handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);

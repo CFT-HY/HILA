@@ -26,7 +26,7 @@ const std::string program_name("Transformer");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
 enum class reduction { NONE, SUM, PRODUCT };
-enum class parity { none, even, odd, all, x };
+enum class parity { none, even, odd, all };
 
 
 /// The following section contains command line options and functions

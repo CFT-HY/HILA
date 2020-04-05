@@ -283,9 +283,10 @@ class field {
   // T& operator[] (const int i) { return data[i]; }
 
   // declarations -- WILL BE implemented by transformer, not written here
-  element<T>& operator[] (const parity p) const;
-  element<T>& operator[] (const parity_plus_direction p) const;
-  element<T>& operator[] (const parity_plus_offset p) const;
+  element<T>& operator[] (const parity p) const;             // f[EVEN]
+  element<T>& operator[] (const X_index_type) const;         // f[X]
+  element<T>& operator[] (const X_plus_direction p) const;   // f[X+dir]
+  element<T>& operator[] (const X_plus_offset p) const;      // f[X+dir1+dir2] and others
 
   #if defined(VANILLA)
   // TEMPORARY HACK: return ptr to bare array

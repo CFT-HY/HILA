@@ -50,15 +50,12 @@ bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
   return ( IDa == IDb );
 }
 
+
 bool MyASTVisitor::is_parity_index_type(Expr *E) {
-  std::string s = get_expr_type(E);
-  if (s == "parity" || s == "parity_plus_direction" || s == "parity_plus_offset") 
-    return true;
-  else 
-    return false;
+  return (get_expr_type(E) == "parity");
 }
 
-// Checks if E is a parity Expr. Catches both parity and parity_plus_direction 
+// Checks if E is a parity Expr. Catches both parity and X_plus_direction 
 bool MyASTVisitor::is_field_parity_expr(Expr *E) {
   E = E->IgnoreParens();
   CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
@@ -83,6 +80,29 @@ bool MyASTVisitor::is_field_parity_expr(Expr *E) {
       }
     }
     #endif
+  }
+  return false;   
+}
+
+bool MyASTVisitor::is_X_index_type(Expr *E) {
+  std::string s = get_expr_type(E);
+  if (s == "X_index_type" || s == "X_plus_direction" || s == "X_plus_offset") 
+    return true;
+  else 
+    return false;
+}
+
+// Checks if E is a parity Expr. Catches both parity and X_plus_direction 
+bool MyASTVisitor::is_field_with_X_expr(Expr *E) {
+  E = E->IgnoreParens();
+  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+
+  if (OC &&
+      strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
+      is_field_expr(OC->getArg(0))) {
+
+    return is_X_index_type(OC->getArg(1));
+
   }
   return false;   
 }
@@ -233,7 +253,7 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
 /// Go through one field reference within parity loop and store relevant info
 //////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound) {
+bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X) {
     
   e = e->IgnoreParens();
   field_ref lfe;
@@ -275,26 +295,32 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   std::string parity_expr_type = get_expr_type(lfe.parityExpr);
 
   if (parity_expr_type == "parity") {
+    if (is_X) {
+      llvm::errs() << "Internal error in handle_loop_parity\n";
+      exit(-1);
+    }
     if (parsing_state.accept_field_parity) {
       // 1st parity statement on a single line lattice loop
       loop_parity.expr  = lfe.parityExpr;
       loop_parity.value = get_parity_val(loop_parity.expr);
       loop_parity.text  = get_stmt_str(loop_parity.expr);
     } else {
-      require_parity_X(lfe.parityExpr);
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 lfe.parityExpr->getSourceRange().getBegin(),
+                 "field[parity] not allowed here, use field[X] -type instead" );
     }
   }
   
   // next ref must have wildcard parity
   parsing_state.accept_field_parity = false;
         
-  if (parity_expr_type == "parity_plus_direction" || 
-      parity_expr_type == "parity_plus_offset") {
+  if (parity_expr_type == "X_plus_direction" || 
+      parity_expr_type == "X_plus_offset") {
 
     if (is_assign) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "Parity + offset not allowed on the LHS of an assignment");
+                 "X + dir -type reference not allowed on the LHS of an assignment");
     }
 
     // Now need to split the expr to parity and dir-bits
@@ -307,16 +333,17 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     lfe.direxpr_s = remove_X( get_stmt_str(lfe.parityExpr), &has_X );
 
     if (!has_X) {
-      reportDiag(DiagnosticsEngine::Level::Error,
+      reportDiag(DiagnosticsEngine::Level::Fatal,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "Parity must be \'X\'");
+                 "Internal error: index should have been X" );
+      exit(-1);
     }
 
-    llvm::errs() << "Direxpr " << lfe.direxpr_s << '\n';
+    // llvm::errs() << "Direxpr " << lfe.direxpr_s << '\n';
 
     lfe.is_direction = true;
 
-    if (parity_expr_type == "parity_plus_offset") {
+    if (parity_expr_type == "X_plus_offset") {
 
       // It's an offset, no checking here to be done
       lfe.is_offset = true;
@@ -340,7 +367,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       if (!Op) {
         reportDiag(DiagnosticsEngine::Level::Fatal,
                    lfe.parityExpr->getSourceRange().getBegin(),
-                   "Internal error: could not parse parity + direction/offset -statement" );
+                   "Internal error: could not parse X + direction/offset -statement" );
         exit(1);
       }
 
@@ -602,12 +629,13 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // check and analyze the field expressions
   check_field_ref_list();
   check_var_info_list();
-  // check that loop_parity is not X
-  if (loop_parity.value == parity::x) {
-    reportDiag(DiagnosticsEngine::Level::Error,
-               loop_parity.expr->getSourceRange().getBegin(),
-               "Parity of the full loop cannot be \'X\'");
-  }
+
+  // check that loop_parity is not X  -- impossible now
+  // if (loop_parity.value == parity::x) {
+  //   reportDiag(DiagnosticsEngine::Level::Error,
+  //              loop_parity.expr->getSourceRange().getBegin(),
+  //              "Parity of the full loop cannot be \'X\'");
+  // }
   
   generate_code(ls);
   
@@ -689,11 +717,24 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     
     //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs
+    if (is_field_with_X_expr(E)) {
+      // It is field[X] reference
+      // get the expression for field name
+          
+      handle_field_parity_X_expr(E, is_assignment, is_compound, true);
+      is_assignment = false;  // next will not be assignment
+      // (unless it is a[] = b[] = c[], which is OK)
+
+      parsing_state.skip_children = 1;
+      return true;
+    }
+
+
     if (is_field_parity_expr(E)) {
       // Now we know it is a field parity reference
       // get the expression for field name
           
-      handle_field_parity_expr(E, is_assignment, is_compound);
+      handle_field_parity_X_expr(E, is_assignment, is_compound, false);
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
 
@@ -702,7 +743,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     }
 
     if (is_field_expr(E)) {
-      // field without [parity], bad usually (TODO: allow  scalar func(field)-type?)
+      // field without [X], bad usually (TODO: allow  scalar func(field)-type?)
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
                  "Field expressions without [..] not allowed within field loop");
@@ -1079,13 +1120,13 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
     // Parity is now constant
     int64_t val = (APV.getInt().getExtValue());
     parity p;
-    if (0 <= val && val <= (int)parity::x) {
+    if (0 <= val && val <= (int)parity::all) {
       p = static_cast<parity>(val);
     } else {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  pExpr->getSourceRange().getBegin(),
                  "Transformer internal error, unknown parity" );
-      exit(1);
+      exit(-1);
     }
     if (p == parity::none) {
       reportDiag(DiagnosticsEngine::Level::Error,
@@ -1099,14 +1140,15 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
   }
 }
 
-void MyASTVisitor::require_parity_X(Expr * pExpr) {
-  // Now parity has to be X (or the same as before?)
-  if (get_parity_val(pExpr) != parity::x) {
-    reportDiag(DiagnosticsEngine::Level::Error,
-               pExpr->getSourceRange().getBegin(),
-               "Use wildcard parity \"X\" or \"parity::x\"" );
-  }
-}
+//  Obsolete when X is new type
+// void MyASTVisitor::require_parity_X(Expr * pExpr) {
+//   // Now parity has to be X (or the same as before?)
+//   if (get_parity_val(pExpr) != parity::x) {
+//     reportDiag(DiagnosticsEngine::Level::Error,
+//                pExpr->getSourceRange().getBegin(),
+//                "Use wildcard parity \"X\" or \"parity::x\"" );
+//   }
+// }
 
 // finish the field_ref_list, and
 // construct the field_info_list
@@ -1536,8 +1578,14 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     if (E && is_field_parity_expr(E)) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
-                 "field[parity] -expression is allowed only in assignment statements or inside onsites(parity) compound statements");
+                 "field[parity] -expression is allowed only in LHS of field assignment statements (field[par] = ...)");
+    } else if (E && is_field_with_X_expr(E)) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 E->getSourceRange().getBegin(),
+                 "field[X] -expressions allowed only in RHS of field assignment statements or in \"onsites()\" blocks");
+
     }
+
   }
 
   // and add special handling for special function calls here

@@ -39,7 +39,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
   // Handle parameters
   int i=0;
   for( Expr * E : Call->arguments() ){
-    if( is_field_parity_expr(E) ) {
+    if( is_field_with_X_expr(E) ) {
       if(i < D->getNumParams()){
         const ParmVarDecl * pv = D->getParamDecl(i);
         QualType q = pv->getOriginalType ();
@@ -47,7 +47,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
         // Check for const qualifier
         if( !q.isConstQualified ()) {
           // Mark it as changed
-          handle_field_parity_expr(E, is_assignment, is_compound);
+          handle_field_parity_X_expr(E, is_assignment, is_compound, true);
         }
       }
     }
@@ -78,14 +78,14 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
   // Handle parameters
   int i=0;
   for( Expr * E : Call->arguments() ){
-    if( is_field_parity_expr(E) ) {
+    if( is_field_with_X_expr(E) ) {
       const ParmVarDecl * pv = D->getParamDecl(i);
       QualType q = pv->getOriginalType ();
         
       // Check for const qualifier
       if( !q.isConstQualified ()) {
         // Mark it as changed
-        handle_field_parity_expr(E, true, true);
+        handle_field_parity_X_expr(E, true, true, true);
       }
     }
     i++;
@@ -93,13 +93,13 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
 
   // Handle the object itself
   Expr * E = Call->getImplicitObjectArgument();
-  if( is_field_parity_expr(E) ) {
+  if( is_field_with_X_expr(E) ) {
     QualType q = E->getType();
 
     // Check for const qualifier
     if( !q.isConstQualified ()) {
       // Mark it as changed
-      handle_field_parity_expr(E, true, true);
+      handle_field_parity_X_expr(E, true, true, true);
     }
   }
 }
