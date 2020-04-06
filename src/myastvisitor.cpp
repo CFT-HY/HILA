@@ -409,6 +409,20 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_c
   return(true);
 }
 
+
+///  Utility to find the reduction typ
+
+reduction get_reduction_type(bool is_assign,
+                             std::string & assignop,
+                             var_info & vi) {
+  if (is_assign && (!vi.is_loop_local)) {
+    if (assignop == "+=") return reduction::SUM;
+    if (assignop == "*=") return reduction::PRODUCT;
+  }
+  return reduction::NONE;
+}
+
+
 // This processes references to non-field variables within field loops
 void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
                                   bool is_assign,

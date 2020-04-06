@@ -106,44 +106,50 @@ llvm::cl::opt<bool> cmdline::no_interleaved_comm("no-interleave",
 // List of targets that can be specified in command line arguments
 
 llvm::cl::opt<bool> cmdline::kernel("target:vanilla-kernel",
-         llvm::cl::desc("Generate kernels"),
-         llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate kernels"),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
-          llvm::cl::desc("Generate loops in place"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate loops in place"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
-          llvm::cl::desc("Generate CUDA kernels"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate CUDA kernels"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::AVX512("target:AVX512",
-          llvm::cl::desc("Generate AVX512 vectorized loops"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate AVX512 vectorized loops"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::AVX("target:AVX",
-          llvm::cl::desc("Generate AVX vectorized loops"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate AVX vectorized loops"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::SSE("target:SSE",
-          llvm::cl::desc("Generate SSE vectorized loops"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate SSE vectorized loops"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<int> cmdline::VECTORIZE("target:VECTORIZE",
-          llvm::cl::desc("Generate vectorized loops with given vector size \n"
-          "For example -target:VECTORIZE=32 is equivalent to -target:AVX"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate vectorized loops with given vector size \n"
+      "For example -target:VECTORIZE=32 is equivalent to -target:AVX"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
-          llvm::cl::desc("Offload to GPU using openACC"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Offload to GPU using openACC"),
+      llvm::cl::cat(TransformerCat));
 
 
 // Debug and Utility arguments
 
 llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
-         llvm::cl::desc("write pragmas/attributes to functions called from loops"),
-         llvm::cl::cat(TransformerCat));
+     llvm::cl::desc("write pragmas/attributes to functions called from loops"),
+     llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<int> cmdline::verbosity("verbosity",
+     llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
+     llvm::cl::cat(TransformerCat));
+
+     
 
 CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
@@ -243,16 +249,6 @@ static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("heLpp","heL pragma desc
 
 #endif  // pragmahandler
 
-
-reduction get_reduction_type(bool is_assign,
-                             std::string & assignop,
-                             var_info & vi) {
-  if (is_assign && (!vi.is_loop_local)) {
-    if (assignop == "+=") return reduction::SUM;
-    if (assignop == "*=") return reduction::PRODUCT;
-  }
-  return reduction::NONE;
-}
 
 /////////////////////////////////////////////////////////////////////////////
 /// Preprocessor callbacks are used to find include locs

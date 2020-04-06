@@ -25,7 +25,7 @@ using namespace clang::tooling;
 const std::string program_name("Transformer");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
-enum class reduction { NONE, SUM, PRODUCT };
+enum class reduction { NONE, SUM, PRODUCT };  // TBD:  MIN MAX MINLOC MAXLOC
 enum class parity { none, even, odd, all };
 
 
@@ -65,6 +65,7 @@ namespace cmdline {
   extern llvm::cl::opt<int> VECTORIZE;
   extern llvm::cl::opt<bool> no_interleaved_comm;
   extern llvm::cl::opt<bool> no_mpi;
+  extern llvm::cl::opt<int> verbosity;
 };
 
 namespace state {
