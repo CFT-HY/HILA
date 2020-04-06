@@ -25,7 +25,19 @@ int main(int argc, char **argv){
     }
   }
 
-  
+  f.FFT();
+
+  for(int Index=0; Index<lattice->local_volume(); Index++){
+    coordinate_vector c = lattice->site_coordinates(Index);
+    int csum = 0;
+    foralldir(dir){
+      csum += c[dir];
+    }
+    cmplx<double> elem = f.get_value_at(Index);
+    assert(elem.re == lattice->volume());
+    assert(elem.im == 0);
+    
+  }
 
   finishrun();
 }
