@@ -793,7 +793,7 @@ inline void field<cmplx<double>>::FFT(){
     int my_column_rank = -1;
     MPI_Comm column_communicator;
 
-    printf(" node %d has %ld sites out of %ld in direction %d\n",myrank,local_sites, sites, (int)dir);
+    //printf(" node %d has %ld sites out of %ld in direction %d\n",myrank,local_sites, sites, (int)dir);
     
     // Build a list of nodes in this column
     // All nodes should have these in the same order
@@ -813,7 +813,7 @@ inline void field<cmplx<double>>::FFT(){
         if(rank==myrank)
           my_column_rank = nodelist.size();
         nodelist.push_back(rank);
-        printf(" node %d: %d in my column\n", myrank, rank);
+        //printf(" node %d: %d in my column\n", myrank, rank);
       }
     }
 
@@ -825,7 +825,7 @@ inline void field<cmplx<double>>::FFT(){
     // Count columns on this rank
     int cols = 1;
     foralldir(d2) if(d2!=dir) cols *= lattice->local_size(d2);
-    printf(" node %d: %d columns\n", myrank, cols);
+    //printf(" node %d: %d columns\n", myrank, cols);
 
     // Buffers for sending and receiving a column
     std::vector<cmplx<double>> column(sites), send_buffer(sites);
@@ -848,6 +848,15 @@ inline void field<cmplx<double>>::FFT(){
         sitelist[i] = lattice->site_index(site);
       }
 
+      // Print initial data for the column
+      //printf("rank %d, col %d %d, col rank %d, send (",myrank,c,c%nodelist.size(),my_column_rank);
+      //for(int t=0;t<local_sites; t++){
+      //  cmplx<double> elem = fs->payload.get(sitelist[t],lattice->field_alloc_size());
+      //  int t2 = t + (c%nodelist.size())*local_sites;
+      //  printf(" (%g, %g) ", elem.re, elem.im );
+      //}
+      //printf(")\n");
+
       // Collect the data on this node
       char * sendbuf = (char*) send_buffer.data()+(c%nodelist.size())*local_sites;
       fs->payload.gather_elements(sendbuf, sitelist, lattice);
@@ -858,27 +867,21 @@ inline void field<cmplx<double>>::FFT(){
                   c%nodelist.size(), column_communicator);
 
       if(my_column_rank == c%nodelist.size()){
-        printf("rank %d, col rank %d, data (",myrank,my_column_rank);
         fftw_complex *in, *out;
         in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
         out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
         for(int t=0;t<sites; t++){
-          printf(" %g, ", column[t].re );
           in[t][0] = column[t].re;
           in[t][1] = column[t].im;
         }
-        printf(")\n");
 
         fftw_plan plan = fftw_plan_dft_1d( sites, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
         fftw_execute(plan);
 
-        printf("rank %d, col rank %d, out (",myrank,my_column_rank);
         for(int t=0;t<sites; t++){
-          printf(" (%g, %g) ", out[t][0], out[t][1] );
           column[t].re = out[t][0];
           column[t].im = out[t][1];
         }
-        printf(")\n");
 
         fftw_destroy_plan(plan);
         fftw_free(in); fftw_free(out);
@@ -889,9 +892,17 @@ inline void field<cmplx<double>>::FFT(){
                   sendbuf, local_sites*sizeof(cmplx<double>), MPI_BYTE,
                   c%nodelist.size(), column_communicator);
       fs->payload.place_elements(sendbuf, sitelist, lattice);
+
+      // Print final result
+      //printf("rank %d, col %d %d, col rank %d, recv (",myrank,c,c%nodelist.size(),my_column_rank);
+      //for(int t=0;t<local_sites; t++){
+      //  cmplx<double> elem = fs->payload.get(sitelist[t],lattice->field_alloc_size());
+      //  int t2 = t + (c%nodelist.size())*local_sites;
+      //  printf(" (%g, %g) ", elem.re, elem.im );
+      //}
+      //printf(")\n");
       c++;
     }
-
   }
 }
 
