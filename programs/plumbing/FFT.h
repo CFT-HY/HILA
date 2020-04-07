@@ -63,7 +63,8 @@ static mpi_column_struct get_mpi_column(direction dir){
 // running the Fourier transform on the column and redistributing
 // the result
 // Input and result are passed by reference. They may be the same.
-
+// The must be complex and the underlying complex type is supplied
+// by the complex_type template argument
 template<typename T, typename complex_type>
 inline void FFT_field_complex(field<T> & input, field<T> & result){
 
@@ -193,9 +194,47 @@ inline void field<cmplx<double>>::FFT(){
   FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this);
 }
 
+
+
+
+/// Match a given type T to it's underlying complex type
+template<typename T, class Enable = void>
+struct complex_base{};
+
+// Match to a complex type
+template<>
+struct complex_base<cmplx<float>>{
+  using type = cmplx<float>;
+};
+
+template<>
+struct complex_base<cmplx<double>>{
+  using type = cmplx<double>;
+};
+
+// Match templated class B
+template<template<typename B> class C, typename B>
+struct complex_base<C<B>>{
+  using complex_base_B = typename complex_base<B>::type;
+};
+
+template<template<int a, typename B> class C, int a, typename B>
+struct complex_base<C<a, B>>{
+  using complex_base_B = typename complex_base<B>::type;
+};
+
+template<template<int a,int b,typename B> class C, int a, int b, typename B>
+struct complex_base<C<a,b,B>>{
+  using complex_base_B = typename complex_base<B>::type;
+};
+
+
+
+/// Run fourier transform on a complex field
+// Called with any type T with a cmplx type nested in the lowest level
 template<typename T>
 void FFT_field(field<T> & input, field<T> & result){
-  FFT_field_complex<cmplx<double>,cmplx<double>>(input, result);
+  FFT_field_complex<T,typename complex_base<T>::type>(input, result);
 }
 
 
