@@ -63,9 +63,14 @@ static mpi_column_struct get_mpi_column(direction dir){
 // running the Fourier transform on the column and redistributing
 // the result
 // Input and result are passed by reference. They may be the same.
-inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & result){
+
+template<typename T, typename complex_type>
+inline void FFT_field_complex(field<T> & input, field<T> & result){
+
   lattice_struct * lattice = input.fs->lattice;
-  field<cmplx<double>> * read_pointer = &input; // Read from input on first time, then work in result
+  field<T> * read_pointer = &input; // Read from input on first time, then work in result
+
+  int elements = sizeof(T)/sizeof(complex_type);
 
   // Mark changed and make sure it's allocated
   result.mark_changed(ALL);
@@ -83,7 +88,7 @@ inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & resul
     int my_column_rank = mpi_column.my_column_rank;
 
     // Buffers for sending and receiving a column
-    std::vector<cmplx<double>> column(sites), send_buffer(sites);
+    std::vector<complex_type> column(sites), send_buffer(sites);
 
     // Variables needed for constructing the columns of sites
     std::vector<node_info> allnodes = lattice->nodelist();
@@ -127,12 +132,13 @@ inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & resul
         read_pointer->fs->payload.gather_elements(sendbuf, sitelist[n], lattice);
 
         // Send the data from each node to rank c in the column
-        MPI_Gather( sendbuf, local_sites*sizeof(cmplx<double>), MPI_BYTE, 
-                  column.data(), local_sites*sizeof(cmplx<double>), MPI_BYTE,
+        MPI_Gather( sendbuf, local_sites*sizeof(complex_type), MPI_BYTE, 
+                  column.data(), local_sites*sizeof(complex_type), MPI_BYTE,
                   root, column_communicator);
       }
 
       if( my_column_rank < n ){
+        // Run the FFT on my column
         fftw_complex *in, *out;
         in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
         out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
@@ -157,8 +163,8 @@ inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & resul
         int root = (c+n)%nnodes; // The node that does the calculation
         char * sendbuf = (char*) send_buffer.data()+root*local_sites;
 
-        MPI_Scatter( column.data(), local_sites*sizeof(cmplx<double>), MPI_BYTE, 
-                  sendbuf, local_sites*sizeof(cmplx<double>), MPI_BYTE,
+        MPI_Scatter( column.data(), local_sites*sizeof(complex_type), MPI_BYTE, 
+                  sendbuf, local_sites*sizeof(complex_type), MPI_BYTE,
                   root, column_communicator);
         result.fs->payload.place_elements(sendbuf, sitelist[n], lattice);
       }
@@ -174,8 +180,9 @@ inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & resul
 
 #else
 
-inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & result){
-}
+
+template<typename T, typename C>
+inline void FFT_field_complex(field<T> & input, field<T> & result){}
 
 
 
@@ -183,8 +190,14 @@ inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & resul
 
 template<>
 inline void field<cmplx<double>>::FFT(){
-  FFT_field(*this, *this);
+  FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this);
 }
+
+template<typename T>
+void FFT_field(field<T> & input, field<T> & result){
+  FFT_field_complex<cmplx<double>,cmplx<double>>(input, result);
+}
+
 
 
 #endif
