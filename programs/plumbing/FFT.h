@@ -72,66 +72,67 @@ inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & resul
 
   // Run transform in all directions
   foralldir(dir){
-
+    // Get the number of sites per column on this node and on all nodes
     size_t local_sites = lattice->local_size(dir);
     size_t sites = lattice->size(dir);
-    int nnodes = sites / local_sites;
-    std::vector<node_info> allnodes = lattice->nodelist();
-    int myrank = lattice->node_rank();
-    coordinate_vector min = allnodes[myrank].min;
-    coordinate_vector size = allnodes[myrank].size;
-    
+
+    // Get the MPI column in this direction
     mpi_column_struct mpi_column = get_mpi_column(dir);
     MPI_Comm column_communicator = mpi_column.column_communicator;
     std::vector<int> nodelist = mpi_column.nodelist;
     int my_column_rank = mpi_column.my_column_rank;
 
+    // Buffers for sending and receiving a column
+    std::vector<cmplx<double>> column(sites), send_buffer(sites);
+
+    // Variables needed for constructing the columns of sites
+    std::vector<node_info> allnodes = lattice->nodelist();
+    int myrank = lattice->node_rank();
+    int nnodes = nodelist.size();
+    coordinate_vector min = allnodes[myrank].min;
+    coordinate_vector size = allnodes[myrank].size;
+
 
     // Count columns on this rank
     int cols = 1;
     foralldir(d2) if(d2!=dir) cols *= lattice->local_size(d2);
-    //printf(" node %d: %d columns\n", myrank, cols);
-
-    // Buffers for sending and receiving a column
-    std::vector<cmplx<double>> column(sites), send_buffer(sites);
 
     // Do transform in all columns
     int c=0;
     while( c < cols ) {
-      coordinate_vector thiscol=min;
-      int cc = c;
-      foralldir(d2) if(d2!=dir) {
-        thiscol[d2] += cc%size[d2];
-        cc/=size[d2];
-      }
+      int n;
+      std::vector<std::vector<unsigned>> sitelist(nnodes);
 
-      // Build a list of sites matching this column
-      coordinate_vector site = thiscol;
-      std::vector<unsigned> sitelist(local_sites);
-      for(int i=0; i<local_sites; i++ ){
-        site[dir] = min[dir] + i;
-        sitelist[i] = lattice->site_index(site);
-      }
+      // Build a column for each node and send the data
+      for(n=0; n < nnodes && c+n < cols; n++ ){
+        int root = (c+n)%nnodes; // The node that does the calculation
 
-      // Print initial data for the column
-      //printf("rank %d, col %d %d, col rank %d, send (",myrank,c,c%nodelist.size(),my_column_rank);
-      //for(int t=0;t<local_sites; t++){
-      //  cmplx<double> elem = fs->payload.get(sitelist[t],lattice->field_alloc_size());
-      //  int t2 = t + (c%nodelist.size())*local_sites;
-      //  printf(" (%g, %g) ", elem.re, elem.im );
-      //}
-      //printf(")\n");
+        coordinate_vector thiscol=min;
+        int cc = c+n;
+        foralldir(d2) if(d2!=dir) {
+          thiscol[d2] += cc%size[d2];
+          cc/=size[d2];
+        }
 
-      // Collect the data on this node
-      char * sendbuf = (char*) send_buffer.data()+(c%nodelist.size())*local_sites;
-      read_pointer->fs->payload.gather_elements(sendbuf, sitelist, lattice);
+        // Build a list of sites matching this column
+        coordinate_vector site = thiscol;
+        sitelist[n].resize(local_sites);
+        for(int i=0; i<local_sites; i++ ){
+          site[dir] = min[dir] + i;
+          sitelist[n][i] = lattice->site_index(site);
+        }
 
-      // Send the data from each node to rank c in the column
-      MPI_Gather( sendbuf, local_sites*sizeof(cmplx<double>), MPI_BYTE, 
+        // Collect the data to node n
+        char * sendbuf = (char*) send_buffer.data()+root*local_sites;
+        read_pointer->fs->payload.gather_elements(sendbuf, sitelist[n], lattice);
+
+        // Send the data from each node to rank c in the column
+        MPI_Gather( sendbuf, local_sites*sizeof(cmplx<double>), MPI_BYTE, 
                   column.data(), local_sites*sizeof(cmplx<double>), MPI_BYTE,
-                  c%nodelist.size(), column_communicator);
+                  root, column_communicator);
+      }
 
-      if(my_column_rank == c%nodelist.size()){
+      if( my_column_rank < n ){
         fftw_complex *in, *out;
         in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
         out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
@@ -152,22 +153,17 @@ inline void FFT_field(field<cmplx<double>> & input, field<cmplx<double>> & resul
         fftw_free(in); fftw_free(out);
       }
 
+      for(n=0; n < nnodes && c+n < cols; n++ ){
+        int root = (c+n)%nnodes; // The node that does the calculation
+        char * sendbuf = (char*) send_buffer.data()+root*local_sites;
 
-      MPI_Scatter( column.data(), local_sites*sizeof(cmplx<double>), MPI_BYTE, 
+        MPI_Scatter( column.data(), local_sites*sizeof(cmplx<double>), MPI_BYTE, 
                   sendbuf, local_sites*sizeof(cmplx<double>), MPI_BYTE,
-                  c%nodelist.size(), column_communicator);
-      result.fs->payload.place_elements(sendbuf, sitelist, lattice);
+                  root, column_communicator);
+        result.fs->payload.place_elements(sendbuf, sitelist[n], lattice);
+      }
 
-
-      // Print result
-      //printf("rank %d, col %d %d, col rank %d, recv (",myrank,c,c%nodelist.size(),my_column_rank);
-      //for(int t=0;t<local_sites; t++){
-      //  cmplx<double> elem = fs->payload.get(sitelist[t],lattice->field_alloc_size());
-      //  int t2 = t + (c%nodelist.size())*local_sites;
-      //  printf(" (%g, %g) ", elem.re, elem.im );
-      //}
-      //printf(")\n");
-      c++;
+      c+=n;
     }
 
     read_pointer = &result; // From now on we work in result
