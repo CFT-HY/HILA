@@ -2,9 +2,11 @@
 
 int main(int argc, char **argv){
 
+  using T = matrix<2,2,cmplx<double>>;
+
   test_setup(argc, argv);
     
-  field<cmplx<double>> f, p;
+  field<T> f, p;
   f[ALL] = 1;
 
   FFT_field(f, p);
@@ -15,13 +17,13 @@ int main(int argc, char **argv){
     foralldir(dir){
       csum += c[dir];
     }
-    cmplx<double> elem = p.get_value_at(Index);
+    T elem = p.get_value_at(Index);
     if(csum == 0){
-      assert(elem.re == lattice->volume() && "first fft");
-      assert(elem.im == 0 && "first fft");
+      assert(elem.c[0][0].re == lattice->volume() && "first fft");
+      assert(elem.c[0][0].im == 0 && "first fft");
     } else {
-      assert(elem.re == 0 && "first fft");
-      assert(elem.im == 0 && "first fft");
+      assert(elem.c[0][0].re == 0 && "first fft");
+      assert(elem.c[0][0].im == 0 && "first fft");
     }
   }
 
@@ -33,9 +35,9 @@ int main(int argc, char **argv){
     foralldir(dir){
       csum += c[dir];
     }
-    cmplx<double> elem = f.get_value_at(Index);
-    assert(elem.re == lattice->volume() && "second fft");
-    assert(elem.im == 0 && "first fft");
+    T elem = f.get_value_at(Index);
+    assert(elem.c[0][0].re == lattice->volume() && "second fft");
+    assert(elem.c[0][0].im == 0 && "first fft");
     
   }
 

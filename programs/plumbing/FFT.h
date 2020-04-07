@@ -89,7 +89,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     int my_column_rank = mpi_column.my_column_rank;
 
     // Buffers for sending and receiving a column
-    std::vector<complex_type> column(sites), send_buffer(sites);
+    std::vector<complex_type> column(elements*sites), send_buffer(elements*sites);
 
     // Variables needed for constructing the columns of sites
     std::vector<node_info> allnodes = lattice->nodelist();
@@ -129,12 +129,12 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         }
 
         // Collect the data to node n
-        char * sendbuf = (char*) send_buffer.data()+root*local_sites;
+        char * sendbuf = (char*) send_buffer.data()+root*elements*local_sites;
         read_pointer->fs->payload.gather_elements(sendbuf, sitelist[n], lattice);
 
         // Send the data from each node to rank c in the column
-        MPI_Gather( sendbuf, local_sites*sizeof(complex_type), MPI_BYTE, 
-                  column.data(), local_sites*sizeof(complex_type), MPI_BYTE,
+        MPI_Gather( sendbuf, local_sites*sizeof(T), MPI_BYTE, 
+                  column.data(), local_sites*sizeof(T), MPI_BYTE,
                   root, column_communicator);
       }
 
@@ -143,29 +143,33 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         fftw_complex *in, *out;
         in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
         out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
-        for(int t=0;t<sites; t++){
-          in[t][0] = column[t].re;
-          in[t][1] = column[t].im;
+
+        for( int e=0; e<elements; e++ ){
+          for(int t=0;t<sites; t++){
+            in[t][0] = column[e+elements*t].re;
+            in[t][1] = column[e+elements*t].im;
+          }
+
+          fftw_plan plan = fftw_plan_dft_1d( sites, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+          fftw_execute(plan);
+
+          for(int t=0;t<sites; t++){
+            column[e+elements*t].re = out[t][0];
+            column[e+elements*t].im = out[t][1];
+          }
+
+          fftw_destroy_plan(plan);
         }
 
-        fftw_plan plan = fftw_plan_dft_1d( sites, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
-        fftw_execute(plan);
-
-        for(int t=0;t<sites; t++){
-          column[t].re = out[t][0];
-          column[t].im = out[t][1];
-        }
-
-        fftw_destroy_plan(plan);
         fftw_free(in); fftw_free(out);
       }
 
       for(n=0; n < nnodes && c+n < cols; n++ ){
         int root = (c+n)%nnodes; // The node that does the calculation
-        char * sendbuf = (char*) send_buffer.data()+root*local_sites;
+        char * sendbuf = (char*) send_buffer.data()+root*elements*local_sites;
 
-        MPI_Scatter( column.data(), local_sites*sizeof(complex_type), MPI_BYTE, 
-                  sendbuf, local_sites*sizeof(complex_type), MPI_BYTE,
+        MPI_Scatter( column.data(), local_sites*sizeof(T), MPI_BYTE, 
+                  sendbuf, local_sites*sizeof(T), MPI_BYTE,
                   root, column_communicator);
         result.fs->payload.place_elements(sendbuf, sitelist[n], lattice);
       }
@@ -215,17 +219,17 @@ struct complex_base<cmplx<double>>{
 // Match templated class B
 template<template<typename B> class C, typename B>
 struct complex_base<C<B>>{
-  using complex_base_B = typename complex_base<B>::type;
+  using type = typename complex_base<B>::type;
 };
 
 template<template<int a, typename B> class C, int a, typename B>
 struct complex_base<C<a, B>>{
-  using complex_base_B = typename complex_base<B>::type;
+  using type = typename complex_base<B>::type;
 };
 
 template<template<int a,int b,typename B> class C, int a, int b, typename B>
 struct complex_base<C<a,b,B>>{
-  using complex_base_B = typename complex_base<B>::type;
+  using type = typename complex_base<B>::type;
 };
 
 
