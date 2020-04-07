@@ -1,4 +1,3 @@
-
 #define _USE_MATH_DEFINES
 #include <iostream>
 #include <fstream>
@@ -20,23 +19,26 @@ std::ostream &hila::output = std::cout;
 lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 
-inline double scalefactor(double t, double t_end){
+inline double scaleFactor(double t, double t_end){
 	return t/t_end;
 }
 
 int main(int argc, char ** argv){
 
-	int l = 10;
-	int seed = 20;
-	int steps = 30;
-	double param1 = 1.0;
-	double sigma = 0.1;
+	input parameters = input();
+	parameters.import("sim_params.txt");
 
-  	int dim = 3;
-  	dx = 1.0;
-  	dt = 0.1;
-  	tStart = 0.0;
-  	tEnd = 32.0;
+	int l = parameters.get("l");
+	int seed = parameters.get("seed");
+	double param1 = parameters.get("param1");
+	double sigma = parameters.get("sigma");
+  	double dx = parameters.get("dx");
+  	double dt = parameters.get("dt");
+  	double tStart = parameters.get("tStart");
+  	double tEnd = parameters.get("tEnd");
+	double lambda = parameters.get("lambda");
+
+	//parameters.close();
  
 	int box_dimensions[3] = {l,2*l,4*l}; 
 
@@ -47,7 +49,8 @@ int main(int argc, char ** argv){
 
 	field<cmplx<double>> phi;
 	field<cmplx<double>> pi;
-	field<cmplx<double>> e; //energy 
+	field<cmplx<double>> deltaPi; 
+	field<cmplx<double>> e;  
 
 	//initialize vaccuum state phi, set pi to zero
  
@@ -62,21 +65,29 @@ int main(int argc, char ** argv){
 
 	//evolve fields
 
-	double t = 0;
-	for (int i = 0; i < steps; i++){
+	for (double t = tStart; t < tEnd; t += dt){
 
-		double a = scaleFactor(t);  
-      		double aHalfPlus = scaleFactor(t+dt/2.0);
-      		double aHalfMinus = scaleFactor(t-dt/2.0);
+		double a = scaleFactor(t, tEnd);  
+      		double aHalfPlus = scaleFactor(t+dt/2.0, tEnd);
+      		double aHalfMinus = scaleFactor(t-dt/2.0, tEnd);
 
-		double aadt_aadxdx = pow( a / aHalfPlus , Real(2) ) * dt / (dx*dx);
-  		double aadt2D_aadxdx = aadt_aadxdx * Real(2) * dim;
- 		double aaaaldt_aa = pow( a, Real(4) ) * lambda * dt / pow(aHalfPlus, 2);
-  		double daa_aa = ( pow(aHalfPlus, 2) - pow(aHalfMinus, 2) ) / pow(aHalfPlus, 2);
+		double aadt_aadxdx = pow( a / aHalfPlus , 2.0) * dt / (dx*dx);
+  		double aadt2D_aadxdx = aadt_aadxdx * 2.0 * NDIM;
+ 		double aaaaldt_aa = pow( a, 4.0 ) * lambda * dt / pow(aHalfPlus, 2.0);
+  		double daa_aa = ( pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0) ) / pow(aHalfPlus, 2.0);
   		double ss = sigma*sigma;
-		double*  deltaPi= new double[nf]; //delta-pi at each site
-    		double mod; //at each site 
-	}
+		
+		onsites(ALL){ 
+			cmplx<double> mod = phi[X].conj()*phi[X];
+			deltaPi[X] = -1.0*(aadt2D_aadxdx + aaaaldt_aa*(mod - ss))*phi[X];
+		}
 
+		direction d;
+		foralldir(d){
+			deltaPi[ALL] += aadt_aadxdx*phi[X + d]; 
+		}
+
+		pi[ALL] = pi[X] + deltaPi[X];
+	}
 	return 0;
 }
