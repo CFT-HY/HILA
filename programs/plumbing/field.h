@@ -813,7 +813,7 @@ template<typename T>
 void field<T>::field_struct::gather_elements(char * buffer, std::vector<unsigned> index_list, int root, MPI_Comm Communicator) const {
   std::vector<T> send_buffer(index_list.size());
   payload.gather_elements((char*) send_buffer.data(), index_list, lattice);
-  MPI_Gatherv( (char*) send_buffer.data(), index_list.size()*sizeof(T), MPI_BYTE, 
+  MPI_Gather( (char*) send_buffer.data(), index_list.size()*sizeof(T), MPI_BYTE, 
               buffer, index_list.size()*sizeof(T), MPI_BYTE,
               root, Communicator);
 }
