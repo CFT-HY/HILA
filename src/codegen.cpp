@@ -115,9 +115,9 @@ void MyASTVisitor::generate_code(Stmt *S) {
   }
 
 
-  // mark modified fields
+  // check alloc and do it if needed
   for (field_info & l : field_info_list) if (l.is_written) {
-    code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
+    code << l.new_name << ".check_alloc();\n";
   }
 
   // Check that read fields are initialized
@@ -197,7 +197,12 @@ void MyASTVisitor::generate_code(Stmt *S) {
            << vrf.vector_name << ".size(), true);\n";
     }
   }
-          
+
+  // finally mark modified fields
+  for (field_info & l : field_info_list) if (l.is_written) {
+    code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
+  }
+
   // and close
   code << "}\n//----------";
   

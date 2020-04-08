@@ -194,7 +194,7 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 
 
 
-std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait_loops) {
   std::stringstream code;
 
   // The base type of the loop is the base type of the first variable
@@ -227,6 +227,11 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
   // Set the start and end points
   code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = loop_lattice->loop_end(" << parity_in_this_loop << ");\n";
+
+
+  if (generate_wait_loops) {
+    code << "for (int _wait_i_ = 0; _wait_i_ < 2; ++_wait_i_) {\n";
+  }
 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; "
@@ -384,6 +389,24 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
   }
 
   code << "}\n";
+
+
+  if (generate_wait_loops) {
+    // add the code for 2nd round
+    code << "if (_dir_mask_ == 0) break;    // No need for another round\n";
+    code << "_dir_mask_ = ~_dir_mask_;\n";
+    
+    for (field_info & l : field_info_list) {
+      // If neighbour references exist, communicate them
+      for (dir_ptr & d : l.dir_list) if(d.count > 0){
+        code << l.new_name << ".wait_get("
+             << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
+      }
+    }
+    code << "}\n";
+
+  }
+
 
 
   // Final reduction of the temporary reduction variables
