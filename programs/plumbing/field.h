@@ -482,6 +482,11 @@ class field {
 
   // Fourier transform declarations
   void FFT();
+
+  // Writes the field to disk
+  void write_to_stream(std::ofstream & outputfile);
+  void append_to_file(std::string filename);
+  void write_to_file(std::string filename);
 };
 
 
@@ -808,7 +813,7 @@ template<typename T>
 void field<T>::field_struct::gather_elements(char * buffer, std::vector<unsigned> index_list, int root, MPI_Comm Communicator) const {
   std::vector<T> send_buffer(index_list.size());
   payload.gather_elements((char*) send_buffer.data(), index_list, lattice);
-  MPI_Gather( (char*) send_buffer.data(), index_list.size()*sizeof(T), MPI_BYTE, 
+  MPI_Gatherv( (char*) send_buffer.data(), index_list.size()*sizeof(T), MPI_BYTE, 
               buffer, index_list.size()*sizeof(T), MPI_BYTE,
               root, Communicator);
 }
@@ -886,30 +891,55 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
 
 
 
-// Write the field into a file in coordinate order
+// Write the field to an file stream
 template<typename T>
-void field<T>::write_to_file(std::string filename){
-  std::ofstream myfile;
-  myfile.open(filename, std::ios::out | std::ios::app | std::ios::binary);
+void field<T>::write_to_stream(std::ofstream& outputfile){
+  constexpr size_t target_write_size = 1000000;
+  constexpr size_t sites_per_write = target_write_size / sizeof(T);
+  constexpr size_t write_size = sites_per_write * sizeof(T);
+
+  std::vector<coordinate_vector> coord_list(write_size);
+  char * buffer = (char*) malloc(write_size);
 
   coordinate_vector size = lattice->size();
-
   for(int i=0; i<lattice->volume(); i++){
     coordinate_vector site;
     int ii = i;
-    printf("mynode %d c (", mynode());
     foralldir(dir){
       site[dir] = ii%size[dir];
       ii = ii/size[dir];
-      printf(" %d", site[dir]);
     }
-    printf(" )\n");
+
+    coord_list[i%sites_per_write] = site;
+
+    if( mynode()==0 && (i+1)%sites_per_write == 0 ){
+      printf("%d %d\n",mynode(),i);
+      fs->gather_elements(buffer, coord_list);
+      printf("%d %d\n",mynode(),i);
+      outputfile.write(buffer,write_size);
+      printf("%d %d\n",mynode(),i);
+    }
+
   }
-
-
-
 }
 
+// Write the field to the end of a file in coordinate order
+template<typename T>
+void field<T>::append_to_file(std::string filename){
+  std::ofstream outputfile;
+  outputfile.open(filename, std::ios::out | std::ios::app | std::ios::binary);
+  write_to_stream(outputfile);
+  outputfile.close();
+}
+
+// Write the field to a file replacing the file
+template<typename T>
+void field<T>::write_to_file(std::string filename){
+  std::ofstream outputfile;
+  outputfile.open(filename, std::ios::out | std::ios::binary);
+  write_to_stream(outputfile);
+  outputfile.close();
+}
 
 
 // Include Fourier transform

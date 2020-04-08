@@ -41,5 +41,7 @@ int main(int argc, char **argv){
     
   }
 
+  f.write_to_file("test_config_filename");
+
   finishrun();
 }
