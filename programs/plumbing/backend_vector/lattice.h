@@ -246,7 +246,7 @@ struct vectorized_lattice_struct  {
 
     /// Return the number of sites that need to be allocated
     /// (1 vector for each site)
-    unsigned field_alloc_size() {
+    unsigned field_alloc_size() const {
       return alloc_size;
     }
 

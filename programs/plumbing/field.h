@@ -213,9 +213,23 @@ class field {
     fs->move_status[(int)p - 1][d] = stat;
   }
 
+  // check that field is allocated, and if not do it (if not const
+  // call this BEFORE the var is actually written to
+  void check_alloc() { 
+    if (!is_allocated()) allocate();
+  }
+  // If field is const specified, we should not be able to write to it in the first
+  // place
+  void check_alloc() const { 
+    assert(is_allocated());
+  }
 
   // If ALL changes, both parities invalid; if p != ALL, then p and ALL.
-  void mark_changed_inner(const parity p) const {
+  void mark_changed(const parity p) const {
+
+    // TODO: CHECK THAT THERE'S NO ONGOING COMMUNICATION; IF SO CLEAR IT!!!
+    // OTHERWISE WAIT_GET WILL RECEIVE INCORRECT DATA!!!
+
     for (int i=0; i<NDIRS; i++) {
       set_move_status(p,i,status::NOT_DONE);
       if (p != ALL) set_move_status(ALL,i,status::NOT_DONE );
@@ -227,17 +241,6 @@ class field {
     fs->assigned_to |= parity_bits(p);
   }
 
-  // call this BEFORE the var is actually written to
-  void mark_changed(const parity p) {
-    if (fs == nullptr) allocate();
-    mark_changed_inner(p);
-  }
-
-  // const version needed for fetches of const fields
-  void mark_changed(const parity p) const {
-    assert(is_allocated());
-    mark_changed_inner(p);
-  }
   
   /// Mark the field parity fetched from direction
   // In case p=ALL we could mark everything fetched, but we'll be conservative here 
@@ -565,12 +568,20 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
   int tag = get_next_msg_tag();
 
+
   lattice_struct::nn_comminfo_struct  & ci = lattice->nn_comminfo[d];
   lattice_struct::comm_node_struct & from_node = ci.from_node;
   lattice_struct::comm_node_struct & to_node = ci.to_node;
 
+  // Nothing to do, nothing to wait for -- we'll use the status
+  // to keep track of vector boundary shuffle anyway in wait_get
+
+  if (from_node.rank == mynode() && to_node.rank == mynode()) return 0;
+
+
   // check if this is done - either fetched or no comm to be done in the 1st place
-  if (is_fetched(d,p) || (from_node.rank == mynode() && to_node.rank == mynode()) ) {
+
+  if (is_fetched(d,p)) {
     lattice->n_gather_avoided++; 
     return 0;   // nothing to wait for
   }
@@ -647,7 +658,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
 }
 
-///* wait_get(): Wait for communication at parity par from
+///  wait_get(): Wait for communication at parity par from
 ///  direction d completes the communication in the function.
 ///  If the communication has not started yet, also calls
 ///  start_get()
@@ -664,10 +675,16 @@ void field<T>::wait_get(direction d, parity p) const {
   lattice_struct::comm_node_struct & to_node = ci.to_node;
 
   // check if this is done - either fetched or no comm to be done in the 1st place
-  if (is_fetched(d,p) || 
-      (from_node.rank == mynode() && to_node.rank == mynode()) ) {
+  if (is_fetched(d,p)) return;
+
+
+  // this is the branch if no comms -- we'll do the boundary shuffle anyway
+  if (from_node.rank == mynode() && to_node.rank == mynode()) {
+    fs->set_local_boundary_elements(d,p);
+    mark_fetched(d,p);
     return;
   }
+
 
   // if (!is_move_started(d,p)) {
   //   output0 << "Wait move error - wait_get without corresponding start_get\n";
@@ -722,6 +739,7 @@ void field<T>::wait_get(direction d, parity p) const {
 
 #ifndef VANILLA
       fs->place_comm_elements( fs->receive_buffer[d], from_node, par);
+      hila::output << "CALLING PLACE_COMM\n";
 #endif
     }
 

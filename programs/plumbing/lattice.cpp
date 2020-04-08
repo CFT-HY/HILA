@@ -727,8 +727,11 @@ void test_std_gathers()
         int add;
         if (is_up_dir(d2)) add = 1; else add = -1;
         onsites(p) {
-          element<int> i = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d) - t[X+d2].r[d];
-          diff += i;
+                  
+          element<int> j = t[X+d2].r[d];
+          element<int> s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
+
+          diff += s - j;
 
         }
 
