@@ -129,7 +129,11 @@ void MyASTVisitor::generate_code(Stmt *S) {
       if (l.is_read_atX) init_par = parity_in_this_loop;
       else init_par = "opp_parity(" + parity_in_this_loop + ")";
     }
-    code << "assert(" << l.new_name << ".is_initialized(" << init_par << "));\n";
+
+    // TAKE THIS AWAY FOR NOW -- WE DON'T HAVE A GOOD METHOD TO CHECK "pure output" FUNCTIONS
+    // E.g. method   U[X].random(), where U does not have to be initialized
+    
+    //  code << "assert(" << l.new_name << ".is_initialized(" << init_par << "));\n";
   }
 
   // change the f[X+offset] -references, generate code
@@ -340,7 +344,7 @@ std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, 
   } else if( target.openacc){
     code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);   // use cpu method for acc
   } else if(target.VECTORIZE) {
-    code << generate_code_avx(S,semicolon_at_end,loopBuf);
+    code << generate_code_avx(S,semicolon_at_end,loopBuf, generate_wait_loops);
   } else {
     code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);
   }

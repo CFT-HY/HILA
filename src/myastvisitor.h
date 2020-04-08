@@ -277,7 +277,7 @@ public:
   std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb);
   void generate_openacc_loop_header(std::stringstream & code);
   //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
-  std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(FunctionDecl *fd);
