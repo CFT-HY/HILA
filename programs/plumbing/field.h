@@ -229,6 +229,18 @@ class field {
         payload.set_local_boundary_elements(dir, par, lattice);
       };
 
+      /// Gather a list of elements to a single node
+#if defined(USE_MPI) && !defined(TRANSFORMER) 
+      void gather_elements(char * buffer, std::vector<unsigned> index_list, int root=0, MPI_Comm Communicator=MPI_COMM_WORLD) const;
+      void gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0, MPI_Comm Communicator=MPI_COMM_WORLD) const;
+      void send_elements(char * buffer, std::vector<unsigned> index_list, int  root=0, MPI_Comm Communicator=MPI_COMM_WORLD);
+      void send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int  root=0, MPI_Comm Communicator=MPI_COMM_WORLD);
+#else
+      void gather_elements(char * buffer, std::vector<unsigned> index_list, int root=0) const;
+      void gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
+      void send_elements(char * buffer, std::vector<unsigned> index_list, int root=0);
+      void send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0);
+#endif
   };
 
   static_assert( std::is_pod<T>::value, "Field expects only pod-type elements (plain data): default constructor, copy and delete");
@@ -631,7 +643,7 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
 /// Functions for manipulating lists of elements
 template<typename T>
 void field<T>::set_elements( T * elements, std::vector<unsigned> index_list) const {
-  fs->payload.gather_elements(elements, index_list, fs->lattice);
+  fs->payload.set_elements(elements, index_list, fs->lattice);
 }
 
 template<typename T>
@@ -640,7 +652,7 @@ void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_
   for (int j=0; j<coord_list.size(); j++) {
     index_list[j] = fs->lattice->site_index(coord_list[j]);
   }
-  fs->payload.gather_elements(elements, index_list, fs->lattice);
+  fs->payload.set_elements(elements, index_list, fs->lattice);
 }
 
 
@@ -770,7 +782,6 @@ void field<T>::wait_move(direction d, parity p) const {
   }
 }
 
-
 #else
 
 ///* Trivial implementation when no MPI is used
@@ -788,6 +799,120 @@ void field<T>::wait_move(direction d, parity p) const {
 
 
 
+
+
+/// Gather a list of elements to a single node
+#if defined(USE_MPI) && !defined(TRANSFORMER)
+
+template<typename T>
+void field<T>::field_struct::gather_elements(char * buffer, std::vector<unsigned> index_list, int root, MPI_Comm Communicator) const {
+  std::vector<T> send_buffer(index_list.size());
+  payload.gather_elements((char*) send_buffer.data(), index_list, lattice);
+  MPI_Gather( (char*) send_buffer.data(), index_list.size()*sizeof(T), MPI_BYTE, 
+              buffer, index_list.size()*sizeof(T), MPI_BYTE,
+              root, Communicator);
+}
+
+template<typename T>
+void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root, MPI_Comm Communicator) const {
+  std::vector<unsigned> index_list;
+  for(coordinate_vector c : coord_list){
+    if( lattice->is_on_node(c) ){
+      index_list.push_back(lattice->site_index(c));
+    }
+  }
+  
+  gather_elements(buffer, index_list, root, Communicator);
+}
+
+
+template<typename T>
+void field<T>::field_struct::send_elements(char * buffer, std::vector<unsigned> index_list, int root, MPI_Comm Communicator) {
+  std::vector<T> recv_buffer(index_list.size());
+  MPI_Scatter( (char*) buffer, index_list.size()*sizeof(T), MPI_BYTE, 
+              recv_buffer.data(), index_list.size()*sizeof(T), MPI_BYTE,
+              root, Communicator);
+  payload.place_elements((char*) recv_buffer.data(), index_list, lattice);
+}
+
+template<typename T>
+void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root, MPI_Comm Communicator) {
+  std::vector<unsigned> index_list;
+  for(coordinate_vector c : coord_list){
+    if( lattice->is_on_node(c) ){
+      index_list.push_back(lattice->site_index(c));
+    }
+  }
+  
+  send_elements(buffer, index_list, root, Communicator);
+}
+
+
+#else
+
+
+template<typename T>
+void field<T>::field_struct::gather_elements(char * buffer, std::vector<unsigned> index_list, int root) const {
+  payload.gather_elements(buffer, index_list, lattice);
+}
+
+template<typename T>
+void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) const {
+  std::vector<unsigned> index_list;
+  for(coordinate_vector c : coord_list){
+    index_list.push_back(lattice->site_index(c));
+  }
+  
+  gather_elements(buffer, index_list);
+}
+
+
+template<typename T>
+void field<T>::field_struct::send_elements(char * buffer, std::vector<unsigned> index_list, int root) {
+  payload.place_elements(buffer, index_list, lattice);
+}
+
+template<typename T>
+void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) {
+  std::vector<unsigned> index_list;
+  for(coordinate_vector c : coord_list){
+    index_list.push_back(lattice->site_index(c));
+  }
+  
+  send_elements(buffer, index_list, root);
+}
+
+#endif
+
+
+
+// Write the field into a file in coordinate order
+template<typename T>
+void field<T>::write_to_file(std::string filename){
+  std::ofstream myfile;
+  myfile.open(filename, std::ios::out | std::ios::app | std::ios::binary);
+
+  coordinate_vector size = lattice->size();
+
+  for(int i=0; i<lattice->volume(); i++){
+    coordinate_vector site;
+    int ii = i;
+    printf("mynode %d c (", mynode());
+    foralldir(dir){
+      site[dir] = ii%size[dir];
+      ii = ii/size[dir];
+      printf(" %d", site[dir]);
+    }
+    printf(" )\n");
+  }
+
+
+
+}
+
+
+
+// Include Fourier transform
 #include "../plumbing/FFT.h"
 
 
