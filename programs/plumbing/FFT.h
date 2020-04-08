@@ -98,6 +98,12 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     coordinate_vector min = allnodes[myrank].min;
     coordinate_vector size = allnodes[myrank].size;
 
+    // FFTW buffers
+    fftw_complex *in, *out;
+    in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
+    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
+    fftw_plan plan = fftw_plan_dft_1d( sites, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+
 
     // Count columns on this rank
     int cols = 1;
@@ -112,20 +118,19 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       // Build a column for each node and send the data
       for(n=0; n < nnodes && c+n < cols; n++ ){
         int root = (c+n)%nnodes; // The node that does the calculation
-
-        coordinate_vector thiscol=min;
         int cc = c+n;
+        coordinate_vector thiscol=min;
+
         foralldir(d2) if(d2!=dir) {
           thiscol[d2] += cc%size[d2];
           cc/=size[d2];
         }
 
         // Build a list of sites matching this column
-        coordinate_vector site = thiscol;
         sitelist[n].resize(local_sites);
         for(int i=0; i<local_sites; i++ ){
-          site[dir] = min[dir] + i;
-          sitelist[n][i] = lattice->site_index(site);
+          thiscol[dir] = min[dir] + i;
+          sitelist[n][i] = lattice->site_index(thiscol);
         }
 
         // Collect the data to node n
@@ -140,9 +145,6 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
       if( my_column_rank < n ){
         // Run the FFT on my column
-        fftw_complex *in, *out;
-        in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
-        out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * sites);
 
         for( int e=0; e<elements; e++ ){
           for(int t=0;t<sites; t++){
@@ -150,18 +152,13 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
             in[t][1] = column[e+elements*t].im;
           }
 
-          fftw_plan plan = fftw_plan_dft_1d( sites, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
           fftw_execute(plan);
 
           for(int t=0;t<sites; t++){
             column[e+elements*t].re = out[t][0];
             column[e+elements*t].im = out[t][1];
           }
-
-          fftw_destroy_plan(plan);
         }
-
-        fftw_free(in); fftw_free(out);
       }
 
       for(n=0; n < nnodes && c+n < cols; n++ ){
@@ -178,6 +175,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     }
 
     read_pointer = &result; // From now on we work in result
+    fftw_destroy_plan(plan);
+    fftw_free(in); fftw_free(out);
   }
 
 }
