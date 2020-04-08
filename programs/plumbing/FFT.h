@@ -111,9 +111,9 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
     // Do transform in all columns
     int c=0;
+    int n;
+    std::vector<std::vector<unsigned>> sitelist(nnodes);
     while( c < cols ) {
-      int n;
-      std::vector<std::vector<unsigned>> sitelist(nnodes);
 
       // Build a column for each node and send the data
       for(n=0; n < nnodes && c+n < cols; n++ ){
