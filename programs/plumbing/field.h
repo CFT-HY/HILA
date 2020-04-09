@@ -933,7 +933,7 @@ void field<T>::write_to_stream(std::ofstream& outputfile){
   constexpr size_t sites_per_write = target_write_size / sizeof(T);
   constexpr size_t write_size = sites_per_write * sizeof(T);
 
-  std::vector<coordinate_vector> coord_list(write_size);
+  std::vector<coordinate_vector> coord_list(sites_per_write);
   char * buffer = (char*) malloc(write_size);
   coordinate_vector size = lattice->size();
 
@@ -1005,7 +1005,7 @@ void field<T>::read_from_stream(std::ifstream& inputfile){
 
   mark_changed(ALL);
 
-  std::vector<coordinate_vector> coord_list(read_size);
+  std::vector<coordinate_vector> coord_list(sites_per_read);
   char * buffer = (char*) malloc(read_size);
   coordinate_vector size = lattice->size();
 
