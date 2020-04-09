@@ -12,7 +12,7 @@
 #include "../dirac.h"
 #include<iostream>
 
-#define MAXITERS 10
+#define MAXITERS 10000
 struct staggered_dirac;
 
 template<typename T>
@@ -43,24 +43,36 @@ class CG_engine<staggered_dirac>{
     void solve(
         const mtype gauge[NDIM],
         const double mass,
-        const vtype &b,
+        vtype &b,
         vtype &x_0)
     {
         vtype r, p, Dp;
         double pDDp = 0, rr = 0, rrnew = 0;
         double alpha, beta;
+        double target_rr, source_norm=0;
+        double accuracy = 1e-8;
+        
+        onsites(ALL){
+            source_norm += norm_squared(b[X]);
+        }
+        
+        target_rr = accuracy*accuracy * source_norm;
+
         dirac_stagggered(gauge, mass, x_0, Dp);
         onsites(ALL){
             r[X] = b[X] - Dp[X];
-            p[X] = b[X];
+            p[X] = r[X];
+        }
+
+        onsites(ALL){
+            rr += norm_squared(r[X]);
         }
 
         for (int i = 0; i < MAXITERS; i++){
+            pDDp=rrnew=0;
             dirac_stagggered(gauge, mass, p, Dp);
-            rr=pDDp=rrnew=0;
             //note: unsure about whether it should be pDDp or pDp  
             onsites(ALL){
-                rr += norm_squared(r[X]);
                 pDDp += norm_squared(p[X].conjugate()*Dp[X]);
             }
 
@@ -73,8 +85,14 @@ class CG_engine<staggered_dirac>{
             onsites(ALL){ 
                 rrnew += norm_squared(r[X]); 
             }
+            #ifdef DEBUG
+            printf("CG iter %d, node %d, %g %g %g\n", i, mynode(), alpha, rrnew, target_rr);
+            #endif
+            if( rrnew < target_rr )
+                return;
             beta = rrnew/rr;
             p[ALL] = beta*p[X] + r[X];
+            rr = rrnew;
         }
     }
 

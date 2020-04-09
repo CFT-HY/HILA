@@ -11,23 +11,20 @@ int main(int argc, char **argv){
     field<matrix<1, N, cmplx<double>> > sol;
     field<matrix<N,N, cmplx<double>> > U[NDIM];
 
-    b.mark_changed(ALL);
-    sol.mark_changed(ALL);
-
     onsites(ALL){
-        b[X].random();
-        sol[X].random();
+      b[X].random();
+      for(int i=0; i<N; i++)
+        sol[X].c[1][i] = 0;
     }
 
     foralldir(d) {
-      U[d].mark_changed(ALL);
       onsites(ALL){
         U[d][X].random();
       }
     }
 
     CG_engine<staggered_dirac> engine;
-    engine.solve(U, 0.1, b, sol);
+    engine.solve(U, 1.0, b, sol);
 
     finishrun();
 }
