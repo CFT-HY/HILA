@@ -477,8 +477,8 @@ class field {
   field<T> shift(const coordinate_vector &v) const { return shift(v,ALL); }
 
   // General getters and setters
-  void set_elements( T * elements, std::vector<unsigned> index_list) const;
   void set_elements( T * elements, std::vector<coordinate_vector> coord_list) const;
+  void set_elements( T element, coordinate_vector coord) const;
 
   // Fourier transform declarations
   void FFT();
@@ -648,18 +648,17 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
 
 /// Functions for manipulating lists of elements
 template<typename T>
-void field<T>::set_elements( T * elements, std::vector<unsigned> index_list) const {
-  fs->payload.set_elements(elements, index_list, fs->lattice);
+void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
+  fs->send_elements( (char*) elements, coord_list);
 }
 
 template<typename T>
-void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
-  std::vector<unsigned> index_list(coord_list.size());
-  for (int j=0; j<coord_list.size(); j++) {
-    index_list[j] = fs->lattice->site_index(coord_list[j]);
-  }
-  fs->payload.set_elements(elements, index_list, fs->lattice);
+void field<T>::set_elements( T element, coordinate_vector coord) const {
+  std::vector<coordinate_vector> coord_list;
+  coord_list.push_back(coord);
+  fs->send_elements( (char*) &element, coord_list);
 }
+
 
 
 
