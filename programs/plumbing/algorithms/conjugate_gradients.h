@@ -55,13 +55,13 @@ class CG_engine<staggered_dirac>{
             p[X] = b[X];
         }
 
-        for (int = 0; i < MAXITERS; i++){
+        for (int i = 0; i < MAXITERS; i++){
             dirac_stagggered(gauge, mass, p, Dp);
-            rr=pDDP=rrnew=0;
+            rr=pDDp=rrnew=0;
             //note: unsure about whether it should be pDDp or pDp  
             onsites(ALL){
                 rr += norm_squared(r[X]);
-                pDDp += p[X].conjugate()*Dp[X];
+                pDDp += norm_squared(p[X].conjugate()*Dp[X]);
             }
 
             alpha=rr/pDDp;
