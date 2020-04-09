@@ -2,44 +2,44 @@
 
 int main(int argc, char **argv){
 
-  using T = matrix<1,1,cmplx<double>>;
+  using T = matrix<2,2,cmplx<double>>;
 
   test_setup(argc, argv);
     
-  field<T> f, f2, p;
+  field<T> f, f2, p, p2;
+  double sum = 0;
+
+  // Start with unit field
   f[ALL] = 1;
 
+  // After one FFT the field is 0 except at coord 0
+  p2[ALL] = 0;
+  T m = lattice->volume();
+  coordinate_vector c;
+  foralldir(d){
+    c[d] = 0;
+  }
+  p2.set_elements(m, c);
+
+
   FFT_field(f, p);
-
-  for(int Index=0; Index<lattice->local_volume(); Index++){
-    coordinate_vector c = lattice->site_coordinates(Index);
-    int csum = 0;
-    foralldir(dir){
-      csum += c[dir];
-    }
-    T elem = p.get_value_at(Index);
-    if(csum == 0){
-      assert(elem.c[0][0].re == lattice->volume() && "first fft");
-      assert(elem.c[0][0].im == 0 && "first fft");
-    } else {
-      assert(elem.c[0][0].re == 0 && "first fft");
-      assert(elem.c[0][0].im == 0 && "first fft");
-    }
+  
+  onsites(ALL) {
+    sum += (p[X]-p2[X]).norm_sq();
   }
+  assert(sum==0 && "First FFT\n");
 
+
+  // After two applications the field should be back to a constant * volume
+  f2[ALL] = lattice->volume();
+  
   FFT_field(p, f);
-
-  for(int Index=0; Index<lattice->local_volume(); Index++){
-    coordinate_vector c = lattice->site_coordinates(Index);
-    int csum = 0;
-    foralldir(dir){
-      csum += c[dir];
-    }
-    T elem = f.get_value_at(Index);
-    assert(elem.c[0][0].re == lattice->volume() && "second fft");
-    assert(elem.c[0][0].im == 0 && "first fft");
-    
+  
+  onsites(ALL) {
+    sum += (f[X]-f2[X]).norm_sq();
   }
+  assert(sum==0 && "Second FFT\n");
+
 
   // Test reading and writing a field
   onsites(ALL){
@@ -49,7 +49,7 @@ int main(int argc, char **argv){
   write_fields("test_config_filename", p, f);
   read_fields("test_config_filename", p, f2);
 
-  double sum=0;
+  sum=0;
   onsites(ALL) {
     sum += (f2[X]-f[X]).norm_sq();
   }
