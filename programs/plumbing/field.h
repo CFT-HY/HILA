@@ -230,17 +230,8 @@ class field {
       };
 
       /// Gather a list of elements to a single node
-#if defined(USE_MPI) && !defined(TRANSFORMER) 
-      void gather_elements(char * buffer, std::vector<unsigned> index_list, std::vector<unsigned> node_list, int root, MPI_Comm Communicator) const;
-      void gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0, MPI_Comm Communicator=MPI_COMM_WORLD) const;
-      void send_elements(char * buffer, std::vector<unsigned> index_list, std::vector<unsigned> node_list, int  root=0, MPI_Comm Communicator=MPI_COMM_WORLD);
-      void send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int  root=0, MPI_Comm Communicator=MPI_COMM_WORLD);
-#else
-      void gather_elements(char * buffer, std::vector<unsigned> index_list, int root=0) const;
       void gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
-      void send_elements(char * buffer, std::vector<unsigned> index_list, int root=0);
-      void send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0);
-#endif
+      void send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int  root=0);
   };
 
   static_assert( std::is_pod<T>::value, "Field expects only pod-type elements (plain data): default constructor, copy and delete");
@@ -810,7 +801,19 @@ void field<T>::wait_move(direction d, parity p) const {
 #if defined(USE_MPI) && !defined(TRANSFORMER)
 
 template<typename T>
-void field<T>::field_struct::gather_elements(char * buffer, std::vector<unsigned> index_list, std::vector<unsigned> node_list, int root, MPI_Comm Communicator) const {
+void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) const {
+  std::vector<unsigned> index_list;
+  std::vector<unsigned> node_list(lattice->n_nodes());
+  std::fill(node_list.begin(), node_list.end(),0);
+  
+  for(coordinate_vector c : coord_list){
+    if( lattice->is_on_node(c) ){
+      index_list.push_back(lattice->site_index(c));
+    }
+
+    node_list[lattice->node_rank(c)]++;
+  }
+  
   std::vector<T> send_buffer(index_list.size());
   payload.gather_elements((char*) send_buffer.data(), index_list, lattice);
   if(mynode() != root && node_list[mynode()] > 0){
@@ -829,12 +832,14 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<unsigned
   }
 }
 
+
+
 template<typename T>
-void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root, MPI_Comm Communicator) const {
+void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) {
   std::vector<unsigned> index_list;
   std::vector<unsigned> node_list(lattice->n_nodes());
   std::fill(node_list.begin(), node_list.end(),0);
-  
+
   for(coordinate_vector c : coord_list){
     if( lattice->is_on_node(c) ){
       index_list.push_back(lattice->site_index(c));
@@ -842,14 +847,7 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordina
 
     node_list[lattice->node_rank(c)]++;
   }
-  
-  gather_elements(buffer, index_list, node_list, root, Communicator);
-}
 
-
-
-template<typename T>
-void field<T>::field_struct::send_elements(char * buffer, std::vector<unsigned> index_list, std::vector<unsigned> node_list, int root, MPI_Comm Communicator) {
   std::vector<T> recv_buffer(index_list.size());
   payload.gather_elements((char*) recv_buffer.data(), index_list, lattice);
   if(mynode() != root && node_list[mynode()] > 0){
@@ -869,31 +867,9 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<unsigned> 
   payload.place_elements((char*) recv_buffer.data(), index_list, lattice);
 }
 
-template<typename T>
-void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root, MPI_Comm Communicator) {
-  std::vector<unsigned> index_list;
-  std::vector<unsigned> node_list(lattice->n_nodes());
-  std::fill(node_list.begin(), node_list.end(),0);
-
-  for(coordinate_vector c : coord_list){
-    if( lattice->is_on_node(c) ){
-      index_list.push_back(lattice->site_index(c));
-    }
-
-    node_list[lattice->node_rank(c)]++;
-  }
-  
-  send_elements(buffer, index_list, node_list, root, Communicator);
-}
-
 
 #else
 
-
-template<typename T>
-void field<T>::field_struct::gather_elements(char * buffer, std::vector<unsigned> index_list, int root) const {
-  payload.gather_elements(buffer, index_list, lattice);
-}
 
 template<typename T>
 void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) const {
@@ -902,14 +878,9 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordina
     index_list.push_back(lattice->site_index(c));
   }
   
-  gather_elements(buffer, index_list);
+  payload.gather_elements(buffer, index_list, lattice);
 }
 
-
-template<typename T>
-void field<T>::field_struct::send_elements(char * buffer, std::vector<unsigned> index_list, int root) {
-  payload.place_elements(buffer, index_list, lattice);
-}
 
 template<typename T>
 void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) {
@@ -918,7 +889,7 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
     index_list.push_back(lattice->site_index(c));
   }
   
-  send_elements(buffer, index_list, root);
+  payload.place_elements(buffer, index_list, lattice);
 }
 
 #endif
