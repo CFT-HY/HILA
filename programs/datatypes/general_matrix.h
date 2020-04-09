@@ -162,9 +162,19 @@ class matrix {
   }
 
   #pragma transformer loop_function
-  matrix<n, m, T> & random(){
+  template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
+  matrix<n, m, A> & random(){
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
       c[i][j] = static_cast<T>(hila_random());
+    }
+    return *this;
+  }
+
+  #pragma transformer loop_function
+  template <typename A=T, std::enable_if_t<!is_arithmetic<A>::value, int> = 0 > 
+  matrix<n, m, A> & random(){
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+      c[i][j].random();
     }
     return *this;
   }
