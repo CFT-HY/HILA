@@ -6,7 +6,7 @@ int main(int argc, char **argv){
 
   test_setup(argc, argv);
     
-  field<T> f, p;
+  field<T> f, f2, p;
   f[ALL] = 1;
 
   FFT_field(f, p);
@@ -46,12 +46,12 @@ int main(int argc, char **argv){
     f[X].random();
   }
 
-  f.write_to_file("test_config_filename");
-  p.read_from_file("test_config_filename");
+  write_fields("test_config_filename", p, f);
+  read_fields("test_config_filename", p, f2);
 
   double sum=0;
   onsites(ALL) {
-    sum += (f[X]-p[X]).norm_sq();
+    sum += (f2[X]-f[X]).norm_sq();
   }
 
   assert(sum==0 && "Write and read field");

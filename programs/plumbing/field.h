@@ -979,15 +979,20 @@ void field<T>::write_to_file(std::string filename){
 
 
 // Write a list of fields into an output stream
+template<typename T>
+static void write_fields(std::ofstream& outputfile, field<T>& last){
+  last.write_to_stream(outputfile);
+}
+
 template<typename T, typename... fieldtypes>
-static void write_fields(std::ofstream& outputfile, field<T> next, fieldtypes... fields){
-  next.write_to_file(outputfile);
+static void write_fields(std::ofstream& outputfile, field<T>& next, fieldtypes&... fields){
+  next.write_to_stream(outputfile);
   write_fields(outputfile, fields...);
 }
 
 // Write a list of fields to a file
 template<typename... fieldtypes>
-static void write_fields(std::string filename, fieldtypes... fields){
+static void write_fields(std::string filename, fieldtypes&... fields){
   std::ofstream outputfile;
   outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
   write_fields(outputfile, fields...);
@@ -1050,15 +1055,20 @@ void field<T>::read_from_file(std::string filename){
 
 
 // Read a list of fields from an input stream
+template<typename T>
+static void read_fields(std::ifstream& inputfile, field<T>& last){
+  last.read_from_stream(inputfile);
+}
+
 template<typename T, typename... fieldtypes>
-static void read_fields(std::ifstream& inputfile, field<T> next, fieldtypes... fields){
+static void read_fields(std::ifstream& inputfile, field<T>& next, fieldtypes&... fields){
   next.read_from_stream(inputfile);
   read_fields(inputfile, fields...);
 }
 
 // Read a list of fields from a file
 template<typename... fieldtypes>
-static void read_fields(std::string filename, fieldtypes... fields){
+static void read_fields(std::string filename, fieldtypes&... fields){
   std::ifstream inputfile;
   inputfile.open(filename, std::ios::in | std::ios::binary);
   read_fields(inputfile, fields...);
