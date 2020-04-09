@@ -134,7 +134,11 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         }
 
         // Collect the data to node n
-        read_pointer->fs->gather_elements((char*) column.data(), sitelist[n], root, column_communicator);
+        char * sendbuf = (char*) send_buffer.data()+root*elements*local_sites;
+        read_pointer->fs->payload.gather_elements(sendbuf, sitelist[n], lattice);
+        MPI_Gather( sendbuf, local_sites*sizeof(T), MPI_BYTE, 
+                   column.data(), local_sites*sizeof(T), MPI_BYTE,
+                   root, column_communicator);
       }
 
       if( my_column_rank < n ){
@@ -159,7 +163,10 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         int root = (c+n)%nnodes; // The node that does the calculation
         char * sendbuf = (char*) send_buffer.data()+root*elements*local_sites;
 
-        result.fs->send_elements((char*) column.data(), sitelist[n], root, column_communicator);
+        MPI_Scatter( column.data(), local_sites*sizeof(T), MPI_BYTE, 
+                   sendbuf, local_sites*sizeof(T), MPI_BYTE,
+                   root, column_communicator);
+        result.fs->payload.place_elements(sendbuf, sitelist[n], lattice);
       }
 
       c+=n;
