@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv){
 
-  using T = matrix<2,2,cmplx<double>>;
+  using T = matrix<1,1,cmplx<double>>;
 
   test_setup(argc, argv);
     
@@ -41,7 +41,21 @@ int main(int argc, char **argv){
     
   }
 
+  // Test reading and writing a field
+  onsites(ALL){
+    f[X].random();
+  }
+
   f.write_to_file("test_config_filename");
+  p.read_from_file("test_config_filename");
+
+  double sum=0;
+  onsites(ALL) {
+    sum += (f[X]-p[X]).norm_sq();
+  }
+
+  assert(sum==0 && "Write and read field");
+
 
   finishrun();
 }
