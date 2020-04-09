@@ -468,8 +468,10 @@ class field {
   field<T> shift(const coordinate_vector &v) const { return shift(v,ALL); }
 
   // General getters and setters
-  void set_elements( T * elements, std::vector<coordinate_vector> coord_list) const;
-  void set_elements( T element, coordinate_vector coord) const;
+  void set_elements(T * elements, std::vector<coordinate_vector> coord_list);
+  void set_element(T element, coordinate_vector coord);
+  void get_elements(T * elements, std::vector<coordinate_vector> coord_list) const;
+  T get_element(coordinate_vector coord) const;
 
   // Fourier transform declarations
   void FFT();
@@ -634,23 +636,6 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
 }
 
 #endif
-
-
-
-/// Functions for manipulating lists of elements
-template<typename T>
-void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
-  fs->send_elements( (char*) elements, coord_list);
-}
-
-template<typename T>
-void field<T>::set_elements( T element, coordinate_vector coord) const {
-  std::vector<coordinate_vector> coord_list;
-  coord_list.push_back(coord);
-  fs->send_elements( (char*) &element, coord_list);
-}
-
-
 
 
 #if defined(USE_MPI) && !defined(TRANSFORMER) 
@@ -893,6 +878,38 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
 }
 
 #endif
+
+
+/// Functions for manipulating individual elements in an array
+template<typename T>
+void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_list) {
+  fs->send_elements( (char*) elements, coord_list);
+}
+
+template<typename T>
+void field<T>::set_element( T element, coordinate_vector coord) {
+  std::vector<coordinate_vector> coord_list;
+  coord_list.push_back(coord);
+  fs->send_elements( (char*) &element, coord_list);
+}
+
+template<typename T>
+void field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
+  fs->gather_elements( (char*) elements, coord_list);
+}
+
+template<typename T>
+T field<T>::get_element( coordinate_vector coord) const {
+  T element;
+  std::vector<coordinate_vector> coord_list;
+  coord_list.push_back(coord);
+  fs->gather_elements( (char*) &element, coord_list);
+  return element;
+}
+
+
+
+
 
 
 

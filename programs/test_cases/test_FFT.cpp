@@ -19,7 +19,7 @@ int main(int argc, char **argv){
   foralldir(d){
     c[d] = 0;
   }
-  p2.set_elements(m, c);
+  p2.set_element(m, c);
 
 
   FFT_field(f, p);
