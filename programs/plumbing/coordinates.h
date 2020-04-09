@@ -85,8 +85,8 @@ constexpr parity ODD  = parity::odd;       //               010
 constexpr parity ALL  = parity::all;       //               011
 
 // this is used in diagnostics - make static inline so can be defd here
-static inline const char * parity_name(parity p) {
-  const char * parity_name_s[5] = {"parity::none", "EVEN", "ODD", "ALL", "X"};
+inline const char * parity_name(parity p) {
+  const char * parity_name_s[4] = {"parity::none", "EVEN", "ODD", "ALL"};
   return parity_name_s[(int)p]; 
 }
 
@@ -159,7 +159,7 @@ class coordinate_vector {
 
   // Parity of this coordinate
   #pragma transformer loop_function
-  parity coordinate_parity() {
+  ::parity parity() {
     int s = 0;
     foralldir(d) s += r[d];
     if (s % 2 == 0) return parity::even;
@@ -223,6 +223,7 @@ class coordinate_vector {
     return v;
   }
 
+  
 };
 
 inline coordinate_vector operator+(const coordinate_vector & a, const coordinate_vector & b) {
@@ -341,6 +342,13 @@ inline coordinate_vector operator-( const direction dir, coordinate_vector cv ) 
   foralldir(d) cv[d] = dir_dot_product(dir,d) - cv[d];
   return cv;
 }
+
+// finally, output
+inline std::ostream& operator<<(std::ostream &strm, const coordinate_vector & c) {
+  foralldir(d) strm << c[d] << ' ';
+  return strm;
+}
+
 
 
 /////////////////////////////////////////////////////////////////////
