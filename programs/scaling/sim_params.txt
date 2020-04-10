@@ -1,4 +1,4 @@
-l=10
+l=20
 param1 = 0.1
 sigma = 3.0
 seed=20

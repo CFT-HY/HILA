@@ -37,10 +37,8 @@ int main(int argc, char ** argv){
   	double tStart = parameters.get("tStart");
   	double tEnd = parameters.get("tEnd");
 	double lambda = parameters.get("lambda");
-
-	//parameters.close();
  
-	int box_dimensions[3] = {l,2*l,4*l}; 
+	int box_dimensions[3] = {l,l,l}; 
 
 	lattice->setup(box_dimensions, argc, argv);
 	seed_random(seed);
@@ -50,7 +48,8 @@ int main(int argc, char ** argv){
 	field<cmplx<double>> phi;
 	field<cmplx<double>> pi;
 	field<cmplx<double>> deltaPi; 
-	field<cmplx<double>> e;  
+	field<cmplx<double>> V;
+	field<cmplx<double>> E;   
 
 	//initialize vaccuum state phi, set pi to zero
  
@@ -65,7 +64,7 @@ int main(int argc, char ** argv){
 
 	//evolve fields
 
-	for (double t = tStart; t < tEnd; t += dt){
+	for (double t = tStart; t <= tEnd; t += dt){
 
 		double a = scaleFactor(t, tEnd);  
       		double aHalfPlus = scaleFactor(t+dt/2.0, tEnd);
@@ -78,16 +77,22 @@ int main(int argc, char ** argv){
   		double ss = sigma*sigma;
 		
 		onsites(ALL){ 
-			cmplx<double> mod = phi[X].conj()*phi[X];
-			deltaPi[X] = -1.0*(aadt2D_aadxdx + aaaaldt_aa*(mod - ss))*phi[X];
+			cmplx<double> norm = phi[X].conj()*phi[X]; //calculate phi norm
+			V[X] = 0.25*lambda*a*a*pow((norm - ss).re, 2.0); //calculate potential
+			deltaPi[X] = -1.0*(aadt2D_aadxdx + aaaaldt_aa*(norm - ss))*phi[X]; 
 		}
 
 		direction d;
 		foralldir(d){
 			deltaPi[ALL] += aadt_aadxdx*phi[X + d]; 
 		}
+		
+		pi[ALL] = pi[X] - daa_aa*pi[X];
+		pi[ALL] = pi[X] + deltaPi[X]; 
 
-		pi[ALL] = pi[X] + deltaPi[X];
+		/* diffusive upate
+		//pi[ALL] = deltaPi[X]*(1/(diffusiveFactor * dt))
+		*/
 	}
 	return 0;
 }
