@@ -136,6 +136,8 @@ bool lattice_struct::is_on_node(const coordinate_vector & loc)
 /// Note: loc really has to be on this node
 ///////////////////////////////////////////////////////////////////////
 
+#ifndef VECTOR_LAYOUT
+
 unsigned lattice_struct::site_index(const coordinate_vector & loc)
 {
   int dir,l,s;
@@ -187,6 +189,95 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 }
 
 
+
+#else  // now VECTOR_LAYOUT
+
+///////////////////////////////////////////////////////////////////////
+/// The (AVX) vectorized version of the site_index function.
+/// Now there are two stages: an "inner" vect index, which goes over
+/// over "virtual nodes", and the "outer" index inside the virtual node.
+/// This is to mimic the (float) vectorized structs, which only have the
+/// outer index
+///////////////////////////////////////////////////////////////////////
+
+unsigned lattice_struct::site_index(const coordinate_vector & loc)
+{
+  int dir,l,s,subl;
+  unsigned i;
+
+  // let's mod the coordinate to sublattice
+  l = loc[NDIM-1] - this_node.min[NDIM-1];
+  subl = l / this_node.subnodes.size[NDIM-1];
+  i = l % this_node.subnodes.size[NDIM-1];
+
+  s = loc[NDIM-1];
+  for (dir=NDIM-2; dir>=0; dir--) {
+    l = loc[dir] - this_node.min[dir];
+    subl = subl * this_node.subnodes.divisions[dir] 
+         + l / this_node.subnodes.size[dir];
+    i = i * this_node.subnodes.size[dir] 
+      + l % this_node.subnodes.size[dir];
+    s += loc[dir];
+  }
+
+  // i is now the site within the subnode, and
+  // subl the index of the subnode
+
+#if defined(EVEN_SITES_FIRST)
+  if (s%2 == 0) i = i/2;    /* even site index */
+  else i = i/2 + this_node.subnodes.evensites;  /* odd site */
+#endif
+
+  return (subl + layout_subnodes*i);
+
+}
+
+
+///////////////////////////////////////////////////////////////////////
+/// give site index for nodeid sites
+/// compare to above
+///////////////////////////////////////////////////////////////////////
+
+unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigned nodeid)
+{
+  int dir,l,s,subl;
+  unsigned i;
+  const node_info & ni = nodes.nodelist[nodeid];
+  
+  // let's mod the coordinate to sublattice
+  // get subnode size - divisons are the same in all nodes
+
+  coordinate_vector subsize = ni.size/this_node.subnodes.divisions;
+
+  l = loc[NDIM-1] - ni.min[NDIM-1];
+  subl = l / subsize[NDIM-1];
+  i = l % subsize[NDIM-1];
+  s = loc[NDIM-1];
+
+  for (dir=NDIM-2; dir>=0; dir--) {
+    l = loc[dir] - ni.min[dir];
+    subl = subl * this_node.subnodes.divisions[dir]
+         + l / subsize[dir];
+    i = i * subsize[dir] + l % subsize[dir];
+    s += loc[dir];
+  }
+
+#if defined(EVEN_SITES_FIRST)
+  if (layout_subnodes > 1) { // ensure this works even when == 1
+    if (s%2 == 0) i = i/2;              /* even site index */
+    else i = i/2 + ni.evensites/layout_subnodes;  /* odd site */
+  } else {
+    // no subnodes, for some reason
+    if (s%2 == 0) i = i/2;
+    else i = i/2 + ni.evensites;
+  }
+#endif
+
+  return (subl + layout_subnodes*i);
+}
+
+#endif // VECTOR_LAYOUT
+
 ///////////////////////////////////////////////////////////////////////
 /// invert the this_node index -> location (only on this node)
 ///////////////////////////////////////////////////////////////////////
@@ -231,7 +322,7 @@ void lattice_struct::setup_nodes() {
       ni.evensites = ni.oddsites = v/2;
     else {
       // now node ni has odd number of sites
-      if (l.coordinate_parity() == EVEN) {
+      if (l.parity() == EVEN) {
         ni.evensites = v/2 + 1; 
         ni.oddsites = v/2;
       } else {
@@ -248,9 +339,8 @@ void lattice_struct::setup_nodes() {
     }
     
     // use the opportunity to set up this_node when it is met
-    if (nn == mynode()) this_node.setup(ni, *lattice);
-
-    
+    if (nn == mynode())
+      this_node.setup(ni, *lattice);
   }
 }
 
@@ -270,7 +360,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   oddsites  = ni.oddsites;
   sites     = ni.evensites + ni.oddsites;
 
-  first_site_even = (min.coordinate_parity() == EVEN);
+  first_site_even = (min.parity() == EVEN);
    
   // neighbour node indices
   foralldir(d) {
@@ -282,6 +372,10 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   }
 
   // map site indexes to locations -- coordinates array
+  // after the above site_index should work
+
+#ifndef VECTOR_LAYOUT
+
   coordinates.resize(sites);
   coordinate_vector l = min;
   for(unsigned i = 0; i<sites; i++){
@@ -292,7 +386,55 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
       l[d] = min[d];
     }
   }
+
+#else
+  
+  // set up the subnodes
+  subnodes.setup(*this);
+
+  // the coordinate vector is defined only on one subnode
+  // use then offset to get all coordinates
+
+  coordinates.resize(subnodes.sites);
+  coordinate_vector l = min;
+  for(unsigned i = 0; i<subnodes.sites; i++){
+    coordinates[ lattice.site_index(l)/layout_subnodes ] = l;
+    // walk through the coordinates
+    foralldir(d) {
+      if (++l[d] < (min[d]+subnodes.size[d])) break;
+      l[d] = min[d];
+    }
+  }
+
+#endif
+
 }
+
+#ifdef VECTOR_LAYOUT
+
+////////////////////////////////////////////////////////////////////////
+/// Fill in subnodes -struct
+////////////////////////////////////////////////////////////////////////
+void lattice_struct::node_struct::subnode_struct::setup(const node_struct & tn)
+{
+  size = tn.size / divisions;
+  evensites = tn.evensites / layout_subnodes;
+  oddsites  = tn.oddsites / layout_subnodes;
+  sites     = evensites + oddsites;
+
+  coordinate_vector offs(0);
+  for (int i=0; i<layout_subnodes; i++) {
+    offset[i] = offs;
+    // walk through the offsets
+    foralldir(d) {
+      offs[d] += size[d];
+      if (offs[d] < tn.size[d]) break;
+      offs[d] = 0;
+    }
+  }
+}
+
+#endif
 
 /////////////////////////////////////////////////////////////////////
 /// Create the neighbour index arrays 
@@ -376,7 +518,7 @@ void lattice_struct::create_std_gathers()
         // reset neighb array temporarily, as a flag
         neighb[d][i] = this_node.sites;
 
-	      // Now site is off-node, this lead to fetching
+	      // Now site is off-node, this leads to fetching
         // check that there's really only 1 node to talk with
         unsigned rank = node_rank(ln);
         if ( from_node.rank == this_node.rank) {
@@ -387,7 +529,7 @@ void lattice_struct::create_std_gathers()
         }
 
         from_node.sites++;
-        if (l.coordinate_parity() == EVEN) from_node.evensites++;
+        if (l.parity() == EVEN) from_node.evensites++;
         else from_node.oddsites++;
 
 	      num++;
@@ -427,7 +569,7 @@ void lattice_struct::create_std_gathers()
           l = coordinates(i);
           ln = mod(l + d, size()); 
 
-          if (l.coordinate_parity() == EVEN) {
+          if (l.parity() == EVEN) {
             // THIS site is even
             neighb[d][i] = c_offset + c_even;
 
@@ -573,12 +715,12 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
         index[i] = this_node.sites + r;
 
         // using parity of THIS
-        if (l.coordinate_parity() == EVEN) np_even[r]++;
+        if (l.parity() == EVEN) np_even[r]++;
         else np_odd[r]++;
 
       } else {
         // on the sending side - we use parity of target
-        if (ln.coordinate_parity() == EVEN) np_even[r]++;  
+        if (ln.parity() == EVEN) np_even[r]++;  
         else np_odd[r]++;
       }
 
@@ -635,7 +777,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
         // we'll fill the buffers according to the parity of receieving node
         // first even, then odd sites in the buffer
         int k;
-        if (ln.coordinate_parity() == EVEN) k = np_even[n]++;
+        if (ln.parity() == EVEN) k = np_even[n]++;
         else k = node_v[n].evensites + np_odd[n]++;
 
         // and set the ptr to the site to be communicated
@@ -655,7 +797,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
         while (node_v[n].rank != r) n++;
 
         coordinate_vector l = coordinates(i);
-        if (l.coordinate_parity() == EVEN)
+        if (l.parity() == EVEN)
           index[i] = node_v[n].buffer + (np_even[n]++);
         else 
           index[i] = node_v[n].buffer + node_v[n].evensites + (np_odd[n]++);
@@ -732,6 +874,22 @@ void test_std_gathers()
           element<int> s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
 
           diff += s - j;
+
+          element<int> i;
+          i = s - j;
+
+#if !defined(VANILLA) && !defined(TRANSFORMER)
+          for (int k=0; k<8; k++) if (i[k] != 0) {
+            hila::output << "Error!  node " << mynode() << " parity " 
+                         << parity_name(p) << " direction " << (unsigned)d2 << '\n';
+            hila::output << "\nCoordinate was ";
+            for (int l=0; l<8; l++) hila::output << j[l] << ' ';
+            hila::output << "\nShould be ";
+            for (int l=0; l<8; l++) hila::output << s[l] << ' ';
+            hila::output << '\n';
+            exit(-1);
+          }
+#endif
 
         }
 

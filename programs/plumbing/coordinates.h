@@ -260,6 +260,21 @@ inline coordinate_vector operator/(const coordinate_vector & a, const int i) {
   return r;
 }
 
+/// Somewhat unorthodox vector * vector and vector / vector -operators; elem by elem
+
+inline coordinate_vector operator*(const coordinate_vector & a, const coordinate_vector & b) {
+  coordinate_vector r;
+  foralldir(d) r[d] = a[d]*b[d];
+  return r;
+}
+
+inline coordinate_vector operator/(const coordinate_vector & a, const coordinate_vector & b) {
+  coordinate_vector r;
+  foralldir(d) r[d] = a[d]/b[d];
+  return r;
+}
+
+
 /// Positive mod(): we define here the positive mod utility function mod(a,b).
 /// It mods the arguments 0 <= a < m.  This is not the standard
 /// for integer operator% in c++, which gives negative results if a<0.  This is useful in 

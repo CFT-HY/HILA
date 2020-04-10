@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 
+#define VECTOR_LAYOUT  // TEMP HERE TO HELP EDITOR!!!!
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
@@ -14,6 +15,11 @@
 #include "../plumbing/coordinates.h"
 #include "../plumbing/inputs.h"
 
+#ifdef VECTOR_LAYOUT
+#define VECTOR_SIZE (256/8)
+// This is the vector size used to determine the layout
+constexpr unsigned layout_subnodes = VECTOR_SIZE/sizeof(float);
+#endif
 
 
 struct node_info {
@@ -55,7 +61,22 @@ private:
     std::vector<coordinate_vector> coordinates;
 
     void setup(node_info & ni, lattice_struct & lattice);
+
+#ifdef VECTOR_LAYOUT
+    // If we have vectorized-style layout, we introduce "subnodes"
+    // size is this_node.size/subnodes.divisions, which is not
+    // constant across nodes
+    struct subnode_struct {
+      coordinate_vector divisions,size;  // div to subnodes to directions, size
+      coordinate_vector offset[layout_subnodes];  // coord shift to subnodes
+      unsigned sites,evensites,oddsites;   
+
+      void setup(const node_struct & tn);
+    } subnodes;
+#endif
+
   } this_node;
+
 
   // information about all nodes
   struct allnodes {
@@ -237,16 +258,26 @@ public:
   }
   #endif
 
+#ifndef VECTOR_LAYOUT
+
   inline const coordinate_vector & coordinates( unsigned idx ){
     return this_node.coordinates[idx];
   }
+#else
+
+  inline const coordinate_vector coordinates( unsigned idx ){
+
+    return  this_node.coordinates[idx / layout_subnodes]
+            + this_node.subnodes.offset[idx % layout_subnodes];
+  }
+#endif
 
   inline parity site_parity( unsigned idx ) {
-  #ifdef EVENFIRST
+  #ifdef EVEN_SITES_FIRST
     if (idx < this_node.evensites) return EVEN;
     else return ODD;
   #else 
-    return this_node.coordinates[idx].coordinate_parity();
+    return coordinates(idx).parity();
   #endif
   }
 

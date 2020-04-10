@@ -14,8 +14,8 @@ CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
 # Don't remove cpt-files
 .PRECIOUS: %.cpt
 
-%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o
-	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o
+%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o
+	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o
 
 %.cpt: %.cpp Makefile
 	$(TRANSFORMER) $(ADDITION) $<
