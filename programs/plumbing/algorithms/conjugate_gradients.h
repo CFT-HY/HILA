@@ -46,8 +46,8 @@ class CG_engine<staggered_dirac>{
         vtype &b,
         vtype &x_0)
     {
-        vtype r, p, Dp;
-        double pDDp = 0, rr = 0, rrnew = 0;
+        vtype r, p, Dp, DDp;
+        double pDp = 0, rr = 0, rrnew = 0, rr_start=0;
         double alpha, beta;
         double target_rr, source_norm=0;
         double accuracy = 1e-8;
@@ -59,34 +59,36 @@ class CG_engine<staggered_dirac>{
         target_rr = accuracy*accuracy * source_norm;
 
         dirac_stagggered(gauge, mass, x_0, Dp);
+        dirac_stagggered_dagger(gauge, mass, Dp, DDp);
         onsites(ALL){
-            r[X] = b[X] - Dp[X];
+            r[X] = b[X] - DDp[X];
             p[X] = r[X];
         }
 
         onsites(ALL){
-            rr += norm_squared(r[X]);
+            rr += (r[X]*r[X]).re;
         }
+        rr_start = rr;
 
         for (int i = 0; i < MAXITERS; i++){
-            pDDp=rrnew=0;
+            pDp=rrnew=0;
             dirac_stagggered(gauge, mass, p, Dp);
-            //note: unsure about whether it should be pDDp or pDp  
+            dirac_stagggered_dagger(gauge, mass, Dp, DDp);
             onsites(ALL){
-                pDDp += norm_squared(p[X].conjugate()*Dp[X]);
+                pDp += (p[X]*DDp[X]).re;
             }
 
-            alpha=rr/pDDp;
+            alpha=rr/pDp;
 
             onsites(ALL){
                 x_0[X] = x_0[X] + alpha*p[X];
-                r[X] = r[X] - alpha*Dp[X]; 
+                r[X] = r[X] - alpha*DDp[X];
             }
             onsites(ALL){ 
-                rrnew += norm_squared(r[X]); 
+                rrnew += (r[X]*r[X]).re;
             }
             #ifdef DEBUG
-            printf("CG iter %d, node %d, %g %g %g\n", i, mynode(), alpha, rrnew, target_rr);
+            printf("CG iter %d, node %d, %g %g %g %g\n", i, mynode(), rrnew, rr_start, target_rr, pDp);
             #endif
             if( rrnew < target_rr )
                 return;
