@@ -451,7 +451,7 @@ template<int n, typename T>
 T operator* (const matrix<1, n, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
-    result += vecA.c[0][i]*(conj(vecB.c[i][0]));
+    result += (conj(vecA.c[i][0]))*vecB.c[i][0];
   }
   return result;
 }
@@ -461,7 +461,7 @@ template<int n, typename T>
 T operator* (const matrix<1, n, T> & vecA, const matrix<1, n, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
-    result += vecA.c[0][i]*(conj(vecB.c[0][i]));
+    result += (conj(vecA.c[0][i]))*vecB.c[0][i];
   }
   return result;
 }
@@ -472,7 +472,7 @@ T operator* (const matrix<n, 1, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result; 
   result=0;
   for (int i = 0; i < n; i++){
-    result += vecA.c[i][0]*(conj(vecB.c[i][0]));
+    result += (conj(vecA.c[0][i]))*vecB.c[i][0];
   }
   return result;
 }
