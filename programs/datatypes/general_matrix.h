@@ -69,7 +69,7 @@ class matrix {
   #pragma transformer loop_function
   matrix(const scalart rhs) {
     static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
-    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
       if (i == j) c[i][j] = (rhs);
       else c[i][j] = (0);
     }
@@ -190,7 +190,7 @@ class matrix {
   std::string str() const {
     std::string text = "";
     for (int i=0; i<n; i++){
-      for (int j=0; j<n; j++) {
+      for (int j=0; j<m; j++) {
         text + c[i][j].str() + " "; 
       }
       text + "\n"; 
@@ -482,7 +482,7 @@ template <int n, int m, typename T>
 #pragma transformer loop_function
 matrix<n,m,T> operator+ (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
   matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
     res.c[i][j] =  A.c[i][j] + B.c[i][j];
   }
   return res;
@@ -493,7 +493,7 @@ template <int n, int m, typename T>
 #pragma transformer loop_function
 matrix<n,m,T> operator- (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
   matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
     res.c[i][j] =  A.c[i][j] - B.c[i][j];
   }
   return res;
@@ -504,7 +504,7 @@ template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithm
 #pragma transformer loop_function
 matrix<n,m,T> operator* (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
     res.c[i][j] = s * A.c[i][j];
   }
   return res;
@@ -514,7 +514,7 @@ template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithm
 #pragma transformer loop_function
 matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
     res.c[i][j] = s / A.c[i][j];
   }
   return res;
@@ -532,7 +532,7 @@ template <int n, int m, typename T>
 std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
   for (int i=0; i<n; i++){
     strm << "\n"; 
-    for (int j=0; j<n; j++) {
+    for (int j=0; j<m; j++) {
       strm << " " << A.c[i][j] << " "; 
     }
     strm << "\n"; 
