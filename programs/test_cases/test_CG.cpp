@@ -39,16 +39,24 @@ int main(int argc, char **argv){
   dirac_stagggered(U, 0.1, b, Db);
   dirac_stagggered_dagger(U, 0.1, a, Ddaggera);
   onsites(ALL){
-    double diff = 0;
     diffre += (a[X]*Db[X]).re - (Ddaggera[X]*b[X]).re;
     diffim += (a[X]*Db[X]).im - (Ddaggera[X]*b[X]).im;
   }
 
   assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
   assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
-
+  
+  // Now run CG on DdaggerDb and check the result is b
+  dirac_stagggered_dagger(U, 0.1, Db, DdaggerDb);
   CG_engine<staggered_dirac> engine;
-  engine.solve(U, 1.0, b, sol);
+  engine.solve(U, 0.1, DdaggerDb, a);
+
+  onsites(ALL){
+    diffre += norm_squared(a[X]-b[X]);
+  }
+  printf(" %g \n", diffre);
+  assert(diffre*diffre < 1e-8 && "test CG");
+
 
   finishrun();
 }
