@@ -15,6 +15,7 @@
 #define MAXITERS 10000
 
 
+// Implement the apply function of the conjugate gradient operator
 template<typename vector, typename op>
 void GG_invert(vector &in, vector &out, op &M){
   vector r, p, Dp, DDp;
@@ -70,13 +71,14 @@ void GG_invert(vector &in, vector &out, op &M){
 }
 
 
+/// The conjugate gradient operator. Applies square the inverse of an operator on a vector
 template<typename vector, typename Op>
 class CG{
   private:
     Op & M; // The operator to invert
   public:
 
-    // Constructor: initialize mass, gauge and eta
+    // Constructor: iniialize the operator
     CG(Op & op) : M(op) {};
 
     void apply(vector &in, vector &out)
