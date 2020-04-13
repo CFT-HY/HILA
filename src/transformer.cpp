@@ -542,6 +542,7 @@ public:
     file_id_list.clear();
     file_buffer_list.clear();
     field_decl = field_storage_decl = nullptr;
+    reset_vectorizable_types();
 
     return (true);
   }

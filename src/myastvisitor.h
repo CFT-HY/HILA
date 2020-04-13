@@ -128,9 +128,13 @@ public:
   bool VisitVarDecl(VarDecl *var);
 
   bool VisitDecl( Decl * D);
+  bool VisitType( Type * T);
   
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
+
+  /// typealiases are used to determine if class is vectorizable
+  bool VisitTypeAliasDecl(TypeAliasDecl * ta);
 
   /// True if the decl is preceded by "#pragma transformer <string>" where s is the string
   bool has_pragma(Decl *d, const char *s);
@@ -283,6 +287,16 @@ public:
   void handle_loop_function_cuda(FunctionDecl *fd);
   void handle_loop_function_openacc(FunctionDecl *fd);
   void handle_loop_function_avx(FunctionDecl *fd);
+
+
+  /// inspect if the type name is vectorizable
+  /// returns the vectorized type in vectorized_type, if it is
+  bool is_vectorizable(const std::string & type_name, vectorization_info & vi);
+  bool is_vectorizable(const QualType & QT, vectorization_info & vi);
+
+  /// Check if the field type is vectorizable and how
+  vectorization_info inspect_field_type(Expr *fE);
+
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();

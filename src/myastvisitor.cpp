@@ -147,21 +147,21 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 // is the stmt pointing now to a function call
 bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
   if (auto *Call = dyn_cast<CallExpr>(s)){
-    llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
+    // llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
     return true;
   }
   return false;
 }
 bool MyASTVisitor::is_member_call_stmt(Stmt * s) {
   if (auto *Call = dyn_cast<CXXMemberCallExpr>(s)){
-    llvm::errs() << "Member call found: " << get_stmt_str(s) << '\n';
+    // llvm::errs() << "Member call found: " << get_stmt_str(s) << '\n';
     return true;
   }
   return false;
 }
 bool MyASTVisitor::is_constructor_stmt(Stmt * s) {
   if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
-    llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
+    // llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
     return true;
   }
   return false;
@@ -245,8 +245,6 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
 }
 
 
-
-
 /// -- Handler utility functions -- 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -282,7 +280,6 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_c
     if( r.fullExpr == lfe.fullExpr  ){
       return(true);
   }
-
 
   //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr); 
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
@@ -410,7 +407,9 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_c
 }
 
 
-///  Utility to find the reduction typ
+//////////////////////////////////////////////////////////////////
+
+///  Utility to find the reduction type
 
 reduction get_reduction_type(bool is_assign,
                              std::string & assignop,
@@ -892,11 +891,20 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   return true;    
 }
 
+////////////////////////////////////////////////////////////////////////////
+///  List field<> specializations
+///  This does not currently do anything necessary, specializations are
+///  now handled as field<> are used in loops
+///  
+////////////////////////////////////////////////////////////////////////////
+
+
 int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
   // save global, perhaps needed (perhaps not)
   field_decl = D;
 
-  // llvm::errs() << "+++++++\n Specializations of field\n";
+  if (cmdline::verbosity >= 2)
+    llvm::errs() << "field<type> specializations in this compilation unit:\n";
 
   int count = 0;
   for (auto spec = D->spec_begin(); spec != D->spec_end(); spec++ ) {
@@ -917,19 +925,19 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     // Get typename without class, struct... qualifiers
     PrintingPolicy pp(Context->getLangOpts());
     std::string typestr = args.get(0).getAsType().getAsString(pp);
-    llvm::errs() << "arg type " << typestr << "\n";
+    if (cmdline::verbosity >= 2) llvm::errs() << "  field < " << typestr << " >";
 
-    // Type of field<> can never be field?  This always is true
-    if( typestr.find("field<") ){ // Skip for field templates
-      if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
-    }
+    if (spec->isExplicitSpecialization()) llvm::errs() << " explicit specialization\n";
+    else llvm::errs() << '\n';
     
   }
   return(count);
       
 } // end of "field"
 
+///////////////////////////////////////////////////////////////////////////////////
 /// Source Location utilities
+///////////////////////////////////////////////////////////////////////////////////
 
 SourceLocation MyASTVisitor::getSourceLocationAtEndOfLine( SourceLocation l ) {
   SourceManager &SM = TheRewriter.getSourceMgr();
@@ -951,7 +959,10 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   return r.getBegin().getLocWithOffset(i-1);
 }
 
-
+///////////////////////////////////////////////////////////////////////////////////
+/// Pragma handling: has_pragma()
+/// TODO: switch to use vector produced by preprocessor pragma visitor!
+///////////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::has_pragma(Stmt *S, const char * n) {
   return has_pragma( S->getSourceRange().getBegin(), n);
@@ -960,6 +971,7 @@ bool MyASTVisitor::has_pragma(Stmt *S, const char * n) {
 bool MyASTVisitor::has_pragma(Decl *F, const char * n) {
   return has_pragma( F->getSourceRange().getBegin(), n);
 }
+
 
 bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
   std::string arg;
@@ -996,6 +1008,7 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
 /// Check if the SourceLocation l is preceded by "#pragma transformer" on previous line.
 /// There cannot be anything except whitespace between l and the beginning of line
 /// Pragma_args will point to the beginning of arguments of pragma
+
 bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & arguments, 
                                           SourceLocation & pragmaloc ) {
   SourceLocation l = l0;
@@ -1067,11 +1080,12 @@ bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & argu
   return false; 
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////
 /// These are the main traverse methods
 /// By overriding these methods in MyASTVisitor we can control which nodes are visited.
 /// These are control points for the depth of the traversal;
 ///  check_loop, skip_children,  ast_depth
+////////////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
@@ -1151,8 +1165,10 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
 //   }
 // }
 
-// finish the field_ref_list, and
-// construct the field_info_list
+//////////////////////////////////////////////////////////////////////////////
+/// Process the field<> -references appearing in this loop, and
+/// construct the field_info_list
+//////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::check_field_ref_list() {
 
@@ -1188,11 +1204,13 @@ bool MyASTVisitor::check_field_ref_list() {
         no_errors = false;
       }
       lfv.type_template.erase(0,5);  // Remove "field"  from field<T>
+
+      lfv.nameExpr = p.nameExpr;     // store the first nameExpr to this field
       
       field_info_list.push_back(lfv);
       fip = & field_info_list.back();
     }
-    // now lfip points to the right info element
+    // now fip points to the right info element
     // copy that to lf reference
     p.info = fip;
 
@@ -1261,9 +1279,15 @@ bool MyASTVisitor::check_field_ref_list() {
     } // direction
   } // p-loop
   
-  // check for f[ALL] = f[X+dir] -type use, which is undefined
   
   for (field_info & l : field_info_list) {
+
+    // Check if the field can be vectorized
+
+    l.vecinfo = inspect_field_type(l.nameExpr);
+
+    // check for f[ALL] = f[X+dir] -type use, which is undefined
+
     if (l.is_written && l.dir_list.size() > 0) {
  
       // There may be error, find culprits
@@ -1306,8 +1330,10 @@ bool MyASTVisitor::check_field_ref_list() {
   return no_errors;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/// Check now that the references to variables are as required
+/////////////////////////////////////////////////////////////////////////////
 
-/// Check now that the references to variables are according to rules
 void MyASTVisitor::check_var_info_list() {
   for (var_info & vi : var_info_list) {
     if (!vi.is_loop_local) {
@@ -1952,21 +1978,20 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
   return true;
 }
 
-#if 0
-bool MyASTVisitor::
-VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
-  if (D->getNameAsString() == "field") {    
-    const TemplateArgumentList & tal = D->getTemplateArgs();
-    llvm::errs() << " *** field with args ";
-    for (unsigned i = 0; i < tal.size(); i++) 
-      llvm::errs() << TheRewriter.getRewrittenText(tal.get(i).getAsExpr()->getSourceRange())
-                   << " ";
-    llvm::errs() << "\n";
+
+// THis is just to enable ast dump
+bool MyASTVisitor::VisitType( Type * T) {
+  if (parsing_state.check_loop && state::loop_found) return true;
+
+  auto * recdecl = T->getAsCXXRecordDecl();
+  if (recdecl != nullptr) {
+    if (has_pragma(recdecl->getInnerLocStart(),"ast dump")) {
+      ast_dump_header("type",recdecl->getInnerLocStart());
+      recdecl->dumpColor();
+    }
   }
   return true;
 }
-#endif
-
 
 
 

@@ -169,6 +169,23 @@ struct dir_ptr {
 };
 
 
+
+/// field_type_info contains information of the template argument of
+/// field<type> -expression.  Type is vectorizable if:
+/// a) just float, double, int  or 
+/// b) is templated type, with float/double in template and  implements 
+///    the method using base_type = typename base_type_struct<T>::type;
+
+enum class number_type {INT, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
+
+struct vectorization_info {
+  bool is_vectorizable;
+  int vector_length;
+  number_type basetype;
+  std::string vectorized_type;
+};
+
+
 // main struct for storing info about each field variable inside loops
 // one field_info for each loop variable
   
@@ -179,10 +196,13 @@ struct field_info {
   std::string loop_ref_name;             // var which refers to payload, loop_ref_name v = new_name->fs.payload
   std::vector<dir_ptr> dir_list;         // nb directions TODO: more general gather ptr
   std::vector<field_ref *> ref_list;     // where the var is referred at
+  Expr *nameExpr;                        // first of the name exprs to this field
+  vectorization_info vecinfo;            // info of the type in field<type>
+
   bool is_written;                       // is the field written to in this loop
   bool is_read_atX;                      // local read, i.e. field[X]
   bool is_read_nb;                       // read using nn-neighbours 
-  bool is_read_offset;                  // read with an offset (non-nn) index
+  bool is_read_offset;                   // read with an offset (non-nn) index
   int  first_assign_seq;                 // the sequence of the first assignment
 
   field_info() {
@@ -268,6 +288,10 @@ reduction get_reduction_type(bool, std::string &, var_info &);
 void set_fid_modified(const FileID FID);
 bool search_fid(const FileID FID);
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
+
+// reset the status of vectorizable types
+void reset_vectorizable_types();
+
 
 // take global CI just in case
 extern CompilerInstance *myCompilerInstance;
