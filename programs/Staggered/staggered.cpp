@@ -21,19 +21,17 @@ void gaussian_momentum(field<NMAT> *momentum){
         for(int j=0; j<N; j++) {
           double a = gaussian_ran();
           double b = gaussian_ran();
-
           momentum[dir][X].c[i][j].re = a;
           momentum[dir][X].c[i][j].im = b;
           momentum[dir][X].c[j][i].re =-a;
           momentum[dir][X].c[j][i].im = b;
         }
-        double a = gaussian_ran();
-        momentum[dir][X].c[i][i].re = 0;
-        momentum[dir][X].c[i][i].im = a;
-        tr += a;
       }
-      for(int i=0; i<N; i++) {
-        momentum[dir][X].c[i][i].im -= tr/N;
+      for(int i=1; i<N; i++) {
+        double a = gaussian_ran()*sqrt(2.0/(i*(i+1)));
+        for(int j=0; j<i; j++)
+          momentum[dir][X].c[i][i].im += a;
+        momentum[dir][X].c[i][i].im -= i*a;
       }
     }
   }
