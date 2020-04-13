@@ -108,6 +108,7 @@ OBJECTS = \
   $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/myastvisitor.o \
   $(BUILDDIR)/loop_function.o \
+  $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o
