@@ -96,6 +96,12 @@ class SU : public matrix<n,n,cmplx<radix> >{
       }
     }
 
+    SU(matrix<n,n,cmplx<radix>> m) {
+        for (int j=0; j<n; j++) for (int i=0; i<n; i++){
+            this->c[i][j] = m.c[i][j];
+        }
+    }
+
 
     void reunitarize(){ //implement later
         make_unitary();
@@ -118,10 +124,23 @@ class SU : public matrix<n,n,cmplx<radix> >{
         }
     }
 
+    void exp(const int depth = 12){
+        matrix<n,n,cmplx<radix>> A, An;
+        radix factor = 1;
+        A = *this;
+        An = *this;
+        *this = 1;
+        for (int k = 1; k<=depth; k++){
+            factor = factor/static_cast<radix>(k);
+            (*this) += An*factor;
+            An *= A;
+        }
+    }
+
     //generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix. 
     //more iterations are needed to generate larger elements: 12 works well for n < 10. 
 
-    void random(const int depth = 12){ 
+    void random(const int depth = 12) { 
         matrix<n,n,cmplx<radix>> A, An, res;
         An = 1; 
         res = 1;
