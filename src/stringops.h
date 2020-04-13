@@ -18,7 +18,7 @@ std::string remove_all_whitespace(const std::string & line);
 
 /// if in contains the pattern returns its first location.
 /// pattern must be delimited by non-alphanumeric chars (c++ symbol name rules)
-int find_word(const std::string & in, const std::string & pattern, int pos = 0);
+std::string::size_type find_word(const std::string & in, const std::string & pattern, int pos = 0);
 
 /// Check whether line contains the list of strings given in list.  Initial whitespaces skipped
 bool contains_word_list(const std::string & line, const std::vector<std::string> & list);
