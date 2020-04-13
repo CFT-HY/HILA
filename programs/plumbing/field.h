@@ -90,10 +90,13 @@ class field {
 #endif
         }
       }
-#else
+
+#else  // Not MPI
+
       // empty stubs
       void initialize_communication(){}
       void free_communication(){}
+
 #endif
 
       void allocate_payload() { 

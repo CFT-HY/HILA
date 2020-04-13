@@ -228,7 +228,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc)
   else i = i/2 + this_node.subnodes.evensites;  /* odd site */
 #endif
 
-  return (subl + layout_subnodes*i);
+  return (subl + number_of_subnodes*i);
 
 }
 
@@ -263,9 +263,9 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
   }
 
 #if defined(EVEN_SITES_FIRST)
-  if (layout_subnodes > 1) { // ensure this works even when == 1
+  if (number_of_subnodes > 1) { // ensure this works even when == 1
     if (s%2 == 0) i = i/2;              /* even site index */
-    else i = i/2 + ni.evensites/layout_subnodes;  /* odd site */
+    else i = i/2 + ni.evensites/number_of_subnodes;  /* odd site */
   } else {
     // no subnodes, for some reason
     if (s%2 == 0) i = i/2;
@@ -273,7 +273,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
   }
 #endif
 
-  return (subl + layout_subnodes*i);
+  return (subl + number_of_subnodes*i);
 }
 
 #endif // VECTOR_LAYOUT
@@ -398,7 +398,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   coordinates.resize(subnodes.sites);
   coordinate_vector l = min;
   for(unsigned i = 0; i<subnodes.sites; i++){
-    coordinates[ lattice.site_index(l)/layout_subnodes ] = l;
+    coordinates[ lattice.site_index(l)/number_of_subnodes ] = l;
     // walk through the coordinates
     foralldir(d) {
       if (++l[d] < (min[d]+subnodes.size[d])) break;
@@ -418,12 +418,12 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
 void lattice_struct::node_struct::subnode_struct::setup(const node_struct & tn)
 {
   size = tn.size / divisions;
-  evensites = tn.evensites / layout_subnodes;
-  oddsites  = tn.oddsites / layout_subnodes;
+  evensites = tn.evensites / number_of_subnodes;
+  oddsites  = tn.oddsites / number_of_subnodes;
   sites     = evensites + oddsites;
 
   coordinate_vector offs(0);
-  for (int i=0; i<layout_subnodes; i++) {
+  for (int i=0; i<number_of_subnodes; i++) {
     offset[i] = offs;
     // walk through the offsets
     foralldir(d) {
@@ -838,6 +838,7 @@ lattice_struct::gen_comminfo_struct lattice_struct::create_general_gather( const
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
+#pragma transformer dump ast
 struct test_tt {
   T r[NDIM];
 

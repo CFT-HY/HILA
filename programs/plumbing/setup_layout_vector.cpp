@@ -31,7 +31,7 @@ void lattice_struct::setup_layout()
   }
   output0 << "  =  " << l_volume << " sites\n";
   output0 << "Dividing to " << numnodes() << " nodes\n";
-  output0 << "Layout using vector of " << layout_subnodes << " elements\n";
+  output0 << "Layout using vector of " << number_of_subnodes << " elements\n";
 
   // we want to divide up to numnode * vector_size virtual nodes
   // use the float vector size to divide to numnodes() * vector_size nodes, this is the most
@@ -46,7 +46,7 @@ void lattice_struct::setup_layout()
 
   // try divisions:
   // number of virtual nodes
-  nn *= layout_subnodes;
+  nn *= number_of_subnodes;
 
   int i = nn; 
   for (int n=0; n<NPRIMES; n++) {
@@ -168,15 +168,15 @@ void lattice_struct::setup_layout()
 
           int sd = subdiv[dir] * 2;
           if (dir != mdir && nodesiz[dir] % 2 == 0 && divisions[dir] % sd == 0 
-              && n_subn < layout_subnodes) {
+              && n_subn < number_of_subnodes) {
             subdiv[dir] = sd;
             n_subn *= 2;
             div_done = true;
           }
         }
-      } while (div_done && n_subn < layout_subnodes);
+      } while (div_done && n_subn < number_of_subnodes);
 
-      if (n_subn != layout_subnodes) fail = true;
+      if (n_subn != number_of_subnodes) fail = true;
 
     }
 
@@ -269,7 +269,7 @@ void lattice_struct::setup_layout()
       if (dir > 0) output0 << " x ";
       output0 << subdiv[dir];
     }
-    output0 << "  =  " << layout_subnodes << " subnodes\n";
+    output0 << "  =  " << number_of_subnodes << " subnodes\n";
     
     output0 << "Sites on subnodes: ";
     foralldir(dir) {

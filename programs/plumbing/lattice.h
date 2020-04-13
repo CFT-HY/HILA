@@ -16,9 +16,11 @@
 #include "../plumbing/inputs.h"
 
 #ifdef VECTOR_LAYOUT
+#ifndef VECTOR_SIZE
 #define VECTOR_SIZE (256/8)
+#endif
 // This is the vector size used to determine the layout
-constexpr unsigned layout_subnodes = VECTOR_SIZE/sizeof(float);
+constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
 #endif
 
 
@@ -68,7 +70,7 @@ private:
     // constant across nodes
     struct subnode_struct {
       coordinate_vector divisions,size;  // div to subnodes to directions, size
-      coordinate_vector offset[layout_subnodes];  // coord shift to subnodes
+      coordinate_vector offset[number_of_subnodes];  // coord shift to subnodes
       unsigned sites,evensites,oddsites;   
 
       void setup(const node_struct & tn);
@@ -267,8 +269,8 @@ public:
 
   inline const coordinate_vector coordinates( unsigned idx ){
 
-    return  this_node.coordinates[idx / layout_subnodes]
-            + this_node.subnodes.offset[idx % layout_subnodes];
+    return  this_node.coordinates[idx / number_of_subnodes]
+            + this_node.subnodes.offset[idx % number_of_subnodes];
   }
 #endif
 
