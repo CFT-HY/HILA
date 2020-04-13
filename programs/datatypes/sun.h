@@ -128,7 +128,7 @@ class SU : public matrix<n,n,cmplx<radix> >{
         matrix<n,n,cmplx<radix>> A, An;
         radix factor = 1;
         A = *this;
-        An = *this;
+        An = A;
         *this = 1;
         for (int k = 1; k<=depth; k++){
             factor = factor/static_cast<radix>(k);

@@ -16,9 +16,8 @@
 void gaussian_momentum(field<NMAT> *momentum){
   foralldir(dir) {
     onsites(ALL){
-      double tr = 0;
       for(int i=0; i<N; i++) {
-        for(int j=0; j<N; j++) {
+        for(int j=0; j<i; j++) {
           double a = gaussian_ran();
           double b = gaussian_ran();
           momentum[dir][X].c[i][j].re = a;
@@ -26,6 +25,11 @@ void gaussian_momentum(field<NMAT> *momentum){
           momentum[dir][X].c[j][i].re =-a;
           momentum[dir][X].c[j][i].im = b;
         }
+      }
+
+      for(int i=1; i<N; i++) {
+        momentum[dir][X].c[i][i].re = 0;
+        momentum[dir][X].c[i][i].im = 0;
       }
       for(int i=1; i<N; i++) {
         double a = gaussian_ran()*sqrt(2.0/(i*(i+1)));
@@ -39,7 +43,7 @@ void gaussian_momentum(field<NMAT> *momentum){
 
 
 /// Gaussian random momentum for each element
-void project_antihermitean(element<SUN> &matrix){
+void project_antihermitean(element<NMAT> &matrix){
   double tr = 0;
   for(int i=0; i<N; i++) {
     for(int j=0; j<N; j++) {
@@ -83,7 +87,7 @@ double momentum_action(field<NMAT> *momentum){
 field<SUN> calc_staples(field<SUN> *U, direction dir)
 {
   field<SUN> staple_sum;
-  static field<matrix<N,N,cmplx<double>>> down_staple;
+  static field<SUN> down_staple;
   staple_sum[ALL] = 0;
   foralldir(dir2){
     //Calculate the down side staple.
@@ -97,7 +101,7 @@ field<SUN> calc_staples(field<SUN> *U, direction dir)
                      * U[dir][X+dir2].conjugate()
                      * U[dir2][X].conjugate();
     // Add the down staple
-    staple_sum[ALL] = staple_sum[X] + down_staple[X - dir2];
+    staple_sum[ALL] = staple_sum[X] + down_staple[X-dir2];
   }
   return staple_sum;
 }
@@ -113,15 +117,15 @@ double plaquette(field<SUN> *U){
       temp =  U[dir1][X] * U[dir2][X+dir1];
       temp = temp*U[dir1][X+dir2].conjugate();
       temp = temp*U[dir2][X].conjugate();
-      Plaq += 1-temp.trace().re/N;
+      Plaq += 1.0-temp.trace().re/N;
     }
   }
   return Plaq;
 }
 
 /// Calculate the action
-double gauge_action(field<SUN> *U, double beta){
-  return beta*plaquette(U);
+double gauge_action(field<SUN> *gauge, double beta){
+  return beta*plaquette(gauge);
 }
 
 
@@ -133,7 +137,7 @@ void gauge_force(field<SUN> *gauge, field<NMAT> *momentum, double eps){
   foralldir(dir){
     field<SUN> staples = calc_staples(gauge, dir);
     onsites(ALL){
-      element<SUN> force;
+      element<NMAT> force;
       force = gauge[dir][X]*staples[X];
       project_antihermitean(force);
       momentum[dir][X] = momentum[dir][X] - eps*force;
@@ -178,7 +182,7 @@ void update_hmc(field<SUN> *gauge, double beta, int steps){
 
   for(int step=0; step < steps; step++){
 
-    leapfrog_step(gauge, momentum, beta, 1.0/steps);
+    leapfrog_step(gauge, momentum, beta, 0.1/steps);
 
     S_gauge = gauge_action(gauge, beta);
     S_mom = momentum_action(momentum);
@@ -212,13 +216,41 @@ int main(int argc, char **argv){
   // Starting with a unit configuration
   foralldir(dir){
     onsites(ALL){
-      gauge[dir][X] = 1;
+      gauge[dir][X].random();
     }
   }
 
+  double eps = 0.001;
+  double s1 = gauge_action(gauge, beta);
+  output0 << s1 << "\n";
+
+  SUN g = gauge[0].get_value_at(0);
+  g.c[0][1].re += eps;
+  g.c[1][0].re -= eps;
+  gauge[0].set_value_at(g, 0);
+
+  double s2 = gauge_action(gauge, beta);
+  output0 << s2 << " " << (s2-s1)/(eps*beta) << "\n";
+  g.c[0][1].re -= eps;
+  g.c[1][0].re += eps;
+  gauge[0].set_value_at(g, 0);
+
+  field<NMAT> momentum[NDIM];
+  foralldir(dir){
+    onsites(ALL){
+      momentum[dir][X] = 0;
+    }
+  }
+
+  gauge_force(gauge, momentum, 1);
+  NMAT f = momentum[0].get_value_at(0);
+  output0 << f.c[0][1].re << " " << f.c[1][0].re << "\n";
+  output0 << f.c[0][1].re + (s2-s1)/(eps*beta) << "\n";
 
 
-  for(int step = 0; step < 10; step ++){
+
+
+  for(int step = 0; step < 20; step ++){
     update_hmc(gauge, beta, hmc_steps);
   }
 
