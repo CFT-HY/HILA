@@ -34,7 +34,7 @@ void gaussian_momentum(field<NMAT> *momentum){
       for(int i=1; i<N; i++) {
         double a = gaussian_ran()*sqrt(2.0/(i*(i+1)));
         for(int j=0; j<i; j++)
-          momentum[dir][X].c[i][i].im += a;
+          momentum[dir][X].c[j][j].im += a;
         momentum[dir][X].c[i][i].im -= i*a;
       }
     }
