@@ -83,9 +83,6 @@ bool MyASTVisitor::VisitTypeAliasDecl(TypeAliasDecl * ta) {
     std::string class_name = ta->getQualifiedNameAsString();
     std::string type_name = ta->getUnderlyingType().getCanonicalType().getAsString();
 
-    llvm::errs() << "GOT base_type ALIAS DECL! QUALIFIED NAME  " << class_name << '\n';
-    llvm::errs() << "      IS TYPE " << type_name << '\n';
-
     number_type nt = get_number_type(type_name);
     if (nt == number_type::UNKNOWN) return true;   // Unknown number type, we'll do nothing
   
