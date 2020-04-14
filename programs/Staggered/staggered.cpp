@@ -109,7 +109,7 @@ field<SUN> calc_staples(field<SUN> *U, direction dir)
 
 
 /// Measure the plaquette
-double plaquette(field<SUN> *U){
+double plaquette_sum(field<SUN> *U){
   double Plaq=0;
   foralldir(dir1) foralldir(dir2) if(dir2 < dir1){
     onsites(ALL){
@@ -123,9 +123,14 @@ double plaquette(field<SUN> *U){
   return Plaq;
 }
 
+double plaquette(field<SUN> *gauge){
+  return plaquette_sum(gauge)/(lattice->volume()*NDIM*(NDIM-1));
+}
+
+
 /// Calculate the action
 double gauge_action(field<SUN> *gauge, double beta){
-  return beta*plaquette(gauge);
+  return beta*plaquette_sum(gauge);
 }
 
 
@@ -296,7 +301,7 @@ int main(int argc, char **argv){
   // Now the actual simulation
   for(int step = 0; step < 1000; step ++){
     update_hmc(gauge, beta, hmc_steps, traj_length);
-    double plaq = plaquette(gauge)/lattice->volume();
+    double plaq = plaquette(gauge);
     output0 << "Plaq: " << plaq << "\n";
   }
 
