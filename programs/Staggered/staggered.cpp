@@ -75,7 +75,6 @@ double momentum_action(field<NMAT> *momentum){
         }
         double diag = momentum[dir][X].c[i][i].im;
         thissum += 0.5*diag*diag;
-        coordinate_vector c=coordinates(X);
       }
       sum += thissum;
     }
@@ -170,28 +169,45 @@ void leapfrog_step(field<SUN> *gauge, field<NMAT> *momentum, double beta, double
 
 
 
-void update_hmc(field<SUN> *gauge, double beta, int steps){
+void update_hmc(field<SUN> *gauge, double beta, int steps, double traj_length){
   field<VEC> vector;
   field<NMAT> momentum[NDIM];
+
+  static int accepted=0, trajectory=1;
 
   gaussian_momentum(momentum);
   double S_gauge = gauge_action(gauge, beta);
   double S_mom = momentum_action(momentum);
   double start_action = S_gauge + S_mom;
-  output0 << "Action " << S_gauge << " " << S_mom << " "
-          << start_action << "\n";
+  output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
+          << S_gauge << " " << S_mom << " " << start_action << "\n";
+
+  field<SUN> gauge_copy[NDIM];
+  foralldir(dir) gauge_copy[dir] = gauge[dir];
 
   for(int step=0; step < steps; step++){
-    leapfrog_step(gauge, momentum, beta, 1.0/steps);
+    leapfrog_step(gauge, momentum, beta, traj_length/steps);
   }
 
   double S2_gauge = gauge_action(gauge, beta);
   double S2_mom = momentum_action(momentum);
-  //output0 << "Gauge " << S2_gauge - S_gauge << "\n" ;
-  //output0 << "Mom " << S2_mom - S_mom << "\n" ;
-  output0 << "Action " << S2_gauge << " " << S2_mom << " "
-        << S2_gauge + S2_mom  << " " << start_action-S2_gauge - S2_mom
-        << "\n";
+  double edS = exp(-(S2_gauge+S2_mom - start_action));
+
+
+  output0 << "End HMC: Action " << S2_gauge << " " << S2_mom << " "
+        << S2_gauge + S2_mom  << " " << S2_gauge+S2_mom - start_action
+        << " exp(-dS) " << edS << "\n";
+
+  if(hila_random() < edS){
+    output0 << "Accepted!\n";
+    accepted++;
+  } else {
+    output0 << "Rejected!\n";
+  }
+
+  output0 << "Acceptance " << accepted << "/" << trajectory 
+          << " " << (double)accepted/(double)trajectory << "\n";
+  trajectory++;
 }
 
 
@@ -208,6 +224,7 @@ int main(int argc, char **argv){
   double beta = parameters.get("beta");
   int seed = parameters.get("seed");
 	double hmc_steps = parameters.get("hmc_steps");
+	double traj_length = parameters.get("traj_length");
 
   lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
   seed_random(seed);
@@ -242,16 +259,19 @@ int main(int argc, char **argv){
 
   if(mynode()==0)
     gauge[0].set_value_at(g1, 50);
+  gauge[0].mark_changed(ALL);
   double s1 = gauge_action(gauge, 1.0);
   output0 << s1 << "\n";
 
   if(mynode()==0)
     gauge[0].set_value_at(g12,50);
+  gauge[0].mark_changed(ALL);
   double s2 = gauge_action(gauge, 1.0);
   output0 << s2 << " " << (s2-s1)/eps << "\n";
 
   if(mynode()==0)
     gauge[0].set_value_at(g1, 50);
+  gauge[0].mark_changed(ALL);
 
   gauge_force(gauge, momentum, 1.0/N);
   NMAT f = momentum[0].get_value_at(50);
@@ -265,18 +285,19 @@ int main(int argc, char **argv){
   s1 = momentum_action(momentum);
   h = momentum[0].get_value_at(0);
   h.c[0][0].im += eps;
-  h.c[1][1].im -= eps;
   if(mynode()==0)
     momentum[0].set_value_at(h, 0);
   s2 = momentum_action(momentum);
 
   output0 << s1 << " " << s2 << " " << (s2-s1)/eps << "\n";
-  output0 << h.c[0][0].im << " " << 2*h.c[0][0].im - (s2-s1)/eps << "\n";
+  output0 << h.c[0][0].im << " " << h.c[0][0].im - (s2-s1)/eps << "\n";
 
-  
-  gaussian_momentum(momentum);
-  for(int step = 0; step < 1; step ++){
-    update_hmc(gauge, beta, hmc_steps);
+
+  // Now the actual simulation
+  for(int step = 0; step < 1000; step ++){
+    update_hmc(gauge, beta, hmc_steps, traj_length);
+    double plaq = plaquette(gauge)/lattice->volume();
+    output0 << "Plaq: " << plaq << "\n";
   }
 
 
