@@ -228,6 +228,8 @@ public:
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op, Stmt * assign_stmt = nullptr);
   void handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
 
+  var_info * new_var_info(VarDecl *decl);
+
   bool check_rhs_of_assignment(Stmt *s);
 
   /// this checks if the statement s is site-dependent inside site loops

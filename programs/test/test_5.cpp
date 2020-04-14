@@ -17,6 +17,7 @@ using ft = cmplx<double>;
 template <typename T>
 class v2 {
 public:
+  using base_type = typename base_type_struct<T>::type;
   cmplx<T> a[2];
 };
 
@@ -47,13 +48,23 @@ int main()
   A[ALL] = { cmplx(1,0), cmplx(0,0) };
   
   onsites(p) {
+    #pragma transformer ast dump
     double dv = t[X];
+
+    #pragma transformer ast dump
+    double t2;
+
+    #pragma transformer ast dump
+    double t4 = 5.0;
     
     t[X] = 1;
 
     double vv = (double)X.parity();
 
     A[X].a[0] = 0;
+
+    #pragma transformer ast dump
+    v2<double> vvv = A[X];
     // c[X] = b[X+(XUP+YUP)];
     // #pragma transformer ast dump
     c[X] = a[X];

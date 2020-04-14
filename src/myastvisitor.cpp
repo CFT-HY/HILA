@@ -457,47 +457,19 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     }
     if (!found) {
       // new variable referred to
-      var_info vi;
-      vi.refs = {};
-      vi.refs.push_back(vr);
-      vi.decl = decl;
-      vi.name = decl->getName();
-      // Printing policy is somehow needed for printing type without "class" id
-      // Unqualified takes away "consts" etc and Canonical typdefs/using.
-      // Also need special handling for element type
-      PrintingPolicy pp(Context->getLangOpts());
-      vi.type = DRE->getType().getUnqualifiedType().getAsString(pp);
-      vi.type = remove_all_whitespace(vi.type);
-      bool is_elem = (vi.type.find("element<") == 0);
-      vi.type = DRE->getType().getUnqualifiedType().getCanonicalType().getAsString(pp);
-      if (is_elem) vi.type = "element<" + vi.type + ">";
-      // llvm::errs() << " + Got " << vi.type << '\n';
+      vip = new_var_info(decl);
 
-      // is it loop-local?
-      vi.is_loop_local = false;
-      for (var_decl & d : var_decl_list) {
-        if (d.scope >= 0 && vi.decl == d.decl) {
-          llvm::errs() << "loop local var ref! " << vi.name << '\n';
-          vi.is_loop_local = true;
-          vi.var_declp = &d;
-          break;
-        }
-      }
-      vi.is_assigned = is_assign;
+      vip->refs.push_back(vr);
+      vip->is_assigned = is_assign;
       // we know refs contains only 1 element
-      vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
+      vip->reduction_type = get_reduction_type(is_assign, assignop, *vip);
 
-      vi.depends_on_site = false; // default value
-      
-      var_info_list.push_back(vi);
-      vip = &(var_info_list.back());
     }
 
     if (is_assign && assign_stmt != nullptr && !vip->depends_on_site) {
       vip->depends_on_site = check_rhs_of_assignment(assign_stmt);
       
       llvm::errs() << "Var " << vip->name << " depends on site: " << vip->depends_on_site <<  "\n";
-
     } 
     
   } else { 
@@ -507,6 +479,44 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
                "Reference to unimplemented (non-variable) type");
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+///  Insert the new variable info
+
+
+var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
+
+  var_info vi;
+  vi.refs = {};
+  vi.decl = decl;
+  vi.name = decl->getName();
+  // Printing policy is somehow needed for printing type without "class" id
+  // Unqualified takes away "consts" etc and Canonical typdefs/using.
+  // Also need special handling for element type
+  PrintingPolicy pp(Context->getLangOpts());
+  vi.type = decl->getType().getUnqualifiedType().getAsString(pp);
+  vi.type = remove_all_whitespace(vi.type);
+  bool is_elem = (vi.type.find("element<") == 0);
+  vi.type = decl->getType().getUnqualifiedType().getCanonicalType().getAsString(pp);
+  if (is_elem) vi.type = "element<" + vi.type + ">";
+  // llvm::errs() << " + Got " << vi.type << '\n';
+
+  // is it loop-local?
+  vi.is_loop_local = false;
+  for (var_decl & d : var_decl_list) {
+    if (d.scope >= 0 && vi.decl == d.decl) {
+      llvm::errs() << "loop local var ref! " << vi.name << '\n';
+      vi.is_loop_local = true;
+      vi.var_declp = &d;
+      break;
+    }
+  }
+  vi.depends_on_site = false;  // default case
+
+  var_info_list.push_back(vi);
+  return &(var_info_list.back());
+}
+
 
 ///////////////////////////////////////////////////////////////////
 /// Check if the RHS of assignment is site dependent
@@ -1435,6 +1445,10 @@ SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
 }
 
 
+/////////////////////////////////////////////////////////////////////////////
+/// Variable decl inside field loops
+/////////////////////////////////////////////////////////////////////////////
+
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   
   if (parsing_state.check_loop && state::loop_found) return true;
@@ -1471,9 +1485,20 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     vd.type = var->getType().getAsString();
     vd.scope = parsing_state.scope_level;
 
-    // TODO: we should probably handle initialization statements here too!!!
-
     var_decl_list.push_back(vd);
+
+    // insert this to var_info_list too
+
+    var_info * ip = new_var_info(var);
+    ip->reduction_type = reduction::NONE;
+
+    // finally, check initialization
+    if (var->hasInit()) {
+      ip->depends_on_site = depends_on_site(var->getInit());
+      ip->is_assigned = true;
+    } else {
+      ip->is_assigned = false;
+    }
     
     llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
     return true;
