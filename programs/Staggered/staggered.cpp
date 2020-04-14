@@ -255,7 +255,7 @@ int main(int argc, char **argv){
 
   // Test the force calculation by varying one gauge link
   // (Needs to be moved to tests)
-  double eps = 0.00001;
+  double eps = 1e-6;
   SUN g1 = gauge[0].get_value_at(50);
   SUN h = 1;
   h.c[0][1].re += eps;
@@ -266,13 +266,11 @@ int main(int argc, char **argv){
     gauge[0].set_value_at(g1, 50);
   gauge[0].mark_changed(ALL);
   double s1 = gauge_action(gauge, 1.0);
-  output0 << s1 << "\n";
 
   if(mynode()==0)
     gauge[0].set_value_at(g12,50);
   gauge[0].mark_changed(ALL);
   double s2 = gauge_action(gauge, 1.0);
-  output0 << s2 << " " << (s2-s1)/eps << "\n";
 
   if(mynode()==0)
     gauge[0].set_value_at(g1, 50);
@@ -280,8 +278,11 @@ int main(int argc, char **argv){
 
   gauge_force(gauge, momentum, 1.0/N);
   NMAT f = momentum[0].get_value_at(50);
-  output0 << f.c[0][1].re << " " << f.c[1][0].re << "\n";
-  output0 << 2*f.c[0][1].re + (s2-s1)/eps << "\n";
+  double diff;
+  if(mynode()==0) {
+    diff = 2*f.c[0][1].re + (s2-s1)/eps;
+    assert( diff*diff < eps*eps*100 );
+  }
 
 
   // Check also the momentum action and derivative
@@ -294,8 +295,10 @@ int main(int argc, char **argv){
     momentum[0].set_value_at(h, 0);
   s2 = momentum_action(momentum);
 
-  output0 << s1 << " " << s2 << " " << (s2-s1)/eps << "\n";
-  output0 << h.c[0][0].im << " " << h.c[0][0].im - (s2-s1)/eps << "\n";
+  if(mynode()==0) {
+    diff = h.c[0][0].im - (s2-s1)/eps;
+    assert( diff*diff < eps*eps*100 );
+  }
 
 
   // Now the actual simulation
