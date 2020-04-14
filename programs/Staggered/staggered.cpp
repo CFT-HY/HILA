@@ -171,6 +171,16 @@ void leapfrog_step(field<SUN> *gauge, field<NMAT> *momentum, double beta, double
 }
 
 
+void O2_step(field<SUN> *gauge, field<NMAT> *momentum, double beta, double eps){
+  double zeta = eps*0.1931833275037836;
+  double middlestep = eps-2*zeta;
+  gauge_force(gauge, momentum, beta*zeta/N);
+  gauge_step(gauge, momentum, 0.5*eps);
+  gauge_force(gauge, momentum, beta*middlestep/N);
+  gauge_step(gauge, momentum, 0.5*eps);
+  gauge_force(gauge, momentum, beta*zeta/N);
+}
+
 
 
 
@@ -191,7 +201,7 @@ void update_hmc(field<SUN> *gauge, double beta, int steps, double traj_length){
   foralldir(dir) gauge_copy[dir] = gauge[dir];
 
   for(int step=0; step < steps; step++){
-    leapfrog_step(gauge, momentum, beta, traj_length/steps);
+    O2_step(gauge, momentum, beta, traj_length/steps);
   }
 
   double S2_gauge = gauge_action(gauge, beta);
