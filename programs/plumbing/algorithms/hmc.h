@@ -3,13 +3,13 @@
 
 
 
-/// An integrator class must implement at least two functions, 
 
 
-
-
-/// A leapfrog step, which can be used as a vuilding block of an
-/// integrator
+/// A leapfrog step, which can be used as a building block of an
+/// integrator.
+// The action term class needs to implement two update steps,
+// called momentum_step(double eps) and force_step(double eps).
+// The force_step is assumed to be numerically more expensive.
 template<class action_term>
 void leapfrog_step(action_term at, double eps){
   at.momentum_step(0.5*eps);
@@ -38,6 +38,9 @@ void O2_step(action_term at, double eps){
 // Consists of an integration step following equations of
 // motion implemented in the integrator class gt
 // and an accept-reject step using the action
+//
+// The integrator class must implement at least two functions, 
+// action() an integrator_step(double eps) 
 template<class integrator>
 void update_hmc(integrator gt, int steps, double traj_length){
   static int accepted=0, trajectory=1;
