@@ -241,6 +241,7 @@ struct var_info {
   reduction reduction_type;
   std::string reduction_name;
   bool is_assigned;
+  bool depends_on_site;
 };
 
 // Stores onformation for a single reference to an array

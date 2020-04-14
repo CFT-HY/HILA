@@ -109,6 +109,7 @@ OBJECTS = \
   $(BUILDDIR)/myastvisitor.o \
   $(BUILDDIR)/loop_function.o \
   $(BUILDDIR)/vectorization_info.o \
+  $(BUILDDIR)/depends_on_site.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o

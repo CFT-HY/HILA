@@ -225,8 +225,13 @@ public:
   
   bool handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X);
   
-  void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
+  void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op, Stmt * assign_stmt = nullptr);
   void handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
+
+  bool check_rhs_of_assignment(Stmt *s);
+
+  /// this checks if the statement s is site-dependent inside site loops
+  bool depends_on_site(Expr *e);
 
   void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
@@ -344,6 +349,9 @@ public:
   bool TraverseStmt(Stmt *s);
   bool VisitDeclRefExpr(DeclRefExpr * e);
 };
+
+
+
 
 
 #endif

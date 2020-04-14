@@ -236,9 +236,9 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
         LoopAssignChecker lac(TheRewriter, Context);
         lac.TraverseStmt(OP->getArg(1));
       } else {
-        llvm::errs() << " ** Element type : " << type << '\n';
-        PrintingPolicy pp(Context->getLangOpts());
-        llvm::errs() << " ** Canonical type without keywords: " << OP->getArg(0)->getType().getCanonicalType().getAsString(pp) << '\n';
+        // llvm::errs() << " ** Element type : " << type << '\n';
+        // PrintingPolicy pp(Context->getLangOpts());
+        // llvm::errs() << " ** Canonical type without keywords: " << OP->getArg(0)->getType().getCanonicalType().getAsString(pp) << '\n';
       }
     }
   }
@@ -421,11 +421,15 @@ reduction get_reduction_type(bool is_assign,
   return reduction::NONE;
 }
 
+////////////////////////////////////////////////////////////////////////////
+/// This processes references to non-field variables within field loops
+/// if is_assign==true, this is assigned to with assignop and assign_stmt contains
+/// the full assignment op
+////////////////////////////////////////////////////////////////////////////
 
-// This processes references to non-field variables within field loops
-void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
-                                  bool is_assign,
-                                  std::string &assignop) {
+
+void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
+                                  std::string &assignop, Stmt * assign_stmt) {
 
   
   if (isa<VarDecl>(DRE->getDecl())) {
@@ -435,7 +439,8 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
     //vr.ind = writeBuf->markExpr(DRE);
     vr.is_assigned = is_assign;
     if (is_assign) vr.assignop = assignop;
-    
+
+
     bool found = false;
     var_info *vip = nullptr;
     for (var_info & vi : var_info_list) {
@@ -481,10 +486,20 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
       vi.is_assigned = is_assign;
       // we know refs contains only 1 element
       vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
+
+      vi.depends_on_site = false; // default value
       
       var_info_list.push_back(vi);
       vip = &(var_info_list.back());
     }
+
+    if (is_assign && assign_stmt != nullptr && !vip->depends_on_site) {
+      vip->depends_on_site = check_rhs_of_assignment(assign_stmt);
+      
+      llvm::errs() << "Var " << vip->name << " depends on site: " << vip->depends_on_site <<  "\n";
+
+    } 
+    
   } else { 
     // end of VarDecl - how about other decls, e.g. functions?
     reportDiag(DiagnosticsEngine::Level::Error,
@@ -493,9 +508,31 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
   }
 }
 
+///////////////////////////////////////////////////////////////////
+/// Check if the RHS of assignment is site dependent
+///////////////////////////////////////////////////////////////////
 
+bool MyASTVisitor::check_rhs_of_assignment(Stmt *s) {
 
+  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
+    if (OP->isAssignmentOp()) {
+      return depends_on_site(OP->getArg(1));
+    }
+  }
+
+  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
+    if (B->isAssignmentOp()) {
+      return depends_on_site(B->getRHS());
+    }
+  }
+  // one of these should have triggered!  
+  assert(0 && "Internal error in RHS analysis");
+}
+
+///////////////////////////////////////////////////////////////////
 /// Find the the base of a compound variable expression
+///////////////////////////////////////////////////////////////////
+
 DeclRefExpr * find_base_variable(Expr * E){
   Expr * RE = E;
 
@@ -680,6 +717,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // must remember the set value across calls
   static bool is_assignment = false;
   static bool is_compound = false;
+  static Stmt * assign_stmt = nullptr;
   static std::string assignop;
 
   // depth = 1 is the "top level" statement, should give fully formed
@@ -692,6 +730,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // And also assignments to other vars: t += norm2(lf[X]) etc.
   if (is_assignment_expr(s,&assignop,is_compound)) {
     check_allowed_assignment(s);
+    assign_stmt = s;
     is_assignment = true;
     // next visit here will be to the assigned to variable
     return true;
@@ -768,7 +807,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       if (isa<VarDecl>(DRE->getDecl())) {
         // now it should be var ref non-field
       
-        handle_var_ref(DRE,is_assignment,assignop);
+        handle_var_ref(DRE,is_assignment,assignop,assign_stmt);
         is_assignment = false;
       
         llvm::errs() << "Variable ref: "
@@ -1431,6 +1470,9 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     vd.name = var->getName();
     vd.type = var->getType().getAsString();
     vd.scope = parsing_state.scope_level;
+
+    // TODO: we should probably handle initialization statements here too!!!
+
     var_decl_list.push_back(vd);
     
     llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
@@ -2008,7 +2050,7 @@ void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument
   SourceManager &SM = TheRewriter.getSourceMgr();
 
   for (const TemplateArgument * tap : typeargs) {
-    llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
+    // llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
     const Type * tp = tap->getAsType().getTypePtrOrNull();
     // Builtins are fine too
     if (tp && !tp->isBuiltinType()) {

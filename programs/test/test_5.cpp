@@ -10,7 +10,6 @@ cmplx<double> e(cmplx<double> x) {return d(x);}
 // #pragma transformer ast dump
 cmplx<double> f(const cmplx<double> & x) { return e(x);}
 
-  #   pragma transformer    skip
 
 
 using ft = cmplx<double>;
@@ -48,10 +47,15 @@ int main()
   A[ALL] = { cmplx(1,0), cmplx(0,0) };
   
   onsites(p) {
+    double dv = t[X];
+    
+    t[X] = 1;
 
-    #pragma transformer ast dump
+    double vv = (double)X.parity();
+
     A[X].a[0] = 0;
     // c[X] = b[X+(XUP+YUP)];
+    // #pragma transformer ast dump
     c[X] = a[X];
     
     //    c[X] = a[X];
