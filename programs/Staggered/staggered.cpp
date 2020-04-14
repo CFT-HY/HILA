@@ -13,36 +13,6 @@
 
 
 /// Gaussian random momentum for each element
-void gaussian_momentum(field<NMAT> *momentum){
-  foralldir(dir) {
-    onsites(ALL){
-      for(int i=0; i<N; i++) {
-        for(int j=0; j<i; j++) {
-          double a = gaussian_ran();
-          double b = gaussian_ran();
-          momentum[dir][X].c[i][j].re = a;
-          momentum[dir][X].c[j][i].re =-a;
-          momentum[dir][X].c[i][j].im = b;
-          momentum[dir][X].c[j][i].im = b;
-        }
-      }
-
-      for(int i=0; i<N; i++) {
-        momentum[dir][X].c[i][i].re = 0;
-        momentum[dir][X].c[i][i].im = 0;
-      }
-      for(int i=1; i<N; i++) {
-        double a = gaussian_ran()*sqrt(2.0/(i*(i+1)));
-        for(int j=0; j<i; j++)
-          momentum[dir][X].c[j][j].im += a;
-        momentum[dir][X].c[i][i].im -= i*a;
-      }
-    }
-  }
-}
-
-
-/// Gaussian random momentum for each element
 void project_antihermitean(element<NMAT> &matrix){
   double tr = 0;
   for(int i=0; i<N; i++) {
@@ -62,25 +32,6 @@ void project_antihermitean(element<NMAT> &matrix){
   }
 }
 
-
-/// Calculate the action of the gauge momentum
-double momentum_action(field<NMAT> *momentum){
-  double sum = 0;
-  foralldir(dir) {
-    onsites(ALL){
-      double thissum = 0;
-      for(int i=0; i<N; i++) {
-        for(int j=0; j<i; j++) {
-          thissum += momentum[dir][X].c[i][j].squarenorm();
-        }
-        double diag = momentum[dir][X].c[i][i].im;
-        thissum += 0.5*diag*diag;
-      }
-      sum += thissum;
-    }
-  }
-  return sum;
-}
 
 
 /// Calculate the sum of staples connected to links in direction dir 
@@ -128,17 +79,58 @@ double plaquette(field<SUN> *gauge){
 }
 
 
-/// Calculate the action
-double gauge_action(field<SUN> *gauge, double beta){
-  return beta*plaquette_sum(gauge);
+
+
+
+// The momentum action
+double momentum_action_impl(field<NMAT> *momentum){
+  double sum = 0;
+  foralldir(dir) {
+    onsites(ALL){
+      double thissum = 0;
+      for(int i=0; i<N; i++) {
+        for(int j=0; j<i; j++) {
+          thissum += momentum[dir][X].c[i][j].squarenorm();
+        }
+        double diag = momentum[dir][X].c[i][i].im;
+        thissum += 0.5*diag*diag;
+      }
+      sum += thissum;
+    }
+  }
+  return sum;
+}
+
+void gaussian_momentum_impl(field<NMAT> *momentum){
+  foralldir(dir) {
+    onsites(ALL){
+      for(int i=0; i<N; i++) {
+        for(int j=0; j<i; j++) {
+          double a = gaussian_ran();
+          double b = gaussian_ran();
+          momentum[dir][X].c[i][j].re = a;
+          momentum[dir][X].c[j][i].re =-a;
+          momentum[dir][X].c[i][j].im = b;
+          momentum[dir][X].c[j][i].im = b;
+        }
+      }
+
+      for(int i=0; i<N; i++) {
+        momentum[dir][X].c[i][i].re = 0;
+        momentum[dir][X].c[i][i].im = 0;
+      }
+      for(int i=1; i<N; i++) {
+        double a = gaussian_ran()*sqrt(2.0/(i*(i+1)));
+        for(int j=0; j<i; j++)
+          momentum[dir][X].c[j][j].im += a;
+        momentum[dir][X].c[i][i].im -= i*a;
+      }
+    }
+  }
 }
 
 
-
-
-
-// Update the momentum with the gauge field
-void gauge_force(field<SUN> *gauge, field<NMAT> *momentum, double eps){
+void force_step_impl(field<SUN> *gauge, field<NMAT> *momentum, double eps){
   foralldir(dir){
     field<SUN> staples = calc_staples(gauge, dir);
     onsites(ALL){
@@ -150,9 +142,7 @@ void gauge_force(field<SUN> *gauge, field<NMAT> *momentum, double eps){
   }
 }
 
-
-// Update the gauge field with momentum
-void gauge_step(field<SUN> *gauge, field<NMAT> *momentum, double eps){
+void momentum_step_impl(field<SUN> *gauge, field<NMAT> *momentum, double eps){
   foralldir(dir){
     onsites(ALL){
       element<SUN> momexp = eps*momentum[dir][X];
@@ -164,66 +154,50 @@ void gauge_step(field<SUN> *gauge, field<NMAT> *momentum, double eps){
 
 
 
-void leapfrog_step(field<SUN> *gauge, field<NMAT> *momentum, double beta, double eps){
-  gauge_step(gauge, momentum, 0.5*eps);
-  gauge_force(gauge, momentum, beta*eps/N);
-  gauge_step(gauge, momentum, 0.5*eps);
-}
 
 
-void O2_step(field<SUN> *gauge, field<NMAT> *momentum, double beta, double eps){
-  double zeta = eps*0.1931833275037836;
-  double middlestep = eps-2*zeta;
-  gauge_force(gauge, momentum, beta*zeta/N);
-  gauge_step(gauge, momentum, 0.5*eps);
-  gauge_force(gauge, momentum, beta*middlestep/N);
-  gauge_step(gauge, momentum, 0.5*eps);
-  gauge_force(gauge, momentum, beta*zeta/N);
-}
+class gauge_term{
+  public:
+    field<SUN> *gauge;
+    field<NMAT> *momentum;
+    double beta;
+    
+    gauge_term(field<SUN> *g, field<NMAT> *m, double b){
+      gauge = g; momentum = m; beta = b;
+    }
+
+    //The gauge action
+    double gauge_action(){
+      return beta*plaquette_sum(gauge);
+    }
+
+    // The momentum action
+    double momentum_action(){
+      return momentum_action_impl(momentum);
+    }
+
+    /// Gaussian random momentum for each element
+    void gaussian_momentum(){
+      gaussian_momentum_impl(momentum);
+    }
+
+    // Update the momentum with the gauge field
+    void force_step(double eps){
+      force_step_impl(gauge, momentum, beta*eps/N);
+    }
+
+    // Update the gauge field with momentum
+    void momentum_step(double eps){
+      momentum_step_impl(gauge, momentum, eps);
+    }
+};
+
+#include "../plumbing/hmc.h"
 
 
 
 
-void update_hmc(field<SUN> *gauge, double beta, int steps, double traj_length){
-  field<VEC> vector;
-  field<NMAT> momentum[NDIM];
 
-  static int accepted=0, trajectory=1;
-
-  gaussian_momentum(momentum);
-  double S_gauge = gauge_action(gauge, beta);
-  double S_mom = momentum_action(momentum);
-  double start_action = S_gauge + S_mom;
-  output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
-          << S_gauge << " " << S_mom << " " << start_action << "\n";
-
-  field<SUN> gauge_copy[NDIM];
-  foralldir(dir) gauge_copy[dir] = gauge[dir];
-
-  for(int step=0; step < steps; step++){
-    O2_step(gauge, momentum, beta, traj_length/steps);
-  }
-
-  double S2_gauge = gauge_action(gauge, beta);
-  double S2_mom = momentum_action(momentum);
-  double edS = exp(-(S2_gauge+S2_mom - start_action));
-
-
-  output0 << "End HMC: Action " << S2_gauge << " " << S2_mom << " "
-        << S2_gauge + S2_mom  << " " << S2_gauge+S2_mom - start_action
-        << " exp(-dS) " << edS << "\n";
-
-  if(hila_random() < edS){
-    output0 << "Accepted!\n";
-    accepted++;
-  } else {
-    output0 << "Rejected!\n";
-  }
-
-  output0 << "Acceptance " << accepted << "/" << trajectory 
-          << " " << (double)accepted/(double)trajectory << "\n";
-  trajectory++;
-}
 
 
 
@@ -272,48 +246,52 @@ int main(int argc, char **argv){
   h.c[1][0].re -= eps;
   SUN g12 = h*g1;
 
+  gauge_term gt(gauge, momentum, 1.0);
+
   if(mynode()==0)
     gauge[0].set_value_at(g1, 50);
   gauge[0].mark_changed(ALL);
-  double s1 = gauge_action(gauge, 1.0);
+  double s1 = gt.gauge_action();
 
   if(mynode()==0)
     gauge[0].set_value_at(g12,50);
   gauge[0].mark_changed(ALL);
-  double s2 = gauge_action(gauge, 1.0);
+  double s2 = gt.gauge_action();
 
   if(mynode()==0)
     gauge[0].set_value_at(g1, 50);
   gauge[0].mark_changed(ALL);
 
-  gauge_force(gauge, momentum, 1.0/N);
+  gt.force_step(1.0);
   NMAT f = momentum[0].get_value_at(50);
-  double diff;
-  if(mynode()==0) {
-    diff = 2*f.c[0][1].re + (s2-s1)/eps;
+  double diff = 2*f.c[0][1].re + (s2-s1)/eps;
+  output0 << diff << "\n";
+  if(mynode()==0) 
     assert( diff*diff < eps*eps*100 );
-  }
 
 
   // Check also the momentum action and derivative
-  gaussian_momentum(momentum);
+  gt.gaussian_momentum();
 
-  s1 = momentum_action(momentum);
+  s1 = gt.momentum_action();
   h = momentum[0].get_value_at(0);
   h.c[0][0].im += eps;
   if(mynode()==0)
     momentum[0].set_value_at(h, 0);
-  s2 = momentum_action(momentum);
+  s2 = gt.momentum_action();
 
-  if(mynode()==0) {
-    diff = h.c[0][0].im - (s2-s1)/eps;
+  diff = h.c[0][0].im - (s2-s1)/eps;
+  output0 << diff << "\n";
+  if(mynode()==0) 
     assert( diff*diff < eps*eps*100 );
-  }
+
+
 
 
   // Now the actual simulation
+  gt = gauge_term(gauge, momentum, beta);
   for(int step = 0; step < 1000; step ++){
-    update_hmc(gauge, beta, hmc_steps, traj_length);
+    update_hmc(gt, hmc_steps, traj_length);
     double plaq = plaquette(gauge);
     output0 << "Plaq: " << plaq << "\n";
   }
