@@ -21,13 +21,13 @@ void gaussian_momentum(field<NMAT> *momentum){
           double a = gaussian_ran();
           double b = gaussian_ran();
           momentum[dir][X].c[i][j].re = a;
-          momentum[dir][X].c[i][j].im = b;
           momentum[dir][X].c[j][i].re =-a;
+          momentum[dir][X].c[i][j].im = b;
           momentum[dir][X].c[j][i].im = b;
         }
       }
 
-      for(int i=1; i<N; i++) {
+      for(int i=0; i<N; i++) {
         momentum[dir][X].c[i][i].re = 0;
         momentum[dir][X].c[i][i].im = 0;
       }
@@ -46,12 +46,12 @@ void gaussian_momentum(field<NMAT> *momentum){
 void project_antihermitean(element<NMAT> &matrix){
   double tr = 0;
   for(int i=0; i<N; i++) {
-    for(int j=0; j<N; j++) {
+    for(int j=0; j<i; j++) {
       double a = 0.5*(matrix.c[i][j].re - matrix.c[j][i].re);
       double b = 0.5*(matrix.c[i][j].im + matrix.c[j][i].im);
       matrix.c[i][j].re = a;
-      matrix.c[i][j].im = b;
       matrix.c[j][i].re =-a;
+      matrix.c[i][j].im = b;
       matrix.c[j][i].im = b;
     }
     tr += matrix.c[i][i].im;
@@ -70,11 +70,12 @@ double momentum_action(field<NMAT> *momentum){
     onsites(ALL){
       double thissum = 0;
       for(int i=0; i<N; i++) {
-        for(int j=0; j<N; j++) {
+        for(int j=0; j<i; j++) {
           thissum += momentum[dir][X].c[i][j].squarenorm();
         }
         double diag = momentum[dir][X].c[i][i].im;
         thissum += 0.5*diag*diag;
+        coordinate_vector c=coordinates(X);
       }
       sum += thissum;
     }
@@ -111,13 +112,13 @@ field<SUN> calc_staples(field<SUN> *U, direction dir)
 /// Measure the plaquette
 double plaquette(field<SUN> *U){
   double Plaq=0;
-  foralldir(dir1) foralldir(dir2) if(dir1 != dir2){
+  foralldir(dir1) foralldir(dir2) if(dir2 < dir1){
     onsites(ALL){
       element<SUN> temp;
-      temp =  U[dir1][X] * U[dir2][X+dir1];
-      temp = temp*U[dir1][X+dir2].conjugate();
-      temp = temp*U[dir2][X].conjugate();
-      Plaq += 1.0-temp.trace().re/N;
+      temp = U[dir1][X] * U[dir2][X+dir1]
+           * U[dir1][X+dir2].conjugate()
+           * U[dir2][X].conjugate();
+      Plaq += 1-temp.trace().re/N;
     }
   }
   return Plaq;
@@ -181,15 +182,16 @@ void update_hmc(field<SUN> *gauge, double beta, int steps){
           << start_action << "\n";
 
   for(int step=0; step < steps; step++){
-
-    leapfrog_step(gauge, momentum, beta, 0.1/steps);
-
-    S_gauge = gauge_action(gauge, beta);
-    S_mom = momentum_action(momentum);
+    leapfrog_step(gauge, momentum, beta, 1.0/steps);
   }
-    output0 << "Action " << S_gauge << " " << S_mom << " "
-            << S_gauge + S_mom  << " " << start_action-S_gauge - S_mom
-            << "\n";
+
+  double S2_gauge = gauge_action(gauge, beta);
+  double S2_mom = momentum_action(momentum);
+  //output0 << "Gauge " << S2_gauge - S_gauge << "\n" ;
+  //output0 << "Mom " << S2_mom - S_mom << "\n" ;
+  output0 << "Action " << S2_gauge << " " << S2_mom << " "
+        << S2_gauge + S2_mom  << " " << start_action-S2_gauge - S2_mom
+        << "\n";
 }
 
 
@@ -220,20 +222,6 @@ int main(int argc, char **argv){
     }
   }
 
-  double eps = 0.001;
-  double s1 = gauge_action(gauge, beta);
-  output0 << s1 << "\n";
-
-  SUN g = gauge[0].get_value_at(0);
-  g.c[0][1].re += eps;
-  g.c[1][0].re -= eps;
-  gauge[0].set_value_at(g, 0);
-
-  double s2 = gauge_action(gauge, beta);
-  output0 << s2 << " " << (s2-s1)/(eps*beta) << "\n";
-  g.c[0][1].re -= eps;
-  g.c[1][0].re += eps;
-  gauge[0].set_value_at(g, 0);
 
   field<NMAT> momentum[NDIM];
   foralldir(dir){
@@ -242,15 +230,52 @@ int main(int argc, char **argv){
     }
   }
 
-  gauge_force(gauge, momentum, 1);
-  NMAT f = momentum[0].get_value_at(0);
+
+  // Test the force calculation by varying one gauge link
+  // (Needs to be moved to tests)
+  double eps = 0.00001;
+  SUN g1 = gauge[0].get_value_at(50);
+  SUN h = 1;
+  h.c[0][1].re += eps;
+  h.c[1][0].re -= eps;
+  SUN g12 = h*g1;
+
+  if(mynode()==0)
+    gauge[0].set_value_at(g1, 50);
+  double s1 = gauge_action(gauge, 1.0);
+  output0 << s1 << "\n";
+
+  if(mynode()==0)
+    gauge[0].set_value_at(g12,50);
+  double s2 = gauge_action(gauge, 1.0);
+  output0 << s2 << " " << (s2-s1)/eps << "\n";
+
+  if(mynode()==0)
+    gauge[0].set_value_at(g1, 50);
+
+  gauge_force(gauge, momentum, 1.0/N);
+  NMAT f = momentum[0].get_value_at(50);
   output0 << f.c[0][1].re << " " << f.c[1][0].re << "\n";
-  output0 << f.c[0][1].re + (s2-s1)/(eps*beta) << "\n";
+  output0 << 2*f.c[0][1].re + (s2-s1)/eps << "\n";
 
 
+  // Check also the momentum action and derivative
+  gaussian_momentum(momentum);
 
+  s1 = momentum_action(momentum);
+  h = momentum[0].get_value_at(0);
+  h.c[0][0].im += eps;
+  h.c[1][1].im -= eps;
+  if(mynode()==0)
+    momentum[0].set_value_at(h, 0);
+  s2 = momentum_action(momentum);
 
-  for(int step = 0; step < 20; step ++){
+  output0 << s1 << " " << s2 << " " << (s2-s1)/eps << "\n";
+  output0 << h.c[0][0].im << " " << 2*h.c[0][0].im - (s2-s1)/eps << "\n";
+
+  
+  gaussian_momentum(momentum);
+  for(int step = 0; step < 1; step ++){
     update_hmc(gauge, beta, hmc_steps);
   }
 

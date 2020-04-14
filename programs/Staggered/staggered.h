@@ -16,7 +16,7 @@
 #include "../plumbing/dirac.h"
 
 
-const int N=3;
+const int N=2;
 const int Nf=1;
 
 using SUN = SU<N,double>;
