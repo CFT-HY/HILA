@@ -467,7 +467,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     }
 
     if (is_assign && assign_stmt != nullptr && !vip->depends_on_site) {
-      vip->depends_on_site = check_rhs_of_assignment(assign_stmt);
+      vip->depends_on_site = check_rhs_of_assignment(assign_stmt, &vip->dependent_vars );
       
       llvm::errs() << "Var " << vip->name << " depends on site: " << vip->depends_on_site <<  "\n";
     } 
@@ -507,11 +507,11 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
     if (d.scope >= 0 && vi.decl == d.decl) {
       llvm::errs() << "loop local var ref! " << vi.name << '\n';
       vi.is_loop_local = true;
-      vi.var_declp = &d;
       break;
     }
   }
   vi.depends_on_site = false;  // default case
+  vi.dependent_vars.clear();
 
   var_info_list.push_back(vi);
   return &(var_info_list.back());
@@ -522,17 +522,17 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
 /// Check if the RHS of assignment is site dependent
 ///////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::check_rhs_of_assignment(Stmt *s) {
+bool MyASTVisitor::check_rhs_of_assignment(Stmt *s, std::vector<var_info *> * vi) {
 
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
-      return depends_on_site(OP->getArg(1));
+      return depends_on_site(OP->getArg(1),vi);
     }
   }
 
   if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
     if (B->isAssignmentOp()) {
-      return depends_on_site(B->getRHS());
+      return depends_on_site(B->getRHS(),vi);
     }
   }
   // one of these should have triggered!  
@@ -1419,10 +1419,31 @@ void MyASTVisitor::check_var_info_list() {
       }
     }
   }
+
+  // iterate through var_info_list until no more depends_on_site -relations found
+  // this should not leave any corner cases behind
+
+  int found;
+  do {
+    found = 0;
+    for (var_info & vi : var_info_list) {
+      if (vi.depends_on_site == false) {
+        for (var_info * d : vi.dependent_vars) if (d->depends_on_site) {
+          vi.depends_on_site = true;
+          llvm::errs() << " HA!  Var " << vi.name << " depends on site after all!\n";
+          found++;
+          break;  // go to next var
+        }
+      }
+    } 
+  } while (found > 0);
+
+
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////////
 /// flag_error = true by default in myastvisitor.h
+
 SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
   SourceRange range(S->getBeginLoc(),
                     Lexer::findLocationAfterToken(S->getEndLoc(),
@@ -1494,7 +1515,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
 
     // finally, check initialization
     if (var->hasInit()) {
-      ip->depends_on_site = depends_on_site(var->getInit());
+      ip->depends_on_site = depends_on_site(var->getInit(), &ip->dependent_vars);
       ip->is_assigned = true;
     } else {
       ip->is_assigned = false;

@@ -15,18 +15,20 @@
 
 class dependsOnSiteChecker : public RecursiveASTVisitor<dependsOnSiteChecker> {
 protected:
-  Rewriter &TheRewriter;
   ASTContext *Context;
 
 public:
   bool found_X;
   bool found_var_depends_on_site;
   bool found_X_method;
+  bool found_dependent_var;
+  std::vector<var_info *> * depends_on_var;
 
-  dependsOnSiteChecker(Rewriter &R, ASTContext *C) : TheRewriter(R) {
+  dependsOnSiteChecker(ASTContext *C, std::vector<var_info *> * dep_var) {
     Context = C;
+    depends_on_var = dep_var;    // we do not clear the vector, because it may contain earlier dependencies
     
-    found_X = found_var_depends_on_site = found_X_method = false;
+    found_X = found_var_depends_on_site = found_X_method = found_dependent_var = false;
   }
 
   // bool VisitStmt(Stmt *s) { llvm::errs() << "In stmt\n"; return true; }
@@ -43,9 +45,17 @@ public:
         VarDecl * decl = dyn_cast<VarDecl>(e->getDecl());
         // it's a variable and found the decl, check if we have it here
         for (var_info & v : var_info_list) {
-          if (v.decl == decl && v.depends_on_site) {
-            found_var_depends_on_site = true;
-            return false;  // again, the inspection can be stopped
+          if (v.decl == decl) {
+            if (v.depends_on_site) {
+              found_var_depends_on_site = true;
+              return false;  // again, the inspection can be stopped
+
+            } else { 
+              // now it is possible that v later becomes site dependent
+              found_dependent_var = true;
+              if (depends_on_var != nullptr) depends_on_var->push_back(&v);
+              // continue, may find more
+            }
           }
         }
       }
@@ -67,10 +77,17 @@ public:
 
 };
 
+////////////////////////////////////////////////////////////////////////////////////
+/// Check site dependence.  If return status is false, the optional vector 
+/// dependent_var will contains pointers to variables whose status may change
+/// later.  These should be checked if needed.  The vector is unmodified if 
+/// return is true.
+////////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::depends_on_site(Expr * e) {
 
-  dependsOnSiteChecker checker(TheRewriter,Context);
+bool MyASTVisitor::depends_on_site(Expr * e, std::vector<var_info *> * dependent_var) {
+
+  dependsOnSiteChecker checker(Context,dependent_var);
 
   checker.TraverseStmt(e);
   return (checker.found_X || checker.found_var_depends_on_site || checker.found_X_method);

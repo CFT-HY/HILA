@@ -230,18 +230,23 @@ struct var_ref {
   bool is_assigned;
 };
 
+/// This struct keeps track of all variables appearing in loops
+/// variable can be external or defined inside loop (loop_local)
+/// depends_on_site means that the variable value can be site dependent,
+/// which has implications for vectorization
+
 struct var_info {
-  std::vector<var_ref> refs;
-  VarDecl * decl;
-  struct var_decl * var_declp;
-  std::string type;
-  std::string name;
-  std::string new_name;
-  bool is_loop_local;
-  reduction reduction_type;
-  std::string reduction_name;
-  bool is_assigned;
-  bool depends_on_site;
+  std::vector<var_ref> refs;                // references of this var in loop
+  std::string type;                         // type as string
+  std::string name;                         // variable name
+  std::string new_name;                     // name to be used in loop
+  VarDecl * decl;                           // declaration of this var
+  std::string reduction_name;               // name of reduction variable
+  std::vector<var_info *> dependent_vars;   // vector of var_infos which may affect depends_on_site
+  reduction reduction_type;                 // what type of reduction
+  bool is_loop_local;                       // true if defined inside loop
+  bool is_assigned;                         // is the var assigned to
+  bool depends_on_site;                     // is the value of variable site dependent
 };
 
 // Stores onformation for a single reference to an array

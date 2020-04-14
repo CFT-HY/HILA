@@ -48,22 +48,21 @@ int main()
   A[ALL] = { cmplx(1,0), cmplx(0,0) };
   
   onsites(p) {
-    #pragma transformer ast dump
     double dv = t[X];
 
-    #pragma transformer ast dump
     double t2;
 
-    #pragma transformer ast dump
     double t4 = 5.0;
+
+    t4 = t2;
     
-    t[X] = 1;
+    t2 = t[X];
+    
 
     double vv = (double)X.parity();
 
     A[X].a[0] = 0;
 
-    #pragma transformer ast dump
     v2<double> vvv = A[X];
     // c[X] = b[X+(XUP+YUP)];
     // #pragma transformer ast dump
