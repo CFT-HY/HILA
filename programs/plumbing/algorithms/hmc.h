@@ -3,29 +3,43 @@
 
 
 
+/// An integrator class must implement at least two functions, 
 
+
+
+
+/// A leapfrog step, which can be used as a vuilding block of an
+/// integrator
 template<class action_term>
-void leapfrog_step(action_term gauge, double eps){
-  gauge.momentum_step(0.5*eps);
-  gauge.force_step(eps);
-  gauge.momentum_step(0.5*eps);
+void leapfrog_step(action_term at, double eps){
+  at.momentum_step(0.5*eps);
+  at.force_step(eps);
+  at.momentum_step(0.5*eps);
 }
 
 
+/// A second order step, which can be used as a building block of
+/// an integrator
 template<class action_term>
-void O2_step(action_term gauge, double eps){
+void O2_step(action_term at, double eps){
   double zeta = eps*0.1931833275037836;
   double middlestep = eps-2*zeta;
-  gauge.force_step(zeta);
-  gauge.momentum_step(0.5*eps);
-  gauge.force_step(middlestep);
-  gauge.momentum_step(0.5*eps);
-  gauge.force_step(zeta);
+  at.momentum_step(zeta);
+  at.force_step(0.5*eps);
+  at.momentum_step(middlestep);
+  at.force_step(0.5*eps);
+  at.momentum_step(zeta);
 }
 
 
-template<class action_term>
-void update_hmc(action_term gt, int steps, double traj_length){
+
+
+/// The Hybrid Montecarlo algorithm.
+// Consists of an integration step following equations of
+// motion implemented in the integrator class gt
+// and an accept-reject step using the action
+template<class integrator>
+void update_hmc(integrator gt, int steps, double traj_length){
   static int accepted=0, trajectory=1;
 
   // Draw the momentum
@@ -42,9 +56,7 @@ void update_hmc(action_term gt, int steps, double traj_length){
 
 
   // Run the integator
-  for(int step=0; step < steps; step++){
-    O2_step(gt, traj_length/steps);
-  }
+  gt.integrate(steps, traj_length);
 
 
   // Recalculate the action

@@ -142,18 +142,6 @@ void force_step_impl(field<SUN> *gauge, field<NMAT> *momentum, double eps){
   }
 }
 
-void momentum_step_impl(field<SUN> *gauge, field<NMAT> *momentum, double eps){
-  foralldir(dir){
-    onsites(ALL){
-      element<SUN> momexp = eps*momentum[dir][X];
-      momexp.exp();
-      gauge[dir][X] = momexp*gauge[dir][X];
-    }
-  }
-}
-
-
-
 
 
 class gauge_term{
@@ -178,18 +166,88 @@ class gauge_term{
 
     // Update the momentum with the gauge field
     void force_step(double eps){
-      force_step_impl(gauge, momentum, beta*eps/N);
+      foralldir(dir){
+        field<SUN> staples = calc_staples(gauge, dir);
+        onsites(ALL){
+          element<NMAT> force;
+          force = gauge[dir][X]*staples[X];
+          project_antihermitean(force);
+          momentum[dir][X] = momentum[dir][X] - beta*eps/N*force;
+        }
+      }
     }
 
     // Update the gauge field with momentum
     void momentum_step(double eps){
-      momentum_step_impl(gauge, momentum, eps);
+      foralldir(dir){
+        onsites(ALL){
+          element<SUN> momexp = eps*momentum[dir][X];
+          momexp.exp();
+          gauge[dir][X] = momexp*gauge[dir][X];
+        }
+      }
     }
 };
 
 
 
+class fermion_term{
+  public:
+    gauge_term gt;
+    field<SUN> *gauge;
+    field<NMAT> *momentum;
+    double beta;
 
+    fermion_term(gauge_term g, field<NMAT> *m, double b) : gt(g) {
+      gauge = g.gauge; momentum = m; beta = b;
+    }
+
+    //The gauge action
+    double action(){
+      return gt.action();
+    }
+
+    /// Gaussian random momentum for each element
+    void gaussian_momentum(){
+      gt.gaussian_momentum();
+    }
+
+    // Update the momentum with the gauge field
+    void force_step(double eps){
+      // Fermion force here
+     }
+
+    // Update the gauge field with momentum
+    void momentum_step(double eps){
+      O2_step(gt, eps);
+    }
+};
+
+
+class full_action{
+  public:
+    fermion_term ft;
+    field<SUN> *gauge;
+
+    full_action(fermion_term f) : ft(f) {gauge = f.gauge;}
+
+    //The gauge action
+    double action(){
+      return ft.action();
+    }
+
+    /// Gaussian random momentum for each element
+    void gaussian_momentum(){
+      ft.gaussian_momentum();
+    }
+
+    // Update the momentum with the gauge field
+    void integrate(int steps, double dt){
+      for(int step=0; step < steps; step++){
+        O2_step(ft, dt/steps);
+      }
+    }
+};
 
 
 
@@ -282,8 +340,10 @@ int main(int argc, char **argv){
 
   // Now the actual simulation
   gt = gauge_term(gauge, momentum, beta);
-  for(int step = 0; step < 1000; step ++){
-    update_hmc(gt, hmc_steps, traj_length);
+  fermion_term ft = fermion_term(gt, momentum, beta);
+  full_action action = full_action(ft);
+  for(int step = 0; step < 100; step ++){
+    update_hmc(action, hmc_steps, traj_length);
     double plaq = plaquette(gauge);
     output0 << "Plaq: " << plaq << "\n";
   }
