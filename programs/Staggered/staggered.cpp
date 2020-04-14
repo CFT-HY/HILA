@@ -187,6 +187,11 @@ class gauge_term{
         }
       }
     }
+
+    // A single gauge update
+    void integrator_step(double eps){
+      O2_step(*this, eps);
+    }
 };
 
 
@@ -196,10 +201,9 @@ class fermion_term{
     gauge_term gt;
     field<SUN> *gauge;
     field<NMAT> *momentum;
-    double beta;
 
-    fermion_term(gauge_term g, field<NMAT> *m, double b) : gt(g) {
-      gauge = g.gauge; momentum = m; beta = b;
+    fermion_term(gauge_term g, field<NMAT> *m) : gt(g) {
+      gauge = g.gauge; momentum = m;
     }
 
     //The gauge action
@@ -219,7 +223,12 @@ class fermion_term{
 
     // Update the gauge field with momentum
     void momentum_step(double eps){
-      O2_step(gt, eps);
+      gt.integrator_step(eps);
+    }
+
+    // A single gauge update
+    void integrator_step(double eps){
+      O2_step(*this, eps);
     }
 };
 
@@ -244,7 +253,7 @@ class full_action{
     // Update the momentum with the gauge field
     void integrate(int steps, double dt){
       for(int step=0; step < steps; step++){
-        O2_step(ft, dt/steps);
+        ft.integrator_step(dt/steps);
       }
     }
 };
@@ -340,7 +349,7 @@ int main(int argc, char **argv){
 
   // Now the actual simulation
   gt = gauge_term(gauge, momentum, beta);
-  fermion_term ft = fermion_term(gt, momentum, beta);
+  fermion_term ft = fermion_term(gt, momentum);
   full_action action = full_action(ft);
   for(int step = 0; step < 100; step ++){
     update_hmc(action, hmc_steps, traj_length);
