@@ -6,7 +6,7 @@
 
 #include "staggered.h"
 #include "../plumbing/inputs.h"
-
+#include "../plumbing/algorithms/hmc.h"
 
 
 
@@ -83,7 +83,7 @@ double plaquette(field<SUN> *gauge){
 
 
 // The momentum action
-double momentum_action_impl(field<NMAT> *momentum){
+double momentum_action(field<NMAT> *momentum){
   double sum = 0;
   foralldir(dir) {
     onsites(ALL){
@@ -161,19 +161,14 @@ class gauge_term{
     field<SUN> *gauge;
     field<NMAT> *momentum;
     double beta;
-    
+
     gauge_term(field<SUN> *g, field<NMAT> *m, double b){
       gauge = g; momentum = m; beta = b;
     }
 
     //The gauge action
-    double gauge_action(){
-      return beta*plaquette_sum(gauge);
-    }
-
-    // The momentum action
-    double momentum_action(){
-      return momentum_action_impl(momentum);
+    double action(){
+      return beta*plaquette_sum(gauge) + momentum_action(momentum);
     }
 
     /// Gaussian random momentum for each element
@@ -192,7 +187,6 @@ class gauge_term{
     }
 };
 
-#include "../plumbing/hmc.h"
 
 
 
@@ -251,21 +245,20 @@ int main(int argc, char **argv){
   if(mynode()==0)
     gauge[0].set_value_at(g1, 50);
   gauge[0].mark_changed(ALL);
-  double s1 = gt.gauge_action();
+  double s1 = plaquette_sum(gauge);
 
   if(mynode()==0)
     gauge[0].set_value_at(g12,50);
   gauge[0].mark_changed(ALL);
-  double s2 = gt.gauge_action();
+  double s2 = plaquette_sum(gauge);
 
   if(mynode()==0)
     gauge[0].set_value_at(g1, 50);
   gauge[0].mark_changed(ALL);
 
-  gt.force_step(1.0);
+  force_step_impl(gauge, momentum, 1.0/N);
   NMAT f = momentum[0].get_value_at(50);
   double diff = 2*f.c[0][1].re + (s2-s1)/eps;
-  output0 << diff << "\n";
   if(mynode()==0) 
     assert( diff*diff < eps*eps*100 );
 
@@ -273,15 +266,14 @@ int main(int argc, char **argv){
   // Check also the momentum action and derivative
   gt.gaussian_momentum();
 
-  s1 = gt.momentum_action();
+  s1 = momentum_action(momentum);
   h = momentum[0].get_value_at(0);
   h.c[0][0].im += eps;
   if(mynode()==0)
     momentum[0].set_value_at(h, 0);
-  s2 = gt.momentum_action();
+  s2 = momentum_action(momentum);
 
   diff = h.c[0][0].im - (s2-s1)/eps;
-  output0 << diff << "\n";
   if(mynode()==0) 
     assert( diff*diff < eps*eps*100 );
 

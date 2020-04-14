@@ -36,12 +36,9 @@ void update_hmc(action_term gt, int steps, double traj_length){
   foralldir(dir) gauge_copy[dir] = gt.gauge[dir];
 
   // Calculate the starting action and print
-  double S_gauge = gt.gauge_action();
-  double S_mom = gt.momentum_action();
-  double start_action = S_gauge + S_mom;
+  double start_action = gt.action();
   output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
-          << S_gauge << " " << S_mom << " " << start_action << "\n";
-
+          << start_action << "\n";
 
 
   // Run the integator
@@ -51,12 +48,11 @@ void update_hmc(action_term gt, int steps, double traj_length){
 
 
   // Recalculate the action
-  double S2_gauge = gt.gauge_action();
-  double S2_mom = gt.momentum_action();
-  double edS = exp(-(S2_gauge+S2_mom - start_action));
+  double end_action = gt.action();
+  double edS = exp(-(end_action - start_action));
 
-  output0 << "End HMC: Action " << S2_gauge << " " << S2_mom << " "
-        << S2_gauge + S2_mom  << " " << S2_gauge+S2_mom - start_action
+  output0 << "End HMC: Action " << end_action << " "
+        << end_action - start_action
         << " exp(-dS) " << edS << "\n";
 
 
