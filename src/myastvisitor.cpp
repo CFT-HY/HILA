@@ -703,6 +703,8 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
       if (n->depends_on_site) loop_info.has_site_dependent_conditional = true;
   }
 
+  if (loop_info.has_site_dependent_conditional) llvm::errs() << "Cond is site dep!\n";
+
   // and now generate the appropriate code
   generate_code(ls);
   
@@ -919,7 +921,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
  
   // start {...} -block or other compound
   if (isa<CompoundStmt>(s) || isa<ForStmt>(s) || isa<IfStmt>(s)
-      || isa<WhileStmt>(s)) {
+      || isa<WhileStmt>(s) || isa<DoStmt>(s)) {
 
     static bool passthrough = false;
     // traverse each stmt - use passthrough trick if needed
@@ -939,7 +941,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // check also the conditionals - are these site dependent?
     if (!loop_info.has_site_dependent_conditional) {
       Expr * condexpr = nullptr;
-      if      (ForStmt   * FS = dyn_cast<ForStmt>(s))   condexpr = FS->getCond();
+      if      (IfStmt    * IS = dyn_cast<IfStmt>(s))    condexpr = IS->getCond();
+      else if (ForStmt   * FS = dyn_cast<ForStmt>(s))   condexpr = FS->getCond();
       else if (WhileStmt * WS = dyn_cast<WhileStmt>(s)) condexpr = WS->getCond();
       else if (DoStmt    * DS = dyn_cast<DoStmt>(s))    condexpr = DS->getCond();
 

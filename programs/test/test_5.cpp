@@ -58,9 +58,10 @@ int main()
     
     t2 = t[X];
     
-
     double vv = (double)X.parity();
 
+    if (t2 < 4) t[X] += 4;
+    
     A[X].a[0] = 0;
 
     v2<double> vvv = A[X];
