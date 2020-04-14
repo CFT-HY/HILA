@@ -153,7 +153,7 @@ llvm::cl::opt<int> cmdline::verbosity("verbosity",
 
 CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
-loop_parity_struct loop_parity;
+loop_info_struct loop_info;
 codetype target;     // declared extern (global)
 
 

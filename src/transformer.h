@@ -76,13 +76,6 @@ namespace state {
 extern llvm::cl::OptionCategory TransformerCat;
 
 
-// Stores the parity of the current loop: Expr, value (if known), Expr as string
-
-struct loop_parity_struct {
-  const Expr * expr;
-  parity value;
-  std::string text;
-};
 
 //class storing global state variables used in parsing
 
@@ -289,6 +282,18 @@ struct special_function_call {
   int scope;
 };
 
+// Stores the parity of the current loop: Expr, value (if known), Expr as string
+
+struct loop_info_struct {
+  const Expr * parity_expr;
+  std::string parity_text;
+  parity parity_value;
+
+  bool has_site_dependent_conditional;           // if, for, while w. site dep. cond?
+  std::vector<var_info *> conditional_vars;      // may depend on variables
+};
+
+
 bool write_output_file( const std::string & name, const std::string & buf ) ;
 reduction get_reduction_type(bool, std::string &, var_info &);
 void set_fid_modified(const FileID FID);
@@ -302,7 +307,7 @@ void reset_vectorizable_types();
 // take global CI just in case
 extern CompilerInstance *myCompilerInstance;
 extern global_state global;
-extern loop_parity_struct loop_parity;
+extern loop_info_struct loop_info;
 extern codetype target;
 
 /// global variable declarations - definitions on transformer.cpp

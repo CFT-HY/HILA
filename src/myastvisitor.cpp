@@ -298,9 +298,9 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_c
     }
     if (parsing_state.accept_field_parity) {
       // 1st parity statement on a single line lattice loop
-      loop_parity.expr  = lfe.parityExpr;
-      loop_parity.value = get_parity_val(loop_parity.expr);
-      loop_parity.text  = get_stmt_str(loop_parity.expr);
+      loop_info.parity_expr  = lfe.parityExpr;
+      loop_info.parity_value = get_parity_val(loop_info.parity_expr);
+      loop_info.parity_text  = get_stmt_str(loop_info.parity_expr);
     } else {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
@@ -671,6 +671,9 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   array_ref_list.clear();
   remove_expr_list.clear();
   global.location.loop = ls->getSourceRange().getBegin();
+
+  loop_info.has_site_dependent_conditional = false;  // reset
+  loop_info.conditional_vars.clear();
   
   parsing_state.accept_field_parity = field_parity_ok;
     
@@ -679,7 +682,10 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   parsing_state.in_loop_body = true;
   parsing_state.ast_depth = 0;   // renormalize to the beginning of loop
   parsing_state.stmt_sequence = 0;
+
+  // code analysis starts here
   TraverseStmt(ls);
+
   parsing_state.in_loop_body = false;
   parsing_state.ast_depth = 0;
 
@@ -690,13 +696,14 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   check_field_ref_list();
   check_var_info_list();
 
-  // check that loop_parity is not X  -- impossible now
-  // if (loop_parity.value == parity::x) {
-  //   reportDiag(DiagnosticsEngine::Level::Error,
-  //              loop_parity.expr->getSourceRange().getBegin(),
-  //              "Parity of the full loop cannot be \'X\'");
-  // }
-  
+  // check here also if conditionals are site dependent through var dependence
+  // because var_info_list was checked above, once is enough
+  if (loop_info.has_site_dependent_conditional == false) {
+    for (auto * n : loop_info.conditional_vars) 
+      if (n->depends_on_site) loop_info.has_site_dependent_conditional = true;
+  }
+
+  // and now generate the appropriate code
   generate_code(ls);
   
   // Buf.clear();
@@ -928,6 +935,19 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1; 
 
     TraverseStmt(s);
+
+    // check also the conditionals - are these site dependent?
+    if (!loop_info.has_site_dependent_conditional) {
+      Expr * condexpr = nullptr;
+      if      (ForStmt   * FS = dyn_cast<ForStmt>(s))   condexpr = FS->getCond();
+      else if (WhileStmt * WS = dyn_cast<WhileStmt>(s)) condexpr = WS->getCond();
+      else if (DoStmt    * DS = dyn_cast<DoStmt>(s))    condexpr = DS->getCond();
+
+      if (condexpr != nullptr) {
+        loop_info.has_site_dependent_conditional = 
+          depends_on_site(condexpr, &loop_info.conditional_vars);
+      }
+    }
 
     parsing_state.ast_depth = 0;
 
@@ -1343,7 +1363,7 @@ bool MyASTVisitor::check_field_ref_list() {
       bool found_error = false;
       for (field_ref * p : l.ref_list) {
         if (p->is_direction && !p->is_written && !p->is_offset) {
-          if (loop_parity.value == parity::all) {
+          if (loop_info.parity_value == parity::all) {
 
             reportDiag(DiagnosticsEngine::Level::Error,
                        p->parityExpr->getSourceRange().getBegin(),
@@ -1353,13 +1373,13 @@ bool MyASTVisitor::check_field_ref_list() {
             no_errors = false;
             found_error = true;
 
-          } else if (loop_parity.value == parity::none) {
+          } else if (loop_info.parity_value == parity::none) {
             reportDiag(DiagnosticsEngine::Level::Remark,
                        p->parityExpr->getSourceRange().getBegin(),
                        "Simultaneous access '%0' and assignment '%1' is allowed only with parity %2 is EVEN or ODD.  Inserting assertion",
                        get_stmt_str(p->fullExpr).c_str(),
                        l.old_name.c_str(),
-                       loop_parity.text.c_str());
+                       loop_info.parity_text.c_str());
             found_error = true;
           }
         }
@@ -1629,9 +1649,9 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           if (vd) {
             const Expr * ie = vd->getInit();
             if (ie) {
-              loop_parity.expr  = ie;
-              loop_parity.value = get_parity_val(loop_parity.expr);
-              loop_parity.text  = remove_initial_whitespace(macro.substr(loop_call.length(),
+              loop_info.parity_expr  = ie;
+              loop_info.parity_value = get_parity_val(loop_info.parity_expr);
+              loop_info.parity_text  = remove_initial_whitespace(macro.substr(loop_call.length(),
                                                                          std::string::npos));
                 
               global.full_loop_text = macro + " " + get_stmt_str(f->getBody());

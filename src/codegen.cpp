@@ -70,7 +70,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
   std::stringstream code;
   code << "{\n";
 
-  // basic set up: 1st loop_parity, if it is known const set it up,
+  // basic set up: 1st loop_info, if it is known const set it up,
   // else copy it to a variable name
 
   const std::string t = loopBuf.dump(); 
@@ -82,9 +82,9 @@ void MyASTVisitor::generate_code(Stmt *S) {
   parity_name = "Parity";
   while (t.find(parity_name,0) != std::string::npos) parity_name += "_";
   
-  if (loop_parity.value == parity::none) {
+  if (loop_info.parity_value == parity::none) {
     // now unknown
-    code << "const parity " << parity_name << " = " << loop_parity.text << ";\n";
+    code << "const parity " << parity_name << " = " << loop_info.parity_text << ";\n";
 
     if (global.assert_loop_parity) {
       code << "assert( is_even_odd_parity(" << parity_name << ") && \"Parity should be EVEN or ODD in this loop\");\n";
@@ -92,7 +92,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
     parity_in_this_loop = parity_name;
       
   } 
-  else parity_in_this_loop = parity_str(loop_parity.value);
+  else parity_in_this_loop = parity_str(loop_info.parity_value);
 
   // then, generate new names for field variables in loop
 
@@ -123,7 +123,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
   // Check that read fields are initialized
   for (field_info & l : field_info_list) if (l.is_read_nb || l.is_read_atX) {
     std::string init_par;
-    if ( loop_parity.value == parity::all || (l.is_read_nb && l.is_read_atX)) {
+    if ( loop_info.parity_value == parity::all || (l.is_read_nb && l.is_read_atX)) {
       init_par = "ALL";
     } else {
       if (l.is_read_atX) init_par = parity_in_this_loop;
