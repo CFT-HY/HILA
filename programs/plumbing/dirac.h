@@ -11,7 +11,7 @@ inline void init_staggered_eta(field<double> staggered_eta[NDIM]){
   // Initialize the staggered eta field
   foralldir(d){
     onsites(ALL){
-      element<coordinate_vector> l = coordinates(X);
+      element<coordinate_vector> l = X.coordinates();
       element<int> sumcoord = 0;
       for(int d2=XUP;d2<d;d2++){
         sumcoord += l[d2];
@@ -30,12 +30,12 @@ inline void init_staggered_eta(field<double> staggered_eta[NDIM]){
 
 template<typename mtype, typename vtype>
 void dirac_staggered_apply(
-  const mtype *gauge,
+  const field<mtype> *gauge,
   const double mass,
-  const vtype &v_in,
-  vtype &v_out,
+  const field<vtype> &v_in,
+  field<vtype> &v_out,
   field<double> staggered_eta[NDIM],
-  vtype vtemp[NDIM])
+  field<vtype> vtemp[NDIM])
 {
   // Start getting neighbours
   foralldir(dir){
@@ -54,7 +54,7 @@ void dirac_staggered_apply(
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
-    v_out[ALL] += 0.5 * staggered_eta[dir][X] * (
+    v_out[ALL] = v_out[X] + 0.5 * staggered_eta[dir][X] * (
       v_in[X+dir]*gauge[dir][X] - vtemp[dir][X+odir]
     );
   }
@@ -63,12 +63,12 @@ void dirac_staggered_apply(
 
 template<typename mtype, typename vtype>
 void dirac_staggered_dagger(
-  const mtype *gauge,
+  const field<mtype> *gauge,
   const double mass,
-  const vtype &v_in,
-  vtype &v_out,
+  const field<vtype> &v_in,
+  field<vtype> &v_out,
   field<double> staggered_eta[NDIM],
-  vtype vtemp[NDIM])
+  field<vtype> vtemp[NDIM])
 {
   // Start getting neighbours
   foralldir(dir){
@@ -87,7 +87,7 @@ void dirac_staggered_dagger(
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
-    v_out[ALL] -= 0.5 * staggered_eta[dir][X] * (
+    v_out[ALL] = v_out[X] - 0.5 * staggered_eta[dir][X] * (
       v_in[X+dir]*(gauge[dir][X]) - vtemp[dir][X+odir]
     );
   }
@@ -102,19 +102,28 @@ template<typename vector, typename matrix>
 class dirac_staggered {
   private:
     double mass;
-    vector vtemp[NDIM];
+    field<vector> vtemp[NDIM];
     field<double> staggered_eta[NDIM];
 
     // Note array of fields, changes with the field
-    matrix *gauge;
+    field<matrix> *gauge;
   
   public:
+
+    // Constructor: initialize mass, gauge and eta
+    dirac_staggered(dirac_staggered &d) {
+      mass = d.mass;
+      gauge = d.gauge;
+
+      // Initialize the eta field (Share this?)
+      init_staggered_eta(staggered_eta);
+    }
   
     // Constructor: initialize mass, gauge and eta
-    dirac_staggered(double m, matrix *U) {
+    dirac_staggered(double m, field<matrix> *U) {
       // Set mass and gauge field
       mass = m;
-      gauge = (matrix*) U;
+      gauge = (field<matrix>*) U;
 
       // Initialize the eta field
       init_staggered_eta(staggered_eta);
@@ -128,29 +137,29 @@ class dirac_staggered {
 
 
     // Applies the operator to in
-    void apply( const vector & in, vector & out){
+    void apply( const field<vector> & in, field<vector> & out){
       dirac_staggered_apply(gauge, mass, in, out, staggered_eta, vtemp);
 
     }
 
     // Applies the conjugate of the operator
-    void dagger( const vector & in, vector & out){
+    void dagger( const field<vector> & in, field<vector> & out){
       dirac_staggered_dagger(gauge, mass, in, out, staggered_eta, vtemp);
     }
 };
 
 // Multiplying from the left applies the standard Dirac operator
 template<typename vector, typename matrix>
-vector operator* (dirac_staggered<vector, matrix> D, const vector & in) {
-  vector out;
+field<vector> operator* (dirac_staggered<field<vector>, field<matrix>> D, const field<vector> & in) {
+  field<vector> out;
   D.apply(in, out);
   return out;
 }
 
 // Multiplying from the right applies the conjugate
 template<typename vector, typename matrix>
-vector operator* (const vector & in, dirac_staggered<vector, matrix> D) {
-  vector out;
+field<vector> operator* (const field<vector> & in, dirac_staggered<field<vector>, field<matrix>> D) {
+  field<vector> out;
   D.dagger(in, out);
   return out;
 }

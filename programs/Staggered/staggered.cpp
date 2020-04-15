@@ -14,7 +14,7 @@
 
 
 using SG = gauge_action<SUN,NMAT>;
-using Dtype = dirac_staggered<field<VEC>,field<SUN>>;
+using Dtype = dirac_staggered<VEC,SUN>;
 using SF = fermion_action<SG, VEC, Dtype>;
 
 
@@ -26,7 +26,7 @@ class full_action{
     SF fa;
     field<SUN> *gauge;
 
-    full_action(SF f) : fa(f) {gauge = f.gauge;}
+    full_action(SF &f) : fa(f) {gauge = f.gauge;}
 
     //The gauge action
     double action(){
@@ -140,7 +140,7 @@ int main(int argc, char **argv){
   ga = SG(gauge, momentum, beta);
   Dtype D(mass, gauge);
   SF fa(ga, D);
-  full_action action = full_action(fa);
+  full_action action(fa);
   for(int step = 0; step < 100; step ++){
     update_hmc(action, hmc_steps, traj_length);
     double plaq = plaquette(gauge);

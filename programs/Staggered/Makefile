@@ -24,16 +24,22 @@ staggered: Makefile staggered.tr.o inputs.o mersenne_inline.o lattice.o setup_la
 
 
 staggered.cpt: Makefile staggered.cpp 
-	$(TRANSFORMER) staggered.cpp 2>/dev/null
+	$(TRANSFORMER) staggered.cpp
 
-%.tr.o : %.cpt staggered.h
+
+
+%.tr.o : %.cpt Makefile
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
-%.o : %.cpp staggered.h
-	$(CC) $(CXXFLAGS) $< -c -o $@
+%.cpt: %.cpp Makefile staggered.h
+	$(TRANSFORMER) $<
                   
-%.o : ../plumbing/%.cpp
-	$(CC) $(CXXFLAGS) $< -c -o $@
+
+%.cpt:../plumbing/%.cpp Makefile
+	$(TRANSFORMER) $<
+
+%.o : %.cpt
+	$(CC) $(CXXFLAGS) $< -c
 
 
 

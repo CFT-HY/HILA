@@ -6,6 +6,8 @@ CC = mpic++ -DUSE_MPI
 CFLAGS = -g  $(OPTS)
 CXXFLAGS = -g -x c++ $(OPTS)
 
+.PRECIOUS: %.cpt %.o
+
 test: Makefile conjReduce
 	./test.sh conjReduce
 
@@ -21,14 +23,15 @@ test_conjReduce: Makefile inputs.o conjReduce.o mersenne_inline.o lattice.o setu
 %.cpt: %.cpp Makefile
 	$(TRANSFORMER) $<
 
+%.cpt:../plumbing/%.cpp Makefile
+	$(TRANSFORMER) $<
+
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
 %.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c
 
-%.o : ../plumbing/%.cpp
-	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c
 	$(CC) $(CFLAGS) $< -c
