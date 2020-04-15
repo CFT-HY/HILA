@@ -330,7 +330,7 @@ void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
     handle_loop_function_cuda(fd);
   } else if (target.openacc) {
     handle_loop_function_openacc(fd);
-  } else if (target.VECTORIZE) {
+  } else if (target.vectorize) {
     handle_loop_function_avx(fd);
   }
 }
@@ -343,7 +343,7 @@ std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, 
     code << generate_code_cuda(S,semicolon_at_end,loopBuf);
   } else if( target.openacc){
     code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);   // use cpu method for acc
-  } else if(target.VECTORIZE) {
+  } else if(target.vectorize) {
     code << generate_code_avx(S,semicolon_at_end,loopBuf, generate_wait_loops);
   } else {
     code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);

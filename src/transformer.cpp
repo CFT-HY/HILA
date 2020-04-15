@@ -129,9 +129,9 @@ llvm::cl::opt<bool> cmdline::SSE("target:SSE",
       llvm::cl::desc("Generate SSE vectorized loops"),
       llvm::cl::cat(TransformerCat));
 
-llvm::cl::opt<int> cmdline::VECTORIZE("target:VECTORIZE",
+llvm::cl::opt<int> cmdline::vectorize("target:vectorize",
       llvm::cl::desc("Generate vectorized loops with given vector size \n"
-      "For example -target:VECTORIZE=32 is equivalent to -target:AVX"),
+      "For example -target:vectorize=32 is equivalent to -target:AVX"),
       llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
@@ -164,17 +164,17 @@ void get_target_struct(codetype & target) {
   } else if (cmdline::openacc) {
     target.openacc = true;
   } else if (cmdline::AVX) {
-    target.VECTORIZE = true;
+    target.vectorize = true;
     target.vector_size = 32;
   } else if (cmdline::AVX512) {
-    target.VECTORIZE = true;
+    target.vectorize = true;
     target.vector_size = 64;
   } else if (cmdline::SSE) {
-    target.VECTORIZE = true;
+    target.vectorize = true;
     target.vector_size = 16;
-  } else if (cmdline::VECTORIZE) {
-    target.VECTORIZE = true;
-    target.vector_size = cmdline::VECTORIZE;
+  } else if (cmdline::vectorize) {
+    target.vectorize = true;
+    target.vector_size = cmdline::vectorize;
   }
 }
 

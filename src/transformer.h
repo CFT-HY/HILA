@@ -35,7 +35,7 @@ enum class parity { none, even, odd, all };
 // variables describing the type of code to be generated
 struct codetype {
   bool CUDA=false;
-  bool VECTORIZE=false;
+  bool vectorize=false;
   int vector_size=1;
   bool openacc=false;
 };
@@ -62,10 +62,10 @@ namespace cmdline {
   extern llvm::cl::opt<bool> SSE;
   extern llvm::cl::opt<bool> openacc;
   extern llvm::cl::opt<bool> func_attribute;
-  extern llvm::cl::opt<int> VECTORIZE;
+  extern llvm::cl::opt<int>  vectorize;
   extern llvm::cl::opt<bool> no_interleaved_comm;
   extern llvm::cl::opt<bool> no_mpi;
-  extern llvm::cl::opt<int> verbosity;
+  extern llvm::cl::opt<int>  verbosity;
 };
 
 namespace state {

@@ -135,7 +135,7 @@ bool MyASTVisitor::is_vectorizable(const std::string & type_name, vectorization_
     // found it
     vi.basetype = n.ntype;
 
-    if (target.VECTORIZE) {
+    if (target.vectorize) {
       std::string old_t, new_t;
 
       if (n.ntype == number_type::DOUBLE) {
@@ -170,7 +170,7 @@ bool MyASTVisitor::is_vectorizable(const std::string & type_name, vectorization_
       return vi.is_vectorizable = true;
 
     } else {
-      // now target.VECTORIZE is false, we don't know the vec length
+      // now target.vectorize is false, we don't know the vec length
       if (n.ntype == number_type::DOUBLE || n.ntype == number_type::FLOAT || 
           n.ntype == number_type::INT) {
             vi.vectorized_type = "";   // in principle vectorizable, don't know the type

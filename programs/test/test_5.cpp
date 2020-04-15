@@ -10,6 +10,10 @@ cmplx<double> e(cmplx<double> x) {return d(x);}
 // #pragma transformer ast dump
 cmplx<double> f(const cmplx<double> & x) { return e(x);}
 
+template <typename T>
+T xyz(T & v) {
+  return sin(v);
+}
 
 
 using ft = cmplx<double>;
@@ -20,9 +24,6 @@ public:
   using base_type = typename base_type_struct<T>::type;
   cmplx<T> a[2];
 };
-
-
-#pragma kissa
 
 
 int main()
@@ -60,7 +61,7 @@ int main()
     
     double vv = (double)X.parity();
 
-    if (t2 < 4) t[X] += 4;
+    if (t2 < 4) A[X] += xyz(A[X]);
     
     A[X].a[0] = 0;
 

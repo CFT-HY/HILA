@@ -1453,7 +1453,6 @@ void MyASTVisitor::check_var_info_list() {
       if (vi.depends_on_site == false) {
         for (var_info * d : vi.dependent_vars) if (d->depends_on_site) {
           vi.depends_on_site = true;
-          llvm::errs() << " HA!  Var " << vi.name << " depends on site after all!\n";
           found++;
           break;  // go to next var
         }
