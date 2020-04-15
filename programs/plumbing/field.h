@@ -150,7 +150,9 @@ class field {
   // one below it does not catch implicit copying.  Try to understand why
   field<T>(const field<T>& other) {
     fs = nullptr;  // this is probably unnecessary
-    (*this)[ALL] = other[X];
+    if(other.fs != nullptr){
+      (*this)[ALL] = other[X];
+    }
   }
     
   // copy constructor - from fields which can be assigned
@@ -158,7 +160,9 @@ class field {
             std::enable_if_t<std::is_convertible<A,T>::value, int> = 0 >  
   field<T>(const field<A>& other) {
     fs = nullptr;  // this is probably unnecessary
-    (*this)[ALL] = other[X];
+    if(other.fs != nullptr){
+      (*this)[ALL] = other[X];
+    }
   }
 
 
