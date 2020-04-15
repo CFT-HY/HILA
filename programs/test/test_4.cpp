@@ -2,7 +2,7 @@
 #include "../plumbing/field.h"
 
 
-transformer_ctl(dump_ast);
+
 template <typename T>
 class c {
 public:
@@ -34,7 +34,7 @@ public:
 };
 
 
-transformer_ctl(dump_ast);
+
 template <typename T>
 inline T sum(const T a, const T b) {
   T r;
