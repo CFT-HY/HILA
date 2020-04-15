@@ -1,4 +1,4 @@
-	#define _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -29,6 +29,7 @@ class scaling_sim {
 		scaling_sim() = default;
 		void allocate(const std::string fname, int argc, char ** argv);
 		void initialize();
+		void write_energy();
 		void next();
 		inline double scaleFactor(double t);
 
@@ -100,12 +101,22 @@ void scaling_sim::initialize(){
 		}
 		onsites(ALL){
 			cmplx<double> norm = pi[X].conj()*pi[X];
-			if (norm.re == 0) norm = cmplx(1.0, 0.0);
+			if (norm.re == 0) norm = cmplx<double>(1.0, 0.0);
 			phi[X] = pi[X]/norm;
-			pi[X] = cmplx(0.0, 0.0);
+			pi[X] = cmplx<double>(0.0, 0.0);
 		}
 	}
 
+}
+
+void scaling_sim::write_energy(){
+	
+	cmplx<double> vsum;
+	onsites(ALL){
+		cmplx<double> v = V[X];
+		vsum += v; 
+	}
+	std::cout << vsum/((double) config.l*config.l*config.l) << "\n"; 
 }
 
 void scaling_sim::next(){
@@ -141,6 +152,7 @@ int main(int argc, char ** argv){
 	sim.initialize();
 	while(sim.t < sim.config.tEnd){
 		sim.next();
+		sim.write_energy();
 	}
 	return 0;
 }
