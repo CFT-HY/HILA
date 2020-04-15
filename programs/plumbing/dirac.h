@@ -30,7 +30,7 @@ inline void init_staggered_eta(field<double> staggered_eta[NDIM]){
 
 template<typename mtype, typename vtype>
 void dirac_staggered_apply(
-  const mtype gauge[NDIM],
+  const mtype *gauge,
   const double mass,
   const vtype &v_in,
   vtype &v_out,
@@ -63,7 +63,7 @@ void dirac_staggered_apply(
 
 template<typename mtype, typename vtype>
 void dirac_staggered_dagger(
-  const mtype gauge[NDIM],
+  const mtype *gauge,
   const double mass,
   const vtype &v_in,
   vtype &v_out,
@@ -111,7 +111,7 @@ class dirac_staggered {
   public:
   
     // Constructor: initialize mass, gauge and eta
-    dirac_staggered(double m, matrix U[NDIM]) {
+    dirac_staggered(double m, matrix *U) {
       // Set mass and gauge field
       mass = m;
       gauge = (matrix*) U;

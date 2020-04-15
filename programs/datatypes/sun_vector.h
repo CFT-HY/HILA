@@ -30,16 +30,26 @@ static double gaussian_ran()
 
 
 template<int n, typename radix>
-class SU_vector : public matrix<n,1,cmplx<radix> >{
+class SU_vector : public matrix<1,n,cmplx<radix> >{
   public:
   using base_type = typename base_type_struct<radix>::type;
   
+  SU_vector() = default;
+
+  SU_vector(matrix<1,n,cmplx<radix>> m) {
+    for (int i=0; i<n; i++){
+      this->c[i][0] = m.c[i][0];
+    }
+  }
+
   void gaussian(){ 
     for (int i = 0; i < n; i++) {
       (*this).c[i][0].re = gaussian_ran();
       (*this).c[i][0].im = gaussian_ran();
     }
   }
+
+  
 
 };
 

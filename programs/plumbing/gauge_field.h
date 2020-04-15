@@ -158,13 +158,13 @@ double plaquette(field<SUN> *gauge){
 
 
 template<typename SUN, typename MATRIX>
-class gauge_term{
+class gauge_action{
   public:
     field<SUN> *gauge;
     field<MATRIX> *momentum;
     double beta;
 
-    gauge_term(field<SUN> *g, field<MATRIX> *m, double b){
+    gauge_action(field<SUN> *g, field<MATRIX> *m, double b){
       gauge = g; momentum = m; beta = b;
     }
 

@@ -8,76 +8,40 @@
 #include "../plumbing/inputs.h"
 #include "../plumbing/algorithms/hmc.h"
 #include "../plumbing/gauge_field.h"
+#include "../plumbing/fermion_field.h"
 
 
 
 
+using SG = gauge_action<SUN,NMAT>;
+using Dtype = dirac_staggered<field<VEC>,field<SUN>>;
+using SF = fermion_action<SG, VEC, Dtype>;
 
 
 
-
-
-
-
-
-
-class fermion_term{
-  public:
-    gauge_term<SUN,NMAT> gt;
-    field<SUN> *gauge;
-
-    fermion_term(gauge_term<SUN,NMAT> g) : gt(g) {
-      gauge = g.gauge;
-    }
-
-    //The gauge action
-    double action(){
-      return gt.action();
-    }
-
-    /// Gaussian random momentum for each element
-    void generate_momentum(){
-      gt.generate_momentum();
-    }
-
-    // Update the momentum with the gauge field
-    void force_step(double eps){
-      // Fermion force here
-     }
-
-    // Update the gauge field with momentum
-    void momentum_step(double eps){
-      gt.integrator_step(eps);
-    }
-
-    // A single gauge update
-    void integrator_step(double eps){
-      O2_step(*this, eps);
-    }
-};
 
 
 class full_action{
   public:
-    fermion_term ft;
+    SF fa;
     field<SUN> *gauge;
 
-    full_action(fermion_term f) : ft(f) {gauge = f.gauge;}
+    full_action(SF f) : fa(f) {gauge = f.gauge;}
 
     //The gauge action
     double action(){
-      return ft.action();
+      return fa.action();
     }
 
     /// Gaussian random momentum for each element
     void generate_momentum(){
-      ft.generate_momentum();
+      fa.generate_momentum();
     }
 
     // Update the momentum with the gauge field
     void integrate(int steps, double dt){
       for(int step=0; step < steps; step++){
-        ft.integrator_step(dt/steps);
+        fa.integrator_step(dt/steps);
       }
     }
 };
@@ -96,6 +60,7 @@ int main(int argc, char **argv){
   input parameters = input();
   parameters.import("parameters");
   double beta = parameters.get("beta");
+  double mass = parameters.get("mass");
   int seed = parameters.get("seed");
 	double hmc_steps = parameters.get("hmc_steps");
 	double traj_length = parameters.get("traj_length");
@@ -131,7 +96,7 @@ int main(int argc, char **argv){
   h.c[1][0].re -= eps;
   SUN g12 = h*g1;
 
-  gauge_term<SUN,NMAT> gt(gauge, momentum, 1.0);
+  gauge_action<SUN,NMAT> ga(gauge, momentum, 1.0);
 
   if(mynode()==0)
     gauge[0].set_value_at(g1, 50);
@@ -155,7 +120,7 @@ int main(int argc, char **argv){
 
 
   // Check also the momentum action and derivative
-  gt.generate_momentum();
+  ga.generate_momentum();
 
   s1 = momentum_action(momentum);
   h = momentum[0].get_value_at(0);
@@ -172,9 +137,10 @@ int main(int argc, char **argv){
 
 
   // Now the actual simulation
-  gt = gauge_term<SUN,NMAT>(gauge, momentum, beta);
-  fermion_term ft = fermion_term(gt);
-  full_action action = full_action(ft);
+  ga = SG(gauge, momentum, beta);
+  Dtype D(mass, gauge);
+  SF fa(ga, D);
+  full_action action = full_action(fa);
   for(int step = 0; step < 100; step ++){
     update_hmc(action, hmc_steps, traj_length);
     double plaq = plaquette(gauge);
