@@ -426,7 +426,7 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
 // by the Clang parser.
 class MyASTConsumer : public ASTConsumer {
 public:
-  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { Rewriterp = &R; }
+  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { }
 
 
   // HandleTranslationUnit is called after the AST for the whole TU is completed
@@ -436,6 +436,8 @@ public:
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
     //tud->dump();
+
+    Visitor.reset_parsing_state();
 
     // Traverse each declaration in the translation unit
     for (Decl* d : tud->decls() ) {
@@ -490,7 +492,7 @@ public:
 
 private:
   MyASTVisitor Visitor;
-  Rewriter * Rewriterp;
+
 };
 
 

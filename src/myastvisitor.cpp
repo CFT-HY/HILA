@@ -27,96 +27,9 @@ std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
   }
 }
 
-/// -- Identifier utility functions --
-/// getCanonicalType takes away typedefs, getUnqualifiedType() qualifiers, pp just in case
-/// the type string needs to begin with the string
-
-bool MyASTVisitor::is_field_storage_expr(Expr *E) {
-  PrintingPolicy pp(Context->getLangOpts());
-  return( E && 
-    E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_storage_type) == 0);
-}
-
-bool MyASTVisitor::is_field_expr(Expr *E) {
-  PrintingPolicy pp(Context->getLangOpts());
-  return( E && 
-    E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_type) == 0);
-}
-
-bool MyASTVisitor::is_field_decl(ValueDecl *D) {
-  PrintingPolicy pp(Context->getLangOpts());
-  return( D && 
-    D->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_type) == 0);
-}
-
-
-bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
-  // Use the Profile function in clang, which "fingerprints"
-  // statements
-  llvm::FoldingSetNodeID IDa, IDb;
-  a->Profile(IDa, *Context, true);
-  b->Profile(IDb, *Context, true);
-  return ( IDa == IDb );
-}
-
-
-bool MyASTVisitor::is_parity_index_type(Expr *E) {
-  return (get_expr_type(E) == "parity");
-}
-
-// Checks if E is a parity Expr. Catches both parity and X_plus_direction 
-bool MyASTVisitor::is_field_parity_expr(Expr *E) {
-  E = E->IgnoreParens();
-  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
-
-  if (OC &&
-      strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
-      is_field_expr(OC->getArg(0))) {
-
-    return is_parity_index_type(OC->getArg(1));
-
-  } else {
-    // DON'T DO TEMPLATES NOW!  ONLY SPECIALIZATIONS
-    #if 0
-    // This is for templated expressions
-    // for some reason, expr a[X] "getBase() gives X, getIdx() a...
-    if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-      Expr * lhs = ASE->getLHS()->IgnoreParens();
-      
-      if (is_field_expr(ASE->getLHS()->IgnoreParens())) {
-        // llvm::errs() << " FP: and field\n";
-        return is_parity_index_type(ASE->getRHS());
-      }
-    }
-    #endif
-  }
-  return false;   
-}
-
-bool MyASTVisitor::is_X_index_type(Expr *E) {
-  std::string s = get_expr_type(E);
-  if (s == "X_index_type" || s == "X_plus_direction" || s == "X_plus_offset") 
-    return true;
-  else 
-    return false;
-}
-
-// Checks if E is a parity Expr. Catches both parity and X_plus_direction 
-bool MyASTVisitor::is_field_with_X_expr(Expr *E) {
-  E = E->IgnoreParens();
-  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
-
-  if (OC &&
-      strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
-      is_field_expr(OC->getArg(0))) {
-
-    return is_X_index_type(OC->getArg(1));
-
-  }
-  return false;   
-}
 
 /// is the stmt pointing now to assignment
+
 bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
@@ -152,43 +65,6 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 
   return false;
 }
-
-// is the stmt pointing now to a function call
-bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
-  if (auto *Call = dyn_cast<CallExpr>(s)){
-    // llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
-    return true;
-  }
-  return false;
-}
-bool MyASTVisitor::is_member_call_stmt(Stmt * s) {
-  if (auto *Call = dyn_cast<CXXMemberCallExpr>(s)){
-    // llvm::errs() << "Member call found: " << get_stmt_str(s) << '\n';
-    return true;
-  }
-  return false;
-}
-bool MyASTVisitor::is_constructor_stmt(Stmt * s) {
-  if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
-    // llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
-    return true;
-  }
-  return false;
-}
-
-bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
-  SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(),
-                                                   tok::semi,
-                                                   TheRewriter.getSourceMgr(),
-                                                   Context->getLangOpts(),
-                                                   false);
-  if (l.isValid()) {
-    //    llvm::errs() << "; found " << get_stmt_str(S) << '\n';
-    return true;
-  }
-  return false;
-}
-
 
 
 /// Check the validity a variable reference in a loop

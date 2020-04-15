@@ -13,9 +13,7 @@
 /// and methods of X (check!), or it contains a local variable which is site dependent
 //////////////////////////////////////////////////////////////////////////////
 
-class dependsOnSiteChecker : public RecursiveASTVisitor<dependsOnSiteChecker> {
-protected:
-  ASTContext *Context;
+class dependsOnSiteChecker : public GeneralVisitor, public RecursiveASTVisitor<dependsOnSiteChecker> {
 
 public:
   bool found_X;
@@ -24,8 +22,8 @@ public:
   bool found_dependent_var;
   std::vector<var_info *> * depends_on_var;
 
-  dependsOnSiteChecker(ASTContext *C, std::vector<var_info *> * dep_var) {
-    Context = C;
+  dependsOnSiteChecker(Rewriter &R, ASTContext *C, std::vector<var_info *> * dep_var) : GeneralVisitor(R,C) {
+
     depends_on_var = dep_var;    // we do not clear the vector, because it may contain earlier dependencies
     
     found_X = found_var_depends_on_site = found_X_method = found_dependent_var = false;
@@ -35,7 +33,7 @@ public:
 
   bool VisitDeclRefExpr(DeclRefExpr * e) {
     /// if we visit X
-    if (e->getType().getCanonicalType().getAsString() == "const class X_index_type") {
+    if (is_X_type(e)) {
       found_X = true;
       // llvm::errs() << "FOUND X index!\n";
       return false;  // we do not need to go further, do we?
@@ -67,8 +65,7 @@ public:
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *MCall) {
     // if we have an X-method, i.e. X.something() which is site dependent
     // it appears that the X DeclRefExpr finds the X-methods before this, but no matter.
-    if (MCall->getImplicitObjectArgument()->getType().getCanonicalType().getAsString() 
-         == "const class X_index_type") {
+    if (is_X_type(MCall->getImplicitObjectArgument())) {
       found_X_method = true;
       return false;
     }
@@ -87,7 +84,7 @@ public:
 
 bool MyASTVisitor::depends_on_site(Expr * e, std::vector<var_info *> * dependent_var) {
 
-  dependsOnSiteChecker checker(Context,dependent_var);
+  dependsOnSiteChecker checker(TheRewriter,Context,dependent_var);
 
   checker.TraverseStmt(e);
   return (checker.found_X || checker.found_var_depends_on_site || checker.found_X_method);

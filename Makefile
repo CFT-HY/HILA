@@ -90,6 +90,7 @@ BUILDDIR := build
 
 HEADERS = \
   $(SRCDIR)/transformer.h \
+  $(SRCDIR)/generalvisitor.h \
   $(SRCDIR)/myastvisitor.h \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \

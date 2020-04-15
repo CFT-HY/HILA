@@ -10,23 +10,26 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "srcbuf.h" //srcbuf class interface 
-#include "transformer.h" //global vars needed  
+#include "transformer.h" //global vars needed 
+#include "generalvisitor.h"  // Definitions for the general visitor case
 
 //////////////////////////////////////////////
 /// myastvisitor.h : overloaded ASTVisitor for 
 /// generating code from AST
 ///
-/// Implemented by:
+/// Used in:
 /// - myastvisitor.cpp
-/// - codegen.cpp 
+/// - loop_function.cpp
+/// - codegen.cpp and its derivatives
+/// 
 //////////////////////////////////////////////
 
 
-class GeneralVisitor {
-protected:
+class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisitor> {
 
-  Rewriter &TheRewriter;
-  ASTContext *Context;
+private:
+  srcBuf *writeBuf;
+  srcBuf *toplevelBuf;
 
   //flags used during AST parsing 
   struct {
@@ -39,10 +42,11 @@ protected:
     bool check_loop;            // true if just checking existence of a field loop
     bool loop_function_next;
   } parsing_state;
-  
-public:
 
-  GeneralVisitor(Rewriter &R) : TheRewriter(R) {
+public:
+  using GeneralVisitor::GeneralVisitor;
+
+  void reset_parsing_state() {
     parsing_state.skip_children = 0;
     parsing_state.scope_level = 0;
     parsing_state.ast_depth = 1;
@@ -53,62 +57,6 @@ public:
     parsing_state.loop_function_next = false;
   }
 
-  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { 
-    parsing_state.skip_children = 0;
-    parsing_state.scope_level = 0;
-    parsing_state.in_loop_body = false;
-    parsing_state.accept_field_parity = false;
-    parsing_state.check_loop = false;
-    parsing_state.loop_function_next = false;
-    Context=C; 
-  }
-
-  // template <unsigned N>
-  // void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
-  //                 const char (&msg)[N],
-  //                 const char *s1 = nullptr,
-  //                 const char *s2 = nullptr,
-  //                 const char *s3 = nullptr );
-
-
-  template <unsigned N>
-  void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
-                  const char (&msg)[N],
-                  const char *s1 = nullptr,
-                  const char *s2 = nullptr,
-                  const char *s3 = nullptr) {
-    // we'll do reporting only when output is on, avoid double reports
-    auto & DE = Context->getDiagnostics();    
-    auto ID = DE.getCustomDiagID(lev, msg );
-    auto DB = DE.Report(SL, ID);
-    if (s1 != nullptr) DB.AddString(s1);
-    if (s2 != nullptr) DB.AddString(s2);
-    if (s3 != nullptr) DB.AddString(s3);
-  }
-
-
-
-  std::string get_stmt_str(const Stmt *s) {
-    return TheRewriter.getRewrittenText(s->getSourceRange());
-  }
-
-  std::string get_expr_type(const Expr *e) {
-    // This is somehow needed for printing type without "class" id
-    // TODO: perhaps reanalyse and make more robust?
-    PrintingPolicy pp(Context->getLangOpts());
-    return e->getType().getUnqualifiedType().getAsString(pp);
-  }
-};
-
-
-class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisitor> {
-
-private:
-  srcBuf *writeBuf;
-  srcBuf *toplevelBuf;
-
-public:
-  using GeneralVisitor::GeneralVisitor;
 
   bool shouldVisitTemplateInstantiations() const { return true; }
   // is false by default, but still goes?
@@ -175,44 +123,14 @@ public:
   
   /// special handler for field<>
   int handle_field_specializations(ClassTemplateDecl *D);
-
-  // void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
   
-  // bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
-  // bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
-  
-  bool is_field_storage_expr(Expr *E);
-  bool is_field_expr(Expr *E);
-  bool is_field_decl(ValueDecl *D);
-
-  /// allowed index types: parity
-  bool is_parity_index_type(Expr *E);
-
-  // catches field[parity-type] expressions, incl. _plus -versions
-  bool is_field_parity_expr(Expr *E);
-
-  /// allowed index types: X, X_plus_direction, X_plus_offset
-  bool is_X_index_type(Expr *E);
-
-  // catches field[X] and field[X+dir] expressions, incl. _plus -versions
-  bool is_field_with_X_expr(Expr *E);
-
   bool is_array_expr(Expr *E); 
-  
-  /// this tries to "fingerprint" expressions and see if they're duplicate
-  bool is_duplicate_expr(const Expr * a, const Expr * b);
   
   /// Checks if expr points to a variable defined in the same loop
   var_decl * is_loop_local_var_ref(Expr *E);
 
   bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool & is_compound);
   
-  bool is_function_call_stmt(Stmt * s);
-
-  bool is_member_call_stmt(Stmt * s);
-
-  bool is_constructor_stmt(Stmt * s);
-
   bool is_loop_extern_var_ref(Expr *E);
 
   void check_allowed_assignment(Stmt * s);
@@ -256,7 +174,7 @@ public:
   bool is_field_parity_assignment( Stmt *s );
 
   /// Does ; follow the statement?
-  bool isStmtWithSemi(Stmt * S);  
+
   SourceRange getRangeWithSemicolon(Stmt * S, bool flag_error = true);
   
   void requireGloballyDefined(Expr * e);
