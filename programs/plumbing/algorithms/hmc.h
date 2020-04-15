@@ -1,5 +1,5 @@
-#ifndef INTEGRATOR_H
-#define INTEGRATOR_H
+#ifndef HMC_H
+#define HMC_H
 
 
 
@@ -46,7 +46,7 @@ void update_hmc(integrator gt, int steps, double traj_length){
   static int accepted=0, trajectory=1;
 
   // Draw the momentum
-  gt.gaussian_momentum();
+  gt.generate_momentum();
 
   // Make a copy of the gauge field in case the update is rejected
   field<SUN> gauge_copy[NDIM];
