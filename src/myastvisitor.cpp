@@ -1671,7 +1671,8 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
         // not descent inside templates
         parsing_state.skip_children = 1;
         break;
-        
+
+      case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
 
         if (does_function_contain_loop(f)) {
