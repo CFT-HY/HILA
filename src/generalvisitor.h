@@ -26,6 +26,10 @@
 ///       ... custom constructor stmts ...
 ///    }       
 ///    ... whatever definitions ...
+///  
+///    // if constructor is not needed, use the GeneralVisitor constructor:
+///    using GeneralVisitor::GeneralVisitor;
+///
 /// };
 /// 
 /// exampleVisitor ev(TheRewriter,Context, .... );
