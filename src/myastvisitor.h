@@ -1,4 +1,3 @@
-// -*- mode: c++ -*-
 #ifndef MYASTVISITOR_H
 #define MYASTVISITOR_H
 
@@ -11,23 +10,26 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "srcbuf.h" //srcbuf class interface 
-#include "transformer.h" //global vars needed  
+#include "transformer.h" //global vars needed 
+#include "generalvisitor.h"  // Definitions for the general visitor case
 
 //////////////////////////////////////////////
 /// myastvisitor.h : overloaded ASTVisitor for 
 /// generating code from AST
 ///
-/// Implemented by:
+/// Used in:
 /// - myastvisitor.cpp
-/// - codegen.cpp 
+/// - loop_function.cpp
+/// - codegen.cpp and its derivatives
+/// 
 //////////////////////////////////////////////
 
 
-class GeneralVisitor {
-protected:
+class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisitor> {
 
-  Rewriter &TheRewriter;
-  ASTContext *Context;
+private:
+  srcBuf *writeBuf;
+  srcBuf *toplevelBuf;
 
   //flags used during AST parsing 
   struct {
@@ -40,10 +42,11 @@ protected:
     bool check_loop;            // true if just checking existence of a field loop
     bool loop_function_next;
   } parsing_state;
-  
-public:
 
-  GeneralVisitor(Rewriter &R) : TheRewriter(R) {
+public:
+  using GeneralVisitor::GeneralVisitor;
+
+  void reset_parsing_state() {
     parsing_state.skip_children = 0;
     parsing_state.scope_level = 0;
     parsing_state.ast_depth = 1;
@@ -54,45 +57,6 @@ public:
     parsing_state.loop_function_next = false;
   }
 
-  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { 
-    parsing_state.skip_children = 0;
-    parsing_state.scope_level = 0;
-    parsing_state.in_loop_body = false;
-    parsing_state.accept_field_parity = false;
-    parsing_state.check_loop = false;
-    parsing_state.loop_function_next = false;
-    Context=C; 
-  }
-
-  template <unsigned N>
-  void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
-                  const char (&msg)[N],
-                  const char *s1 = nullptr,
-                  const char *s2 = nullptr,
-                  const char *s3 = nullptr );
-
-
-  std::string get_stmt_str(const Stmt *s) {
-    return TheRewriter.getRewrittenText(s->getSourceRange());
-  }
-
-  std::string get_expr_type(const Expr *e) {
-    // This is somehow needed for printing type without "class" id
-    // TODO: perhaps reanalyse and make more robust?
-    PrintingPolicy pp(Context->getLangOpts());
-    return e->getType().getUnqualifiedType().getAsString(pp);
-  }
-};
-
-
-class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisitor> {
-
-private:
-  srcBuf *writeBuf;
-  srcBuf *toplevelBuf;
-
-public:
-  using GeneralVisitor::GeneralVisitor;
 
   bool shouldVisitTemplateInstantiations() const { return true; }
   // is false by default, but still goes?
@@ -112,9 +76,13 @@ public:
   bool VisitVarDecl(VarDecl *var);
 
   bool VisitDecl( Decl * D);
+  bool VisitType( Type * T);
   
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
+
+  /// typealiases are used to determine if class is vectorizable
+  bool VisitTypeAliasDecl(TypeAliasDecl * ta);
 
   /// True if the decl is preceded by "#pragma transformer <string>" where s is the string
   bool has_pragma(Decl *d, const char *s);
@@ -155,54 +123,37 @@ public:
   
   /// special handler for field<>
   int handle_field_specializations(ClassTemplateDecl *D);
-
-  // void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
   
-  // bool VisitClassTemplateSpecalializationDeclImpl(ClassTemplateSpecializationDecl *D);
-  // bool VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D);
-  
-  bool is_field_storage_expr(Expr *E);
-  bool is_field_expr(Expr *E);
-  bool is_field_decl(ValueDecl *D);
-
-  /// allowed index types: parity, parity_plus_direction, parity_plus_offset
-  bool is_parity_index_type(Expr *E);
-
-  // catches field[parity-type] expressions, incl. _plus -versions
-  bool is_field_parity_expr(Expr *E);
-
   bool is_array_expr(Expr *E); 
-  
-  /// this tries to "fingerprint" expressions and see if they're duplicate
-  bool is_duplicate_expr(const Expr * a, const Expr * b);
   
   /// Checks if expr points to a variable defined in the same loop
   var_decl * is_loop_local_var_ref(Expr *E);
 
   bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool & is_compound);
   
-  bool is_function_call_stmt(Stmt * s);
-
-  bool is_member_call_stmt(Stmt * s);
-
-  bool is_constructor_stmt(Stmt * s);
-
   bool is_loop_extern_var_ref(Expr *E);
 
   void check_allowed_assignment(Stmt * s);
   
   parity get_parity_val(const Expr *pExpr);
-    
-  void require_parity_X(Expr * pExpr);
-  
+      
   bool check_field_ref_list();
 
   void check_var_info_list();
   
-  bool handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound);
+  bool handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X);
   
-  void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op);
+  void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op, Stmt * assign_stmt = nullptr);
   void handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
+
+  var_info * new_var_info(VarDecl *decl);
+
+  bool check_rhs_of_assignment(Stmt *s, std::vector<var_info *> * dependent = nullptr);
+
+  /// this checks if the statement s is site-dependent inside site loops
+  /// if return is false, vi (if non-null) will contain a list of variables
+  /// which may turn out to be dependent on site later.  Check after loop complete!
+  bool is_site_dependent(Expr *e, std::vector<var_info *> * vi = nullptr);
 
   void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
@@ -223,7 +174,7 @@ public:
   bool is_field_parity_assignment( Stmt *s );
 
   /// Does ; follow the statement?
-  bool isStmtWithSemi(Stmt * S);  
+
   SourceRange getRangeWithSemicolon(Stmt * S, bool flag_error = true);
   
   void requireGloballyDefined(Expr * e);
@@ -249,20 +200,30 @@ public:
   void generate_code(Stmt *S);
   void handle_field_plus_offsets(std::stringstream &code, srcBuf & loopbuf, std::string & par );
 
-  std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf);
+  std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait);
   void backend_handle_loop_function(FunctionDecl *fd);
 
   /// Generate a header for starting communication and marking fields changed
-  std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
   std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb);
   void generate_openacc_loop_header(std::stringstream & code);
   //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
-  std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
 
   /// Handle functions called in a loop
   void handle_loop_function_cuda(FunctionDecl *fd);
   void handle_loop_function_openacc(FunctionDecl *fd);
   void handle_loop_function_avx(FunctionDecl *fd);
+
+
+  /// inspect if the type name is vectorizable
+  /// returns the vectorized type in vectorized_type, if it is
+  bool is_vectorizable(const std::string & type_name, vectorization_info & vi);
+  bool is_vectorizable(const QualType & QT, vectorization_info & vi);
+
+  /// Check if the field type is vectorizable and how
+  vectorization_info inspect_field_type(Expr *fE);
+
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();
@@ -310,6 +271,9 @@ public:
   bool TraverseStmt(Stmt *s);
   bool VisitDeclRefExpr(DeclRefExpr * e);
 };
+
+
+
 
 
 #endif

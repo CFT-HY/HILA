@@ -36,7 +36,7 @@ int main(int argc, char **argv){
     // Test that neighbours are fetched correctly
     foralldir(dir){
         onsites(ALL){
-          element<coordinate_vector> l = coordinates(X);
+          element<coordinate_vector> l = X.coordinates();
           coordinate[X] = l[dir];
           nb_coordinate1[X] = (l[dir] + 1) % nd[dir];
         }

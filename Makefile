@@ -40,7 +40,7 @@ $(info -----------------------------------------------)
 
 #CXX := g++-5
 CXX := $(LLVM_BIN_PATH)/clang++
-CXXFLAGS := -g -fno-rtti
+CXXFLAGS := -g -fno-rtti -std=c++17
 
 LLVM_CXXFLAGS := `$(LLVM_BIN_PATH)/llvm-config --cxxflags`
 LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`
@@ -90,6 +90,7 @@ BUILDDIR := build
 
 HEADERS = \
   $(SRCDIR)/transformer.h \
+  $(SRCDIR)/generalvisitor.h \
   $(SRCDIR)/myastvisitor.h \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \
@@ -108,6 +109,8 @@ OBJECTS = \
   $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/myastvisitor.o \
   $(BUILDDIR)/loop_function.o \
+  $(BUILDDIR)/vectorization_info.o \
+  $(BUILDDIR)/depends_on_site.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o

@@ -25,8 +25,8 @@ using namespace clang::tooling;
 const std::string program_name("Transformer");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
-enum class reduction { NONE, SUM, PRODUCT };
-enum class parity { none, even, odd, all, x };
+enum class reduction { NONE, SUM, PRODUCT };  // TBD:  MIN MAX MINLOC MAXLOC
+enum class parity { none, even, odd, all };
 
 
 /// The following section contains command line options and functions
@@ -35,7 +35,7 @@ enum class parity { none, even, odd, all, x };
 // variables describing the type of code to be generated
 struct codetype {
   bool CUDA=false;
-  bool VECTORIZE=false;
+  bool vectorize=false;
   int vector_size=1;
   bool openacc=false;
 };
@@ -62,7 +62,10 @@ namespace cmdline {
   extern llvm::cl::opt<bool> SSE;
   extern llvm::cl::opt<bool> openacc;
   extern llvm::cl::opt<bool> func_attribute;
-  extern llvm::cl::opt<int> VECTORIZE;
+  extern llvm::cl::opt<int>  vectorize;
+  extern llvm::cl::opt<bool> no_interleaved_comm;
+  extern llvm::cl::opt<bool> no_mpi;
+  extern llvm::cl::opt<int>  verbosity;
 };
 
 namespace state {
@@ -73,13 +76,6 @@ namespace state {
 extern llvm::cl::OptionCategory TransformerCat;
 
 
-// Stores the parity of the current loop: Expr, value (if known), Expr as string
-
-struct loop_parity_struct {
-  const Expr * expr;
-  parity value;
-  std::string text;
-};
 
 //class storing global state variables used in parsing
 
@@ -166,6 +162,23 @@ struct dir_ptr {
 };
 
 
+
+/// field_type_info contains information of the template argument of
+/// field<type> -expression.  Type is vectorizable if:
+/// a) just float, double, int  or 
+/// b) is templated type, with float/double in template and  implements 
+///    the method using base_type = typename base_type_struct<T>::type;
+
+enum class number_type {INT, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
+
+struct vectorization_info {
+  bool is_vectorizable;
+  int vector_length;
+  number_type basetype;
+  std::string vectorized_type;
+};
+
+
 // main struct for storing info about each field variable inside loops
 // one field_info for each loop variable
   
@@ -176,10 +189,13 @@ struct field_info {
   std::string loop_ref_name;             // var which refers to payload, loop_ref_name v = new_name->fs.payload
   std::vector<dir_ptr> dir_list;         // nb directions TODO: more general gather ptr
   std::vector<field_ref *> ref_list;     // where the var is referred at
+  Expr *nameExpr;                        // first of the name exprs to this field
+  vectorization_info vecinfo;            // info of the type in field<type>
+
   bool is_written;                       // is the field written to in this loop
   bool is_read_atX;                      // local read, i.e. field[X]
   bool is_read_nb;                       // read using nn-neighbours 
-  bool is_read_offset;                  // read with an offset (non-nn) index
+  bool is_read_offset;                   // read with an offset (non-nn) index
   int  first_assign_seq;                 // the sequence of the first assignment
 
   field_info() {
@@ -207,17 +223,23 @@ struct var_ref {
   bool is_assigned;
 };
 
+/// This struct keeps track of all variables appearing in loops
+/// variable can be external or defined inside loop (loop_local)
+/// is_site_dependent means that the variable value can be site dependent,
+/// which has implications for vectorization
+
 struct var_info {
-  std::vector<var_ref> refs;
-  VarDecl * decl;
-  struct var_decl * var_declp;
-  std::string type;
-  std::string name;
-  std::string new_name;
-  bool is_loop_local;
-  reduction reduction_type;
-  std::string reduction_name;
-  bool is_assigned;
+  std::vector<var_ref> refs;                // references of this var in loop
+  std::string type;                         // type as string
+  std::string name;                         // variable name
+  std::string new_name;                     // name to be used in loop
+  VarDecl * decl;                           // declaration of this var
+  std::string reduction_name;               // name of reduction variable
+  std::vector<var_info *> dependent_vars;   // vector of var_infos which may affect is_site_dependent
+  reduction reduction_type;                 // what type of reduction
+  bool is_loop_local;                       // true if defined inside loop
+  bool is_assigned;                         // is the var assigned to
+  bool is_site_dependent;                     // is the value of variable site dependent
 };
 
 // Stores onformation for a single reference to an array
@@ -260,16 +282,32 @@ struct special_function_call {
   int scope;
 };
 
+// Stores the parity of the current loop: Expr, value (if known), Expr as string
+
+struct loop_info_struct {
+  const Expr * parity_expr;
+  std::string parity_text;
+  parity parity_value;
+
+  bool has_site_dependent_conditional;           // if, for, while w. site dep. cond?
+  std::vector<var_info *> conditional_vars;      // may depend on variables
+};
+
+
 bool write_output_file( const std::string & name, const std::string & buf ) ;
 reduction get_reduction_type(bool, std::string &, var_info &);
 void set_fid_modified(const FileID FID);
 bool search_fid(const FileID FID);
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
 
+// reset the status of vectorizable types
+void reset_vectorizable_types();
+
+
 // take global CI just in case
 extern CompilerInstance *myCompilerInstance;
 extern global_state global;
-extern loop_parity_struct loop_parity;
+extern loop_info_struct loop_info;
 extern codetype target;
 
 /// global variable declarations - definitions on transformer.cpp

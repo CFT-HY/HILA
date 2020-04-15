@@ -159,6 +159,11 @@ int srcBuf::find_original(SourceLocation start, const std::string &c) {
   return find_original(get_index(start),c);
 }
             
+bool srcBuf::is_edited(SourceLocation sl) {
+  int idx = get_index(sl);
+  return (ext_ind[idx] != 1);
+}
+
 bool srcBuf::is_extent(int i) {
   assert(i>=0 && i<true_size);
   int e = abs(ext_ind[i]);

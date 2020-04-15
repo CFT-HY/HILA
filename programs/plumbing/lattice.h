@@ -6,6 +6,7 @@
 #include <array>
 #include <vector>
 
+#define VECTOR_LAYOUT  // TEMP HERE TO HELP EDITOR!!!!
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
@@ -14,6 +15,13 @@
 #include "../plumbing/coordinates.h"
 #include "../plumbing/inputs.h"
 
+#ifdef VECTOR_LAYOUT
+#ifndef VECTOR_SIZE
+#define VECTOR_SIZE (256/8)
+#endif
+// This is the vector size used to determine the layout
+constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
+#endif
 
 
 struct node_info {
@@ -55,7 +63,22 @@ private:
     std::vector<coordinate_vector> coordinates;
 
     void setup(node_info & ni, lattice_struct & lattice);
+
+#ifdef VECTOR_LAYOUT
+    // If we have vectorized-style layout, we introduce "subnodes"
+    // size is this_node.size/subnodes.divisions, which is not
+    // constant across nodes
+    struct subnode_struct {
+      coordinate_vector divisions,size;  // div to subnodes to directions, size
+      coordinate_vector offset[number_of_subnodes];  // coord shift to subnodes
+      unsigned sites,evensites,oddsites;   
+
+      void setup(const node_struct & tn);
+    } subnodes;
+#endif
+
   } this_node;
+
 
   // information about all nodes
   struct allnodes {
@@ -81,16 +104,19 @@ public:
     unsigned rank;                         // rank of communicated with node
     unsigned sites, evensites, oddsites;
     unsigned buffer;
-    std::vector<unsigned> sitelist;
+    unsigned * sitelist;
 
-    // Get a vector containing the sites of parity par
-    std::vector<unsigned> get_site_list(parity par){
-      if(par == ALL){
-        return std::vector<unsigned>(sitelist.begin(), sitelist.end());
-      } else if(par == EVEN){
-        return std::vector<unsigned>(sitelist.begin(), sitelist.begin()+evensites);
+    // Get a vector containing the sites of parity par and number of elements
+    const unsigned * RESTRICT get_sitelist(parity par, int & size) const {
+      if (par == ALL) { 
+        size = sites;
+        return sitelist;
+      } else if (par == EVEN) {
+        size = evensites;
+        return sitelist;
       } else {
-        return std::vector<unsigned>(sitelist.begin() + evensites, sitelist.end());
+        size = oddsites;
+        return sitelist + evensites;
       }
     }
 
@@ -124,21 +150,29 @@ public:
     }
   };
 
-  struct comminfo_struct {
+  // nn-communication has only 1 node to talk to
+  struct nn_comminfo_struct {
     unsigned * index;
-    std::vector<comm_node_struct> from_node;
-    std::vector<comm_node_struct> to_node;
+    comm_node_struct from_node, to_node;
     unsigned receive_buf_size;                    // only for general gathers
   };
 
+  // general communication
+  struct gen_comminfo_struct {
+    unsigned * index;
+    std::vector<comm_node_struct> from_node;
+    std::vector<comm_node_struct> to_node;
+    unsigned receive_buf_size;     
+  };
+
   // nearest neighbour comminfo struct
-  comminfo_struct comminfo[NDIRS];
+  std::array<nn_comminfo_struct,NDIRS> nn_comminfo;
 
-  
-
-
+  // Main neighbour index array
   unsigned * RESTRICT neighb[NDIRS];
-  unsigned char * RESTRICT wait_arr_;
+
+  // implement waiting using mask_t - unsigned char is good for up to 4 dim. 
+  dir_mask_t * RESTRICT wait_arr_;
 
   backend_lattice_struct *backend_lattice;
 
@@ -160,12 +194,20 @@ public:
 
   void teardown();
 
+  // Std accessors:
+  // volume
+  long long volume() { return l_volume; }
+
+  // size routines
   int size(direction d) { return l_size[d]; }
   int size(int d) { return l_size[d]; }
   coordinate_vector size() {return l_size;}
 
+  coordinate_vector mod_size(const coordinate_vector & v) { return mod(v, l_size); }
+
   int local_size(int d) { return this_node.size[d]; }
-  long long volume() { return l_volume; }
+  long long local_volume() {return this_node.sites;}
+
   int node_rank() { return this_node.rank; }
   int n_nodes() { return nodes.number; }
   std::vector<node_info> nodelist() { return nodes.nodelist; }
@@ -176,11 +218,10 @@ public:
   int  node_rank(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c, const unsigned node);
-  coordinate_vector site_coordinates(unsigned index);
-  unsigned field_alloc_size() {return this_node.field_alloc_size; }
+  const unsigned field_alloc_size() const {return this_node.field_alloc_size; }
 
   void create_std_gathers();
-  comminfo_struct create_general_gather( const coordinate_vector & r);
+  gen_comminfo_struct create_general_gather( const coordinate_vector & r);
   std::vector<comm_node_struct> 
   create_comm_node_vector( coordinate_vector offset, unsigned * index, bool receive);
 
@@ -222,19 +263,35 @@ public:
   }
   #endif
 
-  coordinate_vector coordinates( unsigned idx ){
-    return site_coordinates(idx);
+#ifndef VECTOR_LAYOUT
+
+  inline const coordinate_vector & coordinates( unsigned idx ){
+    return this_node.coordinates[idx];
+  }
+#else
+
+  inline const coordinate_vector coordinates( unsigned idx ){
+
+    return  this_node.coordinates[idx / number_of_subnodes]
+            + this_node.subnodes.offset[idx % number_of_subnodes];
+  }
+#endif
+
+  inline parity site_parity( unsigned idx ) {
+  #ifdef EVEN_SITES_FIRST
+    if (idx < this_node.evensites) return EVEN;
+    else return ODD;
+  #else 
+    return coordinates(idx).parity();
+  #endif
   }
 
   coordinate_vector local_coordinates( unsigned idx ){
-    coordinate_vector l = site_coordinates(idx);
-    foralldir(d)
-      l[d] = l[d] - this_node.min[d];
-    return l;
+    return coordinates(idx) - this_node.min;
   }
 
-  lattice_struct::comminfo_struct get_comminfo(int d){
-    return comminfo[d];
+  lattice_struct::nn_comminfo_struct get_comminfo(int d){
+    return nn_comminfo[d];
   }
 
   /* MPI functions and variables. Define here in lattice? */
@@ -257,9 +314,11 @@ public:
 /// global handle to lattice
 extern lattice_struct * lattice;
 
-
 // Keep track of defined lattices
 extern std::vector<lattice_struct*> lattices;
+
+// and the MPI tag generator
+int get_next_msg_tag();
 
 
 

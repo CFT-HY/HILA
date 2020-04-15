@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
+// #include <filesystem>  <- this should be used for pathname resolution, but llvm-9 does not properly handle
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -44,97 +45,115 @@ std::vector<Expr *> remove_expr_list = {};
 bool state::loop_found = false;
 bool state::compile_errors_occurred = false;
 
+bool skip_this_translation_unit = false;
+
 ///definition of command line options
 llvm::cl::OptionCategory TransformerCat(program_name);
 
-llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"),
-          llvm::cl::cat(TransformerCat));
+llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", 
+      llvm::cl::desc("Dump AST tree"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::no_include("noincl",
-             llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
-             llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<std::string> cmdline::dummy_def("D", 
-            llvm::cl::value_desc("name"),
-            llvm::cl::desc("Define name/symbol for preprocessor"),
-            llvm::cl::cat(TransformerCat));
+      llvm::cl::value_desc("name"),
+      llvm::cl::desc("Define name/symbol for preprocessor"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<std::string> cmdline::dummy_incl("I", 
-             llvm::cl::desc("Directory for include file search"),
-             llvm::cl::value_desc("directory"),
-             llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Directory for include file search"),
+      llvm::cl::value_desc("directory"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::function_spec_no_inline("function-spec-no-inline",
-                          llvm::cl::desc("Do not mark generated function specializations \"inline\""),
-                          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Do not mark generated function specializations \"inline\""),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::method_spec_no_inline("method-spec-no-inline",
-                        llvm::cl::desc("Do not mark generated method specializations \"inline\""),
-                        llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Do not mark generated method specializations \"inline\""),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<bool> cmdline::funcinfo("ident-functions",
-           llvm::cl::desc("Comment function call types in output"),
-           llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Comment function call types in output"),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<bool> cmdline::no_output("no-output",
-            llvm::cl::desc("No output file, for syntax check"),
-            llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("No output file, for syntax check"),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<bool> cmdline::syntax_only("syntax-only",
-              llvm::cl::desc("Same as no-output"),
-              llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Same as no-output"),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<std::string> cmdline::output_filename("o",
-                  llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
-                  llvm::cl::value_desc("name"),
-                  llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
+      llvm::cl::value_desc("name"),
+      llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::no_mpi("no-mpi",
+      llvm::cl::desc("Do not generate MPI specific code (single node)"),
+      llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<bool> cmdline::no_interleaved_comm("no-interleave",
+      llvm::cl::desc("Do not interleave communications with computation"),
+      llvm::cl::cat(TransformerCat));
+
 
 
 // List of targets that can be specified in command line arguments
 
 llvm::cl::opt<bool> cmdline::kernel("target:vanilla-kernel",
-         llvm::cl::desc("Generate kernels"),
-         llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate kernels"),
+      llvm::cl::cat(TransformerCat));
   
 llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
-          llvm::cl::desc("Generate loops in place"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate loops in place"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
-          llvm::cl::desc("Generate CUDA kernels"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate CUDA kernels"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::AVX512("target:AVX512",
-          llvm::cl::desc("Generate AVX512 vectorized loops"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate AVX512 vectorized loops"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::AVX("target:AVX",
-          llvm::cl::desc("Generate AVX vectorized loops"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate AVX vectorized loops"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::SSE("target:SSE",
-          llvm::cl::desc("Generate SSE vectorized loops"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Generate SSE vectorized loops"),
+      llvm::cl::cat(TransformerCat));
 
-llvm::cl::opt<int> cmdline::VECTORIZE("target:VECTORIZE",
-          llvm::cl::desc("Generate vectorized loops with given vector size \n"
-          "For example -target:VECTORIZE=32 is equivalent to -target:AVX"),
-          llvm::cl::cat(TransformerCat));
+llvm::cl::opt<int> cmdline::vectorize("target:vectorize",
+      llvm::cl::desc("Generate vectorized loops with given vector size \n"
+      "For example -target:vectorize=32 is equivalent to -target:AVX"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
-          llvm::cl::desc("Offload to GPU using openACC"),
-          llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Offload to GPU using openACC"),
+      llvm::cl::cat(TransformerCat));
 
 
 // Debug and Utility arguments
 
 llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
-         llvm::cl::desc("write pragmas/attributes to functions called from loops"),
-         llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("write pragmas/attributes to functions called from loops"),
+      llvm::cl::cat(TransformerCat));
+
+llvm::cl::opt<int> cmdline::verbosity("verbosity",
+      llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
+      llvm::cl::cat(TransformerCat));
+
+     
 
 CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
-loop_parity_struct loop_parity;
+loop_info_struct loop_info;
 codetype target;     // declared extern (global)
 
 
@@ -145,17 +164,17 @@ void get_target_struct(codetype & target) {
   } else if (cmdline::openacc) {
     target.openacc = true;
   } else if (cmdline::AVX) {
-    target.VECTORIZE = true;
+    target.vectorize = true;
     target.vector_size = 32;
   } else if (cmdline::AVX512) {
-    target.VECTORIZE = true;
+    target.vectorize = true;
     target.vector_size = 64;
   } else if (cmdline::SSE) {
-    target.VECTORIZE = true;
+    target.vectorize = true;
     target.vector_size = 16;
-  } else if (cmdline::VECTORIZE) {
-    target.VECTORIZE = true;
-    target.vector_size = cmdline::VECTORIZE;
+  } else if (cmdline::vectorize) {
+    target.vectorize = true;
+    target.vector_size = cmdline::vectorize;
   }
 }
 
@@ -227,19 +246,152 @@ class heLppPragmaHandler : public PragmaHandler {
 };
 
 static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("heLpp","heL pragma description");
-#endif
 
-reduction get_reduction_type(bool is_assign,
-                             std::string & assignop,
-                             var_info & vi) {
-  if (is_assign && (!vi.is_loop_local)) {
-    if (assignop == "+=") return reduction::SUM;
-    if (assignop == "*=") return reduction::PRODUCT;
-  }
-  return reduction::NONE;
-}
+#endif  // pragmahandler
+
 
 /////////////////////////////////////////////////////////////////////////////
+/// Preprocessor callbacks are used to find include locs
+
+
+struct includeloc_struct {
+    SourceLocation HashLoc;
+    StringRef FileName;
+    const FileEntry * File;
+    FileID fid;
+    FileID fid_included;
+    CharSourceRange FilenameRange;
+    std::string newName;
+};
+
+// block of static vars, easiest to move information
+static std::list<includeloc_struct> includelocs;
+
+class MyPPCallbacks : public PPCallbacks {
+public:
+
+  
+  // make static vars directly callable
+
+  /// This hook is called when #include (or #import) is processed
+  void InclusionDirective(SourceLocation HashLoc,
+                          const Token & IncludeTok,
+                          StringRef FileName,
+                          bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          const FileEntry * File,
+                          StringRef SearchPath,
+                          StringRef RelativePath,
+                          const Module * Imported,
+                          SrcMgr::CharacteristicKind FileType) 
+  {
+
+    SourceManager &SM = myCompilerInstance->getSourceManager();
+
+    if (IsAngled == false && FileType == SrcMgr::CharacteristicKind::C_User) {
+      // normal user file included, add to a candidate
+      includeloc_struct ci;
+      ci.HashLoc  = HashLoc;
+      ci.FileName = FileName;
+      ci.File     = File;
+      ci.fid      = SM.getFileID(HashLoc);   // FileID of the include-stmt file
+
+      ci.FilenameRange = FilenameRange;
+      ci.newName  = File->tryGetRealPathName();
+
+      includelocs.push_back(ci);
+
+    }
+    
+  }
+
+  void PragmaDirective( SourceLocation Loc, PragmaIntroducerKind Introducer ) {
+    SourceManager &SM = myCompilerInstance->getSourceManager();
+    if (SM.isInMainFile(Loc) && Introducer == clang::PIK_HashPragma) {
+      bool invalid;
+      const char * src = SM.getCharacterData(Loc,&invalid);
+      if (invalid || *src != '#') return;
+      src++;   // skip hash
+      const char * end = strchr(src,'\n');
+      if (end == nullptr) return;
+      std::string line(src,end-src);
+      std::vector<std::string> w { "pragma","transformer","skip" };
+      if (contains_word_list(line,w)) skip_this_translation_unit = true;
+    }
+  }
+	
+
+  /// This triggers when the preprocessor changes file (#include, exit from it)
+  /// Use this to track the chain of non-system include files
+
+  // void FileChanged(SourceLocation Loc, FileChangeReason Reason, SrcMgr::CharacteristicKind FileType,
+  //                  FileID PrevFID) {
+
+  //   SourceManager &SM = myCompilerInstance->getSourceManager();
+
+  //   if (Reason == PPCallbacks::EnterFile) {
+
+  //     // entering a new file -- is this file OK?
+  //     if (next_include_ok && FileType == SrcMgr::CharacteristicKind::C_User &&
+  //         Loc.isValid() && !SM.isInSystemHeader(Loc)) {
+  //       // Fine to include, push it on list
+
+  //       last_ok_fid = SM.getFileID(Loc);
+  //       // and note it as ok fid
+  //       current_includeloc.fid_included = last_ok_fid;
+
+  //       includelocs.push_back(current_includeloc);
+
+  //       this_file_ok = true;
+
+  //       llvm::errs() << "FILE CHANGED to " << SM.getFilename(Loc) << " isvalid " << next_include_ok << '\n';
+  //     } else {
+  //       this_file_ok = false;
+  //     }
+
+  //   } else if (Reason == PPCallbacks::ExitFile) {
+
+  //     FileID fid = SM.getFileID(Loc);
+  //     if (this_file_ok || fid == last_ok_fid || SM.isInMainFile(Loc)) {
+  //       // everything is peachy, continue - flag the this_file_ok which takes us up to main file
+  //       this_file_ok = true;
+  //     }
+  //   }
+  // }
+
+  // /// Called for any skipped include file, mark also these points
+  // /// 
+
+  // //  NOTE: LLVM 10 seems to change FileEntry -> FileEntryRef
+  // //  TODO: Check the actual version, compare with 9
+  // #if LLVM_VERSION_MAJOR < 10
+  // void FileSkipped( const FileEntry & SkippedFile, const Token & FilenameTok,
+	// 	                SrcMgr::CharacteristicKind FileType )
+  // #else 
+  // void FileSkipped( const FileEntryRef & SkippedFile, const Token & FilenameTok,
+	// 	                SrcMgr::CharacteristicKind FileType )
+  // #endif
+  // {
+  //   SourceManager &SM = myCompilerInstance->getSourceManager();
+
+  //   if (next_include_ok && FileType == SrcMgr::CharacteristicKind::C_User) {
+  //     // this is an include candidate but skipped.  Mark the location
+
+  //     skippedlocs.push_back(current_includeloc);
+
+  //     llvm::errs() << "SKIPPED INCLUDE to " << current_includeloc.FileName << '\n';
+
+  //   }
+  // }
+
+
+  // This triggers when range is skipped due to #if (0) .. #endif
+  //   void SourceRangeSkipped(SourceRange Range, SourceLocation endLoc) {
+  //     // llvm::errs() << "RANGE skipped\n";
+  //   }
+};
+
+
 
 
 // file_buffer_list stores the edited source of all files
@@ -274,7 +426,7 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
 // by the Clang parser.
 class MyASTConsumer : public ASTConsumer {
 public:
-  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { Rewriterp = &R; }
+  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { }
 
 
   // HandleTranslationUnit is called after the AST for the whole TU is completed
@@ -284,6 +436,8 @@ public:
     SourceManager &SM = ctx.getSourceManager();
     TranslationUnitDecl *tud = ctx.getTranslationUnitDecl();
     //tud->dump();
+
+    Visitor.reset_parsing_state();
 
     // Traverse each declaration in the translation unit
     for (Decl* d : tud->decls() ) {
@@ -303,9 +457,8 @@ public:
         beginloc = CSR.getBegin();
       }
 
-      // analyze only user files (these should be named)
       if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
-      //if (!SM.isInSystemHeader(beginloc)) {
+
         // llvm::errs() << "Processing file " << SM.getFilename(beginloc) << "\n";
         // TODO: ensure that we go only through files which are needed!
 
@@ -319,7 +472,9 @@ public:
         global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
 
         // Traverse the declaration using our AST visitor.
-        Visitor.TraverseDecl(d);
+        // if theres "#pragma skip don't do it"
+        if (!skip_this_translation_unit) Visitor.TraverseDecl(d);
+
         // llvm::errs() << "Dumping level " << i++ << "\n";
         if (cmdline::dump_ast) {
           if (!cmdline::no_include || SM.isInMainFile(beginloc))
@@ -337,53 +492,10 @@ public:
 
 private:
   MyASTVisitor Visitor;
-  Rewriter * Rewriterp;
+
 };
 
 
-//#define NEED_PP_CALLBACKS
-#ifdef NEED_PP_CALLBACKS
-
-class MyPPCallbacks : public PPCallbacks {
-public:
-  SourceLocation This_hashloc;
-  std::string This_name;
-
-  // This hook is called when #include (or #import) is processed
-  void InclusionDirective(SourceLocation HashLoc,
-                          const Token & IncludeTok,
-                          StringRef FileName,
-                          bool IsAngled,
-                          CharSourceRange FilenameRange,
-                          const FileEntry * File,
-                          StringRef SearchPath,
-                          StringRef RelativePath,
-                          const Module * Imported,
-                          SrcMgr::CharacteristicKind FileType) { }
-
-  // This triggers when the preprocessor changes file (#include, exit from it)
-  // Use this to track the chain of non-system include files
-  void FileChanged(SourceLocation Loc, FileChangeReason Reason, SrcMgr::CharacteristicKind FileType,
-                   FileID PrevFID) {
-    SourceManager &SM = myCompilerInstance->getSourceManager();
-    if (Reason == PPCallbacks::EnterFile &&
-        FileType == SrcMgr::CharacteristicKind::C_User &&
-        Loc.isValid() &&
-        !SM.isInSystemHeader(Loc) &&
-        !SM.isInMainFile(Loc) ) {
-
-      llvm::errs() << "FILE CHANGED to " << SM.getFilename(Loc) << '\n';
-
-    }
-  }
-
-  // This triggers when range is skipped due to #if (0) .. #endif
-  //   void SourceRangeSkipped(SourceRange Range, SourceLocation endLoc) {
-  //     // llvm::errs() << "RANGE skipped\n";
-  //   }
-};
-
-#endif
 
 // This struct will be used to keep track of #include-chains.
 
@@ -402,7 +514,9 @@ void set_fid_modified(const FileID FID) {
   if (search_fid(FID) == false) {
     // new file to be added
     file_id_list.push_back(FID);
-    // llvm::errs() << "New file changed " << SM.getFileEntryForID(FID)->getName() << '\n';
+
+    SourceManager &SM = myCompilerInstance->getSourceManager();
+    // llvm::errs() << "NEW BUFFER ADDED " << SM.getFileEntryForID(FID)->getName() << '\n';
   }
 }
 
@@ -415,29 +529,54 @@ public:
   virtual bool BeginSourceFileAction(CompilerInstance &CI) override {
     llvm::errs() << "** Starting operation on source file "+getCurrentFile()+"\n";
 
-#ifdef NEED_PP_CALLBACKS
     // Insert preprocessor callback functions to the stream.  This enables
     // tracking included files, ranges etc.
     Preprocessor &pp = CI.getPreprocessor();
     std::unique_ptr<MyPPCallbacks> callbacks(new MyPPCallbacks());
     pp.addPPCallbacks(std::move(callbacks));
-#endif
+
+    // init global variables PP callbacks use
+    includelocs.clear();
 
     global.main_file_name = getCurrentFile();
 
+    skip_this_translation_unit = false;
     file_id_list.clear();
     file_buffer_list.clear();
     field_decl = field_storage_decl = nullptr;
+    reset_vectorizable_types();
 
     return (true);
   }
 
+  //////////////////////////
+  
+  int change_include_names(FileID fid) {
+
+    int n = 0;
+    srcBuf * buf = get_file_buffer(TheRewriter, fid);
+    for (auto & inc : includelocs) {
+      if (inc.fid == fid) {
+        buf->replace( SourceRange(inc.FilenameRange.getBegin(),inc.FilenameRange.getEnd()),
+                      std::string("\"") + inc.newName + "\"" );
+        n++;
+      }
+    }
+    return n;
+  }
+
   void insert_includes_to_file_buffer(FileID myFID) {
     // this is where to write
+
+    // change filenames to be included
+    change_include_names(myFID);
+
     srcBuf * buf = get_file_buffer(TheRewriter, myFID);
     // find files to be included
     SourceManager &SM = TheRewriter.getSourceMgr();
+
     for (FileID f : file_id_list) {
+
       SourceLocation IL = SM.getIncludeLoc(f);
       if (IL.isValid() && myFID == SM.getFileID(IL)) {
         // file f is included, but do #include there first
@@ -463,11 +602,15 @@ public:
 
         // Find the start of the include statement
         e = SR.getEnd();
-        for (int i=1; i<100; i++) {
+        for (int i=1; i<200; i++) {
           const char * p = SM.getCharacterData(b.getLocWithOffset(-i));
-          if (p && *p == '#' && strncmp(p,"#include",8) == 0) {
-            SR = SourceRange(b.getLocWithOffset(-i),e);
-            break;
+          if (p && *p == '#') {
+            ++p;
+            while (std::isspace(*p)) ++p;
+            if (strncmp(p,"include",7) == 0) {
+              SR = SourceRange(b.getLocWithOffset(-i),e);
+              break;
+            }
           }
         }
 
@@ -475,10 +618,12 @@ public:
         buf->remove(SR);
         // TheRewriter.RemoveText(SR);
 
+
+        srcBuf * buf_from = get_file_buffer(TheRewriter, f);
+
         // and finally insert
         // SourceRange r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
-        srcBuf * buf_from = get_file_buffer(TheRewriter, f);
-        // TheRewriter.InsertText(SR.getBegin(),
+         // TheRewriter.InsertText(SR.getBegin(),
         buf->insert(SR.getBegin(),
                     "// start include "+includestr
                     + "---------------------------------\n"
@@ -486,6 +631,8 @@ public:
                     "// end include "+includestr
                     + "---------------------------------\n",
                     false);
+
+      } else {
 
       }
     }
@@ -533,6 +680,8 @@ public:
                << SM.getFilename(SM.getLocForStartOfFile(f)) << '\n';
           check_include_path(f);
         }
+
+        //        change_include_names(SM.getMainFileID());
 
         insert_includes_to_file_buffer(SM.getMainFileID());
       }

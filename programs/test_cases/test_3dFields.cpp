@@ -155,7 +155,7 @@ int main(int argc, char **argv){
     std::fill(arraysum.begin(), arraysum.end(), 0);
 
     onsites(ALL){
-      element<coordinate_vector> l = coordinates(X);
+      element<coordinate_vector> l = X.coordinates();
       element<int> t = l[TUP];
       
       arraysum[t] += dfield[X];

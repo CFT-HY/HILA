@@ -10,12 +10,18 @@ cmplx<double> e(cmplx<double> x) {return d(x);}
 // #pragma transformer ast dump
 cmplx<double> f(const cmplx<double> & x) { return e(x);}
 
+template <typename T>
+T xyz(T & v) {
+  return sin(v);
+}
+
 
 using ft = cmplx<double>;
 
 template <typename T>
 class v2 {
 public:
+  using base_type = typename base_type_struct<T>::type;
   cmplx<T> a[2];
 };
 
@@ -43,10 +49,25 @@ int main()
   A[ALL] = { cmplx(1,0), cmplx(0,0) };
   
   onsites(p) {
+    double dv = t[X];
 
-    #pragma transformer ast dump
+    double t2;
+
+    double t4 = 5.0;
+
+    t4 = t2;
+    
+    t2 = t[X];
+    
+    double vv = (double)X.parity();
+
+    if (t2 < 4) A[X] += xyz(A[X]);
+    
     A[X].a[0] = 0;
+
+    v2<double> vvv = A[X];
     // c[X] = b[X+(XUP+YUP)];
+    // #pragma transformer ast dump
     c[X] = a[X];
     
     //    c[X] = a[X];

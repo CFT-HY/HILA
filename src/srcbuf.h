@@ -89,6 +89,8 @@ public:
   int find_original(int idx, const std::string &s);
   int find_original(SourceLocation start, const std::string &c);
 
+  bool is_edited(SourceLocation sl);  // true if sl is edited (inserted, replaced or deleted)
+
   bool is_extent(int i);
 
   void remove_extent(int i);

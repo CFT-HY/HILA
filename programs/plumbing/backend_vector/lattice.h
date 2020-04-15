@@ -1,6 +1,7 @@
 #ifndef _BACKEND_LATTICE_H_
 #define _BACKEND_LATTICE_H_
 
+#include "../lattice.h"
 
 /// Splits the local lattice into equal sections for vectorization
 template<int vector_size>
@@ -100,7 +101,7 @@ struct vectorized_lattice_struct  {
         // to create a halo copy of neighbours that cross the boundary
         // Check here if that is the case for this direction
         bool need_halo = false;
-        if( lattice->comminfo[d].from_node.size() > 0 
+        if( lattice->nn_comminfo[d].from_node.rank != mynode()
             || split[updir] > 1 ){
           need_halo = true;
         }
@@ -238,14 +239,14 @@ struct vectorized_lattice_struct  {
 
 
     /// Return the communication info
-    lattice_struct::comminfo_struct get_comminfo(int d){
+    lattice_struct::nn_comminfo_struct get_comminfo(int d){
       return lattice->get_comminfo(d);
     }
 
 
     /// Return the number of sites that need to be allocated
     /// (1 vector for each site)
-    unsigned field_alloc_size() {
+    unsigned field_alloc_size() const {
       return alloc_size;
     }
 
@@ -358,10 +359,10 @@ inline auto vectorized_lattice_struct<16>::coordinates(int idx){
 
 
 struct backend_lattice_struct {
-  lattice_struct lattice;
+  lattice_struct * latticep;
 
-  void setup(lattice_struct _lattice){
-    lattice = _lattice;
+  void setup(lattice_struct & _lattice){
+    latticep = &_lattice;
   }
 
   template< int vector_size >
@@ -370,7 +371,7 @@ struct backend_lattice_struct {
     static bool init = true;
     static vectorized_lattice_struct<vector_size> * vlat; 
     if(init){
-      vlat = new vectorized_lattice_struct<vector_size>(&lattice);
+      vlat = new vectorized_lattice_struct<vector_size>(latticep);
       init = false;
     }
 

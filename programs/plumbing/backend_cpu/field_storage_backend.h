@@ -23,7 +23,7 @@ inline void field_storage<T>::set(const A &value, const int i, const int field_a
 
 template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
-  fieldbuf = malloc( sizeof(T) * lattice->field_alloc_size() );
+  fieldbuf = memalloc( sizeof(T) * lattice->field_alloc_size() );
   if (fieldbuf == nullptr) {
     std::cout << "Failure in field memory allocation\n";
     exit(1);
@@ -91,8 +91,10 @@ void field_storage<T>::free_field() {
 
 
 template<typename T>
-void field_storage<T>::gather_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) const {
-  for (int j=0; j<index_list.size(); j++) {
+void field_storage<T>::gather_elements( char * RESTRICT buffer, 
+                                        const unsigned * RESTRICT index_list, int n,
+                                        const lattice_struct * RESTRICT lattice) const {
+  for (int j=0; j<n; j++) {
     int index = index_list[j];
     T element = get(index, lattice->field_alloc_size());
     std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
@@ -101,8 +103,10 @@ void field_storage<T>::gather_elements(char * buffer, std::vector<unsigned> inde
 
 
 template<typename T>
-void field_storage<T>::place_elements(char * buffer, std::vector<unsigned> index_list, lattice_struct * lattice) {
-  for (int j=0; j<index_list.size(); j++) {
+void field_storage<T>::place_elements(char * RESTRICT buffer, 
+                                      const unsigned * RESTRICT index_list, int n,
+                                      const lattice_struct * RESTRICT lattice) {
+  for (int j=0; j<n; j++) {
     T element = *((T*) ( buffer + j*sizeof(T) ));
     set(element, index_list[j], lattice->field_alloc_size());
   }

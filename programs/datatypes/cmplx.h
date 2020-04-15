@@ -27,7 +27,10 @@ inline T nmul_add(T a, T b, T c) { return c - a*b; }
 
 template <typename T = double>
 struct cmplx {
+  
+  // This incantation is needed to make field<cmplx<>> vectorized 
   using base_type = typename base_type_struct<T>::type;
+
   T re,im;
   
   cmplx<T>() = default;

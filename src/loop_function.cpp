@@ -39,7 +39,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
   // Handle parameters
   int i=0;
   for( Expr * E : Call->arguments() ){
-    if( is_field_parity_expr(E) ) {
+    if( is_field_with_X_expr(E) ) {
       if(i < D->getNumParams()){
         const ParmVarDecl * pv = D->getParamDecl(i);
         QualType q = pv->getOriginalType ();
@@ -47,7 +47,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
         // Check for const qualifier
         if( !q.isConstQualified ()) {
           // Mark it as changed
-          handle_field_parity_expr(E, is_assignment, is_compound);
+          handle_field_parity_X_expr(E, is_assignment, is_compound, true);
         }
       }
     }
@@ -78,14 +78,14 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
   // Handle parameters
   int i=0;
   for( Expr * E : Call->arguments() ){
-    if( is_field_parity_expr(E) ) {
+    if( is_field_with_X_expr(E) ) {
       const ParmVarDecl * pv = D->getParamDecl(i);
       QualType q = pv->getOriginalType ();
         
       // Check for const qualifier
       if( !q.isConstQualified ()) {
         // Mark it as changed
-        handle_field_parity_expr(E, true, true);
+        handle_field_parity_X_expr(E, true, true, true);
       }
     }
     i++;
@@ -93,13 +93,13 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
 
   // Handle the object itself
   Expr * E = Call->getImplicitObjectArgument();
-  if( is_field_parity_expr(E) ) {
+  if( is_field_with_X_expr(E) ) {
     QualType q = E->getType();
 
     // Check for const qualifier
     if( !q.isConstQualified ()) {
       // Mark it as changed
-      handle_field_parity_expr(E, true, true);
+      handle_field_parity_X_expr(E, true, true, true);
     }
   }
 }
@@ -128,30 +128,60 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
   // If the function is in a list of defined loop functions, add it to a list
   // Return true if the expression is a special function
+
   std::string name = Call->getDirectCallee()->getNameInfo().getAsString();
-  if( name == "coordinates" ){
-    llvm::errs() << get_stmt_str(Call) << '\n';
-    special_function_call sfc;
-    sfc.fullExpr = Call;
-    sfc.scope = parsing_state.scope_level;
-    sfc.name = name;
-    sfc.replace_expression = "loop_lattice->coordinates";
-    sfc.add_loop_var = true;
-    special_function_call_list.push_back(sfc);
-    return 1;
+
+  // check here if this is a special method call (X.method() )
+  if (CXXMemberCallExpr *MCall = dyn_cast<CXXMemberCallExpr>(Call)) {
+    // llvm::errs() << "It's a member call, name " << name << " objarg "
+    //       << MCall->getImplicitObjectArgument()->getType().getAsString() << "\n";
+    if (MCall->getImplicitObjectArgument()->getType().getAsString() == "const class X_index_type") {
+      // now it is a method of X
+      // llvm::errs() << " X-method name " << get_stmt_str(Call) << '\n';
+
+      // llvm::errs() << get_stmt_str(Call) << '\n';
+      special_function_call sfc;
+      sfc.fullExpr = Call;
+      sfc.scope = parsing_state.scope_level;
+      sfc.name = name;
+      if (name == "coordinates") {
+        sfc.replace_expression = "loop_lattice->coordinates";
+      } else if (name == "parity") {
+        sfc.replace_expression = "loop_lattice->site_parity";
+      } else if (name == "coordinate") {
+        reportDiag(DiagnosticsEngine::Level::Error,
+          Call->getSourceRange().getBegin(),
+        "Method X.coordinate(dir) not yet implemented!  Use X.coordinates()[dir] instead");
+      } else {
+        reportDiag(DiagnosticsEngine::Level::Error,
+          Call->getSourceRange().getBegin(),
+        "Unknown method X.%0()", name.c_str() );
+      }
+
+      sfc.add_loop_var = true;
+      special_function_call_list.push_back(sfc);
+      return true;
+
+    } else {
+
+      // other method calls?
+      return false;
+    }
+
+  } else {
+    if( name == "hila_random" ){
+      llvm::errs() << get_stmt_str(Call) << '\n';
+      special_function_call sfc;
+      sfc.fullExpr = Call;
+      sfc.scope = parsing_state.scope_level;
+      sfc.name = name;
+      sfc.replace_expression = "hila_random";
+      sfc.add_loop_var = false;
+      special_function_call_list.push_back(sfc);
+      return true;
+    }
   }
-  if( name == "hila_random" ){
-    llvm::errs() << get_stmt_str(Call) << '\n';
-    special_function_call sfc;
-    sfc.fullExpr = Call;
-    sfc.scope = parsing_state.scope_level;
-    sfc.name = name;
-    sfc.replace_expression = "hila_random";
-    sfc.add_loop_var = false;
-    special_function_call_list.push_back(sfc);
-    return 1;
-  }
-  return 0;
+  return false;
 }
 
 

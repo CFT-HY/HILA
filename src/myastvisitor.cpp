@@ -27,67 +27,9 @@ std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
   }
 }
 
-/// -- Identifier utility functions --
-
-bool MyASTVisitor::is_field_storage_expr(Expr *E) {
-  return( E && E->getType().getAsString().find(field_storage_type) != std::string::npos);
-}
-
-bool MyASTVisitor::is_field_expr(Expr *E) {
-  return( E && E->getType().getAsString().find(field_type) != std::string::npos);
-}
-
-bool MyASTVisitor::is_field_decl(ValueDecl *D) {
-  return( D && D->getType().getAsString().find(field_type) != std::string::npos);
-}
-
-bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
-  // Use the Profile function in clang, which "fingerprints"
-  // statements
-  llvm::FoldingSetNodeID IDa, IDb;
-  a->Profile(IDa, *Context, true);
-  b->Profile(IDb, *Context, true);
-  return ( IDa == IDb );
-}
-
-bool MyASTVisitor::is_parity_index_type(Expr *E) {
-  std::string s = get_expr_type(E);
-  if (s == "parity" || s == "parity_plus_direction" || s == "parity_plus_offset") 
-    return true;
-  else 
-    return false;
-}
-
-// Checks if E is a parity Expr. Catches both parity and parity_plus_direction 
-bool MyASTVisitor::is_field_parity_expr(Expr *E) {
-  E = E->IgnoreParens();
-  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
-
-  if (OC &&
-      strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
-      is_field_expr(OC->getArg(0))) {
-
-    return is_parity_index_type(OC->getArg(1));
-
-  } else {
-    // DON'T DO TEMPLATES NOW!  ONLY SPECIALIZATIONS
-    #if 0
-    // This is for templated expressions
-    // for some reason, expr a[X] "getBase() gives X, getIdx() a...
-    if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-      Expr * lhs = ASE->getLHS()->IgnoreParens();
-      
-      if (is_field_expr(ASE->getLHS()->IgnoreParens())) {
-        // llvm::errs() << " FP: and field\n";
-        return is_parity_index_type(ASE->getRHS());
-      }
-    }
-    #endif
-  }
-  return false;   
-}
 
 /// is the stmt pointing now to assignment
+
 bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
@@ -123,43 +65,6 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 
   return false;
 }
-
-// is the stmt pointing now to a function call
-bool MyASTVisitor::is_function_call_stmt(Stmt * s) {
-  if (auto *Call = dyn_cast<CallExpr>(s)){
-    llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
-    return true;
-  }
-  return false;
-}
-bool MyASTVisitor::is_member_call_stmt(Stmt * s) {
-  if (auto *Call = dyn_cast<CXXMemberCallExpr>(s)){
-    llvm::errs() << "Member call found: " << get_stmt_str(s) << '\n';
-    return true;
-  }
-  return false;
-}
-bool MyASTVisitor::is_constructor_stmt(Stmt * s) {
-  if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
-    llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
-    return true;
-  }
-  return false;
-}
-
-bool MyASTVisitor::isStmtWithSemi(Stmt * S) {
-  SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(),
-                                                   tok::semi,
-                                                   TheRewriter.getSourceMgr(),
-                                                   Context->getLangOpts(),
-                                                   false);
-  if (l.isValid()) {
-    //    llvm::errs() << "; found " << get_stmt_str(S) << '\n';
-    return true;
-  }
-  return false;
-}
-
 
 
 /// Check the validity a variable reference in a loop
@@ -216,15 +121,13 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
         LoopAssignChecker lac(TheRewriter, Context);
         lac.TraverseStmt(OP->getArg(1));
       } else {
-        llvm::errs() << " ** Element type : " << type << '\n';
-        PrintingPolicy pp(Context->getLangOpts());
-        llvm::errs() << " ** Canonical type without keywords: " << OP->getArg(0)->getType().getCanonicalType().getAsString(pp) << '\n';
+        // llvm::errs() << " ** Element type : " << type << '\n';
+        // PrintingPolicy pp(Context->getLangOpts());
+        // llvm::errs() << " ** Canonical type without keywords: " << OP->getArg(0)->getType().getCanonicalType().getAsString(pp) << '\n';
       }
     }
   }
 }
-
-
 
 
 /// -- Handler utility functions -- 
@@ -233,7 +136,7 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
 /// Go through one field reference within parity loop and store relevant info
 //////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_compound) {
+bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X) {
     
   e = e->IgnoreParens();
   field_ref lfe;
@@ -263,7 +166,6 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       return(true);
   }
 
-
   //lfe.nameInd    = writeBuf->markExpr(lfe.nameExpr); 
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
   
@@ -275,26 +177,32 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   std::string parity_expr_type = get_expr_type(lfe.parityExpr);
 
   if (parity_expr_type == "parity") {
+    if (is_X) {
+      llvm::errs() << "Internal error in handle_loop_parity\n";
+      exit(-1);
+    }
     if (parsing_state.accept_field_parity) {
       // 1st parity statement on a single line lattice loop
-      loop_parity.expr  = lfe.parityExpr;
-      loop_parity.value = get_parity_val(loop_parity.expr);
-      loop_parity.text  = get_stmt_str(loop_parity.expr);
+      loop_info.parity_expr  = lfe.parityExpr;
+      loop_info.parity_value = get_parity_val(loop_info.parity_expr);
+      loop_info.parity_text  = get_stmt_str(loop_info.parity_expr);
     } else {
-      require_parity_X(lfe.parityExpr);
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 lfe.parityExpr->getSourceRange().getBegin(),
+                 "field[parity] not allowed here, use field[X] -type instead" );
     }
   }
   
   // next ref must have wildcard parity
   parsing_state.accept_field_parity = false;
         
-  if (parity_expr_type == "parity_plus_direction" || 
-      parity_expr_type == "parity_plus_offset") {
+  if (parity_expr_type == "X_plus_direction" || 
+      parity_expr_type == "X_plus_offset") {
 
     if (is_assign) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "Parity + offset not allowed on the LHS of an assignment");
+                 "X + dir -type reference not allowed on the LHS of an assignment");
     }
 
     // Now need to split the expr to parity and dir-bits
@@ -307,16 +215,17 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
     lfe.direxpr_s = remove_X( get_stmt_str(lfe.parityExpr), &has_X );
 
     if (!has_X) {
-      reportDiag(DiagnosticsEngine::Level::Error,
+      reportDiag(DiagnosticsEngine::Level::Fatal,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "Parity must be \'X\'");
+                 "Internal error: index should have been X" );
+      exit(-1);
     }
 
-    llvm::errs() << "Direxpr " << lfe.direxpr_s << '\n';
+    // llvm::errs() << "Direxpr " << lfe.direxpr_s << '\n';
 
     lfe.is_direction = true;
 
-    if (parity_expr_type == "parity_plus_offset") {
+    if (parity_expr_type == "X_plus_offset") {
 
       // It's an offset, no checking here to be done
       lfe.is_offset = true;
@@ -340,7 +249,7 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
       if (!Op) {
         reportDiag(DiagnosticsEngine::Level::Fatal,
                    lfe.parityExpr->getSourceRange().getBegin(),
-                   "Internal error: could not parse parity + direction/offset -statement" );
+                   "Internal error: could not parse X + direction/offset -statement" );
         exit(1);
       }
 
@@ -350,10 +259,10 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
         // Got constant
         lfe.is_constant_direction = true;
         lfe.constant_value = result.getExtValue();
-        llvm::errs() << " GOT DIR CONST, value " << lfe.constant_value << "  expr " << lfe.direxpr_s << '\n';
+        // llvm::errs() << " GOT DIR CONST, value " << lfe.constant_value << "  expr " << lfe.direxpr_s << '\n';
       } else {
         lfe.is_constant_direction = false;
-        llvm::errs() << "GOT DIR NOT-CONST " << lfe.direxpr_s << '\n';
+        // llvm::errs() << "GOT DIR NOT-CONST " << lfe.direxpr_s << '\n';
       
         // If the direction is a variable, add it to the list
         // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
@@ -382,10 +291,30 @@ bool MyASTVisitor::handle_field_parity_expr(Expr *e, bool is_assign, bool is_com
   return(true);
 }
 
-// This processes references to non-field variables within field loops
-void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
-                                  bool is_assign,
-                                  std::string &assignop) {
+
+//////////////////////////////////////////////////////////////////
+
+///  Utility to find the reduction type
+
+reduction get_reduction_type(bool is_assign,
+                             std::string & assignop,
+                             var_info & vi) {
+  if (is_assign && (!vi.is_loop_local)) {
+    if (assignop == "+=") return reduction::SUM;
+    if (assignop == "*=") return reduction::PRODUCT;
+  }
+  return reduction::NONE;
+}
+
+////////////////////////////////////////////////////////////////////////////
+/// This processes references to non-field variables within field loops
+/// if is_assign==true, this is assigned to with assignop and assign_stmt contains
+/// the full assignment op
+////////////////////////////////////////////////////////////////////////////
+
+
+void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
+                                  std::string &assignop, Stmt * assign_stmt) {
 
   
   if (isa<VarDecl>(DRE->getDecl())) {
@@ -395,7 +324,8 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
     //vr.ind = writeBuf->markExpr(DRE);
     vr.is_assigned = is_assign;
     if (is_assign) vr.assignop = assignop;
-    
+
+
     bool found = false;
     var_info *vip = nullptr;
     for (var_info & vi : var_info_list) {
@@ -412,39 +342,21 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
     }
     if (!found) {
       // new variable referred to
-      var_info vi;
-      vi.refs = {};
-      vi.refs.push_back(vr);
-      vi.decl = decl;
-      vi.name = decl->getName();
-      // Printing policy is somehow needed for printing type without "class" id
-      // Unqualified takes away "consts" etc and Canonical typdefs/using.
-      // Also need special handling for element type
-      PrintingPolicy pp(Context->getLangOpts());
-      vi.type = DRE->getType().getUnqualifiedType().getAsString(pp);
-      vi.type = remove_all_whitespace(vi.type);
-      bool is_elem = (vi.type.find("element<") == 0);
-      vi.type = DRE->getType().getUnqualifiedType().getCanonicalType().getAsString(pp);
-      if (is_elem) vi.type = "element<" + vi.type + ">";
-      llvm::errs() << " + Got " << vi.type << '\n';
+      vip = new_var_info(decl);
 
-      // is it loop-local?
-      vi.is_loop_local = false;
-      for (var_decl & d : var_decl_list) {
-        if (d.scope >= 0 && vi.decl == d.decl) {
-          llvm::errs() << "loop local var ref! " << vi.name << '\n';
-          vi.is_loop_local = true;
-          vi.var_declp = &d;
-          break;
-        }
-      }
-      vi.is_assigned = is_assign;
+      vip->refs.push_back(vr);
+      vip->is_assigned = is_assign;
       // we know refs contains only 1 element
-      vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
-      
-      var_info_list.push_back(vi);
-      vip = &(var_info_list.back());
+      vip->reduction_type = get_reduction_type(is_assign, assignop, *vip);
+
     }
+
+    if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
+      vip->is_site_dependent = check_rhs_of_assignment(assign_stmt, &vip->dependent_vars );
+      
+      llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
+    } 
+    
   } else { 
     // end of VarDecl - how about other decls, e.g. functions?
     reportDiag(DiagnosticsEngine::Level::Error,
@@ -453,9 +365,69 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE,
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+///  Insert the new variable info
 
 
+var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
+
+  var_info vi;
+  vi.refs = {};
+  vi.decl = decl;
+  vi.name = decl->getName();
+  // Printing policy is somehow needed for printing type without "class" id
+  // Unqualified takes away "consts" etc and Canonical typdefs/using.
+  // Also need special handling for element type
+  PrintingPolicy pp(Context->getLangOpts());
+  vi.type = decl->getType().getUnqualifiedType().getAsString(pp);
+  vi.type = remove_all_whitespace(vi.type);
+  bool is_elem = (vi.type.find("element<") == 0);
+  vi.type = decl->getType().getUnqualifiedType().getCanonicalType().getAsString(pp);
+  if (is_elem) vi.type = "element<" + vi.type + ">";
+  // llvm::errs() << " + Got " << vi.type << '\n';
+
+  // is it loop-local?
+  vi.is_loop_local = false;
+  for (var_decl & d : var_decl_list) {
+    if (d.scope >= 0 && vi.decl == d.decl) {
+      llvm::errs() << "loop local var ref! " << vi.name << '\n';
+      vi.is_loop_local = true;
+      break;
+    }
+  }
+  vi.is_site_dependent = false;  // default case
+  vi.dependent_vars.clear();
+
+  var_info_list.push_back(vi);
+  return &(var_info_list.back());
+}
+
+
+///////////////////////////////////////////////////////////////////
+/// Check if the RHS of assignment is site dependent
+///////////////////////////////////////////////////////////////////
+
+bool MyASTVisitor::check_rhs_of_assignment(Stmt *s, std::vector<var_info *> * vi) {
+
+  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
+    if (OP->isAssignmentOp()) {
+      return is_site_dependent(OP->getArg(1),vi);
+    }
+  }
+
+  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
+    if (B->isAssignmentOp()) {
+      return is_site_dependent(B->getRHS(),vi);
+    }
+  }
+  // one of these should have triggered!  
+  assert(0 && "Internal error in RHS analysis");
+}
+
+///////////////////////////////////////////////////////////////////
 /// Find the the base of a compound variable expression
+///////////////////////////////////////////////////////////////////
+
 DeclRefExpr * find_base_variable(Expr * E){
   Expr * RE = E;
 
@@ -584,6 +556,9 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   array_ref_list.clear();
   remove_expr_list.clear();
   global.location.loop = ls->getSourceRange().getBegin();
+
+  loop_info.has_site_dependent_conditional = false;  // reset
+  loop_info.conditional_vars.clear();
   
   parsing_state.accept_field_parity = field_parity_ok;
     
@@ -592,7 +567,10 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   parsing_state.in_loop_body = true;
   parsing_state.ast_depth = 0;   // renormalize to the beginning of loop
   parsing_state.stmt_sequence = 0;
+
+  // code analysis starts here
   TraverseStmt(ls);
+
   parsing_state.in_loop_body = false;
   parsing_state.ast_depth = 0;
 
@@ -602,13 +580,17 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // check and analyze the field expressions
   check_field_ref_list();
   check_var_info_list();
-  // check that loop_parity is not X
-  if (loop_parity.value == parity::x) {
-    reportDiag(DiagnosticsEngine::Level::Error,
-               loop_parity.expr->getSourceRange().getBegin(),
-               "Parity of the full loop cannot be \'X\'");
+
+  // check here also if conditionals are site dependent through var dependence
+  // because var_info_list was checked above, once is enough
+  if (loop_info.has_site_dependent_conditional == false) {
+    for (auto * n : loop_info.conditional_vars) 
+      if (n->is_site_dependent) loop_info.has_site_dependent_conditional = true;
   }
-  
+
+  if (loop_info.has_site_dependent_conditional) llvm::errs() << "Cond is site dep!\n";
+
+  // and now generate the appropriate code
   generate_code(ls);
   
   // Buf.clear();
@@ -639,6 +621,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // must remember the set value across calls
   static bool is_assignment = false;
   static bool is_compound = false;
+  static Stmt * assign_stmt = nullptr;
   static std::string assignop;
 
   // depth = 1 is the "top level" statement, should give fully formed
@@ -651,6 +634,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // And also assignments to other vars: t += norm2(lf[X]) etc.
   if (is_assignment_expr(s,&assignop,is_compound)) {
     check_allowed_assignment(s);
+    assign_stmt = s;
     is_assignment = true;
     // next visit here will be to the assigned to variable
     return true;
@@ -664,7 +648,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // return true;
   }
 
-  // Check c++ methods
+  // Check c++ methods  -- HMM: it seems above function call stmt catches these first
   if( is_member_call_stmt(s) ){
     handle_member_call_in_loop(s);
     // let this ripple trough, for now ...
@@ -689,11 +673,24 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     
     //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs
+    if (is_field_with_X_expr(E)) {
+      // It is field[X] reference
+      // get the expression for field name
+          
+      handle_field_parity_X_expr(E, is_assignment, is_compound, true);
+      is_assignment = false;  // next will not be assignment
+      // (unless it is a[] = b[] = c[], which is OK)
+
+      parsing_state.skip_children = 1;
+      return true;
+    }
+
+
     if (is_field_parity_expr(E)) {
       // Now we know it is a field parity reference
       // get the expression for field name
           
-      handle_field_parity_expr(E, is_assignment, is_compound);
+      handle_field_parity_X_expr(E, is_assignment, is_compound, false);
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
 
@@ -702,7 +699,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     }
 
     if (is_field_expr(E)) {
-      // field without [parity], bad usually (TODO: allow  scalar func(field)-type?)
+      // field without [X], bad usually (TODO: allow  scalar func(field)-type?)
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
                  "Field expressions without [..] not allowed within field loop");
@@ -714,7 +711,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       if (isa<VarDecl>(DRE->getDecl())) {
         // now it should be var ref non-field
       
-        handle_var_ref(DRE,is_assignment,assignop);
+        handle_var_ref(DRE,is_assignment,assignop,assign_stmt);
         is_assignment = false;
       
         llvm::errs() << "Variable ref: "
@@ -809,7 +806,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
  
   // start {...} -block or other compound
   if (isa<CompoundStmt>(s) || isa<ForStmt>(s) || isa<IfStmt>(s)
-      || isa<WhileStmt>(s)) {
+      || isa<WhileStmt>(s) || isa<DoStmt>(s)) {
 
     static bool passthrough = false;
     // traverse each stmt - use passthrough trick if needed
@@ -826,6 +823,20 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
     TraverseStmt(s);
 
+    // check also the conditionals - are these site dependent?
+    if (!loop_info.has_site_dependent_conditional) {
+      Expr * condexpr = nullptr;
+      if      (IfStmt    * IS = dyn_cast<IfStmt>(s))    condexpr = IS->getCond();
+      else if (ForStmt   * FS = dyn_cast<ForStmt>(s))   condexpr = FS->getCond();
+      else if (WhileStmt * WS = dyn_cast<WhileStmt>(s)) condexpr = WS->getCond();
+      else if (DoStmt    * DS = dyn_cast<DoStmt>(s))    condexpr = DS->getCond();
+
+      if (condexpr != nullptr) {
+        loop_info.has_site_dependent_conditional = 
+          is_site_dependent(condexpr, &loop_info.conditional_vars);
+      }
+    }
+
     parsing_state.ast_depth = 0;
 
     parsing_state.scope_level--;
@@ -837,11 +848,20 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   return true;    
 }
 
+////////////////////////////////////////////////////////////////////////////
+///  List field<> specializations
+///  This does not currently do anything necessary, specializations are
+///  now handled as field<> are used in loops
+///  
+////////////////////////////////////////////////////////////////////////////
+
+
 int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
   // save global, perhaps needed (perhaps not)
   field_decl = D;
 
-  // llvm::errs() << "+++++++\n Specializations of field\n";
+  if (cmdline::verbosity >= 2)
+    llvm::errs() << "field<type> specializations in this compilation unit:\n";
 
   int count = 0;
   for (auto spec = D->spec_begin(); spec != D->spec_end(); spec++ ) {
@@ -862,19 +882,19 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     // Get typename without class, struct... qualifiers
     PrintingPolicy pp(Context->getLangOpts());
     std::string typestr = args.get(0).getAsType().getAsString(pp);
-    llvm::errs() << "arg type " << typestr << "\n";
+    if (cmdline::verbosity >= 2) llvm::errs() << "  field < " << typestr << " >";
 
-    // Type of field<> can never be field?  This always is true
-    if( typestr.find("field<") ){ // Skip for field templates
-      if (spec->isExplicitSpecialization()) llvm::errs() << " explicit\n";
-    }
+    if (spec->isExplicitSpecialization()) llvm::errs() << " explicit specialization\n";
+    else llvm::errs() << '\n';
     
   }
   return(count);
       
 } // end of "field"
 
+///////////////////////////////////////////////////////////////////////////////////
 /// Source Location utilities
+///////////////////////////////////////////////////////////////////////////////////
 
 SourceLocation MyASTVisitor::getSourceLocationAtEndOfLine( SourceLocation l ) {
   SourceManager &SM = TheRewriter.getSourceMgr();
@@ -896,7 +916,10 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   return r.getBegin().getLocWithOffset(i-1);
 }
 
-
+///////////////////////////////////////////////////////////////////////////////////
+/// Pragma handling: has_pragma()
+/// TODO: switch to use vector produced by preprocessor pragma visitor!
+///////////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::has_pragma(Stmt *S, const char * n) {
   return has_pragma( S->getSourceRange().getBegin(), n);
@@ -905,6 +928,7 @@ bool MyASTVisitor::has_pragma(Stmt *S, const char * n) {
 bool MyASTVisitor::has_pragma(Decl *F, const char * n) {
   return has_pragma( F->getSourceRange().getBegin(), n);
 }
+
 
 bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
   std::string arg;
@@ -941,6 +965,7 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
 /// Check if the SourceLocation l is preceded by "#pragma transformer" on previous line.
 /// There cannot be anything except whitespace between l and the beginning of line
 /// Pragma_args will point to the beginning of arguments of pragma
+
 bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & arguments, 
                                           SourceLocation & pragmaloc ) {
   SourceLocation l = l0;
@@ -992,25 +1017,32 @@ bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & argu
   std::string txt = TheRewriter.getRewrittenText(SourceRange(l,lend));
 
   txt = remove_extra_whitespace(txt);
+
   std::string comp = "#pragma transformer";
   if (txt.compare(0,comp.length(),comp) == 0) {
     // found it, set return value
     arguments = txt.substr(comp.length()+1, std::string::npos);
     pragmaloc = l;
-    // llvm::errs() << "PRAGMA LINE " << txt << " in file " 
-    //              << SM.getFilename(l) << " at line "
-    //              << SM.getSpellingLineNumber(l) << '\n';
+    return true;
+  }
+  // there could be space between # and pragma
+  comp = "# pragma transformer";
+  if (txt.compare(0,comp.length(),comp) == 0) {
+    // found it, set return value
+    arguments = txt.substr(comp.length()+1, std::string::npos);
+    pragmaloc = l;
     return true;
   }
   
   return false; 
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////
 /// These are the main traverse methods
 /// By overriding these methods in MyASTVisitor we can control which nodes are visited.
 /// These are control points for the depth of the traversal;
 ///  check_loop, skip_children,  ast_depth
+////////////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
 
@@ -1050,20 +1082,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
   return true;
 }
 
-template <unsigned N>
-void GeneralVisitor::reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,
-                              const char (&msg)[N],
-                              const char *s1,
-                              const char *s2,
-                              const char *s3 ) {
-  // we'll do reporting only when output is on, avoid double reports
-  auto & DE = Context->getDiagnostics();    
-  auto ID = DE.getCustomDiagID(lev, msg );
-  auto DB = DE.Report(SL, ID);
-  if (s1 != nullptr) DB.AddString(s1);
-  if (s2 != nullptr) DB.AddString(s2);
-  if (s3 != nullptr) DB.AddString(s3);
-}
+
 
 parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
   SourceLocation SL;
@@ -1073,13 +1092,13 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
     // Parity is now constant
     int64_t val = (APV.getInt().getExtValue());
     parity p;
-    if (0 <= val && val <= (int)parity::x) {
+    if (0 <= val && val <= (int)parity::all) {
       p = static_cast<parity>(val);
     } else {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  pExpr->getSourceRange().getBegin(),
                  "Transformer internal error, unknown parity" );
-      exit(1);
+      exit(-1);
     }
     if (p == parity::none) {
       reportDiag(DiagnosticsEngine::Level::Error,
@@ -1093,17 +1112,20 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
   }
 }
 
-void MyASTVisitor::require_parity_X(Expr * pExpr) {
-  // Now parity has to be X (or the same as before?)
-  if (get_parity_val(pExpr) != parity::x) {
-    reportDiag(DiagnosticsEngine::Level::Error,
-               pExpr->getSourceRange().getBegin(),
-               "Use wildcard parity \"X\" or \"parity::x\"" );
-  }
-}
+//  Obsolete when X is new type
+// void MyASTVisitor::require_parity_X(Expr * pExpr) {
+//   // Now parity has to be X (or the same as before?)
+//   if (get_parity_val(pExpr) != parity::x) {
+//     reportDiag(DiagnosticsEngine::Level::Error,
+//                pExpr->getSourceRange().getBegin(),
+//                "Use wildcard parity \"X\" or \"parity::x\"" );
+//   }
+// }
 
-// finish the field_ref_list, and
-// construct the field_info_list
+//////////////////////////////////////////////////////////////////////////////
+/// Process the field<> -references appearing in this loop, and
+/// construct the field_info_list
+//////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::check_field_ref_list() {
 
@@ -1139,11 +1161,13 @@ bool MyASTVisitor::check_field_ref_list() {
         no_errors = false;
       }
       lfv.type_template.erase(0,5);  // Remove "field"  from field<T>
+
+      lfv.nameExpr = p.nameExpr;     // store the first nameExpr to this field
       
       field_info_list.push_back(lfv);
       fip = & field_info_list.back();
     }
-    // now lfip points to the right info element
+    // now fip points to the right info element
     // copy that to lf reference
     p.info = fip;
 
@@ -1212,16 +1236,22 @@ bool MyASTVisitor::check_field_ref_list() {
     } // direction
   } // p-loop
   
-  // check for f[ALL] = f[X+dir] -type use, which is undefined
   
   for (field_info & l : field_info_list) {
+
+    // Check if the field can be vectorized
+
+    l.vecinfo = inspect_field_type(l.nameExpr);
+
+    // check for f[ALL] = f[X+dir] -type use, which is undefined
+
     if (l.is_written && l.dir_list.size() > 0) {
  
       // There may be error, find culprits
       bool found_error = false;
       for (field_ref * p : l.ref_list) {
         if (p->is_direction && !p->is_written && !p->is_offset) {
-          if (loop_parity.value == parity::all) {
+          if (loop_info.parity_value == parity::all) {
 
             reportDiag(DiagnosticsEngine::Level::Error,
                        p->parityExpr->getSourceRange().getBegin(),
@@ -1231,13 +1261,13 @@ bool MyASTVisitor::check_field_ref_list() {
             no_errors = false;
             found_error = true;
 
-          } else if (loop_parity.value == parity::none) {
+          } else if (loop_info.parity_value == parity::none) {
             reportDiag(DiagnosticsEngine::Level::Remark,
                        p->parityExpr->getSourceRange().getBegin(),
                        "Simultaneous access '%0' and assignment '%1' is allowed only with parity %2 is EVEN or ODD.  Inserting assertion",
                        get_stmt_str(p->fullExpr).c_str(),
                        l.old_name.c_str(),
-                       loop_parity.text.c_str());
+                       loop_info.parity_text.c_str());
             found_error = true;
           }
         }
@@ -1257,8 +1287,10 @@ bool MyASTVisitor::check_field_ref_list() {
   return no_errors;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/// Check now that the references to variables are as required
+/////////////////////////////////////////////////////////////////////////////
 
-/// Check now that the references to variables are according to rules
 void MyASTVisitor::check_var_info_list() {
   for (var_info & vi : var_info_list) {
     if (!vi.is_loop_local) {
@@ -1295,10 +1327,30 @@ void MyASTVisitor::check_var_info_list() {
       }
     }
   }
+
+  // iterate through var_info_list until no more is_site_dependent -relations found
+  // this should not leave any corner cases behind
+
+  int found;
+  do {
+    found = 0;
+    for (var_info & vi : var_info_list) {
+      if (vi.is_site_dependent == false) {
+        for (var_info * d : vi.dependent_vars) if (d->is_site_dependent) {
+          vi.is_site_dependent = true;
+          found++;
+          break;  // go to next var
+        }
+      }
+    } 
+  } while (found > 0);
+
+
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////////
 /// flag_error = true by default in myastvisitor.h
+
 SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
   SourceRange range(S->getBeginLoc(),
                     Lexer::findLocationAfterToken(S->getEndLoc(),
@@ -1320,6 +1372,10 @@ SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
   return range;
 }
 
+
+/////////////////////////////////////////////////////////////////////////////
+/// Variable decl inside field loops
+/////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   
@@ -1356,7 +1412,21 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     vd.name = var->getName();
     vd.type = var->getType().getAsString();
     vd.scope = parsing_state.scope_level;
+
     var_decl_list.push_back(vd);
+
+    // insert this to var_info_list too
+
+    var_info * ip = new_var_info(var);
+    ip->reduction_type = reduction::NONE;
+
+    // finally, check initialization
+    if (var->hasInit()) {
+      ip->is_site_dependent = is_site_dependent(var->getInit(), &ip->dependent_vars);
+      ip->is_assigned = true;
+    } else {
+      ip->is_assigned = false;
+    }
     
     llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
     return true;
@@ -1466,9 +1536,9 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
           if (vd) {
             const Expr * ie = vd->getInit();
             if (ie) {
-              loop_parity.expr  = ie;
-              loop_parity.value = get_parity_val(loop_parity.expr);
-              loop_parity.text  = remove_initial_whitespace(macro.substr(loop_call.length(),
+              loop_info.parity_expr  = ie;
+              loop_info.parity_value = get_parity_val(loop_info.parity_expr);
+              loop_info.parity_text  = remove_initial_whitespace(macro.substr(loop_call.length(),
                                                                          std::string::npos));
                 
               global.full_loop_text = macro + " " + get_stmt_str(f->getBody());
@@ -1530,8 +1600,14 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     if (E && is_field_parity_expr(E)) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
-                 "field[parity] -expression is allowed only in assignment statements or inside onsites(parity) compound statements");
+                 "field[parity] -expression is allowed only in LHS of field assignment statements (field[par] = ...)");
+    } else if (E && is_field_with_X_expr(E)) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 E->getSourceRange().getBegin(),
+                 "field[X] -expressions allowed only in RHS of field assignment statements or in \"onsites()\" blocks");
+
     }
+
   }
 
   // and add special handling for special function calls here
@@ -1555,7 +1631,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
         args.append(name).append( "\", " ).append(
             std::to_string( SM.getSpellingLineNumber(sl)));
 
-        writeBuf->insert(sl,args);
+        // if (!writeBuf->is_edited(sl)) writeBuf->insert(sl,args);
       }
     } 
   }
@@ -1563,8 +1639,10 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   return true;
 }
 
-
-//////// Functiondecl and templates below
+//////////////////////////////////////////////////////////////////////////////
+/// Check if the function definition contains a site loop
+/// If it is a template function, it probably should be specialized 
+//////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
   // Currently simple: buffer the function and traverse through it
@@ -1614,8 +1692,6 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     loop_function_check(f);
   }
 
-  // Check if the function can be called from a loop
-  bool loop_callable = true;
   // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
@@ -1633,9 +1709,9 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-      if (does_function_contain_loop(f)) {
-        loop_callable = false;
-      }
+      // if (does_function_contain_loop(f)) {
+      //   loop_callable = false;
+      // }
 
      
     switch (f->getTemplatedKind()) {
@@ -1897,21 +1973,20 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
   return true;
 }
 
-#if 0
-bool MyASTVisitor::
-VisitClassTemplateSpecalializationDecl(ClassTemplateSpecializationDecl *D) {
-  if (D->getNameAsString() == "field") {    
-    const TemplateArgumentList & tal = D->getTemplateArgs();
-    llvm::errs() << " *** field with args ";
-    for (unsigned i = 0; i < tal.size(); i++) 
-      llvm::errs() << TheRewriter.getRewrittenText(tal.get(i).getAsExpr()->getSourceRange())
-                   << " ";
-    llvm::errs() << "\n";
+
+// THis is just to enable ast dump
+bool MyASTVisitor::VisitType( Type * T) {
+  if (parsing_state.check_loop && state::loop_found) return true;
+
+  auto * recdecl = T->getAsCXXRecordDecl();
+  if (recdecl != nullptr) {
+    if (has_pragma(recdecl->getInnerLocStart(),"ast dump")) {
+      ast_dump_header("type",recdecl->getInnerLocStart());
+      recdecl->dumpColor();
+    }
   }
   return true;
 }
-#endif
-
 
 
 
@@ -1928,7 +2003,7 @@ void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument
   SourceManager &SM = TheRewriter.getSourceMgr();
 
   for (const TemplateArgument * tap : typeargs) {
-    llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
+    // llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
     const Type * tp = tap->getAsType().getTypePtrOrNull();
     // Builtins are fine too
     if (tp && !tp->isBuiltinType()) {

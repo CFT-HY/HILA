@@ -39,7 +39,7 @@ void dirac_staggered_apply(
 {
   // Start getting neighbours
   foralldir(dir){
-    v_in.start_move(dir);
+    v_in.start_get(dir);
   }
 
   // Apply the mass diagonally
@@ -50,7 +50,7 @@ void dirac_staggered_apply(
     direction odir = opp_dir( (direction)dir );
     // First mulltiply the by conjugate before communicating the matrix
     vtemp[dir][ALL] = v_in[X]*gauge[dir][X].conjugate();
-    vtemp[dir].start_move(odir);
+    vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
@@ -72,7 +72,7 @@ void dirac_staggered_dagger(
 {
   // Start getting neighbours
   foralldir(dir){
-    v_in.start_move(dir);
+    v_in.start_get(dir);
   }
 
   // Apply the mass diagonally
@@ -83,7 +83,7 @@ void dirac_staggered_dagger(
     direction odir = opp_dir( (direction)dir );
     // First mulltiply the by conjugate before communicating the matrix
     vtemp[dir][ALL] = v_in[X]*gauge[dir][X].conjugate();
-    vtemp[dir].start_move(odir);
+    vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
@@ -126,9 +126,11 @@ class dirac_staggered {
     }
 
 
+
     // Applies the operator to in
     void apply( const vector & in, vector & out){
       dirac_staggered_apply(gauge, mass, in, out, staggered_eta, vtemp);
+
     }
 
     // Applies the conjugate of the operator

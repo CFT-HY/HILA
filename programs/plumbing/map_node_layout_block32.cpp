@@ -31,7 +31,7 @@ void map_node_layout()
   j = -1;
   for (d=0; j<0 && d<NDIM; d++) if (blocklat[d] % 3 == 0) j=d;
   if (j >= 0) {
-    fprintf0(outf," map_node_layout: BLOCK 3*2^(dim-1)\n");
+    fprintf0(outf,"map_node_layout: BLOCK 3*2^(dim-1)\n");
     
     // set the order of the directions
     order[0] = j;
@@ -45,7 +45,7 @@ void map_node_layout()
 
   } else {
 
-    fprintf0(outf," No mod 3 dimensions found, attempt map_node_layout: BLOCK 2^dim\n");
+    fprintf0(outf,"No mod 3 dimensions found, attempt map_node_layout: BLOCK 2^dim\n");
 
     blocksize = 1;
     di = 0;

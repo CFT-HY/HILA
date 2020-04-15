@@ -48,6 +48,22 @@ std::string remove_all_whitespace(const std::string & line) {
   return out;
 }
 
+/// True if string contains word (note: this word is c++ alphanumeric word, ie. split as in )
+
+std::string::size_type find_word(const std::string & in, const std::string & pattern, int pos) {
+  int i = in.find(pattern,pos);
+  if (i == std::string::npos) return std::string::npos;  // not found
+
+  if ( i>0 && std::isalnum(in[i-1]) ) 
+    return std::string::npos;   // is at the end of a longer word
+  if ( i<in.length()-pattern.length()-1 && std::isalnum(in[i+pattern.length()]) ) 
+    return std::string::npos;
+
+  return i;
+}
+
+
+
 // returns true if line contains the word list at the beginning
 bool contains_word_list(const std::string & line, const std::vector<std::string> & list) {
   const char *p = line.c_str();

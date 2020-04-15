@@ -8,8 +8,11 @@
 
 #include "../plumbing/defs.h"
 
+///////////////////////////////////////////////////////////////////////////
 /// enum direction - includes the opposite direction
 /// defined as unsigned, but note that direction + int is not defined
+/// Direction can be used as an array index (interchangably with int)
+///////////////////////////////////////////////////////////////////////////
 
 #if NDIM==4
 enum direction : unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
@@ -54,21 +57,38 @@ static inline direction operator+(const direction d) { return d; }
 static inline int is_up_dir(const direction d) { return d<NDIM; }
 static inline int is_up_dir(const int d) { return d<NDIM; }
 
+static inline direction abs(direction dir) { if (is_up_dir(dir)) return dir; else return -dir; }
+
 inline int dir_dot_product(direction d1, direction d2) {
   if (d1 == d2) return 1;
   else if (d1 == opp_dir(d2)) return -1;
   else return 0;
 }
 
+/// dir_mask_t  type  used in masking directions
+/// unsigned char is ok up to 4 dim (2*4 bits)
+using dir_mask_t = unsigned char;
 
-/// enum class parity type definition
+inline dir_mask_t get_dir_mask(const direction d) { return (dir_mask_t)(1<<d); }
 
-enum class parity : unsigned { none = 0, even, odd, all, x };
+
+////////////////////////////////////////////////////////////////////
+/// enum class parity type definition - stronger protection than std enum
+/// 
+////////////////////////////////////////////////////////////////////
+
+enum class parity : unsigned { none = 0, even, odd, all };
+// 
 // should use here #define instead of const parity? Makes EVEN a protected symbol
 constexpr parity EVEN = parity::even;      // bit pattern:  001
 constexpr parity ODD  = parity::odd;       //               010
 constexpr parity ALL  = parity::all;       //               011
-constexpr parity X    = parity::x;         //               100
+
+// this is used in diagnostics - make static inline so can be defd here
+inline const char * parity_name(parity p) {
+  const char * parity_name_s[4] = {"parity::none", "EVEN", "ODD", "ALL"};
+  return parity_name_s[(int)p]; 
+}
 
 // utilities for getting the bit patterns
 static inline unsigned parity_bits(parity p) {
@@ -99,7 +119,10 @@ static std::vector<parity> loop_parities(parity par){
   return parities;
 }
 
-// COORDINATE_VECTOR
+
+//////////////////////////////////////////////////////////////////////
+/// COORDINATE_VECTOR type 
+//////////////////////////////////////////////////////////////////////
 
 class coordinate_vector {
  private:
@@ -136,7 +159,7 @@ class coordinate_vector {
 
   // Parity of this coordinate
   #pragma transformer loop_function
-  parity coordinate_parity() {
+  ::parity parity() {
     int s = 0;
     foralldir(d) s += r[d];
     if (s % 2 == 0) return parity::even;
@@ -181,14 +204,14 @@ class coordinate_vector {
   #pragma transformer loop_function
   coordinate_vector & operator+=(const direction dir) {
     if (is_up_dir(dir)) ++r[dir]; 
-    else --r[opp_dir(dir)];
+    else --r[-dir];
     return *this;
   }
 
   #pragma transformer loop_function
   coordinate_vector & operator-=(const direction dir) {
     if (is_up_dir(dir)) --r[dir]; 
-    else ++r[opp_dir(dir)];
+    else ++r[-dir];
     return *this;
   }
 
@@ -200,6 +223,7 @@ class coordinate_vector {
     return v;
   }
 
+  
 };
 
 inline coordinate_vector operator+(const coordinate_vector & a, const coordinate_vector & b) {
@@ -236,6 +260,21 @@ inline coordinate_vector operator/(const coordinate_vector & a, const int i) {
   return r;
 }
 
+/// Somewhat unorthodox vector * vector and vector / vector -operators; elem by elem
+
+inline coordinate_vector operator*(const coordinate_vector & a, const coordinate_vector & b) {
+  coordinate_vector r;
+  foralldir(d) r[d] = a[d]*b[d];
+  return r;
+}
+
+inline coordinate_vector operator/(const coordinate_vector & a, const coordinate_vector & b) {
+  coordinate_vector r;
+  foralldir(d) r[d] = a[d]/b[d];
+  return r;
+}
+
+
 /// Positive mod(): we define here the positive mod utility function mod(a,b).
 /// It mods the arguments 0 <= a < m.  This is not the standard
 /// for integer operator% in c++, which gives negative results if a<0.  This is useful in 
@@ -260,14 +299,15 @@ inline coordinate_vector mod(const coordinate_vector & a, const coordinate_vecto
 
 // dot product, just in case...
 inline int dot(const coordinate_vector & d1, const coordinate_vector & d2) {
-  int r = 1;
+  int r = 0;
   foralldir(d) r += d1[d]*d2[d];
   return r;
 }
 
+inline int norm_sq(const coordinate_vector & d) {
+  return dot(d,d);
+}
 
-// Replaced by transformer
-coordinate_vector coordinates(parity X);
 
 /// Special direction operators: dir + dir -> coordinate_vector
 inline coordinate_vector operator+(const direction d1, const direction d2) {
@@ -318,34 +358,60 @@ inline coordinate_vector operator-( const direction dir, coordinate_vector cv ) 
   return cv;
 }
 
+// finally, output
+inline std::ostream& operator<<(std::ostream &strm, const coordinate_vector & c) {
+  foralldir(d) strm << c[d] << ' ';
+  return strm;
+}
 
-/// Parity + dir -type: used in expressions of type f[X+dir]
-/// It's a dummy type, will be removed by transformer
-struct parity_plus_direction {
-  parity p;
-  direction d;
+
+
+/////////////////////////////////////////////////////////////////////
+///  X-coordinate type - "dummy" class, used only
+///  in loop index and is removed by code analysis
+///  Has nothing inside except some methods
+/////////////////////////////////////////////////////////////////////
+
+class X_index_type {
+  public:
+    const coordinate_vector & coordinates() const;
+    int coordinate(direction d) const;
+    ::parity parity() const;
 };
+
+/// this defines the "point" dummy variable!
+static const X_index_type X;
+
+
+/// X + dir -type: used in expressions of type f[X+dir]
+/// It's a dummy type, will be removed by transformer
+struct X_plus_direction {};
 
 /// Declarations, no need to implement these (type removed by transformer)
-const parity_plus_direction operator+(const parity par, const direction d);
-const parity_plus_direction operator-(const parity par, const direction d);
+const X_plus_direction operator+(const X_index_type x, const direction d);
+const X_plus_direction operator-(const X_index_type x, const direction d);
 
-/// Parity + coordinate offset, used in f[X+coordinate_vector] or f[X+dir1+dir2] etc.
-struct parity_plus_offset {
-  parity p;
-  coordinate_vector cv;
-};
+/// X + coordinate offset, used in f[X+coordinate_vector] or f[X+dir1+dir2] etc.
+struct X_plus_offset {};
 
-const parity_plus_offset operator+(const parity par, const coordinate_vector & cv);
-const parity_plus_offset operator-(const parity par, const coordinate_vector & cv);
-const parity_plus_offset operator+(const parity_plus_direction, const direction d);
-const parity_plus_offset operator-(const parity_plus_direction, const direction d);
-const parity_plus_offset operator+(const parity_plus_direction, const coordinate_vector & cv);
-const parity_plus_offset operator-(const parity_plus_direction, const coordinate_vector & cv);
-const parity_plus_offset operator+(const parity_plus_offset, const direction d);
-const parity_plus_offset operator-(const parity_plus_offset, const direction d);
-const parity_plus_offset operator+(const parity_plus_offset, const coordinate_vector & cv);
-const parity_plus_offset operator-(const parity_plus_offset, const coordinate_vector & cv);
+// and prototypes, these operators are not defined anywhere but needed for types
+const X_plus_offset operator+(const X_index_type x, const coordinate_vector & cv);
+const X_plus_offset operator-(const X_index_type x, const coordinate_vector & cv);
+const X_plus_offset operator+(const X_plus_direction, const direction d);
+const X_plus_offset operator-(const X_plus_direction, const direction d);
+const X_plus_offset operator+(const X_plus_direction, const coordinate_vector & cv);
+const X_plus_offset operator-(const X_plus_direction, const coordinate_vector & cv);
+const X_plus_offset operator+(const X_plus_offset, const direction d);
+const X_plus_offset operator-(const X_plus_offset, const direction d);
+const X_plus_offset operator+(const X_plus_offset, const coordinate_vector & cv);
+const X_plus_offset operator-(const X_plus_offset, const coordinate_vector & cv);
+
+
+/// Prototypes for coordinates, replaced by transformer -- TO BE REMOVED!
+const coordinate_vector & coordinates(X_index_type x);
+// const coordinate_vector & coordinates(X_plus_direction xd);
+// const coordinate_vector & coordinates(X_plus_offset xo);
+
 
 
 #endif

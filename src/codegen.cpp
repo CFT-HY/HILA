@@ -39,7 +39,6 @@ std::string parity_str(parity p)
   case parity::even : return "parity::even";
   case parity::odd  : return "parity::odd";
   case parity::all  : return "parity::all";
-  case parity::x    : return "parity::x";
   }
 }
 
@@ -71,7 +70,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
   std::stringstream code;
   code << "{\n";
 
-  // basic set up: 1st loop_parity, if it is known const set it up,
+  // basic set up: 1st loop_info, if it is known const set it up,
   // else copy it to a variable name
 
   const std::string t = loopBuf.dump(); 
@@ -83,9 +82,9 @@ void MyASTVisitor::generate_code(Stmt *S) {
   parity_name = "Parity";
   while (t.find(parity_name,0) != std::string::npos) parity_name += "_";
   
-  if (loop_parity.value == parity::none) {
+  if (loop_info.parity_value == parity::none) {
     // now unknown
-    code << "const parity " << parity_name << " = " << loop_parity.text << ";\n";
+    code << "const parity " << parity_name << " = " << loop_info.parity_text << ";\n";
 
     if (global.assert_loop_parity) {
       code << "assert( is_even_odd_parity(" << parity_name << ") && \"Parity should be EVEN or ODD in this loop\");\n";
@@ -93,7 +92,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
     parity_in_this_loop = parity_name;
       
   } 
-  else parity_in_this_loop = parity_str(loop_parity.value);
+  else parity_in_this_loop = parity_str(loop_info.parity_value);
 
   // then, generate new names for field variables in loop
 
@@ -116,33 +115,54 @@ void MyASTVisitor::generate_code(Stmt *S) {
   }
 
 
-  // mark modified fields
+  // check alloc and do it if needed
   for (field_info & l : field_info_list) if (l.is_written) {
-    code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
+    code << l.new_name << ".check_alloc();\n";
   }
 
   // Check that read fields are initialized
   for (field_info & l : field_info_list) if (l.is_read_nb || l.is_read_atX) {
     std::string init_par;
-    if ( loop_parity.value == parity::all || (l.is_read_nb && l.is_read_atX)) {
+    if ( loop_info.parity_value == parity::all || (l.is_read_nb && l.is_read_atX)) {
       init_par = "ALL";
     } else {
       if (l.is_read_atX) init_par = parity_in_this_loop;
       else init_par = "opp_parity(" + parity_in_this_loop + ")";
     }
-    code << "assert(" << l.new_name << ".is_initialized(" << init_par << "));\n";
+
+    // TAKE THIS AWAY FOR NOW -- WE DON'T HAVE A GOOD METHOD TO CHECK "pure output" FUNCTIONS
+    // E.g. method   U[X].random(), where U does not have to be initialized
+    
+    //  code << "assert(" << l.new_name << ".is_initialized(" << init_par << "));\n";
   }
 
   // change the f[X+offset] -references, generate code
   handle_field_plus_offsets( code, loopBuf, parity_name );
 
+  bool first = true;
+  bool generate_wait_loops;
+  if (cmdline::no_interleaved_comm || cmdline::no_mpi) 
+    generate_wait_loops = false;
+  else 
+    generate_wait_loops = true;
+
   for (field_info & l : field_info_list) {
     // If neighbour references exist, communicate them
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << l.new_name << ".wait_move("
-           << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
+      if (!generate_wait_loops) {
+        code << l.new_name << ".get("
+             << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
+      } else {
+        if (first) code << "dir_mask_t  _dir_mask_ = 0;\n";
+        first = false;        
+
+        code << "_dir_mask_ |= " << l.new_name << ".start_get("
+             << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
+      }
     }
   }
+
+  if (first) generate_wait_loops = false;   // no communication needed in the 1st place
   
   // Create temporary variables for reductions
   for (var_info & v : var_info_list) {
@@ -159,7 +179,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
   }
 
   // Place the content of the loop
-  code << backend_generate_code(S,semicolon_at_end,loopBuf);
+  code << backend_generate_code(S,semicolon_at_end,loopBuf,generate_wait_loops);
   
   
   // Check reduction variables
@@ -181,7 +201,12 @@ void MyASTVisitor::generate_code(Stmt *S) {
            << vrf.vector_name << ".size(), true);\n";
     }
   }
-          
+
+  // finally mark modified fields
+  for (field_info & l : field_info_list) if (l.is_written) {
+    code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
+  }
+
   // and close
   code << "}\n//----------";
   
@@ -305,22 +330,23 @@ void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
     handle_loop_function_cuda(fd);
   } else if (target.openacc) {
     handle_loop_function_openacc(fd);
-  } else if (target.VECTORIZE) {
+  } else if (target.vectorize) {
     handle_loop_function_avx(fd);
   }
 }
 
 /// Call the backend function for generating loop code
-std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf,
+                                                bool generate_wait_loops) {
   std::stringstream code;
   if( target.CUDA ){
     code << generate_code_cuda(S,semicolon_at_end,loopBuf);
-  } else if( target.openacc ){
-    code << generate_code_cpu(S,semicolon_at_end,loopBuf);   // use cpu method for acc
-  } else if(target.VECTORIZE) {
-    code << generate_code_avx(S,semicolon_at_end,loopBuf);
+  } else if( target.openacc){
+    code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);   // use cpu method for acc
+  } else if(target.vectorize) {
+    code << generate_code_avx(S,semicolon_at_end,loopBuf, generate_wait_loops);
   } else {
-    code << generate_code_cpu(S,semicolon_at_end,loopBuf);
+    code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);
   }
   return code.str();
 }
