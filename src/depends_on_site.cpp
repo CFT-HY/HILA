@@ -13,7 +13,7 @@
 /// and methods of X (check!), or it contains a local variable which is site dependent
 //////////////////////////////////////////////////////////////////////////////
 
-class dependsOnSiteChecker : public GeneralVisitor, public RecursiveASTVisitor<dependsOnSiteChecker> {
+class isSiteDependentChecker : public GeneralVisitor, public RecursiveASTVisitor<isSiteDependentChecker> {
 
 public:
   bool found_X;
@@ -22,7 +22,7 @@ public:
   bool found_dependent_var;
   std::vector<var_info *> * depends_on_var;
 
-  dependsOnSiteChecker(Rewriter &R, ASTContext *C, std::vector<var_info *> * dep_var) : GeneralVisitor(R,C) {
+  isSiteDependentChecker(Rewriter &R, ASTContext *C, std::vector<var_info *> * dep_var) : GeneralVisitor(R,C) {
 
     depends_on_var = dep_var;    // we do not clear the vector, because it may contain earlier dependencies
     
@@ -44,7 +44,7 @@ public:
         // it's a variable and found the decl, check if we have it here
         for (var_info & v : var_info_list) {
           if (v.decl == decl) {
-            if (v.depends_on_site) {
+            if (v.is_site_dependent) {
               found_var_depends_on_site = true;
               return false;  // again, the inspection can be stopped
 
@@ -82,9 +82,9 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////
 
 
-bool MyASTVisitor::depends_on_site(Expr * e, std::vector<var_info *> * dependent_var) {
+bool MyASTVisitor::is_site_dependent(Expr * e, std::vector<var_info *> * dependent_var) {
 
-  dependsOnSiteChecker checker(TheRewriter,Context,dependent_var);
+  isSiteDependentChecker checker(TheRewriter,Context,dependent_var);
 
   checker.TraverseStmt(e);
   return (checker.found_X || checker.found_var_depends_on_site || checker.found_X_method);

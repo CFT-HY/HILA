@@ -153,7 +153,7 @@ public:
   /// this checks if the statement s is site-dependent inside site loops
   /// if return is false, vi (if non-null) will contain a list of variables
   /// which may turn out to be dependent on site later.  Check after loop complete!
-  bool depends_on_site(Expr *e, std::vector<var_info *> * vi = nullptr);
+  bool is_site_dependent(Expr *e, std::vector<var_info *> * vi = nullptr);
 
   void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);

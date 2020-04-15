@@ -351,10 +351,10 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
 
     }
 
-    if (is_assign && assign_stmt != nullptr && !vip->depends_on_site) {
-      vip->depends_on_site = check_rhs_of_assignment(assign_stmt, &vip->dependent_vars );
+    if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
+      vip->is_site_dependent = check_rhs_of_assignment(assign_stmt, &vip->dependent_vars );
       
-      llvm::errs() << "Var " << vip->name << " depends on site: " << vip->depends_on_site <<  "\n";
+      llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
     } 
     
   } else { 
@@ -395,7 +395,7 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
       break;
     }
   }
-  vi.depends_on_site = false;  // default case
+  vi.is_site_dependent = false;  // default case
   vi.dependent_vars.clear();
 
   var_info_list.push_back(vi);
@@ -411,13 +411,13 @@ bool MyASTVisitor::check_rhs_of_assignment(Stmt *s, std::vector<var_info *> * vi
 
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
-      return depends_on_site(OP->getArg(1),vi);
+      return is_site_dependent(OP->getArg(1),vi);
     }
   }
 
   if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
     if (B->isAssignmentOp()) {
-      return depends_on_site(B->getRHS(),vi);
+      return is_site_dependent(B->getRHS(),vi);
     }
   }
   // one of these should have triggered!  
@@ -585,7 +585,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // because var_info_list was checked above, once is enough
   if (loop_info.has_site_dependent_conditional == false) {
     for (auto * n : loop_info.conditional_vars) 
-      if (n->depends_on_site) loop_info.has_site_dependent_conditional = true;
+      if (n->is_site_dependent) loop_info.has_site_dependent_conditional = true;
   }
 
   if (loop_info.has_site_dependent_conditional) llvm::errs() << "Cond is site dep!\n";
@@ -833,7 +833,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
       if (condexpr != nullptr) {
         loop_info.has_site_dependent_conditional = 
-          depends_on_site(condexpr, &loop_info.conditional_vars);
+          is_site_dependent(condexpr, &loop_info.conditional_vars);
       }
     }
 
@@ -1328,16 +1328,16 @@ void MyASTVisitor::check_var_info_list() {
     }
   }
 
-  // iterate through var_info_list until no more depends_on_site -relations found
+  // iterate through var_info_list until no more is_site_dependent -relations found
   // this should not leave any corner cases behind
 
   int found;
   do {
     found = 0;
     for (var_info & vi : var_info_list) {
-      if (vi.depends_on_site == false) {
-        for (var_info * d : vi.dependent_vars) if (d->depends_on_site) {
-          vi.depends_on_site = true;
+      if (vi.is_site_dependent == false) {
+        for (var_info * d : vi.dependent_vars) if (d->is_site_dependent) {
+          vi.is_site_dependent = true;
           found++;
           break;  // go to next var
         }
@@ -1422,7 +1422,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
 
     // finally, check initialization
     if (var->hasInit()) {
-      ip->depends_on_site = depends_on_site(var->getInit(), &ip->dependent_vars);
+      ip->is_site_dependent = is_site_dependent(var->getInit(), &ip->dependent_vars);
       ip->is_assigned = true;
     } else {
       ip->is_assigned = false;
