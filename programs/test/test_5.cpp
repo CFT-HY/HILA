@@ -1,7 +1,7 @@
-
 #include "../plumbing/defs.h"
-#include "../plumbing/field.h"
 #include "../datatypes/cmplx.h"
+
+#include "../plumbing/field.h"
 
 // extern field<int> glob;
 
@@ -25,6 +25,11 @@ public:
   cmplx<T> a[2];
 };
 
+template <typename g>
+void pf(g & s) {
+  s[ALL] = 1;
+}
+
 
 int main()
 {
@@ -33,6 +38,8 @@ int main()
   int i;
   field<double> t(1.0);
 
+  pf(t);
+  
   field<v2<double>> A;  
   
   coordinate_vector 
@@ -61,7 +68,7 @@ int main()
     
     double vv = (double)X.parity();
 
-    if (t2 < 4) A[X] += xyz(A[X]);
+    //    if (t2 < 4) A[X] += xyz(A[X]);
     
     A[X].a[0] = 0;
 

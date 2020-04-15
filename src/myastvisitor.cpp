@@ -1629,6 +1629,13 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 }
 
 
+////////////////////////////////////////////////////////////////////////
+/// This is visited for every function declaration and specialization
+/// (either function specialization or template class method specialization)
+/// If needed, specializations are "rewritten" open
+////////////////////////////////////////////////////////////////////////
+
+
 bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
@@ -1672,8 +1679,13 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
         parsing_state.skip_children = 1;
         break;
 
-      case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+      // do all specializations here: either direct function template,
+      // specialized through class template, or specialized
+      // because it's a base class function specialized by derived class (TODO: TEST THIS!).
+
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
+      case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+      case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
 
         if (does_function_contain_loop(f)) {
           specialize_function_or_method(f);
