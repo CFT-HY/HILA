@@ -1041,12 +1041,10 @@ bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & argu
 /// These are the main traverse methods
 /// By overriding these methods in MyASTVisitor we can control which nodes are visited.
 /// These are control points for the depth of the traversal;
-///  check_loop, skip_children,  ast_depth
+///  skip_children,  ast_depth
 ////////////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::TraverseStmt(Stmt *S) {
-
-  if (parsing_state.check_loop && state::loop_found) return true;
     
   // if state::skip_children > 0 we'll skip all until return to level up
   if (parsing_state.skip_children > 0) parsing_state.skip_children++;
@@ -1064,8 +1062,6 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
 }
 
 bool MyASTVisitor::TraverseDecl(Decl *D) {
-
-  if (parsing_state.check_loop && state::loop_found) return true;
 
   // if state::skip_children > 0 we'll skip all until return to level up
   if (parsing_state.skip_children > 0) parsing_state.skip_children++;
@@ -1378,9 +1374,7 @@ SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
 /////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
-  
-  if (parsing_state.check_loop && state::loop_found) return true;
-  
+    
   if (parsing_state.in_loop_body) {
     // for now care only loop body variable declarations
 
@@ -1492,12 +1486,8 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
 ///////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::VisitStmt(Stmt *s) {
-
-  if (parsing_state.check_loop && state::loop_found) return true;
-  
- 
-  if ( !parsing_state.check_loop && parsing_state.ast_depth == 1 &&
-       has_pragma(s,"ast dump") ) {
+   
+  if ( parsing_state.ast_depth == 1 && has_pragma(s,"ast dump") ) {
     ast_dump(s);
   }
 
@@ -1518,11 +1508,6 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
       static std::string loop_call("onsites");
       if (pp.getImmediateMacroName(startloc) == loop_call) {
         // Now we know it is onsites-macro
-
-        if (parsing_state.check_loop) {
-          state::loop_found = true;
-          return true;
-        }
 
         CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( startloc );
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
@@ -1578,11 +1563,6 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   }
 
   if (found) {
-    
-    if (parsing_state.check_loop) {
-      state::loop_found = true;
-      return true;
-    }
 
     SourceRange full_range = getRangeWithSemicolon(s,false);
     global.full_loop_text = TheRewriter.getRewrittenText(full_range);
@@ -1595,20 +1575,29 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1;
 
   //  Finally, if we get to a field[parity] -expression without a loop or assignment flag error
-  if (!parsing_state.check_loop) {
-    Expr * E = dyn_cast<Expr>(s);
-    if (E && is_field_parity_expr(E)) {
-      reportDiag(DiagnosticsEngine::Level::Error,
-                 E->getSourceRange().getBegin(),
-                 "field[parity] -expression is allowed only in LHS of field assignment statements (field[par] = ...)");
-    } else if (E && is_field_with_X_expr(E)) {
-      reportDiag(DiagnosticsEngine::Level::Error,
-                 E->getSourceRange().getBegin(),
-                 "field[X] -expressions allowed only in RHS of field assignment statements or in \"onsites()\" blocks");
+ 
+  Expr * E = dyn_cast<Expr>(s);
+  if (E && is_field_parity_expr(E)) {
+    reportDiag(DiagnosticsEngine::Level::Error,
+                E->getSourceRange().getBegin(),
+                "field[parity] -expression is allowed only in LHS of field assignment statements (field[par] = ...)");
+    parsing_state.skip_children = 1;
+    return true;
 
-    }
+  } else if (E && is_field_with_X_expr(E)) {
+    reportDiag(DiagnosticsEngine::Level::Error,
+                E->getSourceRange().getBegin(),
+                "field[X] -expressions allowed only in field loops");
+    parsing_state.skip_children = 1;
+    return true;
 
-  }
+  } 
+  //   else if (E && is_X_index_type(E)) {
+  //   reportDiag(DiagnosticsEngine::Level::Error,
+  //               E->getSourceRange().getBegin(),
+  //               "Use of \"X\" is allowed only in field loops");
+  //   parsing_state.skip_children = 1;
+  // }
 
   // and add special handling for special function calls here
 
@@ -1639,54 +1628,13 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   return true;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-/// Check if the function definition contains a site loop
-/// If it is a template function, it probably should be specialized 
-//////////////////////////////////////////////////////////////////////////////
-
-bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
-  // Currently simple: buffer the function and traverse through it
-
-  srcBuf buf(&TheRewriter,f);
-  srcBuf *bp = writeBuf;
-  writeBuf = &buf;
-  
-  buf.off();
-  
-  bool lf = state::loop_found;
-  state::loop_found = false;  // use this to flag
-
-  bool retval;
-  if (f->hasBody()) {
-    
-    // llvm::errs() << "About to check function " << f->getNameAsString() << '\n';
-    // llvm::errs() << buf.dump() << '\n';
-    
-    parsing_state.check_loop = true;
-    TraverseStmt(f->getBody());
-    parsing_state.check_loop = false;
-    
-    // llvm::errs() << "Func check done\n";
-    
-    retval = state::loop_found;
-  } else {
-    retval = false;
-  }
-  state::loop_found = lf;
-  writeBuf = bp;
-  
-  buf.clear();
-  
-  return retval;
-}
-
 
 bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
   // this does not really do anything
 
-  if (!parsing_state.check_loop && has_pragma(f,"loop_function")) {
+  if (has_pragma(f,"loop_function")) {
     // This function can be called from a loop,
     // handle as if it was called from one
     loop_function_check(f);
@@ -1958,9 +1906,8 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 // Find the element typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
 bool MyASTVisitor::VisitDecl( Decl * D) {
-  if (parsing_state.check_loop && state::loop_found) return true;
 
-  if ( !parsing_state.check_loop && parsing_state.ast_depth == 1 &&
+  if ( parsing_state.ast_depth == 1 &&
        has_pragma(D,"ast dump") ) {
     ast_dump(D);
   }
@@ -1976,7 +1923,6 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
 
 // THis is just to enable ast dump
 bool MyASTVisitor::VisitType( Type * T) {
-  if (parsing_state.check_loop && state::loop_found) return true;
 
   auto * recdecl = T->getAsCXXRecordDecl();
   if (recdecl != nullptr) {

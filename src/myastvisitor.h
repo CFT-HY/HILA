@@ -39,7 +39,6 @@ private:
     int  stmt_sequence;         // sequence number of full statements in loops.  Full stmts separated by ;
     bool in_loop_body;          // true if in field loop
     bool accept_field_parity;   // if parity of loop not resolved yet
-    bool check_loop;            // true if just checking existence of a field loop
     bool loop_function_next;
   } parsing_state;
 
@@ -53,7 +52,6 @@ public:
     parsing_state.stmt_sequence = 0;
     parsing_state.in_loop_body = false;
     parsing_state.accept_field_parity = false;
-    parsing_state.check_loop = false;
     parsing_state.loop_function_next = false;
   }
 
