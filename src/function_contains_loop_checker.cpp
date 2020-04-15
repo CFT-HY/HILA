@@ -23,6 +23,9 @@ public:
   bool found_X;
   bool found_field_parity;
 
+  containsFieldLoopChecker(Rewriter &R,ASTContext *C) : GeneralVisitor(R,C) {
+    found_X = found_field_parity = false;
+  }
 
   // bool VisitStmt(Stmt *s) { llvm::errs() << "In stmt\n"; return true; }
 

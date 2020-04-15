@@ -1703,6 +1703,11 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   return true;
 }
 
+////////////////////////////////////////////////////////////////////////////
+/// This does the heavy lifting of specializing function templates and
+/// methods defined within template classes.  This is needed if there are
+/// field loops within the functions
+////////////////////////////////////////////////////////////////////////////
 
 
 void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
@@ -1850,6 +1855,10 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
   return f->getSourceRange();
 }
 
+////////////////////////////////////////////////////////////////////////////
+/// Class template visitor: we check this because we track field and field_storage
+/// specializations (not really needed?)
+////////////////////////////////////////////////////////////////////////////
 
 
 bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
