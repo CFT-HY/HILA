@@ -142,12 +142,12 @@ llvm::cl::opt<bool> cmdline::openacc("target:openacc",
 // Debug and Utility arguments
 
 llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
-     llvm::cl::desc("write pragmas/attributes to functions called from loops"),
-     llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("write pragmas/attributes to functions called from loops"),
+      llvm::cl::cat(TransformerCat));
 
 llvm::cl::opt<int> cmdline::verbosity("verbosity",
-     llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
-     llvm::cl::cat(TransformerCat));
+      llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
+      llvm::cl::cat(TransformerCat));
 
      
 

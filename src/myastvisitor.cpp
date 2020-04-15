@@ -28,18 +28,27 @@ std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
 }
 
 /// -- Identifier utility functions --
+/// getCanonicalType takes away typedefs, getUnqualifiedType() qualifiers, pp just in case
+/// the type string needs to begin with the string
 
 bool MyASTVisitor::is_field_storage_expr(Expr *E) {
-  return( E && E->getType().getAsString().find(field_storage_type) != std::string::npos);
+  PrintingPolicy pp(Context->getLangOpts());
+  return( E && 
+    E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_storage_type) == 0);
 }
 
 bool MyASTVisitor::is_field_expr(Expr *E) {
-  return( E && E->getType().getAsString().find(field_type) != std::string::npos);
+  PrintingPolicy pp(Context->getLangOpts());
+  return( E && 
+    E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_type) == 0);
 }
 
 bool MyASTVisitor::is_field_decl(ValueDecl *D) {
-  return( D && D->getType().getAsString().find(field_type) != std::string::npos);
+  PrintingPolicy pp(Context->getLangOpts());
+  return( D && 
+    D->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_type) == 0);
 }
+
 
 bool MyASTVisitor::is_duplicate_expr(const Expr * a, const Expr * b) {
   // Use the Profile function in clang, which "fingerprints"
@@ -1754,8 +1763,10 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   return true;
 }
 
-
-//////// Functiondecl and templates below
+//////////////////////////////////////////////////////////////////////////////
+/// Check if the function definition contains a site loop
+/// If it is a template function, it probably should be specialized 
+//////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::does_function_contain_loop( FunctionDecl *f ) {
   // Currently simple: buffer the function and traverse through it
@@ -1805,8 +1816,6 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     loop_function_check(f);
   }
 
-  // Check if the function can be called from a loop
-  bool loop_callable = true;
   // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
@@ -1824,9 +1833,9 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
-      if (does_function_contain_loop(f)) {
-        loop_callable = false;
-      }
+      // if (does_function_contain_loop(f)) {
+      //   loop_callable = false;
+      // }
 
      
     switch (f->getTemplatedKind()) {
