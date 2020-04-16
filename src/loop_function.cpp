@@ -93,11 +93,12 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
 
   // Handle the object itself
   Expr * E = Call->getImplicitObjectArgument();
+  E = E->IgnoreImplicit();
   if( is_field_with_X_expr(E) ) {
-    QualType q = E->getType();
+    CXXMethodDecl * Decl = Call->getMethodDecl();
 
     // Check for const qualifier
-    if( !q.isConstQualified ()) {
+    if( !Decl->isConst() ) {
       // Mark it as changed
       handle_field_parity_X_expr(E, true, true, true);
     }
