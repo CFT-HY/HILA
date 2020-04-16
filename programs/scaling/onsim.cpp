@@ -29,15 +29,13 @@ class scaling_sim {
 		scaling_sim() = default;
 		void allocate(const std::string fname, int argc, char ** argv);
 		void initialize();
-		void write_energy();
+		void write_energies();
 		void next();
 		inline double scaleFactor(double t);
 
 		field<cmplx<double>> phi;
 		field<cmplx<double>> pi;
 		field<cmplx<double>> deltaPi; 
-		field<cmplx<double>> V;
-		field<cmplx<double>> E;
 
 		double t;
 
@@ -59,16 +57,17 @@ class scaling_sim {
 void scaling_sim::allocate(const std::string fname, int argc, char ** argv){
 	input parameters = input();
 	parameters.import(fname);
-	config.l = parameters.get("l");
+	config.l = parameters.get("N");
 	config.seed = parameters.get("seed");
 	config.param1 = parameters.get("param1");
 	config.sigma = parameters.get("sigma");
   	config.dx = parameters.get("dx");
-  	config.dt = parameters.get("dt");
+	double ratio = parameters.get("dtdxRatio");
+  	config.dt = config.dx*ratio;
   	config.tStart = parameters.get("tStart");
   	config.tEnd = parameters.get("tEnd");
 	config.lambda = parameters.get("lambda");
-	config.smoothing = parameters.get("smoothing");
+	config.smoothing = parameters.get("smooth");
 
 	int box_dimensions[3] = {config.l,config.l,config.l}; 
 
@@ -107,16 +106,48 @@ void scaling_sim::initialize(){
 		}
 	}
 
+	
+
 }
 
-void scaling_sim::write_energy(){
-	
-	cmplx<double> vsum;
+void scaling_sim::write_energies(){
+	double a = scaleFactor(t);
+	double ss = config.sigma*config.sigma;
+
+	//non-weighted energies
+    	double sumPi = 0.0;
+   	double sumDiPhi = 0.0;
+    	double sumV = 0.0;
+	double sumPhiDiPhi = 0.0;
+	double sumPhiPi = 0.0; 
+
+	//weighted energies
+        double w_sumPi = 0.0;
+        double w_sumDiPhi = 0.0;
+        double w_sumV = 0.0;
+        double w_sumPhiDiPhi = 0.0; 
+        double w_sumPhiPi = 0.0;
+
 	onsites(ALL){
-		cmplx<double> v = V[X];
-		vsum += v; 
+		double v = 0;
+                cmplx<double> norm = phi[X].conj()*phi[X]; //calculate phi norm
+                sumV += 0.25*config.lambda*a*a*pow((norm - ss).re, 2.0); //reduce potential
+		sumPi += (pi[X].conj()*pi[X]).re; 
 	}
-	std::cout << vsum/((double) config.l*config.l*config.l) << "\n"; 
+
+	direction d;
+	foralldir(d){
+		onsites(ALL){
+			cmplx<double> diff_phi = (phi[X + d] - phi[X])/config.dx;  
+			double diPhi = (diff_phi.conj()*diff_phi).re;
+			sumDiPhi += diPhi; //reduce diPhi
+		}
+	}
+
+	if (mynode() == 0){
+		double vol = (double) config.l*config.l*config.l;
+		hila::output << sumV/vol << '\t' << sumDiPhi/vol << '\t' << sumPi/vol << '\n';
+	}
 }
 
 void scaling_sim::next(){
@@ -129,9 +160,10 @@ void scaling_sim::next(){
   	double daa_aa = ( pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0) ) / pow(aHalfPlus, 2.0);
   	double ss = config.sigma*config.sigma;
 
+	phi[ALL] = phi[X] + config.dt*pi[X];
+
 	onsites(ALL){
 		cmplx<double> norm = phi[X].conj()*phi[X]; //calculate phi norm
-		V[X] = 0.25*config.lambda*a*a*pow((norm - ss).re, 2.0); //calculate potential
 		deltaPi[X] = -1.0*(aadt2D_aadxdx + aaaaldt_aa*(norm - ss))*phi[X]; 	
 	}
 
@@ -152,7 +184,7 @@ int main(int argc, char ** argv){
 	sim.initialize();
 	while(sim.t < sim.config.tEnd){
 		sim.next();
-		sim.write_energy();
+		sim.write_energies();
 	}
 	return 0;
 }

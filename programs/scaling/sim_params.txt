@@ -1,10 +1,13 @@
-l=20
-param1 = 0.1
+N = 16 
+param1 = 1.0
 sigma = 3.0
 seed=20
 sigma = 1.0
-dx = 1.0
-dt = 0.05
-tStart = 0.0
-tEnd = 1.0
-lambda = 1.0
+dx = 0.5 
+tStart = 10.0
+tEnd = 64.0
+lambda = 2.0
+dtdxRatio=0.2
+smooth=30
+
+
