@@ -36,7 +36,7 @@ int main(int argc, char **argv){
 
   // Check conjugate of the Dirac operator
   double diffre = 0, diffim = 0;
-  using dirac = dirac_staggered< field<matrix<1, N, cmplx<double>>>, field<matrix<N,N, cmplx<double>>> >;
+  using dirac = dirac_staggered< matrix<1, N, cmplx<double>>, matrix<N,N, cmplx<double>> >;
   dirac D(0.1, U);
   D.apply(b, Db);
   D.dagger(a, Ddaggera);
