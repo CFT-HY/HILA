@@ -887,7 +887,7 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordina
     index_list.push_back(lattice->site_index(c));
   }
   
-  payload.gather_elements(buffer, index_list, lattice);
+  payload.gather_elements(buffer, index_list.data(), index_list.size(), lattice);
 }
 
 
@@ -898,7 +898,7 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
     index_list.push_back(lattice->site_index(c));
   }
   
-  payload.place_elements(buffer, index_list, lattice);
+  payload.place_elements(buffer, index_list.data(), index_list.size(), lattice);
 }
 
 #endif
