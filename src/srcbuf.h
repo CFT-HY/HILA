@@ -71,6 +71,9 @@ public:
   // the mapped size of the range
   int get_sourcerange_size(const SourceRange & s);
 
+  bool is_in_range(const SourceLocation sl);
+  bool is_in_range(const SourceRange & r);
+
   // get string from index to mapped length
   std::string get_mapped(int index, int len);
   // get edited string originally from range
@@ -88,6 +91,9 @@ public:
   int find_original(SourceLocation start, const char c);
   int find_original(int idx, const std::string &s);
   int find_original(SourceLocation start, const std::string &c);
+
+  int find_original_word(int idx, const std::string &s);  // finds full word
+  int find_original_word(SourceLocation start, const std::string &s);
 
   bool is_edited(SourceLocation sl);  // true if sl is edited (inserted, replaced or deleted)
 

@@ -14,6 +14,7 @@
 
 /// See comments in srcbuf.h
 
+#include "stringops.h"
 #include "srcbuf.h"
 
 
@@ -86,6 +87,18 @@ int srcBuf::get_sourcerange_size(const SourceRange & s) {
   return get_index_range_size(ind,ind+len-1);
 }
 
+bool srcBuf::is_in_range(const SourceLocation s) {
+  int l = get_offset(s) - first_offset;
+  return (l >= 0 && l < true_size);
+}
+
+bool srcBuf::is_in_range(const SourceRange &sr) {
+  int l = get_offset(sr.getBegin()) - first_offset;
+  if (l < 0 || l >= true_size) return false;
+  l += get_sourcerange_size(sr);
+  return (l < true_size); 
+}
+
   // get buffer content from index to length len
 std::string srcBuf::get_mapped(int index, int len) {
   assert(index >= 0 && "srcbuf: offset error");
@@ -139,6 +152,18 @@ char srcBuf:: get_original(int i) {
   return buf.at(i);
 }
   
+
+int srcBuf::find_original_word(int idx, const std::string &s) {
+  std::string::size_type i;
+  i = find_word(buf,s,idx);
+  if (i == std::string::npos) return -1;
+  return (int)i;
+}
+
+int srcBuf::find_original_word(SourceLocation sl, const std::string & s) {
+  return find_original_word(get_index(sl),s);
+}
+
 int srcBuf::find_original(int idx, const char c) {
   std::string::size_type i = buf.find(c, idx);
   if (i == std::string::npos) return -1;
