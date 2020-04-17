@@ -28,8 +28,8 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
   // Get the declaration of the function
   Decl* decl = Call->getCalleeDecl();
 
-  //llvm::errs() << " callee:\n";
-  //decl->dump();
+  // llvm::errs() << " callee:\n";
+  // decl->dumpColor();
 
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
@@ -38,21 +38,29 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
 
   // Handle parameters
   int i=0;
+  bool got_field_with_X = false;
   for( Expr * E : Call->arguments() ){
     if( is_field_with_X_expr(E) ) {
+      got_field_with_X = true;
       if(i < D->getNumParams()){
         const ParmVarDecl * pv = D->getParamDecl(i);
         QualType q = pv->getOriginalType ();
 
-        // Check for const qualifier
-        if( !q.isConstQualified ()) {
+        // Check for const qualifier OR that it is NOt a reference parameter
+        // (can change)
+        if( !q.isConstQualified() && q.getTypePtr()->isReferenceType()) {
           // Mark it as changed
+          llvm::errs() << "FIELD CAN CHANGE HERE!\n";
           handle_field_parity_X_expr(E, is_assignment, is_compound, true);
         }
       }
     }
     i++;
   }
+
+  // Check also if function has "out" parameters  
+  // variable references or 
+
 }
 
 void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
@@ -204,6 +212,11 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   }
   if (handle_decl) {
     loop_functions.push_back(fd);
+    llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
+      " parameters ";
+    for (int i=0; i<fd->getNumParams(); i++) 
+      llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString() << '\n';
+    
     backend_handle_loop_function(fd);
   }
   return handle_decl;
