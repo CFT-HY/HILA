@@ -51,11 +51,15 @@ public:
   void off() { write_ok = false; }
   void on()  { write_ok = true; }
   
+  /// This method returns the srcbuf index corresponding to sourcelocation
   int get_index( SourceLocation s ) { 
     int l = get_offset(s) - first_offset;
     assert(l>=0 && l<true_size);
     return l;
   }
+
+  /// returns the start and begin index of the sourcerange in std::pair
+  std::pair<int,int> get_sourcerange_index( const SourceRange & sr);
 
   unsigned size() {return true_size;}
   
@@ -70,6 +74,9 @@ public:
   
   // the mapped size of the range
   int get_sourcerange_size(const SourceRange & s);
+
+  bool is_in_range(const SourceLocation sl);
+  bool is_in_range(const SourceRange & r);
 
   // get string from index to mapped length
   std::string get_mapped(int index, int len);
@@ -88,6 +95,9 @@ public:
   int find_original(SourceLocation start, const char c);
   int find_original(int idx, const std::string &s);
   int find_original(SourceLocation start, const std::string &c);
+
+  int find_original_word(int idx, const std::string &s);  // finds full word
+  int find_original_word(SourceLocation start, const std::string &s);
 
   bool is_edited(SourceLocation sl);  // true if sl is edited (inserted, replaced or deleted)
 

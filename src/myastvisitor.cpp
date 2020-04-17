@@ -882,11 +882,12 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     // Get typename without class, struct... qualifiers
     PrintingPolicy pp(Context->getLangOpts());
     std::string typestr = args.get(0).getAsType().getAsString(pp);
-    if (cmdline::verbosity >= 2) llvm::errs() << "  field < " << typestr << " >";
 
-    if (spec->isExplicitSpecialization()) llvm::errs() << " explicit specialization\n";
-    else llvm::errs() << '\n';
-    
+    if (cmdline::verbosity >= 2) {
+      llvm::errs() << "  field < " << typestr << " >";
+      if (spec->isExplicitSpecialization()) llvm::errs() << " explicit specialization\n";
+      else llvm::errs() << '\n';
+    }
   }
   return(count);
       
@@ -1629,6 +1630,13 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 }
 
 
+////////////////////////////////////////////////////////////////////////
+/// This is visited for every function declaration and specialization
+/// (either function specialization or template class method specialization)
+/// If needed, specializations are "rewritten" open
+////////////////////////////////////////////////////////////////////////
+
+
 bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
@@ -1672,8 +1680,13 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
         parsing_state.skip_children = 1;
         break;
 
-      case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+      // do all specializations here: either direct function template,
+      // specialized through class template, or specialized
+      // because it's a base class function specialized by derived class (TODO: TEST THIS!).
+
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
+      case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
+      case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
 
         if (does_function_contain_loop(f)) {
           specialize_function_or_method(f);
@@ -1761,14 +1774,64 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   // Get template mapping for classes
   // parent is from: CXXRecordDecl * parent = method->getParent();   
   if (parent) ntemplates += get_param_substitution_list( parent, par, arg, typeargs );
+ 
   llvm::errs() << "Num nesting templates " << ntemplates << '\n';
+  llvm::errs() << "Specializing function " << f->getQualifiedNameAsString() 
+               << " template args: " << template_args << '\n';
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
-  // template_args adds template specialization args after the name, name<args>(..)
-  funcBuf.replace(f->getNameInfo().getSourceRange(),
-                  f->getQualifiedNameAsString() + template_args);
+ 
+  // if we have special function do not try to explicitly specialize the name
+  if (isa<CXXConstructorDecl>(f) || isa<CXXConversionDecl>(f) || isa<CXXDestructorDecl>(f)) {
+    template_args.clear();
+  }
+
+  PrintingPolicy pp(Context->getLangOpts());
   
+  // llvm::errs() << " FROM RETURN TYPE: "  << f->getReturnType().getAsString(pp) 
+  //              << " " << f->getQualifiedNameAsString() << template_args << '\n';
+
+  // llvm::errs() << funcBuf.dump() << '\n';
+
+  // Careful here: for functions which have been declared first, defined later,
+  // getNameInfo().getsourceRange() points to the declaration. Thus, it is not in the
+  // range of this function definition. 
+  // TODO: Use this fact to generate specialization declarations?
+
+  SourceRange sr = f->getNameInfo().getSourceRange();
+
+  if (funcBuf.is_in_range(sr)) {
+    // remove all to the end of the name
+    funcBuf.remove(0,funcBuf.get_index(sr.getBegin()));
+    funcBuf.remove(sr);
+
+  } else {
+
+    // now we have to hunt for the function name
+    int l = funcBuf.find_original(0,'(');
+
+    // location of first paren - function name should be just before this, right?
+    // TODO: what happens with possible keywords with parens, or macro definitions?  
+    // There could be template arguments after this, but the parameters (template_args) above should
+    // take care of this, so kill all
+    if (l < 0) {
+      reportDiag(DiagnosticsEngine::Level::Fatal,
+                 f->getSourceRange().getBegin(),
+                 "Internal error: Could not locate function name" );
+      exit(-1);
+    }
+    funcBuf.remove(0,l-1);
+  }
+
+  // FInally produce the function return type and full name + possible templ. args.
+
+  // put right return type and function name
+  funcBuf.insert(0, f->getReturnType().getAsString(pp) + " " + 
+                    f->getQualifiedNameAsString() + template_args, true, true);
+
+
+
 // #define use_ast_type
 #ifdef use_ast_type
   // replace type as written with the type given in ast (?qualifiers)
@@ -1781,12 +1844,12 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   
 #else 
   
-  // remove "static" if it is so specified in methods
-  if (is_static) { 
-    funcBuf.replace_token(0,
-                          funcBuf.get_index(f->getNameInfo().getSourceRange().getBegin()),
-                          "static","");
-  }
+  // remove "static" if it is so specified in methods - not needed now
+  // if (is_static) { 
+  //   funcBuf.replace_token(0,
+  //                         funcBuf.get_index(f->getNameInfo().getSourceRange().getBegin()),
+  //                         "static","");
+  // }
 
 #endif
 

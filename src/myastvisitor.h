@@ -239,7 +239,6 @@ public:
 
   void set_writeBuf(const FileID fid);
 
-  SourceRange get_templatefunc_decl_range(FunctionTemplateDecl *tf, FunctionDecl *f); 
   SourceRange get_func_decl_range(FunctionDecl *f);
 
   void ast_dump(const Stmt *s);

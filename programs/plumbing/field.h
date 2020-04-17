@@ -141,14 +141,13 @@ class field {
 
   field_struct * RESTRICT fs;
   
-  field<T>() {
+  field() {
     // std::cout << "In constructor 1\n";
     fs = nullptr;             // lazy allocation on 1st use
   }
   
-  // TODO: for some reason this straightforward copy constructor seems to be necessary, the
-  // one below it does not catch implicit copying.  Try to understand why
-  field<T>(const field<T>& other) {
+  // Straightforward copy constructor seems to be necessary
+  field(const field & other) {
     fs = nullptr;  // this is probably unnecessary
     if(other.fs != nullptr){
       (*this)[ALL] = other[X];
@@ -158,30 +157,30 @@ class field {
   // copy constructor - from fields which can be assigned
   template <typename A,
             std::enable_if_t<std::is_convertible<A,T>::value, int> = 0 >  
-  field<T>(const field<A>& other) {
+  field(const field<A>& other) {
     fs = nullptr;  // this is probably unnecessary
     if(other.fs != nullptr){
       (*this)[ALL] = other[X];
     }
   }
 
-
+  // constructor with compatible scalar
   template <typename A,
             std::enable_if_t<std::is_convertible<A,T>::value, int> = 0 >  
-  field<T>(const A& val) {
+  field(const A& val) {
     fs = nullptr;
     // static_assert(!std::is_same<A,int>::value, "in int constructor");
     (*this)[ALL] = val;
   }
   
   // move constructor - steal the content
-  field<T>(field<T>&& rhs) {
+  field(field && rhs) {
     // std::cout << "in move constructor\n";
     fs = rhs.fs;
     rhs.fs = nullptr;
   }
 
-  ~field<T>() {
+  ~field() {
     free();
   }
     

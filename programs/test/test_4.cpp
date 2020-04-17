@@ -2,7 +2,6 @@
 #include "../plumbing/field.h"
 
 
-
 template <typename T>
 class c {
 public:
@@ -31,8 +30,18 @@ public:
       return r;
     }
   };
+  
 };
 
+
+// test also dependent functions
+
+template <typename V>
+class h : c<V> {
+public:
+  V var;
+  V func(V & a, V & b) { return this->sumt(a,b); }
+};
 
 
 template <typename T>
@@ -61,14 +70,17 @@ int main()
   c<field<int>>::f fv;
   c<field<double>> cv;
   double dd;
+  h<field<double>> hv;
 
 //  int j = c<int>::sum( 1, 2);
   
-  x = cv.sumt(a,x);
+  // x = cv.sumt(a,x);
   x = fv.sum2(a,x);
   
+  x = hv.func(a,x);
+  
   extern int kissa;
-  x = c<field<double>>::d<field<double>>::sum( a, x);
+  // x = c<field<double>>::d<field<double>>::sum( a, x);
   
   x = sum(a,x);
   y = sum(y,y);
