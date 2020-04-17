@@ -658,7 +658,6 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     handle_constructor_in_loop(s);
     // return true;
   }
-  
    
   // catch then expressions
   if (Expr *E = dyn_cast<Expr>(s)) {
@@ -668,7 +667,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
        parsing_state.skip_children = 1;   // nothing to be done
        return true;
     }
-    
+
+
     //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs
     if (is_field_with_X_expr(E)) {
@@ -700,10 +700,26 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // field without [X], bad usually (TODO: allow  scalar func(field)-type?)
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
-                 "Field expressions without [..] not allowed within field loop");
+                 "Field expressions without [X] not allowed within field loop");
       parsing_state.skip_children = 1;  // once is enough
       return true;
     }
+
+
+    if (UnaryOperator * UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UnaryOperatorKind::UO_AddrOf &&
+          is_field_with_X_expr( UO->getSubExpr() ) ) {
+        reportDiag(DiagnosticsEngine::Level::Error,
+                   E->getSourceRange().getBegin(),
+                   "Taking address of field[X] -type expression is not allowed. (References are OK.) "
+                   "If you need a pointer, copy first: 'auto v = f[X]; auto *p = &v;'");
+
+        parsing_state.skip_children = 1;  // once is enough
+        return true;
+      }
+    }
+
+
 
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (isa<VarDecl>(DRE->getDecl())) {
