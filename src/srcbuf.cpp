@@ -87,6 +87,15 @@ int srcBuf::get_sourcerange_size(const SourceRange & s) {
   return get_index_range_size(ind,ind+len-1);
 }
 
+/// returns the indices of the sourcerange in std::pair
+
+std::pair<int,int> srcBuf::get_sourcerange_index( const SourceRange & sr) {
+  assert( is_in_range(sr) );
+  int b = get_index(sr.getBegin());
+  int len = myRewriter->getRangeSize(sr);
+  return std::make_pair(b, b+len-1);
+}
+
 bool srcBuf::is_in_range(const SourceLocation s) {
   int l = get_offset(s) - first_offset;
   return (l >= 0 && l < true_size);
@@ -183,7 +192,8 @@ int srcBuf::find_original(int idx, const std::string &s) {
 int srcBuf::find_original(SourceLocation start, const std::string &c) {
   return find_original(get_index(start),c);
 }
-            
+
+
 bool srcBuf::is_edited(SourceLocation sl) {
   int idx = get_index(sl);
   return (ext_ind[idx] != 1);

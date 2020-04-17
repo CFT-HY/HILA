@@ -51,11 +51,15 @@ public:
   void off() { write_ok = false; }
   void on()  { write_ok = true; }
   
+  /// This method returns the srcbuf index corresponding to sourcelocation
   int get_index( SourceLocation s ) { 
     int l = get_offset(s) - first_offset;
     assert(l>=0 && l<true_size);
     return l;
   }
+
+  /// returns the start and begin index of the sourcerange in std::pair
+  std::pair<int,int> get_sourcerange_index( const SourceRange & sr);
 
   unsigned size() {return true_size;}
   
