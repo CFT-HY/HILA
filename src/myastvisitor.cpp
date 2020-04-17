@@ -708,11 +708,13 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
     if (UnaryOperator * UO = dyn_cast<UnaryOperator>(E)) {
       if (UO->getOpcode() == UnaryOperatorKind::UO_AddrOf &&
-          is_field_with_X_expr( UO->getSubExpr() ) ) {
+          does_expr_contain_field( UO->getSubExpr() ) ) {
         reportDiag(DiagnosticsEngine::Level::Error,
                    E->getSourceRange().getBegin(),
-                   "Taking address of field[X] -type expression is not allowed. (References are OK.) "
-                   "If you need a pointer, copy first: 'auto v = f[X]; auto *p = &v;'");
+                   "Taking address of '%0' expression is not allowed. (References are OK.) "
+                   "If you need a pointer, copy first: 'auto v = %1; auto *p = &v;'",
+                   get_stmt_str(UO->getSubExpr()).c_str(),
+                   get_stmt_str(UO->getSubExpr()).c_str() );
 
         parsing_state.skip_children = 1;  // once is enough
         return true;

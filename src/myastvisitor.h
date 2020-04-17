@@ -89,6 +89,9 @@ public:
 
   /// true if function contains parity loop
   bool does_function_contain_loop( FunctionDecl *f );
+
+  /// check if there's field reference in the Expr.
+  bool does_expr_contain_field(Expr *E);
   
   /// same for function templates
   // bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
