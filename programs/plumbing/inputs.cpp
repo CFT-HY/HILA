@@ -5,9 +5,9 @@
 #include "inputs.h"
 #include "globals.h"
 
-#ifdef USE_MPI
-
 #include "comm_mpi.h" 
+
+#ifdef USE_MPI
 static int myrank = 0;
 
 #endif
@@ -38,7 +38,6 @@ void input::handle(const std::string & line){
 void input::import(const std::string & fname) {
 
     #ifdef USE_MPI
-
     int dummy = 0;
     char ** argvp;
     initialize_machine(dummy, &argvp); 
@@ -136,36 +135,41 @@ void input::close(){
 void input::broadcast_values(){
     double * vals; //buffer containing values for each name
     char * names; //buffer containing variable names
-    int lengths[2];  
+    int lengths[3];
+    int counter = 0;  
 
     if (myrank==0){
         lengths[0] = values.size();
         lengths[1] = 0; 
+	lengths[2] = 0;
         for (auto i = values.begin(); i != values.end(); ++i){
             lengths[1] += (int) (*i).first.size();
-        } 
+	    lengths[2] += 1; 
+        }  
     }
 
     //broadcast lengths to other processes
-    MPI_Bcast(&lengths, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&lengths, 3, MPI_INT, 0, MPI_COMM_WORLD); 
+
     vals = new double[lengths[0]];
     names = new char[lengths[1] + lengths[0]];
+    counter = lengths[2];
 
     //construct name and value lists in root node
-    int counter = 0;
     if (myrank==0){
         std::string buffer;
+	int index = 0; 
         for (auto i = values.begin(); i != values.end(); ++i){
-            vals[counter] = (*i).second;
-            buffer.append((*i).first + "\t"); 
-            counter++;
+            vals[index] = (*i).second;
+            buffer.append((*i).first + "\t");
+	    index++;  
         }
         snprintf(names,lengths[1] + lengths[0], "%s", buffer.c_str()); 
     }
 
-    MPI_Bcast(vals, lengths[0], MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Bcast(vals, lengths[2], MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(names, lengths[1] + lengths[0], MPI_CHAR, 0, MPI_COMM_WORLD);
-
+ 
     //construct map in other nodes
     if (myrank != 0){
         std::istringstream iss (std::string(names), std::istringstream::in);

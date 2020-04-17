@@ -279,7 +279,8 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator
     timing = 0;
     //printf("node %d, dirac_stagggered 0\n", mynode());
-    dirac_stagggered(U, 0.1, vector1, vector2);
+    dirac_staggered< field<matrix<1,N, cmplx<double>>>, field<matrix<N,N, cmplx<double>>>> D(0.1, U);
+    D.apply(vector1, vector2);
     synchronize();
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
@@ -287,7 +288,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
         //printf("node %d, dirac_stagggered %d\n", mynode(), i);
         vector1.mark_changed(ALL); // Ensure communication is included
-        dirac_stagggered(U, 0.1, vector1, vector2);
+        D.apply(vector1, vector2);
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -295,28 +296,6 @@ int main(int argc, char **argv){
     }
     timing = timing / (double)n_runs;
     output0 << "Dirac: " << timing << "ms \n";
-
-
-    // Time staggered Dirac operator with direction loop expanded
-    #if (NDIM==4) 
-    timing = 0;
-    dirac_stagggered_4dim(U, 0.1, vector1, vector2);
-    synchronize();
-    for(n_runs=1; timing < mintime; ){
-      n_runs*=2;
-      gettimeofday(&start, NULL);
-      for( int i=0; i<n_runs; i++){
-        vector1.mark_changed(ALL); // Ensure communication is included
-        dirac_stagggered_4dim(U, 0.1, vector1, vector2);
-      }
-      synchronize();
-      gettimeofday(&end, NULL);
-      timing = timediff(start, end);
-    }
-    timing = timing / (double)n_runs;
-    output0 << "Dirac one loop: " << timing << "ms \n";
-    #endif
-    
 
     // Conjugate gradient step 
     timing = 0;
@@ -338,7 +317,7 @@ int main(int argc, char **argv){
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         
-        dirac_stagggered(U, 0.1, p, Dp);
+        D.apply(p, Dp);
 
         rr=pDDp=0;
         onsites(ALL){

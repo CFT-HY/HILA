@@ -3,6 +3,7 @@
 
 #include "../plumbing/globals.h"
 
+#ifdef USE_MPI
 
 
 ///***********************************************************
@@ -99,5 +100,7 @@ inline void lattice_struct::reduce_node_product(double * value, int N, bool dist
 }
 
 
+
+#endif //USE_MPI
 
 #endif //COMM_MPI_H

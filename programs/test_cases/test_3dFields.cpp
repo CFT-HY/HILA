@@ -100,7 +100,7 @@ int main(int argc, char **argv){
     s1[EVEN] = 1.0;
     s2[EVEN] = 1.0;
     s2[ODD] = -s1[X+XUP];
-    s2.start_move(XUP,ODD);
+    s2.start_get(XUP,ODD);
 
     sum = 0;
     onsites(ALL){

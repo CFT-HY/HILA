@@ -4,6 +4,8 @@
 #include "../plumbing/field.h"
 #include "../plumbing/comm_mpi.h"
 
+#ifdef USE_MPI
+
 
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
@@ -105,3 +107,5 @@ int numnodes()
   return(nodes);
 }
 
+
+#endif // USE_MPI

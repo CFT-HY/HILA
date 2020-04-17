@@ -129,6 +129,10 @@ class field {
       void set_local_boundary_elements(direction dir, parity par){
         payload.set_local_boundary_elements(dir, par, lattice);
       };
+
+      /// Gather a list of elements to a single node
+      void gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
+      void send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int  root=0);
   };
 
   static_assert( std::is_pod<T>::value, "Field expects only pod-type elements (plain data): default constructor, copy and delete");
@@ -145,7 +149,9 @@ class field {
   // Straightforward copy constructor seems to be necessary
   field(const field & other) {
     fs = nullptr;  // this is probably unnecessary
-    (*this)[ALL] = other[X];
+    if(other.fs != nullptr){
+      (*this)[ALL] = other[X];
+    }
   }
     
   // copy constructor - from fields which can be assigned
@@ -153,7 +159,9 @@ class field {
             std::enable_if_t<std::is_convertible<A,T>::value, int> = 0 >  
   field(const field<A>& other) {
     fs = nullptr;  // this is probably unnecessary
-    (*this)[ALL] = other[X];
+    if(other.fs != nullptr){
+      (*this)[ALL] = other[X];
+    }
   }
 
   // constructor with compatible scalar
@@ -391,10 +399,24 @@ class field {
   void wait_get(direction d, parity p) const;
   void get(direction d, parity p) const;
 
-  // and declaration of shift methods
+  // Declaration of shift methods
   field<T> shift(const coordinate_vector &v, parity par) const;
   field<T> shift(const coordinate_vector &v) const { return shift(v,ALL); }
 
+  // General getters and setters
+  void set_elements(T * elements, std::vector<coordinate_vector> coord_list);
+  void set_element(T element, coordinate_vector coord);
+  void get_elements(T * elements, std::vector<coordinate_vector> coord_list) const;
+  T get_element(coordinate_vector coord) const;
+
+  // Fourier transform declarations
+  void FFT();
+
+  // Writes the field to disk
+  void write_to_stream(std::ofstream & outputfile);
+  void write_to_file(std::string filename);
+  void read_from_stream(std::ifstream & inputfile);
+  void read_from_file(std::string filename);
 };
 
 
@@ -781,6 +803,106 @@ void field<T>::wait_get(direction d, parity p) const {}
 
 #endif  // MPI
 
+
+
+/// Gather a list of elements to a single node
+#if defined(USE_MPI) && !defined(TRANSFORMER)
+
+template<typename T>
+void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) const {
+  std::vector<unsigned> index_list;
+  std::vector<unsigned> node_list(lattice->n_nodes());
+  std::fill(node_list.begin(), node_list.end(),0);
+  
+  for(coordinate_vector c : coord_list){
+    if( lattice->is_on_node(c) ){
+      index_list.push_back(lattice->site_index(c));
+    }
+
+    node_list[lattice->node_rank(c)]++;
+  }
+  
+  std::vector<T> send_buffer(index_list.size());
+  payload.gather_elements((char*) send_buffer.data(), index_list, lattice);
+  if(mynode() != root && node_list[mynode()] > 0){
+    MPI_Send((char*) send_buffer.data(), node_list[mynode()]*sizeof(T), MPI_BYTE, root, mynode(), MPI_COMM_WORLD);
+  }
+  if(mynode() == root) {
+    for( int n=0; n<node_list.size(); n++ ) if(node_list[n] > 0) {
+      if(n!=root) {
+        MPI_Status status;
+        MPI_Recv(buffer, node_list[n]*sizeof(T), MPI_BYTE, n, n, MPI_COMM_WORLD, &status);
+      } else {
+        std::memcpy( buffer, (char *) send_buffer.data(), node_list[n]*sizeof(T) );
+      }
+      buffer += node_list[n]*sizeof(T);
+    }
+  }
+}
+
+
+
+template<typename T>
+void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) {
+  std::vector<unsigned> index_list;
+  std::vector<unsigned> node_list(lattice->n_nodes());
+  std::fill(node_list.begin(), node_list.end(),0);
+
+  for(coordinate_vector c : coord_list){
+    if( lattice->is_on_node(c) ){
+      index_list.push_back(lattice->site_index(c));
+    }
+
+    node_list[lattice->node_rank(c)]++;
+  }
+
+  std::vector<T> recv_buffer(index_list.size());
+  payload.gather_elements((char*) recv_buffer.data(), index_list, lattice);
+  if(mynode() != root && node_list[mynode()] > 0){
+    MPI_Status status;
+    MPI_Recv((char*) recv_buffer.data(), node_list[mynode()]*sizeof(T), MPI_BYTE, root, mynode(), MPI_COMM_WORLD, &status);
+  }
+  if(mynode() == root) {
+    for( int n=0; n<node_list.size(); n++ ) if(node_list[n] > 0) {
+      if(n!=root) {
+        MPI_Send(buffer, node_list[n]*sizeof(T), MPI_BYTE, n, n, MPI_COMM_WORLD);
+      } else {
+        std::memcpy( (char *) recv_buffer.data(), buffer, node_list[n]*sizeof(T) );
+      }
+      buffer += node_list[n]*sizeof(T);
+    }
+  }
+  payload.place_elements((char*) recv_buffer.data(), index_list, lattice);
+}
+
+
+#else
+
+
+template<typename T>
+void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) const {
+  std::vector<unsigned> index_list;
+  for(coordinate_vector c : coord_list){
+    index_list.push_back(lattice->site_index(c));
+  }
+  
+  payload.gather_elements(buffer, index_list, lattice);
+}
+
+
+template<typename T>
+void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) {
+  std::vector<unsigned> index_list;
+  for(coordinate_vector c : coord_list){
+    index_list.push_back(lattice->site_index(c));
+  }
+  
+  payload.place_elements(buffer, index_list, lattice);
+}
+
+#endif
+
+
 /// And a conveniece combi function
 template<typename T>
 void field<T>::get(direction d, parity p) const {
@@ -788,6 +910,191 @@ void field<T>::get(direction d, parity p) const {
   wait_get(d,p);
 }
 
+/// Functions for manipulating individual elements in an array
+template<typename T>
+void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_list) {
+  fs->send_elements( (char*) elements, coord_list);
+}
+
+template<typename T>
+void field<T>::set_element( T element, coordinate_vector coord) {
+  std::vector<coordinate_vector> coord_list;
+  coord_list.push_back(coord);
+  fs->send_elements( (char*) &element, coord_list);
+}
+
+template<typename T>
+void field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
+  fs->gather_elements( (char*) elements, coord_list);
+}
+
+template<typename T>
+T field<T>::get_element( coordinate_vector coord) const {
+  T element;
+  std::vector<coordinate_vector> coord_list;
+  coord_list.push_back(coord);
+  fs->gather_elements( (char*) &element, coord_list);
+  return element;
+}
+
+
+
+
+
+
+
+// Write the field to an file stream
+template<typename T>
+void field<T>::write_to_stream(std::ofstream& outputfile){
+  constexpr size_t target_write_size = 1000000;
+  constexpr size_t sites_per_write = target_write_size / sizeof(T);
+  constexpr size_t write_size = sites_per_write * sizeof(T);
+
+  std::vector<coordinate_vector> coord_list(sites_per_write);
+  char * buffer = (char*) malloc(write_size);
+  coordinate_vector size = lattice->size();
+
+  int i=0;
+  for(; i<lattice->volume(); i++){
+    coordinate_vector site;
+    int ii = i;
+    foralldir(dir){
+      site[dir] = ii%size[dir];
+      ii = ii/size[dir];
+    }
+
+    coord_list[i%sites_per_write] = site;
+
+    // Write the buffer when full
+    if( (i+1)%sites_per_write == 0 ){
+      fs->gather_elements(buffer, coord_list);
+      if( mynode()==0 )
+        outputfile.write(buffer,write_size);
+    }
+  }
+
+  // Write the rest
+  coord_list.resize(i%sites_per_write);
+  fs->gather_elements(buffer, coord_list);
+  double * v = (double*) buffer;
+  if( mynode() == 0 )
+    outputfile.write(buffer,sizeof(T)*(i%sites_per_write));
+
+  std::free(buffer);
+}
+
+
+// Write the field to a file replacing the file
+template<typename T>
+void field<T>::write_to_file(std::string filename){
+  std::ofstream outputfile;
+  outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+  write_to_stream(outputfile);
+  outputfile.close();
+}
+
+
+
+// Write a list of fields into an output stream
+template<typename T>
+static void write_fields(std::ofstream& outputfile, field<T>& last){
+  last.write_to_stream(outputfile);
+}
+
+template<typename T, typename... fieldtypes>
+static void write_fields(std::ofstream& outputfile, field<T>& next, fieldtypes&... fields){
+  next.write_to_stream(outputfile);
+  write_fields(outputfile, fields...);
+}
+
+// Write a list of fields to a file
+template<typename... fieldtypes>
+static void write_fields(std::string filename, fieldtypes&... fields){
+  std::ofstream outputfile;
+  outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+  write_fields(outputfile, fields...);
+  outputfile.close();
+}
+
+
+
+// Read the field from a stream
+template<typename T>
+void field<T>::read_from_stream(std::ifstream& inputfile){
+  constexpr size_t target_read_size = 1000000;
+  constexpr size_t sites_per_read = target_read_size / sizeof(T);
+  constexpr size_t read_size = sites_per_read * sizeof(T);
+
+  mark_changed(ALL);
+
+  std::vector<coordinate_vector> coord_list(sites_per_read);
+  char * buffer = (char*) malloc(read_size);
+  coordinate_vector size = lattice->size();
+
+  int i=0;
+  for(; i<lattice->volume(); i++){
+    coordinate_vector site;
+    int ii = i;
+    foralldir(dir){
+      site[dir] = ii%size[dir];
+      ii = ii/size[dir];
+    }
+
+    coord_list[i%sites_per_read] = site;
+
+    // Read the buffer when full
+    if( (i+1)%sites_per_read == 0 ){
+      if( mynode()==0 )
+        inputfile.read(buffer,read_size);
+      fs->send_elements(buffer, coord_list);
+    }
+  }
+
+  // Read the rest
+  coord_list.resize(i%sites_per_read);
+  if( mynode()==0 )
+    inputfile.read(buffer, sizeof(T)*(i%sites_per_read));
+  double * v = (double*) buffer;
+  fs->send_elements(buffer, coord_list);
+
+  std::free(buffer);
+}
+
+
+// Read field contennts from the beginning of a file
+template<typename T>
+void field<T>::read_from_file(std::string filename){
+  std::ifstream inputfile;
+  inputfile.open(filename, std::ios::in | std::ios::binary);
+  read_from_stream(inputfile);
+  inputfile.close();
+}
+
+
+// Read a list of fields from an input stream
+template<typename T>
+static void read_fields(std::ifstream& inputfile, field<T>& last){
+  last.read_from_stream(inputfile);
+}
+
+template<typename T, typename... fieldtypes>
+static void read_fields(std::ifstream& inputfile, field<T>& next, fieldtypes&... fields){
+  next.read_from_stream(inputfile);
+  read_fields(inputfile, fields...);
+}
+
+// Read a list of fields from a file
+template<typename... fieldtypes>
+static void read_fields(std::string filename, fieldtypes&... fields){
+  std::ifstream inputfile;
+  inputfile.open(filename, std::ios::in | std::ios::binary);
+  read_fields(inputfile, fields...);
+  inputfile.close();
+}
+
+
+// Include Fourier transform
+#include "../plumbing/FFT.h"
 
 
 #endif // FIELD_H

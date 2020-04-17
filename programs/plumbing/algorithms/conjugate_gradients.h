@@ -12,80 +12,78 @@
 #include "../dirac.h"
 #include<iostream>
 
-#define MAXITERS 10
-struct staggered_dirac;
+#define MAXITERS 10000
 
-template<typename T>
-class CG_engine{
-    public:
-    template<typename mtype, typename vtype> 
-    void solve(
-        const mtype gauge[NDIM],
-        const double mass,
-        const vtype &v_in,
-        vtype &v_out)
-    {
-        std::cout << "Incorrect args in call to CG_engine.solve(..args..) for the selected operator";
-    }
-    template<typename mtype, typename vtype>
-    void act(
-        const mtype gauge[NDIM],
-        const double mass,
-        const vtype &v_in,
-        vtype &v_out)
-    {}
-};
 
-template<> //not optimized yet
-class CG_engine<staggered_dirac>{
-    public:
-    template<typename mtype, typename vtype> 
-    void solve(
-        const mtype gauge[NDIM],
-        const double mass,
-        const vtype &b,
-        vtype &x_0)
-    {
-        vtype r, p, Dp;
-        double pDDp = 0, rr = 0, rrnew = 0;
-        double alpha, beta;
-        dirac_stagggered(gauge, mass, x_0, Dp);
-        onsites(ALL){
-            r[X] = b[X] - Dp[X];
-            p[X] = b[X];
-        }
+// Implement the apply function of the conjugate gradient operator
+template<typename vector, typename op>
+void GG_invert(vector &in, vector &out, op &M){
+  vector r, p, Dp, DDp;
+  double pDp = 0, rr = 0, rrnew = 0, rr_start=0;
+  double alpha, beta;
+  double target_rr, source_norm=0;
+  double accuracy = 1e-8;
+  
+  onsites(ALL){
+    source_norm += norm_squared(in[X]);
+  }
+        
+  target_rr = accuracy*accuracy * source_norm;
 
-        for (int = 0; i < MAXITERS; i++){
-            dirac_stagggered(gauge, mass, p, Dp);
-            rr=pDDP=rrnew=0;
-            //note: unsure about whether it should be pDDp or pDp  
-            onsites(ALL){
-                rr += norm_squared(r[X]);
-                pDDp += p[X].conjugate()*Dp[X];
-            }
+  M.apply(out, Dp);
+  M.dagger(Dp, DDp);
+  onsites(ALL){
+      r[X] = in[X] - DDp[X];
+      p[X] = r[X];
+  }
 
-            alpha=rr/pDDp;
+  onsites(ALL){
+      rr += (r[X]*r[X]).re;
+  }
+  rr_start = rr;
 
-            onsites(ALL){
-                x_0[X] = x_0[X] + alpha*p[X];
-                r[X] = r[X] - alpha*Dp[X]; 
-            }
-            onsites(ALL){ 
-                rrnew += norm_squared(r[X]); 
-            }
-            beta = rrnew/rr;
-            p[ALL] = beta*p[X] + r[X];
-        }
+  for (int i = 0; i < MAXITERS; i++){
+    pDp=rrnew=0;
+    M.apply(p, Dp);
+    M.dagger(Dp, DDp);
+    onsites(ALL){
+        pDp += (p[X]*DDp[X]).re;
     }
 
-    template<typename mtype, typename vtype>
-    void act(
-        const mtype gauge[NDIM],
-        const double mass,
-        const vtype &v_in,
-        vtype &v_out)
+    alpha=rr/pDp;
+
+    onsites(ALL){
+        out[X] = out[X] + alpha*p[X];
+        r[X] = r[X] - alpha*DDp[X];
+    }
+    onsites(ALL){ 
+        rrnew += (r[X]*r[X]).re;
+    }
+    #ifdef DEBUG
+    printf("CG iter %d, node %d, %g %g %g %g\n", i, mynode(), rrnew, rr_start, target_rr, pDp);
+    #endif
+    if( rrnew < target_rr )
+        return;
+    beta = rrnew/rr;
+    p[ALL] = beta*p[X] + r[X];
+    rr = rrnew;
+  }
+}
+
+
+/// The conjugate gradient operator. Applies square the inverse of an operator on a vector
+template<typename vector, typename Op>
+class CG{
+  private:
+    Op & M; // The operator to invert
+  public:
+
+    // Constructor: iniialize the operator
+    CG(Op & op) : M(op) {};
+
+    void apply(vector &in, vector &out)
     {
-        dirac_stagggered_alldim(gauge,mass,v_in,v_out);
+      GG_invert(in, out, M);
     }
 };
 

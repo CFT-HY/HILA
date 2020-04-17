@@ -69,7 +69,7 @@ class matrix {
   #pragma transformer loop_function
   matrix(const scalart rhs) {
     static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
-    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
       if (i == j) c[i][j] = (rhs);
       else c[i][j] = (0);
     }
@@ -162,9 +162,19 @@ class matrix {
   }
 
   #pragma transformer loop_function
-  matrix<n, m, T> & random(){
+  template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
+  matrix<n, m, A> & random(){
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
       c[i][j] = static_cast<T>(hila_random());
+    }
+    return *this;
+  }
+
+  #pragma transformer loop_function
+  template <typename A=T, std::enable_if_t<!is_arithmetic<A>::value, int> = 0 > 
+  matrix<n, m, A> & random(){
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+      c[i][j].random();
     }
     return *this;
   }
@@ -180,7 +190,7 @@ class matrix {
   std::string str() const {
     std::string text = "";
     for (int i=0; i<n; i++){
-      for (int j=0; j<n; j++) {
+      for (int j=0; j<m; j++) {
         text + c[i][j].str() + " "; 
       }
       text + "\n"; 
@@ -441,7 +451,7 @@ template<int n, typename T>
 T operator* (const matrix<1, n, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
-    result += vecA.c[0][i]*(conj(vecB.c[i][0]));
+    result += (conj(vecA.c[i][0]))*vecB.c[i][0];
   }
   return result;
 }
@@ -451,7 +461,7 @@ template<int n, typename T>
 T operator* (const matrix<1, n, T> & vecA, const matrix<1, n, T> & vecB) {
   T result = (0.0);
   for (int i = 0; i < n; i++){
-    result += vecA.c[0][i]*(conj(vecB.c[0][i]));
+    result += (conj(vecA.c[0][i]))*vecB.c[0][i];
   }
   return result;
 }
@@ -462,7 +472,7 @@ T operator* (const matrix<n, 1, T> & vecA, const matrix<n, 1, T> & vecB) {
   T result; 
   result=0;
   for (int i = 0; i < n; i++){
-    result += vecA.c[i][0]*(conj(vecB.c[i][0]));
+    result += (conj(vecA.c[0][i]))*vecB.c[i][0];
   }
   return result;
 }
@@ -472,7 +482,7 @@ template <int n, int m, typename T>
 #pragma transformer loop_function
 matrix<n,m,T> operator+ (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
   matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
     res.c[i][j] =  A.c[i][j] + B.c[i][j];
   }
   return res;
@@ -483,7 +493,7 @@ template <int n, int m, typename T>
 #pragma transformer loop_function
 matrix<n,m,T> operator- (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
   matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
     res.c[i][j] =  A.c[i][j] - B.c[i][j];
   }
   return res;
@@ -494,7 +504,7 @@ template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithm
 #pragma transformer loop_function
 matrix<n,m,T> operator* (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
     res.c[i][j] = s * A.c[i][j];
   }
   return res;
@@ -504,7 +514,7 @@ template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithm
 #pragma transformer loop_function
 matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
     res.c[i][j] = s / A.c[i][j];
   }
   return res;
@@ -522,7 +532,7 @@ template <int n, int m, typename T>
 std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
   for (int i=0; i<n; i++){
     strm << "\n"; 
-    for (int j=0; j<n; j++) {
+    for (int j=0; j<m; j++) {
       strm << " " << A.c[i][j] << " "; 
     }
     strm << "\n"; 

@@ -1,0 +1,10 @@
+l=10
+param1 = 0.1
+sigma = 3.0
+seed=20
+sigma = 1.0
+dx = 1.0
+dt = 0.05
+tStart = 0.0
+tEnd = 1.0
+lambda = 1.0

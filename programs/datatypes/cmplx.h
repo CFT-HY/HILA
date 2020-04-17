@@ -118,6 +118,14 @@ struct cmplx {
     return cmplx<T>( { r*cos(theta), r*sin(theta) } );
   }
 
+  #pragma transformer loop_function
+  template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
+  cmplx<A> & random(){
+    re = static_cast<T>(hila_random());
+    im = static_cast<T>(hila_random());
+    return *this;
+  }
+
   // unary + and -
   #pragma transformer loop_function
   inline cmplx<T> operator+() const {return *this;}
