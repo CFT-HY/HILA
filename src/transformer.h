@@ -69,7 +69,6 @@ namespace cmdline {
 };
 
 namespace state {
-  extern bool loop_found; // = false;
   extern bool compile_errors_occurred; // = false;
 };
 

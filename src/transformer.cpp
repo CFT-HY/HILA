@@ -42,7 +42,6 @@ std::list<vector_reduction_ref> vector_reduction_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::vector<Expr *> remove_expr_list = {};
 
-bool state::loop_found = false;
 bool state::compile_errors_occurred = false;
 
 bool skip_this_translation_unit = false;
@@ -461,8 +460,6 @@ public:
 
         // llvm::errs() << "Processing file " << SM.getFilename(beginloc) << "\n";
         // TODO: ensure that we go only through files which are needed!
-
-        state::loop_found = false;
 
         // get our own file edit buffer (unless it exists)
         Visitor.set_writeBuf(SM.getFileID(beginloc));

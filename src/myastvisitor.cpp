@@ -603,8 +603,6 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
 
   // don't go again through the arguments
   parsing_state.skip_children = 1;
-
-  state::loop_found = true;
   
   return true;
 }
