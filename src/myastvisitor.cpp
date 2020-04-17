@@ -1781,8 +1781,10 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
 
  
   // if we have special function do not try to explicitly specialize the name
+  bool is_special = false;
   if (isa<CXXConstructorDecl>(f) || isa<CXXConversionDecl>(f) || isa<CXXDestructorDecl>(f)) {
     template_args.clear();
+    is_special = true;
   }
 
   PrintingPolicy pp(Context->getLangOpts());
@@ -1825,9 +1827,9 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   // FInally produce the function return type and full name + possible templ. args.
 
   // put right return type and function name
-  funcBuf.insert(0, f->getReturnType().getAsString(pp) + " " + 
-                    f->getQualifiedNameAsString() + template_args, true, true);
-
+  funcBuf.insert(0, f->getQualifiedNameAsString() + template_args, true, true);
+  if (!is_special)
+    funcBuf.insert(0, f->getReturnType().getAsString(pp) + " ", true, true);
 
 
 // #define use_ast_type
