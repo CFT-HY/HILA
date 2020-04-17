@@ -54,11 +54,13 @@ std::string::size_type find_word(const std::string & in, const std::string & pat
   int i = in.find(pattern,pos);
   if (i == std::string::npos) return std::string::npos;  // not found
 
-  if ( i>0 && std::isalnum(in[i-1]) ) 
+  if ( i>0 && (std::isalnum(in[i-1]) || in[i-1] == '_') ) 
     return std::string::npos;   // is at the end of a longer word
-  if ( i<in.length()-pattern.length()-1 && std::isalnum(in[i+pattern.length()]) ) 
-    return std::string::npos;
-
+  if ( i<in.length()-pattern.length()-1) {
+    char c = in[i+pattern.length()];
+    if (std::isalnum(c) || c == '_')
+      return std::string::npos;   // word continues
+  }
   return i;
 }
 
