@@ -279,7 +279,7 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator
     timing = 0;
     //printf("node %d, dirac_stagggered 0\n", mynode());
-    dirac_staggered< field<matrix<1,N, cmplx<double>>>, field<matrix<N,N, cmplx<double>>>> D(0.1, U);
+    dirac_staggered< matrix<1,N, cmplx<double>>, matrix<N,N, cmplx<double>>> D(0.1, U);
     D.apply(vector1, vector2);
     synchronize();
     for(n_runs=1; timing < mintime; ){
