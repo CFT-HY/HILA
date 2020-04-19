@@ -151,10 +151,7 @@ public:
 
   bool is_X_type(Expr *E) {
     std::string s = get_expr_type(E);
-    if (s == "X_index_type")
-      return true;
-    else 
-      return false;
+    return (s == "X_index_type");
   }
 
 
@@ -162,11 +159,14 @@ public:
 
   bool is_X_index_type(Expr *E) {
     std::string s = get_expr_type(E);
-    if (s == "X_index_type" || s == "X_plus_direction" || s == "X_plus_offset") 
-      return true;
-    else 
-      return false;
+    return (s == "X_index_type" || s == "X_plus_direction" || s == "X_plus_offset");
   }
+
+  bool is_X_and_dir_type(Expr *E) {
+    std::string s = get_expr_type(E);
+    return (s == "X_plus_direction" || s == "X_plus_offset");
+  }
+
 
   /// Checks if E is a parity Expr. Catches both parity and X_plus_direction 
 
@@ -179,6 +179,20 @@ public:
         is_field_expr(OC->getArg(0))) {
 
       return is_X_index_type(OC->getArg(1));
+
+    }
+    return false;   
+  }
+
+  bool is_field_with_X_and_dir(Expr *E) {
+    E = E->IgnoreParens();
+    CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+
+    if (OC &&
+        strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
+        is_field_expr(OC->getArg(0))) {
+      
+      return is_X_and_dir_type(OC->getArg(1));
 
     }
     return false;   
