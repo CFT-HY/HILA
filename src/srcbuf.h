@@ -96,8 +96,14 @@ public:
   int find_original(int idx, const std::string &s);
   int find_original(SourceLocation start, const std::string &c);
 
-  int find_original_word(int idx, const std::string &s);  // finds full word
-  int find_original_word(SourceLocation start, const std::string &s);
+  int find_original_word(int idx, const std::string &s, bool reverse=false);  // finds full word
+  int find_original_word(SourceLocation start, const std::string &s, bool reverse=false);
+
+  /// give next or previous word or special char from buffer.  if idxp != nullptr, it contains the index
+  std::string get_next_original_word(int idx, int * idxp = nullptr);
+  std::string get_next_original_word(SourceLocation s, int * idxp = nullptr);
+  std::string get_previous_original_word(int idx, int * idxp = nullptr);
+  std::string get_previous_original_word(SourceLocation s, int * idxp = nullptr);
 
   bool is_edited(SourceLocation sl);  // true if sl is edited (inserted, replaced or deleted)
 

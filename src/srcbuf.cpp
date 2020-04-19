@@ -162,16 +162,65 @@ char srcBuf:: get_original(int i) {
 }
   
 
-int srcBuf::find_original_word(int idx, const std::string &s) {
+int srcBuf::find_original_word(int idx, const std::string &s, bool reverse ) {
   std::string::size_type i;
-  i = find_word(buf,s,idx);
+  i = find_word(buf,s,idx,reverse);
   if (i == std::string::npos) return -1;
   return (int)i;
 }
 
-int srcBuf::find_original_word(SourceLocation sl, const std::string & s) {
-  return find_original_word(get_index(sl),s);
+int srcBuf::find_original_word(SourceLocation sl, const std::string & s, bool reverse) {
+  return find_original_word(get_index(sl),s,reverse);
 }
+
+
+/// get now the following/previous word/special char from the buffer
+std::string srcBuf::get_next_original_word(SourceLocation sl, int * idxp) {
+  return get_next_original_word(get_index(sl),idxp);
+}
+  
+std::string srcBuf::get_next_original_word(int idx, int * idxp) {
+  assert(idx >= 0 && idx < original_size);
+
+  while (idx < original_size && (std::isspace(buf[idx]) || buf[idx] == '\n')) idx++;
+  int s = idx;
+
+  if (idx < original_size) {
+    if (std::isalnum(buf[idx]) || buf[idx] == '_') {
+      // it's a word, go ahead
+      do { 
+        idx++; 
+      } while( idx < original_size && (std::isalnum(buf[idx]) || buf[idx] == '_'));
+    } else idx++; // else just 1 char
+  }
+  if (idxp != nullptr) *idxp = s;
+
+  return buf.substr(s,idx-s);
+}
+
+std::string srcBuf::get_previous_original_word(SourceLocation sl, int * idxp) {
+  return get_previous_original_word(get_index(sl),idxp);
+}
+
+std::string srcBuf::get_previous_original_word(int idx, int * idxp) {
+  assert(idx >= 0 && idx < original_size);
+  idx--;
+
+  while (idx >= 0 && (std::isspace(buf[idx]) || buf[idx] == '\n')) idx--;
+  int end = idx;
+
+  if (idx >= 0) {
+    if (std::isalnum(buf[idx]) || buf[idx] == '_') {
+      // it's a word, go ahead
+      do {  
+        idx--;  
+      } while( idx >= 0 && (std::isalnum(buf[idx]) || buf[idx] == '_'));
+    } else idx--;  // 1 char
+  }
+  if (idxp != nullptr) *idxp = idx+1;
+  return buf.substr(idx+1,end-idx);
+}
+
 
 int srcBuf::find_original(int idx, const char c) {
   std::string::size_type i = buf.find(c, idx);
