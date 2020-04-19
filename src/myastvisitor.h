@@ -149,12 +149,17 @@ public:
 
   var_info * new_var_info(VarDecl *decl);
 
+  /// check the dependency chain of variables in assignments
   bool check_rhs_of_assignment(Stmt *s, std::vector<var_info *> * dependent = nullptr);
 
   /// this checks if the statement s is site-dependent inside site loops
   /// if return is false, vi (if non-null) will contain a list of variables
   /// which may turn out to be dependent on site later.  Check after loop complete!
   bool is_site_dependent(Expr *e, std::vector<var_info *> * vi = nullptr);
+
+  /// Check that the addressof-operators and reference vars are OK
+  void check_addrofops_and_refs(Stmt * S);
+
 
   void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);

@@ -578,8 +578,9 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   for (Expr * e : remove_expr_list) writeBuf->remove(e);
   
   // check and analyze the field expressions
-  check_field_ref_list();
   check_var_info_list();
+  check_addrofops_and_refs(ls);  // scan through the full loop again
+  check_field_ref_list();
 
   // check here also if conditionals are site dependent through var dependence
   // because var_info_list was checked above, once is enough
@@ -706,22 +707,20 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     }
 
 
-    if (UnaryOperator * UO = dyn_cast<UnaryOperator>(E)) {
-      if (UO->getOpcode() == UnaryOperatorKind::UO_AddrOf &&
-          does_expr_contain_field( UO->getSubExpr() ) ) {
-        reportDiag(DiagnosticsEngine::Level::Error,
-                   E->getSourceRange().getBegin(),
-                   "Taking address of '%0' expression is not allowed. (References are OK.) "
-                   "If you need a pointer, copy first: 'auto v = %1; auto *p = &v;'",
-                   get_stmt_str(UO->getSubExpr()).c_str(),
-                   get_stmt_str(UO->getSubExpr()).c_str() );
+    // if (UnaryOperator * UO = dyn_cast<UnaryOperator>(E)) {
+    //   if (UO->getOpcode() == UnaryOperatorKind::UO_AddrOf &&
+    //       does_expr_contain_field( UO->getSubExpr() ) ) {
+    //     reportDiag(DiagnosticsEngine::Level::Error,
+    //                E->getSourceRange().getBegin(),
+    //                "Taking address of '%0' is not allowed, suggest using references. "
+    //                "If a pointer is necessary, copy first: 'auto v = %1; auto *p = &v;'",
+    //                get_stmt_str(UO->getSubExpr()).c_str(),
+    //                get_stmt_str(UO->getSubExpr()).c_str() );
 
-        parsing_state.skip_children = 1;  // once is enough
-        return true;
-      }
-    }
-
-
+    //     parsing_state.skip_children = 1;  // once is enough
+    //     return true;
+    //   }
+    // }
 
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (isa<VarDecl>(DRE->getDecl())) {
@@ -1833,6 +1832,11 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
     // TODO: what happens with possible keywords with parens, or macro definitions?  
     // There could be template arguments after this, but the parameters (template_args) above should
     // take care of this, so kill all
+    if (l > 0) {
+      // llvm::errs() << "Searching name " << f->getNameAsString() << '\n';
+      int j = funcBuf.find_original_word(0,f->getNameAsString());
+      if (j<0 || j>l) l = -1;      // name not found
+    }
     if (l < 0) {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  f->getSourceRange().getBegin(),
@@ -1849,18 +1853,6 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   if (!is_special)
     funcBuf.insert(0, f->getReturnType().getAsString(pp) + " ", true, true);
 
-
-// #define use_ast_type
-#ifdef use_ast_type
-  // replace type as written with the type given in ast (?qualifiers)
-  // we could also leave the "written" type as is.  Problems with array types?
-  int i = funcBuf.get_index(f->getNameInfo().getSourceRange().getBegin());
-  if (i > 0)
-    funcBuf.replace(0,i-1,remove_class_from_type(f->getReturnType().getAsString()) + " ");
-  else 
-    funcBuf.insert(0,remove_class_from_type(f->getReturnType().getAsString()) + " ",true,false);
-  
-#else 
   
   // remove "static" if it is so specified in methods - not needed now
   // if (is_static) { 
@@ -1868,8 +1860,6 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   //                         funcBuf.get_index(f->getNameInfo().getSourceRange().getBegin()),
   //                         "static","");
   // }
-
-#endif
 
   if (!f->isInlineSpecified() && !no_inline)
     funcBuf.insert(0, "inline ", true, true);
