@@ -24,9 +24,11 @@ public:
   using GeneralVisitor::GeneralVisitor;   // use general visitor constructor
 
   int skip_children;
+  srcBuf *loopBuf;
 
-  addrOfAndRefChecker(Rewriter &R,ASTContext *C) : GeneralVisitor(R,C) {
+  addrOfAndRefChecker(Rewriter &R,ASTContext *C, srcBuf *wb) : GeneralVisitor(R,C) {
     skip_children = 0;
+    loopBuf = wb;
   }
 
   // implement the "skip_children" method from MyASTVisitor also here
@@ -120,8 +122,11 @@ public:
     return true;
   } // end of visitexpr
 
+
+
   //////////////////////////////////////////////////////////////////////////
   /// Variable declarator visitor
+  /// this should catch normal declarations
   //////////////////////////////////////////////////////////////////////////
 
   bool VisitDecl(Decl *D) {
@@ -144,6 +149,12 @@ public:
         // For reference vars:  const double & d = dval;  it's the referred to val which is const qualified!
         // bool is_const_qualified = V->getType().isConstQualified() || V->getType().isLocalConstQualified();
 
+        bool pure_out_ref = false;
+        if ( loopBuf->get_previous_original_word( V->getSourceRange().getBegin() ) ==
+             pure_output_keyword) {
+          pure_out_ref = true;
+        }  
+
         Expr * E = V->getInit();
         bool is_const_qualified = E->getType().isConstQualified();
 
@@ -155,7 +166,7 @@ public:
         if (is_field_with_X_expr(E)) {
           // this must have been scanned before
           for( field_ref & r : field_ref_list) if( r.fullExpr == E ){
-            r.is_read = true;
+            r.is_read = !pure_out_ref;
             if (!is_const_qualified) {
               r.is_written = true;
               if (is_field_with_X_and_dir(E)) {
@@ -199,7 +210,6 @@ public:
     return true;
   } // end of visitDecl
 
-
 };
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -208,7 +218,7 @@ public:
 
 void MyASTVisitor::check_addrofops_and_refs(Stmt * S) {
 
-  addrOfAndRefChecker arf(TheRewriter,Context);
+  addrOfAndRefChecker arf(TheRewriter,Context,writeBuf);
   arf.TraverseStmt(S);
 }
 
