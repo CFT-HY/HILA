@@ -79,24 +79,24 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
     QualType q = pv->getOriginalType ();
 
 
-    // check if we have pure_output qualifier
-    bool pure_output = false;
+    // check if we have output_only qualifier
+    bool output_only = false;
  
     if ( getPreviousWord(pv->getSourceRange().getBegin().getLocWithOffset(-1)) 
-         == pure_output_keyword) {
-      pure_output = true;
+         == output_only_keyword) {
+      output_only = true;
     }
     
-    if (pure_output) llvm::errs() << "It is an out parameter!\n";
+    if (output_only) llvm::errs() << "It is an out parameter!\n";
 
     bool is_lvalue = E->isLValue();
 
     if (is_lvalue) llvm::errs() << " LVALUE\n";
 
-    if (!is_lvalue && pure_output) 
+    if (!is_lvalue && output_only) 
       reportDiag(DiagnosticsEngine::Level::Error,
                  Call->getSourceRange().getBegin(),
-                 "'pure_output' can be used only with lvalue reference");
+                 "'output_only' can be used only with lvalue reference");
      
     if (is_field_with_X_expr(E)) {
 
@@ -105,7 +105,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
         //if( !q.isConstQualified() && q.getTypePtr()->isReferenceType()) {
           // Mark it as changed
       llvm::errs() << "FIELD CAN CHANGE HERE!\n";
-      handle_field_parity_X_expr(E, is_lvalue, (is_lvalue && !pure_output), true);
+      handle_field_parity_X_expr(E, is_lvalue, (is_lvalue && !output_only), true);
     }
   }
 
@@ -121,24 +121,24 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
     // try this method...
     SourceLocation sl = MD->getNameInfo().getEndLoc();
     // scan parens after name
-    bool pure_output = false;
+    bool output_only = false;
     llvm::errs() << "METHOD WORD AFTER PARENS " << getNextWord(skipParens(sl)) 
                  << " is const? " << is_const << '\n';
-    if (getNextWord(skipParens(sl)) == pure_output_keyword) {
-      pure_output = true;
+    if (getNextWord(skipParens(sl)) == output_only_keyword) {
+      output_only = true;
     }
 
-    if (pure_output && is_const) {
+    if (output_only && is_const) {
        reportDiag(DiagnosticsEngine::Level::Error,
                  sl,
-                 "'pure_output' cannot be used with 'const'");
+                 "'output_only' cannot be used with 'const'");
        reportDiag(DiagnosticsEngine::Level::Note,
                  Call->getSourceRange().getBegin(),
                  "Called from here");
     }
 
     if (is_field_with_X_expr(E)) {
-      handle_field_parity_X_expr(E,!is_const,(!is_const && !pure_output),true);
+      handle_field_parity_X_expr(E,!is_const,(!is_const && !output_only),true);
     }
   }
 

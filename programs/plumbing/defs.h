@@ -36,7 +36,9 @@ using real_t = float;
 #define NDIM 4
 #endif
 
-#define pure_output     // nothing here - keyword for loop function parameters
+
+// This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!
+#define output_only     
 
 // text output section -- defines also output0, which writes from node 0 only
 

@@ -15,7 +15,7 @@ cmplx<double> f(const cmplx<double> & x) { return e(x);}
 
 
 template <typename T>
-T xyz( pure_output T & v) {
+T xyz( output_only T & v) {
   v = 1.3;
   return sin(v);
 }
@@ -29,7 +29,7 @@ public:
   using base_type = typename base_type_struct<T>::type;
   cmplx<T> a[2];
   
-  void setter() pure_output  { a[0]=1; }
+  void setter() output_only  { a[0]=1; }
 };
 
 

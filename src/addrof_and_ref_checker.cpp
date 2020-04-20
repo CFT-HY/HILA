@@ -151,7 +151,7 @@ public:
 
         bool pure_out_ref = false;
         if ( loopBuf->get_previous_original_word( V->getSourceRange().getBegin() ) ==
-             pure_output_keyword) {
+             output_only_keyword) {
           pure_out_ref = true;
         }  
 
