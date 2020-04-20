@@ -45,6 +45,7 @@ public:
   srcBuf( Rewriter *R, Expr *E ) { create(R,E); }
   srcBuf( Rewriter *R, Stmt *S ) { create(R,S); }
   srcBuf( Rewriter *R, Decl *D ) { create(R,D); }
+  srcBuf( Rewriter *R, SourceRange sr) { create(R,sr); }
 
   int get_offset( SourceLocation s );
 
