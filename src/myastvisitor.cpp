@@ -44,7 +44,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 
       // Need to mark/handle the assignment method if necessary
       if( is_function_call_stmt(s) ){
-        handle_function_call_in_loop(s, true, iscompound);
+        handle_function_call_in_loop(s);
       } else if ( is_constructor_stmt(s) ){
         handle_constructor_in_loop(s);
       }
@@ -639,26 +639,27 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     return true;
   }
 
-  // Check for function calls parameters. We need to determine if the 
-  // function can assign to the a field parameter (is not const).
-  if( is_function_call_stmt(s) ){
-    handle_function_call_in_loop(s);
-    // let this ripple trough, for now ...
-    // return true;
-  }
-
-  // Check c++ methods  -- HMM: it seems above function call stmt catches these first
-  if( is_member_call_stmt(s) ){
-    handle_member_call_in_loop(s);
-    // let this ripple trough, for now ...
-    // return true;
-  }
-
 
   if ( is_constructor_stmt(s) ){
     handle_constructor_in_loop(s);
     // return true;
   }
+
+  // Check c++ methods  -- HMM: it seems above function call stmt catches these first
+  if( 0 && is_member_call_stmt(s) ){
+    handle_member_call_in_loop(s);
+    // let this ripple trough, for now ...
+    // return true;
+  }
+
+  // Check for function calls parameters. We need to determine if the 
+  // function can assign to the a field parameter (is not const).
+  if( is_function_call_stmt(s) ){
+    handle_function_call_in_loop(s);
+    // let this ripple trough, for - expr f[X] is a function call and is trapped below too
+    // return true;
+  }
+
    
   // catch then expressions
   if (Expr *E = dyn_cast<Expr>(s)) {
@@ -931,6 +932,102 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   int i = TheRewriter.getRangeSize(r);
   return r.getBegin().getLocWithOffset(i-1);
 }
+
+/// get next character and sourcelocation, while skipping comments
+
+SourceLocation MyASTVisitor::getNextLoc(SourceLocation sl, bool forward) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  bool invalid = false;
+
+  int dir;
+  if (forward) dir = 1; else dir = -1;
+  SourceLocation s = sl.getLocWithOffset(dir);
+  const char * c = SM.getCharacterData(s,&invalid);
+
+  // skip comments - only c-style backwards
+  while ('/' == *c) {
+
+    if (forward && '/' == *SM.getCharacterData(s.getLocWithOffset(1),&invalid)) {
+      // a comment, skip the rest of line
+      while (!invalid && *SM.getCharacterData(s,&invalid) != '\n' ) s = s.getLocWithOffset(1);
+      c = SM.getCharacterData(s,&invalid);
+
+    } else if ('*' == *SM.getCharacterData(s.getLocWithOffset(dir),&invalid)) {
+      // c-style comment
+      s = s.getLocWithOffset(2*dir);
+      while (!invalid && *SM.getCharacterData(s,&invalid) != '*' && 
+              *SM.getCharacterData(s.getLocWithOffset(dir),&invalid) != '/' ) s = s.getLocWithOffset(dir);
+      s = s.getLocWithOffset(2*dir);
+      c = SM.getCharacterData(s,&invalid);
+    } else 
+      break;  // exit from here
+  }
+  
+  return s;
+}
+
+
+char MyASTVisitor::getChar(SourceLocation sl) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  bool invalid = false;
+  const char * c = SM.getCharacterData(sl,&invalid);
+  if (invalid) return 0;
+  else return *c;
+}
+
+
+/// Skip paren expression following sl, points after the paren
+
+SourceLocation MyASTVisitor::skipParens( SourceLocation sl ) {
+
+  while (sl.isValid() && getChar(sl) != '(') sl = getNextLoc(sl);
+
+  int lev = 1;
+  sl = getNextLoc(sl);
+  while (lev > 0 && sl.isValid()) {
+    char c = getChar(sl);
+    if (c == '(') lev++;
+    if (c == ')') lev--;
+    sl = getNextLoc(sl);
+  }
+
+  return sl;
+}  
+
+/// Get next word starting from sl
+
+std::string MyASTVisitor::getNextWord( SourceLocation sl ) {
+  while (std::isspace(getChar(sl))) sl = getNextLoc(sl);  // skip spaces
+  
+  std::string res;
+  char c = getChar(sl);
+  if (std::isalnum(c) || c == '_') {
+    while (sl.isValid() && (std::isalnum(c) || c== '_')) {
+      res.push_back(c);
+      sl = getNextLoc(sl);
+      c  = getChar(sl);
+    }
+  } else res.push_back(c);
+  return res;
+}
+
+/// Get prev word starting from sl - 
+
+std::string MyASTVisitor::getPreviousWord( SourceLocation sl ) {
+  while (std::isspace(getChar(sl))) sl = getNextLoc(sl,false);  // skip spaces
+  
+  SourceLocation e = sl;
+  char c = getChar(sl);
+  if (std::isalnum(c) || c == '_') {
+    while (sl.isValid() && (std::isalnum(c) || c== '_')) {
+      sl = getNextLoc(sl,false);
+      c  = getChar(sl);
+    }
+    sl = getNextLoc(sl); // 1 step too much
+  } 
+  return TheRewriter.getRewrittenText(SourceRange(sl,e));
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Pragma handling: has_pragma()

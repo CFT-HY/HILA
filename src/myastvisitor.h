@@ -161,7 +161,7 @@ public:
   void check_addrofops_and_refs(Stmt * S);
 
 
-  void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
+  // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
 
   void handle_member_call_in_loop(Stmt * s);
@@ -241,6 +241,18 @@ public:
   SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
   /// another utility (cannot trust r.getEnd())
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
+
+  // get next char and loc, while skipping comments
+  SourceLocation getNextLoc(SourceLocation sl,bool forward = true);
+
+  char getChar(SourceLocation sl);
+
+  // get next word or symbol, if it is not a legal name symbol
+  std::string getNextWord(SourceLocation sl);
+  std::string getPreviousWord(SourceLocation sl);
+
+  /// jump over following () expr
+  SourceLocation skipParens( SourceLocation sl);
 
   /// utility used in finding pragmas on the previous line
   bool is_preceded_by_pragma( SourceLocation l, std::string & args, SourceLocation & ploc );
