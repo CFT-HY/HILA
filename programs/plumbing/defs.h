@@ -60,7 +60,11 @@ static inline direction next_direction(direction dir) {
   return static_cast<direction>(static_cast<unsigned>(dir)+1);
 }
 
+//go through all neighbor sites in UP directions
 #define foralldir(d) for(direction d=XUP; d<NDIM; d=next_direction(d))
+
+//go through all directions (naming should be changed)
+#define forALLdir(d) for(direction d=XUP; d<NDIM*2; d=next_direction(d))
 
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
