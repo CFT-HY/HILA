@@ -116,6 +116,9 @@ void scaling_sim::initialize(){
 }
 
 void scaling_sim::write_moduli(){
+
+	double a = scaleFactor(t);
+
 	double phimod = 0.0;
 	double pimod = 0.0;
 
@@ -131,7 +134,7 @@ void scaling_sim::write_moduli(){
 
 	if (mynode() == 0){
 		double vol = (double) (config.l*config.l*config.l);
-		hila::output << phimod/vol << "," << pimod/vol << ",";
+		hila::output << t << "," << a << "," << config.lambda << "," << phimod/vol << "," << 0.5*pimod/vol << ",";
 	}
 
 	synchronize();
@@ -161,11 +164,12 @@ void scaling_sim::write_energies(){
 		double v = 0;
         cmplx<double> norm = phi[X].conj()*phi[X]; //calculate phi norm
         sumV += 0.25*config.lambda*a*a*pow((norm.re - ss), 2.0); //reduce potential
-		sumPi += (pi[X].conj()*pi[X]).re; 
+		sumPi += 0.5*(pi[X].conj()*pi[X]).re; //
+		sumPhiPi += 0.5*(phi[X].conj()*pi[X]).re;
 	}
 
 	direction d;
-	foralldir(d){
+	forALLdir(d){
 		onsites(ALL){
 			cmplx<double> diff_phi = (phi[X + d] - phi[X])/config.dx;  
 			double diPhi = (diff_phi.conj()*diff_phi).re;
@@ -175,7 +179,7 @@ void scaling_sim::write_energies(){
 
 	if (mynode() == 0){
 		double vol = (double) config.l*config.l*config.l;
-		hila::output << a << "," << sumPi/vol << "," << sumDiPhi/vol << "," << sumV/vol << '\n';
+		hila::output << 0.25*sumPi/vol << "," << sumDiPhi/vol << "," << sumV/vol << '\n';
 	}
 }
 
@@ -190,7 +194,6 @@ void scaling_sim::next(){
   	double daa_aa = ( pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0) ) / pow(aHalfPlus, 2.0);
   	double ss = config.sigma*config.sigma;
 
-	deltaPi[ALL] = cmplx<double>(0.0, 0.0);
 	phi[ALL] = phi[X] + config.dt*pi[X];
 
 	onsites(ALL){
