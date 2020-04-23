@@ -57,6 +57,29 @@ void input::import(const std::string & fname) {
     #endif
 }
 
+void input::import(int & argc, char *** argvp, const std::string & fname){
+
+    #ifdef USE_MPI
+
+    initialize_machine(argc, argvp); 
+    MPI_Comm_rank(MPI_COMM_WORLD, &myrank); 
+    if (myrank == 0){
+        read(fname);
+        check_essentials(); 
+    }
+
+    broadcast_values();
+    broadcast_names();
+
+    #else
+
+    read(fname);
+    check_essentials();
+
+    #endif   
+}
+
+
 void input::read(const std::string & fname) {
     std::ifstream inputfile;
     inputfile.open(fname);
@@ -141,7 +164,7 @@ void input::broadcast_values(){
     if (myrank==0){
         lengths[0] = values.size();
         lengths[1] = 0; 
-	lengths[2] = 0;
+	    lengths[2] = 0;
         for (auto i = values.begin(); i != values.end(); ++i){
             lengths[1] += (int) (*i).first.size();
 	    lengths[2] += 1; 
