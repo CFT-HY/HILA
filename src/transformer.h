@@ -25,6 +25,8 @@ using namespace clang::tooling;
 const std::string program_name("Transformer");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
+const std::string output_only_keyword("output_only");
+
 enum class reduction { NONE, SUM, PRODUCT };  // TBD:  MIN MAX MINLOC MAXLOC
 enum class parity { none, even, odd, all };
 
@@ -69,7 +71,6 @@ namespace cmdline {
 };
 
 namespace state {
-  extern bool loop_found; // = false;
   extern bool compile_errors_occurred; // = false;
 };
 

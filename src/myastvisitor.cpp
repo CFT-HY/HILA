@@ -44,7 +44,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
 
       // Need to mark/handle the assignment method if necessary
       if( is_function_call_stmt(s) ){
-        handle_function_call_in_loop(s, true, iscompound);
+        handle_function_call_in_loop(s);
       } else if ( is_constructor_stmt(s) ){
         handle_constructor_in_loop(s);
       }
@@ -578,8 +578,9 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   for (Expr * e : remove_expr_list) writeBuf->remove(e);
   
   // check and analyze the field expressions
-  check_field_ref_list();
   check_var_info_list();
+  check_addrofops_and_refs(ls);  // scan through the full loop again
+  check_field_ref_list();
 
   // check here also if conditionals are site dependent through var dependence
   // because var_info_list was checked above, once is enough
@@ -603,8 +604,6 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
 
   // don't go again through the arguments
   parsing_state.skip_children = 1;
-
-  state::loop_found = true;
   
   return true;
 }
@@ -640,27 +639,27 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     return true;
   }
 
-  // Check for function calls parameters. We need to determine if the 
-  // function can assign to the a field parameter (is not const).
-  if( is_function_call_stmt(s) ){
-    handle_function_call_in_loop(s);
-    // let this ripple trough, for now ...
-    // return true;
-  }
-
-  // Check c++ methods  -- HMM: it seems above function call stmt catches these first
-  if( is_member_call_stmt(s) ){
-    handle_member_call_in_loop(s);
-    // let this ripple trough, for now ...
-    // return true;
-  }
-
 
   if ( is_constructor_stmt(s) ){
     handle_constructor_in_loop(s);
     // return true;
   }
-  
+
+  // Check c++ methods  -- HMM: it seems above function call stmt catches these first
+  if( 0 && is_member_call_stmt(s) ){
+    handle_member_call_in_loop(s);
+    // let this ripple trough, for now ...
+    // return true;
+  }
+
+  // Check for function calls parameters. We need to determine if the 
+  // function can assign to the a field parameter (is not const).
+  if( is_function_call_stmt(s) ){
+    handle_function_call_in_loop(s);
+    // let this ripple trough, for - expr f[X] is a function call and is trapped below too
+    // return true;
+  }
+
    
   // catch then expressions
   if (Expr *E = dyn_cast<Expr>(s)) {
@@ -670,7 +669,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
        parsing_state.skip_children = 1;   // nothing to be done
        return true;
     }
-    
+
+
     //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs
     if (is_field_with_X_expr(E)) {
@@ -702,10 +702,26 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // field without [X], bad usually (TODO: allow  scalar func(field)-type?)
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
-                 "Field expressions without [..] not allowed within field loop");
+                 "Field expressions without [X] not allowed within field loop");
       parsing_state.skip_children = 1;  // once is enough
       return true;
     }
+
+
+    // if (UnaryOperator * UO = dyn_cast<UnaryOperator>(E)) {
+    //   if (UO->getOpcode() == UnaryOperatorKind::UO_AddrOf &&
+    //       does_expr_contain_field( UO->getSubExpr() ) ) {
+    //     reportDiag(DiagnosticsEngine::Level::Error,
+    //                E->getSourceRange().getBegin(),
+    //                "Taking address of '%0' is not allowed, suggest using references. "
+    //                "If a pointer is necessary, copy first: 'auto v = %1; auto *p = &v;'",
+    //                get_stmt_str(UO->getSubExpr()).c_str(),
+    //                get_stmt_str(UO->getSubExpr()).c_str() );
+
+    //     parsing_state.skip_children = 1;  // once is enough
+    //     return true;
+    //   }
+    // }
 
     if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (isa<VarDecl>(DRE->getDecl())) {
@@ -916,6 +932,102 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   int i = TheRewriter.getRangeSize(r);
   return r.getBegin().getLocWithOffset(i-1);
 }
+
+/// get next character and sourcelocation, while skipping comments
+
+SourceLocation MyASTVisitor::getNextLoc(SourceLocation sl, bool forward) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  bool invalid = false;
+
+  int dir;
+  if (forward) dir = 1; else dir = -1;
+  SourceLocation s = sl.getLocWithOffset(dir);
+  const char * c = SM.getCharacterData(s,&invalid);
+
+  // skip comments - only c-style backwards
+  while ('/' == *c) {
+
+    if (forward && '/' == *SM.getCharacterData(s.getLocWithOffset(1),&invalid)) {
+      // a comment, skip the rest of line
+      while (!invalid && *SM.getCharacterData(s,&invalid) != '\n' ) s = s.getLocWithOffset(1);
+      c = SM.getCharacterData(s,&invalid);
+
+    } else if ('*' == *SM.getCharacterData(s.getLocWithOffset(dir),&invalid)) {
+      // c-style comment
+      s = s.getLocWithOffset(2*dir);
+      while (!invalid && *SM.getCharacterData(s,&invalid) != '*' && 
+              *SM.getCharacterData(s.getLocWithOffset(dir),&invalid) != '/' ) s = s.getLocWithOffset(dir);
+      s = s.getLocWithOffset(2*dir);
+      c = SM.getCharacterData(s,&invalid);
+    } else 
+      break;  // exit from here
+  }
+  
+  return s;
+}
+
+
+char MyASTVisitor::getChar(SourceLocation sl) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  bool invalid = false;
+  const char * c = SM.getCharacterData(sl,&invalid);
+  if (invalid) return 0;
+  else return *c;
+}
+
+
+/// Skip paren expression following sl, points after the paren
+
+SourceLocation MyASTVisitor::skipParens( SourceLocation sl ) {
+
+  while (sl.isValid() && getChar(sl) != '(') sl = getNextLoc(sl);
+
+  int lev = 1;
+  sl = getNextLoc(sl);
+  while (lev > 0 && sl.isValid()) {
+    char c = getChar(sl);
+    if (c == '(') lev++;
+    if (c == ')') lev--;
+    sl = getNextLoc(sl);
+  }
+
+  return sl;
+}  
+
+/// Get next word starting from sl
+
+std::string MyASTVisitor::getNextWord( SourceLocation sl ) {
+  while (std::isspace(getChar(sl))) sl = getNextLoc(sl);  // skip spaces
+  
+  std::string res;
+  char c = getChar(sl);
+  if (std::isalnum(c) || c == '_') {
+    while (sl.isValid() && (std::isalnum(c) || c== '_')) {
+      res.push_back(c);
+      sl = getNextLoc(sl);
+      c  = getChar(sl);
+    }
+  } else res.push_back(c);
+  return res;
+}
+
+/// Get prev word starting from sl - 
+
+std::string MyASTVisitor::getPreviousWord( SourceLocation sl ) {
+  while (std::isspace(getChar(sl))) sl = getNextLoc(sl,false);  // skip spaces
+  
+  SourceLocation e = sl;
+  char c = getChar(sl);
+  if (std::isalnum(c) || c == '_') {
+    while (sl.isValid() && (std::isalnum(c) || c== '_')) {
+      sl = getNextLoc(sl,false);
+      c  = getChar(sl);
+    }
+    sl = getNextLoc(sl); // 1 step too much
+  } 
+  return TheRewriter.getRewrittenText(SourceRange(sl,e));
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Pragma handling: has_pragma()
@@ -1783,8 +1895,10 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
 
  
   // if we have special function do not try to explicitly specialize the name
+  bool is_special = false;
   if (isa<CXXConstructorDecl>(f) || isa<CXXConversionDecl>(f) || isa<CXXDestructorDecl>(f)) {
     template_args.clear();
+    is_special = true;
   }
 
   PrintingPolicy pp(Context->getLangOpts());
@@ -1815,6 +1929,11 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
     // TODO: what happens with possible keywords with parens, or macro definitions?  
     // There could be template arguments after this, but the parameters (template_args) above should
     // take care of this, so kill all
+    if (l > 0) {
+      // llvm::errs() << "Searching name " << f->getNameAsString() << '\n';
+      int j = funcBuf.find_original_word(0,f->getNameAsString());
+      if (j<0 || j>l) l = -1;      // name not found
+    }
     if (l < 0) {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  f->getSourceRange().getBegin(),
@@ -1827,22 +1946,10 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   // FInally produce the function return type and full name + possible templ. args.
 
   // put right return type and function name
-  funcBuf.insert(0, f->getReturnType().getAsString(pp) + " " + 
-                    f->getQualifiedNameAsString() + template_args, true, true);
+  funcBuf.insert(0, f->getQualifiedNameAsString() + template_args, true, true);
+  if (!is_special)
+    funcBuf.insert(0, f->getReturnType().getAsString(pp) + " ", true, true);
 
-
-
-// #define use_ast_type
-#ifdef use_ast_type
-  // replace type as written with the type given in ast (?qualifiers)
-  // we could also leave the "written" type as is.  Problems with array types?
-  int i = funcBuf.get_index(f->getNameInfo().getSourceRange().getBegin());
-  if (i > 0)
-    funcBuf.replace(0,i-1,remove_class_from_type(f->getReturnType().getAsString()) + " ");
-  else 
-    funcBuf.insert(0,remove_class_from_type(f->getReturnType().getAsString()) + " ",true,false);
-  
-#else 
   
   // remove "static" if it is so specified in methods - not needed now
   // if (is_static) { 
@@ -1850,8 +1957,6 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   //                         funcBuf.get_index(f->getNameInfo().getSourceRange().getBegin()),
   //                         "static","");
   // }
-
-#endif
 
   if (!f->isInlineSpecified() && !no_inline)
     funcBuf.insert(0, "inline ", true, true);

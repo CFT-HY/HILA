@@ -36,6 +36,10 @@ using real_t = float;
 #define NDIM 4
 #endif
 
+
+// This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!
+#define output_only     
+
 // text output section -- defines also output0, which writes from node 0 only
 
 namespace hila {

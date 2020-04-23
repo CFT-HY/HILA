@@ -22,9 +22,12 @@ public:
 
   bool found_X;
   bool found_field_parity;
+  bool found_field;
+  bool searching_for_field;
 
-  containsFieldLoopChecker(Rewriter &R,ASTContext *C) : GeneralVisitor(R,C) {
+  containsFieldLoopChecker(Rewriter &R,ASTContext *C,bool fieldsearch) : GeneralVisitor(R,C) {
     found_X = found_field_parity = false;
+    searching_for_field = fieldsearch;
   }
 
   // bool VisitStmt(Stmt *s) { llvm::errs() << "In stmt\n"; return true; }
@@ -35,6 +38,10 @@ public:
       found_X = true;
       // llvm::errs() << "FOUND X index!\n";
       return false;  // we do not need to go further, do we?
+    }
+    if (is_field_expr(e)) {
+      found_field = true;
+      if (searching_for_field) return false; // stop
     }
     return true;
   }
@@ -47,6 +54,7 @@ public:
     }
     return true;
   }
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -56,10 +64,16 @@ public:
 bool MyASTVisitor::does_function_contain_loop(FunctionDecl * f) {
 
   if (f->hasBody()) {
-    containsFieldLoopChecker flc(TheRewriter,Context);
+    containsFieldLoopChecker flc(TheRewriter,Context,false);
     flc.TraverseStmt(f->getBody());
     return (flc.found_X || flc.found_field_parity);
   }
   return false;
 }
 
+
+bool MyASTVisitor::does_expr_contain_field(Expr *E) {
+  containsFieldLoopChecker flc(TheRewriter,Context,true);
+  flc.TraverseStmt(E);
+  return (flc.found_X || flc.found_field_parity || flc.found_field);
+}

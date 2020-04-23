@@ -13,7 +13,7 @@ std::vector<FunctionDecl *> loop_functions = {};
 // any field references.
 // Assume non-const references can be assigned to.
 
-void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compound) {
+void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
@@ -28,36 +28,125 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s, bool is_assignment, bo
   // Get the declaration of the function
   Decl* decl = Call->getCalleeDecl();
 
-  //llvm::errs() << " callee:\n";
-  //decl->dump();
+  // llvm::errs() << " callee:\n";
+  // decl->dumpColor();
 
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   // Store functions used in loops, recursively...
   loop_function_check(decl);
 
-  // Handle parameters
-  int i=0;
-  for( Expr * E : Call->arguments() ){
-    if( is_field_with_X_expr(E) ) {
-      if(i < D->getNumParams()){
-        const ParmVarDecl * pv = D->getParamDecl(i);
-        QualType q = pv->getOriginalType ();
+  // Now inspect function call parameters/args
 
-        // Check for const qualifier
-        if( !q.isConstQualified ()) {
-          // Mark it as changed
-          handle_field_parity_X_expr(E, is_assignment, is_compound, true);
-        }
-      }
-    }
-    i++;
+  // don't inspect args for operator calls, assume it is done separately
+  if (isa<CXXOperatorCallExpr>(Call)) return;
+
+
+  llvm::errs() << "LOOP FUNC " << D->getNameAsString() << " with "
+  << D->getNumParams() << " parameters and " << Call->getNumArgs() << " arguments\n";
+
+  llvm::errs() << "Is it a method? " << isa<CXXMemberCallExpr>(Call) << '\n';
+
+  llvm::errs() << "   Func args: ";
+  for (Expr * E : Call->arguments()) {
+    llvm::errs() << get_stmt_str(E);
+    if (E->isLValue()) llvm::errs() << "-LVALUE";
+    llvm::errs() << ", ";
   }
+  llvm::errs() << "\n   Func params: ";
+  for (int i=0; i<D->getNumParams(); i++) llvm::errs() << D->getParamDecl(i)->getNameAsString() << ", ";
+  llvm::errs() << "\n";
+
+  // Handle parameters
+  if (D->getNumParams() != Call->getNumArgs()) {
+    llvm::errs() << "Internal error: #params != #args, function " << D->getNameAsString() << '\n';
+    exit(-1);
+  }
+
+  // let's check if the definition is within writeBuf
+  // srcBuf fbuffer, * sb;
+  // if (writeBuf->is_in_range(D->getSourceRange())) sb = writeBuf;
+  // else {
+  //   fbuffer.create( &TheRewriter, D );
+  //   sb = &fbuffer;
+  // }
+  
+
+  for( int i=0; i<Call->getNumArgs(); i++) {
+    Expr * E = Call->getArg(i);
+    
+    const ParmVarDecl * pv = D->getParamDecl(i);
+    QualType q = pv->getOriginalType ();
+
+
+    // check if we have output_only qualifier
+    bool output_only = false;
+ 
+    if ( getPreviousWord(pv->getSourceRange().getBegin().getLocWithOffset(-1)) 
+         == output_only_keyword) {
+      output_only = true;
+    }
+    
+    if (output_only) llvm::errs() << "It is an out parameter!\n";
+
+    bool is_lvalue = E->isLValue();
+
+    if (is_lvalue) llvm::errs() << " LVALUE\n";
+
+    if (!is_lvalue && output_only) 
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 Call->getSourceRange().getBegin(),
+                 "'output_only' can be used only with lvalue reference");
+     
+    if (is_field_with_X_expr(E)) {
+
+        // Check for const qualifier OR that it is NOt a reference parameter
+        // (can change)
+        //if( !q.isConstQualified() && q.getTypePtr()->isReferenceType()) {
+          // Mark it as changed
+      llvm::errs() << "FIELD CAN CHANGE HERE!\n";
+      handle_field_parity_X_expr(E, is_lvalue, (is_lvalue && !output_only), true);
+    }
+  }
+
+  // If the function is a method, check the member call arg too 
+
+  if ( CXXMemberCallExpr * MCE = dyn_cast<CXXMemberCallExpr>(s) ) {
+    Expr * E = MCE->getImplicitObjectArgument();
+    E = E->IgnoreImplicit();
+
+    CXXMethodDecl * MD = MCE->getMethodDecl();
+    bool is_const = MD->isConst();
+
+    // try this method...
+    SourceLocation sl = MD->getNameInfo().getEndLoc();
+    // scan parens after name
+    bool output_only = false;
+    llvm::errs() << "METHOD WORD AFTER PARENS " << getNextWord(skipParens(sl)) 
+                 << " is const? " << is_const << '\n';
+    if (getNextWord(skipParens(sl)) == output_only_keyword) {
+      output_only = true;
+    }
+
+    if (output_only && is_const) {
+       reportDiag(DiagnosticsEngine::Level::Error,
+                 sl,
+                 "'output_only' cannot be used with 'const'");
+       reportDiag(DiagnosticsEngine::Level::Note,
+                 Call->getSourceRange().getBegin(),
+                 "Called from here");
+    }
+
+    if (is_field_with_X_expr(E)) {
+      handle_field_parity_X_expr(E,!is_const,(!is_const && !output_only),true);
+    }
+  }
+
 }
 
-void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
-  handle_function_call_in_loop(s,true,true);
-}
+// void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
+//   handle_function_call_in_loop(s,true,true);
+// }
 
 
 
@@ -71,6 +160,8 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
   // Get the declaration of the function
   Decl* decl = Call->getCalleeDecl();
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
+
+  llvm::errs() << "  Member call " << D->getNameAsString() << '\n';
 
   // Store functions used in loops, recursively...
   loop_function_check(decl);
@@ -119,6 +210,8 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 
   //llvm::errs() << " callee:\n";
   //decl->dump();
+
+  llvm::errs() << "  Constructor " << decl->getNameAsString() << '\n';
 
   // Store functions used in loops, recursively...
   loop_function_check(decl);
@@ -205,6 +298,11 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   }
   if (handle_decl) {
     loop_functions.push_back(fd);
+    // llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
+    //   " parameters ";
+    // for (int i=0; i<fd->getNumParams(); i++) 
+    //   llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString() << '\n';
+    
     backend_handle_loop_function(fd);
   }
   return handle_decl;

@@ -89,6 +89,9 @@ public:
 
   /// true if function contains parity loop
   bool does_function_contain_loop( FunctionDecl *f );
+
+  /// check if there's field reference in the Expr.
+  bool does_expr_contain_field(Expr *E);
   
   /// same for function templates
   // bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
@@ -146,6 +149,7 @@ public:
 
   var_info * new_var_info(VarDecl *decl);
 
+  /// check the dependency chain of variables in assignments
   bool check_rhs_of_assignment(Stmt *s, std::vector<var_info *> * dependent = nullptr);
 
   /// this checks if the statement s is site-dependent inside site loops
@@ -153,7 +157,11 @@ public:
   /// which may turn out to be dependent on site later.  Check after loop complete!
   bool is_site_dependent(Expr *e, std::vector<var_info *> * vi = nullptr);
 
-  void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
+  /// Check that the addressof-operators and reference vars are OK
+  void check_addrofops_and_refs(Stmt * S);
+
+
+  // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
 
   void handle_member_call_in_loop(Stmt * s);
@@ -233,6 +241,18 @@ public:
   SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
   /// another utility (cannot trust r.getEnd())
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
+
+  // get next char and loc, while skipping comments
+  SourceLocation getNextLoc(SourceLocation sl,bool forward = true);
+
+  char getChar(SourceLocation sl);
+
+  // get next word or symbol, if it is not a legal name symbol
+  std::string getNextWord(SourceLocation sl);
+  std::string getPreviousWord(SourceLocation sl);
+
+  /// jump over following () expr
+  SourceLocation skipParens( SourceLocation sl);
 
   /// utility used in finding pragmas on the previous line
   bool is_preceded_by_pragma( SourceLocation l, std::string & args, SourceLocation & ploc );

@@ -50,8 +50,11 @@ std::string remove_all_whitespace(const std::string & line) {
 
 /// True if string contains word (note: this word is c++ alphanumeric word, ie. split as in )
 
-std::string::size_type find_word(const std::string & in, const std::string & pattern, int pos) {
-  int i = in.find(pattern,pos);
+std::string::size_type find_word(const std::string & in, const std::string & pattern, int pos, bool reverse) {
+  int i;
+  if (!reverse) i = in.find(pattern,pos);
+  else i = in.rfind(pattern,pos);
+
   if (i == std::string::npos) return std::string::npos;  // not found
 
   if ( i>0 && (std::isalnum(in[i-1]) || in[i-1] == '_') ) 

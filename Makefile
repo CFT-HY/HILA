@@ -112,6 +112,7 @@ OBJECTS = \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site.o \
   $(BUILDDIR)/function_contains_loop_checker.o \
+  $(BUILDDIR)/addrof_and_ref_checker.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o
