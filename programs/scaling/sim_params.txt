@@ -1,13 +1,14 @@
-N = 16 
-param1 = 1.0
-sigma = 3.0
-seed=20
+N = 32
+seed = 1
+initialModulus = 1.0
 sigma = 1.0
-dx = 0.5 
-tStart = 10.0
-tEnd = 64.0
+dx = 0.5
+tStart = 50
+tEnd = 102
 lambda = 2.0
-dtdxRatio=0.2
-smooth=30
+tStats = 50
+numberStatsOutputs = 100
+dtdxRatio = 0.2
+smooth = 50
 
 

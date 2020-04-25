@@ -134,7 +134,7 @@ void scaling_sim::write_moduli(){
 
 	if (mynode() == 0){
 		double vol = (double) (config.l*config.l*config.l);
-		hila::output << t << "," << a << "," << config.lambda << "," << phimod/vol << "," << 0.5*pimod/vol << ",";
+		hila::output << t << "," << a << "," << config.lambda << "," << phimod/vol << "," << pimod/vol << ",";
 	}
 
 	synchronize();
@@ -179,7 +179,7 @@ void scaling_sim::write_energies(){
 
 	if (mynode() == 0){
 		double vol = (double) config.l*config.l*config.l;
-		hila::output << 0.25*sumPi/vol << "," << sumDiPhi/vol << "," << sumV/vol << '\n';
+		hila::output << sumPi/vol << "," << sumDiPhi/vol << "," << sumV/vol << '\n';
 	}
 }
 
@@ -198,7 +198,7 @@ void scaling_sim::next(){
 
 	onsites(ALL){
 		cmplx<double> norm = phi[X].conj()*phi[X]; //calculate phi norm
-		deltaPi[X] = phi[X]*(aaaaldt_aa*(ss - norm.re) - aadt2D_aadxdx); 	
+		deltaPi[X] = phi[X]*(aaaaldt_aa*(ss - norm.re) - aadt2D_aadxdx);
 	}
 
 	direction d;
