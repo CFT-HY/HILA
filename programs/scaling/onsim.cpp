@@ -212,16 +212,23 @@ void scaling_sim::next(){
 	pi[ALL] = pi[X] + deltaPi[X]; 
 
 	t += config.dt;
-	synchronize();
 }
 
 int main(int argc, char ** argv){
 	scaling_sim sim;
 	sim.allocate("sim_params.txt", argc, argv);
 	sim.initialize();
-	while(sim.t < sim.config.tEnd){
-		sim.write_moduli();
-		sim.write_energies();
+	int steps = (sim.config.tEnd - sim.config.tStats)/(sim.config.dt * sim.config.nOutputs); //number of steps between printing stats 
+	int stat_counter = 0; 
+	while (sim.t < sim.config.tEnd){
+		if (sim.t >= sim.config.tStats){
+			if (stat_counter%steps==0){
+				synchronize();
+				sim.write_moduli();
+				sim.write_energies();
+			}
+			stat_counter++;
+		}
 		sim.next();
 	}
 

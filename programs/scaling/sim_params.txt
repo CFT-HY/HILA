@@ -6,8 +6,8 @@ dx = 0.5
 tStart = 50
 tEnd = 102
 lambda = 2.0
-tStats = 50
-numberStatsOutputs = 100
+tStats = 80
+numberStatsOutputs = 5
 dtdxRatio = 0.2
 smooth = 50
 
