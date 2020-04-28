@@ -823,7 +823,7 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordina
   }
   
   std::vector<T> send_buffer(index_list.size());
-  payload.gather_elements((char*) send_buffer.data(), index_list, lattice);
+  payload.gather_elements((char*) send_buffer.data(), index_list.data(), send_buffer.size(), lattice);
   if(mynode() != root && node_list[mynode()] > 0){
     MPI_Send((char*) send_buffer.data(), node_list[mynode()]*sizeof(T), MPI_BYTE, root, mynode(), MPI_COMM_WORLD);
   }
@@ -857,7 +857,7 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
   }
 
   std::vector<T> recv_buffer(index_list.size());
-  payload.gather_elements((char*) recv_buffer.data(), index_list, lattice);
+  payload.gather_elements((char*) recv_buffer.data(), index_list.data(), recv_buffer.size(), lattice);
   if(mynode() != root && node_list[mynode()] > 0){
     MPI_Status status;
     MPI_Recv((char*) recv_buffer.data(), node_list[mynode()]*sizeof(T), MPI_BYTE, root, mynode(), MPI_COMM_WORLD, &status);
@@ -872,7 +872,7 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
       buffer += node_list[n]*sizeof(T);
     }
   }
-  payload.place_elements((char*) recv_buffer.data(), index_list, lattice);
+  payload.place_elements((char*) recv_buffer.data(), index_list.data(), recv_buffer.size(), lattice);
 }
 
 
