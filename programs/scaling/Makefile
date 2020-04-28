@@ -38,3 +38,7 @@ clean:
 
 cleanall:
 	rm -rf *.cpt *.o *.exe
+
+output4: onsim.exe
+	mpirun -np 4 onsim.exe > output.dat
+	sed -i '/[a-zA-Z]/d' output.dat

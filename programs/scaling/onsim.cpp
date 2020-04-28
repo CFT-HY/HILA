@@ -26,6 +26,7 @@ inline double scaleFactor(double t, double t_end){
 class scaling_sim {
 
 	public:
+
 		scaling_sim() = default;
 		void allocate(const std::string fname, int argc, char ** argv);
 		void initialize();
@@ -42,9 +43,12 @@ class scaling_sim {
 
 		struct {
 			int l;
+			int m;
 			int seed;
 			int smoothing;
+			int initalCondition;
 			double initialModulus;
+			double epsilon;
 			double sigma;
 			double dx;
 			double dt;
@@ -57,11 +61,12 @@ class scaling_sim {
 		} config;
 };
 
-
 void scaling_sim::allocate(const std::string fname, int argc, char ** argv){
 	input parameters = input();
 	parameters.import(fname);
 	config.l = parameters.get("N");
+	config.m = parameters.get("m");
+	config.epsilon = parameters.get("epsilon");
 	config.seed = parameters.get("seed");
 	config.initialModulus = parameters.get("initialModulus");
 	config.sigma = parameters.get("sigma");
@@ -70,6 +75,7 @@ void scaling_sim::allocate(const std::string fname, int argc, char ** argv){
   	config.tEnd = parameters.get("tEnd");
 	config.lambda = parameters.get("lambda");
 	config.smoothing = parameters.get("smooth");
+	config.initalCondition = parameters.get("initialCondition");
 	config.tStats = parameters.get("tStats");
 	config.nOutputs = parameters.get("numberStatsOutputs");
 	double ratio = parameters.get("dtdxRatio");
@@ -88,14 +94,40 @@ inline double scaling_sim::scaleFactor(double t){
 
 void scaling_sim::initialize(){
 
-	//initialize vaccuum state
-	onsites(ALL){
-		double theta, r;
-		r = config.initialModulus*config.sigma;
-		theta = hila_random()*2*M_PI;
-		cmplx<double> val;
-		phi[X] = val.polar(r, theta);
-		pi[X] = 0; 
+	int m =config.m;
+	double epsilon = config.epsilon;
+	double s = config.sigma;
+	int N = config.l;
+
+	switch(config.initalCondition){
+
+		case 1 : {
+			onsites(ALL){
+				element<coordinate_vector> coord = coordinates(X); //coordinates of the current lattice sit$
+				pi[X] = cmplx<double>(0.0, 0.0);
+				phi[X].re = s*sqrt(1-epsilon*epsilon*sin(2.0*M_PI*coord[0]*m/N)*sin(2.0*M_PI*coord[0]*m/N));
+				phi[X].im = s*epsilon*sin(2.0*M_PI*coord[0]*m/N);
+			}
+
+			if (mynode() == 0){
+					hila::output << "Axion wave generated with amplitude: "<< config.epsilon << '\n';
+			}
+
+			break;
+		}
+
+		default : { 
+			onsites(ALL){
+				double theta, r;
+				r = config.initialModulus*s;
+				theta = hila_random()*2*M_PI;
+				cmplx<double> val;
+				phi[X] = val.polar(r, theta);
+				pi[X] = 0; 
+			}
+			break;
+		}
+
 	}
 
 	//smoothing iterations
@@ -147,9 +179,9 @@ void scaling_sim::write_energies(){
 
 	//non-weighted energies
 	double sumPhi = 0.0;
-    double sumPi = 0.0;
-   	double sumDiPhi = 0.0;
-    double sumV = 0.0;
+    double sumPi = 0.0; // 
+   	double sumDiPhi = 0.0; //
+    double sumV = 0.0; //
 	double sumPhiDiPhi = 0.0;
 	double sumPhiPi = 0.0; 
 
@@ -169,13 +201,26 @@ void scaling_sim::write_energies(){
 	}
 
 	direction d;
-	forALLdir(d){
+	foralldir(d){
 		onsites(ALL){
 			cmplx<double> diff_phi = (phi[X + d] - phi[X])/config.dx;  
 			double diPhi = (diff_phi.conj()*diff_phi).re;
 			sumDiPhi += diPhi; //reduce diPhi
 		}
 	}
+
+	/*
+	direction d;
+    foralldir(d){
+		onsites(ALL){
+        	cmplx<double> DiffPhi = (phi[X + d] - phi[X])/config.dx;
+        	double pDphi = 0.5*(DiffPhi.conj()*phi[X]).re;
+        	sumPhiDiPhi += pDphi*pDphi;
+
+			//sum di phi as well, but not for each direction 
+		}
+    }
+	*/
 
 	if (mynode() == 0){
 		double vol = (double) config.l*config.l*config.l;
@@ -214,12 +259,17 @@ void scaling_sim::next(){
 	t += config.dt;
 }
 
+//measure and output the other energies
+//write measurements into a specified output file from the command line
+
 int main(int argc, char ** argv){
 	scaling_sim sim;
 	sim.allocate("sim_params.txt", argc, argv);
 	sim.initialize();
+
 	int steps = (sim.config.tEnd - sim.config.tStats)/(sim.config.dt * sim.config.nOutputs); //number of steps between printing stats 
-	int stat_counter = 0; 
+	int stat_counter = 0;
+
 	while (sim.t < sim.config.tEnd){
 		if (sim.t >= sim.config.tStats){
 			if (stat_counter%steps==0){

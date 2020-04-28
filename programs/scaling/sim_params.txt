@@ -1,14 +1,17 @@
 N = 32
-seed = 1
+seed = 3
 initialModulus = 1.0
 sigma = 1.0
 dx = 0.5
 tStart = 50
 tEnd = 102
 lambda = 2.0
-tStats = 80
-numberStatsOutputs = 5
+tStats = 50
+numberStatsOutputs = 400
 dtdxRatio = 0.2
-smooth = 50
+smooth = 0
+initialCondition = 0
+m = 3
+epsilon = 0.5
 
 
