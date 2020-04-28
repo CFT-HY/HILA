@@ -24,7 +24,10 @@ In short, the framework can be used in these steps:
 
 1. Write c++ code using the syntax and datatypes laid out below
 2. Use the transformer excecutable to convert this code into .cpt code 
-3. Compile the new .cpt code into the final excecutable 
+3. Compile the new .cpt code into the final excecutable
+
+![Workflow illustration](/docs/workflowV1.png)
+ 
 
 To compile the transformer, first create a build directory inside the main directory if it doesn't exist. 
 Then, compile the transformer by typing `make` in the main folder.
