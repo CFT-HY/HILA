@@ -1947,8 +1947,9 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
 
   // put right return type and function name
   funcBuf.insert(0, f->getQualifiedNameAsString() + template_args, true, true);
-  if (!is_special)
-    funcBuf.insert(0, f->getReturnType().getAsString(pp) + " ", true, true);
+  if (!is_special) {
+    funcBuf.insert(0, f->getDeclaredReturnType().getAsString(pp) + " ", true, true);
+  }
 
   
   // remove "static" if it is so specified in methods - not needed now
