@@ -73,7 +73,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
   int elements = sizeof(T)/sizeof(complex_type);
 
-  // Mark changed and make sure it's allocated
+  // Make sture the result is allocated and mark it changed 
+  result.check_alloc();
   result.mark_changed(ALL);
 
   // Run transform in all directions
