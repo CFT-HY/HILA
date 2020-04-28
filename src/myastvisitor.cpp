@@ -1948,9 +1948,16 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
   // put right return type and function name
   funcBuf.insert(0, f->getQualifiedNameAsString() + template_args, true, true);
   if (!is_special) {
-    funcBuf.insert(0, f->getDeclaredReturnType().getAsString(pp) + " ", true, true);
+    // Declarations with a trailing return type behave weirdly, they have empty ReturnTypeSourceRange,
+    // but the getDeclaredReturnType is the explicit return type.
+    if( TheRewriter.getRewrittenText(f->getReturnTypeSourceRange()) == "" ){
+      // So this one has a trailing return type. Just add auto.
+      funcBuf.insert(0, " auto ", true, true);
+    } else {
+      // Normal case, just add the declared return type. 
+      funcBuf.insert(0, f->getDeclaredReturnType().getAsString(pp) + " ", true, true);
+    }
   }
-
   
   // remove "static" if it is so specified in methods - not needed now
   // if (is_static) { 
