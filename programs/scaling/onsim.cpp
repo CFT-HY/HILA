@@ -197,34 +197,26 @@ void scaling_sim::write_energies(){
         cmplx<double> norm = phi[X].conj()*phi[X]; //calculate phi norm
         sumV += 0.25*config.lambda*a*a*pow((norm.re - ss), 2.0); //reduce potential
 		sumPi += 0.5*(pi[X].conj()*pi[X]).re; //
-		sumPhiPi += 0.5*(phi[X].conj()*pi[X]).re;
+		double pPi = (phi[X].conj()*pi[X]).re;
+		sumPhiPi += 0.5*pPi*pPi;
 	}
 
 	direction d;
 	foralldir(d){
 		onsites(ALL){
-			cmplx<double> diff_phi = (phi[X + d] - phi[X])/config.dx;  
-			double diPhi = (diff_phi.conj()*diff_phi).re;
-			sumDiPhi += diPhi; //reduce diPhi
+			double pDphi = 0.0;
+			cmplx<double> diff_phi = (phi[X + d] - phi[X])/config.dx;
+			pDphi = 0.5*(diff_phi.conj()*phi[X]).re;
+			sumDiPhi += 0.5*(diff_phi.conj()*diff_phi).re; //reduce diPhi
+			sumPhiDiPhi += pDphi*pDphi;
 		}
 	}
 
-	/*
-	direction d;
-    foralldir(d){
-		onsites(ALL){
-        	cmplx<double> DiffPhi = (phi[X + d] - phi[X])/config.dx;
-        	double pDphi = 0.5*(DiffPhi.conj()*phi[X]).re;
-        	sumPhiDiPhi += pDphi*pDphi;
-
-			//sum di phi as well, but not for each direction 
-		}
-    }
-	*/
-
 	if (mynode() == 0){
 		double vol = (double) config.l*config.l*config.l;
-		hila::output << sumPi/vol << "," << sumDiPhi/vol << "," << sumV/vol << '\n';
+		//print all non-weighted energies
+		hila::output << sumPi/vol << "," << sumDiPhi/vol << "," << sumV/vol << ',';
+		hila::output << sumPhiPi/vol << "," << sumPhiDiPhi/vol << '\n';
 	}
 }
 
