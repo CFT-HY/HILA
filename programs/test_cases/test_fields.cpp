@@ -76,6 +76,122 @@ int main(int argc, char **argv){
     }
     assert(sum==(double)lattice->volume() && "test setting field with parity");
 
+    // Test communication functions
+    s1[ALL] = 0;
+
+    assert(s1.is_allocated());
+    assert(s1.is_initialized(EVEN));
+    assert(s1.is_initialized(ODD));
+
+    s1.mark_changed(ALL);
+
+    // Check initial state of communication functions
+    foralldir(d){
+      assert(!s1.is_fetched(d, EVEN));
+      assert(!s1.is_fetched(d, ODD));
+      assert(!s1.is_fetched(d, ALL));
+      assert(!s1.is_move_started(d, EVEN));
+      assert(!s1.is_move_started(d, ODD));
+      assert(!s1.is_move_started(d, ALL));
+      assert(s1.move_not_done(d, EVEN) && "move not done initially");
+      assert(s1.move_not_done(d, ODD) && "move not done initially");
+      assert(s1.move_not_done(d, ALL) && "move not done initially");
+    }
+
+    // Test marking move started and fetched
+    foralldir(d){
+      s1.mark_move_started(d, EVEN);
+      assert(s1.is_move_started(d, EVEN));
+      assert(!s1.is_fetched(d, EVEN));
+      assert(!s1.move_not_done(d, EVEN) && "move not done after starting");
+      assert(!s1.is_fetched(d, ODD));
+      assert(!s1.is_fetched(d, ALL));
+      assert(!s1.is_move_started(d, ODD));
+      assert(!s1.is_move_started(d, ALL));
+      assert(s1.move_not_done(d, ODD));
+      assert(s1.move_not_done(d, ALL));
+
+      s1.mark_fetched(d, EVEN);
+      assert(s1.is_fetched(d, EVEN));
+      assert(!s1.is_move_started(d, EVEN));
+      assert(!s1.move_not_done(d, EVEN));
+
+      s1.mark_changed(ALL);
+
+      s1.mark_move_started(d, ODD);
+      assert(s1.is_move_started(d, ODD));
+      assert(!s1.is_fetched(d, ODD));
+      assert(!s1.move_not_done(d, ODD) && "move not done after starting");
+      
+      s1.mark_fetched(d, ODD);
+      assert(s1.is_fetched(d, ODD));
+      assert(!s1.is_move_started(d, ODD));
+      assert(!s1.move_not_done(d, ODD));
+
+      s1.mark_changed(ALL);
+
+      s1.mark_move_started(d, ALL);
+      assert(s1.is_move_started(d, ALL));
+      assert(!s1.is_fetched(d, ALL));
+      assert(!s1.move_not_done(d, ALL) && "move not done after starting");
+      
+      s1.mark_fetched(d, ALL);
+      assert(s1.is_fetched(d, ALL));
+      assert(!s1.is_move_started(d, ALL));
+      assert(!s1.move_not_done(d, ALL));
+
+      s1.mark_changed(ALL);
+    }
+
+
+    // Try setting an element on node 0
+    coordinate_vector coord;
+    foralldir(d) {
+      coord[d] = 0;
+    }
+    s1.set_element(cmplx<double>(1), coord);
+    cmplx<double> elem = s1.get_element(coord);
+    assert(elem.re == 1 && elem.im==0);
+
+    // Now try setting on a different node, if the lattice is split
+    foralldir(d) {
+      coord[d] = nd[d]-1;
+    }
+    s1.set_element(cmplx<double>(1), coord);
+    elem = s1.get_element(coord);
+    assert(elem.re == 1 && elem.im==0);
+
+
+    // Now try actually moving the data
+    foralldir(d) {
+      coord[d] = 0;
+    }
+    foralldir(d){
+      // Move data up in direction d
+      s2[ALL] = s1[X-d];
+
+      // Should still be on this node
+      coordinate_vector coord2 = coord;
+      coord2[d] += 1;
+      cmplx<double> moved = s2.get_element(coord2);
+      assert(elem.re == 1 && elem.im==0);
+
+      s2[ALL] = s1[X+d];
+
+      // Now it may be on a different node
+      coord2 = coord;
+      coord2[d] = (coord[d] - 1 + nd[d]) % nd[d];
+      moved = s2.get_element(coord2);
+      if( elem.re != 1 || elem.im != 0 ){
+        output0 << "Problem in communicating to direction " << d << "\n";
+        output0 << "Received " << moved << "\n";
+        assert(elem.re == 1 && elem.im==0);
+      }
+    }
+
+
+
+
     foralldir(d){
         onsites(ODD){
       	    s2[X] += s1[X + d];
@@ -92,7 +208,7 @@ int main(int argc, char **argv){
         element<double> diff = s1[X].re - (NDIM+1);
 	    sum += diff*diff;
     }
-	assert(sum==0 && "test neighbour fetch");
+	  assert(sum==0 && "test neighbour fetch");
 
 
     // Test starting communication manually
