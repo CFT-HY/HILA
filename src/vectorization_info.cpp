@@ -114,19 +114,19 @@ bool MyASTVisitor::VisitTypeAliasDecl(TypeAliasDecl * ta) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-/// is_vectorizable  true for types which can be vectorized, and returns the
+/// is_vectorizable_type  true for types which can be vectorized, and returns the
 /// corresponding vectorized typename in vectorized_type
 /////////////////////////////////////////////////////////////////////////////////////////
 
 
-bool MyASTVisitor::is_vectorizable(const QualType & QT, vectorization_info & vi) {
+bool MyASTVisitor::is_vectorizable_type(const QualType & QT, vectorization_info & vi) {
   PrintingPolicy pp(Context->getLangOpts());
   std::string tname = QT.getCanonicalType().getAsString(pp);
-  return is_vectorizable(tname, vi);
+  return is_vectorizable_type(tname, vi);
 }
 
 
-bool MyASTVisitor::is_vectorizable(const std::string & type_name, vectorization_info & vi) {
+bool MyASTVisitor::is_vectorizable_type(const std::string & type_name, vectorization_info & vi) {
 
   // Note: the std types are included in vectorizable_types
   // vectorizable_type vector filled in by VisitTypeAliasDecl above
@@ -139,19 +139,19 @@ bool MyASTVisitor::is_vectorizable(const std::string & type_name, vectorization_
       std::string old_t, new_t;
 
       if (n.ntype == number_type::DOUBLE) {
-        vi.vector_length = target.vector_size/sizeof(double);
+        vi.vector_size = target.vector_size/sizeof(double);
         old_t = "double";
-        new_t = "Vec" + std::to_string(vi.vector_length) + "d";
+        new_t = "Vec" + std::to_string(vi.vector_size) + "d";
 
       } else if (n.ntype == number_type::FLOAT) {
-        vi.vector_length = target.vector_size/sizeof(float);
+        vi.vector_size = target.vector_size/sizeof(float);
         old_t = "float";
-        new_t = "Vec" + std::to_string(vi.vector_length) + "f";
+        new_t = "Vec" + std::to_string(vi.vector_size) + "f";
 
       } else if (n.ntype == number_type::INT) {
-        vi.vector_length = target.vector_size/sizeof(int);
+        vi.vector_size = target.vector_size/sizeof(int);
         old_t = "int";
-        new_t = "Vec" + std::to_string(vi.vector_length) + "i";
+        new_t = "Vec" + std::to_string(vi.vector_size) + "i";
 
       } else return vi.is_vectorizable = false;   // not vectorizable type
 
@@ -174,7 +174,7 @@ bool MyASTVisitor::is_vectorizable(const std::string & type_name, vectorization_
       if (n.ntype == number_type::DOUBLE || n.ntype == number_type::FLOAT || 
           n.ntype == number_type::INT) {
             vi.vectorized_type = "";   // in principle vectorizable, don't know the type
-            vi.vector_length = 0;
+            vi.vector_size = 0;
             return vi.is_vectorizable = true;
       } else return vi.is_vectorizable = false;          // not known vectorizable type
     }
@@ -211,7 +211,7 @@ vectorization_info MyASTVisitor::inspect_field_type(Expr *fE) {
 
   QualType QT = tal.get(0).getAsType();
 
-  if (is_vectorizable(QT,einfo)) {
+  if (is_vectorizable_type(QT,einfo)) {
     llvm::errs() << "Type " << QT.getCanonicalType().getAsString() << " is vectorizable -> " << einfo.vectorized_type << '\n';
   }
   return einfo;
