@@ -45,10 +45,11 @@ protected:
 
   Rewriter &TheRewriter;
   ASTContext *Context;
+  PrintingPolicy PP;
   
 public:
-  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R) { 
-    Context=C; 
+  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R), PP(C->getLangOpts()) { 
+    Context=C;
   }
 
   template <unsigned N>
@@ -73,8 +74,7 @@ public:
   std::string get_expr_type(const Expr *e) {
     // This is somehow needed for printing type without "class" id
     // TODO: perhaps reanalyse and make more robust?
-    PrintingPolicy pp(Context->getLangOpts());
-    return e->getType().getUnqualifiedType().getAsString(pp);
+    return e->getType().getUnqualifiedType().getAsString(PP);
   }
 
 
@@ -83,21 +83,18 @@ public:
   /// the type string needs to begin with the string
 
   bool is_field_storage_expr(Expr *E) {
-    PrintingPolicy pp(Context->getLangOpts());
     return( E && 
-      E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_storage_type) == 0);
+      E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(field_storage_type) == 0);
   }
 
   bool is_field_expr(Expr *E) {
-    PrintingPolicy pp(Context->getLangOpts());
     return( E && 
-      E->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_type) == 0);
+      E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(field_type) == 0);
   }
 
   bool is_field_decl(ValueDecl *D) {
-    PrintingPolicy pp(Context->getLangOpts());
     return( D && 
-      D->getType().getCanonicalType().getUnqualifiedType().getAsString(pp).find(field_type) == 0);
+      D->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(field_type) == 0);
   }
 
   /// try to figure out whether expressions are duplicates
