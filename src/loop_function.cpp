@@ -41,7 +41,8 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   // don't inspect args for operator calls, assume it is done separately
   if (isa<CXXOperatorCallExpr>(Call)) return;
 
-
+#define LOOP_FUNC_DEBUG
+#ifdef LOOP_FUNC_DEBUG
   llvm::errs() << "LOOP FUNC " << D->getNameAsString() << " with "
   << D->getNumParams() << " parameters and " << Call->getNumArgs() << " arguments\n";
 
@@ -62,14 +63,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
     llvm::errs() << "Internal error: #params != #args, function " << D->getNameAsString() << '\n';
     exit(-1);
   }
-
-  // let's check if the definition is within writeBuf
-  // srcBuf fbuffer, * sb;
-  // if (writeBuf->is_in_range(D->getSourceRange())) sb = writeBuf;
-  // else {
-  //   fbuffer.create( &TheRewriter, D );
-  //   sb = &fbuffer;
-  // }
+#endif
   
 
   for( int i=0; i<Call->getNumArgs(); i++) {
@@ -87,11 +81,10 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
       output_only = true;
     }
     
-    if (output_only) llvm::errs() << "It is an out parameter!\n";
-
     bool is_lvalue = E->isLValue();
 
-    if (is_lvalue) llvm::errs() << " LVALUE\n";
+    // if (output_only) llvm::errs() << "It is an out parameter!\n";
+    // if (is_lvalue) llvm::errs() << " LVALUE\n";
 
     if (!is_lvalue && output_only) 
       reportDiag(DiagnosticsEngine::Level::Error,
@@ -99,13 +92,9 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
                  "'output_only' can be used only with lvalue reference");
      
     if (is_field_with_X_expr(E)) {
-
-        // Check for const qualifier OR that it is NOt a reference parameter
-        // (can change)
-        //if( !q.isConstQualified() && q.getTypePtr()->isReferenceType()) {
-          // Mark it as changed
-      llvm::errs() << "FIELD CAN CHANGE HERE!\n";
-      handle_field_parity_X_expr(E, is_lvalue, (is_lvalue && !output_only), true);
+      // Mark it as changed
+      // llvm::errs() << "FIELD CAN CHANGE HERE!\n";
+      handle_field_parity_X_expr(E, is_lvalue, (is_lvalue && !output_only), true, true);
     }
   }
 
@@ -144,11 +133,8 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 
 }
 
-// void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
-//   handle_function_call_in_loop(s,true,true);
-// }
 
-
+// this one not used now...
 
 void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
 
@@ -238,14 +224,14 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
       sfc.fullExpr = Call;
       sfc.scope = parsing_state.scope_level;
       sfc.name = name;
+      sfc.args = "";
       if (name == "coordinates") {
         sfc.replace_expression = "loop_lattice->coordinates";
       } else if (name == "parity") {
         sfc.replace_expression = "loop_lattice->site_parity";
       } else if (name == "coordinate") {
-        reportDiag(DiagnosticsEngine::Level::Error,
-          Call->getSourceRange().getBegin(),
-        "Method X.coordinate(dir) not yet implemented!  Use X.coordinates()[dir] instead");
+        sfc.replace_expression = "loop_lattice->coordinate";
+        sfc.args = get_stmt_str( MCall->getArg(0) );
       } else {
         reportDiag(DiagnosticsEngine::Level::Error,
           Call->getSourceRange().getBegin(),
