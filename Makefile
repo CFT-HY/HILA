@@ -104,7 +104,7 @@ OBJECTS = \
   $(BUILDDIR)/codegen.o \
   $(BUILDDIR)/codegen_cpu.o \
   $(BUILDDIR)/codegen_cuda.o \
-  $(BUILDDIR)/codegen_avx.o \
+  $(BUILDDIR)/codegen_avx_new.o \
   $(BUILDDIR)/codegen_openacc.o \
   $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/myastvisitor.o \
