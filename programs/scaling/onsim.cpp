@@ -167,9 +167,6 @@ void scaling_sim::write_moduli(){
 		double vol = (double) (config.l*config.l*config.l);
 		hila::output << t << "," << a << "," << config.lambda << "," << phimod/vol << "," << pimod/vol << ",";
 	}
-
-	synchronize();
-
 }
 
 void scaling_sim::write_energies(){
@@ -177,7 +174,6 @@ void scaling_sim::write_energies(){
 	double ss = config.sigma*config.sigma;
 
 	//non-weighted energies
-	double sumPhi = 0.0;
     double sumPi = 0.0; // 
    	double sumDiPhi = 0.0; //
     double sumV = 0.0; //
@@ -192,30 +188,44 @@ void scaling_sim::write_energies(){
     double w_sumPhiPi = 0.0;
 
 	onsites(ALL){
-		double v = 0;
-        cmplx<double> norm = phi[X].conj()*phi[X]; //calculate phi norm
-        sumV += 0.25*config.lambda*a*a*pow((norm.re - ss), 2.0); //reduce potential
-		sumPi += 0.5*(pi[X].conj()*pi[X]).re; //
+        double phinorm = (phi[X].conj()*phi[X]).re; 
+		double v = 0.25*config.lambda*a*a*pow((phinorm - ss), 2.0);
+		double pinorm = (pi[X].conj()*pi[X]).re;
 		double pPi = (phi[X].conj()*pi[X]).re;
+
+        sumV += v;
+		w_sumV += v*v;
+
+		sumPi += 0.5*pinorm; 
+		w_sumPi += 0.5*pinorm*v;
+
 		sumPhiPi += 0.5*pPi*pPi;
+		w_sumPhiPi += 0.5*pPi*pPi*v;
 	}
 
 	direction d;
 	foralldir(d){
 		onsites(ALL){
-			double pDphi = 0.0;
+			cmplx<double> norm = phi[X].conj()*phi[X];
+			double v = 0.25*config.lambda*a*a*pow((norm.re - ss), 2.0);
 			cmplx<double> diff_phi = (phi[X + d] - phi[X])/config.dx;
-			pDphi = 0.5*(diff_phi.conj()*phi[X]).re;
-			sumDiPhi += 0.5*(diff_phi.conj()*diff_phi).re; //reduce diPhi
-			sumPhiDiPhi += pDphi*pDphi;
+			double pDphi = 0.5*(diff_phi.conj()*phi[X]).re;
+
+			sumDiPhi += 0.5*(diff_phi.conj()*diff_phi).re; 
+			sumPhiDiPhi += pDphi*pDphi/norm.re;
+
+			w_sumDiPhi += 0.5*(diff_phi.conj()*diff_phi).re*v; 
+			w_sumPhiDiPhi += pDphi*pDphi/norm.re*v;
 		}
 	}
 
 	if (mynode() == 0){
 		double vol = (double) config.l*config.l*config.l;
-		//print all non-weighted energies
-		hila::output << sumPi/vol << "," << sumDiPhi/vol << "," << sumV/vol << ',';
-		hila::output << sumPhiPi/vol << "," << sumPhiDiPhi/vol << '\n';
+		hila::output << sumPi/vol << "," << w_sumPi/vol << ",";
+		hila::output << sumDiPhi/vol << "," << w_sumDiPhi/vol << ","; 
+		hila::output << sumPhiPi/vol << "," << w_sumPhiPi/vol << ","; 
+		hila::output << sumPhiDiPhi/vol << "," << w_sumPhiDiPhi/vol << ","; 
+		hila::output << sumV/vol << "," << w_sumV/vol << "\n"; 
 	}
 }
 
@@ -250,7 +260,6 @@ void scaling_sim::next(){
 	t += config.dt;
 }
 
-//measure and output the other energies
 //write measurements into a specified output file from the command line
 
 int main(int argc, char ** argv){
