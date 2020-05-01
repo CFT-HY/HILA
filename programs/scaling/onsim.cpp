@@ -103,7 +103,7 @@ void scaling_sim::initialize(){
 
 		case 1 : {
 			onsites(ALL){
-				element<coordinate_vector> coord = coordinates(X); //coordinates of the current lattice sit$
+				element<coordinate_vector> coord = coordinates(X); //coordinates of the current lattice site
 				pi[X] = cmplx<double>(0.0, 0.0);
 				phi[X].re = s*sqrt(1-epsilon*epsilon*sin(2.0*M_PI*coord[0]*m/N)*sin(2.0*M_PI*coord[0]*m/N));
 				phi[X].im = s*epsilon*sin(2.0*M_PI*coord[0]*m/N);
@@ -117,6 +117,7 @@ void scaling_sim::initialize(){
 		}
 
 		default : { 
+			
 			onsites(ALL){
 				double theta, r;
 				r = config.initialModulus*s;
@@ -125,26 +126,24 @@ void scaling_sim::initialize(){
 				phi[X] = val.polar(r, theta);
 				pi[X] = 0; 
 			}
+			//smoothing iterations
+			for (int iter = 0; iter < config.smoothing; iter++){
+				direction d;
+				pi[ALL] = 6.0*phi[X];
+				foralldir(d){
+					pi[ALL] = pi[X] + phi[X + d];
+				}
+				onsites(ALL){
+					cmplx<double> norm = pi[X].conj()*pi[X];
+					if (norm.re == 0) norm = cmplx<double>(1.0, 0.0);
+					phi[X] = pi[X]/norm;
+					pi[X] = cmplx<double>(0.0, 0.0);
+				}
+			}
+
 			break;
 		}
-
 	}
-
-	//smoothing iterations
-	for (int iter = 0; iter < config.smoothing; iter++){
-		direction d;
-		pi[ALL] = 6.0*phi[X];
-		foralldir(d){
-			pi[ALL] = pi[X] + phi[X + d];
-		}
-		onsites(ALL){
-			cmplx<double> norm = pi[X].conj()*pi[X];
-			if (norm.re == 0) norm = cmplx<double>(1.0, 0.0);
-			phi[X] = pi[X]/norm;
-			pi[X] = cmplx<double>(0.0, 0.0);
-		}
-	}
-
 }
 
 void scaling_sim::write_moduli(){
