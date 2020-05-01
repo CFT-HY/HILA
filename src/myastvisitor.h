@@ -25,6 +25,7 @@
 //////////////////////////////////////////////
 
 
+
 class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisitor> {
 
 private:
@@ -54,7 +55,6 @@ public:
     parsing_state.accept_field_parity = false;
     parsing_state.loop_function_next = false;
   }
-
 
   bool shouldVisitTemplateInstantiations() const { return true; }
   // is false by default, but still goes?
@@ -142,7 +142,7 @@ public:
 
   void check_var_info_list();
   
-  bool handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X);
+  bool handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X, bool is_func_arg = false);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op, Stmt * assign_stmt = nullptr);
   void handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
@@ -163,10 +163,15 @@ public:
 
   // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
+  void handle_loop_function_args(FunctionDecl *D, CallExpr *Call);
 
   void handle_member_call_in_loop(Stmt * s);
 
   void handle_constructor_in_loop(Stmt * s);
+
+  bool check_argument( Expr * E, bool is_lvalue, bool output_only,
+       argument_info & ai, std::vector<var_info *> & lvalue_refs);
+
 
   bool loop_function_check(Decl *fd);
 
@@ -209,6 +214,8 @@ public:
   std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait);
   void backend_handle_loop_function(FunctionDecl *fd);
 
+  bool check_loop_vectorizable(Stmt *S, int & vector_size, std::string & diag);
+
   /// Generate a header for starting communication and marking fields changed
   std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
   std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb);
@@ -224,8 +231,8 @@ public:
 
   /// inspect if the type name is vectorizable
   /// returns the vectorized type in vectorized_type, if it is
-  bool is_vectorizable(const std::string & type_name, vectorization_info & vi);
-  bool is_vectorizable(const QualType & QT, vectorization_info & vi);
+  bool is_vectorizable_type(const std::string & type_name, vectorization_info & vi);
+  bool is_vectorizable_type(const QualType & QT, vectorization_info & vi);
 
   /// Check if the field type is vectorizable and how
   vectorization_info inspect_field_type(Expr *fE);
