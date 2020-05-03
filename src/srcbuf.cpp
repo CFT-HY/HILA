@@ -105,11 +105,11 @@ bool srcBuf::is_in_range(const SourceRange &sr) {
   int l = get_offset(sr.getBegin()) - first_offset;
   if (l < 0 || l >= true_size) return false;
   l += myRewriter->getRangeSize(sr) - 1;
-  if (l >= true_size) {
-    llvm::errs() << "IN_RANGE ERROR, index " << l << " true_size " << true_size << '\n';
-    llvm::errs() << "BUFFER IS " << dump() << '\n';
-    llvm::errs() << "AND SOURCE " << myRewriter->getRewrittenText(sr) << '\n';
-  }
+  // if (l >= true_size) {
+  //   llvm::errs() << "IN_RANGE ERROR, index " << l << " true_size " << true_size << '\n';
+  //   llvm::errs() << "BUFFER IS " << dump() << '\n';
+  //   llvm::errs() << "AND SOURCE " << myRewriter->getRewrittenText(sr) << '\n';
+  // }
   return (l < true_size); 
 }
 
