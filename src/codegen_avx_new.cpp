@@ -313,7 +313,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
        << fieldname << ".fs->vector_lattice;\n";
 
   // Get a pointer to the neighbours
-  code << "unsigned (* RESTRICT neighbours)[NDIRS] = loop_lattice->neighbours;\n";
+  code << "unsigned * RESTRICT * RESTRICT neighbours = loop_lattice->neighbours;\n";
 
   // Set the start and end points
   code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";
@@ -357,7 +357,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
 
         code << l.vecinfo.vectorized_type << " " 
              << d.name_with_dir
-             << " = " << l.new_name << ".get_vector_at(neighbours[" 
+             << " = " << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type << ">(neighbours[" 
              << dirname << "][" << looping_var << "]);\n";
 
         // and replace references in loop body
@@ -370,7 +370,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
     if (l.is_read_atX) {
       code << l.vecinfo.vectorized_type << " "
            << l.loop_ref_name << " = " 
-           << l.new_name << ".get_vector_at(" << looping_var << ");\n";
+           << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type << ">(" << looping_var << ");\n";
     } else if (l.is_written) {
       code << l.vecinfo.vectorized_type << " "
            << l.loop_ref_name << ";\n";
@@ -393,7 +393,9 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
     } else if (vi.is_site_dependent) {
       // now must be loop-local vectorized var
       // change declaration - name need not be changed
-      loopBuf.replace( vi.decl->getSourceRange(), vi.vecinfo.vectorized_type );
+      // loopBuf.replace( vi.decl->getSourceRange(), vi.vecinfo.vectorized_type );
+      loopBuf.replace( vi.decl->getTypeSourceInfo()->getTypeLoc().getSourceRange(),
+                       vi.vecinfo.vectorized_type );
     }
   }
 
@@ -452,8 +454,8 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
   // Add calls to setters 
   for (field_info & l : field_info_list){
     if(l.is_written) {
-      code << l.new_name << ".set_vector_at(" << l.loop_ref_name << ", " 
-           << looping_var << ");\n";
+      code << l.new_name << ".set_vector_at<" << l.vecinfo.vectorized_type << ">(" 
+           << l.loop_ref_name << ", " << looping_var << ");\n";
     }
   }
 

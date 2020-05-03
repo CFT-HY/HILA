@@ -1270,14 +1270,19 @@ bool MyASTVisitor::check_field_ref_list() {
       field_info lfv;
       lfv.old_name = name;
       lfv.type_template = get_expr_type(p.nameExpr);
-      lfv.element_type = p.nameExpr->getType().getCanonicalType().getAsString(PP);
       if (lfv.type_template.find("field",0) != 0) {
         reportDiag(DiagnosticsEngine::Level::Error,
-                   p.nameExpr->getSourceRange().getBegin(),
+                   p.nameExpr->getSourceRange().getBegin(),     
                    "Confused: type of field expression?");
         no_errors = false;
       }
       lfv.type_template.erase(0,5);  // Remove "field"  from field<T>
+
+      // get also the fully canonical field<T>  type.
+      lfv.element_type = p.nameExpr->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
+      int a = lfv.element_type.find('<')+1;
+      int b = lfv.element_type.rfind('>') - a;
+      lfv.element_type = lfv.element_type.substr(a,b); 
 
       lfv.nameExpr = p.nameExpr;     // store the first nameExpr to this field
       

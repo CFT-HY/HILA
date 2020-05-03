@@ -117,8 +117,6 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
 
     // and finally replace references in body 
     for (field_ref * ref : l.ref_list) if (!ref->is_direction) {
-      assert(loopBuf.is_in_range(ref->fullExpr->getSourceRange()) && "Internal error: not in loopBuf range"); 
-      
       loopBuf.replace(ref->fullExpr, l.loop_ref_name);
     }
   }
