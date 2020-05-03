@@ -1,3 +1,4 @@
+
 #include "../plumbing/defs.h"
 #include "../datatypes/cmplx.h"
 
@@ -9,8 +10,6 @@ cmplx<double> d(cmplx<double> x) {return x;}
 cmplx<double> e(cmplx<double> x) {return d(x);}
 // #pragma transformer ast dump
 cmplx<double> f(const cmplx<double> & x) { return e(x);}
-
-
 
 
 
@@ -54,6 +53,7 @@ int main()
   field<cmplx<double>> a,b,c;
   int i;
   field<double> t(1.0),s;
+  field<cmplx<float>> kissa;
 
   auto y = X;
   
@@ -78,8 +78,10 @@ int main()
   double dvar;
   onsites(p) {
 
+    kissa[X] = 2;
     A[X].setter();
-    s[X] = xyz(t[X]);
+    auto tv = t[X];
+    s[X] = xyz(tv);
     // t[X] = tmp;
     
   }

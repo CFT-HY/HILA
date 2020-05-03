@@ -35,8 +35,8 @@ template<typename T>
 __device__ __host__ auto field_storage<T>::get(const int i, const int field_alloc_size) const {
   assert( i < field_alloc_size);
   T value;
-  real_t *value_f = static_cast<real_t *>(static_cast<void *>(&value));
-  real_t *fp = static_cast<real_t *>(fieldbuf);
+  real_t * RESTRICT value_f = static_cast<real_t *>(static_cast<void *>(&value));
+  real_t * RESTRICT fp = static_cast<real_t *>(fieldbuf);
   for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
      value_f[e] = fp[e*field_alloc_size + i];
    }
@@ -48,8 +48,8 @@ template<typename T>
 template<typename A>
 __device__ __host__ inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size){
   assert( i < field_alloc_size);
-  real_t *value_f = (real_t *)(&value);
-  real_t *fp = static_cast<real_t *>(fieldbuf);
+  real_t * RESTRICT value_f = (real_t *)(&value);
+  real_t * RESTRICT fp = static_cast<real_t *>(fieldbuf);
   for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
     fp[e*field_alloc_size + i] = value_f[e];
   }

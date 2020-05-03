@@ -28,7 +28,7 @@ struct vectorized_lattice_struct  {
     // offsets to boundary halos
     bool is_boundary_permutation[NDIM];
     int boundary_permutation[NDIRS][vector_size];
-    unsigned halo_offset[NDIRS], halo_offset_odd[NDIRS], n_halo_offset[NDIRS];
+    unsigned halo_offset[NDIRS], halo_offset_odd[NDIRS], n_halo_vectors[NDIRS];
     unsigned * RESTRICT halo_index[NDIRS];
 
     // move data from receive buffer -- sending is fine as it is
@@ -38,7 +38,7 @@ struct vectorized_lattice_struct  {
     unsigned recv_list_size[NDIRS];
     
     // coordinate offsets to nodes
-    std::array<vector_base_type<int,vector_size>::type, NDIM> coordinate_offset;
+    typename vector_base_type<int,vector_size>::type coordinate_offset[NDIM];
     coordinate_vector * RESTRICT coordinate_base;
 
     unsigned * RESTRICT neighbours[NDIRS];
@@ -73,12 +73,12 @@ struct vectorized_lattice_struct  {
       lattice =  _lattice;
 
       /// vector
-      v_sites = lattice->this_node.sites / vector_size;
+      v_sites = lattice->local_volume() / vector_size;
       subdivisions   = lattice->this_node.subnodes.divisions;
       subnode_size   = lattice->this_node.subnodes.size;
       subnode_origin = lattice->this_node.min;
 
-      if ( vector_size == VECTOR_SIZE/2 ) {
+      if ( vector_size == VECTOR_SIZE/sizeof(double) ) {
         for (int i=NDIM-1; i>=0; i--) {
           if (lattice->this_node.subnodes.divisions[i] > 1) {
             subdivisions[i] /= 2;
@@ -87,6 +87,9 @@ struct vectorized_lattice_struct  {
           }
         }
       }
+
+      hila::output << "Setting up lattice with vector of " << vector_size << '\n';
+
 
       // boundary permutation maps subnodes to vectors
       // fastest moving division to smallest dimension
@@ -111,10 +114,15 @@ struct vectorized_lattice_struct  {
           boundary_permutation[d][i] = (i+step) % sdmul + (i/sdmul) * sdmul;
         step *= subdivisions[d];
 
+        hila::output << " Boundary perm to direction " << d << ":  ";
+        for (int i=0; i<vector_size; i++) hila::output << ' ' << boundary_permutation[d][i];
+        hila::output << '\n';
+
         // permutation to oppsitie direction is the inverse, thus:
         for (int i=0; i<vector_size; i++) 
           boundary_permutation[-d][ boundary_permutation[d][i] ] = i;
       }
+
 
 
       // reserve extra storage for permutation halo sites
@@ -135,7 +143,8 @@ struct vectorized_lattice_struct  {
         halo_offset[d] = c_offset;
         for (int i=0; i<v_sites; i++) {
           int j = vector_size*i;   // the "original lattice" index for the 1st site of vector
-          coordinate_vector here = lattice->this_node.coordinates[j];
+          coordinate_vector here = lattice->coordinates(j);
+          // std::cout << here << '\n';
 
           if (is_on_first_subnode(here+d)) {
             assert(lattice->neighb[d][j] % vector_size == 0);   // REMOVE THIS LATER, consistency check
@@ -144,16 +153,23 @@ struct vectorized_lattice_struct  {
             neighbours[d][i] = c_offset++;  // now points beyond the lattice
           }
         }
-        n_halo_offset[d] = c_offset - halo_offset[d];
-        halo_offset_odd[d] = halo_offset[d] + n_halo_offset[d]/2;
+        n_halo_vectors[d] = c_offset - halo_offset[d];
+        halo_offset_odd[d] = halo_offset[d] + n_halo_vectors[d]/2;
+        assert(n_halo_vectors[d] % 2 == 0);
 
         // set also the index array, if needed
-        if (n_halo_offset[d] > 0) {
-          halo_index[d] = (unsigned *)memalloc(n_halo_offset * sizeof(unsigned));
+        // halo_index[d] points to the subnode modded neighbour site to dir d, if 
+        // there is boundary twist (meaning there are on-node subnodes to this dir)
+        // we'll use the standard neighb array to do this.
+        if (n_halo_vectors[d] > 0 && is_boundary_permutation[abs(d)]) {
+          halo_index[d] = (unsigned *)memalloc(n_halo_vectors[d] * sizeof(unsigned));
           int j=0;
           for (int i=0; i<v_sites; i++) {
-            if (neighbours[d][i] >= v_sites) halo_index[d][j++] = i;
+            if (neighbours[d][i] >= v_sites) {
+              halo_index[d][j++] = lattice->neighb[d][i*vector_size]/vector_size;
+            }
           }
+          assert( j == n_halo_vectors[d] );
         }
       }
 
@@ -223,7 +239,7 @@ struct vectorized_lattice_struct  {
     /// this gives the neighbour when the lattice is traversed
     /// site-by-site.  Now idx is the "true" site index, not vector index
     unsigned site_neighbour(direction d, int idx) {
-      return neighbours[d][idx/vector_size] + idx % vector_size;
+      return vector_size * neighbours[d][idx/vector_size] + idx % vector_size;
     }
 
     /// Return the number of sites that need to be allocated 
@@ -236,7 +252,7 @@ struct vectorized_lattice_struct  {
     /// Return the coordinates of each vector nested as
     /// coordinate[direction][vector_index]
     auto coordinates(int idx) {
-      std::array<vector_base_type<int,vector_size>::type>,NDIM> r;
+      std::array<typename vector_base_type<int,vector_size>::type ,NDIM> r;
       foralldir(d) r[d] = coordinate_offset[d] + coordinate_base[idx][d];
       return r;
     }
@@ -251,7 +267,7 @@ struct vectorized_lattice_struct  {
     }
 
     /// First index in a lattice loop
-    int loop_begin( parity P) {
+    int loop_begin( ::parity P) {
       if(P==ODD){
         return v_sites/2;
       } else {
@@ -260,7 +276,7 @@ struct vectorized_lattice_struct  {
     }
 
     // Last index in a lattice loop
-    int loop_end( parity P) {
+    int loop_end( ::parity P) {
       if(P==EVEN){
         return v_sites/2;
       } else {

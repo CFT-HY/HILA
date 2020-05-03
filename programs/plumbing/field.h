@@ -7,9 +7,13 @@
 #include <type_traits>
 
 #include "../plumbing/globals.h"
+
 #include "../plumbing/defs.h"
 #include "../plumbing/field_storage.h"
 #include "../plumbing/lattice.h"
+
+#include "../plumbing/backend_vector/vector_types.h"
+
 
 #ifdef USE_MPI
 #include "../plumbing/comm_mpi.h"
@@ -50,6 +54,10 @@ class field {
     public:
       field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
       lattice_struct * lattice;
+#ifdef VECTORIZED
+      // get a direct ptr from here too, ease access
+      vectorized_lattice_struct< vector_info<T>::vector_size > * vector_lattice;
+#endif
       unsigned assigned_to;           // keeps track of first assignment to parities
       status move_status[3][NDIRS];     // is communication done
 #ifdef USE_MPI
@@ -57,9 +65,9 @@ class field {
       MPI_Request send_request[3][NDIRS];
 #ifndef VANILLA
       // vanilla needs no special receive buffers
-      char * receive_buffer[NDIRS];
+      T * receive_buffer[NDIRS];
 #endif
-      char * send_buffer[NDIRS];
+      T * send_buffer[NDIRS];
 
       void initialize_communication(){
         for (int d=0; d<NDIRS; d++) {
@@ -104,6 +112,7 @@ class field {
       }
       void free_payload() { payload.free_field(); }
 
+#ifndef VECTORIZED
       /// Getter for an individual elements. Will not work in CUDA host code,
       /// but must be defined
       inline auto get(const int i) const {
@@ -114,25 +123,81 @@ class field {
       inline void set(const A & value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
       }
+#else
+      template <typename vecT>
+      inline vecT get_vector(const int i) const {
+        return payload.template get_vector<vecT>( i );
+      }
+      inline T get_element(const int i) const {
+        return payload.get_element( i );
+      }
+
+      template <typename vecT>
+      inline void set_vector(const vecT & val, const int i) {
+        return payload.set_vector( val, i );
+      }
+      inline void set_element(const T & val, const int i) {
+        return payload.set_element( val, i );
+      }
+#endif
 
       /// Gather boundary elements for communication
-      void gather_comm_elements(char * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, parity par) const {
+      void gather_comm_elements(T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, parity par) const {
         payload.gather_comm_elements(buffer, to_node, par, lattice);
-      };
+      }
 
       /// Place boundary elements from neighbour
-      void place_comm_elements(char * RESTRICT buffer, const lattice_struct::comm_node_struct & from_node, parity par){
+      void place_comm_elements(T * RESTRICT buffer, const lattice_struct::comm_node_struct & from_node, parity par){
         payload.place_comm_elements(buffer, from_node, par, lattice);
-      };
+      }
       
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
         payload.set_local_boundary_elements(dir, par, lattice);
-      };
+      }
 
       /// Gather a list of elements to a single node
       void gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
       void send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int  root=0);
+
+      /// get the receive buffer pointer for the communication.    
+      T * get_receive_buffer( direction d, parity par,
+                              const lattice_struct::comm_node_struct & from_node ) {
+#if defined(VANILLA)
+
+        return (T *)payload.get_buffer() + from_node.offset(par);
+
+#elif defined(CUDA)
+
+        if (receive_buffer[d] == nullptr) 
+          receive_buffer[d] = (T *)memalloc( from_node.sites * sizeof(T) );
+        return receive_buffer[d];
+
+#elif defined(VECTORIZED)
+
+        if constexpr (!is_vectorizable_type<T>::value) {
+          // use vanilla type
+          return (T *)payload.get_buffer() + from_node.offset(par);
+        } else {
+          int offs = 0;
+          if (par == ODD) offs = from_node.sites/2;
+
+          if (vector_lattice->is_boundary_permutation[abs(d)]) {
+            // extra copy operation needed
+            if (receive_buffer[d] == nullptr) { 
+              receive_buffer[d] = (T *)memalloc( from_node.sites * sizeof(T) );
+            }
+            return receive_buffer[d] + offs;
+          } else {
+            // directly to boundary buffer
+            constexpr int vector_size = vector_info<T>::vector_size;
+            return ((T *)payload.get_buffer()
+                    + (vector_lattice->halo_offset[d]*vector_size + offs) );
+          }
+        }
+#endif
+      } // end of get_receive_buffer
+
   };
 
   static_assert( std::is_pod<T>::value, "Field expects only pod-type elements (plain data): default constructor, copy and delete");
@@ -197,6 +262,10 @@ class field {
     fs->initialize_communication();
     mark_changed(ALL);      // guarantees communications will be done
     fs->assigned_to = 0;    // and this means that it is not assigned
+
+    #ifdef VECTORIZED
+    fs->vector_lattice = lattice->backend_lattice->get_vectorized_lattice< vector_info<T>::vector_size >();
+    #endif
   }
 
   void free() {
@@ -213,6 +282,8 @@ class field {
   bool is_initialized(parity p) const { 
     return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
   }
+
+
   
   status move_status(parity p, int d) const { 
     assert(parity_bits(p) && d>=0 && d<NDIRS);
@@ -301,17 +372,35 @@ class field {
   element<T>& operator[] (const X_plus_direction p) const;   // f[X+dir]
   element<T>& operator[] (const X_plus_offset p) const;      // f[X+dir1+dir2] and others
 
-  #if defined(VANILLA)
+
   // TEMPORARY HACK: return ptr to bare array
-  inline auto field_buffer() const { return this->fs->payload.get_buffer(); }
-  #endif
+  inline auto field_buffer() const { return fs->payload.get_buffer(); }
 
+
+#ifndef VECTORIZED
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  inline auto get_value_at(int i) const { return this->fs->get(i); }
+  inline auto get_value_at(int i) const { return fs->get(i); }
+#else
+  inline auto get_value_at(int i) const { return fs->get_element(i); }
+  template <typename vecT>
+  inline auto get_vector_at(int i) const { return fs->template get_vector<vecT>(i); }
+  inline auto get_value_at_nb_site(direction d, int i) const {
+      return fs->get_element( fs->vector_lattice->site_neighbour(d,i) );
+  }
+#endif
 
+#ifndef VECTORIZED
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
   template<typename A>
-  inline void set_value_at(const A & value, int i) { this->fs->set( value, i); }
+  inline void set_value_at(const A & value, int i) { fs->set( value, i); }
+
+#else
+  template<typename vecT>
+  inline void set_vector_at(const vecT & value, int i) { fs->set_vector( value, i); }
+
+  template<typename A>
+  inline void set_value_at(const A & value, int i) { fs->set_element( value, i); }
+#endif
 
   // fetch the element at this loc
   // T get(int i) const;
@@ -638,23 +727,15 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
   constexpr int size = sizeof(T);
 
-  char * receive_buffer;
-  char * send_buffer;
+  T * receive_buffer;
+  T * send_buffer;
 
   if (from_node.rank != mynode()) {
 
     // HANDLE RECEIVES: get node which will send here
 
-#ifdef VANILLA
-    // in vanilla code the receive buffer is the field buffer, set offsets
-    // field_buffer gives the right type, so addition gives the right offset without size
-    receive_buffer = ((char *)field_buffer()) + from_node.offset(par) * size;
-#else
-    if (fs->receive_buffer[d] == nullptr) {
-      fs->receive_buffer[d] = (char *)memalloc( size*from_node.sites);
-    }
-    receive_buffer = fs->receive_buffer[d] + from_node.offset(par) * size;
-#endif
+    // buffer can be separate or in field buffer
+    receive_buffer = fs->get_receive_buffer(d,par,from_node);
   
     unsigned sites = from_node.n_sites(par);
 
@@ -668,15 +749,14 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
     unsigned sites = to_node.n_sites(par);
 
     if(fs->send_buffer[d] == nullptr)
-      fs->send_buffer[d] = (char *)memalloc( to_node.sites*size );
-    send_buffer = fs->send_buffer[d] + to_node.offset(par) * size;
+      fs->send_buffer[d] = (T *)memalloc( to_node.sites*size );
+    send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
     fs->gather_comm_elements(send_buffer, to_node, par);
  
-    MPI_Isend( send_buffer, sites*size, MPI_BYTE, to_node.rank, 
+    MPI_Isend( (char *)send_buffer, sites*size, MPI_BYTE, to_node.rank, 
                tag, lattice->mpi_comm_lat, &fs->send_request[par_i][d]);
   }
-
 
   return get_dir_mask(d);
 
@@ -762,7 +842,7 @@ void field<T>::wait_get(direction d, parity p) const {
       MPI_Wait( &fs->receive_request[par_i][d], &status);
 
 #ifndef VANILLA
-      fs->place_comm_elements( fs->receive_buffer[d], from_node, par);
+      fs->place_comm_elements( fs->get_receive_buffer(d,par,from_node), from_node, par);
       hila::output << "CALLING PLACE_COMM\n";
 #endif
     }
@@ -823,7 +903,7 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordina
   }
   
   std::vector<T> send_buffer(index_list.size());
-  payload.gather_elements((char*) send_buffer.data(), index_list, lattice);
+  payload.gather_elements((T*) send_buffer.data(), index_list, lattice);
   if(mynode() != root && node_list[mynode()] > 0){
     MPI_Send((char*) send_buffer.data(), node_list[mynode()]*sizeof(T), MPI_BYTE, root, mynode(), MPI_COMM_WORLD);
   }
@@ -857,7 +937,7 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
   }
 
   std::vector<T> recv_buffer(index_list.size());
-  payload.gather_elements((char*) recv_buffer.data(), index_list, lattice);
+  payload.gather_elements((T*) recv_buffer.data(), index_list, lattice);
   if(mynode() != root && node_list[mynode()] > 0){
     MPI_Status status;
     MPI_Recv((char*) recv_buffer.data(), node_list[mynode()]*sizeof(T), MPI_BYTE, root, mynode(), MPI_COMM_WORLD, &status);
@@ -872,7 +952,7 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
       buffer += node_list[n]*sizeof(T);
     }
   }
-  payload.place_elements((char*) recv_buffer.data(), index_list, lattice);
+  payload.place_elements((T*) recv_buffer.data(), index_list, lattice);
 }
 
 
@@ -886,7 +966,7 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordina
     index_list.push_back(lattice->site_index(c));
   }
   
-  payload.gather_elements(buffer, index_list, lattice);
+  payload.gather_elements((T*)buffer, index_list, lattice);
 }
 
 
@@ -897,7 +977,7 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
     index_list.push_back(lattice->site_index(c));
   }
   
-  payload.place_elements(buffer, index_list, lattice);
+  payload.place_elements((T*)buffer, index_list, lattice);
 }
 
 #endif

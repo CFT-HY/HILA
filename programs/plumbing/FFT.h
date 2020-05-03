@@ -135,7 +135,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
         // Collect the data to node n
         char * sendbuf = (char*) send_buffer.data()+root*elements*local_sites;
-        read_pointer->fs->payload.gather_elements(sendbuf, sitelist[n].data(), sitelist[n].size(), lattice);
+        read_pointer->fs->payload.gather_elements((T*)sendbuf, sitelist[n].data(), sitelist[n].size(), lattice);
         MPI_Gather( sendbuf, local_sites*sizeof(T), MPI_BYTE, 
                    column.data(), local_sites*sizeof(T), MPI_BYTE,
                    root, column_communicator);
@@ -166,7 +166,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         MPI_Scatter( column.data(), local_sites*sizeof(T), MPI_BYTE, 
                    sendbuf, local_sites*sizeof(T), MPI_BYTE,
                    root, column_communicator);
-        result.fs->payload.place_elements(sendbuf, sitelist[n].data(), sitelist[n].size(), lattice);
+        result.fs->payload.place_elements((T*)sendbuf, sitelist[n].data(), sitelist[n].size(), lattice);
       }
 
       c+=n;

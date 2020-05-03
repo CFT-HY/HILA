@@ -21,7 +21,8 @@ void lattice_struct::setup_layout()
   coordinate_vector nodesiz;
 
   output0 << "------------------------------------------------------------\n";
-  output0 << "LAYOUT: vectorized lattice\nvector length " << VECTOR_SIZE*8 << " bits = "
+  output0 << "LAYOUT: subnode lattice, with " << VECTOR_SIZE/sizeof(float) << " subnodes\n"
+              << "Enabled vector length " << VECTOR_SIZE*8 << " bits = "
               << VECTOR_SIZE/sizeof(double) << " doubles or " 
               << VECTOR_SIZE/sizeof(float) << " floats/ints\n";
   output0 << "Lattice size ";

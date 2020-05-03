@@ -1,55 +1,21 @@
 #ifndef VECTOR_TYPES_H
 #define VECTOR_TYPES_H
 
-/// is_vectorizable_type<T>::value  is always false if the target is not vectorizable
 
+
+/// is_vectorizable_type<T>::value  is always false if the target is not vectorizable
 template<typename T, typename A=void >
 struct is_vectorizable_type {
   static constexpr bool value = false;
 };
 
 #ifdef VECTORIZED
-///  is_vectorizable_type<T>::value is true if the base_type_struct<T>::type exists
+///  specialize is_vectorizable_type<T>::value to true if the base_type_struct<T>::type exists 
 template<typename T>
 struct is_vectorizable_type<T, typename std::enable_if_t<std::is_arithmetic<typename base_type_struct<T>::type>::value>> {
   static constexpr bool value = true;
 };
 
-#endif
-
-/// Construct the vector info for the type.
-/// first, if the type is not vectorizable
-template<typename T, typename A=void>
-struct vector_info {
-  static constexpr bool is_vectorizable = false;
-  using base_type = T;
-  // Find vector length
-  static constexpr int vector_size = 1;
-  // Find the vector type from above
-  using type = T;
-  // Number of elements in the full type
-  static constexpr int elements = 1;
-  // Size of the base type
-  static constexpr int base_type_size = sizeof(base_type);
-};
-
-#ifdef VECTORIZED
-
-/// and the same for vectorizable type
-template<typename T>
-struct vector_info<T, typename std::enable_if_t<std::is_arithmetic<typename base_type_struct<T>::type>::value>> {
-  static constexpr bool is_vectorizable = true;
-  // Get base type first
-  using base_type = typename base_type_struct<T>::type;
-  // Find vector length
-  static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
-  // Find the vector type from above
-  using type = typename vector_base_type<base_type, vector_size>::type;
-  // Number of elements in the full type
-  static constexpr int elements = sizeof(T)/sizeof(base_type);
-  // Size of the base type
-  static constexpr int base_type_size = sizeof(base_type);
-};
 
 /// do forward definition here, enables inclusion
 template <int vector_size>
@@ -104,6 +70,44 @@ struct vector_base_type<coordinate_vector, 8> {
   using type = Vec8i;
 };
 
+#endif // VECTORIZED
+
+/// Construct the vector info for the type.
+/// first, if the type is not vectorizable
+template<typename T, typename A=void>
+struct vector_info {
+  static constexpr bool is_vectorizable = false;
+  using base_type = T;
+  // Find vector length
+  static constexpr int vector_size = 1;
+  // Find the vector type from above
+  using type = void;
+  // Number of elements in the full type
+  static constexpr int elements = 1;
+  // Size of the base type
+  static constexpr int base_type_size = sizeof(base_type);
+};
+
+#ifdef VECTORIZED
+
+/// and specializre the same for vectorizable type
+template<typename T>
+struct vector_info<T, typename std::enable_if_t<std::is_arithmetic<typename base_type_struct<T>::type>::value>> {
+  static constexpr bool is_vectorizable = true;
+  // Get base type first
+  using base_type = typename base_type_struct<T>::type;
+  // Find vector length
+  static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
+  // Find the vector type from above
+  using type = typename vector_base_type<base_type, vector_size>::type;
+  // Number of elements in the full type
+  static constexpr int elements = sizeof(T)/sizeof(base_type);
+  // Size of the base type
+  static constexpr int base_type_size = sizeof(base_type);
+};
+
 #endif  // VECTORIZED
+
+
 
 #endif
