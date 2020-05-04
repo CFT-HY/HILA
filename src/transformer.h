@@ -68,6 +68,7 @@ namespace cmdline {
   extern llvm::cl::opt<bool> no_interleaved_comm;
   extern llvm::cl::opt<bool> no_mpi;
   extern llvm::cl::opt<int>  verbosity;
+  extern llvm::cl::opt<int>  avx_info;
 };
 
 namespace state {
@@ -174,7 +175,7 @@ enum class number_type {INT, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
 
 struct vectorization_info {
   bool is_vectorizable;
-  int vector_length;
+  int vector_size;
   number_type basetype;
   std::string vectorized_type;
 };
@@ -185,6 +186,7 @@ struct vectorization_info {
   
 struct field_info {
   std::string type_template;             // This will be the <T> part of field<T>
+  std::string element_type;              // type of the element of field
   std::string old_name;                  // "name" of field variable, can be an expression
   std::string new_name;                  // replacement field name
   std::string loop_ref_name;             // var which refers to payload, loop_ref_name v = new_name->fs.payload
@@ -238,9 +240,10 @@ struct var_info {
   std::string reduction_name;               // name of reduction variable
   std::vector<var_info *> dependent_vars;   // vector of var_infos which may affect is_site_dependent
   reduction reduction_type;                 // what type of reduction
+  vectorization_info vecinfo;               // info about vectorization
   bool is_loop_local;                       // true if defined inside loop
   bool is_assigned;                         // is the var assigned to
-  bool is_site_dependent;                     // is the value of variable site dependent
+  bool is_site_dependent;                   // is the value of variable site dependent
 };
 
 // Stores onformation for a single reference to an array
@@ -279,6 +282,7 @@ struct special_function_call {
   std::string full_expr;
   std::string name;
   std::string replace_expression;
+  std::string args;
   bool add_loop_var;
   int scope;
 };
@@ -292,6 +296,22 @@ struct loop_info_struct {
 
   bool has_site_dependent_conditional;           // if, for, while w. site dep. cond?
   std::vector<var_info *> conditional_vars;      // may depend on variables
+  Expr * condExpr;
+};
+
+
+struct argument_info {
+  Expr * E;
+  std::vector<var_info *> dependent_vars;
+  bool is_lvalue;
+  bool is_site_dependent;
+};
+
+struct call_info_struct {
+  CallExpr * call;
+  std::vector<argument_info> arguments;
+  bool is_method;
+  argument_info method;
 };
 
 

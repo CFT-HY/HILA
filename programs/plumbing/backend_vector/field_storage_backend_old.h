@@ -5,8 +5,7 @@
 #include "../lattice.h"
 #include "../field_storage.h"
 #include "vector_types.h"
-#include "../coordinates.h"
-#include "defs.h"
+
 
 
 
@@ -67,10 +66,20 @@ template <typename T>
 using vector_type = typename vectorize_struct<T,vector_info<T>::vector_size>::type;
 
 
+
+
+
+
+
 template<typename T>
 void field_storage<T>::allocate_field( lattice_struct * lattice ) {
-  fieldbuf = (T *)memalloc( lattice->backend_lattice->
-                            get_vectorized_lattice<vector_info<T>::vector_size>()->field_alloc_size()*sizeof(T) );
+  constexpr int vector_size = vector_info<T>::vector_size;
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_size>();
+
+  int size = sizeof(T) * vector_size * vlat->field_alloc_size();
+  if (size % VECTOR_SIZE) 
+    size = size - (size % VECTOR_SIZE) + VECTOR_SIZE;
+  fieldbuf = (T*) aligned_alloc( VECTOR_SIZE, size);
 }
 
 template<typename T>
@@ -81,22 +90,18 @@ void field_storage<T>::free_field() {
   fieldbuf = nullptr;
 }
 
-// get and set a full vector T
 
 template<typename T>
-template<typename vecT>
 #pragma transformer loop_function
-inline vecT field_storage<T>::get_vector(const int i) const {
+auto field_storage<T>::get(const int i, const int field_alloc_size) const
+{
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
   constexpr int elements = vector_info<T>::elements;
   constexpr int vector_size = vector_info<T>::vector_size;
-  // using vectorized_type = vector_type<T>;
+  using vectorized_type = vector_type<T>;
 
-  static_assert( sizeof(vecT) == sizeof(T) * vector_size );
-  // assert (((int64_t)fieldbuf) % ((vector_size)*sizeof(basetype)) == 0);
-
-  vecT value;
+  vectorized_type value;
   basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
   for( int e=0; e<elements; e++ ){
@@ -106,18 +111,16 @@ inline vecT field_storage<T>::get_vector(const int i) const {
 }
 
 
-// note: here i is the vector index
 
 template<typename T>
-template<typename vecT>
+template<typename A>
 #pragma transformer loop_function
-inline void field_storage<T>::set_vector(const vecT &value, const int i)  {
+inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size) 
+{
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
   constexpr int elements = vector_info<T>::elements;
   constexpr int vector_size = vector_info<T>::vector_size;
-
-  static_assert( sizeof(vecT) == sizeof(T) * vector_size );
 
   basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
   vectortype *valuep = (vectortype *)(&value);
@@ -127,54 +130,29 @@ inline void field_storage<T>::set_vector(const vecT &value, const int i)  {
 }
 
 
-/// set_element scatters one individual T-element to vectorized store,
-/// using the "site" index idx.
 
+
+
+
+
+/// Vectorized implementation of fetching elements
 template<typename T>
-#pragma transformer loop_function
-inline void field_storage<T>::set_element(const T &value, const int idx) {
-  static_assert( vector_info<T>::is_vectorizable );
-  using basetype = typename vector_info<T>::base_type;
-  constexpr int elements = vector_info<T>::elements;
-  constexpr int vector_size = vector_info<T>::vector_size;
-
-  // "base" of the vector is (idx/vector_size)*elements; index in vector is idx % vector_size
-  basetype * RESTRICT b = ((basetype *) (fieldbuf)) + (idx/vector_size)*vector_size*elements + idx % vector_size;
-  const basetype * RESTRICT vp = (basetype *)(&value);
-  for( int e=0; e<elements; e++ ){
-    b[e*vector_size] = vp[e];
-  }
-}
-
-/// get_element fetches one T-element from vectorized store
-/// again, idx is the "site" index
-
-template<typename T>
-#pragma transformer loop_function
-inline T field_storage<T>::get_element(const int idx) const {
-  static_assert( vector_info<T>::is_vectorizable );
-  using basetype = typename vector_info<T>::base_type;
-  constexpr int elements = vector_info<T>::elements;
-  constexpr int vector_size = vector_info<T>::vector_size;
-
-  T value;
-  // "base" of the vector is (idx/vector_size)*elements; index in vector is idx % vector_size
-  const basetype * RESTRICT b = (basetype *) (fieldbuf) + (idx/vector_size)*vector_size*elements + idx % vector_size;
-  basetype * RESTRICT vp = (basetype *)(&value);   // does going through address slow down?
-  for( int e=0; e<elements; e++ ){
-    vp[e] = b[e*vector_size];
-  }
-  return value;
-}
-
-
-/// Fetch elements from the field to buffer using sites in index_list
-template<typename T>
-void field_storage<T>::gather_elements(T * RESTRICT buffer, const unsigned * RESTRICT index_list, 
+void field_storage<T>::gather_elements(char * RESTRICT buffer, const unsigned * RESTRICT index_list, 
                                        int n, const lattice_struct * RESTRICT lattice) const {
-
+  constexpr int vector_size = vector_info<T>::vector_size;
+  vectorized_lattice_struct<vector_size> * vlat = lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
   for (int j=0; j<n; j++) {
-    buffer[j] = get_element(index_list[j]);
+    int index = index_list[j];
+    int v_index = vlat->vector_index[index];
+    auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
+    auto pvector = (typename vector_info<T>::type*) (&element);
+
+    for( int e=0; e<vector_info<T>::elements; e++ ){
+      auto basenumber = pvector[e].extract(v_index);
+      auto * number_buffer = (typename vector_info<T>::base_type *) buffer;
+
+      number_buffer[j*vector_info<T>::elements + e] = basenumber;
+    }
   }
 }
 
@@ -182,10 +160,24 @@ void field_storage<T>::gather_elements(T * RESTRICT buffer, const unsigned * RES
 
 /// Vectorized implementation of setting elements
 template<typename T>
-void field_storage<T>::place_elements(T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n,
+void field_storage<T>::place_elements(char * RESTRICT buffer, const unsigned * RESTRICT index_list, int n,
                                       const lattice_struct * RESTRICT lattice) {
+  constexpr int vector_size = vector_info<T>::vector_size;
+  const vectorized_lattice_struct<vector_size> * RESTRICT vlat = 
+      lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
   for (int j=0; j<n; j++) {
-    set_element(buffer[j],index_list[j]);
+    int index = index_list[j];
+    int v_index = vlat->vector_index[index];
+    auto element = get(vlat->lattice_index[index], vlat->field_alloc_size());
+    auto pvector = (typename vector_info<T>::type*) (&element);
+
+    for( int e=0; e<vector_info<T>::elements; e++ ){
+      auto number_buffer = (typename vector_info<T>::base_type *) buffer;
+      auto basenumber = number_buffer[j*vector_info<T>::elements + e];
+
+      pvector[e].insert(v_index, basenumber);
+    }
+    set(element, vlat->lattice_index[index], vlat->field_alloc_size());
   }
 }
 
@@ -196,36 +188,29 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par, la
   constexpr int elements = vector_info<T>::elements;
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
+  const vectorized_lattice_struct<vector_size> * RESTRICT vlat = 
+    lattice->backend_lattice->get_vectorized_lattice<vector_size>();
 
-  const auto vector_lattice = 
-      lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
   // The halo copy and permutation is only necessary if vectorization
   // splits the lattice in this direction
-  if ( vector_lattice->is_boundary_permutation[abs(dir)]) {
+  if( vlat->split[dir] > 1 ) {
 
-    int start = 0;
-    int end   = vector_lattice->n_halo_vectors[dir];
-    if (par == ODD)  start = vector_lattice->n_halo_vectors[dir]/2;
-    if (par == EVEN) end   = vector_lattice->n_halo_vectors[dir]/2;
-    int offset = vector_lattice->halo_offset[dir];
+    // Loop over the boundary sites
+    for( parity p : loop_parities(par)){
+      int par_int = (int) p - 1; 
+      const int * RESTRICT perm = vlat->boundary_permutation[dir];
+      auto hs = vlat->halo_sites[par_int][dir];
 
-    /// Loop over the boundary sites - i is the vector index
-    /// location where the vectors are copied from are in halo_index
-
-    const int * RESTRICT perm = vector_lattice->boundary_permutation[dir];
-
-    basetype * fp = static_cast<basetype *>(static_cast<void *>(fieldbuf));
-    for (int idx=start; idx<end; idx++) {
-      /// get ptrs to target and source vec elements
-      basetype * RESTRICT t = fp + (idx+offset)*(elements*vector_size);
-      basetype * RESTRICT s = fp + vector_lattice->halo_index[dir][idx]*(elements*vector_size);
-
-      for (int e=0; e<elements*vector_size; e+=vector_size)
-        for (int i=0; i<vector_size; i++) 
-          t[e + i] = s[e + perm[i]];
-
+      for( int idx = 0; idx < hs.nb_index.size(); idx++ ) {
+        basetype * fp = static_cast<basetype *>(fieldbuf);
+        basetype * RESTRICT s = fp + elements*vector_size*hs.nb_index[idx];
+        basetype * RESTRICT d = fp + elements*vector_size*(vlat->sites + hs.first_index+idx);
+        for( int e=0; e<elements; e++ ){
+          for( int i=0; i<vector_size; i++ )
+           d[e*vector_size+i] =  s[e*vector_size + perm[i]];
+        }
+      }
     }
- 
   }
 }
 

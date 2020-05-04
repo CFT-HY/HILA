@@ -141,6 +141,8 @@ struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> 
   using type = T;
 };
 
+template<typename T>
+using number_type = typename base_type_struct<T>::type;
 
 
 

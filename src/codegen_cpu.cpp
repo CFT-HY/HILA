@@ -37,11 +37,13 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
 
   // Set loop lattice
   std::string fieldname = field_info_list.front().new_name;
-  code << "lattice_struct * RESTRICT loop_lattice = " << fieldname << ".fs->lattice;\n";
+  code << "const lattice_struct * RESTRICT loop_lattice = " << fieldname << ".fs->lattice;\n";
   
   // Set the start and end points
   code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "const int loop_end   = loop_lattice->loop_end(" << parity_in_this_loop << ");\n";
+
+  // are there 
 
 
   if (generate_wait_loops) {
@@ -75,9 +77,7 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
   
   // Create temporary field element variables
   for (field_info & l : field_info_list) {
-    std::string type_name = l.type_template;
-    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-
+ 
     // First check for direction references. If any found, create list of temp
     // variables
     if (l.is_read_nb) {
@@ -87,9 +87,16 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
         else dirname = remove_X( loopBuf.get(d.parityExpr->getSourceRange()) ); // mapped name was get_stmt_str(d.e);
 
         // generate access stmt
-        code << type_name << " " << d.name_with_dir
-             << " = " << l.new_name << ".get_value_at(lattice->neighb[" 
-             << dirname << "][" << looping_var << "]);\n";
+        code << l.element_type << " " << d.name_with_dir << " = " << l.new_name;
+
+        if (target.vectorize && l.vecinfo.is_vectorizable) {
+          // now l is vectorizable, but accessed sequentially -- this inly happens in vectorized targets
+          code << ".get_value_at_nb_site(" << dirname << ", " << looping_var << ");\n";
+        } else  {
+          // std neighbour accessor for scalars
+          code << ".get_value_at(loop_lattice->neighb[" 
+               << dirname << "][" << looping_var << "]);\n";
+        }
 
         // and replace references in loop body
         for (field_ref * ref : d.ref_list) {
@@ -101,11 +108,11 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
     // and then get (possible) local refs
     if (l.is_read_atX) {
       // now reading var without nb. reference
-      code << type_name << " " << l.loop_ref_name << " = " 
+      code << l.element_type << " " << l.loop_ref_name << " = " 
            << l.new_name << ".get_value_at(" << looping_var << ");\n";
 
     } else if (l.is_written) {
-      code << type_name << " " << l.loop_ref_name << ";\n";
+      code << l.element_type << " " << l.loop_ref_name << ";\n";
     }
 
     // and finally replace references in body 

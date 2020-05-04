@@ -104,7 +104,12 @@ bool srcBuf::is_in_range(const SourceLocation s) {
 bool srcBuf::is_in_range(const SourceRange &sr) {
   int l = get_offset(sr.getBegin()) - first_offset;
   if (l < 0 || l >= true_size) return false;
-  l += get_sourcerange_size(sr);
+  l += myRewriter->getRangeSize(sr) - 1;
+  // if (l >= true_size) {
+  //   llvm::errs() << "IN_RANGE ERROR, index " << l << " true_size " << true_size << '\n';
+  //   llvm::errs() << "BUFFER IS " << dump() << '\n';
+  //   llvm::errs() << "AND SOURCE " << myRewriter->getRewrittenText(sr) << '\n';
+  // }
   return (l < true_size); 
 }
 
@@ -135,6 +140,7 @@ std::string srcBuf::get_mapped(int index, int len) {
 
 // get edited string originally from range
 std::string srcBuf::get(int i1, int i2) {
+  assert(0 <= i1 && i1 <= i2 && i2 < true_size);
   return get_mapped(i1,get_index_range_size(i1,i2));
 }
 
@@ -146,6 +152,7 @@ std::string srcBuf::get(SourceLocation s, int len) {
   
 // get edited string originally from range
 std::string srcBuf::get(const SourceRange & s) {
+  assert(is_in_range(s));
   return get_mapped(get_index(s.getBegin()),get_sourcerange_size(s));
 }
 
@@ -291,16 +298,19 @@ int srcBuf::remove(int index1, int index2) {
 }
 
 int srcBuf::remove(const SourceRange &s) {
+  assert( is_in_range(s) );
   int i=get_index(s.getBegin());
   return remove(i, i+myRewriter->getRangeSize(s)-1);
 }
 
 int srcBuf::remove(const CharSourceRange &s) {
+  assert( is_in_range(s.getAsRange()) );
   int i=get_index(s.getBegin());
   return remove(i, i+myRewriter->getRangeSize(s)-1);
 }
 
 int srcBuf::remove(Expr *E) {
+  assert(is_in_range(E->getSourceRange()));
   return remove(E->getSourceRange());
 }
 
@@ -308,6 +318,7 @@ int srcBuf::remove(Expr *E) {
 // return the next element 
 
 int srcBuf::remove_with_comma(const SourceRange &s) {
+  assert(is_in_range(s));
   int after  = remove(s);
   int before = get_index(s.getBegin()) - 1;
   int r = before;
@@ -393,15 +404,18 @@ int srcBuf::insert(int i, const std::string & s_in, bool incl_before, bool do_in
         
 int srcBuf::insert(SourceLocation sl, const std::string & s,
                    bool incl_before, bool do_indent) {
+  assert(is_in_range(sl));
   return insert(get_index(sl), s, incl_before, do_indent);
 }
 
 int srcBuf::insert(Expr *e, const std::string & s, bool incl_before, bool do_indent) {
+  assert(is_in_range(e->getSourceRange()));
   return insert(e->getSourceRange().getBegin(), s, incl_before, do_indent);
 }
 
 // Insert a new line above the location i
 int srcBuf::insert_above(int i, const std::string & s, bool incl_before, bool do_indent) {
+  assert(i>=0 && i < original_size);
   while (i > 0 && buf[i] != '\n' ) i--;
   std::string new_line = '\n'+s;
   if(i==0) new_line = new_line+'\n';
@@ -410,10 +424,12 @@ int srcBuf::insert_above(int i, const std::string & s, bool incl_before, bool do
 
 int srcBuf::insert_above(SourceLocation sl, const std::string & s,
                    bool incl_before, bool do_indent) {
+  assert(is_in_range(sl));
   return insert_above(get_index(sl), s, incl_before, do_indent);
 }
 
 int srcBuf::insert_above(Expr *e, const std::string & s, bool incl_before, bool do_indent) {
+  assert(is_in_range(e->getSourceRange()));
   return insert_above(e->getSourceRange().getBegin(), s, incl_before, do_indent);
 }
 
@@ -434,20 +450,24 @@ int srcBuf::insert_before_stmt(int i, const std::string & s, bool incl_before, b
 
 int srcBuf::insert_before_stmt(SourceLocation sl, const std::string & s,
                    bool incl_before, bool do_indent) {
+  assert(is_in_range(sl));
   return insert_before_stmt(get_index(sl), s, incl_before, do_indent);
 }
 
 int srcBuf::insert_before_stmt(Expr *e, const std::string & s, bool incl_before, bool do_indent) {
+  assert(is_in_range(e->getSourceRange()));
   return insert_before_stmt(e->getSourceRange().getBegin(), s, incl_before, do_indent);
 }
 
 
 int srcBuf::comment_line(int i){
+  assert(i<original_size);
   while (i > 0 && buf[i] != '\n' ) i--;
   return insert(i+1, "//", false, false);
 }
 
 int srcBuf::comment_line(SourceLocation sl){
+  assert(is_in_range(sl));
   return comment_line(get_index(sl));
 }
 

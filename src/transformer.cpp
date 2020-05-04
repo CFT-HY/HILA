@@ -148,7 +148,9 @@ llvm::cl::opt<int> cmdline::verbosity("verbosity",
       llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
       llvm::cl::cat(TransformerCat));
 
-     
+llvm::cl::opt<int> cmdline::avx_info("AVXinfo",
+      llvm::cl::desc("AVX vectorization information level 0-2. 0 quiet, 1 not vectorizable loops, 2 all loops"),
+      llvm::cl::cat(TransformerCat));
 
 CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
@@ -157,7 +159,7 @@ codetype target;     // declared extern (global)
 
 
 /// Check command line arguments and set appropriate flags in target
-void get_target_struct(codetype & target) {
+void handle_cmdline_arguments(codetype & target) {
   if (cmdline::CUDA) {
     target.CUDA = true;
   } else if (cmdline::openacc) {
@@ -175,6 +177,8 @@ void get_target_struct(codetype & target) {
     target.vectorize = true;
     target.vector_size = cmdline::vectorize;
   }
+
+
 }
 
 
@@ -244,7 +248,7 @@ class heLppPragmaHandler : public PragmaHandler {
 
 };
 
-static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("heLpp","heL pragma description");
+static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("hilapp","hila pragma description");
 
 #endif  // pragmahandler
 
@@ -400,7 +404,7 @@ struct file_buffer {
   FileID fid;
 };
 
-std::vector<file_buffer> file_buffer_list = {};
+std::list<file_buffer> file_buffer_list = {};
 
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   for (file_buffer & fb : file_buffer_list) {
@@ -413,7 +417,7 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   file_buffer_list.push_back(fb);
   SourceManager &SM = R.getSourceMgr();
   SourceRange r(SM.getLocForStartOfFile(fid),SM.getLocForEndOfFile(fid));
-
+ 
   llvm::errs() << "Create buf for file "
                << SM.getFilename(SM.getLocForStartOfFile(fid)) << '\n';
   
@@ -584,14 +588,17 @@ public:
         SourceLocation e = SR.getEnd();
         SourceLocation b = SR.getBegin();
 
+        // llvm::errs() << "IN file " <<  SM.getFilename(IL) << '\n'; 
+
         // Find the end of the include statement, which is an end of line
         // TODO: do this on "buf" instead of original file data
-        for (int i=1; i<100; i++) {
+        for (int i=1; i<5000; i++) {
           const char * p = SM.getCharacterData(e.getLocWithOffset(i));
-          if (p && *p == '\n') {
+          assert(p && "Error in scanning include stmt");
+          if (*p == '\n') {
             SR = SourceRange(b,e.getLocWithOffset(i));
             break;
-          }
+          } 
         }
 
         // Get the filename (the part after the includestr)
@@ -599,22 +606,22 @@ public:
 
         // Find the start of the include statement
         e = SR.getEnd();
-        for (int i=1; i<200; i++) {
+        for (int i=1; i<5000; i++) {
           const char * p = SM.getCharacterData(b.getLocWithOffset(-i));
-          if (p && *p == '#') {
+          assert(p && "Error in scanning the beginning of include stmt");
+          if (*p == '#') {
             ++p;
             while (std::isspace(*p)) ++p;
-            if (strncmp(p,"include",7) == 0) {
-              SR = SourceRange(b.getLocWithOffset(-i),e);
-              break;
-            }
+            assert(strncmp(p,"include",7) == 0 && "Did not find #include");
+            SR = SourceRange(b.getLocWithOffset(-i),e);
+            break;
           }
         }
 
+
         // Remove "#include"
         buf->remove(SR);
-        // TheRewriter.RemoveText(SR);
-
+       
 
         srcBuf * buf_from = get_file_buffer(TheRewriter, f);
 
@@ -629,8 +636,11 @@ public:
                     + "---------------------------------\n",
                     false);
 
-      } else {
+      } else if (IL.isInvalid() && !SM.isInMainFile(SM.getLocForStartOfFile(f))) {
+        llvm::errs() << "Invalid include loc!\n";
+        llvm::errs() << "File to include: " << SM.getFilename(SM.getLocForStartOfFile(f)) << '\n';
 
+        exit(-1);
       }
     }
   }
@@ -737,7 +747,7 @@ int main(int argc, const char **argv) {
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
 
   // We have command line args, possibly do something with them
-  get_target_struct(target);
+  handle_cmdline_arguments(target);
   if (cmdline::syntax_only) cmdline::no_output = true;
 
   // ClangTool::run accepts a FrontendActionFactory, which is then used to

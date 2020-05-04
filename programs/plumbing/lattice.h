@@ -6,7 +6,7 @@
 #include <array>
 #include <vector>
 
-#define VECTOR_LAYOUT  // TEMP HERE TO HELP EDITOR!!!!
+#define SUBNODE_LAYOUT  // TEMP HERE TO HELP EDITOR!!!!
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
@@ -15,9 +15,9 @@
 #include "../plumbing/coordinates.h"
 #include "../plumbing/inputs.h"
 
-#ifdef VECTOR_LAYOUT
+#ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
-#define VECTOR_SIZE (256/8)
+#define VECTOR_SIZE (256/8)                    // this is for AVX2
 #endif
 // This is the vector size used to determine the layout
 constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
@@ -38,10 +38,6 @@ struct node_info {
 struct backend_lattice_struct;
 
 
-
-
-
-
 class lattice_struct {
 private:
  
@@ -51,6 +47,8 @@ private:
   // Alternative: int_32t and int_64t (or int_fast_32t  and int_fast_64t, even more generally) 
   coordinate_vector l_size;
   long long l_volume;
+
+public:
 
   // Information about the node stored on this process
   struct node_struct {
@@ -64,7 +62,7 @@ private:
 
     void setup(node_info & ni, lattice_struct & lattice);
 
-#ifdef VECTOR_LAYOUT
+#ifdef SUBNODE_LAYOUT
     // If we have vectorized-style layout, we introduce "subnodes"
     // size is this_node.size/subnodes.divisions, which is not
     // constant across nodes
@@ -98,12 +96,11 @@ private:
     
   } nodes;
 
-public:
 
   struct comm_node_struct {
     unsigned rank;                         // rank of communicated with node
     unsigned sites, evensites, oddsites;
-    unsigned buffer;
+    unsigned buffer;                       // offset from the start of field array
     unsigned * sitelist;
 
     // Get a vector containing the sites of parity par and number of elements
@@ -121,7 +118,7 @@ public:
     }
 
     // The number of sites that need to be communicated
-    unsigned n_sites(parity par){
+    unsigned n_sites(parity par) const {
       if(par == ALL){
         return sites;
       } else if(par == EVEN){
@@ -132,7 +129,7 @@ public:
     }
 
     // The local index of a site that is sent to neighbour
-    unsigned site_index(int site, parity par){
+    unsigned site_index(int site, parity par) const {
       if(par == ODD){
         return sitelist[evensites+site];
       } else {
@@ -141,7 +138,7 @@ public:
     }
 
     // The offset of the halo from the start of the field array
-    unsigned offset(parity par){
+    unsigned offset(parity par) const {
       if(par == ODD){
         return buffer + evensites;
       } else {
@@ -174,7 +171,9 @@ public:
   // implement waiting using mask_t - unsigned char is good for up to 4 dim. 
   dir_mask_t * RESTRICT wait_arr_;
 
+#ifndef VANILLA
   backend_lattice_struct *backend_lattice;
+#endif
 
   void setup(int siz[NDIM], int &argc, char **argv);
   void setup(input & inputs);
@@ -206,7 +205,7 @@ public:
   coordinate_vector mod_size(const coordinate_vector & v) { return mod(v, l_size); }
 
   int local_size(int d) { return this_node.size[d]; }
-  long long local_volume() {return this_node.sites;}
+  unsigned local_volume() {return this_node.sites;}
 
   int node_rank() { return this_node.rank; }
   int n_nodes() { return nodes.number; }
@@ -262,21 +261,21 @@ public:
   }
   #endif
 
-#ifndef VECTOR_LAYOUT
+#ifndef SUBNODE_LAYOUT
 
-  inline const coordinate_vector & coordinates( unsigned idx ){
+  inline const coordinate_vector & coordinates( unsigned idx ) const {
     return this_node.coordinates[idx];
   }
 #else
 
-  inline const coordinate_vector coordinates( unsigned idx ){
+  inline const coordinate_vector coordinates( unsigned idx ) const {
 
     return  this_node.coordinates[idx / number_of_subnodes]
             + this_node.subnodes.offset[idx % number_of_subnodes];
   }
 #endif
 
-  inline parity site_parity( unsigned idx ) {
+  inline parity site_parity( unsigned idx ) const {
   #ifdef EVEN_SITES_FIRST
     if (idx < this_node.evensites) return EVEN;
     else return ODD;
@@ -285,7 +284,7 @@ public:
   #endif
   }
 
-  coordinate_vector local_coordinates( unsigned idx ){
+  coordinate_vector local_coordinates( unsigned idx ) const {
     return coordinates(idx) - this_node.min;
   }
 
@@ -328,7 +327,7 @@ int get_next_msg_tag();
 #elif defined(CUDA)
 #include "../plumbing/backend_cuda/lattice.h"
 #elif defined(VECTORIZED)
-#include "../plumbing/backend_vector/lattice.h"
+#include "../plumbing/backend_vector/lattice_vector.h"
 #endif
 
 

@@ -52,6 +52,12 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
   // Initialize wait_array structures - has to be after std gathers()
   initialize_wait_arrays();
 
+#ifndef VANILLA
+  /* Setup backend-specific lattice info if necessary */
+  backend_lattice = new backend_lattice_struct;
+  backend_lattice->setup(*this);
+#endif
+
   test_std_gathers();
 
 
@@ -136,7 +142,7 @@ bool lattice_struct::is_on_node(const coordinate_vector & loc)
 /// Note: loc really has to be on this node
 ///////////////////////////////////////////////////////////////////////
 
-#ifndef VECTOR_LAYOUT
+#ifndef SUBNODE_LAYOUT
 
 unsigned lattice_struct::site_index(const coordinate_vector & loc)
 {
@@ -190,7 +196,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 
 
 
-#else  // now VECTOR_LAYOUT
+#else  // now SUBNODE_LAYOUT
 
 ///////////////////////////////////////////////////////////////////////
 /// The (AVX) vectorized version of the site_index function.
@@ -198,6 +204,14 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 /// over "virtual nodes", and the "outer" index inside the virtual node.
 /// This is to mimic the (float) vectorized structs, which only have the
 /// outer index
+/// a 2-dim. 4x4 node is divided into 4 subnodes to as follows:  
+/// here 0-3 is the index within subnode, and a-d the subnode label.
+///    0a 1a | 0b 1b         
+///    2a 3a | 2b 3b         0(abcd)  1(abcd)
+///    -------------   -->   2(abcd)  3(abcd) 
+///    0c 1c | 0d 1d
+///    2c 3c | 2d 3d         this is how it is stored, and how the index runs
+/// 
 ///////////////////////////////////////////////////////////////////////
 
 unsigned lattice_struct::site_index(const coordinate_vector & loc)
@@ -276,18 +290,13 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
   return (subl + number_of_subnodes*i);
 }
 
-#endif // VECTOR_LAYOUT
+#endif // SUBNODE_LAYOUT
 
 ///////////////////////////////////////////////////////////////////////
 /// invert the this_node index -> location (only on this node)
 ///////////////////////////////////////////////////////////////////////
 
 // this is defined in lattice.h
-
-//const coordinate_vector & lattice_struct::coordinates(unsigned index)
-//{
-//  return this_node.coordinates[index];
-//}
 
 
 /////////////////////////////////////////////////////////////////////
@@ -374,7 +383,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   // map site indexes to locations -- coordinates array
   // after the above site_index should work
 
-#ifndef VECTOR_LAYOUT
+#ifndef SUBNODE_LAYOUT
 
   coordinates.resize(sites);
   coordinate_vector l = min;
@@ -410,7 +419,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
 
 }
 
-#ifdef VECTOR_LAYOUT
+#ifdef SUBNODE_LAYOUT
 
 ////////////////////////////////////////////////////////////////////////
 /// Fill in subnodes -struct
@@ -549,7 +558,7 @@ void lattice_struct::create_std_gathers()
       // sitelist tells us which sites to send
       to_node.sitelist = (unsigned *)memalloc(to_node.sites * sizeof(unsigned));
 #ifndef VANILLA
-      // non-vanilla code wants to have receive buffers, so we need mapping to field
+      // non-vanilla code MAY want to have receive buffers, so we need mapping to field
       from_node.sitelist = (unsigned *)memalloc(from_node.sites * sizeof(unsigned));
 #endif
     } else 
@@ -605,9 +614,6 @@ void lattice_struct::create_std_gathers()
   /* Finally, set the site to the final offset (better be right!) */
   this_node.field_alloc_size = c_offset;
 
-  /* Setup backend-specific lattice info if necessary */
-  backend_lattice = new backend_lattice_struct;
-  backend_lattice->setup(*this);
 
 }
 
@@ -632,9 +638,7 @@ int get_next_msg_tag() {
 /************************************************************************/
 
 #ifdef USE_MPI
-/* this formats the wait_array, used by forallsites_waitA()
- * should be made as fast as possible!
- *
+/* this formats the wait_array, used by forallsites_waitA()site_neighbour
  * wait_array[i] contains a bit at position 1<<dir if nb(dir,i) is out
  * of lattice.
  * Site OK if ((wait_arr ^ xor_mask ) & and_mask) == 0
@@ -838,7 +842,7 @@ lattice_struct::gen_comminfo_struct lattice_struct::create_general_gather( const
 //////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-#pragma transformer dump ast
+// #pragma transformer dump ast
 struct test_tt {
   T r[NDIM];
 
@@ -856,8 +860,12 @@ void test_std_gathers()
   
   onsites(ALL) {
     foralldir(d) {
-      t[X].r[d] = X.coordinates()[d];
+      double v = X.coordinates()[d];
+      t[X].r[d] = v;
     }
+    // foralldir(d)
+    //   hila::output << t[X].r[d] << ' ';
+    // hila::output << '\n';
   }
 
   for (parity p : {EVEN,ODD,ALL}) {
@@ -871,15 +879,30 @@ void test_std_gathers()
         if (is_up_dir(d2)) add = 1; else add = -1;
         onsites(p) {
                   
-          element<int> j = t[X+d2].r[d];
-          element<int> s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
+          int j = t[X+d2].r[d];
+//        if (j==0) j = 0;
+          int s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
 
-          diff += s - j;
+          int lv = s-j;
+          diff += lv;
 
-          element<int> i;
-          i = s - j;
+          
+          if (lv != 0) {
+            hila::output << "diff != 0! at " << X.coordinates() << " direction " << d2 
+                         << " parity " << (int)p << '\n';
+            hila::output << "t[X+d2].r[d] = " << j << " should be " << s <<  '\n';
+            for (int loop=0; loop<NDIM; loop++) hila::output << t[X+d].r[loop] << ' ';
+            hila::output << " - ";
+            for (int loop=0; loop<NDIM; loop++) hila::output << t[X].r[loop] << ' ';
+            
+            hila::output << '\n';
 
-#if !defined(VANILLA) && !defined(TRANSFORMER)
+            exit(-1);
+          }
+          
+          int i = s - j;
+
+#if (0 && !defined(VANILLA) && !defined(TRANSFORMER))
           for (int k=0; k<8; k++) if (i[k] != 0) {
             hila::output << "Error!  node " << mynode() << " parity " 
                          << parity_name(p) << " direction " << (unsigned)d2 << '\n';

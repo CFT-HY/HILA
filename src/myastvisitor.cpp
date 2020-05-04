@@ -122,8 +122,7 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
         lac.TraverseStmt(OP->getArg(1));
       } else {
         // llvm::errs() << " ** Element type : " << type << '\n';
-        // PrintingPolicy pp(Context->getLangOpts());
-        // llvm::errs() << " ** Canonical type without keywords: " << OP->getArg(0)->getType().getCanonicalType().getAsString(pp) << '\n';
+        // llvm::errs() << " ** Canonical type without keywords: " << OP->getArg(0)->getType().getCanonicalType().getAsString(PP) << '\n';
       }
     }
   }
@@ -134,9 +133,12 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
 
 //////////////////////////////////////////////////////////////////////////////
 /// Go through one field reference within parity loop and store relevant info
+/// is_assign: assignment, is_compound: compound assign, is_X: argument is X, 
+/// is_func_arg: expression is a lvalue-argument (non-const. reference) to function
 //////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X) {
+bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, 
+                                              bool is_X, bool is_func_arg ) {
     
   e = e->IgnoreParens();
   field_ref lfe;
@@ -199,10 +201,16 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_c
   if (parity_expr_type == "X_plus_direction" || 
       parity_expr_type == "X_plus_offset") {
 
-    if (is_assign) {
+    if (is_assign && !is_func_arg) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "X + dir -type reference not allowed on the LHS of an assignment");
+                 "Cannot assign to field expression with [X + dir] -type argument.");
+    }
+    if (is_assign && is_func_arg) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                 lfe.parityExpr->getSourceRange().getBegin(),
+                 "Cannot use a non-const. reference to field expression with [X + dir] -type argument.");
+
     }
 
     // Now need to split the expr to parity and dir-bits
@@ -378,11 +386,10 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
   // Printing policy is somehow needed for printing type without "class" id
   // Unqualified takes away "consts" etc and Canonical typdefs/using.
   // Also need special handling for element type
-  PrintingPolicy pp(Context->getLangOpts());
-  vi.type = decl->getType().getUnqualifiedType().getAsString(pp);
+  vi.type = decl->getType().getUnqualifiedType().getAsString(PP);
   vi.type = remove_all_whitespace(vi.type);
   bool is_elem = (vi.type.find("element<") == 0);
-  vi.type = decl->getType().getUnqualifiedType().getCanonicalType().getAsString(pp);
+  vi.type = decl->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
   if (is_elem) vi.type = "element<" + vi.type + ">";
   // llvm::errs() << " + Got " << vi.type << '\n';
 
@@ -472,7 +479,6 @@ bool is_variable_loop_local(VarDecl * decl){
 void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
                                         bool is_assign,
                                         std::string &assignop) {
-  PrintingPolicy pp(Context->getLangOpts());
 
   // array refs are OK if they're inside the field element type,
   // for example  f[X].c[i][j]
@@ -506,7 +512,7 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
       
       // Find the type of the full expression (that is an element of the array)
       auto type = E->getType().getCanonicalType().getUnqualifiedType();
-      ar.type = type.getAsString(pp);
+      ar.type = type.getAsString(PP);
     
       array_ref_list.push_back(ar);
     } else {
@@ -850,6 +856,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       if (condexpr != nullptr) {
         loop_info.has_site_dependent_conditional = 
           is_site_dependent(condexpr, &loop_info.conditional_vars);
+        if (loop_info.has_site_dependent_conditional) 
+          loop_info.condExpr = condexpr;
       }
     }
 
@@ -896,8 +904,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     }
 
     // Get typename without class, struct... qualifiers
-    PrintingPolicy pp(Context->getLangOpts());
-    std::string typestr = args.get(0).getAsType().getAsString(pp);
+    std::string typestr = args.get(0).getAsType().getAsString(PP);
 
     if (cmdline::verbosity >= 2) {
       llvm::errs() << "  field < " << typestr << " >";
@@ -1265,11 +1272,17 @@ bool MyASTVisitor::check_field_ref_list() {
       lfv.type_template = get_expr_type(p.nameExpr);
       if (lfv.type_template.find("field",0) != 0) {
         reportDiag(DiagnosticsEngine::Level::Error,
-                   p.nameExpr->getSourceRange().getBegin(),
+                   p.nameExpr->getSourceRange().getBegin(),     
                    "Confused: type of field expression?");
         no_errors = false;
       }
       lfv.type_template.erase(0,5);  // Remove "field"  from field<T>
+
+      // get also the fully canonical field<T>  type.
+      lfv.element_type = p.nameExpr->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
+      int a = lfv.element_type.find('<')+1;
+      int b = lfv.element_type.rfind('>') - a;
+      lfv.element_type = lfv.element_type.substr(a,b); 
 
       lfv.nameExpr = p.nameExpr;     // store the first nameExpr to this field
       
@@ -1303,12 +1316,12 @@ bool MyASTVisitor::check_field_ref_list() {
 
     if (p.is_direction) {
 
-      if (p.is_written) {
-        reportDiag(DiagnosticsEngine::Level::Error,
-                   p.parityExpr->getSourceRange().getBegin(),
-                   "Neighbour offset not allowed on the LHS of an assignment");
-        no_errors = false;
-      }
+      // if (p.is_written) {
+      //   reportDiag(DiagnosticsEngine::Level::Error,
+      //              p.parityExpr->getSourceRange().getBegin(),
+      //              "Neighbour offset not allowed on the LHS of an assignment");
+      //   no_errors = false;
+      // }
 
       // does this dir with this field name exist before?
       // Use is_duplicate_expr() to resolve the ptr, it has (some) intelligence to
@@ -1454,6 +1467,13 @@ void MyASTVisitor::check_var_info_list() {
     } 
   } while (found > 0);
 
+  // and also get the vectorized type for them, to be prepared...
+
+  if (target.vectorize) {
+    for (var_info & vi : var_info_list) {
+      vi.vecinfo.is_vectorizable = is_vectorizable_type(vi.decl->getType(),vi.vecinfo);
+    }
+  }
 
 }
 
@@ -1900,10 +1920,8 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
     template_args.clear();
     is_special = true;
   }
-
-  PrintingPolicy pp(Context->getLangOpts());
   
-  // llvm::errs() << " FROM RETURN TYPE: "  << f->getReturnType().getAsString(pp) 
+  // llvm::errs() << " FROM RETURN TYPE: "  << f->getReturnType().getAsString(PP) 
   //              << " " << f->getQualifiedNameAsString() << template_args << '\n';
 
   // llvm::errs() << funcBuf.dump() << '\n';
@@ -1955,9 +1973,10 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
       funcBuf.insert(0, " auto ", true, true);
     } else {
       // Normal case, just add the declared return type. 
-      funcBuf.insert(0, f->getDeclaredReturnType().getAsString(pp) + " ", true, true);
+      funcBuf.insert(0, f->getDeclaredReturnType().getAsString(PP) + " ", true, true);
     }
   }
+  
   
   // remove "static" if it is so specified in methods - not needed now
   // if (is_static) { 
@@ -2200,14 +2219,12 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
   if (argset) *argset = "< ";
 
   // Get argument strings without class, struct... qualifiers
-  PrintingPolicy pp(Context->getLangOpts()); 
-
   
   for (int i=0; i<tal.size(); i++) {
     if (argset && i>0) *argset += ", ";
     switch (tal.get(i).getKind()) {
       case TemplateArgument::ArgKind::Type:
-        arg.push_back( tal.get(i).getAsType().getAsString(pp) );
+        arg.push_back( tal.get(i).getAsType().getAsString(PP) );
         par.push_back( tpl->getParam(i)->getNameAsString() );
         if (argset) *argset += arg.back();  // write just added arg
         typeargs.push_back( &tal.get(i) );  // save type-type arguments

@@ -1,6 +1,7 @@
 #ifndef VANILLA_BACKEND
 #define VANILLA_BACKEND
 
+#include "../lattice.h"
 #include "../field_storage.h"
 
 
@@ -10,20 +11,19 @@
 template<typename T> 
 inline auto field_storage<T>::get(const int i, const int field_alloc_size) const 
 {
-      T value = ((T*)fieldbuf)[i];
-      return value;
+  return fieldbuf[i];
 }
 
 template<typename T>
 template<typename A>
 inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size)
 {
-  ((T*)fieldbuf)[i] = value;
+  fieldbuf[i] = value;
 }
 
 template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
-  fieldbuf = memalloc( sizeof(T) * lattice->field_alloc_size() );
+  fieldbuf = (T*)memalloc( sizeof(T) * lattice->field_alloc_size() );
   if (fieldbuf == nullptr) {
     std::cout << "Failure in field memory allocation\n";
     exit(1);
@@ -88,27 +88,24 @@ void field_storage<T>::free_field() {
 #endif //layout
 
 
-
-
 template<typename T>
-void field_storage<T>::gather_elements( char * RESTRICT buffer, 
+void field_storage<T>::gather_elements( T * RESTRICT buffer, 
                                         const unsigned * RESTRICT index_list, int n,
                                         const lattice_struct * RESTRICT lattice) const {
   for (int j=0; j<n; j++) {
     int index = index_list[j];
-    T element = get(index, lattice->field_alloc_size());
-    std::memcpy( buffer + j*sizeof(T), (char *) (&element), sizeof(T) );
+    buffer[j] = get(index, lattice->field_alloc_size());
+    // std::memcpy( buffer + j, (char *) (&element), sizeof(T) );
   }
 }
 
 
 template<typename T>
-void field_storage<T>::place_elements(char * RESTRICT buffer, 
+void field_storage<T>::place_elements(T * RESTRICT buffer, 
                                       const unsigned * RESTRICT index_list, int n,
                                       const lattice_struct * RESTRICT lattice) {
   for (int j=0; j<n; j++) {
-    T element = *((T*) ( buffer + j*sizeof(T) ));
-    set(element, index_list[j], lattice->field_alloc_size());
+    set(buffer[j], index_list[j], lattice->field_alloc_size());
   }
 }
 
