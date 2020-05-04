@@ -2,13 +2,13 @@
 /// This is a hacky method to insert automatic check to success of
 /// memalloc, so that we get the file name and line number where the
 /// the failure happened:
-/// we use just macro with comma operators a
+/// 
 
 #include "../plumbing/memalloc.h"
 
 void * memalloc( std::size_t size, const char * filename, const unsigned line ) {
 
-#ifndef ALIGN
+#ifndef ALIGNED_MEMALLOC
 
   void * p;
 
@@ -29,7 +29,7 @@ void * memalloc( std::size_t size, const char * filename, const unsigned line ) 
 
   void * p;
   // align to 32 bytes (parameter?)
-  int e = std::posix_memalign( &p, (std::size_t)32, size);
+  int e = posix_memalign( &p, (std::size_t)32, size);
   if (e != 0) {
     if (filename != nullptr) {
       hila::output <<   " *** memalloc failure in file " << filename << " at line " << line << '\n';
