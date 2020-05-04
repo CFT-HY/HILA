@@ -94,6 +94,7 @@ inline vecT field_storage<T>::get_vector(const int i) const {
   // using vectorized_type = vector_type<T>;
 
   static_assert( sizeof(vecT) == sizeof(T) * vector_size );
+  // assert (((int64_t)fieldbuf) % ((vector_size)*sizeof(basetype)) == 0);
 
   vecT value;
   basetype *vp = (basetype *) (fieldbuf) + i*elements*vector_size;
@@ -201,8 +202,6 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par, la
   // The halo copy and permutation is only necessary if vectorization
   // splits the lattice in this direction
   if ( vector_lattice->is_boundary_permutation[abs(dir)]) {
-
-    hila::output << "BOundary elems to dir " << dir << " parity " << (int)par << '\n';
 
     int start = 0;
     int end   = vector_lattice->n_halo_vectors[dir];

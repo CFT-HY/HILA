@@ -88,7 +88,7 @@ struct vectorized_lattice_struct  {
         }
       }
 
-      hila::output << "Setting up lattice with vector of " << vector_size << '\n';
+      hila::output << "Setting up lattice struct with vector of size " << vector_size << '\n';
 
 
       // boundary permutation maps subnodes to vectors
@@ -113,10 +113,6 @@ struct vectorized_lattice_struct  {
         for (int i=0; i<vector_size; i++) 
           boundary_permutation[d][i] = (i+step) % sdmul + (i/sdmul) * sdmul;
         step *= subdivisions[d];
-
-        hila::output << " Boundary perm to direction " << d << ":  ";
-        for (int i=0; i<vector_size; i++) hila::output << ' ' << boundary_permutation[d][i];
-        hila::output << '\n';
 
         // permutation to oppsitie direction is the inverse, thus:
         for (int i=0; i<vector_size; i++) 

@@ -886,6 +886,7 @@ void test_std_gathers()
           int lv = s-j;
           diff += lv;
 
+          
           if (lv != 0) {
             hila::output << "diff != 0! at " << X.coordinates() << " direction " << d2 
                          << " parity " << (int)p << '\n';
@@ -898,6 +899,7 @@ void test_std_gathers()
 
             exit(-1);
           }
+          
           int i = s - j;
 
 #if (0 && !defined(VANILLA) && !defined(TRANSFORMER))

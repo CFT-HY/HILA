@@ -176,7 +176,7 @@ class field {
 #elif defined(VECTORIZED)
 
         if constexpr (!is_vectorizable_type<T>::value) {
-          // use vanilla type
+          // use vanilla type, field laid out in std fashion
           return (T *)payload.get_buffer() + from_node.offset(par);
         } else {
           int offs = 0;
@@ -189,7 +189,7 @@ class field {
             }
             return receive_buffer[d] + offs;
           } else {
-            // directly to boundary buffer
+            // directly to halo buffer
             constexpr int vector_size = vector_info<T>::vector_size;
             return ((T *)payload.get_buffer()
                     + (vector_lattice->halo_offset[d]*vector_size + offs) );
