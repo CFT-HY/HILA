@@ -45,7 +45,8 @@ struct vectorized_lattice_struct  {
     unsigned alloc_size;
 
 
-    bool is_on_first_subnode( const coordinate_vector & v ) {
+    bool is_on_first_subnode( coordinate_vector v ) {
+      v = mod(v,lattice->size());
       foralldir(d) {
         if ( v[d] < subnode_origin[d] || 
              v[d] >= subnode_origin[d]+subnode_size[d]) 
@@ -88,7 +89,7 @@ struct vectorized_lattice_struct  {
         }
       }
 
-      hila::output << "Setting up lattice struct with vector of size " << vector_size << '\n';
+      output0 << "Setting up lattice struct with vector of size " << vector_size << " elements\n";
 
 
       // boundary permutation maps subnodes to vectors
@@ -162,11 +163,24 @@ struct vectorized_lattice_struct  {
           int j=0;
           for (int i=0; i<v_sites; i++) {
             if (neighbours[d][i] >= v_sites) {
-              halo_index[d][j++] = lattice->neighb[d][i*vector_size]/vector_size;
+              // scan neighbour sites within the vector i -- some must be inside the node,
+              // which we want in this case
+              int k,n = -1;
+              bool found = false;
+              for (k=0; k<vector_size; k++) 
+                if (lattice->neighb[d][i*vector_size+k] < lattice->this_node.sites) {
+                  if (!found) {
+                    n = lattice->neighb[d][i*vector_size+k]/vector_size;
+                    found = true;
+                  }
+                  else assert( n == lattice->neighb[d][i*vector_size+k]/vector_size);
+                }
+              assert( n >= 0 );
+              halo_index[d][j++] = n;
             }
           }
           assert( j == n_halo_vectors[d] );
-        }
+        } else halo_index[d] = nullptr;
       }
 
       /// and then possible neighbour receive indices
@@ -187,8 +201,10 @@ struct vectorized_lattice_struct  {
               // i/vector_size is the "vector index" of site, and 
               // i % vector_size the index within the vector.  
               // vector neighbour is neighbours[d][i/vector_size]
+              // remember to do the permutation too
 
-              recv_list[d][j++] = neighbours[d][i/vector_size]*vector_size + i % vector_size;
+              recv_list[d][j++] = neighbours[d][i/vector_size]*vector_size 
+                                + (i % vector_size);
             }
           }
           assert(j == recv_list_size[d]);

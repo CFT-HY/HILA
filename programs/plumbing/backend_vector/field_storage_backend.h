@@ -157,6 +157,8 @@ inline T field_storage<T>::get_element(const int idx) const {
   constexpr int elements = vector_info<T>::elements;
   constexpr int vector_size = vector_info<T>::vector_size;
 
+  static_assert( sizeof(T) == sizeof(basetype)*elements );
+
   T value;
   // "base" of the vector is (idx/vector_size)*elements; index in vector is idx % vector_size
   const basetype * RESTRICT b = (basetype *) (fieldbuf) + (idx/vector_size)*vector_size*elements + idx % vector_size;
@@ -209,6 +211,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par, la
     if (par == EVEN) end   = vector_lattice->n_halo_vectors[dir]/2;
     int offset = vector_lattice->halo_offset[dir];
 
+
     /// Loop over the boundary sites - i is the vector index
     /// location where the vectors are copied from are in halo_index
 
@@ -228,5 +231,60 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par, la
  
   }
 }
+
+
+// gather full vectors from fieldbuf to buffer, for communications
+template <typename T>
+void field_storage<T>::gather_comm_vectors( T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, 
+          parity par, const vectorized_lattice_struct<vector_info<T>::vector_size> * RESTRICT vlat) const {
+  
+  // Use sitelist in to_node, but use only every vector_size -index.  These point to the beginning of the vector
+  constexpr int vector_size = vector_info<T>::vector_size;
+  int n;
+  const unsigned * index_list = to_node.get_sitelist(par,n);
+  
+  assert(n % vector_size == 0);
+
+  for (int i=0; i<n; i+=vector_size) {
+    std::memcpy( buffer + i, fieldbuf + index_list[i], sizeof(T)*vector_size);
+
+    // check that indices are really what they should -- REMOVE
+    for (int j=0; j<vector_size; j++) assert( index_list[i]+j == index_list[i+j] );
+  }
+}
+
+
+
+// Place the received MPI elements to halo (neighbour) buffer
+template <typename T>
+void field_storage<T>::place_recv_elements(const T * RESTRICT buffer, direction d, parity par,
+                    const vectorized_lattice_struct<vector_info<T>::vector_size> * RESTRICT vlat) const {
+
+  constexpr int vector_size = vector_info<T>::vector_size;
+  constexpr int elements = vector_info<T>::elements;
+  using basetype = typename vector_info<T>::base_type;
+
+
+  int start = 0;
+  if (par == ODD) start = vlat->recv_list_size[d]/2;
+  int n = vlat->recv_list_size[d];
+  if (par != ALL) n /= 2;
+
+  // remove const  --  the payload of the buffer remains const, but the halo  bits are changed
+  T * targetbuf = const_cast<T*>(fieldbuf);
+
+  for (int i=0; i<n; i++) {
+    int idx = vlat->recv_list[d][i+start];
+
+    basetype * RESTRICT t = ((basetype *)targetbuf) + (idx/vector_size)*vector_size*elements + idx % vector_size;
+    const basetype * RESTRICT vp = (basetype *)(&buffer[i]);
+
+    for( int e=0; e<elements; e++ ){
+      t[e*vector_size] = vp[e];
+    }
+  }
+}
+
+
 
 #endif

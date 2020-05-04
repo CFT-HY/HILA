@@ -48,6 +48,13 @@ class field_storage {
     template <typename vecT>
     #pragma transformer loop_function
     inline vecT get_vector( const int idx ) const;
+
+    void gather_comm_vectors( T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, 
+      parity par, const vectorized_lattice_struct<vector_info<T>::vector_size> * RESTRICT vlat) const;
+
+    void place_recv_elements(const T * RESTRICT buffer, direction d, parity par,
+                             const vectorized_lattice_struct<vector_info<T>::vector_size> * RESTRICT vlat) const;
+
 #endif
 
 
@@ -56,8 +63,9 @@ class field_storage {
     void gather_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n, 
                           const lattice_struct * RESTRICT lattice) const;
     /// Place boundary elements from neighbour
-    void place_comm_elements( T * RESTRICT buffer, const lattice_struct::comm_node_struct & from_node,
-                              parity par, const lattice_struct * RESTRICT lattice);
+    void place_comm_elements( direction d, parity par, T * RESTRICT buffer, 
+                              const lattice_struct::comm_node_struct & from_node,
+                              const lattice_struct * RESTRICT lattice);
     void place_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n,
                          const lattice_struct * RESTRICT lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
@@ -79,16 +87,18 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
   gather_elements(buffer, index_list, n, lattice);
 }
 
+#ifndef VANILLA
+
 template<typename T>
-void field_storage<T>::place_comm_elements(T * RESTRICT buffer, 
+void field_storage<T>::place_comm_elements(direction d, parity par, T * RESTRICT buffer, 
                                            const lattice_struct::comm_node_struct & from_node, 
-                                           parity par, const lattice_struct * RESTRICT lattice) {
+                                           const lattice_struct * RESTRICT lattice) {
   int n;
   const unsigned * index_list = from_node.get_sitelist(par,n);
   place_elements(buffer, index_list, n, lattice);
 }
 
-
+#endif
 
 /*
 Import backend
