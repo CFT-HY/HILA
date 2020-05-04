@@ -23,6 +23,7 @@
 constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
 #endif
 
+void test_std_gathers();
 
 struct node_info {
   coordinate_vector min,size;
