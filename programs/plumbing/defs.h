@@ -94,6 +94,9 @@ inline void finishrun() {
 template <typename T>
 void broadcast(T & v) {}
 
+template <typename T>
+void broadcast_array(T * var, int n) {}
+
 #else
 
 int mynode();
