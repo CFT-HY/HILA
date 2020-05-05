@@ -14,8 +14,8 @@ CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
 # Don't remove cpt-files
 .PRECIOUS: %.cpt
 
-%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o
-	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o
+%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
+	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
 
 %.cpt: %.cpp Makefile
 	$(TRANSFORMER) $(ADDITION) $<
@@ -29,7 +29,13 @@ CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
 lattice.cpt : ../plumbing/lattice.cpp
 	$(TRANSFORMER) $(ADDITION) $<
 
+test_gathers.cpt : ../plumbing/test_gathers.cpp
+	$(TRANSFORMER) $(ADDITION) $<
+
 lattice.o : lattice.cpt
+	$(CC) $(CXXFLAGS) $< -c
+
+test_gathers.o : test_gathers.cpt
 	$(CC) $(CXXFLAGS) $< -c 
 
 %.o : ../plumbing/%.cpp
