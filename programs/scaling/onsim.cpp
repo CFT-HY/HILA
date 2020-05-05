@@ -23,6 +23,10 @@ inline double scaleFactor(double t, double t_end){
 	return t/t_end;
 }
 
+class filewriter {
+
+};
+
 class scaling_sim {
 
 	public:
@@ -57,7 +61,7 @@ class scaling_sim {
 			double nOutputs;
 			double tEnd;
 			double lambda;
-			std::string ofname;
+			std::fstream stream;
 		} config;
 };
 
@@ -101,6 +105,20 @@ void scaling_sim::initialize(){
 
 	switch(config.initalCondition){
 
+		case 2 : {
+			onsites(ALL){
+				pi[X] = cmplx<double>(0.0, 0.0);
+				phi[X].re = config.sigma;
+				phi[X].im = config.sigma;
+			}
+
+			if (mynode() == 0){
+					hila::output << "Field initialized to constant value: "<< config.sigma << '\n';
+			}
+
+			break;
+		}
+
 		case 1 : {
 			onsites(ALL){
 				element<coordinate_vector> coord = coordinates(X); //coordinates of the current lattice site
@@ -141,6 +159,10 @@ void scaling_sim::initialize(){
 				}
 			}
 
+			if (mynode() == 0){
+					hila::output << "Field elements randomly generated \n";
+			}
+
 			break;
 		}
 	}
@@ -165,11 +187,12 @@ void scaling_sim::write_moduli(){
 
 	if (mynode() == 0){
 		double vol = (double) (config.l*config.l*config.l);
-		hila::output << t << "," << a << "," << config.lambda << "," << phimod/vol << "," << pimod/vol << ",";
+		config.stream << t << "," << a << "," << config.lambda << "," << phimod/vol << "," << pimod/vol << ",";
 	}
 }
 
 void scaling_sim::write_energies(){
+
 	double a = scaleFactor(t);
 	double ss = config.sigma*config.sigma;
 
@@ -221,15 +244,16 @@ void scaling_sim::write_energies(){
 
 	if (mynode() == 0){
 		double vol = (double) config.l*config.l*config.l;
-		hila::output << sumPi/vol << "," << w_sumPi/vol << ",";
-		hila::output << sumDiPhi/vol << "," << w_sumDiPhi/vol << ","; 
-		hila::output << sumPhiPi/vol << "," << w_sumPhiPi/vol << ","; 
-		hila::output << sumPhiDiPhi/vol << "," << w_sumPhiDiPhi/vol << ","; 
-		hila::output << sumV/vol << "," << w_sumV/vol << "\n"; 
+		config.stream << sumPi/vol << "," << w_sumPi/vol << ",";
+		config.stream << sumDiPhi/vol << "," << w_sumDiPhi/vol << ","; 
+		config.stream << sumPhiPi/vol << "," << w_sumPhiPi/vol << ","; 
+		config.stream << sumPhiDiPhi/vol << "," << w_sumPhiDiPhi/vol << ","; 
+		config.stream << sumV/vol << "," << w_sumV/vol << "\n"; 
 	}
 }
 
 void scaling_sim::next(){
+
 	double a = scaleFactor(t);
 	double aHalfPlus = scaleFactor(t + config.dt/2.0); 
 	double aHalfMinus = scaleFactor(t - config.dt/2.0);
@@ -258,17 +282,24 @@ void scaling_sim::next(){
 	pi[ALL] = pi[X] + deltaPi[X]; 
 
 	t += config.dt;
-}
 
-//write measurements into a specified output file from the command line
+}
 
 int main(int argc, char ** argv){
 	scaling_sim sim;
-	sim.allocate("sim_params.txt", argc, argv);
+
+	std::string input_fname(argv[1]);
+	std::string output_fname(argv[2]);
+
+	sim.allocate(input_fname, argc, argv);
 	sim.initialize();
 
 	int steps = (sim.config.tEnd - sim.config.tStats)/(sim.config.dt * sim.config.nOutputs); //number of steps between printing stats 
 	int stat_counter = 0;
+
+	if (mynode() == 0){
+		sim.config.stream.open(output_fname);
+	}
 
 	while (sim.t < sim.config.tEnd){
 		if (sim.t >= sim.config.tStats){
@@ -280,6 +311,10 @@ int main(int argc, char ** argv){
 			stat_counter++;
 		}
 		sim.next();
+	}
+
+	if (mynode() == 0){
+		sim.config.stream.close();
 	}
 
 	finishrun();
