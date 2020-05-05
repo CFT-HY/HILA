@@ -6,7 +6,6 @@
 #include <math.h>
 #include <type_traits>
 
-#include "../plumbing/globals.h"
 
 #include "../plumbing/defs.h"
 #include "../plumbing/field_storage.h"
@@ -142,15 +141,49 @@ class field {
 #endif
 
       /// Gather boundary elements for communication
-      void gather_comm_elements(T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, parity par) const {
+      void gather_comm_elements(direction d, parity par, T * RESTRICT buffer, 
+                                const lattice_struct::comm_node_struct & to_node) const {
+#ifndef VECTORIZED
         payload.gather_comm_elements(buffer, to_node, par, lattice);
+#else
+        if constexpr (is_vectorizable_type<T>::value) {
+          // now vectorized layout
+          if (vector_lattice->is_boundary_permutation[abs(d)]) {
+            // with boundary permutation need to fetch elems 1-by-1
+            payload.gather_comm_elements(buffer, to_node, par, lattice);
+          } else {
+            // without it, can do the full block
+            payload.gather_comm_vectors(buffer, to_node, par, vector_lattice);
+          }
+        } else {
+          payload.gather_comm_elements(buffer, to_node, par, lattice);
+        }
+#endif
       }
 
+
       /// Place boundary elements from neighbour
-      void place_comm_elements(T * RESTRICT buffer, const lattice_struct::comm_node_struct & from_node, parity par){
-        payload.place_comm_elements(buffer, from_node, par, lattice);
+      void place_comm_elements(direction d, parity par, T * RESTRICT buffer, 
+                               const lattice_struct::comm_node_struct & from_node){
+#ifdef VECTORIZED
+        if constexpr (is_vectorizable_type<T>::value) {
+          // now vectorized layout, act accordingly
+          if (vector_lattice->is_boundary_permutation[abs(d)]) {
+            payload.place_recv_elements(buffer, d, par, vector_lattice);
+          } else {
+            // nothing to do here, comms directly in place
+          }
+        } else {
+          // non-vectorized, using vanilla method, again nothing to do
+        }
+#else
+        // this one is only for cuda
+        payload.place_comm_elements(d,par, buffer, from_node, lattice);
+#endif
       }
-      
+
+
+
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
         payload.set_local_boundary_elements(dir, par, lattice);
@@ -752,7 +785,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
       fs->send_buffer[d] = (T *)memalloc( to_node.sites*size );
     send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
-    fs->gather_comm_elements(send_buffer, to_node, par);
+    fs->gather_comm_elements(d,par,send_buffer,to_node);
  
     MPI_Isend( (char *)send_buffer, sites*size, MPI_BYTE, to_node.rank, 
                tag, lattice->mpi_comm_lat, &fs->send_request[par_i][d]);
@@ -842,8 +875,7 @@ void field<T>::wait_get(direction d, parity p) const {
       MPI_Wait( &fs->receive_request[par_i][d], &status);
 
 #ifndef VANILLA
-      fs->place_comm_elements( fs->get_receive_buffer(d,par,from_node), from_node, par);
-      hila::output << "CALLING PLACE_COMM\n";
+      fs->place_comm_elements(d, par, fs->get_receive_buffer(d,par,from_node), from_node);
 #endif
     }
 

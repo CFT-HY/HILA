@@ -43,7 +43,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
           dfield1[ALL] = dfield2[X]*dfield3[X];
       }
-      synchronize();;
+      // // synchronize();;
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -57,7 +57,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
           dfield1[ALL] = dfield2[X] + dfield3[X];
       }
-      // synchronize();
+      // // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -71,7 +71,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
           ffield1[ALL] = ffield2[X]*ffield3[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -85,7 +85,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
           ffield1[ALL] = ffield2[X] + ffield3[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -129,7 +129,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
           matrix1[ALL] = matrix1[X]*matrix1[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -145,7 +145,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
         matrix3[ALL] = matrix1[X]*matrix2[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -161,7 +161,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
           fmatrix3[ALL] = fmatrix1[X]*fmatrix2[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -176,7 +176,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
         vector2[ALL] = vector1[X]*matrix1[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -191,9 +191,10 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
           fvector2[ALL] = fvector1[X]*fmatrix1[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
+      output0 << "timing " << timing << '\n';
     }
     timing = timing / (double)n_runs;
     output0 << "Single Precision Vector * Matrix: " << timing << " ms \n";
@@ -213,7 +214,7 @@ int main(int argc, char **argv){
         }
       }
       volatile double volatile_sum = sum;
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -236,7 +237,7 @@ int main(int argc, char **argv){
         }
         volatile double volatile_sum = fsum;
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -256,7 +257,7 @@ int main(int argc, char **argv){
         }
       }
       
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -281,7 +282,7 @@ int main(int argc, char **argv){
     //printf("node %d, dirac_stagggered 0\n", mynode());
     dirac_staggered< matrix<1,N, cmplx<double>>, matrix<N,N, cmplx<double>>> D(0.1, U);
     D.apply(vector1, vector2);
-    synchronize();
+    // synchronize();
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
       gettimeofday(&start, NULL);
@@ -290,7 +291,7 @@ int main(int argc, char **argv){
         vector1.mark_changed(ALL); // Ensure communication is included
         D.apply(vector1, vector2);
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }
@@ -337,7 +338,7 @@ int main(int argc, char **argv){
         beta = rrnew/rr;
         p[ALL] = r[X] + beta*p[X];
       }
-      synchronize();
+      // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
     }

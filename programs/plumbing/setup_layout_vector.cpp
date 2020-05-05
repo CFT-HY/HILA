@@ -207,10 +207,6 @@ void lattice_struct::setup_layout()
       ++n;
       nodes.divisors[dir][n] = i;
     }
-    // output0 << "Divisors ";
-    // for (int i=0;i<nodes.n_divisions[dir]; i++) output0 << nodes.divisors[dir][i] << " ";
-    // output0 << '\n';
-
   }
 
   // set up the subnode divisions here -- rest is set in setup_node
