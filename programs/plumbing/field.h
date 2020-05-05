@@ -719,17 +719,20 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
   lattice_struct::comm_node_struct & from_node = ci.from_node;
   lattice_struct::comm_node_struct & to_node = ci.to_node;
 
-  // Nothing to do, nothing to wait for -- we'll use the status
-  // to keep track of vector boundary shuffle anyway in wait_get
-
-  if (from_node.rank == mynode() && to_node.rank == mynode()) return 0;
-
-
   // check if this is done - either fetched or no comm to be done in the 1st place
 
   if (is_fetched(d,p)) {
     lattice->n_gather_avoided++; 
     return 0;   // nothing to wait for
+  }
+
+  // No comms to do, nothing to wait for -- we'll use the is_fetched
+  // status to keep track of vector boundary shuffle anyway
+
+  if (from_node.rank == mynode() && to_node.rank == mynode()) {
+    fs->set_local_boundary_elements(d,p);
+    mark_fetched(d,p);
+    return 0;
   }
 
   // if this parity or ALL-type fetch is going on nothing to be done
@@ -791,6 +794,12 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
                tag, lattice->mpi_comm_lat, &fs->send_request[par_i][d]);
   }
 
+  // and do the boundary shuffle here, after MPI has started
+  // NOTE: there should be no danger of MPI and shuffle overwriting, MPI writes
+  // to halo buffers only if no permutation is needed.  With a permutation MPI
+  // uses special receive buffer
+  fs->set_local_boundary_elements(d,par);
+
   return get_dir_mask(d);
 
 }
@@ -814,14 +823,8 @@ void field<T>::wait_get(direction d, parity p) const {
   // check if this is done - either fetched or no comm to be done in the 1st place
   if (is_fetched(d,p)) return;
 
-
-  // this is the branch if no comms -- we'll do the boundary shuffle anyway
-  if (from_node.rank == mynode() && to_node.rank == mynode()) {
-    fs->set_local_boundary_elements(d,p);
-    mark_fetched(d,p);
-    return;
-  }
-
+  // this is the branch if no comms -- shuffle was done in start_get
+  if (from_node.rank == mynode() && to_node.rank == mynode()) return;
 
   // if (!is_move_started(d,p)) {
   //   output0 << "Wait move error - wait_get without corresponding start_get\n";
@@ -860,9 +863,6 @@ void field<T>::wait_get(direction d, parity p) const {
       exit(-1);
     }
   }
-
-  // Update local elements in the halo (necessary for vectorized version)
-  fs->set_local_boundary_elements(d, par);
 
   if (n_wait == 2) par = EVEN; // we'll flip both
 
@@ -904,8 +904,11 @@ void field<T>::wait_get(direction d, parity p) const {
 template<typename T>
 dir_mask_t field<T>::start_get(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)
-  // Does not need to happen every time; should use tracking like in MPI
-  fs->set_local_boundary_elements(d, p);
+  // We use here simpler tracking than in MPI, may lead to slight extra work
+  if (!is_fetched(d,p)) {
+    fs->set_local_boundary_elements(d, p);
+    mark_fetched(d,p);
+  }
   return 0;
 }
 
