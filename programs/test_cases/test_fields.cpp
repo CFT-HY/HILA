@@ -176,6 +176,7 @@ int main(int argc, char **argv){
       cmplx<double> moved = s2.get_element(coord2);
       assert(elem.re == 1 && elem.im==0);
 
+      // Move data down
       s2[ALL] = s1[X+d];
 
       // Now it may be on a different node
@@ -190,25 +191,33 @@ int main(int argc, char **argv){
     }
 
 
-
-
+    // Communication and copy test with full field
     foralldir(d){
-        onsites(ODD){
-      	    s2[X] += s1[X + d];
-	    }
-	    onsites(EVEN){
-		    s3[X] += s1[X + d];
-	    }
+      s1 = 1.0; s2 = 1.0; s3 = 1.0;
+      double sum = 0;
+      double sum2 = 0;
+      onsites(EVEN){
+        double a = s1[X+d].re;
+        double b = s2[X].re;
+        sum += a-b;
+      }
+
+      output0 << d << " " << sum << "\n";
+	    assert(sum==0 && "Test communicating a filled field");
+
+
+      s1 = 1.0; s2 = 1.0; s3 = 1.0; sum = 0; sum2 = 0;
+      onsites(EVEN){
+        sum += s2[X].re-s1[X+d].re;
+        s2[X] -= 1.0;
+        sum2 += s2[X].re;
+      }
+
+      output0 << d << " " << sum << " " << sum2 << "\n";
+
+	    assert(sum==0 && "Reproduce write problem");
     }
 
-    s1[ALL] = s2[X] + s3[X];
-
-    sum = 0;
-    onsites(ALL){
-        element<double> diff = s1[X].re - (NDIM+1);
-	    sum += diff*diff;
-    }
-	  assert(sum==0 && "test neighbour fetch");
 
 
     // Test starting communication manually
