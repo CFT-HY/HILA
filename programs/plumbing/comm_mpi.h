@@ -99,6 +99,11 @@ inline void lattice_struct::reduce_node_product(double * value, int N, bool dist
   }
 }
 
+template <typename T>
+void broadcast(T & var) {
+  MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, MPI_COMM_WORLD);
+} 
+
 
 
 #endif //USE_MPI
