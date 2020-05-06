@@ -41,12 +41,14 @@ void gather_test() {
       
         T diff = 0;
         int add;
+        double sum1 = 0, sum2 = 0;  // use double to accumulate ints, should be accurate
         if (is_up_dir(d2)) add = 1; else add = -1;
         onsites(p) {
           T j = t[X+d2].r[d];
-//        if (j==0) j = 0;
-          T s;
-          s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
+          T s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
+
+          sum2 += t[X+d2].r[d] - lattice->size(d)/2;
+          sum1 += t[X].r[d] - lattice->size(d)/2;
 
           T lv = s-j;
           T a = 0;
@@ -67,6 +69,23 @@ void gather_test() {
           }
         }
 
+        double s_result;
+        if (p == ALL) 
+          s_result = lattice->volume()/2;
+        else 
+          s_result = lattice->volume()/4;
+
+        if (sum1 + s_result != 0.0) {
+          output0 << "Error in sum reduction!  answer " << sum1 + s_result << " should be 0\n";
+          exit(-1);
+        }
+
+        if (sum2 + s_result != 0.0) {
+          output0 << "Error in neighbour sum reduction!  answer " << sum2 + s_result << " should be 0\n";
+          exit(-1);
+        }
+
+
         t.mark_changed(ALL);  // foorce fetching, test it too
 
 #ifdef VECTORIZED
@@ -74,19 +93,32 @@ void gather_test() {
 
         
         diff = 0;
+        sum1 = sum2 = 0;
         onsites(p) {
           T j = t[X+d2].r[d];
           T s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
 
           diff += s-j;
+          sum1 += t[X].r[d] - lattice->size(d)/2;
+          sum2 += t[X+d2].r[d] - lattice->size(d)/2;
         }     
      
         if (diff != 0) {
-          hila::output << "Std gather test error! Node " << mynode() 
+          hila::output << "Vectorized std gather test error! Node " << mynode() 
                        << " Parity " << parity_name(p) << " direction " << (unsigned)d2 << '\n';
           exit(-1);
         }
 
+        if (sum1 + s_result != 0.0) {
+          output0 << "Error in vector sum reduction!  answer " << sum1 + s_result << " should be 0\n";
+          exit(-1);
+        }
+
+        if (sum2 + s_result != 0.0) {
+          output0 << "Error in vector neighbour sum reduction!  answer " << sum2 + s_result << " should be 0\n";
+          exit(-1);
+        }
+        
         t.mark_changed(ALL);
 #endif
       }
