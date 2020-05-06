@@ -90,6 +90,13 @@ inline void finishrun() {
   exit(0);
 }
 
+// broadcast does nothing if not MPI
+template <typename T>
+void broadcast(T & v) {}
+
+template <typename T>
+void broadcast_array(T * var, int n) {}
+
 #else
 
 int mynode();

@@ -44,7 +44,8 @@ struct vectorized_lattice_struct  {
     unsigned * RESTRICT neighbours[NDIRS];
     unsigned alloc_size;
 
-
+    unsigned char * RESTRICT vec_wait_arr_; 
+ 
     bool is_on_first_subnode( coordinate_vector v ) {
       v = mod(v,lattice->size());
       foralldir(d) {
@@ -183,6 +184,7 @@ struct vectorized_lattice_struct  {
         } else halo_index[d] = nullptr;
       }
 
+      #ifdef USE_MPI
       /// and then possible neighbour receive indices
       for (direction d=(direction)0; d<NDIRS; d++) {
         if (is_boundary_permutation[abs(d)] && lattice->nodes.n_divisions[abs(d)] > 1) {
@@ -216,6 +218,7 @@ struct vectorized_lattice_struct  {
         }
 
       }
+      #endif
 
       /// how big the field allocation should be - IN SITES, not vectors
       alloc_size = c_offset * vector_size;
@@ -235,6 +238,23 @@ struct vectorized_lattice_struct  {
         coordinate_base[i] = lattice->coordinates(vector_size*i);
       }
 
+      /// Finally, initialize wait arrays
+      /// it is a bit mask array containing a bit at location dir if the neighbour
+      /// at that dir is out of the local volume
+
+      #ifdef USE_MPI
+      vec_wait_arr_ = (dir_mask_t *)memalloc( v_sites * sizeof(dir_mask_t) );
+
+      for (int i=0; i<v_sites; i++) {
+        vec_wait_arr_[i] = 0;    /* basic, no wait */
+        foralldir(dir) {
+          direction odir = -dir;
+          if ( neighbours[dir][i]  >= v_sites ) vec_wait_arr_[i] = vec_wait_arr_[i] | (1<<dir) ;
+          if ( neighbours[odir][i] >= v_sites ) vec_wait_arr_[i] = vec_wait_arr_[i] | (1<<odir) ;
+        }
+      }
+      #endif
+
 
     }  // end of initialization
 
@@ -244,13 +264,13 @@ struct vectorized_lattice_struct  {
     }
 
     /// get neighbours for this, with 2 different methods:
-    unsigned vector_neighbour(direction d, int idx) {
+    unsigned vector_neighbour(direction d, int idx) const {
       return neighbours[d][idx];
     }
 
     /// this gives the neighbour when the lattice is traversed
     /// site-by-site.  Now idx is the "true" site index, not vector index
-    unsigned site_neighbour(direction d, int idx) {
+    unsigned site_neighbour(direction d, int idx) const {
       return vector_size * neighbours[d][idx/vector_size] + idx % vector_size;
     }
 
@@ -263,13 +283,13 @@ struct vectorized_lattice_struct  {
 
     /// Return the coordinates of each vector nested as
     /// coordinate[direction][vector_index]
-    auto coordinates(int idx) {
+    auto coordinates(int idx) const {
       std::array<typename vector_base_type<int,vector_size>::type ,NDIM> r;
       foralldir(d) r[d] = coordinate_offset[d] + coordinate_base[idx][d];
       return r;
     }
 
-    auto coordinate(direction d, int idx) {
+    auto coordinate(direction d, int idx) const {
       return coordinate_offset[d] + coordinate_base[idx][d];
     }
 
@@ -279,7 +299,7 @@ struct vectorized_lattice_struct  {
     }
 
     /// First index in a lattice loop
-    int loop_begin( ::parity P) {
+    int loop_begin( ::parity P) const {
       if(P==ODD){
         return v_sites/2;
       } else {
@@ -288,7 +308,7 @@ struct vectorized_lattice_struct  {
     }
 
     // Last index in a lattice loop
-    int loop_end( ::parity P) {
+    int loop_end( ::parity P) const {
       if(P==EVEN){
         return v_sites/2;
       } else {
@@ -297,12 +317,12 @@ struct vectorized_lattice_struct  {
     }
 
     template <typename T>
-    void reduce_node_sum(T * value, int N, bool distribute){
+    void reduce_node_sum(T * value, int N, bool distribute) const {
       lattice->reduce_node_sum(value, N, distribute);
     };
 
     template <typename T>
-    void reduce_node_product(T * value, int N, bool distribute){
+    void reduce_node_product(T * value, int N, bool distribute) const {
       lattice->reduce_node_product(value, N, distribute);
     };
 

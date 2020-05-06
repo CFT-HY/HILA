@@ -309,11 +309,8 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
 
   // Set loop lattice for neibhbour arrays
   std::string fieldname = field_info_list.front().new_name;
-  code << "auto * loop_lattice = "
+  code << "const auto * RESTRICT loop_lattice = "
        << fieldname << ".fs->vector_lattice;\n";
-
-  // Get a pointer to the neighbours
-  code << "unsigned * RESTRICT * RESTRICT neighbours = loop_lattice->neighbours;\n";
 
   // Set the start and end points
   code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";
@@ -324,10 +321,12 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
   }
 
   // Start the loop
-  code << "for(int " << looping_var << " = loop_begin; "
-       << looping_var << " < loop_end; " 
-       << looping_var << "++) {\n";
+  code << "for(int " << looping_var <<" = loop_begin; " 
+       << looping_var << " < loop_end; ++" << looping_var << ") {\n";
 
+  if (generate_wait_loops) {
+    code << "if (((loop_lattice->vec_wait_arr_[" << looping_var << "] & _dir_mask_) != 0) == _wait_i_) {\n";
+  }
 
   // Add vector reduction variable here, inside the loop
   for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
@@ -357,7 +356,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
 
         code << l.vecinfo.vectorized_type << " " 
              << d.name_with_dir
-             << " = " << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type << ">(neighbours[" 
+             << " = " << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type << ">(loop_lattice->neighbours[" 
              << dirname << "][" << looping_var << "]);\n";
 
         // and replace references in loop body
@@ -464,8 +463,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
 
   if (generate_wait_loops) {
     // add the code for 2nd round
-    code << "if (_dir_mask_ == 0) break;    // No need for another round\n";
-    code << "_dir_mask_ = ~_dir_mask_;\n";
+    code << "}\nif (_dir_mask_ == 0) break;    // No need for another round\n";
     
     for (field_info & l : field_info_list) {
       // If neighbour references exist, communicate them
@@ -477,7 +475,6 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
     code << "}\n";
 
   }
-
 
 
   // Final reduction of the temporary reduction variables

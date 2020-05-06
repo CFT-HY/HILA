@@ -55,12 +55,11 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
 
   // Start the loop
   code << "for(int " << looping_var <<" = loop_begin; " 
-       << looping_var << " < loop_end; ++" << looping_var << ") ";
+       << looping_var << " < loop_end; ++" << looping_var << ") {\n";
 
   if (generate_wait_loops) {
-    code << "if (((loop_lattice->wait_arr_[" << looping_var << "] & _dir_mask_) != 0) == _wait_i_) ";
+    code << "if (((loop_lattice->wait_arr_[" << looping_var << "] & _dir_mask_) != 0) == _wait_i_) {\n";
   }
-  code <<  "{\n";
 
   // replace reduction variables in the loop
   for ( var_info & vi : var_info_list ) {
@@ -157,9 +156,8 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
   code << "}\n";
 
   if (generate_wait_loops) {
-    // add the code for 2nd round
-    code << "if (_dir_mask_ == 0) break;    // No need for another round\n";
-    code << "_dir_mask_ = ~_dir_mask_;\n";
+    // add the code for 2nd round - also need one } to balance the if ()
+    code << "}\nif (_dir_mask_ == 0) break;    // No need for another round\n";
     
     for (field_info & l : field_info_list) {
       // If neighbour references exist, communicate them

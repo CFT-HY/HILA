@@ -99,7 +99,20 @@ inline void lattice_struct::reduce_node_product(double * value, int N, bool dist
   }
 }
 
+template <typename T>
+void broadcast(T & var) {
+  MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, MPI_COMM_WORLD);
+} 
 
+template <typename T>
+void broadcast(T * var) {
+  static_assert(sizeof(T) > 0 && "Do not use pointers to broadcast()-function");
+}
+
+template <typename T>
+void broadcast_array(T * var, int n) {
+  MPI_Bcast(var, sizeof(T)*n, MPI_BYTE, 0, MPI_COMM_WORLD);
+}
 
 #endif //USE_MPI
 
