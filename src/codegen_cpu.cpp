@@ -158,7 +158,6 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
   if (generate_wait_loops) {
     // add the code for 2nd round - also need one } to balance the if ()
     code << "}\nif (_dir_mask_ == 0) break;    // No need for another round\n";
-    code << "_dir_mask_ = ~_dir_mask_;\n";
     
     for (field_info & l : field_info_list) {
       // If neighbour references exist, communicate them

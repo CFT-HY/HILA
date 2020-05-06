@@ -464,7 +464,6 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
   if (generate_wait_loops) {
     // add the code for 2nd round
     code << "}\nif (_dir_mask_ == 0) break;    // No need for another round\n";
-    code << "_dir_mask_ = ~_dir_mask_;\n";
     
     for (field_info & l : field_info_list) {
       // If neighbour references exist, communicate them
