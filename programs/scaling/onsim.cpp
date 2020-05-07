@@ -113,7 +113,7 @@ void scaling_sim::initialize(){
 			}
 
 			if (mynode() == 0){
-					hila::output << "Field initialized to constant value: "<< config.sigma << '\n';
+					hila::output << "Field real and imaginary components set to sigma = "<< config.sigma << '\n';
 			}
 
 			break;
@@ -298,7 +298,7 @@ int main(int argc, char ** argv){
 	int stat_counter = 0;
 
 	if (mynode() == 0){
-		sim.config.stream.open(output_fname);
+		sim.config.stream.open(output_fname, std::ios::out);
 	}
 
 	while (sim.t < sim.config.tEnd){
