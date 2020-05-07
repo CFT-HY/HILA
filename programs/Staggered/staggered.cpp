@@ -115,8 +115,11 @@ int main(int argc, char **argv){
   gauge_force(gauge, momentum, 1.0/N);
   NMAT f = momentum[0].get_value_at(50);
   double diff = 2*f.c[0][1].re + (s2-s1)/eps;
-  if(mynode()==0) 
-    assert( diff*diff < eps*eps*100 );
+  
+  if(mynode()==0) {
+    hila::output << "Force diff " << diff << "\n";
+    assert( diff*diff < eps*eps*100 && "Gauge force" );
+  }
 
 
   // Check also the momentum action and derivative
@@ -131,7 +134,7 @@ int main(int argc, char **argv){
 
   diff = h.c[0][0].im - (s2-s1)/eps;
   if(mynode()==0) 
-    assert( diff*diff < eps*eps*100 );
+    assert( diff*diff < eps*eps*100 && "Momentum derivative" );
 
 
 
