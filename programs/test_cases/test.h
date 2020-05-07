@@ -20,7 +20,7 @@ lattice_struct * lattice = & my_lattice;
 
 
 
-const int nd[4] = { 64, 40, 5, 16};
+const int nd[4] = { 64, 40, 6, 16};
 
 
 inline void checkLatticeSetup(){

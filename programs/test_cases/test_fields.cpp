@@ -201,21 +201,28 @@ int main(int argc, char **argv){
         double b = s2[X].re;
         sum += a-b;
       }
-
-      output0 << d << " " << sum << "\n";
 	    assert(sum==0 && "Test communicating a filled field");
+    }
 
-
-      s1 = 1.0; s2 = 1.0; s3 = 1.0; sum = 0; sum2 = 0;
-      onsites(EVEN){
-        sum += s2[X].re-s1[X+d].re;
-        s2[X] -= 1.0;
-        sum2 += s2[X].re;
+    // Test interleaving by calculating a sum of coordinates
+    // when a field is communicated
+    foralldir(d){
+      s1 = 1; s2 = 1; sum = 0;
+      onsites(ALL){
+        sum += X.coordinates()[0];
+        s1[X];
       }
 
-      output0 << d << " " << sum << " " << sum2 << "\n";
+      double result = lattice->volume()*(nd[0]-1)/2;
+	    assert(sum==result && "Reproduce write problem 1");
 
-	    assert(sum==0 && "Reproduce write problem");
+      s1 = 1; s2 = 1; sum = 0;
+      onsites(ALL){
+        sum += X.coordinates()[0];
+        s1[X+d];
+      }
+
+	    assert(sum==result && "Reproduce write problem 2");
     }
 
 
