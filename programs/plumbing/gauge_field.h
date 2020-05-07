@@ -108,7 +108,7 @@ void gauge_force(field<SUN> *gauge, field<MATRIX> *momentum, double eps){
   foralldir(dir){
     field<SUN> staples = calc_staples(gauge, dir);
     onsites(ALL){
-      element<NMAT> force;
+      element<MATRIX> force;
       force = gauge[dir][X]*staples[X];
       project_antihermitean(force);
       momentum[dir][X] = momentum[dir][X] - eps*force;
@@ -157,9 +157,12 @@ double plaquette(field<SUN> *gauge){
 
 
 
-template<typename SUN, typename MATRIX>
+template<int N, typename float_t>
 class gauge_action{
   public:
+    using SUN = SU<N, float_t>;
+    using MATRIX = matrix<N,N,cmplx<float_t>>;
+
     field<SUN> *gauge;
     field<MATRIX> *momentum;
     double beta;

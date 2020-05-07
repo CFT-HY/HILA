@@ -13,7 +13,7 @@
 
 
 
-using SG = gauge_action<SUN,NMAT>;
+using SG = gauge_action<N, double>;
 using Dtype = dirac_staggered<VEC,SUN>;
 using SF = fermion_action<SG, VEC, Dtype>;
 
