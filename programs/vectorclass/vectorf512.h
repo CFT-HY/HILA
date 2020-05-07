@@ -749,7 +749,7 @@ public:
     Vec8d(__m512d const x) {
         zmm = x;
     }
-     // Assignment from integer:
+    // Assignment from integer:
     Vec8d & operator = (Vec8i const x) {
         zmm = _mm512_cvtepi32_pd(__m256i(x));
         return *this;

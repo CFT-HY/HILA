@@ -1455,7 +1455,7 @@ public:
         ymm = x;
         return *this;
     }
-    // Assignment operator to convert from Vec4d
+    // Assignment operator to convert from Vec4i
     Vec4d & operator = (Vec4i const a0) {
         ymm = _mm256_cvtepi32_pd(a0.xmm);
         return *this;
@@ -1608,6 +1608,19 @@ static inline Vec4d & operator += (Vec4d & a, Vec4d const b) {
     a = a + b;
     return a;
 }
+
+
+// vector operator + : add integer to double
+static inline Vec4d operator + (Vec4d const a, Vec4i const b) {
+    Vec4d fb; fb = b;
+    return _mm256_add_pd(a, fb);
+}
+static inline Vec4d & operator += (Vec4d & a, Vec4i const b) {
+    a = a + b;
+    return a;
+}
+
+
 
 // postfix operator ++
 static inline Vec4d operator ++ (Vec4d & a, int) {
