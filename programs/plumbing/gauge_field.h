@@ -195,6 +195,41 @@ class gauge_action{
     void integrator_step(double eps){
       O2_step(*this, eps);
     }
+
+
+
+
+    SUN generator(int n){
+      // SUN generators normalized as tr(T^2) = 2
+      SUN generator = 0;
+      if(n<N-1){
+        // Diagonal generators
+        double w = sqrt(2.0/((n+1)*(n+2)));
+        for(int i=0; i<n+1; i++ ){
+          generator.c[i][i].im = w;
+        }
+        generator.c[n+1][n+1].im = -(n+1)*w;
+      } else {
+        // Nondiagonal ones. Just run through the indexes and
+        // count until they match...
+        int k=N-1;
+        for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
+          if( n == k ){
+            generator.c[m1][m2].im = 1;
+            generator.c[m2][m1].im = 1;
+          } else if( n == k+1 ){
+            generator.c[m1][m2].re = 1;
+            generator.c[m2][m1].re =-1;
+          }
+          k+=2;
+        }
+      }
+      return generator;
+    }
+
+    int n_generators(){
+      return N*N-1;
+    }
 };
 
 

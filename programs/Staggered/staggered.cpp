@@ -79,72 +79,85 @@ int main(int argc, char **argv){
   }
 
 
-  field<NMAT> momentum[NDIM];
-  foralldir(dir){
-    onsites(ALL){
-      momentum[dir][X] = 0;
-    }
-  }
 
 
   // Test the force calculation by varying one gauge link
   // (Needs to be moved to tests)
-  double eps = 1e-6;
-  SUN g1 = gauge[0].get_value_at(50);
-  SUN h = 1;
-  h.c[0][1].re += eps;
-  h.c[1][0].re -= eps;
-  SUN g12 = h*g1;
+  field<NMAT> momentum[NDIM];
+  gauge_action<N, double> ga(gauge, momentum, 1.0);
+  for(int ng = 0; ng < ga.n_generators(); ng++){
+    foralldir(dir){
+      onsites(ALL){
+        momentum[dir][X] = 0;
+      }
+    }
 
-  gauge_action<SUN,NMAT> ga(gauge, momentum, 1.0);
+    double eps = 1e-6;
+    SUN g1 = gauge[0].get_value_at(50);
+    SUN h = 1;
+    h += eps * ga.generator(ng);
+    SUN g12 = h*g1;
 
-  if(mynode()==0)
-    gauge[0].set_value_at(g1, 50);
-  gauge[0].mark_changed(ALL);
-  double s1 = plaquette_sum(gauge);
+    double s1 = plaquette_sum(gauge);
 
-  if(mynode()==0)
-    gauge[0].set_value_at(g12,50);
-  gauge[0].mark_changed(ALL);
-  double s2 = plaquette_sum(gauge);
+    if(mynode()==0){
+      gauge[0].set_value_at(g12,50);
+      //gauge[0].set_value_at(g12,lattice->neighb[1][50]);
+    }
+    gauge[0].mark_changed(ALL);
+    double s2 = plaquette_sum(gauge);
 
-  if(mynode()==0)
-    gauge[0].set_value_at(g1, 50);
-  gauge[0].mark_changed(ALL);
+    if(mynode()==0)
+      gauge[0].set_value_at(g1, 50);
+    gauge[0].mark_changed(ALL);
 
-  gauge_force(gauge, momentum, 1.0/N);
-  NMAT f = momentum[0].get_value_at(50);
-  double diff = 2*f.c[0][1].re + (s2-s1)/eps;
-  
-  if(mynode()==0) {
-    hila::output << "Force diff " << diff << "\n";
-    assert( diff*diff < eps*eps*100 && "Gauge force" );
+    gauge_force(gauge, momentum, 1.0/N);
+    SUN f = momentum[0].get_value_at(50);
+    double diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
+
+    if(mynode()==0) {
+      //hila::output << "Force 1 " << (f*ga.generator(ng)).trace().re << "\n";
+      //hila::output << "Force 2 " << (s2-s1)/eps << "\n";
+      //hila::output << "Force " << ng << " diff " << diff << "\n";
+      h = ga.generator(ng);
+      assert( diff*diff < eps*eps*1000 && "Gauge force" );
+    }
+
+
+    // Check also the momentum action and derivative
+    ga.generate_momentum();
+
+    s1 = momentum_action(momentum);
+    h = momentum[0].get_value_at(0);
+    h += eps * ga.generator(ng);
+    if(mynode()==0)
+      momentum[0].set_value_at(h, 0);
+    s2 = momentum_action(momentum);
+
+    diff = (h*ga.generator(ng)).trace().re + (s2-s1)/eps;
+    if(mynode()==0) {
+      //hila::output << "Mom 1 " << (h*ga.generator(ng)).trace().re << "\n";
+      //hila::output << "Mom 2 " << (s2-s1)/eps << "\n";
+      //hila::output << "Mom " << ng << " diff " << diff << "\n";
+      h = ga.generator(ng);
+      assert( diff*diff < eps*eps*1000 && "Momentum derivative" );
+    }
   }
-
-
-  // Check also the momentum action and derivative
-  ga.generate_momentum();
-
-  s1 = momentum_action(momentum);
-  h = momentum[0].get_value_at(0);
-  h.c[0][0].im += eps;
-  if(mynode()==0)
-    momentum[0].set_value_at(h, 0);
-  s2 = momentum_action(momentum);
-
-  diff = h.c[0][0].im - (s2-s1)/eps;
-  if(mynode()==0) 
-    assert( diff*diff < eps*eps*100 && "Momentum derivative" );
-
 
 
 
   // Now the actual simulation
+  foralldir(dir){
+    onsites(ALL){
+      gauge[dir][X] = 1;
+    }
+  }
+
   ga = SG(gauge, momentum, beta);
   Dtype D(mass, gauge);
   SF fa(ga, D);
   full_action action(fa);
-  for(int step = 0; step < 100; step ++){
+  for(int step = 0; step < 5; step ++){
     update_hmc(action, hmc_steps, traj_length);
     double plaq = plaquette(gauge);
     output0 << "Plaq: " << plaq << "\n";
