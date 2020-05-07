@@ -65,7 +65,7 @@ else
     tests=$(ls test_*.cpp  )
 fi
 
-for D in 1 2 3 4 ; do
+for D in 2 3 4 ; do
   sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' ${MAKEFILE}
   make cleanall
   for testfile in $tests; do
