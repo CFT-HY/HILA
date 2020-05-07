@@ -1,4 +1,4 @@
-beta = 2
+beta = 4
 mass = 0.5
 hmc_steps = 10
 traj_length = 1.0
