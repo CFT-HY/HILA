@@ -14,11 +14,11 @@ test: Makefile conjReduce
 test_transformer: Makefile conjReduce.cpp ../../build/transformer
 	./test_transformer.sh conjReduce.cpp
 
-test_conjReduce: Makefile inputs.o conjReduce.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o
-	$(CC) -o conjReduce inputs.o conjReduce.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o
+test_conjReduce: Makefile inputs.o conjReduce.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o test_gathers.o
+	$(CC) -o conjReduce inputs.o conjReduce.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o test_gathers.o
 
-%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o memalloc.o
-	$(CC) -o $@ $< -lfftw3 -lm inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o memalloc.o
+%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o memalloc.o test_gathers.o
+	$(CC) -o $@ $< -lfftw3 -lm inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o memalloc.o test_gathers.o
 
 %.cpt: %.cpp Makefile
 	$(TRANSFORMER) $<
