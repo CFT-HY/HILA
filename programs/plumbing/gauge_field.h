@@ -180,7 +180,7 @@ class gauge_action{
 
     // Update the momentum with the gauge field
     void force_step(double eps){
-      gauge_force(gauge, momentum, eps);
+      gauge_force(gauge, momentum, beta*eps/N);
     }
 
     // Update the gauge field with momentum
