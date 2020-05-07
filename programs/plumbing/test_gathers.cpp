@@ -36,8 +36,7 @@ void gather_test() {
   for (parity p : {EVEN,ODD,ALL}) {
 
     foralldir(d) {
-      direction d2;
-      for (d2=d; is_up_dir(d2); d2=-d) {
+      for (direction d2 : {d,-d}) {
       
         T diff = 0;
         int add;
