@@ -924,7 +924,7 @@ void field<T>::wait_get(direction d, parity p) const {}
 #if defined(USE_MPI) && !defined(TRANSFORMER)
 
 template<typename T>
-void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) const {
+void field<T>::field_struct::gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root) const {
   std::vector<unsigned> index_list;
   std::vector<unsigned> node_list(lattice->n_nodes());
   std::fill(node_list.begin(), node_list.end(),0);
@@ -950,7 +950,7 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordina
       } else {
         std::memcpy( buffer, (char *) send_buffer.data(), node_list[n]*sizeof(T) );
       }
-      buffer += node_list[n]*sizeof(T);
+      buffer += node_list[n];
     }
   }
 }
@@ -958,7 +958,7 @@ void field<T>::field_struct::gather_elements(char * buffer, std::vector<coordina
 
 
 template<typename T>
-void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root) {
+void field<T>::field_struct::send_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root) {
   std::vector<unsigned> index_list;
   std::vector<unsigned> node_list(lattice->n_nodes());
   std::fill(node_list.begin(), node_list.end(),0);
@@ -984,7 +984,7 @@ void field<T>::field_struct::send_elements(char * buffer, std::vector<coordinate
       } else {
         std::memcpy( (char *) recv_buffer.data(), buffer, node_list[n]*sizeof(T) );
       }
-      buffer += node_list[n]*sizeof(T);
+      buffer += node_list[n];
     }
   }
   payload.place_elements((T*) recv_buffer.data(), index_list.data(), recv_buffer.size(), lattice);
@@ -1028,19 +1028,19 @@ void field<T>::get(direction d, parity p) const {
 /// Functions for manipulating individual elements in an array
 template<typename T>
 void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_list) {
-  fs->send_elements( (char*) elements, coord_list);
+  fs->send_elements( elements, coord_list);
 }
 
 template<typename T>
 void field<T>::set_element( T element, coordinate_vector coord) {
   std::vector<coordinate_vector> coord_list;
   coord_list.push_back(coord);
-  fs->send_elements( (char*) &element, coord_list);
+  fs->send_elements( &element, coord_list);
 }
 
 template<typename T>
 void field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
-  fs->gather_elements( (char*) elements, coord_list);
+  fs->gather_elements( elements, coord_list);
 }
 
 template<typename T>
@@ -1048,7 +1048,7 @@ T field<T>::get_element( coordinate_vector coord) const {
   T element;
   std::vector<coordinate_vector> coord_list;
   coord_list.push_back(coord);
-  fs->gather_elements( (char*) &element, coord_list);
+  fs->gather_elements( &element, coord_list);
   return element;
 }
 
@@ -1066,7 +1066,7 @@ void field<T>::write_to_stream(std::ofstream& outputfile){
   constexpr size_t write_size = sites_per_write * sizeof(T);
 
   std::vector<coordinate_vector> coord_list(sites_per_write);
-  char * buffer = (char*) malloc(write_size);
+  T * buffer = (T*) malloc(write_size);
   coordinate_vector size = lattice->size();
 
   int i=0;
@@ -1084,7 +1084,7 @@ void field<T>::write_to_stream(std::ofstream& outputfile){
     if( (i+1)%sites_per_write == 0 ){
       fs->gather_elements(buffer, coord_list);
       if( mynode()==0 )
-        outputfile.write(buffer,write_size);
+        outputfile.write((char*)buffer,write_size);
     }
   }
 
@@ -1093,7 +1093,7 @@ void field<T>::write_to_stream(std::ofstream& outputfile){
   fs->gather_elements(buffer, coord_list);
   double * v = (double*) buffer;
   if( mynode() == 0 )
-    outputfile.write(buffer,sizeof(T)*(i%sites_per_write));
+    outputfile.write((char*)buffer,sizeof(T)*(i%sites_per_write));
 
   std::free(buffer);
 }
@@ -1143,7 +1143,7 @@ void field<T>::read_from_stream(std::ifstream& inputfile){
   mark_changed(ALL);
 
   std::vector<coordinate_vector> coord_list(sites_per_read);
-  char * buffer = (char*) malloc(read_size);
+  T * buffer = (T*) malloc(read_size);
   coordinate_vector size = lattice->size();
 
   int i=0;
@@ -1160,7 +1160,7 @@ void field<T>::read_from_stream(std::ifstream& inputfile){
     // Read the buffer when full
     if( (i+1)%sites_per_read == 0 ){
       if( mynode()==0 )
-        inputfile.read(buffer,read_size);
+        inputfile.read((char*)buffer,read_size);
       fs->send_elements(buffer, coord_list);
     }
   }
@@ -1168,7 +1168,7 @@ void field<T>::read_from_stream(std::ifstream& inputfile){
   // Read the rest
   coord_list.resize(i%sites_per_read);
   if( mynode()==0 )
-    inputfile.read(buffer, sizeof(T)*(i%sites_per_read));
+    inputfile.read((char*)buffer, sizeof(T)*(i%sites_per_read));
   double * v = (double*) buffer;
   fs->send_elements(buffer, coord_list);
 
