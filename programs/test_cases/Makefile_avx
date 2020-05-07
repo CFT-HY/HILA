@@ -18,13 +18,13 @@ test_transformer: Makefile conjReduce.cpp ../../build/transformer
 %.cpt: %.cpp Makefile
 	$(TRANSFORMER) $<
 
+%.cpt:../plumbing/%.cpp Makefile
+	$(TRANSFORMER) $<
+
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
 %.o : %.cpt
-	$(CC) $(CXXFLAGS) $< -c
-
-%.o : ../plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c
