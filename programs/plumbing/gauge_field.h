@@ -181,30 +181,17 @@ class gauge_action{
     using SUN = SU<N, float_t>;
     using MATRIX = matrix<N,N,cmplx<float_t>>;
 
-    field<SUN> gauge[NDIM];
-    field<SUN> momentum[NDIM];
+    field<SUN> (&gauge)[NDIM];
+    field<SUN> (&momentum)[NDIM];
     double beta;
 
-    // After running the constructor, the gauge field should
-    // be allocated. This way the action can be assigned to
-    // another variable.
-    gauge_action(){
-      beta = 0;
-      set_unity();
-      generate_momentum();
-    };
-    gauge_action(double b){
-      beta = b;
-      set_unity();
-      generate_momentum();
-    }
+    gauge_action(field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM], double b) 
+    : gauge(g), momentum(m), beta(b){}
 
-    // Copies the whole field, not just a reference
     gauge_action(gauge_action &ga){
       beta = ga.beta;
-      foralldir(d){
-        gauge[d] = ga.gauge[d]; momentum[d] = ga.momentum[d]; 
-      }
+      gauge = ga.gauge;
+      momentum = ga.momentum; 
     }
 
     //The gauge action
