@@ -13,12 +13,6 @@
 
 
 
-using SM = gauge_momentum_action<N, double>;
-using SG = gauge_action<N, double>;
-using Dtype = dirac_staggered<VEC,SUN>;
-using SF = fermion_action<SG, VEC, Dtype>;
-
-
 
 
 void test_forces(){
@@ -27,7 +21,7 @@ void test_forces(){
   field<SUN> gauge[NDIM];
   field<SUN> momentum[NDIM];
 
-  gauge_action<N, double> ga(gauge, momentum, 1.0);
+  gauge_action<N> ga(gauge, momentum, 1.0);
   // Starting with a unit configuration
   foralldir(dir){
     onsites(ALL){
@@ -95,6 +89,8 @@ void test_forces(){
 }
 
 
+using SG = gauge_action<N>;
+using Dtype = dirac_staggered<VEC,SUN>;
 
 
 
@@ -115,17 +111,20 @@ int main(int argc, char **argv){
   test_forces();
 
 
+  // Define gauge field and momentum field
   field<SUN> gauge[NDIM];
   field<SUN> momentum[NDIM];
 
-  SM ma(gauge, momentum);
-  SG ga(gauge, momentum, beta);
+  // Use 
+  gauge_momentum_action ma(gauge, momentum);
+  gauge_action ga(gauge, momentum, beta);
   ga.set_unity();
-  integrator<SG, SM> gauge_integrator(ga, ma);
 
   Dtype D(mass, gauge);
-  SF fa(ga, D);
-  integrator<SF, integrator<SG, SM>> fermion_integrator(fa, gauge_integrator);
+  fermion_action<SG, VEC, Dtype> fa(ga, D);
+
+  integrator gauge_integrator(ga, ma);
+  integrator fermion_integrator(fa, gauge_integrator);
   for(int step = 0; step < 5; step ++){
     update_hmc(fermion_integrator, hmc_steps, traj_length);
     double plaq = plaquette(ga.gauge);
