@@ -49,7 +49,15 @@ class SU_vector : public matrix<1,n,cmplx<radix> >{
     }
   }
 
-  
+
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+  #pragma transformer loop_function
+  SU_vector & operator= (const scalart rhs) {
+    for (int i=0; i<n; i++){
+      this->c[i][i] = rhs;
+    }
+    return *this;
+  }
 
 };
 

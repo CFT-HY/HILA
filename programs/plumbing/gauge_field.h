@@ -156,6 +156,24 @@ double plaquette(field<SUN> *gauge){
 
 
 
+template<typename SUN>
+void gauge_set_unity(field<SUN> *gauge){
+  foralldir(dir){
+    onsites(ALL){
+      gauge[dir][X] = 1;
+    }
+  }
+}
+
+template<typename SUN>
+void gauge_random(field<SUN> *gauge){
+  foralldir(dir){
+    onsites(ALL){
+      gauge[dir][X].random();
+    }
+  }
+}
+
 
 template<int N, typename float_t>
 class gauge_action{
@@ -163,12 +181,30 @@ class gauge_action{
     using SUN = SU<N, float_t>;
     using MATRIX = matrix<N,N,cmplx<float_t>>;
 
-    field<SUN> *gauge;
-    field<MATRIX> *momentum;
+    field<SUN> gauge[NDIM];
+    field<SUN> momentum[NDIM];
     double beta;
 
-    gauge_action(field<SUN> *g, field<MATRIX> *m, double b){
-      gauge = g; momentum = m; beta = b;
+    // After running the constructor, the gauge field should
+    // be allocated. This way the action can be assigned to
+    // another variable.
+    gauge_action(){
+      beta = 0;
+      set_unity();
+      generate_momentum();
+    };
+    gauge_action(double b){
+      beta = b;
+      set_unity();
+      generate_momentum();
+    }
+
+    // Copies the whole field, not just a reference
+    gauge_action(gauge_action &ga){
+      beta = ga.beta;
+      foralldir(d){
+        gauge[d] = ga.gauge[d]; momentum[d] = ga.momentum[d]; 
+      }
     }
 
     //The gauge action
@@ -195,6 +231,13 @@ class gauge_action{
     void integrator_step(double eps){
       O2_step(*this, eps);
     }
+
+
+    // Set the gauge field to unity
+    void set_unity(){gauge_set_unity(gauge);}
+
+    // Draw a random gauge field
+    void random(){gauge_random(gauge);}
 
 
 

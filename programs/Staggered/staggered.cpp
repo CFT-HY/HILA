@@ -20,28 +20,28 @@ using SF = fermion_action<SG, VEC, Dtype>;
 
 
 
-
+template<typename action_type>
 class full_action{
   public:
-    SF fa;
-    field<SUN> *gauge;
+    action_type &act;
+    field<SUN> (&gauge)[NDIM];
 
-    full_action(SF &f) : fa(f) {gauge = f.gauge;}
+    full_action(action_type &_act) : act(_act), gauge(_act.gauge){}
 
     //The gauge action
     double action(){
-      return fa.action();
+      return act.action();
     }
 
     /// Gaussian random momentum for each element
     void generate_momentum(){
-      fa.generate_momentum();
+      act.generate_momentum();
     }
 
     // Update the momentum with the gauge field
     void integrate(int steps, double dt){
       for(int step=0; step < steps; step++){
-        fa.integrator_step(dt/steps);
+        act.integrator_step(dt/steps);
       }
     }
 };
@@ -69,50 +69,49 @@ int main(int argc, char **argv){
   seed_random(seed);
 
 
-  field<SUN> gauge[NDIM];
 
-  // Starting with a unit configuration
-  foralldir(dir){
-    onsites(ALL){
-      gauge[dir][X].random();
-    }
-  }
+
 
 
 
 
   // Test the force calculation by varying one gauge link
   // (Needs to be moved to tests)
-  field<NMAT> momentum[NDIM];
-  gauge_action<N, double> ga(gauge, momentum, 1.0);
+  gauge_action<N, double> ga(1.0);
+  // Starting with a unit configuration
+  foralldir(dir){
+    onsites(ALL){
+      ga.gauge[dir][X].random();
+    }
+  }
   for(int ng = 0; ng < ga.n_generators(); ng++){
     foralldir(dir){
       onsites(ALL){
-        momentum[dir][X] = 0;
+        ga.momentum[dir][X] = 0;
       }
     }
 
     double eps = 1e-6;
-    SUN g1 = gauge[0].get_value_at(50);
+    SUN g1 = ga.gauge[0].get_value_at(50);
     SUN h = 1;
     h += eps * ga.generator(ng);
     SUN g12 = h*g1;
 
-    double s1 = plaquette_sum(gauge);
+    double s1 = plaquette_sum(ga.gauge);
 
     if(mynode()==0){
-      gauge[0].set_value_at(g12,50);
-      //gauge[0].set_value_at(g12,lattice->neighb[1][50]);
+      ga.gauge[0].set_value_at(g12,50);
+      //ga.gauge[0].set_value_at(g12,lattice->neighb[1][50]);
     }
-    gauge[0].mark_changed(ALL);
-    double s2 = plaquette_sum(gauge);
+    ga.gauge[0].mark_changed(ALL);
+    double s2 = plaquette_sum(ga.gauge);
 
     if(mynode()==0)
-      gauge[0].set_value_at(g1, 50);
-    gauge[0].mark_changed(ALL);
+      ga.gauge[0].set_value_at(g1, 50);
+    ga.gauge[0].mark_changed(ALL);
 
-    gauge_force(gauge, momentum, 1.0/N);
-    SUN f = momentum[0].get_value_at(50);
+    gauge_force(ga.gauge, ga.momentum, 1.0/N);
+    SUN f = ga.momentum[0].get_value_at(50);
     double diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
@@ -127,12 +126,12 @@ int main(int argc, char **argv){
     // Check also the momentum action and derivative
     ga.generate_momentum();
 
-    s1 = momentum_action(momentum);
-    h = momentum[0].get_value_at(0);
+    s1 = momentum_action(ga.momentum);
+    h = ga.momentum[0].get_value_at(0);
     h += eps * ga.generator(ng);
     if(mynode()==0)
-      momentum[0].set_value_at(h, 0);
-    s2 = momentum_action(momentum);
+      ga.momentum[0].set_value_at(h, 0);
+    s2 = momentum_action(ga.momentum);
 
     diff = (h*ga.generator(ng)).trace().re + (s2-s1)/eps;
     if(mynode()==0) {
@@ -147,19 +146,15 @@ int main(int argc, char **argv){
 
 
   // Now the actual simulation
-  foralldir(dir){
-    onsites(ALL){
-      gauge[dir][X] = 1;
-    }
-  }
+  ga = SG(beta);
+  ga.set_unity();
 
-  ga = SG(gauge, momentum, beta);
-  Dtype D(mass, gauge);
+  Dtype D(mass, ga.gauge);
   SF fa(ga, D);
-  full_action action(fa);
+  full_action<SF> action(fa);
   for(int step = 0; step < 5; step ++){
     update_hmc(action, hmc_steps, traj_length);
-    double plaq = plaquette(gauge);
+    double plaq = plaquette(ga.gauge);
     output0 << "Plaq: " << plaq << "\n";
   }
 
