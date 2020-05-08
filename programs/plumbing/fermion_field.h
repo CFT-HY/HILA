@@ -28,13 +28,13 @@ void fermion_force(field<VECTOR> &chi, gauge_action_type gauge, double eps){
 
 
 
-template<typename gauge_action_type, typename VECTOR, typename DIRAC_OP>
+template<typename gauge_action_type, typename DIRAC_OP>
 class fermion_action{
   public:
     gauge_action_type &ga;
     DIRAC_OP &D;
     field<SUN> (&gauge)[NDIM];
-    field<VECTOR> chi;
+    field<typename DIRAC_OP::vector_type> chi;
 
     fermion_action(gauge_action_type &g, DIRAC_OP &d) : ga(g), D(d),gauge(g.gauge) {
       chi = 0.0;

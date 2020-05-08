@@ -89,9 +89,6 @@ void test_forces(){
 }
 
 
-using SG = gauge_action<N>;
-using Dtype = dirac_staggered<VEC,SUN>;
-
 
 
 
@@ -114,13 +111,14 @@ int main(int argc, char **argv){
   field<SUN> gauge[NDIM];
   field<SUN> momentum[NDIM];
 
-  // Use 
+  // Define gauge and momentum action terms
   gauge_momentum_action ma(gauge, momentum);
   gauge_action ga(gauge, momentum, beta);
   ga.set_unity();
 
-  Dtype D(mass, gauge);
-  fermion_action<SG, VEC, Dtype> fa(ga, D);
+  // Define a Dirac operator
+  dirac_staggered<VEC, SUN> D(mass, gauge);
+  fermion_action fa(ga, D);
 
   integrator gauge_integrator(ga, ma);
   integrator fermion_integrator(fa, gauge_integrator);

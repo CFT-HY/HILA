@@ -110,6 +110,8 @@ class dirac_staggered {
   
   public:
 
+    using vector_type = vector;
+
     // Constructor: initialize mass, gauge and eta
     dirac_staggered(dirac_staggered &d) {
       mass = d.mass;
