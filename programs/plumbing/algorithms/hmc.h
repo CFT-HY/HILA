@@ -79,6 +79,7 @@ void update_hmc(integrator_type &integr, int steps, double traj_length){
     accepted++;
   } else {
     output0 << "Rejected!\n";
+    foralldir(dir) integr.action.gauge[dir] = gauge_copy[dir];
   }
 
   output0 << "Acceptance " << accepted << "/" << trajectory 
