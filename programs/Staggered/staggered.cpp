@@ -20,41 +20,6 @@ using SF = fermion_action<SG, VEC, Dtype>;
 
 
 
-template<typename action_type>
-class full_action{
-  public:
-    action_type &act;
-    field<SUN> (&gauge)[NDIM];
-
-    full_action(action_type &_act) : act(_act), gauge(_act.gauge){}
-
-    //The gauge action
-    double action(){
-      return act.action();
-    }
-
-    /// Gaussian random momentum for each element
-    void generate_momentum(){
-      act.generate_momentum();
-    }
-
-    // Update the momentum with the gauge field
-    void integrate(int steps, double dt){
-      for(int step=0; step < steps; step++){
-        act.integrator_step(dt/steps);
-      }
-    }
-};
-
-
-
-
-
-
-
-
-
-
 int main(int argc, char **argv){
 
   input parameters = input();
@@ -67,11 +32,6 @@ int main(int argc, char **argv){
 
   lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
   seed_random(seed);
-
-
-
-
-
 
 
 
@@ -151,9 +111,8 @@ int main(int argc, char **argv){
 
   Dtype D(mass, ga.gauge);
   SF fa(ga, D);
-  full_action<SF> action(fa);
   for(int step = 0; step < 5; step ++){
-    update_hmc(action, hmc_steps, traj_length);
+    update_hmc(fa, hmc_steps, traj_length);
     double plaq = plaquette(ga.gauge);
     output0 << "Plaq: " << plaq << "\n";
   }
