@@ -110,7 +110,6 @@ int main(int argc, char **argv){
 
   test_forces();
 
-
   // Define gauge field and momentum field
   field<SUN> gauge[NDIM];
   field<SUN> momentum[NDIM];

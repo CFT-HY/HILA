@@ -215,6 +215,7 @@ class gauge_momentum_action {
 
 
 
+
 template<int N, typename float_t=double>
 class gauge_action {
   public:
@@ -222,6 +223,7 @@ class gauge_action {
 
     field<SUN> (&gauge)[NDIM];
     field<SUN> (&momentum)[NDIM];
+    field<SUN> gauge_copy[NDIM];
     double beta;
 
     gauge_action(field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM], double b) 
@@ -253,6 +255,17 @@ class gauge_action {
 
     // Draw a random gauge field
     void random(){gauge_random(gauge);}
+
+
+    // Make a copy of fields updated in a trajectory
+    void back_up_fields(){
+      foralldir(dir) gauge_copy[dir] = gauge[dir];
+    }
+
+    // Restore the previous backup
+    void restore_backup(){
+      foralldir(dir) gauge[dir] = gauge_copy[dir];
+    }
 
 
 
@@ -292,18 +305,44 @@ class gauge_action {
 
 
 
+
+/// Define an integration step for a Molecular Dynamics
+/// trajectory.
 template<typename action_type, typename lower_integrator_type>
 class integrator{
   public:
-    action_type &action;
+    action_type &action_terms;
     lower_integrator_type &lower_integrator;
 
     integrator(action_type &a, lower_integrator_type &i)
-    : action(a), lower_integrator(i) {}
+    : action_terms(a), lower_integrator(i) {}
+
+    // The current total action of fields updated by this
+    // integrator. This is kept constant up to order eps^3.
+    double action(){
+      return action_terms.action();
+    }
+
+    // Refresh fields that can be drawn from a gaussian distribution
+    // This is needed at the beginning of a trajectory
+    void draw_gaussian_fields(){
+      action_terms.generate_momentum();
+    }
+
+    // Make a copy of fields updated in a trajectory
+    void back_up_fields(){
+      action_terms.back_up_fields();
+    }
+
+    // Restore the previous backup
+    void restore_backup(){
+      action_terms.restore_backup();
+    }
+
 
     // Update the momentum with the gauge field
     void force_step(double eps){
-      action.force_step(eps);
+      action_terms.force_step(eps);
     }
 
     // Update the gauge field with momentum

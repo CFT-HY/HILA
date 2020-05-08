@@ -43,17 +43,18 @@ void O2_step(action_term &at, double eps){
 // action() an integrator_step(double eps) 
 template<class integrator_type>
 void update_hmc(integrator_type &integr, int steps, double traj_length){
+  
   static int accepted=0, trajectory=1;
 
   // Draw the momentum
-  integr.action.generate_momentum();
+  integr.draw_gaussian_fields();
 
   // Make a copy of the gauge field in case the update is rejected
-  field<SUN> gauge_copy[NDIM];
-  foralldir(dir) gauge_copy[dir] = integr.action.gauge[dir];
+  integr.back_up_fields();
+  
 
   // Calculate the starting action and print
-  double start_action = integr.action.action();
+  double start_action = integr.action();
   output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
           << start_action << "\n";
 
@@ -65,7 +66,7 @@ void update_hmc(integrator_type &integr, int steps, double traj_length){
 
 
   // Recalculate the action
-  double end_action = integr.action.action();
+  double end_action = integr.action();
   double edS = exp(-(end_action - start_action));
 
   output0 << "End HMC: Action " << end_action << " "
@@ -79,7 +80,7 @@ void update_hmc(integrator_type &integr, int steps, double traj_length){
     accepted++;
   } else {
     output0 << "Rejected!\n";
-    foralldir(dir) integr.action.gauge[dir] = gauge_copy[dir];
+    integr.restore_backup();
   }
 
   output0 << "Acceptance " << accepted << "/" << trajectory 

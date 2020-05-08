@@ -46,6 +46,16 @@ class fermion_action{
       return ga.action();
     }
 
+    // Make a copy of fields updated in a trajectory
+    void back_up_fields(){
+      ga.back_up_fields();
+    }
+
+    // Restore the previous backup
+    void restore_backup(){
+      ga.restore_backup();
+    }
+
     /// Gaussian random momentum for each element
     void generate_momentum(){
       ga.generate_momentum();
