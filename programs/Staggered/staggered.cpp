@@ -114,8 +114,7 @@ int main(int argc, char **argv){
   // Define gauge and momentum action terms
   gauge_momentum_action ma(gauge, momentum);
   gauge_action ga(gauge, momentum, beta);
-  ga.set_unity();
-
+  
   // Define a Dirac operator
   dirac_staggered<VEC, SUN> D(mass, gauge);
   fermion_action fa(D, gauge, momentum);
@@ -125,10 +124,15 @@ int main(int argc, char **argv){
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
-  integrator gauge_integrator(ga, ma);
-  integrator fermion_integrator(fa+fa2, gauge_integrator);
+  integrator integrator_level_1(ga, ma);
+  integrator integrator_level_2(fa+fa2, integrator_level_1);
+  
+  // Initialize the gauge field
+  ga.set_unity();
+
+  // Run HMC using the integrator
   for(int step = 0; step < 5; step ++){
-    update_hmc(fermion_integrator, hmc_steps, traj_length);
+    update_hmc(integrator_level_2, hmc_steps, traj_length);
     double plaq = plaquette(ga.gauge);
     output0 << "Plaq: " << plaq << "\n";
   }
