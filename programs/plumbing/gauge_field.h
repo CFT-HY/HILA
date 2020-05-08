@@ -193,10 +193,8 @@ class gauge_momentum_action {
     gauge_momentum_action(field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM]) 
     : gauge(g), momentum(m){}
 
-    gauge_momentum_action(gauge_momentum_action &ma){
-      momentum = ma.momentum; 
-      gauge = ma.gauge; 
-    }
+    gauge_momentum_action(gauge_momentum_action &ma)
+    : gauge(ma.gauge), momentum(ma.momentum){}
 
     double action(){
       return momentum_action(momentum);
@@ -229,11 +227,8 @@ class gauge_action {
     gauge_action(field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM], double b) 
     : gauge(g), momentum(m), beta(b){}
 
-    gauge_action(gauge_action &ga){
-      beta = ga.beta;
-      gauge = ga.gauge;
-      momentum = ga.momentum; 
-    }
+    gauge_action(gauge_action &ga)
+    : gauge(ga.gauge), momentum(ga.momentum), beta(ga.beta) {}
 
     //The gauge action
     double action(){
@@ -304,44 +299,111 @@ class gauge_action {
 
 
 
+// Represents a sum of two acttion terms. Useful for adding them
+// to an integrator on the same level.
+template<typename action_type_1, typename action_type_2>
+class action_sum {
+  public:
+    action_type_1 a1;
+    action_type_2 a2;
+
+    action_sum(action_type_1 _a1, action_type_2 _a2) 
+    : a1(_a1), a2(_a2){}
+
+    action_sum(action_sum &asum) : a1(asum.a1), a2(asum.a2){}
+
+    //The gauge action
+    double action(){
+      return a1.action() + a2.action();
+    }
+
+    /// Gaussian random momentum for each element
+    void draw_gaussian_fields(){
+      a1.draw_gaussian_fields();
+      a2.draw_gaussian_fields();
+    }
+
+    // Update the momentum with the gauge field
+    void force_step(double eps){
+      a1.force_step(eps);
+      a2.force_step(eps);
+    }
+
+    // Set the gauge field to unity
+    void set_unity(){
+      a1.set_unity();
+      a2.set_unity();
+    }
+
+    // Draw a random gauge field
+    void random(){
+      a1.random();
+      a2.random();
+    }
+
+
+    // Make a copy of fields updated in a trajectory
+    void back_up_fields(){
+      a1.back_up_fields();
+      a2.back_up_fields();
+    }
+
+    // Restore the previous backup
+    void restore_backup(){
+      a1.restore_backup();
+      a2.restore_backup();
+    }
+};
+
+
+// Sum operator for creating an action_sum object
+template<int N, typename float_t=double, typename action2>
+action_sum<gauge_action<N, float_t>, action2> operator+(gauge_action<N, float_t> a1, action2 a2){
+  action_sum sum(a1, a2);
+  return sum;
+}
+
+
+
+
 /// Define an integration step for a Molecular Dynamics
 /// trajectory.
 template<typename action_type, typename lower_integrator_type>
 class integrator{
   public:
-    action_type &action_terms;
-    lower_integrator_type &lower_integrator;
+    action_type action_term;
+    lower_integrator_type lower_integrator;
 
-    integrator(action_type &a, lower_integrator_type &i)
-    : action_terms(a), lower_integrator(i) {}
+    integrator(action_type a, lower_integrator_type i)
+    : action_term(a), lower_integrator(i) {}
 
     // The current total action of fields updated by this
     // integrator. This is kept constant up to order eps^3.
     double action(){
-      return action_terms.action() + lower_integrator.action();
+      return action_term.action() + lower_integrator.action();
     }
 
     // Refresh fields that can be drawn from a gaussian distribution
     // This is needed at the beginning of a trajectory
     void draw_gaussian_fields(){
-      action_terms.draw_gaussian_fields();
+      action_term.draw_gaussian_fields();
       lower_integrator.draw_gaussian_fields();
     }
 
     // Make a copy of fields updated in a trajectory
     void back_up_fields(){
-      action_terms.back_up_fields();
+      action_term.back_up_fields();
     }
 
     // Restore the previous backup
     void restore_backup(){
-      action_terms.restore_backup();
+      action_term.restore_backup();
     }
 
 
     // Update the momentum with the gauge field
     void force_step(double eps){
-      action_terms.force_step(eps);
+      action_term.force_step(eps);
     }
 
     // Update the gauge field with momentum

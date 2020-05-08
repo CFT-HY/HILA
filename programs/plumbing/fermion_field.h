@@ -39,15 +39,14 @@ class fermion_action{
     fermion_action(DIRAC_OP &d, field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM])
     : D(d), gauge(g), momentum(m){ chi = 0.0; }
 
-    fermion_action(fermion_action &fa){
-      momentum = fa.momentum; 
-      gauge = fa.gauge;
+    fermion_action(fermion_action &fa)
+    : gauge(fa.gauge), momentum(fa.momentum), D(fa.D)  {
       chi = fa.chi;
     }
 
     // Return the value of the action with the current
     // field configuration
-    double action(){ return 0;}
+    double action(){ return 10000000;}
 
     // Make a copy of fields updated in a trajectory
     void back_up_fields(){}
@@ -68,7 +67,12 @@ class fermion_action{
 
 };
 
-
+// Sum operator for creating an action_sum object
+template<typename SUN, typename DIRAC_OP, typename action2>
+action_sum<fermion_action<SUN, DIRAC_OP>, action2> operator+(fermion_action<SUN, DIRAC_OP> a1, action2 a2){
+  action_sum sum(a1, a2);
+  return sum;
+}
 
 
 

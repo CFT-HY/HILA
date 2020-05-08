@@ -120,8 +120,13 @@ int main(int argc, char **argv){
   dirac_staggered<VEC, SUN> D(mass, gauge);
   fermion_action fa(D, gauge, momentum);
 
+  // A second fermion, for checking that addition works
+  fermion_action fa2(D, gauge, momentum);
+
+  // Build two integrator levels. Gauge is on the lowest level and
+  // the fermions are on higher level
   integrator gauge_integrator(ga, ma);
-  integrator fermion_integrator(fa, gauge_integrator);
+  integrator fermion_integrator(fa+fa2, gauge_integrator);
   for(int step = 0; step < 5; step ++){
     update_hmc(fermion_integrator, hmc_steps, traj_length);
     double plaq = plaquette(ga.gauge);
