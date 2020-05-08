@@ -2,6 +2,8 @@
 #define FERMION_FIELD_H
 
 
+#include "../plumbing/algorithms/conjugate_gradients.h"
+
 
 /// Generate a pseudofermion field with a distribution given
 /// by the action chi 1/(D_dagger D) chi
@@ -15,6 +17,22 @@ void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
   D.dagger(tmp,chi);
 }
 
+
+/// Calculate the action of a fermion term
+template<typename VECTOR, typename DIRAC_OP>
+double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
+  field<VECTOR> psi;
+  CG<field<VECTOR>, DIRAC_OP> inverse(D);
+  double action = 0;
+
+  psi=0;
+  inverse.apply(chi,psi);
+
+  onsites(ALL){
+    action += (chi[X]*psi[X]).re;
+  }
+  return action;
+}
 
 
 
@@ -46,7 +64,9 @@ class fermion_action{
 
     // Return the value of the action with the current
     // field configuration
-    double action(){ return 10000000;}
+    double action(){ 
+      return 0*pseudofermion_action(chi, D);
+    }
 
     // Make a copy of fields updated in a trajectory
     void back_up_fields(){}
