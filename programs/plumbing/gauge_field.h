@@ -203,7 +203,7 @@ class gauge_momentum_action {
     }
 
     /// Gaussian random momentum for each element
-    void generate_momentum(){
+    void draw_gaussian_fields(){
       gaussian_momentum(momentum);
     }
 
@@ -237,13 +237,11 @@ class gauge_action {
 
     //The gauge action
     double action(){
-      return beta*plaquette_sum(gauge) + momentum_action(momentum);
+      return beta*plaquette_sum(gauge);
     }
 
     /// Gaussian random momentum for each element
-    void generate_momentum(){
-      gaussian_momentum(momentum);
-    }
+    void draw_gaussian_fields(){}
 
     // Update the momentum with the gauge field
     void force_step(double eps){
@@ -320,13 +318,14 @@ class integrator{
     // The current total action of fields updated by this
     // integrator. This is kept constant up to order eps^3.
     double action(){
-      return action_terms.action();
+      return action_terms.action() + lower_integrator.action();
     }
 
     // Refresh fields that can be drawn from a gaussian distribution
     // This is needed at the beginning of a trajectory
     void draw_gaussian_fields(){
-      action_terms.generate_momentum();
+      action_terms.draw_gaussian_fields();
+      lower_integrator.draw_gaussian_fields();
     }
 
     // Make a copy of fields updated in a trajectory

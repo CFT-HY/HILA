@@ -28,37 +28,35 @@ void fermion_force(field<VECTOR> &chi, gauge_action_type gauge, double eps){
 
 
 
-template<typename gauge_action_type, typename DIRAC_OP>
+template<typename SUN, typename DIRAC_OP>
 class fermion_action{
   public:
-    gauge_action_type &ga;
-    DIRAC_OP &D;
     field<SUN> (&gauge)[NDIM];
+    field<SUN> (&momentum)[NDIM];
+    DIRAC_OP &D;
     field<typename DIRAC_OP::vector_type> chi;
 
-    fermion_action(gauge_action_type &g, DIRAC_OP &d) : ga(g), D(d),gauge(g.gauge) {
-      chi = 0.0;
+    fermion_action(DIRAC_OP &d, field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM])
+    : D(d), gauge(g), momentum(m){ chi = 0.0; }
+
+    fermion_action(fermion_action &fa){
+      momentum = fa.momentum; 
+      gauge = fa.gauge;
+      chi = fa.chi;
     }
 
     // Return the value of the action with the current
     // field configuration
-    double action(){
-      return ga.action();
-    }
+    double action(){ return 0;}
 
     // Make a copy of fields updated in a trajectory
-    void back_up_fields(){
-      ga.back_up_fields();
-    }
+    void back_up_fields(){}
 
     // Restore the previous backup
-    void restore_backup(){
-      ga.restore_backup();
-    }
+    void restore_backup(){}
 
     /// Gaussian random momentum for each element
-    void generate_momentum(){
-      ga.generate_momentum();
+    void draw_gaussian_fields(){
       generate_pseudofermion(chi, D);
     }
 
@@ -66,11 +64,6 @@ class fermion_action{
     // action
     void force_step(double eps){
       
-    }
-
-    // Update the gauge field with momentum
-    void momentum_step(double eps){
-      ga.step(eps);
     }
 
 };

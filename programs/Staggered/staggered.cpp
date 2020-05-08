@@ -68,7 +68,7 @@ void test_forces(){
 
 
     // Check also the momentum action and derivative
-    ga.generate_momentum();
+    ga.draw_gaussian_fields();
 
     s1 = momentum_action(momentum);
     h = momentum[0].get_value_at(0);
@@ -118,7 +118,7 @@ int main(int argc, char **argv){
 
   // Define a Dirac operator
   dirac_staggered<VEC, SUN> D(mass, gauge);
-  fermion_action fa(ga, D);
+  fermion_action fa(D, gauge, momentum);
 
   integrator gauge_integrator(ga, ma);
   integrator fermion_integrator(fa, gauge_integrator);
