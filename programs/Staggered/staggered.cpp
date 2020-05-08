@@ -13,6 +13,7 @@
 
 
 
+using SM = gauge_momentum_action<N, double>;
 using SG = gauge_action<N, double>;
 using Dtype = dirac_staggered<VEC,SUN>;
 using SF = fermion_action<SG, VEC, Dtype>;
@@ -117,13 +118,16 @@ int main(int argc, char **argv){
   field<SUN> gauge[NDIM];
   field<SUN> momentum[NDIM];
 
-  gauge_action<N, double> ga(gauge, momentum, beta);
+  SM ma(gauge, momentum);
+  SG ga(gauge, momentum, beta);
   ga.set_unity();
+  integrator<SG, SM> gauge_integrator(ga, ma);
 
-  Dtype D(mass, ga.gauge);
+  Dtype D(mass, gauge);
   SF fa(ga, D);
+  integrator<SF, integrator<SG, SM>> fermion_integrator(fa, gauge_integrator);
   for(int step = 0; step < 5; step ++){
-    update_hmc(fa, hmc_steps, traj_length);
+    update_hmc(fermion_integrator, hmc_steps, traj_length);
     double plaq = plaquette(ga.gauge);
     output0 << "Plaq: " << plaq << "\n";
   }

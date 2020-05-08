@@ -60,13 +60,9 @@ class fermion_action{
 
     // Update the gauge field with momentum
     void momentum_step(double eps){
-      ga.integrator_step(eps);
+      ga.step(eps);
     }
 
-    // A single gauge update
-    void integrator_step(double eps){
-      O2_step(*this, eps);
-    }
 };
 
 

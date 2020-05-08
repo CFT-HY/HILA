@@ -175,11 +175,50 @@ void gauge_random(field<SUN> *gauge){
 }
 
 
-template<int N, typename float_t>
-class gauge_action{
+
+
+
+// Action term for the momentum of a gauge field
+// This is both an action term and an integrator. It can form the
+// lowest level step to an integrator construct.
+template<int N, typename float_t=double>
+class gauge_momentum_action {
   public:
     using SUN = SU<N, float_t>;
-    using MATRIX = matrix<N,N,cmplx<float_t>>;
+
+    field<SUN> (&gauge)[NDIM];
+    field<SUN> (&momentum)[NDIM];
+    double beta;
+
+    gauge_momentum_action(field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM]) 
+    : gauge(g), momentum(m){}
+
+    gauge_momentum_action(gauge_momentum_action &ma){
+      momentum = ma.momentum; 
+      gauge = ma.gauge; 
+    }
+
+    double action(){
+      return momentum_action(momentum);
+    }
+
+    /// Gaussian random momentum for each element
+    void generate_momentum(){
+      gaussian_momentum(momentum);
+    }
+
+    // Integrator step: apply the momentum on the gauge field
+    void step(double eps){
+      apply_momentum(gauge, momentum, eps);
+    }
+};
+
+
+
+template<int N, typename float_t=double>
+class gauge_action {
+  public:
+    using SUN = SU<N, float_t>;
 
     field<SUN> (&gauge)[NDIM];
     field<SUN> (&momentum)[NDIM];
@@ -208,17 +247,6 @@ class gauge_action{
     void force_step(double eps){
       gauge_force(gauge, momentum, beta*eps/N);
     }
-
-    // Update the gauge field with momentum
-    void momentum_step(double eps){
-      apply_momentum(gauge, momentum, eps);
-    }
-
-    // A single gauge update
-    void integrator_step(double eps){
-      O2_step(*this, eps);
-    }
-
 
     // Set the gauge field to unity
     void set_unity(){gauge_set_unity(gauge);}
@@ -263,6 +291,32 @@ class gauge_action{
 };
 
 
+
+template<typename action_type, typename lower_integrator_type>
+class integrator{
+  public:
+    action_type &action;
+    lower_integrator_type &lower_integrator;
+
+    integrator(action_type &a, lower_integrator_type &i)
+    : action(a), lower_integrator(i) {}
+
+    // Update the momentum with the gauge field
+    void force_step(double eps){
+      action.force_step(eps);
+    }
+
+    // Update the gauge field with momentum
+    void momentum_step(double eps){
+      lower_integrator.step(eps);
+    }
+
+    // A single gauge update
+    void step(double eps){
+      O2_step(*this, eps);
+    }
+
+};
 
 
 

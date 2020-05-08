@@ -41,31 +41,31 @@ void O2_step(action_term &at, double eps){
 //
 // The integrator class must implement at least two functions, 
 // action() an integrator_step(double eps) 
-template<class action_type>
-void update_hmc(action_type &act, int steps, double traj_length){
+template<class integrator_type>
+void update_hmc(integrator_type &integr, int steps, double traj_length){
   static int accepted=0, trajectory=1;
 
   // Draw the momentum
-  act.generate_momentum();
+  integr.action.generate_momentum();
 
   // Make a copy of the gauge field in case the update is rejected
   field<SUN> gauge_copy[NDIM];
-  foralldir(dir) gauge_copy[dir] = act.gauge[dir];
+  foralldir(dir) gauge_copy[dir] = integr.action.gauge[dir];
 
   // Calculate the starting action and print
-  double start_action = act.action();
+  double start_action = integr.action.action();
   output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
           << start_action << "\n";
 
 
   // Run the integator
   for(int step=0; step < steps; step++){
-    act.integrator_step(traj_length/steps);
+    integr.step(traj_length/steps);
   }
 
 
   // Recalculate the action
-  double end_action = act.action();
+  double end_action = integr.action.action();
   double edS = exp(-(end_action - start_action));
 
   output0 << "End HMC: Action " << end_action << " "
