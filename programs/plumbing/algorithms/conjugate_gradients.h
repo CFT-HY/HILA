@@ -59,7 +59,7 @@ void GG_invert(vector &in, vector &out, op &M){
     onsites(ALL){ 
         rrnew += (r[X]*r[X]).re;
     }
-    #ifdef DEBUG
+    #ifdef DEBUG_CG
     printf("CG iter %d, node %d, %g %g %g %g\n", i, mynode(), rrnew, rr_start, target_rr, pDp);
     #endif
     if( rrnew < target_rr )

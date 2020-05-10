@@ -13,21 +13,19 @@ void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
   onsites(ALL){
     psi[X].random();
   }
-  D.apply(psi,tmp);
-  D.dagger(tmp,chi);
+  D.dagger(psi,chi);
 }
 
 
 /// Calculate the action of a fermion term
 template<typename VECTOR, typename DIRAC_OP>
 double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
-  field<VECTOR> psi;
+  field<VECTOR> psi, tmp;
   CG<field<VECTOR>, DIRAC_OP> inverse(D);
   double action = 0;
 
   psi=0;
   inverse.apply(chi,psi);
-
   onsites(ALL){
     action += (chi[X]*psi[X]).re;
   }
@@ -37,9 +35,27 @@ double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
 
 
 /// Apply the force of the gauge field on the momentum field 
-template<typename gauge_action_type, typename VECTOR, typename DIRAC_OP>
-void fermion_force(field<VECTOR> &chi, gauge_action_type gauge, double eps){
+template<typename SUN, typename VECTOR, typename DIRAC_OP>
+void fermion_force(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], DIRAC_OP &D, double eps){
+  field<VECTOR> psi, Mpsi;
+  field<SUN> force[NDIM], force2[NDIM];
+  CG<field<VECTOR>, DIRAC_OP> inverse(D);
   
+  psi=0;
+  inverse.apply(chi, psi);
+  
+  D.apply(psi, Mpsi);
+
+  D.force(Mpsi, psi, force);
+  D.force(psi, Mpsi, force2);
+
+  foralldir(dir){
+    onsites(ALL){
+      force[dir][X] = force[dir][X] - force2[dir][X];
+      project_antihermitean(force[dir][X]);
+      momentum[dir][X] = momentum[dir][X] - eps*force[dir][X];
+    }
+  }
 }
 
 
@@ -54,6 +70,7 @@ class fermion_action{
     DIRAC_OP &D;
     field<typename DIRAC_OP::vector_type> chi;
 
+
     fermion_action(DIRAC_OP &d, field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM])
     : D(d), gauge(g), momentum(m){ chi = 0.0; }
 
@@ -65,7 +82,7 @@ class fermion_action{
     // Return the value of the action with the current
     // field configuration
     double action(){ 
-      return 0*pseudofermion_action(chi, D);
+      return pseudofermion_action(chi, D);
     }
 
     // Make a copy of fields updated in a trajectory
@@ -82,7 +99,7 @@ class fermion_action{
     // Update the momentum with the derivative of the fermion
     // action
     void force_step(double eps){
-      
+      fermion_force( chi, momentum, D, eps );
     }
 
 };

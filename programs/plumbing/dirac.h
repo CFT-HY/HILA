@@ -81,20 +81,39 @@ void dirac_staggered_dagger(
   // Run neighbour fetches and multiplications
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
-    // First mulltiply the by conjugate before communicating the matrix
+    // First multiply the by conjugate before communicating the matrix
     vtemp[dir][ALL] = v_in[X]*gauge[dir][X].conjugate();
     vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
     v_out[ALL] = v_out[X] - 0.5 * staggered_eta[dir][X] * (
-      v_in[X+dir]*(gauge[dir][X]) - vtemp[dir][X+odir]
+      v_in[X+dir]*gauge[dir][X] - vtemp[dir][X+odir]
     );
   }
 }
 
 
 
+template<typename mtype, typename vtype>
+void dirac_staggered_calc_force(
+  const field<mtype> *gauge,
+  const double mass,
+  const field<vtype> &psi,
+  const field<vtype> &chi,
+  field<mtype> (&out)[NDIM],
+  field<double> staggered_eta[NDIM],
+  field<vtype> vtemp[NDIM])
+{
+  foralldir(dir){
+    out[dir][ALL] = -0.5 * (
+       staggered_eta[dir][X] * outer_product( psi[X+dir], chi[X] )
+      -staggered_eta[dir][X+dir] * outer_product( chi[X+dir], psi[X] )
+    );
+    
+    out[dir][ALL] = gauge[dir][X]*out[dir][X];
+  }
+}
 
 
 
@@ -141,14 +160,20 @@ class dirac_staggered {
     // Applies the operator to in
     void apply( const field<vector> & in, field<vector> & out){
       dirac_staggered_apply(gauge, mass, in, out, staggered_eta, vtemp);
-
     }
 
     // Applies the conjugate of the operator
     void dagger( const field<vector> & in, field<vector> & out){
       dirac_staggered_dagger(gauge, mass, in, out, staggered_eta, vtemp);
     }
+
+    // Applies the derivative of the Dirac operator with respect
+    // to the gauge field
+    void force( const field<vector> & psi, const field<vector> & chi, field<matrix> (&force)[NDIM]){
+      dirac_staggered_calc_force(gauge, mass, psi, chi, force, staggered_eta, vtemp);
+    }
 };
+
 
 // Multiplying from the left applies the standard Dirac operator
 template<typename vector, typename matrix>

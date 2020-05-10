@@ -22,7 +22,6 @@ void test_forces(){
   field<SUN> momentum[NDIM];
 
   gauge_action<N> ga(gauge, momentum, 1.0);
-  // Starting with a unit configuration
   foralldir(dir){
     onsites(ALL){
       gauge[dir][X].random();
@@ -35,7 +34,7 @@ void test_forces(){
       }
     }
 
-    double eps = 1e-6;
+    double eps = 1e-4;
     SUN g1 = gauge[0].get_value_at(50);
     SUN h = 1;
     h += eps * ga.generator(ng);
@@ -65,6 +64,100 @@ void test_forces(){
       h = ga.generator(ng);
       assert( diff*diff < eps*eps*1000 && "Gauge force" );
     }
+
+
+    dirac_staggered<VEC, SUN> D(1.0, gauge);
+    fermion_action fa(D, gauge, momentum);
+    for(int ng = 0; ng < ga.n_generators(); ng++){
+      fa.draw_gaussian_fields();
+      foralldir(dir){
+        onsites(ALL){
+          gauge[dir][X].random();
+        }
+      }
+      foralldir(dir){
+        onsites(ALL){
+          momentum[dir][X] = 0;
+        }
+      }
+
+      g1 = gauge[0].get_value_at(50);
+      h = 1;
+      h += eps * ga.generator(ng);
+      g12 = h*g1;
+
+
+      static field<VEC> psi, chi, tmp, tmp2;
+      onsites(ALL){
+        psi[X].random();
+        chi[X].random();
+      }
+      s1 = 0;
+      D.apply(psi,tmp);
+      onsites(ALL){
+        s1 += (chi[X]*tmp[X]).re;
+      }
+
+      if(mynode()==0){
+        gauge[0].set_value_at(g12,50);
+      }
+      gauge[0].mark_changed(ALL);
+      s2 = 0;
+      D.apply(psi,tmp);
+      onsites(ALL){
+        s2 += (chi[X]*tmp[X]).re;
+      }
+
+      if(mynode()==0)
+        gauge[0].set_value_at(g1, 50);
+      gauge[0].mark_changed(ALL);
+
+      D.force(chi, psi, momentum);
+      f = momentum[0].get_value_at(50);
+      diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
+
+      if(mynode()==0) {
+        //hila::output << "Action 1 " << s1 << "\n";
+        //hila::output << "Action 2 " << s2 << "\n";
+        //hila::output << "Calculated deriv " << (f*ga.generator(ng)).trace().re << "\n";
+        //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+        //hila::output << "deriv " << ng << " diff " << diff << "\n";
+        assert( diff*diff < eps*eps*1000 && "Fermion deriv" );
+      }
+
+
+      foralldir(dir){
+        onsites(ALL){
+          momentum[dir][X] = 0;
+        }
+      }
+
+      s1 = fa.action();
+
+      if(mynode()==0){
+        gauge[0].set_value_at(g12,50);
+      }
+      gauge[0].mark_changed(ALL);
+      s2 = fa.action();
+
+      if(mynode()==0)
+        gauge[0].set_value_at(g1, 50);
+      gauge[0].mark_changed(ALL);
+
+      fa.force_step(1.0);
+      f = momentum[0].get_value_at(50);
+      diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
+
+      if(mynode()==0) {
+        //hila::output << "Action 1 " << s1 << "\n";
+        //hila::output << "Action 2 " << s2 << "\n";
+        //hila::output << "Calculated force " << (f*ga.generator(ng)).trace().re << "\n";
+        //hila::output << "Actual force " << (s2-s1)/eps << "\n";
+        //hila::output << "Force " << ng << " diff " << diff << "\n";
+        assert( diff*diff < eps*eps*1000 && "Fermion force" );
+      }
+    }
+
 
 
     // Check also the momentum action and derivative

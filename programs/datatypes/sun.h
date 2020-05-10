@@ -491,4 +491,18 @@ SU2<radix> SU2<radix>::operator - (const SU2<radix> & y){
     return r;
 };
 
+
+
+
+template<int n, typename radix>
+SU<n,radix> outer_product(matrix<1,n,cmplx<radix>> lhs, matrix<1,n,cmplx<radix>> rhs){
+  SU<n,radix> r;
+  for(int j=0; j<n; j++) for (int i=0; i<n; i++) {
+    r.c[j][i] = lhs.c[0][i] * rhs.c[0][j].conj();
+  }
+  return r;
+}
+
+
+
 #endif 
