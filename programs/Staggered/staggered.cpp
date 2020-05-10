@@ -89,8 +89,8 @@ void test_forces(){
 
       static field<VEC> psi, chi, tmp, tmp2;
       onsites(ALL){
-        psi[X].random();
-        chi[X].random();
+        psi[X].gaussian();
+        chi[X].gaussian();
       }
       s1 = 0;
       D.apply(psi,tmp);

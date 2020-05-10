@@ -11,7 +11,7 @@ template<typename VECTOR, typename DIRAC_OP>
 void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
   field<VECTOR> psi, tmp;
   onsites(ALL){
-    psi[X].random();
+    psi[X].gaussian();
   }
   D.dagger(psi,chi);
 }
