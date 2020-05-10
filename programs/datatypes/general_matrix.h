@@ -445,37 +445,6 @@ matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const conjugateMatri
   return res;
 }
 
-//dot product definitions for vectors
-template<int n, typename T> 
-#pragma transformer loop_function
-T operator* (const matrix<1, n, T> & vecA, const matrix<n, 1, T> & vecB) {
-  T result = (0.0);
-  for (int i = 0; i < n; i++){
-    result += (conj(vecA.c[i][0]))*vecB.c[i][0];
-  }
-  return result;
-}
-
-template<int n, typename T> 
-#pragma transformer loop_function
-T operator* (const matrix<1, n, T> & vecA, const matrix<1, n, T> & vecB) {
-  T result = (0.0);
-  for (int i = 0; i < n; i++){
-    result += (conj(vecA.c[0][i]))*vecB.c[0][i];
-  }
-  return result;
-}
-
-template<int n, typename T> 
-#pragma transformer loop_function
-T operator* (const matrix<n, 1, T> & vecA, const matrix<n, 1, T> & vecB) {
-  T result; 
-  result=0;
-  for (int i = 0; i < n; i++){
-    result += (conj(vecA.c[0][i]))*vecB.c[i][0];
-  }
-  return result;
-}
 
 //component wise addition
 template <int n, int m, typename T> 

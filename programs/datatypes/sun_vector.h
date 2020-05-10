@@ -6,22 +6,23 @@
 #include "../plumbing/random.h"
 
 template<int n, typename radix>
-class SU_vector : public matrix<1,n,cmplx<radix> >{
+class SU_vector {
   public:
+  cmplx<radix> c[n];
   using base_type = typename base_type_struct<radix>::type;
   
   SU_vector() = default;
 
   SU_vector(matrix<1,n,cmplx<radix>> m) {
     for (int i=0; i<n; i++){
-      this->c[0][i] = m.c[0][i];
+      c[i] = m.c[i];
     }
   }
 
   void gaussian(){ 
     for (int i = 0; i < n; i++) {
-      (*this).c[0][i].re = gaussian_ran(1.0);
-      (*this).c[0][i].im = gaussian_ran(1.0);
+      (*this).c[i].re = gaussian_ran(1.0);
+      (*this).c[i].im = gaussian_ran(1.0);
     }
   }
 
@@ -30,11 +31,107 @@ class SU_vector : public matrix<1,n,cmplx<radix> >{
   #pragma transformer loop_function
   SU_vector & operator= (const scalart rhs) {
     for (int i=0; i<n; i++){
-      this->c[i][i] = rhs;
+      c[i] = rhs;
     }
     return *this;
   }
 
+  radix norm_sq(){ 
+    radix r=0;
+    for (int i = 0; i < n; i++) {
+      r += c[i].re * c[i].re;
+      r += c[i].im * c[i].im;
+    }
+    return r;
+  }
+
 };
+
+
+
+template<int n, typename radix>
+cmplx<radix> operator*(const SU_vector<n,radix> &lhs, const SU_vector<n,radix> &rhs){
+  cmplx<radix> r = (0.0);
+  for (int i=0; i<n; i++) {
+    r += conj(lhs.c[i])*rhs.c[i];
+  }
+  return r;
+}
+
+
+template<int n, typename radix>
+SU_vector<n,radix>  operator*(SU_vector<n,radix> lhs, matrix<n,n,cmplx<radix>> rhs){
+  SU_vector<n,radix>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = 0;
+    for(int j=0; j<n; j++) {
+      r.c[i] += lhs.c[j] * rhs.c[j][i];
+    }
+  }
+  return r;
+}
+
+template<int n, typename radix>
+SU_vector<n,radix>  operator*(matrix<n,n,cmplx<radix>>  lhs, SU_vector<n,radix> rhs){
+  SU_vector<n,radix>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = 0;
+    for(int j=0; j<n; j++) {
+      r.c[i] += lhs.c[i][j] * rhs.c[j];
+    }
+  }
+  return r;
+}
+
+
+template<int n, typename radix>
+SU_vector<n,radix>  operator+(SU_vector<n,radix> lhs, SU_vector<n,radix> rhs){
+  SU_vector<n,radix>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = lhs.c[i] + rhs.c[i];
+  }
+  return r;
+}
+
+template<int n, typename radix>
+SU_vector<n,radix>  operator-(SU_vector<n,radix> lhs, SU_vector<n,radix> rhs){
+  SU_vector<n,radix>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = lhs.c[i] - rhs.c[i];
+  }
+  return r;
+}
+
+
+
+template<int n, typename radix>
+SU_vector<n,radix>  operator*(radix lhs, SU_vector<n,radix> rhs){
+  SU_vector<n,radix>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = lhs * rhs.c[i];
+  }
+  return r;
+}
+
+template<int n, typename radix>
+SU_vector<n,radix>  operator*(SU_vector<n,radix> lhs, radix rhs){
+  SU_vector<n,radix>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = lhs.c[i] * rhs;
+  }
+  return r;
+}
+
+
+template<int n, typename radix>
+matrix<n,n,cmplx<radix>> outer_product(SU_vector<n,radix> lhs, SU_vector<n,radix> rhs){
+  matrix<n,n,cmplx<radix>> r;
+  for(int j=0; j<n; j++) for (int i=0; i<n; i++) {
+    r.c[j][i] = lhs.c[i] * rhs.c[j].conj();
+  }
+  return r;
+}
+
+
 
 #endif
