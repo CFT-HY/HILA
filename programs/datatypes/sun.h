@@ -52,22 +52,6 @@ do {                                            \
 #define aa_c(x,y) (-x.d*y.c - x.c*y.d - x.a*y.b + x.b*y.a)
 #define aa_d(x,y) ( x.d*y.d - x.a*y.a - x.b*y.b - x.c*y.c)
 
-// gaussian rng generation routines ----------------------
-
-#define VARIANCE 0.5
-#define MYSINF(X) sin(X)
-#define MYCOSF(X) cos(X)
-
-template<typename radix>
-radix gaussian_ran2 (radix* out2) 
-{
-  double phi, urnd, r;
-  phi = 2.0 * 3.141592654 * (double) hila_random();
-  urnd = (double)(1.0-hila_random());
-  r  = sqrt( -log(urnd) * (2.0 * VARIANCE) );
-  *out2 = (r*MYCOSF(phi));
-  return (radix)(r*MYSINF(phi));
-}
 
 //--------------------------------------------------------
 

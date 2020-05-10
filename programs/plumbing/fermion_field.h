@@ -3,6 +3,7 @@
 
 
 #include "../plumbing/algorithms/conjugate_gradients.h"
+#include <cmath>
 
 
 /// Generate a pseudofermion field with a distribution given
