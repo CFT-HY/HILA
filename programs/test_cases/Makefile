@@ -4,7 +4,7 @@ TRANSFORMER = ../../build/transformer  -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/ope
 CC = mpic++ -DUSE_MPI
 
 CFLAGS = -g  $(OPTS)
-CXXFLAGS = -g -x c++ $(OPTS)
+CXXFLAGS = -g -x c++ --std=c++17 $(OPTS)
 
 .PRECIOUS: %.cpt %.o
 

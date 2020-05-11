@@ -1,4 +1,6 @@
 #include "test.h"
+#include "../datatypes/sun_vector.h"
+#include "../datatypes/sun.h"
 #include "../plumbing/algorithms/conjugate_gradients.h"
 
 #define N 3
@@ -16,16 +18,14 @@ int main(int argc, char **argv){
   #endif
   seed_random(2);
 
-  field<matrix<1, N, cmplx<double>> > a, b, Db, Ddaggera, DdaggerDb;
-  field<matrix<1, N, cmplx<double>> > sol;
-  field<matrix<N,N, cmplx<double>> > U[NDIM];
+  field<SU_vector<N>> a, b, Db, Ddaggera, DdaggerDb;
+  field<SU_vector<N>> sol;
+  field<SU<N>> U[NDIM];
 
   onsites(ALL){
-    for(int i=0; i<N; i++){
-      a[X].random();
-      b[X].random();
-      sol[X].c[0][i] = 0;
-    }
+    a[X].gaussian();
+    b[X].gaussian();
+    sol[X] = 0;
   }
 
   foralldir(d) {
@@ -36,7 +36,7 @@ int main(int argc, char **argv){
 
   // Check conjugate of the Dirac operator
   double diffre = 0, diffim = 0;
-  using dirac = dirac_staggered< matrix<1, N, cmplx<double>>, matrix<N,N, cmplx<double>> >;
+  using dirac = dirac_staggered< SU_vector<N>, SU<N>>;
   dirac D(0.1, U);
   D.apply(b, Db);
   D.dagger(a, Ddaggera);
@@ -50,7 +50,7 @@ int main(int argc, char **argv){
   
   // Now run CG on DdaggerDb and check the result is b
   D.dagger(Db, DdaggerDb);
-  CG<field<matrix<1, N, cmplx<double>>>, dirac> inverse(D);
+  CG<field<SU_vector<N>>, dirac> inverse(D);
   inverse.apply(DdaggerDb, a);
 
   onsites(ALL){

@@ -108,7 +108,7 @@ class fermion_action{
 // Sum operator for creating an action_sum object
 template<typename SUN, typename DIRAC_OP, typename action2>
 action_sum<fermion_action<SUN, DIRAC_OP>, action2> operator+(fermion_action<SUN, DIRAC_OP> a1, action2 a2){
-  action_sum sum(a1, a2);
+  action_sum<fermion_action<SUN, DIRAC_OP>, action2> sum(a1, a2);
   return sum;
 }
 

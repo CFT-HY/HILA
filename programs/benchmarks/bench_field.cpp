@@ -211,7 +211,7 @@ int main(int argc, char **argv){
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
       broadcast(timing);
-      output0 << "timing " << timing << '\n';
+      //output0 << "timing " << timing << '\n';
     }
     timing = timing / (double)n_runs;
     output0 << "Single Precision Vector * Matrix: " << timing << " ms \n";

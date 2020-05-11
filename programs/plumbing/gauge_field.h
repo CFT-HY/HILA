@@ -2,30 +2,9 @@
 #define GAUGE_FIELD_H
 
 
-/// Project to the antihermitean part of a matrix
-template<typename MATRIX>
-void project_antihermitean(MATRIX &matrix){
-  double tr = 0;
-  for(int i=0; i<N; i++) {
-    for(int j=0; j<i; j++) {
-      double a = 0.5*(matrix.c[i][j].re - matrix.c[j][i].re);
-      double b = 0.5*(matrix.c[i][j].im + matrix.c[j][i].im);
-      matrix.c[i][j].re = a;
-      matrix.c[j][i].re =-a;
-      matrix.c[i][j].im = b;
-      matrix.c[j][i].im = b;
-    }
-    tr += matrix.c[i][i].im;
-    matrix.c[i][i].re = 0;
-  }
-  for(int i=0; i<N; i++) {
-    matrix.c[i][i].im -= tr/N;
-  }
-}
-
 /// Generate a random antihermitean matrix
-template<typename MATRIX>
-void gaussian_momentum(field<MATRIX> *momentum){
+template<int N, typename radix>
+void gaussian_momentum(field<SU<N,radix>> *momentum){
   foralldir(dir) {
     onsites(ALL){
       for(int i=0; i<N; i++) {
@@ -53,10 +32,9 @@ void gaussian_momentum(field<MATRIX> *momentum){
   }
 }
 
-
 // The momentum action
-template<typename MATRIX>
-double momentum_action(field<MATRIX> *momentum){
+template<int N, typename radix>
+double momentum_action(field<SU<N,radix>> *momentum){
   double sum = 0;
   foralldir(dir) {
     onsites(ALL){
@@ -133,12 +111,12 @@ void apply_momentum(field<SUN> *gauge, field<MATRIX> *momentum, double eps){
 
 
 /// Measure the plaquette
-template<typename SUN>
-double plaquette_sum(field<SUN> *U){
+template<int N, typename radix>
+double plaquette_sum(field<SU<N,radix>> *U){
   double Plaq=0;
   foralldir(dir1) foralldir(dir2) if(dir2 < dir1){
     onsites(ALL){
-      element<SUN> temp;
+      element<SU<N,radix>> temp;
       temp = U[dir1][X] * U[dir2][X+dir1]
            * U[dir1][X+dir2].conjugate()
            * U[dir2][X].conjugate();
@@ -359,7 +337,7 @@ class action_sum {
 // Sum operator for creating an action_sum object
 template<int N, typename float_t=double, typename action2>
 action_sum<gauge_action<N, float_t>, action2> operator+(gauge_action<N, float_t> a1, action2 a2){
-  action_sum sum(a1, a2);
+  action_sum<gauge_action<N, float_t>, action2> sum(a1, a2);
   return sum;
 }
 
