@@ -11,14 +11,16 @@
 
 int main(int argc, char **argv){
 
+  /* Use a smaller lattice size since
+   * the inversion takes a while */
   #if NDIM==1
-  lattice->setup( 16, argc, argv );
+  lattice->setup( 8, argc, argv );
   #elif NDIM==2
   lattice->setup( 8, 8, argc, argv );
   #elif NDIM==3
-  lattice->setup( 8, 8, 8, argc, argv );
+  lattice->setup( 8, 4, 4, argc, argv );
   #elif NDIM==4
-  lattice->setup( 8, 8, 8, 6, argc, argv );
+  lattice->setup( 8, 4, 4, 4, argc, argv );
   #endif
   seed_random(2);
 
