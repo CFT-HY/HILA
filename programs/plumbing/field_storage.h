@@ -5,9 +5,10 @@
 #include "../plumbing/globals.h"
 
 #include "../plumbing/defs.h"
-
+#include "../plumbing/field.h"
 #include "../plumbing/backend_vector/vector_types.h"
 
+#include "../plumbing/has_unary_minus.h"
 
 
 // Pointer to field data and accessors. Only this is passed to the
@@ -62,6 +63,13 @@ class field_storage {
                                parity par, const lattice_struct * RESTRICT lattice) const;
     void gather_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n, 
                           const lattice_struct * RESTRICT lattice) const;
+
+
+
+    void gather_elements_negated( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n, 
+                                  const lattice_struct * RESTRICT lattice) const;
+
+
     /// Place boundary elements from neighbour
     void place_comm_elements( direction d, parity par, T * RESTRICT buffer, 
                               const lattice_struct::comm_node_struct & from_node,
@@ -69,7 +77,7 @@ class field_storage {
     void place_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n,
                          const lattice_struct * RESTRICT lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
-    void set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT lattice);
+    void set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT fs);
 
 
     T * RESTRICT get_buffer() {

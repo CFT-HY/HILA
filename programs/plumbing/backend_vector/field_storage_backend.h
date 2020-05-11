@@ -193,7 +193,7 @@ void field_storage<T>::place_elements(T * RESTRICT buffer, const unsigned * REST
 
 
 template<typename T>
-void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){
+void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT lattice){
   constexpr int vector_size = vector_info<T>::vector_size;
   constexpr int elements = vector_info<T>::elements;
   using vectortype = typename vector_info<T>::type;

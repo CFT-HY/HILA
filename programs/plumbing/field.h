@@ -22,9 +22,6 @@
 // This is a marker for transformer -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)
 
-// boundary condition classification
-enum {PERIODIC, ANTIPERIODIC, FIXED};
-
 
 template <typename T>
 using element = T;
@@ -64,9 +61,9 @@ class field {
       unsigned assigned_to;           // keeps track of first assignment to parities
       status move_status[3][NDIRS];     // is communication done
 
-#ifdef BOUNDARY_CONDITIONS
-      vector<> extra_nb_arrs;
-#endif
+      // neighbour pointers - because of boundary conditions, can be different for diff. fields
+      unsigned * neighbours[NDIRS];
+      boundary_condition_t boundary_condition[NDIRS];
 
 #ifdef USE_MPI
       MPI_Request receive_request[3][NDIRS];
@@ -196,7 +193,28 @@ class field {
 
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
-        payload.set_local_boundary_elements(dir, par, lattice);
+        #ifdef SPECIAL_BOUNDARY_CONDITIONS
+        if (boundary_condition[dir] != boundary_condition_t::PERIODIC &&
+            lattice->special_boundaries[dir].is_needed) {
+          // need to copy or do something w. local boundary
+          int n, start = 0;
+          if (par == ODD) {
+            n = lattice->special_boundaries[dir].n_odd;
+            start = lattice->special_boundaries[dir].n_even;
+          } else {
+            if (par == EVEN) n = lattice->special_boundaries[dir].n_even;
+            else n = lattice->special_boundaries[dir].n_total;
+          }
+          int offset = lattice->special_boundaries[dir].offset + start;
+
+          /// finally, boundary condition (TODO:MORE GENERAL!)
+          if (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC) {
+            payload.gather_elements_negated( payload.fieldbuf + offset, 
+                    lattice->special_boundaries[dir].move_index + start, n, lattice);
+          }
+        } else
+        #endif
+          payload.set_local_boundary_elements(dir, par, lattice);
       }
 
       /// Gather a list of elements to a single node
@@ -303,6 +321,7 @@ class field {
     fs->lattice = lattice;
     fs->allocate_payload();
     fs->initialize_communication();
+    for (direction d=(direction)0; d<NDIRS; ++d) fs->neighbours[d] = lattice->neighb[d];
     mark_changed(ALL);      // guarantees communications will be done
     fs->assigned_to = 0;    // and this means that it is not assigned
 
@@ -327,8 +346,7 @@ class field {
     return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
   }
 
-
-  
+    
   status move_status(parity p, int d) const { 
     assert(parity_bits(p) && d>=0 && d<NDIRS);
     return fs->move_status[(int)p - 1][d]; 
@@ -397,7 +415,7 @@ class field {
   }
 
   /// Check if communication has started.  This is strict, checks exactly this parity
-  bool is_move_started( int dir, parity par) const{
+  bool is_move_started( int dir, parity par) const {
     return move_status(par,dir) == status::STARTED;
   }
     
@@ -405,7 +423,25 @@ class field {
     return move_status(par,dir) == status::NOT_DONE;
   }
  
-  
+  void set_boundary_condition( direction dir, boundary_condition_t bc) {
+
+    #ifdef SPECIAL_BOUNDARY_CONDITIONS
+    fs->boundary_condition[dir] = bc;
+    fs->boundary_condition[-dir] = bc;
+    fs->neighbours[dir]  = lattice->get_neighbour_array(dir,bc);
+    fs->neighbours[-dir] = lattice->get_neighbour_array(-dir,bc);
+    #endif
+
+  }
+
+  boundary_condition_t get_boundary_condition( direction dir ) const {
+    #ifdef SPECIAL_BOUNDARY_CONDITION
+    return fs->boundary_condition[dir];
+    #else
+    return boundary_condition_t::PERIODIC;
+    #endif
+  }
+
   // Overloading [] 
   // placemarker, should not be here
   // T& operator[] (const int i) { return data[i]; }
@@ -924,7 +960,7 @@ void field<T>::drop_comms_if_needed(direction d, parity p) const {
   }
 }
 
-/// and cancel send and receive
+/// cancel ongoing send and receive
 
 template<typename T>
 void field<T>::cancel_comm(direction d, parity p) const {

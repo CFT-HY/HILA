@@ -50,6 +50,11 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
   // Initialize wait_array structures - has to be after std gathers()
   initialize_wait_arrays();
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+  // do this after std. boundary is done
+  init_special_boundaries();
+#endif
+
 #ifndef VANILLA
   /* Setup backend-specific lattice info if necessary */
   backend_lattice = new backend_lattice_struct;
@@ -57,7 +62,6 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 #endif
 
   test_std_gathers();
-
 
 }
 
@@ -672,6 +676,96 @@ void lattice_struct::initialize_wait_arrays(){}
 
 #endif
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+
+/////////////////////////////////////////////////////////////////////
+/// set up special boundary
+/// sets up the bool array which tells if special neighbour indices
+/// are needed.  Note that this is not uniform across the nodes,
+/// not all nodes have them.
+/////////////////////////////////////////////////////////////////////
+
+void lattice_struct::init_special_boundaries() {
+  for (direction d=(direction)0; d<NDIRS; ++d) {
+
+    // default values, nothing interesting happens
+    special_boundaries[d].n_even = special_boundaries[d].n_odd = 
+      special_boundaries[d].n_total = 0;
+    special_boundaries[d].is_needed = false;
+
+    direction od = -d;
+    if (nodes.n_divisions[abs(d)] == 1) {
+
+      int coord = -1;
+      // do we get up/down boundary?
+      if (is_up_dir(d) && this_node.min[d] + this_node.size[d] == size(d)) coord = size(d)-1;
+      if (is_up_dir(od) && this_node.min[od] == 0) coord = 0;
+
+      if (coord >= 0) {
+        // now we got it
+        special_boundaries[d].is_needed = true;
+        special_boundaries[d].offset = this_node.field_alloc_size;
+
+        for (int i=0; i<this_node.sites; i++) if (coordinate(d,i) == coord) {
+          // set buffer indices
+          special_boundaries[d].n_total++;
+          if (site_parity(i) == EVEN) special_boundaries[d].n_even++;
+          else special_boundaries[d].n_odd++;
+        }
+        this_node.field_alloc_size += special_boundaries[d].n_total;
+      }
+    }
+
+    // allocate neighbours only on 1st use, otherwise unneeded
+    special_boundaries[d].neighbours = nullptr;    
+  }
+}
+
+/////////////////////////////////////////////////////////////////////
+/// give the neighbour array pointer.  Allocate if needed
+
+const unsigned * lattice_struct::get_neighbour_array(direction d, boundary_condition_t bc) {
+
+  // regular bc exit, should happen almost always
+  if (special_boundaries[d].is_needed == false ||
+      bc == boundary_condition_t::PERIODIC) return neighb[d];
+
+  if (special_boundaries[d].neighbours == nullptr) {
+    setup_special_boundary_array(d);
+  }
+  return special_boundaries[d].neighbours;
+}
+
+//////////////////////////////////////////////////////////////////////
+/// and set up the boundary to one direction
+//////////////////////////////////////////////////////////////////////
+
+void lattice_struct::setup_special_boundary_array(direction d) {
+  // if it is not needed or already done...
+  if (special_boundaries[d].is_needed == false ||
+      special_boundaries[d].neighbours != nullptr) return;
+
+  // now allocate neighbour array and the fetching array
+  special_boundaries[d].neighbours = (unsigned *)memalloc(sizeof(unsigned) * volume());
+  special_boundaries[d].move_index = (unsigned *)memalloc(sizeof(unsigned) * special_boundaries[d].n_total);
+
+  int coord;
+  int offs = special_boundaries[d].offset;
+  if (is_up_dir(d)) coord = size(d)-1; else coord = 0;
+
+  int k = 0;
+  for (int i=0; i<this_node.sites; i++) {
+    if (coordinate(abs(d),i) != coord) {
+      special_boundaries[d].neighbours[i] = neighb[d][i];
+    } else {
+      special_boundaries[d].neighbours[i] = offs++;
+      special_boundaries[d].move_index[k++] = i;
+    }
+  }
+  assert( k == special_boundaries[d].n_total );
+}
+
+#endif
 
 /////////////////////////////////////////////////////////////////////
 /// Create the neighbour index arrays 
