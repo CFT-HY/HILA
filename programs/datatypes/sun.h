@@ -64,7 +64,7 @@ do {                                            \
 ///
 //////////////////////////////////////////////////////////
 
-template<int n, typename radix>
+template<int n, typename radix=double>
 class SU : public matrix<n,n,cmplx<radix> >{
     public:
     using base_type = typename base_type_struct<radix>::type;
@@ -474,6 +474,34 @@ SU2<radix> SU2<radix>::operator - (const SU2<radix> & y){
     r.c = c - y.c; r.d = d - y.d;
     return r;
 };
+
+
+
+
+
+
+/// Project to the antihermitean part of a matrix
+template<int N, typename radix>
+void project_antihermitean(SU<N,radix> &matrix){
+  double tr = 0;
+  for(int i=0; i<N; i++) {
+    for(int j=0; j<i; j++) {
+      double a = 0.5*(matrix.c[i][j].re - matrix.c[j][i].re);
+      double b = 0.5*(matrix.c[i][j].im + matrix.c[j][i].im);
+      matrix.c[i][j].re = a;
+      matrix.c[j][i].re =-a;
+      matrix.c[i][j].im = b;
+      matrix.c[j][i].im = b;
+    }
+    tr += matrix.c[i][i].im;
+    matrix.c[i][i].re = 0;
+  }
+  for(int i=0; i<N; i++) {
+    matrix.c[i][i].im -= tr/N;
+  }
+};
+
+
 
 
 

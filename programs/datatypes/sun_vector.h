@@ -5,7 +5,7 @@
 #include "../datatypes/general_matrix.h"
 #include "../plumbing/random.h"
 
-template<int n, typename radix>
+template<int n, typename radix=double>
 class SU_vector {
   public:
   cmplx<radix> c[n];
