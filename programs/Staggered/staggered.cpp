@@ -24,7 +24,6 @@ int main(int argc, char **argv){
   lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
   seed_random(seed);
 
-  test_forces();
 
   // Define gauge field and momentum field
   field<SUN> gauge[NDIM];
