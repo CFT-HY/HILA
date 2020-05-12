@@ -220,6 +220,20 @@ struct cmplx {
     return *this;
   }
 
+  template <typename A = T,
+            std::enable_if_t<!is_arithmetic<A>::value, int> = 0 >
+  std::string str() const {
+    std::string text = "(" + re.str() + "," + im.str() + ")"; 
+    return text;
+  }
+
+  template <typename A = T,
+            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
+  std::string str() const {
+    std::string text = "(" + std::to_string(re) + "," + std::to_string(im) + ")"; 
+    return text;
+  }
+
 };
 
 // template <typename T>

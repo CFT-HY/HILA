@@ -4,6 +4,7 @@
 #include "../plumbing/defs.h"
 #include "../datatypes/cmplx.h"
 #include "../datatypes/general_matrix.h"
+#include "../datatypes/wilson_vector.h"
 #include "../plumbing/field.h"
 
 

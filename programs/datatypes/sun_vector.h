@@ -19,14 +19,6 @@ class SU_vector {
     }
   }
 
-  void gaussian(){ 
-    for (int i = 0; i < n; i++) {
-      (*this).c[i].re = gaussian_ran(1.0);
-      (*this).c[i].im = gaussian_ran(1.0);
-    }
-  }
-
-
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
   #pragma transformer loop_function
   SU_vector & operator= (const scalart rhs) {
@@ -36,13 +28,38 @@ class SU_vector {
     return *this;
   }
 
-  radix norm_sq(){ 
+
+  inline void gaussian(){ 
+    for (int i = 0; i < n; i++) {
+      (*this).c[i].re = gaussian_ran(1.0);
+      (*this).c[i].im = gaussian_ran(1.0);
+    }
+  }
+
+  inline radix norm_sq(){ 
     radix r=0;
     for (int i = 0; i < n; i++) {
       r += c[i].re * c[i].re;
       r += c[i].im * c[i].im;
     }
     return r;
+  }
+
+
+  inline SU_vector operator-() const {
+    SU_vector<n,radix> r;
+    for (int i = 0; i < n; i++) {
+      r.c[i] = -c[i];
+    }
+    return r;
+  }
+
+  std::string str() const {
+    std::string text = "";
+    for (int i=0; i<n; i++){
+      text += c[i].str() + " "; 
+    }
+    return text;
   }
 
 };
@@ -82,6 +99,26 @@ SU_vector<n,radix>  operator*(matrix<n,n,cmplx<radix>>  lhs, SU_vector<n,radix> 
   }
   return r;
 }
+
+
+template<int n, typename radix>
+SU_vector<n,radix> operator*(const cmplx<radix> &lhs, const SU_vector<n,radix> &rhs){
+  SU_vector<n,radix>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = lhs*rhs.c[i];
+  }
+  return r;
+}
+
+template<int n, typename radix>
+SU_vector<n,radix> operator*(const SU_vector<n,radix> &lhs, const cmplx<radix> &rhs){
+  SU_vector<n,radix>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = lhs.c[i]*rhs;
+  }
+  return r;
+}
+
 
 
 template<int n, typename radix>
