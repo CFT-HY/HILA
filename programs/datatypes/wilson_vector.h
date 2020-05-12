@@ -203,6 +203,7 @@ Wilson_vector<n,radix> operator*(const gamma_matrix_type gamma, const Wilson_vec
 
 
 
+
 /// half_Wilson_vector is a Wilson vector projected by
 /// 1 +- gamma_j and contains half the degrees of freedom
 /* 
@@ -262,13 +263,15 @@ class half_Wilson_vector {
   
   half_Wilson_vector() = default;
 
+
   // This will take the projection 1 +- gamma_j
+#if (Gammadim==4) 
   half_Wilson_vector(Wilson_vector<n, radix> w, direction dir) {
     switch(dir){
       case XUP:
 	      c[0] = w.c[0] + cmplx(0,1)*w.c[3];
 	      c[1] = w.c[1] + cmplx(0,1)*w.c[2];
-	    break;
+	      break;
       case XDOWN:
  	      c[0] = w.c[0] - cmplx(0,1)*w.c[3];
 	      c[1] = w.c[1] - cmplx(0,1)*w.c[2];
@@ -309,6 +312,68 @@ class half_Wilson_vector {
 #endif
     }
   }
+
+  Wilson_vector<n, radix> expand(direction dir){
+    Wilson_vector<n, radix> r;
+    switch(dir){
+      case XUP:
+        r.c[0] = c[0]; r.c[1] = c[1];
+        r.c[2] = cmplx(0,-1)*c[1];
+        r.c[3] = cmplx(0,-1)*c[0];
+	      break;
+      case XDOWN:
+        r.c[0] = c[0]; r.c[1] = c[1];
+        r.c[2] = cmplx(0,1)*c[1];
+        r.c[3] = cmplx(0,1)*c[0];
+	      break;
+      case YUP:
+        r.c[0] = c[0]; r.c[1] = c[1];
+        r.c[2] = c[1];
+        r.c[3] = -c[0];
+	      break;
+      case YDOWN:
+        r.c[0] = c[0]; r.c[1] = c[1];
+        r.c[2] = -c[1];
+        r.c[3] = c[0];
+        break;
+      case ZUP:
+        r.c[0] = c[0]; r.c[1] = c[1];
+        r.c[2] = cmplx(0,-1)*c[0];
+        r.c[3] = cmplx(0, 1)*c[1];
+	      break;
+      case ZDOWN:
+        r.c[0] = c[0]; r.c[1] = c[1];
+        r.c[2] = cmplx(0, 1)*c[0];
+        r.c[3] = cmplx(0,-1)*c[1];
+        break;
+      case TUP:
+        r.c[0] = c[0]; r.c[1] = c[1];
+        r.c[2] = c[0];
+        r.c[3] = c[1];
+	      break;
+      case TDOWN:
+        r.c[0] = c[0]; r.c[1] = c[1];
+        r.c[2] = -c[0];
+        r.c[3] = -c[1];
+	      break;
+#if NDIM == 5
+      case 4:
+        r.c[0] = sqrt(2.0)*c[0]; r.c[1] = sqrt(2.0)*c[1];
+        r.c[2] = 0; r.c[3] = 0;
+        break;
+      case 5:
+        r.c[0] = 0; r.c[1] = 0;
+        r.c[2] = sqrt(2.0)*c[0]; r.c[3] = sqrt(2.0)*c[1];
+        break;
+#endif
+    }
+    return r;
+  }
+
+#elif (Gammadim==2)
+
+
+#endif
 
 
   /// Returns the norm squared of (1+-gamma_j) * wilson_vector.
