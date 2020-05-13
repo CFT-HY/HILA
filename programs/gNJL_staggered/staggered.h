@@ -14,13 +14,27 @@
 #include "../datatypes/sun_vector.h"
 #include "../datatypes/sun.h"
 #include "../plumbing/field.h"
-#include "dirac_staggered_NJL.h"
+#include "../plumbing/dirac.h"
+
+
+#include "dirac_staggered_gNJL.h"
+
+
 #include "../plumbing/algorithms/hmc.h"
 #include "../plumbing/gauge_field.h"
 #include "../plumbing/fermion_field.h"
+#include "auxiliary_field.h"
+#include "fermion_field.h"
 
 
-const int N=2;
+
+
+
+
+
+
+
+constexpr int N=2;
 
 using SUN = SU<N,double>;
 using NMAT = matrix<N,N,cmplx<double>>;
