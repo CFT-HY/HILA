@@ -187,8 +187,57 @@ class gauge_momentum_action {
     void step(double eps){
       apply_momentum(gauge, momentum, eps);
     }
+
+    // Called by hmc
+    void back_up_fields(){}
+    void restore_backup(){}
+
 };
 
+
+
+// Represents a sum of two momentum terms. Useful for adding them
+// to an integrator on the same level.
+template<typename momentum_action_1, typename momentum_action_2>
+class momentum_action_sum {
+  public:
+    momentum_action_1 a1;
+    momentum_action_2 a2;
+
+    momentum_action_sum(momentum_action_1 _a1, momentum_action_2 _a2) 
+    : a1(_a1), a2(_a2){}
+
+    momentum_action_sum(momentum_action_sum &asum) : a1(asum.a1), a2(asum.a2){}
+
+    //The gauge action
+    double action(){
+      return a1.action() + a2.action();
+    }
+
+    /// Gaussian random momentum for each element
+    void draw_gaussian_fields(){
+      a1.draw_gaussian_fields();
+      a2.draw_gaussian_fields();
+    }
+
+    // Called by hmc
+    void back_up_fields(){}
+    void restore_backup(){}
+
+    // Integrator step: apply the momentum on the gauge fields
+    void step(double eps){
+      a1.step(eps);
+      a2.step(eps);
+    }
+
+};
+
+// Sum operator for creating a momentum action_sum object
+template<int N, typename float_t=double, typename action2>
+momentum_action_sum<gauge_momentum_action<N, float_t>, action2> operator+(gauge_momentum_action<N, float_t> a1, action2 a2){
+  momentum_action_sum<gauge_momentum_action<N, float_t>, action2> sum(a1, a2);
+  return sum;
+}
 
 
 
@@ -275,8 +324,6 @@ class gauge_action {
 };
 
 
-
-
 // Represents a sum of two acttion terms. Useful for adding them
 // to an integrator on the same level.
 template<typename action_type_1, typename action_type_2>
@@ -343,7 +390,6 @@ action_sum<gauge_action<N, float_t>, action2> operator+(gauge_action<N, float_t>
 
 
 
-
 /// Define an integration step for a Molecular Dynamics
 /// trajectory.
 template<typename action_type, typename lower_integrator_type>
@@ -371,11 +417,13 @@ class integrator{
     // Make a copy of fields updated in a trajectory
     void back_up_fields(){
       action_term.back_up_fields();
+      lower_integrator.back_up_fields();
     }
 
     // Restore the previous backup
     void restore_backup(){
       action_term.restore_backup();
+      lower_integrator.restore_backup();
     }
 
 
@@ -395,6 +443,10 @@ class integrator{
     }
 
 };
+
+
+
+
 
 
 

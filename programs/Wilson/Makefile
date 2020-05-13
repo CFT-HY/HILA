@@ -16,37 +16,35 @@ CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
 LDFLAGS = -lfftw3 -lm
 
 
-.PRECIOUS: %.cpt
+.PRECIOUS: build/%.cpt
 
 
-Wilson: Makefile Wilson.tr.o inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o memalloc.o test_gathers.o Wilson.h
-	$(LD) $(LDFLAGS) -o Wilson Wilson.tr.o inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o memalloc.o test_gathers.o
+OBJECTS = build/Wilson.o build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
 
 
-Wilson.cpt: Makefile Wilson.cpp 
-	$(TRANSFORMER) Wilson.cpp
+Wilson: Makefile $(OBJECTS) Wilson.h
+	$(LD) $(LDFLAGS) -o build/Wilson  $(OBJECTS)
 
 
-%.cpt: %.cpp Makefile
-	$(TRANSFORMER) $<
+build/Wilson.cpt: Makefile Wilson.cpp
+	mkdir -p build
+	$(TRANSFORMER) Wilson.cpp -o build/Wilson.cpt
 
-%.cpt:../plumbing/%.cpp Makefile
-	$(TRANSFORMER) $<
 
-%.tr.o : %.cpt
+build/%.cpt: %.cpp Makefile
+	$(TRANSFORMER) $< -o $@
+
+build/%.cpt:../plumbing/%.cpp Makefile
+	$(TRANSFORMER) $< -o $@
+
+build/%.o : build/%.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
-
-%.o : %.cpt
-	$(CC) $(CXXFLAGS) $< -c
-
-%.o : %.c
-	$(CC) $(CFLAGS) $< -c
 
 
 
 clean:
-	rm -rf *.cpt *.o
+	rm -rf build
 
 cleanall:
-	rm -rf *.cpt *.o Wilson
+	rm -rf build
 
