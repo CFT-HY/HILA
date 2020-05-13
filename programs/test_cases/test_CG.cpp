@@ -41,8 +41,8 @@ int main(int argc, char **argv){
   D.apply(b, Db);
   D.dagger(a, Ddaggera);
   onsites(ALL){
-    diffre += (a[X]*Db[X]).re - (Ddaggera[X]*b[X]).re;
-    diffim += (a[X]*Db[X]).im - (Ddaggera[X]*b[X]).im;
+    diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
+    diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
   }
 
   assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");

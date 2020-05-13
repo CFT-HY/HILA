@@ -103,7 +103,7 @@ int main(int argc, char **argv){
       s1 = 0;
       D.apply(psi,tmp);
       onsites(ALL){
-        s1 += (chi[X]*tmp[X]).re;
+        s1 += chi[X].rdot(tmp[X]);
       }
 
       if(mynode()==0){
@@ -113,7 +113,7 @@ int main(int argc, char **argv){
       s2 = 0;
       D.apply(psi,tmp);
       onsites(ALL){
-        s2 += (chi[X]*tmp[X]).re;
+        s2 += chi[X].rdot(tmp[X]);
       }
 
       if(mynode()==0)

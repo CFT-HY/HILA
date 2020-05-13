@@ -187,6 +187,14 @@ class matrix {
     return result;
   }
 
+  inline T dot(const matrix<n, m, T> &rhs) const {
+    T r = (0.0);
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+      r += conj(c[i][j])*rhs.c[i][j];
+    }
+    return r;
+  }
+
   std::string str() const {
     std::string text = "";
     for (int i=0; i<n; i++){

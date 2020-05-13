@@ -54,6 +54,22 @@ class SU_vector {
     return r;
   }
 
+  inline cmplx<radix> dot(const SU_vector &rhs) const {
+    cmplx<radix> r = (0.0);
+    for (int i=0; i<n; i++) {
+      r += conj(c[i])*rhs.c[i];
+    }
+    return r;
+  }
+
+  inline radix rdot(const SU_vector &rhs) const {
+    radix r = (0.0);
+    for (int i=0; i<n; i++) {
+      r += c[i].re*rhs.c[i].re + c[i].im*rhs.c[i].im;
+    }
+    return r;
+  }
+
   std::string str() const {
     std::string text = "";
     for (int i=0; i<n; i++){
@@ -65,15 +81,6 @@ class SU_vector {
 };
 
 
-
-template<int n, typename radix>
-cmplx<radix> operator*(const SU_vector<n,radix> &lhs, const SU_vector<n,radix> &rhs){
-  cmplx<radix> r = (0.0);
-  for (int i=0; i<n; i++) {
-    r += conj(lhs.c[i])*rhs.c[i];
-  }
-  return r;
-}
 
 
 template<int n, typename radix>

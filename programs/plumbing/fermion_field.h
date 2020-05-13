@@ -28,7 +28,7 @@ double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
   psi=0;
   inverse.apply(chi,psi);
   onsites(ALL){
-    action += (chi[X]*psi[X]).re;
+    action += chi[X].rdot(psi[X]);
   }
   return action;
 }
