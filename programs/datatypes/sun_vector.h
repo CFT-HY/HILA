@@ -31,8 +31,8 @@ class SU_vector {
 
   inline void gaussian(){ 
     for (int i = 0; i < n; i++) {
-      (*this).c[i].re = gaussian_ran(1.0);
-      (*this).c[i].im = gaussian_ran(1.0);
+      (*this).c[i].re = gaussian_ran(0.5);
+      (*this).c[i].im = gaussian_ran(0.5);
     }
   }
 
