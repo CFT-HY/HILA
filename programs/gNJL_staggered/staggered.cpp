@@ -10,6 +10,32 @@
 
 
 
+void measure(field<SU<N>> (&gauge)[NDIM], field<double> &sigma, field<double> &pi){
+  double plaq = plaquette(gauge);
+  output0 << "Plaq: " << plaq << "\n";
+
+  double sigmasq = 0, sigma_ave = 0;
+  double pisq = 0, pi_ave = 0;
+  onsites(ALL){
+    sigma_ave += sigma[X];
+    sigmasq += sigma[X]*sigma[X];
+    pi_ave += pi[X];
+    pisq += pi[X]*pi[X];
+  }
+  sigma_ave /= lattice->volume();
+  sigmasq /= lattice->volume();
+  pi_ave /= lattice->volume();
+  pisq /= lattice->volume();
+  output0 << "Sigma: " << sigma_ave << "\n";
+  output0 << "Sigma sq: " << sigmasq << "\n";
+  output0 << "Pi: " << pi_ave << "\n";
+  output0 << "Pi sq: " << pisq << "\n";
+}
+
+
+
+
+
 int main(int argc, char **argv){
 
   // Read parameters
@@ -45,8 +71,8 @@ int main(int argc, char **argv){
   auxiliary_action aa(sigma, pi, sigma_mom, pi_mom, gamma);
 
   // Initialize
-  sigma[ALL] = 0;
-  pi[ALL] = 0;
+  sigma[ALL] = gaussian_ran();
+  pi[ALL] = gaussian_ran();
 
   // Define a Dirac operator (2 flavors)
   dirac_staggered_gNJL<N> D(mass, gauge, sigma, pi);
@@ -102,7 +128,7 @@ int main(int argc, char **argv){
     hila::output << "Calculated deriv " << f << "\n";
     hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
     hila::output << "deriv diff " << diff << "\n";
-    assert( diff*diff < eps && "Fermion deriv" );
+    assert( diff*diff < 10*eps && "Fermion deriv" );
   }
 
   
@@ -137,9 +163,78 @@ int main(int argc, char **argv){
     hila::output << "Calculated deriv " << f << "\n";
     hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
     hila::output << "deriv diff " << diff << "\n";
-    assert( diff*diff < eps && "Fermion deriv" );
+    assert( diff*diff < 10*eps && "Fermion deriv" );
   }
 
+
+
+  p = pi.get_value_at(50);
+  s1 = 0;
+  D.dagger(psi,tmp);
+  onsites(ALL){
+    s1 += chi[X].rdot(tmp[X]);
+  }
+  
+  if(mynode()==0){
+    pi.set_value_at(p+eps, 50);
+  }
+  pi.mark_changed(ALL);
+ 
+  s2 = 0;
+  D.dagger(psi,tmp);
+  onsites(ALL){
+    s2 += chi[X].rdot(tmp[X]);
+  }
+
+  if(mynode()==0){
+    pi.set_value_at(p, 50);
+  }
+  pi.mark_changed(ALL);
+
+  sigma_mom[ALL] = 0;
+  pi_mom[ALL] = 0;
+  D.force(chi, psi, momentum, sigma_mom, pi_mom);
+  f = -pi_mom.get_value_at(50);
+  diff = f - (s2-s1)/eps;
+
+  if(mynode()==0) {
+    hila::output << "Calculated deriv " << f << "\n";
+    hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+    hila::output << "deriv diff " << diff << "\n";
+    assert( diff*diff < 10*eps && "Fermion deriv" );
+  }
+
+
+  sigma_mom[ALL] = 0; pi_mom[ALL] = 0;
+  sigma[ALL] = gaussian_ran(); pi[ALL] = gaussian_ran();
+  foralldir(dir){
+    momentum[dir][ALL] = 0;
+    gauge[dir][ALL] = 1;
+  }
+
+  s = pi.get_value_at(50);
+
+  if(mynode()==0){
+    sigma.set_value_at(s+eps,50);
+  }
+  sigma.mark_changed(ALL);
+  s2 = aa.action();
+
+  if(mynode()==0)
+    sigma.set_value_at(s, 50);
+  sigma.mark_changed(ALL);
+  s1 = aa.action();
+
+  aa.force_step(1.0);
+  f = sigma_mom.get_value_at(50);
+  diff = f - (s2-s1)/eps;
+
+  if(mynode()==0) {
+    hila::output << "Calculated force " << f << "\n";
+    hila::output << "Actual force " << (s2-s1)/eps << "\n";
+    hila::output << "Sigma force diff " << diff << "\n";
+    assert( diff*diff < 10*eps && "Fermion force" );
+  }
 
 
   fa.draw_gaussian_fields();
@@ -149,7 +244,7 @@ int main(int argc, char **argv){
   }
   sigma_mom[ALL] = 0; pi_mom[ALL] = 0;
   sigma[ALL] = 0; pi[ALL] = 0;
-  s1 = fa.action();
+  s = pi.get_value_at(50);
 
   if(mynode()==0){
     sigma.set_value_at(s+eps,50);
@@ -160,48 +255,64 @@ int main(int argc, char **argv){
   if(mynode()==0)
     sigma.set_value_at(s, 50);
   sigma.mark_changed(ALL);
+  s1 = fa.action();
 
   fa.force_step(1.0);
   f = sigma_mom.get_value_at(50);
-  diff = diff = f - (s2-s1)/eps;
+  diff = f - (s2-s1)/eps;
 
   if(mynode()==0) {
     hila::output << "Calculated force " << f << "\n";
     hila::output << "Actual force " << (s2-s1)/eps << "\n";
-    hila::output << "force diff " << diff << "\n";
-    assert( diff*diff < eps && "Fermion force" );
+    hila::output << "Sigma force diff " << diff << "\n";
+    assert( diff*diff < 10*eps && "Fermion force" );
   }
 
 
 
+  sigma_mom[ALL] = 0; pi_mom[ALL] = 0;
+  sigma[ALL] = 0; pi[ALL] = 0;
+  p = pi.get_value_at(50);
+  
+  if(mynode()==0){
+    pi.set_value_at(p+eps,50);
+  }
+  pi.mark_changed(ALL);
+  s2 = fa.action();
+
+  if(mynode()==0)
+    pi.set_value_at(p, 50);
+  pi.mark_changed(ALL);
+  s1 = fa.action();
+
+  fa.force_step(1.0);
+  f = pi_mom.get_value_at(50);
+  diff = f - (s2-s1)/eps;
+
+  if(mynode()==0) {
+    hila::output << "Calculated force " << f << "\n";
+    hila::output << "Actual force " << (s2-s1)/eps << "\n";
+    hila::output << "Pi force diff " << diff << "\n";
+    assert( diff*diff < 10*eps && "Fermion force" );
+  }
+  output0 << "\n";
+
+
+
+
+  sigma[ALL] = 0; pi[ALL] = 0;
+  sigma_mom[ALL] = 0; pi_mom[ALL] = 0;
+  foralldir(dir){
+    momentum[dir][ALL] = 0;
+    gauge[dir][ALL] = 1;
+  }
 
 
   // Run HMC using the integrator
   for(int step = 0; step < 100; step ++){
     // Run update
     update_hmc(integrator_level_2, hmc_steps, traj_length);
-    
-    // Measurements
-
-    double plaq = plaquette(ga.gauge);
-    output0 << "Plaq: " << plaq << "\n";
-
-    double sigmasq = 0, sigma_ave = 0;
-    double pisq = 0, pi_ave = 0;
-    onsites(ALL){
-      sigma_ave += sigma[X];
-      sigmasq += sigma[X]*sigma[X];
-      pi_ave += pi[X];
-      pisq += pi[X]*pi[X];
-    }
-    sigma_ave /= lattice->volume();
-    sigmasq /= lattice->volume();
-    pi_ave /= lattice->volume();
-    pisq /= lattice->volume();
-    output0 << "Sigma: " << sigma_ave << "\n";
-    output0 << "Sigma sq: " << sigmasq << "\n";
-    output0 << "Pi: " << pi_ave << "\n";
-    output0 << "Pi sq: " << pisq << "\n";
+    measure(gauge, sigma, pi);
   }
 
 

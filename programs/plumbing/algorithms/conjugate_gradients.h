@@ -22,7 +22,7 @@ void GG_invert(vector &in, vector &out, op &M){
   double pDp = 0, rr = 0, rrnew = 0, rr_start=0;
   double alpha, beta;
   double target_rr, source_norm=0;
-  double accuracy = 1e-8;
+  double accuracy = 1e-12;
   
   onsites(ALL){
     source_norm += norm_squared(in[X]);
@@ -62,12 +62,17 @@ void GG_invert(vector &in, vector &out, op &M){
     #ifdef DEBUG_CG
     printf("CG iter %d, node %d, %g %g %g %g\n", i, mynode(), rrnew, rr_start, target_rr, pDp);
     #endif
-    if( rrnew < target_rr )
-        return;
+    if( rrnew < target_rr ){
+      //printf("CG completed in %d iterations, accuracy %g\n", i, sqrt(rrnew/source_norm));
+      return;
+    }
     beta = rrnew/rr;
     p[ALL] = beta*p[X] + r[X];
     rr = rrnew;
   }
+
+  output0 << "WARNING: Maximum iterations exceeded in conjugate gradient\n";
+
 }
 
 

@@ -14,8 +14,8 @@ class auxiliary_momentum_action {
     double action(){
       double a=0;
       onsites(ALL){
-        a += sigma_momentum[X]*sigma_momentum[X]
-           + pi_momentum[X]*pi_momentum[X];
+        a += 0.5*sigma_momentum[X]*sigma_momentum[X]
+           + 0.5*pi_momentum[X]*pi_momentum[X];
       }
       return a;
     }
@@ -30,8 +30,8 @@ class auxiliary_momentum_action {
 
     // Integrator step: apply the momentum on the gauge field
     void step(double eps){
-      sigma[ALL] = sigma[X] + eps*sigma_momentum[X];
-      pi[ALL] = pi[X] + eps*pi_momentum[X];
+      sigma[ALL] = sigma[X] - eps*sigma_momentum[X];
+      pi[ALL] = pi[X] - eps*pi_momentum[X];
     }
 
     // Called by hmc
@@ -66,8 +66,8 @@ class auxiliary_action {
 
     // Update the momentum with the auxiliary field
     void force_step(double eps){
-      sigma_momentum[ALL] = sigma_momentum[X] - eps*1.0/(4.0*G*G)*sigma[X];
-      pi_momentum[ALL] = pi_momentum[X] - eps*1.0/(4.0*G*G)*pi[X];
+      sigma_momentum[ALL] = sigma_momentum[X] + 2*eps*1.0/(4.0*G*G)*sigma[X];
+      pi_momentum[ALL] = pi_momentum[X] + 2*eps*1.0/(4.0*G*G)*pi[X];
     }
 
     // Make a copy of fields updated in a trajectory

@@ -1,6 +1,6 @@
-beta = 4
+beta = 8
 gamma = 0.5
-mass = 1.5
+mass = 1
 hmc_steps = 20
-traj_length = 1.0
+traj_length = 1
 seed = 1351
