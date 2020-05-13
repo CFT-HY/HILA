@@ -1,5 +1,24 @@
 
 
+
+
+template<int N>
+void dirac_staggered_gNJL_calc_force(
+  dirac_staggered<SU_vector<N>, SU<N>> D,
+  const field<SU_vector<N>> &psi,
+  const field<SU_vector<N>> &chi,
+  field<SU<N>> (&gforce)[NDIM],
+  field<double> &sforce,
+  field<double> &pforce )
+{
+  D.force(psi, chi, gforce);
+  sforce[ALL] = sforce[X] + psi[X].rdot(chi[X]);
+  pforce[EVEN] = pforce[X] + psi[X].rdot(chi[X]);
+  pforce[ODD]  = pforce[X] - psi[X].rdot(chi[X]);
+}
+
+
+
 template<int N>
 class dirac_staggered_gNJL {
   private:
@@ -22,7 +41,7 @@ class dirac_staggered_gNJL {
     void apply( const field<SU_vector<N>> & in, field<SU_vector<N>> & out){
       D.apply(in, out);
 
-      //out[ALL]  = out[X] + sigma[X]*in[X];
+      out[ALL]  = out[X] + sigma[X]*in[X];
       //out[EVEN] = out[X] + cmplx(0,1)*pi[X]*in[X];
       //out[ODD]  = out[X] - cmplx(0,1)*pi[X]*in[X];
     }
@@ -31,15 +50,17 @@ class dirac_staggered_gNJL {
     void dagger( const field<SU_vector<N>> & in, field<SU_vector<N>> & out){
       D.dagger(in, out);
 
-      //out[ALL]  = out[X] + sigma[X]*in[X];
+      out[ALL]  = out[X] + sigma[X]*in[X];
       //out[EVEN] = out[X] - cmplx(0,1)*pi[X]*in[X];
       //out[ODD]  = out[X] + cmplx(0,1)*pi[X]*in[X];
     }
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    void force( const field<SU_vector<N>> & psi, const field<SU_vector<N>> & chi, field<SU<N>> (&force)[NDIM]){
-      D.force(psi, chi, force);
+    void force( const field<SU_vector<N>> & psi, const field<SU_vector<N>> & chi, field<SU<N>> (&gforce)[NDIM], field<double> &sforce, field<double> &pforce){
+      dirac_staggered_gNJL_calc_force(
+        D, psi, chi, gforce, sforce, pforce
+      );
     }
 };
 

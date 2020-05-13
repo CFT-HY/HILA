@@ -4,6 +4,7 @@ template<typename SUN, typename VECTOR, typename DIRAC_OP>
 void fermion_force_gNJL(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], field<double> &sigma_momentum, field<double> &pi_momentum, DIRAC_OP &D, double eps){
   field<VECTOR> psi, Mpsi;
   field<SUN> force[NDIM], force2[NDIM];
+  field<double> smom, pmom;
   CG<field<VECTOR>, DIRAC_OP> inverse(D);
   
   psi=0;
@@ -11,8 +12,8 @@ void fermion_force_gNJL(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], field<
   
   D.apply(psi, Mpsi);
 
-  D.force(Mpsi, psi, force);
-  D.force(psi, Mpsi, force2);
+  D.force(Mpsi, psi, force, smom, pmom);
+  D.force(psi, Mpsi, force2, smom, pmom);
 
   foralldir(dir){
     onsites(ALL){
@@ -20,6 +21,11 @@ void fermion_force_gNJL(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], field<
       project_antihermitean(force[dir][X]);
       momentum[dir][X] = momentum[dir][X] - eps*force[dir][X];
     }
+  }
+
+  onsites(ALL){
+    sigma_momentum[X] = sigma_momentum[X] - eps * smom[X];
+    //pi_momentum[X] = pi_momentum[X] + eps * dot.im;
   }
 }
 
