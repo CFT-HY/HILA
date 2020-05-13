@@ -25,7 +25,7 @@ void fermion_force_gNJL(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], field<
 
   onsites(ALL){
     sigma_momentum[X] = sigma_momentum[X] - eps * smom[X];
-    //pi_momentum[X] = pi_momentum[X] + eps * dot.im;
+    pi_momentum[X] = pi_momentum[X] - eps * pmom[X];
   }
 }
 

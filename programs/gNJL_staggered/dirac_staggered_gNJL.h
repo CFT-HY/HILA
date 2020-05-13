@@ -12,9 +12,16 @@ void dirac_staggered_gNJL_calc_force(
   field<double> &pforce )
 {
   D.force(psi, chi, gforce);
-  sforce[ALL] = sforce[X] + psi[X].rdot(chi[X]);
-  pforce[EVEN] = pforce[X] + psi[X].rdot(chi[X]);
-  pforce[ODD]  = pforce[X] - psi[X].rdot(chi[X]);
+  onsites(EVEN){
+    cmplx<double> dot = psi[X].dot(chi[X]);
+    sforce[X] = sforce[X] + dot.re;
+    pforce[X] = pforce[X] - dot.im;
+  }
+  onsites(ODD){
+    cmplx<double> dot = psi[X].dot(chi[X]);
+    sforce[X] = sforce[X] + dot.re;
+    pforce[X] = pforce[X] + dot.im;
+  }
 }
 
 
@@ -42,8 +49,8 @@ class dirac_staggered_gNJL {
       D.apply(in, out);
 
       out[ALL]  = out[X] + sigma[X]*in[X];
-      //out[EVEN] = out[X] + cmplx(0,1)*pi[X]*in[X];
-      //out[ODD]  = out[X] - cmplx(0,1)*pi[X]*in[X];
+      out[EVEN] = out[X] + cmplx(0,1)*pi[X]*in[X];
+      out[ODD]  = out[X] - cmplx(0,1)*pi[X]*in[X];
     }
 
     // Applies the conjugate of the operator
@@ -51,8 +58,8 @@ class dirac_staggered_gNJL {
       D.dagger(in, out);
 
       out[ALL]  = out[X] + sigma[X]*in[X];
-      //out[EVEN] = out[X] - cmplx(0,1)*pi[X]*in[X];
-      //out[ODD]  = out[X] + cmplx(0,1)*pi[X]*in[X];
+      out[EVEN] = out[X] - cmplx(0,1)*pi[X]*in[X];
+      out[ODD]  = out[X] + cmplx(0,1)*pi[X]*in[X];
     }
 
     // Applies the derivative of the Dirac operator with respect

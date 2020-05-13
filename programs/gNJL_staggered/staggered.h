@@ -28,12 +28,6 @@
 
 
 
-
-
-
-
-
-
 constexpr int N=2;
 
 using SUN = SU<N,double>;

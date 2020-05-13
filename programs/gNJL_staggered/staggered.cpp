@@ -52,11 +52,15 @@ int main(int argc, char **argv){
   dirac_staggered_gNJL<N> D(mass, gauge, sigma, pi);
   gNJL_fermion_action fa(D, momentum, sigma_mom, pi_mom);
 
-
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
   integrator integrator_level_1(ga+aa, gma+ama);
   integrator integrator_level_2(fa, integrator_level_1);
+
+
+
+
+
 
   sigma_mom[ALL] = 0;
   pi_mom[ALL] = 0;
@@ -95,34 +99,63 @@ int main(int argc, char **argv){
   double diff = f - (s2-s1)/eps;
 
   if(mynode()==0) {
-    hila::output << "Action 1 " << s1 << "\n";
-    hila::output << "Action 2 " << s2 << "\n";
     hila::output << "Calculated deriv " << f << "\n";
     hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
     hila::output << "deriv diff " << diff << "\n";
-    assert( diff*diff < eps*eps*1000 && "Fermion deriv" );
+    assert( diff*diff < eps && "Fermion deriv" );
+  }
+
+  
+  
+  double p = pi.get_value_at(50);
+  s1 = 0;
+  D.apply(psi,tmp);
+  onsites(ALL){
+    s1 += chi[X].rdot(tmp[X]);
+  }
+  
+  if(mynode()==0){
+    pi.set_value_at(p+eps, 50);
+  }
+  pi.mark_changed(ALL);
+
+  s2 = 0;
+  D.apply(psi,tmp);
+  onsites(ALL){
+    s2 += chi[X].rdot(tmp[X]);
+  }
+
+  if(mynode()==0){
+    pi.set_value_at(p, 50);
+  }
+  pi.mark_changed(ALL);
+
+  f = pi_mom.get_value_at(50);
+  diff = f - (s2-s1)/eps;
+
+  if(mynode()==0) {
+    hila::output << "Calculated deriv " << f << "\n";
+    hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+    hila::output << "deriv diff " << diff << "\n";
+    assert( diff*diff < eps && "Fermion deriv" );
   }
 
 
 
+  fa.draw_gaussian_fields();
   foralldir(dir){
     momentum[dir][ALL] = 0;
     gauge[dir][ALL] = 1;
   }
-  sigma_mom[ALL] = 0;
-  pi_mom[ALL] = 0;
-  sigma[ALL] = 0;
-  pi[ALL] = 0;
-
+  sigma_mom[ALL] = 0; pi_mom[ALL] = 0;
+  sigma[ALL] = 0; pi[ALL] = 0;
   s1 = fa.action();
-  output0 << "Action 1 " << s1 << "\n";
 
   if(mynode()==0){
     sigma.set_value_at(s+eps,50);
   }
   sigma.mark_changed(ALL);
   s2 = fa.action();
-  output0 << "Action 2 " << s2 << "\n";
 
   if(mynode()==0)
     sigma.set_value_at(s, 50);
@@ -133,13 +166,13 @@ int main(int argc, char **argv){
   diff = diff = f - (s2-s1)/eps;
 
   if(mynode()==0) {
-    hila::output << "Action 1 " << s1 << "\n";
-    hila::output << "Action 2 " << s2 << "\n";
-    hila::output << "Calculated deriv " << f << "\n";
-    hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-    hila::output << "deriv diff " << diff << "\n";
-    assert( diff*diff < eps*eps*1000 && "Fermion deriv" );
+    hila::output << "Calculated force " << f << "\n";
+    hila::output << "Actual force " << (s2-s1)/eps << "\n";
+    hila::output << "force diff " << diff << "\n";
+    assert( diff*diff < eps && "Fermion force" );
   }
+
+
 
 
 
@@ -154,12 +187,21 @@ int main(int argc, char **argv){
     output0 << "Plaq: " << plaq << "\n";
 
     double sigmasq = 0, sigma_ave = 0;
+    double pisq = 0, pi_ave = 0;
     onsites(ALL){
       sigma_ave += sigma[X];
       sigmasq += sigma[X]*sigma[X];
+      pi_ave += pi[X];
+      pisq += pi[X]*pi[X];
     }
+    sigma_ave /= lattice->volume();
+    sigmasq /= lattice->volume();
+    pi_ave /= lattice->volume();
+    pisq /= lattice->volume();
     output0 << "Sigma: " << sigma_ave << "\n";
     output0 << "Sigma sq: " << sigmasq << "\n";
+    output0 << "Pi: " << pi_ave << "\n";
+    output0 << "Pi sq: " << pisq << "\n";
   }
 
 
