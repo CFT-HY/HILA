@@ -6,7 +6,7 @@
 #include <array>
 #include <vector>
 
-#define SUBNODE_LAYOUT  // TEMP HERE TO HELP EDITOR!!!!
+//#define SUBNODE_LAYOUT  // TEMP HERE TO HELP EDITOR!!!!
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
