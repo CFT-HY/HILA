@@ -70,6 +70,16 @@ class SU_vector {
     return r;
   }
 
+
+  inline matrix<n,n,cmplx<radix>> outer_product(const SU_vector<n,radix> rhs) const {
+    matrix<n,n,cmplx<radix>> r;
+    for(int j=0; j<n; j++) for (int i=0; i<n; i++) {
+      r.c[j][i] = c[i] * rhs.c[j].conj();
+    }
+    return r;
+  }
+
+
   std::string str() const {
     std::string text = "";
     for (int i=0; i<n; i++){
@@ -166,15 +176,6 @@ SU_vector<n,radix>  operator*(SU_vector<n,radix> lhs, radix rhs){
   return r;
 }
 
-
-template<int n, typename radix>
-matrix<n,n,cmplx<radix>> outer_product(SU_vector<n,radix> lhs, SU_vector<n,radix> rhs){
-  matrix<n,n,cmplx<radix>> r;
-  for(int j=0; j<n; j++) for (int i=0; i<n; i++) {
-    r.c[j][i] = lhs.c[i] * rhs.c[j].conj();
-  }
-  return r;
-}
 
 
 

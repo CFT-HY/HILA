@@ -86,6 +86,16 @@ class Wilson_vector {
     return r;
   }
 
+  /// Returns an SUN matrix, which is the sum of the outer products
+  // of the SUN vectors c
+  inline SU<n,radix> outer_product(const Wilson_vector rhs){
+    SU<n,radix> r = 0;
+    for (int i=0; i<Gammadim; i++) {
+      r.c[i] += c[i].outer_product(rhs.c[i]);
+    }
+    return r;
+  }
+
   std::string str() const {
     std::string text = "";
     for (int i=0; i<Gammadim; i++){
@@ -147,16 +157,7 @@ Wilson_vector<n,radix>  operator*(const Wilson_vector<n,radix> lhs, const radix 
 }
 
 
-/// Returns an SUN matrix, which is the sum of the outer products
-// of the SUN vectors c
-template<int n, typename radix>
-SU<n,radix> outer_product(const Wilson_vector<n,radix> lhs, const Wilson_vector<n,radix> rhs){
-  SU<n,radix> r = 0;
-  for (int i=0; i<Gammadim; i++) {
-    r.c[i] += lhs.c[i] * rhs.c[i];
-  }
-  return r;
-}
+
 
 
 

@@ -108,8 +108,8 @@ void dirac_staggered_calc_force(
 {
   foralldir(dir){
     out[dir][ALL] = -0.5 * (
-       staggered_eta[dir][X] * outer_product( psi[X+dir], chi[X] )
-      -staggered_eta[dir][X+dir] * outer_product( chi[X+dir], psi[X] )
+       staggered_eta[dir][X] * psi[X+dir].outer_product(chi[X])
+      -staggered_eta[dir][X+dir] * chi[X+dir].outer_product(psi[X])
     );
     
     out[dir][ALL] = gauge[dir][X]*out[dir][X];
