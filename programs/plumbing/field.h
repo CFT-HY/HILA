@@ -22,6 +22,9 @@
 // This is a marker for transformer -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)
 
+// boundary condition classification
+enum {PERIODIC, ANTIPERIODIC, FIXED};
+
 
 template <typename T>
 using element = T;
@@ -47,6 +50,7 @@ class field {
 
  private:
 
+
   /// The following struct holds the data + information about the field
   /// TODO: field-specific boundary conditions?
   class field_struct {
@@ -59,6 +63,11 @@ class field {
 #endif
       unsigned assigned_to;           // keeps track of first assignment to parities
       status move_status[3][NDIRS];     // is communication done
+
+#ifdef BOUNDARY_CONDITIONS
+      vector<> extra_nb_arrs;
+#endif
+
 #ifdef USE_MPI
       MPI_Request receive_request[3][NDIRS];
       MPI_Request send_request[3][NDIRS];
@@ -67,6 +76,7 @@ class field {
       T * receive_buffer[NDIRS];
 #endif
       T * send_buffer[NDIRS];
+
 
       void initialize_communication(){
         for (int d=0; d<NDIRS; d++) {
@@ -303,6 +313,7 @@ class field {
 
   void free() {
     if (fs != nullptr) {
+      for (direction d=(direction)0; d<NDIRS; ++d) drop_comms_if_needed(d,ALL);
       fs->free_payload();
       fs->free_communication();
       delete fs;
@@ -341,10 +352,10 @@ class field {
   // If ALL changes, both parities invalid; if p != ALL, then p and ALL.
   void mark_changed(const parity p) const {
 
-    // TODO: CHECK THAT THERE'S NO ONGOING COMMUNICATION; IF SO CLEAR IT!!!
-    // OTHERWISE WAIT_GET WILL RECEIVE INCORRECT DATA!!!
+    for (direction i=(direction)0; i<NDIRS; ++i) {
+      // check if there's ongoing comms, invalidate it!
+      drop_comms_if_needed(i,p);
 
-    for (int i=0; i<NDIRS; i++) {
       set_move_status(p,i,status::NOT_DONE);
       if (p != ALL) set_move_status(ALL,i,status::NOT_DONE );
       else {
@@ -438,7 +449,7 @@ class field {
   // fetch the element at this loc
   // T get(int i) const;
   
-  // NOTE: THIS SHOULD BE INCLUDED IN TEMPLATE BELOW; SEEMS NOT???  
+  // Basic copy constructor (cannot be a template)
   field<T>& operator= (const field<T>& rhs) {
    (*this)[ALL] = rhs[X];
    return *this;
@@ -520,6 +531,8 @@ class field {
   dir_mask_t start_get(direction d) const { return start_get(d, ALL);}
   void wait_get(direction d, parity p) const;
   void get(direction d, parity p) const;
+  void drop_comms_if_needed(direction d, parity p) const;
+  void cancel_comm(direction d, parity p) const; 
 
   // Declaration of shift methods
   field<T> shift(const coordinate_vector &v, parity par) const;
@@ -896,6 +909,32 @@ void field<T>::wait_get(direction d, parity p) const {
 }
 
 
+///  drop_comms_if_needed():  if field is changed or deleted,
+///  cancel ongoing communications.  This should happen very seldom,
+///  only if there are "by-hand" start_get operations and these are not needed
+template<typename T>
+void field<T>::drop_comms_if_needed(direction d, parity p) const {
+
+  if (is_move_started(d, ALL)) cancel_comm(d, ALL);
+  if (p != ALL) {
+    if (is_move_started(d, p)) cancel_comm(d, p);
+  } else {
+    if (is_move_started(d, EVEN)) cancel_comm(d, EVEN);
+    if (is_move_started(d, ODD)) cancel_comm(d, ODD);
+  }
+}
+
+/// and cancel send and receive
+
+template<typename T>
+void field<T>::cancel_comm(direction d, parity p) const {
+  if (lattice->nn_comminfo[d].from_node.rank != mynode()) {
+    MPI_Cancel( &fs->receive_request[(int)p-1][d] );
+  }
+  if (lattice->nn_comminfo[d].to_node.rank != mynode()) {
+    MPI_Cancel( &fs->send_request[(int)p-1][d] );
+  }
+}
 
 #else
 
@@ -914,7 +953,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
 template<typename T>
 void field<T>::wait_get(direction d, parity p) const {}
-
+void field<T>::drop_comms_if_needed(direction d, parity p) const {}
 
 #endif  // MPI
 
