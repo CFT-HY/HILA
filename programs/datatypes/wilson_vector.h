@@ -86,6 +86,22 @@ class Wilson_vector {
     return r;
   }
 
+  inline cmplx<radix> dot(const Wilson_vector &rhs) const {
+    cmplx<radix> r = (0.0);
+    for (int i=0; i<Gammadim; i++) {
+      r += c[i].dot(rhs.c[i]);
+    }
+    return r;
+  }
+
+  inline radix rdot(const Wilson_vector &rhs) const {
+    radix r = (0.0);
+    for (int i=0; i<Gammadim; i++) {
+      r += c[i].rdot(rhs.c[i]);
+    }
+    return r;
+  }
+
   /// Returns an SUN matrix, which is the sum of the outer products
   // of the SUN vectors c
   inline SU<n,radix> outer_product(const Wilson_vector rhs){
@@ -108,11 +124,21 @@ class Wilson_vector {
 
 
 
+
 template<int n, typename radix>
-cmplx<radix> operator*(const Wilson_vector<n,radix> lhs, const Wilson_vector<n,radix> rhs){
-  cmplx<radix> r = (0.0);
+Wilson_vector<n,radix> operator*(const SU<n,radix> lhs, const Wilson_vector<n,radix> rhs){
+  Wilson_vector<n,radix> r;
   for (int i=0; i<Gammadim; i++) {
-    r += lhs.c[i]*rhs.c[i];
+    r.c[i] = lhs*rhs.c[i];
+  }
+  return r;
+}
+
+template<int n, typename radix>
+Wilson_vector<n,radix> operator*(const Wilson_vector<n,radix> lhs, const SU<n,radix> rhs){
+  Wilson_vector<n,radix> r;
+  for (int i=0; i<Gammadim; i++) {
+    r.c[i] = lhs*rhs.c[i];
   }
   return r;
 }
@@ -401,9 +427,62 @@ class half_Wilson_vector {
 
 
 
+template<int n, typename radix>
+half_Wilson_vector<n,radix> operator*(const SU<n,radix> lhs, const half_Wilson_vector<n,radix> rhs){
+  half_Wilson_vector<n,radix> r;
+  for (int i=0; i<Gammadim/2; i++) {
+    r.c[i] = lhs*rhs.c[i];
+  }
+  return r;
+}
+
+template<int n, typename radix>
+half_Wilson_vector<n,radix> operator*(const half_Wilson_vector<n,radix> lhs, const SU<n,radix> rhs){
+  half_Wilson_vector<n,radix> r;
+  for (int i=0; i<Gammadim/2; i++) {
+    r.c[i] = lhs*rhs.c[i];
+  }
+  return r;
+}
+
+
+template<int n, typename radix>
+half_Wilson_vector<n,radix> operator+(const half_Wilson_vector<n,radix> lhs, const half_Wilson_vector<n,radix> rhs){
+  half_Wilson_vector<n,radix>  r;
+  for (int i=0; i<Gammadim/2; i++) {
+    r.c[i] = lhs.c[i] + rhs.c[i];
+  }
+  return r;
+}
+
+template<int n, typename radix>
+half_Wilson_vector<n,radix> operator-(const half_Wilson_vector<n,radix> lhs, const half_Wilson_vector<n,radix> rhs){
+  half_Wilson_vector<n,radix>  r;
+  for (int i=0; i<Gammadim/2; i++) {
+    r.c[i] = lhs.c[i] - rhs.c[i];
+  }
+  return r;
+}
 
 
 
+template<int n, typename radix>
+half_Wilson_vector<n,radix> operator*(const radix lhs, const half_Wilson_vector<n,radix> &rhs){
+  half_Wilson_vector<n,radix>  r;
+  for (int i=0; i<Gammadim/2; i++) {
+    r.c[i] = lhs * rhs.c[i];
+  }
+  return r;
+}
+
+template<int n, typename radix>
+half_Wilson_vector<n,radix>  operator*(const half_Wilson_vector<n,radix> lhs, const radix rhs){
+  half_Wilson_vector<n,radix>  r;
+  for (int i=0; i<Gammadim/2; i++) {
+    r.c[i] = lhs.c[i] * rhs;
+  }
+  return r;
+}
 
 
 
