@@ -1,5 +1,5 @@
-#ifndef __DIRAC_H__
-#define __DIRAC_H__
+#ifndef __DIRAC_WILSON_H__
+#define __DIRAC_WILSON_H__
 
 #include "../../plumbing/defs.h"
 #include "../../datatypes/cmplx.h"

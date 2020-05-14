@@ -6,8 +6,9 @@
 
 #include "../plumbing/defs.h"
 #include "../datatypes/cmplx.h"
-#include "../datatypes/general_matrix.h"
+#include "../datatypes/sun_vector.h"
 #include "../datatypes/sun.h"
+#include "../datatypes/wilson_vector.h"
 #include "../plumbing/field.h"
 #include "../plumbing/inputs.h"
 
