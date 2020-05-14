@@ -47,12 +47,12 @@ void fermion_force(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], DIRAC_OP &D
   
   D.apply(psi, Mpsi);
 
-  D.force(Mpsi, psi, force);
-  D.force(psi, Mpsi, force2);
+  D.force(Mpsi, psi, force, 1);
+  D.force(psi, Mpsi, force2, -1);
 
   foralldir(dir){
     onsites(ALL){
-      force[dir][X] = force[dir][X] - force2[dir][X];
+      force[dir][X] = force[dir][X] + force2[dir][X];
       project_antihermitean(force[dir][X]);
       momentum[dir][X] = momentum[dir][X] - eps*force[dir][X];
     }

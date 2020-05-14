@@ -104,10 +104,11 @@ void dirac_staggered_calc_force(
   const field<vtype> &chi,
   field<mtype> (&out)[NDIM],
   field<double> (&staggered_eta)[NDIM],
-  field<vtype> (&vtemp)[NDIM])
+  field<vtype> (&vtemp)[NDIM],
+  int sign)
 {
   foralldir(dir){
-    out[dir][ALL] = -0.5 * (
+    out[dir][ALL] = -sign*0.5 * (
        staggered_eta[dir][X] * psi[X+dir].outer_product(chi[X])
       -staggered_eta[dir][X+dir] * chi[X+dir].outer_product(psi[X])
     );
@@ -170,8 +171,8 @@ class dirac_staggered {
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    void force( const field<vector> & psi, const field<vector> & chi, field<matrix> (&force)[NDIM]){
-      dirac_staggered_calc_force(gauge, mass, psi, chi, force, staggered_eta, vtemp);
+    void force( const field<vector> & psi, const field<vector> & chi, field<matrix> (&force)[NDIM], int sign=1){
+      dirac_staggered_calc_force(gauge, mass, psi, chi, force, staggered_eta, vtemp, sign);
     }
 };
 

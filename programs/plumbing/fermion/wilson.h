@@ -95,24 +95,36 @@ void dirac_wilson_calc_force(
   const field<Wilson_vector<n, radix>> &psi,
   const field<Wilson_vector<n, radix>> &chi,
   field<SU<n, radix>> (&out)[NDIM],
-  field<half_Wilson_vector<n, radix>> (&vtemp)[NDIM])
+  field<half_Wilson_vector<n, radix>> (&vtemp)[NDIM],
+  int sign)
 {
   foralldir(dir){
-    direction odir = opp_dir( (direction)dir );
-    onsites(ALL){
-      vtemp[0][X] = half_Wilson_vector<n, radix>(psi[X], odir);
-      vtemp[1][X] = half_Wilson_vector<n, radix>(chi[X], dir);
+    if(sign == 1){
+      direction odir = opp_dir( (direction)dir );
+      onsites(ALL){
+        vtemp[0][X] = half_Wilson_vector<n, radix>(psi[X], odir);
+        vtemp[1][X] = half_Wilson_vector<n, radix>(chi[X], dir);
+      }
+
+      out[dir][ALL] = -kappa * (
+          ( vtemp[0][X+dir].expand(odir) ).outer_product(chi[X])
+        + ( vtemp[1][X+dir].expand(dir)  ).outer_product(psi[X])
+      );
+    } else {
+      direction odir = opp_dir( (direction)dir );
+      onsites(ALL){
+        vtemp[0][X] = half_Wilson_vector<n, radix>(psi[X], dir);
+        vtemp[1][X] = half_Wilson_vector<n, radix>(chi[X], odir);
+      }
+
+      out[dir][ALL] = -kappa * (
+          ( vtemp[0][X+dir].expand(dir) ).outer_product(chi[X])
+        + ( vtemp[1][X+dir].expand(odir)  ).outer_product(psi[X])
+      );
     }
-    
-    out[dir][ALL] = -kappa * (
-        ( vtemp[0][X+dir].expand(odir) ).outer_product(chi[X])
-      + ( vtemp[1][X+dir].expand(dir)  ).outer_product(psi[X])
-    );
-    
     out[dir][ALL] = gauge[dir][X]*out[dir][X];
   }
 }
-
 
 
 template<int n, typename radix=double>
@@ -154,8 +166,8 @@ class dirac_wilson {
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    void force( const field<Wilson_vector<n, radix>> & psi, const field<Wilson_vector<n, radix>> & chi, field<SU<n, radix>> (&force)[NDIM]){
-      dirac_wilson_calc_force(gauge, kappa, psi, chi, force, vtemp);
+    void force( const field<Wilson_vector<n, radix>> & psi, const field<Wilson_vector<n, radix>> & chi, field<SU<n, radix>> (&force)[NDIM], int sign=1){
+      dirac_wilson_calc_force(gauge, kappa, psi, chi, force, vtemp, sign);
     }
 };
 

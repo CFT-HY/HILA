@@ -123,9 +123,9 @@ int main(int argc, char **argv){
     double diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
-      hila::output << "Calculated deriv " << (f*ga.generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Staggered deriv " << ng << " diff " << diff << "\n";
+      //hila::output << "Calculated deriv " << (f*ga.generator(ng)).trace().re << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Staggered deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*100 && "Staggered fermion deriv" );
     }
 
@@ -150,18 +150,16 @@ int main(int argc, char **argv){
     diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated force " << (f*ga.generator(ng)).trace().re << "\n";
-      hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      hila::output << "Staggered force " << ng << " diff " << diff << "\n";
+      //hila::output << "Calculated force " << (f*ga.generator(ng)).trace().re << "\n";
+      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      //hila::output << "Staggered force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*100 && "Staggered force" );
     }
   }
 
 
   for(int ng = 0; ng < ga.n_generators(); ng++){
-    dirac_wilson<N> D(0.1, gauge);
+    dirac_wilson<N> D(0.05, gauge);
     fermion_action fa(D, gauge, momentum);
     fa.draw_gaussian_fields();
     foralldir(dir){
@@ -200,14 +198,49 @@ int main(int argc, char **argv){
       gauge[0].set_value_at(g1, 50);
     gauge[0].mark_changed(ALL);
 
-    D.force(chi, psi, momentum);
+    D.force(chi, psi, momentum, 1);
     SU<N> f = momentum[0].get_value_at(50);
     double diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
-      hila::output << "Calculated deriv " << (f*ga.generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
+      //hila::output << "Calculated deriv " << (f*ga.generator(ng)).trace().re << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps*100 && "Wilson fermion deriv" );
+    }
+
+    foralldir(dir){
+      momentum[dir][ALL] = 0;
+    }
+
+    s1 = 0;
+    D.dagger(psi,tmp);
+    onsites(ALL){
+      s1 += chi[X].rdot(tmp[X]);
+    }
+
+    if(mynode()==0){
+      gauge[0].set_value_at(g12,50);
+    }
+    gauge[0].mark_changed(ALL);
+    s2 = 0;
+    D.dagger(psi,tmp);
+    onsites(ALL){
+      s2 += chi[X].rdot(tmp[X]);
+    }
+
+    if(mynode()==0)
+      gauge[0].set_value_at(g1, 50);
+    gauge[0].mark_changed(ALL);
+
+    D.force(chi, psi, momentum, -1);
+    f = momentum[0].get_value_at(50);
+    diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
+
+    if(mynode()==0) {
+      //hila::output << "Calculated deriv " << (f*ga.generator(ng)).trace().re << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*100 && "Wilson fermion deriv" );
     }
 
@@ -231,9 +264,9 @@ int main(int argc, char **argv){
     diff = (f*ga.generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
-      hila::output << "Calculated force " << (f*ga.generator(ng)).trace().re << "\n";
-      hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      hila::output << "Wilson force " << ng << " diff " << diff << "\n";
+      //hila::output << "Calculated force " << (f*ga.generator(ng)).trace().re << "\n";
+      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      //hila::output << "Wilson force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*100 && "Wilson fermion force" );
     }
   }
