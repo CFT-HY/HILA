@@ -1,6 +1,5 @@
 #include "test.h"
 
-#if NDIM == 4
 
 #include "../plumbing/fermion/staggered.h"
 #include "../plumbing/fermion/wilson.h"
@@ -18,8 +17,10 @@ void test_gamma_matrices(){
   SU<N> U; U.random();
   w1.gaussian();
 
+#if NDIM == 4
   w2 = w1-gamma5*(gamma5*w1);
   assert(w2.norm_sq() < 0.0001 && "g5*g5 = 1");
+#endif
 
   foralldir(d){
     w2 = w1-gamma_matrix[d]*(gamma_matrix[d]*w1);
@@ -52,9 +53,9 @@ void test_gamma_matrices(){
 int main(int argc, char **argv){
 
   #if NDIM==1
-  lattice->setup( 16, argc, argv );
+  lattice->setup( 64, argc, argv );
   #elif NDIM==2
-  lattice->setup( 16, 8, argc, argv );
+  lattice->setup( 32, 8, argc, argv );
   #elif NDIM==3
   lattice->setup( 16, 8, 8, argc, argv );
   #elif NDIM==4
@@ -144,7 +145,3 @@ int main(int argc, char **argv){
 }
 
 
-#else 
-int main(int argc, char **argv){
-}
-#endif

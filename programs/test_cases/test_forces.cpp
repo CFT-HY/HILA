@@ -15,11 +15,11 @@ int main(int argc, char **argv){
   /* Use a smaller lattice size since
    * the inversion takes a while */
   #if NDIM==1
-  lattice->setup( 8, argc, argv );
+  lattice->setup( 64, argc, argv );
   #elif NDIM==2
-  lattice->setup( 8, 8, argc, argv );
+  lattice->setup( 32, 8, argc, argv );
   #elif NDIM==3
-  lattice->setup( 8, 8, 8, argc, argv );
+  lattice->setup( 16, 8, 8, argc, argv );
   #elif NDIM==4
   lattice->setup( 8, 8, 8, 8, argc, argv );
   #endif
@@ -158,7 +158,6 @@ int main(int argc, char **argv){
   }
 
 
-#if NDIM == 4
 
   for(int ng = 0; ng < ga.n_generators(); ng++){
     dirac_wilson<N> D(0.05, gauge);
@@ -273,7 +272,6 @@ int main(int argc, char **argv){
     }
   }
 
-#endif
 
 
   for(int ng = 0; ng < ga.n_generators(); ng++){

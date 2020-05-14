@@ -225,7 +225,22 @@ Wilson_vector<n,radix> operator*(const gamma_matrix_type gamma, const Wilson_vec
 
 #elif (Gammadim==2)
 
-
+template<int n, typename radix>
+Wilson_vector<n,radix> operator*(const gamma_matrix_type gamma, const Wilson_vector<n,radix> rhs){
+  Wilson_vector<n,radix>  r;
+  switch(gamma) {
+    case gamma0:
+      r.c[0] = rhs.c[1]; r.c[1] = rhs.c[0];
+      break;
+    case gamma1:
+      r.c[0] = cmplx(0,-1)*rhs.c[1]; r.c[1] = cmplx(0,1)*rhs.c[0];
+      break;
+    case gamma2:
+      r.c[0] = rhs.c[0]; r.c[1] = -rhs.c[1];
+      break;
+  }
+  return r;
+}
 
 #endif
 
@@ -334,8 +349,8 @@ class half_Wilson_vector {
   	    c[1] = sqrt(2.0)*w.c[1];
         break;
       case 5:
-        c[0] = sqrt(2.0);*w.c[2];
-  	    c[1] = sqrt(2.0);*w.c[3];
+        c[0] = sqrt(2.0)*w.c[2];
+  	    c[1] = sqrt(2.0)*w.c[3];
         break;
 #endif
     }
@@ -399,6 +414,70 @@ class half_Wilson_vector {
   }
 
 #elif (Gammadim==2)
+/*
+ gamma(XUP) 	 eigenvectors	 eigenvalue
+   0  1		      ( 1, 1)	       +1
+   1  0		      ( 1,-1)	       -1
+
+ gamma(YUP)		 eigenvectors	 eigenvalue
+   0  i	        ( 1, i)	       +1
+  -i  0	  	    ( 1,-i)	       -1
+
+ gamma(ZUP)		 eigenvectors  eigenvalue
+   1  0	        ( 1, 0)	       +1
+   0 -1	  	    ( 0, 1)	       -1
+*/
+  half_Wilson_vector(Wilson_vector<n, radix> w, direction dir) {
+    switch(dir){
+      case XUP:
+	      c[0] = w.c[0] + w.c[1];
+	      break;
+      case XDOWN:
+	      c[0] = w.c[0] - w.c[1];
+	      break;
+      case YUP:
+	      c[0] = w.c[0] - cmplx(0,1)*w.c[1];
+	      break;
+      case YDOWN:
+ 	      c[0] = w.c[0] + cmplx(0,1)*w.c[1];
+	      break;
+#if NDIM == 3
+      case ZUP:
+  	    c[0] = sqrt(2.0)*w.c[0];
+	      break;
+      case ZDOWN:
+        c[0] = sqrt(2.0)*w.c[1];
+        break;
+#endif
+    }
+  }
+
+  Wilson_vector<n, radix> expand(direction dir) const{
+    Wilson_vector<n, radix> r;
+    switch(dir){
+      case XUP:
+        r.c[0] = c[0]; r.c[1] = c[0];
+	      break;
+      case XDOWN:
+        r.c[0] = c[0]; r.c[1] = -c[0];
+	      break;
+      case YUP:
+        r.c[0] = c[0]; r.c[1] = cmplx(0,1)*c[0];
+	      break;
+      case YDOWN:
+        r.c[0] = c[0]; r.c[1] = cmplx(0,-1)*c[0];
+        break;
+#if NDIM == 3
+      case ZUP:
+        r.c[0] = sqrt(2.0)*c[0]; r.c[1] = 0;
+	      break;
+      case ZDOWN:
+        r.c[0] = 0; r.c[1] = sqrt(2.0)*c[0];
+        break;
+#endif
+    }
+    return r;
+  }
 
 
 #endif
