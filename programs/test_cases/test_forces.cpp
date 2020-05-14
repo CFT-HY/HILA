@@ -158,6 +158,8 @@ int main(int argc, char **argv){
   }
 
 
+#if NDIM == 4
+
   for(int ng = 0; ng < ga.n_generators(); ng++){
     dirac_wilson<N> D(0.05, gauge);
     fermion_action fa(D, gauge, momentum);
@@ -270,6 +272,8 @@ int main(int argc, char **argv){
       assert( diff*diff < eps*100 && "Wilson fermion force" );
     }
   }
+
+#endif
 
 
   for(int ng = 0; ng < ga.n_generators(); ng++){
