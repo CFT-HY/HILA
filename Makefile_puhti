@@ -103,11 +103,15 @@ OBJECTS = \
   $(BUILDDIR)/codegen.o \
   $(BUILDDIR)/codegen_cpu.o \
   $(BUILDDIR)/codegen_cuda.o \
-  $(BUILDDIR)/codegen_avx.o \
+  $(BUILDDIR)/codegen_avx_new.o \
   $(BUILDDIR)/codegen_openacc.o \
   $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/myastvisitor.o \
   $(BUILDDIR)/loop_function.o \
+  $(BUILDDIR)/vectorization_info.o \
+  $(BUILDDIR)/depends_on_site.o \
+  $(BUILDDIR)/function_contains_loop_checker.o \
+  $(BUILDDIR)/addrof_and_ref_checker.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o
