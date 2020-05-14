@@ -44,7 +44,7 @@ lattice_struct * lattice = & my_lattice;
 
 
 // Define some parameters for the simulation
-extern const int nd[4] = { 8, 8, 8, 8 };
+extern const int nd[4] = { 16, 8, 8, 8 };
 
 extern int n_measurements;
 extern int n_updates_per_measurement;
