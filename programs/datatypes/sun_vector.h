@@ -74,7 +74,7 @@ class SU_vector {
   inline matrix<n,n,cmplx<radix>> outer_product(const SU_vector<n,radix> rhs) const {
     matrix<n,n,cmplx<radix>> r;
     for(int j=0; j<n; j++) for (int i=0; i<n; i++) {
-      r.c[j][i] = c[i] * rhs.c[j].conj();
+      r.c[i][j] = c[i] * rhs.c[j].conj();
     }
     return r;
   }

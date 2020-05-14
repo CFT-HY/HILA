@@ -34,7 +34,7 @@ int main(int argc, char **argv){
     }
   }
 
-  // Check conjugate of the Dirac operator
+  // Check conjugate of the staggered Dirac operator
   double diffre = 0, diffim = 0;
   using dirac = dirac_staggered< SU_vector<N>, SU<N>>;
   dirac D(0.1, U);

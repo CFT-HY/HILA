@@ -5,6 +5,7 @@
 #include "../datatypes/general_matrix.h"
 #include "../datatypes/sun.h"
 #include "../datatypes/sun_vector.h"
+#include "../plumbing/coordinates.h"
 #include "../plumbing/random.h"
 
 
@@ -104,10 +105,10 @@ class Wilson_vector {
 
   /// Returns an SUN matrix, which is the sum of the outer products
   // of the SUN vectors c
-  inline SU<n,radix> outer_product(const Wilson_vector rhs){
+  inline SU<n,radix> outer_product(const Wilson_vector rhs) const{
     SU<n,radix> r = 0;
     for (int i=0; i<Gammadim; i++) {
-      r.c[i] += c[i].outer_product(rhs.c[i]);
+      r += c[i].outer_product(rhs.c[i]);
     }
     return r;
   }
@@ -126,7 +127,7 @@ class Wilson_vector {
 
 
 template<int n, typename radix>
-Wilson_vector<n,radix> operator*(const SU<n,radix> lhs, const Wilson_vector<n,radix> rhs){
+Wilson_vector<n,radix> operator*(const matrix<n,n,cmplx<radix>> lhs, const Wilson_vector<n,radix> rhs){
   Wilson_vector<n,radix> r;
   for (int i=0; i<Gammadim; i++) {
     r.c[i] = lhs*rhs.c[i];
@@ -135,7 +136,7 @@ Wilson_vector<n,radix> operator*(const SU<n,radix> lhs, const Wilson_vector<n,ra
 }
 
 template<int n, typename radix>
-Wilson_vector<n,radix> operator*(const Wilson_vector<n,radix> lhs, const SU<n,radix> rhs){
+Wilson_vector<n,radix> operator*(const Wilson_vector<n,radix> lhs, const matrix<n,n,cmplx<radix>> rhs){
   Wilson_vector<n,radix> r;
   for (int i=0; i<Gammadim; i++) {
     r.c[i] = lhs*rhs.c[i];
@@ -340,7 +341,7 @@ class half_Wilson_vector {
     }
   }
 
-  Wilson_vector<n, radix> expand(direction dir){
+  Wilson_vector<n, radix> expand(direction dir) const{
     Wilson_vector<n, radix> r;
     switch(dir){
       case XUP:
@@ -428,7 +429,7 @@ class half_Wilson_vector {
 
 
 template<int n, typename radix>
-half_Wilson_vector<n,radix> operator*(const SU<n,radix> lhs, const half_Wilson_vector<n,radix> rhs){
+half_Wilson_vector<n,radix> operator*(const matrix<n,n,cmplx<radix>> lhs, const half_Wilson_vector<n,radix> rhs){
   half_Wilson_vector<n,radix> r;
   for (int i=0; i<Gammadim/2; i++) {
     r.c[i] = lhs*rhs.c[i];
@@ -437,10 +438,10 @@ half_Wilson_vector<n,radix> operator*(const SU<n,radix> lhs, const half_Wilson_v
 }
 
 template<int n, typename radix>
-half_Wilson_vector<n,radix> operator*(const half_Wilson_vector<n,radix> lhs, const SU<n,radix> rhs){
+half_Wilson_vector<n,radix> operator*(const half_Wilson_vector<n,radix> lhs, const matrix<n,n,cmplx<radix>> rhs){
   half_Wilson_vector<n,radix> r;
   for (int i=0; i<Gammadim/2; i++) {
-    r.c[i] = lhs*rhs.c[i];
+    r.c[i] = lhs.c[i]*rhs;
   }
   return r;
 }

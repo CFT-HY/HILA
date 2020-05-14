@@ -2,7 +2,7 @@
 #define FERMION_FIELD_H
 
 
-#include "../plumbing/algorithms/conjugate_gradients.h"
+#include "../../plumbing/algorithms/conjugate_gradients.h"
 #include <cmath>
 
 

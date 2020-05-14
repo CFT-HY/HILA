@@ -9,7 +9,7 @@
 /// staggered dirac operator or something else. 
 ///////////////////////////////////////////////////////
 
-#include "../dirac.h"
+#include "../fermion/staggered.h"
 #include<iostream>
 
 #define MAXITERS 10000

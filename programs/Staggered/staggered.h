@@ -14,7 +14,7 @@
 #include "../datatypes/sun_vector.h"
 #include "../datatypes/sun.h"
 #include "../plumbing/field.h"
-#include "../plumbing/dirac.h"
+#include "../plumbing/fermion/staggered.h"
 #include "../plumbing/algorithms/hmc.h"
 #include "../plumbing/gauge_field.h"
 #include "../plumbing/fermion_field.h"

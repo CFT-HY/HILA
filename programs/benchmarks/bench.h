@@ -9,7 +9,7 @@
 #include "../datatypes/general_matrix.h"
 #include "../datatypes/sun.h"
 #include "../plumbing/field.h"
-#include "../plumbing/dirac.h"
+#include "../plumbing/fermion/staggered.h"
 
 
 // Minimum time to run each benchmark

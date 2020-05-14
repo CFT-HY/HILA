@@ -1,14 +1,14 @@
 #ifndef __DIRAC_H__
 #define __DIRAC_H__
 
-#include "../plumbing/defs.h"
-#include "../datatypes/cmplx.h"
-#include "../datatypes/general_matrix.h"
-#include "../datatypes/wilson_vector.h"
-#include "../plumbing/field.h"
+#include "../../plumbing/defs.h"
+#include "../../datatypes/cmplx.h"
+#include "../../datatypes/general_matrix.h"
+#include "../../datatypes/wilson_vector.h"
+#include "../../plumbing/field.h"
 
 
-inline void init_staggered_eta(field<double> staggered_eta[NDIM]){
+inline void init_staggered_eta(field<double> (&staggered_eta)[NDIM]){
   // Initialize the staggered eta field
   foralldir(d){
     onsites(ALL){
@@ -35,8 +35,8 @@ void dirac_staggered_apply(
   const double mass,
   const field<vtype> &v_in,
   field<vtype> &v_out,
-  field<double> staggered_eta[NDIM],
-  field<vtype> vtemp[NDIM])
+  field<double> (&staggered_eta)[NDIM],
+  field<vtype> (&vtemp)[NDIM])
 {
   // Start getting neighbours
   foralldir(dir){
@@ -50,13 +50,13 @@ void dirac_staggered_apply(
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
     // First mulltiply the by conjugate before communicating the matrix
-    vtemp[dir][ALL] = v_in[X]*gauge[dir][X].conjugate();
+    vtemp[dir][ALL] = gauge[dir][X].conjugate()*v_in[X];
     vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
     v_out[ALL] = v_out[X] + 0.5 * staggered_eta[dir][X] * (
-      v_in[X+dir]*gauge[dir][X] - vtemp[dir][X+odir]
+      gauge[dir][X]*v_in[X+dir] - vtemp[dir][X+odir]
     );
   }
 }
@@ -68,8 +68,8 @@ void dirac_staggered_dagger(
   const double mass,
   const field<vtype> &v_in,
   field<vtype> &v_out,
-  field<double> staggered_eta[NDIM],
-  field<vtype> vtemp[NDIM])
+  field<double> (&staggered_eta)[NDIM],
+  field<vtype> (&vtemp)[NDIM])
 {
   // Start getting neighbours
   foralldir(dir){
@@ -83,13 +83,13 @@ void dirac_staggered_dagger(
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
     // First multiply the by conjugate before communicating the matrix
-    vtemp[dir][ALL] = v_in[X]*gauge[dir][X].conjugate();
+    vtemp[dir][ALL] = gauge[dir][X].conjugate()*v_in[X];
     vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
     v_out[ALL] = v_out[X] - 0.5 * staggered_eta[dir][X] * (
-      v_in[X+dir]*gauge[dir][X] - vtemp[dir][X+odir]
+      gauge[dir][X]*v_in[X+dir] - vtemp[dir][X+odir]
     );
   }
 }
@@ -103,8 +103,8 @@ void dirac_staggered_calc_force(
   const field<vtype> &psi,
   const field<vtype> &chi,
   field<mtype> (&out)[NDIM],
-  field<double> staggered_eta[NDIM],
-  field<vtype> vtemp[NDIM])
+  field<double> (&staggered_eta)[NDIM],
+  field<vtype> (&vtemp)[NDIM])
 {
   foralldir(dir){
     out[dir][ALL] = -0.5 * (
