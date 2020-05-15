@@ -6,7 +6,7 @@
 
 #include "../plumbing/defs.h"
 #include "../datatypes/cmplx.h"
-#include "../datatypes/sun_vector.h"
+#include "../datatypes/vector.h"
 #include "../datatypes/sun.h"
 #include "../datatypes/wilson_vector.h"
 #include "../plumbing/field.h"

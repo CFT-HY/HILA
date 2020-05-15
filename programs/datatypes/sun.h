@@ -4,7 +4,7 @@
 #include "../plumbing/defs.h"
 #include "../datatypes/cmplx.h"
 #include "../datatypes/general_matrix.h"
-#include "../datatypes/sun_vector.h"
+#include "../datatypes/vector.h"
 #include "../plumbing/mersenne.h" //has to be included
 #include <cmath>
 
@@ -75,8 +75,8 @@ class SU : public matrix<n,n,cmplx<radix> >{
     #pragma transformer loop_function
     SU(const scalart rhs) {
       for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-        if (i == j) matrix<n,n,cmplx<radix>>::c[i][j] = (rhs);
-        else matrix<n,n,cmplx<radix>>::c[i][j] = (0);
+        if (i == j) this->c[i][j] = (rhs);
+        else this->c[i][j] = (0);
       }
     }
 
@@ -124,7 +124,7 @@ class SU : public matrix<n,n,cmplx<radix> >{
     //generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix. 
     //more iterations are needed to generate larger elements: 12 works well for n < 10. 
 
-    void random(const int depth = 12) { 
+    void random(const int depth = 12) {
         matrix<n,n,cmplx<radix>> A, An, res;
         An = 1; 
         res = 1;
@@ -151,6 +151,45 @@ class SU : public matrix<n,n,cmplx<radix> >{
             (*this).c[i][j] = res.c[i][j];
         }
     }
+
+
+    // Generate a random algebra (antihermitean) matrix
+    void gaussian_algebra(){
+      for(int i=0; i<n; i++) {
+        for(int j=0; j<i; j++) {
+          double a = gaussian_ran();
+          double b = gaussian_ran();
+          (*this).c[i][j].re = a;
+          (*this).c[j][i].re =-a;
+          (*this).c[i][j].im = b;
+          (*this).c[j][i].im = b;
+        }
+      }
+
+      for(int i=0; i<n; i++) {
+        (*this).c[i][i].re = 0;
+        (*this).c[i][i].im = 0;
+      }
+      for(int i=1; i<n; i++) {
+        double a = gaussian_ran()*sqrt(2.0/(i*(i+1)));
+        for(int j=0; j<i; j++)
+          (*this).c[j][j].im += a;
+        (*this).c[i][i].im -= i*a;
+      }
+    }
+
+    // The norm of an algebra matrix
+    radix algebra_norm(){
+      double thissum = 0;
+      for(int i=0; i<n; i++) {
+        for(int j=0; j<i; j++) {
+          thissum += (*this).c[i][j].squarenorm();
+        }
+        double diag = (*this).c[i][i].im;
+        thissum += 0.5*diag*diag;
+      }
+    }
+
 
     // find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff 
     cmplx<radix> det_lu(){
@@ -228,7 +267,46 @@ class SU : public matrix<n,n,cmplx<radix> >{
 
         return (csum);
     }
+
+
+
+
+    static constexpr SU generator(int ng){
+      // SUN generators normalized as tr(T^2) = 2
+      SU generator = 0;
+      if(ng<n-1){
+        // Diagonal generators
+        double w = sqrt(2.0/((ng+1)*(ng+2)));
+        for(int i=0; i<ng+1; i++ ){
+          generator.c[i][i].im = w;
+        }
+        generator.c[ng+1][ng+1].im = -(ng+1)*w;
+      } else {
+        // Nondiagonal ones. Just run through the indexes and
+        // count until they match...
+        int k=n-1;
+        for( int m1=0; m1<n; m1++) for( int m2=m1+1; m2<n; m2++){
+          if( ng == k ){
+            generator.c[m1][m2].im = 1;
+            generator.c[m2][m1].im = 1;
+          } else if( n == k+1 ){
+            generator.c[m1][m2].re = 1;
+            generator.c[m2][m1].re =-1;
+          }
+          k+=2;
+        }
+      }
+      return generator;
+    }
+
+    static constexpr int generator_count(){
+      return n*n-1;
+    }
+
 };
+
+
+
 
 template<typename radix> 
 class SU2; 
@@ -241,26 +319,6 @@ class SU2adjoint;
 
 template<typename radix> 
 class SU3 : public SU<3,radix> {
-    public:
-    using base_type = typename base_type_struct<radix>::type;
-    //constructor from two SU3 vectors
-    SU3 (const SU_vector<3, radix> & a, const SU_vector<3, radix> & b){
-        SU_vector<3, radix> c; //last column of matrix to be made from cross product
-        const SU_vector<3, radix> ai[3] = { a, b, c };
-        int i,j;
-        su3_vector_crossprod_conj(a,b,c);
-        #ifdef CUDA
-        #pragma unroll
-        #endif
-        for (i = 0; i < 3; i++){
-        #ifdef CUDA
-        #pragma unroll
-        #endif
-            for (j = 0; j < 3; j++){
-                this->c[i][j] = ai[i].c[j];
-            }
-        }
-    }
 };
 
 template<typename radix>
@@ -502,6 +560,43 @@ void project_antihermitean(SU<N,radix> &matrix){
 };
 
 
+
+
+
+
+
+
+template<int n, typename radix=double>
+class SU_vector : public vector<n,cmplx<radix>>{
+  public:
+    using base_type = typename base_type_struct<radix>::type;
+
+    SU_vector() = default;
+
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    #pragma transformer loop_function
+    SU_vector(const scalart rhs) {
+      for(int i=0; i<n; i++){
+        this->c[i] = (rhs);
+      }
+    }
+
+    SU_vector(vector<n,cmplx<radix>> m) {
+      for(int i=0; i<n; i++){
+        this->c[i] = m.c[i];
+      }
+    }
+
+    inline radix rdot(const SU_vector &rhs) const {
+      radix r = 0;
+      for (int i=1; i<n; i++) {
+        r += this->c[i].re*rhs.c[i].re ;
+        r += this->c[i].im*rhs.c[i].im ;
+      }
+      return r;
+    }
+    
+};
 
 
 

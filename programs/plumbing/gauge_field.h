@@ -7,27 +7,7 @@ template<int N, typename radix>
 void gaussian_momentum(field<SU<N,radix>> *momentum){
   foralldir(dir) {
     onsites(ALL){
-      for(int i=0; i<N; i++) {
-        for(int j=0; j<i; j++) {
-          double a = gaussian_ran();
-          double b = gaussian_ran();
-          momentum[dir][X].c[i][j].re = a;
-          momentum[dir][X].c[j][i].re =-a;
-          momentum[dir][X].c[i][j].im = b;
-          momentum[dir][X].c[j][i].im = b;
-        }
-      }
-
-      for(int i=0; i<N; i++) {
-        momentum[dir][X].c[i][i].re = 0;
-        momentum[dir][X].c[i][i].im = 0;
-      }
-      for(int i=1; i<N; i++) {
-        double a = gaussian_ran()*sqrt(2.0/(i*(i+1)));
-        for(int j=0; j<i; j++)
-          momentum[dir][X].c[j][j].im += a;
-        momentum[dir][X].c[i][i].im -= i*a;
-      }
+      momentum[dir][X].gaussian_algebra();
     }
   }
 }
@@ -38,15 +18,7 @@ double momentum_action(field<SU<N,radix>> *momentum){
   double sum = 0;
   foralldir(dir) {
     onsites(ALL){
-      double thissum = 0;
-      for(int i=0; i<N; i++) {
-        for(int j=0; j<i; j++) {
-          thissum += momentum[dir][X].c[i][j].squarenorm();
-        }
-        double diag = momentum[dir][X].c[i][i].im;
-        thissum += 0.5*diag*diag;
-      }
-      sum += thissum;
+      sum += momentum[dir][X].algebra_norm();
     }
   }
   return sum;
@@ -285,41 +257,6 @@ class gauge_action {
     // Restore the previous backup
     void restore_backup(){
       foralldir(dir) gauge[dir] = gauge_copy[dir];
-    }
-
-
-
-
-    SUN generator(int n){
-      // SUN generators normalized as tr(T^2) = 2
-      SUN generator = 0;
-      if(n<N-1){
-        // Diagonal generators
-        double w = sqrt(2.0/((n+1)*(n+2)));
-        for(int i=0; i<n+1; i++ ){
-          generator.c[i][i].im = w;
-        }
-        generator.c[n+1][n+1].im = -(n+1)*w;
-      } else {
-        // Nondiagonal ones. Just run through the indexes and
-        // count until they match...
-        int k=N-1;
-        for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
-          if( n == k ){
-            generator.c[m1][m2].im = 1;
-            generator.c[m2][m1].im = 1;
-          } else if( n == k+1 ){
-            generator.c[m1][m2].re = 1;
-            generator.c[m2][m1].re =-1;
-          }
-          k+=2;
-        }
-      }
-      return generator;
-    }
-
-    int n_generators(){
-      return N*N-1;
     }
 };
 
