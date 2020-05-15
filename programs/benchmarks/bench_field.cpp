@@ -104,13 +104,13 @@ int main(int argc, char **argv){
     field<matrix<N,N, cmplx<double>> > matrix1;
     field<matrix<N,N, cmplx<double>> > matrix2;
     field<matrix<N,N, cmplx<double>> > matrix3;
-    field<matrix<1,N, cmplx<double>> > vector1;
-    field<matrix<1,N, cmplx<double>> > vector2;
+    field<vector<N, cmplx<double>> > vector1;
+    field<vector<N, cmplx<double>> > vector2;
     field<matrix<N,N, cmplx<float>> > fmatrix1;
     field<matrix<N,N, cmplx<float>> > fmatrix2;
     field<matrix<N,N, cmplx<float>> > fmatrix3;
-    field<matrix<1,N, cmplx<float>> > fvector1;
-    field<matrix<1,N, cmplx<float>> > fvector2;
+    field<vector<N, cmplx<float>> > fvector1;
+    field<vector<N, cmplx<float>> > fvector2;
 
     // Generate random values
     onsites(ALL){
@@ -248,7 +248,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
         onsites(ALL){
           for(int j=0; j<N; j++){
-            fvector1[X].c[0][j]=1;
+            fvector1[X].c[j]=1;
           }
         }
         onsites(ALL){
@@ -290,12 +290,14 @@ int main(int argc, char **argv){
     //printf("node %d, create gauge\n", mynode());
 
     // Define a gauge matrix
-    field<matrix<N,N, cmplx<double>> > U[NDIM];
+    field<SU<N,double>> U[NDIM];
+    field<SU_vector<N, double>> sunvec1, sunvec2;
+
     foralldir(d) {
       onsites(ALL){
         U[d][X].random();
-        vector1[X].random();
-        vector2[X].random();
+        sunvec1[X].gaussian();
+        sunvec2[X].gaussian();
       }
     }
 
@@ -303,47 +305,46 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator
     timing = 0;
     //printf("node %d, dirac_stagggered 0\n", mynode());
-    dirac_staggered< matrix<1,N, cmplx<double>>, matrix<N,N, cmplx<double>>> D(0.1, U);
-    D.apply(vector1, vector2);
+    dirac_staggered<SU_vector<N, double>, SU<N, double>> D_staggered(0.1, U);
+    D_staggered.apply(sunvec1, sunvec2);
+
     // synchronize();
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-        //printf("node %d, dirac_stagggered %d\n", mynode(), i);
-        vector1.mark_changed(ALL); // Ensure communication is included
-        D.apply(vector1, vector2);
+        sunvec1.mark_changed(ALL); // Ensure communication is included
+        D_staggered.apply(sunvec1, sunvec2);
       }
       // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
       broadcast(timing);
-
     }
     timing = timing / (double)n_runs;
-    output0 << "Dirac: " << timing << "ms \n";
+    output0 << "Dirac staggered: " << timing << "ms \n";
 
     // Conjugate gradient step 
     timing = 0;
-    field<matrix<1,N, cmplx<double>> > r, rnew, p, Dp;
     for(n_runs=1; timing < mintime; ){
+      field<SU_vector<N, double>>  r, rnew, p, Dp;
       n_runs*=2;
 
       double pDDp = 0, rr = 0, rrnew = 0;
       double alpha, beta;
 
       onsites(ALL){
-        r[X] = vector1[X];
-        p[X] = vector1[X];
+        r[X] = sunvec1[X];
+        p[X] = sunvec1[X];
         for(int i=0; i<N; i++){
-           vector2[X].c[0][i] = 0;
+           sunvec2[X].c[i] = 0;
         }
       }
 
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         
-        D.apply(p, Dp);
+        D_staggered.apply(p, Dp);
 
         rr=pDDp=0;
         onsites(ALL){
@@ -355,7 +356,86 @@ int main(int argc, char **argv){
 
         rrnew = 0;
         onsites(ALL){
-          vector2[X] = r[X] + alpha*p[X];
+          sunvec2[X] = r[X] + alpha*p[X];
+          r[X] = r[X] - alpha*Dp[X];
+          rrnew += r[X].norm_sq();
+        }
+
+        beta = rrnew/rr;
+        p[ALL] = r[X] + beta*p[X];
+      }
+      // synchronize();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
+      broadcast(timing);
+
+    }
+
+    timing = timing / (double)n_runs;
+    output0 << "CG staggered: " << timing << "ms / iteration\n";
+
+
+
+    field<Wilson_vector<SU_vector<N, double>>> wvec1, wvec2;
+    onsites(ALL){
+      wvec1[X].gaussian();
+      wvec2[X].gaussian();
+    }
+    // Time staggered Dirac operator
+    timing = 0;
+    //printf("node %d, dirac_stagggered 0\n", mynode());
+    dirac_wilson<SU_vector<N, double>, SU<N, double>> D_wilson(0.1, U);
+    D_wilson.apply(wvec1, wvec2);
+
+    // synchronize();
+    for(n_runs=1; timing < mintime; ){
+      n_runs*=2;
+      gettimeofday(&start, NULL);
+      for( int i=0; i<n_runs; i++){
+        wvec1.mark_changed(ALL); // Ensure communication is included
+        D_wilson.apply(wvec1, wvec2);
+      }
+      // synchronize();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
+      broadcast(timing);
+    }
+    timing = timing / (double)n_runs;
+    output0 << "Dirac: " << timing << "ms \n";
+
+    // Conjugate gradient step 
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
+      field<Wilson_vector<SU_vector<N, double>>>  r, rnew, p, Dp;
+      n_runs*=2;
+
+      double pDDp = 0, rr = 0, rrnew = 0;
+      double alpha, beta;
+
+      onsites(ALL){
+        r[X] = wvec1[X];
+        p[X] = wvec1[X];
+        for(int i=0; i<N; i++){
+           wvec2[X].c[i] = 0;
+        }
+      }
+
+      gettimeofday(&start, NULL);
+      for( int i=0; i<n_runs; i++){
+        
+        D_wilson.apply(p, Dp);
+
+        rr=pDDp=0;
+        onsites(ALL){
+          rr += r[X].norm_sq();
+          pDDp += Dp[X].norm_sq();
+        }
+
+        alpha = rr / pDDp;
+
+        rrnew = 0;
+        onsites(ALL){
+          wvec2[X] = r[X] + alpha*p[X];
           r[X] = r[X] - alpha*Dp[X];
           rrnew += r[X].norm_sq();
         }
@@ -372,6 +452,7 @@ int main(int argc, char **argv){
 
     timing = timing / (double)n_runs;
     output0 << "CG: " << timing << "ms / iteration\n";
+
 
 
     finishrun();

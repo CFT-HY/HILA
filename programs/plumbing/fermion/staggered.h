@@ -122,37 +122,23 @@ class dirac_staggered {
     field<double> staggered_eta[NDIM];
 
     // Note array of fields, changes with the field
-    field<matrix> *gauge;
+    field<matrix> (&gauge)[NDIM];
   
   public:
 
     using vector_type = vector;
 
     // Constructor: initialize mass, gauge and eta
-    dirac_staggered(dirac_staggered &d) {
-      mass = d.mass;
-      gauge = d.gauge;
-
+    dirac_staggered(dirac_staggered &d) : gauge(d.gauge), mass(d.mass) {
       // Initialize the eta field (Share this?)
       init_staggered_eta(staggered_eta);
     }
   
     // Constructor: initialize mass, gauge and eta
-    dirac_staggered(double m, field<matrix> *U) {
-      // Set mass and gauge field
-      mass = m;
-      gauge = (field<matrix>*) U;
-
+    dirac_staggered(double m, field<matrix> (&g)[NDIM]) : gauge(g), mass(m)  {
       // Initialize the eta field
       init_staggered_eta(staggered_eta);
     }
-
-    // Update mass
-    void set_mass(double m){
-      mass = m;
-    }
-
-
 
     // Applies the operator to in
     void apply( const field<vector> & in, field<vector> & out){

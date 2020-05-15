@@ -36,6 +36,10 @@ class vector {
     }
   }
 
+  inline void random(){ 
+    (*this).gaussian();
+  }
+
   inline auto norm_sq(){ 
     auto r=norm_squared(c[0]);
     for (int i = 1; i < n; i++) {

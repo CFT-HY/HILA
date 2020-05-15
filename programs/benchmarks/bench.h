@@ -8,8 +8,10 @@
 #include "../plumbing/defs.h"
 #include "../datatypes/general_matrix.h"
 #include "../datatypes/sun.h"
+#include "../datatypes/wilson_vector.h"
 #include "../plumbing/field.h"
 #include "../plumbing/fermion/staggered.h"
+#include "../plumbing/fermion/wilson.h"
 
 
 // Minimum time to run each benchmark
