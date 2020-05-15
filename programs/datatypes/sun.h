@@ -587,11 +587,11 @@ class SU_vector : public vector<n,cmplx<radix>>{
       }
     }
 
-    inline radix rdot(const SU_vector &rhs) const {
-      radix r = 0;
-      for (int i=1; i<n; i++) {
-        r += this->c[i].re*rhs.c[i].re ;
-        r += this->c[i].im*rhs.c[i].im ;
+    inline double rdot(const SU_vector &rhs) const {
+      double r = 0;
+      for (int i=0; i<n; i++) {
+        r += this->c[i].re*rhs.c[i].re;
+        r += this->c[i].im*rhs.c[i].im;
       }
       return r;
     }

@@ -33,11 +33,11 @@ int main(int argc, char **argv){
   ga.set_unity();
 
   // Define a Dirac operator
-  dirac_wilson<N> D(kappa, gauge);
+  dirac_wilson<VEC, SUN> D(kappa, gauge);
   fermion_action fa(D, gauge, momentum);
 
   // Check conjugate of the Dirac operator
-  field<Wilson_vector<N>> a, b, Db, Ddaggera, DdaggerDb;
+  field<Wilson_vector<VEC>> a, b, Db, Ddaggera, DdaggerDb;
   onsites(ALL){
     a[X].gaussian();
     b[X].gaussian();

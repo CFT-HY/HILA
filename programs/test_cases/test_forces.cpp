@@ -159,7 +159,9 @@ int main(int argc, char **argv){
 
 
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){
-    dirac_wilson<N> D(0.05, gauge);
+    using VEC=SU_vector<N>;
+    using SUN=SU<N>;
+    dirac_wilson<VEC,SUN> D(0.05, gauge);
     fermion_action fa(D, gauge, momentum);
     fa.draw_gaussian_fields();
     foralldir(dir){
@@ -173,7 +175,7 @@ int main(int argc, char **argv){
     SU<N> h = SU<N>(1) + eps * SU<N>::generator(ng);
     SU<N> g12 = h*g1;
 
-    static field<Wilson_vector<N>> psi, chi, tmp, tmp2;
+    static field<Wilson_vector<VEC>> psi, chi, tmp, tmp2;
     onsites(ALL){
       psi[X].gaussian();
       chi[X].gaussian();

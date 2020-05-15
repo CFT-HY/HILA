@@ -10,13 +10,13 @@
 
 
 
-template<int n, typename radix=double>
+template<typename vector, typename matrix>
 void dirac_wilson_apply(
-  const field<SU<n, radix>> *gauge,
+  const field<matrix> *gauge,
   const double kappa,
-  const field<Wilson_vector<n, radix>> &v_in,
-  field<Wilson_vector<n, radix>> &v_out,
-  field<half_Wilson_vector<n, radix>> (&vtemp)[NDIM])
+  const field<Wilson_vector<vector>> &v_in,
+  field<Wilson_vector<vector>> &v_out,
+  field<half_Wilson_vector<vector>> (&vtemp)[NDIM])
 {
   // Start getting neighbours
   foralldir(dir){
@@ -31,7 +31,7 @@ void dirac_wilson_apply(
     direction odir = opp_dir( (direction)dir );
     // First multiply the by conjugate before communicating
     onsites(ALL){
-      half_Wilson_vector<n, radix> h(v_in[X], odir);
+      half_Wilson_vector<vector> h(v_in[X], odir);
       vtemp[dir][X] = gauge[dir][X].conjugate()*h;
     }
     vtemp[dir].start_get(odir);
@@ -39,7 +39,7 @@ void dirac_wilson_apply(
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
     onsites(ALL){
-      half_Wilson_vector<n, radix> h1(v_in[X+dir], dir);
+      half_Wilson_vector<vector> h1(v_in[X+dir], dir);
       v_out[X] = v_out[X] 
                - (kappa*gauge[dir][X]*h1).expand(dir)
                - (kappa*vtemp[dir][X-dir]).expand(odir);
@@ -48,13 +48,13 @@ void dirac_wilson_apply(
 }
 
 
-template<int n, typename radix=double>
+template<typename vector, typename matrix>
 void dirac_wilson_dagger(
-  const field<SU<n, radix>> *gauge,
+  const field<matrix> *gauge,
   const double kappa,
-  const field<Wilson_vector<n, radix>> &v_in,
-  field<Wilson_vector<n, radix>> &v_out,
-  field<half_Wilson_vector<n, radix>> (&vtemp)[NDIM])
+  const field<Wilson_vector<vector>> &v_in,
+  field<Wilson_vector<vector>> &v_out,
+  field<half_Wilson_vector<vector>> (&vtemp)[NDIM])
 {
   // Start getting neighbours
   foralldir(dir){
@@ -69,7 +69,7 @@ void dirac_wilson_dagger(
     direction odir = opp_dir( (direction)dir );
     // First multiply the by conjugate before communicating
     onsites(ALL){
-      half_Wilson_vector<n, radix> h(v_in[X], dir);
+      half_Wilson_vector<vector> h(v_in[X], dir);
       vtemp[dir][X] = gauge[dir][X].conjugate() * h;
     }
     vtemp[dir].start_get(odir);
@@ -77,7 +77,7 @@ void dirac_wilson_dagger(
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
     onsites(ALL){
-      half_Wilson_vector<n, radix> h1(v_in[X+dir], odir);
+      half_Wilson_vector<vector> h1(v_in[X+dir], odir);
       v_out[X] = v_out[X] 
                - (kappa*gauge[dir][X]*h1).expand(odir)
                - (kappa*vtemp[dir][X-dir]).expand(dir);
@@ -88,22 +88,22 @@ void dirac_wilson_dagger(
 
 
 
-template<int n, typename radix=double>
+template<typename vector, typename matrix>
 void dirac_wilson_calc_force(
-  const field<SU<n, radix>> *gauge,
+  const field<matrix> *gauge,
   const double kappa,
-  const field<Wilson_vector<n, radix>> &psi,
-  const field<Wilson_vector<n, radix>> &chi,
-  field<SU<n, radix>> (&out)[NDIM],
-  field<half_Wilson_vector<n, radix>> (&vtemp)[NDIM],
+  const field<Wilson_vector<vector>> &psi,
+  const field<Wilson_vector<vector>> &chi,
+  field<matrix> (&out)[NDIM],
+  field<half_Wilson_vector<vector>> (&vtemp)[NDIM],
   int sign)
 {
   foralldir(dir){
     if(sign == 1){
       direction odir = opp_dir( (direction)dir );
       onsites(ALL){
-        vtemp[0][X] = half_Wilson_vector<n, radix>(psi[X], odir);
-        vtemp[1][X] = half_Wilson_vector<n, radix>(chi[X], dir);
+        vtemp[0][X] = half_Wilson_vector<vector>(psi[X], odir);
+        vtemp[1][X] = half_Wilson_vector<vector>(chi[X], dir);
       }
 
       out[dir][ALL] = -kappa * (
@@ -113,8 +113,8 @@ void dirac_wilson_calc_force(
     } else {
       direction odir = opp_dir( (direction)dir );
       onsites(ALL){
-        vtemp[0][X] = half_Wilson_vector<n, radix>(psi[X], dir);
-        vtemp[1][X] = half_Wilson_vector<n, radix>(chi[X], odir);
+        vtemp[0][X] = half_Wilson_vector<vector>(psi[X], dir);
+        vtemp[1][X] = half_Wilson_vector<vector>(chi[X], odir);
       }
 
       out[dir][ALL] = -kappa * (
@@ -127,18 +127,18 @@ void dirac_wilson_calc_force(
 }
 
 
-template<int n, typename radix=double>
+template<typename vector, typename matrix>
 class dirac_wilson {
   private:
     double kappa;
-    field<half_Wilson_vector<n, radix>> vtemp[NDIM];
+    field<half_Wilson_vector<vector>> vtemp[NDIM];
 
     // Note array of fields, changes with the field
-    field<SU<n, radix>> *gauge;
+    field<matrix> *gauge;
   
   public:
 
-    using vector_type = Wilson_vector<n, radix>;
+    using vector_type = Wilson_vector<vector>;
 
     // Constructor: initialize mass, gauge and eta
     dirac_wilson(dirac_wilson &d) {
@@ -147,43 +147,43 @@ class dirac_wilson {
     }
   
     // Constructor: initialize mass, gauge and eta
-    dirac_wilson(double k, field<SU<n, radix>> *U) {
+    dirac_wilson(double k, field<matrix> *U) {
       // Set mass and gauge field
       kappa = k;
-      gauge = (field<SU<n, radix>>*) U;
+      gauge = (field<matrix>*) U;
     }
 
 
     // Applies the operator to in
-    void apply( const field<Wilson_vector<n, radix>> & in, field<Wilson_vector<n, radix>> & out){
+    void apply( const field<Wilson_vector<vector>> & in, field<Wilson_vector<vector>> & out){
       dirac_wilson_apply(gauge, kappa, in, out, vtemp);
     }
 
     // Applies the conjugate of the operator
-    void dagger( const field<Wilson_vector<n, radix>> & in, field<Wilson_vector<n, radix>> & out){
+    void dagger( const field<Wilson_vector<vector>> & in, field<Wilson_vector<vector>> & out){
       dirac_wilson_dagger(gauge, kappa, in, out, vtemp);
     }
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    void force( const field<Wilson_vector<n, radix>> & psi, const field<Wilson_vector<n, radix>> & chi, field<SU<n, radix>> (&force)[NDIM], int sign=1){
+    void force( const field<Wilson_vector<vector>> & psi, const field<Wilson_vector<vector>> & chi, field<matrix> (&force)[NDIM], int sign=1){
       dirac_wilson_calc_force(gauge, kappa, psi, chi, force, vtemp, sign);
     }
 };
 
 
 // Multiplying from the left applies the standard Dirac operator
-template<int n, typename radix>
-field<Wilson_vector<n, radix>> operator* (dirac_wilson<n, radix> D, const field<Wilson_vector<n, radix>> & in) {
-  field<Wilson_vector<n, radix>> out;
+template<typename vector, typename matrix>
+field<Wilson_vector<vector>> operator* (dirac_wilson<vector, matrix> D, const field<Wilson_vector<vector>> & in) {
+  field<Wilson_vector<vector>> out;
   D.apply(in, out);
   return out;
 }
 
 // Multiplying from the right applies the conjugate
-template<int n, typename radix>
-field<Wilson_vector<n, radix>> operator* (const field<Wilson_vector<n, radix>> & in, dirac_wilson<n, radix> D) {
-  field<Wilson_vector<n, radix>> out;
+template<typename vector, typename matrix>
+field<Wilson_vector<vector>> operator* (const field<Wilson_vector<vector>> & in, dirac_wilson<vector, matrix> D) {
+  field<Wilson_vector<vector>> out;
   D.dagger(in, out);
   return out;
 }

@@ -12,8 +12,8 @@
 
 
 void test_gamma_matrices(){
-  Wilson_vector<N> w1, w2, w3;
-  half_Wilson_vector<N> h1;
+  Wilson_vector<SU_vector<N>> w1, w2, w3;
+  half_Wilson_vector<SU_vector<N>> h1;
   SU<N> U; U.random();
   w1.gaussian();
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv){
 
   // Check conjugate of the staggered Dirac operator
   {
-    using dirac = dirac_staggered< SU_vector<N>, SU<N>>;
+    using dirac = dirac_staggered<SU_vector<N>, SU<N>>;
     dirac D(0.1, U);
     field<SU_vector<N>> a, b, Db, Ddaggera, DdaggerDb;
     field<SU_vector<N>> sol;
@@ -108,10 +108,11 @@ int main(int argc, char **argv){
 
   // Check conjugate of the wilson Dirac operator
   {
-    using dirac = dirac_wilson<N>;
+    using VEC = SU_vector<N>;
+    using dirac = dirac_wilson<VEC, SU<N>>;
     dirac D(0.1, U);
-    field<Wilson_vector<N>> a, b, Db, Ddaggera, DdaggerDb;
-    field<Wilson_vector<N>> sol;
+    field<Wilson_vector<VEC>> a, b, Db, Ddaggera, DdaggerDb;
+    field<Wilson_vector<VEC>> sol;
     onsites(ALL){
       a[X].gaussian();
       b[X].gaussian();
@@ -131,7 +132,7 @@ int main(int argc, char **argv){
   
     // Now run CG on DdaggerDb and check the result is b
     D.dagger(Db, DdaggerDb);
-    CG<field<Wilson_vector<N>>, dirac> inverse(D);
+    CG<field<Wilson_vector<VEC>>, dirac> inverse(D);
     inverse.apply(DdaggerDb, a);
 
     onsites(ALL){

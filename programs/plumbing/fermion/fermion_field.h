@@ -63,16 +63,16 @@ void fermion_force(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], DIRAC_OP &D
 
 
 
-template<typename SUN, typename DIRAC_OP>
+template<typename matrix, typename DIRAC_OP>
 class fermion_action{
   public:
-    field<SUN> (&gauge)[NDIM];
-    field<SUN> (&momentum)[NDIM];
+    field<matrix> (&gauge)[NDIM];
+    field<matrix> (&momentum)[NDIM];
     DIRAC_OP &D;
     field<typename DIRAC_OP::vector_type> chi;
 
 
-    fermion_action(DIRAC_OP &d, field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM])
+    fermion_action(DIRAC_OP &d, field<matrix> (&g)[NDIM], field<matrix> (&m)[NDIM])
     : D(d), gauge(g), momentum(m){ chi = 0.0; }
 
     fermion_action(fermion_action &fa)
@@ -106,9 +106,9 @@ class fermion_action{
 };
 
 // Sum operator for creating an action_sum object
-template<typename SUN, typename DIRAC_OP, typename action2>
-action_sum<fermion_action<SUN, DIRAC_OP>, action2> operator+(fermion_action<SUN, DIRAC_OP> a1, action2 a2){
-  action_sum<fermion_action<SUN, DIRAC_OP>, action2> sum(a1, a2);
+template<typename matrix, typename DIRAC_OP, typename action2>
+action_sum<fermion_action<matrix, DIRAC_OP>, action2> operator+(fermion_action<matrix, DIRAC_OP> a1, action2 a2){
+  action_sum<fermion_action<matrix, DIRAC_OP>, action2> sum(a1, a2);
   return sum;
 }
 
