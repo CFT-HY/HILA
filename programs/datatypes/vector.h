@@ -57,6 +57,22 @@ class vector {
     return r;
   }
 
+  #pragma transformer loop_function
+  vector & operator+=(const vector & rhs){
+    for (int i = 0; i < n; i++){
+      c[i] += rhs.c[i];
+    }
+    return *this;
+  }
+  
+  #pragma transformer loop_function
+  vector & operator-=(const vector & rhs){
+    for (int i = 0; i < n; i++){
+      c[i] -= rhs.c[i];
+    }
+    return *this;
+  }
+
   inline T dot(const vector &rhs) const {
     T r = (0.0);
     for (int i=0; i<n; i++) {

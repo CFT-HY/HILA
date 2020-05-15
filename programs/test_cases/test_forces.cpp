@@ -70,7 +70,7 @@ int main(int argc, char **argv){
       //hila::output << "Force 2 " << (s2-s1)/eps << "\n";
       //hila::output << "Force " << ng << " diff " << diff << "\n";
       h = SU<N>::generator(ng);
-      assert( diff*diff < eps*100 && "Gauge force" );
+      assert( diff*diff < eps*10 && "Gauge force" );
     }
   }
 
@@ -125,7 +125,7 @@ int main(int argc, char **argv){
       //hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
       //hila::output << "Staggered deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*100 && "Staggered fermion deriv" );
+      assert( diff*diff < eps*10 && "Staggered fermion deriv" );
     }
 
 
@@ -152,7 +152,7 @@ int main(int argc, char **argv){
       //hila::output << "Calculated force " << (f*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Actual force " << (s2-s1)/eps << "\n";
       //hila::output << "Staggered force " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*100 && "Staggered force" );
+      assert( diff*diff < eps*10 && "Staggered force" );
     }
   }
 
@@ -161,7 +161,11 @@ int main(int argc, char **argv){
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){
     using VEC=SU_vector<N>;
     using SUN=SU<N>;
-    dirac_wilson<VEC,SUN> D(0.05, gauge);
+    dirac_wilson<VEC,SUN> D_plain(0.05, gauge);
+    precondition_evenodd D(D_plain);
+    parity par = EVEN;
+    //dirac_wilson<VEC,SUN> D(0.05, gauge);
+    //parity par = ALL
     fermion_action fa(D, gauge, momentum);
     fa.draw_gaussian_fields();
     foralldir(dir){
@@ -176,13 +180,14 @@ int main(int argc, char **argv){
     SU<N> g12 = h*g1;
 
     static field<Wilson_vector<VEC>> psi, chi, tmp, tmp2;
-    onsites(ALL){
-      psi[X].gaussian();
-      chi[X].gaussian();
+    psi[ALL]=0; chi[ALL]=0;
+    onsites(par){
+      psi[X].gaussian(); chi[X].gaussian();
     }
+
     double s1 = 0;
     D.apply(psi,tmp);
-    onsites(ALL){
+    onsites(par){
       s1 += chi[X].rdot(tmp[X]);
     }
 
@@ -192,7 +197,7 @@ int main(int argc, char **argv){
     gauge[0].mark_changed(ALL);
     double s2 = 0;
     D.apply(psi,tmp);
-    onsites(ALL){
+    onsites(par){
       s2 += chi[X].rdot(tmp[X]);
     }
 
@@ -205,19 +210,23 @@ int main(int argc, char **argv){
     double diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
-      //hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*100 && "Wilson fermion deriv" );
+      hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps*10 && "Wilson fermion deriv" );
     }
 
     foralldir(dir){
       momentum[dir][ALL] = 0;
     }
+    psi[ALL]=0; chi[ALL]=0;
+    onsites(par){
+      psi[X].gaussian(); chi[X].gaussian();
+    }
 
     s1 = 0;
     D.dagger(psi,tmp);
-    onsites(ALL){
+    onsites(par){
       s1 += chi[X].rdot(tmp[X]);
     }
 
@@ -227,7 +236,7 @@ int main(int argc, char **argv){
     gauge[0].mark_changed(ALL);
     s2 = 0;
     D.dagger(psi,tmp);
-    onsites(ALL){
+    onsites(par){
       s2 += chi[X].rdot(tmp[X]);
     }
 
@@ -240,10 +249,10 @@ int main(int argc, char **argv){
     diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
-      //hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*100 && "Wilson fermion deriv" );
+      hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps*10 && "Wilson dagger deriv" );
     }
 
 
@@ -269,7 +278,7 @@ int main(int argc, char **argv){
       //hila::output << "Calculated force " << (f*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Actual force " << (s2-s1)/eps << "\n";
       //hila::output << "Wilson force " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*100 && "Wilson fermion force" );
+      assert( diff*diff < eps*10 && "Wilson fermion force" );
     }
   }
 
@@ -292,7 +301,7 @@ int main(int argc, char **argv){
       //hila::output << "Mom 2 " << (s2-s1)/eps << "\n";
       //hila::output << "Mom " << ng << " diff " << diff << "\n";
       h = SU<N>::generator(ng);
-      assert( diff*diff < eps*100 && "Momentum derivative" );
+      assert( diff*diff < eps*10 && "Momentum derivative" );
     }
   }
 }

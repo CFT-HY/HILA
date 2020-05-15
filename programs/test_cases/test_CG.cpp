@@ -27,20 +27,20 @@ void test_gamma_matrices(){
     assert(w2.norm_sq() < 0.0001 && "gamma_d*gamma_d = 1");
 
     w2 = w1 + gamma_matrix[d]*w1;
-    h1 = half_Wilson_vector(w1,d);
+    h1 = half_Wilson_vector(w1,d,1);
     double diff = w2.norm_sq() - h1.norm_sq();
     assert(diff*diff < 0.0001 && "half_Wilson_vector projection norm to direction XUP");
 
-    w3 = (U*h1).expand(d) - U*w2;
+    w3 = (U*h1).expand(d,1) - U*w2;
     assert(w3.norm_sq() < 0.0001 && "half_wilson_vector expand");
 
 
     w2 = w1 - gamma_matrix[d]*w1;
-    h1 = half_Wilson_vector(w1,opp_dir(d));
+    h1 = half_Wilson_vector(w1,d,-1);
     diff = w2.norm_sq() - h1.norm_sq();
     assert(diff*diff < 0.0001 && "half_Wilson_vector projection norm to direction XUP");
 
-    w3 = (U*h1).expand(opp_dir(d)) - U*w2;
+    w3 = (U*h1).expand(d,-1) - U*w2;
     assert(w3.norm_sq() < 0.0001 && "half_wilson_vector expand");
 
   }
@@ -133,6 +133,44 @@ int main(int argc, char **argv){
     // Now run CG on DdaggerDb and check the result is b
     D.dagger(Db, DdaggerDb);
     CG<field<Wilson_vector<VEC>>, dirac> inverse(D);
+    inverse.apply(DdaggerDb, a);
+
+    onsites(ALL){
+      diffre += norm_squared(a[X]-b[X]);
+    }
+    assert(diffre*diffre < 1e-8 && "test CG");
+  }
+
+  // Check conjugate of the even-odd preconditioned wilson Dirac operator
+  {
+    using VEC = SU_vector<N>;
+    using dirac = dirac_wilson<VEC, SU<N>>;
+    dirac D_plain(0.1, U);
+    precondition_evenodd D(D_plain);
+    field<Wilson_vector<VEC>> a, b, Db, Ddaggera, DdaggerDb;
+    field<Wilson_vector<VEC>> sol;
+
+    a[ODD] = 0; b[ODD] = 0;
+    onsites(EVEN){
+      a[X].gaussian();
+      b[X].gaussian();
+      sol[X] = 0;
+    }
+
+    double diffre = 0, diffim = 0;
+    D.apply(b, Db);
+    D.dagger(a, Ddaggera);
+    onsites(ALL){
+      diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
+      diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
+    }
+  
+    assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
+    assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
+  
+    // Now run CG on DdaggerDb and check the result is b
+    D.dagger(Db, DdaggerDb);
+    CG<field<Wilson_vector<VEC>>, precondition_evenodd<dirac>> inverse(D);
     inverse.apply(DdaggerDb, a);
 
     onsites(ALL){

@@ -81,6 +81,22 @@ class Wilson_vector {
     return *this;
   }
 
+  #pragma transformer loop_function
+  Wilson_vector & operator+=(const Wilson_vector & rhs){
+    for (int i = 0; i < Gammadim; i++){
+      c[i] += rhs.c[i];
+    }
+    return *this;
+  }
+
+  #pragma transformer loop_function
+  Wilson_vector & operator-=(const Wilson_vector & rhs){
+    for (int i = 0; i < Gammadim; i++){
+      c[i] -= rhs.c[i];
+    }
+    return *this;
+  }
+
   inline auto norm_sq(){ 
     auto r=c[0].norm_sq();
     for (int i = 1; i < Gammadim; i++) {
@@ -472,7 +488,6 @@ class half_Wilson_vector {
     return r;
   }
 
-
 #endif
 
 
@@ -484,6 +499,22 @@ class half_Wilson_vector {
       r += c[i].norm_sq();
     }
     return r;
+  }
+
+  #pragma transformer loop_function
+  half_Wilson_vector & operator+=(const half_Wilson_vector & rhs){
+    for (int i = 0; i < Gammadim; i++){
+      c[i] += rhs.c[i];
+    }
+    return *this;
+  }
+
+  #pragma transformer loop_function
+  half_Wilson_vector & operator-=(const half_Wilson_vector & rhs){
+    for (int i = 0; i < Gammadim; i++){
+      c[i] -= rhs.c[i];
+    }
+    return *this;
   }
 
   std::string str() const {
