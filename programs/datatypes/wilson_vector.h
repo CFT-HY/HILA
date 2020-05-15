@@ -292,104 +292,110 @@ class half_Wilson_vector {
 
   // This will take the projection 1 +- gamma_j
 #if (Gammadim==4) 
-  half_Wilson_vector(Wilson_vector<vector> w, direction dir) {
+  half_Wilson_vector(Wilson_vector<vector> w, direction dir, int sign) {
     switch(dir){
       case XUP:
-	      c[0] = w.c[0] + cmplx(0,1)*w.c[3];
-	      c[1] = w.c[1] + cmplx(0,1)*w.c[2];
-	      break;
-      case XDOWN:
- 	      c[0] = w.c[0] - cmplx(0,1)*w.c[3];
-	      c[1] = w.c[1] - cmplx(0,1)*w.c[2];
+        if(sign==1){
+	        c[0] = w.c[0] + cmplx(0,1)*w.c[3];
+	        c[1] = w.c[1] + cmplx(0,1)*w.c[2];
+	      } else {
+ 	        c[0] = w.c[0] - cmplx(0,1)*w.c[3];
+	        c[1] = w.c[1] - cmplx(0,1)*w.c[2];
+        }
 	      break;
       case YUP:
-	      c[0] = w.c[0] - w.c[3];
-	      c[1] = w.c[1] + w.c[2];
-	      break;
-      case YDOWN:
-	      c[0] = w.c[0] + w.c[3];
-	      c[1] = w.c[1] - w.c[2];
+        if(sign==1){
+	        c[0] = w.c[0] - w.c[3];
+	        c[1] = w.c[1] + w.c[2];
+	      } else {
+	        c[0] = w.c[0] + w.c[3];
+	        c[1] = w.c[1] - w.c[2];
+        }
 	      break;
       case ZUP:
-	      c[0] = w.c[0] + cmplx(0,1)*w.c[2];
-	      c[1] = w.c[1] - cmplx(0,1)*w.c[3];
-	      break;
-      case ZDOWN:
-	      c[0] = w.c[0] - cmplx(0,1)*w.c[2];
-	      c[1] = w.c[1] + cmplx(0,1)*w.c[3];
+        if(sign==1){
+	        c[0] = w.c[0] + cmplx(0,1)*w.c[2];
+	        c[1] = w.c[1] - cmplx(0,1)*w.c[3];
+	      } else {
+	        c[0] = w.c[0] - cmplx(0,1)*w.c[2];
+	        c[1] = w.c[1] + cmplx(0,1)*w.c[3];
+        }
 	      break;
       case TUP:
-	      c[0] = w.c[0] + w.c[2];
-	      c[1] = w.c[1] + w.c[3];
-	      break;
-      case TDOWN:
-	      c[0] = w.c[0] - w.c[2];
-	      c[1] = w.c[1] - w.c[3];
+        if(sign==1){
+	        c[0] = w.c[0] + w.c[2];
+	        c[1] = w.c[1] + w.c[3];
+	      } else {
+	        c[0] = w.c[0] - w.c[2];
+	        c[1] = w.c[1] - w.c[3];
+        }
 	      break;
 #if NDIM == 5
       case 4:
-  	    c[0] = sqrt(2.0)*w.c[0];
-  	    c[1] = sqrt(2.0)*w.c[1];
-        break;
-      case 5:
-        c[0] = sqrt(2.0)*w.c[2];
-  	    c[1] = sqrt(2.0)*w.c[3];
+        if(sign==1){
+  	      c[0] = sqrt(2.0)*w.c[0];
+  	      c[1] = sqrt(2.0)*w.c[1];
+	      } else {
+          c[0] = sqrt(2.0)*w.c[2];
+  	      c[1] = sqrt(2.0)*w.c[3];
+        }
         break;
 #endif
     }
   }
 
-  Wilson_vector<vector> expand(direction dir) const{
+  Wilson_vector<vector> expand(direction dir, int sign) const{
     Wilson_vector<vector> r;
     switch(dir){
       case XUP:
-        r.c[0] = c[0]; r.c[1] = c[1];
-        r.c[2] = cmplx(0,-1)*c[1];
-        r.c[3] = cmplx(0,-1)*c[0];
-	      break;
-      case XDOWN:
-        r.c[0] = c[0]; r.c[1] = c[1];
-        r.c[2] = cmplx(0,1)*c[1];
-        r.c[3] = cmplx(0,1)*c[0];
+        if(sign==1){
+          r.c[0] = c[0]; r.c[1] = c[1];
+          r.c[2] = cmplx(0,-1)*c[1];
+          r.c[3] = cmplx(0,-1)*c[0];
+	      } else {
+          r.c[0] = c[0]; r.c[1] = c[1];
+          r.c[2] = cmplx(0,1)*c[1];
+          r.c[3] = cmplx(0,1)*c[0];
+        }
 	      break;
       case YUP:
-        r.c[0] = c[0]; r.c[1] = c[1];
-        r.c[2] = c[1];
-        r.c[3] = -c[0];
-	      break;
-      case YDOWN:
-        r.c[0] = c[0]; r.c[1] = c[1];
-        r.c[2] = -c[1];
-        r.c[3] = c[0];
+        if(sign==1){
+          r.c[0] = c[0]; r.c[1] = c[1];
+          r.c[2] = c[1]; r.c[3] = -c[0];
+	      } else {
+          r.c[0] = c[0];  r.c[1] = c[1];
+          r.c[2] = -c[1]; r.c[3] = c[0];
+        }
         break;
       case ZUP:
-        r.c[0] = c[0]; r.c[1] = c[1];
-        r.c[2] = cmplx(0,-1)*c[0];
-        r.c[3] = cmplx(0, 1)*c[1];
-	      break;
-      case ZDOWN:
-        r.c[0] = c[0]; r.c[1] = c[1];
-        r.c[2] = cmplx(0, 1)*c[0];
-        r.c[3] = cmplx(0,-1)*c[1];
+        if(sign==1){
+          r.c[0] = c[0]; r.c[1] = c[1];
+          r.c[2] = cmplx(0,-1)*c[0];
+          r.c[3] = cmplx(0, 1)*c[1];
+	      } else {
+          r.c[0] = c[0]; r.c[1] = c[1];
+          r.c[2] = cmplx(0, 1)*c[0];
+          r.c[3] = cmplx(0,-1)*c[1];
+        }
         break;
       case TUP:
-        r.c[0] = c[0]; r.c[1] = c[1];
-        r.c[2] = c[0];
-        r.c[3] = c[1];
-	      break;
-      case TDOWN:
-        r.c[0] = c[0]; r.c[1] = c[1];
-        r.c[2] = -c[0];
-        r.c[3] = -c[1];
+        if(sign==1){
+          r.c[0] = c[0]; r.c[1] = c[1];
+          r.c[2] = c[0]; r.c[3] = c[1];
+	      } else {
+          r.c[0] = c[0];  r.c[1] = c[1];
+          r.c[2] = -c[0]; r.c[3] = -c[1];
+        }
 	      break;
 #if NDIM == 5
       case 4:
-        r.c[0] = sqrt(2.0)*c[0]; r.c[1] = sqrt(2.0)*c[1];
-        r.c[2] = 0; r.c[3] = 0;
-        break;
-      case 5:
-        r.c[0] = 0; r.c[1] = 0;
-        r.c[2] = sqrt(2.0)*c[0]; r.c[3] = sqrt(2.0)*c[1];
+        if(sign==1){
+          r.c[0] = sqrt(2.0)*c[0]; r.c[1] = sqrt(2.0)*c[1];
+          r.c[2] = 0; r.c[3] = 0;
+	      } else {
+          r.c[0] = 0; r.c[1] = 0;
+          r.c[2] = sqrt(2.0)*c[0]; r.c[3] = sqrt(2.0)*c[1];
+        }
         break;
 #endif
     }
@@ -410,52 +416,56 @@ class half_Wilson_vector {
    1  0	        ( 1, 0)	       +1
    0 -1	  	    ( 0, 1)	       -1
 */
-  half_Wilson_vector(Wilson_vector<vector> w, direction dir) {
+  half_Wilson_vector(Wilson_vector<vector> w, direction dir, int sign) {
     switch(dir){
       case XUP:
-	      c[0] = w.c[0] + w.c[1];
-	      break;
-      case XDOWN:
-	      c[0] = w.c[0] - w.c[1];
+        if(sign==1){
+	        c[0] = w.c[0] + w.c[1];
+	      } else {
+	        c[0] = w.c[0] - w.c[1];
+        }
 	      break;
       case YUP:
-	      c[0] = w.c[0] - cmplx(0,1)*w.c[1];
-	      break;
-      case YDOWN:
- 	      c[0] = w.c[0] + cmplx(0,1)*w.c[1];
+        if(sign==1){
+	        c[0] = w.c[0] - cmplx(0,1)*w.c[1];
+	      } else {
+ 	        c[0] = w.c[0] + cmplx(0,1)*w.c[1];
+        }
 	      break;
 #if NDIM == 3
       case ZUP:
-  	    c[0] = sqrt(2.0)*w.c[0];
-	      break;
-      case ZDOWN:
-        c[0] = sqrt(2.0)*w.c[1];
+        if(sign==1){
+  	      c[0] = sqrt(2.0)*w.c[0];
+	      } else {
+          c[0] = sqrt(2.0)*w.c[1];
+        }
         break;
 #endif
     }
   }
 
-  Wilson_vector<vector> expand(direction dir) const{
+  Wilson_vector<vector> expand(direction dir, int sign) const{
     Wilson_vector<vector> r;
     switch(dir){
       case XUP:
-        r.c[0] = c[0]; r.c[1] = c[0];
-	      break;
-      case XDOWN:
-        r.c[0] = c[0]; r.c[1] = -c[0];
+        if(sign==1){
+          r.c[0] = c[0]; r.c[1] = c[0];
+	      } else {
+          r.c[0] = c[0]; r.c[1] = -c[0];
+        }
 	      break;
       case YUP:
-        r.c[0] = c[0]; r.c[1] = cmplx(0,1)*c[0];
-	      break;
-      case YDOWN:
-        r.c[0] = c[0]; r.c[1] = cmplx(0,-1)*c[0];
+          r.c[0] = c[0]; r.c[1] = cmplx(0,1)*c[0];
+	      } else {
+          r.c[0] = c[0]; r.c[1] = cmplx(0,-1)*c[0];
+        }
         break;
 #if NDIM == 3
       case ZUP:
-        r.c[0] = sqrt(2.0)*c[0]; r.c[1] = 0;
-	      break;
-      case ZDOWN:
-        r.c[0] = 0; r.c[1] = sqrt(2.0)*c[0];
+          r.c[0] = sqrt(2.0)*c[0]; r.c[1] = 0;
+	      } else {
+          r.c[0] = 0; r.c[1] = sqrt(2.0)*c[0];
+        }
         break;
 #endif
     }

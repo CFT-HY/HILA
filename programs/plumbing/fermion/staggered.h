@@ -71,11 +71,6 @@ void dirac_staggered_dagger(
   field<double> (&staggered_eta)[NDIM],
   field<vtype> (&vtemp)[NDIM])
 {
-  // Start getting neighbours
-  foralldir(dir){
-    v_in.start_get(dir);
-  }
-
   // Apply the mass diagonally
   v_out[ALL] = mass * v_in[X];
 

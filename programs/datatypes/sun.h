@@ -188,6 +188,7 @@ class SU : public matrix<n,n,cmplx<radix> >{
         double diag = (*this).c[i][i].im;
         thissum += 0.5*diag*diag;
       }
+      return thissum;
     }
 
 
