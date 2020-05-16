@@ -92,6 +92,7 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
                                             parity par, const lattice_struct * RESTRICT lattice) const {
   int n;
   const unsigned * index_list = to_node.get_sitelist(par,n);
+
   gather_elements(buffer, index_list, n, lattice);
 }
 

@@ -692,21 +692,23 @@ void lattice_struct::init_special_boundaries() {
     special_boundaries[d].n_even = special_boundaries[d].n_odd = 
       special_boundaries[d].n_total = 0;
     special_boundaries[d].is_needed = false;
+    special_boundaries[d].is_on_edge = false;
 
     direction od = -d;
-    if (nodes.n_divisions[abs(d)] == 1) {
+    int coord = -1;
+    // do we get up/down boundary?
+    if (is_up_dir(d) && this_node.min[d] + this_node.size[d] == size(d)) coord = size(d)-1;
+    if (is_up_dir(od) && this_node.min[od] == 0) coord = 0;
 
-      int coord = -1;
-      // do we get up/down boundary?
-      if (is_up_dir(d) && this_node.min[d] + this_node.size[d] == size(d)) coord = size(d)-1;
-      if (is_up_dir(od) && this_node.min[od] == 0) coord = 0;
+    if (coord >= 0) {
+      // now we got it
+      special_boundaries[d].is_on_edge = true;
 
-      if (coord >= 0) {
-        // now we got it
+      if (nodes.n_divisions[abs(d)] == 1) {
         special_boundaries[d].is_needed = true;
         special_boundaries[d].offset = this_node.field_alloc_size;
 
-        for (int i=0; i<this_node.sites; i++) if (coordinate(d,i) == coord) {
+        for (int i=0; i<this_node.sites; i++) if (coordinate(abs(d),i) == coord) {
           // set buffer indices
           special_boundaries[d].n_total++;
           if (site_parity(i) == EVEN) special_boundaries[d].n_even++;
@@ -714,7 +716,11 @@ void lattice_struct::init_special_boundaries() {
         }
         this_node.field_alloc_size += special_boundaries[d].n_total;
       }
+
     }
+
+    hila::output << "Node " << mynode() << " dir " << d << " min " << this_node.min << " is_on_edge "
+      << special_boundaries[d].is_on_edge << '\n';
 
     // allocate neighbours only on 1st use, otherwise unneeded
     special_boundaries[d].neighbours = nullptr;    
@@ -746,7 +752,7 @@ void lattice_struct::setup_special_boundary_array(direction d) {
       special_boundaries[d].neighbours != nullptr) return;
 
   // now allocate neighbour array and the fetching array
-  special_boundaries[d].neighbours = (unsigned *)memalloc(sizeof(unsigned) * volume());
+  special_boundaries[d].neighbours = (unsigned *)memalloc(sizeof(unsigned) * this_node.sites);
   special_boundaries[d].move_index = (unsigned *)memalloc(sizeof(unsigned) * special_boundaries[d].n_total);
 
   int coord;
@@ -759,9 +765,10 @@ void lattice_struct::setup_special_boundary_array(direction d) {
       special_boundaries[d].neighbours[i] = neighb[d][i];
     } else {
       special_boundaries[d].neighbours[i] = offs++;
-      special_boundaries[d].move_index[k++] = i;
+      special_boundaries[d].move_index[k++] = neighb[d][i];
     }
   }
+
   assert( k == special_boundaries[d].n_total );
 }
 

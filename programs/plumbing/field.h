@@ -62,7 +62,7 @@ class field {
       status move_status[3][NDIRS];     // is communication done
 
       // neighbour pointers - because of boundary conditions, can be different for diff. fields
-      unsigned * neighbours[NDIRS];
+      const unsigned * RESTRICT neighbours[NDIRS];
       boundary_condition_t boundary_condition[NDIRS];
 
 #ifdef USE_MPI
@@ -151,7 +151,21 @@ class field {
       void gather_comm_elements(direction d, parity par, T * RESTRICT buffer, 
                                 const lattice_struct::comm_node_struct & to_node) const {
 #ifndef VECTORIZED
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+        // note: -d in is_on_edge, because we're about to send stuff to that direction
+        // (fetching from direction +d)
+        if (boundary_condition[d] == boundary_condition_t::ANTIPERIODIC &&
+            lattice->special_boundaries[-d].is_on_edge) {
+          int n;
+          const unsigned * index_list = to_node.get_sitelist(par,n);
+          payload.gather_elements_negated(buffer, index_list, n, lattice);                    
+        } else {
+          payload.gather_comm_elements(buffer, to_node, par, lattice);
+        }
+#else
         payload.gather_comm_elements(buffer, to_node, par, lattice);
+#endif
+
 #else
         if constexpr (is_vectorizable_type<T>::value) {
           // now vectorized layout
@@ -209,7 +223,7 @@ class field {
 
           /// finally, boundary condition (TODO:MORE GENERAL!)
           if (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC) {
-            payload.gather_elements_negated( payload.fieldbuf + offset, 
+            payload.gather_elements_negated( payload.fieldbuf + offset,
                     lattice->special_boundaries[dir].move_index + start, n, lattice);
           }
         } else
@@ -426,6 +440,7 @@ class field {
   void set_boundary_condition( direction dir, boundary_condition_t bc) {
 
     #ifdef SPECIAL_BOUNDARY_CONDITIONS
+    // TODO: This works as intended only for periodic/antiperiodic b.c.
     fs->boundary_condition[dir] = bc;
     fs->boundary_condition[-dir] = bc;
     fs->neighbours[dir]  = lattice->get_neighbour_array(dir,bc);

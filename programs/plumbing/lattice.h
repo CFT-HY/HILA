@@ -177,12 +177,15 @@ public:
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
   // special boundary pointers are needed only in cases neighbour
-  // pointers must be modified (new halo elements). That is known only during runtime
+  // pointers must be modified (new halo elements). That is known only during runtime.
+  // is_on_edget is the only "general" info element here, true if the node to direction
+  // dir is on lattice edge.
   struct special_boundary_struct {
     unsigned * neighbours;
     unsigned * move_index;
     unsigned offset, n_even, n_odd, n_total;
     bool is_needed;
+    bool is_on_edge;
   };
   // holder for nb ptr info
   special_boundary_struct special_boundaries[NDIRS];
