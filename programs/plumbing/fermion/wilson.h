@@ -68,8 +68,8 @@ template<typename vector, typename matrix>
 void dirac_wilson_calc_force(
   const field<matrix> *gauge,
   const double kappa,
-  const field<Wilson_vector<vector>> &psi,
   const field<Wilson_vector<vector>> &chi,
+  const field<Wilson_vector<vector>> &psi,
   field<matrix> (&out)[NDIM],
   parity par,
   int sign)
@@ -77,17 +77,21 @@ void dirac_wilson_calc_force(
   field<half_Wilson_vector<vector>> (&vtemp)[NDIM] = wilson_dirac_temp_vector<vector>;
 
   foralldir(dir){
-    direction odir = opp_dir( (direction)dir );
+    onsites(opp_parity(par)){
+      vtemp[0][X] = half_Wilson_vector<vector>(chi[X], dir, -sign);
+    }
     onsites(par){
-      vtemp[0][X] = half_Wilson_vector<vector>(psi[X], dir, -sign);
-      vtemp[1][X] = half_Wilson_vector<vector>(chi[X], dir, sign);
+      vtemp[1][X] = half_Wilson_vector<vector>(psi[X], dir, sign);
     }
 
+    out[dir][ALL] = 0;
     out[dir][par] = -kappa * (
-        ( vtemp[0][X+dir].expand(dir,-sign) ).outer_product(chi[X])
-      + ( vtemp[1][X+dir].expand(dir, sign) ).outer_product(psi[X])
+        ( vtemp[0][X+dir].expand(dir,-sign) ).outer_product(psi[X])
     );
-    out[dir][par] = gauge[dir][X]*out[dir][X];
+    out[dir][opp_parity(par)] = out[dir][X] - kappa * (
+        ( vtemp[1][X+dir].expand(dir, sign) ).outer_product(chi[X])
+    );
+    out[dir][ALL] = gauge[dir][X]*out[dir][X];
   }
 }
 
@@ -145,8 +149,8 @@ class dirac_wilson {
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    void force( const field<vector_type> & psi, const field<vector_type> & chi, field<matrix> (&force)[NDIM], int sign=1){
-      dirac_wilson_calc_force(gauge, kappa, psi, chi, force, ALL, sign);
+    void force(const field<vector_type> & chi,  const field<vector_type> & psi, field<matrix> (&force)[NDIM], int sign=1){
+      dirac_wilson_calc_force(gauge, kappa, chi, psi, force, ALL, sign);
     }
 };
 
@@ -187,11 +191,11 @@ class precondition_evenodd {
     // Applies the operator to in
     void apply( const field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
-      D.diag(in, out, EVEN);
-
+      dirac_wilson_diag(in, out, EVEN);
       D.hop(in, out, ODD, 1);
       D.diag_inverse(out, ODD);
       D.hop(out, out, EVEN, 1);
+      //out[EVEN] = out[X+XUP];
       out[ODD] = 0;
     }
 
@@ -208,17 +212,21 @@ class precondition_evenodd {
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    void force( const field<vector_type> & chi, const field<vector_type> & psi, field<matrix_type> (&force)[NDIM], int sign){
+    void force(const field<vector_type> & chi, const field<vector_type> & psi, field<matrix_type> (&force)[NDIM], int sign){
+      field<matrix_type> force2[NDIM];
       field<vector_type> tmp;
-      tmp[ALL] = 0;
-      D.hop(psi, tmp, ODD, sign);
-      D.diag_inverse(tmp, ODD);
-      D.hop_deriv(tmp, chi, force, ALL, sign);
-
       tmp[ALL] = 0;
       D.hop(chi, tmp, ODD, -sign);
       D.diag_inverse(tmp, ODD);
-      D.hop_deriv(psi, tmp, force, ALL, sign);
+      D.hop_deriv(tmp, psi, force, EVEN, sign);
+
+      tmp[ALL] = 0;
+      D.hop(psi, tmp, ODD, sign);
+      D.diag_inverse(tmp, ODD);
+      D.hop_deriv(chi, tmp, force2, ODD, sign);
+
+      foralldir(dir)
+        force[dir][ALL] = force[dir][X] + force2[dir][X];
     }
 };
 
