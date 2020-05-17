@@ -167,17 +167,35 @@ class field {
 #endif
 
 #else
+        // this is vectorized branch
+        bool antiperiodic = false;
+        if (boundary_condition[d] == boundary_condition_t::ANTIPERIODIC &&
+            lattice->special_boundaries[-d].is_on_edge) antiperiodic = true;
+
         if constexpr (is_vectorizable_type<T>::value) {
           // now vectorized layout
           if (vector_lattice->is_boundary_permutation[abs(d)]) {
             // with boundary permutation need to fetch elems 1-by-1
-            payload.gather_comm_elements(buffer, to_node, par, lattice);
+            if (!antiperiodic)
+              payload.gather_comm_elements(buffer, to_node, par, lattice);
+            else {
+              int n;
+              const unsigned * index_list = to_node.get_sitelist(par,n);
+              payload.gather_elements_negated(buffer, index_list, n, lattice);                 
+            }
           } else {
             // without it, can do the full block
-            payload.gather_comm_vectors(buffer, to_node, par, vector_lattice);
+            payload.gather_comm_vectors(buffer, to_node, par, vector_lattice, antiperiodic);
           }
         } else {
-          payload.gather_comm_elements(buffer, to_node, par, lattice);
+          // not vectoizable, standard methods
+          if (!antiperiodic)
+            payload.gather_comm_elements(buffer, to_node, par, lattice);
+          else {
+            int n;
+            const unsigned * index_list = to_node.get_sitelist(par,n);
+            payload.gather_elements_negated(buffer, index_list, n, lattice);                 
+          }
         }
 #endif
       }
@@ -204,7 +222,7 @@ class field {
       }
 
 
-
+#ifndef VECTORIZED
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
         #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -230,6 +248,17 @@ class field {
         #endif
           payload.set_local_boundary_elements(dir, par, lattice);
       }
+
+#else  
+      // Now vectorized
+      /// Place boundary elements from local lattice (used in vectorized version)
+      void set_local_boundary_elements(direction dir, parity par){
+        bool antiperiodic =
+          (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
+        payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
+      }
+
+#endif
 
       /// Gather a list of elements to a single node
       void gather_elements(char * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;

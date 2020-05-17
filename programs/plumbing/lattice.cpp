@@ -719,8 +719,8 @@ void lattice_struct::init_special_boundaries() {
 
     }
 
-    hila::output << "Node " << mynode() << " dir " << d << " min " << this_node.min << " is_on_edge "
-      << special_boundaries[d].is_on_edge << '\n';
+    // hila::output << "Node " << mynode() << " dir " << d << " min " << this_node.min << " is_on_edge "
+    //   << special_boundaries[d].is_on_edge << '\n';
 
     // allocate neighbours only on 1st use, otherwise unneeded
     special_boundaries[d].neighbours = nullptr;    
