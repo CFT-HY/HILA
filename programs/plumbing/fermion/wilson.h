@@ -84,10 +84,11 @@ inline void dirac_wilson_calc_force(
       vtemp[1][X] = half_Wilson_vector<vector>(psi[X], dir, sign);
     }
 
+    out[dir][ALL] = 0;
     out[dir][par] = -kappa * (
         ( vtemp[0][X+dir].expand(dir,-sign) ).outer_product(psi[X])
     );
-    out[dir][opp_parity(par)] = - kappa * (
+    out[dir][opp_parity(par)] = out[dir][X] - kappa * (
         ( vtemp[1][X+dir].expand(dir, sign) ).outer_product(chi[X])
     );
     out[dir][ALL] = gauge[dir][X]*out[dir][X];
