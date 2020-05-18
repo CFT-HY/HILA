@@ -3,44 +3,10 @@
  * interaction                               *
  *********************************************/
 
+#define DEBUG_CG
 
 #include "Wilson.h"
 
-
-void test_gamma_matrices(){
-  Wilson_vector<N> w1, w2, w3;
-  half_Wilson_vector<N> h1;
-  w1.gaussian();
-
-  w2 = w1-gamma5*(gamma5*w1);
-  assert(w2.norm_sq() < 0.0001 && "g5*g5 = 1");
-
-  foralldir(d){
-    w2 = w1-gamma_matrix[d]*(gamma_matrix[d]*w1);
-    assert(w2.norm_sq() < 0.0001 && "gamma_d*gamma_d = 1");
-
-    w2 = w1 + gamma_matrix[d]*w1;
-    h1 = half_Wilson_vector(w1,d);
-    double diff = w2.norm_sq() - h1.norm_sq();
-    assert(diff*diff < 0.0001 && "half_Wilson_vector projection norm to direction XUP");
-
-    w3 = h1.expand(d) - w2;
-    assert(w3.norm_sq() < 0.0001 && "half_wilson_vector expand");
-
-
-    w2 = w1 - gamma_matrix[d]*w1;
-    h1 = half_Wilson_vector(w1,opp_dir(d));
-    diff = w2.norm_sq() - h1.norm_sq();
-    assert(diff*diff < 0.0001 && "half_Wilson_vector projection norm to direction XUP");
-
-    w3 = h1.expand(opp_dir(d)) - w2;
-    assert(w3.norm_sq() < 0.0001 && "half_wilson_vector expand");
-
-    //output0 << w2.str();
-    //output0 << h2.str();
-  }
-
-}
 
 
 
@@ -49,7 +15,7 @@ int main(int argc, char **argv){
   input parameters = input();
   parameters.import("parameters");
   double beta = parameters.get("beta");
-  double mass = parameters.get("mass");
+  double kappa = parameters.get("kappa");
   int seed = parameters.get("seed");
 	double hmc_steps = parameters.get("hmc_steps");
 	double traj_length = parameters.get("traj_length");
@@ -64,8 +30,28 @@ int main(int argc, char **argv){
   // Define gauge and momentum action terms
   gauge_momentum_action ma(gauge, momentum);
   gauge_action ga(gauge, momentum, beta);
+
+  ga.set_unity();
+
+  // Define a Dirac operator
+  Dirac_Wilson_evenodd<VEC, SUN> D(kappa, gauge);
+  fermion_action fa(D, gauge, momentum);
+
+
+  // Build two integrator levels. Gauge is on the lowest level and
+  // the fermions are on higher level
+  integrator integrator_level_1(ga, ma);
+  integrator integrator_level_2(fa, integrator_level_1);
   
-  test_gamma_matrices();
+  // Initialize the gauge field
+  ga.set_unity();
+
+  // Run HMC using the integrator
+  for(int step = 0; step < 5; step ++){
+    update_hmc(integrator_level_2, hmc_steps, traj_length);
+    double plaq = plaquette(ga.gauge);
+    output0 << "Plaq: " << plaq << "\n";
+  }
 
   finishrun();
 

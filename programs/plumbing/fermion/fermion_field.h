@@ -2,7 +2,7 @@
 #define FERMION_FIELD_H
 
 
-#include "../plumbing/algorithms/conjugate_gradients.h"
+#include "../../plumbing/algorithms/conjugate_gradients.h"
 #include <cmath>
 
 
@@ -22,7 +22,7 @@ void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
 template<typename VECTOR, typename DIRAC_OP>
 double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
   field<VECTOR> psi, tmp;
-  CG<field<VECTOR>, DIRAC_OP> inverse(D);
+  CG<DIRAC_OP> inverse(D);
   double action = 0;
 
   psi=0;
@@ -40,19 +40,19 @@ template<typename SUN, typename VECTOR, typename DIRAC_OP>
 void fermion_force(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], DIRAC_OP &D, double eps){
   field<VECTOR> psi, Mpsi;
   field<SUN> force[NDIM], force2[NDIM];
-  CG<field<VECTOR>, DIRAC_OP> inverse(D);
+  CG<DIRAC_OP> inverse(D);
   
   psi=0;
   inverse.apply(chi, psi);
   
   D.apply(psi, Mpsi);
 
-  D.force(Mpsi, psi, force);
-  D.force(psi, Mpsi, force2);
+  D.force(Mpsi, psi, force, 1);
+  D.force(psi, Mpsi, force2, -1);
 
   foralldir(dir){
     onsites(ALL){
-      force[dir][X] = force[dir][X] - force2[dir][X];
+      force[dir][X] = force[dir][X] + force2[dir][X];
       project_antihermitean(force[dir][X]);
       momentum[dir][X] = momentum[dir][X] - eps*force[dir][X];
     }
@@ -63,16 +63,16 @@ void fermion_force(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], DIRAC_OP &D
 
 
 
-template<typename SUN, typename DIRAC_OP>
+template<typename matrix, typename DIRAC_OP>
 class fermion_action{
   public:
-    field<SUN> (&gauge)[NDIM];
-    field<SUN> (&momentum)[NDIM];
+    field<matrix> (&gauge)[NDIM];
+    field<matrix> (&momentum)[NDIM];
     DIRAC_OP &D;
     field<typename DIRAC_OP::vector_type> chi;
 
 
-    fermion_action(DIRAC_OP &d, field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM])
+    fermion_action(DIRAC_OP &d, field<matrix> (&g)[NDIM], field<matrix> (&m)[NDIM])
     : D(d), gauge(g), momentum(m){ chi = 0.0; }
 
     fermion_action(fermion_action &fa)
@@ -106,9 +106,9 @@ class fermion_action{
 };
 
 // Sum operator for creating an action_sum object
-template<typename SUN, typename DIRAC_OP, typename action2>
-action_sum<fermion_action<SUN, DIRAC_OP>, action2> operator+(fermion_action<SUN, DIRAC_OP> a1, action2 a2){
-  action_sum<fermion_action<SUN, DIRAC_OP>, action2> sum(a1, a2);
+template<typename matrix, typename DIRAC_OP, typename action2>
+action_sum<fermion_action<matrix, DIRAC_OP>, action2> operator+(fermion_action<matrix, DIRAC_OP> a1, action2 a2){
+  action_sum<fermion_action<matrix, DIRAC_OP>, action2> sum(a1, a2);
   return sum;
 }
 
