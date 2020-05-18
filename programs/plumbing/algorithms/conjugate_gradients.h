@@ -11,17 +11,19 @@
 
 #include<iostream>
 
-#define MAXITERS 10000
+constexpr int CG_DEFAULT_MAXITERS = 10000;
+constexpr double CG_DEFAULT_ACCURACY = 1e-8;
 
 
 // Implement the apply function of the conjugate gradient operator
 template<typename vector, typename op>
-void GG_invert(vector &in, vector &out, op &M){
+void GG_invert(vector &in, vector &out, op &M,
+  double accuracy, int max_iters)
+{
   vector r, p, Dp, DDp;
   double pDp = 0, rr = 0, rrnew = 0, rr_start=0;
   double alpha, beta;
   double target_rr, source_norm=0;
-  double accuracy = 1e-8;
   
   onsites(ALL){
     source_norm += norm_squared(in[X]);
@@ -41,7 +43,7 @@ void GG_invert(vector &in, vector &out, op &M){
   }
   rr_start = rr;
 
-  for (int i = 0; i < MAXITERS; i++){
+  for (int i = 0; i < max_iters; i++){
     pDp=rrnew=0;
     M.apply(p, Dp);
     M.dagger(Dp, DDp);
@@ -58,8 +60,8 @@ void GG_invert(vector &in, vector &out, op &M){
     onsites(ALL){ 
         rrnew += r[X].rdot(r[X]);
     }
-    #ifdef DEBUG_CG
     printf("CG iter %d, node %d, %g %g %g %g\n", i, mynode(), rrnew, rr_start, target_rr, pDp);
+    #ifdef DEBUG_CG
     #endif
     if( rrnew < target_rr )
         return;
@@ -71,18 +73,28 @@ void GG_invert(vector &in, vector &out, op &M){
 
 
 /// The conjugate gradient operator. Applies square the inverse of an operator on a vector
-template<typename vector, typename Op>
+template<typename Op>
 class CG{
   private:
-    Op & M; // The operator to invert
+    // The operator to invert
+    Op & M; 
+    // desired relative accuracy
+    double accuracy = CG_DEFAULT_ACCURACY; 
+    // maximum number of iterations
+    double maxiters = CG_DEFAULT_MAXITERS;
   public:
+
+    using vector_type = typename Op::vector_type;
 
     // Constructor: iniialize the operator
     CG(Op & op) : M(op) {};
+    CG(Op & op, double _accuracy) : M(op) {accuracy = _accuracy;};
+    CG(Op & op, double _accuracy, int _maxiters) : M(op) 
+    {accuracy = _accuracy; maxiters=_maxiters;};
 
-    void apply(vector &in, vector &out)
+    void apply(field<vector_type> &in, field<vector_type> &out)
     {
-      GG_invert(in, out, M);
+      GG_invert(in, out, M, accuracy, maxiters);
     }
 };
 
