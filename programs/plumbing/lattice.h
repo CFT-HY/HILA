@@ -23,6 +23,9 @@
 constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
 #endif
 
+// list boundary conditions - used only if SPECIAL_BOUNDARY_CONDITIONS defined
+enum class boundary_condition_t {PERIODIC, ANTIPERIODIC, FIXED};
+
 void test_std_gathers();
 
 struct node_info {
@@ -172,6 +175,22 @@ public:
   // implement waiting using mask_t - unsigned char is good for up to 4 dim. 
   dir_mask_t * RESTRICT wait_arr_;
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+  // special boundary pointers are needed only in cases neighbour
+  // pointers must be modified (new halo elements). That is known only during runtime.
+  // is_on_edget is the only "general" info element here, true if the node to direction
+  // dir is on lattice edge.
+  struct special_boundary_struct {
+    unsigned * neighbours;
+    unsigned * move_index;
+    unsigned offset, n_even, n_odd, n_total;
+    bool is_needed;
+    bool is_on_edge;
+  };
+  // holder for nb ptr info
+  special_boundary_struct special_boundaries[NDIRS];
+#endif
+
 #ifndef VANILLA
   backend_lattice_struct *backend_lattice;
 #endif
@@ -227,6 +246,17 @@ public:
   
   bool first_site_even() { return this_node.first_site_even; };
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+  void init_special_boundaries();
+  void setup_special_boundary_array(direction d);
+
+  const unsigned * get_neighbour_array(direction d, boundary_condition_t bc);
+#else
+  const unsigned * get_neighbour_array(direction d, boundary_condition_t bc) { 
+    return neighb[d];
+  }
+#endif
+
   unsigned remap_node(const unsigned i);
   
   #ifdef EVEN_SITES_FIRST
@@ -267,6 +297,12 @@ public:
   inline const coordinate_vector & coordinates( unsigned idx ) const {
     return this_node.coordinates[idx];
   }
+
+  inline int coordinate( direction d, unsigned idx ) const {
+    return this_node.coordinates[idx][d];
+  }
+
+
 #else
 
   inline const coordinate_vector coordinates( unsigned idx ) const {
@@ -274,6 +310,13 @@ public:
     return  this_node.coordinates[idx / number_of_subnodes]
             + this_node.subnodes.offset[idx % number_of_subnodes];
   }
+
+  inline int coordinate( direction d, unsigned idx ) const {
+
+    return  this_node.coordinates[idx / number_of_subnodes][d]
+            + this_node.subnodes.offset[idx % number_of_subnodes][d];
+  }
+
 #endif
 
   inline parity site_parity( unsigned idx ) const {

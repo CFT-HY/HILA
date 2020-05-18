@@ -93,7 +93,7 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
           code << ".get_value_at_nb_site(" << dirname << ", " << looping_var << ");\n";
         } else  {
           // std neighbour accessor for scalars
-          code << ".get_value_at(loop_lattice->neighb[" 
+          code << ".get_value_at(" << l.new_name << ".fs->neighbours["
                << dirname << "][" << looping_var << "]);\n";
         }
 

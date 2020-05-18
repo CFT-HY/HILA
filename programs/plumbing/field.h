@@ -22,9 +22,6 @@
 // This is a marker for transformer -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)
 
-// boundary condition classification
-enum {PERIODIC, ANTIPERIODIC, FIXED};
-
 
 template <typename T>
 using element = T;
@@ -64,9 +61,9 @@ class field {
       unsigned assigned_to;           // keeps track of first assignment to parities
       status move_status[3][NDIRS];     // is communication done
 
-#ifdef BOUNDARY_CONDITIONS
-      vector<> extra_nb_arrs;
-#endif
+      // neighbour pointers - because of boundary conditions, can be different for diff. fields
+      const unsigned * RESTRICT neighbours[NDIRS];
+      boundary_condition_t boundary_condition[NDIRS];
 
 #ifdef USE_MPI
       MPI_Request receive_request[3][NDIRS];
@@ -154,19 +151,51 @@ class field {
       void gather_comm_elements(direction d, parity par, T * RESTRICT buffer, 
                                 const lattice_struct::comm_node_struct & to_node) const {
 #ifndef VECTORIZED
-        payload.gather_comm_elements(buffer, to_node, par, lattice);
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+        // note: -d in is_on_edge, because we're about to send stuff to that direction
+        // (fetching from direction +d)
+        if (boundary_condition[d] == boundary_condition_t::ANTIPERIODIC &&
+            lattice->special_boundaries[-d].is_on_edge) {
+          int n;
+          const unsigned * index_list = to_node.get_sitelist(par,n);
+          payload.gather_elements_negated(buffer, index_list, n, lattice);                    
+        } else {
+          payload.gather_comm_elements(buffer, to_node, par, lattice);
+        }
 #else
+        payload.gather_comm_elements(buffer, to_node, par, lattice);
+#endif
+
+#else
+        // this is vectorized branch
+        bool antiperiodic = false;
+        if (boundary_condition[d] == boundary_condition_t::ANTIPERIODIC &&
+            lattice->special_boundaries[-d].is_on_edge) antiperiodic = true;
+
         if constexpr (is_vectorizable_type<T>::value) {
           // now vectorized layout
           if (vector_lattice->is_boundary_permutation[abs(d)]) {
             // with boundary permutation need to fetch elems 1-by-1
-            payload.gather_comm_elements(buffer, to_node, par, lattice);
+            if (!antiperiodic)
+              payload.gather_comm_elements(buffer, to_node, par, lattice);
+            else {
+              int n;
+              const unsigned * index_list = to_node.get_sitelist(par,n);
+              payload.gather_elements_negated(buffer, index_list, n, lattice);                 
+            }
           } else {
             // without it, can do the full block
-            payload.gather_comm_vectors(buffer, to_node, par, vector_lattice);
+            payload.gather_comm_vectors(buffer, to_node, par, vector_lattice, antiperiodic);
           }
         } else {
-          payload.gather_comm_elements(buffer, to_node, par, lattice);
+          // not vectoizable, standard methods
+          if (!antiperiodic)
+            payload.gather_comm_elements(buffer, to_node, par, lattice);
+          else {
+            int n;
+            const unsigned * index_list = to_node.get_sitelist(par,n);
+            payload.gather_elements_negated(buffer, index_list, n, lattice);                 
+          }
         }
 #endif
       }
@@ -193,11 +222,43 @@ class field {
       }
 
 
-
+#ifndef VECTORIZED
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
-        payload.set_local_boundary_elements(dir, par, lattice);
+        #ifdef SPECIAL_BOUNDARY_CONDITIONS
+        if (boundary_condition[dir] != boundary_condition_t::PERIODIC &&
+            lattice->special_boundaries[dir].is_needed) {
+          // need to copy or do something w. local boundary
+          int n, start = 0;
+          if (par == ODD) {
+            n = lattice->special_boundaries[dir].n_odd;
+            start = lattice->special_boundaries[dir].n_even;
+          } else {
+            if (par == EVEN) n = lattice->special_boundaries[dir].n_even;
+            else n = lattice->special_boundaries[dir].n_total;
+          }
+          int offset = lattice->special_boundaries[dir].offset + start;
+
+          /// finally, boundary condition (TODO:MORE GENERAL!)
+          if (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC) {
+            payload.gather_elements_negated( payload.fieldbuf + offset,
+                    lattice->special_boundaries[dir].move_index + start, n, lattice);
+          }
+        } else
+        #endif
+          payload.set_local_boundary_elements(dir, par, lattice);
       }
+
+#else  
+      // Now vectorized
+      /// Place boundary elements from local lattice (used in vectorized version)
+      void set_local_boundary_elements(direction dir, parity par){
+        bool antiperiodic =
+          (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
+        payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
+      }
+
+#endif
 
       /// Gather a list of elements to a single node
       void gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
@@ -303,6 +364,7 @@ class field {
     fs->lattice = lattice;
     fs->allocate_payload();
     fs->initialize_communication();
+    for (direction d=(direction)0; d<NDIRS; ++d) fs->neighbours[d] = lattice->neighb[d];
     mark_changed(ALL);      // guarantees communications will be done
     fs->assigned_to = 0;    // and this means that it is not assigned
 
@@ -327,8 +389,7 @@ class field {
     return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
   }
 
-
-  
+    
   status move_status(parity p, int d) const { 
     assert(parity_bits(p) && d>=0 && d<NDIRS);
     return fs->move_status[(int)p - 1][d]; 
@@ -397,7 +458,7 @@ class field {
   }
 
   /// Check if communication has started.  This is strict, checks exactly this parity
-  bool is_move_started( int dir, parity par) const{
+  bool is_move_started( int dir, parity par) const {
     return move_status(par,dir) == status::STARTED;
   }
     
@@ -405,7 +466,26 @@ class field {
     return move_status(par,dir) == status::NOT_DONE;
   }
  
-  
+  void set_boundary_condition( direction dir, boundary_condition_t bc) {
+
+    #ifdef SPECIAL_BOUNDARY_CONDITIONS
+    // TODO: This works as intended only for periodic/antiperiodic b.c.
+    fs->boundary_condition[dir] = bc;
+    fs->boundary_condition[-dir] = bc;
+    fs->neighbours[dir]  = lattice->get_neighbour_array(dir,bc);
+    fs->neighbours[-dir] = lattice->get_neighbour_array(-dir,bc);
+    #endif
+
+  }
+
+  boundary_condition_t get_boundary_condition( direction dir ) const {
+    #ifdef SPECIAL_BOUNDARY_CONDITION
+    return fs->boundary_condition[dir];
+    #else
+    return boundary_condition_t::PERIODIC;
+    #endif
+  }
+
   // Overloading [] 
   // placemarker, should not be here
   // T& operator[] (const int i) { return data[i]; }
@@ -924,7 +1004,7 @@ void field<T>::drop_comms_if_needed(direction d, parity p) const {
   }
 }
 
-/// and cancel send and receive
+/// cancel ongoing send and receive
 
 template<typename T>
 void field<T>::cancel_comm(direction d, parity p) const {

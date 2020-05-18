@@ -5,9 +5,10 @@
 #include "../plumbing/globals.h"
 
 #include "../plumbing/defs.h"
-
+#include "../plumbing/field.h"
 #include "../plumbing/backend_vector/vector_types.h"
 
+#include "../plumbing/has_unary_minus.h"
 
 
 // Pointer to field data and accessors. Only this is passed to the
@@ -50,7 +51,7 @@ class field_storage {
     inline vecT get_vector( const int idx ) const;
 
     void gather_comm_vectors( T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, 
-      parity par, const vectorized_lattice_struct<vector_info<T>::vector_size> * RESTRICT vlat) const;
+      parity par, const vectorized_lattice_struct<vector_info<T>::vector_size> * RESTRICT vlat, bool antiperiodic) const;
 
     void place_recv_elements(const T * RESTRICT buffer, direction d, parity par,
                              const vectorized_lattice_struct<vector_info<T>::vector_size> * RESTRICT vlat) const;
@@ -62,6 +63,13 @@ class field_storage {
                                parity par, const lattice_struct * RESTRICT lattice) const;
     void gather_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n, 
                           const lattice_struct * RESTRICT lattice) const;
+
+
+
+    void gather_elements_negated( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n, 
+                                  const lattice_struct * RESTRICT lattice) const;
+
+
     /// Place boundary elements from neighbour
     void place_comm_elements( direction d, parity par, T * RESTRICT buffer, 
                               const lattice_struct::comm_node_struct & from_node,
@@ -69,8 +77,11 @@ class field_storage {
     void place_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n,
                          const lattice_struct * RESTRICT lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
+#ifndef VECTORIZED
     void set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT lattice);
-
+#else
+    void set_local_boundary_elements(direction dir, parity par, const lattice_struct * RESTRICT lattice, bool antiperiodic);
+#endif
 
     T * RESTRICT get_buffer() {
       return static_cast<T*>(fieldbuf);
@@ -84,6 +95,7 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
                                             parity par, const lattice_struct * RESTRICT lattice) const {
   int n;
   const unsigned * index_list = to_node.get_sitelist(par,n);
+
   gather_elements(buffer, index_list, n, lattice);
 }
 

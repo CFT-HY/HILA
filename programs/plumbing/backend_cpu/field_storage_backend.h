@@ -99,6 +99,23 @@ void field_storage<T>::gather_elements( T * RESTRICT buffer,
   }
 }
 
+template<typename T>
+void field_storage<T>::gather_elements_negated( T * RESTRICT buffer, 
+                        const unsigned * RESTRICT index_list, int n,
+                        const lattice_struct * RESTRICT lattice) const {
+  if constexpr (has_unary_minus<T>::value) {
+    for (int j=0; j<n; j++) {
+      int index = index_list[j];
+      buffer[j] = - get(index, lattice->field_alloc_size());    /// requires unary - !!
+      // std::memcpy( buffer + j, (char *) (&element), sizeof(T) );
+    }
+  } else {
+    // sizeof(T) here to prevent compile time evaluation of assert
+    assert(sizeof(T) < 1 && 
+    "Antiperiodic boundary conditions require that unary - -operator is defined!");
+  }
+}
+
 
 template<typename T>
 void field_storage<T>::place_elements(T * RESTRICT buffer, 
@@ -110,7 +127,7 @@ void field_storage<T>::place_elements(T * RESTRICT buffer,
 }
 
 template<typename T>
-void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * lattice){}
+void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT lattice) {}
 
 
 #endif
