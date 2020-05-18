@@ -59,7 +59,7 @@ int main(int argc, char **argv){
   #elif NDIM==3
   lattice->setup( 16, 8, 8, argc, argv );
   #elif NDIM==4
-  lattice->setup( 16, 8, 8, 8, argc, argv );
+  lattice->setup( 8, 8, 8, 8, argc, argv );
   #endif
   seed_random(2);
 
@@ -68,9 +68,10 @@ int main(int argc, char **argv){
   field<SU<N>> U[NDIM];
   foralldir(d) {
     onsites(ALL){
-      U[d][X].random();
+      U[d][X] = 1;
     }
   }
+
 
   // Check conjugate of the staggered Dirac operator
   {
@@ -95,13 +96,14 @@ int main(int argc, char **argv){
     assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
     assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
     
-    // Now run CG on DdaggerDb and check the result is b
-    D.dagger(Db, DdaggerDb);
-    CG<field<SU_vector<N>>, dirac> inverse(D);
-    inverse.apply(DdaggerDb, a);
+    // Now run CG on Ddaggera. b=1/D a -> Db = a 
+    CG<dirac> inverse(D);
+    b[ALL] = 0;
+    inverse.apply(Ddaggera, b);
+    D.apply(b, Db);
 
-    onsites(ALL){
-      diffre += norm_squared(a[X]-b[X]);
+    onsites(EVEN){
+      diffre += norm_squared(a[X]-Db[X]);
     }
     assert(diffre*diffre < 1e-8 && "test CG");
   }
@@ -130,13 +132,49 @@ int main(int argc, char **argv){
     assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
     assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
   
-    // Now run CG on DdaggerDb and check the result is b
-    D.dagger(Db, DdaggerDb);
-    CG<field<Wilson_vector<VEC>>, dirac> inverse(D);
-    inverse.apply(DdaggerDb, a);
+    // Now run CG on Ddaggera. b=1/D a -> Db = a 
+    CG<dirac> inverse(D);
+    b[ALL] = 0;
+    inverse.apply(Ddaggera, b);
+    D.apply(b, Db);
 
+    onsites(EVEN){
+      diffre += norm_squared(a[X]-Db[X]);
+    }
+    assert(diffre*diffre < 1e-8 && "test CG");
+  }
+
+  // Check conjugate of the even-odd preconditioned staggered Dirac operator
+  {
+    using dirac = dirac_staggered_evenodd<SU_vector<N>, SU<N>>;
+    dirac D(0.1, U);
+    field<SU_vector<N>> a, b, Db, Ddaggera, DdaggerDb;
+    field<SU_vector<N>> sol;
     onsites(ALL){
-      diffre += norm_squared(a[X]-b[X]);
+      a[X].gaussian();
+      b[X].gaussian();
+      sol[X] = 0;
+    }
+
+    double diffre = 0, diffim = 0;
+    D.apply(b, Db);
+    D.dagger(a, Ddaggera);
+    onsites(ALL){
+      diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
+      diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
+    }
+
+    assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
+    assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
+    
+    // Now run CG on Ddaggera. b=1/D a -> Db = a 
+    CG<dirac> inverse(D);
+    b[ALL] = 0;
+    inverse.apply(Ddaggera, b);
+    D.apply(b, Db);
+
+    onsites(EVEN){
+      diffre += norm_squared(a[X]-Db[X]);
     }
     assert(diffre*diffre < 1e-8 && "test CG");
   }
@@ -159,7 +197,7 @@ int main(int argc, char **argv){
     double diffre = 0, diffim = 0;
     D.apply(b, Db);
     D.dagger(a, Ddaggera);
-    onsites(ALL){
+    onsites(EVEN){
       diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
@@ -167,13 +205,14 @@ int main(int argc, char **argv){
     assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
     assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
   
-    // Now run CG on DdaggerDb and check the result is b
-    D.dagger(Db, DdaggerDb);
-    CG<field<Wilson_vector<VEC>>, dirac> inverse(D);
-    inverse.apply(DdaggerDb, a);
+    // Now run CG on Ddaggera. b=1/D a -> Db = a 
+    CG<dirac> inverse(D);
+    b[ALL] = 0;
+    inverse.apply(Ddaggera, b);
+    D.apply(b, Db);
 
-    onsites(ALL){
-      diffre += norm_squared(a[X]-b[X]);
+    onsites(EVEN){
+      diffre += norm_squared(a[X]-Db[X]);
     }
     assert(diffre*diffre < 1e-8 && "test CG");
   }

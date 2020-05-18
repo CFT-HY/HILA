@@ -17,7 +17,7 @@
 #include "../plumbing/fermion/staggered.h"
 #include "../plumbing/algorithms/hmc.h"
 #include "../plumbing/gauge_field.h"
-#include "../plumbing/fermion_field.h"
+#include "../plumbing/fermion/fermion_field.h"
 
 
 const int N=3;

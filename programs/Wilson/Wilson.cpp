@@ -3,6 +3,7 @@
  * interaction                               *
  *********************************************/
 
+#define DEBUG_CG
 
 #include "Wilson.h"
 
@@ -33,28 +34,9 @@ int main(int argc, char **argv){
   ga.set_unity();
 
   // Define a Dirac operator
-  dirac_wilson<VEC, SUN> D(kappa, gauge);
+  Dirac_Wilson_evenodd<VEC, SUN> D(kappa, gauge);
   fermion_action fa(D, gauge, momentum);
 
-
-
-  // Check conjugate of the Dirac operator
-  field<Wilson_vector<VEC>> a, b, Db, Ddaggera, DdaggerDb;
-  onsites(ALL){
-    a[X].gaussian();
-    b[X].gaussian();
-  }
-  double diffre = 0, diffim = 0;
-  D.apply(b, Db);
-  D.dagger(a, Ddaggera);
-  onsites(ALL){
-    diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
-    diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
-  }
-
-  assert(diffre*diffre < 1e-16 && "test Wilson dirac conjugate");
-  assert(diffim*diffim < 1e-16 && "test Wilson dirac conjugate");
-  
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level

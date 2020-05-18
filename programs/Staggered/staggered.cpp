@@ -3,7 +3,7 @@
  * interaction                               *
  *********************************************/
 
-
+//#define DEBUG_CG
 #include "staggered.h"
 
 
@@ -34,7 +34,7 @@ int main(int argc, char **argv){
   gauge_action ga(gauge, momentum, beta);
   
   // Define a Dirac operator
-  dirac_staggered<VEC, SUN> D(mass, gauge);
+  dirac_staggered_evenodd<VEC, SUN> D(mass, gauge);
   fermion_action fa(D, gauge, momentum);
 
   // A second fermion, for checking that addition works

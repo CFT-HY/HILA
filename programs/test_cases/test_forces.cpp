@@ -14,18 +14,18 @@
 
 
 template<typename dirac, typename matrix, typename vector>
-void check_forces(parity par){
+void check_forces(parity par, double mass_parameter){
   field<SU<N>> gauge[NDIM];
   field<SU<N>> momentum[NDIM];
   double eps = 1e-5;
 
-  dirac D(0.05, gauge);
+  dirac D(mass_parameter, gauge);
   fermion_action fa(D, gauge, momentum);
 
   for(int ng = 0; ng < matrix::generator_count(); ng++){
     foralldir(dir){
       onsites(ALL){
-        gauge[dir][X].random();
+        gauge[dir][X] = 1;
       }
     }
     fa.draw_gaussian_fields();
@@ -66,14 +66,61 @@ void check_forces(parity par){
 
     D.force(chi, psi, momentum, 1);
     matrix f = momentum[0].get_value_at(50);
-    double diff = (f*matrix::generator(ng)).trace().re - (s2-s1)/eps;
+    double f1 = (s2-s1)/eps;
+    double f2 = (f*matrix::generator(ng)).trace().re;
+    double diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
+
+
+    onsites(ALL){
+      psi[X].gaussian();
+      chi[X].gaussian();
+    }
+    
+    s1 = 0;
+    D.dagger(psi,tmp);
+    onsites(ALL){
+      s1 += chi[X].rdot(tmp[X]);
+    }
+
+    if(mynode()==0){
+      gauge[0].set_value_at(g12,50);
+    }
+    gauge[0].mark_changed(ALL);
+
+    s2 = 0;
+    D.dagger(psi,tmp);
+    onsites(ALL){
+      s2 += chi[X].rdot(tmp[X]);
+    }
+
+    if(mynode()==0)
+      gauge[0].set_value_at(g1, 50);
+    gauge[0].mark_changed(ALL);
+
+    D.force(chi, psi, momentum, -1);
+    f = momentum[0].get_value_at(50);
+    f1 = (s2-s1)/eps;
+    f2 = (f*matrix::generator(ng)).trace().re;
+    diff = (f2-f1)/(f1+f2);
+
+    if(mynode()==0) {
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps*10 && "Fermion deriv" );
+    }
+
 
 
     foralldir(dir){
@@ -93,12 +140,16 @@ void check_forces(parity par){
 
     fa.force_step(1.0);
     f = momentum[0].get_value_at(50);
-    diff = (f*matrix::generator(ng)).trace().re - (s2-s1)/eps;
+    f1 = (s2-s1)/eps;
+    f2 = (f*matrix::generator(ng)).trace().re;
+    diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      //hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion force" );
     }
   }
@@ -176,12 +227,14 @@ int main(int argc, char **argv){
   using VEC=SU_vector<N>;
   using SUN=SU<N>;
 
-  output0 << "Checking staggered forces:\n";
-  check_forces<dirac_staggered<VEC, SUN>, SUN, VEC>(ALL);
-  output0 << "Checking Wilson forces:\n";
-  check_forces<dirac_wilson<VEC, SUN>, SUN, VEC>(ALL);
-  output0 << "Checking evenodd preconditioned Wilson forces:\n";
-  check_forces<Dirac_Wilson_evenodd<VEC, SUN>, SUN, VEC>(EVEN);
+  //output0 << "Checking staggered forces:\n";
+  //check_forces<dirac_staggered<VEC, SUN>, SUN, VEC>(ALL, 1.0);
+  output0 << "Checking evenodd preconditioned staggered forces:\n";
+  check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 1.0);
+  //output0 << "Checking Wilson forces:\n";
+  //check_forces<dirac_wilson<VEC, SUN>, SUN, VEC>(ALL, 0.05);
+  //output0 << "Checking evenodd preconditioned Wilson forces:\n";
+  //check_forces<Dirac_Wilson_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 0.05);
 
 
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){
