@@ -144,9 +144,8 @@ int main(int argc, char **argv){
   // Check conjugate of the even-odd preconditioned wilson Dirac operator
   {
     using VEC = SU_vector<N>;
-    using dirac = dirac_wilson<VEC, SU<N>>;
-    dirac D_plain(0.1, U);
-    precondition_evenodd D(D_plain);
+    using dirac = Dirac_Wilson_evenodd<VEC, SU<N>>;
+    dirac D(0.1, U);
     field<Wilson_vector<VEC>> a, b, Db, Ddaggera, DdaggerDb;
     field<Wilson_vector<VEC>> sol;
 
@@ -170,7 +169,7 @@ int main(int argc, char **argv){
   
     // Now run CG on DdaggerDb and check the result is b
     D.dagger(Db, DdaggerDb);
-    CG<field<Wilson_vector<VEC>>, precondition_evenodd<dirac>> inverse(D);
+    CG<field<Wilson_vector<VEC>>, dirac> inverse(D);
     inverse.apply(DdaggerDb, a);
 
     onsites(ALL){

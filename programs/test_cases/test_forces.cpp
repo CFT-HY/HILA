@@ -10,6 +10,106 @@
 
 #define N 3
 
+
+
+
+template<typename dirac, typename matrix, typename vector>
+void check_forces(parity par){
+  field<SU<N>> gauge[NDIM];
+  field<SU<N>> momentum[NDIM];
+  double eps = 1e-5;
+
+  dirac D(0.05, gauge);
+  fermion_action fa(D, gauge, momentum);
+
+  for(int ng = 0; ng < matrix::generator_count(); ng++){
+    foralldir(dir){
+      onsites(ALL){
+        gauge[dir][X].random();
+      }
+    }
+    fa.draw_gaussian_fields();
+    foralldir(dir){
+      momentum[dir][ALL] = 0;
+    }
+
+    matrix g1 = gauge[0].get_value_at(50);
+    matrix h = matrix(1) + eps * matrix::generator(ng);
+    matrix g12 = h*g1;
+
+    field<typename dirac::vector_type> psi, chi, tmp, tmp2;
+    onsites(ALL){
+      psi[X].gaussian();
+      chi[X].gaussian();
+    }
+    
+    double s1 = 0;
+    D.apply(psi,tmp);
+    onsites(ALL){
+      s1 += chi[X].rdot(tmp[X]);
+    }
+
+    if(mynode()==0){
+      gauge[0].set_value_at(g12,50);
+    }
+    gauge[0].mark_changed(ALL);
+
+    double s2 = 0;
+    D.apply(psi,tmp);
+    onsites(ALL){
+      s2 += chi[X].rdot(tmp[X]);
+    }
+
+    if(mynode()==0)
+      gauge[0].set_value_at(g1, 50);
+    gauge[0].mark_changed(ALL);
+
+    D.force(chi, psi, momentum, 1);
+    matrix f = momentum[0].get_value_at(50);
+    double diff = (f*matrix::generator(ng)).trace().re - (s2-s1)/eps;
+
+    if(mynode()==0) {
+      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps*10 && "Fermion deriv" );
+    }
+
+
+    foralldir(dir){
+      momentum[dir][ALL] = 0;
+    }
+
+    if(mynode()==0){
+      gauge[0].set_value_at(g12,50);
+    }
+    gauge[0].mark_changed(ALL);
+    s2 = fa.action();
+
+    if(mynode()==0)
+      gauge[0].set_value_at(g1, 50);
+    gauge[0].mark_changed(ALL);
+    s1 = fa.action();
+
+    fa.force_step(1.0);
+    f = momentum[0].get_value_at(50);
+    diff = (f*matrix::generator(ng)).trace().re - (s2-s1)/eps;
+
+    if(mynode()==0) {
+      //hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
+      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps*10 && "Fermion force" );
+    }
+  }
+}
+
+
+
+
+
+
+
 int main(int argc, char **argv){
 
   /* Use a smaller lattice size since
@@ -21,7 +121,7 @@ int main(int argc, char **argv){
   #elif NDIM==3
   lattice->setup( 16, 8, 8, argc, argv );
   #elif NDIM==4
-  lattice->setup( 8, 8, 8, 8, argc, argv );
+  lattice->setup( 16, 8, 8, 4, argc, argv );
   #endif
   seed_random(2);
 
@@ -37,7 +137,6 @@ int main(int argc, char **argv){
       gauge[dir][X].random();
     }
   }
-
   
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){
     foralldir(dir){
@@ -74,335 +173,15 @@ int main(int argc, char **argv){
     }
   }
 
-#if 0
-  for(int ng = 0; ng < SU<N>::generator_count(); ng++){
-    dirac_staggered<SU_vector<N>, SU<N>> D(1.0, gauge);
-    fermion_action fa(D, gauge, momentum);
-    fa.draw_gaussian_fields();
-    foralldir(dir){
-      onsites(ALL){
-        gauge[dir][X].random();
-        momentum[dir][X] = 0;
-      }
-    }
+  using VEC=SU_vector<N>;
+  using SUN=SU<N>;
 
-    SU<N> g1 = gauge[0].get_value_at(50);
-    SU<N> h = SU<N>(1) + eps * SU<N>::generator(ng);
-    SU<N> g12 = h*g1;
-
-    static field<SU_vector<N>> psi, chi, tmp, tmp2;
-    onsites(ALL){
-      psi[X].gaussian();
-      chi[X].gaussian();
-    }
-    
-    double s1 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0){
-      gauge[0].set_value_at(g12,50);
-    }
-    gauge[0].mark_changed(ALL);
-
-    double s2 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g1, 50);
-    gauge[0].mark_changed(ALL);
-
-    D.force(chi, psi, momentum);
-    SU<N> f = momentum[0].get_value_at(50);
-    double diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
-
-    if(mynode()==0) {
-      //hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Staggered deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Staggered fermion deriv" );
-    }
-
-
-    foralldir(dir){
-      momentum[dir][ALL] = 0;
-    }
-
-    if(mynode()==0){
-      gauge[0].set_value_at(g12,50);
-    }
-    gauge[0].mark_changed(ALL);
-    s2 = fa.action();
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g1, 50);
-    gauge[0].mark_changed(ALL);
-    s1 = fa.action();
-
-    fa.force_step(1.0);
-    f = momentum[0].get_value_at(50);
-    diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
-
-    if(mynode()==0) {
-      //hila::output << "Calculated force " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      //hila::output << "Staggered force " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Staggered force" );
-    }
-  }
-#endif
-
-#if 0
-  for(int ng = 0; ng < SU<N>::generator_count(); ng++){
-    using VEC=SU_vector<N>;
-    using SUN=SU<N>;
-    dirac_wilson<VEC,SUN> D(0.05, gauge);
-    fermion_action fa(D, gauge, momentum);
-    fa.draw_gaussian_fields();
-    foralldir(dir){
-      onsites(ALL){
-        gauge[dir][X].random();
-        momentum[dir][X] = 0;
-      }
-    }
-
-    SU<N> g1 = gauge[0].get_value_at(50);
-    SU<N> h = SU<N>(1) + eps * SU<N>::generator(ng);
-    SU<N> g12 = h*g1;
-
-    static field<Wilson_vector<VEC>> psi, chi, tmp, tmp2;
-    psi[ALL]=0; chi[ALL]=0;
-    onsites(ALL){
-      psi[X].gaussian(); chi[X].gaussian();
-    }
-
-    double s1 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0){
-      gauge[0].set_value_at(g12,50);
-    }
-    gauge[0].mark_changed(ALL);
-    double s2 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g1, 50);
-    gauge[0].mark_changed(ALL);
-
-    D.force(chi, psi, momentum, 1);
-    SU<N> f = momentum[0].get_value_at(50);
-    double diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
-
-    if(mynode()==0) {
-      hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Wilson fermion deriv" );
-    }
-
-    foralldir(dir){
-      momentum[dir][ALL] = 0;
-    }
-    psi[ALL]=0; chi[ALL]=0;
-    onsites(ALL){
-      psi[X].gaussian(); chi[X].gaussian();
-    }
-
-    s1 = 0;
-    D.dagger(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0){
-      gauge[0].set_value_at(g12,50);
-    }
-    gauge[0].mark_changed(ALL);
-    s2 = 0;
-    D.dagger(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g1, 50);
-    gauge[0].mark_changed(ALL);
-
-    D.force(chi, psi, momentum, -1);
-    f = momentum[0].get_value_at(50);
-    diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
-
-    if(mynode()==0) {
-      hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Wilson dagger deriv" );
-    }
-
-
-    foralldir(dir){
-      momentum[dir][ALL] = 0;
-    }
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g12,50);
-    gauge[0].mark_changed(ALL);
-    s2 = fa.action();
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g1, 50);
-    gauge[0].mark_changed(ALL);
-    s1 = fa.action();
-
-    fa.force_step(1.0);
-    f = momentum[0].get_value_at(50);
-    diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
-
-    if(mynode()==0) {
-      //hila::output << "Calculated force " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      //hila::output << "Wilson force " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Wilson fermion force" );
-    }
-  }
-#endif
-
-
-  for(int ng = 0; ng < SU<N>::generator_count(); ng++){
-    using VEC=SU_vector<N>;
-    using SUN=SU<N>;
-    dirac_wilson<VEC,SUN> D_plain(0.05, gauge);
-    precondition_evenodd D(D_plain);
-    fermion_action fa(D, gauge, momentum);
-    fa.draw_gaussian_fields();
-    foralldir(dir){
-      onsites(ALL){
-        gauge[dir][X].random();
-        momentum[dir][X] = 0;
-      }
-    }
-
-    SU<N> g1 = gauge[0].get_value_at(800);
-    SU<N> h = SU<N>(1) + eps * SU<N>::generator(ng);
-    SU<N> g12 = h*g1;
-
-    static field<Wilson_vector<VEC>> psi, chi, tmp, tmp2;
-    psi[ALL]=0; chi[ALL]=0;
-    onsites(EVEN){
-      psi[X].gaussian();
-      chi[X].gaussian();
-    }
-    
-    double s1 = 0;
-    D.apply(psi,tmp);
-    onsites(EVEN){
-      s1 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0){
-      gauge[0].set_value_at(g12,800);
-    }
-    gauge[0].mark_changed(ALL);
-    double s2 = 0;
-    D.apply(psi,tmp);
-    onsites(EVEN){
-      s2 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g1, 800);
-    gauge[0].mark_changed(ALL);
-
-    D.force(chi, psi, momentum, 1);
-    SU<N> f = momentum[0].get_value_at(800);
-    double diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
-
-    if(mynode()==0) {
-      hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Wilson fermion deriv" );
-    }
-
-    foralldir(dir){
-      momentum[dir][ALL] = 0;
-    }
-    psi[ALL]=0; chi[ALL]=0;
-    onsites(ALL){
-      psi[X].gaussian(); chi[X].gaussian();
-    }
-
-    s1 = 0;
-    D.dagger(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0){
-      gauge[0].set_value_at(g12,800);
-    }
-    gauge[0].mark_changed(ALL);
-    s2 = 0;
-    D.dagger(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g1, 800);
-    gauge[0].mark_changed(ALL);
-
-    D.force(chi, psi, momentum, -1);
-    f = momentum[0].get_value_at(800);
-    diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
-
-    if(mynode()==0) {
-      hila::output << "Calculated deriv " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Wilson deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Wilson dagger deriv" );
-    }
-
-
-    foralldir(dir){
-      momentum[dir][ALL] = 0;
-    }
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g12,800);
-    gauge[0].mark_changed(ALL);
-    s2 = fa.action();
-
-    if(mynode()==0)
-      gauge[0].set_value_at(g1, 800);
-    gauge[0].mark_changed(ALL);
-    s1 = fa.action();
-
-    fa.force_step(1.0);
-    f = momentum[0].get_value_at(800);
-    diff = (f*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
-
-    if(mynode()==0) {
-      //hila::output << "Calculated force " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      //hila::output << "Wilson force " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Wilson fermion force" );
-    }
-  }
-
-
+  output0 << "Checking staggered forces:\n";
+  check_forces<dirac_staggered<VEC, SUN>, SUN, VEC>(ALL);
+  output0 << "Checking Wilson forces:\n";
+  check_forces<dirac_wilson<VEC, SUN>, SUN, VEC>(ALL);
+  output0 << "Checking evenodd preconditioned Wilson forces:\n";
+  check_forces<Dirac_Wilson_evenodd<VEC, SUN>, SUN, VEC>(EVEN);
 
 
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){

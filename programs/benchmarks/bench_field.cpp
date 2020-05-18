@@ -304,8 +304,10 @@ int main(int argc, char **argv){
 
     // Time staggered Dirac operator
     timing = 0;
-    //printf("node %d, dirac_stagggered 0\n", mynode());
-    dirac_staggered<SU_vector<N, double>, SU<N, double>> D_staggered(0.1, U);
+
+    using sunvec = SU_vector<N, double>;
+    using sunmat = SU<N, double>;
+    dirac_staggered<sunvec, sunmat> D_staggered(0.1, U);
     D_staggered.apply(sunvec1, sunvec2);
 
     // synchronize();
@@ -384,7 +386,7 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator
     timing = 0;
     //printf("node %d, dirac_stagggered 0\n", mynode());
-    dirac_wilson<SU_vector<N, double>, SU<N, double>> D_wilson(0.1, U);
+    Dirac_Wilson_evenodd<sunvec, sunmat> D_wilson(0.1, U);
     D_wilson.apply(wvec1, wvec2);
 
     // synchronize();
