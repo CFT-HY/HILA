@@ -22,7 +22,7 @@ void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
 template<typename VECTOR, typename DIRAC_OP>
 double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
   field<VECTOR> psi, tmp;
-  CG<field<VECTOR>, DIRAC_OP> inverse(D);
+  CG<DIRAC_OP> inverse(D);
   double action = 0;
 
   psi=0;
@@ -40,7 +40,7 @@ template<typename SUN, typename VECTOR, typename DIRAC_OP>
 void fermion_force(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], DIRAC_OP &D, double eps){
   field<VECTOR> psi, Mpsi;
   field<SUN> force[NDIM], force2[NDIM];
-  CG<field<VECTOR>, DIRAC_OP> inverse(D);
+  CG<DIRAC_OP> inverse(D);
   
   psi=0;
   inverse.apply(chi, psi);
