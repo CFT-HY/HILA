@@ -36,6 +36,8 @@ int main(int argc, char **argv){
   dirac_wilson<VEC, SUN> D(kappa, gauge);
   fermion_action fa(D, gauge, momentum);
 
+
+
   // Check conjugate of the Dirac operator
   field<Wilson_vector<VEC>> a, b, Db, Ddaggera, DdaggerDb;
   onsites(ALL){
@@ -53,6 +55,21 @@ int main(int argc, char **argv){
   assert(diffre*diffre < 1e-16 && "test Wilson dirac conjugate");
   assert(diffim*diffim < 1e-16 && "test Wilson dirac conjugate");
   
+
+  // Build two integrator levels. Gauge is on the lowest level and
+  // the fermions are on higher level
+  integrator integrator_level_1(ga, ma);
+  integrator integrator_level_2(fa, integrator_level_1);
+  
+  // Initialize the gauge field
+  ga.set_unity();
+
+  // Run HMC using the integrator
+  for(int step = 0; step < 5; step ++){
+    update_hmc(integrator_level_2, hmc_steps, traj_length);
+    double plaq = plaquette(ga.gauge);
+    output0 << "Plaq: " << plaq << "\n";
+  }
 
   finishrun();
 
