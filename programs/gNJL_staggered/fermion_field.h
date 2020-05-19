@@ -34,21 +34,27 @@ void fermion_force_gNJL(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], field<
 }
 
 
-template<typename vector, typename matrix>
+template<typename dirac, typename matrix>
 class gNJL_fermion_action{
   public:
     field<matrix> (&momentum)[NDIM];
     field<double> &sigma_momentum, &pi_momentum;
-    dirac_staggered_gNJL<vector, matrix> &D;
-    field<vector> chi;
+    dirac &D;
+    field<typename dirac::vector_type> chi;
 
 
-    gNJL_fermion_action(dirac_staggered_gNJL<vector, matrix> &d, field<matrix> (&m)[NDIM], field<double> &sm, field<double> &pm)
-    : D(d), momentum(m), sigma_momentum(sm), pi_momentum(pm){ chi = 0.0; }
+    gNJL_fermion_action(dirac &d, field<matrix> (&m)[NDIM], field<double> &sm, field<double> &pm)
+    : D(d), momentum(m), sigma_momentum(sm), pi_momentum(pm){ 
+      chi = 0.0;
+      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+    }
 
     gNJL_fermion_action(gNJL_fermion_action &fa)
     : momentum(fa.momentum), D(fa.D), sigma_momentum(fa.sigma_momentum), pi_momentum(fa.pi_momentum)  {
       chi = fa.chi;
+      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
     }
 
     // Return the value of the action with the current

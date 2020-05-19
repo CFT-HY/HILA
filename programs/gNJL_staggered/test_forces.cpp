@@ -35,10 +35,10 @@ int main(int argc, char **argv){
 
   // Initialize
   sigma[ALL] = 0.1;
-  pi[ALL] = 0;
+  pi[ALL] = 0.1;
 
   // Define a Dirac operator (2 flavors)
-  dirac_staggered_gNJL<VEC,SUN> D(1.5, gauge, sigma, pi);
+  dirac_staggered_gNJL_evenodd<VEC,SUN> D(1.5, gauge, sigma, pi);
   gNJL_fermion_action fa(D, momentum, sigma_mom, pi_mom);
 
   for(int ng = 0; ng < SUN::generator_count(); ng++){
@@ -50,76 +50,69 @@ int main(int argc, char **argv){
     pi_mom[ALL] = 0;
 
     double eps = 1e-5;
-    double s = sigma.get_value_at(50);
+    double s = sigma.get_value_at(850);
     static field<SU_vector<N>> psi, chi, tmp, tmp2;
     onsites(ALL){
       psi[X].gaussian(); chi[X].gaussian();
     }
 
-    double s1 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
+    double s1;
+    double s2;
 
     if(mynode()==0){
-      sigma.set_value_at(s+eps, 50);
+      sigma.set_value_at(s+eps, 850);
     }
     sigma.mark_changed(ALL);
-
-    double s2 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
+    D.apply(psi,tmp2);
 
     if(mynode()==0){
-      sigma.set_value_at(s, 50);
+      sigma.set_value_at(s, 850);
     }
     sigma.mark_changed(ALL);
+    D.apply(psi,tmp);
+
+    double ds = 0;
+    onsites(ALL){
+      ds += chi[X].rdot(tmp2[X]) - chi[X].rdot(tmp[X]);
+    }
 
     D.force(chi, psi, momentum, sigma_mom, pi_mom, 1);
-    double f = sigma_mom.get_value_at(50);
-    double diff = f - (s2-s1)/eps;
+    double f = sigma_mom.get_value_at(850);
+    double diff = f - (ds)/eps;
 
     if(mynode()==0) {
       hila::output << "Calculated deriv " << f << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Actual deriv " << (ds)/eps << "\n";
       hila::output << "Sigma deriv diff " << diff << "\n";
       assert( diff*diff < 10*eps && "Sigma deriv" );
     }
 
 
 
-    double p = pi.get_value_at(50);
-    s1 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
-
+    double p = pi.get_value_at(850);
     if(mynode()==0){
-      pi.set_value_at(p+eps, 50);
+      pi.set_value_at(p+eps, 850);
     }
     pi.mark_changed(ALL);
-
-    s2 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
+    D.apply(psi,tmp2);
 
     if(mynode()==0){
-      pi.set_value_at(p, 50);
+      pi.set_value_at(p, 850);
     }
     pi.mark_changed(ALL);
+    D.apply(psi,tmp);
 
-    f = pi_mom.get_value_at(50);
-    diff = f - (s2-s1)/eps;
+    ds = 0;
+    onsites(ALL){
+      ds += chi[X].rdot(tmp2[X]) - chi[X].rdot(tmp[X]);
+    }
+
+    f = pi_mom.get_value_at(850);
+    diff = f - ds/eps;
 
     if(mynode()==0) {
       hila::output << "Calculated deriv " << f << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Actual deriv " << ds/eps << "\n";
       hila::output << "Pi deriv diff " << diff << "\n";
       assert( diff*diff < 10*eps && "Pi deriv" );
     }
@@ -128,37 +121,30 @@ int main(int argc, char **argv){
     SUN h = SUN(1) + eps * SUN::generator(ng);
     SUN g12 = h*g1;
 
-    s1 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
-
     if(mynode()==0){
       gauge[0].set_value_at(g12,50);
     }
     gauge[0].mark_changed(ALL);
-
-    s2 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
+    D.apply(psi,tmp2);
 
     if(mynode()==0)
       gauge[0].set_value_at(g1, 50);
     gauge[0].mark_changed(ALL);
+    D.apply(psi,tmp);
+
+    ds = 0;
+    onsites(ALL){
+      ds += chi[X].rdot(tmp2[X]) - chi[X].rdot(tmp[X]);
+    }
 
     SUN m = momentum[0].get_value_at(50);
-    double f1 = (s2-s1)/eps;
+    double f1 = ds/eps;
     double f2 = (m*SUN::generator(ng)).trace().re;
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
       hila::output << "Calculated deriv " << (m*SUN::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Actual deriv " << f1 << "\n";
       hila::output << "Gauge deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Gauge deriv" );
     }
@@ -169,98 +155,84 @@ int main(int argc, char **argv){
     foralldir(dir){
       momentum[dir][ALL] = 0;
     }
-    
-    s1 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
 
     if(mynode()==0){
       sigma.set_value_at(s+eps, 50);
     }
     sigma.mark_changed(ALL);
-
-    s2 = 0;
-    D.apply(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
+    D.apply(psi,tmp2);
 
     if(mynode()==0){
       sigma.set_value_at(s, 50);
     }
     sigma.mark_changed(ALL);
+    D.apply(psi,tmp);
+
+    ds = 0;
+    onsites(ALL){
+      ds += chi[X].rdot(tmp2[X]) - chi[X].rdot(tmp[X]);
+    }
 
     D.force(chi, psi, momentum, sigma_mom, pi_mom, -1);
     f = sigma_mom.get_value_at(50);
-    diff = f - (s2-s1)/eps;
+    diff = f - ds/eps;
 
     if(mynode()==0) {
       hila::output << "Calculated deriv " << f << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Actual deriv " << ds/eps << "\n";
       hila::output << "Sigma dagger diff " << diff << "\n";
       assert( diff*diff < 10*eps && "Sigma dagger deriv" );
     }
 
 
     p = pi.get_value_at(50);
-    s1 = 0;
-    D.dagger(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
 
     if(mynode()==0){
       pi.set_value_at(p+eps, 50);
     }
     pi.mark_changed(ALL);
-  
-    s2 = 0;
-    D.dagger(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
+    D.dagger(psi,tmp2);
 
     if(mynode()==0){
       pi.set_value_at(p, 50);
     }
     pi.mark_changed(ALL);
+    D.dagger(psi,tmp);
+
+    ds = 0;
+    onsites(ALL){
+      ds += chi[X].rdot(tmp2[X]) - chi[X].rdot(tmp[X]);
+    }
 
     f = pi_mom.get_value_at(50);
-    diff = f - (s2-s1)/eps;
+    diff = f - ds/eps;
 
     if(mynode()==0) {
       hila::output << "Calculated deriv " << f << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Actual deriv " << ds/eps << "\n";
       hila::output << "Pi dagger diff " << diff << "\n";
       assert( diff*diff < 10*eps && "Pi dagger deriv" );
     }
 
 
-    s1 = 0;
-    D.dagger(psi,tmp);
-    onsites(ALL){
-      s1 += chi[X].rdot(tmp[X]);
-    }
-
     if(mynode()==0){
       gauge[0].set_value_at(g12,50);
     }
     gauge[0].mark_changed(ALL);
-
-    s2 = 0;
-    D.dagger(psi,tmp);
-    onsites(ALL){
-      s2 += chi[X].rdot(tmp[X]);
-    }
+    D.dagger(psi,tmp2);
 
     if(mynode()==0)
       gauge[0].set_value_at(g1, 50);
     gauge[0].mark_changed(ALL);
+    D.dagger(psi,tmp);
+
+    ds = 0;
+    onsites(ALL){
+      ds += chi[X].rdot(tmp2[X]) - chi[X].rdot(tmp[X]);
+    }
 
     m = momentum[0].get_value_at(50);
-    f1 = (s2-s1)/eps;
+    f1 = ds/eps;
     f2 = (m*SUN::generator(ng)).trace().re;
     diff = (f2-f1)/(f1+f2);
 
@@ -268,7 +240,7 @@ int main(int argc, char **argv){
       hila::output << "Action 1 " << s1 << "\n";
       hila::output << "Action 2 " << s2 << "\n";
       hila::output << "Calculated deriv " << (m*SUN::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Actual deriv " << ds/eps << "\n";
       hila::output << "Gauge dagger deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Gauge dagger deriv" );
     }
@@ -318,7 +290,7 @@ int main(int argc, char **argv){
     s1 = aa.action();
 
     f = pi_mom.get_value_at(50);
-    diff = f - (s2-s1)/eps;
+    diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
       hila::output << "Calculated force " << f << "\n";
@@ -353,7 +325,7 @@ int main(int argc, char **argv){
 
     fa.force_step(1.0);
     f = sigma_mom.get_value_at(50);
-    diff = f - (s2-s1)/eps;
+    diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
       hila::output << "Calculated force " << f << "\n";
@@ -377,7 +349,7 @@ int main(int argc, char **argv){
     s1 = fa.action();
 
     f = pi_mom.get_value_at(50);
-    diff = f - (s2-s1)/eps;
+    diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
 

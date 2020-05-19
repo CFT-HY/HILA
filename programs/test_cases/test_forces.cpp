@@ -15,8 +15,8 @@
 
 template<typename dirac, typename matrix, typename vector>
 void check_forces(parity par, double mass_parameter){
-  field<SU<N>> gauge[NDIM];
-  field<SU<N>> momentum[NDIM];
+  field<matrix> gauge[NDIM];
+  field<matrix> momentum[NDIM];
   double eps = 1e-5;
 
   dirac D(mass_parameter, gauge);

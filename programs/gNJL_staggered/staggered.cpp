@@ -74,7 +74,7 @@ int main(int argc, char **argv){
   pi[ALL] = 0;
 
   // Define a Dirac operator (2 flavors)
-  dirac_staggered_gNJL<VEC, SUN> D(mass, gauge, sigma, pi);
+  dirac_staggered_gNJL_evenodd<VEC, SUN> D(mass, gauge, sigma, pi);
   gNJL_fermion_action fa(D, momentum, sigma_mom, pi_mom);
 
   // Build two integrator levels. Gauge is on the lowest level and

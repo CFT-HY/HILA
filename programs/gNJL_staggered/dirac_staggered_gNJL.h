@@ -1,30 +1,32 @@
 
 
 
-template<typename vector, typename matrix>
-void dirac_staggered_gNJL_calc_force(
-  const field<matrix> *gauge,
-  const field<vector> &chi,
+
+
+template<typename vector>
+void dirac_staggered_diag_gNJL_force(
   const field<vector> &psi,
-  field<matrix> (&gforce)[NDIM],
+  const field<vector> &chi,
   field<double> &sforce,
   field<double> &pforce,
-  field<double> (&staggered_eta)[NDIM],
   int sign, parity par )
 {
-  dirac_staggered_calc_force(gauge, chi, psi, gforce, staggered_eta, sign, par);
-  sforce[ALL] = 0; pforce[ALL] = 0; 
+  sforce[ALL] = 0;
+  pforce[ALL] = 0;
+  if(par!=ODD)
   onsites(EVEN){
-    cmplx<double> dot = psi[X].dot(chi[X]);
+    cmplx<double> dot = chi[X].dot(psi[X]);
     sforce[X] = sforce[X] + dot.re;
     pforce[X] = pforce[X] + sign * dot.im;
   }
+  if(par!=EVEN)
   onsites(ODD){
-    cmplx<double> dot = psi[X].dot(chi[X]);
+    cmplx<double> dot = chi[X].dot(psi[X]);
     sforce[X] = sforce[X] + dot.re;
     pforce[X] = pforce[X] - sign * dot.im;
   }
 }
+
 
 
 // Apply the diagonally
@@ -37,33 +39,31 @@ void dirac_staggered_diag_gNJL(
   field<double> &pi,
   parity par, int sign)
 {
-  v_out[par]  = v_out[X] + (mass+sigma[X])*v_in[X];
   if(par!=ODD)
-    v_out[EVEN] = v_out[X] + cmplx(0,sign)*pi[X]*v_in[X];
+    v_out[EVEN] = v_out[X] + cmplx(mass+sigma[X], sign*pi[X])*v_in[X];
   if(par!=EVEN)
-    v_out[ODD]  = v_out[X] - cmplx(0,sign)*pi[X]*v_in[X];
+    v_out[ODD]  = v_out[X] + cmplx(mass+sigma[X],-sign*pi[X])*v_in[X];
 }
+
 
 // Apply the inverse of the diagonal
 template<typename vector>
 void dirac_staggered_diag_gNJL_inverse(
   const double mass,
   field<vector> &v_out,
-  field<double> &sigma,
-  field<double> &pi,
+  const field<double> &sigma,
+  const field<double> &pi,
   parity par, int sign)
 {
   if(par!=ODD)
     onsites(EVEN){
       element<double> sqr = (sigma[X]+mass)*(sigma[X]+mass) + pi[X]*pi[X];
-      v_out[X] = ((sigma[X]+mass)/sqr) * v_out[X];
-      v_out[X] = ((cmplx(0,-sign)*pi)/sqr) * v_out[X];
+      v_out[X] = cmplx(sigma[X]+mass,-sign*pi[X])/sqr * v_out[X];
   }
   if(par!=EVEN)
     onsites(ODD){
       element<double> sqr = (sigma[X]+mass)*(sigma[X]+mass) + pi[X]*pi[X];
-      v_out[X] = ((sigma[X]+mass)/sqr) * v_out[X];
-      v_out[X] = ((cmplx(0,sign)*pi)/sqr) * v_out[X];
+      v_out[X] = cmplx(sigma[X]+mass, sign*pi[X])/sqr * v_out[X];
   }
 }
 
@@ -108,7 +108,8 @@ class dirac_staggered_gNJL {
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
     void force( const field<vector> & chi, const field<vector> & psi, field<matrix> (&gforce)[NDIM], field<double> &sforce, field<double> &pforce, int sign){
-      dirac_staggered_gNJL_calc_force(gauge, chi, psi, gforce, sforce, pforce, staggered_eta, sign, ALL);
+      dirac_staggered_calc_force(gauge, chi, psi, gforce, staggered_eta, sign, ALL);
+      dirac_staggered_diag_gNJL_force(chi, psi, sforce, pforce, sign, ALL);
     }
 };
 
@@ -119,9 +120,8 @@ class dirac_staggered_gNJL_evenodd {
   private:
     double mass;
     field<double> staggered_eta[NDIM];
-    field<double> &sigma, &pi;
 
-    // Note array of fields, changes with the field
+    field<double> &sigma, &pi;
     field<matrix> (&gauge)[NDIM];
   public:
 
@@ -162,24 +162,31 @@ class dirac_staggered_gNJL_evenodd {
     void force( const field<vector> & psi, const field<vector> & chi, field<matrix> (&gforce)[NDIM], field<double> &sforce, field<double> &pforce, int sign){
       field<matrix_type> gforce2[NDIM];
       field<double> sforce2, pforce2;
-      field<vector_type> tmp;
+      field<vector_type> tmp, tmp2;
       tmp.copy_boundary_condition(chi);
+      tmp2.copy_boundary_condition(chi);
+      dirac_staggered_diag_gNJL_force(psi, chi, sforce, pforce, sign, EVEN);
 
       tmp[ALL] = 0;
       dirac_staggered_hop(gauge, chi, tmp, staggered_eta, ODD, -sign);
-      dirac_staggered_diag_gNJL_inverse(mass, tmp, sigma, pi, ODD, -sign);
-      dirac_staggered_gNJL_calc_force(gauge, chi, psi, gforce, sforce, pforce, staggered_eta, sign, ALL);
-
-      tmp[ALL] = 0;
-      dirac_staggered_hop(gauge, psi, tmp, staggered_eta, ODD, sign);
       dirac_staggered_diag_gNJL_inverse(mass, tmp, sigma, pi, ODD, sign);
-      dirac_staggered_gNJL_calc_force(gauge, chi, psi, gforce, sforce, pforce, staggered_eta, sign, ALL);
+      dirac_staggered_calc_force(gauge, tmp, psi, gforce, staggered_eta, sign, EVEN);
+
+      tmp2[ALL] = 0;
+      dirac_staggered_hop(gauge, psi, tmp2, staggered_eta, ODD, sign);
+      dirac_staggered_diag_gNJL_inverse(mass, tmp2, sigma, pi, ODD, -sign);
+      dirac_staggered_calc_force(gauge, chi, tmp2, gforce2, staggered_eta, sign, ODD);
+
+      dirac_staggered_diag_gNJL_force(tmp2, tmp, sforce2, pforce2, sign, ODD);
 
       foralldir(dir){
         gforce[dir][ALL] = gforce[dir][X] + gforce2[dir][X];
-        sforce[ALL] = sforce[X] + sforce2[X];
-        pforce[ALL] = pforce[X] + pforce2[X];
       }
+      // Note negative sign since the second part is the derivative
+      // of an inverse
+      sforce[ALL] = sforce[X] - sforce2[X];
+      pforce[ALL] = pforce[X] - pforce2[X];
+
     }
 };
 

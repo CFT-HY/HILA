@@ -75,7 +75,7 @@ void GG_invert(vector &in, vector &out, op &M,
     p[par] = beta*p[X] + r[X];
     rr = rrnew;
   }
-
+  
   output0 << "WARNING: Maximum iterations exceeded in conjugate gradient\n";
 
 }
