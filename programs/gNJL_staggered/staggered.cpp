@@ -35,7 +35,6 @@ void measure(field<SU<N>> (&gauge)[NDIM], field<double> &sigma, field<double> &p
 
 
 
-
 int main(int argc, char **argv){
 
   // Read parameters
@@ -71,11 +70,11 @@ int main(int argc, char **argv){
   auxiliary_action aa(sigma, pi, sigma_mom, pi_mom, gamma);
 
   // Initialize
-  sigma[ALL] = 0;
+  sigma[ALL] = 0.05;
   pi[ALL] = 0;
 
   // Define a Dirac operator (2 flavors)
-  dirac_staggered_gNJL<N> D(mass, gauge, sigma, pi);
+  dirac_staggered_gNJL<VEC, SUN> D(mass, gauge, sigma, pi);
   gNJL_fermion_action fa(D, momentum, sigma_mom, pi_mom);
 
   // Build two integrator levels. Gauge is on the lowest level and

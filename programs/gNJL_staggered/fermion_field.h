@@ -3,44 +3,47 @@
 template<typename SUN, typename VECTOR, typename DIRAC_OP>
 void fermion_force_gNJL(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], field<double> &sigma_momentum, field<double> &pi_momentum, DIRAC_OP &D, double eps){
   field<VECTOR> psi, Mpsi;
+  psi.copy_boundary_condition(chi);
+  Mpsi.copy_boundary_condition(chi);
   field<SUN> force[NDIM], force2[NDIM];
-  field<double> smom, pmom, pmom2;
-  CG<field<VECTOR>, DIRAC_OP> inverse(D);
+  field<double> smom, smom2, pmom, pmom2;
+  CG<DIRAC_OP> inverse(D);
   
   psi=0;
   inverse.apply(chi, psi);
   
   D.apply(psi, Mpsi);
 
-  D.force(Mpsi, psi, force, smom, pmom);
-  D.force(psi, Mpsi, force2, smom, pmom2);
+  D.force(Mpsi, psi, force, smom, pmom, 1);
+  D.force(psi, Mpsi, force2, smom2, pmom2, -1);
 
   foralldir(dir){
     onsites(ALL){
-      force[dir][X] = force[dir][X] - force2[dir][X];
+      force[dir][X] = force[dir][X] + force2[dir][X];
       project_antihermitean(force[dir][X]);
       momentum[dir][X] = momentum[dir][X] - eps*force[dir][X];
     }
   }
 
   onsites(ALL){
-    pmom[X] = pmom[X] - pmom2[X];
+    smom[X] = smom[X] + smom2[X];
+    pmom[X] = pmom[X] + pmom2[X];
     sigma_momentum[X] = sigma_momentum[X] - eps * smom[X];
     pi_momentum[X] = pi_momentum[X] - eps * pmom[X];
   }
 }
 
 
-template<int N>
+template<typename vector, typename matrix>
 class gNJL_fermion_action{
   public:
-    field<SU<N>> (&momentum)[NDIM];
+    field<matrix> (&momentum)[NDIM];
     field<double> &sigma_momentum, &pi_momentum;
-    dirac_staggered_gNJL<N> &D;
-    field<SU_vector<N>> chi;
+    dirac_staggered_gNJL<vector, matrix> &D;
+    field<vector> chi;
 
 
-    gNJL_fermion_action(dirac_staggered_gNJL<N> &d, field<SU<N>> (&m)[NDIM], field<double> &sm, field<double> &pm)
+    gNJL_fermion_action(dirac_staggered_gNJL<vector, matrix> &d, field<matrix> (&m)[NDIM], field<double> &sm, field<double> &pm)
     : D(d), momentum(m), sigma_momentum(sm), pi_momentum(pm){ chi = 0.0; }
 
     gNJL_fermion_action(gNJL_fermion_action &fa)

@@ -11,10 +11,10 @@
 // Include the lattice field definition
 #include "../plumbing/defs.h"
 #include "../plumbing/inputs.h"
-#include "../datatypes/sun_vector.h"
+#include "../datatypes/vector.h"
 #include "../datatypes/sun.h"
 #include "../plumbing/field.h"
-#include "../plumbing/dirac.h"
+#include "../plumbing/fermion/staggered.h"
 
 
 #include "dirac_staggered_gNJL.h"
@@ -22,7 +22,7 @@
 
 #include "../plumbing/algorithms/hmc.h"
 #include "../plumbing/gauge_field.h"
-#include "../plumbing/fermion_field.h"
+#include "../plumbing/fermion/fermion_field.h"
 #include "auxiliary_field.h"
 #include "fermion_field.h"
 
@@ -44,7 +44,7 @@ lattice_struct * lattice = & my_lattice;
 
 
 // Define some parameters for the simulation
-extern const int nd[4] = { 16, 8, 8, 8 };
+extern const int nd[4] = { 8, 8, 8, 8 };
 
 extern int n_measurements;
 extern int n_updates_per_measurement;

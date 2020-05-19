@@ -19,25 +19,26 @@ LDFLAGS = -lfftw3 -lm
 .PRECIOUS: build/%.cpt
 
 
-OBJECTS = build/staggered.o build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_generic.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
+OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
 
 
-staggered: Makefile $(OBJECTS) staggered.h
-	$(LD) $(LDFLAGS) -o build/staggered  $(OBJECTS)
+staggered: Makefile build/staggered.o $(OBJECTS) staggered.h
+	$(LD) $(LDFLAGS) -o build/staggered build/staggered.o  $(OBJECTS)
 
-
-build/staggered.cpt: Makefile staggered.cpp
-	mkdir -p build
-	$(TRANSFORMER) staggered.cpp -o build/staggered.cpt
+test_forces: Makefile build/test_forces.o $(OBJECTS) staggered.h
+	$(LD) $(LDFLAGS) -o build/test_forces build/test_forces.o $(OBJECTS)
 
 
 build/%.cpt: %.cpp Makefile
+	mkdir -p build
 	$(TRANSFORMER) $< -o $@
 
 build/%.cpt:../plumbing/%.cpp Makefile
+	mkdir -p build
 	$(TRANSFORMER) $< -o $@
 
 build/%.o : build/%.cpt
+	mkdir -p build
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
 

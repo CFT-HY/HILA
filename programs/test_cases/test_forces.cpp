@@ -29,9 +29,6 @@ void check_forces(parity par, double mass_parameter){
       }
     }
     fa.draw_gaussian_fields();
-    foralldir(dir){
-      momentum[dir][ALL] = 0;
-    }
 
     matrix g1 = gauge[0].get_value_at(50);
     matrix h = matrix(1) + eps * matrix::generator(ng);
@@ -47,7 +44,10 @@ void check_forces(parity par, double mass_parameter){
       psi[X].gaussian();
       chi[X].gaussian();
     }
-    
+    foralldir(dir){
+      momentum[dir][ALL] = 0;
+    }
+
     double s1 = 0;
     D.apply(psi,tmp);
     onsites(ALL){
