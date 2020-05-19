@@ -6,6 +6,7 @@
 #include "coordinates.h"
 #include "lattice.h"
 #include "field.h"
+#include "../datatypes/general_matrix.h"
 
 
 template <typename T>
@@ -14,6 +15,10 @@ struct test_struct {
   T r[NDIM];
 
   using base_type = typename base_type_struct<T>::type;
+
+  // define unary - for antiperiodic b.c.
+  test_struct<T> operator-() const { test_struct<T> t; foralldir(d) t.r[d] = -r[d]; return t; }
+
 };
 
 using test_int = test_struct<int>;
@@ -33,6 +38,11 @@ void gather_test() {
     }
   }
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+  for (boundary_condition_t bc : {boundary_condition_t::PERIODIC, boundary_condition_t::ANTIPERIODIC}) {
+    // output0 << "testing boundary " << (int)bc << '\n';
+    t.set_boundary_condition(TUP,bc);
+#endif
   for (parity p : {EVEN,ODD,ALL}) {
 
     foralldir(d) {
@@ -43,15 +53,24 @@ void gather_test() {
         double sum1 = 0, sum2 = 0;  // use double to accumulate ints, should be accurate
         if (is_up_dir(d2)) add = 1; else add = -1;
         onsites(p) {
-          T j = t[X+d2].r[d];
+          auto n = t[X+d2];
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+          if (bc == boundary_condition_t::ANTIPERIODIC &&
+              (( X.coordinates()[TUP] == 0 && d2 == TDOWN) || 
+               ( X.coordinates()[TUP] == lattice->size(TUP)-1 && d2 ==TUP))) {
+            n = -n;
+          }
+#endif
+
+          T j = n.r[d];
           T s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
 
-          sum2 += t[X+d2].r[d] - lattice->size(d)/2;
+          sum2 += n.r[d] - lattice->size(d)/2;
           sum1 += t[X].r[d] - lattice->size(d)/2;
 
           T lv = s-j;
           T a = 0;
-          foralldir(dir) if (dir != d) a+= t[X+d2].r[dir] - t[X].r[dir];
+          foralldir(dir) if (dir != d) a+= n.r[dir] - t[X].r[dir];
           
           if (lv != 0 || a != 0) {
             hila::output << "Error in gather test at " << X.coordinates() << " direction " << d2 
@@ -60,7 +79,7 @@ void gather_test() {
             hila::output << "This element - neighbour element:  ";
             for (int loop=0; loop<NDIM; loop++) hila::output << t[X].r[loop] << ' ';
             hila::output << " - ";
-            for (int loop=0; loop<NDIM; loop++) hila::output << t[X+d2].r[loop] << ' ';
+            for (int loop=0; loop<NDIM; loop++) hila::output << n.r[loop] << ' ';
             
             hila::output << '\n';
 
@@ -94,12 +113,12 @@ void gather_test() {
         diff = 0;
         sum1 = sum2 = 0;
         onsites(p) {
-          T j = t[X+d2].r[d];
+          T j = abs(t[X+d2].r[d]);
           T s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
 
           diff += s-j;
           sum1 += t[X].r[d] - lattice->size(d)/2;
-          sum2 += t[X+d2].r[d] - lattice->size(d)/2;
+          sum2 += abs(t[X+d2].r[d]) - lattice->size(d)/2;
         }     
      
         if (diff != 0) {
@@ -123,6 +142,9 @@ void gather_test() {
       }
     }
   }
+  #ifdef SPECIAL_BOUNDARY_CONDITIONS
+  }
+  #endif
 }
 
 

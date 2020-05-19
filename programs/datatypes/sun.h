@@ -86,6 +86,13 @@ class SU : public matrix<n,n,cmplx<radix> >{
         }
     }
 
+    SU operator - () const {
+      SU r;
+      for (int j=0; j<n; j++) for (int i=0; i<n; i++){
+        r.c[i][j] = -this->c[i][j];
+      }
+      return r;
+    }
 
     void reunitarize(){ //implement later
         make_unitary();
@@ -586,6 +593,14 @@ class SU_vector : public vector<n,cmplx<radix>>{
       for(int i=0; i<n; i++){
         this->c[i] = m.c[i];
       }
+    }
+
+    SU_vector operator - () const {
+      SU_vector r;
+      for (int i = 0; i < n; i++){
+        r.c[i] = -this->c[i];
+      }
+      return r;
     }
 
     inline double rdot(const SU_vector &rhs) const {

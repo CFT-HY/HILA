@@ -22,7 +22,9 @@ inline void dirac_wilson_hop(
   parity par, int sign)
 {
   field<half_Wilson_vector<vector>> (&vtemp)[NDIM] = wilson_dirac_temp_vector<vector>;
-  
+  foralldir(dir)
+    vtemp[dir].copy_boundary_condition(v_in);
+
   // Run neighbour fetches and multiplications
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
@@ -31,6 +33,8 @@ inline void dirac_wilson_hop(
       half_Wilson_vector<vector> h(v_in[X], dir, -sign);
       vtemp[dir][X] = gauge[dir][X].conjugate()*h;
     }
+
+    vtemp[dir].set_boundary_condition(dir, v_in.get_boundary_condition(dir));
     vtemp[dir].start_get(odir);
   }
   foralldir(dir){
@@ -75,7 +79,9 @@ inline void dirac_wilson_calc_force(
   int sign)
 {
   field<half_Wilson_vector<vector>> (&vtemp)[NDIM] = wilson_dirac_temp_vector<vector>;
-
+  vtemp[0].copy_boundary_condition(chi);
+  vtemp[1].copy_boundary_condition(chi);
+  
   foralldir(dir){
     onsites(opp_parity(par)){
       vtemp[0][X] = half_Wilson_vector<vector>(chi[X], dir, -sign);
@@ -202,6 +208,7 @@ class Dirac_Wilson_evenodd {
     inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<matrix_type> (&force)[NDIM], int sign){
       field<matrix_type> force2[NDIM];
       field<vector_type> tmp;
+      tmp.copy_boundary_condition(chi);
 
       tmp[ALL] = 0;
       dirac_wilson_hop(gauge, kappa, chi, tmp, ODD, -sign);

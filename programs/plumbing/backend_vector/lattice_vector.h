@@ -30,6 +30,7 @@ struct vectorized_lattice_struct  {
     int boundary_permutation[NDIRS][vector_size];
     unsigned halo_offset[NDIRS], halo_offset_odd[NDIRS], n_halo_vectors[NDIRS];
     unsigned * RESTRICT halo_index[NDIRS];
+    bool local_boundary_copy[NDIRS];
 
     // move data from receive buffer -- sending is fine as it is
     // takes the role of nn_comms
@@ -122,19 +123,31 @@ struct vectorized_lattice_struct  {
       }
 
 
-
       // reserve extra storage for permutation halo sites
       // there are 2*(area) v-sites to each direction with permutation,
       //  + mpi buffers too if needed. (separately allocated)
-      // to directions without permutation there is
-      //  - no halo site, if no node communication
-      //  - 2*(area) v-sites, filled in directly by MPI or other comm.
+      // to directions without permutation there is also
+      //  - 2*(area) v-sites, filled in directly by MPI or copying from local node
+      //  if no mpi comm.  The copying is done to ease implementing different boundary conditions
       // These come automatically when we tally up the neigbours below
 
       for (direction d=(direction)0; d<NDIRS; d++) {
         neighbours[d] = (unsigned *)memalloc(v_sites * sizeof(unsigned));
       }
 
+      // check special case: 1st subnode is across the whole lattice to direction d and
+      // no boundary permutation
+      // we do the copy also in this case, in order to implement other boundary conditions
+      // Slows down a bit the periodic case, but with MPI comms this should make no difference
+
+      foralldir(d) {
+        if (lattice->nodes.n_divisions[d] == 1 && !is_boundary_permutation[d]) {
+          local_boundary_copy[d] = local_boundary_copy[-d] = true;
+        } else {
+          local_boundary_copy[d] = local_boundary_copy[-d] = false;
+        }
+      }
+ 
       // accumulate here points off-subnode (to halo)
       int c_offset = v_sites;  
       for(direction d=(direction)0; d<NDIRS; ++d) {
@@ -145,8 +158,17 @@ struct vectorized_lattice_struct  {
           // std::cout << here << '\n';
 
           if (is_on_first_subnode(here+d)) {
-            assert(lattice->neighb[d][j] % vector_size == 0);   // REMOVE THIS LATER, consistency check
-            neighbours[d][i] = lattice->neighb[d][j]/vector_size;
+            assert(lattice->neighb[d][j] % vector_size == 0);   // consistency check can be REMOVED
+            direction ad = abs(d);
+
+            if (local_boundary_copy[d] &&
+                ((is_up_dir(d)  && here[ad] == lattice->size(ad)-1) ||
+                 (is_up_dir(-d) && here[ad] == 0)) ) {
+              neighbours[d][i] = c_offset++;
+            } else {
+              // standard branch, within the subnode
+              neighbours[d][i] = lattice->neighb[d][j]/vector_size;
+            }
           } else {
             neighbours[d][i] = c_offset++;  // now points beyond the lattice
           }
@@ -181,7 +203,18 @@ struct vectorized_lattice_struct  {
             }
           }
           assert( j == n_halo_vectors[d] );
-        } else halo_index[d] = nullptr;
+        } else if (local_boundary_copy[d]) {
+          // set the local untwisted array copy here
+
+          halo_index[d] = (unsigned *)memalloc(n_halo_vectors[d] * sizeof(unsigned));
+          int j=0;
+          for (int i=0; i<v_sites; i++) {
+            if (neighbours[d][i] >= v_sites) {
+              halo_index[d][j++] = lattice->neighb[d][i*vector_size]/vector_size;
+              assert(lattice->neighb[d][i*vector_size] % vector_size == 0);
+            }
+          }
+        } else halo_index[d] = nullptr;   // no special copy here - mpi fills
       }
 
       #ifdef USE_MPI
@@ -253,6 +286,9 @@ struct vectorized_lattice_struct  {
           if ( neighbours[odir][i] >= v_sites ) vec_wait_arr_[i] = vec_wait_arr_[i] | (1<<odir) ;
         }
       }
+      #endif
+
+      #ifdef SPECIAL_BOUNDARY_CONDITIONS
       #endif
 
 

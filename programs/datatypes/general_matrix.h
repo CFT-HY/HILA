@@ -49,6 +49,8 @@ class matrix {
 
   matrix() = default;
 
+  matrix<n,m,T> operator-(void) { return -1*(*this); }
+
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
   #pragma transformer loop_function
   matrix<n,m,T> & operator= (const scalart rhs) {

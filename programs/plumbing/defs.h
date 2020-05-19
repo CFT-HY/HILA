@@ -25,7 +25,7 @@
 #define RESTRICT   // disabled here
 #endif
 
-#define EVEN_SITES_FIRST
+#define EVEN_SITES_FIRST  
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = float;
@@ -59,9 +59,8 @@ namespace hila {
 // Global functions: setup
 void initial_setup(int argc, char **argv);
 
-
-
-
+// Allow other than periodic boundary conditions
+#define SPECIAL_BOUNDARY_CONDITIONS
 
 // Backend defs-headers
 
@@ -72,10 +71,6 @@ void initial_setup(int argc, char **argv);
 #else
 #include "../plumbing/backend_cpu/defs.h"
 #endif
-
-
-
-
 
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000
