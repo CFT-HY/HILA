@@ -158,7 +158,7 @@ class field {
             lattice->special_boundaries[-d].is_on_edge) {
           int n;
           const unsigned * index_list = to_node.get_sitelist(par,n);
-          payload.gather_elements_negated(buffer, index_list, n, lattice);                    
+          payload.gather_elements_negated(buffer, index_list, n, lattice);
         } else {
           payload.gather_comm_elements(buffer, to_node, par, lattice);
         }
@@ -181,7 +181,7 @@ class field {
             else {
               int n;
               const unsigned * index_list = to_node.get_sitelist(par,n);
-              payload.gather_elements_negated(buffer, index_list, n, lattice);                 
+              payload.gather_elements_negated(buffer, index_list, n, lattice);
             }
           } else {
             // without it, can do the full block
@@ -367,6 +367,11 @@ class field {
     for (direction d=(direction)0; d<NDIRS; ++d) fs->neighbours[d] = lattice->neighb[d];
     mark_changed(ALL);      // guarantees communications will be done
     fs->assigned_to = 0;    // and this means that it is not assigned
+
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+    foralldir(dir)
+      fs->boundary_condition[dir] = boundary_condition_t::PERIODIC;
+#endif
 
     #ifdef VECTORIZED
     fs->vector_lattice = lattice->backend_lattice->get_vectorized_lattice< vector_info<T>::vector_size >();
