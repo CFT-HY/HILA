@@ -477,12 +477,12 @@ class field {
 
     #ifdef SPECIAL_BOUNDARY_CONDITIONS
     // TODO: This works as intended only for periodic/antiperiodic b.c.
+    check_alloc();
     fs->boundary_condition[dir] = bc;
     fs->boundary_condition[-dir] = bc;
     fs->neighbours[dir]  = lattice->get_neighbour_array(dir,bc);
     fs->neighbours[-dir] = lattice->get_neighbour_array(-dir,bc);
     #endif
-
   }
 
   boundary_condition_t get_boundary_condition( direction dir ) const {
@@ -491,6 +491,13 @@ class field {
     #else
     return boundary_condition_t::PERIODIC;
     #endif
+  }
+
+  template<typename A>
+  void copy_boundary_condition(const field<A> & rhs) {
+    foralldir(dir){
+      set_boundary_condition(dir, rhs.get_boundary_condition(dir));
+    }
   }
 
   // Overloading [] 

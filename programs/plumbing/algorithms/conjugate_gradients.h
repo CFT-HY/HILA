@@ -12,7 +12,7 @@
 #include<iostream>
 
 constexpr int CG_DEFAULT_MAXITERS = 10000;
-constexpr double CG_DEFAULT_ACCURACY = 1e-8;
+constexpr double CG_DEFAULT_ACCURACY = 1e-10;
 
 
 // Implement the apply function of the conjugate gradient operator
@@ -21,6 +21,10 @@ void GG_invert(vector &in, vector &out, op &M,
   double accuracy, int max_iters, parity par)
 {
   vector r, p, Dp, DDp;
+  r.copy_boundary_condition(in);
+  p.copy_boundary_condition(in);
+  Dp.copy_boundary_condition(in);
+  DDp.copy_boundary_condition(in);
   double pDp = 0, rr = 0, rrnew = 0, rr_start=0;
   double alpha, beta;
   double target_rr, source_norm=0;

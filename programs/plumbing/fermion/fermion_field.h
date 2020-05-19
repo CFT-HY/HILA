@@ -10,7 +10,8 @@
 /// by the action chi 1/(D_dagger D) chi
 template<typename VECTOR, typename DIRAC_OP>
 void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
-  field<VECTOR> psi, tmp;
+  field<VECTOR> psi;
+  psi.copy_boundary_condition(chi);
   onsites(ALL){
     psi[X].gaussian();
   }
@@ -21,7 +22,8 @@ void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
 /// Calculate the action of a fermion term
 template<typename VECTOR, typename DIRAC_OP>
 double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
-  field<VECTOR> psi, tmp;
+  field<VECTOR> psi;
+  psi.copy_boundary_condition(chi);
   CG<DIRAC_OP> inverse(D);
   double action = 0;
 
@@ -39,6 +41,8 @@ double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
 template<typename SUN, typename VECTOR, typename DIRAC_OP>
 void fermion_force(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], DIRAC_OP &D, double eps){
   field<VECTOR> psi, Mpsi;
+  psi.copy_boundary_condition(chi);
+  Mpsi.copy_boundary_condition(chi);
   field<SUN> force[NDIM], force2[NDIM];
   CG<DIRAC_OP> inverse(D);
   
@@ -76,12 +80,14 @@ class fermion_action{
     : D(d), gauge(g), momentum(m){ 
       chi = 0.0;
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
     }
 
     fermion_action(fermion_action &fa)
     : gauge(fa.gauge), momentum(fa.momentum), D(fa.D)  {
       chi = fa.chi;
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
     }
 
     // Return the value of the action with the current

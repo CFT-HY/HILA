@@ -38,6 +38,11 @@ void check_forces(parity par, double mass_parameter){
     matrix g12 = h*g1;
 
     field<typename dirac::vector_type> psi, chi, tmp, tmp2;
+    psi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+    psi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+    chi.copy_boundary_condition(psi);
+    tmp.copy_boundary_condition(psi);
+    tmp2.copy_boundary_condition(psi);
     onsites(ALL){
       psi[X].gaussian();
       chi[X].gaussian();
@@ -71,11 +76,11 @@ void check_forces(parity par, double mass_parameter){
     double diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
 
@@ -113,11 +118,11 @@ void check_forces(parity par, double mass_parameter){
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
 
@@ -145,11 +150,11 @@ void check_forces(parity par, double mass_parameter){
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
-      hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion force " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
+      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion force" );
     }
   }
@@ -227,14 +232,14 @@ int main(int argc, char **argv){
   using VEC=SU_vector<N>;
   using SUN=SU<N>;
 
-  //output0 << "Checking staggered forces:\n";
-  //check_forces<dirac_staggered<VEC, SUN>, SUN, VEC>(ALL, 1.0);
+  output0 << "Checking staggered forces:\n";
+  check_forces<dirac_staggered<VEC, SUN>, SUN, VEC>(ALL, 1.5);
   output0 << "Checking evenodd preconditioned staggered forces:\n";
-  check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 1.0);
-  //output0 << "Checking Wilson forces:\n";
-  //check_forces<dirac_wilson<VEC, SUN>, SUN, VEC>(ALL, 0.05);
-  //output0 << "Checking evenodd preconditioned Wilson forces:\n";
-  //check_forces<Dirac_Wilson_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 0.05);
+  check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 1.5);
+  output0 << "Checking Wilson forces:\n";
+  check_forces<dirac_wilson<VEC, SUN>, SUN, VEC>(ALL, 0.05);
+  output0 << "Checking evenodd preconditioned Wilson forces:\n";
+  check_forces<Dirac_Wilson_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 0.05);
 
 
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){

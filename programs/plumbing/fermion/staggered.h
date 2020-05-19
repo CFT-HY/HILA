@@ -61,14 +61,17 @@ void dirac_staggered_hop(
   parity par, int sign)
 {
   field<vtype> (&vtemp)[NDIM] = staggered_dirac_temp<vtype>;
+  foralldir(dir)
+    vtemp[dir].copy_boundary_condition(v_in);
 
-  // Run neighbour fetches and multiplications
+  // First multiply the by conjugate before communicating the vector
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
-    // First mulltiply the by conjugate before communicating the matrix
     vtemp[dir][opp_parity(par)] = gauge[dir][X].conjugate()*v_in[X];
     vtemp[dir].start_get(odir);
   }
+
+  // Run neighbour fetches and multiplications
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
     v_out[par] = v_out[X] + 0.5 * sign * staggered_eta[dir][X] * (
@@ -148,6 +151,7 @@ class dirac_staggered {
 template<typename vector, typename matrix>
 field<vector> operator* (dirac_staggered<field<vector>, field<matrix>> D, const field<vector> & in) {
   field<vector> out;
+  out.copy_boundary_condition(in);
   D.apply(in, out);
   return out;
 }
@@ -156,6 +160,7 @@ field<vector> operator* (dirac_staggered<field<vector>, field<matrix>> D, const 
 template<typename vector, typename matrix>
 field<vector> operator* (const field<vector> & in, dirac_staggered<field<vector>, field<matrix>> D) {
   field<vector> out;
+  out.copy_boundary_condition(in);
   D.dagger(in, out);
   return out;
 }
@@ -211,6 +216,7 @@ class dirac_staggered_evenodd {
     inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<matrix_type> (&force)[NDIM], int sign){
       field<matrix_type> force2[NDIM];
       field<vector_type> tmp;
+      tmp.copy_boundary_condition(chi);
 
       tmp[ALL] = 0;
       dirac_staggered_hop(gauge, chi, tmp, staggered_eta, ODD, -sign);
