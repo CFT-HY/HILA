@@ -47,6 +47,15 @@ struct cmatrix {
     }
     return res;
   }
+
+  cmatrix<n,T> operator-(){
+    cmatrix<n,T> r;
+    for (int i = 0; i < n; i++){
+      r.c[i][j] = -c[j][i];
+    }
+    return *r;
+  }
+
 };
 
 
