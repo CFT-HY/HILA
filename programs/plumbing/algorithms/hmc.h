@@ -2,6 +2,8 @@
 #define HMC_H
 
 
+#include <sys/time.h>
+#include <ctime>
 
 
 
@@ -45,6 +47,8 @@ template<class integrator_type>
 void update_hmc(integrator_type &integr, int steps, double traj_length){
   
   static int accepted=0, trajectory=1;
+  struct timeval start, end;
+  double timing;
 
   // Draw the momentum
   integr.draw_gaussian_fields();
@@ -52,18 +56,17 @@ void update_hmc(integrator_type &integr, int steps, double traj_length){
   // Make a copy of the gauge field in case the update is rejected
   integr.back_up_fields();
   
+  gettimeofday(&start, NULL);
 
   // Calculate the starting action and print
   double start_action = integr.action();
   output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
           << start_action << "\n";
 
-
   // Run the integator
   for(int step=0; step < steps; step++){
     integr.step(traj_length/steps);
   }
-
 
   // Recalculate the action
   double end_action = integr.action();
@@ -72,7 +75,6 @@ void update_hmc(integrator_type &integr, int steps, double traj_length){
   output0 << "End HMC: Action " << end_action << " "
         << end_action - start_action
         << " exp(-dS) " << edS << "\n";
-
 
   // Accept or reject
   if(hila_random() < edS){
@@ -83,8 +85,14 @@ void update_hmc(integrator_type &integr, int steps, double traj_length){
     integr.restore_backup();
   }
 
+
   output0 << "Acceptance " << accepted << "/" << trajectory 
           << " " << (double)accepted/(double)trajectory << "\n";
+
+  gettimeofday(&end, NULL);
+  timing = (double)(end.tv_sec - start.tv_sec) + 1e-6*(end.tv_usec - start.tv_usec);
+
+  output0 << "HMC done in " << timing << " seconds \n";
   trajectory++;
 }
 
