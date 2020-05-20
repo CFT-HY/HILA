@@ -70,11 +70,11 @@ int main(int argc, char **argv){
   auxiliary_action aa(sigma, pi, sigma_mom, pi_mom, gamma);
 
   // Initialize
-  sigma[ALL] = 0.05;
+  sigma[ALL] = 0.5;
   pi[ALL] = 0;
 
   // Define a Dirac operator (2 flavors)
-  dirac_staggered_gNJL_evenodd<VEC, SUN> D(mass, gauge, sigma, pi);
+  dirac_staggered_gNJL<VEC, SUN> D(mass, gauge, sigma, pi);
   gNJL_fermion_action fa(D, momentum, sigma_mom, pi_mom);
 
   // Build two integrator levels. Gauge is on the lowest level and
@@ -84,7 +84,7 @@ int main(int argc, char **argv){
 
 
   // Run HMC using the integrator
-  for(int step = 0; step < 100; step ++){
+  for(int step = 0; step < 1000; step ++){
     // Run update
     update_hmc(integrator_level_2, hmc_steps, traj_length);
     measure(gauge, sigma, pi);

@@ -1,4 +1,90 @@
 
+
+class hypercube{
+  private:
+    int s[16];
+  public:
+  int size = 16;
+  int & operator[](const int i) {
+    return s[i];
+  }
+};
+
+std::vector<hypercube> get_hypercubes(){
+  static std::vector<hypercube> hypercubes;
+  const int loop_begin = lattice->loop_begin(parity::all);
+  const int loop_end   = lattice->loop_end(parity::all);
+
+  if(hypercubes.size() == 0){
+    for(int Index = loop_begin; Index < loop_end; ++Index){
+      coordinate_vector l = lattice->coordinates(Index);
+      bool is_hypercube_root = true;
+      foralldir(d){
+        is_hypercube_root *= (l[d]%2) == 0;
+      }
+      if(is_hypercube_root){
+        hypercube h;
+        int hi = 0;
+        h[hi] = Index;
+        foralldir(d1){
+          int id1 = lattice->neighb[d1][Index];
+          hi++; h[hi] = id1;
+          foralldir(d2) if(d2>d1) {
+            int id2 = lattice->neighb[d2][id1];
+            hi++; h[hi] = id2;
+            foralldir(d3) if(d3>d2) {
+              int id3 = lattice->neighb[d3][id2];
+              hi++; h[hi] = id3;
+              foralldir(d4) if(d4>d3) {
+                int id4 = lattice->neighb[d4][id3];
+                hi++; h[hi] = id4;
+              }
+            }
+          }
+        }
+        hypercubes.push_back(h);
+      }
+    }
+  }
+
+  return hypercubes;
+}
+
+
+void hypercube_sum(const field<double> &f1, field<double> &f2){
+
+  f1.check_alloc();
+  f2.check_alloc();
+  for(hypercube cube : get_hypercubes()){
+    double val = 0;
+    for(int ci=0; ci < cube.size; ci++){
+      val += f1.get_value_at(cube[ci]);
+    }
+    for(int ci=0; ci < cube.size; ci++){
+      f2.set_value_at(val, cube[ci]);
+    }
+  }
+  f2.mark_changed(ALL);
+}
+
+
+void momentum_gaussian_hypercube(field<double> &mom){
+
+  mom.check_alloc();
+  for(hypercube cube : get_hypercubes()){
+    double val = gaussian_ran();
+    mom.set_value_at(val, cube[0]);
+    for(int ci=1; ci < cube.size; ci++){
+      mom.set_value_at(0, cube[ci]);
+    }
+  }
+  mom.mark_changed(ALL);
+}
+
+
+constexpr double alpha = 10;
+
+
 class auxiliary_momentum_action {
   public:
 
@@ -12,26 +98,29 @@ class auxiliary_momentum_action {
     : sigma(ma.sigma), pi(ma.pi), sigma_momentum(ma.sigma_momentum), pi_momentum(ma.pi_momentum){}
 
     double action(){
+      field<double> tpi, tsigma;
+      hypercube_sum(sigma_momentum, tsigma);
+      hypercube_sum(pi_momentum, tpi);
       double a=0;
       onsites(ALL){
-        a += 0.5*sigma_momentum[X]*sigma_momentum[X]
-           + 0.5*pi_momentum[X]*pi_momentum[X];
+        a += alpha*0.5*(tsigma[X]*tsigma[X] + tpi[X]*tpi[X])/16/16;
       }
       return a;
     }
 
     /// Gaussian random momentum for each element
     void draw_gaussian_fields(){
-      onsites(ALL){
-        sigma_momentum[X] = gaussian_ran();
-        pi_momentum[X] = gaussian_ran();
-      }
+      momentum_gaussian_hypercube(sigma_momentum);
+      momentum_gaussian_hypercube(pi_momentum);
     }
 
     // Integrator step: apply the momentum on the gauge field
     void step(double eps){
-      sigma[ALL] = sigma[X] - eps*sigma_momentum[X];
-      pi[ALL] = pi[X] - eps*pi_momentum[X];
+      field<double> tpi, tsigma;
+      hypercube_sum(sigma_momentum, tsigma);
+      hypercube_sum(pi_momentum, tpi);
+      sigma[ALL] = sigma[X] - alpha*eps*tsigma[X]/16;
+      pi[ALL] = pi[X] - alpha*eps*tpi[X]/16;
     }
 
     // Called by hmc
@@ -57,7 +146,7 @@ class auxiliary_action {
     double action(){
       double a=0;
       onsites(ALL){
-        a += 1.0/(4.0*G*G) * (sigma[X]*sigma[X] + pi[X]*pi[X]);
+        a += 1.0/(4*G*G) * (sigma[X]*sigma[X] + pi[X]*pi[X]);
       }
       return a;
     }
@@ -66,8 +155,8 @@ class auxiliary_action {
 
     // Update the momentum with the auxiliary field
     void force_step(double eps){
-      sigma_momentum[ALL] = sigma_momentum[X] + 2*eps*1.0/(4.0*G*G)*sigma[X];
-      pi_momentum[ALL] = pi_momentum[X] + 2*eps*1.0/(4.0*G*G)*pi[X];
+      sigma_momentum[ALL] = sigma_momentum[X] + 2*eps/(4.0*G*G)*sigma[X];
+      pi_momentum[ALL] = pi_momentum[X] + 2*eps/(4.0*G*G)*pi[X];
     }
 
     // Make a copy of fields updated in a trajectory
@@ -82,4 +171,5 @@ class auxiliary_action {
       pi = pi_backup;
     }
 };
+
 

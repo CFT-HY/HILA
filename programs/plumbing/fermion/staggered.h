@@ -96,7 +96,7 @@ void dirac_staggered_calc_force(
     out[dir][par] = -sign * 0.5 *
       staggered_eta[dir][X] * chi[X+dir].outer_product(psi[X]);
     out[dir][opp_parity(par)] = out[dir][X] + sign*0.5 *
-       staggered_eta[dir][X+dir] * psi[X+dir].outer_product(chi[X]);
+       staggered_eta[dir][X] * psi[X+dir].outer_product(chi[X]);
     
     out[dir][ALL] = gauge[dir][X]*out[dir][X];
   }
