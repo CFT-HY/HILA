@@ -82,20 +82,18 @@ void momentum_gaussian_hypercube(field<double> &mom){
 }
 
 
-constexpr double alpha = 10;
-
-
 class auxiliary_momentum_action {
   public:
 
     field<double> &sigma, &pi;
     field<double> &sigma_momentum, &pi_momentum;
+    double alpha=1;
 
-    auxiliary_momentum_action(field<double> &s, field<double> &p, field<double> &sm, field<double> &pm) 
-    : sigma(s), pi(p), sigma_momentum(sm), pi_momentum(pm){}
+    auxiliary_momentum_action(field<double> &s, field<double> &p, field<double> &sm, field<double> &pm, double a=1) 
+    : sigma(s), pi(p), sigma_momentum(sm), pi_momentum(pm), alpha(a){}
 
     auxiliary_momentum_action(auxiliary_momentum_action &ma)
-    : sigma(ma.sigma), pi(ma.pi), sigma_momentum(ma.sigma_momentum), pi_momentum(ma.pi_momentum){}
+    : sigma(ma.sigma), pi(ma.pi), sigma_momentum(ma.sigma_momentum), pi_momentum(ma.pi_momentum), alpha(ma.alpha){}
 
     double action(){
       field<double> tpi, tsigma;

@@ -11,6 +11,9 @@
 
 
 void measure(field<SU<N>> (&gauge)[NDIM], field<double> &sigma, field<double> &pi){
+  static int iter = 0;
+
+  output0 << " Measure_start " << iter << "\n";
   double plaq = plaquette(gauge);
   output0 << "Plaq: " << plaq << "\n";
 
@@ -27,9 +30,14 @@ void measure(field<SU<N>> (&gauge)[NDIM], field<double> &sigma, field<double> &p
   pi_ave /= lattice->volume();
   pisq /= lattice->volume();
   output0 << "Sigma: " << sigma_ave << "\n";
-  output0 << "Sigma sq: " << sigmasq << "\n";
+  output0 << "Sigmasq: " << sigmasq << "\n";
   output0 << "Pi: " << pi_ave << "\n";
-  output0 << "Pi sq: " << pisq << "\n";
+  output0 << "Pisq: " << pisq << "\n";
+
+  output0 << "AUXSQ: " << sigmasq+pisq << "\n";
+
+  output0 << " Measure_end " << iter << "\n";
+  iter++;
 }
 
 
@@ -46,6 +54,7 @@ int main(int argc, char **argv){
   int seed = parameters.get("seed");
 	double hmc_steps = parameters.get("hmc_steps");
 	double traj_length = parameters.get("traj_length");
+	double alpha = parameters.get("alpha");
 
   lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
   seed_random(seed);
@@ -66,7 +75,7 @@ int main(int argc, char **argv){
   field<double> sigma, pi, sigma_mom, pi_mom;
 
   // And action
-  auxiliary_momentum_action ama(sigma, pi, sigma_mom, pi_mom);
+  auxiliary_momentum_action ama(sigma, pi, sigma_mom, pi_mom, alpha);
   auxiliary_action aa(sigma, pi, sigma_mom, pi_mom, gamma);
 
   // Initialize
