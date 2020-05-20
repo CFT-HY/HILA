@@ -367,6 +367,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
   }
 
@@ -426,6 +429,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
     return r;
   }
@@ -471,7 +477,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
-    }
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();    }
   }
 
   #pragma transformer loop_function
@@ -500,6 +508,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
     return r;
   }
