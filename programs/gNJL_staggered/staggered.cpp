@@ -55,6 +55,7 @@ int main(int argc, char **argv){
 	double hmc_steps = parameters.get("hmc_steps");
 	double traj_length = parameters.get("traj_length");
 	double alpha = parameters.get("alpha");
+	std::string configfile = parameters.get("configuration_file");
 
   lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
   seed_random(seed);
@@ -91,12 +92,21 @@ int main(int argc, char **argv){
   integrator integrator_level_1(ga+aa, gma+ama);
   integrator integrator_level_2(fa, integrator_level_1);
 
+  if( std::ifstream(configfile) )
+  {
+    output0 << "Found configuration file, reading\n";
+    read_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3], sigma, pi);
+  } else {
+    output0 << "No config file " << configfile << ", starting new run\n";
+  }
 
   // Run HMC using the integrator
   for(int step = 0; step < 1000; step ++){
     // Run update
     update_hmc(integrator_level_2, hmc_steps, traj_length);
     measure(gauge, sigma, pi);
+  
+    write_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3], sigma, pi);
   }
 
 

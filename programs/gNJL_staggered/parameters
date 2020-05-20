@@ -1,6 +1,8 @@
-beta = 8
-gamma = 0.5
-mass = 1
+beta = 5
+gamma = 0.8
+mass = 0.0
 hmc_steps = 20
 traj_length = 1
+alpha = 10
 seed = 1351
+configuration_file = config
