@@ -1,5 +1,5 @@
 beta = 5
-gamma = 0.8
+gamma = 0.5
 mass = 0.0
 hmc_steps = 20
 traj_length = 1
