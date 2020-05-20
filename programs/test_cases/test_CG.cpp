@@ -12,8 +12,8 @@
 
 
 void test_gamma_matrices(){
-  Wilson_vector<SU_vector<N>> w1, w2, w3;
-  half_Wilson_vector<SU_vector<N>> h1;
+  Wilson_vector<N, double> w1, w2, w3;
+  half_Wilson_vector<N, double> h1;
   SU<N> U; U.random();
   w1.gaussian();
 

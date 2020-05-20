@@ -92,7 +92,7 @@ int main(int argc, char **argv){
 
 
 
-    field<Wilson_vector<SU_vector<N, double>>> wvec1, wvec2;
+    field<Wilson_vector<N, double>> wvec1, wvec2;
     onsites(ALL){
       wvec1[X].gaussian();
       wvec2[X].gaussian();
@@ -100,7 +100,7 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator
     timing = 0;
     //printf("node %d, dirac_stagggered 0\n", mynode());
-    using dirac_wilson = Dirac_Wilson_evenodd<sunvec, sunmat>;
+    using dirac_wilson = Dirac_Wilson_evenodd<N, double, sunmat>;
     dirac_wilson D_wilson(0.05, U);
     D_wilson.apply(wvec1, wvec2);
 

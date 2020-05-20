@@ -74,7 +74,7 @@ class vector {
   }
 
   #pragma transformer loop_function
-  vector operator-(){
+  vector & operator-(){
     for (int i = 0; i < n; i++){
       c[i] = -c[i];
     }
@@ -153,6 +153,7 @@ vector<n,T> operator*(const vector<n,T> &lhs, const scalart &rhs){
   }
   return r;
 }
+
 
 
 template<int n, typename T>
