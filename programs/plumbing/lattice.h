@@ -17,7 +17,7 @@
 
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
-#define VECTOR_SIZE (256/16)                    // this is for AVX2
+#define VECTOR_SIZE (256/8)                    // this is for AVX2
 #endif
 // This is the vector size used to determine the layout
 constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
