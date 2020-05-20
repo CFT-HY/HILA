@@ -229,7 +229,7 @@ int main(int argc, char **argv){
     }
   }
 
-  using VEC=SU_vector<N>;
+  using VEC=SU_vector<N, double>;
   using SUN=SU<N>;
 
   output0 << "Checking staggered forces:\n";
@@ -237,9 +237,9 @@ int main(int argc, char **argv){
   output0 << "Checking evenodd preconditioned staggered forces:\n";
   check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 1.5);
   output0 << "Checking Wilson forces:\n";
-  check_forces<dirac_wilson<VEC, SUN>, SUN, VEC>(ALL, 0.05);
+  check_forces<dirac_wilson<N, double, SUN>, SUN, VEC>(ALL, 0.05);
   output0 << "Checking evenodd preconditioned Wilson forces:\n";
-  check_forces<Dirac_Wilson_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 0.05);
+  check_forces<Dirac_Wilson_evenodd<N, double, SUN>, SUN, VEC>(EVEN, 0.05);
 
 
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){

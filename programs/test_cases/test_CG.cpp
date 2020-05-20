@@ -13,7 +13,6 @@
 
 void test_gamma_matrices(){
   Wilson_vector<N, double> w1, w2, w3;
-  half_Wilson_vector<N, double> h1;
   SU<N> U; U.random();
   w1.gaussian();
 
@@ -23,6 +22,7 @@ void test_gamma_matrices(){
 #endif
 
   foralldir(d){
+    half_Wilson_vector<N, double> h1;
     w2 = w1-gamma_matrix[d]*(gamma_matrix[d]*w1);
     assert(w2.norm_sq() < 0.0001 && "gamma_d*gamma_d = 1");
 
@@ -75,10 +75,10 @@ int main(int argc, char **argv){
 
   // Check conjugate of the staggered Dirac operator
   {
-    using dirac = dirac_staggered<SU_vector<N>, SU<N>>;
+    using dirac = dirac_staggered<SU_vector<N, double>, SU<N>>;
     dirac D(0.1, U);
-    field<SU_vector<N>> a, b, Db, Ddaggera, DdaggerDb;
-    field<SU_vector<N>> sol;
+    field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    field<SU_vector<N, double>> sol;
     onsites(ALL){
       a[X].gaussian();
       b[X].gaussian();
@@ -110,11 +110,11 @@ int main(int argc, char **argv){
 
   // Check conjugate of the wilson Dirac operator
   {
-    using VEC = SU_vector<N>;
-    using dirac = dirac_wilson<VEC, SU<N>>;
+    using VEC = SU_vector<N, double>;
+    using dirac = dirac_wilson<N, double, SU<N, double>>;
     dirac D(0.1, U);
-    field<Wilson_vector<VEC>> a, b, Db, Ddaggera, DdaggerDb;
-    field<Wilson_vector<VEC>> sol;
+    field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    field<Wilson_vector<N, double>> sol;
     onsites(ALL){
       a[X].gaussian();
       b[X].gaussian();
@@ -146,10 +146,10 @@ int main(int argc, char **argv){
 
   // Check conjugate of the even-odd preconditioned staggered Dirac operator
   {
-    using dirac = dirac_staggered_evenodd<SU_vector<N>, SU<N>>;
+    using dirac = dirac_staggered_evenodd<SU_vector<N, double>, SU<N>>;
     dirac D(0.1, U);
-    field<SU_vector<N>> a, b, Db, Ddaggera, DdaggerDb;
-    field<SU_vector<N>> sol;
+    field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    field<SU_vector<N, double>> sol;
     onsites(ALL){
       a[X].gaussian();
       b[X].gaussian();
@@ -181,11 +181,11 @@ int main(int argc, char **argv){
 
   // Check conjugate of the even-odd preconditioned wilson Dirac operator
   {
-    using VEC = SU_vector<N>;
-    using dirac = Dirac_Wilson_evenodd<VEC, SU<N>>;
+    using VEC = SU_vector<N, double>;
+    using dirac = Dirac_Wilson_evenodd<N, double, SU<N>>;
     dirac D(0.1, U);
-    field<Wilson_vector<VEC>> a, b, Db, Ddaggera, DdaggerDb;
-    field<Wilson_vector<VEC>> sol;
+    field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    field<Wilson_vector<N, double>> sol;
 
     a[ODD] = 0; b[ODD] = 0;
     onsites(EVEN){

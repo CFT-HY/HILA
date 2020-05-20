@@ -84,10 +84,12 @@ inline void dirac_wilson_calc_force(
   
   foralldir(dir){
     onsites(opp_parity(par)){
-      vtemp[0][X] = half_Wilson_vector<N, radix>(chi[X], dir, -sign);
+      half_Wilson_vector<N, radix> hw(chi[X], dir, -sign);
+      vtemp[0][X] = hw;
     }
     onsites(par){
-      vtemp[1][X] = half_Wilson_vector<N, radix>(psi[X], dir, sign);
+      half_Wilson_vector<N, radix> hw(psi[X], dir, sign);
+      vtemp[1][X] = hw;
     }
 
     out[dir][ALL] = 0;

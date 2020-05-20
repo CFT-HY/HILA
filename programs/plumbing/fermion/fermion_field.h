@@ -9,10 +9,10 @@
 /// Generate a pseudofermion field with a distribution given
 /// by the action chi 1/(D_dagger D) chi
 template<typename VECTOR, typename DIRAC_OP>
-void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
+void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D, parity par){
   field<VECTOR> psi;
   psi.copy_boundary_condition(chi);
-  onsites(ALL){
+  onsites(par){
     psi[X].gaussian();
   }
   D.dagger(psi,chi);
@@ -21,7 +21,7 @@ void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
 
 /// Calculate the action of a fermion term
 template<typename VECTOR, typename DIRAC_OP>
-double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
+double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D, parity par){
   field<VECTOR> psi;
   psi.copy_boundary_condition(chi);
   CG<DIRAC_OP> inverse(D);
@@ -29,7 +29,7 @@ double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
 
   psi=0;
   inverse.apply(chi,psi);
-  onsites(ALL){
+  onsites(par){
     action += chi[X].rdot(psi[X]);
   }
   return action;
@@ -74,13 +74,15 @@ class fermion_action{
     field<matrix> (&momentum)[NDIM];
     DIRAC_OP &D;
     field<typename DIRAC_OP::vector_type> chi;
+    parity par;
 
 
-    fermion_action(DIRAC_OP &d, field<matrix> (&g)[NDIM], field<matrix> (&m)[NDIM])
+    fermion_action(DIRAC_OP &d, field<matrix> (&g)[NDIM], field<matrix> (&m)[NDIM], parity p=ALL)
     : D(d), gauge(g), momentum(m){ 
       chi = 0.0;
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      par = p;
     }
 
     fermion_action(fermion_action &fa)
@@ -88,12 +90,13 @@ class fermion_action{
       chi = fa.chi;
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      par = fa.par;
     }
 
     // Return the value of the action with the current
     // field configuration
     double action(){ 
-      return pseudofermion_action(chi, D);
+      return pseudofermion_action(chi, D, par);
     }
 
     // Make a copy of fields updated in a trajectory
@@ -104,7 +107,7 @@ class fermion_action{
 
     /// Gaussian random momentum for each element
     void draw_gaussian_fields(){
-      generate_pseudofermion(chi, D);
+      generate_pseudofermion(chi, D, par);
     }
 
     // Update the momentum with the derivative of the fermion
