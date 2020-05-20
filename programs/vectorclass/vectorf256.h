@@ -1610,16 +1610,6 @@ static inline Vec4d & operator += (Vec4d & a, Vec4d const b) {
 }
 
 
-// vector operator + : add integer to double
-static inline Vec4d operator + (Vec4d const a, Vec4i const b) {
-    Vec4d fb; fb = b;
-    return _mm256_add_pd(a, fb);
-}
-static inline Vec4d & operator += (Vec4d & a, Vec4i const b) {
-    a = a + b;
-    return a;
-}
-
 
 
 // postfix operator ++
