@@ -28,8 +28,8 @@ void test_gamma_matrices(){
 
     w2 = w1 + gamma_matrix[d]*w1;
     h1 = half_Wilson_vector(w1,d,1);
-    double diff = w2.norm_sq() - h1.norm_sq();
-    assert(diff*diff < 0.0001 && "half_Wilson_vector projection norm to direction XUP");
+    double diff = w2.norm_sq() - 2*h1.norm_sq();
+    assert(diff*diff < 0.0001 && "half_Wilson_vector projection +1 norm");
 
     w3 = (U*h1).expand(d,1) - U*w2;
     assert(w3.norm_sq() < 0.0001 && "half_wilson_vector expand");
@@ -37,8 +37,8 @@ void test_gamma_matrices(){
 
     w2 = w1 - gamma_matrix[d]*w1;
     h1 = half_Wilson_vector(w1,d,-1);
-    diff = w2.norm_sq() - h1.norm_sq();
-    assert(diff*diff < 0.0001 && "half_Wilson_vector projection norm to direction XUP");
+    diff = w2.norm_sq() - 2*h1.norm_sq();
+    assert(diff*diff < 0.0001 && "half_Wilson_vector projection -1 norm");
 
     w3 = (U*h1).expand(d,-1) - U*w2;
     assert(w3.norm_sq() < 0.0001 && "half_wilson_vector expand");

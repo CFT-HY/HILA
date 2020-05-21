@@ -104,9 +104,9 @@ class Wilson_vector {
     return r;
   }
 
-  inline auto norm_sq(){ 
-    auto r=c[0].norm_sq();
-    for (int i = 1; i < Gammadim; i++) {
+  inline radix norm_sq(){ 
+    radix r=0;
+    for (int i = 0; i < Gammadim; i++) {
       r += c[i].norm_sq();
     }
     return r;
@@ -520,9 +520,9 @@ class half_Wilson_vector {
 
   /// Returns the norm squared of (1+-gamma_j) * wilson_vector.
   /// Thus the factor 2.
-  inline auto norm_sq(){ 
-    auto r=c[0].norm_sq();
-    for (int i = 1; i < Gammadim; i++) {
+  inline radix norm_sq(){ 
+    radix r=0;
+    for (int i = 0; i < Gammadim/2; i++) {
       r += c[i].norm_sq();
     }
     return r;
