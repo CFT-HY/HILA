@@ -38,12 +38,12 @@ void GG_invert(vector &in, vector &out, op &M,
   M.apply(out, Dp);
   M.dagger(Dp, DDp);
   onsites(par){
-      r[X] = in[X] - DDp[X];
-      p[X] = r[X];
+    r[X] = in[X] - DDp[X];
+    p[X] = r[X];
   }
 
   onsites(par){
-      rr += r[X].rdot(r[X]);
+    rr += norm_squared(r[X]);
   }
   rr_start = rr;
 
@@ -52,17 +52,17 @@ void GG_invert(vector &in, vector &out, op &M,
     M.apply(p, Dp);
     M.dagger(Dp, DDp);
     onsites(par){
-        pDp += p[X].rdot(DDp[X]);
+      pDp += norm_squared(Dp[X]);
     }
 
     alpha=rr/pDp;
 
     onsites(par){
-        out[X] = out[X] + alpha*p[X];
-        r[X] = r[X] - alpha*DDp[X];
+      out[X] = out[X] + alpha*p[X];
+      r[X] = r[X] - alpha*DDp[X];
     }
     onsites(par){ 
-        rrnew += r[X].rdot(r[X]);
+      rrnew += norm_squared(r[X]);
     }
     #ifdef DEBUG_CG
     printf("CG iter %d, node %d, %g %g %g %g\n", i, mynode(), rrnew, rr_start, target_rr, pDp);
