@@ -127,7 +127,7 @@ int main(int argc, char **argv){
     output0 << "Dirac Wilson: " << timing << "ms \n";
 
     // Conjugate gradient step (set accuracy=1 to run only 1 step)
-    CG<dirac_wilson> w_inverse(D_wilson, 1.0, EVEN);
+    CG<dirac_wilson> w_inverse(D_wilson, 1.0);
     timing = 0;
     for(n_runs=1; timing < mintime; ){
 
