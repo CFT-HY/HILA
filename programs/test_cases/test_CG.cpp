@@ -63,6 +63,9 @@ int main(int argc, char **argv){
   #endif
   seed_random(2);
 
+  field<double> disable_avx; disable_avx = 0;
+
+
   test_gamma_matrices();
 
   field<SU<N>> U[NDIM];
@@ -80,6 +83,7 @@ int main(int argc, char **argv){
     field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<SU_vector<N, double>> sol;
     onsites(ALL){
+      if(disable_avx[X]==0){};
       a[X].gaussian();
       b[X].gaussian();
       sol[X] = 0;
@@ -102,7 +106,8 @@ int main(int argc, char **argv){
     inverse.apply(Ddaggera, b);
     D.apply(b, Db);
 
-    onsites(EVEN){
+    diffre = 0;
+    onsites(ALL){
       diffre += norm_squared(a[X]-Db[X]);
     }
     assert(diffre*diffre < 1e-8 && "test CG");
@@ -112,10 +117,11 @@ int main(int argc, char **argv){
   {
     using VEC = SU_vector<N, double>;
     using dirac = dirac_wilson<N, double, SU<N, double>>;
-    dirac D(0.1, U);
+    dirac D(0.05, U);
     field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<Wilson_vector<N, double>> sol;
     onsites(ALL){
+      if(disable_avx[X]==0){};
       a[X].gaussian();
       b[X].gaussian();
       sol[X] = 0;
@@ -138,7 +144,8 @@ int main(int argc, char **argv){
     inverse.apply(Ddaggera, b);
     D.apply(b, Db);
 
-    onsites(EVEN){
+    diffre = 0;
+    onsites(ALL){
       diffre += norm_squared(a[X]-Db[X]);
     }
     assert(diffre*diffre < 1e-8 && "test CG");
@@ -151,6 +158,7 @@ int main(int argc, char **argv){
     field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<SU_vector<N, double>> sol;
     onsites(ALL){
+      if(disable_avx[X]==0){};
       a[X].gaussian();
       b[X].gaussian();
       sol[X] = 0;
@@ -189,6 +197,7 @@ int main(int argc, char **argv){
 
     a[ODD] = 0; b[ODD] = 0;
     onsites(EVEN){
+      if(disable_avx[X]==0){};
       a[X].gaussian();
       b[X].gaussian();
       sol[X] = 0;

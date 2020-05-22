@@ -191,7 +191,6 @@ class Dirac_Wilson_evenodd {
       dirac_wilson_hop(gauge, kappa, in, out, ODD, 1);
       dirac_wilson_diag_inverse(out, ODD);
       dirac_wilson_hop(gauge, kappa, out, out, EVEN, 1);
-      out[ODD] = 0;
     }
 
     // Applies the conjugate of the operator
@@ -202,7 +201,6 @@ class Dirac_Wilson_evenodd {
       dirac_wilson_hop(gauge, kappa, in, out, ODD, -1);
       dirac_wilson_diag_inverse(out, ODD);
       dirac_wilson_hop(gauge, kappa, out, out, EVEN, -1);
-      out[ODD] = 0;
     }
 
     // Applies the derivative of the Dirac operator with respect

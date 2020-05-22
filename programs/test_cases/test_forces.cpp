@@ -17,6 +17,7 @@ template<typename dirac, typename matrix, typename vector>
 void check_forces(parity par, double mass_parameter){
   field<SU<N>> gauge[NDIM];
   field<SU<N>> momentum[NDIM];
+  field<double> disable_avx; disable_avx = 0;
   double eps = 1e-5;
 
   dirac D(mass_parameter, gauge);
@@ -44,6 +45,7 @@ void check_forces(parity par, double mass_parameter){
     tmp.copy_boundary_condition(psi);
     tmp2.copy_boundary_condition(psi);
     onsites(ALL){
+      if(disable_avx[X]==0){};
       psi[X].gaussian();
       chi[X].gaussian();
     }
@@ -86,6 +88,7 @@ void check_forces(parity par, double mass_parameter){
 
 
     onsites(ALL){
+      if(disable_avx[X]==0){};
       psi[X].gaussian();
       chi[X].gaussian();
     }

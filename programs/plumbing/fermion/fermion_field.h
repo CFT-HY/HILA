@@ -11,8 +11,10 @@
 template<typename VECTOR, typename DIRAC_OP>
 void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D, parity par){
   field<VECTOR> psi;
+  field<double> disable_avx; disable_avx = 0;
   psi.copy_boundary_condition(chi);
   onsites(par){
+    if(disable_avx[X]==0){};
     psi[X].gaussian();
   }
   D.dagger(psi,chi);

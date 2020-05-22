@@ -8,7 +8,7 @@
 #define SEED 100
 #endif
 
-const int latsize[4] = { 32, 8, 8, 8 };
+const int latsize[4] = { 8, 8, 8, 8 };
 
 int main(int argc, char **argv){
     int n_runs=1;
@@ -35,13 +35,17 @@ int main(int argc, char **argv){
     // Define a gauge matrix
     field<SU<N,double>> U[NDIM];
     field<SU_vector<N, double>> sunvec1, sunvec2;
+    field<double> disable_avx; disable_avx = 0;
 
     foralldir(d) {
       onsites(ALL){
         U[d][X].random();
-        sunvec1[X].gaussian();
-        sunvec2[X].gaussian();
       }
+    }
+    onsites(ALL){
+      if(disable_avx[X]==0){};
+      sunvec1[X].gaussian();
+      sunvec2[X].gaussian();
     }
 
 
@@ -77,7 +81,8 @@ int main(int argc, char **argv){
       n_runs*=2;
       
       for( int i=0; i<n_runs; i++){
-        stg_inverse.apply(sunvec1, sunvec2);
+        sunvec1[ALL]=0;
+        stg_inverse.apply(sunvec2, sunvec1);
       }
 
       // synchronize();
@@ -94,6 +99,7 @@ int main(int argc, char **argv){
 
     field<Wilson_vector<N, double>> wvec1, wvec2;
     onsites(ALL){
+      if(disable_avx[X]==0){};
       wvec1[X].gaussian();
       wvec2[X].gaussian();
     }
@@ -121,13 +127,14 @@ int main(int argc, char **argv){
     output0 << "Dirac Wilson: " << timing << "ms \n";
 
     // Conjugate gradient step (set accuracy=1 to run only 1 step)
-    CG<dirac_wilson> w_inverse(D_wilson, 1.0);
+    CG<dirac_wilson> w_inverse(D_wilson, 1.0, EVEN);
     timing = 0;
     for(n_runs=1; timing < mintime; ){
 
       n_runs*=2;
 
       for( int i=0; i<n_runs; i++){
+        wvec1[ALL]=0;
         w_inverse.apply(wvec2, wvec1);
       }
 
