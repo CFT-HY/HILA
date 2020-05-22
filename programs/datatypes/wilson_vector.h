@@ -112,16 +112,16 @@ class Wilson_vector {
     return r;
   }
 
-  inline auto dot(const Wilson_vector &rhs) const {
-    auto r = c[0].dot(rhs.c[0]);
-    for (int i=1; i<Gammadim; i++) {
+  inline cmplx<radix> dot(const Wilson_vector &rhs) const {
+    cmplx<radix> r = 0;
+    for (int i=0; i<Gammadim; i++) {
       r += c[i].dot(rhs.c[i]);
     }
     return r;
   }
 
-  inline double rdot(const Wilson_vector &rhs) const {
-    double r = (0.0);
+  inline radix rdot(const Wilson_vector &rhs) const {
+    radix r = (0.0);
     for (int i=0; i<Gammadim; i++) {
       r += c[i].rdot(rhs.c[i]);
     }
