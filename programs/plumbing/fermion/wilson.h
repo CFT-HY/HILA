@@ -119,6 +119,8 @@ class dirac_wilson {
     using vector_type = Wilson_vector<N, radix>;
     using matrix_type = matrix;
 
+    parity par = ALL;
+
     // Constructor: initialize mass and gauge
     dirac_wilson(dirac_wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
     dirac_wilson(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
@@ -171,21 +173,23 @@ template<int N, typename radix, typename matrix>
 class Dirac_Wilson_evenodd {
   private:
     double kappa;
-
-    // Note array of fields, changes with the field
     field<matrix> (&gauge)[NDIM];
   public:
 
     using vector_type = Wilson_vector<N, radix>;
     using matrix_type = matrix;
 
+    // The parity 
+    parity par = EVEN;
+
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
 
 
     // Applies the operator to in
-    inline void apply( const field<vector_type> & in, field<vector_type> & out){
+    inline void apply( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
+      in[ODD] = 0;
       dirac_wilson_diag(in, out, EVEN);
 
       dirac_wilson_hop(gauge, kappa, in, out, ODD, 1);
@@ -194,8 +198,9 @@ class Dirac_Wilson_evenodd {
     }
 
     // Applies the conjugate of the operator
-    inline void dagger( const field<vector_type> & in, field<vector_type> & out){
+    inline void dagger( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
+      in[ODD] = 0;
       dirac_wilson_diag(in, out, EVEN);
 
       dirac_wilson_hop(gauge, kappa, in, out, ODD, -1);

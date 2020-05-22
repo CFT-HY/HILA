@@ -14,7 +14,7 @@
 
 
 template<typename dirac, typename matrix, typename vector>
-void check_forces(parity par, double mass_parameter){
+void check_forces(double mass_parameter){
   field<SU<N>> gauge[NDIM];
   field<SU<N>> momentum[NDIM];
   field<double> disable_avx; disable_avx = 0;
@@ -23,7 +23,7 @@ void check_forces(parity par, double mass_parameter){
   dirac D(mass_parameter, gauge);
   fermion_action fa(D, gauge, momentum);
 
-  for(int ng = 0; ng < matrix::generator_count(); ng++){
+  for(int ng = 0; ng < 1 ; ng++ ){ //matrix::generator_count(); ng++){
     foralldir(dir){
       onsites(ALL){
         gauge[dir][X] = 1;
@@ -44,7 +44,8 @@ void check_forces(parity par, double mass_parameter){
     chi.copy_boundary_condition(psi);
     tmp.copy_boundary_condition(psi);
     tmp2.copy_boundary_condition(psi);
-    onsites(ALL){
+
+    onsites(D.par){
       if(disable_avx[X]==0){};
       psi[X].gaussian();
       chi[X].gaussian();
@@ -52,7 +53,7 @@ void check_forces(parity par, double mass_parameter){
     
     double s1 = 0;
     D.apply(psi,tmp);
-    onsites(ALL){
+    onsites(D.par){
       s1 += chi[X].rdot(tmp[X]);
     }
 
@@ -63,7 +64,7 @@ void check_forces(parity par, double mass_parameter){
 
     double s2 = 0;
     D.apply(psi,tmp);
-    onsites(ALL){
+    onsites(D.par){
       s2 += chi[X].rdot(tmp[X]);
     }
 
@@ -78,16 +79,16 @@ void check_forces(parity par, double mass_parameter){
     double diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
 
 
-    onsites(ALL){
+    onsites(D.par){
       if(disable_avx[X]==0){};
       psi[X].gaussian();
       chi[X].gaussian();
@@ -95,7 +96,7 @@ void check_forces(parity par, double mass_parameter){
     
     s1 = 0;
     D.dagger(psi,tmp);
-    onsites(ALL){
+    onsites(D.par){
       s1 += chi[X].rdot(tmp[X]);
     }
 
@@ -106,7 +107,7 @@ void check_forces(parity par, double mass_parameter){
 
     s2 = 0;
     D.dagger(psi,tmp);
-    onsites(ALL){
+    onsites(D.par){
       s2 += chi[X].rdot(tmp[X]);
     }
 
@@ -121,12 +122,12 @@ void check_forces(parity par, double mass_parameter){
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Fermion deriv" );
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps*10 && "Fermion dg deriv" );
     }
 
 
@@ -153,11 +154,11 @@ void check_forces(parity par, double mass_parameter){
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion force" );
     }
   }
@@ -236,13 +237,13 @@ int main(int argc, char **argv){
   using SUN=SU<N>;
 
   output0 << "Checking staggered forces:\n";
-  check_forces<dirac_staggered<VEC, SUN>, SUN, VEC>(ALL, 1.5);
+  check_forces<dirac_staggered<VEC, SUN>, SUN, VEC>(1.5);
   output0 << "Checking evenodd preconditioned staggered forces:\n";
-  check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN, VEC>(EVEN, 1.5);
+  check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN, VEC>(1.5);
   output0 << "Checking Wilson forces:\n";
-  check_forces<dirac_wilson<N, double, SUN>, SUN, VEC>(ALL, 0.05);
+  check_forces<dirac_wilson<N, double, SUN>, SUN, VEC>(0.05);
   output0 << "Checking evenodd preconditioned Wilson forces:\n";
-  check_forces<Dirac_Wilson_evenodd<N, double, SUN>, SUN, VEC>(EVEN, 0.05);
+  check_forces<Dirac_Wilson_evenodd<N, double, SUN>, SUN, VEC>(0.05);
 
 
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){
