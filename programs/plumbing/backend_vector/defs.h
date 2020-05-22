@@ -25,11 +25,10 @@ inline void synchronize_threads(){}
 
 /// Implements test for basic in types, similar to 
 /// std::is_arithmetic, but allows the backend to add
-/// it's own basic tyes (such as AVX vectors)
+/// it's own basic types (such as AVX vectors)
 template< class T >
-struct is_arithmetic : std::integral_constant<
+struct is_avx_vector : std::integral_constant<
   bool,
-  std::is_arithmetic<T>::value ||
   std::is_same<T,Vec4d>::value ||
   std::is_same<T,Vec8f>::value ||
   std::is_same<T,Vec8i>::value ||
@@ -37,6 +36,15 @@ struct is_arithmetic : std::integral_constant<
   std::is_same<T,Vec16f>::value ||
   std::is_same<T,Vec16i>::value 
 > {};
+
+template< class T >
+struct is_arithmetic : std::integral_constant<
+  bool,
+  std::is_arithmetic<T>::value ||
+  is_avx_vector<T>::value
+> {};
+
+
 
 
 
