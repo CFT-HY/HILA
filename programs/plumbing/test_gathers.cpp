@@ -63,7 +63,7 @@ void gather_test() {
 #endif
 
           T j = n.r[d];
-          T s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
+          T s = ((int)(t[X].r[d] + add + lattice->size(d))) % lattice->size(d);
 
           sum2 += n.r[d] - lattice->size(d)/2;
           sum1 += t[X].r[d] - lattice->size(d)/2;
@@ -113,12 +113,13 @@ void gather_test() {
         diff = 0;
         sum1 = sum2 = 0;
         onsites(p) {
-          T j = abs(t[X+d2].r[d]);
-          T s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
+          int a = t[X+d2].r[d];
+          T j = abs(a);
+          T s = ((int)(t[X].r[d] + add + lattice->size(d))) % lattice->size(d);
 
           diff += s-j;
           sum1 += t[X].r[d] - lattice->size(d)/2;
-          sum2 += abs(t[X+d2].r[d]) - lattice->size(d)/2;
+          sum2 += j - lattice->size(d)/2;
         }     
      
         if (diff != 0) {
@@ -152,6 +153,6 @@ void gather_test() {
 void test_std_gathers()
 {
   gather_test<int>();
-  // gather_test<int64_t>();
+  gather_test<double>();
 }
 

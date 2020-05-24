@@ -72,8 +72,8 @@ public:
     // constant across nodes
     struct subnode_struct {
       coordinate_vector divisions,size;  // div to subnodes to directions, size
-      coordinate_vector offset[number_of_subnodes];  // coord shift to subnodes
       unsigned sites,evensites,oddsites;   
+      direction merged_subnodes_dir;
 
       void setup(const node_struct & tn);
     } subnodes;
@@ -292,8 +292,6 @@ public:
   }
   #endif
 
-#ifndef SUBNODE_LAYOUT
-
   inline const coordinate_vector & coordinates( unsigned idx ) const {
     return this_node.coordinates[idx];
   }
@@ -302,22 +300,6 @@ public:
     return this_node.coordinates[idx][d];
   }
 
-
-#else
-
-  inline const coordinate_vector coordinates( unsigned idx ) const {
-
-    return  this_node.coordinates[idx / number_of_subnodes]
-            + this_node.subnodes.offset[idx % number_of_subnodes];
-  }
-
-  inline int coordinate( direction d, unsigned idx ) const {
-
-    return  this_node.coordinates[idx / number_of_subnodes][d]
-            + this_node.subnodes.offset[idx % number_of_subnodes][d];
-  }
-
-#endif
 
   inline parity site_parity( unsigned idx ) const {
   #ifdef EVEN_SITES_FIRST

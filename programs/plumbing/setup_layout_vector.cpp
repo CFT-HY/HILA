@@ -9,8 +9,8 @@
 /***************************************************************/
 
 /* number of primes to be used in factorization */
-#define NPRIMES 9
-const static int prime[NPRIMES] = {2,3,5,7,11,13,17,19,23};
+#define NPRIMES 12
+const static int prime[NPRIMES] = {2,3,5,7,11,13,17,19,23,29,31,37};
 
 // Set up now squaresize and nsquares - arrays 
 // Print info to outf as we proceed 
@@ -22,7 +22,7 @@ void lattice_struct::setup_layout()
 
   output0 << "------------------------------------------------------------\n";
   output0 << "LAYOUT: subnode lattice, with " << VECTOR_SIZE/sizeof(float) << " subnodes\n"
-              << "Enabled vector length " << VECTOR_SIZE*8 << " bits = "
+              << "Enabling vector length " << VECTOR_SIZE*8 << " bits = "
               << VECTOR_SIZE/sizeof(double) << " doubles or " 
               << VECTOR_SIZE/sizeof(float) << " floats/ints\n";
   output0 << "Lattice size ";
@@ -153,6 +153,7 @@ void lattice_struct::setup_layout()
 
     foralldir(dir) 
       if (nodesiz[dir] < 3) fail = true;  // don't allow nodes of size 1 or 2
+
     if (!fail) {
 
       // check here that this can be used for vectorized division
@@ -173,6 +174,7 @@ void lattice_struct::setup_layout()
             subdiv[dir] = sd;
             n_subn *= 2;
             div_done = true;
+            this_node.subnodes.merged_subnodes_dir = dir;
           }
         }
       } while (div_done && n_subn < number_of_subnodes);
@@ -261,7 +263,7 @@ void lattice_struct::setup_layout()
     output0 << "  =  " << numnodes() << " nodes\n";
 
 
-    output0 << "Node subdivision: ";
+    output0 << "Node subdivision to 32-bit elements: ";
     foralldir(dir) {
       if (dir > 0) output0 << " x ";
       output0 << subdiv[dir];
@@ -277,6 +279,12 @@ void lattice_struct::setup_layout()
         output0 << nodesiz[dir]/subdiv[dir];
     }
     output0 << '\n';
+
+    direction dir = this_node.subnodes.merged_subnodes_dir;
+    output0 << "For 64-bit elements:\nsubnode division to direction " << dir
+            << " is " << subdiv[dir]/2 << " sites on subnodes " << nodesiz[dir]*2/subdiv[dir]
+            << '\n';
+    
 
   }
     
