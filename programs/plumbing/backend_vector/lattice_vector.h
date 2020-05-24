@@ -130,12 +130,14 @@ struct vectorized_lattice_struct  {
         // upper corner of 1st subnode
         coordinate_vector here = subnode_origin + subnode_size - 1;
         unsigned idx = lattice->site_index(here);
-        hila::output << "Perm " << here << " idx " << idx << " mod " << idx % vector_size << '\n';
         assert (idx % vector_size == 0);  // is it really on 1st subnode
+
         // loop over subnodes
         for (int i=0; i<vector_size; i++) {
+
           // get the site index of the neighbouring site
           coordinate_vector h = lattice->coordinates(idx+i) + d;
+
           // remember to mod the coordinate on lattice
           h = mod( h, lattice->size() );
           int rank = lattice->node_rank(h);

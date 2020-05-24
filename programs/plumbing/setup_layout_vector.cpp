@@ -262,8 +262,9 @@ void lattice_struct::setup_layout()
     }
     output0 << "  =  " << numnodes() << " nodes\n";
 
+#ifdef VECTORIZED
 
-    output0 << "Node subdivision to 32-bit elements: ";
+    output0 << "Node subdivision to 32bit elems: ";
     foralldir(dir) {
       if (dir > 0) output0 << " x ";
       output0 << subdiv[dir];
@@ -280,15 +281,31 @@ void lattice_struct::setup_layout()
     }
     output0 << '\n';
 
-    direction dir = this_node.subnodes.merged_subnodes_dir;
-    output0 << "For 64-bit elements:\nsubnode division to direction " << dir
-            << " is " << subdiv[dir]/2 << " sites on subnodes " << nodesiz[dir]*2/subdiv[dir]
-            << '\n';
+    direction dmerge = this_node.subnodes.merged_subnodes_dir;
+
+    output0 << "Node subdivision to 64bit elems: ";
+    foralldir(dir) {
+      if (dir > 0) output0 << " x ";
+      output0 << ( (dir == dmerge) ? subdiv[dir]/2 : subdiv[dir] );
+    }
+    output0 << "  =  " << number_of_subnodes/2 << " subnodes\n";
     
+    output0 << "Sites on subnodes: ";
+    foralldir(dir) {
+      if (dir > 0) output0 << " x ";
+      if (dir == mdir)
+        output0 << '(' << nodesiz[dir]-1 << '-' << nodesiz[dir] << ')';
+      else
+        output0 << ( (dir == dmerge) ? 2*nodesiz[dir]/subdiv[dir] : nodesiz[dir]/subdiv[dir] );
+    }
+    output0 << '\n';
+    
+#endif
+
 
   }
     
-  #ifdef USE_MPI
+#ifdef USE_MPI
   // For MPI, remap the nodes for periodic torus
   // in the desired manner 
   // we have at least 2 options:
@@ -297,7 +314,7 @@ void lattice_struct::setup_layout()
   
   nodes.create_remap();
 
-  #endif  
+#endif  
 
   output0 << "------------------------------------------------------------\n\n";
 

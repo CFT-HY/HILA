@@ -209,7 +209,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 /// along the direction merged_subnodes_dir
 /// E.g. 
 /// a 2-dim. 4x8 node is divided into 8 / 4 subnodes as follows:  
-/// here 0-3 is the index within subnode, and a-h / a-d the subnode label.
+/// here 0-3 / 0-7 is the index within subnode, and a-h / a-d the subnode label.
 ///
 ///     32bit(float)   64bit(double)
 ///                                             32bit storage: 64bit storage:    
