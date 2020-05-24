@@ -115,6 +115,7 @@ class dirac_staggered {
   public:
 
     using vector_type = vector;
+    parity par = ALL;
 
     // Constructor: initialize mass, gauge and eta
     dirac_staggered(dirac_staggered &d) : gauge(d.gauge), mass(d.mass) {
@@ -174,12 +175,13 @@ class dirac_staggered_evenodd {
     double mass;
     field<double> staggered_eta[NDIM];
 
-    // Note array of fields, changes with the field
     field<matrix> (&gauge)[NDIM];
   public:
 
     using vector_type = vector;
     using matrix_type = matrix;
+
+    parity par = EVEN;
 
     dirac_staggered_evenodd(dirac_staggered_evenodd &d) : gauge(d.gauge), mass(d.mass) {
       init_staggered_eta(staggered_eta);
@@ -190,8 +192,9 @@ class dirac_staggered_evenodd {
 
 
     // Applies the operator to in
-    inline void apply( const field<vector_type> & in, field<vector_type> & out){
+    inline void apply(  field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
+      in[ODD] = 0;
       dirac_staggered_diag(mass, in, out, EVEN);
 
       dirac_staggered_hop(gauge, in, out, staggered_eta, ODD, 1);
@@ -201,10 +204,11 @@ class dirac_staggered_evenodd {
     }
 
     // Applies the conjugate of the operator
-    inline void dagger( const field<vector_type> & in, field<vector_type> & out){
+    inline void dagger(  field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       dirac_staggered_diag(mass, in, out, EVEN);
 
+      in[ODD] = 0;
       dirac_staggered_hop(gauge, in, out, staggered_eta, ODD, -1);
       dirac_staggered_diag_inverse(mass, out, ODD);
       dirac_staggered_hop(gauge, out, out, staggered_eta, EVEN, -1);

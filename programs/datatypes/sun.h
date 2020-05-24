@@ -187,12 +187,12 @@ class SU : public matrix<n,n,cmplx<radix> >{
 
     // The norm of an algebra matrix
     radix algebra_norm(){
-      double thissum = 0;
+      radix thissum = 0;
       for(int i=0; i<n; i++) {
         for(int j=0; j<i; j++) {
           thissum += (*this).c[i][j].squarenorm();
         }
-        double diag = (*this).c[i][i].im;
+        radix diag = (*this).c[i][i].im;
         thissum += 0.5*diag*diag;
       }
       return thissum;
@@ -549,11 +549,11 @@ SU2<radix> SU2<radix>::operator - (const SU2<radix> & y){
 /// Project to the antihermitean part of a matrix
 template<int N, typename radix>
 void project_antihermitean(SU<N,radix> &matrix){
-  double tr = 0;
+  radix tr = 0;
   for(int i=0; i<N; i++) {
     for(int j=0; j<i; j++) {
-      double a = 0.5*(matrix.c[i][j].re - matrix.c[j][i].re);
-      double b = 0.5*(matrix.c[i][j].im + matrix.c[j][i].im);
+      radix a = 0.5*(matrix.c[i][j].re - matrix.c[j][i].re);
+      radix b = 0.5*(matrix.c[i][j].im + matrix.c[j][i].im);
       matrix.c[i][j].re = a;
       matrix.c[j][i].re =-a;
       matrix.c[i][j].im = b;
@@ -574,7 +574,7 @@ void project_antihermitean(SU<N,radix> &matrix){
 
 
 
-template<int n, typename radix=double>
+template<int n, typename radix>
 class SU_vector : public vector<n,cmplx<radix>>{
   public:
     using base_type = typename base_type_struct<radix>::type;
@@ -603,8 +603,8 @@ class SU_vector : public vector<n,cmplx<radix>>{
       return r;
     }
 
-    inline double rdot(const SU_vector &rhs) const {
-      double r = 0;
+    inline radix rdot(const SU_vector &rhs) const {
+      radix r = 0;
       for (int i=0; i<n; i++) {
         r += this->c[i].re*rhs.c[i].re;
         r += this->c[i].im*rhs.c[i].im;

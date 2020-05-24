@@ -104,24 +104,24 @@ class Wilson_vector {
     return r;
   }
 
-  inline auto norm_sq(){ 
-    auto r=c[0].norm_sq();
-    for (int i = 1; i < Gammadim; i++) {
+  inline radix norm_sq(){ 
+    radix r=0;
+    for (int i = 0; i < Gammadim; i++) {
       r += c[i].norm_sq();
     }
     return r;
   }
 
-  inline auto dot(const Wilson_vector &rhs) const {
-    auto r = c[0].dot(rhs.c[0]);
-    for (int i=1; i<Gammadim; i++) {
+  inline cmplx<radix> dot(const Wilson_vector &rhs) const {
+    cmplx<radix> r = 0;
+    for (int i=0; i<Gammadim; i++) {
       r += c[i].dot(rhs.c[i]);
     }
     return r;
   }
 
-  inline double rdot(const Wilson_vector &rhs) const {
-    double r = (0.0);
+  inline radix rdot(const Wilson_vector &rhs) const {
+    radix r = (0.0);
     for (int i=0; i<Gammadim; i++) {
       r += c[i].rdot(rhs.c[i]);
     }
@@ -367,6 +367,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
   }
 
@@ -426,6 +429,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
     return r;
   }
@@ -471,7 +477,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
-    }
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();    }
   }
 
   #pragma transformer loop_function
@@ -500,6 +508,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
     return r;
   }
@@ -509,9 +520,9 @@ class half_Wilson_vector {
 
   /// Returns the norm squared of (1+-gamma_j) * wilson_vector.
   /// Thus the factor 2.
-  inline auto norm_sq(){ 
-    auto r=c[0].norm_sq();
-    for (int i = 1; i < Gammadim; i++) {
+  inline radix norm_sq(){ 
+    radix r=0;
+    for (int i = 0; i < Gammadim/2; i++) {
       r += c[i].norm_sq();
     }
     return r;

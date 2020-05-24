@@ -84,10 +84,12 @@ inline void dirac_wilson_calc_force(
   
   foralldir(dir){
     onsites(opp_parity(par)){
-      vtemp[0][X] = half_Wilson_vector<N, radix>(chi[X], dir, -sign);
+      half_Wilson_vector<N, radix> hw(chi[X], dir, -sign);
+      vtemp[0][X] = hw;
     }
     onsites(par){
-      vtemp[1][X] = half_Wilson_vector<N, radix>(psi[X], dir, sign);
+      half_Wilson_vector<N, radix> hw(psi[X], dir, sign);
+      vtemp[1][X] = hw;
     }
 
     out[dir][ALL] = 0;
@@ -116,6 +118,8 @@ class dirac_wilson {
 
     using vector_type = Wilson_vector<N, radix>;
     using matrix_type = matrix;
+
+    parity par = ALL;
 
     // Constructor: initialize mass and gauge
     dirac_wilson(dirac_wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
@@ -169,38 +173,39 @@ template<int N, typename radix, typename matrix>
 class Dirac_Wilson_evenodd {
   private:
     double kappa;
-
-    // Note array of fields, changes with the field
     field<matrix> (&gauge)[NDIM];
   public:
 
     using vector_type = Wilson_vector<N, radix>;
     using matrix_type = matrix;
 
+    // The parity 
+    parity par = EVEN;
+
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
 
 
     // Applies the operator to in
-    inline void apply( const field<vector_type> & in, field<vector_type> & out){
+    inline void apply( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
+      in[ODD] = 0;
       dirac_wilson_diag(in, out, EVEN);
 
       dirac_wilson_hop(gauge, kappa, in, out, ODD, 1);
       dirac_wilson_diag_inverse(out, ODD);
       dirac_wilson_hop(gauge, kappa, out, out, EVEN, 1);
-      out[ODD] = 0;
     }
 
     // Applies the conjugate of the operator
-    inline void dagger( const field<vector_type> & in, field<vector_type> & out){
+    inline void dagger( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
+      in[ODD] = 0;
       dirac_wilson_diag(in, out, EVEN);
 
       dirac_wilson_hop(gauge, kappa, in, out, ODD, -1);
       dirac_wilson_diag_inverse(out, ODD);
       dirac_wilson_hop(gauge, kappa, out, out, EVEN, -1);
-      out[ODD] = 0;
     }
 
     // Applies the derivative of the Dirac operator with respect

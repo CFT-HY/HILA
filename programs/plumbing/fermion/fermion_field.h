@@ -11,8 +11,10 @@
 template<typename VECTOR, typename DIRAC_OP>
 void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
   field<VECTOR> psi;
+  field<double> disable_avx; disable_avx = 0;
   psi.copy_boundary_condition(chi);
-  onsites(ALL){
+  onsites(D.par){
+    if(disable_avx[X]==0){};
     psi[X].gaussian();
   }
   D.dagger(psi,chi);
@@ -29,7 +31,7 @@ double pseudofermion_action(field<VECTOR> &chi, DIRAC_OP D){
 
   psi=0;
   inverse.apply(chi,psi);
-  onsites(ALL){
+  onsites(D.par){
     action += chi[X].rdot(psi[X]);
   }
   return action;
@@ -76,7 +78,7 @@ class fermion_action{
     field<typename DIRAC_OP::vector_type> chi;
 
 
-    fermion_action(DIRAC_OP &d, field<matrix> (&g)[NDIM], field<matrix> (&m)[NDIM])
+    fermion_action(DIRAC_OP &d, field<matrix> (&g)[NDIM], field<matrix> (&m)[NDIM], parity p=ALL)
     : D(d), gauge(g), momentum(m){ 
       chi = 0.0;
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);

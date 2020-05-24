@@ -5,8 +5,10 @@
 /// Generate a random antihermitean matrix
 template<int N, typename radix>
 void gaussian_momentum(field<SU<N,radix>> *momentum){
+  field<double> disable_avx; disable_avx = 0;
   foralldir(dir) {
     onsites(ALL){
+      if(disable_avx[X]==0){};
       momentum[dir][X].gaussian_algebra();
     }
   }
