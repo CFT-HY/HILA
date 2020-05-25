@@ -6,6 +6,9 @@
 #include "../plumbing/field.h"
 
 
+//HACK: force disable vectorization in a loop using
+// if(disable_avx[X]==0){};
+field<double> disable_avx = 0;
 
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.

@@ -1345,6 +1345,11 @@ static void read_fields(std::string filename, fieldtypes&... fields){
 #include "../plumbing/FFT.h"
 
 
+//HACK: force disable vectorization in a loop using
+// if(disable_avx[X]==0){};
+extern field<double> disable_avx;
+
+
 #endif // FIELD_H
 
 

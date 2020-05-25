@@ -63,8 +63,6 @@ int main(int argc, char **argv){
   #endif
   seed_random(2);
 
-  field<double> disable_avx; disable_avx = 0;
-
 
   test_gamma_matrices();
 

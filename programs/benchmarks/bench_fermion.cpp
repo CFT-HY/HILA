@@ -35,7 +35,6 @@ int main(int argc, char **argv){
     // Define a gauge matrix
     field<SU<N,double>> U[NDIM];
     field<SU_vector<N, double>> sunvec1, sunvec2;
-    field<double> disable_avx; disable_avx = 0;
 
     foralldir(d) {
       onsites(ALL){

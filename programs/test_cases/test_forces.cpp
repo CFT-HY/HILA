@@ -17,7 +17,6 @@ template<typename dirac, typename matrix, typename vector>
 void check_forces(double mass_parameter){
   field<SU<N>> gauge[NDIM];
   field<SU<N>> momentum[NDIM];
-  field<double> disable_avx; disable_avx = 0;
   double eps = 1e-5;
 
   dirac D(mass_parameter, gauge);
@@ -79,11 +78,11 @@ void check_forces(double mass_parameter){
     double diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
 
@@ -122,11 +121,11 @@ void check_forces(double mass_parameter){
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion dg deriv" );
     }
 
@@ -154,11 +153,11 @@ void check_forces(double mass_parameter){
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
-      hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion force " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
+      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion force" );
     }
   }
