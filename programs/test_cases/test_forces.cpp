@@ -72,19 +72,21 @@ void check_forces(double mass_parameter){
     gauge[0].mark_changed(ALL);
 
     D.force(chi, psi, momentum, 1);
+
     matrix f = momentum[0].get_value_at(50);
     double f1 = (s2-s1)/eps;
     double f2 = (f*matrix::generator(ng)).trace().re;
     double diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
+
 
 
     onsites(D.par){
@@ -92,7 +94,10 @@ void check_forces(double mass_parameter){
       psi[X].gaussian();
       chi[X].gaussian();
     }
-    
+    // Why is this needed???
+    chi.mark_changed(ALL);
+    psi.mark_changed(ALL);
+
     s1 = 0;
     D.dagger(psi,tmp);
     onsites(D.par){
@@ -121,11 +126,11 @@ void check_forces(double mass_parameter){
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion dg deriv" );
     }
 
@@ -153,11 +158,11 @@ void check_forces(double mass_parameter){
     diff = (f2-f1)/(f1+f2);
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
-      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated force " << (f*matrix::generator(ng)).trace().re << "\n";
+      hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion force" );
     }
   }
@@ -180,7 +185,7 @@ int main(int argc, char **argv){
   #elif NDIM==3
   lattice->setup( 16, 8, 8, argc, argv );
   #elif NDIM==4
-  lattice->setup( 16, 8, 8, 4, argc, argv );
+  lattice->setup( 8, 8, 8, 8, argc, argv );
   #endif
   seed_random(2);
 

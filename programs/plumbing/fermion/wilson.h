@@ -180,7 +180,7 @@ class Dirac_Wilson_evenodd {
     using matrix_type = matrix;
 
     // The parity 
-    parity par = EVEN;
+    parity par = ALL;
 
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
@@ -195,6 +195,7 @@ class Dirac_Wilson_evenodd {
       dirac_wilson_hop(gauge, kappa, in, out, ODD, 1);
       dirac_wilson_diag_inverse(out, ODD);
       dirac_wilson_hop(gauge, kappa, out, out, EVEN, 1);
+      out[ODD] = 0;
     }
 
     // Applies the conjugate of the operator
@@ -206,6 +207,7 @@ class Dirac_Wilson_evenodd {
       dirac_wilson_hop(gauge, kappa, in, out, ODD, -1);
       dirac_wilson_diag_inverse(out, ODD);
       dirac_wilson_hop(gauge, kappa, out, out, EVEN, -1);
+      out[ODD] = 0;
     }
 
     // Applies the derivative of the Dirac operator with respect

@@ -74,9 +74,9 @@ void dirac_staggered_hop(
   // Run neighbour fetches and multiplications
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
-    v_out[par] = v_out[X] + 0.5 * sign * staggered_eta[dir][X] * (
-      gauge[dir][X]*v_in[X+dir] - vtemp[dir][X+odir]
-    );
+    v_out[par] = v_out[X] + 0.5 * sign * staggered_eta[dir][X] *
+      ( gauge[dir][X]*v_in[X+dir] -  vtemp[dir][X-dir]);
+
   }
 }
 
@@ -96,8 +96,8 @@ void dirac_staggered_calc_force(
     out[dir][par] = -sign * 0.5 *
       staggered_eta[dir][X] * chi[X+dir].outer_product(psi[X]);
     out[dir][opp_parity(par)] = out[dir][X] + sign*0.5 *
-       staggered_eta[dir][X+dir] * psi[X+dir].outer_product(chi[X]);
-    
+      staggered_eta[dir][X+dir] * psi[X+dir].outer_product(chi[X]);
+
     out[dir][ALL] = gauge[dir][X]*out[dir][X];
   }
 }
@@ -204,11 +204,11 @@ class dirac_staggered_evenodd {
     }
 
     // Applies the conjugate of the operator
-    inline void dagger(  field<vector_type> & in, field<vector_type> & out){
+    inline void dagger( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
+      in[ODD] = 0;
       dirac_staggered_diag(mass, in, out, EVEN);
 
-      in[ODD] = 0;
       dirac_staggered_hop(gauge, in, out, staggered_eta, ODD, -1);
       dirac_staggered_diag_inverse(mass, out, ODD);
       dirac_staggered_hop(gauge, out, out, staggered_eta, EVEN, -1);

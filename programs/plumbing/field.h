@@ -482,6 +482,9 @@ class field {
     fs->boundary_condition[-dir] = bc;
     fs->neighbours[dir]  = lattice->get_neighbour_array(dir,bc);
     fs->neighbours[-dir] = lattice->get_neighbour_array(-dir,bc);
+
+    // Make sure boundaries get refreshed
+    mark_changed(ALL);
     #endif
   }
 
@@ -498,6 +501,9 @@ class field {
     foralldir(dir){
       set_boundary_condition(dir, rhs.get_boundary_condition(dir));
     }
+
+    // Make sure boundaries get refreshed
+    mark_changed(ALL);
   }
 
   // Overloading [] 
@@ -523,7 +529,7 @@ class field {
   template <typename vecT>
   inline auto get_vector_at(int i) const { return fs->template get_vector<vecT>(i); }
   inline auto get_value_at_nb_site(direction d, int i) const {
-      return fs->get_element( fs->vector_lattice->site_neighbour(d,i) );
+    return fs->get_element( fs->vector_lattice->site_neighbour(d,i) );
   }
 #endif
 
