@@ -8,7 +8,7 @@
 
 //HACK: force disable vectorization in a loop using
 // if(disable_avx[X]==0){};
-field<double> disable_avx = 0;
+field<double> disable_avx;
 
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
@@ -65,6 +65,8 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 #endif
 
   test_std_gathers();
+
+  disable_avx = 0;
 
 }
 
