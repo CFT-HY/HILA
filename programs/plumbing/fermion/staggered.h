@@ -194,25 +194,25 @@ class dirac_staggered_evenodd {
     // Applies the operator to in
     inline void apply(  field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
-      in[ODD] = 0;
+      in.mark_changed(ODD);
       dirac_staggered_diag(mass, in, out, EVEN);
 
       dirac_staggered_hop(gauge, in, out, staggered_eta, ODD, 1);
       dirac_staggered_diag_inverse(mass, out, ODD);
       dirac_staggered_hop(gauge, out, out, staggered_eta, EVEN, 1);
-      out[ODD] = 0;
+      out.mark_changed(ODD);
     }
 
     // Applies the conjugate of the operator
     inline void dagger( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
-      in[ODD] = 0;
+      in.mark_changed(ODD);
       dirac_staggered_diag(mass, in, out, EVEN);
 
       dirac_staggered_hop(gauge, in, out, staggered_eta, ODD, -1);
       dirac_staggered_diag_inverse(mass, out, ODD);
       dirac_staggered_hop(gauge, out, out, staggered_eta, EVEN, -1);
-      out[ODD] = 0;
+      out.mark_changed(ODD);
     }
 
     // Applies the derivative of the Dirac operator with respect

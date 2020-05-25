@@ -189,7 +189,7 @@ class Dirac_Wilson_evenodd {
     // Applies the operator to in
     inline void apply( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
-      in[ODD] = 0;
+      in.mark_changed(ODD);
       dirac_wilson_diag(in, out, EVEN);
 
       dirac_wilson_hop(gauge, kappa, in, out, ODD, 1);
@@ -201,7 +201,7 @@ class Dirac_Wilson_evenodd {
     // Applies the conjugate of the operator
     inline void dagger( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
-      in[ODD] = 0;
+      in.mark_changed(ODD);
       dirac_wilson_diag(in, out, EVEN);
 
       dirac_wilson_hop(gauge, kappa, in, out, ODD, -1);

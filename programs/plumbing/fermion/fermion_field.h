@@ -16,6 +16,7 @@ void generate_pseudofermion(field<VECTOR> &chi, DIRAC_OP D){
     if(disable_avx[X]==0){};
     psi[X].gaussian();
   }
+  psi.mark_changed(ALL);
   D.dagger(psi,chi);
 }
 
@@ -47,7 +48,7 @@ void fermion_force(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], DIRAC_OP &D
   field<SUN> force[NDIM], force2[NDIM];
   CG<DIRAC_OP> inverse(D);
   
-  psi=0;
+  psi[ALL]=0;
   inverse.apply(chi, psi);
   
   D.apply(psi, Mpsi);
