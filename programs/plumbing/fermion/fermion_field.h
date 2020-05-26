@@ -81,15 +81,19 @@ class fermion_action{
     fermion_action(DIRAC_OP &d, field<matrix> (&g)[NDIM], field<matrix> (&m)[NDIM], parity p=ALL)
     : D(d), gauge(g), momentum(m){ 
       chi = 0.0;
+      #if NDIM > 3
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      #endif
     }
 
     fermion_action(fermion_action &fa)
     : gauge(fa.gauge), momentum(fa.momentum), D(fa.D)  {
       chi = fa.chi;
+      #if NDIM > 3
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      #endif
     }
 
     // Return the value of the action with the current
