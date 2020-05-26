@@ -495,6 +495,7 @@ class half_Wilson_vector {
         }
 	      break;
       case YUP:
+        if(sign==1){
           r.c[0] = c[0]; r.c[1] = I*c[0];
 	      } else {
           r.c[0] = c[0]; r.c[1] = -I*c[0];
@@ -502,6 +503,7 @@ class half_Wilson_vector {
         break;
 #if NDIM == 3
       case ZUP:
+        if(sign==1){
           r.c[0] = sqrt(2.0)*c[0]; r.c[1] = 0;
 	      } else {
           r.c[0] = 0; r.c[1] = sqrt(2.0)*c[0];
