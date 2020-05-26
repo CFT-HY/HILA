@@ -228,8 +228,9 @@ class dirac_staggered_evenodd {
       dirac_staggered_diag_inverse(mass, tmp, ODD);
       dirac_staggered_calc_force(gauge, chi, tmp, force2, staggered_eta, sign, ODD);
 
-      foralldir(dir)
+      foralldir(dir){
         force[dir][ALL] = force[dir][X] + force2[dir][X];
+      }
     }
 };
 

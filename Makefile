@@ -81,6 +81,30 @@ CLANG_LIBS := \
 	-lclangToolingCore \
 	-lclangTooling \
 	-Wl,--end-group
+#For Clang 10 (I think)
+#CLANG_LIBS := \
+#	-Wl,--start-group \
+#	-lclangAST \
+#	-lclangAnalysis \
+#	-lclangBasic \
+#	-lclangDriver \
+#	-lclangEdit \
+#	-lclangFrontend \
+#	-lclangFrontendTool \
+#	-lclangLex \
+#	-lclangParse \
+#	-lclangSema \
+#	-lclangEdit \
+#	-lclangASTMatchers \
+#	-lclangRewrite \
+#	-lclangRewriteFrontend \
+#	-lclangStaticAnalyzerFrontend \
+#	-lclangStaticAnalyzerCheckers \
+#	-lclangStaticAnalyzerCore \
+#	-lclangSerialization \
+#	-lclangToolingCore \
+#	-lclangTooling \
+#	-Wl,--end-group
 
 # Internal paths in this project: where to find sources, and where to put
 # build artifacts.

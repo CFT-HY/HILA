@@ -1,5 +1,6 @@
 #define _USE_MATH_DEFINES
-#include <iostream>
+#include <sstream>
+#include<iostream>
 #include <fstream>
 #include <string>
 #include <math.h>

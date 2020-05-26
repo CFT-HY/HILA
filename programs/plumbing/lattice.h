@@ -1,7 +1,8 @@
 #ifndef LATTICE_H
 #define LATTICE_H
 
-#include <iostream>
+#include <sstream>
+#include<iostream>
 #include <fstream>
 #include <array>
 #include <vector>

@@ -616,5 +616,4 @@ class SU_vector : public vector<n,cmplx<radix>>{
 
 
 
-
 #endif 

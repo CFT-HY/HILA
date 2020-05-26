@@ -1,3 +1,4 @@
+#include <sstream>
 #include<iostream>
 #include "cmplx.h"
 #include "general_matrix.h"

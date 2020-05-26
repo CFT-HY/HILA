@@ -4,7 +4,8 @@
 /// This file contains general global state of the simulation programs.
 /// Probably this could be done much more elegantly
 
-#include <iostream>
+#include <sstream>
+#include<iostream>
 #include "../plumbing/lattice.h"
 
 

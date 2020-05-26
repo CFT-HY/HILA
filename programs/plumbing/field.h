@@ -1,6 +1,7 @@
 #ifndef FIELD_H
 #define FIELD_H
-#include <iostream>
+#include <sstream>
+#include<iostream>
 #include <string>
 #include <cstring> //Memcpy is here...
 #include <math.h>
