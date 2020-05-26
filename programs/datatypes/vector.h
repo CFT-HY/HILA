@@ -195,6 +195,43 @@ vector<n,T>  operator-(vector<n,T> lhs, vector<n,T> rhs){
 
 
 
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+vector<n,T> operator+(const scalart &lhs, const vector<n,T> &rhs){
+  vector<n,T>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = rhs+rhs.c[i];
+  }
+  return r;
+}
+
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+vector<n,T> operator+(const vector<n,T> &lhs, const scalart &rhs){
+  vector<n,T>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = lhs.c[i]+rhs;
+  }
+  return r;
+}
+
+
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+vector<n,T> operator-(const scalart &lhs, const vector<n,T> &rhs){
+  vector<n,T>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = rhs-rhs.c[i];
+  }
+  return r;
+}
+
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+vector<n,T> operator-(const vector<n,T> &lhs, const scalart &rhs){
+  vector<n,T>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = lhs.c[i]-rhs;
+  }
+  return r;
+}
+
 
 
 template<int n, typename T>
