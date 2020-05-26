@@ -9,7 +9,7 @@
 /// staggered dirac operator or something else. 
 ///////////////////////////////////////////////////////
 
-#include "../dirac.h"
+
 #include <sstream>
 #include<iostream>
 
