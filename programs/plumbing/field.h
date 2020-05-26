@@ -392,7 +392,7 @@ class field {
 
   bool is_allocated() const { return (fs != nullptr); }
 
-  bool is_initialized(parity p) const { 
+  bool is_initialized(parity p) const {
     return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
   }
 
@@ -423,10 +423,14 @@ class field {
     for (direction i=(direction)0; i<NDIRS; ++i) {
       // check if there's ongoing comms, invalidate it!
       drop_comms_if_needed(i,p);
+      //drop_comms_if_needed(i,opp_parity(p));
 
       set_move_status(p,i,status::NOT_DONE);
-      if (p != ALL) set_move_status(ALL,i,status::NOT_DONE );
-      else {
+      set_move_status(ALL,i,status::NOT_DONE );
+      //set_move_status(opp_parity(p),i,status::NOT_DONE);
+      if (p != ALL){
+        set_move_status(ALL,i,status::NOT_DONE );
+      } else {
         set_move_status(EVEN,i,status::NOT_DONE);
         set_move_status(ODD,i,status::NOT_DONE);
       }
@@ -970,7 +974,7 @@ void field<T>::wait_get(direction d, parity p) const {
     else if (is_fetched(d,ODD) && is_move_started(d,EVEN)) par = EVEN;
     else if (is_move_started(d,EVEN) && is_move_started(d,ODD)) {
       n_wait = 2;  // need to wait for both! 
-      par = ALL;  
+      par = ALL;
     } else {
       output0 << "wait_get error: no matching wait found for parity ALL\n";
       exit(-1);

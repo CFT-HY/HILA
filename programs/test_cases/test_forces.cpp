@@ -94,9 +94,6 @@ void check_forces(double mass_parameter){
       psi[X].gaussian();
       chi[X].gaussian();
     }
-    // Why is this needed???
-    chi.mark_changed(ALL);
-    psi.mark_changed(ALL);
 
     s1 = 0;
     D.dagger(psi,tmp);

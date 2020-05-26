@@ -35,7 +35,7 @@ inline void dirac_wilson_hop(
     }
 
     vtemp[dir].set_boundary_condition(dir, v_in.get_boundary_condition(dir));
-    vtemp[dir].start_get(odir);
+    //vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
