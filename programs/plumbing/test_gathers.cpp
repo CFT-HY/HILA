@@ -41,7 +41,9 @@ void gather_test() {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
   for (boundary_condition_t bc : {boundary_condition_t::PERIODIC, boundary_condition_t::ANTIPERIODIC}) {
     // output0 << "testing boundary " << (int)bc << '\n';
-    t.set_boundary_condition(TUP,bc);
+#if NDIM > 3
+      t.set_boundary_condition(TUP,bc);
+#endif
 #endif
   for (parity p : {EVEN,ODD,ALL}) {
 
@@ -54,7 +56,7 @@ void gather_test() {
         if (is_up_dir(d2)) add = 1; else add = -1;
         onsites(p) {
           auto n = t[X+d2];
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
+#if defined(SPECIAL_BOUNDARY_CONDITIONS) && NDIM > 3
           if (bc == boundary_condition_t::ANTIPERIODIC &&
               (( X.coordinates()[TUP] == 0 && d2 == TDOWN) || 
                ( X.coordinates()[TUP] == lattice->size(TUP)-1 && d2 ==TUP))) {
