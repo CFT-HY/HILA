@@ -152,7 +152,7 @@ int main(int argc, char **argv){
   // Check conjugate of the even-odd preconditioned staggered Dirac operator
   {
     using dirac = dirac_staggered_evenodd<SU_vector<N, double>, SU<N>>;
-    dirac D(0.1, U);
+    dirac D(1.5, U);
     field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<SU_vector<N, double>> sol;
     onsites(ALL){
@@ -165,7 +165,7 @@ int main(int argc, char **argv){
     double diffre = 0, diffim = 0;
     D.apply(b, Db);
     D.dagger(a, Ddaggera);
-    onsites(ALL){
+    onsites(EVEN){
       diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
@@ -209,8 +209,8 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
   
-    assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
-    assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
+    assert(diffre*diffre < 1e-16 && "test dirac_wilson_dagger");
+    assert(diffim*diffim < 1e-16 && "test dirac_wilson_dagger");
   
     // Now run CG on Ddaggera. b=1/D a -> Db = a 
     CG<dirac> inverse(D);
