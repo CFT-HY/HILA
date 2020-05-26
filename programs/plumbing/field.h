@@ -424,11 +424,8 @@ class field {
     for (direction i=(direction)0; i<NDIRS; ++i) {
       // check if there's ongoing comms, invalidate it!
       drop_comms_if_needed(i,p);
-      //drop_comms_if_needed(i,opp_parity(p));
 
-      set_move_status(p,i,status::NOT_DONE);
-      set_move_status(ALL,i,status::NOT_DONE );
-      //set_move_status(opp_parity(p),i,status::NOT_DONE);
+      set_move_status(opp_parity(p),i,status::NOT_DONE);
       if (p != ALL){
         set_move_status(ALL,i,status::NOT_DONE );
       } else {
@@ -955,7 +952,6 @@ void field<T>::wait_get(direction d, parity p) const {
 
   // check here consistency, this should never happen
   if (p != ALL && is_move_started(d,p) && is_move_started(d,ALL)) {
-    output0 << "wait_get move parity error!\n";
     exit(-1);
   }
 
@@ -966,7 +962,6 @@ void field<T>::wait_get(direction d, parity p) const {
   else if (p != ALL) {
     if (is_move_started(d,ALL)) par = ALL;      // if all is running wait for it
     else {
-      output0 << "wait_get error: no matching wait found for parity " << (int)p << '\n';
       exit(-1);
     }
   } else {
@@ -977,7 +972,6 @@ void field<T>::wait_get(direction d, parity p) const {
       n_wait = 2;  // need to wait for both! 
       par = ALL;
     } else {
-      output0 << "wait_get error: no matching wait found for parity ALL\n";
       exit(-1);
     }
   }
