@@ -1805,6 +1805,18 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     switch (f->getTemplatedKind()) {
       case FunctionDecl::TemplatedKind::TK_NonTemplate:
         // Normal, non-templated class method -- nothing here
+
+        if(f->isCXXClassMember()){
+          CXXMethodDecl * method = dyn_cast<CXXMethodDecl>(f);
+          CXXRecordDecl * parent = method->getParent();
+          if(parent->isTemplated()){
+            if(does_function_contain_loop(f)){
+              // Skip children here. Loops in the template may be 
+              // incorrect before they are specialized
+              parsing_state.skip_children = 1;
+            }
+          }
+        }
         break;
         
       case FunctionDecl::TemplatedKind::TK_FunctionTemplate:
