@@ -1052,6 +1052,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
 template<typename T>
 void field<T>::wait_get(direction d, parity p) const {}
+template<typename T>
 void field<T>::drop_comms_if_needed(direction d, parity p) const {}
 
 #endif  // MPI
