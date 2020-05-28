@@ -36,6 +36,8 @@ void measure(field<SU<N>> (&gauge)[NDIM], field<double> &sigma, field<double> &p
 
   output0 << "AUXSQ: " << sigmasq+pisq << "\n";
 
+
+
   output0 << " Measure_end " << iter << "\n";
   iter++;
 }
@@ -92,7 +94,10 @@ int main(int argc, char **argv){
   integrator integrator_level_1(ga+aa, gma+ama);
   integrator integrator_level_2(fa, integrator_level_1);
 
-  if( std::ifstream(configfile) )
+
+  int file_found = (bool)std::ifstream(configfile);
+  broadcast(file_found);
+  if( file_found )
   {
     output0 << "Found configuration file, reading\n";
     read_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3], sigma, pi);
