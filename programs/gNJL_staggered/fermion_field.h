@@ -2,82 +2,59 @@
 
 template<typename SUN, typename VECTOR, typename DIRAC_OP>
 void fermion_force_gNJL(field<VECTOR> &chi, field<SUN> (&momentum)[NDIM], field<double> &sigma_momentum, field<double> &pi_momentum, DIRAC_OP &D, double eps){
-  field<VECTOR> psi, Mpsi;
-  psi.copy_boundary_condition(chi);
-  Mpsi.copy_boundary_condition(chi);
-  field<SUN> force[NDIM], force2[NDIM];
-  field<double> smom, smom2, pmom, pmom2;
-  CG<DIRAC_OP> inverse(D);
   
-  psi=0;
-  inverse.apply(chi, psi);
-  
-  D.apply(psi, Mpsi);
-
-  D.force(Mpsi, psi, force, smom, pmom, 1);
-  D.force(psi, Mpsi, force2, smom2, pmom2, -1);
-
-  foralldir(dir){
-    onsites(ALL){
-      force[dir][X] = force[dir][X] + force2[dir][X];
-      project_antihermitean(force[dir][X]);
-      momentum[dir][X] = momentum[dir][X] - eps*force[dir][X];
-    }
-  }
-
-  onsites(ALL){
-    smom[X] = smom[X] + smom2[X];
-    pmom[X] = pmom[X] + pmom2[X];
-    sigma_momentum[X] = sigma_momentum[X] - eps * smom[X];
-    pi_momentum[X] = pi_momentum[X] - eps * pmom[X];
-  }
 }
 
 
-template<typename dirac, typename matrix>
-class gNJL_fermion_action{
+template<typename matrix, typename DIRAC_OP>
+class gNJL_fermion_action : public fermion_action<matrix,DIRAC_OP> {
   public:
-    field<matrix> (&momentum)[NDIM];
     field<double> &sigma_momentum, &pi_momentum;
-    dirac &D;
-    field<typename dirac::vector_type> chi;
 
+    using vector_type = typename DIRAC_OP::vector_type;
+    using fa = fermion_action<matrix,DIRAC_OP>;
 
-    gNJL_fermion_action(dirac &d, field<matrix> (&m)[NDIM], field<double> &sm, field<double> &pm)
-    : D(d), momentum(m), sigma_momentum(sm), pi_momentum(pm){ 
-      chi = 0.0;
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
-    }
+    gNJL_fermion_action(DIRAC_OP &d, field<matrix> (&m)[NDIM], field<double> &sm, field<double> &pm)
+    : fermion_action<matrix,DIRAC_OP>(d, m), sigma_momentum(sm), pi_momentum(pm){}
 
     gNJL_fermion_action(gNJL_fermion_action &fa)
-    : momentum(fa.momentum), D(fa.D), sigma_momentum(fa.sigma_momentum), pi_momentum(fa.pi_momentum)  {
-      chi = fa.chi;
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
-    }
+    : fermion_action<matrix,DIRAC_OP>(fa.D, fa.momentum), sigma_momentum(fa.sigma_momentum), pi_momentum(fa.pi_momentum){}
 
-    // Return the value of the action with the current
-    // field configuration
-    double action(){
-      return pseudofermion_action(chi, D);
-    }
 
-    // Make a copy of fields updated in a trajectory
-    void back_up_fields(){}
-
-    // Restore the previous backup
-    void restore_backup(){}
-
-    /// Gaussian random momentum for each element
-    void draw_gaussian_fields(){
-      generate_pseudofermion(chi, D);
-    }
-
-    // Update the momentum with the derivative of the fermion
-    // action
+    // Update the gauge momentum and the auxiliary field momenta
     void force_step(double eps){
-      fermion_force_gNJL( chi, momentum, sigma_momentum, pi_momentum, D, eps );
+      field<vector_type> psi, Mpsi;
+      psi.copy_boundary_condition(fa::chi);
+      Mpsi.copy_boundary_condition(fa::chi);
+      field<matrix> force[NDIM], force2[NDIM];
+      field<double> smom, smom2, pmom, pmom2;
+      CG<DIRAC_OP> inverse(fa::D);
+
+      psi=0;
+      inverse.apply(fa::chi, psi);
+
+      fa::D.apply(psi, Mpsi);
+
+      fa::D.force(Mpsi, psi, force, smom, pmom, 1);
+      fa::D.force(psi, Mpsi, force2, smom2, pmom2, -1);
+
+      foralldir(dir){
+        onsites(ALL){
+          force[dir][X] = force[dir][X] + force2[dir][X];
+          project_antihermitean(force[dir][X]);
+          fa::momentum[dir][X] = fa::momentum[dir][X] - eps*force[dir][X];
+        }
+      }
+
+      onsites(ALL){
+        smom[X] = smom[X] + smom2[X];
+        pmom[X] = pmom[X] + pmom2[X];
+        sigma_momentum[X] = sigma_momentum[X] - eps * smom[X];
+        pi_momentum[X] = pi_momentum[X] - eps * pmom[X];
+      }
     }
 
 };
+
+
+

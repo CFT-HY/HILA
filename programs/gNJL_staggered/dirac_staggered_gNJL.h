@@ -55,15 +55,17 @@ void dirac_staggered_diag_gNJL_inverse(
   const field<double> &pi,
   parity par, int sign)
 {
-  if(par!=ODD)
+  if(par!=ODD){
     onsites(EVEN){
       element<double> sqr = (sigma[X]+mass)*(sigma[X]+mass) + pi[X]*pi[X];
       v_out[X] = cmplx(sigma[X]+mass,-sign*pi[X])/sqr * v_out[X];
+    }
   }
-  if(par!=EVEN)
+  if(par!=EVEN){
     onsites(ODD){
       element<double> sqr = (sigma[X]+mass)*(sigma[X]+mass) + pi[X]*pi[X];
       v_out[X] = cmplx(sigma[X]+mass, sign*pi[X])/sqr * v_out[X];
+    }
   }
 }
 
@@ -80,7 +82,8 @@ class dirac_staggered_gNJL {
     // Note array of fields, changes with the field
     field<matrix> (&gauge)[NDIM];
   public:
-
+  
+    parity par = ALL;
     using vector_type = vector;
 
     // Constructor: initialize mass, gauge and eta
@@ -124,6 +127,8 @@ class dirac_staggered_gNJL_evenodd {
     field<double> &sigma, &pi;
     field<matrix> (&gauge)[NDIM];
   public:
+
+    parity par = EVEN;
 
     using vector_type = vector;
     using matrix_type = matrix;
