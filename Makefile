@@ -40,7 +40,7 @@ $(info -----------------------------------------------)
 
 #CXX := g++-5
 CXX := $(LLVM_BIN_PATH)/clang++
-CXXFLAGS := -g -fno-rtti -std=c++17
+CXXFLAGS := -O -g -fno-rtti -std=c++17 
 
 LLVM_CXXFLAGS := `$(LLVM_BIN_PATH)/llvm-config --cxxflags`
 LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`
@@ -81,6 +81,30 @@ CLANG_LIBS := \
 	-lclangToolingCore \
 	-lclangTooling \
 	-Wl,--end-group
+#For Clang 10 (I think)
+#CLANG_LIBS := \
+#	-Wl,--start-group \
+#	-lclangAST \
+#	-lclangAnalysis \
+#	-lclangBasic \
+#	-lclangDriver \
+#	-lclangEdit \
+#	-lclangFrontend \
+#	-lclangFrontendTool \
+#	-lclangLex \
+#	-lclangParse \
+#	-lclangSema \
+#	-lclangEdit \
+#	-lclangASTMatchers \
+#	-lclangRewrite \
+#	-lclangRewriteFrontend \
+#	-lclangStaticAnalyzerFrontend \
+#	-lclangStaticAnalyzerCheckers \
+#	-lclangStaticAnalyzerCore \
+#	-lclangSerialization \
+#	-lclangToolingCore \
+#	-lclangTooling \
+#	-Wl,--end-group
 
 # Internal paths in this project: where to find sources, and where to put
 # build artifacts.

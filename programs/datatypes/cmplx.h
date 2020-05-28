@@ -5,6 +5,7 @@
 //#include <complex>
 //#include <cmath>
 
+#include <sstream>
 #include <iostream>
 #include <math.h>
 #include <type_traits>

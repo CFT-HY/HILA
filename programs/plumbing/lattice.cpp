@@ -6,6 +6,9 @@
 #include "../plumbing/field.h"
 
 
+//HACK: force disable vectorization in a loop using
+// if(disable_avx[X]==0){};
+field<double> disable_avx;
 
 ///***********************************************************
 /// setup() lays out the lattice infrastruct, with neighbour arrays etc.
@@ -62,6 +65,8 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 #endif
 
   test_std_gathers();
+
+  disable_avx = 0;
 
 }
 
@@ -204,50 +209,35 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 /// The (AVX) vectorized version of the site_index function.
 /// Now there are two stages: an "inner" vect index, which goes over
 /// over "virtual nodes", and the "outer" index inside the virtual node.
-/// This is to mimic the (float) vectorized structs, which only have the
-/// outer index
-/// a 2-dim. 4x4 node is divided into 4 subnodes to as follows:  
-/// here 0-3 is the index within subnode, and a-d the subnode label.
-///    0a 1a | 0b 1b         
-///    2a 3a | 2b 3b         0(abcd)  1(abcd)
-///    -------------   -->   2(abcd)  3(abcd) 
-///    0c 1c | 0d 1d
-///    2c 3c | 2d 3d         this is how it is stored, and how the index runs
+/// This is to enable the (float/32bit) and the (double/64bit) vectorized structures,
+/// where the latter is achieve by merging two of the 32bit subnodes, 
+/// along the direction merged_subnodes_dir
+/// E.g. 
+/// a 2-dim. 4x8 node is divided into 8 / 4 subnodes as follows:  
+/// here 0-3 / 0-7 is the index within subnode, and a-h / a-d the subnode label.
+///
+///     32bit(float)   64bit(double)
+///                                             32bit storage: 64bit storage:    
+///    0a 1a | 0b 1b   0a 2a | 0b 2b            0(abcdefgh)    0(abcd) 1(abcd)
+///    2a 3a | 2b 3b   4a 6a | 4b 6b            1(abcdefgh)    2(abcd) 3(abcd)
+///    -------------                            2(abcdefgh)    4(abcd) 5(abcd)
+///    0e 1e | 0f 1f   1a 3a | 1b 3b            3(abcdefgh)    6(abcd) 7(abcd)
+///    2e 3e | 2f 3f   5a 7a | 5b 7b          
+///    -------------   -------------           32bit vectors 1st half <-> even 64bit vectors
+///    0c 1c | 0d 1d   0c 2c | 0d 2d           32bit 2nd half <-> odd 64bit
+///    2c 3c | 2d 3d   4c 6c | 4d 6d         
+///    -------------                           The "storage" order above is the site-by-site
+///    0g 1g | 0h 1h   1c 3c | 1d 3d           order, enabling site traversal with maximum locality.
+///    2g 3g | 2h 3h   5c 7c | 5d 7d           It also enables mixed 32bit/64bit vector algebra with half vectors.
 /// 
+/// Direction where the "doubling" is done is the last direction where subnodes are divided
+/// In layout, this will become the "slowest" direction
 ///////////////////////////////////////////////////////////////////////
 
 unsigned lattice_struct::site_index(const coordinate_vector & loc)
 {
-  int dir,l,s,subl;
-  unsigned i;
-
-  // let's mod the coordinate to sublattice
-  l = loc[NDIM-1] - this_node.min[NDIM-1];
-  subl = l / this_node.subnodes.size[NDIM-1];
-  i = l % this_node.subnodes.size[NDIM-1];
-
-  s = loc[NDIM-1];
-  for (dir=NDIM-2; dir>=0; dir--) {
-    l = loc[dir] - this_node.min[dir];
-    subl = subl * this_node.subnodes.divisions[dir] 
-         + l / this_node.subnodes.size[dir];
-    i = i * this_node.subnodes.size[dir] 
-      + l % this_node.subnodes.size[dir];
-    s += loc[dir];
-  }
-
-  // i is now the site within the subnode, and
-  // subl the index of the subnode
-
-#if defined(EVEN_SITES_FIRST)
-  if (s%2 == 0) i = i/2;    /* even site index */
-  else i = i/2 + this_node.subnodes.evensites;  /* odd site */
-#endif
-
-  return (subl + number_of_subnodes*i);
-
+  return site_index(loc, mynode());
 }
-
 
 ///////////////////////////////////////////////////////////////////////
 /// give site index for nodeid sites
@@ -258,35 +248,40 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 {
   int dir,l,s,subl;
   unsigned i;
+
+  assert (nodeid < nodes.number);
   const node_info & ni = nodes.nodelist[nodeid];
   
   // let's mod the coordinate to sublattice
   // get subnode size - divisons are the same in all nodes
 
+  // foralldir(d) assert( ni.size[d] % this_node.subnodes.divisions[d] == 0);
+
   coordinate_vector subsize = ni.size/this_node.subnodes.divisions;
 
-  l = loc[NDIM-1] - ni.min[NDIM-1];
-  subl = l / subsize[NDIM-1];
-  i = l % subsize[NDIM-1];
-  s = loc[NDIM-1];
+  dir = this_node.subnodes.merged_subnodes_dir;
+  l = loc[dir] - ni.min[dir];
+  subl = l / subsize[dir];
+  // flip to interleaved ordering, see above  --  this should work 
+  // automatically w. mapping between 32 and 64 bit vector elems
+  subl = subl/2 + (subl % 2)*(this_node.subnodes.divisions[dir]/2);
 
-  for (dir=NDIM-2; dir>=0; dir--) {
+  i = 0;
+  s = 0;
+
+  for (dir=NDIM-1; dir>=0; dir--) {
     l = loc[dir] - ni.min[dir];
-    subl = subl * this_node.subnodes.divisions[dir]
-         + l / subsize[dir];
+    if (dir != this_node.subnodes.merged_subnodes_dir) { 
+      subl = subl * this_node.subnodes.divisions[dir] 
+           + l / subsize[dir];
+    }
     i = i * subsize[dir] + l % subsize[dir];
     s += loc[dir];
   }
 
 #if defined(EVEN_SITES_FIRST)
-  if (number_of_subnodes > 1) { // ensure this works even when == 1
-    if (s%2 == 0) i = i/2;              /* even site index */
-    else i = i/2 + ni.evensites/number_of_subnodes;  /* odd site */
-  } else {
-    // no subnodes, for some reason
-    if (s%2 == 0) i = i/2;
-    else i = i/2 + ni.evensites;
-  }
+  if (s%2 == 0) i = i/2;              /* even site index */
+  else i = i/2 + ni.evensites/number_of_subnodes;  /* odd site */
 #endif
 
   return (subl + number_of_subnodes*i);
@@ -385,8 +380,6 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   // map site indexes to locations -- coordinates array
   // after the above site_index should work
 
-#ifndef SUBNODE_LAYOUT
-
   coordinates.resize(sites);
   coordinate_vector l = min;
   for(unsigned i = 0; i<sites; i++){
@@ -398,25 +391,10 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
     }
   }
 
-#else
+#ifdef SUBNODE_LAYOUT
   
   // set up the subnodes
   subnodes.setup(*this);
-
-  // the coordinate vector is defined only on one subnode
-  // use then offset to get all coordinates
-
-  coordinates.resize(subnodes.sites);
-  coordinate_vector l = min;
-  for(unsigned i = 0; i<subnodes.sites; i++){
-    coordinates[ lattice.site_index(l)/number_of_subnodes ] = l;
-    // walk through the coordinates
-    foralldir(d) {
-      if (++l[d] < (min[d]+subnodes.size[d])) break;
-      l[d] = min[d];
-    }
-  }
-
 #endif
 
 }
@@ -433,16 +411,6 @@ void lattice_struct::node_struct::subnode_struct::setup(const node_struct & tn)
   oddsites  = tn.oddsites / number_of_subnodes;
   sites     = evensites + oddsites;
 
-  coordinate_vector offs(0);
-  for (int i=0; i<number_of_subnodes; i++) {
-    offset[i] = offs;
-    // walk through the offsets
-    foralldir(d) {
-      offs[d] += size[d];
-      if (offs[d] < tn.size[d]) break;
-      offs[d] = 0;
-    }
-  }
 }
 
 #endif
@@ -509,6 +477,7 @@ void lattice_struct::create_std_gathers()
       coordinate_vector ln, l;
       l = coordinates(i);
       // set ln to be the neighbour of the site
+      // TODO: FIXED BOUNDARY CONDITIONS DO NOT WRAP
       ln = mod(l + d, size());
       //ln = l;
       //if (is_up_dir(d)) ln[d] = (l[d] + 1) % size(d);

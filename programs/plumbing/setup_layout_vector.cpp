@@ -9,8 +9,8 @@
 /***************************************************************/
 
 /* number of primes to be used in factorization */
-#define NPRIMES 9
-const static int prime[NPRIMES] = {2,3,5,7,11,13,17,19,23};
+#define NPRIMES 12
+const static int prime[NPRIMES] = {2,3,5,7,11,13,17,19,23,29,31,37};
 
 // Set up now squaresize and nsquares - arrays 
 // Print info to outf as we proceed 
@@ -22,7 +22,7 @@ void lattice_struct::setup_layout()
 
   output0 << "------------------------------------------------------------\n";
   output0 << "LAYOUT: subnode lattice, with " << VECTOR_SIZE/sizeof(float) << " subnodes\n"
-              << "Enabled vector length " << VECTOR_SIZE*8 << " bits = "
+              << "Enabling vector length " << VECTOR_SIZE*8 << " bits = "
               << VECTOR_SIZE/sizeof(double) << " doubles or " 
               << VECTOR_SIZE/sizeof(float) << " floats/ints\n";
   output0 << "Lattice size ";
@@ -153,6 +153,7 @@ void lattice_struct::setup_layout()
 
     foralldir(dir) 
       if (nodesiz[dir] < 3) fail = true;  // don't allow nodes of size 1 or 2
+
     if (!fail) {
 
       // check here that this can be used for vectorized division
@@ -173,6 +174,7 @@ void lattice_struct::setup_layout()
             subdiv[dir] = sd;
             n_subn *= 2;
             div_done = true;
+            this_node.subnodes.merged_subnodes_dir = dir;
           }
         }
       } while (div_done && n_subn < number_of_subnodes);
@@ -260,8 +262,9 @@ void lattice_struct::setup_layout()
     }
     output0 << "  =  " << numnodes() << " nodes\n";
 
+#ifdef VECTORIZED
 
-    output0 << "Node subdivision: ";
+    output0 << "Node subdivision to 32bit elems: ";
     foralldir(dir) {
       if (dir > 0) output0 << " x ";
       output0 << subdiv[dir];
@@ -278,9 +281,31 @@ void lattice_struct::setup_layout()
     }
     output0 << '\n';
 
+    direction dmerge = this_node.subnodes.merged_subnodes_dir;
+
+    output0 << "Node subdivision to 64bit elems: ";
+    foralldir(dir) {
+      if (dir > 0) output0 << " x ";
+      output0 << ( (dir == dmerge) ? subdiv[dir]/2 : subdiv[dir] );
+    }
+    output0 << "  =  " << number_of_subnodes/2 << " subnodes\n";
+    
+    output0 << "Sites on subnodes: ";
+    foralldir(dir) {
+      if (dir > 0) output0 << " x ";
+      if (dir == mdir)
+        output0 << '(' << nodesiz[dir]-1 << '-' << nodesiz[dir] << ')';
+      else
+        output0 << ( (dir == dmerge) ? 2*nodesiz[dir]/subdiv[dir] : nodesiz[dir]/subdiv[dir] );
+    }
+    output0 << '\n';
+    
+#endif
+
+
   }
     
-  #ifdef USE_MPI
+#ifdef USE_MPI
   // For MPI, remap the nodes for periodic torus
   // in the desired manner 
   // we have at least 2 options:
@@ -289,7 +314,7 @@ void lattice_struct::setup_layout()
   
   nodes.create_remap();
 
-  #endif  
+#endif  
 
   output0 << "------------------------------------------------------------\n\n";
 

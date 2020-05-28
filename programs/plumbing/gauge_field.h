@@ -7,6 +7,7 @@ template<int N, typename radix>
 void gaussian_momentum(field<SU<N,radix>> *momentum){
   foralldir(dir) {
     onsites(ALL){
+      if(disable_avx[X]==0){};
       momentum[dir][X].gaussian_algebra();
     }
   }

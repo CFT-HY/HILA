@@ -4,7 +4,8 @@
 
 #ifdef __CUDACC__
 
-#include <iostream>
+#include <sstream>
+#include<iostream>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand_kernel.h>

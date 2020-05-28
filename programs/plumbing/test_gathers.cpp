@@ -41,7 +41,9 @@ void gather_test() {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
   for (boundary_condition_t bc : {boundary_condition_t::PERIODIC, boundary_condition_t::ANTIPERIODIC}) {
     // output0 << "testing boundary " << (int)bc << '\n';
-    t.set_boundary_condition(TUP,bc);
+#if NDIM > 3
+      t.set_boundary_condition(TUP,bc);
+#endif
 #endif
   for (parity p : {EVEN,ODD,ALL}) {
 
@@ -54,7 +56,7 @@ void gather_test() {
         if (is_up_dir(d2)) add = 1; else add = -1;
         onsites(p) {
           auto n = t[X+d2];
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
+#if defined(SPECIAL_BOUNDARY_CONDITIONS) && NDIM > 3
           if (bc == boundary_condition_t::ANTIPERIODIC &&
               (( X.coordinates()[TUP] == 0 && d2 == TDOWN) || 
                ( X.coordinates()[TUP] == lattice->size(TUP)-1 && d2 ==TUP))) {
@@ -63,7 +65,7 @@ void gather_test() {
 #endif
 
           T j = n.r[d];
-          T s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
+          T s = ((int)(t[X].r[d] + add + lattice->size(d))) % lattice->size(d);
 
           sum2 += n.r[d] - lattice->size(d)/2;
           sum1 += t[X].r[d] - lattice->size(d)/2;
@@ -113,12 +115,13 @@ void gather_test() {
         diff = 0;
         sum1 = sum2 = 0;
         onsites(p) {
-          T j = abs(t[X+d2].r[d]);
-          T s = (t[X].r[d] + add + lattice->size(d)) % lattice->size(d);
+          int a = t[X+d2].r[d];
+          T j = abs(a);
+          T s = ((int)(t[X].r[d] + add + lattice->size(d))) % lattice->size(d);
 
           diff += s-j;
           sum1 += t[X].r[d] - lattice->size(d)/2;
-          sum2 += abs(t[X+d2].r[d]) - lattice->size(d)/2;
+          sum2 += j - lattice->size(d)/2;
         }     
      
         if (diff != 0) {
@@ -152,6 +155,6 @@ void gather_test() {
 void test_std_gathers()
 {
   gather_test<int>();
-  // gather_test<int64_t>();
+  gather_test<double>();
 }
 

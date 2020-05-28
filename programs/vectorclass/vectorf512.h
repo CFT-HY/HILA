@@ -119,6 +119,11 @@ public:
         zmm = x;
         return *this;
     }
+    // Assignment operator to convert from Vec16i
+    Vec16f & operator = (Vec16i const a0) {
+        zmm = _mm512_cvtepi32_ps(a0);
+        return *this;
+    }
     // Type cast operator to convert to __m512 used in intrinsics
     operator __m512() const {
         return zmm;
@@ -186,6 +191,13 @@ public:
         return 16;
     }
     typedef __m512 registertype;
+
+    // Add assign operator to convert from Vec4i
+    Vec16f & operator += (Vec16i const a0) {
+        Vec16f a; a=a0;
+        zmm = _mm512_add_ps(zmm, a);
+        return *this;
+    }
 };
 
 
@@ -839,6 +851,13 @@ public:
         return 17;
     }
     typedef __m512d registertype;
+
+    // Add assign operator to convert from Vec4i
+    Vec8d & operator += (Vec8i const a0) {
+        Vec8d a; a=a0;
+        zmm = _mm512_add_pd(zmm, a);
+        return *this;
+    }
 };
 
 

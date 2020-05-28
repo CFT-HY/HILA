@@ -33,7 +33,7 @@ class input {
         //read runtime parameters from file
         void import(const std::string & fname);
         //read runtime parameters from file and cmd line 
-        void import(int & argc, char *** argvp, const std::string & fname){};
+        void import(int & argc, char *** argvp, const std::string & fname);
 
         //add an essential variable - triggers complaint if not in parameter file or commandline
         void add_essential(const std::string & );

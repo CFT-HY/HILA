@@ -30,6 +30,8 @@ element<cmplx<double>> test_nontemplate_function(element<cmplx<double>> a){
 }
 
 
+#include "../plumbing/fermion/staggered.h"
+
 int main(int argc, char **argv){
 
     //check that you can increment a direction correctly
@@ -42,12 +44,12 @@ int main(int argc, char **argv){
     assert(XUP==0);
     assert(d2==XDOWN);
     #endif
-
     double sum = 0;
-    field<cmplx<double>> s1, s2, s3;
-    field<cmplx<double>> s4[3];
 
     test_setup(argc, argv);
+
+    field<cmplx<double>> s1, s2, s3;
+    field<cmplx<double>> s4[3];
 
     // Test field assingment
     s1 = 0.0;
@@ -57,6 +59,7 @@ int main(int argc, char **argv){
     // Test sum and move constructor
     s1 = s2 + s3;
 
+    sum = 0;
     onsites(ALL){
         sum+=s1[X].re;
     }
@@ -223,6 +226,29 @@ int main(int argc, char **argv){
       }
 
 	    assert(sum==result && "Reproduce write problem 2");
+    }
+
+
+    // Check that communicated and changed fields get marked
+    // correctly
+    coordinate_vector c(0);
+    foralldir(dir){
+      for(int i=0; i<2; i++){
+        s1[EVEN] = 0;
+        s1.set_element(i, c);
+        //s1.mark_changed(EVEN);
+        s1.mark_changed(ODD);
+
+        s2[ALL] = 0;
+        s2[ODD] = s2[X] - s1[X+dir];
+        s2[EVEN] = s2[X] + s2[X+opp_dir(dir)];
+
+        double r = s2.get_element(c).re;
+        sum = (r+i)*(r+i);
+        if(mynode() == 0){
+          assert(sum < 1e-8 && "Even-odd comm test");
+        }
+      }
     }
 
 

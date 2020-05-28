@@ -716,7 +716,11 @@ public:
     // llvm::errs() << "** Creating AST consumer for: " << file << "\n";
     TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
     myCompilerInstance = &CI;
+    #if(__clang_major__ == 10)
+    return std::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());
+    #else
     return llvm::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());
+    #endif
   }
 
 private:

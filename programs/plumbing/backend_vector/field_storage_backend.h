@@ -232,7 +232,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,con
         lattice->backend_lattice->template get_vectorized_lattice<vector_info<T>::vector_size>();
     // The halo copy and permutation is only necessary if vectorization
     // splits the lattice in this direction or local boundary is copied
-    if ( vector_lattice->is_boundary_permutation[abs(dir)] || vector_lattice->local_boundary_copy[dir] ) {
+    if ( vector_lattice->is_boundary_permutation[abs(dir)] || vector_lattice->only_local_boundary_copy[dir] ) {
 
       int start = 0;
       int end   = vector_lattice->n_halo_vectors[dir];

@@ -1,7 +1,8 @@
 #ifndef SUN_H_
 #define SUN_H_
 
-#include <iostream>
+#include <sstream>
+#include<iostream>
 #include <string>
 #include <math.h>
 

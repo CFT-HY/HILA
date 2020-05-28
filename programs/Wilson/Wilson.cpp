@@ -3,8 +3,6 @@
  * interaction                               *
  *********************************************/
 
-#define DEBUG_CG
-
 #include "Wilson.h"
 
 
@@ -46,11 +44,22 @@ int main(int argc, char **argv){
   // Initialize the gauge field
   ga.set_unity();
 
+  if( std::ifstream(configfile) )
+  {
+    output0 << "Found configuration file, reading\n";
+    read_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3], sigma, pi);
+  } else {
+    output0 << "No config file " << configfile << ", starting new run\n";
+  }
+
   // Run HMC using the integrator
   for(int step = 0; step < 5; step ++){
     update_hmc(integrator_level_2, hmc_steps, traj_length);
     double plaq = plaquette(ga.gauge);
     output0 << "Plaq: " << plaq << "\n";
+
+    write_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3], sigma, pi);
+
   }
 
   finishrun();

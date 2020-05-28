@@ -602,6 +602,11 @@ public:
         ymm = x;
         return *this;
     }
+    // Assignment operator to convert from Vec4i
+    Vec8f & operator = (Vec8i const a0) {
+        ymm = _mm256_cvtepi32_ps(a0);
+        return *this;
+    }
     // Type cast operator to convert to __m256 used in intrinsics
     operator __m256() const {
         return ymm;
@@ -667,7 +672,7 @@ public:
             int32_t i[16];
             float   f[16];
         } mask = {{-1,-1,-1,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0}};
-        *this = Vec8fb(*this) & Vec8fb(Vec8f().load(mask.f + 8 - n));
+        *this = Vec8f(Vec8fb(*this) & Vec8fb(Vec8f().load(mask.f + 8 - n)));
 #endif
         return *this;
     }
@@ -728,6 +733,13 @@ public:
         return 16;
     }
     typedef __m256 registertype;
+
+    // Add assign operator to convert from Vec4i
+    Vec8f & operator += (Vec8i const a0) {
+        Vec8f a; a=a0;
+        ymm = _mm256_add_ps(ymm, a);
+        return *this;
+    }
 };
 
 
@@ -1461,7 +1473,7 @@ public:
         return *this;
     }
     // Because of the above, assignment from in needs to be defined
-     Vec4d & operator = (int const a0) {
+    Vec4d & operator = (int const a0) {
         ymm = _mm256_set1_pd(a0);
         return *this;
     }
@@ -1581,6 +1593,14 @@ public:
         return 17;
     }
     typedef __m256d registertype;
+
+
+    // Add assign operator to convert from Vec4i
+    Vec4d & operator += (Vec4i const a0) {
+        Vec4d a; a=a0;
+        ymm = _mm256_add_pd(ymm, a);
+        return *this;
+    }
 };
 
 
@@ -1609,16 +1629,6 @@ static inline Vec4d & operator += (Vec4d & a, Vec4d const b) {
     return a;
 }
 
-
-// vector operator + : add integer to double
-static inline Vec4d operator + (Vec4d const a, Vec4i const b) {
-    Vec4d fb; fb = b;
-    return _mm256_add_pd(a, fb);
-}
-static inline Vec4d & operator += (Vec4d & a, Vec4i const b) {
-    a = a + b;
-    return a;
-}
 
 
 

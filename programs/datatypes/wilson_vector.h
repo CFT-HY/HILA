@@ -43,15 +43,15 @@ static_assert(false, "Wilson fermions only implemented for 1 < NDIM < 6");
 
 
 
-template<typename vector_type>
+template<int N, typename radix>
 class Wilson_vector {
   public:
-  vector_type c[Gammadim];
-  using base_type = typename base_type_struct<vector_type>::type;
+  SU_vector<N, radix> c[Gammadim];
+  using base_type = typename base_type_struct<SU_vector<N, radix>>::type;
   
   Wilson_vector() = default;
 
-  Wilson_vector(vector_type m) {
+  Wilson_vector(SU_vector<N, radix> m) {
     for (int i=0; i<Gammadim; i++){
       c[i] = m;
     }
@@ -104,24 +104,24 @@ class Wilson_vector {
     return r;
   }
 
-  inline auto norm_sq(){ 
-    auto r=c[0].norm_sq();
-    for (int i = 1; i < Gammadim; i++) {
+  inline radix norm_sq(){ 
+    radix r=0;
+    for (int i = 0; i < Gammadim; i++) {
       r += c[i].norm_sq();
     }
     return r;
   }
 
-  inline auto dot(const Wilson_vector &rhs) const {
-    auto r = c[0].dot(rhs.c[0]);
-    for (int i=1; i<Gammadim; i++) {
+  inline cmplx<radix> dot(const Wilson_vector &rhs) const {
+    cmplx<radix> r = 0;
+    for (int i=0; i<Gammadim; i++) {
       r += c[i].dot(rhs.c[i]);
     }
     return r;
   }
 
-  inline double rdot(const Wilson_vector &rhs) const {
-    double r = (0.0);
+  inline radix rdot(const Wilson_vector &rhs) const {
+    radix r = (0.0);
     for (int i=0; i<Gammadim; i++) {
       r += c[i].rdot(rhs.c[i]);
     }
@@ -151,18 +151,18 @@ class Wilson_vector {
 
 
 
-template<typename vector, typename T>
-Wilson_vector<vector> operator*(const T lhs, const Wilson_vector<vector> rhs){
-  Wilson_vector<vector> r;
+template<int N, typename radix, typename T>
+Wilson_vector<N, radix> operator*(const T lhs, const Wilson_vector<N, radix> rhs){
+  Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim; i++) {
     r.c[i] = lhs*rhs.c[i];
   }
   return r;
 }
 
-template<typename vector, typename T>
-Wilson_vector<vector> operator*(const Wilson_vector<vector> lhs, const T rhs){
-  Wilson_vector<vector> r;
+template<int N, typename radix, typename T>
+Wilson_vector<N, radix> operator*(const Wilson_vector<N, radix> lhs, const T rhs){
+  Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim; i++) {
     r.c[i] = lhs.c[i]*rhs;
   }
@@ -170,18 +170,18 @@ Wilson_vector<vector> operator*(const Wilson_vector<vector> lhs, const T rhs){
 }
 
 
-template<typename vector>
-Wilson_vector<vector> operator+(const Wilson_vector<vector>  lhs, const Wilson_vector<vector>  rhs){
-  Wilson_vector<vector> r;
+template<int N, typename radix>
+Wilson_vector<N, radix> operator+(const Wilson_vector<N, radix>  lhs, const Wilson_vector<N, radix>  rhs){
+  Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim; i++) {
     r.c[i] = lhs.c[i] + rhs.c[i];
   }
   return r;
 }
 
-template<typename vector>
-Wilson_vector<vector> operator-(const Wilson_vector<vector> lhs, const Wilson_vector<vector> rhs){
-  Wilson_vector<vector> r;
+template<int N, typename radix>
+Wilson_vector<N, radix> operator-(const Wilson_vector<N, radix> lhs, const Wilson_vector<N, radix> rhs){
+  Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim; i++) {
     r.c[i] = lhs.c[i] - rhs.c[i];
   }
@@ -200,9 +200,9 @@ Wilson_vector<vector> operator-(const Wilson_vector<vector> lhs, const Wilson_ve
 
 #if (Gammadim==4) 
 
-template<typename vector>
-Wilson_vector<vector> operator*(const gamma_matrix_type gamma, const Wilson_vector<vector> rhs){
-  Wilson_vector<vector>  r;
+template<int N, typename radix>
+Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma, const Wilson_vector<N, radix> rhs){
+  Wilson_vector<N, radix>  r;
   switch(gamma) {
     case gamma0:
       r.c[0] = rhs.c[2]; r.c[1] = rhs.c[3];
@@ -231,9 +231,9 @@ Wilson_vector<vector> operator*(const gamma_matrix_type gamma, const Wilson_vect
 
 #elif (Gammadim==2)
 
-template<typename vector>
-Wilson_vector<vector> operator*(const gamma_matrix_type gamma, const Wilson_vector<vector> rhs){
-  Wilson_vector<vector>  r;
+template<int N, typename radix>
+Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma, const Wilson_vector<N, radix> rhs){
+  Wilson_vector<N, radix>  r;
   switch(gamma) {
     case gamma0:
       r.c[0] = rhs.c[1]; r.c[1] = rhs.c[0];
@@ -304,26 +304,29 @@ Wilson_vector<vector> operator*(const gamma_matrix_type gamma, const Wilson_vect
   0  0  0 -1    sq2( 0, 0, 0, 1)   -1
 */
 
-template<typename vector>
+
+template<int N, typename radix>
 class half_Wilson_vector {
   public:
-  vector c[Gammadim/2];
-  using base_type = typename base_type_struct<vector>::type;
+  SU_vector<N, radix> c[Gammadim/2];
+  using base_type = typename base_type_struct<SU_vector<N, radix>>::type;
   
   half_Wilson_vector() = default;
 
 
   // This will take the projection 1 +- gamma_j
 #if (Gammadim==4) 
-  half_Wilson_vector(Wilson_vector<vector> w, direction dir, int sign) {
+  #pragma transformer loop_function
+  half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
+    cmplx<radix> I(0,1);
     switch(dir){
       case XUP:
         if(sign==1){
-	        c[0] = w.c[0] + cmplx(0,1)*w.c[3];
-	        c[1] = w.c[1] + cmplx(0,1)*w.c[2];
+	        c[0] = w.c[0] + I*w.c[3];
+	        c[1] = w.c[1] + I*w.c[2];
 	      } else {
- 	        c[0] = w.c[0] - cmplx(0,1)*w.c[3];
-	        c[1] = w.c[1] - cmplx(0,1)*w.c[2];
+ 	        c[0] = w.c[0] - I*w.c[3];
+	        c[1] = w.c[1] - I*w.c[2];
         }
 	      break;
       case YUP:
@@ -337,11 +340,11 @@ class half_Wilson_vector {
 	      break;
       case ZUP:
         if(sign==1){
-	        c[0] = w.c[0] + cmplx(0,1)*w.c[2];
-	        c[1] = w.c[1] - cmplx(0,1)*w.c[3];
+	        c[0] = w.c[0] + I*w.c[2];
+	        c[1] = w.c[1] - I*w.c[3];
 	      } else {
-	        c[0] = w.c[0] - cmplx(0,1)*w.c[2];
-	        c[1] = w.c[1] + cmplx(0,1)*w.c[3];
+	        c[0] = w.c[0] - I*w.c[2];
+	        c[1] = w.c[1] + I*w.c[3];
         }
 	      break;
       case TUP:
@@ -364,21 +367,26 @@ class half_Wilson_vector {
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
   }
 
-  Wilson_vector<vector> expand(direction dir, int sign) const{
-    Wilson_vector<vector> r;
+  #pragma transformer loop_function
+  Wilson_vector<N, radix> expand(direction dir, int sign) const{
+    Wilson_vector<N, radix> r;
+    cmplx<radix> I(0,1);
     switch(dir){
       case XUP:
         if(sign==1){
           r.c[0] = c[0]; r.c[1] = c[1];
-          r.c[2] = cmplx(0,-1)*c[1];
-          r.c[3] = cmplx(0,-1)*c[0];
+          r.c[2] = -I*c[1];
+          r.c[3] = -I*c[0];
 	      } else {
           r.c[0] = c[0]; r.c[1] = c[1];
-          r.c[2] = cmplx(0,1)*c[1];
-          r.c[3] = cmplx(0,1)*c[0];
+          r.c[2] = I*c[1];
+          r.c[3] = I*c[0];
         }
 	      break;
       case YUP:
@@ -393,12 +401,12 @@ class half_Wilson_vector {
       case ZUP:
         if(sign==1){
           r.c[0] = c[0]; r.c[1] = c[1];
-          r.c[2] = cmplx(0,-1)*c[0];
-          r.c[3] = cmplx(0, 1)*c[1];
+          r.c[2] = -I*c[0];
+          r.c[3] =  I*c[1];
 	      } else {
           r.c[0] = c[0]; r.c[1] = c[1];
-          r.c[2] = cmplx(0, 1)*c[0];
-          r.c[3] = cmplx(0,-1)*c[1];
+          r.c[2] =  I*c[0];
+          r.c[3] = -I*c[1];
         }
         break;
       case TUP:
@@ -421,6 +429,9 @@ class half_Wilson_vector {
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
     return r;
   }
@@ -439,7 +450,9 @@ class half_Wilson_vector {
    1  0	        ( 1, 0)	       +1
    0 -1	  	    ( 0, 1)	       -1
 */
-  half_Wilson_vector(Wilson_vector<vector> w, direction dir, int sign) {
+  #pragma transformer loop_function
+  half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
+    cmplx<radix> I(0,1);
     switch(dir){
       case XUP:
         if(sign==1){
@@ -450,9 +463,9 @@ class half_Wilson_vector {
 	      break;
       case YUP:
         if(sign==1){
-	        c[0] = w.c[0] - cmplx(0,1)*w.c[1];
+	        c[0] = w.c[0] - I*w.c[1];
 	      } else {
- 	        c[0] = w.c[0] + cmplx(0,1)*w.c[1];
+ 	        c[0] = w.c[0] + I*w.c[1];
         }
 	      break;
 #if NDIM == 3
@@ -464,11 +477,15 @@ class half_Wilson_vector {
         }
         break;
 #endif
-    }
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();    }
   }
 
-  Wilson_vector<vector> expand(direction dir, int sign) const{
-    Wilson_vector<vector> r;
+  #pragma transformer loop_function
+  Wilson_vector<N, radix> expand(direction dir, int sign) const{
+    Wilson_vector<N, radix> r;
+    cmplx<radix> I(0,1);
     switch(dir){
       case XUP:
         if(sign==1){
@@ -478,19 +495,24 @@ class half_Wilson_vector {
         }
 	      break;
       case YUP:
-          r.c[0] = c[0]; r.c[1] = cmplx(0,1)*c[0];
+        if(sign==1){
+          r.c[0] = c[0]; r.c[1] = I*c[0];
 	      } else {
-          r.c[0] = c[0]; r.c[1] = cmplx(0,-1)*c[0];
+          r.c[0] = c[0]; r.c[1] = -I*c[0];
         }
         break;
 #if NDIM == 3
       case ZUP:
+        if(sign==1){
           r.c[0] = sqrt(2.0)*c[0]; r.c[1] = 0;
 	      } else {
           r.c[0] = 0; r.c[1] = sqrt(2.0)*c[0];
         }
         break;
 #endif
+      default:
+        hila::output << "ERROR: Half Wilson vector projection called incorrectly \n";
+        finishrun();
     }
     return r;
   }
@@ -500,9 +522,9 @@ class half_Wilson_vector {
 
   /// Returns the norm squared of (1+-gamma_j) * wilson_vector.
   /// Thus the factor 2.
-  inline auto norm_sq(){ 
-    auto r=c[0].norm_sq();
-    for (int i = 1; i < Gammadim; i++) {
+  inline radix norm_sq(){ 
+    radix r=0;
+    for (int i = 0; i < Gammadim/2; i++) {
       r += c[i].norm_sq();
     }
     return r;
@@ -546,18 +568,18 @@ class half_Wilson_vector {
 
 
 
-template<typename vector, typename T>
-half_Wilson_vector<vector> operator*(const T lhs, const half_Wilson_vector<vector> rhs){
-  half_Wilson_vector<vector> r;
+template<int N, typename radix, typename T>
+half_Wilson_vector<N, radix> operator*(const T lhs, const half_Wilson_vector<N, radix> rhs){
+  half_Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim/2; i++) {
     r.c[i] = lhs*rhs.c[i];
   }
   return r;
 }
 
-template<typename vector, typename T>
-half_Wilson_vector<vector> operator*(const half_Wilson_vector<vector> lhs, const T rhs){
-  half_Wilson_vector<vector> r;
+template<int N, typename radix, typename T>
+half_Wilson_vector<N, radix> operator*(const half_Wilson_vector<N, radix> lhs, const T rhs){
+  half_Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim/2; i++) {
     r.c[i] = lhs.c[i]*rhs;
   }
@@ -565,18 +587,18 @@ half_Wilson_vector<vector> operator*(const half_Wilson_vector<vector> lhs, const
 }
 
 
-template<typename vector>
-half_Wilson_vector<vector> operator+(const half_Wilson_vector<vector> lhs, const half_Wilson_vector<vector> rhs){
-  half_Wilson_vector<vector>  r;
+template<int N, typename radix>
+half_Wilson_vector<N, radix> operator+(const half_Wilson_vector<N, radix> lhs, const half_Wilson_vector<N, radix> rhs){
+  half_Wilson_vector<N, radix>  r;
   for (int i=0; i<Gammadim/2; i++) {
     r.c[i] = lhs.c[i] + rhs.c[i];
   }
   return r;
 }
 
-template<typename vector>
-half_Wilson_vector<vector> operator-(const half_Wilson_vector<vector> lhs, const half_Wilson_vector<vector> rhs){
-  half_Wilson_vector<vector>  r;
+template<int N, typename radix>
+half_Wilson_vector<N, radix> operator-(const half_Wilson_vector<N, radix> lhs, const half_Wilson_vector<N, radix> rhs){
+  half_Wilson_vector<N, radix>  r;
   for (int i=0; i<Gammadim/2; i++) {
     r.c[i] = lhs.c[i] - rhs.c[i];
   }

@@ -1,6 +1,7 @@
 #ifndef FIELD_H
 #define FIELD_H
-#include <iostream>
+#include <sstream>
+#include<iostream>
 #include <string>
 #include <cstring> //Memcpy is here...
 #include <math.h>
@@ -392,7 +393,7 @@ class field {
 
   bool is_allocated() const { return (fs != nullptr); }
 
-  bool is_initialized(parity p) const { 
+  bool is_initialized(parity p) const {
     return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
   }
 
@@ -424,9 +425,10 @@ class field {
       // check if there's ongoing comms, invalidate it!
       drop_comms_if_needed(i,p);
 
-      set_move_status(p,i,status::NOT_DONE);
-      if (p != ALL) set_move_status(ALL,i,status::NOT_DONE );
-      else {
+      set_move_status(opp_parity(p),i,status::NOT_DONE);
+      if (p != ALL){
+        set_move_status(ALL,i,status::NOT_DONE );
+      } else {
         set_move_status(EVEN,i,status::NOT_DONE);
         set_move_status(ODD,i,status::NOT_DONE);
       }
@@ -482,6 +484,9 @@ class field {
     fs->boundary_condition[-dir] = bc;
     fs->neighbours[dir]  = lattice->get_neighbour_array(dir,bc);
     fs->neighbours[-dir] = lattice->get_neighbour_array(-dir,bc);
+
+    // Make sure boundaries get refreshed
+    mark_changed(ALL);
     #endif
   }
 
@@ -498,6 +503,9 @@ class field {
     foralldir(dir){
       set_boundary_condition(dir, rhs.get_boundary_condition(dir));
     }
+
+    // Make sure boundaries get refreshed
+    mark_changed(ALL);
   }
 
   // Overloading [] 
@@ -523,7 +531,7 @@ class field {
   template <typename vecT>
   inline auto get_vector_at(int i) const { return fs->template get_vector<vecT>(i); }
   inline auto get_value_at_nb_site(direction d, int i) const {
-      return fs->get_element( fs->vector_lattice->site_neighbour(d,i) );
+    return fs->get_element( fs->vector_lattice->site_neighbour(d,i) );
   }
 #endif
 
@@ -944,7 +952,6 @@ void field<T>::wait_get(direction d, parity p) const {
 
   // check here consistency, this should never happen
   if (p != ALL && is_move_started(d,p) && is_move_started(d,ALL)) {
-    output0 << "wait_get move parity error!\n";
     exit(-1);
   }
 
@@ -955,7 +962,6 @@ void field<T>::wait_get(direction d, parity p) const {
   else if (p != ALL) {
     if (is_move_started(d,ALL)) par = ALL;      // if all is running wait for it
     else {
-      output0 << "wait_get error: no matching wait found for parity " << (int)p << '\n';
       exit(-1);
     }
   } else {
@@ -964,9 +970,8 @@ void field<T>::wait_get(direction d, parity p) const {
     else if (is_fetched(d,ODD) && is_move_started(d,EVEN)) par = EVEN;
     else if (is_move_started(d,EVEN) && is_move_started(d,ODD)) {
       n_wait = 2;  // need to wait for both! 
-      par = ALL;  
+      par = ALL;
     } else {
-      output0 << "wait_get error: no matching wait found for parity ALL\n";
       exit(-1);
     }
   }
@@ -1047,6 +1052,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
 template<typename T>
 void field<T>::wait_get(direction d, parity p) const {}
+template<typename T>
 void field<T>::drop_comms_if_needed(direction d, parity p) const {}
 
 #endif  // MPI
@@ -1343,6 +1349,11 @@ static void read_fields(std::string filename, fieldtypes&... fields){
 
 // Include Fourier transform
 #include "../plumbing/FFT.h"
+
+
+//HACK: force disable vectorization in a loop using
+// if(disable_avx[X]==0){};
+extern field<double> disable_avx;
 
 
 #endif // FIELD_H
