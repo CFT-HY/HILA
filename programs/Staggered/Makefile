@@ -32,12 +32,15 @@ build/staggered.cpt: Makefile staggered.cpp
 
 
 build/%.cpt: %.cpp Makefile
+	mkdir -p build
 	$(TRANSFORMER) $< -o $@
 
 build/%.cpt:../plumbing/%.cpp Makefile
+	mkdir -p build
 	$(TRANSFORMER) $< -o $@
 
 build/%.o : build/%.cpt
+	mkdir -p build
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
 

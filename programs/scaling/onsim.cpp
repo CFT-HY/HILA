@@ -114,7 +114,7 @@ void scaling_sim::initialize(){
 			}
 
 			if (mynode() == 0){
-					hila::output << "Field real and imaginary components set to sigma = "<< config.sigma << '\n';
+				hila::output << "Field real and imaginary components set to sigma = "<< config.sigma << '\n';
 			}
 
 			break;
@@ -122,14 +122,14 @@ void scaling_sim::initialize(){
 
 		case 1 : {
 			onsites(ALL){
-				element<coordinate_vector> coord = coordinates(X); //coordinates of the current lattice site
+				element<coordinate_vector> coord = X.coordinates(); //coordinates of the current lattice site
 				pi[X] = cmplx<double>(0.0, 0.0);
 				phi[X].re = s*sqrt(1-epsilon*epsilon*sin(2.0*M_PI*coord[0]*m/N)*sin(2.0*M_PI*coord[0]*m/N));
 				phi[X].im = s*epsilon*sin(2.0*M_PI*coord[0]*m/N);
 			}
 
 			if (mynode() == 0){
-					hila::output << "Axion wave generated with amplitude: "<< config.epsilon << '\n';
+				hila::output << "Axion wave generated with amplitude: "<< config.epsilon << '\n';
 			}
 
 			break;
@@ -161,7 +161,7 @@ void scaling_sim::initialize(){
 			}
 
 			if (mynode() == 0){
-					hila::output << "Field elements randomly generated \n";
+				hila::output << "Field elements randomly generated \n";
 			}
 
 			break;
@@ -273,7 +273,7 @@ void scaling_sim::next(){
 	}
 
 	direction d;
-	forALLdir(d){
+	foralldir(d){
 		onsites(ALL){
 			deltaPi[X] = deltaPi[X] + aadt_aadxdx*phi[X + d];
 		}
@@ -289,8 +289,16 @@ void scaling_sim::next(){
 int main(int argc, char ** argv){
 	scaling_sim sim;
 
-	std::string input_fname(argv[1]);
-	std::string output_fname(argv[2]);
+	std::string input_fname;
+	std::string output_fname;
+
+	if(argc == 3) {
+	  input_fname = argv[1];
+	  output_fname = argv[2];
+  	} else {
+  	  printf("Usage: onsim \"input file\" \"output file\"\n");
+  	  return 1;
+  	}
 
 	sim.allocate(input_fname, argc, argv);
 	sim.initialize();
