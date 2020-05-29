@@ -8,14 +8,47 @@
 
 
 
+double polyakov(direction dir, field<SU<N>> (&gauge)[NDIM]){
+  coordinate_vector vol = lattice->size();
+  field<SU<N>> polyakov; polyakov[ALL] = 1;
+  for(int t=0; t<vol[dir]; t++){
+    onsites(ALL){
+      if(X.coordinates()[dir]==(t+1)%vol[dir]){
+        polyakov[X] = polyakov[X] * gauge[dir][X-dir];
+      }
+    }
+  }
+
+  double poly=0;
+  onsites(ALL){
+    if(X.coordinates()[dir]==0){
+      poly += polyakov[X].trace().re;
+    }
+  }
+
+  double v3 = lattice->volume()/vol[dir];
+  return poly/(N*v3);
+}
+
 
 
 void measure(double mass, double gamma, field<SU<N>> (&gauge)[NDIM], field<double> &sigma, field<double> &pi){
   static int iter = 0;
+  coordinate_vector vol = lattice->size();
 
   output0 << " Measure_start " << iter << "\n";
   double plaq = plaquette(gauge);
   output0 << "Plaq: " << plaq << "\n";
+
+  double poly = polyakov(TUP, gauge);
+  output0 << "POLYAKOV_T: " << poly << "\n";
+  poly = polyakov(XUP, gauge);
+  output0 << "POLYAKOV_X: " << poly << "\n";
+  poly = polyakov(YUP, gauge);
+  output0 << "POLYAKOV_Y: " << poly << "\n";
+  poly = polyakov(ZUP, gauge);
+  output0 << "POLYAKOV_Z: " << poly << "\n";
+  
 
   double sigmasq = 0, sigma_ave = 0;
   double pisq = 0, pi_ave = 0;
@@ -49,11 +82,56 @@ void measure(double mass, double gamma, field<SU<N>> (&gauge)[NDIM], field<doubl
   coordinate_vector x,y;
   bool is_same = true;
   foralldir(dir){
-    x[dir] = (int)(lattice->size(dir)*hila_random());
-    y[dir] = (int)(lattice->size(dir)*hila_random());
+    x[dir] = (int)(vol[dir]*hila_random());
+    y[dir] = (int)(vol[dir]*hila_random());
     if(x[dir] != y[dir]) is_same = false;
   }
 
+  std::vector<double> sigma_prop(vol[TUP]);
+  std::fill(sigma_prop.begin(), sigma_prop.end(), 0);
+  coordinate_vector c(0);
+  for(int t=0; t<vol[TUP]; t++){
+    std::vector<double> sigma_prop_t(vol[TUP]);
+    std::fill(sigma_prop_t.begin(), sigma_prop_t.end(), 0);
+    c[TUP] = t;
+    double sigma_0 = sigma.get_element(c);
+    broadcast(sigma_0);
+    onsites(ALL){
+      coordinate_vector l = X.coordinates();
+      int t = l[TUP];
+
+      sigma_prop_t[t] += sigma_0 * sigma[X];
+    }
+    for(int t2=0; t2<vol[TUP]; t2++){
+      sigma_prop[t2] += sigma_prop_t[t2];
+    }
+  }
+  for(int t=0; t<vol[TUP]; t+=2){
+    output0 << "SIGMA_PROP: " << t << " " << sigma_prop[t] / lattice->volume() << "\n";
+  }
+
+  std::vector<double> pi_prop(vol[TUP]);
+  std::fill(pi_prop.begin(), pi_prop.end(), 0);
+  c = 0;
+  for(int t=0; t<vol[TUP]; t++){
+    std::vector<double> pi_prop_t(vol[TUP]);
+    std::fill(pi_prop_t.begin(), pi_prop_t.end(), 0);
+    c[TUP] = t;
+    double sigma_0 = sigma.get_element(c);
+    broadcast(sigma_0);
+    onsites(ALL){
+      coordinate_vector l = X.coordinates();
+      int t = l[TUP];
+
+      pi_prop_t[t] += sigma_0 * sigma[X];
+    }
+    for(int t2=0; t2<vol[TUP]; t2++){
+      pi_prop[t2] += pi_prop_t[t2];
+    }
+  }
+  for(int t=0; t<vol[TUP]; t+=2){
+    output0 << "PI_PROP: " << t << " " << pi_prop[t] / lattice->volume() << "\n";
+  }
 
 
   dirac_staggered_gNJL<VEC, SUN> D(mass, gauge, sigma, pi);
