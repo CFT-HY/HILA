@@ -45,7 +45,9 @@ int main(int argc, char **argv){
   // Initialize the gauge field
   ga.set_unity();
 
-  if( std::ifstream(configfile) )
+  int config_found = (bool) std::ifstream(configfile);
+  broadcast(config_found);
+  if( config_found )
   {
     output0 << "Found configuration file, reading\n";
     read_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3]);
