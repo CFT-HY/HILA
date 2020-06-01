@@ -3,13 +3,13 @@
 
 #include<type_traits>
 
-#include "cmplx.h"
+#include "general_matrix.h"
 
 
 template <int n, typename T>
 struct squarematrix {
   using base_type = typename base_type_struct<T>::type;
-  cmplx<T> c[n][n];
+  T c[n][n];
 
   squarematrix() = default;
 
@@ -18,9 +18,8 @@ struct squarematrix {
   squarematrix(const matrix<n,n,T> rhs) {
     for (int i=0; i<n; i++){
       for (int j=0; j<n; j++) {
-        c[i][j] = static_cast<T>(0);
+        c[i][j] = rhs.c[i][j];
       }
-      c[i][i] = static_cast<T>(rhs);
     }
   }
 
@@ -28,7 +27,6 @@ struct squarematrix {
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
   #pragma transformer loop_function
   squarematrix(const scalart rhs) {
-    static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
     for (int i=0; i<n; i++){
       for (int j=0; j<n; j++) {
         c[i][j] = static_cast<T>(0);
@@ -69,7 +67,7 @@ struct squarematrix {
 
   squarematrix<n,T> operator-(){
     squarematrix<n,T> r;
-    for (int i = 0; i < n; i++){
+    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
       r.c[i][j] = -c[j][i];
     }
     return *r;
@@ -108,20 +106,19 @@ struct squarematrix {
   #pragma transformer loop_function
   squarematrix<n,T> & operator*=(const squarematrix<n,T> & rhs){
     squarematrix<n,T> res;
-    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
       res.c[i][j] = (0);
-      for (int k = 0; k < m; k++){
+      for (int k = 0; k < n; k++){
         res.c[i][j] += (c[i][k] * rhs.c[k][j]);
       }
     }
-    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
       c[i][j] = res.c[i][j];
     }
     return *this;
   }
 
   T trace() const {
-    static_assert(n==m, "trace not defined for non square matrices!");
     T result = static_cast<T>(0);
     for (int i = 0; i < n; i++){
       result += c[i][i];
@@ -140,7 +137,7 @@ struct squarematrix {
   #pragma transformer loop_function
   template <typename A=T, std::enable_if_t<!is_arithmetic<A>::value, int> = 0 > 
   squarematrix<n,T> & random(){
-    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
       c[i][j].random();
     }
     return *this;
@@ -154,7 +151,8 @@ struct squarematrix {
     return result;
   }
 
-  // find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff 
+  // find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff
+  template <typename radix, std::enable_if_t<is_arithmetic<radix>::value, int> = 0, std::enable_if_t<std::is_same<T,cmplx<radix>>::value, int> = 0 > 
   cmplx<radix> det_lu(){
     int i, imax, j, k;
     radix big, d, temp, dum;
@@ -275,37 +273,33 @@ squarematrix<n,T> operator- (const squarematrix<n,T> &A, const squarematrix<n,T>
 }
 
 
-// multiply by a scalar 
-template <int n, typename T>
+// multiplication by a scalar
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
 #pragma transformer loop_function
-squarematrix<n,T> operator * (const squarematrix<n,T> & A, const T & B) {
+squarematrix<n,T> operator* (const squarematrix<n,T> &A, const scalart s) {
   squarematrix<n,T> res;
-  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
-    res.c[i][j] = A.c[i][j] * B;
+  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+    res.c[i][j] = s * A.c[i][j];
   }
   return res;
 }
 
-template <int n, typename T>
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
 #pragma transformer loop_function
-squarematrix<n,T> operator * ( const T &A, const squarematrix<n,T> & B) {
+squarematrix<n,T> operator/ (const squarematrix<n,T> &A, const scalart s) {
   squarematrix<n,T> res;
-  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
-    res.c[i][j] = B * A.c[i][j];
+  for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+    res.c[i][j] = s / A.c[i][j];
   }
   return res;
 }
 
-// Divition by scalar
-template <int n, typename T>
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
 #pragma transformer loop_function
-squarematrix<n,T> operator / (const squarematrix<n,T> & A, const T & B) {
-  squarematrix<n,T> res;
-  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
-    res.c[i][j] = A.c[i][j] / B;
-  }
-  return res;
+squarematrix<n,T> operator*(const scalart s, const squarematrix<n,T> &A) {
+  return operator*(A,s);
 }
+
 
 
 
