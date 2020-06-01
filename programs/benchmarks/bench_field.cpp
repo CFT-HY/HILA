@@ -26,11 +26,13 @@ int main(int argc, char **argv){
     field<double> dfield1, dfield2, dfield3;
     field<float> ffield1, ffield2, ffield3;
     onsites(ALL){
+      if(disable_avx[X]==0){};
       dfield1[X] = hila_random();
       dfield2[X] = hila_random();
       dfield3[X] = hila_random();
     }
     onsites(ALL){
+      if(disable_avx[X]==0){};
       ffield1[X] = hila_random();
       ffield2[X] = hila_random();
       ffield3[X] = hila_random();
@@ -115,6 +117,7 @@ int main(int argc, char **argv){
 
     // Generate random values
     onsites(ALL){
+      if(disable_avx[X]==0){};
       matrix1[X].random();
       matrix2[X].random();
       matrix3[X].random();
@@ -123,6 +126,7 @@ int main(int argc, char **argv){
     }
 
     onsites(ALL){
+      if(disable_avx[X]==0){};
       fmatrix1[X].random();
       fmatrix2[X].random();
       fmatrix3[X].random();
