@@ -1,5 +1,6 @@
 beta = 8
 mass = 10.0
+n_trajectories = 10
 hmc_steps = 20
 traj_length = 1.0
 seed = 1351

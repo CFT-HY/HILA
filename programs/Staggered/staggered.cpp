@@ -18,6 +18,7 @@ int main(int argc, char **argv){
   double beta = parameters.get("beta");
   double mass = parameters.get("mass");
   int seed = parameters.get("seed");
+	int n_trajectories = parameters.get("n_trajectories");
 	double hmc_steps = parameters.get("hmc_steps");
 	double traj_length = parameters.get("traj_length");
 	std::string configfile = parameters.get("configuration_file");
@@ -59,7 +60,7 @@ int main(int argc, char **argv){
   }
 
   // Run HMC using the integrator
-  for(int step = 0; step < 5; step ++){
+  for(int step = 0; step < n_trajectories; step ++){
     update_hmc(integrator_level_2, hmc_steps, traj_length);
     double plaq = plaquette(ga.gauge);
     output0 << "Plaq: " << plaq << "\n";
