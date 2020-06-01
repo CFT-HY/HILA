@@ -301,6 +301,25 @@ squarematrix<n,T> operator*(const scalart s, const squarematrix<n,T> &A) {
 }
 
 
+template <int n, typename T, std::enable_if_t<!is_arithmetic<T>::value, int> = 0 >
+#pragma transformer loop_function
+squarematrix<n,T> operator * (const squarematrix<n,T> & A, const T & B) {
+  squarematrix<n,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+    res.c[i][j] = A.c[i][j] * B;
+  }
+  return res;
+}
+
+template <int n, typename T, std::enable_if_t<!is_arithmetic<T>::value, int> = 0 >
+#pragma transformer loop_function
+squarematrix<n,T> operator * (const T & A, const squarematrix<n,T> & B) {
+  squarematrix<n,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+    res.c[i][j] = B * A.c[i][j];
+  }
+  return res;
+}
 
 
 template <int n, typename T> 
