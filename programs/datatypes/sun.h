@@ -3,7 +3,7 @@
 
 #include "../plumbing/defs.h"
 #include "../datatypes/cmplx.h"
-#include "../datatypes/general_matrix.h"
+#include "../datatypes/matrix.h"
 #include "../datatypes/vector.h"
 #include "../plumbing/mersenne.h" //has to be included
 #include <cmath>
@@ -65,7 +65,7 @@ do {                                            \
 //////////////////////////////////////////////////////////
 
 template<int n, typename radix=double>
-class SU : public matrix<n,n,cmplx<radix> >{
+class SU : public squarematrix<n,cmplx<radix>>{
     public:
     using base_type = typename base_type_struct<radix>::type;
 
@@ -80,7 +80,7 @@ class SU : public matrix<n,n,cmplx<radix> >{
       }
     }
 
-    SU(matrix<n,n,cmplx<radix>> m) {
+    SU(squarematrix<n,cmplx<radix>> m) {
         for (int j=0; j<n; j++) for (int i=0; i<n; i++){
             this->c[i][j] = m.c[i][j];
         }
@@ -116,7 +116,7 @@ class SU : public matrix<n,n,cmplx<radix> >{
     }
 
     void exp(const int depth = 12){
-        matrix<n,n,cmplx<radix>> A, An;
+        squarematrix<n,cmplx<radix>> A, An;
         radix factor = 1;
         A = *this;
         An = A;
@@ -132,7 +132,7 @@ class SU : public matrix<n,n,cmplx<radix> >{
     //more iterations are needed to generate larger elements: 12 works well for n < 10. 
 
     void random(const int depth = 12) {
-        matrix<n,n,cmplx<radix>> A, An, res;
+        squarematrix<n,cmplx<radix>> A, An, res;
         An = 1; 
         res = 1;
         cmplx<radix> tr(1,0), factor(1, 0);
