@@ -560,6 +560,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   var_info_list.clear();
   var_decl_list.clear();
   array_ref_list.clear();
+  vector_reduction_ref_list.clear();
   remove_expr_list.clear();
   global.location.loop = ls->getSourceRange().getBegin();
 
@@ -803,6 +804,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
         }
 
       }
+      is_assignment = false;  // next will not be assignment
     }
 
 #endif

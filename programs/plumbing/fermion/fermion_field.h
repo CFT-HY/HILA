@@ -11,15 +11,14 @@
 template<typename matrix, typename DIRAC_OP>
 class fermion_action{
   public:
-    field<matrix> (&gauge)[NDIM];
     field<matrix> (&momentum)[NDIM];
     DIRAC_OP &D;
     using vector_type = typename DIRAC_OP::vector_type;
     field<vector_type> chi;
 
 
-    fermion_action(DIRAC_OP &d, field<matrix> (&g)[NDIM], field<matrix> (&m)[NDIM], parity p=ALL)
-    : D(d), gauge(g), momentum(m){ 
+    fermion_action(DIRAC_OP &d, field<matrix> (&m)[NDIM])
+    : D(d), momentum(m){ 
       chi = 0.0;
       #if NDIM > 3
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
@@ -28,7 +27,7 @@ class fermion_action{
     }
 
     fermion_action(fermion_action &fa)
-    : gauge(fa.gauge), momentum(fa.momentum), D(fa.D)  {
+    : momentum(fa.momentum), D(fa.D)  {
       chi = fa.chi;
       #if NDIM > 3
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
