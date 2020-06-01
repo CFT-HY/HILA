@@ -6,65 +6,247 @@
 #include "cmplx.h"
 
 
-template <int n, typename T = real_t>
-struct cmatrix {
+template <int n, typename T>
+struct squarematrix {
   using base_type = typename base_type_struct<T>::type;
   cmplx<T> c[n][n];
 
-  // do nothing constructor
-  // cmatrix<n,T>() = default;
-  
-  //   // copy construct
-  //   cmatrix<n,T>(const cmatrix<n,T> &other) {
-  //     *this = other;
-  //     return *this;
-  //   }
-  // 
-  //   // another copy construct
-  //   template <typename scalart,
-  //             std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >    
-  //   cmatrix<n,T>(const scalart s) {
-  //     this->operator=(s);
-  //   }
-  
-  // cmatrix = cmatrix assignment should happen automatically
+  squarematrix() = default;
+
+  //constructor from general matrix  
+  #pragma transformer loop_function
+  squarematrix(const matrix<n,n,T> rhs) {
+    for (int i=0; i<n; i++){
+      for (int j=0; j<n; j++) {
+        c[i][j] = static_cast<T>(0);
+      }
+      c[i][i] = static_cast<T>(rhs);
+    }
+  }
+
+  //constructor from scalar  
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+  #pragma transformer loop_function
+  squarematrix(const scalart rhs) {
+    static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
+    for (int i=0; i<n; i++){
+      for (int j=0; j<n; j++) {
+        c[i][j] = static_cast<T>(0);
+      }
+      c[i][i] = static_cast<T>(rhs);
+    }
+  }
 
   template <typename scalart,
             std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
   #pragma transformer loop_function
-  cmatrix<n,T> & operator= (const scalart rhs) {
-    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-      if (i == j) c[i][j] = static_cast<T>(rhs);
-      else c[i][j] = static_cast<T>(0);
+  squarematrix<n,T> & operator= (const scalart rhs) {
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        c[i][j] = static_cast<T>(0);
+      }
+      c[i][i] = static_cast<T>(rhs);
     }
     return *this;
   }
   
-  cmatrix<n,T> & transpose() {
-    cmatrix<n,T> res;
+  squarematrix<n,T> & transpose() {
+    squarematrix<n,T> res;
     for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-      res.c[i][j] =  c[j][i];
+      res.c[i][j] = c[j][i];
     }
     return res;
   }
 
-  cmatrix<n,T> operator-(){
-    cmatrix<n,T> r;
+  squarematrix<n,T> conjugate() const {
+    squarematrix<n,T> res;
+    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+      res.c[i][j] = conj(c[j][i]);
+    }
+    return res;
+  }
+
+
+  squarematrix<n,T> operator-(){
+    squarematrix<n,T> r;
     for (int i = 0; i < n; i++){
       r.c[i][j] = -c[j][i];
     }
     return *r;
   }
 
+
+  //*=, +=, -= operators
+  #pragma transformer loop_function
+  squarematrix<n,T> & operator+=(const squarematrix<n,T> & rhs){
+    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+      c[i][j] += rhs.c[i][j]; 
+    }
+    return *this;
+  }
+
+  #pragma transformer loop_function
+  squarematrix<n,T> & operator-=(const squarematrix<n,T> & rhs){
+    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+      c[i][j] -= rhs.c[i][j]; 
+    }
+    return *this;
+  }
+
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
+  #pragma transformer loop_function
+  squarematrix<n,T> & operator*=(const scalart rhs){
+    T val;
+    val=rhs;
+    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+      c[i][j]*=val;
+    }
+    return *this;
+  }
+
+
+  #pragma transformer loop_function
+  squarematrix<n,T> & operator*=(const squarematrix<n,T> & rhs){
+    squarematrix<n,T> res;
+    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+      res.c[i][j] = (0);
+      for (int k = 0; k < m; k++){
+        res.c[i][j] += (c[i][k] * rhs.c[k][j]);
+      }
+    }
+    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+      c[i][j] = res.c[i][j];
+    }
+    return *this;
+  }
+
+  T trace() const {
+    static_assert(n==m, "trace not defined for non square matrices!");
+    T result = static_cast<T>(0);
+    for (int i = 0; i < n; i++){
+      result += c[i][i];
+    }
+    return result;
+  }
+
+  template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
+  squarematrix<n,T> & random(){
+    for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+      c[i][j] = static_cast<T>(hila_random());
+    }
+    return *this;
+  }
+
+  #pragma transformer loop_function
+  template <typename A=T, std::enable_if_t<!is_arithmetic<A>::value, int> = 0 > 
+  squarematrix<n,T> & random(){
+    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
+      c[i][j].random();
+    }
+    return *this;
+  }
+
+  auto norm_sq(){
+    auto result = norm_squared(c[0][0]);
+    for (int i=0; i<n; i++) for (int j=0; j<n; j++) if(i>0&&j>0) {
+      result += norm_squared(c[i][j]);
+    }
+    return result;
+  }
+
+  // find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff 
+  cmplx<radix> det_lu(){
+    int i, imax, j, k;
+    radix big, d, temp, dum;
+    cmplx<radix> cdum, csum, ctmp1;
+    radix vv[n];
+    cmplx<radix> a[n][n];
+    cmplx<radix> one;
+
+    one=cmplx<radix>(1,0);
+    d=1;
+    imax = -1;
+
+    for (i=0; i<n; i++) for(j=0; j<n; j++) a[i][j] = this->c[i][j];
+    for (i=0; i<n; i++) {
+      big = 0;
+      for(j=0; j<n; j++) {
+        if ((temp = a[i][j].abs()) > big)
+          big = temp;
+      }
+      asser(big != 0.0 && "Determinant does not exist\n");
+      vv[i] = 1.0/big;
+    }
+
+    for (j=0; j<n; j++) {
+      for (i=0; i<j; i++) {
+        csum = a[i][j];
+        for (k=0; k<i; k++) {
+          csum -= a[i][k]*a[k][j];
+        }
+        a[i][j] = csum;
+      }
+
+      big = 0;
+      for (i=j; i<n; i++) {
+        csum = a[i][j];
+        for (k=0; k<j; k++) {
+            csum -= a[i][k]*a[k][j];
+        }
+        a[i][j] = csum;
+        if ((dum = vv[i]*csum.abs()) >= big) {
+            big = dum;
+            imax = i;
+        }
+      }
+
+      if (j != imax) {
+        for (k=0; k<n; k++) {
+          cdum = a[imax][k];
+          a[imax][k] = a[j][k];
+          a[j][k] = cdum;
+        }
+        d = -d;
+        vv[imax] = vv[j];
+      }
+
+      if (a[j][j].abs() == static_cast<radix>(0.0)) 
+        a[j][j] = cmplx<radix>(1e-20,0);
+
+      if (j != n-1) {
+        cdum = one/a[j][j];
+        for (i=j+1; i<n; i++) {
+          a[i][j] = a[i][j]*cdum;
+        }
+      }
+    }
+
+    csum = cmplx<radix>(d,0.0);
+    for (j=0; j<n; j++) {
+      csum = csum*a[j][j];
+    }
+
+    return (csum);
+  }
+  
+  std::string str() const {
+    std::string text = "";
+    for (int i=0; i<n; i++){
+      for (int j=0; j<n; j++) {
+        text + c[i][j].str() + " "; 
+      }
+      text + "\n"; 
+    }
+    return text;
+  }
 };
 
 
 
+
 template <int n, typename T>
-cmatrix<n,T> operator* (const cmatrix<n,T> &A, const cmatrix<n,T> &B) {
-  cmatrix<n,T> res;
-  // not sure if this order is the best, but at least the j-loop
-  // is in contiquous memory
+squarematrix<n,T> operator* (const squarematrix<n,T> &A, const squarematrix<n,T> &B) {
+  squarematrix<n,T> res;
   for (int i=0; i<n; i++) {
     for (int j=0; j<n; j++) res.c[i][j] = static_cast<T>(0);
     for (int k=0; k<n; k++) for (int j=0; j<n; j++) {
@@ -75,30 +257,94 @@ cmatrix<n,T> operator* (const cmatrix<n,T> &A, const cmatrix<n,T> &B) {
 }
 
 template <int n, typename T>
-cmatrix<n,T> operator+ (const cmatrix<n,T> &A, const cmatrix<n,T> &B) {
-  cmatrix<n,T> res;
+squarematrix<n,T> operator+ (const squarematrix<n,T> &A, const squarematrix<n,T> &B) {
+  squarematrix<n,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
     res.c[i][j] =  A.c[i][j] + B.c[i][j];
   }
   return res;
 }
 
-// multiply by a scalar 
-template <int n, typename T, typename scalart,
-          std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >
-cmatrix<n,T> operator*(const cmatrix<n,T> &A, const scalart s) {
-  cmatrix<n,T> res;
+template <int n, typename T>
+squarematrix<n,T> operator- (const squarematrix<n,T> &A, const squarematrix<n,T> &B) {
+  squarematrix<n,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-    res.c[i][j] = s * A.c[i][j];
+    res.c[i][j] =  A.c[i][j] - B.c[i][j];
   }
   return res;
 }
 
-template <int n, typename T, typename scalart,
-          std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >
-cmatrix<n,T> operator*(const scalart s, const cmatrix<n,T> &A) {
-  return operator*(A,s);
+
+// multiply by a scalar 
+template <int n, typename T>
+#pragma transformer loop_function
+squarematrix<n,T> operator * (const squarematrix<n,T> & A, const T & B) {
+  squarematrix<n,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+    res.c[i][j] = A.c[i][j] * B;
+  }
+  return res;
 }
+
+template <int n, typename T>
+#pragma transformer loop_function
+squarematrix<n,T> operator * ( const T &A, const squarematrix<n,T> & B) {
+  squarematrix<n,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+    res.c[i][j] = B * A.c[i][j];
+  }
+  return res;
+}
+
+// Divition by scalar
+template <int n, typename T>
+#pragma transformer loop_function
+squarematrix<n,T> operator / (const squarematrix<n,T> & A, const T & B) {
+  squarematrix<n,T> res;
+  for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
+    res.c[i][j] = A.c[i][j] / B;
+  }
+  return res;
+}
+
+
+
+template <int n, typename T> 
+#pragma transformer loop_function
+squarematrix<n,T> operator ^ (const squarematrix<n,T> & A, const int pow) {
+  squarematrix<n,T> res;
+  res = 1;
+  for (int i = 0; i < pow; i++){
+    res *= A;
+  }
+  return res;
+}
+
+
+template <int n, typename T> 
+#pragma transformer loop_function
+std::ostream& operator<<(std::ostream &strm, const squarematrix<n,T> &A) {
+  for (int i=0; i<n; i++){
+    strm << "\n"; 
+    for (int j=0; j<n; j++) {
+      strm << " " << A.c[i][j] << " "; 
+    }
+    strm << "\n"; 
+  }
+  strm << "\n"; 
+  return strm;
+}
+
+
+template <int n, typename T> 
+inline auto norm_squared(squarematrix<n,T> & rhs){
+  auto result = norm_squared(rhs.c[0][0]);
+  for (int i=0; i<n; i++) for (int j=0; j<n; j++) if(i>0&&j>0) {
+    result += norm_squared(rhs.c[i][j]);
+  }
+  return result;
+}
+
 
 
 #endif
