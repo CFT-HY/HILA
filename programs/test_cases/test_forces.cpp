@@ -20,7 +20,7 @@ void check_forces(double mass_parameter){
   double eps = 1e-5;
 
   dirac D(mass_parameter, gauge);
-  fermion_action fa(D, gauge, momentum);
+  fermion_action fa(D, momentum);
 
   for(int ng = 0; ng < 1 ; ng++ ){ //matrix::generator_count(); ng++){
     foralldir(dir){
@@ -195,6 +195,7 @@ int main(int argc, char **argv){
   double eps = 1e-5;
 
   gauge_action<N> ga(gauge, momentum, 1.0);
+  gauge_momentum_action<N> gma(gauge, momentum);
   foralldir(dir){
     onsites(ALL){
       gauge[dir][X].random();
@@ -253,12 +254,14 @@ int main(int argc, char **argv){
     // Check also the momentum action and derivative
     ga.draw_gaussian_fields();
 
-    double s1 = momentum_action(momentum);
+
+
+    double s1 = gma.action();
     SU<N> h = momentum[0].get_value_at(0);
     h += eps * SU<N>::generator(ng);
     if(mynode()==0)
       momentum[0].set_value_at(h, 0);
-    double s2 = momentum_action(momentum);
+    double s2 = gma.action();
 
     double diff = (h*SU<N>::generator(ng)).trace().re + (s2-s1)/eps;
     if(mynode()==0) {
