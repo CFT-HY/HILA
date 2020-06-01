@@ -277,8 +277,6 @@ class SU : public squarematrix<n,cmplx<radix>>{
     }
 
 
-
-
     static constexpr SU generator(int ng){
       // SUN generators normalized as tr(T^2) = 2
       SU generator = 0;
@@ -297,7 +295,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
           if( ng == k ){
             generator.c[m1][m2].im = 1;
             generator.c[m2][m1].im = 1;
-          } else if( n == k+1 ){
+          } else if( ng == k+1 ){
             generator.c[m1][m2].re = 1;
             generator.c[m2][m1].re =-1;
           }
