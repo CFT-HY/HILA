@@ -20,6 +20,7 @@ int main(int argc, char **argv){
   int seed = parameters.get("seed");
 	double hmc_steps = parameters.get("hmc_steps");
 	double traj_length = parameters.get("traj_length");
+	std::string configfile = parameters.get("configuration_file");
 
   lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
   seed_random(seed);
@@ -34,10 +35,10 @@ int main(int argc, char **argv){
   
   // Define a Dirac operator
   dirac_staggered_evenodd<VEC, SUN> D(mass, gauge);
-  fermion_action fa(D, gauge, momentum);
+  fermion_action fa(D, momentum);
 
   // A second fermion, for checking that addition works
-  fermion_action fa2(D, gauge, momentum);
+  fermion_action fa2(D, momentum);
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
@@ -47,11 +48,24 @@ int main(int argc, char **argv){
   // Initialize the gauge field
   ga.set_unity();
 
+  int config_found = (bool) std::ifstream(configfile);
+  broadcast(config_found);
+  if( config_found )
+  {
+    output0 << "Found configuration file, reading\n";
+    read_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3]);
+  } else {
+    output0 << "No config file " << configfile << ", starting new run\n";
+  }
+
   // Run HMC using the integrator
   for(int step = 0; step < 5; step ++){
     update_hmc(integrator_level_2, hmc_steps, traj_length);
     double plaq = plaquette(ga.gauge);
     output0 << "Plaq: " << plaq << "\n";
+
+    write_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3]);
+
   }
 
 
