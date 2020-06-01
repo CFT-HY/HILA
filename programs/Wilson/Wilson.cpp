@@ -17,6 +17,7 @@ int main(int argc, char **argv){
   int seed = parameters.get("seed");
 	double hmc_steps = parameters.get("hmc_steps");
 	double traj_length = parameters.get("traj_length");
+	std::string configfile = parameters.get("configuration_file");
 
   lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
   seed_random(seed);
@@ -32,8 +33,8 @@ int main(int argc, char **argv){
   ga.set_unity();
 
   // Define a Dirac operator
-  Dirac_Wilson_evenodd<VEC, SUN> D(kappa, gauge);
-  fermion_action fa(D, gauge, momentum);
+  Dirac_Wilson_evenodd<N, double, SU<N>> D(kappa, gauge);
+  fermion_action fa(D, momentum);
 
 
   // Build two integrator levels. Gauge is on the lowest level and
@@ -47,7 +48,7 @@ int main(int argc, char **argv){
   if( std::ifstream(configfile) )
   {
     output0 << "Found configuration file, reading\n";
-    read_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3], sigma, pi);
+    read_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3]);
   } else {
     output0 << "No config file " << configfile << ", starting new run\n";
   }
@@ -58,7 +59,7 @@ int main(int argc, char **argv){
     double plaq = plaquette(ga.gauge);
     output0 << "Plaq: " << plaq << "\n";
 
-    write_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3], sigma, pi);
+    write_fields(configfile, gauge[0], gauge[1], gauge[2], gauge[3]);
 
   }
 
