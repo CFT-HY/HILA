@@ -1,6 +1,7 @@
 beta = 5
 gamma = 0.5
 mass = 0.0
+n_trajectories = 10000
 hmc_steps = 20
 traj_length = 1
 alpha = 10

@@ -198,6 +198,7 @@ int main(int argc, char **argv){
   double gamma = parameters.get("gamma");
   double mass = parameters.get("mass");
   int seed = parameters.get("seed");
+	int n_trajectories = parameters.get("n_trajectories");
 	double hmc_steps = parameters.get("hmc_steps");
 	double traj_length = parameters.get("traj_length");
 	double alpha = parameters.get("alpha");
@@ -250,7 +251,7 @@ int main(int argc, char **argv){
   }
 
   // Run HMC using the integrator
-  for(int step = 0; step < 1000; step ++){
+  for(int step = 0; step < n_trajectories; step ++){
     // Run update
     update_hmc(integrator_level_2, hmc_steps, traj_length);
     measure(mass, gamma, gauge, sigma, pi);
