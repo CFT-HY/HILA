@@ -48,7 +48,7 @@ struct squarematrix {
     return *this;
   }
   
-  squarematrix<n,T> & transpose() {
+  squarematrix<n,T> transpose() {
     squarematrix<n,T> res;
     for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
       res.c[i][j] = c[j][i];
