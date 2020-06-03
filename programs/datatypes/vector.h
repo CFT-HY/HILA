@@ -2,7 +2,7 @@
 #define SU_VEC
 
 #include "../datatypes/cmplx.h"
-#include "../datatypes/general_matrix.h"
+#include "../datatypes/matrix.h"
 #include "../plumbing/random.h"
 
 template<int n, typename T>
@@ -106,8 +106,8 @@ class vector {
     return r;
   }
 
-  inline matrix<n,n,T> outer_product(const vector<n,T> rhs) const {
-    matrix<n,n,T> r;
+  inline squarematrix<n,T> outer_product(const vector<n,T> rhs) const {
+    squarematrix<n,T> r;
     for(int j=0; j<n; j++) for (int i=0; i<n; i++) {
       r.c[i][j] = c[i] * rhs.c[j].conj();
     }
@@ -129,7 +129,7 @@ class vector {
 
 
 template<int n, typename T>
-vector<n,T>  operator*(vector<n,T> lhs, matrix<n,n,T> rhs){
+vector<n,T>  operator*(vector<n,T> lhs, squarematrix<n,T> rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
     r.c[i] = 0;
@@ -141,7 +141,7 @@ vector<n,T>  operator*(vector<n,T> lhs, matrix<n,n,T> rhs){
 }
 
 template<int n, typename T>
-vector<n,T>  operator*(matrix<n,n,T>  lhs, vector<n,T> rhs){
+vector<n,T>  operator*(squarematrix<n,T>  lhs, vector<n,T> rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
     r.c[i] = 0;

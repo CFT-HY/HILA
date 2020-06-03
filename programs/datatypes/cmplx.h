@@ -91,7 +91,7 @@ struct cmplx {
   #pragma transformer loop_function
   inline cmplx<T> & operator=(scalar_t s) {
     re = static_cast<T>(s);
-    im = 0.0;
+    im = static_cast<T>(0);
     return *this;
   }
   

@@ -2,28 +2,34 @@
 #define GAUGE_FIELD_H
 
 
-/// Generate a random antihermitean matrix
-template<int N, typename radix>
-void gaussian_momentum(field<SU<N,radix>> *momentum){
-  foralldir(dir) {
+
+/// Calculate the Polyakov loop for a given gauge field.
+template<int N>
+double polyakov_loop(direction dir, field<SU<N>> (&gauge)[NDIM]){
+  // This implementation uses the onsites() to cycle through the
+  // NDIM-1 dimensional planes. This is probably not the most
+  // efficient implementation.
+  coordinate_vector vol = lattice->size();
+  field<SU<N>> polyakov; polyakov[ALL] = 1;
+  for(int t=0; t<vol[dir]; t++){
     onsites(ALL){
-      if(disable_avx[X]==0){};
-      momentum[dir][X].gaussian_algebra();
+      if(X.coordinates()[dir]==(t+1)%vol[dir]){
+        polyakov[X] = polyakov[X] * gauge[dir][X-dir];
+      }
     }
   }
+
+  double poly=0;
+  onsites(ALL){
+    if(X.coordinates()[dir]==0){
+      poly += polyakov[X].trace().re;
+    }
+  }
+
+  double v3 = lattice->volume()/vol[dir];
+  return poly/(N*v3);
 }
 
-// The momentum action
-template<int N, typename radix>
-double momentum_action(field<SU<N,radix>> *momentum){
-  double sum = 0;
-  foralldir(dir) {
-    onsites(ALL){
-      sum += momentum[dir][X].algebra_norm();
-    }
-  }
-  return sum;
-}
 
 
 
@@ -68,19 +74,6 @@ void gauge_force(field<SUN> *gauge, field<MATRIX> *momentum, double eps){
 }
 
 
-/// Apply the momentum on the gauge field
-template<typename SUN, typename MATRIX>
-void apply_momentum(field<SUN> *gauge, field<MATRIX> *momentum, double eps){
-  foralldir(dir){
-    onsites(ALL){
-      element<SUN> momexp = eps*momentum[dir][X];
-      momexp.exp();
-      gauge[dir][X] = momexp*gauge[dir][X];
-    }
-  }
-}
-
-
 
 
 /// Measure the plaquette
@@ -107,25 +100,6 @@ double plaquette(field<SUN> *gauge){
 
 
 
-template<typename SUN>
-void gauge_set_unity(field<SUN> *gauge){
-  foralldir(dir){
-    onsites(ALL){
-      gauge[dir][X] = 1;
-    }
-  }
-}
-
-template<typename SUN>
-void gauge_random(field<SUN> *gauge){
-  foralldir(dir){
-    onsites(ALL){
-      gauge[dir][X].random();
-    }
-  }
-}
-
-
 
 
 
@@ -148,17 +122,34 @@ class gauge_momentum_action {
     : gauge(ma.gauge), momentum(ma.momentum){}
 
     double action(){
-      return momentum_action(momentum);
+      double sum = 0;
+      foralldir(dir) {
+        onsites(ALL){
+          sum += momentum[dir][X].algebra_norm();
+        }
+      }
+      return sum;
     }
 
     /// Gaussian random momentum for each element
     void draw_gaussian_fields(){
-      gaussian_momentum(momentum);
+      foralldir(dir) {
+        onsites(ALL){
+          if(disable_avx[X]==0){};
+          momentum[dir][X].gaussian_algebra();
+        }
+      }
     }
 
     // Integrator step: apply the momentum on the gauge field
     void step(double eps){
-      apply_momentum(gauge, momentum, eps);
+      foralldir(dir){
+        onsites(ALL){
+          element<SUN> momexp = eps*momentum[dir][X];
+          momexp.exp();
+          gauge[dir][X] = momexp*gauge[dir][X];
+        }
+      }
     }
 
     // Called by hmc
@@ -244,10 +235,22 @@ class gauge_action {
     }
 
     // Set the gauge field to unity
-    void set_unity(){gauge_set_unity(gauge);}
+    void set_unity(){
+      foralldir(dir){
+        onsites(ALL){
+          gauge[dir][X] = 1;
+        }
+      }
+    }
 
     // Draw a random gauge field
-    void random(){gauge_random(gauge);}
+    void random(){
+      foralldir(dir){
+        onsites(ALL){
+          gauge[dir][X].random();
+        }
+      }
+    }
 
 
     // Make a copy of fields updated in a trajectory

@@ -1,5 +1,5 @@
-#ifndef MATRIX_H
-#define MATRIX_H
+#ifndef GENERAL_MATRIX_H
+#define GENERAL_MATRIX_H
 #include<type_traits>
 #include "operations.h"
 #include "../datatypes/cmplx.h"
@@ -516,7 +516,7 @@ std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
     }
     strm << "\n"; 
   }
-  strm << "\n"; 
+  strm << "\n";
   return strm;
 }
 
