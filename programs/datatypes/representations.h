@@ -22,7 +22,7 @@ class adjoint : public squarematrix<N*N-1, radix> {
 
     adjoint(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = 2*(generator(i)*m.conjugate()*generator(j)*m).trace().re;
+        (*this).c[i][j] = -0.5*(generator(i)*m.conjugate()*generator(j)*m).trace().re;
       }
     }
 
@@ -47,8 +47,8 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
       int k=0;
       for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
         if( ng == k ){
-          generator.c[m1][m2].re = 1;
-          generator.c[m2][m1].re =-1;
+          generator.c[m1][m2].re = 1.0/sqrt(2.0);
+          generator.c[m2][m1].re =-1.0/sqrt(2.0);
         }
         k++;
       }
@@ -60,7 +60,7 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
 
     antisymmetric(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = 2*(generator(i)*m.conjugate()*generator(j)*m).trace();
+        (*this).c[i][j] = -(generator(i)*m*generator(j)*m.transpose()).trace();
       }
     }
 
@@ -82,13 +82,13 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
     static constexpr sun generator(int ng){
       sun generator = 0;
       if(ng < N){
-        generator.c[ng][ng].re = sqrt(2.0);
+        generator.c[ng][ng].re = 1;
       }
-      int k=N+1;
+      int k=N;
       for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
         if( ng == k ){
-          generator.c[m1][m2].re = 1;
-          generator.c[m2][m1].re = 1;
+          generator.c[m1][m2].re = 1.0/sqrt(2.0);
+          generator.c[m2][m1].re = 1.0/sqrt(2.0);
         }
         k++;
       }
@@ -100,7 +100,7 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
 
     symmetric(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = 2*(generator(i)*m.conjugate()*generator(j)*m).trace();
+        (*this).c[i][j] = (generator(i)*m*generator(j)*m.transpose()).trace();
       }
     }
 
