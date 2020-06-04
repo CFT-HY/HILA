@@ -1,14 +1,14 @@
 
 OPTS = 
 
-TRANSFORMER = ../../build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+TRANSFORMER = ../../hilapp/build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 LD = mpic++
 
-TRANSFORMER_VECTOR =  ../../build/transformer  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+TRANSFORMER_VECTOR =  ../../hilapp/build/transformer  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
 VECTOR_OPTS = -DAVX
 
-TRANSFORMER_GPU = ../../build/transformer -DGPU -target:CUDA
+TRANSFORMER_GPU = ../../hilapp/build/transformer -DGPU -target:CUDA
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
@@ -36,7 +36,7 @@ build/%.cpt: %.cpp Makefile
 	mkdir -p build
 	$(TRANSFORMER) $< -o $@
 
-build/%.cpt:../plumbing/%.cpp Makefile
+build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
 	mkdir -p build
 	$(TRANSFORMER) $< -o $@
 
