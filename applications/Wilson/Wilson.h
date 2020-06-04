@@ -9,16 +9,16 @@
 #define NDIM 4
 
 // Include the lattice field definition
-#include "../plumbing/defs.h"
-#include "../plumbing/inputs.h"
-#include "../datatypes/vector.h"
-#include "../datatypes/sun.h"
-#include "../datatypes/wilson_vector.h"
-#include "../plumbing/field.h"
-#include "../plumbing/fermion/wilson.h"
-#include "../plumbing/algorithms/hmc.h"
-#include "../plumbing/gauge_field.h"
-#include "../plumbing/fermion/fermion_field.h"
+#include "../../libraries/plumbing/defs.h"
+#include "../../libraries/plumbing/inputs.h"
+#include "../../libraries/datatypes/vector.h"
+#include "../../libraries/datatypes/sun.h"
+#include "../../libraries/datatypes/wilson_vector.h"
+#include "../../libraries/plumbing/field.h"
+#include "../../libraries/dirac/wilson.h"
+#include "../../libraries/hmc/update.h"
+#include "../../libraries/hmc/gauge_field.h"
+#include "../../libraries/hmc/fermion_field.h"
 
 
 const int N=3;
