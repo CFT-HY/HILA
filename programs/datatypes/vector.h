@@ -137,6 +137,30 @@ vector<n,T>  operator*(squarematrix<n,T>  lhs, vector<n,T> rhs){
 
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+vector<n,T>  operator*(vector<n,T> lhs, squarematrix<n,scalart> rhs){
+  vector<n,T>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = 0;
+    for(int j=0; j<n; j++) {
+      r.c[i] += lhs.c[j] * rhs.c[j][i];
+    }
+  }
+  return r;
+}
+
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+vector<n,T>  operator*(squarematrix<n,scalart>  lhs, vector<n,T> rhs){
+  vector<n,T>  r;
+  for (int i=0; i<n; i++) {
+    r.c[i] = 0;
+    for(int j=0; j<n; j++) {
+      r.c[i] += lhs.c[i][j] * rhs.c[j];
+    }
+  }
+  return r;
+}
+
+template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
 vector<n,T> operator*(const scalart &lhs, const vector<n,T> &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {

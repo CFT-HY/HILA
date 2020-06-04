@@ -110,11 +110,11 @@ class dirac_staggered {
     double mass;
     field<double> staggered_eta[NDIM];
 
-    // Note array of fields, changes with the field
-    field<matrix> (&gauge)[NDIM];
   public:
+    field<matrix> (&gauge)[NDIM];
 
     using vector_type = vector;
+    using matrix_type = matrix;
     parity par = ALL;
 
     // Constructor: initialize mass, gauge and eta

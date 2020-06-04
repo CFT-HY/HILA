@@ -13,6 +13,7 @@ NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
 CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
+#CXXFLAGS = -g -x c++ --std=c++17 $(OPTS)
 LDFLAGS = -lfftw3 -lm
 
 

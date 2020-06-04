@@ -107,5 +107,46 @@ action_sum<fermion_action<matrix, DIRAC_OP>, action2> operator+(fermion_action<m
 }
 
 
+template<typename sun, typename representation, typename DIRAC_OP>
+class high_representation_fermion_action {
+  public:
+    field<representation> represented_momentum[NDIM];
+    field<representation> (&represented_gauge)[NDIM];
+    field<sun> (&momentum)[NDIM];
+    field<sun> (&gauge)[NDIM];
+    fermion_action<representation, DIRAC_OP> base_action;
+
+    high_representation_fermion_action(DIRAC_OP &d, field<sun> (&m)[NDIM], field<sun> (&g)[NDIM], field<representation> (&rg)[NDIM]) : momentum(m), gauge(g), represented_gauge(rg), 
+    base_action(d, represented_momentum){};
+
+    high_representation_fermion_action(high_representation_fermion_action &hrfa) : momentum(hrfa.momentum), gauge(hrfa.gauge), represented_gauge(hrfa.represented_gauge), base_action(hrfa.base_action) {}
+
+    // Return the value of the action with the current
+    // field configuration
+    double action(){ 
+      return 0 * base_action.action();
+    }
+
+    // Make a copy of fields updated in a trajectory
+    void back_up_fields(){}
+
+    // Restore the previous backup
+    void restore_backup(){}
+
+    /// Generate a pseudofermion field with a distribution given
+    /// by the action chi 1/(D_dagger D) chi
+    void draw_gaussian_fields(){
+      base_action.draw_gaussian_fields();
+    }
+
+    void force_step(double eps){
+      foralldir(dir){
+        represented_momentum[dir][ALL] = 0;
+      }
+      base_action.force_step(eps);
+      //project_representation_force(represented_momentum, momentum);
+    }
+};
+
 
 #endif

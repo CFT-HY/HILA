@@ -13,6 +13,7 @@
 #include "../plumbing/inputs.h"
 #include "../datatypes/vector.h"
 #include "../datatypes/sun.h"
+#include "../datatypes/representations.h"
 #include "../plumbing/field.h"
 #include "../plumbing/fermion/staggered.h"
 #include "../plumbing/algorithms/hmc.h"
@@ -23,9 +24,14 @@
 const int N=3;
 const int Nf=1;
 
+#define REPRESENTATION adjoint
+
 using SUN = SU<N,double>;
+using REP = REPRESENTATION<N,double>;
 using NMAT = matrix<N,N,cmplx<double>>;
+
 using VEC = SU_vector<N,double>;
+using RVEC = SU_vector<REP::size,double>;
 
 // Direct output to stdout
 std::ostream &hila::output = std::cout;

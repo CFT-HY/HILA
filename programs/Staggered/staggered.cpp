@@ -9,8 +9,6 @@
 
 
 
-
-
 int main(int argc, char **argv){
 
   input parameters = input();
@@ -28,7 +26,14 @@ int main(int argc, char **argv){
 
   // Define gauge field and momentum field
   field<SUN> gauge[NDIM];
+  field<REP> represented_gauge[NDIM];
   field<SUN> momentum[NDIM];
+
+  foralldir(dir){
+    onsites(ALL){
+      represented_gauge[dir][X] = 1;
+    }
+  }
 
   // Define gauge and momentum action terms
   gauge_momentum_action ma(gauge, momentum);
@@ -39,12 +44,13 @@ int main(int argc, char **argv){
   fermion_action fa(D, momentum);
 
   // A second fermion, for checking that addition works
-  fermion_action fa2(D, momentum);
+  dirac_staggered_evenodd<RVEC, REP> D2(mass, represented_gauge);
+  high_representation_fermion_action fa2(D2, momentum, gauge, represented_gauge);
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
   integrator integrator_level_1(ga, ma);
-  integrator integrator_level_2(fa+fa2, integrator_level_1);
+  integrator integrator_level_2(fa, integrator_level_1);
   
   // Initialize the gauge field
   ga.set_unity();

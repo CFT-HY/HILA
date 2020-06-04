@@ -242,11 +242,13 @@ struct squarematrix {
 
 
 
-template <int n, typename T>
-squarematrix<n,T> operator* (const squarematrix<n,T> &A, const squarematrix<n,T> &B) {
-  squarematrix<n,T> res;
+template <int n, typename T1, typename T2, typename Tr=decltype(std::declval<T1>() * std::declval<T2>())>
+squarematrix<n,Tr>
+operator* (const squarematrix<n,T1> &A, const squarematrix<n,T2> &B)
+{
+  squarematrix<n,Tr> res;
   for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) res.c[i][j] = static_cast<T>(0);
+    for (int j=0; j<n; j++) res.c[i][j] = static_cast<Tr>(0);
     for (int k=0; k<n; k++) for (int j=0; j<n; j++) {
       res.c[i][j] +=  A.c[i][k] * B.c[k][j];
     }
@@ -254,9 +256,11 @@ squarematrix<n,T> operator* (const squarematrix<n,T> &A, const squarematrix<n,T>
   return res;
 }
 
-template <int n, typename T>
-squarematrix<n,T> operator+ (const squarematrix<n,T> &A, const squarematrix<n,T> &B) {
-  squarematrix<n,T> res;
+template <int n, typename T1, typename T2, typename Tr=decltype(std::declval<T1>() + std::declval<T2>())>
+squarematrix<n,Tr>
+operator+ (const squarematrix<n,T1> &A, const squarematrix<n,T2> &B)
+{
+  squarematrix<n,Tr> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
     res.c[i][j] =  A.c[i][j] + B.c[i][j];
   }

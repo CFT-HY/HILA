@@ -11,6 +11,27 @@ class adjoint : public squarematrix<N*N-1, radix> {
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
 
+    using squarematrix<N*N-1, radix>::squarematrix;
+
+    adjoint & operator= (const squarematrix<N*N-1, radix> & rhs) {
+      for (int i=0; i<N*N-1; i++) {
+        for (int j=0; j<N*N-1; j++) {
+          this->c[i][j] = rhs.c[i][j];
+        }
+      }
+      return *this;
+    }
+
+    adjoint & operator= (const radix & rhs) {
+      for (int i=0; i<N*N-1; i++) {
+        for (int j=0; j<N*N-1; j++) {
+          this->c[i][j] = 0;
+        }
+        this->c[i][i] = rhs;
+      }
+      return *this;
+    }
+
     // Info on group generators
     constexpr static int size = N*N-1;
     static constexpr sun generator(int i){
@@ -18,19 +39,18 @@ class adjoint : public squarematrix<N*N-1, radix> {
     }
 
 
-    adjoint() = default;
-
-    adjoint(sun &m){
+    void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).c[i][j] = -0.5*(generator(i)*m.conjugate()*generator(j)*m).trace().re;
       }
     }
-
-    adjoint represent(sun &m){
-      adjoint r(m);
-      return r;
-    }
 };
+
+
+/// Project to the antihermitean part of a matrix
+template<int N, typename radix>
+void project_antihermitean(adjoint<N,radix> &matrix){};
+
 
 
 
@@ -39,6 +59,9 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
   public:
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
+
+    using squarematrix<N*(N-1)/2, cmplx<radix>>::squarematrix;
+    using squarematrix<N*(N-1)/2, cmplx<radix>>::operator =;
 
     // Info on group generators
     constexpr static int size = N*(N-1)/2;
@@ -56,19 +79,16 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
     }
 
 
-    antisymmetric() = default;
-
-    antisymmetric(sun &m){
+    void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).c[i][j] = -(generator(i)*m*generator(j)*m.transpose()).trace();
       }
     }
-
-    antisymmetric represent(sun &m){
-      antisymmetric r(m);
-      return r;
-    }
 };
+
+/// Project to the antihermitean part of a matrix
+template<int N, typename radix>
+void project_antihermitean(antisymmetric<N,radix> &matrix){};
 
 
 template<int N, typename radix>
@@ -77,6 +97,8 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
 
+    using squarematrix<N*(N+1)/2, cmplx<radix>>::squarematrix;
+    using squarematrix<N*(N+1)/2, cmplx<radix>>::operator =;
     // Info on group generators
     constexpr static int size = N*(N+1)/2;
     static constexpr sun generator(int ng){
@@ -95,23 +117,43 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
       return generator;
     }
 
-
-    symmetric() = default;
-
-    symmetric(sun &m){
+    void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).c[i][j] = (generator(i)*m*generator(j)*m.transpose()).trace();
       }
     }
-
-    symmetric represent(sun &m){
-      symmetric r(m);
-      return r;
-    }
 };
 
+/// Project to the antihermitean part of a matrix
+template<int N, typename radix>
+void project_antihermitean(symmetric<N,radix> &matrix){};
 
 
+/*
+template<typename sun, typename representation>
+void represent_gauge_field(
+  field<sun> (&u)[NDIM],
+  field<representation> (&v)[NDIM]
+){
+  foralldir(dir){
+    onsites(ALL){
+      v[dir][X].represent(u[dir][X]);
+    }
+  }
+}
 
+
+template<typename sun, typename representation>
+void project_representation_force(
+  field<representation> (&rmom)[NDIM],
+  field<sun> (&fmom)[NDIM]
+){
+  foralldir(dir){
+    onsites(ALL){
+      fmom[dir][X] = 0;
+    }
+  }
+}
+*/
 
 #endif
