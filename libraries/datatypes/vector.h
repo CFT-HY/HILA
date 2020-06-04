@@ -81,6 +81,23 @@ class vector {
     return *this;
   }
 
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+  vector & operator*=(const scalart rhs){
+    for (int i=0; i<n; i++) {
+      c[i] *= rhs;
+    }
+    return *this;
+  }
+
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+  vector & operator/=(const scalart rhs){
+    for (int i=0; i<n; i++) {
+      c[i] /= rhs;
+    }
+    return *this;
+  }
+
+
   inline T dot(const vector &rhs) const {
     T r = (0.0);
     for (int i=0; i<n; i++) {

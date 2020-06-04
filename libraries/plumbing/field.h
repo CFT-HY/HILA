@@ -423,7 +423,7 @@ class field {
 
     for (direction i=(direction)0; i<NDIRS; ++i) {
       // check if there's ongoing comms, invalidate it!
-      drop_comms_if_needed(i,p);
+      drop_comms_if_needed(i,opp_parity(p));
 
       set_move_status(opp_parity(p),i,status::NOT_DONE);
       if (p != ALL){
@@ -1052,6 +1052,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
 template<typename T>
 void field<T>::wait_get(direction d, parity p) const {}
+
 template<typename T>
 void field<T>::drop_comms_if_needed(direction d, parity p) const {}
 
