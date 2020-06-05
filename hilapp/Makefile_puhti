@@ -89,7 +89,7 @@ SRCDIR := src
 BUILDDIR := build
 
 HEADERS = \
-  $(SRCDIR)/transformer.h \
+  $(SRCDIR)/hilapp.h \
   $(SRCDIR)/myastvisitor.h \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \

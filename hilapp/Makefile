@@ -113,7 +113,7 @@ SRCDIR := src
 BUILDDIR := build
 
 HEADERS = \
-  $(SRCDIR)/transformer.h \
+  $(SRCDIR)/hilapp.h \
   $(SRCDIR)/generalvisitor.h \
   $(SRCDIR)/myastvisitor.h \
   $(SRCDIR)/srcbuf.h \
@@ -123,7 +123,7 @@ HEADERS = \
 
 
 OBJECTS = \
-  $(BUILDDIR)/transformer.o \
+  $(BUILDDIR)/hilapp.o \
   $(BUILDDIR)/stringops.o \
   $(BUILDDIR)/codegen.o \
   $(BUILDDIR)/codegen_cpu.o \
@@ -145,7 +145,7 @@ OBJECTS = \
 $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
 	$(CXX) -c $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $< -o $@
 
-$(BUILDDIR)/transformer: ${OBJECTS}
+$(BUILDDIR)/hilapp: ${OBJECTS}
 	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
 		$(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
 

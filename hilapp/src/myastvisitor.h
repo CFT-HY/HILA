@@ -10,7 +10,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "srcbuf.h" //srcbuf class interface 
-#include "transformer.h" //global vars needed 
+#include "hilapp.h" //global vars needed 
 #include "generalvisitor.h"  // Definitions for the general visitor case
 
 //////////////////////////////////////////////

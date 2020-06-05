@@ -22,7 +22,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 
-#include "transformer.h"
+#include "hilapp.h"
 #include "optionsparser.h"
 #include "stringops.h"
 #include "myastvisitor.h"

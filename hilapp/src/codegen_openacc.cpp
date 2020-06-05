@@ -22,7 +22,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 //#include "llvm/Support/raw_ostream.h"
 
-#include "transformer.h"
+#include "hilapp.h"
 #include "myastvisitor.h"
 #include "stringops.h"
 
