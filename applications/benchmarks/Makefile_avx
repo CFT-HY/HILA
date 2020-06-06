@@ -1,7 +1,7 @@
 ADDITION = -DMSIZE=2
 OPTS = -DNDIM=4  $(ADDITION)
 
-HILAPP = ../../build/transformer  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+HILAPP = ../../build/hilapp  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
 
 CC = mpic++  -DUSE_MPI -mavx2 -mfma -DAVX
 

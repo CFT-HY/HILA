@@ -1,15 +1,15 @@
 
 OPTS = -DNDIM=4
 
-HILAPP = ../../build/transformer 
+HILAPP = ../../build/hilapp 
 CC = mpic++ -x c++ -DUSE_MPI
 LD = mpic++ -DUSE_MPI
 
-TRANSFORMER_GPU = ../../build/transformer -DGPU -target:CUDA
+TRANSFORMER_GPU = ../../build/hilapp -DGPU -target:CUDA
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
-TRANSFORMER_openacc = ../../build/transformer -Dopenacc --target:openacc
+TRANSFORMER_openacc = ../../build/hilapp -Dopenacc --target:openacc
 PGCC = pgc++ -acc
 PGLD = pgc++ -acc
 

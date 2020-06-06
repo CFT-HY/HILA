@@ -20,7 +20,7 @@
 #endif
 
 
-// This is a marker for transformer -- for does not survive as it is
+// This is a marker for hilapp -- for does not survive as it is
 #define onsites(p) for(parity parity_type_var_(p);;)
 
 
@@ -512,7 +512,7 @@ class field {
   // placemarker, should not be here
   // T& operator[] (const int i) { return data[i]; }
 
-  // declarations -- WILL BE implemented by transformer, not written here
+  // declarations -- WILL BE implemented by hilapp, not written here
   element<T>& operator[] (const parity p) const;             // f[EVEN]
   element<T>& operator[] (const X_index_type) const;         // f[X]
   element<T>& operator[] (const X_plus_direction p) const;   // f[X+dir]
@@ -814,7 +814,7 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
 #if defined(USE_MPI)
 /* MPI implementations
  * For simplicity, these functions do not use field expressions andb
- * can be ignored by the transformer. Since the transformer does not
+ * can be ignored by the hilapp. Since the hilapp does not
  * have access to mpi.h, it cannot process this branch.
  */
 

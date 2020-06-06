@@ -166,10 +166,10 @@ void initialize_cuda(int rank);
 
 #else
 // This is not the CUDA compiler
-// Maybe transformer?
+// Maybe hilapp?
 
 // define cuda functions in order to avoid compilation errors
-// in transformer
+// in hilapp
 #define hila_random() 0.5
 #define seed_random(seed) while(0)
 

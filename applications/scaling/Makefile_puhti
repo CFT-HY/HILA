@@ -1,6 +1,6 @@
 OPTS = -DNDIM=3
 
-HILAPP = ../../build/transformer -DPUHTI -I../../../llvm/lib/clang/8.0.1/include/ 
+HILAPP = ../../build/hilapp -DPUHTI -I../../../llvm/lib/clang/8.0.1/include/ 
 CC = mpic++ -DUSE_MPI
 
 CFLAGS = -g $(OPTS)
@@ -9,7 +9,7 @@ CXXFLAGS = -g -x c++ $(OPTS)
 test: Makefile conjReduce
 	./test.sh conjReduce
 
-test_transformer: Makefile conjReduce.cpp ../../build/transformer
+test_transformer: Makefile conjReduce.cpp ../../build/hilapp
 	./test_transformer.sh conjReduce.cpp
 
 test_conjReduce: Makefile inputs.o conjReduce.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o 

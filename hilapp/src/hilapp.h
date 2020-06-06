@@ -331,7 +331,7 @@ extern global_state global;
 extern loop_info_struct loop_info;
 extern codetype target;
 
-/// global variable declarations - definitions on transformer.cpp
+/// global variable declarations - definitions on hilapp.cpp
 
 extern ClassTemplateDecl * field_decl;   // Ptr to field primary def in AST
 extern ClassTemplateDecl * field_storage_decl;   // Ptr to field primary def in AST

@@ -123,7 +123,7 @@ inline void synchronize(){
 
 
 
-// Useful c++14 template missing in Puhti compilation of transformer
+// Useful c++14 template missing in Puhti compilation of hilapp
 #if defined(PUHTI) && defined(HILAPP)
 namespace std {
   template< bool B, class T = void >

@@ -190,7 +190,7 @@ void handle_cmdline_arguments(codetype & target) {
 // NOTE: This is executed before AST analysis
 class heLppPragmaHandler : public PragmaHandler {
   public:
-    heLppPragmaHandler() : PragmaHandler("transformer") { }
+    heLppPragmaHandler() : PragmaHandler("hilapp") { }
     void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
                       Token &Tok) {
       // Handle the pragma
@@ -318,7 +318,7 @@ public:
       const char * end = strchr(src,'\n');
       if (end == nullptr) return;
       std::string line(src,end-src);
-      std::vector<std::string> w { "pragma","transformer","skip" };
+      std::vector<std::string> w { "pragma","hilapp","skip" };
       if (contains_word_list(line,w)) skip_this_translation_unit = true;
     }
   }
