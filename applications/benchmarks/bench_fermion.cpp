@@ -1,6 +1,6 @@
 #include "bench.h"
-#include "../plumbing/coordinates.h"
-#include "../plumbing/algorithms/conjugate_gradients.h"
+#include "plumbing/coordinates.h"
+#include "dirac/conjugate_gradient.h"
 
 #define N 3
 

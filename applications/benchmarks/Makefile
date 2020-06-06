@@ -4,7 +4,7 @@ OPTS = -DNDIM=4 $(ADDITION)
 
 #The next line work on puhti
 #HILAPP = ../../build/hilapp -DPUHTI -DHILAPP -I../../../llvm/lib/clang/8.0.1/include/ 
-HILAPP = ../../build/hilapp  -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
+HILAPP = ../../hilapp/build/hilapp  -DUSE_MPI -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
 
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 
@@ -27,10 +27,10 @@ CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
 %.tr.s : %.cpt
 	$(CC) $(CXXFLAGS) $< -S -o $@
 
-lattice.cpt : ../plumbing/lattice.cpp
+lattice.cpt : ../../libraries/plumbing/lattice.cpp
 	$(HILAPP) $(ADDITION) $<
 
-test_gathers.cpt : ../plumbing/test_gathers.cpp
+test_gathers.cpt : ../../libraries/plumbing/test_gathers.cpp
 	$(HILAPP) $(ADDITION) $<
 
 lattice.o : lattice.cpt
@@ -39,7 +39,7 @@ lattice.o : lattice.cpt
 test_gathers.o : test_gathers.cpt
 	$(CC) $(CXXFLAGS) $< -c 
 
-%.o : ../plumbing/%.cpp
+%.o : ../../libraries/plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c

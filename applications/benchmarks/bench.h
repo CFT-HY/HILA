@@ -6,13 +6,13 @@
 #include <sys/time.h>
 #include <ctime>
 
-#include "../plumbing/defs.h"
-#include "../datatypes/general_matrix.h"
-#include "../datatypes/sun.h"
-#include "../datatypes/wilson_vector.h"
-#include "../plumbing/field.h"
-#include "../plumbing/fermion/staggered.h"
-#include "../plumbing/fermion/wilson.h"
+#include "plumbing/defs.h"
+#include "datatypes/general_matrix.h"
+#include "datatypes/sun.h"
+#include "datatypes/wilson_vector.h"
+#include "plumbing/field.h"
+#include "dirac/staggered.h"
+#include "dirac/wilson.h"
 
 
 // Minimum time to run each benchmark
