@@ -743,7 +743,7 @@ int main(int argc, const char **argv) {
   const char **av = new const char *[argc+6];
   argc = rearrange_cmdline(argc, argv, av);
   av[argc++] = "-std=c++17";     // use c++17 std
-  av[argc++] = "-DTRANSFORMER";  // add global defn
+  av[argc++] = "-DHILAPP";  // add global defn
   av[argc] = nullptr;
 
 

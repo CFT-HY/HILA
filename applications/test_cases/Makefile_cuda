@@ -17,8 +17,8 @@ INCLUDES =
 
 
 # The next line is set up for Puhti. If testing on laptop, comment it out and uncomment the line after
-TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
-#TRANSFORMER = ../../build/transformer -target:CUDA -DCUDA -DTRANSFORMER $(INCLUDES) 
+HILAPP = ../../build/transformer -target:CUDA -DCUDA -DPUHTI -DHILAPP -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
+#HILAPP = ../../build/transformer -target:CUDA -DCUDA -DHILAPP $(INCLUDES) 
 CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI -I../../../cub/  $(INCLUDES)
 LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(MPI_LIBS)
 
@@ -32,7 +32,7 @@ CXXFLAGS = -g -G $(OPTS)
 		$(LD) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
 
 %.cpt: %.cpp
-		$(TRANSFORMER) $(OPTS) $<
+		$(HILAPP) $(OPTS) $<
 
 %.tr.o : %.cpt
 		$(CC) $(CXXFLAGS) $< -c -o $@

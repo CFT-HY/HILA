@@ -1,6 +1,6 @@
 OPTS = -DNDIM=3
 
-TRANSFORMER = ../../build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+HILAPP = ../../build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 LD = mpic++
 
@@ -26,16 +26,16 @@ onsim: Makefile $(OBJECTS)
 
 build/onsim.cpt: Makefile onsim.cpp
 	mkdir -p build
-	$(TRANSFORMER) onsim.cpp -o build/onsim.cpt
+	$(HILAPP) onsim.cpp -o build/onsim.cpt
 
 
 build/%.cpt: %.cpp Makefile
 	mkdir -p build
-	$(TRANSFORMER) $< -o $@
+	$(HILAPP) $< -o $@
 
 build/%.cpt:../plumbing/%.cpp Makefile
 	mkdir -p build
-	$(TRANSFORMER) $< -o $@
+	$(HILAPP) $< -o $@
 
 build/%.o : build/%.cpt
 	mkdir -p build

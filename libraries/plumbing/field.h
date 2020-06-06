@@ -1061,7 +1061,7 @@ void field<T>::drop_comms_if_needed(direction d, parity p) const {}
 
 
 /// Gather a list of elements to a single node
-#if defined(USE_MPI) && !defined(TRANSFORMER)
+#if defined(USE_MPI) && !defined(HILAPP)
 
 template<typename T>
 void field<T>::field_struct::gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root) const {

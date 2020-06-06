@@ -124,7 +124,7 @@ inline void synchronize(){
 
 
 // Useful c++14 template missing in Puhti compilation of transformer
-#if defined(PUHTI) && defined(TRANSFORMER)
+#if defined(PUHTI) && defined(HILAPP)
 namespace std {
   template< bool B, class T = void >
   using enable_if_t = typename std::enable_if<B,T>::type;

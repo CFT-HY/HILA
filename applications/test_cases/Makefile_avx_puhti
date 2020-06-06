@@ -1,6 +1,6 @@
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer -DAVX -target:AVX -DPUHTI -I../../../llvm/lib/clang/8.0.1/include/
+HILAPP = ../../build/transformer -DAVX -target:AVX -DPUHTI -I../../../llvm/lib/clang/8.0.1/include/
 CC = mpic++ -mavx2 -DAVX -DUSE_MPI
 
 CFLAGS = -g $(OPTS)
@@ -16,7 +16,7 @@ test_transformer: Makefile conjReduce.cpp ../../build/transformer
 	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o
 
 %.cpt: %.cpp Makefile
-	$(TRANSFORMER) $<
+	$(HILAPP) $<
 
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@

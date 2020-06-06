@@ -1,7 +1,7 @@
 
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer 
+HILAPP = ../../build/transformer 
 CC = mpic++ -x c++ -DUSE_MPI
 LD = mpic++ -DUSE_MPI
 
@@ -32,7 +32,7 @@ SUN_CPU: Makefile SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inlin
 
 
 SUN.tr.cpu.cpp: Makefile SUN.cpp 
-	$(TRANSFORMER) SUN.cpp -o=SUN.tr.cpu.cpp
+	$(HILAPP) SUN.cpp -o=SUN.tr.cpu.cpp
 
 %.cpu.o : %.cpp
 	$(CC) $(CXXFLAGS) $< -c -o $@

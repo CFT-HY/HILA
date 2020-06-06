@@ -1,7 +1,7 @@
 
 OPTS = 
 
-TRANSFORMER = ../../hilapp/build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+HILAPP = ../../hilapp/build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 LD = mpic++
 
@@ -29,14 +29,14 @@ Wilson: Makefile $(OBJECTS) Wilson.h
 
 build/Wilson.cpt: Makefile Wilson.cpp
 	mkdir -p build
-	$(TRANSFORMER) Wilson.cpp -o build/Wilson.cpt
+	$(HILAPP) Wilson.cpp -o build/Wilson.cpt
 
 
 build/%.cpt: %.cpp Makefile
-	$(TRANSFORMER) $< -o $@
+	$(HILAPP) $< -o $@
 
 build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
-	$(TRANSFORMER) $< -o $@
+	$(HILAPP) $< -o $@
 
 build/%.o : build/%.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@

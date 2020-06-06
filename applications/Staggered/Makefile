@@ -1,7 +1,7 @@
 
 OPTS = 
 
-TRANSFORMER = ../../hilapp/build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+HILAPP = ../../hilapp/build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 LD = mpic++
 
@@ -29,16 +29,16 @@ staggered: Makefile $(OBJECTS) staggered.h
 
 build/staggered.cpt: Makefile staggered.cpp
 	mkdir -p build
-	$(TRANSFORMER) staggered.cpp -o build/staggered.cpt
+	$(HILAPP) staggered.cpp -o build/staggered.cpt
 
 
 build/%.cpt: %.cpp Makefile
 	mkdir -p build
-	$(TRANSFORMER) $< -o $@
+	$(HILAPP) $< -o $@
 
 build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
 	mkdir -p build
-	$(TRANSFORMER) $< -o $@
+	$(HILAPP) $< -o $@
 
 build/%.o : build/%.cpt
 	mkdir -p build

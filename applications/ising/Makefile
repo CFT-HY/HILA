@@ -1,7 +1,7 @@
 
 OPTS = -DNDIM=2
 
-TRANSFORMER = ../../build/transformer
+HILAPP = ../../build/transformer
 CC = g++
 LD = g++
 
