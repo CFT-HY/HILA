@@ -10,7 +10,7 @@
 
 
 template <typename T>
-// #pragma transformer dump ast
+// #pragma hila dump ast
 struct test_struct {
   T r[NDIM];
 

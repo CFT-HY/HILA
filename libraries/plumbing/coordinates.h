@@ -29,15 +29,15 @@ constexpr unsigned NDIRS = NDIRECTIONS;    //
 // Increment for directions:  ++dir,  dir++  does the obvious 
 // dir-- not defined, should we?
 
-#pragma transformer loop_function
+#pragma hila loop_function
 static inline direction next_direction(direction dir) {
   return static_cast<direction>(static_cast<unsigned>(dir)+1);
 }
-#pragma transformer loop_function
+#pragma hila loop_function
 static inline direction operator++(direction & dir) {
   return dir = static_cast<direction>(static_cast<unsigned>(dir)+1);
 }
-#pragma transformer loop_function
+#pragma hila loop_function
 static inline direction operator++(direction & dir, int) {
   direction d = dir;
   ++dir;
@@ -131,7 +131,7 @@ class coordinate_vector {
  public:
   coordinate_vector() = default;
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector(const coordinate_vector & v) = default;
   // coordinate_vector(const coordinate_vector & v) {
   //   foralldir(d) r[d] = v[d];
@@ -139,26 +139,26 @@ class coordinate_vector {
 
   ~coordinate_vector() = default;
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector(const int i) { set(i); }
 
   // initialize with direction -- useful for automatic conversion
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector(const direction & dir) {
     foralldir(d) r[d] = dir_dot_product(d,dir);
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   int& operator[] (const int i) { return r[i]; }
-  #pragma transformer loop_function
+  #pragma hila loop_function
   int& operator[] (const direction d) { return r[(int)d]; }
-  #pragma transformer loop_function
+  #pragma hila loop_function
   const int& operator[] (const int i) const { return r[i]; }
-  #pragma transformer loop_function
+  #pragma hila loop_function
   const int& operator[] (const direction d) const { return r[(int)d]; }
 
   // Parity of this coordinate
-  #pragma transformer loop_function
+  #pragma hila loop_function
   ::parity parity() {
     int s = 0;
     foralldir(d) s += r[d];
@@ -167,48 +167,48 @@ class coordinate_vector {
   }
 
   // cast to std::array
-  #pragma transformer loop_function
+  #pragma hila loop_function
   operator std::array<int,NDIM>(){std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector & set(int i) {
     foralldir(d) r[d] = i;
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector & operator+=(const coordinate_vector &v) {
     foralldir(d) r[d] += v[d];
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector & operator-=(const coordinate_vector &v) {
     foralldir(d) r[d] -= v[d];
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector & operator*=(const int i) {
     foralldir(d) r[d] *= i;
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector & operator/=(const int i) {
     foralldir(d) r[d] /= i;
     return *this;
   }
 
   // and also additions for direction -- dir acts like a unit vector
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector & operator+=(const direction dir) {
     if (is_up_dir(dir)) ++r[dir]; 
     else --r[-dir];
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector & operator-=(const direction dir) {
     if (is_up_dir(dir)) --r[dir]; 
     else ++r[-dir];
@@ -216,7 +216,7 @@ class coordinate_vector {
   }
 
   // and unary -
-  #pragma transformer loop_function
+  #pragma hila loop_function
   coordinate_vector operator-() {
     coordinate_vector v;
     foralldir(d) v[d] = -r[d];

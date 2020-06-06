@@ -14,15 +14,15 @@
 /// TEMPORARY location for vector intrinsic analogues -- result obvious
 
 template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline T mul_add(T a, T b, T c) { return a*b + c; }
 
 template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline T mul_sub(T a, T b, T c) { return a*b - c; }
 
 template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline T nmul_add(T a, T b, T c) { return c - a*b; }
 
 
@@ -41,13 +41,13 @@ struct cmplx {
   // constructor from single complex 
   template <typename A,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   constexpr cmplx<T>(const cmplx<A> a): re(static_cast<T>(a.re)), im(static_cast<T>(a.im)) {}
 
   // constructor from single scalar value 
   template <typename scalar_t,
             std::enable_if_t<is_arithmetic<scalar_t>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   constexpr cmplx<T>(const scalar_t val): re(static_cast<T>(val)), im(static_cast<T>(0)) {}
 
   // constructor c(a,b)
@@ -63,7 +63,7 @@ struct cmplx {
   template <typename A, typename B,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0,
             std::enable_if_t<is_arithmetic<B>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   constexpr cmplx<T>(const A & a, const B & b): re(static_cast<T>(a)), im(static_cast<T>(b)) {}
 
   ~cmplx<T>() =default;
@@ -71,7 +71,7 @@ struct cmplx {
   // automatic casting from cmplx<T> -> cmplx<A>
   // TODO: ensure this works if A is vector type!
   template <typename A>
-  #pragma transformer loop_function
+  #pragma hila loop_function
   operator cmplx<A>() const { 
     return cmplx<A>( static_cast<A>(re), static_cast<A>(im) );
   }
@@ -79,7 +79,7 @@ struct cmplx {
   // Assignment from cmplx<A>
   template <typename A,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator=(cmplx<A> s) {
     re = static_cast<T>(s.re);
     im = static_cast<T>(s.im);
@@ -88,38 +88,38 @@ struct cmplx {
   
   template <typename scalar_t,
             std::enable_if_t<is_arithmetic<scalar_t>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator=(scalar_t s) {
     re = static_cast<T>(s);
     im = static_cast<T>(0);
     return *this;
   }
   
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline T real() const { return re; }
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline T imag() const { return im; }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline T squarenorm() const { return re*re + im*im; }
   // TODO: make this work for vector type!  Not double
   
   //currently this gives a compilation error
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline double abs() const { return sqrt(static_cast<double>(squarenorm()) ); }
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline double arg() const { return atan2(static_cast<double>(im),static_cast<double>(re)); }
 
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> conj() const { return cmplx<T>( { re, -im } ); }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> polar(const T r, const T theta) { 
     return cmplx<T>( { r*cos(theta), r*sin(theta) } );
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
   cmplx<A> & random(){
     re = static_cast<T>(hila_random());
@@ -128,13 +128,13 @@ struct cmplx {
   }
 
   // unary + and -
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> operator+() const {return *this;}
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> operator-() const {return cmplx<T>(-re, -im); }
 
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator+= (const cmplx<T> & lhs) {
     re += lhs.re;
     im += lhs.im;
@@ -144,13 +144,13 @@ struct cmplx {
   // TODO: for avx vector too -- #define new template macro
   template <typename A,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator+= (const A & a) {
     re += static_cast<T>(a);
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator-= (const cmplx<T> & lhs) {
     re -= lhs.re;
     im -= lhs.im;
@@ -160,13 +160,13 @@ struct cmplx {
   // TODO: for vector too
   template <typename A,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator-= (const A & a) {
     re -= static_cast<T>(a);
     return *this;
   }
   
-  // #pragma transformer loop_function
+  // #pragma hila loop_function
   // inline cmplx<T> & operator*= (const cmplx<T> & lhs) {
   //   T r = re * lhs.re - im * lhs.im;
   //   im  = im * lhs.re + re * lhs.im;
@@ -174,7 +174,7 @@ struct cmplx {
   //   return *this;
   // }
   
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator*= (const cmplx<T> lhs) {
     T r = mul_sub(re, lhs.re, im * lhs.im);   // a*b-c
     im  = mul_add(im, lhs.re, re * lhs.im);   // a*b+c
@@ -186,7 +186,7 @@ struct cmplx {
   // TODO: for vector too
   template <typename A,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator*= (const A a) {
     re *= static_cast<T>(a);
     im *= static_cast<T>(a);
@@ -194,7 +194,7 @@ struct cmplx {
   }
 
   // a/b = a b*/|b|^2 = (a.re*b.re + a.im*b.im + i(a.im*b.re - a.re*b.im))/|b|^2
-  // #pragma transformer loop_function
+  // #pragma hila loop_function
   // inline cmplx<T> & operator/= (const cmplx<T> & lhs) {
   //   T n = lhs.squarenorm();
   //   T r = (re * lhs.re + im * lhs.im)/n;
@@ -202,7 +202,7 @@ struct cmplx {
   //   re = r;
   //   return *this;
   // }
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator/= (const cmplx<T> & lhs) {
     T n = lhs.squarenorm();
     T r = mul_add(re, lhs.re, im * lhs.im)/n;  // a*b+c
@@ -214,7 +214,7 @@ struct cmplx {
   // TODO: for vector too
   template <typename A,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   inline cmplx<T> & operator/= (const A & a) {
     re /= static_cast<T>(a);
     im /= static_cast<T>(a);
@@ -238,13 +238,13 @@ struct cmplx {
 };
 
 // template <typename T>
-// #pragma transformer loop_function
+// #pragma hila loop_function
 // inline cmplx<T> operator+(const cmplx<T> & a, const cmplx<T> & b) {
 //   return cmplx<T>(a.re + b.re, a.im + b.im);
 // }
 
 template <typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator+(cmplx<T> a, const cmplx<T> & b) {
   a += b;
   return a;
@@ -253,26 +253,26 @@ inline cmplx<T> operator+(cmplx<T> a, const cmplx<T> & b) {
   // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator+(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re + a, c.im);
 }
 
 template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator+(const A &a, const cmplx<T> & c) {
   return cmplx<T>(c.re + a, c.im);
 }
 
 // -
 // template <typename T>
-// #pragma transformer loop_function
+// #pragma hila loop_function
 // inline cmplx<T> operator-(const cmplx<T> & a, const cmplx<T> & b) {
 //   return cmplx<T>(a.re - b.re, a.im - b.im);
 // }
 template <typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator-(cmplx<T> a, const cmplx<T> & b) {
   a -= b;
   return a;
@@ -281,14 +281,14 @@ inline cmplx<T> operator-(cmplx<T> a, const cmplx<T> & b) {
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator-(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re - a, c.im);
 }
 
 template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator-(const A &a, const cmplx<T> & c) {
   return cmplx<T>(a - c.re, -c.im);
 }
@@ -296,12 +296,12 @@ inline cmplx<T> operator-(const A &a, const cmplx<T> & c) {
 
 // *
 // template <typename T>
-// #pragma transformer loop_function
+// #pragma hila loop_function
 // inline cmplx<T> operator*(const cmplx<T> & a, const cmplx<T> & b) {
 //   return cmplx<T>(a.re*b.re - a.im*b.im, a.im*b.re + a.re*b.im);
 // }
 template <typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator*(cmplx<T> a, const cmplx<T> & b) {
   a *= b;
   return a;
@@ -310,14 +310,14 @@ inline cmplx<T> operator*(cmplx<T> a, const cmplx<T> & b) {
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator*(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re * a, c.im * a);
 }
 
 template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator*(const A &a, const cmplx<T> & c) {
   return cmplx<T>(a * c.re, a * c.im);
 }
@@ -325,13 +325,13 @@ inline cmplx<T> operator*(const A &a, const cmplx<T> & c) {
 
 // /   a/b = ab*/|b|^2
 // template <typename T>
-// #pragma transformer loop_function
+// #pragma hila loop_function
 // inline cmplx<T> operator/(const cmplx<T> & a, const cmplx<T> & b) {
 //   T n = b.squarenorm();
 //   return cmplx<T>( (a.re*b.re + a.im*b.im)/n, (a.im*b.re - a.re*b.im)/n );
 // }
 template <typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator/(cmplx<T> a, const cmplx<T> & b) {
   a /= b;
   return a;
@@ -340,7 +340,7 @@ inline cmplx<T> operator/(cmplx<T> a, const cmplx<T> & b) {
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator/(const cmplx<T> & c, const A & a) {
   return cmplx<T>(c.re / a, c.im / a);
 }
@@ -348,7 +348,7 @@ inline cmplx<T> operator/(const cmplx<T> & c, const A & a) {
 // a/c = ac*/|c|^2
 template <typename T, typename A,
           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> operator/(const A &a, const cmplx<T> & c) {
   T n = c.squarenorm();
   return cmplx<T>((a * c.re)/n, -(a * c.im)/n);
@@ -356,7 +356,7 @@ inline cmplx<T> operator/(const A &a, const cmplx<T> & c) {
 
 // write also multiply-add directly with complex numbers
 template <typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<T> mul_add(const cmplx<T> &a, const cmplx<T>  &b, const cmplx<T> &c ) {
   //a*b + c
   cmplx<T> r;
@@ -370,30 +370,30 @@ inline cmplx<T> mul_add(const cmplx<T> &a, const cmplx<T>  &b, const cmplx<T> &c
 
 // Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
 // Underscore seems to be required here
-#pragma transformer loop_function
+#pragma hila loop_function
 constexpr cmplx<double> operator""_i(long double a) {
   return cmplx<double>{0.0,a};
 }
 
-#pragma transformer loop_function
+#pragma hila loop_function
 constexpr cmplx<double> operator""_i(unsigned long long a) {
   return cmplx<double>(0.0,static_cast<double>(a));
 }
 
 template <typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 std::ostream& operator<<(std::ostream &strm, const cmplx<T> A) {
   return strm << "(" << A.re << ", " << A.im << ")";
 }
 
 template<typename Accuracy> 
-#pragma transformer loop_function
+#pragma hila loop_function
 inline cmplx<Accuracy> conj(cmplx<Accuracy> val){
   return val.conj();
 }
 
 template<typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 inline auto norm_squared(cmplx<T> val){
   return val.squarenorm();
 }

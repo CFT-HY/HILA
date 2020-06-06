@@ -29,7 +29,7 @@ void seed_random(unsigned long seed){
 }
 
 /* Generate random numbers on device or host */
-#pragma transformer loop_function
+#pragma hila loop_function
 double hila_random(){
   #ifdef __CUDA_ARCH__
   int x = threadIdx.x + blockIdx.x * blockDim.x;

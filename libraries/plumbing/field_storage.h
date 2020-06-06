@@ -28,26 +28,26 @@ class field_storage {
     void free_field();
 
 #ifndef VECTORIZED
-    #pragma transformer loop_function
+    #pragma hila loop_function
     inline auto get(const int i, const int field_alloc_size) const;
 
     template<typename A>
-    #pragma transformer loop_function
+    #pragma hila loop_function
     inline void set(const A &value, const int i, const int field_alloc_size);
 #else
-    #pragma transformer loop_function
+    #pragma hila loop_function
     inline T get_element(const int i) const;
 
-    #pragma transformer loop_function
+    #pragma hila loop_function
     inline void set_element(const T &value, const int i);
 
     // in vector code, write only 1 element to field at site index idx
     template <typename vecT>
-    #pragma transformer loop_function
+    #pragma hila loop_function
     inline void set_vector( const vecT & val, const int idx );
 
     template <typename vecT>
-    #pragma transformer loop_function
+    #pragma hila loop_function
     inline vecT get_vector( const int idx ) const;
 
     void gather_comm_vectors( T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, 

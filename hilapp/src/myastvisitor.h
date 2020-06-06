@@ -82,7 +82,7 @@ public:
   /// typealiases are used to determine if class is vectorizable
   bool VisitTypeAliasDecl(TypeAliasDecl * ta);
 
-  /// True if the decl is preceded by "#pragma transformer <string>" where s is the string
+  /// True if the decl is preceded by "#pragma hila <string>" where s is the string
   bool has_pragma(Decl *d, const char *s);
   bool has_pragma(Stmt *S, const char *s);
   bool has_pragma(const SourceLocation sl, const char *s);
