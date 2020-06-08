@@ -6,7 +6,7 @@
 #define NDIM 2
 
 // Include the lattice field definition
-#include "../plumbing/field.h"
+#include "plumbing/field.h"
 
 // Direct output to stdout
 std::ostream &hila::output = std::cout;
@@ -65,9 +65,9 @@ int main(int argc, char **argv)
     onsites(ALL){
       M += spin[X];
     }
-    printf("Magnetisation %f\n", M/VOLUME);
+    output0 << "Magnetisation " << M/VOLUME << "\n";
   }
   
-
+  finishrun();
   return 0;
 }

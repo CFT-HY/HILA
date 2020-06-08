@@ -6,7 +6,7 @@
 #define NDIM 2
 
 // Include the lattice field definition
-#include "../plumbing/field.h"
+#include "plumbing/field.h"
 
 // Direct output to stdout
 std::ostream &hila::output=std::cout;
@@ -24,7 +24,7 @@ long seed=123456;
 int NX=64,NY=64;
 int VOLUME=NX*NY;
 
-int main(int argc, const char **argv) {
+int main(int argc, char **argv){
 	// Basic setup
 	lattice->setup(NX,NY, argc, argv);
 	// Define a field
@@ -53,9 +53,9 @@ int main(int argc, const char **argv) {
 				deltaS-=cos(spin[X+XUP]-tnspin)+cos(spin[X+XDOWN]-tnspin)+cos(spin[X+YUP]-tnspin)+cos(spin[X+YDOWN]-tnspin);
 
 				if(deltaS<0 || hila_random()<exp(-beta*deltaS)) {
-					if(tnspin<-PI) {
+					if(tnspin<-M_PI) {
 						tnspin+=2.0*M_PI;
-					} else if(tnspin>PI) {
+					} else if(tnspin>M_PI) {
 						tnspin-=2.0*M_PI;
 					}
 					spin[X]=tnspin;
@@ -71,9 +71,9 @@ int main(int argc, const char **argv) {
 		onsites(ALL) {
 			M+=cos(spin[X]);
 		}
-		printf("Magnetisation %f\n",M/VOLUME);
+		output0 << "Magnetisation " << M/VOLUME << "\n";
 	}
 
-
+	finishrun();
 	return 0;
 }

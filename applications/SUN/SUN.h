@@ -12,9 +12,9 @@
 const int N=2;
 
 // Include the lattice field definition
-#include "../plumbing/defs.h"
-#include "../datatypes/general_matrix.h"
-#include "../plumbing/field.h"
+#include "plumbing/defs.h"
+#include "datatypes/general_matrix.h"
+#include "plumbing/field.h"
 
 
 // Define some parameters for the simulation

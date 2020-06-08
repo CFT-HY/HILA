@@ -1,30 +1,54 @@
 
 OPTS = -DNDIM=2
 
-HILAPP = ../../build/hilapp
-CC = g++
-LD = g++
+HILAPATH = ../..
+HILAINCLUDEPATH = $(HILAPATH)/libraries/
 
 
-CXXFLAGS = -O3 -x c++ $(OPTS)
+HILAPP = $(HILAPATH)/hilapp/build/hilapp -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I$(HILAINCLUDEPATH)
+CC = mpic++ -DUSE_MPI -mavx2 -mfma
+LD = mpic++
+
+TRANSFORMER_VECTOR =  $(HILAPATH)/hilapp/build/hilapp  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I$(HILAINCLUDEPATH)
+VECTOR_OPTS = -DAVX
+
+TRANSFORMER_GPU = $(HILAPATH)/hilapp/build/hilapp -DGPU -target:CUDA -I$(HILAINCLUDEPATH)
+NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
+NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
+
+CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
+#CXXFLAGS = -g -x c++ --std=c++17 $(OPTS) -I$(HILAINCLUDEPATH)
+LDFLAGS = -lfftw3 -lm
+
+.PRECIOUS: build/%.cpt
+
+OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
 
 
+ising: Makefile build/ising.o $(OBJECTS)
+	$(LD) -o ising build/ising.o $(OBJECTS)
 
-ising: Makefile ising.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o
-	$(LD) -o ising ising.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o 
+build/ising.cpt: Makefile ising.cpp
+	mkdir -p build
+	$(HILAPP) ising.cpp -o build/ising.cpt
 
-ising.cpt: Makefile ising.cpp
-	../../build/hilapp ising.cpp
 
-%.o : %.cpt
-	$(CC) $(CXXFLAGS) $< -c
+build/%.cpt: %.cpp Makefile
+	mkdir -p build
+	$(HILAPP) $< -o $@
 
-%.o : ../plumbing/%.cpp
-	$(CC) $(CXXFLAGS) $< -c
+build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
+	mkdir -p build
+	$(HILAPP) $< -o $@
+
+build/%.o : build/%.cpt
+	mkdir -p build
+	$(CC) $(CXXFLAGS) $< -c -o $@
+
 
 clean:
-	rm -rf *.o ising.cpt
+	rm -rf build/*.cpt build/*.o
 
 cleanall:
-	rm -rf *.o ising.cpt ising
+	rm -rf build/*
 

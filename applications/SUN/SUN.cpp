@@ -20,7 +20,7 @@ int NX=16, NY=16, NZ=16, NT=16;
 
 
 void calc_staples(
-  field<matrix<N,N,cmplx<double>>> U[NDIM], 
+  field<matrix<N,N,cmplx<double>>> (&U)[NDIM], 
   field<matrix<N,N,cmplx<double>>> &staple_sum,
   direction dir)
 {
@@ -96,6 +96,7 @@ int main(int argc, char **argv)
         parity p = EVEN;
         for( int par=0; par < 2; par++ ){
           onsites(p){
+            if(disable_avx[X]==0){};
             update( U[dir][X], staple[X], beta );
           }
           p = opp_parity(p);
@@ -108,7 +109,7 @@ int main(int argc, char **argv)
     foralldir(d1) foralldir(d2) if(d1 != d2){
       direction dir1 = (direction)d1, dir2 = (direction)d2;
       onsites(ALL){
-        matrix<N,N,cmplx<double>> temp;
+        element<matrix<N,N,cmplx<double>>> temp;
         temp =  U[dir1][X] * U[dir2][X+dir1];
         temp *= U[dir1][X+dir2].conjugate();
         temp *= U[dir2][X].conjugate();

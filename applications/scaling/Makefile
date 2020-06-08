@@ -14,18 +14,18 @@ TRANSFORMER_GPU = $(HILAPATH)/hilapp/build/hilapp -DGPU -target:CUDA -I$(HILAINC
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
-#CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
-CXXFLAGS = -g -x c++ --std=c++17 $(OPTS) -I$(HILAINCLUDEPATH)
+CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
+#CXXFLAGS = -g -x c++ --std=c++17 $(OPTS) -I$(HILAINCLUDEPATH)
 LDFLAGS = -lfftw3 -lm
 
 
 .PRECIOUS: build/%.cpt
 
-OBJECTS = build/onsim.o build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
+OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
 
 
-onsim: Makefile $(OBJECTS)
-	$(LD) $(LDFLAGS) -o build/onsim  $(OBJECTS)
+onsim: Makefile build/onsim.o $(OBJECTS)
+	$(LD) $(LDFLAGS) -o build/onsim build/onsim.o $(OBJECTS)
 
 build/onsim.cpt: Makefile onsim.cpp
 	mkdir -p build
