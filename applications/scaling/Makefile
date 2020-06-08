@@ -1,18 +1,21 @@
 OPTS = -DNDIM=3
 
-HILAPP = ../../build/hilapp -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+HILAPATH = ../..
+HILAINCLUDEPATH = $(HILAPATH)/libraries/
+
+HILAPP = $(HILAPATH)/hilapp/build/hilapp -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I$(HILAINCLUDEPATH)
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 LD = mpic++
 
-TRANSFORMER_VECTOR =  ../../build/hilapp  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+TRANSFORMER_VECTOR =  $(HILAPATH)/hilapp/build/hilapp  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I$(HILAINCLUDEPATH)
 VECTOR_OPTS = -DAVX
 
-TRANSFORMER_GPU = ../../build/hilapp -DGPU -target:CUDA
+TRANSFORMER_GPU = $(HILAPATH)/hilapp/build/hilapp -DGPU -target:CUDA -I$(HILAINCLUDEPATH)
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
 #CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
-CXXFLAGS = -g -x c++ --std=c++17 $(OPTS)
+CXXFLAGS = -g -x c++ --std=c++17 $(OPTS) -I$(HILAINCLUDEPATH)
 LDFLAGS = -lfftw3 -lm
 
 
@@ -33,7 +36,7 @@ build/%.cpt: %.cpp Makefile
 	mkdir -p build
 	$(HILAPP) $< -o $@
 
-build/%.cpt:../plumbing/%.cpp Makefile
+build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
 	mkdir -p build
 	$(HILAPP) $< -o $@
 
