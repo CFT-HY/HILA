@@ -8,21 +8,21 @@
 
 //complex conjugate
 template<typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 inline T conj(T rhs){
   return rhs;
 }
 
 //transpose 
 template<typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 inline T trans(T rhs){
   return rhs;
 }
 
 
 template<typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 inline auto norm_squared(T val){
   return val.norm_sq();
 }

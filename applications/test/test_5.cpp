@@ -8,7 +8,7 @@
 
 cmplx<double> d(cmplx<double> x) {return x;}
 cmplx<double> e(cmplx<double> x) {return d(x);}
-// #pragma transformer ast dump
+// #pragma hila ast dump
 cmplx<double> f(const cmplx<double> & x) { return e(x);}
 
 

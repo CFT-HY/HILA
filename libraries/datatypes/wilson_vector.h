@@ -58,7 +58,7 @@ class Wilson_vector {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma transformer loop_function
+  #pragma hila loop_function
   Wilson_vector(const scalart rhs) {
     for(int i=0; i<Gammadim; i++){
       c[i] = rhs;
@@ -73,7 +73,7 @@ class Wilson_vector {
 
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma transformer loop_function
+  #pragma hila loop_function
   Wilson_vector & operator= (const scalart rhs) {
     for (int i=0; i<Gammadim; i++){
       c[i] = rhs;
@@ -81,7 +81,7 @@ class Wilson_vector {
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   Wilson_vector & operator+=(const Wilson_vector & rhs){
     for (int i = 0; i < Gammadim; i++){
       c[i] += rhs.c[i];
@@ -316,7 +316,7 @@ class half_Wilson_vector {
 
   // This will take the projection 1 +- gamma_j
 #if (Gammadim==4) 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
     cmplx<radix> I(0,1);
     switch(dir){
@@ -373,7 +373,7 @@ class half_Wilson_vector {
     }
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   Wilson_vector<N, radix> expand(direction dir, int sign) const{
     Wilson_vector<N, radix> r;
     cmplx<radix> I(0,1);
@@ -450,7 +450,7 @@ class half_Wilson_vector {
    1  0	        ( 1, 0)	       +1
    0 -1	  	    ( 0, 1)	       -1
 */
-  #pragma transformer loop_function
+  #pragma hila loop_function
   half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
     cmplx<radix> I(0,1);
     switch(dir){
@@ -482,7 +482,7 @@ class half_Wilson_vector {
         finishrun();    }
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   Wilson_vector<N, radix> expand(direction dir, int sign) const{
     Wilson_vector<N, radix> r;
     cmplx<radix> I(0,1);
@@ -530,7 +530,7 @@ class half_Wilson_vector {
     return r;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   half_Wilson_vector & operator+=(const half_Wilson_vector & rhs){
     for (int i = 0; i < Gammadim/2; i++){
       c[i] += rhs.c[i];
@@ -538,7 +538,7 @@ class half_Wilson_vector {
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   half_Wilson_vector & operator-=(const half_Wilson_vector & rhs){
     for (int i = 0; i < Gammadim/2; i++){
       c[i] -= rhs.c[i];

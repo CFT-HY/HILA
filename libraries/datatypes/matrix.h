@@ -14,7 +14,7 @@ struct squarematrix {
   squarematrix() = default;
 
   //constructor from general matrix  
-  #pragma transformer loop_function
+  #pragma hila loop_function
   squarematrix(const matrix<n,n,T> rhs) {
     for (int i=0; i<n; i++){
       for (int j=0; j<n; j++) {
@@ -25,7 +25,7 @@ struct squarematrix {
 
   //constructor from scalar  
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma transformer loop_function
+  #pragma hila loop_function
   squarematrix(const scalart rhs) {
     for (int i=0; i<n; i++){
       for (int j=0; j<n; j++) {
@@ -37,7 +37,7 @@ struct squarematrix {
 
   template <typename scalart,
             std::enable_if_t<std::is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma transformer loop_function
+  #pragma hila loop_function
   squarematrix<n,T> & operator= (const scalart rhs) {
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
@@ -75,7 +75,7 @@ struct squarematrix {
 
 
   //*=, +=, -= operators
-  #pragma transformer loop_function
+  #pragma hila loop_function
   squarematrix<n,T> & operator+=(const squarematrix<n,T> & rhs){
     for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
       c[i][j] += rhs.c[i][j]; 
@@ -83,7 +83,7 @@ struct squarematrix {
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   squarematrix<n,T> & operator-=(const squarematrix<n,T> & rhs){
     for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
       c[i][j] -= rhs.c[i][j]; 
@@ -92,7 +92,7 @@ struct squarematrix {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   squarematrix<n,T> & operator*=(const scalart rhs){
     T val;
     val=rhs;
@@ -103,7 +103,7 @@ struct squarematrix {
   }
 
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   squarematrix<n,T> & operator*=(const squarematrix<n,T> & rhs){
     squarematrix<n,T> res;
     for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
@@ -134,7 +134,7 @@ struct squarematrix {
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   template <typename A=T, std::enable_if_t<!is_arithmetic<A>::value, int> = 0 > 
   squarematrix<n,T> & random(){
     for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -279,7 +279,7 @@ squarematrix<n,T> operator- (const squarematrix<n,T> &A, const squarematrix<n,T>
 
 // multiplication by a scalar
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
-#pragma transformer loop_function
+#pragma hila loop_function
 squarematrix<n,T> operator* (const squarematrix<n,T> &A, const scalart s) {
   squarematrix<n,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -289,7 +289,7 @@ squarematrix<n,T> operator* (const squarematrix<n,T> &A, const scalart s) {
 }
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
-#pragma transformer loop_function
+#pragma hila loop_function
 squarematrix<n,T> operator/ (const squarematrix<n,T> &A, const scalart s) {
   squarematrix<n,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -299,14 +299,14 @@ squarematrix<n,T> operator/ (const squarematrix<n,T> &A, const scalart s) {
 }
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
-#pragma transformer loop_function
+#pragma hila loop_function
 squarematrix<n,T> operator*(const scalart s, const squarematrix<n,T> &A) {
   return operator*(A,s);
 }
 
 
 template <int n, typename T, std::enable_if_t<!is_arithmetic<T>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 squarematrix<n,T> operator * (const squarematrix<n,T> & A, const T & B) {
   squarematrix<n,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
@@ -316,7 +316,7 @@ squarematrix<n,T> operator * (const squarematrix<n,T> & A, const T & B) {
 }
 
 template <int n, typename T, std::enable_if_t<!is_arithmetic<T>::value, int> = 0 >
-#pragma transformer loop_function
+#pragma hila loop_function
 squarematrix<n,T> operator * (const T & A, const squarematrix<n,T> & B) {
   squarematrix<n,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
@@ -327,7 +327,7 @@ squarematrix<n,T> operator * (const T & A, const squarematrix<n,T> & B) {
 
 
 template <int n, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 squarematrix<n,T> operator ^ (const squarematrix<n,T> & A, const int pow) {
   squarematrix<n,T> res;
   res = 1;
@@ -339,7 +339,7 @@ squarematrix<n,T> operator ^ (const squarematrix<n,T> & A, const int pow) {
 
 
 template <int n, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 std::ostream& operator<<(std::ostream &strm, const squarematrix<n,T> &A) {
   for (int i=0; i<n; i++){
     strm << "\n"; 

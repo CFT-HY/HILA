@@ -4,7 +4,7 @@ The purpose of this document is to give all the information about the structure 
 
 ## Architecture of the field class 
 
-To put it briefly, the field entity is composed of 3 layers. The bottom layer field_storage contains the raw data buffer associated with the field, and provides the routines for editing this data. The second layer, field_struct, is a wrapper on top of field_storage that adds various variables on MPI communications and a communication initialization routine, and a pointer to the lattice that the whole field entity relies on. The final layer (class field) provides the high level user interface, as well as the field related routines that are written by the transformer. 
+To put it briefly, the field entity is composed of 3 layers. The bottom layer field_storage contains the raw data buffer associated with the field, and provides the routines for editing this data. The second layer, field_struct, is a wrapper on top of field_storage that adds various variables on MPI communications and a communication initialization routine, and a pointer to the lattice that the whole field entity relies on. The final layer (class field) provides the high level user interface, as well as the field related routines that are written by the hilapp. 
 
 ## Methods that need to be implemented for each backend 
 

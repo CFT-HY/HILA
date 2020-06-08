@@ -1,6 +1,6 @@
 *.o
 *.cpt
 *.exe
-build/transformer
+hilapp/build/hilapp
 settings.json
 .vscode/

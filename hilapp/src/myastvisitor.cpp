@@ -1,5 +1,5 @@
 #include "myastvisitor.h"
-#include "transformer.h"
+#include "hilapp.h"
 #include "stringops.h"
 #include "specialization_db.h"
 #include "clang/Analysis/CallGraph.h"
@@ -1084,7 +1084,7 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
 }
 
 
-/// Check if the SourceLocation l is preceded by "#pragma transformer" on previous line.
+/// Check if the SourceLocation l is preceded by "#pragma hila" on previous line.
 /// There cannot be anything except whitespace between l and the beginning of line
 /// Pragma_args will point to the beginning of arguments of pragma
 
@@ -1134,13 +1134,13 @@ bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & argu
 
   // l points to \n, skip
   //l = l.getLocWithOffset(1);
-  // Now l points to the beginning of prospective #pragma transformer -line
+  // Now l points to the beginning of prospective #pragma hila -line
   // Get first the source text 
   std::string txt = TheRewriter.getRewrittenText(SourceRange(l,lend));
 
   txt = remove_extra_whitespace(txt);
 
-  std::string comp = "#pragma transformer";
+  std::string comp = "#pragma hila";
   if (txt.compare(0,comp.length(),comp) == 0) {
     // found it, set return value
     arguments = txt.substr(comp.length()+1, std::string::npos);
@@ -1148,7 +1148,7 @@ bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & argu
     return true;
   }
   // there could be space between # and pragma
-  comp = "# pragma transformer";
+  comp = "# pragma hila";
   if (txt.compare(0,comp.length(),comp) == 0) {
     // found it, set return value
     arguments = txt.substr(comp.length()+1, std::string::npos);

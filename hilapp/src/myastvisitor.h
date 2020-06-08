@@ -10,7 +10,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "srcbuf.h" //srcbuf class interface 
-#include "transformer.h" //global vars needed 
+#include "hilapp.h" //global vars needed 
 #include "generalvisitor.h"  // Definitions for the general visitor case
 
 //////////////////////////////////////////////
@@ -82,7 +82,7 @@ public:
   /// typealiases are used to determine if class is vectorizable
   bool VisitTypeAliasDecl(TypeAliasDecl * ta);
 
-  /// True if the decl is preceded by "#pragma transformer <string>" where s is the string
+  /// True if the decl is preceded by "#pragma hila <string>" where s is the string
   bool has_pragma(Decl *d, const char *s);
   bool has_pragma(Stmt *S, const char *s);
   bool has_pragma(const SourceLocation sl, const char *s);

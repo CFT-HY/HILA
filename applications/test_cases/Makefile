@@ -1,6 +1,6 @@
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
+HILAPP = ../../build/hilapp -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
 CC = mpic++ -DUSE_MPI
 
 CFLAGS = -g  $(OPTS)
@@ -11,17 +11,17 @@ CXXFLAGS = -g -x c++ --std=c++17 $(OPTS)
 test: Makefile conjReduce
 	./test.sh conjReduce
 
-test_transformer: Makefile conjReduce.cpp ../../build/transformer
+test_transformer: Makefile conjReduce.cpp ../../build/hilapp
 	./test_transformer.sh conjReduce.cpp
 
 %.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o memalloc.o test_gathers.o
 	$(CC) -o $@ $< -lfftw3 -lm inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o memalloc.o test_gathers.o
 
 %.cpt: %.cpp Makefile
-	$(TRANSFORMER) $<
+	$(HILAPP) $<
 
 %.cpt:../plumbing/%.cpp Makefile
-	$(TRANSFORMER) $<
+	$(HILAPP) $<
 
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@

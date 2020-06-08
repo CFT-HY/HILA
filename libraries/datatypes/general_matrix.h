@@ -52,7 +52,7 @@ class matrix {
   matrix<n,m,T> operator-(void) { return -1*(*this); }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix<n,m,T> & operator= (const scalart rhs) {
     static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
     for (int i=0; i<n; i++){
@@ -68,7 +68,7 @@ class matrix {
 
   //copy constructor from scalar  
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix(const scalart rhs) {
     static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -78,7 +78,7 @@ class matrix {
   }
 
   //*=, +=, -= operators
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix<n,m,T> & operator+=(const matrix<n,m,T> & rhs){
     for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
       c[i][j] += rhs.c[i][j]; 
@@ -86,7 +86,7 @@ class matrix {
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix<n,m,T> & operator-=(const matrix<n,m,T> & rhs){
     for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
       c[i][j] -= rhs.c[i][j]; 
@@ -95,7 +95,7 @@ class matrix {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix<n,m,T> & operator*=(const scalart rhs){
     T val;
     val=rhs;
@@ -106,7 +106,7 @@ class matrix {
   }
 
   template<int p>
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix<n,m,T> & operator*=(const matrix<m,p,T> & rhs){
     static_assert(m==p, "can't assign result of *= to matrix A, because doing so would change it's dimensions");
     matrix<m,m,T> rhsTrans = rhs.transpose();
@@ -125,7 +125,7 @@ class matrix {
 
   //numpy style matrix fill 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix<n,m,T> & fill(const scalart rhs) {
     for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
       c[i][j] = (rhs);
@@ -134,7 +134,7 @@ class matrix {
   }
   
   //return copy of transpose of this matrix
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix<m,n,T> transpose() const {
     matrix<m,n,T> res;
     for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
@@ -144,7 +144,7 @@ class matrix {
   }
 
   //return copy of complex conjugate of this matrix
-  #pragma transformer loop_function
+  #pragma hila loop_function
   matrix<m,n,T> conjugate() const {
     matrix<m,n,T> res;
     for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
@@ -153,7 +153,7 @@ class matrix {
     return res;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   T trace() const {
     static_assert(n==m, "trace not defined for non square matrices!");
     T result = static_cast<T>(0);
@@ -163,7 +163,7 @@ class matrix {
     return result;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
   matrix<n, m, A> & random(){
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -172,7 +172,7 @@ class matrix {
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   template <typename A=T, std::enable_if_t<!is_arithmetic<A>::value, int> = 0 > 
   matrix<n, m, A> & random(){
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -212,7 +212,7 @@ class matrix {
 //templates needed for naive calculation of determinants
 
 template<int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n - 1, m - 1, T> Minor(const matrix<n, m, T> & bigger, int i, int j){
   matrix<n - 1, m - 1, T> result;
   int index = 0;
@@ -226,7 +226,7 @@ matrix<n - 1, m - 1, T> Minor(const matrix<n, m, T> & bigger, int i, int j){
 
 //determinant -> use LU factorization later 
 template<int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 T det(const matrix<n, m, T> & mat){
   static_assert(n==m, "determinants defined only for square matrices");
   T result = 0.0;
@@ -241,14 +241,14 @@ T det(const matrix<n, m, T> & mat){
 }
 
 template<typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 T det(const matrix<2,2,T> & mat){
   return mat.c[0][0]*mat.c[1][1] - mat.c[1][0]*mat.c[0][1];
 }
 
 //matrix multiplication for 2 by 2 matrices ; 
 template<typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<2,2,T> operator* (const matrix<2,2,T> &A, const matrix<2,2,T> &B) {
   matrix<2,2,T> res = 1;
   res.c[0][0] = A.c[0][0]*B.c[0][0] + A.c[0][1]*B.c[1][0];
@@ -260,7 +260,7 @@ matrix<2,2,T> operator* (const matrix<2,2,T> &A, const matrix<2,2,T> &B) {
 
 //matrix power 
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator ^ (const matrix<n,m,T> & A, const int pow) {
   matrix<n,m,T> res;
   res = 1;
@@ -272,7 +272,7 @@ matrix<n,m,T> operator ^ (const matrix<n,m,T> & A, const int pow) {
 
 //matrix * scalar 
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator * (const matrix<n,m,T> & A, const T & B) {
   matrix<n,m,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
@@ -285,7 +285,7 @@ matrix<n,m,T> operator * (const matrix<n,m,T> & A, const T & B) {
 
 //general matrix * matrix multiplication 
 template <int n, int m, int p, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,p,T> operator * (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
@@ -300,7 +300,7 @@ matrix<n,p,T> operator * (const matrix<n,m,T> &A, const matrix<m,p,T> &B) {
 
 //multiplication for matrix * transpose matrix  
 template <int n, int m, int p, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,p,T> operator * (const matrix<n,m,T> & A, const transposeMatrix<p,m,T> & B) {
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
@@ -315,7 +315,7 @@ matrix<n,p,T> operator * (const matrix<n,m,T> & A, const transposeMatrix<p,m,T> 
 
 //multiplication for transpose * matrix  
 template <int n, int m, int p, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,p,T> operator * (const transposeMatrix<m,n,T> & A, const matrix<m,p,T> & B) {
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
@@ -331,7 +331,7 @@ matrix<n,p,T> operator * (const transposeMatrix<m,n,T> & A, const matrix<m,p,T> 
 
 //transpose * transpose
 template <int n, int m, int p, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,p,T> operator * (const transposeMatrix<m,n,T> & A, const transposeMatrix<p,m,T> & B) {
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
@@ -346,7 +346,7 @@ matrix<n,p,T> operator * (const transposeMatrix<m,n,T> & A, const transposeMatri
 
 //multiplication for matrix * conjugate matrix  
 template <int n, int m, int p, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,p,T> operator * (const matrix<n,m,T> & A, const conjugateMatrix<p,m,T> & B) {
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
@@ -361,7 +361,7 @@ matrix<n,p,T> operator * (const matrix<n,m,T> & A, const conjugateMatrix<p,m,T> 
 
 //multiplication for conjugate * matrix  
 template <int n, int m, int p, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,p,T> operator * (const conjugateMatrix<m,n,T> & A, const matrix<m,p,T> & B) {
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
@@ -377,7 +377,7 @@ matrix<n,p,T> operator * (const conjugateMatrix<m,n,T> & A, const matrix<m,p,T> 
 
 //conjugate * conjugate
 template <int n, int m, int p, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator * (const conjugateMatrix<m,n,T> & A, const conjugateMatrix<p,m,T> & B) {
   matrix<n,p,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < p; j++){
@@ -391,7 +391,7 @@ matrix<n,m,T> operator * (const conjugateMatrix<m,n,T> & A, const conjugateMatri
 
 //addition for matrix + conjugate matrix  
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator + (const matrix<n,m,T> & A, const conjugateMatrix<m,n,T> & B) {
   matrix<n,m,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
@@ -402,7 +402,7 @@ matrix<n,m,T> operator + (const matrix<n,m,T> & A, const conjugateMatrix<m,n,T> 
 
 //addition for conjugate + matrix  
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator + (const conjugateMatrix<m,n,T> & A, const matrix<n,m,T> & B) {
   matrix<n,m,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
@@ -413,7 +413,7 @@ matrix<n,m,T> operator + (const conjugateMatrix<m,n,T> & A, const matrix<n,m,T> 
 
 //addition for conjugate + conjugate
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator + (const conjugateMatrix<m,n,T> & A, const conjugateMatrix<n,m,T> & B) {
   matrix<n,m,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
@@ -424,7 +424,7 @@ matrix<n,m,T> operator + (const conjugateMatrix<m,n,T> & A, const conjugateMatri
 
 //subtraction for matrix - conjugate matrix  
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator - (const matrix<n,m,T> & A, const conjugateMatrix<m,n,T> & B) {
   matrix<n,m,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
@@ -435,7 +435,7 @@ matrix<n,m,T> operator - (const matrix<n,m,T> & A, const conjugateMatrix<m,n,T> 
 
 //subtraction for conjugate - matrix  
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const matrix<n,m,T> & B) {
   matrix<n,m,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
@@ -446,7 +446,7 @@ matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const matrix<n,m,T> 
 
 //subtraction for conjugate - conjugate
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const conjugateMatrix<n,m,T> & B) {
   matrix<n,m,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
@@ -458,7 +458,7 @@ matrix<n,m,T> operator - (const conjugateMatrix<m,n,T> & A, const conjugateMatri
 
 //component wise addition
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator+ (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
   matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -469,7 +469,7 @@ matrix<n,m,T> operator+ (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
 
 //component wise subtraction
 template <int n, int m, typename T> 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator- (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
   matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -480,7 +480,7 @@ matrix<n,m,T> operator- (const matrix<n,m,T> &A, const matrix<n,m,T> &B) {
 
 // multiplication by a scalar
 template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator* (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -490,7 +490,7 @@ matrix<n,m,T> operator* (const matrix<n,m,T> &A, const scalart s) {
 }
 
 template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
   matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -500,14 +500,14 @@ matrix<n,m,T> operator/ (const matrix<n,m,T> &A, const scalart s) {
 }
 
 template <int n, int m, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
-#pragma transformer loop_function
+#pragma hila loop_function
 matrix<n,m,T> operator*(const scalart s, const matrix<n,m,T> &A) {
   return operator*(A,s);
 }
 
 
 template <int n, int m, typename T>
-#pragma transformer loop_function
+#pragma hila loop_function
 std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
   for (int i=0; i<n; i++){
     strm << "\n"; 

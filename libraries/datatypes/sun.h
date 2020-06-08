@@ -72,7 +72,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
     SU() = default;
 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    #pragma transformer loop_function
+    #pragma hila loop_function
     SU(const scalart rhs) {
       for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
         if (i == j) this->c[i][j] = (rhs);
@@ -580,7 +580,7 @@ class SU_vector : public vector<n,cmplx<radix>>{
     SU_vector() = default;
 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    #pragma transformer loop_function
+    #pragma hila loop_function
     SU_vector(const scalart rhs) {
       for(int i=0; i<n; i++){
         this->c[i] = (rhs);

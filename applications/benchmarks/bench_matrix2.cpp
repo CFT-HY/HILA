@@ -1,7 +1,7 @@
 
 
 #include "bench.h"
-#include "../plumbing/timers.h"
+#include "plumbing/timers.h"
 
 #ifndef MSIZE
 #define MSIZE 3

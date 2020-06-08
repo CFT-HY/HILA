@@ -10,7 +10,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 
-#include "transformer.h"
+#include "hilapp.h"
 #include "myastvisitor.h"
 #include "stringops.h"
 

@@ -22,7 +22,7 @@
 
 #include "clang/AST/AST.h"
 
-#include "transformer.h"
+#include "hilapp.h"
 #include "specialization_db.h"
 #include "stringops.h"
 

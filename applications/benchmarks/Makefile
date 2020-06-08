@@ -1,9 +1,10 @@
 ADDITION = -DMSIZE=2
 OPTS = -DNDIM=4 $(ADDITION)
 
+
 #The next line work on puhti
-#TRANSFORMER = ../../build/transformer -DPUHTI -DTRANSFORMER -I../../../llvm/lib/clang/8.0.1/include/ 
-TRANSFORMER = ../../build/transformer  -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
+#HILAPP = ../../build/hilapp -DPUHTI -DHILAPP -I../../../llvm/lib/clang/8.0.1/include/ 
+HILAPP = ../../hilapp/build/hilapp  -DUSE_MPI -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
 
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 
@@ -18,7 +19,7 @@ CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
 	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
 
 %.cpt: %.cpp Makefile
-	$(TRANSFORMER) $(ADDITION) $<
+	$(HILAPP) $(ADDITION) $<
 
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
@@ -26,11 +27,11 @@ CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
 %.tr.s : %.cpt
 	$(CC) $(CXXFLAGS) $< -S -o $@
 
-lattice.cpt : ../plumbing/lattice.cpp
-	$(TRANSFORMER) $(ADDITION) $<
+lattice.cpt : ../../libraries/plumbing/lattice.cpp
+	$(HILAPP) $(ADDITION) $<
 
-test_gathers.cpt : ../plumbing/test_gathers.cpp
-	$(TRANSFORMER) $(ADDITION) $<
+test_gathers.cpt : ../../libraries/plumbing/test_gathers.cpp
+	$(HILAPP) $(ADDITION) $<
 
 lattice.o : lattice.cpt
 	$(CC) $(CXXFLAGS) $< -c
@@ -38,7 +39,7 @@ lattice.o : lattice.cpt
 test_gathers.o : test_gathers.cpt
 	$(CC) $(CXXFLAGS) $< -c 
 
-%.o : ../plumbing/%.cpp
+%.o : ../../libraries/plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c

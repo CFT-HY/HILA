@@ -22,7 +22,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 
-#include "transformer.h"
+#include "hilapp.h"
 #include "optionsparser.h"
 #include "stringops.h"
 #include "myastvisitor.h"
@@ -190,7 +190,7 @@ void handle_cmdline_arguments(codetype & target) {
 // NOTE: This is executed before AST analysis
 class heLppPragmaHandler : public PragmaHandler {
   public:
-    heLppPragmaHandler() : PragmaHandler("transformer") { }
+    heLppPragmaHandler() : PragmaHandler("hilapp") { }
     void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
                       Token &Tok) {
       // Handle the pragma
@@ -318,7 +318,7 @@ public:
       const char * end = strchr(src,'\n');
       if (end == nullptr) return;
       std::string line(src,end-src);
-      std::vector<std::string> w { "pragma","transformer","skip" };
+      std::vector<std::string> w { "pragma","hilapp","skip" };
       if (contains_word_list(line,w)) skip_this_translation_unit = true;
     }
   }
@@ -743,7 +743,7 @@ int main(int argc, const char **argv) {
   const char **av = new const char *[argc+6];
   argc = rearrange_cmdline(argc, argv, av);
   av[argc++] = "-std=c++17";     // use c++17 std
-  av[argc++] = "-DTRANSFORMER";  // add global defn
+  av[argc++] = "-DHILAPP";  // add global defn
   av[argc] = nullptr;
 
 

@@ -1,7 +1,7 @@
 
 OPTS = -DNDIM=2
 
-TRANSFORMER = ../../build/transformer
+HILAPP = ../../build/hilapp
 CC = g++
 LD = g++
 
@@ -14,7 +14,7 @@ ising: Makefile ising.o mersenne_inline.o lattice.o setup_layout_generic.o map_n
 	$(LD) -o ising ising.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o 
 
 ising.cpt: Makefile ising.cpp
-	../../build/transformer ising.cpp
+	../../build/hilapp ising.cpp
 
 %.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c

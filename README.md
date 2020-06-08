@@ -3,7 +3,7 @@
 
 The Hila framework consists of 
 
-1. the transformer and 
+1. the hilapp and 
 2. a lattice simulation library.
 
 The library is currently found in `programs/plumbing`.
@@ -23,19 +23,19 @@ here involves new datatypes and a preprocessing tool that converts c++ code with
 In short, the framework can be used in these steps: 
 
 1. Write c++ code using the syntax and datatypes laid out below
-2. Use the transformer excecutable to convert this code into .cpt code 
+2. Use the hilapp excecutable to convert this code into .cpt code 
 3. Compile the new .cpt code into the final excecutable
 
 ![Workflow illustration](/docs/workflowV1.png)
  
 
-To compile the transformer, first create a build directory inside the main directory if it doesn't exist. 
-Then, compile the transformer by typing `make` in the main folder.
-This will create an executable called `transformer` in the build folder.
+To compile the hilapp, first create a build directory inside the main directory if it doesn't exist. 
+Then, compile the hilapp by typing `make` in the main folder.
+This will create an executable called `hilapp` in the build folder.
 
 You can then use it to compile an extended C++ file into standard C++ using
 ~~~ bash
-build/transformer path/to/program.cpp
+build/hilapp path/to/program.cpp
 ~~~
 This will create a `cpt` file written in standard C++.
 
@@ -58,7 +58,7 @@ lattice_struct * lattice = & my_lattice;
 
 ### Compiling on Puhti
 
-There is a separate makefile for compiling transformer on Puhti.
+There is a separate makefile for compiling hilapp on Puhti.
 To use it, run
 ~~~
 module load gcc

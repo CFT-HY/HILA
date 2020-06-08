@@ -20,7 +20,7 @@ class vector {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma transformer loop_function
+  #pragma hila loop_function
   vector & operator= (const scalart rhs) {
     for (int i=0; i<n; i++){
       c[i] = rhs;
@@ -57,7 +57,7 @@ class vector {
     return r;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   vector & operator+=(const vector & rhs){
     for (int i = 0; i < n; i++){
       c[i] += rhs.c[i];
@@ -65,7 +65,7 @@ class vector {
     return *this;
   }
   
-  #pragma transformer loop_function
+  #pragma hila loop_function
   vector & operator-=(const vector & rhs){
     for (int i = 0; i < n; i++){
       c[i] -= rhs.c[i];
@@ -73,7 +73,7 @@ class vector {
     return *this;
   }
 
-  #pragma transformer loop_function
+  #pragma hila loop_function
   vector & operator-(){
     for (int i = 0; i < n; i++){
       c[i] = -c[i];

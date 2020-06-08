@@ -4,7 +4,7 @@
 # To get an allocation with a gpu (make sure you are a member of the hila development project):
 # srun --ntasks=1 --account=Project_2001973 --time=0:10:00 --partition=gputest --gres=gpu:v100:1  --pty bash
 # 
-# Go to the folder /projappl/project_2001973/transformer/programs/test_cases/
+# Go to the folder /projappl/project_2001973/hilapp/programs/test_cases/
 # Then run ./testGPU.sh
 #
 

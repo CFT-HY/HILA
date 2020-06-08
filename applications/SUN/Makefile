@@ -1,15 +1,15 @@
 
 OPTS = -DNDIM=4
 
-TRANSFORMER = ../../build/transformer 
+HILAPP = ../../build/hilapp 
 CC = mpic++ -x c++ -DUSE_MPI
 LD = mpic++ -DUSE_MPI
 
-TRANSFORMER_GPU = ../../build/transformer -DGPU -target:CUDA
+TRANSFORMER_GPU = ../../build/hilapp -DGPU -target:CUDA
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
-TRANSFORMER_openacc = ../../build/transformer -Dopenacc --target:openacc
+TRANSFORMER_openacc = ../../build/hilapp -Dopenacc --target:openacc
 PGCC = pgc++ -acc
 PGLD = pgc++ -acc
 
@@ -32,7 +32,7 @@ SUN_CPU: Makefile SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inlin
 
 
 SUN.tr.cpu.cpp: Makefile SUN.cpp 
-	$(TRANSFORMER) SUN.cpp -o=SUN.tr.cpu.cpp
+	$(HILAPP) SUN.cpp -o=SUN.tr.cpu.cpp
 
 %.cpu.o : %.cpp
 	$(CC) $(CXXFLAGS) $< -c -o $@
