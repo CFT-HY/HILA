@@ -2,7 +2,7 @@
 #define FFT_H
 
 #include "plumbing/field.h"
-#include "../datatypes/cmplx.h"
+#include "datatypes/cmplx.h"
 #include "fftw3.h"
 
 

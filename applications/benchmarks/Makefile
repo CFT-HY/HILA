@@ -6,7 +6,7 @@ OPTS = -DNDIM=4 $(ADDITION)
 #HILAPP = ../../build/hilapp -DPUHTI -DHILAPP -I../../../llvm/lib/clang/8.0.1/include/ 
 HILAPP = ../../hilapp/build/hilapp  -DUSE_MPI -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
 
-CC = mpic++ -DUSE_MPI -mavx2 -mfma
+CC = mpic++ -DUSE_MPI -mavx2 -mfma  -I../../libraries/
 
 CFLAGS = -Ofast $(OPTS)
 CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)

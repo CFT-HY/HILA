@@ -2,9 +2,9 @@
 #define __DIRAC_WILSON_H__
 
 #include "plumbing/defs.h"
-#include "../datatypes/cmplx.h"
-#include "../datatypes/matrix.h"
-#include "../datatypes/wilson_vector.h"
+#include "datatypes/cmplx.h"
+#include "datatypes/matrix.h"
+#include "datatypes/wilson_vector.h"
 #include "plumbing/field.h"
 
 

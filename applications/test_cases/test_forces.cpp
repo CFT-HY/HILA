@@ -1,6 +1,6 @@
 #include "test.h"
-#include "../datatypes/vector.h"
-#include "../datatypes/sun.h"
+#include "datatypes/vector.h"
+#include "datatypes/sun.h"
 #include "plumbing/field.h"
 #include "plumbing/fermion/staggered.h"
 #include "plumbing/fermion/wilson.h"

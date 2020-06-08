@@ -2,7 +2,7 @@
 #define GENERAL_MATRIX_H
 #include<type_traits>
 #include "operations.h"
-#include "../datatypes/cmplx.h"
+#include "datatypes/cmplx.h"
 
 
 // Do this macro here to ease "switching" between using

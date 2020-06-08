@@ -1,8 +1,8 @@
 #ifndef SU_VEC
 #define SU_VEC
 
-#include "../datatypes/cmplx.h"
-#include "../datatypes/matrix.h"
+#include "datatypes/cmplx.h"
+#include "datatypes/matrix.h"
 #include "plumbing/random.h"
 
 template<int n, typename T>
