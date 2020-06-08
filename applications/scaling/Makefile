@@ -33,7 +33,7 @@ build/%.cpt: %.cpp Makefile
 	mkdir -p build
 	$(HILAPP) $< -o $@
 
-build/%.cpt:../plumbing/%.cpp Makefile
+build/%.cpt:plumbing/%.cpp Makefile
 	mkdir -p build
 	$(HILAPP) $< -o $@
 

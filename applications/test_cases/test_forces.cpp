@@ -1,12 +1,12 @@
 #include "test.h"
 #include "../datatypes/vector.h"
 #include "../datatypes/sun.h"
-#include "../plumbing/field.h"
-#include "../plumbing/fermion/staggered.h"
-#include "../plumbing/fermion/wilson.h"
-#include "../plumbing/algorithms/hmc.h"
-#include "../plumbing/gauge_field.h"
-#include "../plumbing/fermion/fermion_field.h"
+#include "plumbing/field.h"
+#include "plumbing/fermion/staggered.h"
+#include "plumbing/fermion/wilson.h"
+#include "plumbing/algorithms/hmc.h"
+#include "plumbing/gauge_field.h"
+#include "plumbing/fermion/fermion_field.h"
 
 #define N 3
 

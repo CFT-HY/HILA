@@ -2,9 +2,9 @@
 #define COMM_VANILLA_H
 
 
-#include "../plumbing/globals.h"
-#include "../plumbing/lattice.h"
-#include "../plumbing/field.h"
+#include "plumbing/globals.h"
+#include "plumbing/lattice.h"
+#include "plumbing/field.h"
 
 ///***********************************************************
 /// Vanilla (non-mpi) implementations of communication routines.

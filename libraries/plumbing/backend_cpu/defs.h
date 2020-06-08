@@ -1,7 +1,7 @@
 #ifndef CPU_DEFS_H
 #define CPU_DEFS_H
 
-#include "../../plumbing/defs.h"
+#include "plumbing/defs.h"
 
 #define VANILLA
 

@@ -19,7 +19,7 @@ ising.cpt: Makefile xy.cpp
 %.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c
 
-%.o : ../plumbing/%.cpp
+%.o : plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 clean:

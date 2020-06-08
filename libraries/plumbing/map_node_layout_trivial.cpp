@@ -3,7 +3,7 @@
 // This is the trivial version, so that the order is straight
 // here.
 
-#include "../plumbing/globals.h"
+#include "plumbing/globals.h"
 
 void lattice_struct::allnodes::create_remap()
 {

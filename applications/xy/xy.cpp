@@ -6,7 +6,7 @@
 #define NDIM 2
 
 // Include the lattice field definition
-#include "../plumbing/field.h"
+#include "plumbing/field.h"
 
 // Direct output to stdout
 std::ostream &hila::output=std::cout;

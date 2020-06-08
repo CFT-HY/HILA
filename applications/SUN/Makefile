@@ -40,7 +40,7 @@ SUN.tr.cpu.cpp: Makefile SUN.cpp
 %.cpu.o : %.cpu.cpp
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
-%.cpu.o : ../plumbing/%.cpp
+%.cpu.o : plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
 
@@ -53,7 +53,7 @@ SUN.tr.gpu.cpp: Makefile SUN.cpp
 %.gpu.o : %.gpu.cpp
 	$(NVCC) $(CXXFLAGS) $< -c -o $@
 
-%.gpu.o : ../plumbing/%.cpp
+%.gpu.o : plumbing/%.cpp
 	$(NVCC) $(CXXFLAGS) $< -c -o $@
 
 
@@ -66,7 +66,7 @@ SUN.tr.oac.cpp: Makefile SUN.cpp
 %.oac.o : %.oac.cpp
 	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
 
-%.oac.o : ../plumbing/%.cpp
+%.oac.o : plumbing/%.cpp
 	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
 
 

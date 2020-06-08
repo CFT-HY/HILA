@@ -1,9 +1,9 @@
 #include "test.h"
 
 
-#include "../plumbing/fermion/staggered.h"
-#include "../plumbing/fermion/wilson.h"
-#include "../plumbing/algorithms/conjugate_gradients.h"
+#include "plumbing/fermion/staggered.h"
+#include "plumbing/fermion/wilson.h"
+#include "plumbing/algorithms/conjugate_gradients.h"
 
 
 #define N 3

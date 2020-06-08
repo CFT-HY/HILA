@@ -20,7 +20,7 @@ test_transformer: Makefile conjReduce.cpp ../../build/hilapp
 %.cpt: %.cpp Makefile
 	$(HILAPP) $<
 
-%.cpt:../plumbing/%.cpp Makefile
+%.cpt:plumbing/%.cpp Makefile
 	$(HILAPP) $<
 
 %.tr.o : %.cpt

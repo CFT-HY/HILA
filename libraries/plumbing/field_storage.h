@@ -2,13 +2,13 @@
 #define FIELD_STORAGEH
 
 
-#include "../plumbing/globals.h"
+#include "plumbing/globals.h"
 
-#include "../plumbing/defs.h"
-#include "../plumbing/field.h"
-#include "../plumbing/backend_vector/vector_types.h"
+#include "plumbing/defs.h"
+#include "plumbing/field.h"
+#include "plumbing/backend_vector/vector_types.h"
 
-#include "../plumbing/has_unary_minus.h"
+#include "plumbing/has_unary_minus.h"
 
 
 // Pointer to field data and accessors. Only this is passed to the
@@ -118,15 +118,15 @@ Import backend
 
 #ifdef VECTORIZED
 
-#include "../plumbing/backend_vector/field_storage_backend.h"
+#include "plumbing/backend_vector/field_storage_backend.h"
 
 #elif defined(CUDA)
 
-#include "../plumbing/backend_cuda/field_storage_backend.h"
+#include "plumbing/backend_cuda/field_storage_backend.h"
 
 #elif defined(VANILLA)
 
-#include "../plumbing/backend_cpu/field_storage_backend.h"
+#include "plumbing/backend_cpu/field_storage_backend.h"
 
 #elif 
 Something must be defined!

@@ -3,8 +3,8 @@
 /// nodes, and if that fails allows slightly different
 /// node sizes.  
 
-#include "../plumbing/globals.h"
-#include "../plumbing/lattice.h"
+#include "plumbing/globals.h"
+#include "plumbing/lattice.h"
 
 /***************************************************************/
 

@@ -1,6 +1,6 @@
-#include "../../plumbing/defs.h"
-#include "../../plumbing/lattice.h"
-#include "../../plumbing/backend_cuda/defs.h"
+#include "plumbing/defs.h"
+#include "plumbing/lattice.h"
+#include "plumbing/backend_cuda/defs.h"
 
 /* Random number generator */
 curandState * curandstate;

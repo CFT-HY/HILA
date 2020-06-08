@@ -1,7 +1,7 @@
 #ifndef COMM_MPI_H
 #define COMM_MPI_H
 
-#include "../plumbing/globals.h"
+#include "plumbing/globals.h"
 
 #ifdef USE_MPI
 

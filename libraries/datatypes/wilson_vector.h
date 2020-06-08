@@ -5,8 +5,8 @@
 #include "../datatypes/general_matrix.h"
 #include "../datatypes/sun.h"
 #include "../datatypes/vector.h"
-#include "../plumbing/coordinates.h"
-#include "../plumbing/random.h"
+#include "plumbing/coordinates.h"
+#include "plumbing/random.h"
 
 
 

@@ -3,7 +3,7 @@
 
 #include "../datatypes/cmplx.h"
 #include "../datatypes/matrix.h"
-#include "../plumbing/random.h"
+#include "plumbing/random.h"
 
 template<int n, typename T>
 class vector {

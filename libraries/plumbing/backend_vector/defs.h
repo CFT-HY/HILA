@@ -1,7 +1,7 @@
 #ifndef AVX_H
 #define AVX_H
 
-#include "../../plumbing/defs.h"
+#include "plumbing/defs.h"
 #include <immintrin.h>
 #include "../../vectorclass/vectorclass.h"
 #include "../../vectorclass/vectormath_exp.h"

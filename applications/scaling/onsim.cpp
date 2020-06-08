@@ -6,12 +6,12 @@
 #include <math.h>
 #include <assert.h>
 
-#include "../plumbing/defs.h"
+#include "plumbing/defs.h"
 #include "../datatypes/cmplx.h"
 #include "../datatypes/general_matrix.h"
 #include "../datatypes/sun.h"
-#include "../plumbing/field.h"
-#include "../plumbing/inputs.h"
+#include "plumbing/field.h"
+#include "plumbing/inputs.h"
 
 // Direct output to stdout
 std::ostream &hila::output = std::cout;

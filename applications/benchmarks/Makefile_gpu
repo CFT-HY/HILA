@@ -37,10 +37,10 @@ test: Makefile_gpu conjReduce
 %.tr.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
-%.o : ../plumbing/%.cpp
+%.o : plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
-%.o : ../plumbing/backend_cuda/%.cpp
+%.o : plumbing/backend_cuda/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c
