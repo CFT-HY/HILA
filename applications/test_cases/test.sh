@@ -66,7 +66,7 @@ else
 fi
 
 for D in 2 3 4 ; do
-  sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' ${MAKEFILE}
+  sed -i 's/^OPTS = .*/OPTS = -DNDIM='${D}'/' ${MAKEFILE}
   make cleanall
   for testfile in $tests; do
     test="${testfile%.*}"
