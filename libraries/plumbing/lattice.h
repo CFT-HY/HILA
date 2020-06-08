@@ -350,11 +350,11 @@ int get_next_msg_tag();
 
 
 #ifdef VANILLA
-#include "../plumbing/backend_cpu/lattice.h"
+#include "plumbing/backend_cpu/lattice.h"
 #elif defined(CUDA)
-#include "../plumbing/backend_cuda/lattice.h"
+#include "plumbing/backend_cuda/lattice.h"
 #elif defined(VECTORIZED)
-#include "../plumbing/backend_vector/lattice_vector.h"
+#include "plumbing/backend_vector/lattice_vector.h"
 #endif
 
 
