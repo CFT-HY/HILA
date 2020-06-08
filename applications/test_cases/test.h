@@ -5,13 +5,13 @@
 #include <assert.h>
 
 
-#include "../plumbing/defs.h"
-#include "../datatypes/cmplx.h"
-#include "../datatypes/vector.h"
-#include "../datatypes/sun.h"
-#include "../datatypes/wilson_vector.h"
-#include "../plumbing/field.h"
-#include "../plumbing/inputs.h"
+#include "plumbing/defs.h"
+#include "datatypes/cmplx.h"
+#include "datatypes/vector.h"
+#include "datatypes/sun.h"
+#include "datatypes/wilson_vector.h"
+#include "plumbing/field.h"
+#include "plumbing/inputs.h"
 
 // Direct output to stdout
 std::ostream &hila::output = std::cout;
