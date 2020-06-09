@@ -1,7 +1,7 @@
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 LD = mpic++
 
-include ../../libraries/Makefile_vector
+include ../../libraries/Makefile
 
 
 CXXFLAGS = -Ofast -x c++ --std=c++17 $(MPI_OPTS) $(HILA_OPTS) 
@@ -13,7 +13,7 @@ LDFLAGS = $(HILA_LD_FLAGS)
 
 
 staggered: Makefile build/staggered.o $(HILA_OBJECTS) staggered.h
-	$(LD) $(LDFLAGS) -o build/staggered  $(HILA_OBJECTS)
+	$(LD) $(LDFLAGS) -o build/staggered build/staggered.o $(HILA_OBJECTS)
 
 
 
