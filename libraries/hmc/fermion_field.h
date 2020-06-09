@@ -111,21 +111,21 @@ template<typename sun, typename representation, typename DIRAC_OP>
 class high_representation_fermion_action {
   public:
     using momtype = squarematrix<representation::size, cmplx<typename representation::base_type>>;
-    field<momtype> represented_momentum[NDIM];
+    field<momtype> represented_force[NDIM];
     field<representation> (&represented_gauge)[NDIM];
     field<sun> (&momentum)[NDIM];
     field<sun> (&gauge)[NDIM];
     fermion_action<momtype, DIRAC_OP> base_action;
 
     high_representation_fermion_action(DIRAC_OP &d, field<sun> (&m)[NDIM], field<sun> (&g)[NDIM], field<representation> (&rg)[NDIM]) : momentum(m), gauge(g), represented_gauge(rg), 
-    base_action(d, represented_momentum){};
+    base_action(d, represented_force){};
 
     high_representation_fermion_action(high_representation_fermion_action &hrfa) : momentum(hrfa.momentum), gauge(hrfa.gauge), represented_gauge(hrfa.represented_gauge), base_action(hrfa.base_action) {}
 
     // Return the value of the action with the current
     // field configuration
     double action(){ 
-      return 0 * base_action.action();
+      return base_action.action();
     }
 
     // Make a copy of fields updated in a trajectory
@@ -142,10 +142,15 @@ class high_representation_fermion_action {
 
     void force_step(double eps){
       foralldir(dir){
-        represented_momentum[dir][ALL] = 0;
+        represented_force[dir][ALL] = 0;
       }
       base_action.force_step(eps);
-      //project_representation_force(represented_momentum, momentum);
+      foralldir(dir){
+        onsites(ALL){
+          auto force = representation::project_force(represented_force[dir][X]);
+          momentum[dir][X] += force;
+        }
+      }
     }
 };
 

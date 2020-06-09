@@ -20,11 +20,42 @@ class adjoint : public squarematrix<N*N-1, radix> {
       return sun::generator(i);
     }
 
+    static constexpr adjoint represented_generator_I(int i){
+      adjoint g;
+      sun ti = sun::generator(i);
+      for(int j=0; j<N*N-j; j++){
+        sun tj = sun::generator(j);
+        for(int k=0; k<N*N-1; k++){
+          sun tk = sun::generator(k);
+          
+          cmplx<radix> tr1 = (ti*tj*tk).trace();
+          cmplx<radix> tr2 = (tj*ti*tk).trace();
+          g.c[j][k] = 2*(tr1.im - tr2.im);
+        }
+      }
+      return g;
+    }
+
 
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).c[i][j] = -0.5*(generator(i)*m.conjugate()*generator(j)*m).trace().re;
       }
+    }
+
+    static squarematrix<N, cmplx<radix>> project_force(
+      squarematrix<size, cmplx<radix>> rforce
+    ){
+      squarematrix<N, cmplx<radix>> fforce=0;
+      for(int g=0; g<N*N-1; g++){
+        adjoint rg = represented_generator_I(g);
+        radix C = (rg.transpose()*rforce).trace().re;
+        fforce += C*sun::generator(g);
+      }
+      cmplx<radix> ct(0,2);
+      fforce = fforce*ct;
+      project_antihermitean(fforce);
+      return fforce;
     }
 };
 
