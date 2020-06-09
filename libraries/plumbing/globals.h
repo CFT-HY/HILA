@@ -6,7 +6,7 @@
 
 #include <sstream>
 #include<iostream>
-#include "../plumbing/lattice.h"
+#include "plumbing/lattice.h"
 
 
 #endif

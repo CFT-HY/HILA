@@ -8,8 +8,8 @@ HILAPP = ../../hilapp/build/hilapp  -DUSE_MPI -I../../libraries/ -I/usr/lib/x86_
 
 CC = mpic++ -DUSE_MPI -mavx2 -mfma
 
-CFLAGS = -Ofast $(OPTS)
-CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 $(OPTS)
+CFLAGS = -Ofast -I../../libraries/ $(OPTS)
+CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 -I../../libraries/ $(OPTS)
 # CXXFLAGS = -g -x c++ --std=c++17 $(OPTS)
 
 # Don't remove cpt-files

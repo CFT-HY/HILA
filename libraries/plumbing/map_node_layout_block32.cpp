@@ -15,7 +15,7 @@
  * Kari Rummukainen 8/2014
  */
 
-#include "../plumbing/lattice.h"
+#include "plumbing/lattice.h"
 
 void map_node_layout()
 {

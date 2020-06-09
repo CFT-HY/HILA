@@ -1,9 +1,9 @@
 
 
 
-#include "../plumbing/globals.h"
-#include "../plumbing/lattice.h"
-#include "../plumbing/field.h"
+#include "plumbing/globals.h"
+#include "plumbing/lattice.h"
+#include "plumbing/field.h"
 
 
 //HACK: force disable vectorization in a loop using

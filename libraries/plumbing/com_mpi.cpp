@@ -1,8 +1,8 @@
 
-#include "../plumbing/globals.h"
-#include "../plumbing/lattice.h"
-#include "../plumbing/field.h"
-#include "../plumbing/comm_mpi.h"
+#include "plumbing/globals.h"
+#include "plumbing/lattice.h"
+#include "plumbing/field.h"
+#include "plumbing/comm_mpi.h"
 
 #ifdef USE_MPI
 
