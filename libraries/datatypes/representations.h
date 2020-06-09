@@ -20,13 +20,15 @@ class adjoint : public squarematrix<N*N-1, radix> {
       return sun::generator(i);
     }
 
+    /* Return a SU(N) generator in the adjoint representation,
+     * multiplied by I */
     static constexpr adjoint represented_generator_I(int i){
       adjoint g;
       sun ti = sun::generator(i);
-      for(int j=0; j<N*N-j; j++){
-        sun tj = sun::generator(j);
+      for(int j=0; j<N*N-1; j++){
+        sun tj = generator(j);
         for(int k=0; k<N*N-1; k++){
-          sun tk = sun::generator(k);
+          sun tk = generator(k);
           
           cmplx<radix> tr1 = (ti*tj*tk).trace();
           cmplx<radix> tr2 = (tj*ti*tk).trace();
@@ -36,13 +38,15 @@ class adjoint : public squarematrix<N*N-1, radix> {
       return g;
     }
 
-
+    /* Project a matrix into the adjoint representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).c[i][j] = -0.5*(generator(i)*m.conjugate()*generator(j)*m).trace().re;
       }
     }
 
+    /* Project a complex adjoint matrix into the algebra and
+     * represent as a complex NxN (momentum) matrix */
     static squarematrix<N, cmplx<radix>> project_force(
       squarematrix<size, cmplx<radix>> rforce
     ){
@@ -88,11 +92,46 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
       return generator;
     }
 
+    /* Return a SU(N) generator in the antisymmetric representation */
+    static constexpr antisymmetric represented_generator(int i){
+      antisymmetric g;
+      sun ti = sun::generator(i);
+      for(int j=0; j<N*(N-1)/2; j++){
+        sun tj = generator(j);
+        for(int k=0; k<N*(N-1)/2; k++){
+          sun tk = generator(k);
+          
+          cmplx<radix> tr1 = (ti*tj*tk).trace();
+          cmplx<radix> tr2 = (tj*ti*tk).trace();
+          g.c[j][k] = tr1 - tr2;
+        }
+      }
+      return g;
+    }
 
+
+    /* Project a matrix into the antisymmetric representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).c[i][j] = -(generator(i)*m*generator(j)*m.transpose()).trace();
       }
+    }
+
+    /* Project a complex antisymmetric matrix into the algebra and
+     * represent as a complex NxN (momentum) matrix */
+    static squarematrix<N, cmplx<radix>> project_force(
+      squarematrix<size, cmplx<radix>> rforce
+    ){
+      squarematrix<N, cmplx<radix>> fforce=0;
+      for(int g=0; g<N*N-1; g++){
+        antisymmetric rg = represented_generator(g);
+        radix C = -(rg.conjugate()*rforce).trace().im;
+        fforce += C*sun::generator(g);
+      }
+      cmplx<radix> ct(0,2);
+      fforce = fforce*ct;
+      project_antihermitean(fforce);
+      return fforce;
     }
 };
 
@@ -124,10 +163,45 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
       return generator;
     }
 
+    /* Return a SU(N) generator in the symmetric representation */
+    static constexpr symmetric represented_generator(int i){
+      symmetric g;
+      sun ti = sun::generator(i);
+      for(int j=0; j<N*(N+1)/2; j++){
+        sun tj = generator(j);
+        for(int k=0; k<N*(N+1)/2; k++){
+          sun tk = generator(k);
+          
+          cmplx<radix> tr1 = (ti*tj*tk).trace();
+          cmplx<radix> tr2 = (tj*ti*tk).trace();
+          g.c[j][k] = tr1 - tr2;
+        }
+      }
+      return g;
+    }
+
+    /* Project a matrix into the symmetric representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).c[i][j] = (generator(i)*m*generator(j)*m.transpose()).trace();
       }
+    }
+
+    /* Project a complex symmetric matrix into the algebra and
+     * represent as a complex NxN (momentum) matrix */
+    static squarematrix<N, cmplx<radix>> project_force(
+      squarematrix<size, cmplx<radix>> rforce
+    ){
+      squarematrix<N, cmplx<radix>> fforce=0;
+      for(int g=0; g<N*N-1; g++){
+        symmetric rg = represented_generator(g);
+        radix C = -(rg.conjugate()*rforce).trace().im;
+        fforce += C*sun::generator(g);
+      }
+      cmplx<radix> ct(0,2);
+      fforce = fforce*ct;
+      project_antihermitean(fforce);
+      return fforce;
     }
 };
 
