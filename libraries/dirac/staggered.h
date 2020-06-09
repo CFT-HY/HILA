@@ -82,12 +82,12 @@ void dirac_staggered_hop(
 
 
 
-template<typename mtype, typename vtype>
+template<typename gaugetype, typename momtype, typename vtype>
 void dirac_staggered_calc_force(
-  const field<mtype> *gauge,
+  const field<gaugetype> *gauge,
   const field<vtype> &chi,
   const field<vtype> &psi,
-  field<mtype> (&out)[NDIM],
+  field<momtype> (&out)[NDIM],
   field<double> (&staggered_eta)[NDIM],
   int sign, parity par)
 {
@@ -142,10 +142,12 @@ class dirac_staggered {
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    void force( const field<vector> & chi, const field<vector> & psi, field<matrix> (&force)[NDIM], int sign=1){
+    template<typename momtype>
+    void force( const field<vector> & chi, const field<vector> & psi, field<momtype> (&force)[NDIM], int sign=1){
       dirac_staggered_calc_force(gauge, chi, psi, force, staggered_eta, sign, ALL);
     }
 };
+
 
 
 // Multiplying from the left applies the standard Dirac operator
@@ -213,8 +215,9 @@ class dirac_staggered_evenodd {
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<matrix_type> (&force)[NDIM], int sign){
-      field<matrix_type> force2[NDIM];
+    template<typename momtype>
+    inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign){
+      field<momtype> force2[NDIM];
       field<vector_type> tmp;
       tmp.copy_boundary_condition(chi);
 

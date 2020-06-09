@@ -50,7 +50,7 @@ int main(int argc, char **argv){
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
   integrator integrator_level_1(ga, ma);
-  integrator integrator_level_2(fa, integrator_level_1);
+  integrator integrator_level_2(fa+fa2, integrator_level_1);
   
   // Initialize the gauge field
   ga.set_unity();

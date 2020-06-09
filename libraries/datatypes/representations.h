@@ -13,24 +13,6 @@ class adjoint : public squarematrix<N*N-1, radix> {
 
     using squarematrix<N*N-1, radix>::squarematrix;
 
-    adjoint & operator= (const squarematrix<N*N-1, radix> & rhs) {
-      for (int i=0; i<N*N-1; i++) {
-        for (int j=0; j<N*N-1; j++) {
-          this->c[i][j] = rhs.c[i][j];
-        }
-      }
-      return *this;
-    }
-
-    adjoint & operator= (const radix & rhs) {
-      for (int i=0; i<N*N-1; i++) {
-        for (int j=0; j<N*N-1; j++) {
-          this->c[i][j] = 0;
-        }
-        this->c[i][i] = rhs;
-      }
-      return *this;
-    }
 
     // Info on group generators
     constexpr static int size = N*N-1;
@@ -47,9 +29,6 @@ class adjoint : public squarematrix<N*N-1, radix> {
 };
 
 
-/// Project to the antihermitean part of a matrix
-template<int N, typename radix>
-void project_antihermitean(adjoint<N,radix> &matrix){};
 
 
 
@@ -86,9 +65,6 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
     }
 };
 
-/// Project to the antihermitean part of a matrix
-template<int N, typename radix>
-void project_antihermitean(antisymmetric<N,radix> &matrix){};
 
 
 template<int N, typename radix>
@@ -124,9 +100,7 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
     }
 };
 
-/// Project to the antihermitean part of a matrix
-template<int N, typename radix>
-void project_antihermitean(symmetric<N,radix> &matrix){};
+
 
 
 /*

@@ -8,16 +8,16 @@
 
 
 
-template<typename matrix, typename DIRAC_OP>
+template<typename momtype, typename DIRAC_OP>
 class fermion_action{
   public:
-    field<matrix> (&momentum)[NDIM];
+    field<momtype> (&momentum)[NDIM];
     DIRAC_OP &D;
     using vector_type = typename DIRAC_OP::vector_type;
     field<vector_type> chi;
 
 
-    fermion_action(DIRAC_OP &d, field<matrix> (&m)[NDIM])
+    fermion_action(DIRAC_OP &d, field<momtype> (&m)[NDIM])
     : D(d), momentum(m){ 
       chi = 0.0;
       #if NDIM > 3
@@ -77,7 +77,7 @@ class fermion_action{
       field<vector_type> psi, Mpsi;
       psi.copy_boundary_condition(chi);
       Mpsi.copy_boundary_condition(chi);
-      field<matrix> force[NDIM], force2[NDIM];
+      field<momtype> force[NDIM], force2[NDIM];
       CG<DIRAC_OP> inverse(D);
 
       psi[ALL]=0;
@@ -110,11 +110,12 @@ action_sum<fermion_action<matrix, DIRAC_OP>, action2> operator+(fermion_action<m
 template<typename sun, typename representation, typename DIRAC_OP>
 class high_representation_fermion_action {
   public:
-    field<representation> represented_momentum[NDIM];
+    using momtype = squarematrix<representation::size, cmplx<typename representation::base_type>>;
+    field<momtype> represented_momentum[NDIM];
     field<representation> (&represented_gauge)[NDIM];
     field<sun> (&momentum)[NDIM];
     field<sun> (&gauge)[NDIM];
-    fermion_action<representation, DIRAC_OP> base_action;
+    fermion_action<momtype, DIRAC_OP> base_action;
 
     high_representation_fermion_action(DIRAC_OP &d, field<sun> (&m)[NDIM], field<sun> (&g)[NDIM], field<representation> (&rg)[NDIM]) : momentum(m), gauge(g), represented_gauge(rg), 
     base_action(d, represented_momentum){};

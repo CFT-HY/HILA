@@ -546,7 +546,7 @@ SU2<radix> SU2<radix>::operator - (const SU2<radix> & y){
 
 /// Project to the antihermitean part of a matrix
 template<int N, typename radix>
-void project_antihermitean(SU<N,radix> &matrix){
+void project_antihermitean(squarematrix<N,cmplx<radix>> &matrix){
   radix tr = 0;
   for(int i=0; i<N; i++) {
     for(int j=0; j<i; j++) {
