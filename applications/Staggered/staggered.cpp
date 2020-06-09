@@ -25,13 +25,17 @@ int main(int argc, char **argv){
   seed_random(seed);
 
   // Define gauge field and momentum field
-  field<SUN> gauge[NDIM];
-  field<REP> represented_gauge[NDIM];
+  field<SU<N,double>> gauge[NDIM];
+  field<antisymmetric<N, double>> antisym_gauge[NDIM];
+  field<symmetric<N, double>> sym_gauge[NDIM];
+  field<adjoint<N, double>> adj_gauge[NDIM];
   field<SUN> momentum[NDIM];
 
   foralldir(dir){
     onsites(ALL){
-      represented_gauge[dir][X] = 1;
+      antisym_gauge[dir][X] = 1;
+      sym_gauge[dir][X] = 1;
+      adj_gauge[dir][X] = 1;
     }
   }
 
@@ -40,17 +44,23 @@ int main(int argc, char **argv){
   gauge_action ga(gauge, momentum, beta);
   
   // Define a Dirac operator
-  dirac_staggered_evenodd<VEC, SUN> D(mass, gauge);
+  dirac_staggered_evenodd<SU_vector<N,double>, SU<N,double>> D(mass, gauge);
   fermion_action fa(D, momentum);
 
   // A second fermion, for checking that addition works
-  dirac_staggered_evenodd<RVEC, REP> D2(mass, represented_gauge);
-  high_representation_fermion_action fa2(D2, momentum, gauge, represented_gauge);
+  dirac_staggered_evenodd<SU_vector<N*(N-1)/2,double>, antisymmetric<N, double>> D2(mass, antisym_gauge);
+  high_representation_fermion_action fa2(D2, momentum, gauge, antisym_gauge);
+
+  dirac_staggered_evenodd<SU_vector<N*(N+1)/2,double>, symmetric<N, double>> D3(mass, sym_gauge);
+  high_representation_fermion_action fa3(D3, momentum, gauge, sym_gauge);
+
+  dirac_staggered_evenodd<SU_vector<N*N-1,double>, adjoint<N, double>> D4(mass, adj_gauge);
+  high_representation_fermion_action fa4(D4, momentum, gauge, adj_gauge);
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
   integrator integrator_level_1(ga, ma);
-  integrator integrator_level_2(fa+fa2, integrator_level_1);
+  integrator integrator_level_2(fa+fa2+fa3+fa4, integrator_level_1);
   
   // Initialize the gauge field
   ga.set_unity();

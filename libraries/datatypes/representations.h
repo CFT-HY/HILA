@@ -208,31 +208,4 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
 
 
 
-/*
-template<typename sun, typename representation>
-void represent_gauge_field(
-  field<sun> (&u)[NDIM],
-  field<representation> (&v)[NDIM]
-){
-  foralldir(dir){
-    onsites(ALL){
-      v[dir][X].represent(u[dir][X]);
-    }
-  }
-}
-
-
-template<typename sun, typename representation>
-void project_representation_force(
-  field<representation> (&rmom)[NDIM],
-  field<sun> (&fmom)[NDIM]
-){
-  foralldir(dir){
-    onsites(ALL){
-      fmom[dir][X] = 0;
-    }
-  }
-}
-*/
-
 #endif

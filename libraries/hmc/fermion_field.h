@@ -101,8 +101,8 @@ class fermion_action{
 
 // Sum operator for creating an action_sum object
 template<typename matrix, typename DIRAC_OP, typename action2>
-action_sum<fermion_action<matrix, DIRAC_OP>, action2> operator+(fermion_action<matrix, DIRAC_OP> a1, action2 a2){
-  action_sum<fermion_action<matrix, DIRAC_OP>, action2> sum(a1, a2);
+action_sum<action2, fermion_action<matrix, DIRAC_OP>> operator+(action2 a1, fermion_action<matrix, DIRAC_OP> a2){
+  action_sum<action2, fermion_action<matrix, DIRAC_OP>> sum(a1, a2);
   return sum;
 }
 
@@ -153,6 +153,13 @@ class high_representation_fermion_action {
       }
     }
 };
+
+// Sum operator for creating an action_sum object
+template<typename sun, typename matrix, typename DIRAC_OP, typename action2>
+action_sum<action2, high_representation_fermion_action<sun, matrix, DIRAC_OP>> operator+(action2 a1, high_representation_fermion_action<sun, matrix, DIRAC_OP> a2){
+  action_sum<action2, high_representation_fermion_action<sun, matrix, DIRAC_OP>> sum(a1, a2);
+  return sum;
+}
 
 
 #endif
