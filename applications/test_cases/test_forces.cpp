@@ -254,11 +254,11 @@ void check_represented_forces(double mass_parameter){
     double diff = f2-f1;
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated deriv " << f2 << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated deriv " << f2 << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
 
@@ -309,11 +309,11 @@ void check_represented_forces(double mass_parameter){
     diff = f2-f1;
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated deriv " << f2 << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated deriv " << f2 << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion dg deriv" );
     }
 
@@ -341,11 +341,11 @@ void check_represented_forces(double mass_parameter){
     diff = f2-f1;
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated force " << f2 << "\n";
-      hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion force " << ng << " diff " << diff << "\n";
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated force " << f2 << "\n";
+      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion force" );
     }
   }
