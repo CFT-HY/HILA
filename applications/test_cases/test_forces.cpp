@@ -79,7 +79,7 @@ void check_forces(double mass_parameter){
     matrix f = momentum[0].get_value_at(50);
     double f1 = (s2-s1)/eps;
     double f2 = (f*cmplx(0,1)*matrix::generator(ng)).trace().re;
-    double diff = (f2-f1)/(f1+f2);
+    double diff = f2-f1;
 
     if(mynode()==0) {
       //hila::output << "Action 1 " << s1 << "\n";
@@ -123,7 +123,7 @@ void check_forces(double mass_parameter){
     f = momentum[0].get_value_at(50);
     f1 = (s2-s1)/eps;
     f2 = (f*cmplx(0,1)*matrix::generator(ng)).trace().re;
-    diff = (f2-f1)/(f1+f2);
+    diff = f2-f1;
 
     if(mynode()==0) {
       //hila::output << "Action 1 " << s1 << "\n";
@@ -155,7 +155,7 @@ void check_forces(double mass_parameter){
     f = momentum[0].get_value_at(50);
     f1 = (s2-s1)/eps;
     f2 = (f*cmplx(0,1)*matrix::generator(ng)).trace().re;
-    diff = (f2-f1)/(f1+f2);
+    diff = f2-f1;
 
     if(mynode()==0) {
       //hila::output << "Action 1 " << s1 << "\n";
@@ -182,7 +182,7 @@ void check_represented_forces(double mass_parameter){
   dirac D(mass_parameter, rgauge);
   high_representation_fermion_action fa(D, momentum, gauge, rgauge);
 
-  for(int ng = 0; ng < 1 ; ng++ ){ //sun::generator_count(); ng++){
+  for(int ng = 0; ng < sun::generator_count(); ng++){
     foralldir(dir){
       onsites(ALL){
         gauge[dir][X] = 1;
@@ -251,14 +251,14 @@ void check_represented_forces(double mass_parameter){
     sun f = repr::project_force(rf);
     double f1 = (s2-s1)/eps;
     double f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
-    double diff = (f2-f1)/(f1+f2);
+    double diff = f2-f1;
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << f2 << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << f2 << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
 
@@ -306,14 +306,14 @@ void check_represented_forces(double mass_parameter){
     f = repr::project_force(rf);
     f1 = (s2-s1)/eps;
     f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
-    diff = (f2-f1)/(f1+f2);
+    diff = f2-f1;
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << f2 << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << f2 << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion dg deriv" );
     }
 
@@ -338,14 +338,14 @@ void check_represented_forces(double mass_parameter){
     f = momentum[0].get_value_at(50);
     f1 = (s2-s1)/eps;
     f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
-    diff = (f2-f1)/(f1+f2);
+    diff = f2-f1;
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated force " << f2 << "\n";
-      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated force " << f2 << "\n";
+      hila::output << "Actual force " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion force " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion force" );
     }
   }
@@ -423,21 +423,33 @@ int main(int argc, char **argv){
 
   using VEC=SU_vector<N, double>;
   using SUN=SU<N, double>;
-  using adjvec=SU_vector<N*N-1, double>;
   using adj=adjoint<N, double>;
+  using adjvec=SU_vector<adj::size, double>;
+  using sym=symmetric<N, double>;
+  using symvec=SU_vector<sym::size, double>;
+  using asym=antisymmetric<N, double>;
+  using asymvec=SU_vector<asym::size, double>;
 
-  output0 << "Checking staggered forces:\n";
-  check_forces<dirac_staggered<VEC, SUN>, SUN>(1.5);
-  output0 << "Checking evenodd preconditioned staggered forces:\n";
-  check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN>(1.5);
-  output0 << "Checking represented staggered forces:\n";
+  //output0 << "Checking staggered forces:\n";
+  //check_forces<dirac_staggered<VEC, SUN>, SUN>(1.5);
+  //output0 << "Checking evenodd preconditioned staggered forces:\n";
+  //check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN>(1.5);
+  output0 << "Checking adjoint staggered forces:\n";
   check_represented_forces<dirac_staggered_evenodd<adjvec, adj>, SUN, adj>(1.5);
+  output0 << "Checking symmetric staggered forces:\n";
+  check_represented_forces<dirac_staggered_evenodd<symvec, sym>, SUN, sym>(1.5);
+  output0 << "Checking antisymmetric staggered forces:\n";
+  check_represented_forces<dirac_staggered_evenodd<asymvec, asym>, SUN, asym>(1.5);
   output0 << "Checking Wilson forces:\n";
   check_forces<dirac_wilson<N, double, SUN>, SUN>(0.05);
   output0 << "Checking evenodd preconditioned Wilson forces:\n";
   check_forces<Dirac_Wilson_evenodd<N, double, SUN>, SUN>(0.05);
-  output0 << "Checking represented Wilson forces:\n";
-  check_represented_forces<Dirac_Wilson_evenodd<N*N-1, double, adj>, SUN, adj>(0.05);
+  output0 << "Checking adjoint Wilson forces:\n";
+  check_represented_forces<Dirac_Wilson_evenodd<adj::size, double, adj>, SUN, adj>(0.05);
+  output0 << "Checking symmetric staggered forces:\n";
+  check_represented_forces<Dirac_Wilson_evenodd<sym::size, double, sym>, SUN, sym>(0.05);
+  output0 << "Checking antisymmetric staggered forces:\n";
+  check_represented_forces<Dirac_Wilson_evenodd<asym::size, double, asym>, SUN, asym>(0.05);
 
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){
     // Check also the momentum action and derivative
