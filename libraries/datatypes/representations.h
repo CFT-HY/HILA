@@ -83,41 +83,51 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
 
     // Info on group generators
     constexpr static int size = N*(N-1)/2;
-    static constexpr sun generator(int ng){
-      sun generator = 0;
-      int k=0;
-      for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
-        if( ng == k ){
-          generator.c[m1][m2].re = 0.5;
-          generator.c[m2][m1].re = 0.5;
+
+    static sun generator(int ng){
+      static bool initialize = true;
+      static sun generators[size];
+      if(initialize) for(int g=0;g<size;g++){
+        generators[g] = 0;
+        int k=0;
+        for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
+          if( g == k ){
+            generators[g].c[m1][m2].re = 0.5;
+            generators[g].c[m2][m1].re =-0.5;
+          }
+          k++;
         }
-        k++;
+        initialize = false;
       }
-      return generator;
+      return generators[ng];
     }
 
     /* Return a SU(N) generator in the antisymmetric representation */
-    static constexpr antisymmetric represented_generator_I(int i){
-      antisymmetric g;
-      sun ti = sun::generator(i);
-      for(int j=0; j<N*(N-1)/2; j++){
-        sun tj = generator(j);
-        for(int k=0; k<N*(N-1)/2; k++){
-          sun tk = generator(k);
-          
-          cmplx<radix> tr1 = (ti*tj*tk).trace();
-          cmplx<radix> tr2 = (tj*ti*tk).trace();
-          g.c[j][k] = tr1 - tr2;
+    static antisymmetric represented_generator_I(int i){
+      static bool initialize = true;
+      static antisymmetric r_generators[N*N-1];
+      if(initialize) for(int g=0;g<N*N-1;g++){
+        r_generators[g] = 0;
+        sun tg = sun::generator(g);
+        for(int j=0; j<N*(N-1)/2; j++){
+          sun tj = generator(j);
+          for(int k=0; k<N*(N-1)/2; k++){
+            sun tk = generator(k);
+
+            cmplx<radix> tr = (tj*tg*tk).trace();
+            r_generators[g].c[j][k] = cmplx(0,-2)*tr;
+          }
         }
+        initialize = false;
       }
-      return g;
+      return r_generators[i];
     }
 
 
     /* Project a matrix into the antisymmetric representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = -(generator(i)*m*generator(j)*m.transpose()).trace();
+        (*this).c[i][j] = 2*(generator(i)*m*generator(j).conjugate()*m.transpose()).trace();
       }
     }
 
@@ -129,10 +139,10 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
       squarematrix<N, cmplx<radix>> fforce=0;
       for(int g=0; g<N*N-1; g++){
         antisymmetric rg = represented_generator_I(g);
-        radix C = -(rg.conjugate()*rforce).trace().im;
+        radix C = (rg.conjugate()*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
-      cmplx<radix> ct(0,2);
+      cmplx<radix> ct(0,4.0*N/size);
       fforce = fforce*ct;
       project_antihermitean(fforce);
       return fforce;
@@ -158,12 +168,12 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
       static sun generators[size];
       if(initialize) for(int g=0;g<size;g++){
         generators[g] = 0;
-        if(ng < N){
-          generators[g].c[ng][ng].re = sqrt(0.5);
+        if(g < N){
+          generators[g].c[g][g].re = sqrt(0.5);
         }
         int k=N;
         for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
-          if( ng == k ){
+          if( g == k ){
             generators[g].c[m1][m2].re = 0.5;
             generators[g].c[m2][m1].re = 0.5;
           }
@@ -210,10 +220,10 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
       squarematrix<N, cmplx<radix>> fforce=0;
       for(int g=0; g<N*N-1; g++){
         symmetric rg = represented_generator_I(g);
-        radix C = (rg.transpose()*rforce).trace().re;
+        radix C = (rg*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
-      cmplx<radix> ct(0,-2.0/N);
+      cmplx<radix> ct(0,-4.0);
       fforce = fforce*ct;
       project_antihermitean(fforce);
       return fforce;
