@@ -142,7 +142,7 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
         radix C = (rg.conjugate()*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
-      cmplx<radix> ct(0,4.0*N/size);
+      cmplx<radix> ct(0,4.0);
       fforce = fforce*ct;
       project_antihermitean(fforce);
       return fforce;
