@@ -16,32 +16,36 @@ class adjoint : public squarematrix<N*N-1, radix> {
 
     // Info on group generators
     constexpr static int size = N*N-1;
-    static constexpr sun generator(int i){
+    static sun generator(int i){
       return sun::generator(i);
     }
 
     /* Return a SU(N) generator in the adjoint representation,
      * multiplied by I */
-    static constexpr adjoint represented_generator_I(int i){
-      adjoint g;
-      sun ti = sun::generator(i);
-      for(int j=0; j<N*N-1; j++){
-        sun tj = generator(j);
-        for(int k=0; k<N*N-1; k++){
-          sun tk = generator(k);
-          
-          cmplx<radix> tr1 = (ti*tj*tk).trace();
-          cmplx<radix> tr2 = (tj*ti*tk).trace();
-          g.c[j][k] = 2*(tr1.im - tr2.im);
+    static adjoint represented_generator_I(int i){
+      static bool initialize = true;
+      static adjoint r_generators[N*N-1];
+      if(initialize) for(int g=0;g<N*N-1;g++){
+        r_generators[g] = 0;
+        sun tg = sun::generator(g);
+        for(int j=0; j<N*N-1; j++){
+          sun tj = generator(j);
+          for(int k=0; k<N*N-1; k++){
+            sun tk = generator(k);
+            cmplx<radix> tr1 = (tg*tj*tk).trace();
+            cmplx<radix> tr2 = (tj*tg*tk).trace();
+            r_generators[g].c[j][k] = 2*(tr1.im - tr2.im);
+          }
         }
+        initialize = false;
       }
-      return g;
+      return r_generators[i];
     }
 
     /* Project a matrix into the adjoint representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = -0.5*(generator(i)*m.conjugate()*generator(j)*m).trace().re;
+        (*this).c[i][j] = 2*(generator(i)*m.conjugate()*generator(j)*m).trace().re;
       }
     }
 
@@ -56,7 +60,7 @@ class adjoint : public squarematrix<N*N-1, radix> {
         radix C = (rg.transpose()*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
-      cmplx<radix> ct(0,2);
+      cmplx<radix> ct(0,-2);
       fforce = fforce*ct;
       project_antihermitean(fforce);
       return fforce;

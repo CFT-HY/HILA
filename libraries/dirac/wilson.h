@@ -68,13 +68,13 @@ inline void dirac_wilson_diag_inverse(
 
 
 
-template<int N, typename radix, typename matrix>
+template<int N, typename radix, typename gaugetype, typename momtype>
 inline void dirac_wilson_calc_force(
-  const field<matrix> *gauge,
+  const field<gaugetype> *gauge,
   const double kappa,
   const field<Wilson_vector<N, radix>> &chi,
   const field<Wilson_vector<N, radix>> &psi,
-  field<matrix> (&out)[NDIM],
+  field<momtype> (&out)[NDIM],
   parity par,
   int sign)
 {
@@ -141,7 +141,8 @@ class dirac_wilson {
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    inline void force(const field<vector_type> & chi,  const field<vector_type> & psi, field<matrix> (&force)[NDIM], int sign=1){
+    template<typename momtype>
+    inline void force(const field<vector_type> & chi,  const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign=1){
       dirac_wilson_calc_force(gauge, kappa, chi, psi, force, ALL, sign);
     }
 };
@@ -212,8 +213,9 @@ class Dirac_Wilson_evenodd {
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<matrix_type> (&force)[NDIM], int sign){
-      field<matrix_type> force2[NDIM];
+    template<typename momtype>
+    inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign){
+      field<momtype> force2[NDIM];
       field<vector_type> tmp;
       tmp.copy_boundary_condition(chi);
 

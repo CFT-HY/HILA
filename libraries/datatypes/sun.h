@@ -277,32 +277,37 @@ class SU : public squarematrix<n,cmplx<radix>>{
     }
 
 
-    static constexpr SU generator(int ng){
-      // SUN generators normalized as tr(T^2) = 2
-      SU generator = 0;
-      if(ng<n-1){
-        // Diagonal generators
-        double w = sqrt(2.0/((ng+1)*(ng+2)));
-        for(int i=0; i<ng+1; i++ ){
-          generator.c[i][i].im = w;
-        }
-        generator.c[ng+1][ng+1].im = -(ng+1)*w;
-      } else {
-        // Nondiagonal ones. Just run through the indexes and
-        // count until they match...
-        int k=n-1;
-        for( int m1=0; m1<n; m1++) for( int m2=m1+1; m2<n; m2++){
-          if( ng == k ){
-            generator.c[m1][m2].im = 1;
-            generator.c[m2][m1].im = 1;
-          } else if( ng == k+1 ){
-            generator.c[m1][m2].re = 1;
-            generator.c[m2][m1].re =-1;
+    static SU generator(int ng){
+      // SUN generators normalized as tr(T^2) = 1/2
+      static bool initialize = true;
+      static SU generators[n*n-1];
+      if(initialize) for(int g=0;g<n*n-1;g++){
+        generators[g] = 0;
+        if(g<n-1){
+          // Diagonal generators
+          double w = 0.5/sqrt((g+1)*(g+2)*0.5);
+          for(int i=0; i<g+1; i++ ){
+            generators[g].c[i][i].re = w;
           }
-          k+=2;
+          generators[g].c[g+1][g+1].re = -(g+1)*w;
+        } else {
+          // Nondiagonal ones. Just run through the indexes and
+          // count until they match...
+          int k=n-1;
+          for( int m1=0; m1<n; m1++) for( int m2=m1+1; m2<n; m2++){
+            if( g == k ){
+              generators[g].c[m1][m2].re = 0.5;
+              generators[g].c[m2][m1].re = 0.5;
+            } else if( g == k+1 ){
+              generators[g].c[m1][m2].im = 0.5;
+              generators[g].c[m2][m1].im =-0.5;
+            }
+            k+=2;
+          }
         }
+        initialize = false;
       }
-      return generator;
+      return generators[ng];
     }
 
     static constexpr int generator_count(){

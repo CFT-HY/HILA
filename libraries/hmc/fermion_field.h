@@ -125,6 +125,11 @@ class high_representation_fermion_action {
     // Return the value of the action with the current
     // field configuration
     double action(){ 
+      foralldir(dir){
+        onsites(ALL){
+          represented_gauge[dir][X].represent(gauge[dir][X]);
+        }
+      }
       return base_action.action();
     }
 
@@ -137,18 +142,41 @@ class high_representation_fermion_action {
     /// Generate a pseudofermion field with a distribution given
     /// by the action chi 1/(D_dagger D) chi
     void draw_gaussian_fields(){
+      foralldir(dir){
+        onsites(ALL){
+          represented_gauge[dir][X].represent(gauge[dir][X]);
+        }
+      }
       base_action.draw_gaussian_fields();
     }
 
     void force_step(double eps){
       foralldir(dir){
-        represented_force[dir][ALL] = 0;
+        onsites(ALL){
+          represented_gauge[dir][X].represent(gauge[dir][X]);
+          represented_force[dir][X] = 0;
+        }
       }
-      base_action.force_step(eps);
+
+      field<typename DIRAC_OP::vector_type> psi, Mpsi;
+      psi.copy_boundary_condition(base_action.chi);
+      Mpsi.copy_boundary_condition(base_action.chi);
+      field<momtype> force[NDIM], force2[NDIM];
+      CG<DIRAC_OP> inverse(base_action.D);
+
+      psi[ALL]=0;
+      inverse.apply(base_action.chi, psi);
+
+      base_action.D.apply(psi, Mpsi);
+
+      base_action.D.force(Mpsi, psi, force, 1);
+      base_action.D.force(psi, Mpsi, force2, -1);
+
       foralldir(dir){
         onsites(ALL){
-          auto force = representation::project_force(represented_force[dir][X]);
-          momentum[dir][X] += force;
+          force[dir][X] = force[dir][X] + force2[dir][X];
+          auto fforce = representation::project_force(force[dir][X]);
+          momentum[dir][X] = momentum[dir][X] - eps*fforce;
         }
       }
     }

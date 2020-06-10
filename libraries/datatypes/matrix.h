@@ -320,7 +320,7 @@ template <int n, typename T, std::enable_if_t<!is_arithmetic<T>::value, int> = 0
 squarematrix<n,T> operator * (const T & A, const squarematrix<n,T> & B) {
   squarematrix<n,T> res;
   for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
-    res.c[i][j] = B * A.c[i][j];
+    res.c[i][j] = A * B.c[i][j];
   }
   return res;
 }
