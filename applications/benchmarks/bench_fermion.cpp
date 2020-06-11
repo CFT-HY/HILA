@@ -105,8 +105,8 @@ int main(int argc, char **argv){
     // Time staggered Dirac operator
     timing = 0;
     //printf("node %d, dirac_stagggered 0\n", mynode());
-    using dirac_wilson = Dirac_Wilson_evenodd<N, double, sunmat>;
-    dirac_wilson D_wilson(0.05, U);
+    using Dirac_Wilson = Dirac_Wilson_evenodd<N, double, sunmat>;
+    Dirac_Wilson D_wilson(0.05, U);
     D_wilson.apply(wvec1, wvec2);
 
     // synchronize();
@@ -126,7 +126,7 @@ int main(int argc, char **argv){
     output0 << "Dirac Wilson: " << timing << "ms \n";
 
     // Conjugate gradient step (set accuracy=1 to run only 1 step)
-    CG<dirac_wilson> w_inverse(D_wilson, 1.0);
+    CG<Dirac_Wilson> w_inverse(D_wilson, 1.0);
     timing = 0;
     for(n_runs=1; timing < mintime; ){
 

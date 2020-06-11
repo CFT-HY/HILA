@@ -430,10 +430,10 @@ int main(int argc, char **argv){
   using asym=antisymmetric<N, double>;
   using asymvec=SU_vector<asym::size, double>;
 
-  //output0 << "Checking staggered forces:\n";
-  //check_forces<dirac_staggered<VEC, SUN>, SUN>(1.5);
-  //output0 << "Checking evenodd preconditioned staggered forces:\n";
-  //check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN>(1.5);
+  output0 << "Checking staggered forces:\n";
+  check_forces<dirac_staggered<VEC, SUN>, SUN>(1.5);
+  output0 << "Checking evenodd preconditioned staggered forces:\n";
+  check_forces<dirac_staggered_evenodd<VEC, SUN>, SUN>(1.5);
   output0 << "Checking adjoint staggered forces:\n";
   check_represented_forces<dirac_staggered_evenodd<adjvec, adj>, SUN, adj>(1.5);
   output0 << "Checking symmetric staggered forces:\n";
@@ -441,14 +441,14 @@ int main(int argc, char **argv){
   output0 << "Checking antisymmetric staggered forces:\n";
   check_represented_forces<dirac_staggered_evenodd<asymvec, asym>, SUN, asym>(1.5);
   output0 << "Checking Wilson forces:\n";
-  check_forces<dirac_wilson<N, double, SUN>, SUN>(0.05);
+  check_forces<Dirac_Wilson<N, double, SUN>, SUN>(0.05);
   output0 << "Checking evenodd preconditioned Wilson forces:\n";
   check_forces<Dirac_Wilson_evenodd<N, double, SUN>, SUN>(0.05);
   output0 << "Checking adjoint Wilson forces:\n";
   check_represented_forces<Dirac_Wilson_evenodd<adj::size, double, adj>, SUN, adj>(0.05);
-  output0 << "Checking symmetric staggered forces:\n";
+  output0 << "Checking symmetric Wilson forces:\n";
   check_represented_forces<Dirac_Wilson_evenodd<sym::size, double, sym>, SUN, sym>(0.05);
-  output0 << "Checking antisymmetric staggered forces:\n";
+  output0 << "Checking antisymmetric Wilson forces:\n";
   check_represented_forces<Dirac_Wilson_evenodd<asym::size, double, asym>, SUN, asym>(0.05);
 
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){

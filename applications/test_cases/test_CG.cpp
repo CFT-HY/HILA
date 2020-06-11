@@ -114,7 +114,7 @@ int main(int argc, char **argv){
   // Check conjugate of the wilson Dirac operator
   {
     using VEC = SU_vector<N, double>;
-    using dirac = dirac_wilson<N, double, SU<N, double>>;
+    using dirac = Dirac_Wilson<N, double, SU<N, double>>;
     dirac D(0.05, U);
     field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<Wilson_vector<N, double>> sol;
@@ -209,8 +209,8 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
   
-    assert(diffre*diffre < 1e-16 && "test dirac_wilson_dagger");
-    assert(diffim*diffim < 1e-16 && "test dirac_wilson_dagger");
+    assert(diffre*diffre < 1e-16 && "test Dirac_Wilson_dagger");
+    assert(diffim*diffim < 1e-16 && "test Dirac_Wilson_dagger");
   
     // Now run CG on Ddaggera. b=1/D a -> Db = a 
     CG<dirac> inverse(D);
