@@ -152,7 +152,10 @@ struct squarematrix {
   }
 
   // find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff
-  template <typename radix, std::enable_if_t<is_arithmetic<radix>::value, int> = 0, std::enable_if_t<std::is_same<T,cmplx<radix>>::value, int> = 0 > 
+  template <typename radix=base_type, typename A=T,
+    std::enable_if_t<is_arithmetic<radix>::value, int> = 0,
+    std::enable_if_t<std::is_same<A,cmplx<radix>>::value, int> = 0 
+  >
   cmplx<radix> det_lu(){
     int i, imax, j, k;
     radix big, d, temp, dum;
@@ -172,7 +175,7 @@ struct squarematrix {
         if ((temp = a[i][j].abs()) > big)
           big = temp;
       }
-      asser(big != 0.0 && "Determinant does not exist\n");
+      assert(big != 0.0 && "Determinant does not exist\n");
       vv[i] = 1.0/big;
     }
 
@@ -220,6 +223,78 @@ struct squarematrix {
     }
 
     csum = cmplx<radix>(d,0.0);
+    for (j=0; j<n; j++) {
+      csum = csum*a[j][j];
+    }
+
+    return (csum);
+  }
+
+  template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+  T det_lu(){
+    int i, imax, j, k;
+    T big, d, temp, dum;
+    T cdum, csum, ctmp1;
+    T vv[n];
+    T a[n][n];
+    d=1;
+    imax = -1;
+
+    for (i=0; i<n; i++) for(j=0; j<n; j++) a[i][j] = this->c[i][j];
+    for (i=0; i<n; i++) {
+      big = 0;
+      for(j=0; j<n; j++) {
+        if ((temp = a[i][j]) > big)
+          big = temp;
+      }
+      assert(big != 0.0 && "Determinant does not exist\n");
+      vv[i] = 1.0/big;
+    }
+
+    for (j=0; j<n; j++) {
+      for (i=0; i<j; i++) {
+        csum = a[i][j];
+        for (k=0; k<i; k++) {
+          csum -= a[i][k]*a[k][j];
+        }
+        a[i][j] = csum;
+      }
+
+      big = 0;
+      for (i=j; i<n; i++) {
+        csum = a[i][j];
+        for (k=0; k<j; k++) {
+            csum -= a[i][k]*a[k][j];
+        }
+        a[i][j] = csum;
+        if ((dum = vv[i]*csum) >= big) {
+            big = dum;
+            imax = i;
+        }
+      }
+
+      if (j != imax) {
+        for (k=0; k<n; k++) {
+          cdum = a[imax][k];
+          a[imax][k] = a[j][k];
+          a[j][k] = cdum;
+        }
+        d = -d;
+        vv[imax] = vv[j];
+      }
+
+      if (a[j][j] == static_cast<T>(0.0)) 
+        a[j][j] = 1e-20;
+
+      if (j != n-1) {
+        cdum = 1.0/a[j][j];
+        for (i=j+1; i<n; i++) {
+          a[i][j] = a[i][j]*cdum;
+        }
+      }
+    }
+
+    csum = d;
     for (j=0; j<n; j++) {
       csum = csum*a[j][j];
     }
