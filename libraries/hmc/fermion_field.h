@@ -67,7 +67,6 @@ class fermion_action{
         if(disable_avx[X]==0){};
         psi[X].gaussian();
       }
-      psi.mark_changed(ALL);
       D.dagger(psi,chi);
     }
 
@@ -127,6 +126,7 @@ class high_representation_fermion_action {
     double action(){ 
       foralldir(dir){
         onsites(ALL){
+          if(disable_avx[X]==0){};
           represented_gauge[dir][X].represent(gauge[dir][X]);
         }
       }
@@ -144,6 +144,7 @@ class high_representation_fermion_action {
     void draw_gaussian_fields(){
       foralldir(dir){
         onsites(ALL){
+          if(disable_avx[X]==0){}; 
           represented_gauge[dir][X].represent(gauge[dir][X]);
         }
       }
@@ -153,6 +154,7 @@ class high_representation_fermion_action {
     void force_step(double eps){
       foralldir(dir){
         onsites(ALL){
+          if(disable_avx[X]==0){}; 
           represented_gauge[dir][X].represent(gauge[dir][X]);
           represented_force[dir][X] = 0;
         }
@@ -174,8 +176,12 @@ class high_representation_fermion_action {
 
       foralldir(dir){
         onsites(ALL){
+          if(disable_avx[X]==0){}; 
+          // Disable for now. Return type of project_force needs to
+          // be fixed
           force[dir][X] = force[dir][X] + force2[dir][X];
-          auto fforce = representation::project_force(force[dir][X]);
+          element<sun> fforce;
+          fforce = representation::project_force(force[dir][X]);
           momentum[dir][X] = momentum[dir][X] - eps*fforce;
         }
       }

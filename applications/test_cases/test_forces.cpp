@@ -9,7 +9,7 @@
 #include "hmc/gauge_field.h"
 #include "hmc/fermion_field.h"
 
-constexpr int N = 3;
+constexpr int N = 2;
 
 
 
@@ -182,7 +182,7 @@ void check_represented_forces(double mass_parameter){
   dirac D(mass_parameter, rgauge);
   high_representation_fermion_action fa(D, momentum, gauge, rgauge);
 
-  for(int ng = 0; ng < sun::generator_count(); ng++){
+  for(int ng = 0; ng < 1 ; ng++ ){ //sun::generator_count(); ng++){
     foralldir(dir){
       onsites(ALL){
         gauge[dir][X] = 1;
@@ -226,6 +226,7 @@ void check_represented_forces(double mass_parameter){
     gauge[0].mark_changed(ALL);
     foralldir(dir){
       onsites(ALL){
+        if(disable_avx[X]==0){};
         rgauge[dir][X].represent(gauge[dir][X]);
       }
     }
@@ -241,6 +242,7 @@ void check_represented_forces(double mass_parameter){
     gauge[0].mark_changed(ALL);
     foralldir(dir){
       onsites(ALL){
+        if(disable_avx[X]==0){};
         rgauge[dir][X].represent(gauge[dir][X]);
       }
     }
@@ -282,6 +284,7 @@ void check_represented_forces(double mass_parameter){
     gauge[0].mark_changed(ALL);
     foralldir(dir){
       onsites(ALL){
+        if(disable_avx[X]==0){};
         rgauge[dir][X].represent(gauge[dir][X]);
       }
     }
@@ -297,6 +300,7 @@ void check_represented_forces(double mass_parameter){
     gauge[0].mark_changed(ALL);
     foralldir(dir){
       onsites(ALL){
+        if(disable_avx[X]==0){};
         rgauge[dir][X].represent(gauge[dir][X]);
       }
     }

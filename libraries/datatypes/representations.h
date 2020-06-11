@@ -45,7 +45,7 @@ class adjoint : public squarematrix<N*N-1, radix> {
     /* Project a matrix into the adjoint representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = 2*(generator(i)*m.conjugate()*generator(j)*m).trace().re;
+        (*this).c[i][j] = 2*(m.conjugate()*generator(i)*m*generator(j)).trace().re;
       }
     }
 
@@ -60,7 +60,7 @@ class adjoint : public squarematrix<N*N-1, radix> {
         radix C = (rg.transpose()*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
-      cmplx<radix> ct(0,-2);
+      cmplx<radix> ct(0,2.0);
       fforce = fforce*ct;
       project_antihermitean(fforce);
       return fforce;
@@ -115,7 +115,7 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
             sun tk = generator(k);
 
             cmplx<radix> tr = (tj*tg*tk).trace();
-            r_generators[g].c[j][k] = cmplx(0,-2)*tr;
+            r_generators[g].c[j][k] = cmplx(0,4)*tr;
           }
         }
         initialize = false;
@@ -142,7 +142,7 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
         radix C = (rg.conjugate()*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
-      cmplx<radix> ct(0,4.0);
+      cmplx<radix> ct(0,-2.0);
       fforce = fforce*ct;
       project_antihermitean(fforce);
       return fforce;
@@ -197,7 +197,7 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
             sun tk = generator(k);
 
             cmplx<radix> tr = (tj*tg*tk).trace();
-            r_generators[g].c[j][k] = cmplx(0,2)*tr;
+            r_generators[g].c[j][k] = cmplx(0,4)*tr;
           }
         }
         initialize = false;
@@ -223,7 +223,7 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
         radix C = (rg*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
-      cmplx<radix> ct(0,-4.0);
+      cmplx<radix> ct(0,-2.0);
       fforce = fforce*ct;
       project_antihermitean(fforce);
       return fforce;
