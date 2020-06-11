@@ -26,6 +26,7 @@ int main(int argc, char **argv){
   // Define gauge field and momentum field
   field<SUN> gauge[NDIM];
   field<SUN> momentum[NDIM];
+  field<adjoint<N,double>> adj_gauge[NDIM];
 
   // Define gauge and momentum action terms
   gauge_momentum_action ma(gauge, momentum);
@@ -34,8 +35,8 @@ int main(int argc, char **argv){
   ga.set_unity();
 
   // Define a Dirac operator
-  Dirac_Wilson_evenodd<N, double, SU<N>> D(kappa, gauge);
-  fermion_action fa(D, momentum);
+  Dirac_Wilson_evenodd<N*N-1, double, adjoint<N,double>> D(kappa, adj_gauge);
+  high_representation_fermion_action fa(D, momentum, gauge, adj_gauge);
 
 
   // Build two integrator levels. Gauge is on the lowest level and
