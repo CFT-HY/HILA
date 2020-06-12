@@ -2,6 +2,47 @@
 #define GAUGE_FIELD_H
 
 
+// A conveniance class for a gauge field.
+// Contains an SU(N) matrix in each direction for the
+// gauge field and for the momentum
+template<int N,typename radix=double>
+struct gauge_field {
+  using gauge_type = SU<N,radix>;
+  field<SU<N,double>> gauge[NDIM];
+  field<SU<N,double>> momentum[NDIM];
+
+  // Set the gauge field to unity
+  void set_unity(){
+    foralldir(dir){
+      onsites(ALL){
+        gauge[dir][X] = 1;
+      }
+    }
+  }
+
+  // Read the gauge field from a file
+  void read_file(std::string filename){
+    std::ifstream inputfile;
+    inputfile.open(filename, std::ios::in | std::ios::binary);
+    foralldir(dir){
+      read_fields(inputfile, gauge[dir]);
+    }
+    inputfile.close();
+  }
+
+  // Write the gauge field to a file
+  void write_file(std::string filename){
+    std::ofstream outputfile;
+    outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+    foralldir(dir){
+      write_fields(outputfile, gauge[dir]);
+    }
+    outputfile.close();
+  }
+};
+
+
+
 
 /// Calculate the Polyakov loop for a given gauge field.
 template<int N>
@@ -106,26 +147,25 @@ double plaquette(field<SUN> *gauge){
 // Action term for the momentum of a gauge field
 // This is both an action term and an integrator. It can form the
 // lowest level step to an integrator construct.
-template<int N, typename float_t=double>
+template<typename gauge_field>
 class gauge_momentum_action {
   public:
-    using SUN = SU<N, float_t>;
+    using gauge_mat = typename gauge_field::gauge_type;
 
-    field<SUN> (&gauge)[NDIM];
-    field<SUN> (&momentum)[NDIM];
-    double beta;
+    gauge_field &gauge;
+    field<gauge_mat> gauge_copy[NDIM];
 
-    gauge_momentum_action(field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM]) 
-    : gauge(g), momentum(m){}
+    gauge_momentum_action(gauge_field &g) 
+    : gauge(g){}
 
     gauge_momentum_action(gauge_momentum_action &ma)
-    : gauge(ma.gauge), momentum(ma.momentum){}
+    : gauge(ma.gauge){}
 
     double action(){
       double sum = 0;
       foralldir(dir) {
         onsites(ALL){
-          sum += momentum[dir][X].algebra_norm();
+          sum += gauge.momentum[dir][X].algebra_norm();
         }
       }
       return sum;
@@ -136,7 +176,7 @@ class gauge_momentum_action {
       foralldir(dir) {
         onsites(ALL){
           if(disable_avx[X]==0){};
-          momentum[dir][X].gaussian_algebra();
+          gauge.momentum[dir][X].gaussian_algebra();
         }
       }
     }
@@ -145,17 +185,23 @@ class gauge_momentum_action {
     void step(double eps){
       foralldir(dir){
         onsites(ALL){
-          element<SUN> momexp = eps*momentum[dir][X];
+          element<gauge_mat> momexp = eps*gauge.momentum[dir][X];
           momexp.exp();
-          gauge[dir][X] = momexp*gauge[dir][X];
+          gauge.gauge[dir][X] = momexp*gauge.gauge[dir][X];
         }
       }
     }
 
     // Called by hmc
-    void back_up_fields(){}
-    void restore_backup(){}
+    // Make a copy of fields updated in a trajectory
+    void back_up_fields(){
+      foralldir(dir) gauge_copy[dir] = gauge.gauge[dir];
+    }
 
+    // Restore the previous backup
+    void restore_backup(){
+      foralldir(dir) gauge.gauge[dir] = gauge_copy[dir];
+    }
 };
 
 
@@ -197,33 +243,32 @@ class momentum_action_sum {
 };
 
 // Sum operator for creating a momentum action_sum object
-template<int N, typename float_t=double, typename action2>
-momentum_action_sum<gauge_momentum_action<N, float_t>, action2> operator+(gauge_momentum_action<N, float_t> a1, action2 a2){
-  momentum_action_sum<gauge_momentum_action<N, float_t>, action2> sum(a1, a2);
+template<typename gauge_type, typename action2>
+momentum_action_sum<gauge_momentum_action<gauge_type>, action2> operator+(gauge_momentum_action<gauge_type> a1, action2 a2){
+  momentum_action_sum<gauge_momentum_action<gauge_type>, action2> sum(a1, a2);
   return sum;
 }
 
 
-
-template<int N, typename float_t=double>
+template<typename gauge_field>
 class gauge_action {
   public:
-    using SUN = SU<N, float_t>;
+    using gauge_mat = typename gauge_field::gauge_type;
+    static constexpr int N = gauge_mat::size;
 
-    field<SUN> (&gauge)[NDIM];
-    field<SUN> (&momentum)[NDIM];
-    field<SUN> gauge_copy[NDIM];
+    gauge_field &gauge;
     double beta;
 
-    gauge_action(field<SUN> (&g)[NDIM], field<SUN> (&m)[NDIM], double b) 
-    : gauge(g), momentum(m), beta(b){}
+    gauge_action(gauge_field &g, double b) 
+    : gauge(g), beta(b){}
 
     gauge_action(gauge_action &ga)
-    : gauge(ga.gauge), momentum(ga.momentum), beta(ga.beta) {}
+    : gauge(ga.gauge), beta(ga.beta) {}
 
     //The gauge action
     double action(){
-      return beta*plaquette_sum(gauge);
+      double s = beta*plaquette_sum(gauge.gauge); 
+      return s;
     }
 
     /// Gaussian random momentum for each element
@@ -231,37 +276,23 @@ class gauge_action {
 
     // Update the momentum with the gauge field
     void force_step(double eps){
-      gauge_force(gauge, momentum, beta*eps/N);
-    }
-
-    // Set the gauge field to unity
-    void set_unity(){
-      foralldir(dir){
-        onsites(ALL){
-          gauge[dir][X] = 1;
-        }
-      }
+      gauge_force(gauge.gauge, gauge.momentum, beta*eps/N);
     }
 
     // Draw a random gauge field
     void random(){
       foralldir(dir){
         onsites(ALL){
-          gauge[dir][X].random();
+          gauge.gauge[dir][X].random();
         }
       }
     }
 
 
-    // Make a copy of fields updated in a trajectory
-    void back_up_fields(){
-      foralldir(dir) gauge_copy[dir] = gauge[dir];
-    }
-
-    // Restore the previous backup
-    void restore_backup(){
-      foralldir(dir) gauge[dir] = gauge_copy[dir];
-    }
+    // Called by HMC. The gauge field is copied by 
+    // the momentum action.
+    void back_up_fields(){}
+    void restore_backup(){}
 };
 
 
@@ -323,9 +354,9 @@ class action_sum {
 
 
 // Sum operator for creating an action_sum object
-template<int N, typename float_t=double, typename action2>
-action_sum<gauge_action<N, float_t>, action2> operator+(gauge_action<N, float_t> a1, action2 a2){
-  action_sum<gauge_action<N, float_t>, action2> sum(a1, a2);
+template<typename gauge_field, typename action2>
+action_sum<gauge_action<gauge_field>, action2> operator+(gauge_action<gauge_field> a1, action2 a2){
+  action_sum<gauge_action<gauge_field>, action2> sum(a1, a2);
   return sum;
 }
 

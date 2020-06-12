@@ -68,6 +68,7 @@ template<int n, typename radix=double>
 class SU : public squarematrix<n,cmplx<radix>>{
     public:
     using base_type = typename base_type_struct<radix>::type;
+    static constexpr int size = n;
 
     SU() = default;
 
