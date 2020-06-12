@@ -20,6 +20,25 @@ struct gauge_field {
     }
   }
 
+  void gauge_update(double eps){
+    foralldir(dir){
+      onsites(ALL){
+        element<SU<N,double>> momexp = eps*momentum[dir][X];
+        momexp.exp();
+        gauge[dir][X] = momexp*gauge[dir][X];
+      }
+    }
+  }
+
+  void add_momentum(field<SU<N,double>> (&force)[NDIM]){
+    foralldir(dir){
+        onsites(ALL){
+          project_antihermitean(force[dir][X]);
+          momentum[dir][X] = momentum[dir][X] + force[dir][X];
+        }
+      }
+  }
+
   // Read the gauge field from a file
   void read_file(std::string filename){
     std::ifstream inputfile;
@@ -77,7 +96,7 @@ double polyakov_loop(direction dir, field<SU<N>> (&gauge)[NDIM]){
 
 /// Calculate the sum of staples connected to links in direction dir 
 template<typename SUN>
-field<SUN> calc_staples(field<SUN> *U, direction dir)
+field<SUN> calc_staples(field<SUN> (&U)[NDIM], direction dir)
 {
   field<SUN> staple_sum;
   static field<SUN> down_staple;
@@ -97,21 +116,6 @@ field<SUN> calc_staples(field<SUN> *U, direction dir)
     staple_sum[ALL] = staple_sum[X] + down_staple[X-dir2];
   }
   return staple_sum;
-}
-
-
-/// Apply the force of the gauge field on the momentum field 
-template<typename SUN, typename MATRIX>
-void gauge_force(field<SUN> *gauge, field<MATRIX> *momentum, double eps){
-  foralldir(dir){
-    field<SUN> staples = calc_staples(gauge, dir);
-    onsites(ALL){
-      element<MATRIX> force;
-      force = gauge[dir][X]*staples[X];
-      project_antihermitean(force);
-      momentum[dir][X] = momentum[dir][X] - eps*force;
-    }
-  }
 }
 
 
@@ -183,13 +187,7 @@ class gauge_momentum_action {
 
     // Integrator step: apply the momentum on the gauge field
     void step(double eps){
-      foralldir(dir){
-        onsites(ALL){
-          element<gauge_mat> momexp = eps*gauge.momentum[dir][X];
-          momexp.exp();
-          gauge.gauge[dir][X] = momexp*gauge.gauge[dir][X];
-        }
-      }
+      gauge.gauge_update(eps);
     }
 
     // Called by hmc
@@ -276,7 +274,14 @@ class gauge_action {
 
     // Update the momentum with the gauge field
     void force_step(double eps){
-      gauge_force(gauge.gauge, gauge.momentum, beta*eps/N);
+      field<gauge_mat> force[NDIM];
+      foralldir(dir){
+        force[dir] = calc_staples(gauge.gauge, dir);
+        onsites(ALL){
+          force[dir][X] = (-beta*eps/N)*gauge.gauge[dir][X]*force[dir][X];
+        }
+      }
+      gauge.add_momentum(force);
     }
 
     // Draw a random gauge field
