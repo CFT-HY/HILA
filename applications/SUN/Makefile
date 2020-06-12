@@ -39,44 +39,11 @@ build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
 	mkdir -p build
 	$(HILAPP) $< -o $@
 
-<<<<<<< HEAD
-%.cpu.o : plumbing/%.cpp
-	$(CC) $(CXXFLAGS) $< -c -o $@
-
-
-SUN.tr.gpu.cpp: Makefile SUN.cpp 
-	$(TRANSFORMER_GPU) SUN.cpp -o=SUN.tr.gpu.cpp
-
-%.gpu.o : %.cpp
-	$(NVCC) $(CXXFLAGS) $< -c -o $@
-
-%.gpu.o : %.gpu.cpp
-	$(NVCC) $(CXXFLAGS) $< -c -o $@
-
-%.gpu.o : plumbing/%.cpp
-	$(NVCC) $(CXXFLAGS) $< -c -o $@
-
-
-SUN.tr.oac.cpp: Makefile SUN.cpp 
-	$(TRANSFORMER_openacc) SUN.cpp -o=SUN.tr.oac.cpp
-
-%.oac.o : %.cpp
-	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
-
-%.oac.o : %.oac.cpp
-	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
-
-%.oac.o : plumbing/%.cpp
-	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
-
-
-=======
 build/%.o : build/%.cpt
 	mkdir -p build
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
 
->>>>>>> 344a4d92af8043ec62d7bfb79c03f59d58b4fe32
 clean:
 	rm -rf build/*.cpt build/*.o
 

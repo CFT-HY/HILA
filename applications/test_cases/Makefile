@@ -19,12 +19,7 @@ CXXFLAGS = -g -x c++ --std=c++17 $(OPTS) -I$(HILAINCLUDEPATH)
 LDFLAGS = -lfftw3 -lm
 
 
-<<<<<<< HEAD
-%.cpt:plumbing/%.cpp Makefile
-	$(HILAPP) $<
-=======
 .PRECIOUS: build/%.cpt build/%.o
->>>>>>> 344a4d92af8043ec62d7bfb79c03f59d58b4fe32
 
 OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
 

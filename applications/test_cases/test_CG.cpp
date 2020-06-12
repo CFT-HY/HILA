@@ -1,15 +1,9 @@
 #include "test.h"
 
 
-<<<<<<< HEAD
-#include "plumbing/fermion/staggered.h"
-#include "plumbing/fermion/wilson.h"
-#include "plumbing/algorithms/conjugate_gradients.h"
-=======
 #include "dirac/staggered.h"
 #include "dirac/wilson.h"
 #include "dirac/conjugate_gradient.h"
->>>>>>> 344a4d92af8043ec62d7bfb79c03f59d58b4fe32
 
 
 #define N 3

@@ -18,11 +18,6 @@ NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 CXXFLAGS = -g -x c++ --std=c++17 $(OPTS) -I$(HILAINCLUDEPATH)
 LDFLAGS = -lfftw3 -lm
 
-<<<<<<< HEAD
-%.cpt:plumbing/%.cpp Makefile
-	$(HILAPP) $<
-=======
->>>>>>> 344a4d92af8043ec62d7bfb79c03f59d58b4fe32
 
 .PRECIOUS: build/%.cpt build/%.o
 
