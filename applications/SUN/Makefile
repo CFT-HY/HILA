@@ -1,45 +1,45 @@
 
 OPTS = -DNDIM=4
 
-HILAPP = ../../build/hilapp 
-CC = mpic++ -x c++ -DUSE_MPI
-LD = mpic++ -DUSE_MPI
+HILAPATH = ../..
+HILAINCLUDEPATH = $(HILAPATH)/libraries/
 
-TRANSFORMER_GPU = ../../build/hilapp -DGPU -target:CUDA
+HILAPP = ../../hilapp/build/hilapp -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I$(HILAINCLUDEPATH)
+CC = mpic++ -DUSE_MPI -mavx2 -mfma
+LD = mpic++
+
+HILAPP_VECTOR =  ../../hilapp/build/hilapp  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I$(HILAINCLUDEPATH)
+VECTOR_OPTS = -DAVX
+
+HILAPP_GPU = ../../hilapp/build/hilapp -DGPU -target:CUDA -I$(HILAINCLUDEPATH)
 NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
 NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
-TRANSFORMER_openacc = ../../build/hilapp -Dopenacc --target:openacc
-PGCC = pgc++ -acc
-PGLD = pgc++ -acc
-
-CXXFLAGS = -O3  $(OPTS) 
-LDFLAGS = 
+CXXFLAGS = -O2 -x c++ --std=c++17 -I$(HILAINCLUDEPATH)
+#CXXFLAGS = -g -x c++ --std=c++17 $(OPTS)
+LDFLAGS = -lfftw3 -lm
 
 
-SUN_openacc: Makefile SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o
-	$(PGLD) $(LDFLAGS) -o SUN_openacc SUN.tr.oac.o monte.oac.o KennedyPendleton.oac.o mersenne_inline.oac.o lattice.oac.o setup_layout_generic.oac.o map_node_layout_trivial.oac.o
-	rm -f *.oac.o
+.PRECIOUS: build/%.cpt
 
-SUN_GPU: Makefile SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inline.gpu.o lattice.gpu.o setup_layout_generic.gpu.o map_node_layout_trivial.gpu.o hila_cuda.gpu.o
-	$(NVLD) $(LDFLAGS) -o SUN_GPU SUN.tr.gpu.o monte.gpu.o KennedyPendleton.gpu.o mersenne_inline.gpu.o lattice.gpu.o  setup_layout_generic.gpu.o map_node_layout_trivial.gpu.o hila_cuda.gpu.o
-	rm -f *.gpu.o
-
-SUN_CPU: Makefile SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o com_mpi.cpu.o
-	$(LD) $(LDFLAGS) -o SUN_CPU SUN.tr.cpu.o monte.cpu.o KennedyPendleton.cpu.o mersenne_inline.cpu.o lattice.cpu.o setup_layout_generic.cpu.o map_node_layout_trivial.cpu.o com_mpi.cpu.o
-	rm -f *.cpu.o
+OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
 
 
 
-SUN.tr.cpu.cpp: Makefile SUN.cpp 
-	$(HILAPP) SUN.cpp -o=SUN.tr.cpu.cpp
 
-%.cpu.o : %.cpp
-	$(CC) $(CXXFLAGS) $< -c -o $@
+SUN: Makefile $(OBJECTS) build/SUN.o build/monte.o build/KennedyPendleton.o SUN.h
+	$(LD) $(LDFLAGS) -o build/SUN build/SUN.o build/monte.o build/KennedyPendleton.o $(OBJECTS)
 
-%.cpu.o : %.cpu.cpp
-	$(CC) $(CXXFLAGS) $< -c -o $@
 
+build/%.cpt: %.cpp Makefile
+	mkdir -p build
+	$(HILAPP) $< -o $@
+
+build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
+	mkdir -p build
+	$(HILAPP) $< -o $@
+
+<<<<<<< HEAD
 %.cpu.o : plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
@@ -70,9 +70,16 @@ SUN.tr.oac.cpp: Makefile SUN.cpp
 	$(PGCC) $(CXXFLAGS) -Dopenacc $< -c -o $@
 
 
+=======
+build/%.o : build/%.cpt
+	mkdir -p build
+	$(CC) $(CXXFLAGS) $< -c -o $@
+
+
+>>>>>>> 344a4d92af8043ec62d7bfb79c03f59d58b4fe32
 clean:
-	rm -rf *.cpt *.o
+	rm -rf build/*.cpt build/*.o
 
 cleanall:
-	rm -rf *.tr.*.cpp *.o SUN_GPU SUN_CPU SUN_openacc
+	rm -rf build/*
 

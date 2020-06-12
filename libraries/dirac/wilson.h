@@ -15,7 +15,7 @@ field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[NDIM];
 
 
 template<int N, typename radix, typename matrix>
-inline void dirac_wilson_hop(
+inline void Dirac_Wilson_hop(
   const field<matrix> *gauge, const double kappa,
   const field<Wilson_vector<N, radix>> &v_in,
   field<Wilson_vector<N, radix>> &v_out,
@@ -51,30 +51,30 @@ inline void dirac_wilson_hop(
 
 
 template<int N, typename radix>
-inline void dirac_wilson_diag(
+inline void Dirac_Wilson_diag(
   const field<Wilson_vector<N, radix>> &v_in,
   field<Wilson_vector<N, radix>> &v_out,
   parity par)
 {
-  v_out[par] += v_in[X];
+  v_out[par] = v_in[X];
 }
 
 
 template<int N, typename radix>
-inline void dirac_wilson_diag_inverse(
+inline void Dirac_Wilson_diag_inverse(
   field<Wilson_vector<N, radix>> &v,
   parity par)
 {}
 
 
 
-template<int N, typename radix, typename matrix>
-inline void dirac_wilson_calc_force(
-  const field<matrix> *gauge,
+template<int N, typename radix, typename gaugetype, typename momtype>
+inline void Dirac_Wilson_calc_force(
+  const field<gaugetype> *gauge,
   const double kappa,
   const field<Wilson_vector<N, radix>> &chi,
   const field<Wilson_vector<N, radix>> &psi,
-  field<matrix> (&out)[NDIM],
+  field<momtype> (&out)[NDIM],
   parity par,
   int sign)
 {
@@ -107,7 +107,7 @@ inline void dirac_wilson_calc_force(
 
 
 template<int N, typename radix, typename matrix>
-class dirac_wilson {
+class Dirac_Wilson {
   private:
     double kappa;
 
@@ -122,34 +122,33 @@ class dirac_wilson {
     parity par = ALL;
 
     // Constructor: initialize mass and gauge
-    dirac_wilson(dirac_wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
-    dirac_wilson(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
+    Dirac_Wilson(Dirac_Wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
+    Dirac_Wilson(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
 
     // Applies the operator to in
     inline void apply( const field<vector_type> & in, field<vector_type> & out){
-      out[ALL] = 0;
-      dirac_wilson_diag(in, out, ALL);
-      dirac_wilson_hop(gauge, kappa, in, out, ALL, 1);
+      Dirac_Wilson_diag(in, out, ALL);
+      Dirac_Wilson_hop(gauge, kappa, in, out, ALL, 1);
     }
 
     // Applies the conjugate of the operator
     inline void dagger( const field<vector_type> & in, field<vector_type> & out){
-      out[ALL] = 0;
-      dirac_wilson_diag(in, out, ALL);
-      dirac_wilson_hop(gauge, kappa, in, out, ALL, -1);
+      Dirac_Wilson_diag(in, out, ALL);
+      Dirac_Wilson_hop(gauge, kappa, in, out, ALL, -1);
     }
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    inline void force(const field<vector_type> & chi,  const field<vector_type> & psi, field<matrix> (&force)[NDIM], int sign=1){
-      dirac_wilson_calc_force(gauge, kappa, chi, psi, force, ALL, sign);
+    template<typename momtype>
+    inline void force(const field<vector_type> & chi,  const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign=1){
+      Dirac_Wilson_calc_force(gauge, kappa, chi, psi, force, ALL, sign);
     }
 };
 
 
 // Multiplying from the left applies the standard Dirac operator
 template<int N, typename radix, typename matrix>
-field<Wilson_vector<N, radix>> operator* (dirac_wilson<N, radix, matrix> D, const field<Wilson_vector<N, radix>> & in) {
+field<Wilson_vector<N, radix>> operator* (Dirac_Wilson<N, radix, matrix> D, const field<Wilson_vector<N, radix>> & in) {
   field<Wilson_vector<N, radix>> out;
   D.apply(in, out);
   return out;
@@ -157,7 +156,7 @@ field<Wilson_vector<N, radix>> operator* (dirac_wilson<N, radix, matrix> D, cons
 
 // Multiplying from the right applies the conjugate
 template<int N, typename radix, typename matrix>
-field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> & in, dirac_wilson<N, radix, matrix> D) {
+field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> & in, Dirac_Wilson<N, radix, matrix> D) {
   field<Wilson_vector<N, radix>> out;
   D.dagger(in, out);
   return out;
@@ -180,7 +179,7 @@ class Dirac_Wilson_evenodd {
     using matrix_type = matrix;
 
     // The parity 
-    parity par = ALL;
+    parity par = EVEN;
 
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
@@ -189,43 +188,42 @@ class Dirac_Wilson_evenodd {
     // Applies the operator to in
     inline void apply( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
-      in.mark_changed(ODD);
-      dirac_wilson_diag(in, out, EVEN);
+      Dirac_Wilson_diag(in, out, EVEN);
 
-      dirac_wilson_hop(gauge, kappa, in, out, ODD, 1);
-      dirac_wilson_diag_inverse(out, ODD);
-      dirac_wilson_hop(gauge, kappa, out, out, EVEN, 1);
+      Dirac_Wilson_hop(gauge, kappa, in, out, ODD, 1);
+      Dirac_Wilson_diag_inverse(out, ODD);
+      Dirac_Wilson_hop(gauge, -kappa, out, out, EVEN, 1);
       out[ODD] = 0;
     }
 
     // Applies the conjugate of the operator
     inline void dagger( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
-      in.mark_changed(ODD);
-      dirac_wilson_diag(in, out, EVEN);
+      Dirac_Wilson_diag(in, out, EVEN);
 
-      dirac_wilson_hop(gauge, kappa, in, out, ODD, -1);
-      dirac_wilson_diag_inverse(out, ODD);
-      dirac_wilson_hop(gauge, kappa, out, out, EVEN, -1);
+      Dirac_Wilson_hop(gauge, kappa, in, out, ODD, -1);
+      Dirac_Wilson_diag_inverse(out, ODD);
+      Dirac_Wilson_hop(gauge, -kappa, out, out, EVEN, -1);
       out[ODD] = 0;
     }
 
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
-    inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<matrix_type> (&force)[NDIM], int sign){
-      field<matrix_type> force2[NDIM];
+    template<typename momtype>
+    inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign){
+      field<momtype> force2[NDIM];
       field<vector_type> tmp;
       tmp.copy_boundary_condition(chi);
 
       tmp[ALL] = 0;
-      dirac_wilson_hop(gauge, kappa, chi, tmp, ODD, -sign);
-      dirac_wilson_diag_inverse(tmp, ODD);
-      dirac_wilson_calc_force(gauge, kappa, tmp, psi, force, EVEN, sign);
+      Dirac_Wilson_hop(gauge, kappa, chi, tmp, ODD, -sign);
+      Dirac_Wilson_diag_inverse(tmp, ODD);
+      Dirac_Wilson_calc_force(gauge, -kappa, tmp, psi, force, EVEN, sign);
 
       tmp[ALL] = 0;
-      dirac_wilson_hop(gauge, kappa, psi, tmp, ODD, sign);
-      dirac_wilson_diag_inverse(tmp, ODD);
-      dirac_wilson_calc_force(gauge, kappa, chi, tmp, force2, ODD, sign);
+      Dirac_Wilson_hop(gauge, kappa, psi, tmp, ODD, sign);
+      Dirac_Wilson_diag_inverse(tmp, ODD);
+      Dirac_Wilson_calc_force(gauge, -kappa, chi, tmp, force2, ODD, sign);
 
       foralldir(dir)
         force[dir][ALL] = force[dir][X] + force2[dir][X];

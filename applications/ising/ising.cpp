@@ -65,9 +65,9 @@ int main(int argc, char **argv)
     onsites(ALL){
       M += spin[X];
     }
-    printf("Magnetisation %f\n", M/VOLUME);
+    output0 << "Magnetisation " << M/VOLUME << "\n";
   }
   
-
+  finishrun();
   return 0;
 }

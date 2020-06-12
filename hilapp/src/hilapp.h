@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
-#ifndef TRANSFORMER_H
-#define TRANSFORMER_H
+#ifndef HILAPP_H
+#define HILAPP_H
 
 #include <string>
 #include <vector>

@@ -30,7 +30,7 @@ element<cmplx<double>> test_nontemplate_function(element<cmplx<double>> a){
 }
 
 
-#include "plumbing/fermion/staggered.h"
+#include "dirac/staggered.h"
 
 int main(int argc, char **argv){
 

@@ -46,15 +46,9 @@ compile_c(){
     check compile
 }
 
-run_c(){
-    echo ./$1
-    ./${1}.exe
-    check run
-}
-
 run_mpi_c(){
-    echo mpirun -n $2 ./${1}.exe
-    mpirun -n $2 ./${1}.exe
+    echo mpirun -n $2 build/${1}.exe
+    mpirun -n $2 build/${1}.exe
     check run $2
 }
 
@@ -66,18 +60,17 @@ else
 fi
 
 for D in 2 3 4 ; do
-  sed -i 's/OPTS = .*/OPTS = -DNDIM='${D}'/' ${MAKEFILE}
+  sed -i 's/^OPTS = .*/OPTS = -DNDIM='${D}'/' ${MAKEFILE}
   make cleanall
   for testfile in $tests; do
     test="${testfile%.*}"
     echo $test
-    transform_c ${test}.cpt
+    transform_c build/${test}.cpt
     compile_c ${test}
-    #run_c ${test}
     run_mpi_c ${test} 1
     run_mpi_c ${test} 2
     #run_mpi_c ${test} 4
-    rm ${test}.exe ${test}.cpt
+    rm build/*
   done
   make cleanall
 done

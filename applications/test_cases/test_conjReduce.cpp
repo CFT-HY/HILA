@@ -69,6 +69,7 @@ int main(int argc, char **argv){
     // Test matrix multiplication and neighbour fetches
     // Calculates M(X) * M.congugate(X+dir)
     onsites(ALL){
+        if(disable_avx[X]==0){};
         element<matrix<2,2,double>> a;
         element<double> theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
         a.c[0][0] =  cos(theta);

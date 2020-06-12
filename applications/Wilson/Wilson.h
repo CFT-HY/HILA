@@ -13,6 +13,7 @@
 #include "../../libraries/plumbing/inputs.h"
 #include "../../libraries/datatypes/vector.h"
 #include "../../libraries/datatypes/sun.h"
+#include "../../libraries/datatypes/representations.h"
 #include "../../libraries/datatypes/wilson_vector.h"
 #include "../../libraries/plumbing/field.h"
 #include "../../libraries/dirac/wilson.h"
@@ -21,8 +22,7 @@
 #include "../../libraries/hmc/fermion_field.h"
 
 
-const int N=3;
-const int Nf=1;
+const int N=2;
 
 using SUN = SU<N,double>;
 using NMAT = matrix<N,N,cmplx<double>>;

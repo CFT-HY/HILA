@@ -1,5 +1,5 @@
-#ifndef TRANSFORMER_SRCBUF_H
-#define TRANSFORMER_SRCBUF_H
+#ifndef HILAPP_SRCBUF_H
+#define HILAPP_SRCBUF_H
 
 // New buffer interface.  Libtooling contains a  ReplaceText and RemoveText
 // in libtooling, but it is much easier to leave that to be original and
@@ -171,4 +171,4 @@ public:
 };
 
 
-#endif // TRANSFORMER_SRCBUF_H
+#endif // HILAPP_SRCBUF_H
