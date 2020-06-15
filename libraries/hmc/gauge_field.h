@@ -112,14 +112,12 @@ double plaquette(field<SUN> *gauge){
 // A conveniance class for a gauge field.
 // Contains an SU(N) matrix in each direction for the
 // gauge field and for the momentum
-
-
-template<int N,typename radix=double>
+template<typename matrix>
 struct gauge_field {
-  using gauge_type = SU<N,radix>;
-  field<SU<N,double>> gauge[NDIM];
-  field<SU<N,double>> momentum[NDIM];
-  field<SU<N,double>> gauge_backup[NDIM];
+  using gauge_type = matrix;
+  field<matrix> gauge[NDIM];
+  field<matrix> momentum[NDIM];
+  field<matrix> gauge_backup[NDIM];
 
   // Set the gauge field to unity
   void set_unity(){
@@ -140,17 +138,20 @@ struct gauge_field {
     }
   }
 
+  // This is the fundamental field, nothing to refresh
+  void refresh(){}
+
   void gauge_update(double eps){
     foralldir(dir){
       onsites(ALL){
-        element<SU<N,double>> momexp = eps*momentum[dir][X];
+        element<matrix> momexp = eps*momentum[dir][X];
         momexp.exp();
         gauge[dir][X] = momexp*gauge[dir][X];
       }
     }
   }
 
-  void add_momentum(field<SU<N,double>> (&force)[NDIM]){
+  void add_momentum(field<matrix> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
         project_antihermitean(force[dir][X]);
@@ -199,17 +200,17 @@ struct represented_gauge_field {
   static constexpr int Nf = fund_type::size;
   static constexpr int Nr = repr::size;
 
-  gauge_field<Nf,basetype> &fundamental;
+  gauge_field<fund_type> &fundamental;
 
   field<repr> gauge[NDIM];
 
-  represented_gauge_field(gauge_field<Nf,basetype>  &f) : fundamental(f){}
+  represented_gauge_field(gauge_field<fund_type>  &f) : fundamental(f){}
   represented_gauge_field(represented_gauge_field &r)
     : represented_gauge_field(r){}
 
 
-
-  void represent(){
+  // Represent the fields
+  void refresh(){
     foralldir(dir){
       onsites(ALL){
         if(disable_avx[X]==0){};
