@@ -47,13 +47,12 @@ class fermion_action{
       inverse.apply(chi,psi);
       onsites(D.par){
         action += chi[X].rdot(psi[X]);
-        
       }
       return action;
     }
 
     // Make a copy of fields updated in a trajectory
-    void back_up_fields(){}
+    void backup_fields(){}
 
     // Restore the previous backup
     void restore_backup(){}
@@ -134,7 +133,7 @@ class high_representation_fermion_action {
     }
 
     // Make a copy of fields updated in a trajectory
-    void back_up_fields(){}
+    void backup_fields(){}
 
     // Restore the previous backup
     void restore_backup(){}

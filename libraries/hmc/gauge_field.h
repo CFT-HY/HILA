@@ -2,104 +2,6 @@
 #define GAUGE_FIELD_H
 
 
-// A conveniance class for a gauge field.
-// Contains an SU(N) matrix in each direction for the
-// gauge field and for the momentum
-template<int N,typename radix=double>
-struct gauge_field {
-  using gauge_type = SU<N,radix>;
-  field<SU<N,double>> gauge[NDIM];
-  field<SU<N,double>> momentum[NDIM];
-
-  // Set the gauge field to unity
-  void set_unity(){
-    foralldir(dir){
-      onsites(ALL){
-        gauge[dir][X] = 1;
-      }
-    }
-  }
-
-  void gauge_update(double eps){
-    foralldir(dir){
-      onsites(ALL){
-        element<SU<N,double>> momexp = eps*momentum[dir][X];
-        momexp.exp();
-        gauge[dir][X] = momexp*gauge[dir][X];
-      }
-    }
-  }
-
-  void add_momentum(field<SU<N,double>> (&force)[NDIM]){
-    foralldir(dir){
-      onsites(ALL){
-        project_antihermitean(force[dir][X]);
-        momentum[dir][X] = momentum[dir][X] + force[dir][X];
-      }
-    }
-  }
-
-  // Read the gauge field from a file
-  void read_file(std::string filename){
-    std::ifstream inputfile;
-    inputfile.open(filename, std::ios::in | std::ios::binary);
-    foralldir(dir){
-      read_fields(inputfile, gauge[dir]);
-    }
-    inputfile.close();
-  }
-
-  // Write the gauge field to a file
-  void write_file(std::string filename){
-    std::ofstream outputfile;
-    outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-    foralldir(dir){
-      write_fields(outputfile, gauge[dir]);
-    }
-    outputfile.close();
-  }
-};
-
-
-template<typename repr>
-struct represented_gauge_field {
-  using gauge_type = repr;
-  using fund_type = typename repr::sun;
-  using basetype = typename repr::base_type;
-  static constexpr int Nf = fund_type::size;
-  static constexpr int Nr = repr::size;
-
-  gauge_field<Nf,basetype> &fundamental;
-
-  field<repr> gauge[NDIM];
-
-  represented_gauge_field(gauge_field<Nf,basetype>  &f) : fundamental(f){}
-  represented_gauge_field(represented_gauge_field &r)
-    : represented_gauge_field(r){}
-
-
-  void represent(){
-    foralldir(dir){
-      onsites(ALL){
-        if(disable_avx[X]==0){};
-        gauge[dir][X].represent(fundamental.gauge[dir][X]);
-      }
-    }
-  }
-
-  void add_momentum(field<squarematrix<Nf,basetype>> (&force)[NDIM]){
-    foralldir(dir){
-      onsites(ALL){
-        project_antihermitean(force[dir][X]);
-        element<fund_type> fforce;
-        fforce = repr::project_force(force[dir][X]);
-        fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce[dir][X];
-      }
-    }
-  }
-
-};
-
 
 
 
@@ -203,104 +105,152 @@ double plaquette(field<SUN> *gauge){
 
 
 
-// Action term for the momentum of a gauge field
-// This is both an action term and an integrator. It can form the
-// lowest level step to an integrator construct.
-template<typename gauge_field>
-class gauge_momentum_action {
-  public:
-    using gauge_mat = typename gauge_field::gauge_type;
 
-    gauge_field &gauge;
-    field<gauge_mat> gauge_copy[NDIM];
 
-    gauge_momentum_action(gauge_field &g) 
-    : gauge(g){}
 
-    gauge_momentum_action(gauge_momentum_action &ma)
-    : gauge(ma.gauge){}
 
-    double action(){
-      double sum = 0;
-      foralldir(dir) {
-        onsites(ALL){
-          sum += gauge.momentum[dir][X].algebra_norm();
-        }
-      }
-      return sum;
-    }
+// A conveniance class for a gauge field.
+// Contains an SU(N) matrix in each direction for the
+// gauge field and for the momentum
+template<int N,typename radix=double>
+struct gauge_field {
+  using gauge_type = SU<N,radix>;
+  field<SU<N,double>> gauge[NDIM];
+  field<SU<N,double>> momentum[NDIM];
+  field<SU<N,double>> gauge_backup[NDIM];
 
-    /// Gaussian random momentum for each element
-    void draw_gaussian_fields(){
-      foralldir(dir) {
-        onsites(ALL){
-          if(disable_avx[X]==0){};
-          gauge.momentum[dir][X].gaussian_algebra();
-        }
+  // Set the gauge field to unity
+  void set_unity(){
+    foralldir(dir){
+      onsites(ALL){
+        gauge[dir][X] = 1;
       }
     }
+  }
 
-    // Integrator step: apply the momentum on the gauge field
-    void step(double eps){
-      gauge.gauge_update(eps);
+  /// Gaussian random momentum for each element
+  void draw_momentum(){
+    foralldir(dir) {
+      onsites(ALL){
+        if(disable_avx[X]==0){};
+        momentum[dir][X].gaussian_algebra();
+      }
     }
+  }
 
-    // Called by hmc
-    // Make a copy of fields updated in a trajectory
-    void back_up_fields(){
-      foralldir(dir) gauge_copy[dir] = gauge.gauge[dir];
+  void gauge_update(double eps){
+    foralldir(dir){
+      onsites(ALL){
+        element<SU<N,double>> momexp = eps*momentum[dir][X];
+        momexp.exp();
+        gauge[dir][X] = momexp*gauge[dir][X];
+      }
     }
+  }
 
-    // Restore the previous backup
-    void restore_backup(){
-      foralldir(dir) gauge.gauge[dir] = gauge_copy[dir];
+  void add_momentum(field<SU<N,double>> (&force)[NDIM]){
+    foralldir(dir){
+      onsites(ALL){
+        project_antihermitean(force[dir][X]);
+        momentum[dir][X] = momentum[dir][X] + force[dir][X];
+      }
     }
+  }
+
+  // Make a copy of fields updated in a trajectory
+  void backup(){
+    foralldir(dir) gauge_backup[dir] = gauge[dir];
+  }
+
+  // Restore the previous backup
+  void restore_backup(){
+    foralldir(dir) gauge[dir] = gauge_backup[dir];
+  }
+
+  // Read the gauge field from a file
+  void read_file(std::string filename){
+    std::ifstream inputfile;
+    inputfile.open(filename, std::ios::in | std::ios::binary);
+    foralldir(dir){
+      read_fields(inputfile, gauge[dir]);
+    }
+    inputfile.close();
+  }
+
+  // Write the gauge field to a file
+  void write_file(std::string filename){
+    std::ofstream outputfile;
+    outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+    foralldir(dir){
+      write_fields(outputfile, gauge[dir]);
+    }
+    outputfile.close();
+  }
+
+
+};
+
+
+template<typename repr>
+struct represented_gauge_field {
+  using gauge_type = repr;
+  using fund_type = typename repr::sun;
+  using basetype = typename repr::base_type;
+  static constexpr int Nf = fund_type::size;
+  static constexpr int Nr = repr::size;
+
+  gauge_field<Nf,basetype> &fundamental;
+
+  field<repr> gauge[NDIM];
+
+  represented_gauge_field(gauge_field<Nf,basetype>  &f) : fundamental(f){}
+  represented_gauge_field(represented_gauge_field &r)
+    : represented_gauge_field(r){}
+
+
+
+  void represent(){
+    foralldir(dir){
+      onsites(ALL){
+        if(disable_avx[X]==0){};
+        gauge[dir][X].represent(fundamental.gauge[dir][X]);
+      }
+    }
+  }
+
+  void add_momentum(field<squarematrix<Nf,basetype>> (&force)[NDIM]){
+    foralldir(dir){
+      onsites(ALL){
+        project_antihermitean(force[dir][X]);
+        element<fund_type> fforce;
+        fforce = repr::project_force(force[dir][X]);
+        fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce[dir][X];
+      }
+    }
+  }
+
+  /// This gets called if there is a represented gauge action term.
+  /// If there is also a fundamental term, it gets called twice... 
+  void draw_momentum(){
+    fundamental.draw_momentum();
+  }
+
+  // Make a backup of the fundamental gauge field
+  // Again, this may get called twice.
+  void backup(){
+    fundamental.backup();
+  }
+
+  // Restore the previous backup
+  void restore_backup(){
+    fundamental.restore_backup();
+  }
+
 };
 
 
 
-// Represents a sum of two momentum terms. Useful for adding them
-// to an integrator on the same level.
-template<typename momentum_action_1, typename momentum_action_2>
-class momentum_action_sum {
-  public:
-    momentum_action_1 a1;
-    momentum_action_2 a2;
 
-    momentum_action_sum(momentum_action_1 _a1, momentum_action_2 _a2) 
-    : a1(_a1), a2(_a2){}
-
-    momentum_action_sum(momentum_action_sum &asum) : a1(asum.a1), a2(asum.a2){}
-
-    //The gauge action
-    double action(){
-      return a1.action() + a2.action();
-    }
-
-    /// Gaussian random momentum for each element
-    void draw_gaussian_fields(){
-      a1.draw_gaussian_fields();
-      a2.draw_gaussian_fields();
-    }
-
-    // Called by hmc
-    void back_up_fields(){}
-    void restore_backup(){}
-
-    // Integrator step: apply the momentum on the gauge fields
-    void step(double eps){
-      a1.step(eps);
-      a2.step(eps);
-    }
-
-};
-
-// Sum operator for creating a momentum action_sum object
-template<typename gauge_type, typename action2>
-momentum_action_sum<gauge_momentum_action<gauge_type>, action2> operator+(gauge_momentum_action<gauge_type> a1, action2 a2){
-  momentum_action_sum<gauge_momentum_action<gauge_type>, action2> sum(a1, a2);
-  return sum;
-}
 
 
 template<typename gauge_field>
@@ -310,6 +260,7 @@ class gauge_action {
     static constexpr int N = gauge_mat::size;
 
     gauge_field &gauge;
+    field<gauge_mat> gauge_copy[NDIM];
     double beta;
 
     gauge_action(gauge_field &g, double b) 
@@ -320,12 +271,20 @@ class gauge_action {
 
     //The gauge action
     double action(){
-      double s = beta*plaquette_sum(gauge.gauge);
-      return s;
+      double Sa = 0;
+      double Sg = beta*plaquette_sum(gauge.gauge);
+      foralldir(dir) {
+        onsites(ALL){
+          Sa += gauge.momentum[dir][X].algebra_norm();
+        }
+      }
+      return Sg+Sa;
     }
 
     /// Gaussian random momentum for each element
-    void draw_gaussian_fields(){}
+    void draw_gaussian_fields(){
+      gauge.draw_momentum();
+    }
 
     // Update the momentum with the gauge field
     void force_step(double eps){
@@ -349,14 +308,34 @@ class gauge_action {
     }
 
 
-    // Called by HMC. The gauge field is copied by 
-    // the momentum action.
-    void back_up_fields(){}
-    void restore_backup(){}
+    // Called by HMC.
+    // Make a copy of fields updated in a trajectory
+    void backup_fields(){
+      gauge.backup();
+    }
+
+    // Restore the previous backup
+    void restore_backup(){
+      gauge.restore_backup();
+    }
+
+    // Momentum step and step are required for an integrator.
+    // A gauge action is also the lowest level of an
+    // integrator hierarchy.
+    
+    // Update the gauge field with momentum
+    void momentum_step(double eps){
+      gauge.gauge_update(eps);
+    }
+
+    // A single gauge update
+    void step(double eps){
+      O2_step(*this, eps);
+    }
 };
 
 
-// Represents a sum of two acttion terms. Useful for adding them
+// Represents a sum of two action terms. Useful for adding them
 // to an integrator on the same level.
 template<typename action_type_1, typename action_type_2>
 class action_sum {
@@ -386,23 +365,10 @@ class action_sum {
       a2.force_step(eps);
     }
 
-    // Set the gauge field to unity
-    void set_unity(){
-      a1.set_unity();
-      a2.set_unity();
-    }
-
-    // Draw a random gauge field
-    void random(){
-      a1.random();
-      a2.random();
-    }
-
-
     // Make a copy of fields updated in a trajectory
-    void back_up_fields(){
-      a1.back_up_fields();
-      a2.back_up_fields();
+    void backup_fields(){
+      a1.backup_fields();
+      a2.backup_fields();
     }
 
     // Restore the previous backup
@@ -414,9 +380,9 @@ class action_sum {
 
 
 // Sum operator for creating an action_sum object
-template<typename gauge_field, typename action2>
-action_sum<gauge_action<gauge_field>, action2> operator+(gauge_action<gauge_field> a1, action2 a2){
-  action_sum<gauge_action<gauge_field>, action2> sum(a1, a2);
+template<typename gauge_field_1, typename gauge_field_2>
+action_sum<gauge_action<gauge_field_1>, gauge_action<gauge_field_2>> operator+(gauge_action<gauge_field_1> a1, gauge_action<gauge_field_2> a2){
+  action_sum<gauge_action<gauge_field_1>, gauge_action<gauge_field_2>> sum(a1, a2);
   return sum;
 }
 
@@ -447,9 +413,9 @@ class integrator{
     }
 
     // Make a copy of fields updated in a trajectory
-    void back_up_fields(){
-      action_term.back_up_fields();
-      lower_integrator.back_up_fields();
+    void backup_fields(){
+      action_term.backup_fields();
+      lower_integrator.backup_fields();
     }
 
     // Restore the previous backup

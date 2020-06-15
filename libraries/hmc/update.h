@@ -54,7 +54,7 @@ void update_hmc(integrator_type &integr, int steps, double traj_length){
   integr.draw_gaussian_fields();
 
   // Make a copy of the gauge field in case the update is rejected
-  integr.back_up_fields();
+  integr.backup_fields();
   
   gettimeofday(&start, NULL);
 
