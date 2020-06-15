@@ -32,11 +32,11 @@ struct gauge_field {
 
   void add_momentum(field<SU<N,double>> (&force)[NDIM]){
     foralldir(dir){
-        onsites(ALL){
-          project_antihermitean(force[dir][X]);
-          momentum[dir][X] = momentum[dir][X] + force[dir][X];
-        }
+      onsites(ALL){
+        project_antihermitean(force[dir][X]);
+        momentum[dir][X] = momentum[dir][X] + force[dir][X];
       }
+    }
   }
 
   // Read the gauge field from a file
@@ -58,6 +58,46 @@ struct gauge_field {
     }
     outputfile.close();
   }
+};
+
+
+template<typename repr>
+struct represented_gauge_field {
+  using gauge_type = repr;
+  using fund_type = typename repr::sun;
+  using basetype = typename repr::base_type;
+  static constexpr int Nf = fund_type::size;
+  static constexpr int Nr = repr::size;
+
+  gauge_field<Nf,basetype> &fundamental;
+
+  field<repr> gauge[NDIM];
+
+  represented_gauge_field(gauge_field<Nf,basetype>  &f) : fundamental(f){}
+  represented_gauge_field(represented_gauge_field &r)
+    : represented_gauge_field(r){}
+
+
+  void represent(){
+    foralldir(dir){
+      onsites(ALL){
+        if(disable_avx[X]==0){};
+        gauge[dir][X].represent(fundamental.gauge[dir][X]);
+      }
+    }
+  }
+
+  void add_momentum(field<squarematrix<Nf,basetype>> (&force)[NDIM]){
+    foralldir(dir){
+      onsites(ALL){
+        project_antihermitean(force[dir][X]);
+        element<fund_type> fforce;
+        fforce = repr::project_force(force[dir][X]);
+        fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce[dir][X];
+      }
+    }
+  }
+
 };
 
 
@@ -132,6 +172,21 @@ double plaquette_sum(field<SU<N,radix>> *U){
            * U[dir1][X+dir2].conjugate()
            * U[dir2][X].conjugate();
       Plaq += 1-temp.trace().re/N;
+    }
+  }
+  return Plaq;
+}
+
+template<int N, typename radix>
+double plaquette_sum(field<squarematrix<N,radix>> *U){
+  double Plaq=0;
+  foralldir(dir1) foralldir(dir2) if(dir2 < dir1){
+    onsites(ALL){
+      element<SU<N,radix>> temp;
+      temp = U[dir1][X] * U[dir2][X+dir1]
+           * U[dir1][X+dir2].conjugate()
+           * U[dir2][X].conjugate();
+      Plaq += 1-temp.trace()/N;
     }
   }
   return Plaq;
@@ -265,7 +320,7 @@ class gauge_action {
 
     //The gauge action
     double action(){
-      double s = beta*plaquette_sum(gauge.gauge); 
+      double s = beta*plaquette_sum(gauge.gauge);
       return s;
     }
 
