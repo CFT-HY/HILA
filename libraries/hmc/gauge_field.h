@@ -115,6 +115,8 @@ double plaquette(field<SUN> *gauge){
 template<typename matrix>
 struct gauge_field {
   using gauge_type = matrix;
+  using basetype = typename matrix::base_type;
+  static constexpr int N = matrix::size;
   field<matrix> gauge[NDIM];
   field<matrix> momentum[NDIM];
   field<matrix> gauge_backup[NDIM];
@@ -151,7 +153,7 @@ struct gauge_field {
     }
   }
 
-  void add_momentum(field<matrix> (&force)[NDIM]){
+  void add_momentum(field<squarematrix<N,cmplx<basetype>>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
         project_antihermitean(force[dir][X]);
@@ -198,7 +200,7 @@ struct represented_gauge_field {
   using fund_type = typename repr::sun;
   using basetype = typename repr::base_type;
   static constexpr int Nf = fund_type::size;
-  static constexpr int Nr = repr::size;
+  static constexpr int N = repr::size;
 
   gauge_field<fund_type> &fundamental;
 
@@ -206,12 +208,13 @@ struct represented_gauge_field {
 
   represented_gauge_field(gauge_field<fund_type>  &f) : fundamental(f){}
   represented_gauge_field(represented_gauge_field &r)
-    : represented_gauge_field(r){}
+    : fundamental(r.fundamental){}
 
 
   // Represent the fields
   void refresh(){
     foralldir(dir){
+      gauge[dir].check_alloc();
       onsites(ALL){
         if(disable_avx[X]==0){};
         gauge[dir][X].represent(fundamental.gauge[dir][X]);
@@ -219,13 +222,13 @@ struct represented_gauge_field {
     }
   }
 
-  void add_momentum(field<squarematrix<Nf,basetype>> (&force)[NDIM]){
+  void add_momentum(field<squarematrix<N,cmplx<basetype>>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
         if(disable_avx[X]==0){};
         element<fund_type> fforce;
         fforce = repr::project_force(force[dir][X]);
-        fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce[dir][X];
+        fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce;
       }
     }
   }
@@ -258,6 +261,7 @@ class gauge_action {
   public:
     using gauge_mat = typename gauge_field::gauge_type;
     static constexpr int N = gauge_mat::size;
+    using momtype = squarematrix<N, cmplx<typename gauge_mat::base_type>>;
 
     gauge_field &gauge;
     field<gauge_mat> gauge_copy[NDIM];
@@ -288,11 +292,12 @@ class gauge_action {
 
     // Update the momentum with the gauge field
     void force_step(double eps){
-      field<gauge_mat> force[NDIM];
+      field<gauge_mat> staple;
+      field<momtype> force[NDIM];
       foralldir(dir){
-        force[dir] = calc_staples(gauge.gauge, dir);
+        staple = calc_staples(gauge.gauge, dir);
         onsites(ALL){
-          force[dir][X] = (-beta*eps/N)*gauge.gauge[dir][X]*force[dir][X];
+          force[dir][X] = (-beta*eps/N)*gauge.gauge[dir][X]*staple[X];
         }
       }
       gauge.add_momentum(force);

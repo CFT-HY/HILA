@@ -82,9 +82,17 @@ class SU : public squarematrix<n,cmplx<radix>>{
     }
 
     SU(squarematrix<n,cmplx<radix>> m) {
-        for (int j=0; j<n; j++) for (int i=0; i<n; i++){
-            this->c[i][j] = m.c[i][j];
-        }
+      for (int j=0; j<n; j++) for (int i=0; i<n; i++){
+        this->c[i][j] = m.c[i][j];
+      }
+    }
+
+    operator squarematrix<n,cmplx<radix>>(){
+      squarematrix<n,cmplx<radix>> r;
+      for (int j=0; j<n; j++) for (int i=0; i<n; i++){
+        r.c[i][j] = this->c[i][j];
+      }
+      return r;
     }
 
     SU operator - () const {
@@ -582,6 +590,7 @@ template<int n, typename radix>
 class SU_vector : public vector<n,cmplx<radix>>{
   public:
     using base_type = typename base_type_struct<radix>::type;
+    static constexpr int size = n;
 
     SU_vector() = default;
 
