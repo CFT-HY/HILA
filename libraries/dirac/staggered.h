@@ -191,6 +191,7 @@ class dirac_staggered_evenodd {
     dirac_staggered_evenodd(double m, field<matrix> (&U)[NDIM]) : gauge(U), mass(m) {
       init_staggered_eta(staggered_eta);
     }
+    
 
 
     // Applies the operator to in

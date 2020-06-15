@@ -112,6 +112,8 @@ double plaquette(field<SUN> *gauge){
 // A conveniance class for a gauge field.
 // Contains an SU(N) matrix in each direction for the
 // gauge field and for the momentum
+
+
 template<int N,typename radix=double>
 struct gauge_field {
   using gauge_type = SU<N,radix>;
@@ -186,8 +188,6 @@ struct gauge_field {
     }
     outputfile.close();
   }
-
-
 };
 
 
@@ -221,7 +221,7 @@ struct represented_gauge_field {
   void add_momentum(field<squarematrix<Nf,basetype>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
-        project_antihermitean(force[dir][X]);
+        if(disable_avx[X]==0){};
         element<fund_type> fforce;
         fforce = repr::project_force(force[dir][X]);
         fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce[dir][X];
@@ -245,7 +245,6 @@ struct represented_gauge_field {
   void restore_backup(){
     fundamental.restore_backup();
   }
-
 };
 
 
