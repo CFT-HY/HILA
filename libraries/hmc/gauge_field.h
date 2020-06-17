@@ -95,7 +95,7 @@ double plaquette_sum(field<SU<N,radix>> *U){
 
 template<typename SUN>
 double plaquette(field<SUN> *gauge){
-  return plaquette_sum(gauge)/(lattice->volume()*NDIM*(NDIM-1));
+  return plaquette_sum(gauge)/(lattice->volume()*NDIM*(NDIM-1)/2);
 }
 
 
