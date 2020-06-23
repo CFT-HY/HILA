@@ -125,6 +125,13 @@ class dirac_staggered {
     dirac_staggered(double m, field<matrix> (&g)[NDIM]) : gauge(g), mass(m)  {
       init_staggered_eta(staggered_eta);
     }
+    dirac_staggered(double m, gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
+      init_staggered_eta(staggered_eta);
+    }
+    dirac_staggered(double m, represented_gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
+      init_staggered_eta(staggered_eta);
+    }
+
 
     // Applies the operator to in
     void apply( const field<vector> & in, field<vector> & out){

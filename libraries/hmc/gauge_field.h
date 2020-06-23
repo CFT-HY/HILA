@@ -2,7 +2,8 @@
 #define GAUGE_FIELD_H
 
 
-
+#include "datatypes/sun.h"
+#include "datatypes/representations.h"
 
 
 /// Calculate the Polyakov loop for a given gauge field.
@@ -113,6 +114,7 @@ double plaquette_sum(field<squarematrix<N,radix>> *U){
 template<typename matrix>
 struct gauge_field {
   using gauge_type = matrix;
+  using fund_type = matrix;
   using basetype = typename matrix::base_type;
   static constexpr int N = matrix::size;
   field<matrix> gauge[NDIM];
@@ -128,6 +130,14 @@ struct gauge_field {
     }
   }
 
+  void random(){
+    foralldir(dir){
+      onsites(ALL){
+        gauge[dir][X].random();
+      }
+    }
+  }
+
   /// Gaussian random momentum for each element
   void draw_momentum(){
     foralldir(dir) {
@@ -135,6 +145,12 @@ struct gauge_field {
         if(disable_avx[X]==0){};
         momentum[dir][X].gaussian_algebra();
       }
+    }
+  }
+
+  void zero_momentum(){
+    foralldir(dir) {
+      momentum[dir][ALL]=0;
     }
   }
 
@@ -202,6 +218,14 @@ struct gauge_field {
   double polyakov(int dir){
     return polyakov_loop(dir, gauge);
   }
+
+
+  field<gauge_type> & get_momentum(int dir){
+    return momentum[dir];
+  }
+  field<gauge_type> & get_gauge(int dir){
+    return gauge[dir];
+  }
 };
 
 
@@ -236,6 +260,17 @@ struct represented_gauge_field {
     }
   }
 
+  void set_unity(){
+    fundamental.set_unity();
+    refresh();
+  }
+
+  void random(){
+    fundamental.random();
+    refresh();
+  }
+
+
   void add_momentum(field<squarematrix<N,cmplx<basetype>>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
@@ -252,6 +287,9 @@ struct represented_gauge_field {
   void draw_momentum(){
     fundamental.draw_momentum();
   }
+  void zero_momentum(){
+    fundamental.zero_momentum();
+  }
 
   // Make a backup of the fundamental gauge field
   // Again, this may get called twice.
@@ -262,6 +300,14 @@ struct represented_gauge_field {
   // Restore the previous backup
   void restore_backup(){
     fundamental.restore_backup();
+  }
+
+
+  field<fund_type> & get_momentum(int dir){
+    return fundamental.get_momentum(dir);
+  }
+  field<fund_type> & get_gauge(int dir){
+    return fundamental.get_gauge(dir);
   }
 };
 
