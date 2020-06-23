@@ -26,9 +26,9 @@ int main(int argc, char **argv){
 
   // Define gauge field and momentum field
   gauge_field<SU<N,double>> gauge;
-  represented_gauge_field<symmetric<N,double>> sym_gauge(gauge);
-  represented_gauge_field<antisymmetric<N,double>> antisym_gauge(gauge);
-  represented_gauge_field<adjoint<N,double>> adj_gauge(gauge);
+  symmetric_gauge_field<N,double> sym_gauge(gauge);
+  antisymmetric_gauge_field<N,double> antisym_gauge(gauge);
+  adjoint_gauge_field<N,double> adj_gauge(gauge);
 
   // Initialize the gauge field
   gauge.set_unity();

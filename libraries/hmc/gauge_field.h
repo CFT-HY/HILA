@@ -252,6 +252,13 @@ struct represented_gauge_field {
 };
 
 
+/* Shortcuts for represented gauge fields */
+template<int N, typename radix>
+using symmetric_gauge_field = represented_gauge_field<symmetric<N,radix>>;
+template<int N, typename radix>
+using antisymmetric_gauge_field = represented_gauge_field<antisymmetric<N,radix>>;
+template<int N, typename radix>
+using adjoint_gauge_field = represented_gauge_field<adjoint<N,radix>>;
 
 
 
