@@ -11,10 +11,10 @@
 template<typename gauge_field, typename DIRAC_OP>
 class fermion_action{
   public:
+    using vector_type = typename DIRAC_OP::vector_type;
     using momtype = squarematrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
     gauge_field &gauge;
     DIRAC_OP &D;
-    using vector_type = typename DIRAC_OP::vector_type;
     field<vector_type> chi;
 
 

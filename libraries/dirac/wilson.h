@@ -6,7 +6,7 @@
 #include "../datatypes/matrix.h"
 #include "../datatypes/wilson_vector.h"
 #include "../plumbing/field.h"
-
+#include "../hmc/gauge_field.h"
 
 
 template<int N, typename radix>
@@ -183,6 +183,8 @@ class Dirac_Wilson_evenodd {
 
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
+    Dirac_Wilson_evenodd(double k, gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
+    Dirac_Wilson_evenodd(double k, represented_gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
 
     // Applies the operator to in

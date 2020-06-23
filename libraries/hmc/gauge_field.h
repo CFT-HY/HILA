@@ -109,9 +109,10 @@ double plaquette(field<SUN> *gauge){
 
 
 
-// A conveniance class for a gauge field.
-// Contains an SU(N) matrix in each direction for the
-// gauge field and for the momentum
+/// A gauge field contains a SU(N) matrix in each
+/// direction for the gauge field and for the momentum.
+/// Defines methods for HMC to update the field and the 
+/// momentum.
 template<typename matrix>
 struct gauge_field {
   using gauge_type = matrix;
@@ -143,6 +144,7 @@ struct gauge_field {
   // This is the fundamental field, nothing to refresh
   void refresh(){}
 
+  /// Update the gauge field with time step eps
   void gauge_update(double eps){
     foralldir(dir){
       onsites(ALL){
@@ -153,6 +155,8 @@ struct gauge_field {
     }
   }
 
+  /// Project a force term to the algebra and add to the
+  /// mometum
   void add_momentum(field<squarematrix<N,cmplx<basetype>>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
@@ -192,6 +196,9 @@ struct gauge_field {
     outputfile.close();
   }
 };
+
+
+
 
 
 template<typename repr>
