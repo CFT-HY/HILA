@@ -95,10 +95,7 @@ double plaquette_sum(field<squarematrix<N,radix>> *U){
 }
 
 
-template<typename SUN>
-double plaquette(field<SUN> *gauge){
-  return plaquette_sum(gauge)/(lattice->volume()*NDIM*(NDIM-1)/2);
-}
+
 
 
 
@@ -194,6 +191,16 @@ struct gauge_field {
       write_fields(outputfile, gauge[dir]);
     }
     outputfile.close();
+  }
+
+  
+  // Simple measurables that only depend on the gauge field
+  double plaquette(){
+    return plaquette_sum(gauge)/(lattice->volume()*NDIM*(NDIM-1)/2);
+  }
+
+  double polyakov(int dir){
+    return polyakov_loop(dir, gauge);
   }
 };
 

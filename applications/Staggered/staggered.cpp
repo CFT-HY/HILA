@@ -68,7 +68,7 @@ int main(int argc, char **argv){
   // Run HMC using the integrator
   for(int step = 0; step < n_trajectories; step ++){
     update_hmc(integrator_level_2, hmc_steps, traj_length);
-    double plaq = plaquette(gauge.gauge);
+    double plaq = gauge.plaquette();
     output0 << "Plaq: " << plaq << "\n";
 
     gauge.write_file(configfile);
