@@ -51,13 +51,13 @@ HILA_GPU_OPTS = -I$(HILA_INCLUDE)
 
 build/%.cpt: %.cpp Makefile
 	mkdir -p build
-	$(HILAPP) $< $(MPI_OPTS) -o $@
+	$(HILAPP) $< $(OPTS) $(MPI_OPTS) -o $@
 
 build/%.o : build/%.cpt
-	$(CC) $(CXXFLAGS) $< -c -o $@
+	$(CC) $(CXXFLAGS) $(OPTS) $< -c -o $@
 
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
 	echo $(THIS_DIR)
-	$(HILAPP) $< -o $@
+	$(HILAPP) $< $(OPTS) -o $@
 
