@@ -34,7 +34,7 @@ int main(int argc, char **argv){
   gauge_action ga(gauge, beta);
 
   // Define a Dirac operator
-  Dirac_Wilson_evenodd<N*N-1, double, adjoint<N,double>> D(kappa, adj_gauge);
+  Dirac_Wilson_evenodd D(kappa, adj_gauge);
   fermion_action fa(D, adj_gauge); 
 
   // Build two integrator levels. Gauge is on the lowest level and

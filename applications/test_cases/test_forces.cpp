@@ -235,62 +235,60 @@ int main(int argc, char **argv){
     }
   }
 
-  using VEC=SU_vector<N, double>;
+
   using SUN=SU<N, double>;
   using adj=adjoint<N, double>;
-  using adjvec=SU_vector<adj::size, double>;
   using sym=symmetric<N, double>;
-  using symvec=SU_vector<sym::size, double>;
   using asym=antisymmetric<N, double>;
-  using asymvec=SU_vector<asym::size, double>;
 
+  // Define represented gauge fields for the Dirac force tests
+  represented_gauge_field<adj> adj_gauge(gauge);
+  represented_gauge_field<sym> sym_gauge(gauge);
+  represented_gauge_field<asym> asym_gauge(gauge);
 
 
   // Staggered Forces
   output0 << "Checking staggered forces:\n";
-  dirac_staggered<VEC, SUN> D_Stg(1.5, gauge);
-  check_forces<dirac_staggered<VEC, SUN>, gauge_field<SU<N,double>>>(D_Stg, gauge);
+  dirac_staggered D_Stg(1.5, gauge);
+  check_forces(D_Stg, gauge);
 
   output0 << "Checking evenodd preconditioned staggered forces:\n";
-  dirac_staggered_evenodd<VEC, SUN> D_Stg_eo(1.5, gauge);
-  check_forces<dirac_staggered_evenodd<VEC, SUN>,gauge_field<SU<N,double>>>(D_Stg_eo, gauge);
+  dirac_staggered_evenodd D_Stg_eo(1.5, gauge);
+  check_forces(D_Stg_eo, gauge);
 
   output0 << "Checking adjoint staggered forces:\n";
-  represented_gauge_field<adj> adj_gauge(gauge);
-  dirac_staggered_evenodd<adjvec, adj> D_stg_adj(1.5, adj_gauge);
-  check_forces<dirac_staggered_evenodd<adjvec, adj>,represented_gauge_field<adj>>(D_stg_adj, adj_gauge);
+  dirac_staggered_evenodd D_stg_adj(1.5, adj_gauge);
+  check_forces(D_stg_adj, adj_gauge);
 
   output0 << "Checking symmetric staggered forces:\n";
-  represented_gauge_field<sym> sym_gauge(gauge);
-  dirac_staggered_evenodd<symvec, sym> D_stg_sym(1.5, sym_gauge);
-  check_forces<dirac_staggered_evenodd<symvec, sym>,represented_gauge_field<sym>>(D_stg_sym, sym_gauge);
+  dirac_staggered_evenodd D_stg_sym(1.5, sym_gauge);
+  check_forces(D_stg_sym, sym_gauge);
 
   output0 << "Checking antisymmetric staggered forces:\n";
-  represented_gauge_field<asym> asym_gauge(gauge);
-  dirac_staggered_evenodd<asymvec, asym> D_stg_asym(1.5, asym_gauge);
-  check_forces<dirac_staggered_evenodd<asymvec, asym>,represented_gauge_field<asym>>(D_stg_asym, asym_gauge);
+  dirac_staggered_evenodd D_stg_asym(1.5, asym_gauge);
+  check_forces(D_stg_asym, asym_gauge);
   
 
   // Wilson forces
   output0 << "Checking evenodd preconditioned Wilson forces:\n";
-  Dirac_Wilson<N, double, SUN> D_W(0.05, gauge);
-  check_forces<Dirac_Wilson<N, double, SUN>, gauge_field<SU<N,double>>>(D_W, gauge);
+  Dirac_Wilson D_W(0.05, gauge);
+  check_forces(D_W, gauge);
 
   output0 << "Checking evenodd preconditioned Wilson forces:\n";
-  Dirac_Wilson_evenodd<N, double, SUN> D_W_eo(0.05, gauge);
-  check_forces<Dirac_Wilson_evenodd<N, double, SUN>, gauge_field<SU<N,double>>>(D_W_eo, gauge);
+  Dirac_Wilson_evenodd D_W_eo(0.05, gauge);
+  check_forces(D_W_eo, gauge);
 
   output0 << "Checking adjoint Wilson forces:\n";
-  Dirac_Wilson_evenodd<adj::size, double, adj> D_W_adj(0.05, adj_gauge);
-  check_forces<Dirac_Wilson_evenodd<adj::size, double, adj>,represented_gauge_field<adj>>(D_W_adj, adj_gauge);
+  Dirac_Wilson_evenodd D_W_adj(0.05, adj_gauge);
+  check_forces(D_W_adj, adj_gauge);
 
   output0 << "Checking symmetric Wilson forces:\n";
-  Dirac_Wilson_evenodd<sym::size, double, sym> D_W_sym(0.05, sym_gauge);
-  check_forces<Dirac_Wilson_evenodd<sym::size, double, sym>,represented_gauge_field<sym>>(D_W_sym, sym_gauge);
+  Dirac_Wilson_evenodd D_W_sym(0.05, sym_gauge);
+  check_forces(D_W_sym, sym_gauge);
 
   output0 << "Checking antisymmetric Wilson forces:\n";
-  Dirac_Wilson_evenodd<asym::size, double, asym> D_W_asym(0.05, asym_gauge);
-  check_forces<Dirac_Wilson_evenodd<asym::size, double, asym>,represented_gauge_field<asym>>(D_W_asym, asym_gauge);
+  Dirac_Wilson_evenodd D_W_asym(0.05, asym_gauge);
+  check_forces(D_W_asym, asym_gauge);
 
 
   // Check also the momentum action and derivative
