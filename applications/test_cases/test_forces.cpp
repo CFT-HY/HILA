@@ -281,15 +281,15 @@ int main(int argc, char **argv){
   check_forces<Dirac_Wilson_evenodd<N, double, SUN>, gauge_field<SU<N,double>>>(D_W_eo, gauge);
 
   output0 << "Checking adjoint Wilson forces:\n";
-  Dirac_Wilson_evenodd<adj::size, double, adj> D_W_adj(1.5, adj_gauge);
+  Dirac_Wilson_evenodd<adj::size, double, adj> D_W_adj(0.05, adj_gauge);
   check_forces<Dirac_Wilson_evenodd<adj::size, double, adj>,represented_gauge_field<adj>>(D_W_adj, adj_gauge);
 
   output0 << "Checking symmetric Wilson forces:\n";
-  Dirac_Wilson_evenodd<sym::size, double, sym> D_W_sym(1.5, sym_gauge);
+  Dirac_Wilson_evenodd<sym::size, double, sym> D_W_sym(0.05, sym_gauge);
   check_forces<Dirac_Wilson_evenodd<sym::size, double, sym>,represented_gauge_field<sym>>(D_W_sym, sym_gauge);
 
   output0 << "Checking antisymmetric Wilson forces:\n";
-  Dirac_Wilson_evenodd<asym::size, double, asym> D_W_asym(1.5, asym_gauge);
+  Dirac_Wilson_evenodd<asym::size, double, asym> D_W_asym(0.05, asym_gauge);
   check_forces<Dirac_Wilson_evenodd<asym::size, double, asym>,represented_gauge_field<asym>>(D_W_asym, asym_gauge);
 
 
