@@ -1206,17 +1206,15 @@ void field<T>::set_element( T element, coordinate_vector coord) {
 /// This is not local, the element needs to be communicated to all nodes
 template<typename T>
 T field<T>::get_element( coordinate_vector coord) const {
-  T send_element, receive_element;
+  T element;
   int owner = lattice->node_rank(coord);
 
   if( mynode() == owner ){
-    send_element = get_value_at( lattice->site_index(coord) );
+    element = get_value_at( lattice->site_index(coord) );
   }
 
-  MPI_Scatter( &send_element, sizeof(T), MPI_BYTE, &receive_element, sizeof(T),
-                   MPI_BYTE, owner, MPI_COMM_WORLD);
-
-  return receive_element;
+  MPI_Bcast( &element, sizeof(T), MPI_BYTE, owner, MPI_COMM_WORLD);
+  return element;
 }
 
 
@@ -1240,20 +1238,17 @@ void field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_
   for(int n=0; n<nodelist.size(); n++){
     node_site_list_struct node = nodelist[n];
     if(node.indexes.size() > 0){
-      T * receive_elements = (T *) malloc( sizeof(T)*node.indexes.size() );
-      T * send_elements = (T *) malloc( sizeof(T)*node.indexes.size() );
-      fs->payload.gather_elements( send_elements, node.coords);
+      T * element_buffer = (T *) malloc( sizeof(T)*node.indexes.size() );
+      fs->payload.gather_elements( element_buffer, node.coords);
 
-      MPI_Scatter( &send_elements, sizeof(T), MPI_BYTE, &receive_elements, sizeof(T),
-                   MPI_BYTE, n, MPI_COMM_WORLD);
+      MPI_Bcast( &element_buffer, sizeof(T), MPI_BYTE, n, MPI_COMM_WORLD);
 
       // place in the array in original order
       for( int i=0; i<node.indexes.size(); i++){
-        elements[i] = receive_elements[node.indexes[i]];
+        elements[i] = element_buffer[node.indexes[i]];
       }
 
-      free(receive_elements);
-      free(send_elements);
+      free(element_buffer);
     }
   }
 }
