@@ -1195,11 +1195,7 @@ void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_
 template<typename T>
 void field<T>::set_element( T element, coordinate_vector coord) {
   if( lattice->is_on_node(coord) ){
-    #ifdef VECTORIZED
-    fs->set_element( element, lattice->site_index(coord));
-    #else
-    fs->set( element, lattice->site_index(coord));
-    #endif
+    set_value_at( element, lattice->site_index(coord));
   }
 }
 
@@ -1214,7 +1210,7 @@ T field<T>::get_element( coordinate_vector coord) const {
   int owner = lattice->node_rank(coord);
 
   if( mynode() == owner ){
-    send_element = fs->get( lattice->site_index(coord) );
+    send_element = get_value_at( lattice->site_index(coord) );
   }
 
   MPI_Scatter( &send_element, sizeof(T), MPI_BYTE, &receive_element, sizeof(T),
@@ -1267,7 +1263,7 @@ void field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_
 /// Without MPI, we just need to call get
 template<typename T>
 T field<T>::get_element( coordinate_vector coord) const {
-  return fs->get( lattice->site_index(coord) );
+  return get_value_at( lattice->site_index(coord) );
 }
 
 /// Without MPI, we just need to call get
