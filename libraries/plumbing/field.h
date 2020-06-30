@@ -1187,7 +1187,7 @@ void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_
       my_elements.push_back(elements[i]);
     }
   }
-  fs->place_elements(my_elements.data(), my_indexes.data(), my_indexes.size(), lattice);
+  fs->payload.place_elements(my_elements.data(), my_indexes.data(), my_indexes.size(), lattice);
 }
 
 // Set a single element. Assuming that each node calls this with the same value, it is
@@ -1195,7 +1195,11 @@ void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_
 template<typename T>
 void field<T>::set_element( T element, coordinate_vector coord) {
   if( lattice->is_on_node(coord) ){
+    #ifdef VECTORIZED
+    fs->set_element( element, lattice->site_index(coord));
+    #else
     fs->set( element, lattice->site_index(coord));
+    #endif
   }
 }
 
