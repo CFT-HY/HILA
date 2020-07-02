@@ -3,10 +3,11 @@
 #include "datatypes/sun.h"
 #include "datatypes/representations.h"
 #include "plumbing/field.h"
-#include "dirac/staggered.h"
-#include "dirac/wilson.h"
 #include "hmc/update.h"
 #include "hmc/gauge_field.h"
+#include "hmc/smearing.h"
+#include "dirac/wilson.h"
+#include "dirac/staggered.h"
 #include "hmc/fermion_field.h"
 
 constexpr int N = 2;
@@ -82,11 +83,11 @@ void check_forces(dirac &D, gauge_field_type &gauge){
     double diff = f2-f1;
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << f2 << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      hila::output << "Action 1 " << s1 << "\n";
+      hila::output << "Action 2 " << s2 << "\n";
+      hila::output << "Calculated deriv " << f2 << "\n";
+      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps*10 && "Fermion deriv" );
     }
 
@@ -245,6 +246,7 @@ int main(int argc, char **argv){
   represented_gauge_field<adj> adj_gauge(gauge);
   represented_gauge_field<sym> sym_gauge(gauge);
   represented_gauge_field<asym> asym_gauge(gauge);
+  stout_smeared_field<SUN> stout_gauge(gauge, 0.01);
 
 
   // Staggered Forces
@@ -255,6 +257,10 @@ int main(int argc, char **argv){
   output0 << "Checking evenodd preconditioned staggered forces:\n";
   dirac_staggered_evenodd D_Stg_eo(1.5, gauge);
   check_forces(D_Stg_eo, gauge);
+
+  output0 << "Checking stout smeared forces:\n";
+  dirac_staggered_evenodd D_stg_stout(1.5, stout_gauge);
+  check_forces(D_stg_stout, stout_gauge);
 
   output0 << "Checking adjoint staggered forces:\n";
   dirac_staggered_evenodd D_stg_adj(1.5, adj_gauge);
