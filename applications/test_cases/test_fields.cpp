@@ -154,7 +154,7 @@ int main(int argc, char **argv){
     }
     s1.set_element(cmplx<double>(1), coord);
     cmplx<double> elem = s1.get_element(coord);
-    assert(elem.re == 1 && elem.im==0);
+    assert(elem.re == 1 && elem.im==0 && "set_element");
 
     // Now try setting on a different node, if the lattice is split
     foralldir(d) {
@@ -162,7 +162,7 @@ int main(int argc, char **argv){
     }
     s1.set_element(cmplx<double>(1), coord);
     elem = s1.get_element(coord);
-    assert(elem.re == 1 && elem.im==0);
+    assert(elem.re == 1 && elem.im==0  && "set_element on other node");
 
 
     // Now try actually moving the data

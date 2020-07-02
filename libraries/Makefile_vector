@@ -41,7 +41,7 @@ HILA_LD_FLAGS = -lfftw3 -lm
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
 	echo $(THIS_DIR)
-	$(HILAPP) $< -o $@
+	$(HILAPP) $< $(OPTS) -o $@
 
 # Standard rules for creating and building cpt files. These
 # build .o files in the build folder by first running them
@@ -49,13 +49,13 @@ build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
 
 build/%.cpt: %.cpp Makefile
 	mkdir -p build
-	$(HILAPP) $< $(MPI_OPTS) -o $@
+	$(HILAPP) $< $(OPTS) $(MPI_OPTS) -o $@
 
 build/%.o : build/%.cpt
-	$(CC) $(CXXFLAGS) $< -c -o $@
+	$(CC) $(CXXFLAGS) $(OPTS) $< -c -o $@
 
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
 	echo $(THIS_DIR)
-	$(HILAPP) $< -o $@
+	$(HILAPP) $< $(OPTS) -o $@
 

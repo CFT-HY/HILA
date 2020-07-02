@@ -6,8 +6,7 @@
 #include "datatypes/matrix.h"
 #include "datatypes/wilson_vector.h"
 #include "plumbing/field.h"
-
-
+#include "hmc/gauge_field.h"
 
 template<int N, typename radix>
 field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[NDIM];
@@ -106,7 +105,7 @@ inline void Dirac_Wilson_calc_force(
 
 
 
-template<int N, typename radix, typename matrix>
+template<typename matrix>
 class Dirac_Wilson {
   private:
     double kappa;
@@ -115,7 +114,8 @@ class Dirac_Wilson {
     field<matrix> (&gauge)[NDIM];
   
   public:
-
+    static constexpr int N = matrix::size;
+    using radix = typename matrix::base_type;
     using vector_type = Wilson_vector<N, radix>;
     using matrix_type = matrix;
 
@@ -124,6 +124,8 @@ class Dirac_Wilson {
     // Constructor: initialize mass and gauge
     Dirac_Wilson(Dirac_Wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
+    Dirac_Wilson(double k, gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
+    Dirac_Wilson(double k, represented_gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
     // Applies the operator to in
     inline void apply( const field<vector_type> & in, field<vector_type> & out){
@@ -148,7 +150,7 @@ class Dirac_Wilson {
 
 // Multiplying from the left applies the standard Dirac operator
 template<int N, typename radix, typename matrix>
-field<Wilson_vector<N, radix>> operator* (Dirac_Wilson<N, radix, matrix> D, const field<Wilson_vector<N, radix>> & in) {
+field<Wilson_vector<N, radix>> operator* (Dirac_Wilson<matrix> D, const field<Wilson_vector<N, radix>> & in) {
   field<Wilson_vector<N, radix>> out;
   D.apply(in, out);
   return out;
@@ -156,7 +158,7 @@ field<Wilson_vector<N, radix>> operator* (Dirac_Wilson<N, radix, matrix> D, cons
 
 // Multiplying from the right applies the conjugate
 template<int N, typename radix, typename matrix>
-field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> & in, Dirac_Wilson<N, radix, matrix> D) {
+field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> & in, Dirac_Wilson<matrix> D) {
   field<Wilson_vector<N, radix>> out;
   D.dagger(in, out);
   return out;
@@ -168,12 +170,14 @@ field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> &
 
 
 
-template<int N, typename radix, typename matrix>
+template<typename matrix>
 class Dirac_Wilson_evenodd {
   private:
     double kappa;
     field<matrix> (&gauge)[NDIM];
   public:
+    static constexpr int N = matrix::size;
+    using radix = typename matrix::base_type;
 
     using vector_type = Wilson_vector<N, radix>;
     using matrix_type = matrix;
@@ -183,6 +187,8 @@ class Dirac_Wilson_evenodd {
 
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
+    Dirac_Wilson_evenodd(double k, gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
+    Dirac_Wilson_evenodd(double k, represented_gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
 
     // Applies the operator to in

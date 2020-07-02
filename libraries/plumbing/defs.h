@@ -13,6 +13,12 @@
 #include <mpi.h>
 #endif
 
+#ifdef HILAPP
+// The compiler is hilapp
+#define __device__
+#define __host__
+#endif
+
 #include "plumbing/mersenne.h"
 #include "plumbing/memalloc.h"   // memory allocator
 

@@ -6,7 +6,7 @@
 #include "datatypes/matrix.h"
 #include "datatypes/sun.h"
 #include "plumbing/field.h"
-
+#include "hmc/gauge_field.h"
 
 template<typename vector>
 field<vector> staggered_dirac_temp[NDIM];
@@ -104,17 +104,17 @@ void dirac_staggered_calc_force(
 
 
 
-template<typename vector, typename matrix>
+template<typename matrix>
 class dirac_staggered {
   private:
     double mass;
     field<double> staggered_eta[NDIM];
 
   public:
+    using vector_type = SU_vector<matrix::size, typename matrix::base_type>;
+    using matrix_type = matrix;
     field<matrix> (&gauge)[NDIM];
 
-    using vector_type = vector;
-    using matrix_type = matrix;
     parity par = ALL;
 
     // Constructor: initialize mass, gauge and eta
@@ -125,16 +125,23 @@ class dirac_staggered {
     dirac_staggered(double m, field<matrix> (&g)[NDIM]) : gauge(g), mass(m)  {
       init_staggered_eta(staggered_eta);
     }
+    dirac_staggered(double m, gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
+      init_staggered_eta(staggered_eta);
+    }
+    dirac_staggered(double m, represented_gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
+      init_staggered_eta(staggered_eta);
+    }
+
 
     // Applies the operator to in
-    void apply( const field<vector> & in, field<vector> & out){
+    void apply( const field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       dirac_staggered_diag(mass, in, out, ALL);
       dirac_staggered_hop(gauge, in, out, staggered_eta, ALL, 1);
     }
 
     // Applies the conjugate of the operator
-    void dagger( const field<vector> & in, field<vector> & out){
+    void dagger( const field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       dirac_staggered_diag(mass, in, out, ALL);
       dirac_staggered_hop(gauge, in, out, staggered_eta, ALL, -1);
@@ -143,7 +150,7 @@ class dirac_staggered {
     // Applies the derivative of the Dirac operator with respect
     // to the gauge field
     template<typename momtype>
-    void force( const field<vector> & chi, const field<vector> & psi, field<momtype> (&force)[NDIM], int sign=1){
+    void force( const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign=1){
       dirac_staggered_calc_force(gauge, chi, psi, force, staggered_eta, sign, ALL);
     }
 };
@@ -152,7 +159,7 @@ class dirac_staggered {
 
 // Multiplying from the left applies the standard Dirac operator
 template<typename vector, typename matrix>
-field<vector> operator* (dirac_staggered<field<vector>, field<matrix>> D, const field<vector> & in) {
+field<vector> operator* (dirac_staggered<matrix> D, const field<vector> & in) {
   field<vector> out;
   out.copy_boundary_condition(in);
   D.apply(in, out);
@@ -161,7 +168,7 @@ field<vector> operator* (dirac_staggered<field<vector>, field<matrix>> D, const 
 
 // Multiplying from the right applies the conjugate
 template<typename vector, typename matrix>
-field<vector> operator* (const field<vector> & in, dirac_staggered<field<vector>, field<matrix>> D) {
+field<vector> operator* (const field<vector> & in, dirac_staggered<vector> D) {
   field<vector> out;
   out.copy_boundary_condition(in);
   D.dagger(in, out);
@@ -171,7 +178,7 @@ field<vector> operator* (const field<vector> & in, dirac_staggered<field<vector>
 
 
 
-template<typename vector, typename matrix>
+template<typename matrix>
 class dirac_staggered_evenodd {
   private:
     double mass;
@@ -179,8 +186,7 @@ class dirac_staggered_evenodd {
 
     field<matrix> (&gauge)[NDIM];
   public:
-
-    using vector_type = vector;
+    using vector_type = SU_vector<matrix::size, typename matrix::base_type>;
     using matrix_type = matrix;
 
     parity par = EVEN;
@@ -189,6 +195,12 @@ class dirac_staggered_evenodd {
       init_staggered_eta(staggered_eta);
     }
     dirac_staggered_evenodd(double m, field<matrix> (&U)[NDIM]) : gauge(U), mass(m) {
+      init_staggered_eta(staggered_eta);
+    }
+    dirac_staggered_evenodd(double m, gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
+      init_staggered_eta(staggered_eta);
+    }
+    dirac_staggered_evenodd(double m, represented_gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
       init_staggered_eta(staggered_eta);
     }
 

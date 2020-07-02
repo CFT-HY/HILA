@@ -76,7 +76,7 @@ int main(int argc, char **argv){
 
   // Check conjugate of the staggered Dirac operator
   {
-    using dirac = dirac_staggered<SU_vector<N, double>, SU<N>>;
+    using dirac = dirac_staggered<SU<N>>;
     dirac D(0.1, U);
     field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<SU_vector<N, double>> sol;
@@ -113,8 +113,7 @@ int main(int argc, char **argv){
 
   // Check conjugate of the wilson Dirac operator
   {
-    using VEC = SU_vector<N, double>;
-    using dirac = Dirac_Wilson<N, double, SU<N, double>>;
+    using dirac = Dirac_Wilson<SU<N, double>>;
     dirac D(0.05, U);
     field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<Wilson_vector<N, double>> sol;
@@ -151,7 +150,7 @@ int main(int argc, char **argv){
 
   // Check conjugate of the even-odd preconditioned staggered Dirac operator
   {
-    using dirac = dirac_staggered_evenodd<SU_vector<N, double>, SU<N>>;
+    using dirac = dirac_staggered_evenodd<SU<N>>;
     dirac D(1.5, U);
     field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<SU_vector<N, double>> sol;
@@ -187,8 +186,7 @@ int main(int argc, char **argv){
 
   // Check conjugate of the even-odd preconditioned wilson Dirac operator
   {
-    using VEC = SU_vector<N, double>;
-    using dirac = Dirac_Wilson_evenodd<N, double, SU<N>>;
+    using dirac = Dirac_Wilson_evenodd<SU<N>>;
     dirac D(0.1, U);
     field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     field<Wilson_vector<N, double>> sol;
