@@ -1188,6 +1188,7 @@ void field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_
     }
   }
   fs->payload.place_elements(my_elements.data(), my_indexes.data(), my_indexes.size(), lattice);
+  mark_changed(ALL);
 }
 
 // Set a single element. Assuming that each node calls this with the same value, it is
@@ -1197,6 +1198,7 @@ void field<T>::set_element( T element, coordinate_vector coord) {
   if( lattice->is_on_node(coord) ){
     set_value_at( element, lattice->site_index(coord));
   }
+  mark_changed(ALL);
 }
 
 
