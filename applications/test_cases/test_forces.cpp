@@ -25,14 +25,16 @@ void check_forces(dirac &D, gauge_field_type &gauge){
   fermion_action fa(D, gauge);
 
   for(int ng = 0; ng < 1 ; ng++ ){ //matrix::generator_count(); ng++){
-    gauge.set_unity();
+    //gauge.set_unity();
     fa.draw_gaussian_fields();
     gauge.zero_momentum();
     foralldir(dir){
       force[dir][ALL] = 0;
     }
 
-    sun g1 = gauge.get_gauge(0).get_value_at(50);
+    coordinate_vector coord(0);
+
+    sun g1 = gauge.get_gauge(0).get_element(coord);
     sun h = sun(1) + cmplx(0, eps) * sun::generator(ng);
     sun g12 = h*g1;
 
@@ -57,10 +59,7 @@ void check_forces(dirac &D, gauge_field_type &gauge){
       s1 += chi[X].rdot(tmp[X]);
     }
 
-    if(mynode()==0){
-      gauge.get_gauge(0).set_value_at(g12,50);
-    }
-    gauge.get_gauge(0).mark_changed(ALL);
+    gauge.get_gauge(0).set_element(g12, coord);
     gauge.refresh();
 
     double s2 = 0;
@@ -69,26 +68,24 @@ void check_forces(dirac &D, gauge_field_type &gauge){
       s2 += chi[X].rdot(tmp[X]);
     }
 
-    if(mynode()==0)
-      gauge.get_gauge(0).set_value_at(g1, 50);
-    gauge.get_gauge(0).mark_changed(ALL);
+    gauge.get_gauge(0).set_element(g1, coord);
     gauge.refresh();
 
     D.force(chi, psi, force, 1);
 
     gauge.add_momentum(force);
-    sun f = gauge.get_momentum(0).get_value_at(50);
+    sun f = gauge.get_momentum(0).get_element(coord);
     double f1 = (s2-s1)/eps;
     double f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
     double diff = f2-f1;
 
     if(mynode()==0) {
-      hila::output << "Action 1 " << s1 << "\n";
-      hila::output << "Action 2 " << s2 << "\n";
-      hila::output << "Calculated deriv " << f2 << "\n";
-      hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Fermion deriv" );
+      //hila::output << "Action 1 " << s1 << "\n";
+      //hila::output << "Action 2 " << s2 << "\n";
+      //hila::output << "Calculated deriv " << f2 << "\n";
+      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
+      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps && "Fermion deriv" );
     }
 
 
@@ -106,10 +103,7 @@ void check_forces(dirac &D, gauge_field_type &gauge){
       s1 += chi[X].rdot(tmp[X]);
     }
 
-    if(mynode()==0){
-      gauge.get_gauge(0).set_value_at(g12,50);
-    }
-    gauge.get_gauge(0).mark_changed(ALL);
+    gauge.get_gauge(0).set_element(g12, coord);
     gauge.refresh();
 
     s2 = 0;
@@ -118,14 +112,12 @@ void check_forces(dirac &D, gauge_field_type &gauge){
       s2 += chi[X].rdot(tmp[X]);
     }
 
-    if(mynode()==0)
-      gauge.get_gauge(0).set_value_at(g1, 50);
-    gauge.get_gauge(0).mark_changed(ALL);
+    gauge.get_gauge(0).set_element(g1, coord);
     gauge.refresh();
 
     D.force(chi, psi, force, -1);
     gauge.add_momentum(force);
-    f = gauge.get_momentum(0).get_value_at(50);
+    f = gauge.get_momentum(0).get_element(coord);
     f1 = (s2-s1)/eps;
     f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
     diff = f2-f1;
@@ -136,27 +128,22 @@ void check_forces(dirac &D, gauge_field_type &gauge){
       //hila::output << "Calculated deriv " << f2 << "\n";
       //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
       //hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Fermion dg deriv" );
+      assert( diff*diff < eps && "Fermion dg deriv" );
     }
 
 
     gauge.zero_momentum();
 
-    if(mynode()==0){
-      gauge.get_gauge(0).set_value_at(g12,50);
-    }
-    gauge.get_gauge(0).mark_changed(ALL);
+    gauge.get_gauge(0).set_element(g12, coord);
     gauge.refresh();
     s2 = fa.action();
 
-    if(mynode()==0)
-      gauge.get_gauge(0).set_value_at(g1, 50);
-    gauge.get_gauge(0).mark_changed(ALL);
+    gauge.get_gauge(0).set_element(g1, coord);
     gauge.refresh();
     s1 = fa.action();
 
     fa.force_step(1.0);
-    f = gauge.get_momentum(0).get_value_at(50);
+    f = gauge.get_momentum(0).get_element(coord);
     f1 = (s2-s1)/eps;
     f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
     diff = f2-f1;
