@@ -100,7 +100,7 @@ inline void Dirac_Wilson_calc_force(
       ( vtemp[1][X+dir].expand(dir, sign) ).outer_product(chi[X])
     );
 
-    out[dir][ALL] = gauge[dir][X]*out[dir][X];
+    //out[dir][ALL] = gauge[dir][X]*out[dir][X];
   }
 }
 

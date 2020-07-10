@@ -44,7 +44,7 @@ field<SUN> calc_staples(field<SUN> (&U)[NDIM], direction dir)
   field<SUN> staple_sum;
   static field<SUN> down_staple;
   staple_sum[ALL] = 0;
-  foralldir(dir2){
+  foralldir(dir2) if(dir2!=dir) {
     //Calculate the down side staple.
     //This will be communicated up.
     down_staple[ALL] = U[dir2][X+dir].conjugate()
@@ -60,7 +60,6 @@ field<SUN> calc_staples(field<SUN> (&U)[NDIM], direction dir)
   }
   return staple_sum;
 }
-
 
 
 
@@ -173,6 +172,7 @@ struct gauge_field {
   void add_momentum(field<squarematrix<N,cmplx<basetype>>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
+        force[dir][X] = gauge[dir][X]*force[dir][X];
         project_antihermitean(force[dir][X]);
         momentum[dir][X] = momentum[dir][X] + force[dir][X];
       }
@@ -276,7 +276,7 @@ struct represented_gauge_field {
       onsites(ALL){
         if(disable_avx[X]==0){};
         element<fund_type> fforce;
-        fforce = repr::project_force(force[dir][X]);
+        fforce = repr::project_force(gauge[dir][X]*force[dir][X]);
         fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce;
       }
     }
