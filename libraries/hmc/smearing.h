@@ -115,6 +115,14 @@ struct stout_smeared_field {
     smeared_fields[smear_steps-1]  = &(gauge[0]);
   }
 
+  ~stout_smeared_field() {
+    for(int step=0; step<smear_steps-1; step++){
+      delete staples[step];
+      delete smeared_fields[step];
+    }
+    free(staples); free(smeared_fields);
+  }
+
 
   // Represent the fields
   void refresh(){
