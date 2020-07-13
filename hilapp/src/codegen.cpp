@@ -137,7 +137,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
   }
 
   // change the f[X+offset] -references, generate code
-  handle_field_plus_offsets( code, loopBuf, parity_name );
+  handle_field_plus_offsets( code, loopBuf, parity_in_this_loop );
 
   bool first = true;
   bool generate_wait_loops;
@@ -249,6 +249,7 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
         // make new field info for new variable 
         field_info new_fi;
         new_fi.type_template = it->type_template;
+        new_fi.element_type = it->element_type;
         new_fi.old_name = new_fi.new_name = offset_field_name;
         new_fi.loop_ref_name = offset_field_name + "_index";
         new_fi.ref_list = d.ref_list;
