@@ -7,6 +7,67 @@
 
 
 
+// Calculate the exponential of Q and the matrix lambda=d/dQ (e^Q m0) 
+template<typename sun>
+void exp_and_derivative(sun &Q, sun &m0, sun &lambda, sun &eQ, int exp_steps){
+  sun m1, qn;
+  eQ=1; qn=Q;
+  double n=1.0;
+  m1 = m0;
+  if(exp_steps==0){
+    lambda = 0;
+  } else {
+    lambda = m1;
+    eQ=eQ+Q;
+  }
+  // gamma matrix (morningstar paper, eq 74)
+  for(int k=2; k<=exp_steps; k++){
+    n=n*1.0/((double)k);
+    m1 = m0*qn+Q*m1;
+    qn = qn*Q;
+    eQ = eQ+n*qn;
+    // lambda = 1/(n+1)!*m1
+    //output0 << " * " << 1.0/n << "\n";
+    lambda = lambda + m1*n;
+  }
+}
+
+
+// Calculate the derivative of with respect to the links a positive and negative staple and add to result
+template<typename matrix, typename forcetype>
+void staple_dir_derivative(field<matrix> *basegauge, field<matrix> (&Lambda)[NDIM], field<forcetype> *result, direction dir1, direction dir2){
+  field<matrix> stapleder2, stapleder3; // Two derivatives that need to be communicated
+  
+  onsites(ALL){
+    element<matrix> U1, U2, U3, U4, L, L2;
+    U1 = basegauge[dir1][X];
+    U2 = basegauge[dir2][X+dir1];
+    U3 = basegauge[dir1][X+dir2];
+    U4 = basegauge[dir2][X];
+    L = Lambda[dir1][X];
+    L2 = Lambda[dir1][X+dir2];
+
+    // Up staple
+    result[dir2][X] += (L*U2*U3.conjugate()).conjugate();
+    stapleder2[X] = U3.conjugate()*U4.conjugate()*L;
+    stapleder3[X] = (U4.conjugate()*L*U2).conjugate();
+
+    // Down staple
+    stapleder2[X] = stapleder2[X] + L2.conjugate()*U4.conjugate()*U1;
+    result[dir1][X] += U2*L2.conjugate()*U4.conjugate();
+    result[dir2][X] += L2*U2.conjugate()*U1.conjugate();
+  }
+
+  // Move derivatives up where necessary
+  onsites(ALL){
+    result[dir2][X] += stapleder2[X-dir1];
+    result[dir1][X] += stapleder3[X-dir2];
+  }
+}
+
+
+
+
 
 
 template<typename sun>
@@ -109,41 +170,23 @@ struct stout_smeared_field {
         basegauge = &fundamental.gauge[0];
       } else {
         basegauge = smeared_fields[step-1];
-      }
+      } 
 
       // Take the derivative of the exponential
       foralldir(dir){
         result[dir][ALL] = 0;
         onsites(ALL){
-          element<sun> m0, m1, qn, ex1, Q;
+          element<sun> m0, m1, qn, eQ, Q;
           Q = -c*basegauge[dir][X]*staples[step][dir][X];
           project_antihermitean(Q);
 
-          ex1=1; qn=Q;
-          double n=1.0;
           m0 = previous[dir][X]*basegauge[dir][X];
-          m1 = m0;
-          if(exp_steps==0){
-            Lambda[dir][X] = 0;
-          } else {
-            Lambda[dir][X] = m1;
-            ex1=ex1+Q;
-          }
-          // gamma matrix (morningstar paper, eq 74)
-          for(int k=2; k<=exp_steps; k++){
-            n=n*1.0/((double)k);
-            m1 = m0*qn+Q*m1;
-            qn = qn*Q;
-            ex1 = ex1+n*qn; //ex1 = e^(iQ)
-            // lambda = 1/(n+1)!*m1
-            //output0 << " * " << 1.0/n << "\n";
-
-            Lambda[dir][X] = Lambda[dir][X] + m1*n;
-          }
+          exp_and_derivative(Q, m0, Lambda[dir][X], eQ, exp_steps);
+          
           project_antihermitean(Lambda[dir][X]);
 
           // First derivative term, R in R*exp(Q)*L
-          result[dir][X] = ex1*previous[dir][X]; 
+          result[dir][X] = eQ*previous[dir][X]; 
 
           // second derivative term, the first link in the plaquette
           result[dir][X] -= c*staples[step][dir][X]*Lambda[dir][X];
@@ -155,32 +198,7 @@ struct stout_smeared_field {
 
       // Take the derivetive with respect to the links in the staples
       foralldir(dir1) foralldir(dir2) if(dir1!=dir2){
-        field<sun> stapleder2, stapleder3; // Two derivatives that need to be communicated
-        onsites(ALL){
-          element<sun> U1, U2, U3, U4, L, L2;
-          U1 = basegauge[dir1][X];
-          U2 = basegauge[dir2][X+dir1];
-          U3 = basegauge[dir1][X+dir2];
-          U4 = basegauge[dir2][X];
-          L = Lambda[dir1][X];
-          L2 = Lambda[dir1][X+dir2];
-
-          // Up staple
-          result[dir2][X] += (L*U2*U3.conjugate()).conjugate();
-          stapleder2[X] = U3.conjugate()*U4.conjugate()*L;
-          stapleder3[X] = (U4.conjugate()*L*U2).conjugate();
-
-          // Down staple
-          stapleder2[X] = stapleder2[X] + L2.conjugate()*U4.conjugate()*U1;
-          result[dir1][X] += U2*L2.conjugate()*U4.conjugate();
-          result[dir2][X] += L2*U2.conjugate()*U1.conjugate();
-        }
-
-        // Move derivatives up where necessary
-        onsites(ALL){
-          result[dir2][X] += stapleder2[X-dir1];
-          result[dir1][X] += stapleder3[X-dir2];
-        }
+        staple_dir_derivative(basegauge, Lambda, result, dir1, dir2);
       }
 
       // Swap previous and result for the next iteration
