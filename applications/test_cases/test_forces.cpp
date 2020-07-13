@@ -233,7 +233,7 @@ int main(int argc, char **argv){
   represented_gauge_field<adj> adj_gauge(gauge);
   represented_gauge_field<sym> sym_gauge(gauge);
   represented_gauge_field<asym> asym_gauge(gauge);
-  stout_smeared_field<SUN> stout_gauge(gauge, 0.1, 1, 10);
+  stout_smeared_field<SUN> stout_gauge(gauge, 0.1, 4, 10);
 
   // Staggered Forces
   output0 << "Checking staggered forces:\n";

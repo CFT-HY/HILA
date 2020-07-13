@@ -39,7 +39,7 @@ double polyakov_loop(direction dir, field<SU<N>> (&gauge)[NDIM]){
 
 /// Calculate the sum of staples connected to links in direction dir 
 template<typename SUN>
-field<SUN> calc_staples(field<SUN> (&U)[NDIM], direction dir)
+field<SUN> calc_staples(field<SUN> *U, direction dir)
 {
   field<SUN> staple_sum;
   static field<SUN> down_staple;
@@ -60,6 +60,7 @@ field<SUN> calc_staples(field<SUN> (&U)[NDIM], direction dir)
   }
   return staple_sum;
 }
+
 
 
 
@@ -169,7 +170,7 @@ struct gauge_field {
 
   /// Project a force term to the algebra and add to the
   /// mometum
-  void add_momentum(field<squarematrix<N,cmplx<basetype>>> (&force)[NDIM]){
+  void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
     foralldir(dir){
       onsites(ALL){
         force[dir][X] = gauge[dir][X]*force[dir][X];
@@ -349,6 +350,7 @@ class gauge_action {
           Sa += gauge.momentum[dir][X].algebra_norm();
         }
       }
+      output0 << "gauge action " << Sg << " mom " << Sa << "\n";
       return Sg+Sa;
     }
 
