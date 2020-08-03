@@ -398,7 +398,7 @@ class gauge_action {
           Sa += gauge.momentum[dir][X].algebra_norm();
         }
       }
-      output0 << "gauge action " << Sg << " mom " << Sa << "\n";
+      
       return Sg+Sa;
     }
 
