@@ -249,7 +249,7 @@ int main(int argc, char **argv){
   dirac_staggered_evenodd D_stg_stout(5.0, stout_gauge);
   check_forces(D_stg_stout, stout_gauge);
 
-  output0 << "Checking stout smeared forces:\n";
+  output0 << "Checking HEX smeared forces:\n";
   dirac_staggered_evenodd D_stg_hex(5.0, hex_gauge);
   check_forces(D_stg_hex, hex_gauge);
 

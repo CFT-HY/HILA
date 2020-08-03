@@ -35,33 +35,33 @@ void exp_and_derivative(sun &Q, sun &m0, sun &lambda, sun &eQ, int exp_steps){
 
 // Calculate the derivative of with respect to the links a positive and negative staple and add to result
 template<typename matrix, typename forcetype>
-void staple_dir_derivative(field<matrix> *basegauge, field<matrix> (&Lambda)[NDIM], field<forcetype> *result, direction dir1, direction dir2){
+void staple_dir_derivative(field<matrix> &basegauge1, field<matrix> &basegauge2, field<matrix> &Lambda, field<forcetype> &result1, field<forcetype> &result2, direction dir1, direction dir2){
   field<matrix> stapleder2, stapleder3; // Two derivatives that need to be communicated
   
   onsites(ALL){
     element<matrix> U1, U2, U3, U4, L, L2;
-    U1 = basegauge[dir1][X];
-    U2 = basegauge[dir2][X+dir1];
-    U3 = basegauge[dir1][X+dir2];
-    U4 = basegauge[dir2][X];
-    L = Lambda[dir1][X];
-    L2 = Lambda[dir1][X+dir2];
+    U1 = basegauge1[X];
+    U2 = basegauge2[X+dir1];
+    U3 = basegauge1[X+dir2];
+    U4 = basegauge2[X];
+    L = Lambda[X];
+    L2 = Lambda[X+dir2];
 
     // Up staple
-    result[dir2][X] += (L*U2*U3.conjugate()).conjugate();
+    result2[X] += (L*U2*U3.conjugate()).conjugate();
     stapleder2[X] = U3.conjugate()*U4.conjugate()*L;
     stapleder3[X] = (U4.conjugate()*L*U2).conjugate();
 
     // Down staple
     stapleder2[X] = stapleder2[X] + L2.conjugate()*U4.conjugate()*U1;
-    result[dir1][X] += U2*L2.conjugate()*U4.conjugate();
-    result[dir2][X] += L2*U2.conjugate()*U1.conjugate();
+    result1[X] += U2*L2.conjugate()*U4.conjugate();
+    result2[X] += L2*U2.conjugate()*U1.conjugate();
   }
 
   // Move derivatives up where necessary
   onsites(ALL){
-    result[dir2][X] += stapleder2[X-dir1];
-    result[dir1][X] += stapleder3[X-dir2];
+    result2[X] += stapleder2[X-dir1];
+    result1[X] += stapleder3[X-dir2];
   }
 }
 
@@ -206,7 +206,7 @@ struct stout_smeared_field {
 
       // Take the derivetive with respect to the links in the staples
       foralldir(dir1) foralldir(dir2) if(dir1!=dir2){
-        staple_dir_derivative(basegauge, Lambda, result, dir1, dir2);
+        staple_dir_derivative(basegauge[dir1], basegauge[dir2], Lambda[dir1], result[dir1], result[dir2], dir1, dir2);
       }
 
       // Swap previous and result for the next iteration
@@ -316,7 +316,8 @@ struct HEX_smeared_field {
       foralldir(rho) if(rho!=mu) if(rho!=nu){
         direction eta;
         foralldir(e) if(e!=mu && e!=nu && e!=rho) eta = e;
-        staples2[nu][mu] += calc_staples(level3[eta], level3[eta], mu, rho);
+        field<sun> stp = calc_staples(level3[eta], level3[eta], mu, rho);
+        staples2[nu][mu][ALL] = staples2[nu][mu][X] + stp[X];
       }
       onsites(ALL){
         element<sun> Q;
@@ -329,10 +330,11 @@ struct HEX_smeared_field {
 
     // Level 1, link to direction mu, staples summed to directions nu
     // with direction nu excluded from lower levels
-    foralldir(mu) foralldir(nu) if(mu!=nu) {
+    foralldir(mu) {
       staples1[mu][ALL] = 0;
-      foralldir(nu) {
-        staples1[mu] += calc_staples(level2[nu], level2[mu], mu, nu);
+      foralldir(nu) if(mu!=nu) {
+        field<sun> stp = calc_staples(level2[nu], level2[mu], mu, nu);
+        staples1[mu][ALL] = staples1[mu][X] + stp[X];
       }
       onsites(ALL){
         element<sun> Q;
@@ -357,16 +359,113 @@ struct HEX_smeared_field {
 
 
   void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
-    // Two storage fields for the current and previous levels of the force
+    field<sun> lambda1[NDIM];
+    field<squarematrix<N,cmplx<basetype>>> result1[NDIM][NDIM];
+    field<sun> lambda2[NDIM][NDIM];
+    field<squarematrix<N,cmplx<basetype>>> result2[NDIM][NDIM];
+    field<sun> lambda3[NDIM][NDIM];
+    field<squarematrix<N,cmplx<basetype>>> result[NDIM];
+
+    foralldir(mu) {
+      result[mu] = 0;
+      foralldir(nu) {
+        result1[mu][nu] = 0;
+        result2[mu][nu] = 0;
+      }
+    }
+    
+    // Level1 exponential
+    foralldir(mu){
+      onsites(ALL){
+        element<sun> m0, m1, qn, eQ, Q;
+        Q = -c1*fundamental.gauge[mu][X]*staples1[mu][X];
+        project_antihermitean(Q);
+
+        m0 = force[mu][X]*fundamental.gauge[mu][X];
+        exp_and_derivative(Q, m0, lambda1[mu][X], eQ, exp_steps);
+        project_antihermitean(lambda1[mu][X]);
+
+        // First derivative term, R in R*exp(Q)*L
+        result[mu][X] = eQ*force[mu][X];
+
+        // second derivative term, the first link in the plaquette
+        result[mu][X] -= c1*staples1[mu][X]*lambda1[mu][X];
+        
+        // Now update Lambda to the derivative with respect to the staple
+        lambda1[mu][X] = -c1*lambda1[mu][X]*fundamental.gauge[mu][X];
+      }
+    }
+
+    // level1 staple
+    foralldir(mu) foralldir(nu) if(mu!=nu){
+      staple_dir_derivative(level2[nu][mu], level2[mu][nu], lambda1[mu], result1[nu][mu], result1[mu][nu], mu, nu);
+    }
 
 
-    // Another storage field, for the derivative of the exponential
-    field<sun> Lambda[NDIM];
+
+    // level2 exponential
+    foralldir(mu) foralldir(nu) if(mu!=nu) {
+      onsites(ALL){
+        element<sun> m0, m1, qn, eQ, Q;
+        Q = -c2*fundamental.gauge[mu][X]*staples2[nu][mu][X];
+        project_antihermitean(Q);
+
+        m0 = result1[nu][mu][X]*fundamental.gauge[mu][X];
+        exp_and_derivative(Q, m0, lambda2[nu][mu][X], eQ, exp_steps);
+        project_antihermitean(lambda2[nu][mu][X]);
+
+        // First derivative term, R in R*exp(Q)*L
+        result[mu][X] += eQ*result1[nu][mu][X];
+
+        // second derivative term, the first link in the plaquette
+        result[mu][X] -= c2*staples2[nu][mu][X]*lambda2[nu][mu][X];
+        
+        // Now update Lambda to the derivative with respect to the staple
+        lambda2[nu][mu][X] = -c2*lambda2[nu][mu][X]*fundamental.gauge[mu][X];
+      }
+    }
+
+    // level2 staple
+    foralldir(mu) foralldir(nu) if(mu!=nu){
+      foralldir(rho) if(rho!=mu) if(rho!=nu){
+        direction eta;
+        foralldir(e) if(e!=mu && e!=nu && e!=rho) eta = e;
+        staple_dir_derivative(level3[eta][mu], level3[eta][rho], lambda2[nu][mu], result2[eta][mu], result2[eta][rho], mu, rho);
+      }
+    }
 
 
 
-    // 
-    fundamental.add_momentum(force);
+    // level3 exponential
+    foralldir(mu) foralldir(nu) if(mu!=nu) {
+      onsites(ALL){
+        element<sun> m0, m1, qn, eQ, Q;
+        Q = -c3*fundamental.gauge[mu][X]*staples3[nu][mu][X];
+        project_antihermitean(Q);
+
+        m0 = result2[nu][mu][X]*fundamental.gauge[mu][X];
+        exp_and_derivative(Q, m0, lambda3[nu][mu][X], eQ, exp_steps);
+        project_antihermitean(lambda3[nu][mu][X]);
+
+        // First derivative term, R in R*exp(Q)*L
+        result[mu][X] += eQ*result2[nu][mu][X];
+
+        // second derivative term, the first link in the plaquette
+        result[mu][X] -= c3*staples3[nu][mu][X]*lambda3[nu][mu][X];
+        
+        // Now update Lambda to the derivative with respect to the staple
+        lambda3[nu][mu][X] = -c3*lambda3[nu][mu][X]*fundamental.gauge[mu][X];
+      }
+    }
+
+    // level3 staple
+    foralldir(mu) foralldir(nu) if(mu!=nu){
+      staple_dir_derivative(fundamental.gauge[mu], fundamental.gauge[nu], lambda3[nu][mu], result[mu], result[nu], mu, nu);
+    }
+
+
+    // Add to the base gauge momentum
+    fundamental.add_momentum(result);
   }
 
   void draw_momentum(){
