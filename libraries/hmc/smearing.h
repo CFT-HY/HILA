@@ -248,4 +248,157 @@ struct stout_smeared_field {
 
 
 
+
+
+#if NDIM==4
+
+
+
+
+template<typename sun>
+struct HEX_smeared_field {
+  using gauge_type = sun;
+  using fund_type = sun;
+  using basetype = typename sun::base_type;
+  static constexpr int Nf = sun::size;
+  static constexpr int N = sun::size;
+
+  // SU2 default parameters
+  double c1=0.13;
+  double c2=0.1525;
+  double c3=0.175;
+  int exp_steps = 10;
+
+  gauge_field<sun> &fundamental;
+  field<sun> staples3[NDIM][NDIM];
+  field<sun> level3[NDIM][NDIM];
+  field<sun> staples2[NDIM][NDIM];
+  field<sun> level2[NDIM][NDIM];
+  field<sun> staples1[NDIM];
+  field<sun> gauge[NDIM];
+
+  HEX_smeared_field(gauge_field<fund_type>  &f)
+    : fundamental(f) {}
+  HEX_smeared_field(gauge_field<fund_type>  &f, int nsteps)
+    : fundamental(f), exp_steps(nsteps) {}
+  HEX_smeared_field(gauge_field<fund_type>  &f, double _c1, double _c2, double _c3)
+    : fundamental(f), c1(_c1), c2(_c2), c3(_c3) {}
+  HEX_smeared_field(gauge_field<fund_type>  &f, double _c1, double _c2, double _c3, int nsteps)
+    : fundamental(f), c1(_c1), c2(_c2), c3(_c3), exp_steps(nsteps) {}
+
+
+  // Represent the fields
+  void refresh(){
+    field<sun> *previous;
+    previous = &fundamental.gauge[0];
+
+    foralldir(mu){
+      fundamental.gauge[mu].check_alloc();
+    }
+
+    // Level 3, link to direction mu, staples only summed to
+    // to direction nu
+    foralldir(mu) foralldir(nu)  if(mu!=nu){
+      staples3[nu][mu] = calc_staples(fundamental.gauge, fundamental.gauge, mu, nu);
+      onsites(ALL){
+        element<sun> Q;
+        Q = -c3*fundamental.gauge[mu][X]*staples3[nu][mu][X];
+        project_antihermitean(Q);
+        Q.exp(exp_steps);
+        level3[nu][mu][X] = fundamental.gauge[mu][X]*Q;
+      }
+    }
+
+    // Level 2, link to direction mu, staples summed to direction
+    // rho != mu, nu. label directions nu and rho by eta != mu, nu, rho
+    foralldir(mu) foralldir(nu) if(mu!=nu) {
+      staples2[nu][mu][ALL] = 0;
+      foralldir(rho) if(rho!=mu) if(rho!=nu){
+        direction eta;
+        foralldir(e) if(e!=mu && e!=nu && e!=rho) eta = e;
+        staples2[nu][mu] += calc_staples(level3[eta], level3[eta], mu, rho);
+      }
+      onsites(ALL){
+        element<sun> Q;
+        Q = -c2*fundamental.gauge[mu][X]*staples2[nu][mu][X];
+        project_antihermitean(Q);
+        Q.exp(exp_steps);
+        level2[nu][mu][X] = fundamental.gauge[mu][X]*Q;
+      }
+    }
+
+    // Level 1, link to direction mu, staples summed to directions nu
+    // with direction nu excluded from lower levels
+    foralldir(mu) foralldir(nu) if(mu!=nu) {
+      staples1[mu][ALL] = 0;
+      foralldir(nu) {
+        staples1[mu] += calc_staples(level2[nu], level2[mu], mu, nu);
+      }
+      onsites(ALL){
+        element<sun> Q;
+        Q = -c1*fundamental.gauge[mu][X]*staples1[mu][X];
+        project_antihermitean(Q);
+        Q.exp(exp_steps);
+        gauge[mu][X] = fundamental.gauge[mu][X]*Q;
+      }
+    }
+
+  }
+
+  void set_unity(){
+    fundamental.set_unity();
+    refresh();
+  }
+
+  void random(){
+    fundamental.random();
+    refresh();
+  }
+
+
+  void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
+    // Two storage fields for the current and previous levels of the force
+
+
+    // Another storage field, for the derivative of the exponential
+    field<sun> Lambda[NDIM];
+
+
+
+    // 
+    fundamental.add_momentum(force);
+  }
+
+  void draw_momentum(){
+    fundamental.draw_momentum();
+  }
+  void zero_momentum(){
+    fundamental.zero_momentum();
+  }
+
+  void backup(){
+    fundamental.backup();
+  }
+
+  // Restore the previous backup
+  void restore_backup(){
+    fundamental.restore_backup();
+  }
+
+
+  field<sun> & get_momentum(int dir){
+    return fundamental.get_momentum(dir);
+  }
+  field<sun> & get_gauge(int dir){
+    return fundamental.get_gauge(dir);
+  }
+};
+
+
+#endif
+
+
+
+
+
 #endif

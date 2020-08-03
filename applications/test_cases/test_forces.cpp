@@ -234,6 +234,7 @@ int main(int argc, char **argv){
   represented_gauge_field<sym> sym_gauge(gauge);
   represented_gauge_field<asym> asym_gauge(gauge);
   stout_smeared_field<SUN> stout_gauge(gauge, 0.1, 4, 10);
+  HEX_smeared_field<SUN> hex_gauge(gauge, 10);
 
   // Staggered Forces
   output0 << "Checking staggered forces:\n";
@@ -247,6 +248,10 @@ int main(int argc, char **argv){
   output0 << "Checking stout smeared forces:\n";
   dirac_staggered_evenodd D_stg_stout(5.0, stout_gauge);
   check_forces(D_stg_stout, stout_gauge);
+
+  output0 << "Checking stout smeared forces:\n";
+  dirac_staggered_evenodd D_stg_hex(5.0, hex_gauge);
+  check_forces(D_stg_hex, hex_gauge);
 
   output0 << "Checking adjoint staggered forces:\n";
   dirac_staggered_evenodd D_stg_adj(5.0, adj_gauge);
@@ -266,7 +271,7 @@ int main(int argc, char **argv){
   Dirac_Wilson D_W(0.05, gauge);
   check_forces(D_W, gauge);
 
-  output0 << "Checking evenodd preconditioned Wilson forces:\n";
+  output0 << "Checking stout smeared Wilson forces:\n";
   Dirac_Wilson_evenodd D_W_eo(0.05, gauge);
   check_forces(D_W_eo, gauge);
 

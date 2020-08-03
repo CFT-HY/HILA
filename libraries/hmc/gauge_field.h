@@ -37,7 +37,31 @@ double polyakov_loop(direction dir, field<SU<N>> (&gauge)[NDIM]){
 
 
 
-/// Calculate the sum of staples connected to links in direction dir 
+/// Calculate the sum of staples in direction dir2 
+/// connected to links in direction dir1
+template<typename SUN>
+field<SUN> calc_staples(field<SUN> *U1, field<SUN> *U2, direction dir1, direction dir2)
+{
+  field<SUN> staple_sum;
+  static field<SUN> down_staple;
+  staple_sum[ALL] = 0;
+  //Calculate the down side staple.
+  //This will be communicated up.
+  down_staple[ALL] = U2[dir2][X+dir1].conjugate()
+                   * U1[dir1][X].conjugate()
+                   * U2[dir2][X];
+  // Forward staple
+  staple_sum[ALL]  = staple_sum[X]
+                   + U2[dir2][X+dir1]
+                   * U1[dir1][X+dir2].conjugate()
+                   * U2[dir2][X].conjugate();
+  // Add the down staple
+  staple_sum[ALL] = staple_sum[X] + down_staple[X-dir2];
+  return staple_sum;
+}
+
+
+/// Calculate the sum of staples connected to links in direction dir
 template<typename SUN>
 field<SUN> calc_staples(field<SUN> *U, direction dir)
 {

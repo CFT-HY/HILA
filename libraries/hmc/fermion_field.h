@@ -51,6 +51,7 @@ class fermion_action{
       onsites(D.par){
         action += chi[X].rdot(psi[X]);
       }
+      output0 << "fermion action " << action << "\n";
       return action;
     }
 

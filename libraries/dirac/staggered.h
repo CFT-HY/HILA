@@ -206,6 +206,9 @@ class dirac_staggered_evenodd {
     dirac_staggered_evenodd(double m, stout_smeared_field<matrix> &g) : gauge(g.gauge), mass(m) {
       init_staggered_eta(staggered_eta);
     }
+    dirac_staggered_evenodd(double m, HEX_smeared_field<matrix> &g) : gauge(g.gauge), mass(m) {
+      init_staggered_eta(staggered_eta);
+    }
 
 
     // Applies the operator to in
