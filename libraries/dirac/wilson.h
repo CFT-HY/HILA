@@ -124,8 +124,7 @@ class Dirac_Wilson {
     // Constructor: initialize mass and gauge
     Dirac_Wilson(Dirac_Wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
-    Dirac_Wilson(double k, gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
-    Dirac_Wilson(double k, represented_gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
+    Dirac_Wilson(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
     // Applies the operator to in
     inline void apply( const field<vector_type> & in, field<vector_type> & out){

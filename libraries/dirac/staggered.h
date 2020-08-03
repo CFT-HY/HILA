@@ -1,12 +1,12 @@
 #ifndef __DIRAC_STAGGERED_H__
 #define __DIRAC_STAGGERED_H__
 
-#include "plumbing/defs.h"
-#include "datatypes/cmplx.h"
-#include "datatypes/matrix.h"
-#include "datatypes/sun.h"
-#include "plumbing/field.h"
-#include "hmc/gauge_field.h"
+#include "../plumbing/defs.h"
+#include "../datatypes/cmplx.h"
+#include "../datatypes/matrix.h"
+#include "../datatypes/sun.h"
+#include "../plumbing/field.h"
+#include "../../libraries/hmc/gauge_field.h"
 
 template<typename vector>
 field<vector> staggered_dirac_temp[NDIM];
@@ -197,16 +197,7 @@ class dirac_staggered_evenodd {
     dirac_staggered_evenodd(double m, field<matrix> (&U)[NDIM]) : gauge(U), mass(m) {
       init_staggered_eta(staggered_eta);
     }
-    dirac_staggered_evenodd(double m, gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
-      init_staggered_eta(staggered_eta);
-    }
-    dirac_staggered_evenodd(double m, represented_gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
-      init_staggered_eta(staggered_eta);
-    }
-    dirac_staggered_evenodd(double m, stout_smeared_field<matrix> &g) : gauge(g.gauge), mass(m) {
-      init_staggered_eta(staggered_eta);
-    }
-    dirac_staggered_evenodd(double m, HEX_smeared_field<matrix> &g) : gauge(g.gauge), mass(m) {
+    dirac_staggered_evenodd(double m, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(m) {
       init_staggered_eta(staggered_eta);
     }
 

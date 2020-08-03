@@ -68,10 +68,9 @@ void staple_dir_derivative(field<matrix> &basegauge1, field<matrix> &basegauge2,
 
 
 
-
-
 template<typename sun>
-struct stout_smeared_field {
+class stout_smeared_field : public gauge_field_base<sun>{
+  public:
   using gauge_type = sun;
   using fund_type = sun;
   using basetype = typename sun::base_type;
@@ -83,24 +82,27 @@ struct stout_smeared_field {
   int exp_steps = 10;
 
   gauge_field<sun> &base_field;
-  field<sun> gauge[NDIM];
   field<sun> **staples;
   field<sun> **smeared_fields;
 
   stout_smeared_field(gauge_field<fund_type>  &f, double coeff) 
     : base_field(f), c(coeff){
+      gauge_field_base<sun>();
       allocate();
     }
   stout_smeared_field(gauge_field<fund_type>  &f, double coeff, int nsteps)
     : base_field(f), c(coeff), smear_steps(nsteps) {
+      gauge_field_base<sun>();
       allocate();
     }
   stout_smeared_field(gauge_field<fund_type>  &f, double coeff, int nsteps, int expsteps)
     : base_field(f), c(coeff), smear_steps(nsteps), exp_steps(expsteps) {
+      gauge_field_base<sun>();
       allocate();
     }
   stout_smeared_field(stout_smeared_field &r)
     : base_field(r.base_field), c(r.c), smear_steps(r.smear_steps), exp_steps(r.exp_steps){
+      gauge_field_base<sun>();
       allocate();
     }
 
@@ -112,7 +114,7 @@ struct stout_smeared_field {
       smeared_fields[step] = new field<sun>[NDIM];
     }
     staples[smear_steps-1]  = new field<sun>[NDIM];
-    smeared_fields[smear_steps-1]  = &(gauge[0]);
+    smeared_fields[smear_steps-1]  = &(this->gauge[0]);
   }
 
   ~stout_smeared_field() {
@@ -256,7 +258,7 @@ struct stout_smeared_field {
 
 
 template<typename sun>
-struct HEX_smeared_field {
+struct HEX_smeared_field : public gauge_field_base<sun> {
   using gauge_type = sun;
   using fund_type = sun;
   using basetype = typename sun::base_type;
@@ -275,16 +277,23 @@ struct HEX_smeared_field {
   field<sun> staples2[NDIM][NDIM];
   field<sun> level2[NDIM][NDIM];
   field<sun> staples1[NDIM];
-  field<sun> gauge[NDIM];
 
   HEX_smeared_field(gauge_field<fund_type>  &f)
-    : base_field(f) {}
+    : base_field(f) {
+      gauge_field_base<sun>();
+    }
   HEX_smeared_field(gauge_field<fund_type>  &f, int nsteps)
-    : base_field(f), exp_steps(nsteps) {}
+    : base_field(f), exp_steps(nsteps) {
+      gauge_field_base<sun>();
+    }
   HEX_smeared_field(gauge_field<fund_type>  &f, double _c1, double _c2, double _c3)
-    : base_field(f), c1(_c1), c2(_c2), c3(_c3) {}
+    : base_field(f), c1(_c1), c2(_c2), c3(_c3) {
+      gauge_field_base<sun>();
+    }
   HEX_smeared_field(gauge_field<fund_type>  &f, double _c1, double _c2, double _c3, int nsteps)
-    : base_field(f), c1(_c1), c2(_c2), c3(_c3), exp_steps(nsteps) {}
+    : base_field(f), c1(_c1), c2(_c2), c3(_c3), exp_steps(nsteps) {
+      gauge_field_base<sun>();
+    }
 
 
   // Represent the fields
@@ -341,7 +350,7 @@ struct HEX_smeared_field {
         Q = -c1*base_field.gauge[mu][X]*staples1[mu][X];
         project_antihermitean(Q);
         Q.exp(exp_steps);
-        gauge[mu][X] = base_field.gauge[mu][X]*Q;
+        this->gauge[mu][X] = base_field.gauge[mu][X]*Q;
       }
     }
 

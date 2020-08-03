@@ -6,6 +6,32 @@
 #include "datatypes/representations.h"
 
 
+/// Define a standard base gauge class. Gauge field types (represented, 
+/// smeared, etc) inherit from this
+template<typename sun>
+class gauge_field_base{
+  public:
+    using basetype = typename sun::base_type;
+    static constexpr int N = sun::size;
+    field<sun> gauge[NDIM];
+    field<sun> momentum[NDIM];
+
+    virtual void refresh(){}
+    virtual void set_unity(){}
+    virtual void random(){}
+
+
+    virtual void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){}
+    virtual void draw_momentum(){}
+    virtual void zero_momentum(){}
+    virtual void backup(){}
+    virtual void restore_backup(){}
+
+};
+
+
+
+
 /// Calculate the Polyakov loop for a given gauge field.
 template<int N>
 double polyakov_loop(direction dir, field<SU<N>> (&gauge)[NDIM]){
@@ -136,20 +162,19 @@ double plaquette_sum(field<squarematrix<N,radix>> *U){
 /// Defines methods for HMC to update the field and the 
 /// momentum.
 template<typename matrix>
-struct gauge_field {
+class gauge_field : public gauge_field_base<matrix> {
+  public:
   using gauge_type = matrix;
   using fund_type = matrix;
   using basetype = typename matrix::base_type;
   static constexpr int N = matrix::size;
-  field<matrix> gauge[NDIM];
-  field<matrix> momentum[NDIM];
   field<matrix> gauge_backup[NDIM];
 
   // Set the gauge field to unity
   void set_unity(){
     foralldir(dir){
       onsites(ALL){
-        gauge[dir][X] = 1;
+        this->gauge[dir][X] = 1;
       }
     }
   }
@@ -157,7 +182,7 @@ struct gauge_field {
   void random(){
     foralldir(dir){
       onsites(ALL){
-        gauge[dir][X].random();
+        this->gauge[dir][X].random();
       }
     }
   }
@@ -167,27 +192,24 @@ struct gauge_field {
     foralldir(dir) {
       onsites(ALL){
         if(disable_avx[X]==0){};
-        momentum[dir][X].gaussian_algebra();
+        this->momentum[dir][X].gaussian_algebra();
       }
     }
   }
 
   void zero_momentum(){
     foralldir(dir) {
-      momentum[dir][ALL]=0;
+      this->momentum[dir][ALL]=0;
     }
   }
-
-  // This is the fundamental field, nothing to refresh
-  void refresh(){}
 
   /// Update the gauge field with time step eps
   void gauge_update(double eps){
     foralldir(dir){
       onsites(ALL){
-        element<matrix> momexp = eps*momentum[dir][X];
+        element<matrix> momexp = eps*this->momentum[dir][X];
         momexp.exp();
-        gauge[dir][X] = momexp*gauge[dir][X];
+        this->gauge[dir][X] = momexp*this->gauge[dir][X];
       }
     }
   }
@@ -197,21 +219,21 @@ struct gauge_field {
   void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
     foralldir(dir){
       onsites(ALL){
-        force[dir][X] = gauge[dir][X]*force[dir][X];
+        force[dir][X] = this->gauge[dir][X]*force[dir][X];
         project_antihermitean(force[dir][X]);
-        momentum[dir][X] = momentum[dir][X] + force[dir][X];
+        this->momentum[dir][X] = this->momentum[dir][X] + force[dir][X];
       }
     }
   }
 
   // Make a copy of fields updated in a trajectory
   void backup(){
-    foralldir(dir) gauge_backup[dir] = gauge[dir];
+    foralldir(dir) gauge_backup[dir] = this->gauge[dir];
   }
 
   // Restore the previous backup
   void restore_backup(){
-    foralldir(dir) gauge[dir] = gauge_backup[dir];
+    foralldir(dir) this->gauge[dir] = gauge_backup[dir];
   }
 
   // Read the gauge field from a file
@@ -219,7 +241,7 @@ struct gauge_field {
     std::ifstream inputfile;
     inputfile.open(filename, std::ios::in | std::ios::binary);
     foralldir(dir){
-      read_fields(inputfile, gauge[dir]);
+      read_fields(inputfile, this->gauge[dir]);
     }
     inputfile.close();
   }
@@ -229,7 +251,7 @@ struct gauge_field {
     std::ofstream outputfile;
     outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
     foralldir(dir){
-      write_fields(outputfile, gauge[dir]);
+      write_fields(outputfile, this->gauge[dir]);
     }
     outputfile.close();
   }
@@ -237,19 +259,19 @@ struct gauge_field {
   
   // Simple measurables that only depend on the gauge field
   double plaquette(){
-    return plaquette_sum(gauge)/(lattice->volume()*NDIM*(NDIM-1)/2);
+    return plaquette_sum(this->gauge)/(lattice->volume()*NDIM*(NDIM-1)/2);
   }
 
   double polyakov(int dir){
-    return polyakov_loop(dir, gauge);
+    return polyakov_loop(dir, this->gauge);
   }
 
 
   field<gauge_type> & get_momentum(int dir){
-    return momentum[dir];
+    return this->momentum[dir];
   }
   field<gauge_type> & get_gauge(int dir){
-    return gauge[dir];
+    return this->gauge[dir];
   }
 };
 
@@ -258,29 +280,31 @@ struct gauge_field {
 
 
 template<typename repr>
-struct represented_gauge_field {
+class represented_gauge_field : public gauge_field_base<repr> {
+  public: 
   using gauge_type = repr;
   using fund_type = typename repr::sun;
   using basetype = typename repr::base_type;
   static constexpr int Nf = fund_type::size;
   static constexpr int N = repr::size;
-
   gauge_field<fund_type> &fundamental;
 
-  field<repr> gauge[NDIM];
-
-  represented_gauge_field(gauge_field<fund_type>  &f) : fundamental(f){}
+  represented_gauge_field(gauge_field<fund_type>  &f) : fundamental(f){
+    gauge_field_base<repr>();
+  }
   represented_gauge_field(represented_gauge_field &r)
-    : fundamental(r.fundamental){}
+    : fundamental(r.fundamental){
+      gauge_field_base<repr>();
+    }
 
 
   // Represent the fields
   void refresh(){
     foralldir(dir){
-      gauge[dir].check_alloc();
+      this->gauge[dir].check_alloc();
       onsites(ALL){
         if(disable_avx[X]==0){};
-        gauge[dir][X].represent(fundamental.gauge[dir][X]);
+        this->gauge[dir][X].represent(fundamental.gauge[dir][X]);
       }
     }
   }
@@ -301,7 +325,7 @@ struct represented_gauge_field {
       onsites(ALL){
         if(disable_avx[X]==0){};
         element<fund_type> fforce;
-        fforce = repr::project_force(gauge[dir][X]*force[dir][X]);
+        fforce = repr::project_force(this->gauge[dir][X]*force[dir][X]);
         fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce;
       }
     }
