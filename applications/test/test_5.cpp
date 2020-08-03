@@ -1,8 +1,8 @@
 
-#include "../plumbing/defs.h"
-#include "../datatypes/cmplx.h"
+#include "plumbing/defs.h"
+#include "datatypes/cmplx.h"
 
-#include "../plumbing/field.h"
+#include "plumbing/field.h"
 
 // extern field<int> glob;
 

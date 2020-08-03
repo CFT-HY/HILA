@@ -12,9 +12,9 @@
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
 #include <assert.h>
-#include "../plumbing/defs.h"
-#include "../plumbing/coordinates.h"
-#include "../plumbing/inputs.h"
+#include "plumbing/defs.h"
+#include "plumbing/coordinates.h"
+#include "plumbing/inputs.h"
 
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE

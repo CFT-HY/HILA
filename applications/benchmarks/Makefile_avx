@@ -3,7 +3,7 @@ OPTS = -DNDIM=4  $(ADDITION)
 
 HILAPP = ../../hilapp/build/hilapp  -DAVX -DUSE_MPI -target:AVX -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/
 
-CC = mpic++  -DUSE_MPI -mavx2 -mfma -DAVX
+CC = mpic++  -DUSE_MPI -mavx2 -mfma -DAVX -I../../libraries/
 
 .PRECIOUS: %.cpt
 

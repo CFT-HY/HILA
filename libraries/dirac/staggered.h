@@ -1,12 +1,12 @@
 #ifndef __DIRAC_STAGGERED_H__
 #define __DIRAC_STAGGERED_H__
 
-#include "../plumbing/defs.h"
-#include "../datatypes/cmplx.h"
-#include "../datatypes/matrix.h"
-#include "../datatypes/sun.h"
-#include "../plumbing/field.h"
-#include "../../libraries/hmc/gauge_field.h"
+#include "plumbing/defs.h"
+#include "datatypes/cmplx.h"
+#include "datatypes/matrix.h"
+#include "datatypes/sun.h"
+#include "plumbing/field.h"
+#include "hmc/gauge_field.h"
 
 template<typename vector>
 field<vector> staggered_dirac_temp[NDIM];

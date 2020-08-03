@@ -1,7 +1,7 @@
 #ifndef RANDOM
 #define RANDOM
 
-#include "../plumbing/defs.h"
+#include "plumbing/defs.h"
 #include <cmath>
 
 // gaussian rng generation routines ----------------------

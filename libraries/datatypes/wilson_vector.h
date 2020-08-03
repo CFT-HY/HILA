@@ -1,12 +1,12 @@
 #ifndef WILSON_VECTOR_H
 #define WILSON_VECTOR_H
 
-#include "../datatypes/cmplx.h"
-#include "../datatypes/general_matrix.h"
-#include "../datatypes/sun.h"
-#include "../datatypes/vector.h"
-#include "../plumbing/coordinates.h"
-#include "../plumbing/random.h"
+#include "datatypes/cmplx.h"
+#include "datatypes/general_matrix.h"
+#include "datatypes/sun.h"
+#include "datatypes/vector.h"
+#include "plumbing/coordinates.h"
+#include "plumbing/random.h"
 
 
 

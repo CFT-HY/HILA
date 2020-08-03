@@ -19,8 +19,8 @@
 #define __host__
 #endif
 
-#include "../plumbing/mersenne.h"
-#include "../plumbing/memalloc.h"   // memory allocator
+#include "plumbing/mersenne.h"
+#include "plumbing/memalloc.h"   // memory allocator
 
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
@@ -71,11 +71,11 @@ void initial_setup(int argc, char **argv);
 // Backend defs-headers
 
 #if defined(CUDA)
-#include "../plumbing/backend_cuda/defs.h"
+#include "plumbing/backend_cuda/defs.h"
 #elif defined(AVX)
-#include "../plumbing/backend_vector/defs.h"
+#include "plumbing/backend_vector/defs.h"
 #else
-#include "../plumbing/backend_cpu/defs.h"
+#include "plumbing/backend_cpu/defs.h"
 #endif
 
 // MPI Related functions and definitions

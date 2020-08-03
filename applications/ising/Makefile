@@ -45,6 +45,11 @@ build/%.o : build/%.cpt
 	mkdir -p build
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
+<<<<<<< HEAD
+%.o : plumbing/%.cpp
+	$(CC) $(CXXFLAGS) $< -c
+=======
+>>>>>>> 344a4d92af8043ec62d7bfb79c03f59d58b4fe32
 
 clean:
 	rm -rf build/*.cpt build/*.o

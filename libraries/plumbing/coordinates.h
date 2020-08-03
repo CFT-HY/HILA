@@ -6,7 +6,7 @@
 ///   class coordinate_vector
 /// These are used to traverse the lattice coordinate systems
 
-#include "../plumbing/defs.h"
+#include "plumbing/defs.h"
 
 ///////////////////////////////////////////////////////////////////////////
 /// enum direction - includes the opposite direction

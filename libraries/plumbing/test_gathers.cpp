@@ -6,7 +6,7 @@
 #include "coordinates.h"
 #include "lattice.h"
 #include "field.h"
-#include "../datatypes/general_matrix.h"
+#include "datatypes/general_matrix.h"
 
 
 template <typename T>

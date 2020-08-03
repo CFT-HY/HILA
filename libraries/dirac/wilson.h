@@ -1,13 +1,12 @@
 #ifndef __DIRAC_WILSON_H__
 #define __DIRAC_WILSON_H__
 
-#include "../plumbing/defs.h"
-#include "../datatypes/cmplx.h"
-#include "../datatypes/matrix.h"
-#include "../datatypes/wilson_vector.h"
-#include "../plumbing/field.h"
-#include "../hmc/gauge_field.h"
-
+#include "plumbing/defs.h"
+#include "datatypes/cmplx.h"
+#include "datatypes/matrix.h"
+#include "datatypes/wilson_vector.h"
+#include "plumbing/field.h"
+#include "hmc/gauge_field.h"
 
 template<int N, typename radix>
 field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[NDIM];

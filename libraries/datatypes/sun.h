@@ -1,11 +1,11 @@
 #ifndef SUN_M
 #define SUN_M
 
-#include "../plumbing/defs.h"
-#include "../datatypes/cmplx.h"
-#include "../datatypes/matrix.h"
-#include "../datatypes/vector.h"
-#include "../plumbing/mersenne.h" //has to be included
+#include "plumbing/defs.h"
+#include "datatypes/cmplx.h"
+#include "datatypes/matrix.h"
+#include "datatypes/vector.h"
+#include "plumbing/mersenne.h" //has to be included
 #include <cmath>
 
 // Macros for sped-up operations 

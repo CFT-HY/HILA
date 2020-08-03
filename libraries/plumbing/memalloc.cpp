@@ -4,7 +4,7 @@
 /// the failure happened:
 /// 
 
-#include "../plumbing/memalloc.h"
+#include "plumbing/memalloc.h"
 
 void * memalloc( std::size_t size, const char * filename, const unsigned line ) {
 

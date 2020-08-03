@@ -1038,7 +1038,7 @@ void field<T>::cancel_comm(direction d, parity p) const {
 #else
 
 ///* Trivial implementation when no MPI is used
-#include "../plumbing/comm_vanilla.h"
+#include "plumbing/comm_vanilla.h"
 template<typename T>
 dir_mask_t field<T>::start_get(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)
@@ -1426,7 +1426,7 @@ static void read_fields(std::string filename, fieldtypes&... fields){
 
 
 // Include Fourier transform
-#include "../plumbing/FFT.h"
+#include "plumbing/FFT.h"
 
 
 //HACK: force disable vectorization in a loop using

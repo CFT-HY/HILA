@@ -1,8 +1,8 @@
 #ifndef FFT_H
 #define FFT_H
 
-#include "../plumbing/field.h"
-#include "../datatypes/cmplx.h"
+#include "plumbing/field.h"
+#include "datatypes/cmplx.h"
 #include "fftw3.h"
 
 

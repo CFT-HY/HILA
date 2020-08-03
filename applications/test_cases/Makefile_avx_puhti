@@ -24,7 +24,7 @@ test_transformer: Makefile conjReduce.cpp ../../build/hilapp
 %.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c
 
-%.o : ../plumbing/%.cpp
+%.o : plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c

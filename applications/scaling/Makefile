@@ -16,6 +16,17 @@ LDFLAGS = $(HILA_LD_FLAGS)
 onsim: Makefile build/onsim.o $(HILA_OBJECTS)
 	$(LD) $(LDFLAGS) -o build/onsim build/onsim.o $(HILA_OBJECTS)
 
+#build/%.cpt: %.cpp Makefile
+#	mkdir -p build
+#	$(HILAPP) $< -o $@
+
+build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
+	mkdir -p build
+	$(HILAPP) $< -o $@
+
+build/%.o : build/%.cpt
+	mkdir -p build
+	$(CC) $(CXXFLAGS) $< -c -o $@
 
 
 clean:

@@ -27,7 +27,7 @@ test_conjReduce: Makefile inputs.o conjReduce.o mersenne_inline.o lattice.o setu
 %.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c
 
-%.o : ../plumbing/%.cpp
+%.o : plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c

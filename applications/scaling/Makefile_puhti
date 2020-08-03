@@ -33,7 +33,7 @@ run_input_test: input_test.exe
 %.o : %.cpt
 	$(CC) $(CXXFLAGS) $< -c
 
-%.o : ../plumbing/%.cpp
+%.o : plumbing/%.cpp
 	$(CC) $(CXXFLAGS) $< -c
 
 %.o : %.c
