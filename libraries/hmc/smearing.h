@@ -82,25 +82,25 @@ struct stout_smeared_field {
   int smear_steps = 1;
   int exp_steps = 10;
 
-  gauge_field<sun> &fundamental;
+  gauge_field<sun> &base_field;
   field<sun> gauge[NDIM];
   field<sun> **staples;
   field<sun> **smeared_fields;
 
   stout_smeared_field(gauge_field<fund_type>  &f, double coeff) 
-    : fundamental(f), c(coeff){
+    : base_field(f), c(coeff){
       allocate();
     }
   stout_smeared_field(gauge_field<fund_type>  &f, double coeff, int nsteps)
-    : fundamental(f), c(coeff), smear_steps(nsteps) {
+    : base_field(f), c(coeff), smear_steps(nsteps) {
       allocate();
     }
   stout_smeared_field(gauge_field<fund_type>  &f, double coeff, int nsteps, int expsteps)
-    : fundamental(f), c(coeff), smear_steps(nsteps), exp_steps(expsteps) {
+    : base_field(f), c(coeff), smear_steps(nsteps), exp_steps(expsteps) {
       allocate();
     }
   stout_smeared_field(stout_smeared_field &r)
-    : fundamental(r.fundamental), c(r.c), smear_steps(r.smear_steps), exp_steps(r.exp_steps){
+    : base_field(r.base_field), c(r.c), smear_steps(r.smear_steps), exp_steps(r.exp_steps){
       allocate();
     }
 
@@ -127,7 +127,7 @@ struct stout_smeared_field {
   // Represent the fields
   void refresh(){
     field<sun> *previous;
-    previous = &fundamental.gauge[0];
+    previous = &base_field.gauge[0];
 
     for(int step=0; step<smear_steps; step++){
       foralldir(dir){
@@ -148,12 +148,12 @@ struct stout_smeared_field {
   }
 
   void set_unity(){
-    fundamental.set_unity();
+    base_field.set_unity();
     refresh();
   }
 
   void random(){
-    fundamental.random();
+    base_field.random();
     refresh();
   }
 
@@ -175,7 +175,7 @@ struct stout_smeared_field {
       // Find the gauge field the current level is calculated from
       field<sun> *basegauge;
       if(step==0){
-        basegauge = &fundamental.gauge[0];
+        basegauge = &base_field.gauge[0];
       } else {
         basegauge = smeared_fields[step-1];
       } 
@@ -217,31 +217,31 @@ struct stout_smeared_field {
     }
 
     // Since we swap at the end, the force is now in "previous"
-    fundamental.add_momentum(previous);
+    base_field.add_momentum(previous);
   }
 
   void draw_momentum(){
-    fundamental.draw_momentum();
+    base_field.draw_momentum();
   }
   void zero_momentum(){
-    fundamental.zero_momentum();
+    base_field.zero_momentum();
   }
 
   void backup(){
-    fundamental.backup();
+    base_field.backup();
   }
 
   // Restore the previous backup
   void restore_backup(){
-    fundamental.restore_backup();
+    base_field.restore_backup();
   }
 
 
   field<sun> & get_momentum(int dir){
-    return fundamental.get_momentum(dir);
+    return base_field.get_momentum(dir);
   }
   field<sun> & get_gauge(int dir){
-    return fundamental.get_gauge(dir);
+    return base_field.get_gauge(dir);
   }
 };
 
@@ -269,7 +269,7 @@ struct HEX_smeared_field {
   double c3=0.175;
   int exp_steps = 10;
 
-  gauge_field<sun> &fundamental;
+  gauge_field<sun> &base_field;
   field<sun> staples3[NDIM][NDIM];
   field<sun> level3[NDIM][NDIM];
   field<sun> staples2[NDIM][NDIM];
@@ -278,34 +278,34 @@ struct HEX_smeared_field {
   field<sun> gauge[NDIM];
 
   HEX_smeared_field(gauge_field<fund_type>  &f)
-    : fundamental(f) {}
+    : base_field(f) {}
   HEX_smeared_field(gauge_field<fund_type>  &f, int nsteps)
-    : fundamental(f), exp_steps(nsteps) {}
+    : base_field(f), exp_steps(nsteps) {}
   HEX_smeared_field(gauge_field<fund_type>  &f, double _c1, double _c2, double _c3)
-    : fundamental(f), c1(_c1), c2(_c2), c3(_c3) {}
+    : base_field(f), c1(_c1), c2(_c2), c3(_c3) {}
   HEX_smeared_field(gauge_field<fund_type>  &f, double _c1, double _c2, double _c3, int nsteps)
-    : fundamental(f), c1(_c1), c2(_c2), c3(_c3), exp_steps(nsteps) {}
+    : base_field(f), c1(_c1), c2(_c2), c3(_c3), exp_steps(nsteps) {}
 
 
   // Represent the fields
   void refresh(){
     field<sun> *previous;
-    previous = &fundamental.gauge[0];
+    previous = &base_field.gauge[0];
 
     foralldir(mu){
-      fundamental.gauge[mu].check_alloc();
+      base_field.gauge[mu].check_alloc();
     }
 
     // Level 3, link to direction mu, staples only summed to
     // to direction nu
     foralldir(mu) foralldir(nu)  if(mu!=nu){
-      staples3[nu][mu] = calc_staples(fundamental.gauge, fundamental.gauge, mu, nu);
+      staples3[nu][mu] = calc_staples(base_field.gauge, base_field.gauge, mu, nu);
       onsites(ALL){
         element<sun> Q;
-        Q = -c3*fundamental.gauge[mu][X]*staples3[nu][mu][X];
+        Q = -c3*base_field.gauge[mu][X]*staples3[nu][mu][X];
         project_antihermitean(Q);
         Q.exp(exp_steps);
-        level3[nu][mu][X] = fundamental.gauge[mu][X]*Q;
+        level3[nu][mu][X] = base_field.gauge[mu][X]*Q;
       }
     }
 
@@ -321,10 +321,10 @@ struct HEX_smeared_field {
       }
       onsites(ALL){
         element<sun> Q;
-        Q = -c2*fundamental.gauge[mu][X]*staples2[nu][mu][X];
+        Q = -c2*base_field.gauge[mu][X]*staples2[nu][mu][X];
         project_antihermitean(Q);
         Q.exp(exp_steps);
-        level2[nu][mu][X] = fundamental.gauge[mu][X]*Q;
+        level2[nu][mu][X] = base_field.gauge[mu][X]*Q;
       }
     }
 
@@ -338,22 +338,22 @@ struct HEX_smeared_field {
       }
       onsites(ALL){
         element<sun> Q;
-        Q = -c1*fundamental.gauge[mu][X]*staples1[mu][X];
+        Q = -c1*base_field.gauge[mu][X]*staples1[mu][X];
         project_antihermitean(Q);
         Q.exp(exp_steps);
-        gauge[mu][X] = fundamental.gauge[mu][X]*Q;
+        gauge[mu][X] = base_field.gauge[mu][X]*Q;
       }
     }
 
   }
 
   void set_unity(){
-    fundamental.set_unity();
+    base_field.set_unity();
     refresh();
   }
 
   void random(){
-    fundamental.random();
+    base_field.random();
     refresh();
   }
 
@@ -378,10 +378,10 @@ struct HEX_smeared_field {
     foralldir(mu){
       onsites(ALL){
         element<sun> m0, m1, qn, eQ, Q;
-        Q = -c1*fundamental.gauge[mu][X]*staples1[mu][X];
+        Q = -c1*base_field.gauge[mu][X]*staples1[mu][X];
         project_antihermitean(Q);
 
-        m0 = force[mu][X]*fundamental.gauge[mu][X];
+        m0 = force[mu][X]*base_field.gauge[mu][X];
         exp_and_derivative(Q, m0, lambda1[mu][X], eQ, exp_steps);
         project_antihermitean(lambda1[mu][X]);
 
@@ -392,7 +392,7 @@ struct HEX_smeared_field {
         result[mu][X] -= c1*staples1[mu][X]*lambda1[mu][X];
         
         // Now update Lambda to the derivative with respect to the staple
-        lambda1[mu][X] = -c1*lambda1[mu][X]*fundamental.gauge[mu][X];
+        lambda1[mu][X] = -c1*lambda1[mu][X]*base_field.gauge[mu][X];
       }
     }
 
@@ -407,10 +407,10 @@ struct HEX_smeared_field {
     foralldir(mu) foralldir(nu) if(mu!=nu) {
       onsites(ALL){
         element<sun> m0, m1, qn, eQ, Q;
-        Q = -c2*fundamental.gauge[mu][X]*staples2[nu][mu][X];
+        Q = -c2*base_field.gauge[mu][X]*staples2[nu][mu][X];
         project_antihermitean(Q);
 
-        m0 = result1[nu][mu][X]*fundamental.gauge[mu][X];
+        m0 = result1[nu][mu][X]*base_field.gauge[mu][X];
         exp_and_derivative(Q, m0, lambda2[nu][mu][X], eQ, exp_steps);
         project_antihermitean(lambda2[nu][mu][X]);
 
@@ -421,7 +421,7 @@ struct HEX_smeared_field {
         result[mu][X] -= c2*staples2[nu][mu][X]*lambda2[nu][mu][X];
         
         // Now update Lambda to the derivative with respect to the staple
-        lambda2[nu][mu][X] = -c2*lambda2[nu][mu][X]*fundamental.gauge[mu][X];
+        lambda2[nu][mu][X] = -c2*lambda2[nu][mu][X]*base_field.gauge[mu][X];
       }
     }
 
@@ -440,10 +440,10 @@ struct HEX_smeared_field {
     foralldir(mu) foralldir(nu) if(mu!=nu) {
       onsites(ALL){
         element<sun> m0, m1, qn, eQ, Q;
-        Q = -c3*fundamental.gauge[mu][X]*staples3[nu][mu][X];
+        Q = -c3*base_field.gauge[mu][X]*staples3[nu][mu][X];
         project_antihermitean(Q);
 
-        m0 = result2[nu][mu][X]*fundamental.gauge[mu][X];
+        m0 = result2[nu][mu][X]*base_field.gauge[mu][X];
         exp_and_derivative(Q, m0, lambda3[nu][mu][X], eQ, exp_steps);
         project_antihermitean(lambda3[nu][mu][X]);
 
@@ -454,42 +454,42 @@ struct HEX_smeared_field {
         result[mu][X] -= c3*staples3[nu][mu][X]*lambda3[nu][mu][X];
         
         // Now update Lambda to the derivative with respect to the staple
-        lambda3[nu][mu][X] = -c3*lambda3[nu][mu][X]*fundamental.gauge[mu][X];
+        lambda3[nu][mu][X] = -c3*lambda3[nu][mu][X]*base_field.gauge[mu][X];
       }
     }
 
     // level3 staple
     foralldir(mu) foralldir(nu) if(mu!=nu){
-      staple_dir_derivative(fundamental.gauge[mu], fundamental.gauge[nu], lambda3[nu][mu], result[mu], result[nu], mu, nu);
+      staple_dir_derivative(base_field.gauge[mu], base_field.gauge[nu], lambda3[nu][mu], result[mu], result[nu], mu, nu);
     }
 
 
     // Add to the base gauge momentum
-    fundamental.add_momentum(result);
+    base_field.add_momentum(result);
   }
 
   void draw_momentum(){
-    fundamental.draw_momentum();
+    base_field.draw_momentum();
   }
   void zero_momentum(){
-    fundamental.zero_momentum();
+    base_field.zero_momentum();
   }
 
   void backup(){
-    fundamental.backup();
+    base_field.backup();
   }
 
   // Restore the previous backup
   void restore_backup(){
-    fundamental.restore_backup();
+    base_field.restore_backup();
   }
 
 
   field<sun> & get_momentum(int dir){
-    return fundamental.get_momentum(dir);
+    return base_field.get_momentum(dir);
   }
   field<sun> & get_gauge(int dir){
-    return fundamental.get_gauge(dir);
+    return base_field.get_gauge(dir);
   }
 };
 
