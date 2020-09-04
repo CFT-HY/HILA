@@ -186,16 +186,18 @@ class Hasenbusch_action_2 {
       field<vector_type> v;
       psi.copy_boundary_condition(chi);
       v.copy_boundary_condition(chi);
-      CG<DIRAC_OP> inverse(D);
       double action = 0;
-    
+
       gauge.refresh();
 
-      v=0; psi=0;
-      D_h.apply(chi, psi);
-      inverse.apply(psi,v);
-      D_h.dagger(v, psi);
-      onsites(D.par){
+      CG<DIRAC_OP> inverse(D);
+
+      v[ALL] = 0;
+      D_h.dagger(chi, psi);
+      inverse.apply(psi, v);
+      D_h.apply(v, psi);
+      onsites(EVEN){
+        if(disable_avx[X]==0){};
         action += chi[X].rdot(psi[X]);
       }
       
@@ -221,15 +223,40 @@ class Hasenbusch_action_2 {
         psi[X].gaussian();
       }
       v=0;
-      inverse_h.apply(psi, v);
-      D_h.apply(v, psi);
+      D_h.dagger(psi, v);
+      inverse_h.apply(v, psi); // 1/D_h * psi
       D.apply(psi, chi);
     }
 
     // Update the momentum with the derivative of the fermion
     // action
     void force_step(double eps){
+      field<vector_type> psi, Mpsi;
+      field<vector_type> Dhchi;
+      psi.copy_boundary_condition(chi);
+      Mpsi.copy_boundary_condition(chi);
+      Dhchi.copy_boundary_condition(chi);
+      field<momtype> force[NDIM], force2[NDIM];
+      CG<DIRAC_OP> inverse(D);
 
+      gauge.refresh();
+
+      D_h.dagger(chi, Dhchi); 
+
+      psi[ALL]=0;
+      inverse.apply(Dhchi, psi);
+
+      D.apply(psi, Mpsi);
+
+      Mpsi[D.par] = Mpsi[X] - chi[X];
+
+      D.force(Mpsi, psi, force, 1);
+      D.force(psi, Mpsi, force2, -1);
+
+      foralldir(dir){
+        force[dir][ALL] = -eps*(force[dir][X] + force2[dir][X]);
+      }
+      gauge.add_momentum(force);
     }
 
 };
