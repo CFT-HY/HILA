@@ -2,6 +2,7 @@
 #define FERMION_FIELD_H
 
 
+#include "../../libraries/dirac/Hasenbusch.h"
 #include "../dirac/conjugate_gradient.h"
 #include <cmath>
 
@@ -101,12 +102,73 @@ class fermion_action{
     }
 };
 
+
 // Sum operator for creating an action_sum object
 template<typename matrix, typename DIRAC_OP, typename action2>
 action_sum<action2, fermion_action<matrix, DIRAC_OP>> operator+(action2 a1, fermion_action<matrix, DIRAC_OP> a2){
   action_sum<action2, fermion_action<matrix, DIRAC_OP>> sum(a1, a2);
   return sum;
 }
+
+
+
+
+
+
+
+
+
+/* The Hasenbusch method for updating fermion fields:
+ * Split the Dirac determinant into two parts, 
+ * D_h1 = D + mh and
+ * D_h2 = D * 1 / (D + mh)^dagger
+ */
+
+
+/* The first action term, with D_h1 = D + mh.
+ * Since the only real difference here is an addition
+ * to the original operator, we can use fermion_action
+ */
+template<typename gauge_field, typename DIRAC_OP>
+class Hasenbusch_action_1 {
+  public:
+    Hasenbusch_operator<DIRAC_OP> D_h;
+    fermion_action<gauge_field, Hasenbusch_operator<DIRAC_OP>> base_action;
+    double _mh;
+
+    Hasenbusch_action_1(DIRAC_OP &d, gauge_field &g, double mh) : _mh(mh), D_h(d, mh), base_action(D_h, g) {}
+
+    Hasenbusch_action_1(Hasenbusch_action_1 &fa) : _mh(fa._mh), D_h(fa.D_h), base_action(fa.base_action){}
+
+    double action(){return(base_action.action());}
+    void backup_fields(){}
+    void restore_backup(){}
+    void draw_gaussian_fields(){base_action.draw_gaussian_fields();}
+    void force_step(double eps){base_action.force_step(eps);}
+
+};
+
+
+template<typename gauge_field, typename DIRAC_OP>
+class Hasenbusch_action_2 {
+  public:
+    Hasenbusch_operator<DIRAC_OP> D_h;
+    fermion_action<gauge_field, DIRAC_OP> base_action;
+    double _mh;
+
+    Hasenbusch_action_2(DIRAC_OP &d, gauge_field &g, double mh) : _mh(mh), D_h(d, mh), base_action(d, g) {}
+
+    Hasenbusch_action_2(Hasenbusch_action_2 &fa) : _mh(fa._mh), D_h(fa.D_h), base_action(fa.base_action){}
+
+    double action(){return(0);}
+    void backup_fields(){}
+    void restore_backup(){}
+    void draw_gaussian_fields(){base_action.draw_gaussian_fields();}
+    void force_step(double eps){}
+
+};
+
+
 
 
 
