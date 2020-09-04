@@ -95,8 +95,8 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
   
-    assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
-    assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
+    assert(diffre*diffre < 1e-16 && "test dirac_staggered_dagger");
+    assert(diffim*diffim < 1e-16 && "test dirac_staggered_dagger");
     
     // Now run CG on Ddaggera. b=1/D a -> Db = a 
     CG<dirac> inverse(D);
@@ -132,8 +132,8 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
   
-    assert(diffre*diffre < 1e-16 && "test dirac_stagggered_dagger");
-    assert(diffim*diffim < 1e-16 && "test dirac_stagggered_dagger");
+    assert(diffre*diffre < 1e-16 && "test dirac_staggered_dagger");
+    assert(diffim*diffim < 1e-16 && "test dirac_staggered_dagger");
   
     // Now run CG on Ddaggera. b=1/D a -> Db = a 
     CG<dirac> inverse(D);

@@ -149,22 +149,88 @@ class Hasenbusch_action_1 {
 };
 
 
+/* The second Hasenbusch action term, D_h2 = D/(D^dagger + mh)
+ */
 template<typename gauge_field, typename DIRAC_OP>
 class Hasenbusch_action_2 {
   public:
+    using vector_type = typename DIRAC_OP::vector_type;
+    using momtype = squarematrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
+    gauge_field &gauge;
+    DIRAC_OP D;
     Hasenbusch_operator<DIRAC_OP> D_h;
-    fermion_action<gauge_field, DIRAC_OP> base_action;
-    double _mh;
+    double mh;
+    field<vector_type> chi;
 
-    Hasenbusch_action_2(DIRAC_OP &d, gauge_field &g, double mh) : _mh(mh), D_h(d, mh), base_action(d, g) {}
+    Hasenbusch_action_2(DIRAC_OP &d, gauge_field &g, double _mh) : mh(_mh), D(d), D_h(d, _mh), gauge(g) {
+      chi = 0.0;
+      #if NDIM > 3
+      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      #endif
+    }
 
-    Hasenbusch_action_2(Hasenbusch_action_2 &fa) : _mh(fa._mh), D_h(fa.D_h), base_action(fa.base_action){}
+    Hasenbusch_action_2(Hasenbusch_action_2 &fa) : mh(fa.mh), D(fa.D), D_h(fa.D_h), gauge(fa.gauge){
+      chi = fa.chi;
+      #if NDIM > 3
+      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      #endif
+    }
 
-    double action(){return(0);}
+
+    // Return the value of the action with the current
+    // field configuration
+    double action(){
+      field<vector_type> psi;
+      field<vector_type> v;
+      psi.copy_boundary_condition(chi);
+      v.copy_boundary_condition(chi);
+      CG<DIRAC_OP> inverse(D);
+      double action = 0;
+    
+      gauge.refresh();
+
+      v=0; psi=0;
+      D_h.apply(chi, psi);
+      inverse.apply(psi,v);
+      D_h.dagger(v, psi);
+      onsites(D.par){
+        action += chi[X].rdot(psi[X]);
+      }
+      
+      hila::output << "h2 " << action << "\n";
+      return action;
+    }
+
     void backup_fields(){}
     void restore_backup(){}
-    void draw_gaussian_fields(){base_action.draw_gaussian_fields();}
-    void force_step(double eps){}
+    
+    /// Generate a pseudofermion field with a distribution given
+    /// by the action chi 1/(D_dagger D) chi
+    void draw_gaussian_fields(){
+      field<vector_type> psi;
+      field<vector_type> v;
+      psi.copy_boundary_condition(chi);
+      v.copy_boundary_condition(chi);
+      CG inverse_h(D_h); // Applies 1/(D_h^dagger D_h)
+      gauge.refresh();
+
+      onsites(D.par){
+        if(disable_avx[X]==0){};
+        psi[X].gaussian();
+      }
+      v=0;
+      inverse_h.apply(psi, v);
+      D_h.apply(v, psi);
+      D.apply(psi, chi);
+    }
+
+    // Update the momentum with the derivative of the fermion
+    // action
+    void force_step(double eps){
+
+    }
 
 };
 
