@@ -191,7 +191,7 @@ class Dirac_Wilson_evenodd {
 
 
     // Applies the operator to in
-    inline void apply( field<vector_type> & in, field<vector_type> & out){
+    inline void apply( const field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       Dirac_Wilson_diag(in, out, EVEN);
 
@@ -202,7 +202,7 @@ class Dirac_Wilson_evenodd {
     }
 
     // Applies the conjugate of the operator
-    inline void dagger( field<vector_type> & in, field<vector_type> & out){
+    inline void dagger( const field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       Dirac_Wilson_diag(in, out, EVEN);
 
