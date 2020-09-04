@@ -414,7 +414,7 @@ class gauge_action {
       foralldir(dir){
         staple = calc_staples(gauge.gauge, dir);
         onsites(ALL){
-          force[dir][X] = (-beta*eps/N)*gauge.gauge[dir][X]*staple[X];
+          force[dir][X] = (-beta*eps/N)*staple[X];
         }
       }
       gauge.add_momentum(force);

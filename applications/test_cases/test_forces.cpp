@@ -215,11 +215,12 @@ int main(int argc, char **argv){
     double diff = (f*cmplx(0,1)*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
-      //hila::output << "Force 1 " << (f*SU<N>::generator(ng)).trace().re << "\n";
-      //hila::output << "Force 2 " << (s2-s1)/eps << "\n";
+      //hila::output << "Force " << (f*cmplx(0,1)*SU<N>::generator(ng)).trace().re << "\n";
+      //hila::output << "Force " << (f*SU<N>::generator(ng)).trace().re << "\n";
+      //hila::output << "Deriv " << (s2-s1)/eps << "\n";
       //hila::output << "Force " << ng << " diff " << diff << "\n";
       h = cmplx(0,1)*SU<N>::generator(ng);
-      //assert( diff*diff < eps*10 && "Gauge force" );
+      assert( diff*diff < eps*10 && "Gauge force" );
     }
   }
 
