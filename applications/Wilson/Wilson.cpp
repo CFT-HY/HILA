@@ -32,6 +32,7 @@ int main(int argc, char **argv){
 
   // Define gauge and momentum action terms
   gauge_action ga(gauge, beta);
+  gauge_momentum_action ma(gauge, beta);
 
   // Define a Dirac operator
   Dirac_Wilson_evenodd D(kappa, adj_gauge);
@@ -40,7 +41,8 @@ int main(int argc, char **argv){
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
-  O2_integrator integrator_level_2(fa1, ga, 5); // 5 gauge each time
+  O2_integrator integrator_level_1(ga, ma);
+  O2_integrator integrator_level_2(fa1, integrator_level_1, 1); // 5 gauge updates each time
   O2_integrator integrator_level_3(fa2, integrator_level_2);
   
   int config_found = (bool) std::ifstream(configfile);
@@ -51,7 +53,9 @@ int main(int argc, char **argv){
     gauge.read_file(configfile);
   } else {
     output0 << "No config file " << configfile << ", starting new run\n";
+    gauge.random();
   }
+
 
   // Run HMC using the integrator
   for(int step = 0; step < n_trajectories; step ++){
