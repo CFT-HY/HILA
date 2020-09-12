@@ -110,7 +110,7 @@ class integrator_base {
     virtual void momentum_step(double eps){}
 
     // A single update
-    void step(double eps){}
+    virtual void step(double eps){}
 };
 
 
