@@ -51,6 +51,8 @@ int main(int argc, char **argv){
   {
     output0 << "Found configuration file, reading\n";
     gauge.read_file(configfile);
+    double plaq = gauge.plaquette();
+    output0 << "Initial plaquette: " << plaq << "\n";
   } else {
     output0 << "No config file " << configfile << ", starting new run\n";
     gauge.random();
