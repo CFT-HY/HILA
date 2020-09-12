@@ -414,6 +414,35 @@ class action_base {
 };
 
 
+/// A base for an integrator. An integrator updates the gauge and
+/// momentum fields in the HMC trajectory, approximately conserving
+/// the action
+class integrator_base {
+  public:
+    virtual double action(){ return 0; }
+
+    // Refresh fields that can be drawn from a gaussian distribution
+    // This is needed at the beginning of a trajectory
+    virtual void draw_gaussian_fields(){}
+
+    // Make a copy of fields updated in a trajectory
+    virtual void backup_fields(){}
+
+    // Restore the previous backup
+    virtual void restore_backup(){}
+
+
+    // Update the momentum with the gauge field
+    virtual void force_step(double eps){}
+
+    // Update the gauge field with momentum
+    virtual void momentum_step(double eps){}
+
+    // A single gauge update
+    virtual void step(double eps){}
+};
+
+
 
 
 /// The Wilson plaquette action of a gauge field
@@ -423,7 +452,7 @@ class action_base {
 /// updates the gauge field. This is the lowest level of the
 /// integrator
 template<typename gauge_field>
-class gauge_action : public action_base {
+class gauge_action : public action_base, public integrator_base {
   public:
     using gauge_field_type = gauge_field;
     using gauge_mat = typename gauge_field::gauge_type;
@@ -564,15 +593,15 @@ action_sum operator+(action_base a1, action_base a2){
 
 
 
+
 /// Define an integration step for a Molecular Dynamics
 /// trajectory.
-template<typename lower_integrator_type>
-class integrator{
+class integrator: public integrator_base {
   public:
     action_base &action_term;
-    lower_integrator_type &lower_integrator;
+    integrator_base &lower_integrator;
 
-    integrator(action_base &a, lower_integrator_type &i)
+    integrator(action_base &a, integrator_base &i)
     : action_term(a), lower_integrator(i) {}
 
     // The current total action of fields updated by this
