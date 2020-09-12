@@ -1,7 +1,7 @@
 #ifndef FERMION_FIELD_H
 #define FERMION_FIELD_H
 
-
+#include "gauge_field.h"
 #include "../../libraries/dirac/Hasenbusch.h"
 #include "../dirac/conjugate_gradient.h"
 #include <cmath>

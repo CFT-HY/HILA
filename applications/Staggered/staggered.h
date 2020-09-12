@@ -15,7 +15,7 @@
 #include "../../libraries/datatypes/sun.h"
 #include "../../libraries/datatypes/representations.h"
 #include "../../libraries/plumbing/field.h"
-#include "../../libraries/hmc/update.h"
+#include "../../libraries/hmc/hmc.h"
 #include "../../libraries/hmc/gauge_field.h"
 #include "../../libraries/dirac/staggered.h"
 #include "../../libraries/hmc/fermion_field.h"

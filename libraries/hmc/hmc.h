@@ -4,35 +4,7 @@
 
 #include <sys/time.h>
 #include <ctime>
-
-
-
-/// A leapfrog step, which can be used as a building block of an
-/// integrator.
-// The action term class needs to implement two update steps,
-// called momentum_step(double eps) and force_step(double eps).
-// The force_step is assumed to be numerically more expensive.
-template<class action_term>
-void leapfrog_step(action_term &at, double eps){
-  at.momentum_step(0.5*eps);
-  at.force_step(eps);
-  at.momentum_step(0.5*eps);
-}
-
-
-/// A second order step, which can be used as a building block of
-/// an integrator
-template<class action_term>
-void O2_step(action_term &at, double eps){
-  double zeta = eps*0.1931833275037836;
-  double middlestep = eps-2*zeta;
-  at.momentum_step(zeta);
-  at.force_step(0.5*eps);
-  at.momentum_step(middlestep);
-  at.force_step(0.5*eps);
-  at.momentum_step(zeta);
-}
-
+#include "integrator.h"
 
 
 

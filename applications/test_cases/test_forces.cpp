@@ -3,7 +3,7 @@
 #include "datatypes/sun.h"
 #include "datatypes/representations.h"
 #include "plumbing/field.h"
-#include "hmc/update.h"
+#include "hmc/hmc.h"
 #include "hmc/gauge_field.h"
 #include "hmc/smearing.h"
 #include "dirac/wilson.h"
