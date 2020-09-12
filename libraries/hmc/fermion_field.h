@@ -10,14 +10,13 @@
 
 
 template<typename gauge_field, typename DIRAC_OP>
-class fermion_action{
+class fermion_action : action_base{
   public:
     using vector_type = typename DIRAC_OP::vector_type;
     using momtype = squarematrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
     gauge_field &gauge;
     DIRAC_OP &D;
     field<vector_type> chi;
-
 
     fermion_action(DIRAC_OP &d, gauge_field &g)
     : D(d), gauge(g){ 
@@ -55,12 +54,6 @@ class fermion_action{
       
       return action;
     }
-
-    // Make a copy of fields updated in a trajectory
-    void backup_fields(){}
-
-    // Restore the previous backup
-    void restore_backup(){}
 
     /// Generate a pseudofermion field with a distribution given
     /// by the action chi 1/(D_dagger D) chi
@@ -103,12 +96,6 @@ class fermion_action{
 };
 
 
-// Sum operator for creating an action_sum object
-template<typename matrix, typename DIRAC_OP, typename action2>
-action_sum<action2, fermion_action<matrix, DIRAC_OP>> operator+(action2 a1, fermion_action<matrix, DIRAC_OP> a2){
-  action_sum<action2, fermion_action<matrix, DIRAC_OP>> sum(a1, a2);
-  return sum;
-}
 
 
 
@@ -130,7 +117,7 @@ action_sum<action2, fermion_action<matrix, DIRAC_OP>> operator+(action2 a1, ferm
  * to the original operator, we can use fermion_action
  */
 template<typename gauge_field, typename DIRAC_OP>
-class Hasenbusch_action_1 {
+class Hasenbusch_action_1 : public action_base {
   public:
     Hasenbusch_operator<DIRAC_OP> D_h;
     fermion_action<gauge_field, Hasenbusch_operator<DIRAC_OP>> base_action;
@@ -141,8 +128,6 @@ class Hasenbusch_action_1 {
     Hasenbusch_action_1(Hasenbusch_action_1 &fa) : _mh(fa._mh), D_h(fa.D_h), base_action(fa.base_action){}
 
     double action(){return(base_action.action());}
-    void backup_fields(){}
-    void restore_backup(){}
     void draw_gaussian_fields(){base_action.draw_gaussian_fields();}
     void force_step(double eps){base_action.force_step(eps);}
 
@@ -152,7 +137,7 @@ class Hasenbusch_action_1 {
 /* The second Hasenbusch action term, D_h2 = D/(D^dagger + mh)
  */
 template<typename gauge_field, typename DIRAC_OP>
-class Hasenbusch_action_2 {
+class Hasenbusch_action_2 : public action_base {
   public:
     using vector_type = typename DIRAC_OP::vector_type;
     using momtype = squarematrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
@@ -205,8 +190,6 @@ class Hasenbusch_action_2 {
       return action;
     }
 
-    void backup_fields(){}
-    void restore_backup(){}
     
     /// Generate a pseudofermion field with a distribution given
     /// by the action chi 1/(D_dagger D) chi

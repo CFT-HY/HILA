@@ -26,7 +26,6 @@ class gauge_field_base{
     virtual void zero_momentum(){}
     virtual void backup(){}
     virtual void restore_backup(){}
-
 };
 
 
@@ -65,6 +64,9 @@ double polyakov_loop(direction dir, field<SU<N>> (&gauge)[NDIM]){
 
 /// Calculate the sum of staples in direction dir2 
 /// connected to links in direction dir1
+/// This version takes two different fields for the
+/// different directions and is necessary for HEX
+/// smearing
 template<typename SUN>
 field<SUN> calc_staples(field<SUN> *U1, field<SUN> *U2, direction dir1, direction dir2)
 {
@@ -372,9 +374,58 @@ using adjoint_gauge_field = represented_gauge_field<adjoint<N,radix>>;
 
 
 
-template<typename gauge_field>
-class gauge_action {
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*******************
+ * Action terms 
+ *******************/
+
+/// Define the standard action term class and trivial implementations
+/// for all functions
+class action_base {
   public:
+    // Calculate and return the action
+    virtual double action(){ return 0; }
+
+    // Draw any fields with a gaussian distribution,
+    // including the momentum
+    virtual void draw_gaussian_fields(){}
+
+    // Update the momentum with the derivative
+    // of the action term
+    virtual void force_step(double eps){}
+
+    // Make a copy of fields updated in a trajectory
+    virtual void backup_fields(){}
+
+    // Restore the previous backup
+    virtual void restore_backup(){}
+};
+
+
+
+
+/// The Wilson plaquette action of a gauge field
+/// The gauge action is a bit special, other action terms
+/// only contain the force step for the MC integrator.
+/// The gauge action also contains an update step that
+/// updates the gauge field. This is the lowest level of the
+/// integrator
+template<typename gauge_field>
+class gauge_action : public action_base {
+  public:
+    using gauge_field_type = gauge_field;
     using gauge_mat = typename gauge_field::gauge_type;
     static constexpr int N = gauge_mat::size;
     using momtype = squarematrix<N, cmplx<typename gauge_mat::base_type>>;
@@ -430,7 +481,8 @@ class gauge_action {
     }
 
 
-    // Called by HMC.
+    /* The following are functions an integrator must have */
+
     // Make a copy of fields updated in a trajectory
     void backup_fields(){
       gauge.backup();
@@ -457,15 +509,16 @@ class gauge_action {
 };
 
 
-// Represents a sum of two action terms. Useful for adding them
-// to an integrator on the same level.
-template<typename action_type_1, typename action_type_2>
-class action_sum {
-  public:
-    action_type_1 a1;
-    action_type_2 a2;
 
-    action_sum(action_type_1 _a1, action_type_2 _a2) 
+
+// Represents a sum of two action terms. Useful for adding them
+// to the same integrator level.
+class action_sum : public action_base{
+  public:
+    action_base &a1;
+    action_base &a2;
+
+    action_sum(action_base &_a1, action_base &_a2) 
     : a1(_a1), a2(_a2){}
 
     action_sum(action_sum &asum) : a1(asum.a1), a2(asum.a2){}
@@ -501,24 +554,25 @@ class action_sum {
 };
 
 
+
 // Sum operator for creating an action_sum object
-template<typename gauge_field_1, typename gauge_field_2>
-action_sum<gauge_action<gauge_field_1>, gauge_action<gauge_field_2>> operator+(gauge_action<gauge_field_1> a1, gauge_action<gauge_field_2> a2){
-  action_sum<gauge_action<gauge_field_1>, gauge_action<gauge_field_2>> sum(a1, a2);
+action_sum operator+(action_base a1, action_base a2){
+  action_sum sum(a1, a2);
   return sum;
 }
 
 
 
+
 /// Define an integration step for a Molecular Dynamics
 /// trajectory.
-template<typename action_type, typename lower_integrator_type>
+template<typename lower_integrator_type>
 class integrator{
   public:
-    action_type action_term;
-    lower_integrator_type lower_integrator;
+    action_base &action_term;
+    lower_integrator_type &lower_integrator;
 
-    integrator(action_type a, lower_integrator_type i)
+    integrator(action_base &a, lower_integrator_type &i)
     : action_term(a), lower_integrator(i) {}
 
     // The current total action of fields updated by this
