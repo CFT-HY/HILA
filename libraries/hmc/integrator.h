@@ -106,9 +106,6 @@ class integrator_base {
     // Update the momentum with the gauge field
     virtual void force_step(double eps){}
 
-    // Update the gauge field with momentum
-    virtual void momentum_step(double eps){}
-
     // A single update
     virtual void step(double eps){}
 };
@@ -177,10 +174,10 @@ class leapfrog_integrator: public action_term_integrator {
     // Run the integrator update
     void step(double eps){
       for(int i=0; i<n; i++)
-        momentum_step(0.5*eps/n);
+        this->lower_integrator.step(0.5*eps/n);
       force_step(eps);
       for(int i=0; i<n; i++)
-        momentum_step(0.5*eps/n);
+        this->lower_integrator.step(0.5*eps/n);
     }
 };
 
@@ -200,14 +197,17 @@ class O2_integrator: public action_term_integrator {
     void step(double eps){
       double zeta = eps*0.1931833275037836;
       double middlestep = eps-2*zeta;
-      for(int i=0; i<n; i++)
-        momentum_step(zeta/n);
+      for(int i=0; i<n; i++){
+        this->lower_integrator.step(zeta/n);
+      }
       force_step(0.5*eps);
-      for(int i=0; i<n; i++)
-        momentum_step(middlestep/n);
+      for(int i=0; i<n; i++){
+        this->lower_integrator.step(middlestep/n);
+      }
       force_step(0.5*eps);
-      for(int i=0; i<n; i++)
-        momentum_step(zeta/n);
+      for(int i=0; i<n; i++){
+        this->lower_integrator.step(zeta/n);
+      }
     }
 };
 

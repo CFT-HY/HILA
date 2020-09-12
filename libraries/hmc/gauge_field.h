@@ -218,7 +218,7 @@ class gauge_field : public gauge_field_base<matrix> {
   }
 
   /// Project a force term to the algebra and add to the
-  /// mometum
+  /// momemtum
   void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
     foralldir(dir){
       onsites(ALL){
@@ -392,14 +392,9 @@ using adjoint_gauge_field = represented_gauge_field<adjoint<N,radix>>;
  * Action terms 
  *******************/
 
-/// The Wilson plaquette action of a gauge field
-/// The gauge action is a bit special, other action terms
-/// only contain the force step for the MC integrator.
-/// The gauge action also contains an update step that
-/// updates the gauge field. This is the lowest level of the
-/// integrator
+
 template<typename gauge_field>
-class gauge_action : public action_base, public integrator_base {
+class gauge_momentum_action : public action_base, public integrator_base {
   public:
     using gauge_field_type = gauge_field;
     using gauge_mat = typename gauge_field::gauge_type;
@@ -408,6 +403,68 @@ class gauge_action : public action_base, public integrator_base {
 
     gauge_field &gauge;
     field<gauge_mat> gauge_copy[NDIM];
+
+    gauge_momentum_action(gauge_field &g, double b) 
+    : gauge(g){}
+    gauge_momentum_action(gauge_momentum_action &ga)
+    : gauge(ga.gauge) {}
+
+    //The gauge action
+    double action(){
+      double Sa = 0;
+      foralldir(dir) {
+        onsites(ALL){
+          Sa += gauge.momentum[dir][X].algebra_norm();
+        }
+      }
+      return Sa;
+    }
+
+    /// Gaussian random momentum for each element
+    void draw_gaussian_fields(){
+      gauge.draw_momentum();
+    }
+
+
+    /* The following are functions an integrator must have */
+    // Make a copy of fields updated in a trajectory
+    void backup_fields(){
+      gauge.backup();
+    }
+
+    // Restore the previous backup
+    void restore_backup(){
+      gauge.restore_backup();
+    }
+
+    // A momentum action is also the lowest level of an
+    // integrator hierarchy and needs to define the an step
+    // to update the gauge field using the momentum 
+    
+    // Update the gauge field with momentum
+    void step(double eps){
+      gauge.gauge_update(eps);
+    }
+
+};
+
+
+
+/// The Wilson plaquette action of a gauge field
+/// The gauge action is a bit special, other action terms
+/// only contain the force step for the MC integrator.
+/// The gauge action also contains an update step that
+/// updates the gauge field. This is the lowest level of the
+/// integrator
+template<typename gauge_field>
+class gauge_action : public action_base {
+  public:
+    using gauge_field_type = gauge_field;
+    using gauge_mat = typename gauge_field::gauge_type;
+    static constexpr int N = gauge_mat::size;
+    using momtype = squarematrix<N, cmplx<typename gauge_mat::base_type>>;
+
+    gauge_field &gauge;
     double beta;
 
     gauge_action(gauge_field &g, double b) 
@@ -418,20 +475,8 @@ class gauge_action : public action_base, public integrator_base {
 
     //The gauge action
     double action(){
-      double Sa = 0;
       double Sg = beta*plaquette_sum(gauge.gauge);
-      foralldir(dir) {
-        onsites(ALL){
-          Sa += gauge.momentum[dir][X].algebra_norm();
-        }
-      }
-      
-      return Sg+Sa;
-    }
-
-    /// Gaussian random momentum for each element
-    void draw_gaussian_fields(){
-      gauge.draw_momentum();
+      return Sg;
     }
 
     // Update the momentum with the gauge field
@@ -446,38 +491,6 @@ class gauge_action : public action_base, public integrator_base {
       }
       gauge.add_momentum(force);
     }
-
-    // Draw a random gauge field
-    void random(){
-      foralldir(dir){
-        onsites(ALL){
-          gauge.gauge[dir][X].random();
-        }
-      }
-    }
-
-
-    /* The following are functions an integrator must have */
-
-    // Make a copy of fields updated in a trajectory
-    void backup_fields(){
-      gauge.backup();
-    }
-
-    // Restore the previous backup
-    void restore_backup(){
-      gauge.restore_backup();
-    }
-
-    // Momentum step and step are required for an integrator.
-    // A gauge action is also the lowest level of an
-    // integrator hierarchy.
-    
-    // Update the gauge field with momentum
-    void momentum_step(double eps){
-      gauge.gauge_update(eps);
-    }
-
 };
 
 
