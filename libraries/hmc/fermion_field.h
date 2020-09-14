@@ -18,6 +18,13 @@ class fermion_action : action_base{
     DIRAC_OP &D;
     field<vector_type> chi;
 
+    // We save a few previous invertions to build an initial guess.
+    // old_chi contains a list of these
+    int MRE_size = 4;
+    std::vector<field<vector_type>> old_chi_inv;
+    int MRE_next_index = 0;
+    int MRE_num_saved = 0;
+
     fermion_action(DIRAC_OP &d, gauge_field &g)
     : D(d), gauge(g){ 
       chi = 0.0;
@@ -25,6 +32,7 @@ class fermion_action : action_base{
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
+      old_chi_inv.resize(MRE_size);
     }
 
     fermion_action(fermion_action &fa)
@@ -34,6 +42,7 @@ class fermion_action : action_base{
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
+      old_chi_inv.resize(MRE_size);
     }
 
     // Return the value of the action with the current
@@ -92,6 +101,37 @@ class fermion_action : action_base{
         force[dir][ALL] = -eps*(force[dir][X] + force2[dir][X]);
       }
       gauge.add_momentum(force);
+    }
+
+
+    // Build an initial guess for the fermion matrix inversion
+    // by inverting first in the limited space of a few previous
+    // solutions. These are saved in old_chi.
+    field<vector_type> & MRE_guess(){
+      int N;
+      double M[N][N];
+      // First check the number of saved vectors
+      if(MRE_num_saved < MRE_size){
+        N=MRE_num_saved;
+      } else {
+        N=MRE_size;
+      }
+
+      // Build the projected matrix, M[i][j] = v[i].v[j] 
+      for(int i=0; i<N; i++) for(int j=0; j<N; j++) {
+        M[i][j] = 0;
+        onsites(D.par){
+          M[i][j] += old_chi_inv[i][X].rdot(old_chi_inv[j][X]);
+        }
+      }
+      
+    }
+
+    // Add new solution to the list
+    void save_new_solution(field<vector_type> & psi){
+      old_chi_inv[MRE_next_index] = psi;
+      MRE_next_index = (MRE_next_index + 1)%MRE_size;
+      MRE_num_saved++;
     }
 };
 
