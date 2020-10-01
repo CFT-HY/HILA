@@ -17,6 +17,7 @@ class fermion_action : action_base{
     gauge_field &gauge;
     DIRAC_OP &D;
     field<vector_type> chi;
+    bool use_MRE_guess = true;
 
     // We save a few previous invertions to build an initial guess.
     // old_chi contains a list of these
@@ -60,7 +61,7 @@ class fermion_action : action_base{
       onsites(D.par){
         action += chi[X].rdot(psi[X]);
       }
-      
+      hila::output << "fermion action " << action << "\n";
       return action;
     }
 
@@ -78,6 +79,77 @@ class fermion_action : action_base{
       D.dagger(psi,chi);
     }
 
+
+    // Build an initial guess for the fermion matrix inversion
+    // by inverting first in the limited space of a few previous
+    // solutions. These are saved in old_chi.
+    void MRE_guess(field<vector_type> & psi, field<vector_type> & ){
+      int N;
+      double M[MRE_size][MRE_size];
+      double v[MRE_size];
+      // First check the number of saved vectors
+      if(MRE_num_saved < MRE_size){
+        N=MRE_num_saved;
+      } else {
+        N=MRE_size;
+      }
+
+      // Build the projected matrix, M[i][j] = v[i].v[j]
+      for(int i=0; i<N; i++) {
+        field<vector_type> Dchi, DDchi;
+        D.apply(old_chi_inv[i], Dchi);
+        D.dagger(Dchi, DDchi);
+        for(int j=0; j<N; j++) {
+          double sum = 0;
+          onsites(D.par) {
+            sum += old_chi_inv[j][X].rdot(DDchi[X]);
+          }
+          M[j][i] = sum;
+        }
+      }
+      // And the projected vector
+      for(int i=0; i<N; i++){
+        double sum = 0;
+        onsites(D.par){
+          sum += old_chi_inv[i][X].rdot(chi[X]);
+        }
+        v[i] = sum;
+      }
+
+      // Now invert the small matrix M (Gaussian elimination)
+      for(int i=0; i<N; i++){
+        // Normalize the i:th row
+        double diag = M[i][i];
+        for(int j=0; j<N; j++) {
+          M[i][j] /= diag;
+        }
+        v[i] /= diag;
+        // Subtract from all other rows
+        for(int k=0; k<N; k++) if(k!=i){
+          double weight = M[k][i];
+          for(int j=0; j<N; j++) {
+            M[k][j] -= weight*M[i][j];
+          }
+          v[k] -= weight*v[i];
+        }
+      }
+
+      // Construct the solution in the original basis
+      psi[ALL] = 0;
+      for(int i=0; i<N; i++){
+        psi[D.par] += v[i]*old_chi_inv[i][X];
+      }
+    }
+
+    // Add new solution to the list
+    void save_new_solution(field<vector_type> & psi){
+      old_chi_inv[MRE_next_index] = psi;
+      MRE_next_index = (MRE_next_index+1)%MRE_size;
+      MRE_num_saved++;
+    }
+
+
+
     // Update the momentum with the derivative of the fermion
     // action
     void force_step(double eps){
@@ -89,8 +161,13 @@ class fermion_action : action_base{
 
       gauge.refresh();
 
-      psi[ALL]=0;
+      if(use_MRE_guess){
+        MRE_guess(psi, chi);
+      } else {
+        psi[ALL]=0;
+      }
       inverse.apply(chi, psi);
+      save_new_solution(psi);
 
       D.apply(psi, Mpsi);
 
@@ -101,37 +178,6 @@ class fermion_action : action_base{
         force[dir][ALL] = -eps*(force[dir][X] + force2[dir][X]);
       }
       gauge.add_momentum(force);
-    }
-
-
-    // Build an initial guess for the fermion matrix inversion
-    // by inverting first in the limited space of a few previous
-    // solutions. These are saved in old_chi.
-    field<vector_type> & MRE_guess(){
-      int N;
-      double M[N][N];
-      // First check the number of saved vectors
-      if(MRE_num_saved < MRE_size){
-        N=MRE_num_saved;
-      } else {
-        N=MRE_size;
-      }
-
-      // Build the projected matrix, M[i][j] = v[i].v[j] 
-      for(int i=0; i<N; i++) for(int j=0; j<N; j++) {
-        M[i][j] = 0;
-        onsites(D.par){
-          M[i][j] += old_chi_inv[i][X].rdot(old_chi_inv[j][X]);
-        }
-      }
-      
-    }
-
-    // Add new solution to the list
-    void save_new_solution(field<vector_type> & psi){
-      old_chi_inv[MRE_next_index] = psi;
-      MRE_next_index = (MRE_next_index + 1)%MRE_size;
-      MRE_num_saved++;
     }
 };
 
