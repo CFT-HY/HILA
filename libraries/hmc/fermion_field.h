@@ -21,7 +21,7 @@ class fermion_action : action_base{
 
     // We save a few previous invertions to build an initial guess.
     // old_chi contains a list of these
-    int MRE_size = 4;
+    int MRE_size = 0;
     std::vector<field<vector_type>> old_chi_inv;
 
     fermion_action(DIRAC_OP &d, gauge_field &g)
@@ -31,11 +31,22 @@ class fermion_action : action_base{
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
+    }
+
+    fermion_action(DIRAC_OP &d, gauge_field &g, int mre_guess_size)
+    : D(d), gauge(g){ 
+      chi = 0.0;
+      #if NDIM > 3
+      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      #endif
+      MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);
       for(int i=0; i<MRE_size; i++){
         old_chi_inv[i][ALL] = 0;
       }
     }
+
 
     fermion_action(fermion_action &fa)
     : gauge(fa.gauge), D(fa.D)  {
@@ -44,6 +55,7 @@ class fermion_action : action_base{
       chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
+      MRE_size = fa.mre_guess_size;
       old_chi_inv.resize(MRE_size);
       for(int i=0; i<MRE_size; i++){
         old_chi_inv[i][ALL] = 0;
