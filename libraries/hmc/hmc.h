@@ -16,32 +16,32 @@
 // The integrator class must implement at least two functions, 
 // action() an integrator_step(double eps) 
 template<class integrator_type>
-void update_hmc(integrator_type &integr, int steps, double traj_length){
+void update_hmc(integrator_type &integrator, int steps, double traj_length){
   
   static int accepted=0, trajectory=1;
   struct timeval start, end;
   double timing;
 
   // Draw the momentum
-  integr.draw_gaussian_fields();
+  integrator.draw_gaussian_fields();
 
   // Make a copy of the gauge field in case the update is rejected
-  integr.backup_fields();
+  integrator.backup_fields();
   
   gettimeofday(&start, NULL);
 
   // Calculate the starting action and print
-  double start_action = integr.action();
+  double start_action = integrator.action();
   output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
           << start_action << "\n";
 
   // Run the integator
   for(int step=0; step < steps; step++){
-    integr.step(traj_length/steps);
+    integrator.step(traj_length/steps);
   }
 
   // Recalculate the action
-  double end_action = integr.action();
+  double end_action = integrator.action();
   double edS = exp(-(end_action - start_action));
 
   output0 << "End HMC: Action " << end_action << " "
@@ -54,7 +54,7 @@ void update_hmc(integrator_type &integr, int steps, double traj_length){
     accepted++;
   } else {
     output0 << "Rejected!\n";
-    integr.restore_backup();
+    integrator.restore_backup();
   }
 
 
