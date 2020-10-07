@@ -58,6 +58,13 @@ class Wilson_vector {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+  Wilson_vector(const Wilson_vector<N,scalart> m) {
+    for (int i=0; i<Gammadim; i++){
+      c[i] = m.c[i];
+    }
+  }
+
+  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
   #pragma hila loop_function
   Wilson_vector(const scalart rhs) {
     for(int i=0; i<Gammadim; i++){

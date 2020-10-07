@@ -172,22 +172,26 @@ field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> &
 template<typename matrix>
 class Dirac_Wilson_evenodd {
   private:
-    double kappa;
     field<matrix> (&gauge)[NDIM];
   public:
+    double kappa;
     static constexpr int N = matrix::size;
     using radix = typename matrix::base_type;
 
     using vector_type = Wilson_vector<N, radix>;
     using matrix_type = matrix;
 
+    using type_flt = Dirac_Wilson_evenodd<typename gauge_field_base<matrix>::gauge_type_flt>;
+
     // The parity 
     parity par = EVEN;
 
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
-    Dirac_Wilson_evenodd(double k, gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
-    Dirac_Wilson_evenodd(double k, represented_gauge_field<matrix> &g) : gauge(g.gauge), kappa(k) {}
+    Dirac_Wilson_evenodd(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
+
+    template<typename M>
+    Dirac_Wilson_evenodd(Dirac_Wilson_evenodd<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(d.kappa) {}
 
 
     // Applies the operator to in

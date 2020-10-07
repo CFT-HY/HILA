@@ -104,6 +104,22 @@ class fermion_action : action_base{
       } else {
         psi[ALL]=0;
       }
+      // If the gauge type is double precision, solve first in single precision
+      if constexpr (std::is_same<double, typename gauge_field::basetype>::value){
+        output0 << "Starting with single precision inversion\n";
+
+        auto single_precision = gauge.get_single_precision();
+        typename DIRAC_OP::type_flt D_flt(D, single_precision);
+        field<typename DIRAC_OP::type_flt::vector_type> c, p, t1, t2;
+        c[ALL] = chi[X];
+        p[ALL] = psi[X];
+        CG inverse(D_flt, 1e-6);
+        inverse.apply(c, p);
+
+        D_flt.apply(p, t1);
+        D_flt.dagger(t1, t2);
+        psi[ALL] = p[X];
+      }
     }
 
     // Add new solution to the list
@@ -128,6 +144,7 @@ class fermion_action : action_base{
       CG<DIRAC_OP> inverse(D);
       gauge.refresh();
 
+      output0 << "base force\n";
       initial_guess(chi, psi);
       inverse.apply(chi, psi);
       save_new_solution(psi);
@@ -275,7 +292,7 @@ class Hasenbusch_action_2 : public action_base {
       field<vector_type> v;
       psi.copy_boundary_condition(chi);
       v.copy_boundary_condition(chi);
-      CG inverse_h(D_h); // Applies 1/(D_h^dagger D_h)
+      CG inverse_h(D_h, 1e-12); // Applies 1/(D_h^dagger D_h)
       gauge.refresh();
 
       onsites(D.par){
@@ -297,6 +314,22 @@ class Hasenbusch_action_2 : public action_base {
         MRE_guess(psi, chi, D, old_chi_inv);
       } else {
         psi[ALL]=0;
+      }
+      // If the gauge type is double precision, solve first in single precision
+      if constexpr (std::is_same<double, typename gauge_field::basetype>::value){
+        output0 << "Starting with single precision inversion\n";
+
+        auto single_precision = gauge.get_single_precision();
+        typename DIRAC_OP::type_flt D_flt(D, single_precision);
+        field<typename DIRAC_OP::type_flt::vector_type> c, p, t1, t2;
+        c[ALL] = chi[X];
+        p[ALL] = psi[X];
+        CG inverse(D_flt, 1e-6);
+        inverse.apply(c, p);
+
+        D_flt.apply(p, t1);
+        D_flt.dagger(t1, t2);
+        psi[ALL] = p[X];
       }
     }
 
@@ -326,8 +359,9 @@ class Hasenbusch_action_2 : public action_base {
 
       D_h.dagger(chi, Dhchi); 
 
-      initial_guess(chi, psi);
-      inverse.apply(chi, psi);
+      output0 << "light hasenbusch force\n";
+      initial_guess(Dhchi, psi);
+      inverse.apply(Dhchi, psi);
       save_new_solution(psi);
 
       D.apply(psi, Mpsi);

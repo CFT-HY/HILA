@@ -13,6 +13,14 @@ class adjoint : public squarematrix<N*N-1, radix> {
 
     using squarematrix<N*N-1, radix>::squarematrix;
 
+    adjoint() = default;
+
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    adjoint(const adjoint<N,scalart> m) {
+      for (int j=0; j<N*N-1; j++) for (int i=0; i<N*N-1; i++){
+        this->c[i][j] = m.c[i][j];
+      }
+    }
 
     // Info on group generators
     constexpr static int size = N*N-1;

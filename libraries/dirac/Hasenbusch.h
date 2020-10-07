@@ -10,12 +10,14 @@
  * D_h2 = D * 1 / (D + mh)^dagger
  */
 
+/// This operator applies D + mh. It is 
+/// necessary for defining the inverse 1/(D+mh)
 template<typename Dirac_type>
 class Hasenbusch_operator {
-  /* An operator that applies D + hm. This is 
-   * necessary for defining the inverse 1/(D+hm) */
   public:
     using vector_type = typename Dirac_type::vector_type;
+    using type_flt = Hasenbusch_operator<typename Dirac_type::type_flt>;
+
     Dirac_type D;
     parity par = D.par;
     double h_parameter;
@@ -25,6 +27,12 @@ class Hasenbusch_operator {
     Hasenbusch_operator(Hasenbusch_operator &h) : D(h.D) {
       h_parameter = h.h_parameter;
     }
+
+    template<typename H_type, typename matrix>
+    Hasenbusch_operator(H_type &h, matrix &mat) : D(h.D, mat) {
+      h_parameter = h.h_parameter;
+    }
+
 
     inline void apply( const field<vector_type> & in, field<vector_type> & out){
       D.apply(in, out);

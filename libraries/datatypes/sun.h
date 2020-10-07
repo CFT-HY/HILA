@@ -81,7 +81,8 @@ class SU : public squarematrix<n,cmplx<radix>>{
       }
     }
 
-    SU(squarematrix<n,cmplx<radix>> m) {
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    SU(squarematrix<n,cmplx<scalart>> m) {
       for (int j=0; j<n; j++) for (int i=0; i<n; i++){
         this->c[i][j] = m.c[i][j];
       }
@@ -599,6 +600,13 @@ class SU_vector : public vector<n,cmplx<radix>>{
     SU_vector(const scalart rhs) {
       for(int i=0; i<n; i++){
         this->c[i] = (rhs);
+      }
+    }
+
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    SU_vector(const SU_vector<n,scalart> m) {
+      for (int i=0; i<n; i++){
+        this->c[i] = m.c[i];
       }
     }
 

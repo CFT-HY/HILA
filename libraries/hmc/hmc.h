@@ -35,7 +35,7 @@ void update_hmc(integrator_type &integrator, int steps, double traj_length){
   output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
           << start_action << "\n";
 
-  // Run the integator
+  // Run the integrator
   for(int step=0; step < steps; step++){
     integrator.step(traj_length/steps);
   }
@@ -43,10 +43,6 @@ void update_hmc(integrator_type &integrator, int steps, double traj_length){
   // Recalculate the action
   double end_action = integrator.action();
   double edS = exp(-(end_action - start_action));
-
-  output0 << "End HMC: Action " << end_action << " "
-        << end_action - start_action
-        << " exp(-dS) " << edS << "\n";
 
   // Accept or reject
   if(hila_random() < edS){
@@ -57,9 +53,10 @@ void update_hmc(integrator_type &integrator, int steps, double traj_length){
     integrator.restore_backup();
   }
 
-
-  output0 << "Acceptance " << accepted << "/" << trajectory 
-          << " " << (double)accepted/(double)trajectory << "\n";
+  output0 << "End HMC: Action " << end_action << " "
+    << end_action - start_action
+    << " exp(-dS) " << edS << ". Acceptance " << accepted << "/" << trajectory 
+    << " " << (double)accepted/(double)trajectory << "\n";
 
   gettimeofday(&end, NULL);
   timing = (double)(end.tv_sec - start.tv_sec) + 1e-6*(end.tv_usec - start.tv_usec);

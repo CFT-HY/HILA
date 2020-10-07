@@ -13,6 +13,7 @@ template<typename sun>
 class gauge_field_base{
   public:
     using basetype = typename sun::base_type;
+    using gauge_type = sun;
     static constexpr int N = sun::size;
     field<sun> gauge[NDIM];
     field<sun> momentum[NDIM];
@@ -21,12 +22,43 @@ class gauge_field_base{
     virtual void set_unity(){}
     virtual void random(){}
 
+    virtual void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){}
+    virtual void draw_momentum(){}
+    virtual void zero_momentum(){}
+    virtual void backup(){}
+    virtual void restore_backup(){}
+
+    using gauge_type_flt = sun;
+};
+
+/// Add a function returning a single precision copy of the field when
+/// it is easy enough to construct. (Must specialize the whole class)
+template<template <int,typename> class M, int N>
+class gauge_field_base<M<N,double>>{
+  public:
+    using basetype = double;
+    using gauge_type =  M<N,double>;
+    field<gauge_type> gauge[NDIM];
+    field<gauge_type> momentum[NDIM];
+
+    virtual void refresh(){}
+    virtual void set_unity(){}
+    virtual void random(){}
 
     virtual void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){}
     virtual void draw_momentum(){}
     virtual void zero_momentum(){}
     virtual void backup(){}
     virtual void restore_backup(){}
+
+    using gauge_type_flt = M<N,float>;
+    gauge_field_base<M<N,float>> get_single_precision(){
+      gauge_field_base<M<N,float>> gauge_flt;
+      foralldir(dir){
+        gauge_flt.gauge[dir] = gauge[dir];
+      }
+      return gauge_flt;
+    }
 };
 
 
@@ -218,7 +250,7 @@ class gauge_field : public gauge_field_base<matrix> {
   }
 
   /// Project a force term to the algebra and add to the
-  /// momemtum
+  /// momentum
   void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
     foralldir(dir){
       onsites(ALL){
@@ -258,7 +290,7 @@ class gauge_field : public gauge_field_base<matrix> {
     }
     outputfile.close();
   }
-
+  
   
   // Simple measurables that only depend on the gauge field
   double plaquette(){
@@ -267,6 +299,20 @@ class gauge_field : public gauge_field_base<matrix> {
 
   double polyakov(int dir){
     return polyakov_loop(dir, this->gauge);
+  }
+
+
+  /// Return the field in single precision. For this the gauge field needs to follow 
+  /// a specific template structure, such as su<N,double>
+  template<typename T, int N, typename radix,
+    template<int,typename> class M,
+    typename = std::enable_if_t<std::is_same<M<N,radix>, T>::value>>
+  auto get_single_precision(){
+    gauge_field<M<N,float>> gauge_flt;
+    foralldir(dir){
+      gauge_flt->gauge[dir][ALL] = this->gauge[dir][X];
+    }
+    return gauge_flt;
   }
 
 
@@ -282,7 +328,7 @@ class gauge_field : public gauge_field_base<matrix> {
 
 
 
-template<typename repr>
+template<class repr>
 class represented_gauge_field : public gauge_field_base<repr> {
   public: 
   using gauge_type = repr;
@@ -298,7 +344,7 @@ class represented_gauge_field : public gauge_field_base<repr> {
   represented_gauge_field(represented_gauge_field &r)
     : fundamental(r.fundamental){
       gauge_field_base<repr>();
-    }
+  }
 
 
   // Represent the fields
@@ -355,6 +401,7 @@ class represented_gauge_field : public gauge_field_base<repr> {
   }
 
 
+
   field<fund_type> & get_momentum(int dir){
     return fundamental.get_momentum(dir);
   }
@@ -362,6 +409,7 @@ class represented_gauge_field : public gauge_field_base<repr> {
     return fundamental.get_gauge(dir);
   }
 };
+
 
 
 /* Shortcuts for represented gauge fields */
