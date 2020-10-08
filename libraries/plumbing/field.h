@@ -503,9 +503,6 @@ class field {
     foralldir(dir){
       set_boundary_condition(dir, rhs.get_boundary_condition(dir));
     }
-
-    // Make sure boundaries get refreshed
-    mark_changed(ALL);
   }
 
   // Overloading [] 

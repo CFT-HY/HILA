@@ -21,8 +21,9 @@ inline void Dirac_Wilson_hop(
   parity par, int sign)
 {
   field<half_Wilson_vector<N, radix>> (&vtemp)[NDIM] = wilson_dirac_temp_vector<N, radix>;
-  foralldir(dir)
+  foralldir(dir){
     vtemp[dir].copy_boundary_condition(v_in);
+  }
 
   // Run neighbour fetches and multiplications
   foralldir(dir){
@@ -33,7 +34,6 @@ inline void Dirac_Wilson_hop(
       vtemp[dir][X] = gauge[dir][X].conjugate()*h;
     }
 
-    vtemp[dir].set_boundary_condition(dir, v_in.get_boundary_condition(dir));
     //vtemp[dir].start_get(odir);
   }
   foralldir(dir){
