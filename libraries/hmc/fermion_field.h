@@ -27,8 +27,8 @@ class fermion_action : action_base{
     : D(d), gauge(g){ 
       chi = 0.0;
       #if NDIM > 3
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
     }
 
@@ -36,8 +36,8 @@ class fermion_action : action_base{
     : D(d), gauge(g){ 
       chi = 0.0;
       #if NDIM > 3
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
       MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);
@@ -51,8 +51,8 @@ class fermion_action : action_base{
     : gauge(fa.gauge), D(fa.D)  {
       chi = fa.chi;
       #if NDIM > 3
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
       MRE_size = fa.mre_guess_size;
       old_chi_inv.resize(MRE_size);
@@ -221,20 +221,10 @@ class Hasenbusch_action_2 : public action_base {
     int MRE_size = 0;
     std::vector<field<vector_type>> old_chi_inv;
 
-    Hasenbusch_action_2(DIRAC_OP &d, gauge_field &g, double _mh) 
-     : mh(_mh), D(d), D_h(d, _mh), gauge(g) {
-      chi = 0.0;
+    void setup(int mre_guess_size){
       #if NDIM > 3
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
-      #endif
-    }
-    Hasenbusch_action_2(DIRAC_OP &d, gauge_field &g, double _mh, int mre_guess_size) 
-     : mh(_mh), D(d), D_h(d, _mh), gauge(g) {
-      chi = 0.0;
-      #if NDIM > 3
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
       MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);
@@ -243,18 +233,21 @@ class Hasenbusch_action_2 : public action_base {
       }
     }
 
+    Hasenbusch_action_2(DIRAC_OP &d, gauge_field &g, double _mh) 
+     : mh(_mh), D(d), D_h(d, _mh), gauge(g) {
+      chi = 0.0;  // Allocates chi and sets it to zero
+      setup(0);
+    }
+    Hasenbusch_action_2(DIRAC_OP &d, gauge_field &g, double _mh, int mre_guess_size) 
+     : mh(_mh), D(d), D_h(d, _mh), gauge(g) {
+      chi = 0.0;  // Allocates chi and sets it to zero
+      setup(mre_guess_size);
+    }
+
     Hasenbusch_action_2(Hasenbusch_action_2 &fa) 
      : mh(fa.mh), D(fa.D), D_h(fa.D_h), gauge(fa.gauge){
-      chi = fa.chi;
-      #if NDIM > 3
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
-      #endif
-      MRE_size = fa.MRE_size;
-      old_chi_inv.resize(MRE_size);
-      for(int i=0; i<MRE_size; i++){
-        old_chi_inv[i][ALL] = 0;
-      }
+      chi = fa.chi;  // Copies the field
+      setup(fa.MRE_size);
     }
 
 

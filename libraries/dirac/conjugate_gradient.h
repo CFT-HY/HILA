@@ -10,11 +10,11 @@
 ///////////////////////////////////////////////////////
 
 
-#include <sstream>
+#include<sstream>
 #include<iostream>
 
 constexpr int CG_DEFAULT_MAXITERS = 10000;
-constexpr double CG_DEFAULT_ACCURACY = 1e-8;
+constexpr double CG_DEFAULT_ACCURACY = 1e-18;
 
 
 /// The conjugate gradient operator. Applies the inverse square of an operator on a vector
@@ -100,10 +100,9 @@ class CG{
 
       gettimeofday(&end, NULL);
       double timing = 1e-3*(end.tv_usec - start.tv_usec) + 1e3*(end.tv_sec - start.tv_sec);
-      broadcast(timing);
 
       output0 << "Conjugate Gradient: " << i << " steps in " << timing << "ms, ";
-      output0 << "residue:" << rrnew << "\n";
+      output0 << "relative residue:" << rrnew/source_norm << "\n";
 
     }
 };
