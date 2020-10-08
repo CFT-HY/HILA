@@ -54,6 +54,29 @@ class fermion_action : public action_base{
       setup(fa.MRE_size);
     }
 
+    // Build an initial guess for the fermion matrix inversion
+    // by inverting first in the limited space of a few previous
+    // solutions. These are saved in old_chi.
+    void initial_guess(field<vector_type> & chi, field<vector_type> & psi){
+      psi[ALL]=0;
+      if(MRE_size > 0){
+        MRE_guess(psi, chi, D, old_chi_inv);
+      }
+      // If the gauge type is double precision, solve first in single precision
+      if constexpr (std::is_same<double, typename gauge_field::basetype>::value){
+        output0 << "Starting with single precision inversion\n";
+
+        auto single_precision = gauge.get_single_precision();
+        typename DIRAC_OP::type_flt D_flt(D, single_precision);
+        field<typename DIRAC_OP::type_flt::vector_type> c, p, t1, t2;
+        c[ALL] = chi[X];
+        p[ALL] = psi[X];
+        CG inverse(D_flt);
+        inverse.apply(c, p);
+
+        D_flt.apply(p, t1);
+        D_flt.dagger(t1, t2);
+        psi[ALL] = p[X];
       }
     }
 
@@ -68,12 +91,30 @@ class fermion_action : public action_base{
       gauge.refresh();
 
       psi=0;
+      initial_guess(chi,psi);
       inverse.apply(chi,psi);
       onsites(D.par){
         action += chi[X].rdot(psi[X]);
       }
-      hila::output << "fermion action " << action << "\n";
       return action;
+    }
+
+    // Calculate the action as a field of double precision numbers
+    void action(field<double> &S){
+      field<vector_type> psi;
+      psi.copy_boundary_condition(chi);
+      CG<DIRAC_OP> inverse(D);
+
+      gauge.refresh();
+
+      psi=0;
+      initial_guess(chi,psi);
+      inverse.apply(chi,psi);
+      onsites(D.par){
+        if(disable_avx[X]==0){};
+        S[X] += chi[X].rdot(psi[X]);
+      }
+      
     }
 
     /// Generate a pseudofermion field with a distribution given
@@ -88,34 +129,6 @@ class fermion_action : public action_base{
         psi[X].gaussian();
       }
       D.dagger(psi,chi);
-    }
-
-
-    // Build an initial guess for the fermion matrix inversion
-    // by inverting first in the limited space of a few previous
-    // solutions. These are saved in old_chi.
-    void initial_guess(field<vector_type> & chi, field<vector_type> & psi){
-      if(MRE_size > 0){
-        MRE_guess(psi, chi, D, old_chi_inv);
-      } else {
-        psi[ALL]=0;
-      }
-      // If the gauge type is double precision, solve first in single precision
-      if constexpr (std::is_same<double, typename gauge_field::basetype>::value){
-        output0 << "Starting with single precision inversion\n";
-
-        auto single_precision = gauge.get_single_precision();
-        typename DIRAC_OP::type_flt D_flt(D, single_precision);
-        field<typename DIRAC_OP::type_flt::vector_type> c, p, t1, t2;
-        c[ALL] = chi[X];
-        p[ALL] = psi[X];
-        CG inverse(D_flt, 1e-6);
-        inverse.apply(c, p);
-
-        D_flt.apply(p, t1);
-        D_flt.dagger(t1, t2);
-        psi[ALL] = p[X];
-      }
     }
 
     // Add new solution to the list
@@ -193,9 +206,9 @@ class Hasenbusch_action_1 : public action_base {
     Hasenbusch_action_1(Hasenbusch_action_1 &fa) : _mh(fa._mh), D_h(fa.D_h), base_action(fa.base_action){}
 
     double action(){return(base_action.action());}
+    void action(field<double> &S){base_action.action(S);}
     void draw_gaussian_fields(){base_action.draw_gaussian_fields();}
     void force_step(double eps){base_action.force_step(eps);}
-
 };
 
 
@@ -257,20 +270,38 @@ class Hasenbusch_action_2 : public action_base {
       double action = 0;
 
       gauge.refresh();
-
       CG<DIRAC_OP> inverse(D);
 
       v[ALL] = 0;
       D_h.dagger(chi, psi);
       inverse.apply(psi, v);
-      D_h.apply(v, psi);
-      onsites(EVEN){
+      D.apply(v, psi);
+      onsites(D.par){
         if(disable_avx[X]==0){};
-        action += chi[X].rdot(psi[X]);
+        action += norm_squared(psi[X]);
       }
       
-      hila::output << "h2 " << action << "\n";
       return action;
+    }
+
+    // Calculate the action as a field of double precision numbers
+    void action(field<double> &S){
+      field<vector_type> psi;
+      field<vector_type> v;
+      psi.copy_boundary_condition(chi);
+      v.copy_boundary_condition(chi);
+
+      gauge.refresh();
+      CG inverse(D);
+
+      v[ALL] = 0;
+      D.dagger(chi, psi);
+      inverse.apply(psi, v);
+      D.apply(v, psi);
+      onsites(EVEN){
+        S[X] += norm_squared(psi[X]);
+      }
+      
     }
 
     
@@ -281,17 +312,18 @@ class Hasenbusch_action_2 : public action_base {
       field<vector_type> v;
       psi.copy_boundary_condition(chi);
       v.copy_boundary_condition(chi);
-      CG inverse_h(D_h, 1e-12); // Applies 1/(D_h^dagger D_h)
+      CG inverse_h(D_h); // Applies 1/(D_h^dagger D_h)
       gauge.refresh();
 
+      psi[ALL] = 0;
       onsites(D.par){
         if(disable_avx[X]==0){};
         psi[X].gaussian();
       }
-      v=0;
-      D_h.dagger(psi, v);
-      inverse_h.apply(v, psi); // 1/D_h * psi
-      D.apply(psi, chi);
+      D.dagger(psi, v);
+      psi[ALL]=0;
+      inverse_h.apply(v, psi);
+      D_h.apply(psi, chi);
     }
 
 
@@ -299,10 +331,9 @@ class Hasenbusch_action_2 : public action_base {
     // by inverting first in the limited space of a few previous
     // solutions. These are saved in old_chi.
     void initial_guess(field<vector_type> & chi, field<vector_type> & psi){
+      psi[ALL]=0;
       if(MRE_size > 0){
         MRE_guess(psi, chi, D, old_chi_inv);
-      } else {
-        psi[ALL]=0;
       }
       // If the gauge type is double precision, solve first in single precision
       if constexpr (std::is_same<double, typename gauge_field::basetype>::value){
@@ -313,7 +344,7 @@ class Hasenbusch_action_2 : public action_base {
         field<typename DIRAC_OP::type_flt::vector_type> c, p, t1, t2;
         c[ALL] = chi[X];
         p[ALL] = psi[X];
-        CG inverse(D_flt, 1e-6);
+        CG inverse(D_flt);
         inverse.apply(c, p);
 
         D_flt.apply(p, t1);
@@ -342,13 +373,15 @@ class Hasenbusch_action_2 : public action_base {
       Mpsi.copy_boundary_condition(chi);
       Dhchi.copy_boundary_condition(chi);
       field<momtype> force[NDIM], force2[NDIM];
+
       CG<DIRAC_OP> inverse(D);
+      gauge.refresh();
 
       gauge.refresh();
 
-      D_h.dagger(chi, Dhchi); 
+      Dhchi[ALL] = 0;
+      D_h.dagger(chi, Dhchi);
 
-      output0 << "light hasenbusch force\n";
       initial_guess(Dhchi, psi);
       inverse.apply(Dhchi, psi);
       save_new_solution(psi);

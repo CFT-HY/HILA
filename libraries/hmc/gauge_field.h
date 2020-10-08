@@ -302,20 +302,6 @@ class gauge_field : public gauge_field_base<matrix> {
   }
 
 
-  /// Return the field in single precision. For this the gauge field needs to follow 
-  /// a specific template structure, such as su<N,double>
-  template<typename T, int N, typename radix,
-    template<int,typename> class M,
-    typename = std::enable_if_t<std::is_same<M<N,radix>, T>::value>>
-  auto get_single_precision(){
-    gauge_field<M<N,float>> gauge_flt;
-    foralldir(dir){
-      gauge_flt->gauge[dir][ALL] = this->gauge[dir][X];
-    }
-    return gauge_flt;
-  }
-
-
   field<gauge_type> & get_momentum(int dir){
     return this->momentum[dir];
   }

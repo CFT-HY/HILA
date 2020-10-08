@@ -268,13 +268,12 @@ int main(int argc, char **argv){
   
 
   // Wilson forces
-  output0 << "Checking evenodd preconditioned Wilson forces:\n";
-  Dirac_Wilson D_W(0.05, gauge);
-  check_forces(D_W, gauge);
+  Dirac_Wilson_evenodd D_W_eo(0.12, gauge);
 
-  output0 << "Checking stout smeared Wilson forces:\n";
-  Dirac_Wilson_evenodd D_W_eo(0.05, gauge);
-  check_forces(D_W_eo, gauge);
+  output0 << "Checking hasenbusch 2:\n";
+  Hasenbusch_action_2 fa2(D_W_eo, gauge, 0);
+  check_forces(fa2, D_W_eo, gauge);
+
 
   output0 << "Checking adjoint Wilson forces:\n";
   Dirac_Wilson_evenodd D_W_adj(0.05, adj_gauge);
