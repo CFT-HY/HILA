@@ -193,6 +193,50 @@ int main(int argc, char **argv){
       }
     }
 
+    // Check boundary conditions by moving the data
+    {
+      field<double> s1, s2;
+      coordinate_vector coord1 = 0;
+      coordinate_vector coord2 = 0;
+      coord1[0] = (nd[0] - 1) % nd[0];
+
+      // Move data up accross the X boundary
+      s1=0; s2=0;
+      s1.set_element(1, coord1);
+      s2[ALL] = s1[X - direction(0)];
+      double moved_element = s2.get_element(coord2);
+      assert(moved_element == 1 && "moved up");
+
+      // The other way
+      s1=0; s2=0;
+      s1.set_element(1, coord2);
+      s2[ALL] = s1[X + direction(0)];
+      moved_element = s2.get_element(coord1);
+      assert(moved_element == 1 && "moved down");
+
+      s1.set_boundary_condition(direction(0), boundary_condition_t::ANTIPERIODIC);
+      s2.set_boundary_condition(direction(0), boundary_condition_t::ANTIPERIODIC);
+      
+      // Now try antiperiodic boundaries
+      s1=0; s2=0;
+      s1.set_element(1, coord1);
+      s2[ALL] = s1[X - direction(0)];
+      moved_element = s2.get_element(coord2);
+      assert(moved_element == -1 && "moved up antiperiodic");
+
+      // The other way
+      s1=0; s2=0;
+      s1.set_element(1, coord2);
+      s2[ODD] = s1[X + direction(0)];
+      moved_element = s2.get_element(coord1);
+      assert(moved_element == -1 && "moved down antiperiodic");
+
+      s1=0;
+      s1[EVEN] = s2[X - direction(0)];
+      moved_element = s1.get_element(coord2);
+      assert(moved_element == 1 && "moved back antiperiodic");
+    }
+
 
     // Communication and copy test with full field
     foralldir(d){
