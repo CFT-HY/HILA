@@ -114,7 +114,6 @@ class fermion_action : public action_base{
         if(disable_avx[X]==0){};
         S[X] += chi[X].rdot(psi[X]);
       }
-      
     }
 
     /// Generate a pseudofermion field with a distribution given
@@ -301,7 +300,6 @@ class Hasenbusch_action_2 : public action_base {
       onsites(EVEN){
         S[X] += norm_squared(psi[X]);
       }
-      
     }
 
     
@@ -377,9 +375,7 @@ class Hasenbusch_action_2 : public action_base {
       CG<DIRAC_OP> inverse(D);
       gauge.refresh();
 
-      gauge.refresh();
 
-      Dhchi[ALL] = 0;
       D_h.dagger(chi, Dhchi);
 
       initial_guess(Dhchi, psi);
