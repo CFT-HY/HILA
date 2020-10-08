@@ -1,6 +1,7 @@
 beta = 8
-kappa = 0.01
-n_trajectories = 10
+kappa = 0.12
+hasenbusch_mass = 0.
+n_trajectories = 1000
 hmc_steps = 20
 traj_length = 1.0
 seed = 1351

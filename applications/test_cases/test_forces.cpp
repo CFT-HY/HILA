@@ -15,14 +15,12 @@ constexpr int N = 2;
 
 
 
-template<typename dirac, typename gauge_field_type>
-void check_forces(dirac &D, gauge_field_type &gauge){
+template<typename fermion_action, typename dirac, typename gauge_field_type>
+void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
   using sun = typename gauge_field_type::fund_type;
   using forcetype = squarematrix<gauge_field_type::N, cmplx<double>>;
   field<forcetype> force[NDIM];
   double eps = 1e-5;
-
-  fermion_action fa(D, gauge);
 
   for(int ng = 0; ng < 1 ; ng++ ){ //matrix::generator_count(); ng++){
     //gauge.set_unity();
@@ -80,11 +78,11 @@ void check_forces(dirac &D, gauge_field_type &gauge){
     double diff = f2-f1;
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << f2 << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion deriv " << ng << " diff " << diff << "\n";
+      //output0 << "Action 1 " << s1 << "\n";
+      //output0 << "Action 2 " << s2 << "\n";
+      //output0 << "Calculated deriv " << f2 << "\n";
+      //output0 << "Actual deriv " << (s2-s1)/eps << "\n";
+      //output0 << "Fermion deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps && "Fermion deriv" );
     }
 
@@ -123,38 +121,49 @@ void check_forces(dirac &D, gauge_field_type &gauge){
     diff = f2-f1;
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated deriv " << f2 << "\n";
-      //hila::output << "Actual deriv " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion dg deriv " << ng << " diff " << diff << "\n";
+      //output0 << "Action 1 " << s1 << "\n";
+      //output0 << "Action 2 " << s2 << "\n";
+      //output0 << "Calculated deriv " << f2 << "\n";
+      //output0 << "Actual deriv " << (s2-s1)/eps << "\n";
+      //output0 << "Fermion dg deriv " << ng << " diff " << diff << "\n";
       assert( diff*diff < eps && "Fermion dg deriv" );
     }
 
 
     gauge.zero_momentum();
+    field<double> sf1, sf2;
+    sf1[ALL]=0; sf2[ALL]=0;
 
     gauge.get_gauge(0).set_element(g12, coord);
     gauge.refresh();
-    s2 = fa.action();
+    fa.action(sf2);
 
     gauge.get_gauge(0).set_element(g1, coord);
     gauge.refresh();
-    s1 = fa.action();
+    fa.action(sf1);
+
+    double dS = 0;
+    s1 = s2 = 0;
+    onsites(ALL){
+      dS += sf2[X]-sf1[X];
+      s1 += sf1[X];
+      s2 += sf2[X];
+    }
+
 
     fa.force_step(1.0);
     f = gauge.get_momentum(0).get_element(coord);
-    f1 = (s2-s1)/eps;
+    f1 = dS/eps;
     f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
     diff = f2-f1;
 
     if(mynode()==0) {
-      //hila::output << "Action 1 " << s1 << "\n";
-      //hila::output << "Action 2 " << s2 << "\n";
-      //hila::output << "Calculated force " << f2 << "\n";
-      //hila::output << "Actual force " << (s2-s1)/eps << "\n";
-      //hila::output << "Fermion force " << ng << " diff " << diff << "\n";
-      assert( diff*diff < eps*10 && "Fermion force" );
+      //output0 << "Action 1 " << s1 << "\n";
+      //output0 << "Action 2 " << s2 << " " << dS << " " << dS/s2 << "\n";
+      //output0 << "Calculated force " << f2 << "\n";
+      //output0 << "Actual force " << f1 << "\n";
+      //output0 << "Fermion force " << ng << " diff " << diff << "\n";
+      assert( diff*diff < eps && "Fermion force" );
     }
   }
 }
@@ -231,6 +240,7 @@ int main(int argc, char **argv){
   using asym=antisymmetric<N, double>;
 
   // Define represented gauge fields for the Dirac force tests
+  gauge.random();
   represented_gauge_field<adj> adj_gauge(gauge);
   represented_gauge_field<sym> sym_gauge(gauge);
   represented_gauge_field<asym> asym_gauge(gauge);
@@ -268,7 +278,18 @@ int main(int argc, char **argv){
   
 
   // Wilson forces
+  output0 << "Checking Wilson forces:\n";
+  Dirac_Wilson D_W(0.05, gauge);
+  check_forces(D_W, gauge);
+
+  output0 << "Checking evenodd Wilson forces:\n";
   Dirac_Wilson_evenodd D_W_eo(0.12, gauge);
+  fermion_action fa(D_W_eo, gauge);
+  check_forces(fa, D_W_eo, gauge);
+
+  output0 << "Checking hasenbusch 1:\n";
+  Hasenbusch_action_1 fa1(D_W_eo, gauge, 0);
+  check_forces(fa1, D_W_eo, gauge);
 
   output0 << "Checking hasenbusch 2:\n";
   Hasenbusch_action_2 fa2(D_W_eo, gauge, 0);
@@ -299,7 +320,7 @@ int main(int argc, char **argv){
       gauge.momentum[0].set_value_at(h, 0);
     double s2 = ga.action();
 
-    double diff = (h*cmplx(0,1)*SU<N>::generator(ng)).trace().re + (s2-s1)/eps;
+    double diff = (h*SU<N>::generator(ng)).trace().re + (s2-s1)/eps;
     if(mynode()==0) {
       //hila::output << "Mom 1 " << (h*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Mom 2 " << (s2-s1)/eps << "\n";

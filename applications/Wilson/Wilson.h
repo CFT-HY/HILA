@@ -1,5 +1,5 @@
-#ifndef STAGGERED_H_
-#define STAGGERED_H_
+#ifndef WILSON_H_
+#define WILSON_H_
 
 #include <iostream>
 #include <string>
