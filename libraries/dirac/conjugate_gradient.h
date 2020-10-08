@@ -47,6 +47,7 @@ class CG{
       p.copy_boundary_condition(in);
       Dp.copy_boundary_condition(in);
       DDp.copy_boundary_condition(in);
+      out.copy_boundary_condition(in);
       double pDp = 0, rr = 0, rrnew = 0, rr_start=0;
       double alpha, beta;
       double target_rr, source_norm=0;
