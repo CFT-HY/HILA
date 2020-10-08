@@ -14,7 +14,7 @@
 #include<iostream>
 
 constexpr int CG_DEFAULT_MAXITERS = 10000;
-constexpr double CG_DEFAULT_ACCURACY = 1e-18;
+constexpr double CG_DEFAULT_ACCURACY = 1e-12;
 
 
 /// The conjugate gradient operator. Applies the inverse square of an operator on a vector
