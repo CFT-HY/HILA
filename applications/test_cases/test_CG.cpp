@@ -64,16 +64,88 @@ int main(int argc, char **argv){
   #endif
   seed_random(2);
 
-
   test_gamma_matrices();
 
   field<SU<N>> U[NDIM];
   foralldir(d) {
     onsites(ALL){
       if(disable_avx[X]==0){};
-      U[d][X].random();
+      U[d][X] = 1;
     }
   }
+
+
+  {
+    using dirac = Dirac_Wilson_evenodd<SU<N, double>>;
+    dirac D(0.1, U);
+    field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    #if NDIM > 3
+      a.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      b.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      Db.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      Ddaggera.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+    #endif
+
+    a[ALL] = 0; b[ALL] = 0;
+    Db[ALL] = 0; Ddaggera[ALL] = 0;
+    onsites(EVEN){
+      if(disable_avx[X]==0){};
+      a[X] = 1; b[X] = 1;
+    }
+    double diffre = 0, diffim = 0;
+
+    foralldir(dir){
+      onsites(ODD){
+        half_Wilson_vector<N, double> h(b[X-dir], dir, -1);
+        half_Wilson_vector<N, double> h1(b[X+dir], dir, 1);
+        Db[X] = Db[X] - 0.1*h1.expand(dir, 1)
+                      - 0.1*h.expand(dir, -1);
+      }
+    }
+    foralldir(dir){
+      onsites(EVEN){
+        half_Wilson_vector<N, double> h(Db[X-dir], dir, 1);
+        half_Wilson_vector<N, double> h1(Db[X+dir], dir, -1);
+        Db[X] = Db[X] + 0.1*h1.expand(dir, -1)
+                      + 0.1*h.expand(dir, 1);
+      }
+    }
+
+
+    foralldir(dir){
+      onsites(ODD){
+        half_Wilson_vector<N, double> h(a[X-dir], dir, 1);
+        half_Wilson_vector<N, double> h1(a[X+dir], dir,-1);
+        Ddaggera[X] = Ddaggera[X] - 0.1*h1.expand(dir, -1)
+                      - 0.1*h.expand(dir, 1);
+      }
+    }
+    foralldir(dir){
+      onsites(EVEN){
+        half_Wilson_vector<N, double> h(Ddaggera[X-dir], dir, -1);
+        half_Wilson_vector<N, double> h1(Ddaggera[X+dir], dir, 1);
+        Ddaggera[X] = Ddaggera[X] + 0.1*h1.expand(dir, 1)
+                      + 0.1*h.expand(dir, -1);
+      }
+    }
+
+    Db[ALL] = 0;
+    //Ddaggera[ALL] = 0;
+
+    Dirac_Wilson_hop(U, 0.1, b, Db, ODD, 1);
+    Dirac_Wilson_hop(U, -0.1, Db, Db, EVEN, 1);
+    //Dirac_Wilson_hop(U, 0.1, a, Ddaggera, ODD, -1);
+    //Dirac_Wilson_hop(U, -0.1, Ddaggera, Ddaggera, EVEN, -1);
+
+    onsites(EVEN){
+      diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
+      diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
+    }
+    assert(diffre*diffre < 1e-16 && "test ");
+    assert(diffim*diffim < 1e-16 && "test ");
+  }
+
+
 
 
   // Check conjugate of the staggered Dirac operator
@@ -222,11 +294,10 @@ int main(int argc, char **argv){
     field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     #if NDIM > 3
       a.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      a.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
-      b.copy_boundary_condition(a);
-      Db.copy_boundary_condition(a);
-      Ddaggera.copy_boundary_condition(a);
-      DdaggerDb.copy_boundary_condition(a);
+      b.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      Db.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      Ddaggera.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      DdaggerDb.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
     #endif
 
     a[ODD] = 0; b[ODD] = 0;
