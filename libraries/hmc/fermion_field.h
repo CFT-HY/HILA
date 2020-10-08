@@ -10,7 +10,7 @@
 
 
 template<typename gauge_field, typename DIRAC_OP>
-class fermion_action : action_base{
+class fermion_action : public action_base{
   public:
     using vector_type = typename DIRAC_OP::vector_type;
     using momtype = squarematrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
@@ -23,18 +23,7 @@ class fermion_action : action_base{
     int MRE_size = 0;
     std::vector<field<vector_type>> old_chi_inv;
 
-    fermion_action(DIRAC_OP &d, gauge_field &g)
-    : D(d), gauge(g){ 
-      chi = 0.0;
-      #if NDIM > 3
-      //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
-      #endif
-    }
-
-    fermion_action(DIRAC_OP &d, gauge_field &g, int mre_guess_size)
-    : D(d), gauge(g){ 
-      chi = 0.0;
+    void setup(int mre_guess_size){
       #if NDIM > 3
       //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
       //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
@@ -46,18 +35,25 @@ class fermion_action : action_base{
       }
     }
 
+    fermion_action(DIRAC_OP &d, gauge_field &g)
+    : D(d), gauge(g){ 
+      chi = 0.0;  // Allocates chi and sets it to zero
+      setup(0);
+    }
+
+    fermion_action(DIRAC_OP &d, gauge_field &g, int mre_guess_size)
+    : D(d), gauge(g){ 
+      chi = 0.0;  // Allocates chi and sets it to zero
+      setup(mre_guess_size);
+    }
+
 
     fermion_action(fermion_action &fa)
-    : gauge(fa.gauge), D(fa.D)  {
-      chi = fa.chi;
-      #if NDIM > 3
-      //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
-      #endif
-      MRE_size = fa.mre_guess_size;
-      old_chi_inv.resize(MRE_size);
-      for(int i=0; i<MRE_size; i++){
-        old_chi_inv[i][ALL] = 0;
+    : gauge(fa.gauge), D(fa.D){
+      chi = fa.chi;  // Copies the field
+      setup(fa.MRE_size);
+    }
+
       }
     }
 
