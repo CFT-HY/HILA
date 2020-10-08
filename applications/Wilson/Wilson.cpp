@@ -43,7 +43,7 @@ int main(int argc, char **argv){
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
   O2_integrator integrator_level_1(ga, ma);
-  O2_integrator integrator_level_2(fa2, integrator_level_1, 5); // 5 gauge updates each time
+  O2_integrator integrator_level_2(fa1, integrator_level_1, 5); // 5 gauge updates each time
   O2_integrator integrator_level_3(fa2, integrator_level_2);
   
   int config_found = (bool) std::ifstream(configfile);
