@@ -491,11 +491,20 @@ class field {
   }
 
   boundary_condition_t get_boundary_condition( direction dir ) const {
-    #ifdef SPECIAL_BOUNDARY_CONDITION
+    #ifdef SPECIAL_BOUNDARY_CONDITIONS
     return fs->boundary_condition[dir];
     #else
     return boundary_condition_t::PERIODIC;
     #endif
+  }
+
+  void print_boundary_condition() {
+    check_alloc();
+    output0 << " ( ";
+    for(int dir=0; dir<NDIRS; dir++){
+      output0 << (int)fs->boundary_condition[dir] << " ";
+    }
+    output0 << ")\n";
   }
 
   template<typename A>
