@@ -75,78 +75,6 @@ int main(int argc, char **argv){
   }
 
 
-  {
-    using dirac = Dirac_Wilson_evenodd<SU<N, double>>;
-    dirac D(0.1, U);
-    field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
-    #if NDIM > 3
-      a.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      b.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      Db.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      Ddaggera.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-    #endif
-
-    a[ALL] = 0; b[ALL] = 0;
-    Db[ALL] = 0; Ddaggera[ALL] = 0;
-    onsites(EVEN){
-      if(disable_avx[X]==0){};
-      a[X] = 1; b[X] = 1;
-    }
-    double diffre = 0, diffim = 0;
-
-    foralldir(dir){
-      onsites(ODD){
-        half_Wilson_vector<N, double> h(b[X-dir], dir, -1);
-        half_Wilson_vector<N, double> h1(b[X+dir], dir, 1);
-        Db[X] = Db[X] - 0.1*h1.expand(dir, 1)
-                      - 0.1*h.expand(dir, -1);
-      }
-    }
-    foralldir(dir){
-      onsites(EVEN){
-        half_Wilson_vector<N, double> h(Db[X-dir], dir, 1);
-        half_Wilson_vector<N, double> h1(Db[X+dir], dir, -1);
-        Db[X] = Db[X] + 0.1*h1.expand(dir, -1)
-                      + 0.1*h.expand(dir, 1);
-      }
-    }
-
-
-    foralldir(dir){
-      onsites(ODD){
-        half_Wilson_vector<N, double> h(a[X-dir], dir, 1);
-        half_Wilson_vector<N, double> h1(a[X+dir], dir,-1);
-        Ddaggera[X] = Ddaggera[X] - 0.1*h1.expand(dir, -1)
-                      - 0.1*h.expand(dir, 1);
-      }
-    }
-    foralldir(dir){
-      onsites(EVEN){
-        half_Wilson_vector<N, double> h(Ddaggera[X-dir], dir, -1);
-        half_Wilson_vector<N, double> h1(Ddaggera[X+dir], dir, 1);
-        Ddaggera[X] = Ddaggera[X] + 0.1*h1.expand(dir, 1)
-                      + 0.1*h.expand(dir, -1);
-      }
-    }
-
-    Db[ALL] = 0;
-    //Ddaggera[ALL] = 0;
-
-    Dirac_Wilson_hop(U, 0.1, b, Db, ODD, 1);
-    Dirac_Wilson_hop(U, -0.1, Db, Db, EVEN, 1);
-    //Dirac_Wilson_hop(U, 0.1, a, Ddaggera, ODD, -1);
-    //Dirac_Wilson_hop(U, -0.1, Ddaggera, Ddaggera, EVEN, -1);
-
-    onsites(EVEN){
-      diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
-      diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
-    }
-    assert(diffre*diffre < 1e-16 && "test ");
-    assert(diffim*diffim < 1e-16 && "test ");
-  }
-
-
-
 
   // Check conjugate of the staggered Dirac operator
   {
@@ -168,12 +96,17 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
   
-    assert(diffre*diffre < 1e-16 && "test dirac_staggered_dagger");
-    assert(diffim*diffim < 1e-16 && "test dirac_staggered_dagger");
+    assert(diffre*diffre < 1e-16 && "test dirac_staggered");
+    assert(diffim*diffim < 1e-16 && "test dirac_staggered");
     
     // Now run CG on Ddaggera. b=1/D a -> Db = a 
     CG<dirac> inverse(D);
+    onsites(ALL){
+      if(disable_avx[X]==0){};
+      a[X].gaussian();
+    }
     b[ALL] = 0;
+    D.dagger(a, Ddaggera);
     inverse.apply(Ddaggera, b);
     D.apply(b, Db);
 
@@ -184,11 +117,6 @@ int main(int argc, char **argv){
     assert(diffre*diffre < 1e-16 && "test D (DdgD)^-1 Ddg");
 
     // Run CG on a, multiply by DdaggerD and check the same
-    onsites(ALL){
-      if(disable_avx[X]==0){};
-      a[X].gaussian();
-    }
-    b[ALL] = 0;
     inverse.apply(a, b);
     D.apply(b, Db);
     D.dagger(Db, DdaggerDb);
@@ -222,6 +150,14 @@ int main(int argc, char **argv){
     using dirac = Dirac_Wilson<SU<N, double>>;
     dirac D(0.05, U);
     field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    #if NDIM > 3
+      a.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      b.copy_boundary_condition(a);
+      Db.copy_boundary_condition(a);
+      Ddaggera.copy_boundary_condition(a);
+      DdaggerDb.copy_boundary_condition(a);
+    #endif
+
     onsites(ALL){
       if(disable_avx[X]==0){};
       a[X].gaussian();
@@ -236,12 +172,33 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
   
-    assert(diffre*diffre < 1e-16 && "test dirac_staggered_dagger");
-    assert(diffim*diffim < 1e-16 && "test dirac_staggered_dagger");
-  
+    assert(diffre*diffre < 1e-16 && "test Dirac_Wilson");
+    assert(diffim*diffim < 1e-16 && "test Dirac_Wilson");
+
     // Now run CG on Ddaggera. b=1/D a -> Db = a 
     CG<dirac> inverse(D);
     b[ALL] = 0;
+    onsites(ALL){
+      if(disable_avx[X]==0){};
+      a[X].gaussian();
+    }
+    inverse.apply(a, b);
+    D.dagger(b, Db);
+    D.apply(Db, DdaggerDb);
+
+    diffre = 0;
+    onsites(ALL){
+      diffre += norm_squared(a[X]-DdaggerDb[X]);
+    }
+    assert(diffre*diffre < 1e-8 && "test DdgD (DdgD)^-1");
+    
+    // Now run CG on Ddaggera. b=1/D a -> Db = a
+    b[ALL] = 0;
+    onsites(ALL){
+      if(disable_avx[X]==0){};
+      a[X].gaussian();
+    }
+    D.dagger(a, Ddaggera);
     inverse.apply(Ddaggera, b);
     D.apply(b, Db);
 
@@ -249,7 +206,7 @@ int main(int argc, char **argv){
     onsites(ALL){
       diffre += norm_squared(a[X]-Db[X]);
     }
-    assert(diffre*diffre < 1e-8 && "test CG");
+    assert(diffre*diffre < 1e-8 && "test D (DdgD)^-1 Ddg");
   }
 
   // Check conjugate of the even-odd preconditioned staggered Dirac operator
@@ -271,8 +228,8 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
 
-    assert(diffre*diffre < 1e-16 && "test dirac_staggered_dagger");
-    assert(diffim*diffim < 1e-16 && "test dirac_staggered_dagger");
+    assert(diffre*diffre < 1e-16 && "test dirac_staggered_evenodd");
+    assert(diffim*diffim < 1e-16 && "test dirac_staggered_evenodd");
     
     // Now run CG on Ddaggera. b=1/D a -> Db = a 
     CG inverse(D);
@@ -315,16 +272,16 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
   
-    assert(diffre*diffre < 1e-16 && "test Dirac_Wilson_dagger");
-    assert(diffim*diffim < 1e-16 && "test Dirac_Wilson_dagger");
+    assert(diffre*diffre < 1e-16 && "test Dirac_Wilson_evenodd");
+    assert(diffim*diffim < 1e-16 && "test Dirac_Wilson_evenodd");
   
-    // Now run CG on Ddaggera. b=1/D a -> Db = a 
+    // Now check that D (DdgD)^-1 Ddg = 1
     CG<dirac> inverse(D);
+    a[ALL] = 0; b[ALL] = 0;
     onsites(EVEN){
       if(disable_avx[X]==0){};
       a[X].gaussian();
     }
-    b[ALL] = 0;
     D.dagger(a, Ddaggera);
     inverse.apply(Ddaggera, b);
     D.apply(b, Db);
@@ -334,7 +291,7 @@ int main(int argc, char **argv){
       diffre += norm_squared(a[X]-Db[X]);
     }
     output0 << "D inv Dg " << diffre << "\n";
-    assert(diffre*diffre < 1e-16 && "test CG");
+    assert(diffre*diffre < 1e-16 && "test D (DdgD)^-1 Ddg");
 
     // Run CG on a, multiply by DdaggerD and check the same
     onsites(EVEN){
@@ -395,8 +352,8 @@ int main(int argc, char **argv){
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
   
-    assert(diffre*diffre < 1e-16 && "test Dirac_Wilson_dagger");
-    assert(diffim*diffim < 1e-16 && "test Dirac_Wilson_dagger");
+    assert(diffre*diffre < 1e-16 && "test Hasenbusch_operator");
+    assert(diffim*diffim < 1e-16 && "test Hasenbusch_operator");
   
     // Now run CG on Ddaggera. b=1/D a -> Db = a 
     CG<dirac> inverse(D);
