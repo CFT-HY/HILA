@@ -50,11 +50,12 @@ int main(int argc, char **argv){
 
   dirac_staggered_evenodd D4(mass, adj_gauge);
   fermion_action fa4(D4, adj_gauge); 
+  
+  action_base fsum = fa+fa2+fa3+fa4;
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
   O2_integrator integrator_level_1(ga, ma);
-  action_base fsum = fa+fa2+fa3+fa4;
   O2_integrator integrator_level_2(fsum, integrator_level_1);
 
 
