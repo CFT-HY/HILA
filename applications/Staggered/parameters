@@ -1,0 +1,7 @@
+beta = 8
+mass = 10.0
+n_trajectories = 10
+hmc_steps = 10
+traj_length = 1.0
+seed = 1351
+configuration_file = config

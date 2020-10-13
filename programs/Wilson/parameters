@@ -1,5 +1,0 @@
-beta = 8
-kappa = 0.01
-hmc_steps = 20
-traj_length = 1.0
-seed = 1351

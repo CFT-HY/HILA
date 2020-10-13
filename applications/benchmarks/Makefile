@@ -1,0 +1,52 @@
+ADDITION = -DMSIZE=2
+OPTS = -DNDIM=4 $(ADDITION)
+
+
+#The next line work on puhti
+#HILAPP = ../../build/hilapp -DPUHTI -DHILAPP -I../../../llvm/lib/clang/8.0.1/include/ 
+HILAPP = ../../hilapp/build/hilapp  -DUSE_MPI -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
+
+CC = mpic++ -DUSE_MPI -mavx2 -mfma  -I../../libraries/
+
+CFLAGS = -Ofast -I../../libraries/ $(OPTS)
+CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 -I../../libraries/ $(OPTS)
+# CXXFLAGS = -g -x c++ --std=c++17 $(OPTS)
+
+# Don't remove cpt-files
+.PRECIOUS: %.cpt
+
+%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
+	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
+
+%.cpt: %.cpp Makefile
+	$(HILAPP) $(ADDITION) $<
+
+%.tr.o : %.cpt
+	$(CC) $(CXXFLAGS) $< -c -o $@
+
+%.tr.s : %.cpt
+	$(CC) $(CXXFLAGS) $< -S -o $@
+
+lattice.cpt : ../../libraries/plumbing/lattice.cpp
+	$(HILAPP) $(ADDITION) $<
+
+test_gathers.cpt : ../../libraries/plumbing/test_gathers.cpp
+	$(HILAPP) $(ADDITION) $<
+
+lattice.o : lattice.cpt
+	$(CC) $(CXXFLAGS) $< -c
+
+test_gathers.o : test_gathers.cpt
+	$(CC) $(CXXFLAGS) $< -c 
+
+%.o : ../../libraries/plumbing/%.cpp
+	$(CC) $(CXXFLAGS) $< -c
+
+%.o : %.c
+	$(CC) $(CFLAGS) $< -c
+
+clean:
+	rm -rf *.o *.cpt *.tr.s
+
+cleanall:
+	rm -rf *.o *.cpt *.exe *.tr.s
