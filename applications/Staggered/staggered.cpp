@@ -35,7 +35,8 @@ int main(int argc, char **argv){
 
   // Define gauge and momentum action terms
   gauge_action ga(gauge, beta);
-  
+  gauge_momentum_action ma(gauge, beta);
+
   // Define a Dirac operator
   dirac_staggered_evenodd D(mass, gauge);
   fermion_action fa(D, gauge);
@@ -52,7 +53,9 @@ int main(int argc, char **argv){
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level
-  integrator integrator_level_2(fa+fa2+fa3+fa4, ga);
+  O2_integrator integrator_level_1(ga, ma);
+  action_base fsum = fa+fa2+fa3+fa4;
+  O2_integrator integrator_level_2(fsum, integrator_level_1);
 
 
   int config_found = (bool) std::ifstream(configfile);
