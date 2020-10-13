@@ -107,13 +107,15 @@ void dirac_staggered_calc_force(
 template<typename matrix>
 class dirac_staggered {
   private:
-    double mass;
     field<double> staggered_eta[NDIM];
 
   public:
+    double mass;
     using vector_type = SU_vector<matrix::size, typename matrix::base_type>;
     using matrix_type = matrix;
     field<matrix> (&gauge)[NDIM];
+
+    using type_flt = dirac_staggered<typename gauge_field_base<matrix>::gauge_type_flt>;
 
     parity par = ALL;
 
@@ -125,10 +127,13 @@ class dirac_staggered {
     dirac_staggered(double m, field<matrix> (&g)[NDIM]) : gauge(g), mass(m)  {
       init_staggered_eta(staggered_eta);
     }
-    dirac_staggered(double m, gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
+    dirac_staggered(double m, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(m) {
       init_staggered_eta(staggered_eta);
     }
-    dirac_staggered(double m, represented_gauge_field<matrix> &g) : gauge(g.gauge), mass(m) {
+
+    template<typename M>
+    dirac_staggered(dirac_staggered<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(d.mass) 
+    {
       init_staggered_eta(staggered_eta);
     }
 
@@ -181,13 +186,15 @@ field<vector> operator* (const field<vector> & in, dirac_staggered<vector> D) {
 template<typename matrix>
 class dirac_staggered_evenodd {
   private:
-    double mass;
     field<double> staggered_eta[NDIM];
 
     field<matrix> (&gauge)[NDIM];
   public:
+    double mass;
     using vector_type = SU_vector<matrix::size, typename matrix::base_type>;
     using matrix_type = matrix;
+
+    using type_flt = dirac_staggered_evenodd<typename gauge_field_base<matrix>::gauge_type_flt>;
 
     parity par = EVEN;
 
@@ -200,6 +207,12 @@ class dirac_staggered_evenodd {
     dirac_staggered_evenodd(double m, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(m) {
       init_staggered_eta(staggered_eta);
     }
+
+    template<typename M>
+    dirac_staggered_evenodd(dirac_staggered_evenodd<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(d.mass) {
+      init_staggered_eta(staggered_eta);
+    }
+
 
 
     // Applies the operator to in

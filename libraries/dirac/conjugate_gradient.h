@@ -22,9 +22,9 @@ template<typename Op>
 class CG{
   private:
     // The operator to invert
-    Op & M; 
+    Op & M;
     // desired relative accuracy
-    double accuracy = CG_DEFAULT_ACCURACY; 
+    double accuracy = CG_DEFAULT_ACCURACY;
     // maximum number of iterations
     double maxiters = CG_DEFAULT_MAXITERS;
   public:
@@ -104,7 +104,6 @@ class CG{
 
       output0 << "Conjugate Gradient: " << i << " steps in " << timing << "ms, ";
       output0 << "relative residue:" << rrnew/source_norm << "\n";
-
     }
 };
 

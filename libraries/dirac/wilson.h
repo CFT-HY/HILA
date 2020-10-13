@@ -34,7 +34,7 @@ inline void Dirac_Wilson_hop(
       vtemp[dir][X] = gauge[dir][X].conjugate()*h;
     }
 
-    //vtemp[dir].start_get(odir);
+    vtemp[dir].start_get(odir);
   }
   foralldir(dir){
     direction odir = opp_dir( (direction)dir );
@@ -99,7 +99,6 @@ inline void Dirac_Wilson_calc_force(
       ( vtemp[1][X+dir].expand(dir, sign) ).outer_product(chi[X])
     );
 
-    //out[dir][ALL] = gauge[dir][X]*out[dir][X];
   }
 }
 
@@ -108,16 +107,17 @@ inline void Dirac_Wilson_calc_force(
 template<typename matrix>
 class Dirac_Wilson {
   private:
-    double kappa;
-
     // Note array of fields, changes with the field
     field<matrix> (&gauge)[NDIM];
   
   public:
+    double kappa;
     static constexpr int N = matrix::size;
     using radix = typename matrix::base_type;
     using vector_type = Wilson_vector<N, radix>;
     using matrix_type = matrix;
+
+    using type_flt = Dirac_Wilson<typename gauge_field_base<matrix>::gauge_type_flt>;
 
     parity par = ALL;
 
@@ -125,6 +125,9 @@ class Dirac_Wilson {
     Dirac_Wilson(Dirac_Wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
     Dirac_Wilson(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
     Dirac_Wilson(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
+
+    template<typename M>
+    Dirac_Wilson(Dirac_Wilson<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(d.kappa) {}
 
     // Applies the operator to in
     inline void apply( const field<vector_type> & in, field<vector_type> & out){

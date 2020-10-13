@@ -11,22 +11,31 @@ class adjoint : public squarematrix<N*N-1, radix> {
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
 
-    using squarematrix<N*N-1, radix>::squarematrix;
-
-    adjoint() = default;
-
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    adjoint(const adjoint<N,scalart> m) {
-      for (int j=0; j<N*N-1; j++) for (int i=0; i<N*N-1; i++){
-        this->c[i][j] = m.c[i][j];
-      }
-    }
-
     // Info on group generators
     constexpr static int size = N*N-1;
     static sun generator(int i){
       return sun::generator(i);
     }
+
+    adjoint() = default;
+
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    #pragma hila loop_function
+    adjoint(const scalart m) {
+      for (int j=0; j<size; j++) { 
+        for (int i=0; i<size; i++){
+          this->c[i][j] = 0;
+        }
+        this->c[j][j] = m;
+      }
+    }
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    adjoint(const adjoint<N,scalart> m) {
+      for (int j=0; j<size; j++) for (int i=0; i<size; i++){
+        this->c[i][j] = m.c[i][j];
+      }
+    }
+
 
     /* Return a SU(N) generator in the adjoint representation,
      * multiplied by I */
@@ -91,6 +100,24 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
 
     // Info on group generators
     constexpr static int size = N*(N-1)/2;
+
+    antisymmetric() = default;
+
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    antisymmetric(const scalart m) {
+      for (int j=0; j<size; j++) { 
+        for (int i=0; i<size; i++){
+          this->c[i][j] = 0;
+        }
+        this->c[j][j] = m;
+      }
+    }
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    antisymmetric(const antisymmetric<N,scalart> m) {
+      for (int j=0; j<size; j++) for (int i=0; i<size; i++){
+        this->c[i][j] = m.c[i][j];
+      }
+    }
 
     static sun generator(int ng){
       static bool initialize = true;
@@ -170,6 +197,25 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
 
     // Info on group generators
     constexpr static int size = N*(N+1)/2;
+
+    symmetric() = default;
+
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    symmetric(const scalart m) {
+      for (int j=0; j<size; j++) { 
+        for (int i=0; i<size; i++){
+          this->c[i][j] = 0;
+        }
+        this->c[j][j] = m;
+      }
+    }
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    symmetric(const symmetric<N,scalart> m) {
+      for (int j=0; j<size; j++) for (int i=0; i<size; i++){
+        this->c[i][j] = m.c[i][j];
+      }
+    }
+
 
     static sun generator(int ng){
       static bool initialize = true;

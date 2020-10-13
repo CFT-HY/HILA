@@ -33,7 +33,9 @@ void MRE_guess(
         vdot += basis[j][X].rdot(basis[i][X]);
       }
       if(norm*norm > 1e-32){
-        basis[i][D.par] -= vdot/norm*basis[j][X];
+        onsites(D.par) {
+          basis[i][X] = basis[i][X] - vdot/norm*basis[j][X];
+        }
       }
     }
   }
@@ -90,7 +92,9 @@ void MRE_guess(
   // Construct the solution in the original basis
   psi[ALL] = 0;
   for(int i=0; i<MRE_size; i++) if(!isnan(v[i])){
-    psi[D.par] += v[i]*basis[i][X];
+    onsites(D.par) {
+      psi[X] = basis[i][X] + v[i]*basis[i][X];
+    }
   }
 }
 

@@ -1,8 +1,7 @@
-#include "test.h"
-#include "datatypes/vector.h"
-#include "datatypes/sun.h"
+// Representations introduces a datatype and must be before field.h
 #include "datatypes/representations.h"
-#include "plumbing/field.h"
+// Test.h includes field.h
+#include "test.h"
 #include "hmc/hmc.h"
 #include "hmc/gauge_field.h"
 #include "hmc/smearing.h"
@@ -249,65 +248,97 @@ int main(int argc, char **argv){
 
   // Staggered Forces
   output0 << "Checking staggered forces:\n";
-  dirac_staggered D_Stg(5.0, gauge);
-  check_forces(D_Stg, gauge);
+  {
+    dirac_staggered D(5.0, gauge);
+    fermion_action fa(D, gauge);
+    check_forces(fa, D, gauge);
+  }
 
-  output0 << "Checking evenodd preconditioned staggered forces:\n";
-  dirac_staggered_evenodd D_Stg_eo(5.0, gauge);
-  check_forces(D_Stg_eo, gauge);
+  {
+    output0 << "Checking evenodd preconditioned staggered forces:\n";
+    dirac_staggered_evenodd D(5.0, gauge);
+    fermion_action fa(D, gauge);
+    check_forces(fa, D, gauge);
+  }
 
-  output0 << "Checking stout smeared forces:\n";
-  dirac_staggered_evenodd D_stg_stout(5.0, stout_gauge);
-  check_forces(D_stg_stout, stout_gauge);
+  {
+    output0 << "Checking stout smeared forces:\n";
+    dirac_staggered_evenodd D(5.0, stout_gauge);
+    fermion_action fa(D, stout_gauge);
+    check_forces(fa, D, stout_gauge);
+  }
 
-  output0 << "Checking HEX smeared forces:\n";
-  dirac_staggered_evenodd D_stg_hex(5.0, hex_gauge);
-  check_forces(D_stg_hex, hex_gauge);
+  {
+    output0 << "Checking HEX smeared forces:\n";
+    dirac_staggered_evenodd D(5.0, hex_gauge);
+    fermion_action fa(D, hex_gauge);
+    check_forces(fa, D, hex_gauge);
+  }
 
-  output0 << "Checking adjoint staggered forces:\n";
-  dirac_staggered_evenodd D_stg_adj(5.0, adj_gauge);
-  check_forces(D_stg_adj, adj_gauge);
+  {
+    output0 << "Checking adjoint staggered forces:\n";
+    dirac_staggered_evenodd D(5.0, adj_gauge);
+    fermion_action fa(D, adj_gauge);
+    check_forces(fa, D, adj_gauge);
+  }
 
-  output0 << "Checking symmetric staggered forces:\n";
-  dirac_staggered_evenodd D_stg_sym(5.0, sym_gauge);
-  check_forces(D_stg_sym, sym_gauge);
+  {
+    output0 << "Checking symmetric staggered forces:\n";
+    dirac_staggered_evenodd D(5.0, sym_gauge);
+    fermion_action fa(D, sym_gauge);
+    check_forces(fa, D, sym_gauge);
+  }
 
-  output0 << "Checking antisymmetric staggered forces:\n";
-  dirac_staggered_evenodd D_stg_asym(5.0, asym_gauge);
-  check_forces(D_stg_asym, asym_gauge);
-  
+  {
+    output0 << "Checking antisymmetric staggered forces:\n";
+    dirac_staggered_evenodd D(5.0, asym_gauge);
+    fermion_action fa(D, asym_gauge);
+    check_forces(fa, D, asym_gauge);
+  }
 
   // Wilson forces
-  output0 << "Checking Wilson forces:\n";
-  Dirac_Wilson D_W(0.05, gauge);
-  check_forces(D_W, gauge);
+  {
+    output0 << "Checking Wilson forces:\n";
+    Dirac_Wilson D(0.05, gauge);
+    fermion_action fa(D, gauge);
+    check_forces(fa, D, gauge);
+  }
 
-  output0 << "Checking evenodd Wilson forces:\n";
-  Dirac_Wilson_evenodd D_W_eo(0.12, gauge);
-  fermion_action fa(D_W_eo, gauge);
-  check_forces(fa, D_W_eo, gauge);
+  {
+    output0 << "Checking evenodd Wilson forces:\n";
+    Dirac_Wilson_evenodd D(0.12, gauge);
+    fermion_action fa(D, gauge);
+    check_forces(fa, D, gauge);
 
-  output0 << "Checking hasenbusch 1:\n";
-  Hasenbusch_action_1 fa1(D_W_eo, gauge, 0);
-  check_forces(fa1, D_W_eo, gauge);
+    output0 << "Checking hasenbusch 1:\n";
+    Hasenbusch_action_1 fa1(D, gauge, 0);
+    check_forces(fa1, D, gauge);
+ 
+    output0 << "Checking hasenbusch 2:\n";
+    Hasenbusch_action_2 fa2(D, gauge, 0);
+    check_forces(fa2, D, gauge);
+  }
 
-  output0 << "Checking hasenbusch 2:\n";
-  Hasenbusch_action_2 fa2(D_W_eo, gauge, 0);
-  check_forces(fa2, D_W_eo, gauge);
+  {
+    output0 << "Checking adjoint Wilson forces:\n";
+    Dirac_Wilson_evenodd D(0.05, adj_gauge);
+    fermion_action fa(D, adj_gauge);
+    check_forces(fa, D, adj_gauge);
+  }
 
+  {
+    output0 << "Checking symmetric Wilson forces:\n";
+    Dirac_Wilson_evenodd D(0.05, sym_gauge);
+    fermion_action fa(D, sym_gauge);
+    check_forces(fa, D, sym_gauge);
+  }
 
-  output0 << "Checking adjoint Wilson forces:\n";
-  Dirac_Wilson_evenodd D_W_adj(0.05, adj_gauge);
-  check_forces(D_W_adj, adj_gauge);
-
-  output0 << "Checking symmetric Wilson forces:\n";
-  Dirac_Wilson_evenodd D_W_sym(0.05, sym_gauge);
-  check_forces(D_W_sym, sym_gauge);
-
-  output0 << "Checking antisymmetric Wilson forces:\n";
-  Dirac_Wilson_evenodd D_W_asym(0.05, asym_gauge);
-  check_forces(D_W_asym, asym_gauge);
-
+  {
+    output0 << "Checking antisymmetric Wilson forces:\n";
+    Dirac_Wilson_evenodd D(0.05, asym_gauge);
+    fermion_action fa(D, asym_gauge);
+    check_forces(fa, D, asym_gauge);
+  }
 
   // Check also the momentum action and derivative
   for(int ng = 0; ng < SU<N>::generator_count(); ng++){
