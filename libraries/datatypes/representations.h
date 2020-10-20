@@ -150,7 +150,7 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
             sun tk = generator(k);
 
             cmplx<radix> tr = (tj*tg*tk).trace();
-            r_generators[g].c[j][k] = cmplx(0,4)*tr;
+            r_generators[g].c[j][k] = cmplx<radix>(0,4)*tr;
           }
         }
         initialize = false;
@@ -251,7 +251,7 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
             sun tk = generator(k);
 
             cmplx<radix> tr = (tj*tg*tk).trace();
-            r_generators[g].c[j][k] = cmplx(0,4)*tr;
+            r_generators[g].c[j][k] = cmplx<radix>(0,4)*tr;
           }
         }
         initialize = false;

@@ -65,12 +65,13 @@ struct squarematrix {
   }
 
 
+  #pragma hila loop_function
   squarematrix<n,T> operator-(){
     squarematrix<n,T> r;
     for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
       r.c[i][j] = -c[j][i];
     }
-    return *r;
+    return r;
   }
 
 

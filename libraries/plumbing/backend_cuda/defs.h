@@ -13,8 +13,6 @@
 
 #define N_threads 64
 
-extern __device__ unsigned * d_neighb[NDIRS];
-
 /* Random number generator */
 extern curandState * curandstate;
 __device__ extern curandState * d_curandstate;
@@ -32,8 +30,8 @@ static inline void check_cuda_error(std::string message){
   }
 }
 
-/* Reduction */
 
+/* Reduction */
 template<typename T>
 T cuda_reduce_sum(  T * vector, int N ){
   static bool initialized = false;

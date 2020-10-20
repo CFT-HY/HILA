@@ -216,16 +216,16 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma, const Wilson_ve
       r.c[2] = rhs.c[0]; r.c[3] = rhs.c[1];
       break;
     case gamma1:
-      r.c[0] = cmplx(0,1)*rhs.c[3]; r.c[1] = cmplx(0,1)*rhs.c[2];
-      r.c[2] = cmplx(0,-1)*rhs.c[1]; r.c[3] = cmplx(0,-1)*rhs.c[0];
+      r.c[0] = cmplx<radix>(0,1)*rhs.c[3]; r.c[1] = cmplx<radix>(0,1)*rhs.c[2];
+      r.c[2] = cmplx<radix>(0,-1)*rhs.c[1]; r.c[3] = cmplx<radix>(0,-1)*rhs.c[0];
       break;
     case gamma2:
       r.c[0] = -rhs.c[3]; r.c[1] = rhs.c[2];
       r.c[2] = rhs.c[1]; r.c[3] = -rhs.c[0];
       break;
     case gamma3:
-      r.c[0] = cmplx(0,1)*rhs.c[2]; r.c[1] = cmplx(0,-1)*rhs.c[3];
-      r.c[2] = cmplx(0,-1)*rhs.c[0]; r.c[3] = cmplx(0,1)*rhs.c[1];
+      r.c[0] = cmplx<radix>(0,1)*rhs.c[2]; r.c[1] = cmplx<radix>(0,-1)*rhs.c[3];
+      r.c[2] = cmplx<radix>(0,-1)*rhs.c[0]; r.c[3] = cmplx<radix>(0,1)*rhs.c[1];
       break;
     case gamma5:
       r.c[0] = rhs.c[0]; r.c[1] = rhs.c[1];
@@ -246,7 +246,7 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma, const Wilson_ve
       r.c[0] = rhs.c[1]; r.c[1] = rhs.c[0];
       break;
     case gamma1:
-      r.c[0] = cmplx(0,-1)*rhs.c[1]; r.c[1] = cmplx(0,1)*rhs.c[0];
+      r.c[0] = cmplx<radix>(0,-1)*rhs.c[1]; r.c[1] = cmplx<radix>(0,1)*rhs.c[0];
       break;
     case gamma2:
       r.c[0] = rhs.c[0]; r.c[1] = -rhs.c[1];

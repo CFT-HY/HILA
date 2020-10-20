@@ -1430,9 +1430,11 @@ static void read_fields(std::string filename, fieldtypes&... fields){
   inputfile.close();
 }
 
-
+#ifndef CUDA
 // Include Fourier transform
+// Only for CPU code for now (cannot load fft module with CUDA on Puhti)
 #include "plumbing/FFT.h"
+#endif
 
 
 //HACK: force disable vectorization in a loop using

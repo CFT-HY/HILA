@@ -65,10 +65,11 @@ void gather_test() {
 #endif
 
           T j = n.r[d];
-          T s = ((int)(t[X].r[d] + add + lattice->size(d))) % lattice->size(d);
+          T t_r = t[X].r[d];
+          T s = ((int)(t_r + add + size_d)) % size_d;
 
-          sum2 += n.r[d] - lattice->size(d)/2;
-          sum1 += t[X].r[d] - lattice->size(d)/2;
+          sum2 += n.r[d] - size_d/2;
+          sum1 += t[X].r[d] - size_d/2;
 
           T lv = s-j;
           T a = 0;
