@@ -6,8 +6,6 @@
 curandState * curandstate;
 __device__ curandState * d_curandstate;
 
-__device__ unsigned * d_neighb[NDIRS];
-
 /* Set seed on device */
 __global__ void seed_random_kernel( curandState * state, unsigned long seed )
 {

@@ -48,6 +48,9 @@ void gather_test() {
   for (parity p : {EVEN,ODD,ALL}) {
 
     foralldir(d) {
+      // Find size here, cannot call the function in a CUDA loop
+      int size_d = lattice->size(d);
+      int size_t = lattice->size(TUP);
       for (direction d2 : {d,-d}) {
       
         T diff = 0;
@@ -74,7 +77,8 @@ void gather_test() {
           T lv = s-j;
           T a = 0;
           foralldir(dir) if (dir != d) a+= n.r[dir] - t[X].r[dir];
-          
+                    
+          #ifndef CUDA
           if (lv != 0 || a != 0) {
             hila::output << "Error in gather test at " << X.coordinates() << " direction " << d2 
                          << " parity " << (int)p << '\n';
@@ -85,9 +89,11 @@ void gather_test() {
             for (int loop=0; loop<NDIM; loop++) hila::output << n.r[loop] << ' ';
             
             hila::output << '\n';
-
-            exit(-1);
           }
+          #endif
+
+          assert(lv == 0 || a == 0 && "Test gathers");
+          
         }
 
         double s_result;

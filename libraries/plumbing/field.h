@@ -120,8 +120,7 @@ class field {
       void free_payload() { payload.free_field(); }
 
 #ifndef VECTORIZED
-      /// Getter for an individual elements. Will not work in CUDA host code,
-      /// but must be defined
+      /// Getter for an individual elements in a loop
       inline auto get(const int i) const {
         return payload.get( i, lattice->field_alloc_size() );
       }
@@ -129,6 +128,16 @@ class field {
       template<typename A>
       inline void set(const A & value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
+      }
+
+      /// Getter for an element outside a loop. Used to manipulate the field directly outside loops.
+      inline auto get_element(const int i) const {
+        return payload.get_element( i, lattice );
+      }
+
+      template<typename A>
+      inline void set_element(const A & value, const int i) {
+        payload.set_element( value, i, lattice );
       }
 #else
       template <typename vecT>
@@ -531,7 +540,7 @@ class field {
 
 #ifndef VECTORIZED
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  inline auto get_value_at(int i) const { return fs->get(i); }
+  inline auto get_value_at(int i) const { return fs->get_element(i); }
 #else
   inline auto get_value_at(int i) const { return fs->get_element(i); }
   template <typename vecT>
@@ -544,7 +553,7 @@ class field {
 #ifndef VECTORIZED
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
   template<typename A>
-  inline void set_value_at(const A & value, int i) { fs->set( value, i); }
+  inline void set_value_at(const A & value, int i) { fs->set_element( value, i); }
 
 #else
   template<typename vecT>

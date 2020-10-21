@@ -129,7 +129,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   // and non-field vars
   for ( var_info & vi : var_info_list ) if(!vi.is_loop_local) {
     // Rename the variable
-    vi.new_name = "sv__" + std::to_string(i) + "_";
+    vi.new_name = "sv_" + std::to_string(i) + "_";
     i++;
 
     if(vi.reduction_type != reduction::NONE) {
@@ -137,9 +137,12 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
       kernel << ", " << vi.type << " * " << vi.new_name;
       code << ", d_r_" << vi.name;
       vi.new_name = vi.new_name+"[Index]";
+    
+    /* // This does not work. A cuda kernel cannot accept a reference.
     } else if(vi.is_assigned) {
       kernel << ", " << vi.type << " & " << vi.new_name;
       code << ", " << vi.name;
+    }*/
     } else {
       kernel << ", const " << vi.type << " " << vi.new_name;
       code << ", " << vi.name;
@@ -165,7 +168,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   // In kernelized code we need to handle array expressions as well
   for ( array_ref & ar : array_ref_list ) {
     // Rename the expression
-    ar.new_name = "sv__" + std::to_string(i) + "_";
+    ar.new_name = "sv_" + std::to_string(i) + "_";
     i++;
     kernel << ", " << ar.type << " " << ar.new_name ;
     code << ", " << get_stmt_str(ar.ref);
@@ -208,9 +211,9 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   for ( var_info & vi : var_info_list ) {
     if (!vi.is_loop_local) {
       if (vi.reduction_type == reduction::SUM) {
-        kernel << "sv__" + std::to_string(i) + "_[Index]" << "=0;\n";
+        kernel << "sv_" + std::to_string(i) + "_[Index]" << "=0;\n";
       } if (vi.reduction_type == reduction::PRODUCT) {
-        kernel << "sv__" + std::to_string(i) + "_[Index]" << "=1;\n";
+        kernel << "sv_" + std::to_string(i) + "_[Index]" << "=1;\n";
       }
       i++;
     }
@@ -220,9 +223,6 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   
   // Create temporary field element variables
   for (field_info & l : field_info_list) {
-    std::string type_name = l.type_template;
-    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-
     if (l.is_read_nb) {
       // this field is nn-read
       for (dir_ptr & d : l.dir_list) {
@@ -236,7 +236,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
         //     dirname = vi.new_name;
 
         // Create the temp variable and call the getter
-        kernel << type_name << " "  << d.name_with_dir 
+        kernel << l.element_type << " "  << d.name_with_dir 
                << " = " << l.new_name << ".get(loop_lattice->d_neighb[" 
                << dirname << "][" << looping_var 
                << "], loop_lattice->field_alloc_size);\n";
@@ -250,13 +250,13 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
 
     if (l.is_read_atX) {
       // local read
-      kernel << type_name << " "  << l.loop_ref_name << " = " 
+      kernel << l.element_type << " "  << l.loop_ref_name << " = " 
              << l.new_name << ".get(" << looping_var 
              << ", loop_lattice->field_alloc_size);\n";
 
     } else if (l.is_written) {
       // and a var which is not read
-      kernel << type_name << " "  << l.loop_ref_name << ";\n";
+      kernel << l.element_type << " "  << l.loop_ref_name << ";\n";
     }
 
     // and finally replace references in body 
@@ -274,14 +274,14 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     //       dirname = vi.new_name;
     //   }
     //   // Create the temp variable and call the getter
-    //   kernel << type_name << " "  << l.loop_ref_name << "_" << r->dirname
+    //   kernel << l.element_type << " "  << l.loop_ref_name << "_" << r->dirname
     //          << "=" << l.new_name << ".get(loop_lattice->d_neighb[" 
     //          << dirname << "][" << looping_var 
     //          << "], loop_lattice->field_alloc_size);\n";
     // }
     // // Check for references without a direction. If found, add temp variable
     // for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-    //   kernel << type_name << " "  << l.loop_ref_name << "=" 
+    //   kernel << l.element_type << " "  << l.loop_ref_name << "=" 
     //          << l.new_name << ".get(" << looping_var 
     //          << ", loop_lattice->field_alloc_size)" << ";\n";
     //   break;  // Only one needed

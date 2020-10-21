@@ -28,12 +28,19 @@ class field_storage {
     void free_field();
 
 #ifndef VECTORIZED
+    // Get an element in a loop
     #pragma hila loop_function
     inline auto get(const int i, const int field_alloc_size) const;
 
     template<typename A>
     #pragma hila loop_function
     inline void set(const A &value, const int i, const int field_alloc_size);
+
+    // Get a single element outside loops
+    inline auto get_element( const int i, const lattice_struct * RESTRICT lattice) const;
+    template<typename A>
+    inline void set_element(A &value, const int i, const lattice_struct * RESTRICT lattice);
+
 #else
     #pragma hila loop_function
     inline T get_element(const int i) const;

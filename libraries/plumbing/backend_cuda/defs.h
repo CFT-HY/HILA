@@ -26,8 +26,17 @@ static inline void check_cuda_error(std::string message){
   if( cudaSuccess != code ){
     std::cout << message << ": "
               << cudaGetErrorString(code) << "\n";
-    exit(1);
   }
+  assert(cudaSuccess == code);
+}
+
+
+static inline void check_cuda_error(cudaError code, std::string message){
+  if( cudaSuccess != code ){
+    std::cout << message << ": "
+              << cudaGetErrorString(code) << "\n";
+  }
+  assert(cudaSuccess == code);
 }
 
 
@@ -172,8 +181,10 @@ void initialize_cuda(int rank);
 #define seed_random(seed) while(0)
 
 #define cudaMalloc(a,b) 0
-#define cudaFree(a) while(0)
-#define check_cuda_error(a) while(0)
+#define cudaFree(a) 0
+static inline void check_cuda_error(std::string message){}
+static inline void check_cuda_error(int code, std::string message){}
+
 
 inline void synchronize_threads(){};
 void initialize_cuda(int rank){};

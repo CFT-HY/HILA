@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 
-#define SUBNODE_LAYOUT  // TEMP HERE TO HELP EDITOR!!!!
+//#define SUBNODE_LAYOUT  // Turn of for CUDA. 
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
@@ -219,9 +219,9 @@ public:
   long long volume() { return l_volume; }
 
   // size routines
-  int size(direction d) { return l_size[d]; }
-  int size(int d) { return l_size[d]; }
-  coordinate_vector size() {return l_size;}
+  int size(direction d) const { return l_size[d]; }
+  int size(int d) const { return l_size[d]; }
+  coordinate_vector size() const {return l_size;}
 
   coordinate_vector mod_size(const coordinate_vector & v) { return mod(v, l_size); }
 
@@ -237,7 +237,7 @@ public:
   int  node_rank(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c, const unsigned node);
-  const unsigned field_alloc_size() const {return this_node.field_alloc_size; }
+  unsigned field_alloc_size() const {return this_node.field_alloc_size; }
 
   void create_std_gathers();
   gen_comminfo_struct create_general_gather( const coordinate_vector & r);

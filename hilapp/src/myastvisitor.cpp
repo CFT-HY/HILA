@@ -386,10 +386,12 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
   // Printing policy is somehow needed for printing type without "class" id
   // Unqualified takes away "consts" etc and Canonical typdefs/using.
   // Also need special handling for element type
-  vi.type = decl->getType().getUnqualifiedType().getAsString(PP);
+  clang::QualType type = decl->getType().getUnqualifiedType().getNonReferenceType();
+  type.removeLocalConst();
+  vi.type = type.getAsString(PP);
   vi.type = remove_all_whitespace(vi.type);
   bool is_elem = (vi.type.find("element<") == 0);
-  vi.type = decl->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
+  vi.type = type.getAsString(PP);
   if (is_elem) vi.type = "element<" + vi.type + ">";
   // llvm::errs() << " + Got " << vi.type << '\n';
 
@@ -476,16 +478,20 @@ bool is_variable_loop_local(VarDecl * decl){
 
 
 // handle an array subscript expression
-void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
+int MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
                                         bool is_assign,
                                         std::string &assignop) {
-
-  // array refs are OK if they're inside the field element type,
-  // for example  f[X].c[i][j]
-  // Try to find these
+                                          
+  // Find the base of the array
+  DeclRefExpr * DRE = find_base_variable(E);
+  if(is_field_expr(DRE)){
+    // The base if a field expression. This is always allowed and 
+    // handled straightforwardly by handling the field.
+    // Return 0 so that the calling function knows nothing was done
+    return 0;
+  }
 
   // Check if it's local
-  DeclRefExpr * DRE = find_base_variable(E);
   VarDecl * decl = dyn_cast<VarDecl>(DRE->getDecl());
   bool array_local = is_variable_loop_local(decl);
 
@@ -501,6 +507,7 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
     index_local = true;
   }
 
+  // Now handling depends on wether it's local, global, or something else
   if(!array_local){
     llvm::errs() << "Non-local array\n";
     if(!index_local){
@@ -523,7 +530,7 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
       // For now, only allow this if it's a
       // histogram reduction
 
-      return;
+      return 0;
 
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
@@ -541,6 +548,7 @@ void MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
       // Array and index are local. This does not require any action.
     }
   }
+  return 1;
 }
 
 
@@ -752,14 +760,13 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (isa<ArraySubscriptExpr>(E)) {
       llvm::errs() << "  It's array expr "
                    << TheRewriter.getRewrittenText(E->getSourceRange()) << "\n";
-      //parsing_state.skip_children = 1;
       auto a = dyn_cast<ArraySubscriptExpr>(E);
 
       // At this point this should be an allowed expression?
-      handle_array_var_ref(a, is_assignment, assignop);
+      int is_handled = handle_array_var_ref(a, is_assignment, assignop);
       
       // We don't want to handle the array variable or the index separately
-      //parsing_state.skip_children = 1;
+      parsing_state.skip_children = is_handled;
       return true;
     }
 
