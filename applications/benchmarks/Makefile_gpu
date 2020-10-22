@@ -1,7 +1,4 @@
 # This makefile is used when compiling gpu benchmarks on puhti
-
-OPTS = -DNDIM=4
-
 # Before compiling on Puhti, load gcc, cuda-mpi and cuda
 # module load gcc/8.3.0 hpcx-mpi/2.5.0-cuda cuda/10.1.168
 # 
@@ -9,47 +6,31 @@ OPTS = -DNDIM=4
 # Replace MPI_LIBS below with the -L and -l parameters it
 # prints.
 #
-MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi 
+
+
+.PRECIOUS: build/%.cpt
+
+MAKEFILE = Makefile_gpu
+OPTS = -DNDIM=4
+
+
+CXXFLAGS = -O0  $(OPTS) -g -G
+
+
+include ../../libraries/Makefile_cuda
 
 
 
-# The next line is set up for Puhti. If testing on laptop, comment it out and uncomment the line after
-HILAPP = ../../build/hilapp -target:CUDA -DCUDA -DPUHTI -DHILAPP -DNRUNS=100 -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
-#HILAPP = ../../build/hilapp -target:CUDA -DCUDA -DHILAPP $(INCLUDES) 
+bench_field: build/bench_field.o Makefile_gpu $(HILA_OBJECTS) 
+	$(LD) -o $@ $< $(HILA_OBJECTS) 
 
-CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI -DNRUNS=100 -I../../../cub/  $(INCLUDES)
-LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(MPI_LIBS)
-
-
-
-CFLAGS = -O3 $(OPTS)
-CXXFLAGS = -O3  $(OPTS)
-
-test: Makefile_gpu conjReduce
-	./test.sh conjReduce
-
-%.exe: %.tr.o Makefile_gpu inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
-	$(LD) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o hila_cuda.o com_mpi.o
-
-%.cpt: %.cpp Makefile_gpu
-	$(HILAPP) -I/projappl/project_2001973/llvm/lib/clang/8.0.1/include $<
-
-%.tr.o : %.cpt
-	$(CC) $(CXXFLAGS) $< -c -o $@
-
-%.o : plumbing/%.cpp
-	$(CC) $(CXXFLAGS) $< -c
-
-%.o : plumbing/backend_cuda/%.cpp
-	$(CC) $(CXXFLAGS) $< -c
-
-%.o : %.c
-	$(CC) $(CFLAGS) $< -c
+bench_fermion: build/bench_fermion.o Makefile_gpu $(HILA_OBJECTS) 
+	$(LD) -o $@ $< $(HILA_OBJECTS) 
 
 clean:
-	rm -rf *.cpt *.o
+	rm -rf build/*.cpt build/*.o
 
 cleanall:
-	rm -rf *.cpt *.o *.exe
+	rm -rf build/*
 
 

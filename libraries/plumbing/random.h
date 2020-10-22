@@ -7,6 +7,7 @@
 // gaussian rng generation routines ----------------------
 
 
+#pragma hila loop_function
 static double gaussian_ran(double variance=0.5)
 {
   static double second;
@@ -32,6 +33,7 @@ static double gaussian_ran(double variance=0.5)
 #define MYCOSF(X) cos(X)
 
 template<typename radix>
+#pragma hila loop_function
 radix gaussian_ran2(radix* out2) 
 {
   double phi, urnd, r;

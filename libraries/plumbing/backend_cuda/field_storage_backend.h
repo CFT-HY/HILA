@@ -3,11 +3,11 @@
 
 #include "../defs.h"
 #include "../field_storage.h"
-#include <tgmath.h>
 
 /* CUDA implementations */
 template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
+  // Allocate space for the field of the device
   auto status = cudaMalloc( (void **)&fieldbuf, sizeof(T) * lattice->field_alloc_size() );
   check_cuda_error(status, "Allocate field memory");
   if (fieldbuf == nullptr) {
@@ -151,11 +151,11 @@ void field_storage<T>::gather_elements( T * RESTRICT buffer,
 /// A kernel that gathers elements negated
 // requires unary - 
 template <typename T>
-__global__ void gather_elements_negated_kernel( field_storage<T> field, char *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void gather_elements_negated_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const int field_alloc_size )
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
-    ((T*) buffer)[Index] = - field.get(site_index[Index], field_alloc_size);
+    buffer[Index] = - field.get(site_index[Index], field_alloc_size);
   }
 }
 
@@ -166,7 +166,7 @@ void field_storage<T>::gather_elements_negated(T * RESTRICT buffer,
                                         const unsigned * RESTRICT index_list, int n,
                                         const lattice_struct * RESTRICT lattice) const {
   unsigned *d_site_index;
-  char * d_buffer;
+  T * d_buffer;
   
   // Copy the list of boundary site indexes to the device
   cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
@@ -178,7 +178,7 @@ void field_storage<T>::gather_elements_negated(T * RESTRICT buffer,
   gather_elements_negated_kernel<<< N_blocks, N_threads >>>(*this, d_buffer, d_site_index, n, lattice->field_alloc_size() );
   
   // Copy the result to the host
-  cudaMemcpy( (char *) buffer, d_buffer, n*sizeof(T), cudaMemcpyDeviceToHost );
+  cudaMemcpy( buffer, d_buffer, n*sizeof(T), cudaMemcpyDeviceToHost );
 
   cudaFree(d_site_index);
   cudaFree(d_buffer);
@@ -189,11 +189,11 @@ void field_storage<T>::gather_elements_negated(T * RESTRICT buffer,
 
 /// A kernel that scatters the elements
 template <typename T>
-__global__ void place_elements_kernel( field_storage<T> field, char *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void place_elements_kernel( field_storage<T> field, T * buffer, unsigned * site_index, const int n, const int field_alloc_size )
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
-    field.set( ((T*) buffer)[Index], site_index[Index], field_alloc_size);
+    field.set( buffer[Index], site_index[Index], field_alloc_size);
   }
 }
 
@@ -203,11 +203,11 @@ void field_storage<T>::place_elements(T * RESTRICT buffer,
                                       const unsigned * RESTRICT index_list, int n,
                                       const lattice_struct * RESTRICT lattice) {
   unsigned *d_site_index;
-  char * d_buffer;
+  T * d_buffer;
 
   // Allocate space and copy the buffer to the device
   cudaMalloc( (void **)&(d_buffer), n*sizeof(T));
-  cudaMemcpy( d_buffer, (char*) buffer, n*sizeof(T), cudaMemcpyHostToDevice );
+  cudaMemcpy( d_buffer, buffer, n*sizeof(T), cudaMemcpyHostToDevice );
 
   // Copy the list of boundary site indexes to the device
   cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
@@ -224,9 +224,51 @@ void field_storage<T>::place_elements(T * RESTRICT buffer,
 
 
 
+template <typename T>
+__global__ void set_local_boundary_elements_kernel( field_storage<T> field, int offset, unsigned * site_index, const int n, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < n ) {
+    T value;
+    value = - field.get(site_index[Index], field_alloc_size);
+    field.set( value, offset+Index, field_alloc_size);
+  }
+}
+
 
 template<typename T>
-void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT lattice){}
+void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
+                                                   const lattice_struct * RESTRICT lattice,
+                                                   bool antiperiodic)
+{
+  // Only need to do something for antiperiodic boundaries
+  if (antiperiodic) {
+    int n, start = 0;
+    if (par == ODD) {
+      n = lattice->special_boundaries[dir].n_odd;
+      start = lattice->special_boundaries[dir].n_even;
+    } else {
+      if (par == EVEN) n = lattice->special_boundaries[dir].n_even;
+      else n = lattice->special_boundaries[dir].n_total;
+    }
+    int offset = lattice->special_boundaries[dir].offset + start;
+
+    unsigned *d_site_index;
+    check_cuda_error("earlier");
+    cudaMalloc( (void **)(&d_site_index), n*sizeof(unsigned));
+    check_cuda_error("set_local_boundary_elements: cudaMalloc");
+    cudaMemcpy( d_site_index, lattice->special_boundaries[dir].move_index + start, n*sizeof(unsigned), cudaMemcpyHostToDevice );
+    check_cuda_error("set_local_boundary_elements: cudaMemcpy");
+
+    int N_blocks = n/N_threads + 1;
+    set_local_boundary_elements_kernel<<< N_blocks, N_threads >>>( *this, offset, 
+      d_site_index, n, lattice->field_alloc_size());
+
+    cudaFree(d_site_index);
+    check_cuda_error("set_local_boundary_elements: cudaFree");
+  }
+  
+}
 
 
 

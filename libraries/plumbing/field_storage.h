@@ -10,19 +10,25 @@
 
 #include "plumbing/has_unary_minus.h"
 
-
-// Pointer to field data and accessors. Only this is passed to the
-// CUDA kernels and other accelerators and it only contains a minimal
-// amount of data.
-
+// Forward declare the field struct
 template <typename T>
 class field_struct;
+
+
+////////////////////////////////////////////////////////////////////////
+// The field_storage struct contains minimal information for using 
+// the field in a loop. It is communicated to CUDA kernels and other
+// accelerator functions. 
+////////////////////////////////////////////////////////////////////////
 
 template <typename T>
 class field_storage {
   public:
 
+    // The actual data content of the class: a pointer to the field and a
+    // list of neighbour pointers.
     T * RESTRICT fieldbuf = nullptr;
+    const unsigned * RESTRICT neighbours[NDIRS];
 
     void allocate_field( lattice_struct * lattice );
     void free_field();
@@ -84,7 +90,7 @@ class field_storage {
     void place_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n,
                          const lattice_struct * RESTRICT lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
-#ifndef VECTORIZED
+#ifdef VANILLA
     void set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT lattice);
 #else
     void set_local_boundary_elements(direction dir, parity par, const lattice_struct * RESTRICT lattice, bool antiperiodic);

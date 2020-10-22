@@ -5,10 +5,8 @@
 #include "defs.h"
 #include "coordinates.h"
 #include "lattice.h"
-#include "field.h"
-#include "datatypes/general_matrix.h"
 
-
+// Declare the test class here, element type definitions must be before field.h
 template <typename T>
 // #pragma hila dump ast
 struct test_struct {
@@ -17,9 +15,16 @@ struct test_struct {
   using base_type = typename base_type_struct<T>::type;
 
   // define unary - for antiperiodic b.c.
+  #pragma hila loop_function
   test_struct<T> operator-() const { test_struct<T> t; foralldir(d) t.r[d] = -r[d]; return t; }
 
 };
+
+#include "field.h"
+#include "datatypes/general_matrix.h"
+
+
+
 
 using test_int = test_struct<int>;
 using test_double = test_struct<double>;
@@ -40,7 +45,6 @@ void gather_test() {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
   for (boundary_condition_t bc : {boundary_condition_t::PERIODIC, boundary_condition_t::ANTIPERIODIC}) {
-    // output0 << "testing boundary " << (int)bc << '\n';
 #if NDIM > 3
       t.set_boundary_condition(TUP,bc);
 #endif
@@ -62,7 +66,7 @@ void gather_test() {
 #if defined(SPECIAL_BOUNDARY_CONDITIONS) && NDIM > 3
           if (bc == boundary_condition_t::ANTIPERIODIC &&
               (( X.coordinates()[TUP] == 0 && d2 == TDOWN) || 
-               ( X.coordinates()[TUP] == lattice->size(TUP)-1 && d2 ==TUP))) {
+               ( X.coordinates()[TUP] == size_t-1 && d2 ==TUP))) {
             n = -n;
           }
 #endif
@@ -89,11 +93,9 @@ void gather_test() {
             for (int loop=0; loop<NDIM; loop++) hila::output << n.r[loop] << ' ';
             
             hila::output << '\n';
+            assert(lv == 0 || a == 0 && "Test gathers");
           }
           #endif
-
-          assert(lv == 0 || a == 0 && "Test gathers");
-          
         }
 
         double s_result;

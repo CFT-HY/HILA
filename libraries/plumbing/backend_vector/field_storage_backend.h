@@ -226,7 +226,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,con
     using vectortype = typename vector_info<T>::type;
     using basetype = typename vector_info<T>::base_type;
 
-    // output0 << "Vecotorized boundary dir " << dir << " parity " << (int)par << " bc " << (int)antiperiodic << '\n';
+    // output0 << "Vectorized boundary dir " << dir << " parity " << (int)par << " bc " << (int)antiperiodic << '\n';
 
     const auto vector_lattice = 
         lattice->backend_lattice->template get_vectorized_lattice<vector_info<T>::vector_size>();

@@ -61,7 +61,7 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 #ifndef VANILLA
   /* Setup backend-specific lattice info if necessary */
   backend_lattice = new backend_lattice_struct;
-  backend_lattice->setup(*this);
+  backend_lattice->setup(this);
 #endif
 
   test_std_gathers();
@@ -719,7 +719,7 @@ void lattice_struct::setup_special_boundary_array(direction d) {
   // if it is not needed or already done...
   if (special_boundaries[d].is_needed == false ||
       special_boundaries[d].neighbours != nullptr) return;
-
+  
   // now allocate neighbour array and the fetching array
   special_boundaries[d].neighbours = (unsigned *)memalloc(sizeof(unsigned) * this_node.sites);
   special_boundaries[d].move_index = (unsigned *)memalloc(sizeof(unsigned) * special_boundaries[d].n_total);

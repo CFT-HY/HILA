@@ -80,7 +80,7 @@ void lattice_struct::setup_layout( )
 
     if (dir < 0) {
       /* This cannot happen */
-      output0 << "CANNOT HAPPEN! in setup_layout_generic\n";
+      output0 << "CANNOT HAPPEN! in setup_layout_simple\n";
       finishrun();
     }
 
