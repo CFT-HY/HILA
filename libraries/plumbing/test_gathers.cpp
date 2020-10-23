@@ -75,13 +75,13 @@ void gather_test() {
           T t_r = t[X].r[d];
           T s = ((int)(t_r + add + size_d)) % size_d;
 
-          sum2 += n.r[d] - size_d/2;
-          sum1 += t[X].r[d] - size_d/2;
+          sum2 += n.r[d] - size_d/2.0;
+          sum1 += t[X].r[d] - size_d/2.0;
 
           T lv = s-j;
           T a = 0;
           foralldir(dir) if (dir != d) a+= n.r[dir] - t[X].r[dir];
-                    
+          
           #ifndef CUDA
           if (lv != 0 || a != 0) {
             hila::output << "Error in gather test at " << X.coordinates() << " direction " << d2 
@@ -93,29 +93,29 @@ void gather_test() {
             for (int loop=0; loop<NDIM; loop++) hila::output << n.r[loop] << ' ';
             
             hila::output << '\n';
-            assert(lv == 0 || a == 0 && "Test gathers");
           }
           #endif
+          assert(lv == 0 || a == 0 && "Test gathers");
         }
 
         double s_result;
         if (p == ALL) 
-          s_result = lattice->volume()/2;
+          s_result = lattice->volume()/2.0;
         else 
-          s_result = lattice->volume()/4;
+          s_result = lattice->volume()/4.0;
 
         if (sum1 + s_result != 0.0) {
-          output0 << "Error in sum reduction!  answer " << sum1 + s_result << " should be 0\n";
+          output0 << "Error in sum reduction!  answer " << sum1 + s_result << " should be 0, parity " << (int)p << ", direction " << (int)d2 << ", bc " << (int)bc << "\n";
           exit(-1);
         }
 
         if (sum2 + s_result != 0.0) {
-          output0 << "Error in neighbour sum reduction!  answer " << sum2 + s_result << " should be 0\n";
+          output0 << "Error in neighbour sum2 reduction!  answer " << sum2 + s_result << " should be 0, parity " << (int)p << ", direction " << (int)d2 << ", bc " << (int)bc << "\n";
           exit(-1);
         }
 
 
-        t.mark_changed(ALL);  // foorce fetching, test it too
+        t.mark_changed(ALL);  // force fetching, test it too
 
 #ifdef VECTORIZED
         // above is not vectorized, so do it also in vec way
@@ -163,7 +163,7 @@ void gather_test() {
 
 void test_std_gathers()
 {
-  gather_test<int>();
   gather_test<double>();
+  gather_test<int>();
 }
 
