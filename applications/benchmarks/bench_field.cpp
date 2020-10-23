@@ -225,21 +225,24 @@ int main(int argc, char **argv){
 
     // Time VECTOR NORM
     timing = 0;
-    for(n_runs=1; timing < mintime; ){
+    onsites(ALL){ // Warm up. Why does this affect the time?
+      sum += vector1[X].norm_sq();
+    }
+    for(n_runs=1; timing < mintime;){
       n_runs*=2;
       gettimeofday(&start, NULL);
       
       sum=0;
       for( int i=0; i<n_runs; i++){
         onsites(ALL){
-          sum += norm_squared(vector1[X]);
+          sum += vector1[X].norm_sq();
         }
       }
-      volatile double volatile_sum = sum;
       // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
       broadcast(timing);
+      output0 << "Vector square sum: " << timing << " ms \n";
 
     }
     timing = timing / (double)n_runs;
@@ -247,24 +250,20 @@ int main(int argc, char **argv){
 
     // Time FLOAT VECTOR NORM
     timing = 0;
-    for(n_runs=1; timing < mintime; n_runs*=2){
+    for(n_runs=1; timing < mintime;){
+      n_runs*=2;
       gettimeofday(&start, NULL);
       fsum=0;
       for( int i=0; i<n_runs; i++){
         onsites(ALL){
-          for(int j=0; j<N; j++){
-            fvector1[X].c[j]=1;
-          }
-        }
-        onsites(ALL){
           fsum += fvector1[X].norm_sq();
         }
-        volatile double volatile_sum = fsum;
       }
       // synchronize();
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
       broadcast(timing);
+      output0 << "Single Precision Vector square sum: " << timing << " ms \n";
 
     }
     timing = timing / (double)n_runs;

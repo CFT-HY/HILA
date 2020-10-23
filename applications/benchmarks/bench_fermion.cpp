@@ -8,7 +8,7 @@
 #define SEED 100
 #endif
 
-const int latsize[4] = { 8, 8, 8, 8 };
+const int latsize[4] = { 32, 32, 32, 32 };
 
 int main(int argc, char **argv){
     int n_runs=1;
@@ -17,6 +17,7 @@ int main(int argc, char **argv){
     double timing;
     double sum;
     float fsum;
+
 
     // Runs lattice->setup 
     #if NDIM==2
@@ -74,11 +75,14 @@ int main(int argc, char **argv){
     output0 << "Dirac staggered: " << timing << "ms \n";
 
     // Conjugate gradient step 
-    CG<dirac_stg> stg_inverse(D_staggered, 1.0);
+    CG<dirac_stg> stg_inverse(D_staggered, 1e-5, 1);
     timing = 0;
+    sunvec1[ALL]=0;
+    stg_inverse.apply(sunvec2, sunvec1);
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
       
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         sunvec1[ALL]=0;
         stg_inverse.apply(sunvec2, sunvec1);
@@ -88,7 +92,6 @@ int main(int argc, char **argv){
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
       broadcast(timing);
-
     }
 
     timing = timing / (double)n_runs;
@@ -126,12 +129,15 @@ int main(int argc, char **argv){
     output0 << "Dirac Wilson: " << timing << "ms \n";
 
     // Conjugate gradient step (set accuracy=1 to run only 1 step)
-    CG<Dirac_Wilson> w_inverse(D_wilson, 1.0);
+    CG<Dirac_Wilson> w_inverse(D_wilson, 1e-5, 1);
     timing = 0;
+    wvec1[ALL]=0;
+    w_inverse.apply(wvec2, wvec1);
     for(n_runs=1; timing < mintime; ){
 
       n_runs*=2;
 
+      gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
         wvec1[ALL]=0;
         w_inverse.apply(wvec2, wvec1);
@@ -141,7 +147,6 @@ int main(int argc, char **argv){
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
       broadcast(timing);
-
     }
 
     timing = timing / (double)n_runs;
