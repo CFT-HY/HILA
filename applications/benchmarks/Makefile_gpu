@@ -14,18 +14,22 @@ MAKEFILE = Makefile_gpu
 OPTS = -DNDIM=4
 
 
-CXXFLAGS = -O0  $(OPTS) -g -G
+CXXFLAGS = -O3  $(OPTS) -g -G
+LDFLAGS = -g -G
 
 
 include ../../libraries/Makefile_cuda
 
 
-
 bench_field: build/bench_field.o Makefile_gpu $(HILA_OBJECTS) 
-	$(LD) -o $@ $< $(HILA_OBJECTS) 
+	$(LD) $(LDFLAGS) -o $@ $< $(HILA_OBJECTS) 
 
 bench_fermion: build/bench_fermion.o Makefile_gpu $(HILA_OBJECTS) 
-	$(LD) -o $@ $< $(HILA_OBJECTS) 
+	$(LD) $(LDFLAGS) -o $@ $< $(HILA_OBJECTS) 
+
+bench_matrix2: build/bench_matrix2.o Makefile_gpu $(HILA_OBJECTS) 
+	$(LD) $(LDFLAGS) -o $@ $< $(HILA_OBJECTS) 
+
 
 clean:
 	rm -rf build/*.cpt build/*.o

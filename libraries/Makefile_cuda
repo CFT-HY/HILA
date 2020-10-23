@@ -41,11 +41,11 @@ MPI_OPTS = -DUSE_MPI -I$(MPI_INCLUDE_DIR)
 HILAPP = $(THIS_DIR)/../hilapp/build/hilapp -target:CUDA -DUSE_MPI -DCUDA -DPUHTI -DHILAPP $(HILA_INCLUDE) $(MPI_OPTS)
 HILA_OPTS = -I$(HILA_INCLUDE)
 
-LD_FLAGS = -lm  $(MPI_LIBS)
+LD_FLAGS = $(LDFLAGS) -lm $(MPI_LIBS)
 
 
-CC = nvcc -dc -g -G -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI -DNRUNS=100 -I../../../cub/  $(CXX_INCLUDE)
-LD = nvcc -g -G -gencode arch=compute_70,code=sm_70 -fmad=false $(LD_FLAGS)
+CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI -DNRUNS=100 -I../../../cub/  $(CXX_INCLUDE)
+LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(LD_FLAGS)
 
 
 
@@ -70,5 +70,5 @@ build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile_cuda $(MAKEFILE)
 	$(HILAPP) $< -o $@
 
 build/%.o: $(THIS_DIR)/plumbing/backend_cuda/%.cpp $(THIS_DIR)/Makefile_cuda $(MAKEFILE)
-	$(CC) $< -o $@
+	$(CC) $(CXXFLAGS) $< -o $@
 
