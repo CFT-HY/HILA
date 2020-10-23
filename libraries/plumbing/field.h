@@ -232,7 +232,7 @@ class field {
       }
 
 
-#ifndef VECTORIZED
+#ifdef VANILLA
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
         #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -251,15 +251,17 @@ class field {
 
           /// finally, boundary condition (TODO:MORE GENERAL!)
           if (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC) {
-            #ifdef CUDA
-            payload.set_local_boundary_elements(dir, par, lattice, true);
-            #else
             payload.gather_elements_negated( payload.fieldbuf + offset,
               lattice->special_boundaries[dir].move_index + start, n, lattice);
-            #endif
           }
         }
         #endif
+      }
+#elif defined(CUDA)
+      void set_local_boundary_elements(direction dir, parity par){
+        bool antiperiodic =
+          (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
+        payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
       }
 #else
       // Vectorized and CUDA
