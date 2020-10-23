@@ -70,17 +70,6 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
   
 
-  // Check for reductions and allocate device memory
-  for (var_info & v : var_info_list) {
-    if (v.reduction_type != reduction::NONE) {
-      // Allocate memory for a reduction. This will be filled in the kernel
-      code << v.type << " * d_" << v.reduction_name << ";\n";
-      code << "cudaMalloc( (void **)& d_" << v.reduction_name << ","
-           << "sizeof(" << v.type << ") * lattice->volume() );\n";
-      code << "check_cuda_error(\"allocate_reduction\");\n";
-    }
-  }
-
   for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
     // Allocate memory for a reduction and initialize
     code << vrf.type << " * d_" << vrf.vector_name << ";\n";
@@ -107,6 +96,28 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   code << "lattice_info.loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop << ");\n";
   code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin)/N_threads + 1;\n";
+
+
+  // Check for reductions and allocate device memory
+  for (var_info & v : var_info_list) {
+    if (v.reduction_type != reduction::NONE) {
+      // Allocate memory for a reduction. This will be filled in the kernel
+      code << v.type << " * d_" << v.reduction_name << ";\n";
+      code << "cudaMalloc( (void **)& d_" << v.reduction_name << ","
+           << "sizeof(" << v.type << ") * N_blocks );\n";
+      code << "check_cuda_error(\"allocate_reduction\");\n";
+      if (v.reduction_type == reduction::SUM) {
+        code << "cuda_set_zero(d_" << v.reduction_name
+           << ", N_blocks);\n";
+      }
+      if (v.reduction_type == reduction::PRODUCT) {
+        code << "cuda_set_one(d_" << v.reduction_name
+           << ", N_blocks);\n";
+      }
+    }
+  }
+
+
   code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info, ";
 
 
@@ -136,20 +147,13 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
       // Generate a temporary array for the reduction 
       kernel << ", " << vi.type << " * " << vi.new_name;
       code << ", d_r_" << vi.name;
-      vi.new_name = vi.new_name+"[Index]";
-    
-    /* // This does not work. A cuda kernel cannot accept a reference.
-    } else if(vi.is_assigned) {
-      kernel << ", " << vi.type << " & " << vi.new_name;
-      code << ", " << vi.name;
-    }*/
     } else {
       kernel << ", const " << vi.type << " " << vi.new_name;
       code << ", " << vi.name;
-    }
-    // Replace references in the loop body
-    for (var_ref & vr : vi.refs) {
-      loopBuf.replace( vr.ref, vi.new_name );
+      // Replace references in the loop body
+      for (var_ref & vr : vi.refs) {
+        loopBuf.replace( vr.ref, vi.new_name );
+      }
     }
   }
 
@@ -204,21 +208,29 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
          << " + loop_lattice->loop_begin; \n";
   /* The last block may exceed the lattice size. Do nothing in that case. */
   kernel << "if(Index < loop_lattice->loop_end) { \n";
-  
 
-  /* Initialize reductions */
-  i=0;
-  for ( var_info & vi : var_info_list ) {
-    if (!vi.is_loop_local) {
+
+  // Declare the shared reduction variable
+  for ( var_info & vi : var_info_list ) if(!vi.is_loop_local) {
+    if(vi.reduction_type != reduction::NONE) {
+      // Generate a temporary array for the reduction 
+      kernel << "__shared__ " << vi.type << " " << vi.new_name
+             << "_sh[N_threads];\n";
+
+      // Initialize only the local element
       if (vi.reduction_type == reduction::SUM) {
-        kernel << "sv_" + std::to_string(i) + "_[Index]" << "=0;\n";
-      } if (vi.reduction_type == reduction::PRODUCT) {
-        kernel << "sv_" + std::to_string(i) + "_[Index]" << "=1;\n";
+        kernel << vi.new_name << "_sh[threadIdx.x] = 0;\n";
+      } else if (vi.reduction_type == reduction::PRODUCT) {
+        kernel << vi.new_name << "_sh[threadIdx.x] = 1;\n";
       }
-      i++;
+
+      // Replace references in the loop body
+      for (var_ref & vr : vi.refs) {
+        loopBuf.replace( vr.ref, vi.new_name+"_sh[threadIdx.x]" );
+      }
     }
   }
-
+  
 
   
   // Create temporary field element variables
@@ -303,6 +315,35 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     kernel << l.new_name << ".set(" << l.loop_ref_name << ", " 
            << looping_var << ", loop_lattice->field_alloc_size );\n";
   }
+  
+  // Handle reductions: Need to sync threads once, then do reduction
+  // locally once per block
+  bool sync_done = false;
+  for ( var_info & vi : var_info_list ) if(!vi.is_loop_local) {
+    if(vi.reduction_type != reduction::NONE) {
+      // Do sync (only if there is a reduction)
+      if(!sync_done){
+        kernel << "__syncthreads();\n";
+        sync_done = true;
+      }
+
+      //Now run the thread level reduction
+      kernel << "if( threadIdx.x == 0 ){\n";
+      if (vi.reduction_type == reduction::SUM) {
+        kernel << vi.new_name << "[blockIdx.x] = 0;\n";
+      } else if (vi.reduction_type == reduction::PRODUCT) {
+        kernel << vi.new_name << "[blockIdx.x] = 1;\n";
+      }
+      kernel << "for( int i=1; i<N_threads; i++ ){\n";
+      if (vi.reduction_type == reduction::SUM) {
+        kernel << vi.new_name << "[blockIdx.x] += " << vi.new_name << "_sh[i];\n";
+      } else if (vi.reduction_type == reduction::PRODUCT) {
+        kernel << vi.new_name << "[blockIdx.x] *= " << vi.new_name << "_sh[i];\n";
+      }
+      kernel << "}\n";
+      kernel << "}\n";
+    }
+  }
 
   kernel << "}\n}\n//----------\n";
   code << ");\n";
@@ -318,10 +359,10 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     // Run reduction
     if (v.reduction_type == reduction::SUM) {
       code << v.reduction_name << " = cuda_reduce_sum( d_"
-           << v.reduction_name << ", loop_lattice->volume()" <<  ");\n";
+           << v.reduction_name << ", N_blocks" <<  ");\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
       code << v.reduction_name << " = cuda_reduce_product( d_"
-           << v.reduction_name << ", loop_lattice->volume()" <<  ");\n";
+           << v.reduction_name << ", N_blocks" <<  ");\n";
     }
     // Free memory allocated for the reduction
     if (v.reduction_type != reduction::NONE) {

@@ -11,7 +11,7 @@
 #include <curand_kernel.h>
 #include <cub/cub.cuh>
 
-#define N_threads 64
+#define N_threads 128
 
 /* Random number generator */
 extern curandState * curandstate;
@@ -41,6 +41,7 @@ static inline void check_cuda_error(cudaError code, std::string message){
 
 
 /* Reduction */
+/*
 template<typename T>
 T cuda_reduce_sum(  T * vector, int N ){
   static bool initialized = false;
@@ -68,6 +69,101 @@ T cuda_reduce_sum(  T * vector, int N ){
 
   return sum;
 }
+*/
+
+
+// A simple hand-written reduction that does not require a library
+template<typename T>
+__global__ void cuda_reduce_sum_kernel( T * vector, int vector_size, int new_size, int elems)
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < new_size ){
+    for(int i=1; i<elems; i++){
+      int ind = Index + i*new_size;
+      vector[Index] += vector[ ind ];
+    }
+  }
+}
+
+template<typename T>
+T cuda_reduce_sum(  T * vector, int N ){
+  const int reduce_step = 32;
+  T sum=0;
+  T * host_vector = (T *)malloc(N*sizeof(T));
+  int vector_size = N;
+
+  while( vector_size > N_threads*reduce_step ){
+    // Take the last n elements that are divisible by reduce_step
+    int first = vector_size%reduce_step;
+    // Calculate the size of the reduced list
+    int new_size = (vector_size-first)/reduce_step;
+    // Find number of blocks and launch the kernel
+    int blocks = new_size/N_threads + 1;
+    cuda_reduce_sum_kernel<<< blocks, N_threads >>>( vector+first, vector_size, new_size, reduce_step );
+    // Find the full size of the resulting array
+    vector_size = new_size + first;
+    cudaDeviceSynchronize();
+  }
+
+  check_cuda_error("cuda_reduce_sum kernel");
+  cudaMemcpy( host_vector, vector, vector_size*sizeof(T), cudaMemcpyDeviceToHost );
+  check_cuda_error("Memcpy in reduction");
+
+  for(int i=0; i<vector_size; i++){
+    sum += host_vector[i];
+  }
+
+  free(host_vector);
+  
+  return sum;
+}
+
+
+template<typename T>
+__global__ void cuda_reduce_prod_kernel( T * vector, int vector_size, int new_size, int elems)
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < new_size ){
+    for(int i=1; i<elems; i++){
+      int ind = Index + i*new_size;
+      vector[Index] *= vector[ ind ];
+    }
+  }
+}
+
+template<typename T>
+T cuda_reduce_prod(  T * vector, int N ){
+  const int reduce_step = 32;
+  T prod=1;
+  T * host_vector = (T *)malloc(N*sizeof(T));
+  int vector_size = N;
+
+  while( vector_size > reduce_step ){
+    // Take the last n elements that are divisible by reduce_step
+    int first = vector_size%reduce_step;
+    // Calculate the size of the reduced list
+    int new_size = (vector_size-first)/reduce_step;
+    // Find number of blocks and launch the kernel
+    int blocks = new_size/N_threads + 1;
+    cuda_reduce_prod_kernel<<< blocks, N_threads >>>( vector+first, vector_size, new_size, reduce_step );
+    // Find the full size of the resulting array
+    vector_size = new_size + first;
+    cudaDeviceSynchronize();
+  }
+
+  check_cuda_error("cuda_reduce_prod kernel");
+  cudaMemcpy( host_vector, vector, vector_size*sizeof(T), cudaMemcpyDeviceToHost );
+  check_cuda_error("Memcpy in reduction");
+
+  for(int i=0; i<vector_size; i++){
+    prod *= host_vector[i];
+  }
+
+  free(host_vector);
+  
+  return prod;
+}
+
 
 
 template<typename T>
@@ -107,7 +203,7 @@ __global__ void cuda_set_one_kernel( T * vector, int elems)
 template<typename T>
 void cuda_set_one_kernel( T * vec, size_t N ){
   int blocks = N/N_threads + 1;
-  cuda_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
+  cuda_set_one_kernel<<<blocks, N_threads>>>(vec, N);
 }
 
 template<typename T>
@@ -117,51 +213,10 @@ void cuda_set_zero( T * vec, size_t N ){
 }
 
 
-// A simple hand-written reduction that does not require a library
-//
-//template<typename T>
-//__global__ void cuda_reduce_sum_kernel( T * vector, int vector_size, int new_size, int elems)
-//{
-//  int Index = threadIdx.x + blockIdx.x * blockDim.x;
-//  if( Index < new_size ){
-//    for(int i=1; i<elems; i++){
-//      int ind = Index + i*new_size;
-//      if( ind < vector_size ){
-//        vector[Index] += vector[ ind ];
-//      }
-//    }
-//  }
-//}
-//
-//
-//template<typename T>
-//T cuda_reduce_sum(  T * vector, int N ){
-//  const int reduce_step = 32;
-//  T sum;
-//  T * host_vector = (T *)malloc(N*sizeof(T));
-//  int vector_size = N;
-//
-//  while( vector_size > reduce_step ){
-//    int new_size = vector_size/reduce_step + 1;
-//    int blocks = new_size/N_threads + 1;
-//    cuda_reduce_sum_kernel<<< blocks, N_threads >>>( vector, vector_size, new_size, reduce_step );
-//    vector_size = new_size;
-//    cudaDeviceSynchronize();
-//  }
-//  
-//
-//  check_cuda_error("cuda_reduce_sum kernel");
-//  cudaMemcpy( host_vector, vector, vector_size*sizeof(T), cudaMemcpyDeviceToHost );
-//  check_cuda_error("Memcpy in reduction");
-//
-//  for(int i=0; i<vector_size; i++){
-//    sum += host_vector[i];
-//  }
-//
-//  free(host_vector);
-//  
-//  return sum;
-//}
+
+
+
+
 
 
 inline void synchronize_threads(){

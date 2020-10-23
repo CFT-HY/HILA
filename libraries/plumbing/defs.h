@@ -25,7 +25,7 @@
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
 /// ADD HERE GUARD FOR THOSE WHICH DO not HAVE IT
-#if 1
+#ifndef CUDA
 #define RESTRICT __restrict__
 #else
 #define RESTRICT   // disabled here
