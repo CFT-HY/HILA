@@ -92,7 +92,7 @@ T cuda_reduce_sum(  T * vector, int N ){
   T * host_vector = (T *)malloc(N*sizeof(T));
   int vector_size = N;
 
-  while( vector_size > N_threads*reduce_step ){
+  while( vector_size > reduce_step ){
     // Take the last n elements that are divisible by reduce_step
     int first = vector_size%reduce_step;
     // Calculate the size of the reduced list
