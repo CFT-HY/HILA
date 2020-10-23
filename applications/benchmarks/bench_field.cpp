@@ -242,8 +242,6 @@ int main(int argc, char **argv){
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
       broadcast(timing);
-      output0 << "Vector square sum: " << timing << " ms \n";
-
     }
     timing = timing / (double)n_runs;
     output0 << "Vector square sum: " << timing << " ms \n";
@@ -263,8 +261,6 @@ int main(int argc, char **argv){
       gettimeofday(&end, NULL);
       timing = timediff(start, end);
       broadcast(timing);
-      output0 << "Single Precision Vector square sum: " << timing << " ms \n";
-
     }
     timing = timing / (double)n_runs;
     output0 << "Single Precision vector square sum: " << timing << " ms \n";
