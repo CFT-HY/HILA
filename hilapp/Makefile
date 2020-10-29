@@ -145,9 +145,15 @@ OBJECTS = \
 $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
 	$(CXX) -c $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $< -o $@
 
+#$(BUILDDIR)/hilapp: ${OBJECTS}
+#	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
+#		-static $(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
+
 $(BUILDDIR)/hilapp: ${OBJECTS}
 	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
-		$(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
+	$(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
+
+
 
 .PHONY: clean
 clean:

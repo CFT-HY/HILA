@@ -15,34 +15,34 @@ CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 -I../../libraries/ $(OPTS)
 # Don't remove cpt-files
 .PRECIOUS: %.cpt
 
-%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
-	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
+%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o Makefile
+	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_generic.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
 
 %.cpt: %.cpp Makefile
 	$(HILAPP) $(ADDITION) $<
 
-%.tr.o : %.cpt
+%.tr.o : %.cpt Makefile
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
-%.tr.s : %.cpt
+%.tr.s : %.cpt Makefile
 	$(CC) $(CXXFLAGS) $< -S -o $@
 
-lattice.cpt : ../../libraries/plumbing/lattice.cpp
+lattice.cpt : ../../libraries/plumbing/lattice.cpp Makefile
 	$(HILAPP) $(ADDITION) $<
 
-test_gathers.cpt : ../../libraries/plumbing/test_gathers.cpp
+test_gathers.cpt : ../../libraries/plumbing/test_gathers.cpp Makefile
 	$(HILAPP) $(ADDITION) $<
 
-lattice.o : lattice.cpt
+lattice.o : lattice.cpt Makefile
 	$(CC) $(CXXFLAGS) $< -c
 
-test_gathers.o : test_gathers.cpt
+test_gathers.o : test_gathers.cpt Makefile
 	$(CC) $(CXXFLAGS) $< -c 
 
-%.o : ../../libraries/plumbing/%.cpp
+%.o : ../../libraries/plumbing/%.cpp Makefile
 	$(CC) $(CXXFLAGS) $< -c
 
-%.o : %.c
+%.o : %.c Makefile
 	$(CC) $(CFLAGS) $< -c
 
 clean:
