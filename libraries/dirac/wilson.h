@@ -37,7 +37,6 @@ inline void Dirac_Wilson_hop(
     vtemp[dir].start_get(odir);
   }
   foralldir(dir){
-    direction odir = opp_dir( (direction)dir );
     onsites(par){
       half_Wilson_vector<N, radix> h1(v_in[X+dir], dir, sign);
       v_out[X] = v_out[X] 
@@ -47,6 +46,49 @@ inline void Dirac_Wilson_hop(
   }
 }
 
+
+// A version of Dirac_wilson_hop that overrides the output field
+template<int N, typename radix, typename matrix>
+inline void Dirac_Wilson_hop_set(
+  const field<matrix> *gauge, const double kappa,
+  const field<Wilson_vector<N, radix>> &v_in,
+  field<Wilson_vector<N, radix>> &v_out,
+  parity par, int sign)
+{
+  field<half_Wilson_vector<N, radix>> (&vtemp)[NDIM] = wilson_dirac_temp_vector<N, radix>;
+  foralldir(dir){
+    vtemp[dir].copy_boundary_condition(v_in);
+  }
+
+  // Run neighbour fetches and multiplications
+  foralldir(dir){
+    direction odir = opp_dir( (direction)dir );
+    // First multiply the by conjugate before communicating
+    onsites(opp_parity(par)){
+      half_Wilson_vector<N, radix> h(v_in[X], dir, -sign);
+      vtemp[dir][X] = gauge[dir][X].conjugate()*h;
+    }
+
+    vtemp[dir].start_get(odir);
+  }
+  //Set on first direction
+  direction dir = direction(0);
+  onsites(par){
+    half_Wilson_vector<N, radix> h1(v_in[X+dir], dir, sign);
+    v_out[X] = - (kappa*gauge[dir][X]*h1).expand(dir, sign)
+               - (kappa*vtemp[dir][X-dir]).expand(dir, -sign);
+  }
+  //Add for all other directions
+  for(int d=1; d < NDIM; d++){
+    direction dir = direction(d);
+    onsites(par){
+      half_Wilson_vector<N, radix> h1(v_in[X+dir], dir, sign);
+      v_out[X] = v_out[X] 
+               - (kappa*gauge[dir][X]*h1).expand(dir, sign)
+               - (kappa*vtemp[dir][X-dir]).expand(dir, -sign);
+    }
+  }
+}
 
 
 template<int N, typename radix>
@@ -199,10 +241,9 @@ class Dirac_Wilson_evenodd {
 
     // Applies the operator to in
     inline void apply( const field<vector_type> & in, field<vector_type> & out){
-      out[ALL] = 0;
       Dirac_Wilson_diag(in, out, EVEN);
 
-      Dirac_Wilson_hop(gauge, kappa, in, out, ODD, 1);
+      Dirac_Wilson_hop_set(gauge, kappa, in, out, ODD, 1);
       Dirac_Wilson_diag_inverse(out, ODD);
       Dirac_Wilson_hop(gauge, -kappa, out, out, EVEN, 1);
       out[ODD] = 0;
@@ -210,10 +251,9 @@ class Dirac_Wilson_evenodd {
 
     // Applies the conjugate of the operator
     inline void dagger( const field<vector_type> & in, field<vector_type> & out){
-      out[ALL] = 0;
       Dirac_Wilson_diag(in, out, EVEN);
 
-      Dirac_Wilson_hop(gauge, kappa, in, out, ODD, -1);
+      Dirac_Wilson_hop_set(gauge, kappa, in, out, ODD, -1);
       Dirac_Wilson_diag_inverse(out, ODD);
       Dirac_Wilson_hop(gauge, -kappa, out, out, EVEN, -1);
       out[ODD] = 0;
@@ -228,12 +268,12 @@ class Dirac_Wilson_evenodd {
       tmp.copy_boundary_condition(chi);
 
       tmp[ALL] = 0;
-      Dirac_Wilson_hop(gauge, kappa, chi, tmp, ODD, -sign);
+      Dirac_Wilson_hop_set(gauge, kappa, chi, tmp, ODD, -sign);
       Dirac_Wilson_diag_inverse(tmp, ODD);
       Dirac_Wilson_calc_force(gauge, -kappa, tmp, psi, force, EVEN, sign);
 
       tmp[ALL] = 0;
-      Dirac_Wilson_hop(gauge, kappa, psi, tmp, ODD, sign);
+      Dirac_Wilson_hop_set(gauge, kappa, psi, tmp, ODD, sign);
       Dirac_Wilson_diag_inverse(tmp, ODD);
       Dirac_Wilson_calc_force(gauge, -kappa, chi, tmp, force2, ODD, sign);
 
