@@ -5,25 +5,29 @@
 /* Random number generator */
 curandState * curandstate;
 __device__ curandState * d_curandstate;
+#define cuda_rand_setup_count
 
 /* Set seed on device */
-__global__ void seed_random_kernel( curandState * state, unsigned long seed )
+__global__ void seed_random_kernel( curandState * state, unsigned long seed, unsigned int iters_per_kernel )
 {
   int x = threadIdx.x + blockIdx.x * blockDim.x;
-  d_curandstate = state;
-  curand_init( seed, x, 0, &d_curandstate[x] );
+  for(int i=0; i<iters_per_kernel; i++){
+    d_curandstate = state;
+    curand_init( seed + i*iters_per_kernel + x, i*iters_per_kernel + x, 0, &d_curandstate[i*iters_per_kernel + x] );
+  }
 }
 
 /* Set seed on device and host */
 void seed_random(unsigned long seed){
-  unsigned long n_blocks = lattice->local_volume() / N_threads + 1;
-  unsigned long n_sites = N_threads*n_blocks;
-  unsigned long myseed = seed + mynode()*lattice->local_volume();
+  unsigned int iters_per_kernel = 16;
+  unsigned long n_blocks = lattice->local_volume() / (N_threads*iters_per_kernel) + 1;
+  unsigned long n_sites = N_threads*n_blocks*iters_per_kernel;
+  unsigned long myseed = seed + mynode()*n_sites;
   cudaMalloc( &curandstate, n_sites*sizeof( curandState ) );
   check_cuda_error("seed_random malloc");
-  seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, myseed );
+  seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, myseed, iters_per_kernel );
   check_cuda_error("seed_random kernel");
-  seed_mersenne(seed+n_sites);
+  seed_mersenne(myseed+n_sites-1);
 }
 
 /* Generate random numbers on device or host */
@@ -53,7 +57,7 @@ void backend_lattice_struct::setup(lattice_struct * lattice)
     // For special boundaries
     cudaMalloc( (void **)&(d_neighb_special[d]), lattice->local_volume() * sizeof(unsigned));
     check_cuda_error("cudaMalloc device neighbour array");
-    const unsigned * special_neighb = lattice->get_neighbour_array((direction)d, boundary_condition_t::ANTIPERIODIC);
+    unsigned * special_neighb = lattice->get_neighbour_array((direction)d, boundary_condition_t::ANTIPERIODIC);
     cudaMemcpy( d_neighb_special[d], special_neighb, lattice->local_volume() * sizeof(unsigned), cudaMemcpyHostToDevice );
     check_cuda_error("cudaMemcpy device neighbour array");
   }
