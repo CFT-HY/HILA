@@ -14,8 +14,8 @@ MAKEFILE = Makefile_gpu
 OPTS = -DNDIM=4
 
 
-CXXFLAGS = -O3  $(OPTS) -g -G
-LDFLAGS = -g -G
+CXXFLAGS = -O3  $(OPTS) 
+LDFLAGS = 
 
 
 include ../../libraries/Makefile_cuda
