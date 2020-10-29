@@ -98,7 +98,6 @@ int main(int argc, char **argv){
     output0 << "Staggered CG: " << timing << "ms / iteration\n";
 
 
-
     field<Wilson_vector<N, double>> wvec1, wvec2;
     onsites(ALL){
       if(disable_avx[X]==0){};
@@ -112,6 +111,7 @@ int main(int argc, char **argv){
     Dirac_Wilson D_wilson(0.05, U);
     D_wilson.apply(wvec1, wvec2);
 
+    
     // synchronize();
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
@@ -128,8 +128,9 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "Dirac Wilson: " << timing << "ms \n";
 
+    
     // Conjugate gradient step (set accuracy=1 to run only 1 step)
-    CG<Dirac_Wilson> w_inverse(D_wilson, 1e-5, 1);
+    CG<Dirac_Wilson> w_inverse(D_wilson, 1e-12, 5);
     timing = 0;
     wvec1[ALL]=0;
     w_inverse.apply(wvec2, wvec1);
@@ -151,7 +152,7 @@ int main(int argc, char **argv){
 
     timing = timing / (double)n_runs;
     output0 << "Dirac Wilson CG: " << timing << "ms / iteration\n";
-
+    
     finishrun();
 }
 
