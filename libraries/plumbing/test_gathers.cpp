@@ -5,10 +5,8 @@
 #include "defs.h"
 #include "coordinates.h"
 #include "lattice.h"
-#include "field.h"
-#include "datatypes/general_matrix.h"
 
-
+// Declare the test class here, element type definitions must be before field.h
 template <typename T>
 // #pragma hila dump ast
 struct test_struct {
@@ -17,9 +15,16 @@ struct test_struct {
   using base_type = typename base_type_struct<T>::type;
 
   // define unary - for antiperiodic b.c.
+  #pragma hila loop_function
   test_struct<T> operator-() const { test_struct<T> t; foralldir(d) t.r[d] = -r[d]; return t; }
 
 };
+
+#include "field.h"
+#include "datatypes/general_matrix.h"
+
+
+
 
 using test_int = test_struct<int>;
 using test_double = test_struct<double>;
@@ -40,7 +45,6 @@ void gather_test() {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
   for (boundary_condition_t bc : {boundary_condition_t::PERIODIC, boundary_condition_t::ANTIPERIODIC}) {
-    // output0 << "testing boundary " << (int)bc << '\n';
 #if NDIM > 3
       t.set_boundary_condition(TUP,bc);
 #endif
@@ -48,6 +52,9 @@ void gather_test() {
   for (parity p : {EVEN,ODD,ALL}) {
 
     foralldir(d) {
+      // Find size here, cannot call the function in a CUDA loop
+      int size_d = lattice->size(d);
+      int size_t = lattice->size(TUP);
       for (direction d2 : {d,-d}) {
       
         T diff = 0;
@@ -59,21 +66,23 @@ void gather_test() {
 #if defined(SPECIAL_BOUNDARY_CONDITIONS) && NDIM > 3
           if (bc == boundary_condition_t::ANTIPERIODIC &&
               (( X.coordinates()[TUP] == 0 && d2 == TDOWN) || 
-               ( X.coordinates()[TUP] == lattice->size(TUP)-1 && d2 ==TUP))) {
+               ( X.coordinates()[TUP] == size_t-1 && d2 ==TUP))) {
             n = -n;
           }
 #endif
 
           T j = n.r[d];
-          T s = ((int)(t[X].r[d] + add + lattice->size(d))) % lattice->size(d);
+          T t_r = t[X].r[d];
+          T s = ((int)(t_r + add + size_d)) % size_d;
 
-          sum2 += n.r[d] - lattice->size(d)/2;
-          sum1 += t[X].r[d] - lattice->size(d)/2;
+          sum2 += n.r[d] - size_d/2.0;
+          sum1 += t[X].r[d] - size_d/2.0;
 
           T lv = s-j;
           T a = 0;
           foralldir(dir) if (dir != d) a+= n.r[dir] - t[X].r[dir];
           
+          #ifndef CUDA
           if (lv != 0 || a != 0) {
             hila::output << "Error in gather test at " << X.coordinates() << " direction " << d2 
                          << " parity " << (int)p << '\n';
@@ -84,29 +93,29 @@ void gather_test() {
             for (int loop=0; loop<NDIM; loop++) hila::output << n.r[loop] << ' ';
             
             hila::output << '\n';
-
-            exit(-1);
           }
+          #endif
+          assert(lv == 0 || a == 0 && "Test gathers");
         }
 
         double s_result;
         if (p == ALL) 
-          s_result = lattice->volume()/2;
+          s_result = lattice->volume()/2.0;
         else 
-          s_result = lattice->volume()/4;
+          s_result = lattice->volume()/4.0;
 
         if (sum1 + s_result != 0.0) {
-          output0 << "Error in sum reduction!  answer " << sum1 + s_result << " should be 0\n";
+          output0 << "Error in sum reduction!  answer " << sum1 + s_result << " should be 0, parity " << (int)p << ", direction " << (int)d2 << ", bc " << (int)bc << "\n";
           exit(-1);
         }
 
         if (sum2 + s_result != 0.0) {
-          output0 << "Error in neighbour sum reduction!  answer " << sum2 + s_result << " should be 0\n";
+          output0 << "Error in neighbour sum2 reduction!  answer " << sum2 + s_result << " should be 0, parity " << (int)p << ", direction " << (int)d2 << ", bc " << (int)bc << "\n";
           exit(-1);
         }
 
 
-        t.mark_changed(ALL);  // foorce fetching, test it too
+        t.mark_changed(ALL);  // force fetching, test it too
 
 #ifdef VECTORIZED
         // above is not vectorized, so do it also in vec way
@@ -154,7 +163,7 @@ void gather_test() {
 
 void test_std_gathers()
 {
-  gather_test<int>();
   gather_test<double>();
+  gather_test<int>();
 }
 

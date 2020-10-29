@@ -8,7 +8,7 @@
  * this through lattice->backend_lattice.
  */
 struct backend_lattice_struct {
-  void setup(lattice_struct lattice){}
+  void setup(lattice_struct * lattice){}
 };
 
 #endif

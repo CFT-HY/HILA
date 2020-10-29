@@ -100,14 +100,6 @@ double monte(
 
       vsq = v0*v0 + v1*v1 + v2*v2 + v3*v3;
 
-#ifndef __CUDA_ARCH__
-      // Keeping this from the earlier code, but I have no idea what it does
-      if (vsq <= 0.0) {
-        //printf("monte: vsq error! node %d, vsq %g\n",lattice->node_number(),vsq);
-        //exit(1);
-      }
-#endif
-
       z = sqrt(vsq );
       /* Normalize   u */
       v0 = v0/z; v1 = v1/z; v2 = v2/z; v3 = v3/z;

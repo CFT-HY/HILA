@@ -120,8 +120,7 @@ class field {
       void free_payload() { payload.free_field(); }
 
 #ifndef VECTORIZED
-      /// Getter for an individual elements. Will not work in CUDA host code,
-      /// but must be defined
+      /// Getter for an individual elements in a loop
       inline auto get(const int i) const {
         return payload.get( i, lattice->field_alloc_size() );
       }
@@ -129,6 +128,16 @@ class field {
       template<typename A>
       inline void set(const A & value, const int i) {
         payload.set( value, i, lattice->field_alloc_size() );
+      }
+
+      /// Getter for an element outside a loop. Used to manipulate the field directly outside loops.
+      inline auto get_element(const int i) const {
+        return payload.get_element( i, lattice );
+      }
+
+      template<typename A>
+      inline void set_element(const A & value, const int i) {
+        payload.set_element( value, i, lattice );
       }
 #else
       template <typename vecT>
@@ -217,13 +226,13 @@ class field {
           // non-vectorized, using vanilla method, again nothing to do
         }
 #else
-        // this one is only for cuda
-        payload.place_comm_elements(d,par, buffer, from_node, lattice);
+        // this one is only for CUDA
+        payload.place_comm_elements(d, par, buffer, from_node, lattice);
 #endif
       }
 
 
-#ifndef VECTORIZED
+#ifdef VANILLA
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
         #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -243,15 +252,19 @@ class field {
           /// finally, boundary condition (TODO:MORE GENERAL!)
           if (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC) {
             payload.gather_elements_negated( payload.fieldbuf + offset,
-                    lattice->special_boundaries[dir].move_index + start, n, lattice);
+              lattice->special_boundaries[dir].move_index + start, n, lattice);
           }
-        } else
+        }
         #endif
-          payload.set_local_boundary_elements(dir, par, lattice);
       }
-
-#else  
-      // Now vectorized
+#elif defined(CUDA)
+      void set_local_boundary_elements(direction dir, parity par){
+        bool antiperiodic =
+          (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
+        payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
+      }
+#else
+      // Vectorized and CUDA
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
         bool antiperiodic =
@@ -274,9 +287,12 @@ class field {
 
 #elif defined(CUDA)
 
-        if (receive_buffer[d] == nullptr) 
+        int offs = 0;
+        if (par == ODD) offs = from_node.sites/2;
+        if (receive_buffer[d] == nullptr) {
           receive_buffer[d] = (T *)memalloc( from_node.sites * sizeof(T) );
-        return receive_buffer[d];
+        }
+        return receive_buffer[d] + offs;
 
 #elif defined(VECTORIZED)
 
@@ -365,10 +381,16 @@ class field {
     fs->lattice = lattice;
     fs->allocate_payload();
     fs->initialize_communication();
-    for (direction d=(direction)0; d<NDIRS; ++d) fs->neighbours[d] = lattice->neighb[d];
     mark_changed(ALL);      // guarantees communications will be done
     fs->assigned_to = 0;    // and this means that it is not assigned
 
+    for (direction d=(direction)0; d<NDIRS; ++d){
+#ifndef CUDA
+      fs->neighbours[d] = lattice->neighb[d];
+#else
+      fs->payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
+#endif
+    }
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     foralldir(dir){
       fs->boundary_condition[dir] = boundary_condition_t::PERIODIC;
@@ -482,8 +504,18 @@ class field {
     check_alloc();
     fs->boundary_condition[dir] = bc;
     fs->boundary_condition[-dir] = bc;
+    #ifndef CUDA
     fs->neighbours[dir]  = lattice->get_neighbour_array(dir,bc);
     fs->neighbours[-dir] = lattice->get_neighbour_array(-dir,bc);
+    #else
+    if(bc == boundary_condition_t::PERIODIC){
+      fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb[dir];
+      fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb[-dir];
+    } else {
+      fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb_special[dir];
+      fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb_special[-dir];
+    }
+    #endif
 
     // Make sure boundaries get refreshed
     mark_changed(ALL);
@@ -531,7 +563,7 @@ class field {
 
 #ifndef VECTORIZED
   /// Get an individual element outside a loop. This is also used as a getter in the vanilla code.
-  inline auto get_value_at(int i) const { return fs->get(i); }
+  inline auto get_value_at(int i) const { return fs->get_element(i); }
 #else
   inline auto get_value_at(int i) const { return fs->get_element(i); }
   template <typename vecT>
@@ -544,7 +576,7 @@ class field {
 #ifndef VECTORIZED
   /// Set an individual element outside a loop. This is also used as a setter in the vanilla code.
   template<typename A>
-  inline void set_value_at(const A & value, int i) { fs->set( value, i); }
+  inline void set_value_at(const A & value, int i) { fs->set_element( value, i); }
 
 #else
   template<typename vecT>
@@ -1041,7 +1073,7 @@ void field<T>::cancel_comm(direction d, parity p) const {
   }
 }
 
-#else
+#else  // No MPI now
 
 ///* Trivial implementation when no MPI is used
 #include "plumbing/comm_vanilla.h"
@@ -1064,7 +1096,7 @@ void field<T>::drop_comms_if_needed(direction d, parity p) const {}
 
 #endif  // MPI
 
-/// And a conveniece combi function
+/// And a convenience combi function
 template<typename T>
 void field<T>::get(direction d, parity p) const {
   start_get(d,p);
@@ -1430,9 +1462,11 @@ static void read_fields(std::string filename, fieldtypes&... fields){
   inputfile.close();
 }
 
-
+#ifndef CUDA
 // Include Fourier transform
+// Only for CPU code for now (cannot load fft module with CUDA on Puhti)
 #include "plumbing/FFT.h"
+#endif
 
 
 //HACK: force disable vectorization in a loop using

@@ -1,4 +1,5 @@
 # Edit MPI_INCLUDE_DIR here to point to the MPI header files
+# and MPI_LIBS to point to the libraries
 #
 # This Makefile defines
 #  HILA_PP,
@@ -18,44 +19,56 @@
 
 
 MPI_INCLUDE_DIR = /usr/lib/x86_64-linux-gnu/openmpi/include/
+MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi 
+
+# This is for Puhti. On oher systems modify to point to clang includes,
+# or comment out
+LLVM_INCLUDE = -I/projappl/project_2001973/llvm/lib/clang/8.0.1/include
 
 
 ################
 
 THIS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
-HILA_INCLUDE = $(THIS_DIR)
+HILA_INCLUDE = -I$(THIS_DIR) $(LLVM_INCLUDE)
+CXX_INCLUDE = -I$(THIS_DIR)
 
-
-HILA_OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
+HILA_OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_generic.o build/map_node_layout_trivial.o build/com_mpi.o build/timers.o build/memalloc.o build/hila_cuda.o build/test_gathers.o
 
 
 MPI_OPTS = -DUSE_MPI -I$(MPI_INCLUDE_DIR)
 
 
-HILAPP = $(THIS_DIR)/../hilapp/build/hilapp -DGPU -target:CUDA -I$(HILA_INCLUDE) $(MPI_OPTS)
+HILAPP = $(THIS_DIR)/../hilapp/build/hilapp -target:CUDA -DUSE_MPI -DCUDA -DPUHTI -DHILAPP $(HILA_INCLUDE) $(MPI_OPTS)
 HILA_OPTS = -I$(HILA_INCLUDE)
 
-HILA_LD_FLAGS = -lfftw3 -lm
+LD_FLAGS = $(LDFLAGS) -lm $(MPI_LIBS)
 
 
+CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI -DNRUNS=100 -I../../../cub/  $(CXX_INCLUDE)
+LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(LD_FLAGS)
 
-build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
-	echo $(THIS_DIR)
-	$(HILAPP) $< -o $@
+
 
 # Standard rules for creating and building cpt files. These
 # build .o files in the build folder by first running them
-# through the 
+# through hilapp
 
-build/%.cpt: %.cpp Makefile
-	mkdir -p build
+
+build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile_cuda $(MAKEFILE)
+	$(HILAPP) $< -o $@
+
+
+build/%.cpt: %.cpp $(THIS_DIR)/Makefile_cuda $(MAKEFILE)
 	$(HILAPP) $< $(MPI_OPTS) -o $@
+
 
 build/%.o : build/%.cpt
 	$(CC) $(CXXFLAGS) $< -c -o $@
 
 
-build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
-	echo $(THIS_DIR)
+build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile_cuda $(MAKEFILE)
 	$(HILAPP) $< -o $@
+
+build/%.o: $(THIS_DIR)/plumbing/backend_cuda/%.cpp $(THIS_DIR)/Makefile_cuda $(MAKEFILE)
+	$(CC) $(CXXFLAGS) $< -o $@
 

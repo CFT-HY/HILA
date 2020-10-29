@@ -145,7 +145,7 @@ public:
   bool handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X, bool is_func_arg = false);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op, Stmt * assign_stmt = nullptr);
-  void handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
+  int handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
 
   var_info * new_var_info(VarDecl *decl);
 

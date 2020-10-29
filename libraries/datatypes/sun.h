@@ -604,18 +604,21 @@ class SU_vector : public vector<n,cmplx<radix>>{
     }
 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    #pragma hila loop_function
     SU_vector(const SU_vector<n,scalart> m) {
       for (int i=0; i<n; i++){
         this->c[i] = m.c[i];
       }
     }
 
+    #pragma hila loop_function
     SU_vector(vector<n,cmplx<radix>> m) {
       for(int i=0; i<n; i++){
         this->c[i] = m.c[i];
       }
     }
 
+    #pragma hila loop_function
     SU_vector operator - () const {
       SU_vector r;
       for (int i = 0; i < n; i++){
@@ -624,6 +627,7 @@ class SU_vector : public vector<n,cmplx<radix>>{
       return r;
     }
 
+    #pragma hila loop_function
     inline radix rdot(const SU_vector &rhs) const {
       radix r = 0;
       for (int i=0; i<n; i++) {

@@ -1,10 +1,10 @@
 ADDITION = -DMSIZE=2
-OPTS = -DNDIM=4 $(ADDITION)
+OPTS = -DNDIM=4 $(ADDITION) -DSUBNODE_LAYOUT -I../../libraries/
 
 
 #The next line work on puhti
-#HILAPP = ../../build/hilapp -DPUHTI -DHILAPP -I../../../llvm/lib/clang/8.0.1/include/ 
-HILAPP = ../../hilapp/build/hilapp  -DUSE_MPI -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
+HILAPP = ../../hilapp/build/hilapp -DPUHTI -DSUBNODE_LAYOUT -DHILAPP -I../../libraries/ -I../../../llvm/lib/clang/8.0.1/include/ 
+#HILAPP = ../../hilapp/build/hilapp  -DUSE_MPI -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
 
 CC = mpic++ -DUSE_MPI -mavx2 -mfma  -I../../libraries/
 

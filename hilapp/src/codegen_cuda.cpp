@@ -70,17 +70,6 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
   
 
-  // Check for reductions and allocate device memory
-  for (var_info & v : var_info_list) {
-    if (v.reduction_type != reduction::NONE) {
-      // Allocate memory for a reduction. This will be filled in the kernel
-      code << v.type << " * d_" << v.reduction_name << ";\n";
-      code << "cudaMalloc( (void **)& d_" << v.reduction_name << ","
-           << "sizeof(" << v.type << ") * lattice->volume() );\n";
-      code << "check_cuda_error(\"allocate_reduction\");\n";
-    }
-  }
-
   for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
     // Allocate memory for a reduction and initialize
     code << vrf.type << " * d_" << vrf.vector_name << ";\n";
@@ -107,6 +96,28 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   code << "lattice_info.loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop << ");\n";
   code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin)/N_threads + 1;\n";
+
+
+  // Check for reductions and allocate device memory
+  for (var_info & v : var_info_list) {
+    if (v.reduction_type != reduction::NONE) {
+      // Allocate memory for a reduction. This will be filled in the kernel
+      code << v.type << " * d_" << v.reduction_name << ";\n";
+      code << "cudaMalloc( (void **)& d_" << v.reduction_name << ","
+           << "sizeof(" << v.type << ") * N_blocks );\n";
+      code << "check_cuda_error(\"allocate_reduction\");\n";
+      if (v.reduction_type == reduction::SUM) {
+        code << "cuda_set_zero(d_" << v.reduction_name
+           << ", N_blocks);\n";
+      }
+      if (v.reduction_type == reduction::PRODUCT) {
+        code << "cuda_set_one(d_" << v.reduction_name
+           << ", N_blocks);\n";
+      }
+    }
+  }
+
+
   code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info, ";
 
 
@@ -129,24 +140,20 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   // and non-field vars
   for ( var_info & vi : var_info_list ) if(!vi.is_loop_local) {
     // Rename the variable
-    vi.new_name = "sv__" + std::to_string(i) + "_";
+    vi.new_name = "sv_" + std::to_string(i) + "_";
     i++;
 
     if(vi.reduction_type != reduction::NONE) {
       // Generate a temporary array for the reduction 
       kernel << ", " << vi.type << " * " << vi.new_name;
       code << ", d_r_" << vi.name;
-      vi.new_name = vi.new_name+"[Index]";
-    } else if(vi.is_assigned) {
-      kernel << ", " << vi.type << " & " << vi.new_name;
-      code << ", " << vi.name;
     } else {
       kernel << ", const " << vi.type << " " << vi.new_name;
       code << ", " << vi.name;
-    }
-    // Replace references in the loop body
-    for (var_ref & vr : vi.refs) {
-      loopBuf.replace( vr.ref, vi.new_name );
+      // Replace references in the loop body
+      for (var_ref & vr : vi.refs) {
+        loopBuf.replace( vr.ref, vi.new_name );
+      }
     }
   }
 
@@ -165,7 +172,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   // In kernelized code we need to handle array expressions as well
   for ( array_ref & ar : array_ref_list ) {
     // Rename the expression
-    ar.new_name = "sv__" + std::to_string(i) + "_";
+    ar.new_name = "sv_" + std::to_string(i) + "_";
     i++;
     kernel << ", " << ar.type << " " << ar.new_name ;
     code << ", " << get_stmt_str(ar.ref);
@@ -201,28 +208,33 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
          << " + loop_lattice->loop_begin; \n";
   /* The last block may exceed the lattice size. Do nothing in that case. */
   kernel << "if(Index < loop_lattice->loop_end) { \n";
-  
 
-  /* Initialize reductions */
-  i=0;
-  for ( var_info & vi : var_info_list ) {
-    if (!vi.is_loop_local) {
+
+  // Declare the shared reduction variable
+  for ( var_info & vi : var_info_list ) if(!vi.is_loop_local) {
+    if(vi.reduction_type != reduction::NONE) {
+      // Generate a temporary array for the reduction 
+      kernel << "__shared__ " << vi.type << " " << vi.new_name
+             << "_sh[N_threads];\n";
+
+      // Initialize only the local element
       if (vi.reduction_type == reduction::SUM) {
-        kernel << "sv__" + std::to_string(i) + "_[Index]" << "=0;\n";
-      } if (vi.reduction_type == reduction::PRODUCT) {
-        kernel << "sv__" + std::to_string(i) + "_[Index]" << "=1;\n";
+        kernel << vi.new_name << "_sh[threadIdx.x] = 0;\n";
+      } else if (vi.reduction_type == reduction::PRODUCT) {
+        kernel << vi.new_name << "_sh[threadIdx.x] = 1;\n";
       }
-      i++;
+
+      // Replace references in the loop body
+      for (var_ref & vr : vi.refs) {
+        loopBuf.replace( vr.ref, vi.new_name+"_sh[threadIdx.x]" );
+      }
     }
   }
-
+  
 
   
   // Create temporary field element variables
   for (field_info & l : field_info_list) {
-    std::string type_name = l.type_template;
-    type_name.erase(0,1).erase(type_name.end()-1, type_name.end());
-
     if (l.is_read_nb) {
       // this field is nn-read
       for (dir_ptr & d : l.dir_list) {
@@ -236,9 +248,10 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
         //     dirname = vi.new_name;
 
         // Create the temp variable and call the getter
-        kernel << type_name << " "  << d.name_with_dir 
-               << " = " << l.new_name << ".get(loop_lattice->d_neighb[" 
-               << dirname << "][" << looping_var 
+        kernel << l.element_type << " "  << d.name_with_dir 
+               << " = " << l.new_name << ".get(" <<
+               l.new_name << ".neighbours[" << dirname
+               << "][" << looping_var 
                << "], loop_lattice->field_alloc_size);\n";
 
         // and replace references in loop body
@@ -250,13 +263,13 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
 
     if (l.is_read_atX) {
       // local read
-      kernel << type_name << " "  << l.loop_ref_name << " = " 
+      kernel << l.element_type << " "  << l.loop_ref_name << " = " 
              << l.new_name << ".get(" << looping_var 
              << ", loop_lattice->field_alloc_size);\n";
 
     } else if (l.is_written) {
       // and a var which is not read
-      kernel << type_name << " "  << l.loop_ref_name << ";\n";
+      kernel << l.element_type << " "  << l.loop_ref_name << ";\n";
     }
 
     // and finally replace references in body 
@@ -274,14 +287,14 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     //       dirname = vi.new_name;
     //   }
     //   // Create the temp variable and call the getter
-    //   kernel << type_name << " "  << l.loop_ref_name << "_" << r->dirname
+    //   kernel << l.element_type << " "  << l.loop_ref_name << "_" << r->dirname
     //          << "=" << l.new_name << ".get(loop_lattice->d_neighb[" 
     //          << dirname << "][" << looping_var 
     //          << "], loop_lattice->field_alloc_size);\n";
     // }
     // // Check for references without a direction. If found, add temp variable
     // for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
-    //   kernel << type_name << " "  << l.loop_ref_name << "=" 
+    //   kernel << l.element_type << " "  << l.loop_ref_name << "=" 
     //          << l.new_name << ".get(" << looping_var 
     //          << ", loop_lattice->field_alloc_size)" << ";\n";
     //   break;  // Only one needed
@@ -302,6 +315,35 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     kernel << l.new_name << ".set(" << l.loop_ref_name << ", " 
            << looping_var << ", loop_lattice->field_alloc_size );\n";
   }
+  
+  // Handle reductions: Need to sync threads once, then do reduction
+  // locally once per block
+  bool sync_done = false;
+  for ( var_info & vi : var_info_list ) if(!vi.is_loop_local) {
+    if(vi.reduction_type != reduction::NONE) {
+      // Do sync (only if there is a reduction)
+      if(!sync_done){
+        kernel << "__syncthreads();\n";
+        sync_done = true;
+      }
+
+      //Now run the thread level reduction
+      kernel << "if( threadIdx.x == 0 ){\n";
+      if (vi.reduction_type == reduction::SUM) {
+        kernel << vi.new_name << "[blockIdx.x] = 0;\n";
+      } else if (vi.reduction_type == reduction::PRODUCT) {
+        kernel << vi.new_name << "[blockIdx.x] = 1;\n";
+      }
+      kernel << "for( int i=0; i<N_threads; i++ ){\n";
+      if (vi.reduction_type == reduction::SUM) {
+        kernel << vi.new_name << "[blockIdx.x] += " << vi.new_name << "_sh[i];\n";
+      } else if (vi.reduction_type == reduction::PRODUCT) {
+        kernel << vi.new_name << "[blockIdx.x] *= " << vi.new_name << "_sh[i];\n";
+      }
+      kernel << "}\n";
+      kernel << "}\n";
+    }
+  }
 
   kernel << "}\n}\n//----------\n";
   code << ");\n";
@@ -317,10 +359,10 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
     // Run reduction
     if (v.reduction_type == reduction::SUM) {
       code << v.reduction_name << " = cuda_reduce_sum( d_"
-           << v.reduction_name << ", loop_lattice->volume()" <<  ");\n";
+           << v.reduction_name << ", N_blocks" <<  ");\n";
     } else if (v.reduction_type == reduction::PRODUCT) {
       code << v.reduction_name << " = cuda_reduce_product( d_"
-           << v.reduction_name << ", loop_lattice->volume()" <<  ");\n";
+           << v.reduction_name << ", N_blocks" <<  ");\n";
     }
     // Free memory allocated for the reduction
     if (v.reduction_type != reduction::NONE) {

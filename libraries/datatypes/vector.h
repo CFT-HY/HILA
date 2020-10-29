@@ -13,6 +13,7 @@ class vector {
   
   vector() = default;
 
+  #pragma hila loop_function
   vector(matrix<1,n,T> m) {
     for (int i=0; i<n; i++){
       c[i] = m.c[i];
@@ -29,6 +30,7 @@ class vector {
   }
 
 
+  #pragma hila loop_function
   inline void gaussian(){ 
     for (int i = 0; i < n; i++) {
       (*this).c[i].re = gaussian_ran(0.5);
@@ -36,10 +38,12 @@ class vector {
     }
   }
 
+  #pragma hila loop_function
   inline void random(){ 
     (*this).gaussian();
   }
 
+  #pragma hila loop_function
   inline auto norm_sq(){ 
     auto r=norm_squared(c[0]);
     for (int i = 1; i < n; i++) {
@@ -49,6 +53,7 @@ class vector {
   }
 
 
+  #pragma hila loop_function
   inline vector operator-() const {
     vector<n,T> r;
     for (int i = 0; i < n; i++) {
@@ -82,6 +87,7 @@ class vector {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+  #pragma hila loop_function
   vector & operator*=(const scalart rhs){
     for (int i=0; i<n; i++) {
       c[i] *= rhs;
@@ -90,6 +96,7 @@ class vector {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+  #pragma hila loop_function
   vector & operator/=(const scalart rhs){
     for (int i=0; i<n; i++) {
       c[i] /= rhs;
@@ -98,6 +105,7 @@ class vector {
   }
 
 
+  #pragma hila loop_function
   inline T dot(const vector &rhs) const {
     T r = (0.0);
     for (int i=0; i<n; i++) {
@@ -106,6 +114,7 @@ class vector {
     return r;
   }
 
+  #pragma hila loop_function
   inline squarematrix<n,T> outer_product(const vector<n,T> rhs) const {
     squarematrix<n,T> r;
     for(int j=0; j<n; j++) for (int i=0; i<n; i++) {
@@ -129,6 +138,7 @@ class vector {
 
 
 template<int n, typename T>
+#pragma hila loop_function
 vector<n,T>  operator*(vector<n,T> lhs, squarematrix<n,T> rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -141,6 +151,7 @@ vector<n,T>  operator*(vector<n,T> lhs, squarematrix<n,T> rhs){
 }
 
 template<int n, typename T>
+#pragma hila loop_function
 vector<n,T>  operator*(squarematrix<n,T>  lhs, vector<n,T> rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -154,6 +165,7 @@ vector<n,T>  operator*(squarematrix<n,T>  lhs, vector<n,T> rhs){
 
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+#pragma hila loop_function
 vector<n,T>  operator*(vector<n,T> lhs, squarematrix<n,scalart> rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -166,6 +178,7 @@ vector<n,T>  operator*(vector<n,T> lhs, squarematrix<n,scalart> rhs){
 }
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+#pragma hila loop_function
 vector<n,T>  operator*(squarematrix<n,scalart>  lhs, vector<n,T> rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -178,6 +191,7 @@ vector<n,T>  operator*(squarematrix<n,scalart>  lhs, vector<n,T> rhs){
 }
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+#pragma hila loop_function
 vector<n,T> operator*(const scalart &lhs, const vector<n,T> &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -187,6 +201,7 @@ vector<n,T> operator*(const scalart &lhs, const vector<n,T> &rhs){
 }
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+#pragma hila loop_function
 vector<n,T> operator*(const vector<n,T> &lhs, const scalart &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -198,6 +213,7 @@ vector<n,T> operator*(const vector<n,T> &lhs, const scalart &rhs){
 
 
 template<int n, typename T>
+#pragma hila loop_function
 vector<n,T> operator*(const T &lhs, const vector<n,T> &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -207,6 +223,7 @@ vector<n,T> operator*(const T &lhs, const vector<n,T> &rhs){
 }
 
 template<int n, typename T>
+#pragma hila loop_function
 vector<n,T> operator*(const vector<n,T> &lhs, const T &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -217,6 +234,7 @@ vector<n,T> operator*(const vector<n,T> &lhs, const T &rhs){
 
 
 template<int n, typename T>
+#pragma hila loop_function
 vector<n,T>  operator+(vector<n,T> lhs, vector<n,T> rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -226,6 +244,7 @@ vector<n,T>  operator+(vector<n,T> lhs, vector<n,T> rhs){
 }
 
 template<int n, typename T>
+#pragma hila loop_function
 vector<n,T>  operator-(vector<n,T> lhs, vector<n,T> rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -237,6 +256,7 @@ vector<n,T>  operator-(vector<n,T> lhs, vector<n,T> rhs){
 
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+#pragma hila loop_function
 vector<n,T> operator+(const scalart &lhs, const vector<n,T> &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -246,6 +266,7 @@ vector<n,T> operator+(const scalart &lhs, const vector<n,T> &rhs){
 }
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+#pragma hila loop_function
 vector<n,T> operator+(const vector<n,T> &lhs, const scalart &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -256,6 +277,7 @@ vector<n,T> operator+(const vector<n,T> &lhs, const scalart &rhs){
 
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+#pragma hila loop_function
 vector<n,T> operator-(const scalart &lhs, const vector<n,T> &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -265,6 +287,7 @@ vector<n,T> operator-(const scalart &lhs, const vector<n,T> &rhs){
 }
 
 template <int n, typename T, typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
+#pragma hila loop_function
 vector<n,T> operator-(const vector<n,T> &lhs, const scalart &rhs){
   vector<n,T>  r;
   for (int i=0; i<n; i++) {
@@ -276,6 +299,7 @@ vector<n,T> operator-(const vector<n,T> &lhs, const scalart &rhs){
 
 
 template<int n, typename T>
+#pragma hila loop_function
 inline auto norm_squared(vector<n,T> & v){
   auto result = norm_squared(v.c[0]);
   for (int i=1; i<n; i++) {

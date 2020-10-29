@@ -32,7 +32,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
     coordinate_vector coord(0);
 
     sun g1 = gauge.get_gauge(0).get_element(coord);
-    sun h = sun(1) + cmplx(0, eps) * sun::generator(ng);
+    sun h = sun(1) + cmplx<double>(0, eps) * sun::generator(ng);
     sun g12 = h*g1;
 
     field<typename dirac::vector_type> psi, chi, tmp, tmp2;
@@ -73,7 +73,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
     gauge.add_momentum(force);
     sun f = gauge.get_momentum(0).get_element(coord);
     double f1 = (s2-s1)/eps;
-    double f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
+    double f2 = (f*cmplx<double>(0,1)*sun::generator(ng)).trace().re;
     double diff = f2-f1;
 
     if(mynode()==0) {
@@ -116,7 +116,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
     gauge.add_momentum(force);
     f = gauge.get_momentum(0).get_element(coord);
     f1 = (s2-s1)/eps;
-    f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
+    f2 = (f*cmplx<double>(0,1)*sun::generator(ng)).trace().re;
     diff = f2-f1;
 
     if(mynode()==0) {
@@ -153,7 +153,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
     fa.force_step(1.0);
     f = gauge.get_momentum(0).get_element(coord);
     f1 = dS/eps;
-    f2 = (f*cmplx(0,1)*sun::generator(ng)).trace().re;
+    f2 = (f*cmplx<double>(0,1)*sun::generator(ng)).trace().re;
     diff = f2-f1;
 
     if(mynode()==0) {
@@ -203,7 +203,7 @@ int main(int argc, char **argv){
       }
     }
     SU<N> g1 = gauge.gauge[0].get_value_at(50);
-    SU<N> h = SU<N>(1) + cmplx(0,eps)* SU<N>::generator(ng);
+    SU<N> h = SU<N>(1) + cmplx<double>(0,eps)* SU<N>::generator(ng);
     SU<N> g12 = h*g1;
 
     double s1 = ga.action();
@@ -220,14 +220,14 @@ int main(int argc, char **argv){
 
     ga.force_step(1.0);
     SU<N> f = gauge.momentum[0].get_value_at(50);
-    double diff = (f*cmplx(0,1)*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
+    double diff = (f*cmplx<double>(0,1)*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
 
     if(mynode()==0) {
-      //hila::output << "Force " << (f*cmplx(0,1)*SU<N>::generator(ng)).trace().re << "\n";
+      //hila::output << "Force " << (f*cmplx<double>(0,1)*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Force " << (f*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Deriv " << (s2-s1)/eps << "\n";
       //hila::output << "Force " << ng << " diff " << diff << "\n";
-      h = cmplx(0,1)*SU<N>::generator(ng);
+      h = cmplx<double>(0,1)*SU<N>::generator(ng);
       assert( diff*diff < eps*10 && "Gauge force" );
     }
   }
@@ -346,7 +346,7 @@ int main(int argc, char **argv){
 
     double s1 = ga.action();
     SU<N> h = gauge.momentum[0].get_value_at(0);
-    h += eps * cmplx(0,1)*SU<N>::generator(ng);
+    h += eps * cmplx<double>(0,1)*SU<N>::generator(ng);
     if(mynode()==0)
       gauge.momentum[0].set_value_at(h, 0);
     double s2 = ga.action();
@@ -356,7 +356,7 @@ int main(int argc, char **argv){
       //hila::output << "Mom 1 " << (h*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Mom 2 " << (s2-s1)/eps << "\n";
       //hila::output << "Mom " << ng << " diff " << diff << "\n";
-      h = cmplx(0,1)*SU<N>::generator(ng);
+      h = cmplx<double>(0,1)*SU<N>::generator(ng);
       assert( diff*diff < eps*10 && "Momentum derivative" );
     }
   }
