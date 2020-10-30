@@ -1,52 +1,39 @@
-ADDITION = -DMSIZE=2
-OPTS = -DNDIM=4 $(ADDITION) -DSUBNODE_LAYOUT -I../../libraries/
+# Define compiler
+CC = mpic++
+LD = mpic++
+
+# Define compilation flags
+CXXFLAGS = -O3 -x c++ --std=c++17 
+#CXXFLAGS = -g -x c++ --std=c++17 
+LDFLAGS = $(HILA_LD_FLAGS)
 
 
-#The next line work on puhti
-HILAPP = ../../hilapp/build/hilapp -DPUHTI -DSUBNODE_LAYOUT -DHILAPP -I../../libraries/ -I../../../llvm/lib/clang/8.0.1/include/ 
-#HILAPP = ../../hilapp/build/hilapp  -DUSE_MPI -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ 
+.PRECIOUS: build/%.cpt
 
-CC = mpic++ -DUSE_MPI -mavx2 -mfma  -I../../libraries/
+# Include one of the Hila library makefiles. These define the
+# compilation instructions for Hila source files and define 
+# $(HILA_OBJECTS), a list of objects to include in linking
 
-CFLAGS = -Ofast -I../../libraries/ $(OPTS)
-CXXFLAGS = -Ofast -ffast-math -x c++ --std=c++17 -I../../libraries/ $(OPTS)
-# CXXFLAGS = -g -x c++ --std=c++17 $(OPTS)
+# Use this one for AVX vectorization
+include ../../libraries/Makefile_vector
 
-# Don't remove cpt-files
-.PRECIOUS: %.cpt
+# Use this one for unvectorized code
+#include ../../libraries/Makefile
 
-%.exe: %.tr.o Makefile inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
-	$(CC) -o $@ $< inputs.o mersenne_inline.o lattice.o setup_layout_vector.o map_node_layout_trivial.o com_mpi.o timers.o memalloc.o test_gathers.o
+# Now the linking step for each target executable
+bench_fermion: Makefile build/bench_fermion.o $(HILA_OBJECTS) bench.h
+	$(LD) $(LDFLAGS) -o build/bench_fermion build/bench_fermion.o $(HILA_OBJECTS)
 
-%.cpt: %.cpp Makefile
-	$(HILAPP) $(ADDITION) $<
+bench_matrix2: Makefile build/bench_matrix2.o $(HILA_OBJECTS) bench.h
+	$(LD) $(LDFLAGS) -o build/bench_matrix2 build/bench_matrix2.o $(HILA_OBJECTS)
 
-%.tr.o : %.cpt
-	$(CC) $(CXXFLAGS) $< -c -o $@
+bench_field: Makefile build/bench_field.o $(HILA_OBJECTS) bench.h
+	$(LD) $(LDFLAGS) -o build/bench_field build/bench_field.o $(HILA_OBJECTS)
 
-%.tr.s : %.cpt
-	$(CC) $(CXXFLAGS) $< -S -o $@
-
-lattice.cpt : ../../libraries/plumbing/lattice.cpp
-	$(HILAPP) $(ADDITION) $<
-
-test_gathers.cpt : ../../libraries/plumbing/test_gathers.cpp
-	$(HILAPP) $(ADDITION) $<
-
-lattice.o : lattice.cpt
-	$(CC) $(CXXFLAGS) $< -c
-
-test_gathers.o : test_gathers.cpt
-	$(CC) $(CXXFLAGS) $< -c 
-
-%.o : ../../libraries/plumbing/%.cpp
-	$(CC) $(CXXFLAGS) $< -c
-
-%.o : %.c
-	$(CC) $(CFLAGS) $< -c
 
 clean:
-	rm -rf *.o *.cpt *.tr.s
+	rm -rf build
 
 cleanall:
-	rm -rf *.o *.cpt *.exe *.tr.s
+	rm -rf build
+
