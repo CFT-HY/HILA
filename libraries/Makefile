@@ -37,13 +37,6 @@ HILA_OPTS = -I$(HILA_INCLUDE)
 HILA_LD_FLAGS = -lfftw3 -lm
 
 
-HILAPP_VECTOR =  $(THIS_DIR)/../hilapp/build/hilapp -DAVX -target:AVX -I$(HILA_INCLUDE) $(MPI_OPTS)
-HILA_VECTOR_OPTS = -DAVX -I$(HILA_INCLUDE)
-
-
-HILAPP_GPU = $(THIS_DIR)/../hilapp/build/hilapp -DGPU -target:CUDA -I$(HILA_INCLUDE) $(MPI_OPTS)
-HILA_GPU_OPTS = -I$(HILA_INCLUDE)
-
 
 # Standard rules for creating and building cpt files. These
 # build .o files in the build folder by first running them
@@ -58,6 +51,6 @@ build/%.o : build/%.cpt
 
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
-	echo $(THIS_DIR)
+	mkdir -p build
 	$(HILAPP) $< $(OPTS) -o $@
 
