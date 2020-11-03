@@ -137,13 +137,13 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par, la
 
 template<typename T>
 auto field_storage<T>::get_element( const int i, const lattice_struct * RESTRICT lattice) const {
-  return this->get(i);
+  return this->get(i, lattice->field_alloc_size());
 }
 
 template<typename T>
 template<typename A>
 void field_storage<T>::set_element(A &value, const int i, const lattice_struct * RESTRICT lattice) {
-  this->set(value, i);
+  this->set(value, i, lattice->field_alloc_size());
 }
 
 

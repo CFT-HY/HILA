@@ -32,7 +32,7 @@ THIS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 HILA_INCLUDE = -I$(THIS_DIR) $(LLVM_INCLUDE)
 CXX_INCLUDE = -I$(THIS_DIR)
 
-HILA_OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_generic.o build/map_node_layout_trivial.o build/com_mpi.o build/timers.o build/memalloc.o build/hila_cuda.o build/test_gathers.o
+HILA_OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/timers.o build/memalloc.o build/hila_cuda.o build/test_gathers.o
 
 
 MPI_OPTS = -DUSE_MPI -I$(MPI_INCLUDE_DIR)

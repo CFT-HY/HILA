@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 
-//#define SUBNODE_LAYOUT  // Turn of for CUDA. 
+#define SUBNODE_LAYOUT 
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
