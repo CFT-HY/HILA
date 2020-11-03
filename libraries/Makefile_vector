@@ -32,11 +32,11 @@ HILA_OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setu
 MPI_OPTS = -DUSE_MPI -I$(MPI_INCLUDE_DIR)
 
 
-HILAPP =  $(THIS_DIR)/../hilapp/build/hilapp 
-HILA_OPTS =  -target:AVX -DAVX -I$(HILA_INCLUDE) $(MPI_OPTS) -DSUBNODE_LAYOUT
-HILA_CXX_FLAGS = $(CXXFLAGS) -DAVX -I$(HILA_INCLUDE) $(MPI_OPTS) -DSUBNODE_LAYOUT
+HILAPP =  $(THIS_DIR)/../hilapp/build/hilapp -DAVX -target:AVX -I$(HILA_INCLUDE) $(MPI_OPTS)
+HILA_OPTS = -DAVX -I$(HILA_INCLUDE)
 
 HILA_LD_FLAGS = -lfftw3 -lm
+
 
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
@@ -49,12 +49,13 @@ build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
 
 build/%.cpt: %.cpp Makefile
 	mkdir -p build
-	$(HILAPP) $< $(OPTS) $(HILA_OPTS) -o $@
+	$(HILAPP) $< $(OPTS) $(MPI_OPTS) -o $@
 
 build/%.o : build/%.cpt
-	$(CC) $(HILA_CXX_FLAGS) -DSUBNODE_LAYOUT $(OPTS) $< -c -o $@
+	$(CC) $(CXXFLAGS) $(OPTS) $(HILA_OPTS) $< -c -o $@
 
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
-	$(HILAPP) $< $(OPTS) $(HILA_OPTS)  -o $@
+	echo $(THIS_DIR)
+	$(HILAPP) $< $(OPTS) -o $@
 
