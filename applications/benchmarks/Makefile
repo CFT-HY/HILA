@@ -17,6 +17,7 @@ LDFLAGS = $(HILA_LD_FLAGS)
 # Use this one for AVX vectorization
 include ../../libraries/Makefile_vector
 
+
 # Use this one for unvectorized code
 #include ../../libraries/Makefile
 

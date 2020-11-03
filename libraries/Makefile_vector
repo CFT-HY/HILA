@@ -1,7 +1,7 @@
 # Edit MPI_INCLUDE_DIR here to point to the MPI header files
 #
 # This Makefile defines
-#  HILA_PP,
+#  HILAPP,
 #    location of the hilapp binary, ../hilapp/build/hilapp
 #  HILA_OBJECTS,
 #    the list of objects that need to be included with an
@@ -33,14 +33,14 @@ MPI_OPTS = -DUSE_MPI -I$(MPI_INCLUDE_DIR)
 
 
 HILAPP =  $(THIS_DIR)/../hilapp/build/hilapp -DAVX -target:AVX -I$(HILA_INCLUDE) $(MPI_OPTS)
-HILA_OPTS = -DAVX -I$(HILA_INCLUDE)
+HILA_OPTS = -DAVX -I$(HILA_INCLUDE) $(MPI_OPTS)
 
 HILA_LD_FLAGS = -lfftw3 -lm
 
 
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
-	echo $(THIS_DIR)
+	mkdir -p build
 	$(HILAPP) $< $(OPTS) -o $@
 
 # Standard rules for creating and building cpt files. These
@@ -56,6 +56,6 @@ build/%.o : build/%.cpt
 
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile
-	echo $(THIS_DIR)
+	mkdir -p build
 	$(HILAPP) $< $(OPTS) -o $@
 

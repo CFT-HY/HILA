@@ -1,5 +1,5 @@
-#ifndef AVX_H
-#define AVX_H
+#ifndef VECTOR_DEFS_H
+#define VECTOR_DEFS_H
 
 #include "plumbing/defs.h"
 #include <immintrin.h>
