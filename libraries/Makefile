@@ -54,7 +54,7 @@ build/%.cpt: %.cpp Makefile
 	$(HILAPP) $< $(OPTS) $(MPI_OPTS) -o $@
 
 build/%.o : build/%.cpt
-	$(CC) $(CXXFLAGS) $(OPTS) $< -c -o $@
+	$(CC) $(CXXFLAGS) $(OPTS) $(HILA_OPTS) $< -c -o $@
 
 
 build/%.cpt: $(THIS_DIR)/plumbing/%.cpp $(THIS_DIR)/Makefile

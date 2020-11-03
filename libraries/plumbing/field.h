@@ -257,12 +257,6 @@ class field {
         }
         #endif
       }
-#elif defined(CUDA)
-      void set_local_boundary_elements(direction dir, parity par){
-        bool antiperiodic =
-          (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
-        payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
-      }
 #else
       // Vectorized and CUDA
       /// Place boundary elements from local lattice (used in vectorized version)
@@ -429,7 +423,7 @@ class field {
     fs->move_status[(int)p - 1][d] = stat;
   }
 
-  // check that field is allocated, and if not do it (if not const
+  // check that field is allocated, and if not do it (if not const)
   // call this BEFORE the var is actually written to
   void check_alloc() { 
     if (!is_allocated()) allocate();
@@ -851,7 +845,7 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
 
 #if defined(USE_MPI)
 /* MPI implementations
- * For simplicity, these functions do not use field expressions andb
+ * For simplicity, these functions do not use field expressions and
  * can be ignored by the hilapp. Since the hilapp does not
  * have access to mpi.h, it cannot process this branch.
  */
@@ -1465,7 +1459,7 @@ static void read_fields(std::string filename, fieldtypes&... fields){
 #ifndef CUDA
 // Include Fourier transform
 // Only for CPU code for now (cannot load fft module with CUDA on Puhti)
-#include "plumbing/FFT.h"
+//#include "plumbing/FFT.h"
 #endif
 
 

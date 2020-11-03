@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 
-//#define SUBNODE_LAYOUT  // Turn of for CUDA. 
+#define SUBNODE_LAYOUT
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG
@@ -18,7 +18,11 @@
 
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
+#ifdef CUDA
+#define VECTOR_SIZE 8 // Size of float, length 1 vectors
+#else
 #define VECTOR_SIZE (256/8)                    // this is for AVX2
+#endif
 #endif
 // This is the vector size used to determine the layout
 constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
@@ -251,9 +255,9 @@ public:
   void init_special_boundaries();
   void setup_special_boundary_array(direction d);
 
-  const unsigned * get_neighbour_array(direction d, boundary_condition_t bc);
+  unsigned * get_neighbour_array(direction d, boundary_condition_t bc);
 #else
-  const unsigned * get_neighbour_array(direction d, boundary_condition_t bc) { 
+  unsigned * get_neighbour_array(direction d, boundary_condition_t bc) { 
     return neighb[d];
   }
 #endif
