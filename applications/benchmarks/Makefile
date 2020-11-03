@@ -15,10 +15,10 @@ LDFLAGS = $(HILA_LD_FLAGS)
 # $(HILA_OBJECTS), a list of objects to include in linking
 
 # Use this one for AVX vectorization
-include ../../libraries/Makefile_vector
+#include ../../libraries/Makefile_vector
 
 # Use this one for unvectorized code
-#include ../../libraries/Makefile
+include ../../libraries/Makefile
 
 # Now the linking step for each target executable
 bench_fermion: Makefile build/bench_fermion.o $(HILA_OBJECTS) bench.h
