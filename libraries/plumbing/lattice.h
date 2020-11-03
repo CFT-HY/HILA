@@ -255,9 +255,9 @@ public:
   void init_special_boundaries();
   void setup_special_boundary_array(direction d);
 
-  unsigned * get_neighbour_array(direction d, boundary_condition_t bc);
+  const unsigned * get_neighbour_array(direction d, boundary_condition_t bc);
 #else
-  unsigned * get_neighbour_array(direction d, boundary_condition_t bc) { 
+  const unsigned * get_neighbour_array(direction d, boundary_condition_t bc) { 
     return neighb[d];
   }
 #endif
