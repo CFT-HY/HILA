@@ -5,7 +5,8 @@
 // Uses Clang RecursiveASTVisitor and Rewriter
 // interfaces
 //
-// Kari Rummukainen 2017-19
+// Kari Rummukainen
+// Jarno Rantaharju
 //
 //------------------------------------------------------------------------------
 #include <sstream>
@@ -236,7 +237,7 @@ class heLppPragmaHandler : public PragmaHandler {
           t.setLocation(pragma_name.getLocation());
           tokenlist.push_back(t);
 
-          auto TokenArray = llvm::make_unique<Token[]>(tokenlist.size());
+          auto TokenArray = std::make_unique<Token[]>(tokenlist.size());
           std::copy(tokenlist.begin(), tokenlist.end(), TokenArray.get());
           PP.EnterTokenStream(std::move(TokenArray), tokenlist.size(),
                               /*DisableMacroExpansion=*/false);
@@ -300,7 +301,7 @@ public:
       ci.fid      = SM.getFileID(HashLoc);   // FileID of the include-stmt file
 
       ci.FilenameRange = FilenameRange;
-      ci.newName  = File->tryGetRealPathName();
+      ci.newName  = File->tryGetRealPathName().str();
 
       includelocs.push_back(ci);
 
@@ -539,7 +540,7 @@ public:
     // init global variables PP callbacks use
     includelocs.clear();
 
-    global.main_file_name = getCurrentFile();
+    global.main_file_name = getCurrentFile().str();
 
     skip_this_translation_unit = false;
     file_id_list.clear();
@@ -716,7 +717,7 @@ public:
     // llvm::errs() << "** Creating AST consumer for: " << file << "\n";
     TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
     myCompilerInstance = &CI;
-    #if(__clang_major__ == 10)
+    #if (__clang_major__ > 9)
     return std::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());
     #else
     return llvm::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());

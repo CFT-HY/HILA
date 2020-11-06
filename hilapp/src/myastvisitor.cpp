@@ -58,7 +58,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
     if (B->isAssignmentOp()) {
       iscompound = B->isCompoundAssignmentOp();
       if (opcodestr)
-        *opcodestr = B->getOpcodeStr();
+        *opcodestr = B->getOpcodeStr().str();
       return true;
     }
   }
@@ -382,7 +382,7 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
   var_info vi;
   vi.refs = {};
   vi.decl = decl;
-  vi.name = decl->getName();
+  vi.name = decl->getName().str();
   // Printing policy is somehow needed for printing type without "class" id
   // Unqualified takes away "consts" etc and Canonical typdefs/using.
   // Also need special handling for element type
@@ -792,8 +792,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
           llvm::errs() << "Found a vector reduction\n";
           vector_reduction_ref vrf;
           vrf.ref = OC;
-          vrf.vector_name = vector_decl->getName();
-          vrf.index_name = index_decl->getName();
+          vrf.vector_name = vector_decl->getName().str();
+          vrf.index_name = index_decl->getName().str();
           if( type.rfind("float",0) != std::string::npos ){
             vrf.type = "float";
           } else {
@@ -1545,7 +1545,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     // Now it should be automatic local variable decl
     var_decl vd;
     vd.decl = var;
-    vd.name = var->getName();
+    vd.name = var->getName().str();
     vd.type = var->getType().getAsString();
     vd.scope = parsing_state.scope_level;
 

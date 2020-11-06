@@ -45,6 +45,7 @@ CXXFLAGS := -g -fno-rtti -std=c++17
 LLVM_CXXFLAGS := `$(LLVM_BIN_PATH)/llvm-config --cxxflags`
 LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`
 
+
 # These are required when compiling vs. a source distribution of Clang. For
 # binary distributions llvm-config --cxxflags gives the right path.
 
@@ -58,6 +59,7 @@ CLANG_INCLUDES := \
 # because there are circular dependencies that make the correct order difficult
 # to specify and maintain. The linker group options make the linking somewhat
 # slower, but IMHO they're still perfectly fine for tools that link with Clang.
+
 CLANG_LIBS := \
 	-Wl,--start-group \
 	-lclangAST \
@@ -81,30 +83,6 @@ CLANG_LIBS := \
 	-lclangToolingCore \
 	-lclangTooling \
 	-Wl,--end-group
-#For Clang 10 (I think)
-#CLANG_LIBS := \
-#	-Wl,--start-group \
-#	-lclangAST \
-#	-lclangAnalysis \
-#	-lclangBasic \
-#	-lclangDriver \
-#	-lclangEdit \
-#	-lclangFrontend \
-#	-lclangFrontendTool \
-#	-lclangLex \
-#	-lclangParse \
-#	-lclangSema \
-#	-lclangEdit \
-#	-lclangASTMatchers \
-#	-lclangRewrite \
-#	-lclangRewriteFrontend \
-#	-lclangStaticAnalyzerFrontend \
-#	-lclangStaticAnalyzerCheckers \
-#	-lclangStaticAnalyzerCore \
-#	-lclangSerialization \
-#	-lclangToolingCore \
-#	-lclangTooling \
-#	-Wl,--end-group
 
 # Internal paths in this project: where to find sources, and where to put
 # build artifacts.
