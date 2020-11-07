@@ -1,12 +1,16 @@
 #-------------------------------------------------------------------------------
-# Sample makefile for building the code samples. Read inline comments for
-# documentation.
+# Makefile for building the "hilapp" hila lattice preprocessor.
 #
-# Original from 
-# Eli Bendersky (eliben@gmail.com)
-# This code is in the public domain
+# This version builds hilapp from "system level" distribution
+#
+# Modelled after the example clang tool Makefile by Eli Bendersky (eliben@gmail.com)
+#    https://github.com/eliben/llvm-clang-samples
+#
+# Kari Rummukainen
+# Jarno Rantaharju
+# 
 #-------------------------------------------------------------------------------
-
+#
 # The following variables will likely need to be customized, depending on where
 # and how you built LLVM & Clang. They can be overridden by setting them on the
 # make command line: "make VARNAME=VALUE", etc.
@@ -16,7 +20,7 @@
 # directories of LLVM, Clang in tools/clang/, etc.
 #
 
-LLVM_SRC_PATH := /usr/lib/llvm-8
+LLVM_SRC_PATH := /usr/lib/llvm-11
 
 # LLVM_BUILD_PATH is the directory in which you built LLVM - where you ran
 # configure or cmake.
@@ -128,7 +132,7 @@ $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
 #		-static $(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
 
 $(BUILDDIR)/hilapp: ${OBJECTS}
-	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
+	$(CXX) -static $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
 	$(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
 
 
