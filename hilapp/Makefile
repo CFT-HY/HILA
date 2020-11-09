@@ -20,7 +20,7 @@
 # directories of LLVM, Clang in tools/clang/, etc.
 #
 
-LLVM_SRC_PATH := /usr/lib/llvm-11
+LLVM_SRC_PATH := /usr/lib/llvm-8
 
 # LLVM_BUILD_PATH is the directory in which you built LLVM - where you ran
 # configure or cmake.
@@ -54,6 +54,7 @@ LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`
 # binary distributions llvm-config --cxxflags gives the right path.
 
 CLANG_INCLUDES := \
+	-I$(LLVM_SRC_PATH)/include \
 	-I$(LLVM_SRC_PATH)/tools/clang/include \
 	-I$(LLVM_BUILD_PATH)/tools/clang/include
 
@@ -132,7 +133,7 @@ $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
 #		-static $(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
 
 $(BUILDDIR)/hilapp: ${OBJECTS}
-	$(CXX) -static $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
+	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
 	$(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
 
 
