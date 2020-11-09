@@ -46,7 +46,7 @@ $(LASTMAKE): $(MAKEFILE_LIST)
 	make clean
 	touch ${LASTMAKE}
 
-	
+
 HILA_OBJECTS = \
   build/inputs.o \
   build/mersenne_inline.o \
@@ -88,9 +88,9 @@ endif
 endif   # close the "clean" bracket
 
 .PHONY: clean cleanall
-	
+
 clean:
 	rm -f build/*.o build/*.cpt build/lastmake*
-	
+
 cleanall:
 	rm -f build/*
