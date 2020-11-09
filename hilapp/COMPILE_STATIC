@@ -1,0 +1,18 @@
+Statically linked "hilapp" may be needed if the target machine does not
+have clang/llvm development packages installed.  Then you may compile
+"hilapp" with static linking and copy the executable to the target
+platform (provided that both machines are binary compatible)
+
+- Obtain the sources and compile clang/llvm according to the instructions in
+HOWTO_GET_CLANG.  Note that the binary distributions usually do not
+include .a -libraries which are needed for static linking.
+
+- Compile hilapp with Makefile_src.
+
+- Install hila source package to target machine (e.g. with git)
+
+- Copy "hilapp" executable AND the directory "clang_include"
+from hila/hilapp/build -directory in the machine where the compilation was done
+to hila/hilapp/build -directory in the target machine.
+"clang_include" is originally a symlink, but it should be copied to a "real" directory.
+
