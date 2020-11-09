@@ -22,12 +22,18 @@ endif
 .PRECIOUS: build/%.cpt build/%.o
 
 
+## hilapp binary (TOP_DIR defined in calling Makefile)
+
+HILAPP := $(TOP_DIR)/hilapp/build/hilapp
+
 ################
 
 LIBRARIES_DIR := $(TOP_DIR)/libraries
 PLATFORM_DIR := $(LIBRARIES_DIR)/platforms
 THESE_MAKEFILES := $(LIBRARIES_DIR)/main.mk $(PLATFORM_DIR)/$(PLATFORM).mk
 HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
+
+HILAPP_DIR := $(dir $(HILAPP))
 
 # Read in the appropriate platform bits
 include $(PLATFORM_DIR)/$(PLATFORM).mk
@@ -57,29 +63,32 @@ HILA_HEADERS := $(wildcard $(TOP_DIR)/libraries/*/*.h) $(wildcard $(TOP_DIR)/lib
 
 ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 
-HILAPP = $(TOP_DIR)/hilapp/build/hilapp $(HILAPP_OPTS)
 HILA_OPTS += -I$(HILA_INCLUDE_DIR)
+
+# Add the (possible) std. includes for hilapp
+HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include
 
 # Standard rules for creating and building cpt files. These
 # build .o files in the build folder by first running them
 # through the 
 
-endif
-endif   # close the "clean" bracket
-
 
 build/%.cpt: %.cpp Makefile $(THIS_MAKEFILE) $(ALL_DEPEND) $(HEADERS)
 	mkdir -p build
-	$(HILAPP) $(HILA_OPTS) $(OPTS) $< -o $@
+	$(HILAPP) $(OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
 
 build/%.o : build/%.cpt
 	$(CC) $(CXXFLAGS) $(OPTS) $(HILA_OPTS) $< -c -o $@
 
 build/%.cpt: $(LIBRARIES_DIR)/plumbing/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 	mkdir -p build
-	$(HILAPP) $(HILA_OPTS) $< -o $@
+	$(HILAPP) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
 
+endif
+endif   # close the "clean" bracket
 
+.PHONY: clean cleanall
+	
 clean:
 	rm -f build/*.o build/*.cpt build/lastmake*
 	
