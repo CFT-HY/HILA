@@ -18,9 +18,7 @@ LDLIBS = -lfftw3 -lm
 # No need to give include directory to mpi for hilapp - here 2 common ones
 MPI_INCLUDE_DIRS = -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openmpi/include
 
-MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi 
-
-LLVM_INCLUDE = -I/projappl/project_2001973/llvm/lib/clang/8.0.1/include
+MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi
 
 LDLIBS = -lm $(MPI_LIBS)
 
