@@ -137,7 +137,7 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
 /// is_func_arg: expression is a lvalue-argument (non-const. reference) to function
 //////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, 
+bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_also_read,
                                               bool is_X, bool is_func_arg ) {
     
   e = e->IgnoreParens();
@@ -172,7 +172,7 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_c
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
   
   lfe.is_written = is_assign;
-  lfe.is_read = (is_compound || !is_assign);
+  lfe.is_read = (is_also_read || !is_assign);
   lfe.sequence = parsing_state.stmt_sequence;
 
 
@@ -637,6 +637,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   static bool is_compound = false;
   static Stmt * assign_stmt = nullptr;
   static std::string assignop;
+  static bool is_member_expr = false;
 
   // depth = 1 is the "top level" statement, should give fully formed
   // c++ statements separated by ';'.  These act as sequencing points
@@ -654,6 +655,9 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     return true;
   }
 
+  if (isa<MemberExpr>(s)) {
+    if (is_assignment) is_member_expr = true;
+  }
 
   if ( is_constructor_stmt(s) ){
     handle_constructor_in_loop(s);
@@ -691,9 +695,9 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (is_field_with_X_expr(E)) {
       // It is field[X] reference
       // get the expression for field name
-          
-      handle_field_parity_X_expr(E, is_assignment, is_compound, true);
+      handle_field_parity_X_expr(E, is_assignment, is_compound || is_member_expr, true);
       is_assignment = false;  // next will not be assignment
+      is_member_expr = false;
       // (unless it is a[] = b[] = c[], which is OK)
 
       parsing_state.skip_children = 1;
@@ -705,9 +709,10 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // Now we know it is a field parity reference
       // get the expression for field name
           
-      handle_field_parity_X_expr(E, is_assignment, is_compound, false);
+      handle_field_parity_X_expr(E, is_assignment, is_compound || is_member_expr, false);
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
+      is_member_expr = false;
 
       parsing_state.skip_children = 1;
       return true;
@@ -812,6 +817,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
       }
       is_assignment = false;  // next will not be assignment
+      is_member_expr = false;
     }
 
 #endif
