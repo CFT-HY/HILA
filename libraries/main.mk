@@ -35,9 +35,6 @@ HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
 
 HILAPP_DIR := $(dir $(HILAPP))
 
-# Read in the appropriate platform bits
-include $(PLATFORM_DIR)/$(PLATFORM).mk
-
 # To force a full remake when changing platforms or targets
 LASTMAKE := build/lastmake.${MAKECMDGOALS}.${PLATFORM}
 
@@ -57,6 +54,10 @@ HILA_OBJECTS = \
   build/memalloc.o \
   build/test_gathers.o
 
+  
+# Read in the appropriate platform bits and perhaps extra objects
+include $(PLATFORM_DIR)/$(PLATFORM).mk
+
 
 # Use all headers inside libraries for dependencies
 HILA_HEADERS := $(wildcard $(TOP_DIR)/libraries/*/*.h) $(wildcard $(TOP_DIR)/libraries/*/*/*.h)
@@ -73,16 +74,24 @@ HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include
 # through the 
 
 
-build/%.cpt: %.cpp Makefile $(THIS_MAKEFILE) $(ALL_DEPEND) $(HEADERS)
+build/%.cpt: %.cpp Makefile $(THIS_MAKEFILE) $(ALL_DEPEND) $(APP_HEADERS)
 	mkdir -p build
-	$(HILAPP) $(OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
+	$(HILAPP) $(APP_OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
 
 build/%.o : build/%.cpt
-	$(CC) $(CXXFLAGS) $(OPTS) $(HILA_OPTS) $< -c -o $@
+	$(CC) $(CXXFLAGS) $(APP_OPTS) $(HILA_OPTS) $< -c -o $@
 
 build/%.cpt: $(LIBRARIES_DIR)/plumbing/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 	mkdir -p build
-	$(HILAPP) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
+	$(HILAPP) $(APP_OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
+
+	
+# This one triggers only for cuda targets
+build/%.cpt: $(LIBRARIES_DIR)/plumbing/backend_cuda/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
+	mkdir -p build
+	$(HILAPP) $(APP_OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
+
+	
 
 endif
 endif   # close the "clean" bracket

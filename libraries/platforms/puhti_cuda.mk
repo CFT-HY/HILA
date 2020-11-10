@@ -10,7 +10,7 @@ CC = nvcc
 LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 
 # Define compilation flags
-CXXFLAGS = -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI -I../../../cub/  $(CXX_INCLUDE)
+CXXFLAGS = -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI  $(CXX_INCLUDE)
 #CXXFLAGS = -g -x c++ --std=c++17 
 
 LDLIBS = -lfftw3 -lm 
@@ -22,18 +22,14 @@ MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi
 
 LDLIBS = -lm $(MPI_LIBS)
 
+# extra cuda objects here
+HILA_OBJECTS += build/hila_cuda.o
 
 ################
 
 # These variables must be defined here
 #
-HILAPP_OPTS = -target:CUDA -DCUDA -DUSE_MPI -DPUHTI -DHILAPP $(MPI_INCLUDE_DIRS)
-HILA_OPTS = -DAVX -DUSE_MPI 
+HILAPP_OPTS = -target:CUDA -DCUDA -DUSE_MPI -DPUHTI $(MPI_INCLUDE_DIRS)
+HILA_OPTS = -DUSE_MPI -DCUDA -DPUHTI
 
-
-# and add extra rule for building backend_cuda -files
-
-build/%.o: $(LIBRARIES_DIR)/plumbing/backend_cuda/%.cpp $(ALL_DEPEND)
-	mkdir -p build
-	$(CC) $(CXXFLAGS) $(OPTS) $(HILA_OPTS) $< -o $@
 

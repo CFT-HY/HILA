@@ -6,7 +6,7 @@ TOP_DIR := ../..
 # Read in the main makefile contents, incl. platforms
 include $(TOP_DIR)/libraries/main.mk
 
-HEADERS := bench.h
+APP_HEADERS := bench.h
 
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
