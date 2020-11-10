@@ -9,7 +9,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
-#include <cub/cub.cuh>
+//#include <cub/cub.cuh>
 
 #define N_threads 128
 
