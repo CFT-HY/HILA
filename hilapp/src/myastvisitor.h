@@ -218,7 +218,7 @@ public:
 
   /// Generate a header for starting communication and marking fields changed
   std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
-  std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+  std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
   void generate_openacc_loop_header(std::stringstream & code);
   //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
   std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);

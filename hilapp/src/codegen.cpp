@@ -341,7 +341,7 @@ std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, 
                                                 bool generate_wait_loops) {
   std::stringstream code;
   if( target.CUDA ){
-    code << generate_code_cuda(S,semicolon_at_end,loopBuf);
+    code << generate_code_cuda(S,semicolon_at_end,loopBuf, generate_wait_loops);
   } else if( target.openacc){
     code << generate_code_cpu(S,semicolon_at_end,loopBuf, generate_wait_loops);   // use cpu method for acc
   } else if(target.vectorize) {

@@ -172,7 +172,9 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_c
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
   
   lfe.is_written = is_assign;
-  lfe.is_read = (is_compound || !is_assign);
+  // non-compound non-assignment can still require reading: for example lf[X].t = 1
+  //lfe.is_read =  (is_compound || !is_assign);
+  lfe.is_read = true;
   lfe.sequence = parsing_state.stmt_sequence;
 
 

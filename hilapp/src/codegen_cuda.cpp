@@ -54,7 +54,7 @@ std::string MyASTVisitor::make_kernel_name() {
 
 
 
-std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf) {
+std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait_loops) {
   
   // "Code" is inserted at the location of the loop statement
   // and the kernel is build in "kernel"
@@ -64,6 +64,17 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   // Get kernel name - use line number or file offset (must be deterministic)
   std::string kernel_name = MyASTVisitor::make_kernel_name();
 
+
+  // Wait for the communication to finish
+  if (generate_wait_loops) {
+      code << "if (_dir_mask_ != 0) { \n";    for (field_info & l : field_info_list) {
+      // If neighbour references exist, communicate them
+      for (dir_ptr & d : l.dir_list) if(d.count > 0){
+        code << l.new_name << ".wait_get("
+             << d.direxpr_s << ", " << parity_in_this_loop << ");\n}\n";
+      }
+    }
+  }
 
   // Set loop lattice
   std::string fieldname = field_info_list.front().old_name;
