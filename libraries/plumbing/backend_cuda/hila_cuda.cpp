@@ -1,6 +1,9 @@
+#ifndef HILAPP
+
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 #include "plumbing/backend_cuda/defs.h"
+
 
 /* Random number generator */
 curandState * curandstate;
@@ -86,6 +89,6 @@ void initialize_cuda( int rank ){
   cudaSetDevice(my_device);
 }
 
-
+#endif
 
 
