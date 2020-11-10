@@ -58,7 +58,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
     if (B->isAssignmentOp()) {
       iscompound = B->isCompoundAssignmentOp();
       if (opcodestr)
-        *opcodestr = B->getOpcodeStr();
+        *opcodestr = B->getOpcodeStr().str();
       return true;
     }
   }
@@ -137,7 +137,7 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
 /// is_func_arg: expression is a lvalue-argument (non-const. reference) to function
 //////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, 
+bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_also_read,
                                               bool is_X, bool is_func_arg ) {
     
   e = e->IgnoreParens();
@@ -172,9 +172,7 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_c
   //lfe.parityInd  = writeBuf->markExpr(lfe.parityExpr);
   
   lfe.is_written = is_assign;
-  // non-compound non-assignment can still require reading: for example lf[X].t = 1
-  //lfe.is_read =  (is_compound || !is_assign);
-  lfe.is_read = true;
+  lfe.is_read = (is_also_read || !is_assign);
   lfe.sequence = parsing_state.stmt_sequence;
 
 
@@ -384,7 +382,7 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
   var_info vi;
   vi.refs = {};
   vi.decl = decl;
-  vi.name = decl->getName();
+  vi.name = decl->getName().str();
   // Printing policy is somehow needed for printing type without "class" id
   // Unqualified takes away "consts" etc and Canonical typdefs/using.
   // Also need special handling for element type
@@ -639,6 +637,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   static bool is_compound = false;
   static Stmt * assign_stmt = nullptr;
   static std::string assignop;
+  static bool is_member_expr = false;
 
   // depth = 1 is the "top level" statement, should give fully formed
   // c++ statements separated by ';'.  These act as sequencing points
@@ -656,6 +655,9 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     return true;
   }
 
+  if (isa<MemberExpr>(s)) {
+    if (is_assignment) is_member_expr = true;
+  }
 
   if ( is_constructor_stmt(s) ){
     handle_constructor_in_loop(s);
@@ -693,9 +695,9 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (is_field_with_X_expr(E)) {
       // It is field[X] reference
       // get the expression for field name
-          
-      handle_field_parity_X_expr(E, is_assignment, is_compound, true);
+      handle_field_parity_X_expr(E, is_assignment, is_compound || is_member_expr, true);
       is_assignment = false;  // next will not be assignment
+      is_member_expr = false;
       // (unless it is a[] = b[] = c[], which is OK)
 
       parsing_state.skip_children = 1;
@@ -707,9 +709,10 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // Now we know it is a field parity reference
       // get the expression for field name
           
-      handle_field_parity_X_expr(E, is_assignment, is_compound, false);
+      handle_field_parity_X_expr(E, is_assignment, is_compound || is_member_expr, false);
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
+      is_member_expr = false;
 
       parsing_state.skip_children = 1;
       return true;
@@ -794,8 +797,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
           llvm::errs() << "Found a vector reduction\n";
           vector_reduction_ref vrf;
           vrf.ref = OC;
-          vrf.vector_name = vector_decl->getName();
-          vrf.index_name = index_decl->getName();
+          vrf.vector_name = vector_decl->getName().str();
+          vrf.index_name = index_decl->getName().str();
           if( type.rfind("float",0) != std::string::npos ){
             vrf.type = "float";
           } else {
@@ -814,6 +817,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 
       }
       is_assignment = false;  // next will not be assignment
+      is_member_expr = false;
     }
 
 #endif
@@ -1547,7 +1551,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     // Now it should be automatic local variable decl
     var_decl vd;
     vd.decl = var;
-    vd.name = var->getName();
+    vd.name = var->getName().str();
     vd.type = var->getType().getAsString();
     vd.scope = parsing_state.scope_level;
 

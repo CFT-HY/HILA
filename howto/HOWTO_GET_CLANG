@@ -1,0 +1,54 @@
+How to get the llvm/clang toolchain in order to build "hilapp" preprocessor.
+
+There are 2 "easy" ways: download binary distribution from llvm.org, or compile it yourself.
+These are described below.  Note that if you need a statically compiled hilapp, you need to
+compile the tools.
+
+--------------------------
+
+1. Binary apt/rpm -distribution (easiest option)
+
+See page https://apt.llvm.org/ for the correct apt/yum commands for debian/ubuntu and rpms.
+
+* add deb to sources (this for ubuntu 16.04 xenial).  Change -11 to the correct llvm/clang version!
+sudo add-apt-repository 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-11 main'
+
+* with key
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+
+* install (again, change 11 to suit!)
+sudo apt update
+sudo apt install clang-11 clang-tools-11 clang-11-doc libclang-common-11-dev libclang-11-dev libclang1-11 clang-format-11
+
+* Clang 8 (at least) required, change in libtooling API in 7->8 (also 10->11, but this is taken into account)
+
+* NOTE: this gives you only .so -libraries.  If you need a statically compiled "hilapp"-program,
+  see the instruction below.
+
+---------------------------
+
+2. Source distribution and compiling
+
+see page https://clang.llvm.org/get_started.html  for compiler etc. requirements.  Any modern
+gcc or clang should be sufficient.  Python and cmake are also needed.
+
+
+* Download with (this gives the latest stable version)
+
+git clone http://llvm.org/git/llvm.git
+cd llvm/tools
+git clone http://llvm.org/git/clang.git
+cd clang/tools
+git clone http://llvm.org/git/clang-tools-extra.git extra
+
+* Compile with 
+
+cd ../../../..  (At top level again)
+mkdir build
+# (in-tree build is not supported)
+cd build
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ../llvm
+make
+* make takes several hours.
+
+* Build types are Release, MinSizeRel, Debug, RelWithDebInfo
