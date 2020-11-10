@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
 // 
-// Transformer tools to convert "lattice loops" into
+// hilapp tools to convert "lattice loops" into
 // hardware-dependent "kernels".
 //
 // database for generated specializations

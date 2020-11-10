@@ -22,7 +22,7 @@ using namespace clang;
 using namespace clang::tooling;
 
 // constant names for program
-const std::string program_name("Transformer");
+const std::string program_name("hilapp");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
 const std::string output_only_keyword("output_only");
@@ -75,7 +75,7 @@ namespace state {
   extern bool compile_errors_occurred; // = false;
 };
 
-extern llvm::cl::OptionCategory TransformerCat;
+extern llvm::cl::OptionCategory HilappCategory;
 
 
 

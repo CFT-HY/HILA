@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------
-// Transformer tools to convert "lattice loops" into
-// hardware-dependent "kernels".
+// Hila preprocessor for lattice simulation programs
+// Converts special c++ dialect to hardware-dependent "kernels".
 //
 // Uses Clang RecursiveASTVisitor and Rewriter
 // interfaces
@@ -48,58 +48,58 @@ bool state::compile_errors_occurred = false;
 bool skip_this_translation_unit = false;
 
 ///definition of command line options
-llvm::cl::OptionCategory TransformerCat(program_name);
+llvm::cl::OptionCategory HilappCategory(program_name);
 
 llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", 
       llvm::cl::desc("Dump AST tree"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::no_include("noincl",
       llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<std::string> cmdline::dummy_def("D", 
       llvm::cl::value_desc("name"),
       llvm::cl::desc("Define name/symbol for preprocessor"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<std::string> cmdline::dummy_incl("I", 
       llvm::cl::desc("Directory for include file search"),
       llvm::cl::value_desc("directory"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::function_spec_no_inline("function-spec-no-inline",
       llvm::cl::desc("Do not mark generated function specializations \"inline\""),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::method_spec_no_inline("method-spec-no-inline",
       llvm::cl::desc("Do not mark generated method specializations \"inline\""),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
   
 llvm::cl::opt<bool> cmdline::funcinfo("ident-functions",
       llvm::cl::desc("Comment function call types in output"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
   
 llvm::cl::opt<bool> cmdline::no_output("no-output",
       llvm::cl::desc("No output file, for syntax check"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
   
 llvm::cl::opt<bool> cmdline::syntax_only("syntax-only",
       llvm::cl::desc("Same as no-output"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
   
 llvm::cl::opt<std::string> cmdline::output_filename("o",
       llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
       llvm::cl::value_desc("name"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::no_mpi("no-mpi",
       llvm::cl::desc("Do not generate MPI specific code (single node)"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::no_interleaved_comm("no-interleave",
       llvm::cl::desc("Do not interleave communications with computation"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 
 
@@ -107,51 +107,51 @@ llvm::cl::opt<bool> cmdline::no_interleaved_comm("no-interleave",
 
 llvm::cl::opt<bool> cmdline::kernel("target:vanilla-kernel",
       llvm::cl::desc("Generate kernels"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
   
 llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
       llvm::cl::desc("Generate loops in place"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
       llvm::cl::desc("Generate CUDA kernels"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::AVX512("target:AVX512",
       llvm::cl::desc("Generate AVX512 vectorized loops"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::AVX("target:AVX",
       llvm::cl::desc("Generate AVX vectorized loops"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::SSE("target:SSE",
       llvm::cl::desc("Generate SSE vectorized loops"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<int> cmdline::vectorize("target:vectorize",
       llvm::cl::desc("Generate vectorized loops with given vector size \n"
       "For example -target:vectorize=32 is equivalent to -target:AVX"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
       llvm::cl::desc("Offload to GPU using openACC"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 
 // Debug and Utility arguments
 
 llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
       llvm::cl::desc("write pragmas/attributes to functions called from loops"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<int> cmdline::verbosity("verbosity",
       llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<int> cmdline::avx_info("AVXinfo",
       llvm::cl::desc("AVX vectorization information level 0-2. 0 quiet, 1 not vectorizable loops, 2 all loops"),
-      llvm::cl::cat(TransformerCat));
+      llvm::cl::cat(HilappCategory));
 
 CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
@@ -181,77 +181,6 @@ void handle_cmdline_arguments(codetype & target) {
 
 
 }
-
-
-
-#if 0
-// It is very hard to anything with pragmas in clang.  Requires modification of
-// clang itself, libtooling is not sufficient
-// Define a pragma handler for #pragma heLpp
-// NOTE: This is executed before AST analysis
-class heLppPragmaHandler : public PragmaHandler {
-  public:
-    heLppPragmaHandler() : PragmaHandler("hilapp") { }
-    void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
-                      Token &Tok) {
-      // Handle the pragma
-
-      llvm::errs() << "Got the pragma! name " << getName() << " Token " << Tok.getName() << '\n';
-
-      static Token tok_dump_ast;
-
-      Token pragma_name = Tok;
-      PP.Lex(Tok);  // lex next token
-      if (Tok.is(tok::identifier)) {
-
-        if (PP.getSpelling(Tok) == "_transformer_cmd_dump_ast_") {
-
-          llvm::errs() << "Got " << PP.getSpelling(Tok) << '\n';
-          tok_dump_ast.setIdentifierInfo(Tok.getIdentifierInfo());
-
-        } else if (PP.getSpelling(Tok) == "dump_ast") {
-
-          llvm::errs() << "Dumping ast for next cmd\n";
-          std::vector<Token> tokenlist;
-          Token t;
-          // synthesize "extern long _transformer_cmd_dump_ast_;"
-          t.startToken();
-          t.setKind(tok::kw_extern);
-          t.setLocation(pragma_name.getLocation());
-          t.setLength(pragma_name.getLength());
-          tokenlist.push_back(t);
-
-          t.setKind(tok::kw_long);  //
-          t.setLocation(pragma_name.getLocation());
-          t.setLength(pragma_name.getLength());
-          tokenlist.push_back(t);
-
-          t.startToken();
-          t.setIdentifierInfo(tok_dump_ast.getIdentifierInfo());  // _transformer_cmd_
-          t.setKind(tok::identifier);
-          t.setLocation(pragma_name.getLocation());
-          tokenlist.push_back(t);
-
-          t.startToken();
-          t.setKind(tok::semi);
-          t.setLocation(pragma_name.getLocation());
-          tokenlist.push_back(t);
-
-          auto TokenArray = std::make_unique<Token[]>(tokenlist.size());
-          std::copy(tokenlist.begin(), tokenlist.end(), TokenArray.get());
-          PP.EnterTokenStream(std::move(TokenArray), tokenlist.size(),
-                              /*DisableMacroExpansion=*/false);
-        }
-      }
-
-    return;
-  }
-
-};
-
-static PragmaHandlerRegistry::Add<heLppPragmaHandler> Y("hilapp","hila pragma description");
-
-#endif  // pragmahandler
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -748,7 +677,7 @@ int main(int argc, const char **argv) {
   av[argc] = nullptr;
 
 
-  OptionsParser op(argc, av, TransformerCat);
+  OptionsParser op(argc, av, HilappCategory);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
 
   // We have command line args, possibly do something with them

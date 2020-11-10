@@ -1228,7 +1228,7 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
     } else {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  pExpr->getSourceRange().getBegin(),
-                 "Transformer internal error, unknown parity" );
+                 "hilapp internal error, unknown parity" );
       exit(-1);
     }
     if (p == parity::none) {
