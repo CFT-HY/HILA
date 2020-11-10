@@ -71,9 +71,10 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
       // If neighbour references exist, communicate them
       for (dir_ptr & d : l.dir_list) if(d.count > 0){
         code << l.new_name << ".wait_get("
-             << d.direxpr_s << ", " << parity_in_this_loop << ");\n}\n";
+             << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
       }
     }
+    code << "}\n";
   }
 
   // Set loop lattice
