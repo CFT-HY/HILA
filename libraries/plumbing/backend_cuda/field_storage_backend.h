@@ -272,6 +272,37 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
 
 
 
+
+template <typename T>
+__global__ void place_comm_elements_kernel( field_storage<T> field, T * buffer, int offset, const int n, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < n ) {
+    T value;
+    field.set( buffer[Index], offset+Index, field_alloc_size);
+  }
+}
+
+
+template<typename T>
+void field_storage<T>::place_comm_elements(direction d, parity par, T * RESTRICT buffer, 
+                                           const lattice_struct::comm_node_struct & from_node, 
+                                           const lattice_struct * RESTRICT lattice) {
+  int n = from_node.n_sites(par);
+  T * d_buffer;
+
+  // Allocate space and copy the buffer to the device
+  cudaMalloc( (void **)&(d_buffer), n*sizeof(T));
+  cudaMemcpy( d_buffer, buffer, n*sizeof(T), cudaMemcpyHostToDevice );
+
+  int N_blocks = n/N_threads + 1;
+  place_comm_elements_kernel<<< N_blocks, N_threads >>>((*this), d_buffer, from_node.offset(par), n, lattice->field_alloc_size());
+
+  cudaFree(d_buffer);
+}
+
+
+
 #elif defined(HILAPP)
 
 // Hilapp requires a dummy implementation for functions with auto return type

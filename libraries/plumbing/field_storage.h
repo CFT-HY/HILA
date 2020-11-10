@@ -112,18 +112,6 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
   gather_elements(buffer, index_list, n, lattice);
 }
 
-#ifndef VANILLA
-
-template<typename T>
-void field_storage<T>::place_comm_elements(direction d, parity par, T * RESTRICT buffer, 
-                                           const lattice_struct::comm_node_struct & from_node, 
-                                           const lattice_struct * RESTRICT lattice) {
-  int n;
-  const unsigned * index_list = from_node.get_sitelist(par,n);
-  place_elements(buffer, index_list, n, lattice);
-}
-
-#endif
 
 /*
 Import backend

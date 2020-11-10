@@ -57,7 +57,7 @@ void backend_lattice_struct::setup(lattice_struct * lattice)
     // For special boundaries
     cudaMalloc( (void **)&(d_neighb_special[d]), lattice->local_volume() * sizeof(unsigned));
     check_cuda_error("cudaMalloc device neighbour array");
-    unsigned * special_neighb = lattice->get_neighbour_array((direction)d, boundary_condition_t::ANTIPERIODIC);
+    const unsigned * special_neighb = lattice->get_neighbour_array((direction)d, boundary_condition_t::ANTIPERIODIC);
     cudaMemcpy( d_neighb_special[d], special_neighb, lattice->local_volume() * sizeof(unsigned), cudaMemcpyHostToDevice );
     check_cuda_error("cudaMemcpy device neighbour array");
   }
