@@ -377,4 +377,15 @@ void field_storage<T>::place_recv_elements(const T * RESTRICT buffer, direction 
 
 
 
+template <typename T>
+void field_storage<T>::free_mpi_buffer( T * buffer){
+  std::free(buffer);
+}
+
+template <typename T>
+T * field_storage<T>::allocate_mpi_buffer( int n ){
+  return (T *)memalloc( n * sizeof(T) );
+}
+
+
 #endif

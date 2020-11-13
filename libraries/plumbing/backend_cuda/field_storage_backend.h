@@ -4,6 +4,9 @@
 #include "../defs.h"
 #include "../field_storage.h"
 
+#define CUDA_AWARE_MPI
+
+
 /* CUDA implementations */
 template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
@@ -115,11 +118,11 @@ void field_storage<T>::set_element(A &value, const int i, const lattice_struct *
 
 /// A kernel that gathers elements
 template <typename T>
-__global__ void gather_elements_kernel( field_storage<T> field, char *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void gather_elements_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const int field_alloc_size )
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
-    ((T*) buffer)[Index] = field.get(site_index[Index], field_alloc_size);
+    buffer[Index] = field.get(site_index[Index], field_alloc_size);
   }
 }
 
@@ -129,7 +132,7 @@ void field_storage<T>::gather_elements( T * RESTRICT buffer,
                                         const unsigned * RESTRICT index_list, int n,
                                         const lattice_struct * RESTRICT lattice) const {
   unsigned *d_site_index;
-  char * d_buffer;
+  T * d_buffer;
   
   // Copy the list of boundary site indexes to the device
   cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
@@ -183,6 +186,47 @@ void field_storage<T>::gather_elements_negated(T * RESTRICT buffer,
   cudaFree(d_site_index);
   cudaFree(d_buffer);
 }
+
+
+// MPI buffer on the device. Use the gather_elements and gather_elements_negated
+// kernels to fill the buffer.
+template<typename T>
+void field_storage<T>::gather_comm_elements(T * RESTRICT buffer, 
+                                            const lattice_struct::comm_node_struct & to_node,
+                                            parity par, 
+                                            const lattice_struct * RESTRICT lattice,
+                                            bool antiperiodic) const {
+  int n;
+  const unsigned * index_list = to_node.get_sitelist(par,n);
+  unsigned *d_site_index;
+  T * d_buffer;
+
+#ifdef CUDA_AWARE_MPI
+  // Buffer is already on device
+  d_buffer = buffer;
+#else
+  // Create a buffer of the device
+  cudaMalloc( (void **)&(d_buffer), n*sizeof(T));
+#endif
+
+  // Copy the list of boundary site indexes to the device
+  cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
+  cudaMemcpy( d_site_index, index_list, n*sizeof(unsigned), cudaMemcpyHostToDevice );
+
+  // Run the kernel
+  int N_blocks = n/N_threads + 1;
+  if(antiperiodic){
+    gather_elements_negated_kernel<<< N_blocks, N_threads >>>(*this, buffer, d_site_index, n, lattice->field_alloc_size() );
+  } else {
+    gather_elements_kernel<<< N_blocks, N_threads >>>(*this, buffer, d_site_index, n, lattice->field_alloc_size() );
+  }
+
+#ifndef CUDA_AWARE_MPI
+  cudaFree(d_buffer);
+#endif
+  cudaFree(d_site_index);
+}
+
 
 
 
@@ -273,17 +317,17 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
 
 
 
+// Place communicated elements to the field array
 template <typename T>
 __global__ void place_comm_elements_kernel( field_storage<T> field, T * buffer, int offset, const int n, const int field_alloc_size )
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
-    T value;
     field.set( buffer[Index], offset+Index, field_alloc_size);
   }
 }
 
-
+// Standard MPI, buffer is on the cpu and needs to be copied accross
 template<typename T>
 void field_storage<T>::place_comm_elements(direction d, parity par, T * RESTRICT buffer, 
                                            const lattice_struct::comm_node_struct & from_node, 
@@ -291,16 +335,51 @@ void field_storage<T>::place_comm_elements(direction d, parity par, T * RESTRICT
   int n = from_node.n_sites(par);
   T * d_buffer;
 
+#ifdef CUDA_AWARE_MPI
+  // MPI buffer is on device
+  d_buffer = buffer;
+#else
   // Allocate space and copy the buffer to the device
   cudaMalloc( (void **)&(d_buffer), n*sizeof(T));
   cudaMemcpy( d_buffer, buffer, n*sizeof(T), cudaMemcpyHostToDevice );
+#endif
 
   int N_blocks = n/N_threads + 1;
   place_comm_elements_kernel<<< N_blocks, N_threads >>>((*this), d_buffer, from_node.offset(par), n, lattice->field_alloc_size());
 
+#ifndef CUDA_AWARE_MPI
+  cudaFree(d_buffer);
+#endif
+}
+
+
+#ifdef CUDA_AWARE_MPI
+
+template <typename T>
+void field_storage<T>::free_mpi_buffer( T * d_buffer){
   cudaFree(d_buffer);
 }
 
+template <typename T>
+T * field_storage<T>::allocate_mpi_buffer( int n ){
+  T * d_buffer;
+  cudaMalloc((void **)&(d_buffer), n*sizeof(T) );
+  return d_buffer;
+}
+
+#else
+
+template <typename T>
+void field_storage<T>::free_mpi_buffer( T * buffer){
+  std::free(buffer);
+}
+
+template <typename T>
+T * field_storage<T>::allocate_mpi_buffer( int n ){
+  return (T *)memalloc( n * sizeof(T) );
+}
+
+#endif
 
 
 #elif defined(HILAPP)
