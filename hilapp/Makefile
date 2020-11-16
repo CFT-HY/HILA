@@ -15,12 +15,14 @@
 # and how you built LLVM & Clang. They can be overridden by setting them on the
 # make command line: "make VARNAME=VALUE", etc.
 
-# LLVM_SRC_PATH is the path to the root of the checked out source code. This
+# If you compiled LLVM/CLANG yourself, set 
+# LLVM_SRC_PATH to the path to the root of the checked out source code. This
 # directory should contain the configure script, the include/ and lib/
 # directories of LLVM, Clang in tools/clang/, etc.
-#
+# LLVM_SRC_PATH := /usr/lib/llvm-8
 
-LLVM_SRC_PATH := /usr/lib/llvm-8
+# If it is a "system library", then llvm-config should be installed:
+LLVM_SRC_PATH := $(shell llvm-config-8 --prefix)
 
 # LLVM_BUILD_PATH is the directory in which you built LLVM - where you ran
 # configure or cmake.
