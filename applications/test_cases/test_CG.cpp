@@ -69,7 +69,6 @@ int main(int argc, char **argv){
   field<SU<N>> U[NDIM];
   foralldir(d) {
     onsites(ALL){
-      if(disable_avx[X]==0){};
       U[d][X] = 1;
     }
   }

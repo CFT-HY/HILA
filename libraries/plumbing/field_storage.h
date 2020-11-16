@@ -72,8 +72,10 @@ class field_storage {
 #endif
 
 
-    void gather_comm_elements( T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, 
-                               parity par, const lattice_struct * RESTRICT lattice) const;
+    void gather_comm_elements( T * RESTRICT buffer, 
+                              const lattice_struct::comm_node_struct & to_node, 
+                              parity par, const lattice_struct * RESTRICT lattice,
+                              bool antiperiodic) const;
     void gather_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n, 
                           const lattice_struct * RESTRICT lattice) const;
 
@@ -90,27 +92,17 @@ class field_storage {
     void place_elements( T * RESTRICT buffer, const unsigned * RESTRICT index_list, int n,
                          const lattice_struct * RESTRICT lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
-#ifdef VANILLA
-    void set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT lattice);
-#else
     void set_local_boundary_elements(direction dir, parity par, const lattice_struct * RESTRICT lattice, bool antiperiodic);
-#endif
+
+    // Allocate buffers for mpi communication
+    T * allocate_mpi_buffer( int n );
+    void free_mpi_buffer(T * buffer);
 
     T * RESTRICT get_buffer() {
       return static_cast<T*>(fieldbuf);
     }
 };
 
-
-template<typename T>
-void field_storage<T>::gather_comm_elements(T * RESTRICT buffer, 
-                                            const lattice_struct::comm_node_struct & to_node, 
-                                            parity par, const lattice_struct * RESTRICT lattice) const {
-  int n;
-  const unsigned * index_list = to_node.get_sitelist(par,n);
-
-  gather_elements(buffer, index_list, n, lattice);
-}
 
 
 /*

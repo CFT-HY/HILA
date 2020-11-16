@@ -84,24 +84,13 @@ class field {
           receive_buffer[d] = nullptr;
 #endif
         }
-      
-        // for(int d=0; d<NDIRS; d++) for(parity par: {EVEN,ODD}) {
-        //   int tag = d + NDIRS*(int)par;
-        //   lattice_struct::nn_comminfo_struct ci = lattice->get_comminfo(d);
-        //   receive_buffer[tag].resize(ci.from_node.size());
-        //   send_buffer[tag].resize(ci.to_node.size());
-        //   receive_request[tag].resize(ci.from_node.size());
-        //   send_request[tag].resize(ci.to_node.size());
-        // }
-        // mpi_tag_base = get_field_mpi
-        // next_mpi_field_tag++;
       }
 
       void free_communication() {
         for (int d=0; d<NDIRS; d++) {
-          if (send_buffer[d] != nullptr) std::free(send_buffer[d]);
+          if (send_buffer[d] != nullptr) payload.free_mpi_buffer(send_buffer[d]);
 #ifndef VANILLA
-          if (receive_buffer[d] != nullptr) std::free(receive_buffer[d]);
+          if (receive_buffer[d] != nullptr) payload.free_mpi_buffer(receive_buffer[d]);
 #endif
         }
       }
@@ -166,14 +155,12 @@ class field {
         // (fetching from direction +d)
         if (boundary_condition[d] == boundary_condition_t::ANTIPERIODIC &&
             lattice->special_boundaries[-d].is_on_edge) {
-          int n;
-          const unsigned * index_list = to_node.get_sitelist(par,n);
-          payload.gather_elements_negated(buffer, index_list, n, lattice);
+          payload.gather_comm_elements(buffer, to_node, par, lattice, true);
         } else {
-          payload.gather_comm_elements(buffer, to_node, par, lattice);
+          payload.gather_comm_elements(buffer, to_node, par, lattice, false);
         }
 #else
-        payload.gather_comm_elements(buffer, to_node, par, lattice);
+        payload.gather_comm_elements(buffer, to_node, par, lattice, false);
 #endif
 
 #else
@@ -231,42 +218,12 @@ class field {
 #endif
       }
 
-
-#ifdef VANILLA
-      /// Place boundary elements from local lattice (used in vectorized version)
-      void set_local_boundary_elements(direction dir, parity par){
-        #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        if (boundary_condition[dir] != boundary_condition_t::PERIODIC &&
-            lattice->special_boundaries[dir].is_needed) {
-          // need to copy or do something w. local boundary
-          int n, start = 0;
-          if (par == ODD) {
-            n = lattice->special_boundaries[dir].n_odd;
-            start = lattice->special_boundaries[dir].n_even;
-          } else {
-            if (par == EVEN) n = lattice->special_boundaries[dir].n_even;
-            else n = lattice->special_boundaries[dir].n_total;
-          }
-          int offset = lattice->special_boundaries[dir].offset + start;
-
-          /// finally, boundary condition (TODO:MORE GENERAL!)
-          if (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC) {
-            payload.gather_elements_negated( payload.fieldbuf + offset,
-              lattice->special_boundaries[dir].move_index + start, n, lattice);
-          }
-        }
-        #endif
-      }
-#else
-      // Vectorized and CUDA
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
         bool antiperiodic =
           (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
         payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
       }
-
-#endif
 
       /// Gather a list of elements to a single node
       void gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
@@ -284,7 +241,7 @@ class field {
         int offs = 0;
         if (par == ODD) offs = from_node.sites/2;
         if (receive_buffer[d] == nullptr) {
-          receive_buffer[d] = (T *)memalloc( from_node.sites * sizeof(T) );
+          receive_buffer[d] = payload.allocate_mpi_buffer( from_node.sites );
         }
         return receive_buffer[d] + offs;
 
@@ -300,7 +257,7 @@ class field {
           if (vector_lattice->is_boundary_permutation[abs(d)]) {
             // extra copy operation needed
             if (receive_buffer[d] == nullptr) { 
-              receive_buffer[d] = (T *)memalloc( from_node.sites * sizeof(T) );
+              receive_buffer[d] = payload.allocate_mpi_buffer( from_node.sites );
             }
             return receive_buffer[d] + offs;
           } else {
@@ -851,7 +808,7 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
  */
 
 /// start_get(): Communicate the field at parity par from direction
-///  d. Uses accessors to prevent dependency on the layout.
+/// d. Uses accessors to prevent dependency on the layout.
 /// return the direction mask bits where something is happening
 template<typename T>
 dir_mask_t field<T>::start_get(direction d, parity p) const {
@@ -932,12 +889,12 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
     unsigned sites = to_node.n_sites(par);
 
     if(fs->send_buffer[d] == nullptr)
-      fs->send_buffer[d] = (T *)memalloc( to_node.sites*size );
+      fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
     send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
     fs->gather_comm_elements(d,par,send_buffer,to_node);
  
-    MPI_Isend( (char *)send_buffer, sites*size, MPI_BYTE, to_node.rank, 
+    MPI_Isend( send_buffer, sites*size, MPI_BYTE, to_node.rank, 
                tag, lattice->mpi_comm_lat, &fs->send_request[par_i][d]);
   }
 
@@ -1459,7 +1416,7 @@ static void read_fields(std::string filename, fieldtypes&... fields){
 #ifndef CUDA
 // Include Fourier transform
 // Only for CPU code for now (cannot load fft module with CUDA on Puhti)
-//#include "plumbing/FFT.h"
+#include "plumbing/FFT.h"
 #endif
 
 

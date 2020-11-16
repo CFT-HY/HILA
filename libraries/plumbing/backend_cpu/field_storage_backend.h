@@ -126,12 +126,44 @@ void field_storage<T>::place_elements(T * RESTRICT buffer,
   }
 }
 
+
 template<typename T>
-void field_storage<T>::set_local_boundary_elements(direction dir, parity par, lattice_struct * RESTRICT lattice) {}
+void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
+                                                   const lattice_struct * RESTRICT lattice,
+                                                   bool antiperiodic)
+{
+  // Only need to do something for antiperiodic boundaries
+  if (antiperiodic) {
+    int n, start = 0;
+    if (par == ODD) {
+      n = lattice->special_boundaries[dir].n_odd;
+      start = lattice->special_boundaries[dir].n_even;
+    } else {
+      if (par == EVEN) n = lattice->special_boundaries[dir].n_even;
+      else n = lattice->special_boundaries[dir].n_total;
+    }
+    int offset = lattice->special_boundaries[dir].offset + start;
+    gather_elements_negated( fieldbuf + offset,
+        lattice->special_boundaries[dir].move_index + start, n, lattice);
+  }
+}
 
 
+template<typename T>
+void field_storage<T>::gather_comm_elements(T * RESTRICT buffer, 
+                                            const lattice_struct::comm_node_struct & to_node,
+                                            parity par, 
+                                            const lattice_struct * RESTRICT lattice,
+                                            bool antiperiodic) const {
+  int n;
+  const unsigned * index_list = to_node.get_sitelist(par,n);
 
-
+  if(antiperiodic){
+    gather_elements_negated(buffer, index_list, n, lattice);
+  } else {
+    gather_elements(buffer, index_list, n, lattice);
+  }
+}
 
 
 
@@ -147,7 +179,15 @@ void field_storage<T>::set_element(A &value, const int i, const lattice_struct *
 }
 
 
+template <typename T>
+void field_storage<T>::free_mpi_buffer( T * buffer){
+  std::free(buffer);
+}
 
+template <typename T>
+T * field_storage<T>::allocate_mpi_buffer( int n ){
+  return (T *)memalloc( n * sizeof(T) );
+}
 
 
 

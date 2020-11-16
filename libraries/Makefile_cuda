@@ -18,8 +18,10 @@
 #
 
 
-MPI_INCLUDE_DIR = /usr/lib/x86_64-linux-gnu/openmpi/include/
-MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi 
+MPI_INCLUDES = 
+#MPI_INCLUDES = /usr/lib/x86_64-linux-gnu/openmpi/include/
+MPI_LIBS = -lmpi 
+#MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi 
 
 # This is for Puhti. On oher systems modify to point to clang includes,
 # or comment out
@@ -35,7 +37,7 @@ CXX_INCLUDE = -I$(THIS_DIR)
 HILA_OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/timers.o build/memalloc.o build/hila_cuda.o build/test_gathers.o
 
 
-MPI_OPTS = -DUSE_MPI -I$(MPI_INCLUDE_DIR)
+MPI_OPTS = -DUSE_MPI $(MPI_INCLUDES_DIR)
 
 
 HILAPP = $(THIS_DIR)/../hilapp/build/hilapp -target:CUDA -DUSE_MPI -DCUDA -DPUHTI -DHILAPP $(HILA_INCLUDE) $(MPI_OPTS)
