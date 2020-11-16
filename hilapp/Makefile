@@ -128,6 +128,7 @@ OBJECTS = \
 
 
 $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
+	@mkdir -p $(BUILDDIR)
 	$(CXX) -c $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $< -o $@
 
 #$(BUILDDIR)/hilapp: ${OBJECTS}
