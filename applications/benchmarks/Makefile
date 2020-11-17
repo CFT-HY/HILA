@@ -17,13 +17,13 @@ bench_field:   build/bench_field ; @:
 
 # Now the linking step for each target executable
 build/bench_fermion: Makefile build/bench_fermion.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) $(LDFLAGS) $(LDLIBS) -o $@ build/bench_fermion.o $(HILA_OBJECTS)
+	$(LD) -o $@ build/bench_fermion.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 build/bench_matrix2: Makefile build/bench_matrix2.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) $(LDFLAGS) $(LDLIBS) -o $@ build/bench_matrix2.o $(HILA_OBJECTS)
+	$(LD) -o $@ build/bench_matrix2.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 build/bench_field: Makefile build/bench_field.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) $(LDFLAGS) $(LDLIBS) -o $@ build/bench_field.o $(HILA_OBJECTS)
+	$(LD) -o $@ build/bench_field.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 
 

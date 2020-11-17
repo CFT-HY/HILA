@@ -1,50 +1,36 @@
-OPTS = -DNDIM=4
 
-HILAPATH = ../..
-HILAINCLUDEPATH = $(HILAPATH)/libraries/
+# Give the location of the top level distribution directory wrt. this.
+# Can be absolute or relative
+TOP_DIR := ../..
 
-HILAPP = $(HILAPATH)/hilapp/build/hilapp -DUSE_MPI -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I$(HILAINCLUDEPATH)
-CC = mpic++ -DUSE_MPI -mavx2 -mfma
-LD = mpic++
+# Read in the main makefile contents, incl. platforms
+include $(TOP_DIR)/libraries/main.mk
 
-HILAPP_VECTOR =  $(HILAPATH)/hilapp/build/hilapp  -DAVX -DUSE_MPI -target:AVX -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I$(HILAINCLUDEPATH)
-VECTOR_OPTS = -DNDIM=4
+APP_HEADERS := bench.h
 
-HILAPP_GPU = $(HILAPATH)/hilapp/build/hilapp -DGPU -target:CUDA -I$(HILAINCLUDEPATH)
-NVCC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA 
-NVLD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
+# With multiple targets we want to use "make target", not "make build/target".
+# This is needed to carry the dependencies to build-subdir
 
+test_CG: build/test_CG ; @:
+test_conjReduce: build/test_conjReduce ; @:
+test_FFT:   build/test_FFT ; @:
+test_forces:   build/test_forces ; @:
+bench_field:   build/bench_field ; @:
+ 
+# Now the linking step for each target executable
+build/test_CG: Makefile build/test_CG.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/test_CG.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
-CXXFLAGS = -g -x c++ --std=c++17 $(OPTS) -I$(HILAINCLUDEPATH)
-LDFLAGS = -lfftw3 -lm
+build/test_conjReduce: Makefile build/test_conjReduce.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/test_conjReduce.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
+build/test_FFT: Makefile build/test_FFT.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/test_FFT.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
-.PRECIOUS: build/%.cpt build/%.o
+build/test_forces: Makefile build/test_forces.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/test_forces.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
-OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setup_layout_vector.o build/map_node_layout_trivial.o build/com_mpi.o build/memalloc.o build/test_gathers.o
-
-
-build/%.exe: build/%.o Makefile $(OBJECTS)
-	$(CC) -o $@ $< -lfftw3 -lm $(OBJECTS)
-
-%.exe: build/%.o Makefile $(OBJECTS)
-	$(CC) -o build/$@ $< -lfftw3 -lm $(OBJECTS)
-
-build/%.cpt: %.cpp Makefile
-	mkdir -p build
-	$(HILAPP) $< -o $@
-
-build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
-	mkdir -p build
-	$(HILAPP) $< -o $@
-
-build/%.o : build/%.cpt
-	mkdir -p build
-	$(CC) $(CXXFLAGS) $< -c -o $@
+build/bench_field: Makefile build/bench_field.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/bench_field.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 
-clean:
-	rm -rf build/*.cpt build/*.o
-
-cleanall:
-	rm -rf build/*
