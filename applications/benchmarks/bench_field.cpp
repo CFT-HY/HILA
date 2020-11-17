@@ -224,7 +224,7 @@ int main(int argc, char **argv){
 
 
     // Time VECTOR NORM
-    timing = 0;
+    timing = sum = 0;
     onsites(ALL){ // Warm up. Why does this affect the time?
       sum += vector1[X].norm_sq();
     }
