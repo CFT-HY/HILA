@@ -4,7 +4,7 @@
 #include "../defs.h"
 #include "../field_storage.h"
 
-#define CUDA_AWARE_MPI
+//#define CUDA_AWARE_MPI
 
 
 /* CUDA implementations */
@@ -196,34 +196,37 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
                                             parity par, 
                                             const lattice_struct * RESTRICT lattice,
                                             bool antiperiodic) const {
+
   int n;
   const unsigned * index_list = to_node.get_sitelist(par,n);
   unsigned *d_site_index;
   T * d_buffer;
-
-#ifdef CUDA_AWARE_MPI
-  // Buffer is already on device
-  d_buffer = buffer;
-#else
-  // Create a buffer of the device
-  cudaMalloc( (void **)&(d_buffer), n*sizeof(T));
-#endif
-
+  
   // Copy the list of boundary site indexes to the device
   cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
   cudaMemcpy( d_site_index, index_list, n*sizeof(unsigned), cudaMemcpyHostToDevice );
 
-  // Run the kernel
+  #ifdef CUDA_AWARE_MPI
+    // The buffer is already on the device
+    d_buffer = buffer;
+  #else
+    // Allocate a buffer on the device
+    cudaMalloc( (void **)&(d_buffer), n*sizeof(T));
+  #endif
+  
+  // Call the kernel to build the list of elements
   int N_blocks = n/N_threads + 1;
   if(antiperiodic){
-    gather_elements_negated_kernel<<< N_blocks, N_threads >>>(*this, buffer, d_site_index, n, lattice->field_alloc_size() );
+    gather_elements_negated_kernel<<< N_blocks, N_threads >>>(*this, d_buffer, d_site_index, n, lattice->field_alloc_size() );
   } else {
-    gather_elements_kernel<<< N_blocks, N_threads >>>(*this, buffer, d_site_index, n, lattice->field_alloc_size() );
+    gather_elements_kernel<<< N_blocks, N_threads >>>(*this, d_buffer, d_site_index, n, lattice->field_alloc_size() );
   }
-
-#ifndef CUDA_AWARE_MPI
+  
+  #ifndef CUDA_AWARE_MPI
+  // Copy the result to the host
+  cudaMemcpy( (char *) buffer, d_buffer, n*sizeof(T), cudaMemcpyDeviceToHost );
   cudaFree(d_buffer);
-#endif
+  #endif
   cudaFree(d_site_index);
 }
 
