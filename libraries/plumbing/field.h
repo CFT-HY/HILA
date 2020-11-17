@@ -231,7 +231,7 @@ class field {
       void gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
       void send_elements(T * buffer, std::vector<coordinate_vector> coord_list, int  root=0);
 
-// #ifdef USE_MPI
+#if defined(USE_MPI)
 
       /// get the receive buffer pointer for the communication.    
       T * get_receive_buffer( direction d, parity par,
@@ -273,7 +273,7 @@ class field {
         }
 #endif
       } // end of get_receive_buffer
-//#endif  // USE_MPI
+#endif  // USE_MPI
 
   };
 

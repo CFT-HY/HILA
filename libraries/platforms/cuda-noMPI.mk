@@ -26,7 +26,7 @@ HILA_OBJECTS += build/hila_cuda.o
 
 # These variables must be defined here
 #
-HILAPP_OPTS = -target:CUDA -DCUDA
+HILAPP_OPTS = -no-mpi -target:CUDA -DCUDA 
 HILA_OPTS = -DCUDA
 
 

@@ -26,6 +26,6 @@ STD_INCLUDE_DIRS := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-
 
 # These variables must be defined here
 #
-HILAPP_OPTS := $(STD_INCLUDE_DIRS)
+HILAPP_OPTS := -no-mpi $(STD_INCLUDE_DIRS)
 HILA_OPTS :=
 

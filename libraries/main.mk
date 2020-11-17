@@ -30,19 +30,9 @@ HILAPP := $(TOP_DIR)/hilapp/build/hilapp
 
 LIBRARIES_DIR := $(TOP_DIR)/libraries
 PLATFORM_DIR := $(LIBRARIES_DIR)/platforms
-THESE_MAKEFILES := $(LIBRARIES_DIR)/main.mk $(PLATFORM_DIR)/$(PLATFORM).mk
 HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
 
 HILAPP_DIR := $(dir $(HILAPP))
-
-# To force a full remake when changing platforms or targets
-LASTMAKE := build/lastmake.${MAKECMDGOALS}.${PLATFORM}
-
-$(LASTMAKE): $(MAKEFILE_LIST)
-	-rm -f build/lastmake.*
-	make clean
-	touch ${LASTMAKE}
-
 
 HILA_OBJECTS = \
   build/inputs.o \
@@ -58,6 +48,14 @@ HILA_OBJECTS = \
 # Read in the appropriate platform bits and perhaps extra objects
 include $(PLATFORM_DIR)/$(PLATFORM).mk
 
+# To force a full remake when changing platforms or targets
+LASTMAKE := build/lastmake.${MAKECMDGOALS}.${PLATFORM}
+
+$(LASTMAKE): $(MAKEFILE_LIST)
+	-rm -f build/lastmake.*
+	make clean
+	touch ${LASTMAKE}
+
 
 # Use all headers inside libraries for dependencies
 HILA_HEADERS := $(wildcard $(TOP_DIR)/libraries/*/*.h) $(wildcard $(TOP_DIR)/libraries/*/*/*.h)
@@ -69,12 +67,12 @@ HILA_OPTS += -I$(HILA_INCLUDE_DIR)
 # Add the (possible) std. includes for hilapp
 HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include
 
-# Standard rules for creating and building cpt files. These
+# Standard rules for creating and building cpdt files. These
 # build .o files in the build folder by first running them
 # through the 
 
 
-build/%.cpt: %.cpp Makefile $(THIS_MAKEFILE) $(ALL_DEPEND) $(APP_HEADERS)
+build/%.cpt: %.cpp Makefile $(MAKEFILE_LIST) $(ALL_DEPEND) $(APP_HEADERS)
 	mkdir -p build
 	$(HILAPP) $(APP_OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
 
