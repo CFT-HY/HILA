@@ -201,7 +201,7 @@ class field {
       /// Place boundary elements from neighbour
       void place_comm_elements(direction d, parity par, T * RESTRICT buffer, 
                                const lattice_struct::comm_node_struct & from_node){
-#ifdef USE_MPI
+// #ifdef USE_MPI
 #ifdef VECTORIZED
         if constexpr (is_vectorizable_type<T>::value) {
           // now vectorized layout, act accordingly
@@ -217,7 +217,7 @@ class field {
         // this one is only for CUDA
         payload.place_comm_elements(d, par, buffer, from_node, lattice);
 #endif
-#endif
+// #endif
       }
 
       /// Place boundary elements from local lattice (used in vectorized version)
@@ -231,7 +231,7 @@ class field {
       void gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
       void send_elements(T * buffer, std::vector<coordinate_vector> coord_list, int  root=0);
 
-#ifdef USE_MPI
+// #ifdef USE_MPI
 
       /// get the receive buffer pointer for the communication.    
       T * get_receive_buffer( direction d, parity par,
@@ -273,7 +273,7 @@ class field {
         }
 #endif
       } // end of get_receive_buffer
-#endif  // USE_MPI
+//#endif  // USE_MPI
 
   };
 
