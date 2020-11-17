@@ -7,10 +7,10 @@
 
 # Define compiler
 CC = nvcc
-LD = nvcc -gencode arch=compute_35,code=sm_35 -fmad=false
+LD = nvcc 
 
 # Define compilation flags
-CXXFLAGS = -dc -x cu -gencode arch=compute_35,code=sm_35 -fmad=false -DCUDA 
+CXXFLAGS = -dc -x cu -std c++14 -gencode arch=compute_30,code=sm_30 -DCUDA 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
 LDLIBS = -lfftw3 -lm 

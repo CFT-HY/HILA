@@ -6,11 +6,11 @@
 #
 
 # Define compiler
-CC = /usr/local/cuda-9.2/bin/nvcc
-LD = /usr/local/cuda-9.2/bin/nvcc -gencode arch=compute_35,code=sm_35 -fmad=false
+CC = nvcc
+LD = nvcc -std c++14
 
 # Define compilation flags
-CXXFLAGS = -dc -x cu -gencode arch=compute_35,code=sm_35 -fmad=false -std=c++11 -DCUDA 
+CXXFLAGS = -dc -x cu -gencode arch=compute_30,code=sm_30 -std c++14 -DCUDA 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
 LDLIBS = -lfftw3 -lm 
