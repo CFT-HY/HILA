@@ -5,17 +5,16 @@
 #
 #
 
-$(info Remember to: module load GCC/8.2.0-2.31.1 OpenMPI/3.1.3-GCC-8.2.0-2.31.1 CUDA/10.1.105)
+$(info For kale_cuda_noMPI, remember to "module load fgci-common/1.0 OpenMPI/3.1.4-gcccuda-2019b")
 
 # Define compiler
 CC = nvcc
 LD = nvcc 
 
-
 CUDAVER = -gencode arch=compute_37,code=sm_37 -gencode arch=compute_70,code=sm_70
 
 # Define compilation flags
-CXXFLAGS = -dc --x cu $(CUDAVER) -std c++14 $(MPI_INCLUDE_DIRS)
+CXXFLAGS = -O4 -dc -x cu $(CUDAVER) -std c++14
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
@@ -26,12 +25,12 @@ STD_INCLUDE_DIRS :=  $(addprefix -I, $(shell echo | mpic++ -xc++ --std=c++17 -Wp
 # Need to give include directory to mpi for hilapp - here 2 common ones
 # MPI_INCLUDE_DIRS :=  $(addprefix -I, $(shell mpic++ -showme:incdirs))
 
-MPI_INCLUDE_DIRS := -I/cvmfs/fgi.csc.fi/apps/el7/aalto/spack/software/openmpi/3.1.4/l567div/include
+#MPI_INCLUDE_DIRS := -I/cvmfs/fgi.csc.fi/apps/el7/aalto/spack/software/openmpi/3.1.4/l567div/include
 
-# MPI_LIBS := $(addprefix -L, $(shell mpic++ -showme:libdirs)) -lmpi
+#MPI_LIBS := $(addprefix -L, $(shell mpic++ -showme:libdirs)) -lmpi
 # MPI_LIBS := -L/appl/opt/OpenMPI/4.0.3-GCC-9.3.0/lib -lmpi
 
-LDLIBS = -lm -lmpi -lcuda -lcudart -lcufft -lstdc++ ${CUDAVER} # $(MPI_LIBS)
+LDLIBS = -lm -lcuda -lcudart -lcufft -lstdc++ ${CUDAVER}
 
 
 # extra cuda objects here
@@ -41,7 +40,6 @@ HILA_OBJECTS += build/hila_cuda.o
 
 # These variables must be defined here
 #
-HILAPP_OPTS = -target:CUDA -DCUDA -DUSE_MPI $(STD_INCLUDE_DIRS) $(MPI_INCLUDE_DIRS)
-HILA_OPTS = -DUSE_MPI -DCUDA 
-
+HILAPP_OPTS = -no-mpi -target:CUDA -DCUDA $(STD_INCLUDE_DIRS)
+HILA_OPTS = -DCUDA 
 
