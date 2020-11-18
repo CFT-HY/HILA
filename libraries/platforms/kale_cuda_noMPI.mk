@@ -18,7 +18,7 @@ CXXFLAGS = -O4 -dc -x cu $(CUDAVER) -std c++14
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
-STD_INCLUDE_DIRS :=  $(addprefix -I, $(shell echo | mpic++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+STD_INCLUDE_DIRS :=  $(addprefix -I, $(shell echo | mpic++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ /"))
 
 # STD_INCLUDE_DIRS := -I/cvmfs/fgi.csc.fi/apps/el7/aalto/spack/software/gcc/9.2.0/sepgfqb/lib/gcc/x86_64-pc-linux-gnu/9.2.0/../../../../include/c++/9.2.0
 
