@@ -4,7 +4,7 @@
 #include "../defs.h"
 #include "../field_storage.h"
 
-//#define CUDA_AWARE_MPI
+#define CUDA_AWARE_MPI
 
 
 /* CUDA implementations */

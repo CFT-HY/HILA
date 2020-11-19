@@ -46,8 +46,8 @@ HILA_OPTS = -I$(HILA_INCLUDE)
 LD_FLAGS = $(LDFLAGS) -lm $(MPI_LIBS)
 
 
-CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI -DNRUNS=100 -I../../../cub/  $(CXX_INCLUDE)
-LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(LD_FLAGS)
+CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -DCUDA -DUSE_MPI -DNRUNS=100 -I../../../cub/  $(CXX_INCLUDE)
+LD = nvcc -gencode arch=compute_70,code=sm_70 $(LD_FLAGS)
 
 
 

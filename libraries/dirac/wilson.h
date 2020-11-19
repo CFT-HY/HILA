@@ -9,7 +9,7 @@
 #include "hmc/gauge_field.h"
 
 template<int N, typename radix>
-field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[NDIM];
+field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[2*NDIM];
 
 
 
@@ -20,28 +20,33 @@ inline void Dirac_Wilson_hop(
   field<Wilson_vector<N, radix>> &v_out,
   parity par, int sign)
 {
-  field<half_Wilson_vector<N, radix>> (&vtemp)[NDIM] = wilson_dirac_temp_vector<N, radix>;
-  foralldir(dir){
+  field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
+  for(int dir=0; dir < 2*NDIM; dir++){
     vtemp[dir].copy_boundary_condition(v_in);
   }
 
   // Run neighbour fetches and multiplications
   foralldir(dir){
-    direction odir = opp_dir( (direction)dir );
     // First multiply the by conjugate before communicating
     onsites(opp_parity(par)){
       half_Wilson_vector<N, radix> h(v_in[X], dir, -sign);
-      vtemp[dir][X] = gauge[dir][X].conjugate()*h;
+      vtemp[-dir][X] = gauge[dir][X].conjugate()*h;
+    }
+    onsites(opp_parity(par)){
+      half_Wilson_vector<N, radix> h(v_in[X], dir, sign);
+      vtemp[dir][X] = h;
     }
 
-    vtemp[dir].start_get(odir);
+    vtemp[dir].start_get(dir, par);
+    vtemp[-dir].start_get(-dir, par);
   }
+
+  // Calculate the derivatives. This 
   foralldir(dir){
     onsites(par){
-      half_Wilson_vector<N, radix> h1(v_in[X+dir], dir, sign);
       v_out[X] = v_out[X] 
-               - (kappa*gauge[dir][X]*h1).expand(dir, sign)
-               - (kappa*vtemp[dir][X-dir]).expand(dir, -sign);
+               - (kappa*gauge[dir][X]*vtemp[dir][X+dir]).expand(dir, sign)
+               - (kappa*vtemp[dir][X+dir]).expand(dir, -sign);
     }
   }
 }
@@ -55,28 +60,31 @@ inline void Dirac_Wilson_hop_set(
   field<Wilson_vector<N, radix>> &v_out,
   parity par, int sign)
 {
-  field<half_Wilson_vector<N, radix>> (&vtemp)[NDIM] = wilson_dirac_temp_vector<N, radix>;
-  foralldir(dir){
+  field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
+  for(int dir=0; dir < 2*NDIM; dir++){
     vtemp[dir].copy_boundary_condition(v_in);
   }
 
   // Run neighbour fetches and multiplications
   foralldir(dir){
-    direction odir = opp_dir( (direction)dir );
     // First multiply the by conjugate before communicating
     onsites(opp_parity(par)){
       half_Wilson_vector<N, radix> h(v_in[X], dir, -sign);
-      vtemp[dir][X] = gauge[dir][X].conjugate()*h;
+      vtemp[-dir][X] = gauge[dir][X].conjugate()*h;
+    }
+    onsites(opp_parity(par)){
+      half_Wilson_vector<N, radix> h(v_in[X], dir, sign);
+      vtemp[dir][X] = h;
     }
 
-    vtemp[dir].start_get(odir);
+    vtemp[dir].start_get(dir, par);
+    vtemp[-dir].start_get(-dir, par);
   }
   //Set on first direction
   direction dir = direction(0);
   onsites(par){
-    half_Wilson_vector<N, radix> h1(v_in[X+dir], dir, sign);
-    v_out[X] = - (kappa*gauge[dir][X]*h1).expand(dir, sign)
-               - (kappa*vtemp[dir][X-dir]).expand(dir, -sign);
+    v_out[X] = - (kappa*gauge[dir][X]*vtemp[dir][X+dir]).expand(dir, sign)
+               - (kappa*vtemp[dir][X+dir]).expand(dir, -sign);
   }
   //Add for all other directions
   for(int d=1; d < NDIM; d++){
@@ -84,8 +92,8 @@ inline void Dirac_Wilson_hop_set(
     onsites(par){
       half_Wilson_vector<N, radix> h1(v_in[X+dir], dir, sign);
       v_out[X] = v_out[X] 
-               - (kappa*gauge[dir][X]*h1).expand(dir, sign)
-               - (kappa*vtemp[dir][X-dir]).expand(dir, -sign);
+               - (kappa*gauge[dir][X]*vtemp[dir][X+dir]).expand(dir, sign)
+               - (kappa*vtemp[dir][X+dir]).expand(dir, -sign);
     }
   }
 }
