@@ -52,7 +52,7 @@ HILA_OBJECTS = \
   build/map_node_layout_trivial.o \
   build/com_mpi.o \
   build/memalloc.o \
-  build/test_gathers.o
+  build/test_gathers.o 
 
   
 # Read in the appropriate platform bits and perhaps extra objects

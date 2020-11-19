@@ -1,6 +1,8 @@
 #ifndef CUDA_INCLUDE_H
 #define CUDA_INCLUDE_H
 
+// Do not include the FFTW headers. CUDA has it's own version.
+#define NO_FFTW
 
 #ifdef __CUDACC__
 
