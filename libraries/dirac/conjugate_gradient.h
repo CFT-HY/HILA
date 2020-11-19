@@ -53,7 +53,7 @@ class CG{
       double target_rr, source_norm=0;
 
       gettimeofday(&start, NULL);
-
+      
       onsites(M.par){
         source_norm += norm_squared(in[X]);
       }

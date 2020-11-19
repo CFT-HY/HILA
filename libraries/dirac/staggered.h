@@ -61,22 +61,21 @@ void dirac_staggered_hop(
   parity par, int sign)
 {
   field<vtype> (&vtemp)[NDIM] = staggered_dirac_temp<vtype>;
-  foralldir(dir)
+  foralldir(dir){
     vtemp[dir].copy_boundary_condition(v_in);
+    v_in.start_get(dir, par);
+  }
 
   // First multiply the by conjugate before communicating the vector
   foralldir(dir){
-    direction odir = opp_dir( (direction)dir );
     vtemp[dir][opp_parity(par)] = gauge[dir][X].conjugate()*v_in[X];
-    //vtemp[dir].start_get(odir);
+    vtemp[dir].start_get(-dir, par);
   }
 
   // Run neighbour fetches and multiplications
   foralldir(dir){
-    direction odir = opp_dir( (direction)dir );
     v_out[par] = v_out[X] + 0.5 * sign * staggered_eta[dir][X] *
       ( gauge[dir][X]*v_in[X+dir] -  vtemp[dir][X-dir]);
-
   }
 }
 
