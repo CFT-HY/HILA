@@ -419,7 +419,7 @@ class field {
   // In case p=ALL we could mark everything fetched, but we'll be conservative here 
   // and mark only this parity, because there might be other parities on the fly and corresponding
   // waits should be done,  This should never happen in automatically generated loops.
-  // In any case start_get, is_fetched, get_move_parity has intelligence to figure out the right thing to do
+  // In any case start_fetch, is_fetched, get_move_parity has intelligence to figure out the right thing to do
   //
 
   void mark_fetched( int dir, const parity p) const {
@@ -623,10 +623,10 @@ class field {
 
 
   // Communication routines
-  dir_mask_t start_get(direction d, parity p) const;
-  dir_mask_t start_get(direction d) const { return start_get(d, ALL);}
-  void wait_get(direction d, parity p) const;
-  void get(direction d, parity p) const;
+  dir_mask_t start_fetch(direction d, parity p) const;
+  dir_mask_t start_fetch(direction d) const { return start_fetch(d, ALL);}
+  void wait_fetch(direction d, parity p) const;
+  void fetch(direction d, parity p) const;
   void drop_comms_if_needed(direction d, parity p) const;
   void cancel_comm(direction d, parity p) const; 
 
@@ -812,11 +812,11 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
  * have access to mpi.h, it cannot process this branch.
  */
 
-/// start_get(): Communicate the field at parity par from direction
+/// start_fetch(): Communicate the field at parity par from direction
 /// d. Uses accessors to prevent dependency on the layout.
 /// return the direction mask bits where something is happening
 template<typename T>
-dir_mask_t field<T>::start_get(direction d, parity p) const {
+dir_mask_t field<T>::start_fetch(direction d, parity p) const {
 
   // get the mpi message tag right away, to ensure that we are always synchronized with the
   // mpi calls -- some nodes might not need comms, but the tags must be in sync
@@ -913,17 +913,17 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
 }
 
-///  wait_get(): Wait for communication at parity par from
+///  wait_fetch(): Wait for communication at parity par from
 ///  direction d completes the communication in the function.
 ///  If the communication has not started yet, also calls
-///  start_get()
+///  start_fetch()
 ///
 ///  NOTE: This will be called even if the field is marked const.
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
 ///  of view of the user, the value of the field does not change.
 template<typename T>
-void field<T>::wait_get(direction d, parity p) const {
+void field<T>::wait_fetch(direction d, parity p) const {
 
   lattice_struct::nn_comminfo_struct  & ci = lattice->nn_comminfo[d];
   lattice_struct::comm_node_struct & from_node = ci.from_node;
@@ -932,17 +932,17 @@ void field<T>::wait_get(direction d, parity p) const {
   // check if this is done - either fetched or no comm to be done in the 1st place
   if (is_fetched(d,p)) return;
 
-  // this is the branch if no comms -- shuffle was done in start_get
+  // this is the branch if no comms -- shuffle was done in start_fetch
   if (from_node.rank == mynode() && to_node.rank == mynode()) return;
 
   // if (!is_move_started(d,p)) {
-  //   output0 << "Wait move error - wait_get without corresponding start_get\n";
+  //   output0 << "Wait move error - wait_fetch without corresponding start_fetch\n";
   //   exit(-1);
   // }
 
   // Note: the move can be parity p OR ALL -- need to wait for it in any case
   // set par to be the "sum" over both parities
-  // There never should be ongoing ALL and other parity fetch -- start_get takes care
+  // There never should be ongoing ALL and other parity fetch -- start_fetch takes care
 
   // check here consistency, this should never happen
   if (p != ALL && is_move_started(d,p) && is_move_started(d,ALL)) {
@@ -1004,7 +1004,7 @@ void field<T>::wait_get(direction d, parity p) const {
 
 ///  drop_comms_if_needed():  if field is changed or deleted,
 ///  cancel ongoing communications.  This should happen very seldom,
-///  only if there are "by-hand" start_get operations and these are not needed
+///  only if there are "by-hand" start_fetch operations and these are not needed
 template<typename T>
 void field<T>::drop_comms_if_needed(direction d, parity p) const {
 
@@ -1034,7 +1034,7 @@ void field<T>::cancel_comm(direction d, parity p) const {
 ///* Trivial implementation when no MPI is used
 #include "plumbing/comm_vanilla.h"
 template<typename T>
-dir_mask_t field<T>::start_get(direction d, parity p) const {
+dir_mask_t field<T>::start_fetch(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)
   // We use here simpler tracking than in MPI, may lead to slight extra work
   if (!is_fetched(d,p)) {
@@ -1045,7 +1045,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 }
 
 template<typename T>
-void field<T>::wait_get(direction d, parity p) const {}
+void field<T>::wait_fetch(direction d, parity p) const {}
 
 template<typename T>
 void field<T>::drop_comms_if_needed(direction d, parity p) const {}
@@ -1054,9 +1054,9 @@ void field<T>::drop_comms_if_needed(direction d, parity p) const {}
 
 /// And a convenience combi function
 template<typename T>
-void field<T>::get(direction d, parity p) const {
-  start_get(d,p);
-  wait_get(d,p);
+void field<T>::fetch(direction d, parity p) const {
+  start_fetch(d,p);
+  wait_fetch(d,p);
 }
 
 

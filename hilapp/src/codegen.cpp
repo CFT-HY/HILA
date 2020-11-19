@@ -156,7 +156,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
         if (first) code << "dir_mask_t  _dir_mask_ = 0;\n";
         first = false;        
 
-        code << "_dir_mask_ |= " << l.new_name << ".start_get("
+        code << "_dir_mask_ |= " << l.new_name << ".start_fetch("
              << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
       }
     }
@@ -368,7 +368,7 @@ std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool 
   int i=0;
 
   // Replace loop references with temporary variables
-  // and add calls to mark_changed() and start_get()
+  // and add calls to mark_changed() and start_fetch()
   for ( field_info & fi : field_info_list ) {
     std::string type_name = fi.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());

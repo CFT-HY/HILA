@@ -399,7 +399,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
     for (field_info & l : field_info_list) {
       // If neighbour references exist, communicate them
       for (dir_ptr & d : l.dir_list) if(d.count > 0){
-        code << l.new_name << ".wait_get("
+        code << l.new_name << ".wait_fetch("
              << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
       }
     }

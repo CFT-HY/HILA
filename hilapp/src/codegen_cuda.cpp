@@ -69,7 +69,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   for (field_info & l : field_info_list) {
     // If neighbour references exist, communicate them
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
-      code << l.new_name << ".wait_get("
+      code << l.new_name << ".wait_fetch("
            << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
     }
   }
