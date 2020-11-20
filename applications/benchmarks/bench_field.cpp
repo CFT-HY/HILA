@@ -274,7 +274,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
         matrix1.mark_changed(ALL);
         for(int dir=0; dir<NDIRS; dir++){
-          matrix1.get((direction)dir,ALL);
+          matrix1.fetch((direction)dir,ALL);
         }
       }
       

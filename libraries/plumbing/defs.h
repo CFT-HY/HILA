@@ -117,12 +117,7 @@ inline void synchronize(){
 
 #else
 
-inline void synchronize(){
-  static int n=1;
-  synchronize_threads();
-  MPI_Barrier(MPI_COMM_WORLD); 
-  n++;
-}
+void synchronize();
 
 #endif
 

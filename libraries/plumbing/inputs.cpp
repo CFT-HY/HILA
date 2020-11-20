@@ -42,7 +42,7 @@ void input::import(const std::string & fname) {
     int dummy = 0;
     char ** argvp;
     initialize_machine(dummy, &argvp); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &myrank); 
+    MPI_Comm_rank(lattice->mpi_comm_lat, &myrank); 
     if (myrank == 0){
         read(fname);
         check_essentials(); 
@@ -63,7 +63,7 @@ void input::import(int & argc, char *** argvp, const std::string & fname){
     #ifdef USE_MPI
 
     initialize_machine(argc, argvp); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &myrank); 
+    MPI_Comm_rank(lattice->mpi_comm_lat, &myrank); 
     if (myrank == 0){
         read(fname);
         check_essentials(); 
@@ -173,7 +173,7 @@ void input::broadcast_values(){
     }
 
     //broadcast lengths to other processes
-    MPI_Bcast(&lengths, 3, MPI_INT, 0, MPI_COMM_WORLD); 
+    MPI_Bcast(&lengths, 3, MPI_INT, 0, lattice->mpi_comm_lat); 
 
     vals = new double[lengths[0]];
     names = new char[lengths[1] + lengths[0]];
@@ -191,8 +191,8 @@ void input::broadcast_values(){
         snprintf(names,lengths[1] + lengths[0], "%s", buffer.c_str()); 
     }
 
-    MPI_Bcast(vals, lengths[2], MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(names, lengths[1] + lengths[0], MPI_CHAR, 0, MPI_COMM_WORLD);
+    MPI_Bcast(vals, lengths[2], MPI_DOUBLE, 0, lattice->mpi_comm_lat);
+    MPI_Bcast(names, lengths[1] + lengths[0], MPI_CHAR, 0, lattice->mpi_comm_lat);
  
     //construct map in other nodes
     if (myrank != 0){
@@ -225,7 +225,7 @@ void input::broadcast_names(){
     }
 
     //broadcast lengths to other processes
-    MPI_Bcast(&lengths, 3, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&lengths, 3, MPI_INT, 0, lattice->mpi_comm_lat);
 
     vars = new char[lengths[1] + lengths[0]];
     strings = new char[lengths[2] + lengths[0]];
@@ -243,8 +243,8 @@ void input::broadcast_names(){
         snprintf(strings, lengths[2] + lengths[0], "%s", buffer1.c_str()); 
     }
 
-    MPI_Bcast(vars, lengths[0], MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(strings, lengths[1] + lengths[0], MPI_CHAR, 0, MPI_COMM_WORLD);
+    MPI_Bcast(vars, lengths[0], MPI_DOUBLE, 0, lattice->mpi_comm_lat);
+    MPI_Bcast(strings, lengths[1] + lengths[0], MPI_CHAR, 0, lattice->mpi_comm_lat);
 
     //construct name-string map in other nodes
     if (myrank != 0){

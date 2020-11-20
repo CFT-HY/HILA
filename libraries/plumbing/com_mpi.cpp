@@ -32,6 +32,10 @@ void initialize_machine(int &argc, char ***argv)
   }
 }
 
+// check if MPI is on
+bool is_comm_initialized(void) {
+  return mpi_initialized;
+}
 
 /* version of exit for multinode processes -- kill all nodes */
 void terminate(int status)
@@ -41,9 +45,11 @@ void terminate(int status)
     MPI_Comm_rank( lattices[0]->mpi_comm_lat, &node );
     output0 << "Node " << node << ", status = " << status << "\n";
 #ifdef TIMERS
-   time_stamp("Terminate");
+    time_stamp("Terminate");
 #endif
-   MPI_Abort( lattices[0]->mpi_comm_lat, 0);
+
+    mpi_initialized = false;
+    MPI_Abort( lattices[0]->mpi_comm_lat, 0);
   }
   exit(status);
 }
@@ -78,7 +84,11 @@ void finishrun()
 #endif
   }
 
-  exit(MPI_Finalize());
+  synchronize();
+  // turn off mpi -- this is needed to avoid mpi calls in destructors
+  mpi_initialized = false;
+
+  MPI_Finalize();
 }
 
 
@@ -95,7 +105,7 @@ char * machine_type(){
 int mynode()
 {
   int node;
-  MPI_Comm_rank( lattices[0]->mpi_comm_lat, &node );
+  MPI_Comm_rank( lattice->mpi_comm_lat, &node );
   return(node);
 }
 
@@ -103,9 +113,16 @@ int mynode()
 int numnodes()
 {
   int nodes;
-  MPI_Comm_size( lattices[0]->mpi_comm_lat, &nodes );
+  MPI_Comm_size( lattice->mpi_comm_lat, &nodes );
   return(nodes);
 }
+
+
+void synchronize(){
+  synchronize_threads();
+  MPI_Barrier(lattice->mpi_comm_lat);
+}
+
 
 
 #endif // USE_MPI
