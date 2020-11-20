@@ -188,6 +188,64 @@ void field_storage<T>::gather_elements_negated(T * RESTRICT buffer,
 }
 
 
+template <typename T>
+__global__ void gather_comm_elements_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < n ) {
+    using base_type = typename base_type_struct<T>::type;
+    constexpr int n_elements = sizeof(T) / sizeof(base_type);
+    T element = field.get(site_index[Index], field_alloc_size);
+    base_type * ep = (base_type *)&element;
+    base_type * fp = (base_type *)(buffer);
+    for (int e=0; e<n_elements; e++) {
+      fp[Index+n*e] = ep[e];
+    }
+  }
+}
+
+template <typename T>
+__global__ void gather_comm_elements_negated_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+{
+  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  if( Index < n ) {
+    using base_type = typename base_type_struct<T>::type;
+    constexpr int n_elements = sizeof(T) / sizeof(base_type);
+    T element = -field.get(site_index[Index], field_alloc_size);
+    base_type * ep = (base_type *)&element;
+    base_type * fp = (base_type *)(buffer);
+    for (int e=0; e<n_elements; e++) {
+      fp[Index+n*e] = ep[e];
+    }
+  }
+}
+
+// Index list is constant? Map each cpu pointer to a device pointer and copy just once
+struct cuda_comm_node_struct{
+  const unsigned *cpu_index;
+  unsigned *gpu_index;
+  int n;
+};
+
+inline unsigned * get_site_index(const lattice_struct::comm_node_struct &to_node, parity par, int &n){
+  static std::vector<struct cuda_comm_node_struct> comm_nodes;
+
+  const unsigned * cpu_index = to_node.get_sitelist(par,n);
+  for(struct cuda_comm_node_struct comm_node : comm_nodes){
+    if(cpu_index == comm_node.cpu_index && n == comm_node.n){
+      return comm_node.gpu_index;
+    }
+  }
+  struct cuda_comm_node_struct comm_node;
+  comm_node.cpu_index = cpu_index;
+  comm_node.n = n;
+  cudaMalloc( (void **)&(comm_node.gpu_index), n*sizeof(unsigned));
+  cudaMemcpy( comm_node.gpu_index, cpu_index, n*sizeof(unsigned), cudaMemcpyHostToDevice );
+  comm_nodes.push_back(comm_node);
+  return comm_node.gpu_index;
+}
+
+
 // MPI buffer on the device. Use the gather_elements and gather_elements_negated
 // kernels to fill the buffer.
 template<typename T>
@@ -196,15 +254,9 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
                                             parity par, 
                                             const lattice_struct * RESTRICT lattice,
                                             bool antiperiodic) const {
-
   int n;
-  const unsigned * index_list = to_node.get_sitelist(par,n);
-  unsigned *d_site_index;
-  T * d_buffer;
-  
-  // Copy the list of boundary site indexes to the device
-  cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
-  cudaMemcpy( d_site_index, index_list, n*sizeof(unsigned), cudaMemcpyHostToDevice );
+  unsigned *d_site_index = get_site_index(to_node, par, n);
+  static T * d_buffer;
 
   #ifdef CUDA_AWARE_MPI
     // The buffer is already on the device
@@ -217,9 +269,9 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
   // Call the kernel to build the list of elements
   int N_blocks = n/N_threads + 1;
   if(antiperiodic){
-    gather_elements_negated_kernel<<< N_blocks, N_threads >>>(*this, d_buffer, d_site_index, n, lattice->field_alloc_size() );
+    gather_comm_elements_negated_kernel<<< N_blocks, N_threads >>>(*this, d_buffer, d_site_index, n, lattice->field_alloc_size() );
   } else {
-    gather_elements_kernel<<< N_blocks, N_threads >>>(*this, d_buffer, d_site_index, n, lattice->field_alloc_size() );
+    gather_comm_elements_kernel<<< N_blocks, N_threads >>>(*this, d_buffer, d_site_index, n, lattice->field_alloc_size() );
   }
   
   #ifndef CUDA_AWARE_MPI
@@ -227,7 +279,6 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
   cudaMemcpy( (char *) buffer, d_buffer, n*sizeof(T), cudaMemcpyDeviceToHost );
   cudaFree(d_buffer);
   #endif
-  cudaFree(d_site_index);
 }
 
 
@@ -326,7 +377,15 @@ __global__ void place_comm_elements_kernel( field_storage<T> field, T * buffer, 
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
-    field.set( buffer[Index], offset+Index, field_alloc_size);
+    using base_type = typename base_type_struct<T>::type;
+    constexpr int n_elements = sizeof(T) / sizeof(base_type);
+    T element;
+    base_type * ep = (base_type *)&element;
+    base_type * fp = (base_type *)(buffer);
+    for (int e=0; e<n_elements; e++) {
+      ep[e] = fp[Index+n*e];
+    }
+    field.set( element, offset+Index, field_alloc_size);
   }
 }
 
