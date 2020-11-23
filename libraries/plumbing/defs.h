@@ -81,6 +81,8 @@ void initial_setup(int argc, char **argv);
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000
 
+#define DEFAULT_OUTPUT_NAME "output"
+
 #ifndef USE_MPI
 
 // Trivial, no MPI
@@ -90,6 +92,10 @@ inline void initialize_machine(int &argc, char ***argv) {}
 inline void finishrun() {
   exit(0);
 }
+inline void terminate(int status) {
+  exit(status);
+}
+
 
 // broadcast does nothing if not MPI
 template <typename T>
@@ -103,6 +109,7 @@ void broadcast_array(T * var, int n) {}
 int mynode();
 int numnodes();
 void finishrun();
+void terminate(int status);
 void initialize_machine(int &argc, char ***argv);
 
 #endif

@@ -34,6 +34,7 @@ void timer::report(const char * label, int print_header) {
     if (print_header > 0 || (first && print_header == -1)) {
       first = false;
       hila::output << "TIMER REPORT:         total(sec)          calls   usec/call  fraction\n";
+      hila::output << "---------------------------------------------------------------------\n";
     }
     // time used during the counter activity
     t_initial = gettime() - t_initial;

@@ -2,33 +2,85 @@
 #include "field.h"
 #include <cstring>
 
-// This file is copied from our old c program: TODO:convert?
 
-/***********************************
- * Cmdline arg operations
- * This routine returns char ptr to the argument, marked by
- * string flag.  e.g.
- *  p = process_cmdline("par=", argc, argv);
- * returns pointer to the string following string "par="
- * NO SPACES ARE ALLOWED!
- */
+// let us house the sublattices-struct here
 
-char * process_cmdline( char *flag, int & argc, char *argv[] )
-{
-  int i;
-  char *p;
+struct sublattices_struct {
+  unsigned number,mylattice;
+  bool sync;
+} sublattices;
 
-  for (i=1,p=nullptr; i<argc && p==nullptr; i++) {
-    p = strstr(argv[i],flag);
-    if (p != nullptr) {
-      p += strlen(flag);
-      argc-- ;
-      for ( ; i<argc; i++) argv[i] = argv[i+1];
-      return(p);
+// This file is largely copied from our old c program: TODO:convert?
+
+///////////////////////////////////////////////////////////////////////////////
+// very simple cmdline arg interpreter
+// p = cmdline.get_arg("par="); 
+// returns pointer to string following "par="
+// n = cmdline.get_int("par=");
+// returns (long) int containing the value following "par="
+//
+// NO SPACES are allowed between par and = and the value
+///////////////////////////////////////////////////////////////////////////////
+
+#include <limits.h>
+#include <errno.h>
+
+class cmdlineargs {
+ private:
+  int argc;
+  const char **argv;
+
+ public:
+  cmdlineargs(int argc0, const char **argv0) {
+    argc = argc0;
+    argv = (const char **)malloc(argc*sizeof(const char *));
+    for (int i=0; i<argc; i++) argv[i] = argv0[i];
+  }
+
+  ~cmdlineargs() {
+    free(argv);
+  }
+
+  const char *get_arg(const char *flag) {
+    int flaglen = strlen(flag);
+    assert(flaglen > 0);
+
+    for (int i=1; i<argc; i++) {
+      const char *p = argv[i];
+
+      // OK if p starts with flag, last char is = or next is 0
+      if (strncmp(p,flag,flaglen) == 0 && 
+          (*(p+flaglen-1) == '=' || *(p+flaglen) == 0)) {
+        p += flaglen;
+        argc-- ;
+        for ( ; i<argc; i++) argv[i] = argv[i+1];
+        return(p);
+      }
+    }
+    return(nullptr);
+  }
+
+  long get_int(const char *flag) {
+    const char *p = get_arg(flag);
+    char *end;
+    if (!p) return LONG_MAX;  // use LONG_MAX to denote no value
+
+    long val = strtol(p, &end, 10);
+    if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
+        || (errno != 0 && val == 0) || end == p || *end != 0) {
+      if (mynode() == 0) {
+        hila::output << "Expect a number (integer) after command line parameter '" << flag << "'\n";
+      }
+      exit(0);      
     }
   }
-  return(nullptr);
+
+  int items() {
+    return argc-1;   // don't count argv[0]
+  }
+
 }
+
 
 /* SETUP ROUTINES */
 
@@ -37,7 +89,10 @@ char * process_cmdline( char *flag, int & argc, char *argv[] )
 #endif
 
 
-void initial_setup(int & argc, char ***argvp)
+void setup_sublattices(cmdlineargs & cl);
+
+
+void initial_setup(int & argc, char **argv)
 {
 
 #if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_)) // || defined(__bg__)
@@ -52,35 +107,29 @@ void initial_setup(int & argc, char ***argvp)
 #endif
 
   // Default output file - we're happy with this unless sublattices
+  // or otherwise indicated
   // This channels outf to std::cout
   hila::output( std::cout.rdbuf() );
 
-  /* Machine initialization first -- open up MPI nodes, copying
-   * argcp, argv to all
-   *
-   * Also sets up sublattices (setup_sublattices) inside
-   */
+  // initialize MPI (if needed) so that mynode() etc. works
+  initialize_machine( argc, &argv );
 
-  initialize_machine( argc, argvp );
+  cmdlineargs commandline(argc, argv);
 
-#ifndef SUBLATTICES
-  /* Check output file name -- NULL: stdout
-   * NOTE: if using sublattices, setup_sublattices took care of this
-   * already
-   */
+  setup_sublattices(commandline);
 
-  if (mynode() == 0) {
-    if (char *name = process_cmdline("out=",argc,*argvp)) {
+  // check the output file if sublattices not used
+  if (sublattices.number == 1 && mynode() == 0) {
+    if (char *name = commandline.get_arg("output=")) {
       // Open file for append
       hila::output_redirect.open(name, ios::out | ios::app);
       hila::output( hila::output_file.rdbuf() );  // output now points to output_redirect
       if (hila::output.fail()) {
-        std::cout << "HiLa: cannot open output file " << name << '\n';        
+        std::cout << "hila: cannot open output file " << name << '\n';        
         exit(1);
       }
     }
   }
-#endif  // not SUBLATTICES
 
   /* set the timing up */
   timing.init();
@@ -110,10 +159,9 @@ void initialize_prn(long seed)
 
 #ifndef SITERAND
 
-  n = mynode();
-#ifdef SUBLATTICES
-  n += this_sublattice * numnodes();
-#endif
+  int n = mynode();
+  if (sublattices.number > 1)
+  n += sublattices.mylattice * numnodes();
 
   if (seed == 0) {
     if (mynode() == 0) {
@@ -131,9 +179,11 @@ void initialize_prn(long seed)
   seed_mersenne(seed);
   // warm it up
   for (i=0; i<90000; i++) dran();
-  taus_initialize();
 
-#else // Now SITERAND is defined
+  // taus_initialize();
+
+#else 
+  // Now SITERAND is defined
   // This is usually used only for occasional benchmarking, where identical output
   // independent of the node number is desired
 
@@ -153,10 +203,10 @@ void initialize_prn(long seed)
 }
 
 
-void deinit_rndgen (void)
-{
-    taus_deinit();
-}
+// void deinit_rndgen (void)
+// {
+//     taus_deinit();
+// }
 
 
 /******************************************************
@@ -201,26 +251,24 @@ FILE *open_parameter_file()
  * here
  */
 
-#ifdef SUBLATTICES
-
-void setup_sublattices(int & argc, char ** argv)
+void setup_sublattices(cmdlineargs & commandline)
 {
-  char *p;
 
-  sublattices.number = 0;
-  /* Open new subvolumes here */
-
-  // fprintf(outf,"Node %d, nargs %d, arg0 %s\n", this_node, *argcp, argv[0]);
-
-  char *p = process_cmdline("sublattices=",argc,argv);
-  if (p) sublattices.number = (int)strtol(p,NULL,10);
-
-  if (sublattices.number > 1) {
-    output0 << " Dividing nodes into " << sublattice.number << " sublattices\n";
+ // get sublattices cmdlinearg first
+  long lnum = commandline.get_int("sublattices=");
+  if (lnum <= 0) {
+    output0 << "sublattices=<number> command line argument value must be positive integer (or argument omitted)\n";
+    finishrun();
+  }
+  if (lnum == LONG_MAX) {
+    sublattices.number = 1;
   } else {
-    output0 << " NO SUBLATTICES.  Use sublattices=nn command line argument to change\n";
+    sublattices.number = lnum;
   }
 
+  if (sublattices.number == 1) return;
+
+  output0 << " Dividing nodes into " << sublattice.number << " sublattices\n";
 
   if (numnodes() % sublattices.number) {
     output0 << "** " << numnodes() << " nodes not evenly divisible into " 
@@ -228,9 +276,39 @@ void setup_sublattices(int & argc, char ** argv)
     finishrun();
   }
 
+#if defined(BLUEGENE_LAYOUT)
+  sublattices.mylattice = bg_layout_sublattices( sublattices.number );
+#else // generic
+  sublattices.mylattice = (mynode()*sublattices.number) / numnodes();
+  /* and divide system into sublattices */
+  split_into_sublattices( sublattices.mylattice );
+#endif
+
+  const char * p = commandline.get_arg("output=");
+  std::string fname;
+  if (p != nullptr) fname = p + sublattices.mylattice; 
+  else fname = DEFAULT_OUTPUT_NAME + sublattices.mylattice;
+
+  // now need to open output file
+
+  hila::output.flush();   // this should be cout at this stage
+    
+  // all nodes open the file -- perhaps not?  Leave only node 0
+  if (mynode() == 0) {
+    hila::output_redirect.open(fname, ios::out | ios::app);
+    hila::output( hila::output_redirect.rdbuf() );  // output now points to output_redirect
+    if (hila::output.fail()) {
+      std::cout << "Cannot open output file " << fname << '\n';        
+      exit(1);
+    }
+      
+    hila::output << " ---- SPLIT " << numnodes() << " nodes into " 
+                 << sublattices.number << " sublattices, this " << sublattices.mylattice << " ----\n";
+  }
+  
   /* Default sync is no */
   sublattices.sync = false;
-  if (process_cmdline("sync=yes",argc,argv) != nullptr) {
+  if (commandline.get_arg("sync=yes") != nullptr) {
     sublattices.sync = true;
     output0 << " Synchronising sublattice trajectories\n";
   } else {
@@ -238,44 +316,6 @@ void setup_sublattices(int & argc, char ** argv)
     output0 << "Not synchronising the sublattice trajectories\n"
             << "Use sync=yes command line argument to override\n";
   }
-
-  #if defined(BLUEGENE_LAYOUT)
-  sublattices.mylattice = bg_layout_sublattices( sublattices.number );
-  #else // generic
-  sublattices.mylattice = (mynode()*sublattices.number) / n;
-  /* and divide system into sublattices */
-  split_into_sublattices( sublattices.mylattice );
-  #endif
-
-  /* Set output file here (crazy, but needs to be done rapidly! 
-   */
-
-  p = process_cmdline("out=",argc,argv);
-    std::string fname;
-    if (p! = nullptr) fname = p + sublattices.mylattice; 
-    else fname = "output" + sublattices.mylattice;
-
-    hila::output.flush();   // this should be cout at this stage
-    
-    // all nodes open the file -- perhaps not?  Leave only node 0
-    if (mynode() == 0) {
-      hila::output_redirect.open(fname, ios::out | ios::app);
-      hila::output( hila::output_redirect.rdbuf() );  // output now points to output_redirect
-      if (hila::output.fail()) {
-        std::cout << "HiLa: cannot open output file " << fname << '\n';        
-        exit(1);
-      }
-      
-      hila::output << " ---- SPLIT " << numnodes() << " nodes into " 
-                   << sublattices.number << " sublattices, this " << sublattices.mylattice << " ----\n";
-      if (!sublattices.sync) {
-        hila::output << "      Not synchronizing sublattice trajectories\n";
-        hila::output << "      Use sync=yes command line argument to override\n";
-      } else {
-        hila::output << "      Synchronising sublattice trajectories\n";
-      }
-    }
-
   
 }
 
