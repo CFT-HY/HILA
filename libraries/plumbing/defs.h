@@ -21,7 +21,7 @@
 
 #include "plumbing/mersenne.h"
 #include "plumbing/memalloc.h"   // memory allocator
-
+#include "plumbing/timing.h"
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
 /// ADD HERE GUARD FOR THOSE WHICH DO not HAVE IT
@@ -59,7 +59,10 @@ namespace hila {
 // do this through else-branch in order to avoid if-statement problems
 #define output0 if (mynode() != 0) {} else hila::output
 
-
+// the above gives often warning when used with if stmt, close that with this hammer
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wdangling-else"
+#endif
 
 
 // Global functions: setup
@@ -153,7 +156,6 @@ struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> 
 
 template<typename T>
 using number_type = typename base_type_struct<T>::type;
-
 
 
 #endif
