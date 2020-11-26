@@ -6,7 +6,6 @@
 #include "plumbing/globals.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
-#include "plumbing/com_single.h"
 
 static bool initialized = false;
 

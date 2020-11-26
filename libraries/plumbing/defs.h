@@ -88,19 +88,6 @@ namespace hila {
 
 #ifndef USE_MPI
 
-// Trivial, no MPI
-#define mynode() 0
-#define numnodes() 1
-inline void initialize_machine(int &argc, char ***argv) {}
-inline void finishrun() {
-  exit(0);
-}
-inline void terminate(int status) {
-  exit(status);
-}
-
-inline void split_into_sublattices( int rank ) {}
-
 // broadcast does nothing if not MPI
 template <typename T>
 void broadcast(T & v) {}
@@ -108,8 +95,7 @@ void broadcast(T & v) {}
 template <typename T>
 void broadcast_array(T * var, int n) {}
 
-
-#else
+#endif
 
 int mynode();
 int numnodes();
@@ -117,23 +103,7 @@ void finishrun();
 void terminate(int status);
 void initialize_machine(int &argc, char ***argv);
 void split_into_sublattices( int rank );
-
-#endif
-
-
-// Synchronization
-#ifndef USE_MPI
-
-inline void synchronize(){
-  synchronize_threads();
-}
-
-#else
-
 void synchronize();
-
-#endif
-
 
 // Useful c++14 template missing in Puhti compilation of hilapp
 #if defined(PUHTI) && defined(HILAPP)
