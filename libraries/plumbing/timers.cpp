@@ -3,7 +3,8 @@
 #include "timers.h"
 #include "clock.h"
 
-  // initialize timer to this timepoint
+
+// initialize timer to this timepoint
 void timer::reset() {
   t_start = t_total = 0.0;
   t_initial = gettime();

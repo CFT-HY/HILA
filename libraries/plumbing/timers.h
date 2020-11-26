@@ -23,4 +23,7 @@ public:
   
 };
 
+void timestamp(const char *msg);
+
+
 #endif  /* timers */
