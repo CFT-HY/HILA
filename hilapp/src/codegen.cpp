@@ -150,7 +150,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
     // If neighbour references exist, communicate them
     for (dir_ptr & d : l.dir_list) if(d.count > 0){
       if (!generate_wait_loops) {
-        code << l.new_name << ".get("
+        code << l.new_name << ".fetch("
              << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
       } else {
         if (first) code << "dir_mask_t  _dir_mask_ = 0;\n";
