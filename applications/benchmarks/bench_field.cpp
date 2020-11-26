@@ -8,7 +8,7 @@
 #define SEED 100
 #endif
 
-
+int latsize[4] = {32,32,32,32};
 
 int main(int argc, char **argv){
     int n_runs=1;
@@ -18,8 +18,10 @@ int main(int argc, char **argv){
     double sum;
     float fsum;
 
-    // Runs lattice->setup 
-    bench_setup(argc, argv);
+    hila::initialize(argc, argv);
+
+    lattice->setup(latsize);
+
     seed_random(SEED);
 
 

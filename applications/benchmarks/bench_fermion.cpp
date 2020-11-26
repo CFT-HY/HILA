@@ -18,20 +18,12 @@ int main(int argc, char **argv){
     double sum;
     float fsum;
 
+    
+    hila::initialize(argc, argv);
 
-    // Runs lattice->setup 
-    #if NDIM==2
-    printf("Not running fermion benchmarks for NDIM = 1\n");
-    return 0;
-    #elif NDIM==2
-    lattice->setup( latsize[0], latsize[1], argc, argv );
-    #elif NDIM==3
-    lattice->setup( latsize[0], latsize[1], latsize[2], argc, argv );
-    #elif NDIM==4
-    lattice->setup( latsize[0], latsize[1], latsize[2], latsize[3], argc, argv );
-    #endif
+    lattice->setup(latsize);
+
     seed_random(SEED);
-
 
     // Define a gauge matrix
     field<SU<N,double>> U[NDIM];
