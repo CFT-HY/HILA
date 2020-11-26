@@ -64,7 +64,7 @@ static mpi_column_struct get_mpi_column(direction dir){
 // running the Fourier transform on the column and redistributing
 // the result
 // Input and result are passed by reference. They may be the same.
-// The must be complex and the underlying complex type is supplied
+// The field must be complex and the underlying complex type is supplied
 // by the complex_type template argument
 template<typename T, typename complex_type>
 inline void FFT_field_complex(field<T> & input, field<T> & result){
@@ -74,14 +74,15 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
   int elements = sizeof(T)/sizeof(complex_type);
 
-  // Make sture the result is allocated and mark it changed 
+  // Make store the result is allocated and mark it changed 
   result.check_alloc();
   result.mark_changed(ALL);
 
   // Run transform in all directions
   foralldir(dir){
     // Get the number of sites per column on this node and on all nodes
-    size_t local_sites = lattice->local_size(dir);
+    size_t local_volume = lattice->local_volume();
+    size_t sites_per_col = lattice->local_size(dir);
     size_t sites = lattice->size(dir);
 
     // Get the MPI column in this direction
@@ -89,9 +90,6 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     MPI_Comm column_communicator = mpi_column.column_communicator;
     std::vector<int> nodelist = mpi_column.nodelist;
     int my_column_rank = mpi_column.my_column_rank;
-
-    // Buffers for sending and receiving a column
-    std::vector<complex_type> column(elements*sites), send_buffer(elements*sites);
 
     // Variables needed for constructing the columns of sites
     std::vector<node_info> allnodes = lattice->nodelist();
@@ -110,68 +108,111 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     // Count columns on this rank
     int cols = 1;
     foralldir(d2) if(d2!=dir) cols *= lattice->local_size(d2);
+    int cpn = cols/nnodes;
+
+    // Buffers for sending and receiving a column
+    std::vector<std::vector<complex_type>> column(cols), send_buffer(cols);
 
     // Do transform in all columns
     int c=0;
-    int n;
-    std::vector<std::vector<unsigned>> sitelist(nnodes);
-    while( c < cols ) {
+    std::vector<std::vector<unsigned>> sitelist(cols);
+    for( c=0; c<cols; c++ ) {
+      column[c].resize(elements*sites);
+      send_buffer[c].resize(elements*sites_per_col);
 
       // Build a column for each node and send the data
-      for(n=0; n < nnodes && c+n < cols; n++ ){
-        int root = (c+n)%nnodes; // The node that does the calculation
-        int cc = c+n;
-        coordinate_vector thiscol=min;
+      int cc = c;
+      int l = c/nnodes; // The column index on that node
+      coordinate_vector thiscol=min;
 
-        foralldir(d2) if(d2!=dir) {
-          thiscol[d2] += cc%size[d2];
-          cc/=size[d2];
-        }
-
-        // Build a list of sites matching this column
-        sitelist[n].resize(local_sites);
-        for(int i=0; i<local_sites; i++ ){
-          thiscol[dir] = min[dir] + i;
-          sitelist[n][i] = lattice->site_index(thiscol);
-        }
-
-        // Collect the data to node n
-        char * sendbuf = (char*) send_buffer.data()+root*elements*local_sites;
-        read_pointer->fs->payload.gather_elements((T*)sendbuf, sitelist[n].data(), sitelist[n].size(), lattice);
-        MPI_Gather( sendbuf, local_sites*sizeof(T), MPI_BYTE, 
-                   column.data(), local_sites*sizeof(T), MPI_BYTE,
-                   root, column_communicator);
+      foralldir(d2) if(d2!=dir) {
+        thiscol[d2] += cc%size[d2];
+        cc/=size[d2];
       }
 
-      if( my_column_rank < n ){
+      // Build a list of sites matching this column
+      sitelist[c].resize(sites_per_col);
+      for(int i=0; i<sites_per_col; i++ ){
+        thiscol[dir] = min[dir] + i;
+        sitelist[c][i] = lattice->site_index(thiscol);
+      }
+    }
+
+    char * mpi_send_buffer = (char*) malloc(cpn*sites*sizeof(T));
+    char * mpi_recv_buffer = (char*) malloc(cpn*sites*sizeof(T));
+    for( int r=0; r<nnodes; r++ ){
+      for( int l=0; l<cpn; l++ ) {
+        int c = r*cpn+l;
+        // Collect the data to the root
+        char * sendbuf = mpi_send_buffer + (r*cpn + l)*sites_per_col*sizeof(T);
+        char * recvbuf = (char*) mpi_recv_buffer;
+        read_pointer->fs->payload.gather_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(),  lattice);
+        MPI_Gather( sendbuf, sites_per_col*sizeof(T), MPI_BYTE, 
+                    recvbuf, sites_per_col*sizeof(T), MPI_BYTE,
+                    r, column_communicator);
+
+        if( my_column_rank == r ){
+          for(int e=0; e<nnodes*sites_per_col*elements; e++){
+            column[c][e] = ((complex_type*) recvbuf)[e];
+          }
+        }
+      }
+    }
+
+    /*
+
+    for( int r=0; r<nnodes; r++ ){
+      for( int l=0; l<cpn; l++ ) {
+        int c = r*cpn+l;
+        // Collect the data to the root
+        char * sendbuf = mpi_send_buffer + (r*cpn + l)*sites_per_col*sizeof(T);
+        read_pointer->fs->payload.gather_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(), lattice);
+      
+      MPI_Gather( mpi_send_buffer + r*cpn*sites_per_col*sizeof(T),
+                  cpn*sites_per_col*sizeof(T), MPI_BYTE,
+                  mpi_recv_buffer, cpn*sites_per_col*sizeof(T), MPI_BYTE,
+                  r, column_communicator);
+
+        int c = l*nnodes + my_column_rank;
+        // Collect the data to the root
+        char * sendbuf = mpi_recv_buffer+ (r*cpn + l)*sites_per_col*sizeof(T);
+        for(int e=0; e<sites*elements; e++){
+          column[c][e] = ((complex_type*) sendbuf)[e];
+        }
+      }
+    }*/
+    
+    for( int r=0; r<nnodes; r++ ){
+      for( int l=0; l<cpn; l++ ) {
+        int c = r*cpn+l;
         // Run the FFT on my column
 
         for( int e=0; e<elements; e++ ){
           for(int t=0;t<sites; t++){
-            in[t][0] = column[e+elements*t].re;
-            in[t][1] = column[e+elements*t].im;
+            in[t][0] = column[c][e+elements*t].re;
+            in[t][1] = column[c][e+elements*t].im;
           }
 
           fftw_execute(plan);
 
           for(int t=0;t<sites; t++){
-            column[e+elements*t].re = out[t][0];
-            column[e+elements*t].im = out[t][1];
+            column[c][e+elements*t].re = out[t][0];
+            column[c][e+elements*t].im = out[t][1];
           }
         }
       }
+    }
+    for( int r=0; r<nnodes; r++ ){
+      for( int l=0; l<cpn; l++ ) {
+        int c = r*cpn+l;
+        char * sendbuf = (char*) send_buffer[c].data();
+        char * recvbuf = (char*) column[c].data();
 
-      for(n=0; n < nnodes && c+n < cols; n++ ){
-        int root = (c+n)%nnodes; // The node that does the calculation
-        char * sendbuf = (char*) send_buffer.data()+root*elements*local_sites;
-
-        MPI_Scatter( column.data(), local_sites*sizeof(T), MPI_BYTE, 
-                   sendbuf, local_sites*sizeof(T), MPI_BYTE,
-                   root, column_communicator);
-        result.fs->payload.place_elements((T*)sendbuf, sitelist[n].data(), sitelist[n].size(), lattice);
+        MPI_Scatter( recvbuf, sites_per_col*sizeof(T), MPI_BYTE, 
+                     sendbuf, sites_per_col*sizeof(T), MPI_BYTE,
+                     r, column_communicator);
+        result.fs->payload.place_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(), lattice);
       }
-
-      c+=n;
     }
 
     read_pointer = &result; // From now on we work in result
