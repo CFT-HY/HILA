@@ -110,7 +110,6 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
     // Buffers for sending and receiving a column
     std::vector<std::vector<complex_type>> column(cols), send_buffer(cols);
-    char * emptyrecvbuffer = (char*) malloc(128*elements*local_volume);
 
     // Do transform in all columns
     int c=0;
@@ -120,54 +119,61 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       send_buffer[c].resize(elements*sites_per_col);
 
       // Build a column for each node and send the data
-        int cc = c;
-        int root = c%nnodes; // The node that does the calculation
-        int l = c/nnodes; // The column index on that node
-        coordinate_vector thiscol=min;
+      int cc = c;
+      int root = c%nnodes; // The node that does the calculation
+      int l = c/nnodes; // The column index on that node
+      coordinate_vector thiscol=min;
 
-        foralldir(d2) if(d2!=dir) {
-          thiscol[d2] += cc%size[d2];
-          cc/=size[d2];
-        }
+      foralldir(d2) if(d2!=dir) {
+        thiscol[d2] += cc%size[d2];
+        cc/=size[d2];
+      }
 
-        // Build a list of sites matching this column
-        sitelist[c].resize(sites_per_col);
-        for(int i=0; i<sites_per_col; i++ ){
-          thiscol[dir] = min[dir] + i;
-          sitelist[c][i] = lattice->site_index(thiscol);
-        }
+      // Build a list of sites matching this column
+      sitelist[c].resize(sites_per_col);
+      for(int i=0; i<sites_per_col; i++ ){
+        thiscol[dir] = min[dir] + i;
+        sitelist[c][i] = lattice->site_index(thiscol);
+      }
 
-        // Collect the data to the root
-        char * sendbuf = (char*) send_buffer[c].data();
-        char * recvbuf = (char*) column[c].data();
-        read_pointer->fs->payload.gather_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(), lattice);
-        MPI_Gather( sendbuf, sites_per_col*sizeof(T), MPI_BYTE, 
-                   recvbuf, sites_per_col*sizeof(T), MPI_BYTE,
-                   root, column_communicator);
-       
-        if( my_column_rank == root ){
-            // Run the FFT on my column
+      // Collect the data to the root
+      char * sendbuf = (char*) send_buffer[c].data();
+      char * recvbuf = (char*) column[c].data();
+      read_pointer->fs->payload.gather_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(), lattice);
+      MPI_Gather( sendbuf, sites_per_col*sizeof(T), MPI_BYTE, 
+                  recvbuf, sites_per_col*sizeof(T), MPI_BYTE,
+                  root, column_communicator);
+    }
+    for( c=0; c<cols; c++ ) {
+      int root = c%nnodes; // The node that does the calculation
+      if( my_column_rank == root ){
+        // Run the FFT on my column
 
-          for( int e=0; e<elements; e++ ){
-            for(int t=0;t<sites; t++){
-              in[t][0] = column[c][e+elements*t].re;
-              in[t][1] = column[c][e+elements*t].im;
-            }
+        for( int e=0; e<elements; e++ ){
+          for(int t=0;t<sites; t++){
+            in[t][0] = column[c][e+elements*t].re;
+            in[t][1] = column[c][e+elements*t].im;
+          }
 
-            fftw_execute(plan);
+          fftw_execute(plan);
 
-            for(int t=0;t<sites; t++){
-              column[c][e+elements*t].re = out[t][0];
-              column[c][e+elements*t].im = out[t][1];
-            }
+          for(int t=0;t<sites; t++){
+            column[c][e+elements*t].re = out[t][0];
+            column[c][e+elements*t].im = out[t][1];
           }
         }
+      }
+    }
+    for( c=0; c<cols; c++ ) {
+      int root = c%nnodes; // The node that does the calculation
+      int l = c/nnodes; // The column index on that node
+      char * sendbuf = (char*) send_buffer[c].data();
+      char * recvbuf = (char*) column[c].data();
 
-        MPI_Scatter( recvbuf, sites_per_col*sizeof(T), MPI_BYTE, 
+      MPI_Scatter( recvbuf, sites_per_col*sizeof(T), MPI_BYTE, 
                    sendbuf, sites_per_col*sizeof(T), MPI_BYTE,
                    root, column_communicator);
-        result.fs->payload.place_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(), lattice);
-
+      result.fs->payload.place_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(), lattice);
     }
 
     read_pointer = &result; // From now on we work in result
