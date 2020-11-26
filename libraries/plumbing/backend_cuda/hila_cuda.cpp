@@ -85,7 +85,7 @@ void initialize_cuda( int rank ){
   cudaGetDeviceCount(&n_devices);
   /* This assumes that each node has the same number of mpi ranks and GPUs */
   my_device = rank%n_devices;
-  printf("Rank %d choosing device %d out of %d\n", rank, my_device, n_devices);
+  printf("Cuda: rank %d choosing device %d out of %d\n", rank, my_device, n_devices);
   cudaSetDevice(my_device);
 }
 
