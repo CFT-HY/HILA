@@ -35,16 +35,20 @@ HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
 HILAPP_DIR := $(dir $(HILAPP))
 
 HILA_OBJECTS = \
+	build/initialize.o \
   build/inputs.o \
   build/mersenne_inline.o \
   build/lattice.o \
   build/setup_layout_vector.o \
   build/map_node_layout_trivial.o \
-  build/com_mpi.o \
   build/memalloc.o \
-  build/test_gathers.o 
+	build/timing.o \
+  build/test_gathers.o \
+	build/com_mpi.o \
+	build/com_single.o
 
-  
+# com_mpi / com_single could be moved to platforms, but they're protected by USE_MPI guards
+
 # Read in the appropriate platform bits and perhaps extra objects
 include $(PLATFORM_DIR)/$(PLATFORM).mk
 
@@ -52,6 +56,7 @@ include $(PLATFORM_DIR)/$(PLATFORM).mk
 LASTMAKE := build/lastmake.${MAKECMDGOALS}.${PLATFORM}
 
 $(LASTMAKE): $(MAKEFILE_LIST)
+	-mkdir -p build
 	-rm -f build/lastmake.*
 	make clean
 	touch ${LASTMAKE}
@@ -97,7 +102,7 @@ endif   # close the "clean" bracket
 .PHONY: clean cleanall
 
 clean:
-	rm -f build/*.o build/*.cpt build/lastmake*
+	-rm -f build/*.o build/*.cpt build/lastmake*
 
 cleanall:
-	rm -f build/*
+	-rm -f build/*

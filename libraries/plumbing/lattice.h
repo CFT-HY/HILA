@@ -15,6 +15,7 @@
 #include "plumbing/defs.h"
 #include "plumbing/coordinates.h"
 #include "plumbing/inputs.h"
+#include "plumbing/timing.h"
 
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
@@ -200,21 +201,20 @@ public:
   backend_lattice_struct *backend_lattice;
 #endif
 
-  void setup(int siz[NDIM], int &argc, char **argv);
+  void setup(const int siz[NDIM]);
   void setup(input & inputs);
   void setup_layout();
   void setup_nodes();
   
   #if NDIM == 4
-  void setup(int nx, int ny, int nz, int nt, int &argc, char **argv);
+  void setup(int nx, int ny, int nz, int nt);
   #elif NDIM == 3  
-  void setup(int nx, int ny, int nz, int &argc, char **argv);
+  void setup(int nx, int ny, int nz);
   #elif NDIM == 2
-  void setup(int nx, int ny, int &argc, char **argv);
+  void setup(int nx, int ny);
   #elif NDIM == 1
-  void setup(int nx, int &argc, char **argv); 
+  void setup(int nx); 
   #endif
-
 
   void teardown();
 
@@ -349,6 +349,14 @@ extern std::vector<lattice_struct*> lattices;
 // and the MPI tag generator
 int get_next_msg_tag();
 
+// let us house the sublattices-struct here
+
+struct sublattices_struct {
+  unsigned number,mylattice;
+  bool sync;
+};
+
+extern sublattices_struct sublattices;
 
 
 

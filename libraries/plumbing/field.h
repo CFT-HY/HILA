@@ -875,9 +875,12 @@ dir_mask_t field<T>::start_fetch(direction d, parity p) const {
   T * receive_buffer;
   T * send_buffer;
 
+
+
   if (from_node.rank != mynode()) {
 
     // HANDLE RECEIVES: get node which will send here
+    post_receive_timer.start();
 
     // buffer can be separate or in field buffer
     receive_buffer = fs->get_receive_buffer(d,par,from_node);
@@ -887,10 +890,14 @@ dir_mask_t field<T>::start_fetch(direction d, parity p) const {
     // c++ version does not return errors??
     MPI_Irecv( receive_buffer, sites*size, MPI_BYTE, from_node.rank,
 	             tag, lattice->mpi_comm_lat, &fs->receive_request[par_i][d] );
+    
+    post_receive_timer.end();
   }
 
   if (to_node.rank != mynode()) {
     // HANDLE SENDS: Copy field elements on the boundary to a send buffer and send
+    start_send_timer.start();
+
     unsigned sites = to_node.n_sites(par);
 
     if(fs->send_buffer[d] == nullptr)
@@ -901,6 +908,7 @@ dir_mask_t field<T>::start_fetch(direction d, parity p) const {
  
     MPI_Isend( send_buffer, sites*size, MPI_BYTE, to_node.rank, 
                tag, lattice->mpi_comm_lat, &fs->send_request[par_i][d]);
+    start_send_timer.end();
   }
 
   // and do the boundary shuffle here, after MPI has started
@@ -977,8 +985,12 @@ void field<T>::wait_fetch(direction d, parity p) const {
     int par_i = (int)par - 1;
 
     if (from_node.rank != mynode()) {
+      wait_receive_timer.start();
+
       MPI_Status status;
       MPI_Wait( &fs->receive_request[par_i][d], &status);
+
+      wait_receive_timer.end();
 
 #ifndef VANILLA
       fs->place_comm_elements(d, par, fs->get_receive_buffer(d,par,from_node), from_node);
@@ -987,8 +999,10 @@ void field<T>::wait_fetch(direction d, parity p) const {
 
     // then wait for the sends
     if (to_node.rank != mynode()) {
+      wait_send_timer.start();
       MPI_Status status;
       MPI_Wait( &fs->send_request[par_i][d], &status );
+      wait_send_timer.end();
     }
 
     // Mark the parity fetched from direction dir
@@ -1024,10 +1038,14 @@ void field<T>::drop_comms(direction d, parity p) const {
 template<typename T>
 void field<T>::cancel_comm(direction d, parity p) const {
   if (lattice->nn_comminfo[d].from_node.rank != mynode()) {
+    cancel_receive_timer.start();
     MPI_Cancel( &fs->receive_request[(int)p-1][d] );
+    cancel_receive_timer.end();
   }
   if (lattice->nn_comminfo[d].to_node.rank != mynode()) {
+    cancel_send_timer.start();
     MPI_Cancel( &fs->send_request[(int)p-1][d] );
+    cancel_send_timer.end();
   }
 }
 

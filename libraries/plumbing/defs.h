@@ -50,9 +50,11 @@ using real_t = double;
 
 namespace hila {
   // this is our default output file stream
-  extern std::ostream &output;
+  extern std::ostream output;
   // this is just a hook to store output file, if it is in use
   extern std::ofstream output_file;
+
+  void initialize(int argc, char **argv);
 };
 
 // this is pretty hacky but easy.  Probably could do without #define too
@@ -65,8 +67,6 @@ namespace hila {
 #endif
 
 
-// Global functions: setup
-void initial_setup(int argc, char **argv);
 
 // Allow other than periodic boundary conditions
 #define SPECIAL_BOUNDARY_CONDITIONS
@@ -99,6 +99,7 @@ inline void terminate(int status) {
   exit(status);
 }
 
+inline void split_into_sublattices( int rank ) {}
 
 // broadcast does nothing if not MPI
 template <typename T>
@@ -107,6 +108,7 @@ void broadcast(T & v) {}
 template <typename T>
 void broadcast_array(T * var, int n) {}
 
+
 #else
 
 int mynode();
@@ -114,6 +116,7 @@ int numnodes();
 void finishrun();
 void terminate(int status);
 void initialize_machine(int &argc, char ***argv);
+void split_into_sublattices( int rank );
 
 #endif
 
@@ -130,8 +133,6 @@ inline void synchronize(){
 void synchronize();
 
 #endif
-
-
 
 
 // Useful c++14 template missing in Puhti compilation of hilapp

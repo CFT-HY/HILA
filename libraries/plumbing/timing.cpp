@@ -13,7 +13,27 @@
 /// Timer routines - for high-resolution event timing
 /////////////////////////////////////////////////////////////////
 
+// store all timers in use
+std::vector<timer *> timer_list = {};
+
+
 // initialize timer to this timepoint
+void timer::init(const char * tag) {
+  label = tag;
+  timer_list.push_back(this);
+  reset();
+}
+
+// remove the timer also from the list
+void timer::remove() {
+  for (auto it = timer_list.begin(); it != timer_list.end(); ++it) {
+    if (*it == this) {
+      timer_list.erase(it);
+      return;
+    }
+  }
+}
+
 void timer::reset() {
   t_start = t_total = 0.0;
   t_initial = gettime();
@@ -36,25 +56,34 @@ double timer::end() {
   } else return 0.0;
 }
 
-void timer::report(const char * label, int print_header) {
+void timer::report() {
   if (mynode() == 0) {
-    static bool first = true;
-    char line[200];
+    char line[202];
 
-    if (print_header > 0 || (first && print_header == -1)) {
-      first = false;
-      hila::output << "TIMER REPORT:         total(sec)          calls   usec/call  fraction\n";
-      hila::output << "---------------------------------------------------------------------\n";
-    }
     // time used during the counter activity
-    t_initial = gettime() - t_initial;
+    double ttime = gettime() - t_initial;
     if (count > 0) {
-      std::snprintf(line,200," %16s: %14.3f %14llu %11.3f %8.4f\n",
-                    label, t_total, count, 1e6 * t_total/count, t_total/t_initial );
+      std::snprintf(line,200,"%-20s: %14.3f %14llu %11.3f %8.4f\n",
+                    label.c_str(), t_total, count, 1e6 * t_total/count, t_total/ttime );
     } else {
-      std::snprintf(line,200," %16s: no timed calls made\n",label);
+      std::snprintf(line,200,"%-20s: no timed calls made\n",label.c_str());
     }
     hila::output << line;      
+  }
+}
+
+void report_timers() {
+  if (mynode() == 0) {
+    if (timer_list.size() > 0) {
+      hila::output << "TIMER REPORT:             total(sec)          calls   usec/call  fraction\n";
+      hila::output << "-------------------------------------------------------------------------\n";
+
+      for (auto tp : timer_list) tp->report();
+
+      hila::output << "-------------------------------------------------------------------------\n";
+    } else {
+      hila::output << "No timers defined\n";
+    }
   }
 }
 
@@ -64,18 +93,22 @@ void timer::report(const char * label, int print_header) {
 /// (alternative: use gettimeofday()  or MPI_Wtime())
 /// gettime returns the time in secs since program start
 
-static double start_time = 0.0;
+static double start_time = -1.0;
 
 double gettime() {
   struct timespec tp;
+
+  if (start_time == -1.0) inittime();
 
   clock_gettime(CLOCK_MONOTONIC, &tp);
   return( ((double)tp.tv_sec - start_time) + 1.0e-9*(double)tp.tv_nsec );
 }
 
 void inittime() {
-  start_time = 0.0;
-  start_time = gettime();
+  if (start_time == -1.0) {
+    start_time = 0.0;
+    start_time = gettime();
+  }
 }
  
 //////////////////////////////////////////////////////////////////

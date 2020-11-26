@@ -12,20 +12,27 @@ class timer {
 private:
   double t_start, t_total, t_initial;
   unsigned long long count;   // need more than 32 bits
+  std::string label;
 
 public:  
   // initialize timer to this timepoint
-  timer() { 
-    reset();
+  timer() {}
+  timer(const char * tag) {
+    init(tag);
   }
-  ~timer() {}
+
+  ~timer() { remove(); }
   
+  void init(const char * tag);
+  void remove();
   void reset();
   double start();
   double end();
-  void report(const char * label, int print_header = -1);
+  void report();
   
 };
+
+void report_timers();
 
 //////////////////////////////////////////////////////////////////
 // Prototypes

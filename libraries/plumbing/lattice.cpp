@@ -1,6 +1,4 @@
 
-
-
 #include "plumbing/globals.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
@@ -10,15 +8,15 @@
 // if(disable_avx[X]==0){};
 field<double> disable_avx;
 
-///***********************************************************
-/// setup() lays out the lattice infrastruct, with neighbour arrays etc.
-
-/// A list of all defined lattices
+// Define the global lattice ptr, and set it to point to "my_lattice"
+lattice_struct my_lattice;
+lattice_struct * lattice = & my_lattice;
+/// A list of all defined lattices (for the future expansion)
 std::vector<lattice_struct*> lattices;
 
 
-/// General lattice setup, including MPI setup
-void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
+/// General lattice setup
+void lattice_struct::setup(const int siz[NDIM]) {
   // Add this lattice to the list 
   lattices.push_back( this );
 
@@ -27,21 +25,6 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
     l_size[i] = siz[i];
     l_volume *= siz[i];
   }
-
-#ifdef USE_MPI
-  /* Initialize MPI */
-  initialize_machine(argc, &argv);
-
-  /* default comm is the world */
-  mpi_comm_lat = MPI_COMM_WORLD;
-
-  MPI_Comm_rank( lattices[0]->mpi_comm_lat, &this_node.rank );
-  MPI_Comm_size( lattices[0]->mpi_comm_lat, &nodes.number );
-
-#else 
-  this_node.rank = 0;
-  nodes.number = 1;
-#endif
 
   setup_layout();
 
@@ -72,24 +55,24 @@ void lattice_struct::setup(int siz[NDIM], int &argc, char **argv) {
 
 
 #if NDIM==4
-void lattice_struct::setup(int nx, int ny, int nz, int nt, int &argc, char **argv) {
+void lattice_struct::setup(int nx, int ny, int nz, int nt) {
   int s[NDIM] = {nx, ny, nz, nt};
-  setup(s, argc, argv);
+  setup(s);
 }
 #elif NDIM==3
-void lattice_struct::setup(int nx, int ny, int nz, int &argc, char **argv) {
+void lattice_struct::setup(int nx, int ny, int nz) {
   int s[NDIM] = {nx, ny, nz};
-  setup(s, argc, argv);
+  setup(s);
 }
 #elif NDIM==2
-void lattice_struct::setup(int nx, int ny, int &argc, char **argv) {
+void lattice_struct::setup(int nx, int ny) {
   int s[NDIM] = {nx, ny};
-  setup(s, argc, argv);
+  setup(s);
 }
 #elif NDIM==1
-void lattice_struct::setup(int nx, int &argc, char **argv) {
+void lattice_struct::setup(int nx) {
   int s[NDIM] = {nx};
-  setup(s, argc, argv);
+  setup(s);
 }
 #endif
 
