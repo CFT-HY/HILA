@@ -26,106 +26,7 @@ extern timer start_send_timer,
 /// Implementations of communication routines.
 ///
 
-/* Integer reductions */
-template <>
-inline void lattice_struct::reduce_node_sum(int * value, int N, bool distribute){
-  int work[N];
-  reduction_timer.start();
-  if(distribute) {
-    MPI_Allreduce( value, work, N, MPI_INT, MPI_SUM, lattice->mpi_comm_lat );
-    for(int i=0; i<N; i++)
-      value[i] = work[i];
-  } else {
-    MPI_Reduce( value, work, N, MPI_INT, MPI_SUM, 0 , lattice->mpi_comm_lat );
-    if (mynode() == 0) for(int i=0; i<N; i++)
-      value[i] = work[i];
-
-  }
-  reduction_timer.end();
-}
-
-template <>
-inline void lattice_struct::reduce_node_product(int * value, int N, bool distribute){
-  int work[N];
-  reduction_timer.start();
-  if(distribute) {
-    MPI_Allreduce( value, work, N, MPI_INT, MPI_PROD, lattice->mpi_comm_lat );
-    for(int i=0; i<N; i++)
-      value[i] = work[i];
-  } else {
-    MPI_Reduce( value, work, N, MPI_INT, MPI_PROD, 0 , lattice->mpi_comm_lat );
-    if (mynode() == 0) for(int i=0; i<N; i++)
-      value[i] = work[i];
-  }
-  reduction_timer.end();
-}
-
-/* Float reductions */
-template <>
-inline void lattice_struct::reduce_node_sum(float * value, int N, bool distribute){
-  float work[N];
-  reduction_timer.start();
-  if(distribute) {
-    MPI_Allreduce( value, work, N, MPI_FLOAT, MPI_SUM, lattice->mpi_comm_lat );
-    for(int i=0; i<N; i++)
-      value[i] = work[i];
-  } else {
-    MPI_Reduce( value, work, N, MPI_FLOAT, MPI_SUM, 0 , lattice->mpi_comm_lat );
-    if (mynode() == 0) for(int i=0; i<N; i++)
-      value[i] = work[i];
-  }
-  reduction_timer.end();
-}
-
-template <>
-inline void lattice_struct::reduce_node_product(float * value, int N, bool distribute){
-  float work[N];
-  reduction_timer.start();
-  if(distribute) {
-    MPI_Allreduce( value, work, N, MPI_FLOAT, MPI_PROD, lattice->mpi_comm_lat );
-    for(int i=0; i<N; i++)
-      value[i] = work[i];
-  } else {
-    MPI_Reduce( value, work, N, MPI_FLOAT, MPI_PROD, 0 , lattice->mpi_comm_lat );
-    if (mynode() == 0) for(int i=0; i<N; i++)
-      value[i] = work[i];
-  }
-  reduction_timer.end();
-}
-
-
-/* Double precision reductions */
-template <>
-inline void lattice_struct::reduce_node_sum(double * value, int N, bool distribute){
-  double work[N];
-  reduction_timer.start();
-  if(distribute) {
-    MPI_Allreduce( value, work, N, MPI_DOUBLE, MPI_SUM, lattice->mpi_comm_lat );
-    for(int i=0; i<N; i++)
-      value[i] = work[i];
-  } else {
-    MPI_Reduce( value, work, N, MPI_DOUBLE, MPI_SUM, 0 , lattice->mpi_comm_lat );
-    if (mynode() == 0) for(int i=0; i<N; i++)
-      value[i] = work[i];
-  }
-  reduction_timer.end();
-}
-
-template <>
-inline void lattice_struct::reduce_node_product(double * value, int N, bool distribute){
-  double work[N];
-  reduction_timer.start();
-  if(distribute) {
-    MPI_Allreduce( value, work, N, MPI_DOUBLE, MPI_PROD, lattice->mpi_comm_lat );
-    for(int i=0; i<N; i++)
-      value[i] = work[i];
-  } else {
-    MPI_Reduce( value, work, N, MPI_DOUBLE, MPI_PROD, 0 , lattice->mpi_comm_lat );
-    if (mynode() == 0) for(int i=0; i<N; i++)
-      value[i] = work[i];
-  }
-  reduction_timer.end();
-}
+// broadcast templates
 
 template <typename T>
 void broadcast(T & var) {
@@ -145,6 +46,74 @@ void broadcast_array(T * var, int n) {
   MPI_Bcast(var, sizeof(T)*n, MPI_BYTE, 0, lattice->mpi_comm_lat);
   broadcast_timer.end();
 }
+
+// Reduction templates
+// TODO: implement using custom MPI Ops!  Then no ambiguity
+
+template <typename T>
+void lattice_struct::reduce_node_sum(T * value, int N, bool distribute) {
+  T work[N];
+  MPI_Datatype dtype;
+
+  if constexpr (std::is_same<number_type<T>,int>::value) {
+    dtype = MPI_INT;
+  } else if constexpr (std::is_same<number_type<T>,float>::value) {
+    dtype = MPI_FLOAT;
+  } else if constexpr (std::is_same<number_type<T>,double>::value) {
+    dtype = MPI_DOUBLE;
+  } else {
+    static_assert(sizeof(T)<0 && "Unknown number_type in reduce_node_sum");
+  }
+
+  reduction_timer.start();
+  if(distribute) {
+    MPI_Allreduce( (void *)value, (void *) work, N*sizeof(T)/sizeof(number_type<T>), 
+                   dtype, MPI_SUM, lattice->mpi_comm_lat );
+    for(int i=0; i<N; i++)
+      value[i] = work[i];
+  } else {
+    MPI_Reduce( (void *)value, (void *)work, N*sizeof(T)/sizeof(number_type<T>), dtype,
+                MPI_SUM, 0 , lattice->mpi_comm_lat );
+    if (mynode() == 0) for(int i=0; i<N; i++)
+      value[i] = work[i];
+
+  }
+  reduction_timer.end();
+}
+
+// Product reduction template - so far only for int, float, dbl
+
+template <typename T>
+void lattice_struct::reduce_node_product(T * value, int N, bool distribute) {
+  T work[N];
+  MPI_Datatype dtype;
+
+  if constexpr (std::is_same<T,int>::value) {
+    dtype = MPI_INT;
+  } else if constexpr (std::is_same<T,float>::value) {
+    dtype = MPI_FLOAT;
+  } else if constexpr (std::is_same<T,double>::value) {
+    dtype = MPI_DOUBLE;
+  } else {
+    static_assert(sizeof(T)<0 && "Unknown number_type in reduce_node_product");
+  }
+
+  reduction_timer.start();
+  if(distribute) {
+    MPI_Allreduce( (void *)value, (void *) work, N, dtype, MPI_PROD, lattice->mpi_comm_lat );
+    for(int i=0; i<N; i++)
+      value[i] = work[i];
+  } else {
+    MPI_Reduce( (void *)value, (void *)work, N, dtype, MPI_PROD, 0 , lattice->mpi_comm_lat );
+    if (mynode() == 0) for(int i=0; i<N; i++)
+      value[i] = work[i];
+
+  }
+  reduction_timer.end();
+}
+
+
+
 
 #endif //USE_MPI
 

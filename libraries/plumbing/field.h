@@ -329,9 +329,8 @@ class field {
   void allocate() {
     assert(fs == nullptr);
     if (lattice == nullptr) {
-      // TODO: write to some named stream
-      std::cout << "Can not allocate field variables before lattice.setup()\n";
-      exit(1);  // TODO - more ordered exit?
+      output0 << "Can not allocate field variables before lattice.setup()\n";
+      terminate(0); 
     }
     fs = new field_struct;
     fs->lattice = lattice;
@@ -1052,7 +1051,7 @@ void field<T>::cancel_comm(direction d, parity p) const {
 #else  // No MPI now
 
 ///* Trivial implementation when no MPI is used
-#include "plumbing/comm_vanilla.h"
+
 template<typename T>
 dir_mask_t field<T>::start_fetch(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)

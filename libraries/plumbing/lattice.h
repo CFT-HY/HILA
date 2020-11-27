@@ -325,18 +325,27 @@ public:
 
   /* MPI functions and variables. Define here in lattice? */
   void initialize_wait_arrays();
+
   #ifdef USE_MPI
   MPI_Comm mpi_comm_lat;
-  #endif
-
-  template <typename T>
-  void reduce_node_sum(T * value, int N, bool distribute);
-
-  template <typename T>
-  void reduce_node_product(T * value, int N, bool distribute);
 
   // Guarantee 64 bits for these - 32 can overflow!
   unsigned long long n_gather_done = 0, n_gather_avoided = 0;
+ 
+  template <typename T>
+  void reduce_node_sum(T * value, int N, bool distribute);
+  template <typename T>
+  void reduce_node_product(T * value, int N, bool distribute);
+
+  #else 
+
+  // define to nothing
+  template <typename T>
+  void reduce_node_sum(T * value, int N, bool distribute) {}
+  template <typename T>
+  void reduce_node_product(T * value, int N, bool distribute) {}
+
+  #endif
 
 };
 
