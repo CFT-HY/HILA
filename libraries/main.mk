@@ -35,17 +35,17 @@ HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
 HILAPP_DIR := $(dir $(HILAPP))
 
 HILA_OBJECTS = \
-	build/initialize.o \
+  build/initialize.o \
   build/inputs.o \
   build/mersenne_inline.o \
   build/lattice.o \
   build/setup_layout_vector.o \
   build/map_node_layout_trivial.o \
   build/memalloc.o \
-	build/timing.o \
+  build/timing.o \
   build/test_gathers.o \
-	build/com_mpi.o \
-	build/com_single.o
+  build/com_mpi.o \
+  build/com_single.o
 
 # com_mpi / com_single could be moved to platforms, but they're protected by USE_MPI guards
 
