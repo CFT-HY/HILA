@@ -70,7 +70,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
   lattice_struct * lattice = input.fs->lattice;
   field<T> * read_pointer = &input; // Read from input on first time, then work in result
-
+  size_t local_volume = lattice->local_volume();
   int elements = sizeof(T)/sizeof(complex_type);
 
   // Make store the result is allocated and mark it changed 
@@ -80,7 +80,6 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
   // Run transform in all directions
   foralldir(dir){
     // Get the number of sites per column on this node and on all nodes
-    size_t local_volume = lattice->local_volume();
     size_t sites_per_col = lattice->local_size(dir);
     size_t sites = lattice->size(dir);
 
@@ -151,14 +150,6 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
                   mpi_recv_buffer, cpn*sites_per_col*sizeof(T), MPI_BYTE,
                   r, column_communicator);
     }
-    for( int l=0; l<cpn; l++ ) {
-      for(int s=0; s<nnodes; s++){
-        int c = my_column_rank*cpn+l;
-        for(int e=0; e<col_size; e++){
-          ((char*) column[c].data())[col_size*s+e] = mpi_recv_buffer[block_size*s + col_size*l + e];
-        }
-      }
-    }
     
     for( int l=0; l<cpn; l++ ) {
       int c = my_column_rank*cpn+l;
@@ -176,22 +167,26 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         fftw_execute(plan);
 
         for(int t=0;t<sites; t++){
-          column[c][e+elements*t].re = out[t][0];
-          column[c][e+elements*t].im = out[t][1];
+          for(int s=0; s<nnodes; s++){
+            complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+            for(int t=0;t<sites_per_col; t++){
+              field_elem[e+elements*t].re = out[t+sites_per_col*s][0];
+              field_elem[e+elements*t].im = out[t+sites_per_col*s][1];
+            }
+          }
         }
       }
     }
-    
-    for( int r=0; r<nnodes; r++ ){
-      for( int l=0; l<cpn; l++ ) {
-        int c = r*cpn+l;
-        char * sendbuf = (char*) send_buffer[c].data();
-        char * recvbuf = (char*) column[c].data();
 
-        MPI_Scatter( recvbuf, sites_per_col*sizeof(T), MPI_BYTE, 
-                     sendbuf, sites_per_col*sizeof(T), MPI_BYTE,
-                     r, column_communicator);
-        result.fs->payload.place_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(), lattice);
+    for( int s=0; s<nnodes; s++ ){
+      char * sendbuf = mpi_send_buffer + block_size*s;
+      MPI_Scatter( mpi_recv_buffer, cpn*sites_per_col*sizeof(T), MPI_BYTE, 
+                   sendbuf, cpn*sites_per_col*sizeof(T), MPI_BYTE,
+                   s, column_communicator);
+
+      for( int l=0; l<cpn; l++ ) {
+        int c = s*cpn+l;
+        result.fs->payload.place_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(), lattice);
       }
     }
 
