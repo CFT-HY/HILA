@@ -137,70 +137,51 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       }
     }
 
-    char * mpi_send_buffer = (char*) malloc(cpn*sites*sizeof(T));
-    char * mpi_recv_buffer = (char*) malloc(cpn*sites*sizeof(T));
+    char * mpi_send_buffer = (char*) malloc(local_volume*sizeof(T));
+    char * mpi_recv_buffer = (char*) malloc(local_volume*sizeof(T));
+    int block_size = cpn*sites_per_col*sizeof(T);
+    int col_size = sites_per_col*sizeof(T);
     for( int r=0; r<nnodes; r++ ){
+      char * sendbuf = mpi_send_buffer + block_size*r;
       for( int l=0; l<cpn; l++ ) {
         int c = r*cpn+l;
-        // Collect the data to the root
-        char * sendbuf = mpi_send_buffer + (r*cpn + l)*sites_per_col*sizeof(T);
-        char * recvbuf = (char*) mpi_recv_buffer;
-        read_pointer->fs->payload.gather_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(),  lattice);
-        MPI_Gather( sendbuf, sites_per_col*sizeof(T), MPI_BYTE, 
-                    recvbuf, sites_per_col*sizeof(T), MPI_BYTE,
-                    r, column_communicator);
-
-        if( my_column_rank == r ){
-          for(int e=0; e<nnodes*sites_per_col*elements; e++){
-            column[c][e] = ((complex_type*) recvbuf)[e];
-          }
-        }
+        read_pointer->fs->payload.gather_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(),  lattice);
       }
-    }
-
-    /*
-
-    for( int r=0; r<nnodes; r++ ){
-      for( int l=0; l<cpn; l++ ) {
-        int c = r*cpn+l;
-        // Collect the data to the root
-        char * sendbuf = mpi_send_buffer + (r*cpn + l)*sites_per_col*sizeof(T);
-        read_pointer->fs->payload.gather_elements((T*)sendbuf, sitelist[c].data(), sitelist[c].size(), lattice);
-      
-      MPI_Gather( mpi_send_buffer + r*cpn*sites_per_col*sizeof(T),
-                  cpn*sites_per_col*sizeof(T), MPI_BYTE,
+      MPI_Gather( sendbuf, cpn*sites_per_col*sizeof(T), MPI_BYTE, 
                   mpi_recv_buffer, cpn*sites_per_col*sizeof(T), MPI_BYTE,
                   r, column_communicator);
-
-        int c = l*nnodes + my_column_rank;
-        // Collect the data to the root
-        char * sendbuf = mpi_recv_buffer+ (r*cpn + l)*sites_per_col*sizeof(T);
-        for(int e=0; e<sites*elements; e++){
-          column[c][e] = ((complex_type*) sendbuf)[e];
-        }
-      }
-    }*/
-    
-    for( int r=0; r<nnodes; r++ ){
-      for( int l=0; l<cpn; l++ ) {
-        int c = r*cpn+l;
-        // Run the FFT on my column
-
-        for( int e=0; e<elements; e++ ){
-          for(int t=0;t<sites; t++){
-            in[t][0] = column[c][e+elements*t].re;
-            in[t][1] = column[c][e+elements*t].im;
-          }
-
-          fftw_execute(plan);
-
-          for(int t=0;t<sites; t++){
-            column[c][e+elements*t].re = out[t][0];
-            column[c][e+elements*t].im = out[t][1];
-          }
+    }
+    for( int l=0; l<cpn; l++ ) {
+      for(int s=0; s<nnodes; s++){
+        int c = my_column_rank*cpn+l;
+        for(int e=0; e<col_size; e++){
+          ((char*) column[c].data())[col_size*s+e] = mpi_recv_buffer[block_size*s + col_size*l + e];
         }
       }
     }
+    
+    for( int l=0; l<cpn; l++ ) {
+      int c = my_column_rank*cpn+l;
+      // Run the FFT on my column
+
+      for( int e=0; e<elements; e++ ){
+        for(int s=0; s<nnodes; s++){
+          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+          for(int t=0;t<sites_per_col; t++){
+            in[t+sites_per_col*s][0] = field_elem[e+elements*t].re;
+            in[t+sites_per_col*s][1] = field_elem[e+elements*t].im;
+          }
+        }
+
+        fftw_execute(plan);
+
+        for(int t=0;t<sites; t++){
+          column[c][e+elements*t].re = out[t][0];
+          column[c][e+elements*t].im = out[t][1];
+        }
+      }
+    }
+    
     for( int r=0; r<nnodes; r++ ){
       for( int l=0; l<cpn; l++ ) {
         int c = r*cpn+l;
