@@ -6,7 +6,7 @@
 #include "plumbing/globals.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
-#include "plumbing/comm_mpi.h"
+#include "plumbing/com_mpi.h"
 #include "plumbing/timing.h"
 
 // declare MPI timers here too - these were externs

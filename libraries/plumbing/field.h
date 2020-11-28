@@ -16,7 +16,7 @@
 
 
 #ifdef USE_MPI
-#include "plumbing/comm_mpi.h"
+#include "plumbing/com_mpi.h"
 #endif
 
 

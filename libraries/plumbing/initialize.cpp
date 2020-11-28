@@ -3,7 +3,7 @@
 #include "timing.h"
 #include "field.h"
 #ifdef USE_MPI
-#include "comm_mpi.h"
+#include "com_mpi.h"
 #endif
 
 // define these global var here - somehow NULL needed for ostream

@@ -6,7 +6,7 @@
 #include "inputs.h"
 #include "globals.h"
 
-#include "comm_mpi.h" 
+#include "com_mpi.h" 
 
 #ifdef USE_MPI
 static int myrank = 0;

@@ -6,7 +6,7 @@
 #include <chrono>
 
 #ifdef USE_MPI
-#include "comm_mpi.h"
+#include "com_mpi.h"
 #endif
 
 /////////////////////////////////////////////////////////////////
