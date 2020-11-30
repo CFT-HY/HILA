@@ -41,7 +41,7 @@ void input::import(const std::string & fname) {
     #ifdef USE_MPI
     int dummy = 0;
     char ** argvp;
-    initialize_machine(dummy, &argvp); 
+
     MPI_Comm_rank(lattice->mpi_comm_lat, &myrank); 
     if (myrank == 0){
         read(fname);
@@ -62,7 +62,6 @@ void input::import(int & argc, char *** argvp, const std::string & fname){
 
     #ifdef USE_MPI
 
-    initialize_machine(argc, argvp); 
     MPI_Comm_rank(lattice->mpi_comm_lat, &myrank); 
     if (myrank == 0){
         read(fname);

@@ -76,6 +76,15 @@ void terminate(int status)
   exit(status);
 }
 
+void error(const char * msg) {
+  output0 << "Error: " << msg << '\n';
+  terminate(0);
+}
+
+void error(const std::string &msg) {
+  error(msg.c_str());
+}
+
 
 /* clean exit from all nodes */
 void finishrun()
