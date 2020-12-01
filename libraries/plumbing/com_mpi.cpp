@@ -3,7 +3,7 @@
 // protect with USE_MPI so can be included even in no-MPI codes
 
 
-#include "plumbing/globals.h"
+#include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
 #include "plumbing/com_mpi.h"
@@ -40,6 +40,7 @@ void initialize_machine(int &argc, char ***argv)
 #endif
 
   }
+  hila::my_rank = mynode();
 
   start_send_timer.init("MPI start send");
   wait_send_timer.init("MPI wait send");
@@ -120,15 +121,23 @@ void broadcast(std::string & var) {
   broadcast_timer.start();
   int size = var.size();
   broadcast(size);
-  char buf[size+1];
-  if (mynode()==0) {
-    for (size_t i=0; i<size; i++) buf[i] = var[i];
+
+  if (hila::my_rank!=0) {
+    var.resize(size,' ');
   }
-  buf[size] = 0;
-  broadcast_array(buf,size+1);
-  var = buf;
+  // copy directy to data() buffer
+  MPI_Bcast((void *)var.data(),size, MPI_BYTE, 0, lattice->mpi_comm_lat);
 }
 
+void broadcast(std::vector<std::string> & list) {
+  int size = list.size();
+  broadcast(size);
+  list.resize(size);
+
+  for (auto & s : list) {
+    broadcast(s);
+  }
+}
 
 /* BASIC COMMUNICATIONS FUNCTIONS */
 

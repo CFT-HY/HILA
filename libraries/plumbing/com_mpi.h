@@ -30,6 +30,7 @@ extern timer start_send_timer,
 
 template <typename T>
 void broadcast(T & var) {
+  static_assert( std::is_trivial<T>::value, "broadcast(var) must use trivial type");
   broadcast_timer.start();
   MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
   broadcast_timer.stop();
@@ -39,11 +40,14 @@ template <typename T>
 void broadcast(std::vector<T> & list) {
   broadcast_timer.start();
 
+  static_assert( std::is_trivial<T>::value, "broadcast(vector<T>) must have trivial T" ); 
+
   int size = list.size();
   MPI_Bcast(&size, sizeof(int), MPI_BYTE, 0, lattice->mpi_comm_lat);
-  if (mynode() != 0) {
+  if (hila::my_rank != 0) {
     list.resize(size);
   }
+
   // move vectors directly to the storage
   MPI_Bcast((void *)list.data(), sizeof(T)*size, MPI_BYTE, 0, lattice->mpi_comm_lat);
 
@@ -58,11 +62,13 @@ void broadcast(T * var) {
 template <typename T>
 void broadcast_array(T * var, int n) {
   broadcast_timer.start();
-  MPI_Bcast(var, sizeof(T)*n, MPI_BYTE, 0, lattice->mpi_comm_lat);
+  MPI_Bcast((void *)var, sizeof(T)*n, MPI_BYTE, 0, lattice->mpi_comm_lat);
   broadcast_timer.stop();
 }
 
+// DO string bcasts separately
 void broadcast(std::string & r);
+void broadcast(std::vector<std::string> &l);
 
 // Reduction templates
 // TODO: implement using custom MPI Ops!  Then no ambiguity
@@ -91,7 +97,7 @@ void lattice_struct::reduce_node_sum(T * value, int N, bool distribute) {
   } else {
     MPI_Reduce( (void *)value, (void *)work, N*sizeof(T)/sizeof(number_type<T>), dtype,
                 MPI_SUM, 0 , lattice->mpi_comm_lat );
-    if (mynode() == 0) for(int i=0; i<N; i++)
+    if (hila::my_rank == 0) for(int i=0; i<N; i++)
       value[i] = work[i];
 
   }
@@ -122,7 +128,7 @@ void lattice_struct::reduce_node_product(T * value, int N, bool distribute) {
       value[i] = work[i];
   } else {
     MPI_Reduce( (void *)value, (void *)work, N, dtype, MPI_PROD, 0 , lattice->mpi_comm_lat );
-    if (mynode() == 0) for(int i=0; i<N; i++)
+    if (hila::my_rank == 0) for(int i=0; i<N; i++)
       value[i] = work[i];
 
   }

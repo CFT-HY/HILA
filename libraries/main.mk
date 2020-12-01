@@ -36,7 +36,7 @@ HILAPP_DIR := $(dir $(HILAPP))
 
 HILA_OBJECTS = \
   build/initialize.o \
-  build/inputs.o \
+  build/param_input.o \
   build/mersenne_inline.o \
   build/lattice.o \
   build/setup_layout_vector.o \
