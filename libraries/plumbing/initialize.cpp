@@ -9,6 +9,7 @@
 // define these global var here - somehow NULL needed for ostream
 std::ostream hila::output(NULL);
 std::ofstream hila::output_file;
+int hila::my_rank;
 
 // let us house the sublattices-struct here
 
@@ -153,7 +154,7 @@ void hila::initialize(int argc, char **argv)
   // set the timing so that gettime() returns time from this point
   inittime();
 
-  // initialize MPI (if needed) so that mynode() etc. works
+  // initialize MPI (if needed) so that hila::my_rank etc. works
   initialize_machine( argc, &argv );
 
   /// Handle commandline args here
@@ -164,7 +165,7 @@ void hila::initialize(int argc, char **argv)
   // check the output file if sublattices not used
   if (sublattices.number == 1) {
     int do_exit = 0;
-    if (mynode() == 0) {
+    if (hila::my_rank == 0) {
       if (const char *name = commandline.get_cstring("output=")) {
         // Open file for append
         if (std::strlen(name) == 0) {
@@ -186,7 +187,7 @@ void hila::initialize(int argc, char **argv)
     if (do_exit) terminate(0);
   }
 
-  if (mynode() == 0) {
+  if (hila::my_rank == 0) {
     hila::output << "------------- Hila lattice program --------------\n";
     hila::output << "Running target " << argv[0] << "\n";
     hila::output << "with command line arguments '";
@@ -229,12 +230,12 @@ void initialize_prn(long seed)
 
 #ifndef SITERAND
 
-  int n = mynode();
+  int n = hila::my_rank;
   if (sublattices.number > 1)
   n += sublattices.mylattice * numnodes();
 
   if (seed == 0) {
-    if (mynode() == 0) {
+    if (hila::my_rank == 0) {
       seed = time(NULL);
       seed = seed^(seed<<26)^(seed<<9);
       output0 << "Random seed from time " << seed << '\n';
@@ -352,7 +353,7 @@ void setup_sublattices(cmdlineargs & commandline)
 #if defined(BLUEGENE_LAYOUT)
   sublattices.mylattice = bg_layout_sublattices( sublattices.number );
 #else // generic
-  sublattices.mylattice = (mynode()*sublattices.number) / numnodes();
+  sublattices.mylattice = (hila::my_rank*sublattices.number) / numnodes();
   /* and divide system into sublattices */
   split_into_sublattices( sublattices.mylattice );
 #endif
@@ -370,7 +371,7 @@ void setup_sublattices(cmdlineargs & commandline)
     
   // all nodes open the file -- perhaps not?  Leave only node 0
   int do_exit = 0;
-  if (mynode() == 0) {
+  if (hila::my_rank == 0) {
     hila::output_file.open(fname, std::ios::out | std::ios::app);
     if (hila::output_file.fail()) {
       std::cout << "Cannot open output file " << fname << '\n';        

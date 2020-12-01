@@ -134,7 +134,7 @@ void gather_test() {
         }     
      
         if (diff != 0) {
-          hila::output << "Vectorized std gather test error! Node " << mynode() 
+          hila::output << "Vectorized std gather test error! Node " << hila::my_rank 
                        << " Parity " << parity_name(p) << " direction " << (unsigned)d2 << '\n';
           exit(-1);
         }

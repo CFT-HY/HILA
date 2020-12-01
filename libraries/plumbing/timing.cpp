@@ -41,14 +41,14 @@ void timer::reset() {
 }
 
 double timer::start() {
-  if (mynode() == 0) {
+  if (hila::my_rank == 0) {
     t_start = gettime();
     return t_start;
   } else return 0.0;
 }
   
 double timer::stop() {
-  if (mynode() == 0) {
+  if (hila::my_rank == 0) {
     double e = gettime();
     t_total += (e - t_start);
     count++;
@@ -57,7 +57,7 @@ double timer::stop() {
 }
 
 void timer::report() {
-  if (mynode() == 0) {
+  if (hila::my_rank == 0) {
     char line[202];
 
     // time used during the counter activity
@@ -73,7 +73,7 @@ void timer::report() {
 }
 
 void report_timers() {
-  if (mynode() == 0) {
+  if (hila::my_rank == 0) {
     if (timer_list.size() > 0) {
       hila::output << "TIMER REPORT:             total(sec)          calls   usec/call  fraction\n";
       hila::output << "-------------------------------------------------------------------------\n";
@@ -133,7 +133,7 @@ bool time_to_exit() {
   // if no time limit set
   if (timelimit == 0.0) return false;
 
-  if (mynode() == 0) {
+  if (hila::my_rank == 0) {
     double this_time = gettime();
     if (this_time - previous_time > max_interval) 
       max_interval = this_time - previous_time;
@@ -159,7 +159,7 @@ bool time_to_exit() {
 
 void timestamp(const char *msg)
 {
-  if (mynode() == 0) {
+  if (hila::my_rank == 0) {
     std::time_t ct = std::time(NULL);
     if (msg != NULL) hila::output << msg;
     std::string d = ctime(&ct);

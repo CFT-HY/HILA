@@ -21,8 +21,9 @@ void initialize_machine(int &argc, char ***argv)
 #ifdef CUDA
     initialize_cuda( 0 );
 #endif
-
+    initialized = true;
   }
+  hila::my_rank = hila::my_rank;
 }
 
 // check if is intialized
