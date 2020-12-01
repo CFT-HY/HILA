@@ -33,7 +33,22 @@ void broadcast(T & var) {
   broadcast_timer.start();
   MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
   broadcast_timer.end();
-} 
+}
+
+template <typename T>
+void broadcast(std::vector<T> & list) {
+  broadcast_timer.start();
+
+  int size = list.size();
+  MPI_Bcast(&size, sizeof(int), MPI_BYTE, 0, lattice->mpi_comm_lat);
+  if (mynode() != 0) {
+    list.resize(size);
+  }
+  // move vectors directly to the storage
+  MPI_Bcast((void *)list.data(), sizeof(T)*size, MPI_BYTE, 0, lattice->mpi_comm_lat);
+
+  broadcast_timer.end();
+}
 
 template <typename T>
 void broadcast(T * var) {
@@ -47,19 +62,7 @@ void broadcast_array(T * var, int n) {
   broadcast_timer.end();
 }
 
-template <>
-void broadcast(std::string & var) {
-  broadcast_timer.start();
-  int size = var.size();
-  broadcast(size);
-  char buf[size+1];
-  if (mynode()==0) {
-    for (size_t i=0; i<size; i++) buf[i] = var[i];
-  }
-  buf[size] = 0;
-  broadcast_array(buf,size+1)
-  var = buf;
-}
+void broadcast(std::string & r);
 
 // Reduction templates
 // TODO: implement using custom MPI Ops!  Then no ambiguity

@@ -115,6 +115,19 @@ void finishrun()
   MPI_Finalize();
 }
 
+// broadcast specialization
+void broadcast(std::string & var) {
+  broadcast_timer.start();
+  int size = var.size();
+  broadcast(size);
+  char buf[size+1];
+  if (mynode()==0) {
+    for (size_t i=0; i<size; i++) buf[i] = var[i];
+  }
+  buf[size] = 0;
+  broadcast_array(buf,size+1);
+  var = buf;
+}
 
 
 /* BASIC COMMUNICATIONS FUNCTIONS */
