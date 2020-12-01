@@ -161,7 +161,7 @@ void synchronize()
   synchronize_timer.start();
   synchronize_threads();
   MPI_Barrier(lattice->mpi_comm_lat);
-  synchronize_timer.end();
+  synchronize_timer.stop();
 }
 
 

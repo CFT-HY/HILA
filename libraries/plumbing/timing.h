@@ -27,7 +27,7 @@ public:
   void remove();
   void reset();
   double start();
-  double end();
+  double stop();
   void report();
   
 };

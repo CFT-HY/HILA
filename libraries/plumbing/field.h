@@ -890,7 +890,7 @@ dir_mask_t field<T>::start_fetch(direction d, parity p) const {
     MPI_Irecv( receive_buffer, sites*size, MPI_BYTE, from_node.rank,
 	             tag, lattice->mpi_comm_lat, &fs->receive_request[par_i][d] );
     
-    post_receive_timer.end();
+    post_receive_timer.stop();
   }
 
   if (to_node.rank != mynode()) {
@@ -907,7 +907,7 @@ dir_mask_t field<T>::start_fetch(direction d, parity p) const {
  
     MPI_Isend( send_buffer, sites*size, MPI_BYTE, to_node.rank, 
                tag, lattice->mpi_comm_lat, &fs->send_request[par_i][d]);
-    start_send_timer.end();
+    start_send_timer.stop();
   }
 
   // and do the boundary shuffle here, after MPI has started
@@ -989,7 +989,7 @@ void field<T>::wait_fetch(direction d, parity p) const {
       MPI_Status status;
       MPI_Wait( &fs->receive_request[par_i][d], &status);
 
-      wait_receive_timer.end();
+      wait_receive_timer.stop();
 
 #ifndef VANILLA
       fs->place_comm_elements(d, par, fs->get_receive_buffer(d,par,from_node), from_node);
@@ -1001,7 +1001,7 @@ void field<T>::wait_fetch(direction d, parity p) const {
       wait_send_timer.start();
       MPI_Status status;
       MPI_Wait( &fs->send_request[par_i][d], &status );
-      wait_send_timer.end();
+      wait_send_timer.stop();
     }
 
     // Mark the parity fetched from direction dir
@@ -1039,12 +1039,12 @@ void field<T>::cancel_comm(direction d, parity p) const {
   if (lattice->nn_comminfo[d].from_node.rank != mynode()) {
     cancel_receive_timer.start();
     MPI_Cancel( &fs->receive_request[(int)p-1][d] );
-    cancel_receive_timer.end();
+    cancel_receive_timer.stop();
   }
   if (lattice->nn_comminfo[d].to_node.rank != mynode()) {
     cancel_send_timer.start();
     MPI_Cancel( &fs->send_request[(int)p-1][d] );
-    cancel_send_timer.end();
+    cancel_send_timer.stop();
   }
 }
 

@@ -47,7 +47,7 @@ double timer::start() {
   } else return 0.0;
 }
   
-double timer::end() {
+double timer::stop() {
   if (mynode() == 0) {
     double e = gettime();
     t_total += (e - t_start);

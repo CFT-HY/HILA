@@ -32,7 +32,7 @@ template <typename T>
 void broadcast(T & var) {
   broadcast_timer.start();
   MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
-  broadcast_timer.end();
+  broadcast_timer.stop();
 }
 
 template <typename T>
@@ -47,7 +47,7 @@ void broadcast(std::vector<T> & list) {
   // move vectors directly to the storage
   MPI_Bcast((void *)list.data(), sizeof(T)*size, MPI_BYTE, 0, lattice->mpi_comm_lat);
 
-  broadcast_timer.end();
+  broadcast_timer.stop();
 }
 
 template <typename T>
@@ -59,7 +59,7 @@ template <typename T>
 void broadcast_array(T * var, int n) {
   broadcast_timer.start();
   MPI_Bcast(var, sizeof(T)*n, MPI_BYTE, 0, lattice->mpi_comm_lat);
-  broadcast_timer.end();
+  broadcast_timer.stop();
 }
 
 void broadcast(std::string & r);
@@ -95,7 +95,7 @@ void lattice_struct::reduce_node_sum(T * value, int N, bool distribute) {
       value[i] = work[i];
 
   }
-  reduction_timer.end();
+  reduction_timer.stop();
 }
 
 // Product reduction template - so far only for int, float, dbl
@@ -126,7 +126,7 @@ void lattice_struct::reduce_node_product(T * value, int N, bool distribute) {
       value[i] = work[i];
 
   }
-  reduction_timer.end();
+  reduction_timer.stop();
 }
 
 

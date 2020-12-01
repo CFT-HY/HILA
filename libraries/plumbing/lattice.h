@@ -14,7 +14,6 @@
 #include <assert.h>
 #include "plumbing/defs.h"
 #include "plumbing/coordinates.h"
-#include "plumbing/inputs.h"
 #include "plumbing/timing.h"
 
 #ifdef SUBNODE_LAYOUT
@@ -202,7 +201,6 @@ public:
 #endif
 
   void setup(const int siz[NDIM]);
-  void setup(input & inputs);
   void setup_layout();
   void setup_nodes();
   
