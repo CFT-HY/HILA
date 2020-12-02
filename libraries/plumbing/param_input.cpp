@@ -16,23 +16,34 @@
 /// Check param_input.h for user instructions
 //////////////////////////////////////////////////////////////////////////////
 
+static std::string empty_key("");
 
-input::returntype input::get(const std::string & variable){
-    return returntype(variable, this);
+input::returntype input::get(const std::string & key){
+    return returntype(key, this);
 }
 
-void input::init(const std::string &fname) {
+input::returntype input::get() {
+  return returntype(empty_key,this);
+}
+
+void input::open(const std::string &fname) {
   bool got_error;
   if (hila::my_rank == 0) {
-    filename = fname;
-    inputfile.open(fname);
-    if (inputfile.is_open()){
-      is_initialized = true;
-      hila::output << "----- Reading file '" << filename << "' -----\n";
-
-    } else {
-      hila::output << "Error: input file '" << fname << "' could not be opened\n";
+    if (is_initialized) {
+      hila::output << "Error: file '" << fname << "' cannot be opened because '" << filename 
+                   << "' is open in this input variable\n";
       got_error = true;
+    } else {
+      filename = fname;
+      inputfile.open(fname);
+      if (inputfile.is_open()){
+        is_initialized = true;
+        hila::output << "----- Reading file '" << filename << "' -----\n";
+
+      } else {
+        hila::output << "Error: input file '" << fname << "' could not be opened\n";
+        got_error = true;
+      }
     }
   }
   broadcast(got_error);
@@ -53,7 +64,11 @@ bool input::get_line() {
   if (hila::my_rank == 0) {
     do {
       inputfile >> std::ws;  // remove initial whitespace
-      if (!std::getline(inputfile, linebuffer)) return false;
+      if (!std::getline(inputfile, linebuffer)) {
+        linebuffer.clear();
+        lb_start = 0;
+        return false;
+      }
     } while (linebuffer.at(0) == COMMENT_CHAR);
     size_t i = linebuffer.find(COMMENT_CHAR);
     if (i != std::string::npos) linebuffer.resize(i);
@@ -78,13 +93,21 @@ void input::print_linebuf() {
   }
 }
 
+// remove leading whitespace, incl. lines
+bool input::remove_whitespace() {
+  if (hila::my_rank == 0) {
+    while (lb_start < linebuffer.size() && std::isspace(linebuffer[lb_start])) lb_start++;
+    if (lb_start == linebuffer.size()) return get_line();
+  }
+  return true;    // do not broadcast yet, should be used only in node 0
+}
+
 // find tokens separated by whitespace or , - 
 // inside of " .. " is one token too.
 // returns true if the next token (on the same line) is found
 
 bool input::peek_token( std::string & tok ) {
-  while (lb_start < linebuffer.size() && std::isspace(linebuffer[lb_start])) lb_start++;
-  if (lb_start == linebuffer.size()) return false;
+  if (!remove_whitespace()) return false;
   size_t i;
   bool in_quotes = false;
   for (i=lb_start; i<linebuffer.size() && 
@@ -125,19 +148,16 @@ bool input::match_token(const std::string & tok) {
   return false;
 }
 
-// require the (typically beginning of line) label for parameters
+// require the (typically beginning of line) key for parameters
 
-bool input::handle_label(const std::string &label) {
+bool input::handle_key(const std::string &key) {
   if (hila::my_rank==0) {
     // check the linebuffer for stuff
+    remove_whitespace();
+    if (key.size() == 0) return true;
     std::string l;
-    if (!get_token(l)) {
-      get_line();
-      get_token(l);
-    }
-
-    if (l != label) {
-      hila::output << "Error: expecting item '" << label << "'\n";
+    if (!get_token(l) || l != key) {
+      hila::output << "Error: expecting key '" << key << "', got '" << l << "'\n";
       return false;
     }
   }
@@ -170,7 +190,7 @@ bool input::is_value(const std::string & str, std::string & val) {
 
 int input::get_int(const std::string &label) {
   int val = 0;
-  bool no_error = handle_label(label);
+  bool no_error = handle_key(label);
 
   if (hila::my_rank==0 && no_error) {
     std::string tok;
@@ -179,18 +199,26 @@ int input::get_int(const std::string &label) {
       no_error = false;
     }
   }
-  broadcast(no_error);
-  if (!no_error) terminate(0);
 
-  broadcast(val);
-  return (int)val;
+  // helper to do it in a single broadcast
+  struct bc_helper {
+    int val;
+    bool noerr;
+  } bcdata = {val, no_error};
+
+  broadcast(bcdata);
+  if (!bcdata.noerr) terminate(0);
+  return bcdata.val;
 }
+
+int input::get_int() { return get_int(empty_key); }
+
 
 // "label <double>"
 
 double input::get_double(const std::string &label) {
   double val = 0;
-  bool no_error = handle_label(label); // removes whitespace
+  bool no_error = handle_key(label); // removes whitespace
 
   if (hila::my_rank==0 && no_error) {
     std::string tok;
@@ -199,12 +227,19 @@ double input::get_double(const std::string &label) {
       no_error = false;
     }
   }
-  broadcast(no_error);
-  if (!no_error) terminate(0);
 
-  broadcast(val);
-  return val;
+  // helper to do it in a single broadcast
+  struct bc_helper {
+    double val;
+    bool noerr;
+  } bcdata = {val, no_error};
+
+  broadcast(bcdata);
+  if (!bcdata.noerr) terminate(0);
+  return bcdata.val;
 }
+
+double input::get_double() { return get_double(empty_key); }
 
 std::string input::remove_quotes(const std::string &val) {
   size_t i,j;
@@ -219,7 +254,7 @@ std::string input::remove_quotes(const std::string &val) {
 
 std::string input::get_string(const std::string &label) {
   std::string val;
-  bool no_error = handle_label(label);
+  bool no_error = handle_key(label);
 
   if (hila::my_rank==0 && no_error) {
     no_error = get_token(val);
@@ -236,57 +271,62 @@ std::string input::get_string(const std::string &label) {
   return val;
 }
 
+std::string input::get_string() { return get_string(empty_key); }
+
 //  expects "label   <item>"  -line, where <item> matches one of the std::strings in items.
 //  returns the index of the item. If not found, errors out
  
-int input::get_item(const std::string &label, const std::vector<std::string> &items) {
-  bool no_error = handle_label(label);
+int input::get_item(const std::string &label, const std::vector<std::string> &items, double *dval) {
+  bool no_error = handle_key(label);
   int i=0;
+  double d;
 
   if (hila::my_rank == 0 && no_error) {
     std::string s;
     no_error = get_token(s);
     if (no_error) {
-      for (i=0; i<items.size(); i++) {
-        if (items[i] == "%i") { 
-          if (is_value(s,item_int_val)) break;
-        } else if (items[i] == "%f") { 
-          if (is_value(s,item_double_val)) break;
-        } else if (items[i] == "%s") {
-          // %s always matches
-          item_string_val = remove_quotes(s);
-          break;
-        } else if (items[i] == s) {
-          // got the item
-          break;
-        }
+      for (i=0; i<items.size() && items[i] != s; i++) ;
+      if (i == items.size() && dval != nullptr) {
+        no_error = is_value(s,d);
+        i = -1;
       }
-    } 
+     }
     if (!no_error || i == items.size()) {
       hila::output << "Input '" << label << "' must be one of: ";
       for (int j=0; j<items.size(); j++) {
-        if (items[j] == "%f") hila::output << "(double) ";
-        else if (items[j] == "%i") hila::output << "(integer) ";
-        else hila::output << '\'' << items[j] << "' ";
+        hila::output << '\'' << items[j] << "' ";
+      }
+      if (dval != nullptr) {
+        hila::output << " (double value)";
       }
       hila::output << '\n';
       no_error = false;
     }
   }
 
-  broadcast(no_error);
-  if (!no_error) terminate(0);
+  struct bcast_helper {
+    double d;
+    int i;
+    bool noerror;
+  } bcdata = {d, i, no_error};     // helper struct to do everything in a single broadcast
 
-  broadcast(i);
-  return i;
+  broadcast(bcdata);
+  if (!bcdata.noerror) terminate(0);
+  if (bcdata.i == -1) *dval = bcdata.d;
+  return bcdata.i;
 }
+
+int input::get_item(const std::string &label, const std::vector<std::string> &items, double & dval) {
+  return get_item(label, items, &dval);
+}
+
 
 // utility function to get a comma-separated list of ints/doubles
 
 template <typename T>
-void input::get_type_list(const std::string & label, std::vector<T> & res, 
-                          const char * name) {
-  bool no_error = handle_label(label);
+void input::get_type_vector(const std::string & label, std::vector<T> & res, 
+                            const char * name) {
+  bool no_error = handle_key(label);
   const char * rest = linebuffer.c_str() + lb_start;
   while (std::isspace(*rest)) rest++;
   res.clear();
@@ -313,20 +353,20 @@ void input::get_type_list(const std::string & label, std::vector<T> & res,
   broadcast(res);
 }
 
-std::vector<int> input::get_int_list(const std::string & label) {
+std::vector<int> input::get_int_vector(const std::string & label) {
   std::vector<int> res;
-  get_type_list(label,res,"integer");
+  get_type_vector(label,res,"integer");
   return res;
 }
 
-std::vector<double> input::get_double_list(const std::string & label) {
+std::vector<double> input::get_double_vector(const std::string & label) {
   std::vector<double> res;
-  get_type_list(label,res,"double");
+  get_type_vector(label,res,"double");
   return res;
 }
 
-std::vector<std::string> input::get_string_list(const std::string & label) {
+std::vector<std::string> input::get_string_vector(const std::string & label) {
   std::vector<std::string> res;
-  get_type_list(label,res,"strings");
+  get_type_vector(label,res,"strings");
   return res;
 }
