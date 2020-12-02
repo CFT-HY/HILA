@@ -62,6 +62,7 @@ $(LASTMAKE): $(MAKEFILE_LIST)
 	touch ${LASTMAKE}
 
 
+
 # Use all headers inside libraries for dependencies
 HILA_HEADERS := $(wildcard $(TOP_DIR)/libraries/*/*.h) $(wildcard $(TOP_DIR)/libraries/*/*/*.h)
 
@@ -71,6 +72,15 @@ HILA_OPTS += -I$(HILA_INCLUDE_DIR)
 
 # Add the (possible) std. includes for hilapp
 HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include
+
+#  GIT VERSION: check if current SHA is the same as old
+#  use the timestamp on .git/index as a proxy for changes in repo
+
+GIT_SHA := $(shell git rev-parse --short=8 HEAD)
+
+ifneq "$(GIT_SHA)" "" 
+HILA_OPTS += -DGIT_SHA_VALUE=$(GIT_SHA)
+endif
 
 # Standard rules for creating and building cpdt files. These
 # build .o files in the build folder by first running them

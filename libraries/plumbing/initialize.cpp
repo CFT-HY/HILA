@@ -193,7 +193,17 @@ void hila::initialize(int argc, char **argv)
     hila::output << "with command line arguments '";
     for (int i=1; i<argc; i++) hila::output << argv[i] << ' ';
     hila::output << "'\n";
-    timestamp("Start");
+    hila::output << "Code version: ";
+    #if defined(GIT_SHA_VALUE)
+    #define xstr(s) makestr(s)
+    #define makestr(s) #s
+    hila::output << "git SHA " << xstr(GIT_SHA_VALUE) << '\n';
+    #else
+    hila::output << "no git information available\n";
+    #endif
+    hila::output << "  Compiled " << __DATE__ << " at " << __TIME__ << '\n';
+
+    timestamp("Starting");
   }
 
   long cputime = commandline.get_int("timelimit=");
