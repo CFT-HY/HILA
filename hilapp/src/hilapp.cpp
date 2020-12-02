@@ -348,8 +348,8 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   SourceManager &SM = R.getSourceMgr();
   SourceRange r(SM.getLocForStartOfFile(fid),SM.getLocForEndOfFile(fid));
  
-  llvm::errs() << "Create buf for file "
-               << SM.getFilename(SM.getLocForStartOfFile(fid)) << '\n';
+  // llvm::errs() << "Create buf for file "
+  //              << SM.getFilename(SM.getLocForStartOfFile(fid)) << '\n';
   
   file_buffer_list.back().sbuf.create( &R, r );
   return( &file_buffer_list.back().sbuf );
@@ -613,8 +613,8 @@ public:
 
         for( int fi=0; fi < file_id_list.size(); fi++ ){
           FileID f = file_id_list[fi];
-          llvm::errs() << "Checking file "
-               << SM.getFilename(SM.getLocForStartOfFile(f)) << '\n';
+          // llvm::errs() << "Checking file "
+          //      << SM.getFilename(SM.getLocForStartOfFile(f)) << '\n';
           check_include_path(f);
         }
 
