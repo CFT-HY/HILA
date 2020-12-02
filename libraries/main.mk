@@ -53,11 +53,11 @@ HILA_OBJECTS = \
 include $(PLATFORM_DIR)/$(PLATFORM).mk
 
 # To force a full remake when changing platforms or targets
-LASTMAKE := build/lastmake.${MAKECMDGOALS}.${PLATFORM}
+LASTMAKE := build/_lastmake.${MAKECMDGOALS}.${PLATFORM}
 
 $(LASTMAKE): $(MAKEFILE_LIST)
 	-mkdir -p build
-	-rm -f build/lastmake.*
+	-rm -f build/_lastmake.*
 	make clean
 	touch ${LASTMAKE}
 
@@ -73,13 +73,24 @@ HILA_OPTS += -I$(HILA_INCLUDE_DIR)
 # Add the (possible) std. includes for hilapp
 HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include
 
-#  GIT VERSION: check if current SHA is the same as old
-#  use the timestamp on .git/index as a proxy for changes in repo
+#
+#  GIT VERSION: tricks to get correct git version and build date
+#  on the file
 
 GIT_SHA := $(shell git rev-parse --short=8 HEAD)
 
 ifneq "$(GIT_SHA)" "" 
 HILA_OPTS += -DGIT_SHA_VALUE=$(GIT_SHA)
+GIT_SHA_FILE := build/_git_sha_$(GIT_SHA)
+
+# Force recompilation if git number has changed
+
+$(GIT_SHA_FILE):
+	-rm -f build/_git_sha_*
+	touch $(GIT_SHA_FILE)
+
+ALL_DEPEND += $(GIT_SHA_FILE)
+	
 endif
 
 # Standard rules for creating and building cpdt files. These
@@ -112,7 +123,7 @@ endif   # close the "clean" bracket
 .PHONY: clean cleanall
 
 clean:
-	-rm -f build/*.o build/*.cpt build/lastmake*
+	-rm -f build/*.o build/*.cpt build/_lastmake*
 
 cleanall:
 	-rm -f build/*
