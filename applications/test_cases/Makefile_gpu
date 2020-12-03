@@ -23,17 +23,9 @@ LDFLAGS =
 include ../../libraries/Makefile_cuda
 
 
-bench_field: build/bench_field.o Makefile_gpu $(HILA_OBJECTS) 
+test_CG: build/test_CG.o Makefile_gpu $(HILA_OBJECTS) 
 	$(LD) $(LDFLAGS) -o $@ $< $(HILA_OBJECTS) 
 
-bench_fermion: build/bench_fermion.o Makefile_gpu $(HILA_OBJECTS) 
-	$(LD) $(LDFLAGS) -o $@ $< $(HILA_OBJECTS) 
-
-bench_matrix2: build/bench_matrix2.o Makefile_gpu $(HILA_OBJECTS) 
-	$(LD) $(LDFLAGS) -o $@ $< $(HILA_OBJECTS) 
-
-bench_FFT: build/bench_FFT.o Makefile_gpu $(HILA_OBJECTS) 
-	$(LD) $(LDFLAGS) -o $@ $< $(HILA_OBJECTS) -lcufft
 
 clean:
 	rm -rf build/*.cpt build/*.o

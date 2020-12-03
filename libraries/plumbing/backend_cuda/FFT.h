@@ -4,9 +4,11 @@
 #include "plumbing/field.h"
 #include "datatypes/cmplx.h"
 
-
-
+#ifdef __CUDACC__
 #ifdef USE_MPI
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include "cufft.h"
 /// Run Fast Fourier Transform on the field to each direction
 // This is done by collecting a column of elements to each node,
 // running the Fourier transform on the column and redistributing
@@ -59,10 +61,10 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
     // CUFFT buffers
     cufftHandle plan;
-    cufftComplex *data;
+    cufftDoubleComplex *data;
     int BATCH=1;
-    cudaMalloc((void**)&data, sizeof(cufftComplex)*NX*BATCH);
-    cufftPlan1d(&plan, NX, CUFFT_C2C, BATCH);
+    cudaMalloc((void**)&data, sizeof(cufftDoubleComplex)*column_size*BATCH);
+    cufftPlan1d(&plan, column_size, CUFFT_Z2Z, BATCH); //Z2Z for double, C2C for float
 
 
     // Construct lists of sites for each column
@@ -95,6 +97,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
         cudaMemcpy( d_site_index, sitelist[c].data(), n*sizeof(unsigned), cudaMemcpyHostToDevice );
 
+        int N_blocks = n/N_threads + 1;
         gather_elements_kernel<<< N_blocks, N_threads >>>(read_pointer->fs->payload, (T*)(sendbuf + col_size*l), d_site_index, n, lattice->field_alloc_size() );
         
         cudaFree(d_site_index);
@@ -110,21 +113,21 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
           complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
-            data[t+node_column_size*s][0] = field_elem[e+elements*t].re;
-            data[t+node_column_size*s][1] = field_elem[e+elements*t].im;
+            data[t+node_column_size*s].x = field_elem[e+elements*t].re;
+            data[t+node_column_size*s].y = field_elem[e+elements*t].im;
           }
         }
 
         // Run the fft
-        cufftExecC2C(plan, data, data, CUFFT_FORWARD);
+        cufftExecZ2Z(plan, data, data, CUFFT_FORWARD);
 
         // Put the transformed data back in place
         for(int t=0;t<column_size; t++){
           for(int s=0; s<nnodes; s++){
             complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
             for(int t=0;t<node_column_size; t++){
-              field_elem[e+elements*t].re = data[t+node_column_size*s][0];
-              field_elem[e+elements*t].im = data[t+node_column_size*s][1];
+              field_elem[e+elements*t].re = data[t+node_column_size*s].x;
+              field_elem[e+elements*t].im = data[t+node_column_size*s].y;
             }
           }
         }
@@ -146,6 +149,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
         cudaMemcpy( d_site_index, sitelist[c].data(), n*sizeof(unsigned), cudaMemcpyHostToDevice );
 
+        int N_blocks = n/N_threads + 1;
         place_elements_kernel<<< N_blocks, N_threads >>>(read_pointer->fs->payload, (T*)(sendbuf + col_size*l), d_site_index, n, lattice->field_alloc_size() );
         
         cudaFree(d_site_index);
@@ -153,24 +157,30 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     }
 
     read_pointer = &result; // From now on we work in result
-    fftw_destroy_plan(plan);
-    fftw_free(in); fftw_free(out);
+    cufftDestroy(plan);
+    cudaFree(data);
   }
 
   cudaFree(mpi_send_buffer);
   cudaFree(mpi_recv_buffer);
 }
 
-
 #else
 
+// No MPI
+template<typename T, typename C>
+inline void FFT_field_complex(field<T> & input, field<T> & result){}
 
+#endif
+
+#else
+// Not CUDA compiler
 template<typename T, typename C>
 inline void FFT_field_complex(field<T> & input, field<T> & result){}
 
 
-
 #endif
+
 
 template<>
 inline void field<cmplx<double>>::FFT(){
@@ -219,7 +229,6 @@ template<typename T>
 void FFT_field(field<T> & input, field<T> & result){
   FFT_field_complex<T,typename complex_base<T>::type>(input, result);
 }
-
 
 
 #endif
