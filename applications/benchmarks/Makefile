@@ -14,6 +14,7 @@ APP_HEADERS := bench.h
 bench_fermion: build/bench_fermion ; @:
 bench_matrix2: build/bench_matrix2 ; @:
 bench_field:   build/bench_field ; @:
+bench_FFT:   build/bench_FFT ; @:
 
 # Now the linking step for each target executable
 build/bench_fermion: Makefile build/bench_fermion.o $(HILA_OBJECTS) $(HEADERS)
@@ -25,6 +26,8 @@ build/bench_matrix2: Makefile build/bench_matrix2.o $(HILA_OBJECTS) $(HEADERS)
 build/bench_field: Makefile build/bench_field.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/bench_field.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
+build/bench_FFT: Makefile build/bench_FFT.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/bench_FFT.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 
 
