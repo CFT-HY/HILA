@@ -1413,15 +1413,21 @@ static void read_fields(std::string filename, fieldtypes&... fields){
   inputfile.close();
 }
 
-#ifndef NO_FFTW
-// Include Fourier transform
+//HACK: force disable vectorization in a loop using
+// if(disable_avx[X]==0){};
+extern field<double> disable_avx;
+
+
+
+// Include FFT implentations (mostly fftw, but for CUDA
+// we need to specialize version)
+#ifdef CUDA
+#include "plumbing/backend_cuda/FFT.h"
+#else
 #include "plumbing/FFT.h"
 #endif
 
 
-//HACK: force disable vectorization in a loop using
-// if(disable_avx[X]==0){};
-extern field<double> disable_avx;
 
 
 #endif // FIELD_H
