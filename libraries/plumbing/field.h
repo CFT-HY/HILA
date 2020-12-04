@@ -191,7 +191,7 @@ class field {
           if (!antiperiodic)
             payload.gather_elements(buffer, index_list, n, lattice);
           else {
-            payload.gather_elements_negated(buffer, index_list, n, lattice);                 
+            payload.gather_elements_negated(buffer, index_list, n, lattice);
           }
         }
 #endif
