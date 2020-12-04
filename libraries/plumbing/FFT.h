@@ -106,11 +106,13 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
             in[t+node_column_size*s][1] = field_elem[e+elements*t].im;
           }
         }
+      }
 
-        // Run the fft
-        fftw_execute(plan);
+      // Run the fft
+      fftw_execute(plan);
 
-        // Put the transformed data back in place
+      // Put the transformed data back in place
+      for( int e=0; e<elements; e++ ){
         for(int t=0;t<column_size; t++){
           for(int s=0; s<nnodes; s++){
             complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
