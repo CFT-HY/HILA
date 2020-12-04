@@ -886,7 +886,50 @@ lattice_struct::gen_comminfo_struct lattice_struct::create_general_gather( const
   return ci;
 }
 
+
 #endif
 
+
+
+
+/// Get an MPI column in direction dir, build if necessary
+lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
+  static mpi_column_struct mpi_column[NDIM];
+    
+  if( mpi_column[dir].init ) {
+    // The communicator does not exist yet, so build it now
+  
+    std::vector<node_info> allnodes = lattice->nodelist();
+    int myrank = lattice->node_rank();
+      
+    // Build a list of nodes in this column
+    // All nodes should have these in the same order
+    coordinate_vector min = allnodes[myrank].min;
+    coordinate_vector size = allnodes[myrank].size;
+    foralldir(d2){
+      assert( min[d2] == lattice->min_coordinate()[d2] );
+    }
+    for( int rank=0; rank < allnodes.size(); rank++ ) {
+      node_info node = allnodes[rank];
+      bool in_column = true;
+      foralldir(d2) if( d2 != dir && node.min[d2] != min[d2] ){
+        in_column = false;
+      }
+      if( in_column ){
+        if(rank==myrank)
+          mpi_column[dir].my_column_rank = mpi_column[dir].nodelist.size();
+        mpi_column[dir].nodelist.push_back(rank);
+        //printf(" node %d: %d in my column\n", myrank, rank);
+      }
+    }
+  
+    MPI_Comm_split( MPI_COMM_WORLD, mpi_column[dir].nodelist[0], mpi_column[dir].my_column_rank, &mpi_column[dir].column_communicator );
+  
+    mpi_column[dir].init = false;
+  
+  }
+  
+  return mpi_column[dir];
+}
 
 

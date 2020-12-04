@@ -3,7 +3,6 @@
 
 #include "plumbing/field.h"
 #include "datatypes/cmplx.h"
-#include "fftw3.h"
 
 
 
@@ -28,8 +27,9 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
   result.mark_changed(ALL);
 
   // Allocate buffers for the MPI
-  char * mpi_send_buffer = (char*) malloc(local_volume*sizeof(T));
-  char * mpi_recv_buffer = (char*) malloc(local_volume*sizeof(T));
+  char * mpi_send_buffer, * mpi_recv_buffer;
+  cudaMalloc( (void **)&(mpi_send_buffer), local_volume*sizeof(T));
+  cudaMalloc( (void **)&(mpi_recv_buffer), local_volume*sizeof(T));
 
   // Run transform in all directions
   foralldir(dir){
@@ -57,11 +57,12 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     coordinate_vector min = allnodes[lattice->node_rank()].min;
     coordinate_vector size = allnodes[lattice->node_rank()].size;
 
-    // FFTW buffers
-    fftw_complex *in, *out;
-    in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * column_size);
-    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * column_size);
-    fftw_plan plan = fftw_plan_dft_1d( column_size, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
+    // CUFFT buffers
+    cufftHandle plan;
+    cufftComplex *data;
+    int BATCH=1;
+    cudaMalloc((void**)&data, sizeof(cufftComplex)*NX*BATCH);
+    cufftPlan1d(&plan, NX, CUFFT_C2C, BATCH);
 
 
     // Construct lists of sites for each column
@@ -89,7 +90,14 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       char * sendbuf = mpi_send_buffer + block_size*r;
       for( int l=0; l<cpn; l++ ) {
         int c = r*cpn+l;
-        read_pointer->fs->payload.gather_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(),  lattice);
+        unsigned *d_site_index;
+        int n = sitelist[c].size();
+        cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
+        cudaMemcpy( d_site_index, sitelist[c].data(), n*sizeof(unsigned), cudaMemcpyHostToDevice );
+
+        gather_elements_kernel<<< N_blocks, N_threads >>>(read_pointer->fs->payload, (T*)(sendbuf + col_size*l), d_site_index, n, lattice->field_alloc_size() );
+        
+        cudaFree(d_site_index);
       }
       MPI_Gather( sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE, 
                   mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE,
@@ -99,27 +107,27 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     // now that we have columns, run FFT on each
     for( int l=0; l<cpn; l++ ) { // Columns
       for( int e=0; e<elements; e++ ){ // Complex elements / field element
-
         for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
           complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
-            in[t+node_column_size*s][0] = field_elem[e+elements*t].re;
-            in[t+node_column_size*s][1] = field_elem[e+elements*t].im;
+            data[t+node_column_size*s][0] = field_elem[e+elements*t].re;
+            data[t+node_column_size*s][1] = field_elem[e+elements*t].im;
           }
         }
-        
+
         // Run the fft
-        fftw_execute(plan);
+        cufftExecC2C(plan, data, data, CUFFT_FORWARD);
 
         // Put the transformed data back in place
-        for(int s=0; s<nnodes; s++){
-          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
-          for(int t=0;t<node_column_size; t++){
-            field_elem[e+elements*t].re = out[t+node_column_size*s][0];
-            field_elem[e+elements*t].im = out[t+node_column_size*s][1];
+        for(int t=0;t<column_size; t++){
+          for(int s=0; s<nnodes; s++){
+            complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+            for(int t=0;t<node_column_size; t++){
+              field_elem[e+elements*t].re = data[t+node_column_size*s][0];
+              field_elem[e+elements*t].im = data[t+node_column_size*s][1];
+            }
           }
         }
-
       }
     }
 
@@ -133,7 +141,14 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       // Place the new data into field memory
       for( int l=0; l<cpn; l++ ) {
         int c = s*cpn+l;
-        result.fs->payload.place_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(), lattice);
+        unsigned *d_site_index;
+        int n = sitelist[c].size();
+        cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
+        cudaMemcpy( d_site_index, sitelist[c].data(), n*sizeof(unsigned), cudaMemcpyHostToDevice );
+
+        place_elements_kernel<<< N_blocks, N_threads >>>(read_pointer->fs->payload, (T*)(sendbuf + col_size*l), d_site_index, n, lattice->field_alloc_size() );
+        
+        cudaFree(d_site_index);
       }
     }
 
@@ -142,8 +157,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     fftw_free(in); fftw_free(out);
   }
 
-  free(mpi_send_buffer);
-  free(mpi_recv_buffer);
+  cudaFree(mpi_send_buffer);
+  cudaFree(mpi_recv_buffer);
 }
 
 

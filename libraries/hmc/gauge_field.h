@@ -217,6 +217,7 @@ class gauge_field : public gauge_field_base<matrix> {
   void random(){
     foralldir(dir){
       onsites(ALL){
+        if(disable_avx[X]==0){};
         this->gauge[dir][X].random();
       }
     }

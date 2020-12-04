@@ -196,6 +196,18 @@ public:
   special_boundary_struct special_boundaries[NDIRS];
 #endif
 
+  /// Information about the column of nodes to a given directions
+  // (nodes that share all coordinates except 1)
+  struct mpi_column_struct {
+    std::vector<int> nodelist;
+    MPI_Comm column_communicator = nullptr;
+    int my_column_rank;
+    bool init = true;
+  };
+
+  /// Get an MPI column in direction dir, build if necessary
+  static mpi_column_struct get_mpi_column(direction dir);
+
 #ifndef VANILLA
   backend_lattice_struct *backend_lattice;
 #endif
@@ -364,7 +376,6 @@ struct sublattices_struct {
 };
 
 extern sublattices_struct sublattices;
-
 
 
 
