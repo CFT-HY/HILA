@@ -9,6 +9,38 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include "cufft.h"
+
+
+/// Gather one element column from the mpi buffer
+template <typename complex_type>
+__global__ void gather_column( cufftDoubleComplex *data, complex_type* mpi_recv_buffer, int elements, int nnodes, int node_column_size, int block_size, int e )
+{
+  int t = threadIdx.x + blockIdx.x * blockDim.x;
+  if( t < node_column_size ) {
+    for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
+      complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s);
+      data[t+node_column_size*s].x = field_elem[e+elements*t].re;
+      data[t+node_column_size*s].y = field_elem[e+elements*t].im;
+    }
+  }
+}
+
+/// Place results in the MPI buffer
+template <typename complex_type>
+__global__ void scatter_column( cufftDoubleComplex *data, complex_type* mpi_recv_buffer, int elements, int nnodes, int node_column_size, int block_size, int e )
+{
+  // Put the transformed data back in place
+  int t = threadIdx.x + blockIdx.x * blockDim.x;
+  if( t < node_column_size ) {
+    for(int s=0; s<nnodes; s++){
+      complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s);
+      field_elem[e+elements*t].re = data[t+node_column_size*s].x;
+      field_elem[e+elements*t].im = data[t+node_column_size*s].y;
+    }
+  }
+}
+
+
 /// Run Fast Fourier Transform on the field to each direction
 // This is done by collecting a column of elements to each node,
 // running the Fourier transform on the column and redistributing
@@ -110,27 +142,17 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     // now that we have columns, run FFT on each
     for( int l=0; l<cpn; l++ ) { // Columns
       for( int e=0; e<elements; e++ ){ // Complex elements / field element
-        for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
-          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
-          for(int t=0;t<node_column_size; t++){
-            data[t+node_column_size*s].x = field_elem[e+elements*t].re;
-            data[t+node_column_size*s].y = field_elem[e+elements*t].im;
-          }
-        }
+        int N_blocks = node_column_size/N_threads + 1;
+        gather_column<<< N_blocks, N_threads >>>( data, 
+          (complex_type*) (mpi_recv_buffer + col_size*l),
+          elements, nnodes, node_column_size, block_size, e );
 
         // Run the fft
         cufftExecZ2Z(plan, data, data, CUFFT_FORWARD);
 
-        // Put the transformed data back in place
-        for(int t=0;t<column_size; t++){
-          for(int s=0; s<nnodes; s++){
-            complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
-            for(int t=0;t<node_column_size; t++){
-              field_elem[e+elements*t].re = data[t+node_column_size*s].x;
-              field_elem[e+elements*t].im = data[t+node_column_size*s].y;
-            }
-          }
-        }
+        scatter_column<<< N_blocks, N_threads >>>( data, 
+          (complex_type*) (mpi_recv_buffer + col_size*l),
+          elements, nnodes, node_column_size, block_size, e );
       }
     }
 
