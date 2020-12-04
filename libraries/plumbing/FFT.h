@@ -99,6 +99,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     // now that we have columns, run FFT on each
     for( int l=0; l<cpn; l++ ) { // Columns
       for( int e=0; e<elements; e++ ){ // Complex elements / field element
+
         for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
           complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
@@ -106,20 +107,19 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
             in[t+node_column_size*s][1] = field_elem[e+elements*t].im;
           }
         }
-
+        
         // Run the fft
         fftw_execute(plan);
 
         // Put the transformed data back in place
-        for(int t=0;t<column_size; t++){
-          for(int s=0; s<nnodes; s++){
-            complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
-            for(int t=0;t<node_column_size; t++){
-              field_elem[e+elements*t].re = out[t+node_column_size*s][0];
-              field_elem[e+elements*t].im = out[t+node_column_size*s][1];
-            }
+        for(int s=0; s<nnodes; s++){
+          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+          for(int t=0;t<node_column_size; t++){
+            field_elem[e+elements*t].re = out[t+node_column_size*s][0];
+            field_elem[e+elements*t].im = out[t+node_column_size*s][1];
           }
         }
+
       }
     }
 
