@@ -85,16 +85,25 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
 
     // Gather a number of columns to each node
+    MPI_Request my_request;
     for( int r=0; r<nnodes; r++ ){
       char * sendbuf = mpi_send_buffer + block_size*r;
       for( int l=0; l<cpn; l++ ) {
         int c = r*cpn+l;
         read_pointer->fs->payload.gather_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(),  lattice);
       }
-      MPI_Gather( sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE, 
+      MPI_Request request;
+      MPI_Igather( sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE, 
                   mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE,
-                  r, column_communicator);
+                  r, column_communicator, &request);
+      if(r == my_column_rank){
+        my_request = request;
+      }
     }
+
+    // Wait for my data
+    MPI_Status status;
+    MPI_Wait(&my_request, &status);
     
     // now that we have columns, run FFT on each
     for( int l=0; l<cpn; l++ ) { // Columns
@@ -124,6 +133,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     }
 
     // Now reverse the gather operation. After this each node will have its original local sites
+    // The scatter operation cannot be asynchronous, but this coul dbe implemented with a 
+    // gather operations instead.
     for( int s=0; s<nnodes; s++ ){
       char * sendbuf = mpi_send_buffer + block_size*s;
       MPI_Scatter( mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE, 
