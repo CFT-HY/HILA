@@ -480,7 +480,15 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
   // Final reduction of the temporary reduction variables
   for (var_info & v : var_info_list) {
     if (v.reduction_type == reduction::SUM) {
-      code << v.reduction_name << " = reduce_sum(" << v.new_name << ");\n";
+      // code << v.reduction_name << " = reduce_sum(" << v.new_name << ");\n";
+
+      code << v.reduction_name << " = reduce_sum_in_vector<"
+                               <<  v.vecinfo.basetype_str << ", "
+                               << v.vecinfo.vectortype << ", "
+                               << v.type << ", "
+                               << v.vecinfo.vectorized_type << ">("
+                               << v.new_name << ");\n";
+
     } else if (v.reduction_type == reduction::PRODUCT) {
       code << v.reduction_name << " = reduce_prod(" << v.new_name << ");\n";
     }

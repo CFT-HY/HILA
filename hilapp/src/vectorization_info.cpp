@@ -140,18 +140,19 @@ bool MyASTVisitor::is_vectorizable_type(const std::string & type_name, vectoriza
 
       if (n.ntype == number_type::DOUBLE) {
         vi.vector_size = target.vector_size/sizeof(double);
-        old_t = "double";
-        new_t = "Vec" + std::to_string(vi.vector_size) + "d";
+        old_t = vi.basetype_str = "double";
+        new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "d";
+        
 
       } else if (n.ntype == number_type::FLOAT) {
         vi.vector_size = target.vector_size/sizeof(float);
-        old_t = "float";
-        new_t = "Vec" + std::to_string(vi.vector_size) + "f";
+        old_t = vi.basetype_str = "float";
+        new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "f";
 
       } else if (n.ntype == number_type::INT) {
         vi.vector_size = target.vector_size/sizeof(int);
-        old_t = "int";
-        new_t = "Vec" + std::to_string(vi.vector_size) + "i";
+        old_t = vi.basetype_str = "int";
+        new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "i";
 
       } else return vi.is_vectorizable = false;   // not vectorizable type
 

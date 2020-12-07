@@ -177,7 +177,9 @@ struct vectorization_info {
   bool is_vectorizable;
   int vector_size;
   number_type basetype;
-  std::string vectorized_type;
+  std::string basetype_str;              // name of the base var
+  std::string vectortype;                // basetype -> vectorized, e.g. "Vec4d" etc.
+  std::string vectorized_type;           // var.type now as vectorized
 };
 
 

@@ -185,6 +185,19 @@ inline double reduce_prod(Vec16i v){
   return sum;
 }
 
+// Return the 
+template <typename base_t, typename vector_t, typename T, typename vecT>
+T reduce_sum_in_vector(const vecT & vt) {
+  constexpr int nvec = sizeof(vecT)/sizeof(vector_t);
+  T res;
+  auto * vptr = (const vector_t *)(&vt);
+  base_t * bptr = (base_t *)(&res);
+  for (int i=0; i<nvec; i++) {
+    bptr[i] = reduce_sum(vptr[i]);
+  }
+  return res;
+}
+
 
 
 /// If vector elements are implemented in the c++ code,
