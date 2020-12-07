@@ -59,7 +59,7 @@ namespace hila {
   extern int my_rank;
 
   void initialize(int argc, char **argv);
-};
+}
 
 // this is pretty hacky but easy.  Probably could do without #define too
 // do this through else-branch in order to avoid if-statement problems
