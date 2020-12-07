@@ -143,7 +143,6 @@ bool MyASTVisitor::is_vectorizable_type(const std::string & type_name, vectoriza
         old_t = vi.basetype_str = "double";
         new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "d";
         
-
       } else if (n.ntype == number_type::FLOAT) {
         vi.vector_size = target.vector_size/sizeof(float);
         old_t = vi.basetype_str = "float";
@@ -153,6 +152,11 @@ bool MyASTVisitor::is_vectorizable_type(const std::string & type_name, vectoriza
         vi.vector_size = target.vector_size/sizeof(int);
         old_t = vi.basetype_str = "int";
         new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "i";
+
+      } else if (n.ntype == number_type::INT64_T) {
+        vi.vector_size = target.vector_size/sizeof(int64_t);
+        old_t = vi.basetype_str = "int64_t";
+        new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "q";
 
       } else return vi.is_vectorizable = false;   // not vectorizable type
 
@@ -173,7 +177,7 @@ bool MyASTVisitor::is_vectorizable_type(const std::string & type_name, vectoriza
     } else {
       // now target.vectorize is false, we don't know the vec length
       if (n.ntype == number_type::DOUBLE || n.ntype == number_type::FLOAT || 
-          n.ntype == number_type::INT) {
+          n.ntype == number_type::INT || n.ntype == number_type::INT64_T) {
             vi.vectorized_type = "";   // in principle vectorizable, don't know the type
             vi.vector_size = 0;
             return vi.is_vectorizable = true;

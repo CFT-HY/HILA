@@ -151,6 +151,7 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
     }
     if( typestring.find("float") != std::string::npos ||
         typestring.find("int") != std::string::npos || 
+        typestring.find("int64_t") != std::string::npos || 
         typestring.find("coordinate_vector") != std::string::npos ){
       smallest = 8;
       largest = 16;

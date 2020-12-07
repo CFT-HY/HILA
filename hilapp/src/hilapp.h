@@ -171,7 +171,7 @@ struct dir_ptr {
 /// b) is templated type, with float/double in template and  implements 
 ///    the method using base_type = typename base_type_struct<T>::type;
 
-enum class number_type {INT, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
+enum class number_type {INT, INT64_T, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
 
 struct vectorization_info {
   bool is_vectorizable;
