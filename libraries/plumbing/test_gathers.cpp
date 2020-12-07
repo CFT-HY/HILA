@@ -117,41 +117,26 @@ void gather_test() {
 
         t.mark_changed(ALL);  // force fetching, test it too
 
-#ifdef VECTORIZED
-        // above is not vectorized, so do it also in vec way
-
-        
-        diff = 0;
-        sum1 = sum2 = 0;
-        onsites(p) {
-          int a = t[X+d2].r[d];
-          T j = abs(a);
-          T s = ((int)(t[X].r[d] + add + lattice->size(d))) % lattice->size(d);
-
-          diff += s-j;
-          sum1 += t[X].r[d] - lattice->size(d)/2;
-          sum2 += j - lattice->size(d)/2;
-        }     
-     
-        if (diff != 0) {
-          hila::output << "Vectorized std gather test error! Node " << hila::my_rank 
-                       << " Parity " << parity_name(p) << " direction " << (unsigned)d2 << '\n';
-          exit(-1);
-        }
-
-        if (sum1 + s_result != 0.0) {
-          output0 << "Error in vector sum reduction!  answer " << sum1 + s_result << " should be 0\n";
-          exit(-1);
-        }
-
-        if (sum2 + s_result != 0.0) {
-          output0 << "Error in vector neighbour sum reduction!  answer " << sum2 + s_result << " should be 0\n";
-          exit(-1);
-        }
-        
-        t.mark_changed(ALL);
-#endif
       }
+#ifdef VECTORIZED
+      // above is not vectorized, so do it also in vec way
+      // make it simple to keep it vectorized
+        
+      T difT = 0;
+      field<T> f = 1;
+      onsites(p) {
+        difT += f[X+d] + f[X-d] - 2*f[X];
+      }     
+     
+      if (difT != 0) {
+        hila::output << "Vectorized std gather test error! Node " << hila::my_rank 
+                     << " Parity " << parity_name(p) << " direction " << (unsigned)d << '\n';
+        exit(-1);
+      }
+    
+      t.mark_changed(ALL);
+#endif
+    
     }
   }
   #ifdef SPECIAL_BOUNDARY_CONDITIONS
