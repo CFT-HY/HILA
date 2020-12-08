@@ -39,7 +39,6 @@ HILA_OBJECTS = \
   build/param_input.o \
   build/mersenne_inline.o \
   build/lattice.o \
-  build/setup_layout_vector.o \
   build/map_node_layout_trivial.o \
   build/memalloc.o \
   build/timing.o \
@@ -51,6 +50,14 @@ HILA_OBJECTS = \
 
 # Read in the appropriate platform bits and perhaps extra objects
 include $(PLATFORM_DIR)/$(PLATFORM).mk
+
+# Define LAYOUT_VECTOR if vector (SUBNODE) layout is desired
+ifdef LAYOUT_VECTOR
+  HILA_OBJECTS += build/setup_layout_vector.o
+	HILA_OPTS += -DSUBNODE_LAYOUT
+else
+	HILA_OBJECTS += build/setup_layout_generic.o
+endif
 
 # To force a full remake when changing platforms or targets
 LASTMAKE := build/_lastmake.${MAKECMDGOALS}.${PLATFORM}

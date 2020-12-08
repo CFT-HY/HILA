@@ -15,6 +15,10 @@ LD := mpic++
 CXXFLAGS  := -O3 -x c++ --std=c++17
 #CXXFLAGS := -g -x c++ --std=c++17
 
+# Define this to use setup_layout_vector
+# it works for non-AVX code too, but is necessary for AVX
+
+LAYOUT_VECTOR := 1
 
 ## The following incantation gives the include paths of the $(CC) compiler (if it is gcc or clang)
 # It may be that this path is not necessary at all, usually not for "system installed" clang
