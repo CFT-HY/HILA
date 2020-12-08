@@ -3,6 +3,7 @@
 
 #include "plumbing/field.h"
 #include "datatypes/cmplx.h"
+#include "plumbing/timing.h"
 #include "fftw3.h"
 
 
@@ -22,6 +23,10 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
   field<T> * read_pointer = &input; // Read from input on first time, then work in result
   size_t local_volume = lattice->local_volume();
   int elements = sizeof(T)/sizeof(complex_type);
+
+  static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");
+
+  FFT_timer.start();
 
   // Make store the result is allocated and mark it changed 
   result.check_alloc();
@@ -86,19 +91,25 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
     // Gather a number of columns to each node
     MPI_Request my_request;
+    MPI_Request other_reqs[nnodes];
+    int ireq = 0;
     for( int r=0; r<nnodes; r++ ){
       char * sendbuf = mpi_send_buffer + block_size*r;
       for( int l=0; l<cpn; l++ ) {
         int c = r*cpn+l;
         read_pointer->fs->payload.gather_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(),  lattice);
       }
+      FFT_MPI_timer.start();
       MPI_Request request;
       MPI_Igather( sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE, 
                   mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE,
                   r, column_communicator, &request);
       if(r == my_column_rank){
         my_request = request;
+      } else {
+        other_reqs[ireq++] = request;
       }
+      FFT_MPI_timer.stop();
     }
 
     // Wait for my data
@@ -132,14 +143,26 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       }
     }
 
+    // clear the other requests -- wonder if these are needed?
+    static timer waitall_timer(" waitall");
+    waitall_timer.start();
+    if (nnodes > 1) {
+      MPI_Status statarr[nnodes-1];
+      MPI_Waitall(nnodes-1, other_reqs, statarr );
+    }
+    waitall_timer.stop();
+
     // Now reverse the gather operation. After this each node will have its original local sites
     // The scatter operation cannot be asynchronous, but this coul dbe implemented with a 
     // gather operations instead.
     for( int s=0; s<nnodes; s++ ){
+      FFT_MPI_timer.start();
       char * sendbuf = mpi_send_buffer + block_size*s;
       MPI_Scatter( mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE, 
                    sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE,
                    s, column_communicator);
+
+      FFT_MPI_timer.stop();
 
       // Place the new data into field memory
       for( int l=0; l<cpn; l++ ) {
@@ -155,6 +178,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
   free(mpi_send_buffer);
   free(mpi_recv_buffer);
+
+  FFT_timer.stop();
 }
 
 

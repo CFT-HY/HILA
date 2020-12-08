@@ -46,7 +46,7 @@ $(info -----------------------------------------------)
 
 #CXX := g++-5
 CXX := $(LLVM_BIN_PATH)/clang++
-CXXFLAGS := -g -fno-rtti -std=c++17 
+CXXFLAGS := -fno-rtti -std=c++17 
 
 LLVM_CXXFLAGS := `$(LLVM_BIN_PATH)/llvm-config --cxxflags`
 LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`

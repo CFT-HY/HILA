@@ -2,7 +2,8 @@
 
 int main(int argc, char **argv){
 
-  using T = matrix<2,2,cmplx<double>>;
+  //using T = matrix<2,2,cmplx<double>>;
+  using T = cmplx<double>;
 
   test_setup(argc, argv);
     
@@ -28,7 +29,7 @@ int main(int argc, char **argv){
     sum += (p[X]-p2[X]).norm_sq();
   }
   assert(sum==0 && "First FFT\n");
-
+  output0 << "Sum " << sum << '\n';
 
   // After two applications the field should be back to a constant * volume
   f2[ALL] = lattice->volume();
