@@ -23,7 +23,7 @@ void initialize_machine(int &argc, char ***argv)
 #endif
     initialized = true;
   }
-  hila::my_rank = hila::my_rank;
+  hila::my_rank_n = 0;
 }
 
 // check if is intialized

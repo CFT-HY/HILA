@@ -28,7 +28,7 @@ input::returntype input::get() {
 
 void input::open(const std::string &fname) {
   bool got_error;
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     if (is_initialized) {
       hila::output << "Error: file '" << fname << "' cannot be opened because '" << filename 
                    << "' is open in this input variable\n";
@@ -61,7 +61,7 @@ void input::close() {
 
 // read one line skipping comments and initial whitespace
 bool input::get_line() {
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     do {
       inputfile >> std::ws;  // remove initial whitespace
       if (!std::getline(inputfile, linebuffer)) {
@@ -80,7 +80,7 @@ bool input::get_line() {
 
 // print the read-in line with a bit special formatting
 void input::print_linebuf() {
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     std::string out;
     size_t i;
     for (i=0; i<linebuffer.size() && !std::isspace(linebuffer[i]); i++) 
@@ -95,7 +95,7 @@ void input::print_linebuf() {
 
 // remove leading whitespace, incl. lines
 bool input::remove_whitespace() {
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     while (lb_start < linebuffer.size() && std::isspace(linebuffer[lb_start])) lb_start++;
     if (lb_start == linebuffer.size()) return get_line();
   }
@@ -151,7 +151,7 @@ bool input::match_token(const std::string & tok) {
 // require the (typically beginning of line) key for parameters
 
 bool input::handle_key(const std::string &key) {
-  if (hila::my_rank==0) {
+  if (hila::myrank()==0) {
     // check the linebuffer for stuff
     remove_whitespace();
     if (key.size() == 0) return true;
@@ -192,7 +192,7 @@ int input::get_int(const std::string &label) {
   int val = 0;
   bool no_error = handle_key(label);
 
-  if (hila::my_rank==0 && no_error) {
+  if (hila::myrank()==0 && no_error) {
     std::string tok;
     if (!(get_token(tok) && is_value(tok,val))) {
       hila::output << "Error: expecting integer after '" << label << "'\n";
@@ -220,7 +220,7 @@ double input::get_double(const std::string &label) {
   double val = 0;
   bool no_error = handle_key(label); // removes whitespace
 
-  if (hila::my_rank==0 && no_error) {
+  if (hila::myrank()==0 && no_error) {
     std::string tok;
     if (!(get_token(tok) && is_value(tok,val))) {
       hila::output << "Error: expecting double after '" << label << "'\n";
@@ -256,7 +256,7 @@ std::string input::get_string(const std::string &label) {
   std::string val;
   bool no_error = handle_key(label);
 
-  if (hila::my_rank==0 && no_error) {
+  if (hila::myrank()==0 && no_error) {
     no_error = get_token(val);
     if (no_error) {
       val = remove_quotes(val);  
@@ -281,7 +281,7 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
   int i=0;
   double d;
 
-  if (hila::my_rank == 0 && no_error) {
+  if (hila::myrank() == 0 && no_error) {
     std::string s;
     no_error = get_token(s);
     if (no_error) {
@@ -331,7 +331,7 @@ void input::get_type_vector(const std::string & label, std::vector<T> & res,
   while (std::isspace(*rest)) rest++;
   res.clear();
 
-  if (hila::my_rank==0 && no_error) {
+  if (hila::myrank()==0 && no_error) {
     std::string s;
     T val;
     do {

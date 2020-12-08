@@ -19,7 +19,7 @@
 
 
 
-const int nd[4] = { 32, 32, 32, 32};
+const int nd[4] = { 32, 32, 32, 128};
 
 
 inline void checkLatticeSetup(){

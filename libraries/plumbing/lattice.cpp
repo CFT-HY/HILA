@@ -219,7 +219,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 
 unsigned lattice_struct::site_index(const coordinate_vector & loc)
 {
-  return site_index(loc, hila::my_rank);
+  return site_index(loc, hila::myrank());
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -328,7 +328,7 @@ void lattice_struct::setup_nodes() {
     }
     
     // use the opportunity to set up this_node when it is met
-    if (nn == hila::my_rank)
+    if (nn == hila::myrank())
       this_node.setup(ni, *lattice);
   }
 }
@@ -340,7 +340,7 @@ void lattice_struct::setup_nodes() {
 void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice)
 {
   
-  rank = hila::my_rank;
+  rank = hila::myrank();
 
   min  = ni.min;
   size = ni.size;
@@ -671,7 +671,7 @@ void lattice_struct::init_special_boundaries() {
 
     }
 
-    // hila::output << "Node " << hila::my_rank << " dir " << d << " min " << this_node.min << " is_on_edge "
+    // hila::output << "Node " << hila::myrank() << " dir " << d << " min " << this_node.min << " is_on_edge "
     //   << special_boundaries[d].is_on_edge << '\n';
 
     // allocate neighbours only on 1st use, otherwise unneeded

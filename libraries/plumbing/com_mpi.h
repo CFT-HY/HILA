@@ -44,7 +44,7 @@ void broadcast(std::vector<T> & list) {
 
   int size = list.size();
   MPI_Bcast(&size, sizeof(int), MPI_BYTE, 0, lattice->mpi_comm_lat);
-  if (hila::my_rank != 0) {
+  if (hila::myrank() != 0) {
     list.resize(size);
   }
 
@@ -97,7 +97,7 @@ void lattice_struct::reduce_node_sum(T * value, int N, bool distribute) {
   } else {
     MPI_Reduce( (void *)value, (void *)work, N*sizeof(T)/sizeof(number_type<T>), dtype,
                 MPI_SUM, 0 , lattice->mpi_comm_lat );
-    if (hila::my_rank == 0) for(int i=0; i<N; i++)
+    if (hila::myrank() == 0) for(int i=0; i<N; i++)
       value[i] = work[i];
 
   }
@@ -128,7 +128,7 @@ void lattice_struct::reduce_node_product(T * value, int N, bool distribute) {
       value[i] = work[i];
   } else {
     MPI_Reduce( (void *)value, (void *)work, N, dtype, MPI_PROD, 0 , lattice->mpi_comm_lat );
-    if (hila::my_rank == 0) for(int i=0; i<N; i++)
+    if (hila::myrank() == 0) for(int i=0; i<N; i++)
       value[i] = work[i];
 
   }

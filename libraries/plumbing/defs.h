@@ -56,14 +56,15 @@ namespace hila {
 
   // store the rank of this process to a global variable - this will not vanish during 
   // object destruction at the end!
-  extern int my_rank;
+  extern int my_rank_n;
+  inline int myrank() { return my_rank_n; }
 
   void initialize(int argc, char **argv);
 }
 
 // this is pretty hacky but easy.  Probably could do without #define too
 // do this through else-branch in order to avoid if-statement problems
-#define output0 if (hila::my_rank != 0) {} else hila::output
+#define output0 if (hila::myrank() != 0) {} else hila::output
 
 // the above gives often warning when used with if stmt, close that with this hammer
 #if defined(__clang__) || defined(__GNUC__)

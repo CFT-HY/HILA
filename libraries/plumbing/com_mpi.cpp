@@ -34,13 +34,11 @@ void initialize_machine(int &argc, char ***argv)
     MPI_Comm_size( lattice->mpi_comm_lat, &lattice->nodes.number );
 
 #ifdef CUDA
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-    initialize_cuda( rank );
+    initialize_cuda( lattice->this_node.rank );
 #endif
 
   }
-  hila::my_rank = mynode();
+  hila::my_rank_n = lattice->this_node.rank;
 
   start_send_timer.init("MPI start send");
   wait_send_timer.init("MPI wait send");
@@ -122,7 +120,7 @@ void broadcast(std::string & var) {
   int size = var.size();
   broadcast(size);
 
-  if (hila::my_rank!=0) {
+  if (hila::myrank()!=0) {
     var.resize(size,' ');
   }
   // copy directy to data() buffer

@@ -837,7 +837,7 @@ dir_mask_t field<T>::start_fetch(direction d, parity p) const {
   // No comms to do, nothing to wait for -- we'll use the is_fetched
   // status to keep track of vector boundary shuffle anyway
 
-  if (from_node.rank == hila::my_rank && to_node.rank == hila::my_rank) {
+  if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) {
     fs->set_local_boundary_elements(d,p);
     mark_fetched(d,p);
     return 0;
@@ -876,7 +876,7 @@ dir_mask_t field<T>::start_fetch(direction d, parity p) const {
 
 
 
-  if (from_node.rank != hila::my_rank) {
+  if (from_node.rank != hila::myrank()) {
 
     // HANDLE RECEIVES: get node which will send here
     post_receive_timer.start();
@@ -893,7 +893,7 @@ dir_mask_t field<T>::start_fetch(direction d, parity p) const {
     post_receive_timer.stop();
   }
 
-  if (to_node.rank != hila::my_rank) {
+  if (to_node.rank != hila::myrank()) {
     // HANDLE SENDS: Copy field elements on the boundary to a send buffer and send
     start_send_timer.start();
 
@@ -940,7 +940,7 @@ void field<T>::wait_fetch(direction d, parity p) const {
   if (is_fetched(d,p)) return;
 
   // this is the branch if no comms -- shuffle was done in start_fetch
-  if (from_node.rank == hila::my_rank && to_node.rank == hila::my_rank) return;
+  if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) return;
 
   // if (!is_move_started(d,p)) {
   //   output0 << "Wait move error - wait_fetch without corresponding start_fetch\n";
@@ -983,7 +983,7 @@ void field<T>::wait_fetch(direction d, parity p) const {
 
     int par_i = (int)par - 1;
 
-    if (from_node.rank != hila::my_rank) {
+    if (from_node.rank != hila::myrank()) {
       wait_receive_timer.start();
 
       MPI_Status status;
@@ -997,7 +997,7 @@ void field<T>::wait_fetch(direction d, parity p) const {
     }
 
     // then wait for the sends
-    if (to_node.rank != hila::my_rank) {
+    if (to_node.rank != hila::myrank()) {
       wait_send_timer.start();
       MPI_Status status;
       MPI_Wait( &fs->send_request[par_i][d], &status );
@@ -1036,12 +1036,12 @@ void field<T>::drop_comms(direction d, parity p) const {
 
 template<typename T>
 void field<T>::cancel_comm(direction d, parity p) const {
-  if (lattice->nn_comminfo[d].from_node.rank != hila::my_rank) {
+  if (lattice->nn_comminfo[d].from_node.rank != hila::myrank()) {
     cancel_receive_timer.start();
     MPI_Cancel( &fs->receive_request[(int)p-1][d] );
     cancel_receive_timer.stop();
   }
-  if (lattice->nn_comminfo[d].to_node.rank != hila::my_rank) {
+  if (lattice->nn_comminfo[d].to_node.rank != hila::myrank()) {
     cancel_send_timer.start();
     MPI_Cancel( &fs->send_request[(int)p-1][d] );
     cancel_send_timer.stop();
@@ -1103,11 +1103,11 @@ void field<T>::field_struct::gather_elements(T * buffer, std::vector<coordinate_
   
   std::vector<T> send_buffer(index_list.size());
   payload.gather_elements((T*) send_buffer.data(), index_list.data(), send_buffer.size(), lattice);
-  if(hila::my_rank != root && node_list[hila::my_rank] > 0){
-    MPI_Send((char*) send_buffer.data(), node_list[hila::my_rank]*sizeof(T), MPI_BYTE, root, hila::my_rank, 
+  if(hila::myrank() != root && node_list[hila::myrank()] > 0){
+    MPI_Send((char*) send_buffer.data(), node_list[hila::myrank()]*sizeof(T), MPI_BYTE, root, hila::myrank(), 
              lattice->mpi_comm_lat);
   }
-  if(hila::my_rank == root) {
+  if(hila::myrank() == root) {
     for( int n=0; n<node_list.size(); n++ ) if(node_list[n] > 0) {
       if(n!=root) {
         MPI_Status status;
@@ -1138,12 +1138,12 @@ void field<T>::field_struct::send_elements(T * buffer, std::vector<coordinate_ve
 
   std::vector<T> recv_buffer(index_list.size());
   payload.gather_elements((T*) recv_buffer.data(), index_list.data(), recv_buffer.size(), lattice);
-  if(hila::my_rank != root && node_list[hila::my_rank] > 0){
+  if(hila::myrank() != root && node_list[hila::myrank()] > 0){
     MPI_Status status;
-    MPI_Recv((char*) recv_buffer.data(), node_list[hila::my_rank]*sizeof(T), MPI_BYTE, root, hila::my_rank, 
+    MPI_Recv((char*) recv_buffer.data(), node_list[hila::myrank()]*sizeof(T), MPI_BYTE, root, hila::myrank(), 
               lattice->mpi_comm_lat, &status);
   }
-  if(hila::my_rank == root) {
+  if(hila::myrank() == root) {
     for( int n=0; n<node_list.size(); n++ ) if(node_list[n] > 0) {
       if(n!=root) {
         MPI_Send(buffer, node_list[n]*sizeof(T), MPI_BYTE, n, n, lattice->mpi_comm_lat);
@@ -1226,7 +1226,7 @@ T field<T>::get_element( coordinate_vector coord) const {
   T element;
   int owner = lattice->node_rank(coord);
 
-  if( hila::my_rank == owner ){
+  if( hila::myrank() == owner ){
     element = get_value_at( lattice->site_index(coord) );
   }
 
@@ -1315,7 +1315,7 @@ void field<T>::write_to_stream(std::ofstream& outputfile){
     // Write the buffer when full
     if( (i+1)%sites_per_write == 0 ){
       fs->gather_elements(buffer, coord_list);
-      if( hila::my_rank==0 )
+      if( hila::myrank()==0 )
         outputfile.write((char*)buffer,write_size);
     }
   }
@@ -1324,7 +1324,7 @@ void field<T>::write_to_stream(std::ofstream& outputfile){
   coord_list.resize(i%sites_per_write);
   fs->gather_elements(buffer, coord_list);
   double * v = (double*) buffer;
-  if( hila::my_rank == 0 )
+  if( hila::myrank() == 0 )
     outputfile.write((char*)buffer,sizeof(T)*(i%sites_per_write));
 
   std::free(buffer);
@@ -1391,7 +1391,7 @@ void field<T>::read_from_stream(std::ifstream& inputfile){
 
     // Read the buffer when full
     if( (i+1)%sites_per_read == 0 ){
-      if( hila::my_rank==0 )
+      if( hila::myrank()==0 )
         inputfile.read((char*)buffer,read_size);
       fs->send_elements(buffer, coord_list);
     }
@@ -1399,7 +1399,7 @@ void field<T>::read_from_stream(std::ifstream& inputfile){
 
   // Read the rest
   coord_list.resize(i%sites_per_read);
-  if( hila::my_rank==0 )
+  if( hila::myrank()==0 )
     inputfile.read((char*)buffer, sizeof(T)*(i%sites_per_read));
   double * v = (double*) buffer;
   fs->send_elements(buffer, coord_list);

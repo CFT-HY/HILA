@@ -25,7 +25,7 @@ void seed_random(unsigned long seed){
   unsigned int iters_per_kernel = 16;
   unsigned long n_blocks = lattice->local_volume() / (N_threads*iters_per_kernel) + 1;
   unsigned long n_sites = N_threads*n_blocks*iters_per_kernel;
-  unsigned long myseed = seed + hila::my_rank*n_sites;
+  unsigned long myseed = seed + hila::myrank()*n_sites;
   cudaMalloc( &curandstate, n_sites*sizeof( curandState ) );
   check_cuda_error("seed_random malloc");
   seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, myseed, iters_per_kernel );

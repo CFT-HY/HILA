@@ -41,14 +41,14 @@ void timer::reset() {
 }
 
 double timer::start() {
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     t_start = gettime();
     return t_start;
   } else return 0.0;
 }
   
 double timer::stop() {
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     double e = gettime();
     t_total += (e - t_start);
     count++;
@@ -57,14 +57,19 @@ double timer::stop() {
 }
 
 void timer::report() {
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     char line[202];
 
     // time used during the counter activity
     double ttime = gettime() - t_initial;
     if (count > 0) {
-      std::snprintf(line,200,"%-20s: %14.3f %14llu %11.3f %8.4f\n",
-                    label.c_str(), t_total, count, 1e6 * t_total/count, t_total/ttime );
+      if (t_total/count < 0.01) {
+        std::snprintf(line,200,"%-20s: %14.3f %14llu %10.3f us %8.4f\n",
+                      label.c_str(), t_total, count, 1e6 * t_total/count, t_total/ttime );
+      } else {
+        std::snprintf(line,200,"%-20s: %14.3f %14llu %10.3f s  %8.4f\n",
+                      label.c_str(), t_total, count, t_total/count, t_total/ttime );
+      }
     } else {
       std::snprintf(line,200,"%-20s: no timed calls made\n",label.c_str());
     }
@@ -73,14 +78,14 @@ void timer::report() {
 }
 
 void report_timers() {
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     if (timer_list.size() > 0) {
-      hila::output << "TIMER REPORT:             total(sec)          calls   usec/call  fraction\n";
-      hila::output << "-------------------------------------------------------------------------\n";
+      hila::output << "TIMER REPORT:             total(sec)          calls     time/call  fraction\n";
+      hila::output << "---------------------------------------------------------------------------\n";
 
       for (auto tp : timer_list) tp->report();
 
-      hila::output << "-------------------------------------------------------------------------\n";
+      hila::output << "---------------------------------------------------------------------------\n";
     } else {
       hila::output << "No timers defined\n";
     }
@@ -133,7 +138,7 @@ bool time_to_exit() {
   // if no time limit set
   if (timelimit == 0.0) return false;
 
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     double this_time = gettime();
     if (this_time - previous_time > max_interval) 
       max_interval = this_time - previous_time;
@@ -159,7 +164,7 @@ bool time_to_exit() {
 
 void timestamp(const char *msg)
 {
-  if (hila::my_rank == 0) {
+  if (hila::myrank() == 0) {
     std::time_t ct = std::time(NULL);
     if (msg != NULL) hila::output << msg;
     std::string d = ctime(&ct);
