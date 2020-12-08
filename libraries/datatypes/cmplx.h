@@ -102,8 +102,10 @@ struct cmplx {
 
   #pragma hila loop_function
   inline T squarenorm() const { return re*re + im*im; }
-  // TODO: make this work for vector type!  Not double
-  
+  #pragma hila loop_function
+  inline T norm_sq() const { return re*re + im*im; }
+
+  // TODO: make this work for vector type!  Not double  
   //currently this gives a compilation error
   #pragma hila loop_function
   inline double abs() const { return sqrt(static_cast<double>(squarenorm()) ); }
