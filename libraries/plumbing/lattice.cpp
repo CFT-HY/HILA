@@ -923,7 +923,8 @@ lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
       }
     }
   
-    MPI_Comm_split( MPI_COMM_WORLD, mpi_column[dir].nodelist[0], mpi_column[dir].my_column_rank, &mpi_column[dir].column_communicator );
+    MPI_Comm_split( lattice->mpi_comm_lat, mpi_column[dir].nodelist[0], 
+                    mpi_column[dir].my_column_rank, &mpi_column[dir].column_communicator );
   
     mpi_column[dir].init = false;
   
