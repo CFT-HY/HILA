@@ -24,8 +24,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
   size_t local_volume = lattice->local_volume();
   int elements = sizeof(T)/sizeof(complex_type);
 
-  static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");
-
+  static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");  // initialized 1st time used
+  
   FFT_timer.start();
 
   // Make store the result is allocated and mark it changed 
@@ -113,9 +113,11 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     }
 
     // Wait for my data
+    FFT_MPI_timer.start();
     MPI_Status status;
     MPI_Wait(&my_request, &status);
-    
+    FFT_MPI_timer.stop();
+
     // now that we have columns, run FFT on each
     for( int l=0; l<cpn; l++ ) { // Columns
       for( int e=0; e<elements; e++ ){ // Complex elements / field element
@@ -144,13 +146,12 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     }
 
     // clear the other requests -- wonder if these are needed?
-    static timer waitall_timer(" waitall");
-    waitall_timer.start();
     if (nnodes > 1) {
+      FFT_MPI_timer.start();
       MPI_Status statarr[nnodes-1];
       MPI_Waitall(nnodes-1, other_reqs, statarr );
+      FFT_MPI_timer.stop();
     }
-    waitall_timer.stop();
 
     // Now reverse the gather operation. After this each node will have its original local sites
     // The scatter operation cannot be asynchronous, but this coul dbe implemented with a 
