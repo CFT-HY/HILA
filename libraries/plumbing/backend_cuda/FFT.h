@@ -13,33 +13,29 @@
 
 /// Gather one element column from the mpi buffer
 template <typename complex_type>
-__global__ void gather_column( cufftDoubleComplex *data, complex_type* mpi_recv_buffer, int elements, int nnodes, int node_column_size, int block_size, int e )
+__global__ void gather_column( cufftDoubleComplex *data, complex_type* field_elem, int elements, int nnodes, int node_column_size, int block_size, int e, int s )
 {
   int t = threadIdx.x + blockIdx.x * blockDim.x;
   if( t < node_column_size ) {
-    for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
-      complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s);
       data[t+node_column_size*s].x = field_elem[e+elements*t].re;
       data[t+node_column_size*s].y = field_elem[e+elements*t].im;
-    }
   }
 }
 
 /// Place results in the MPI buffer
 template <typename complex_type>
-__global__ void scatter_column( cufftDoubleComplex *data, complex_type* mpi_recv_buffer, int elements, int nnodes, int node_column_size, int block_size, int e )
+__global__ void scatter_column( cufftDoubleComplex *data, complex_type* field_elem, int elements, int nnodes, int node_column_size, int block_size, int e, int s )
 {
   // Put the transformed data back in place
   int t = threadIdx.x + blockIdx.x * blockDim.x;
   if( t < node_column_size ) {
-    for(int s=0; s<nnodes; s++){
-      complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s);
       field_elem[e+elements*t].re = data[t+node_column_size*s].x;
       field_elem[e+elements*t].im = data[t+node_column_size*s].y;
-    }
   }
 }
 
+
+#ifdef CUDA_AWARE_MPI
 
 /// Run Fast Fourier Transform on the field to each direction
 // This is done by collecting a column of elements to each node,
@@ -126,8 +122,10 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         int c = r*cpn+l;
         unsigned *d_site_index;
         int n = sitelist[c].size();
-        cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
+        auto status = cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
+        check_cuda_error(status, "FFT allocate field memory");
         cudaMemcpy( d_site_index, sitelist[c].data(), n*sizeof(unsigned), cudaMemcpyHostToDevice );
+        check_cuda_error(status, "FFT memcopy 1");
 
         int N_blocks = n/N_threads + 1;
         gather_elements_kernel<<< N_blocks, N_threads >>>(read_pointer->fs->payload, (T*)(sendbuf + col_size*l), d_site_index, n, lattice->field_alloc_size() );
@@ -187,9 +185,185 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
   cudaFree(mpi_recv_buffer);
 }
 
-#else
 
-// No MPI
+
+#else // Not CUDA aware
+
+/// Run Fast Fourier Transform on the field to each direction
+// This is done by collecting a column of elements to each node,
+// running the Fourier transform on the column and redistributing
+// the result
+// Input and result are passed by reference. They may be the same.
+// The field must be complex and the underlying complex type is supplied
+// by the complex_type template argument
+// Non CUDA aware. This is mostly a copy of the non-CUDA version, but calls
+// the CUDA fft library
+template<typename T, typename complex_type>
+inline void FFT_field_complex(field<T> & input, field<T> & result){
+  check_cuda_error("FFT check for past errors");
+
+  lattice_struct * lattice = input.fs->lattice;
+  field<T> * read_pointer = &input; // Read from input on first time, then work in result
+  size_t local_volume = lattice->local_volume();
+  int elements = sizeof(T)/sizeof(complex_type);
+
+  // Make store the result is allocated and mark it changed 
+  result.check_alloc();
+  result.mark_changed(ALL);
+
+  // Allocate buffers for the MPI
+  char * mpi_send_buffer = (char*) malloc(local_volume*sizeof(T));
+  char * mpi_recv_buffer = (char*) malloc(local_volume*sizeof(T));
+
+  // Run transform in all directions
+  foralldir(dir){
+    check_cuda_error("FFT check before cycle");
+    // Get the number of sites per column on this node and on all nodes
+    size_t node_column_size = lattice->local_size(dir);
+    size_t column_size = lattice->size(dir);
+    // Count columns on this rank
+    int cols = 1;
+    foralldir(d2) if(d2!=dir) cols *= lattice->local_size(d2);
+
+    // Get the MPI column in this direction
+    lattice_struct::mpi_column_struct mpi_column = lattice->get_mpi_column(dir);
+    MPI_Comm column_communicator = mpi_column.column_communicator;
+    std::vector<int> nodelist = mpi_column.nodelist;
+    int my_column_rank = mpi_column.my_column_rank;
+    int nnodes = nodelist.size(); // Nodes in this column
+    int cpn = cols/nnodes; // Columns per node
+    // Amount of data that is communicated from a single node to another
+    int block_size = cpn*node_column_size*sizeof(T);
+    // Size of a full column
+    int col_size = node_column_size*sizeof(T);
+
+    // Variables needed for constructing the columns of sites
+    std::vector<node_info> allnodes = lattice->nodelist();
+    coordinate_vector min = allnodes[lattice->node_rank()].min;
+    coordinate_vector size = allnodes[lattice->node_rank()].size;
+
+    // CUFFT buffers
+    cufftHandle plan;
+    int BATCH=1;
+    cufftDoubleComplex * data = (cufftDoubleComplex*) malloc(sizeof(cufftDoubleComplex)*column_size*BATCH);
+    cufftPlan1d(&plan, column_size, CUFFT_Z2Z, BATCH); //Z2Z for double, C2C for float
+    check_cuda_error("FFT plan");
+
+
+    // Construct lists of sites for each column
+    std::vector<std::vector<unsigned>> sitelist(cols);
+    for( int c=0; c<cols; c++ ) {
+      // Get the index in the other directions
+      int cc = c;
+      coordinate_vector thiscol=min;
+      foralldir(d2) if(d2!=dir) {
+        thiscol[d2] += cc%size[d2];
+        cc/=size[d2];
+      }
+
+      // And build the list of sites
+      sitelist[c].resize(node_column_size);
+      for(int i=0; i<node_column_size; i++ ){
+        thiscol[dir] = min[dir] + i;
+        sitelist[c][i] = lattice->site_index(thiscol);
+      }
+    }
+
+
+    // Gather a number of columns to each node
+    MPI_Request my_request;
+    for( int r=0; r<nnodes; r++ ){
+      char * sendbuf = mpi_send_buffer + block_size*r;
+      for( int l=0; l<cpn; l++ ) {
+        int c = r*cpn+l;
+        read_pointer->fs->payload.gather_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(),  lattice);
+        check_cuda_error("FFT gather");
+      }
+      MPI_Request request;
+      MPI_Igather( sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE, 
+                  mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE,
+                  r, column_communicator, &request);
+      if(r == my_column_rank){
+        my_request = request;
+      }
+    }
+
+    // Wait for my data
+    MPI_Status status;
+    MPI_Wait(&my_request, &status);
+
+    // now that we have columns, run FFT on each
+    for( int l=0; l<cpn; l++ ) { // Columns
+      for( int e=0; e<elements; e++ ){ // Complex elements / field element
+        for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
+          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+          for(int t=0;t<node_column_size; t++){
+            data[t+node_column_size*s].x = field_elem[e+elements*t].re;
+            data[t+node_column_size*s].y = field_elem[e+elements*t].im;
+          }
+        }
+
+        cufftDoubleComplex * d_data;
+        auto status = cudaMalloc((void **)&d_data, column_size*sizeof(cufftDoubleComplex));
+        check_cuda_error(status, "FFT allocate memory");
+        status = cudaMemcpy( d_data, data, column_size*sizeof(cufftDoubleComplex), cudaMemcpyHostToDevice );
+        check_cuda_error(status, "FFT copy");
+
+        // Run the fft
+        cufftExecZ2Z(plan, d_data, d_data, CUFFT_FORWARD);
+        check_cuda_error("Run FFT");
+        cudaDeviceSynchronize();
+        
+        status = cudaMemcpy( data, d_data, column_size*sizeof(cufftDoubleComplex), cudaMemcpyDeviceToHost );
+        check_cuda_error(status, "FFT copy back");
+        status = cudaFree( d_data );
+        check_cuda_error(status, "FFT copy back");
+
+        // Put the transformed data back in place
+        for(int s=0; s<nnodes; s++){
+          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+          for(int t=0;t<node_column_size; t++){
+            field_elem[e+elements*t].re = data[t+node_column_size*s].x;
+            field_elem[e+elements*t].im = data[t+node_column_size*s].y;
+          }
+        }
+      }
+    }
+
+    // Now reverse the gather operation. After this each node will have its original local sites
+    // The scatter operation cannot be asynchronous, but this coul dbe implemented with a 
+    // gather operations instead.
+    for( int s=0; s<nnodes; s++ ){
+      char * sendbuf = mpi_send_buffer + block_size*s;
+      MPI_Scatter( mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE, 
+                   sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE,
+                   s, column_communicator);
+
+      // Place the new data into field memory
+      for( int l=0; l<cpn; l++ ) {
+        int c = s*cpn+l;
+        result.fs->payload.place_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(), lattice);
+        check_cuda_error("FFT place");
+      }
+    }
+
+    read_pointer = &result; // From now on we work in result
+    check_cuda_error("before cufftDestroy");
+    cufftDestroy(plan);
+    check_cuda_error("Destroy plan");
+    free(data);
+  }
+
+  free(mpi_send_buffer);
+  free(mpi_recv_buffer);
+}
+
+
+
+
+#endif
+#else // No MPI
+
 template<typename T, typename C>
 inline void FFT_field_complex(field<T> & input, field<T> & result){}
 
