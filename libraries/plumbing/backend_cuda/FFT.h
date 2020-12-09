@@ -156,6 +156,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
                   r, column_communicator);
     }
     
+
     // Reorganize the data to form columns of a single element
     int N_blocks = (node_column_size*cpn)/N_threads + 1;
     gather_column<complex_type><<< N_blocks, N_threads >>>( data, mpi_recv_buffer,
@@ -167,6 +168,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     // Reorganize back into elements
     scatter_column<complex_type><<< N_blocks, N_threads >>>( data, mpi_recv_buffer,
       elements, cpn, nnodes, node_column_size, column_size, block_size );
+
 
     // Now reverse the gather operation. After this each node will have its original local sites
     for( int s=0; s<nnodes; s++ ){
@@ -258,7 +260,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
     // CUFFT buffers
     cufftHandle plan;
-    int BATCH=1;
+    int BATCH=elements*cpn;
     cufftDoubleComplex * data = (cufftDoubleComplex*) malloc(sizeof(cufftDoubleComplex)*column_size*BATCH);
     cufftPlan1d(&plan, column_size, CUFFT_Z2Z, BATCH); //Z2Z for double, C2C for float
     check_cuda_error("FFT plan");
@@ -302,48 +304,57 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       }
     }
 
-    // Wait for my data
-    MPI_Status status;
-    MPI_Wait(&my_request, &status);
+    // Allocate CUDA FFT buffers
+    cufftDoubleComplex * d_data;
+    auto status = cudaMalloc((void **)&d_data, sizeof(cufftDoubleComplex)*column_size*BATCH);
+    check_cuda_error(status, "FFT allocate memory");
 
-    // now that we have columns, run FFT on each
+    // Wait for my data
+    MPI_Status mpi_status;
+    MPI_Wait(&my_request, &mpi_status);
+
+    // Reorganize the data to form columns of a single element
     for( int l=0; l<cpn; l++ ) { // Columns
       for( int e=0; e<elements; e++ ){ // Complex elements / field element
         for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
           complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
-            data[t+node_column_size*s].x = field_elem[e+elements*t].re;
-            data[t+node_column_size*s].y = field_elem[e+elements*t].im;
-          }
-        }
-        
-
-        cufftDoubleComplex * d_data;
-        auto status = cudaMalloc((void **)&d_data, column_size*sizeof(cufftDoubleComplex));
-        check_cuda_error(status, "FFT allocate memory");
-        status = cudaMemcpy( d_data, data, column_size*sizeof(cufftDoubleComplex), cudaMemcpyHostToDevice );
-        check_cuda_error(status, "FFT copy");
-
-        // Run the fft
-        cufftExecZ2Z(plan, d_data, d_data, CUFFT_FORWARD);
-        check_cuda_error("Run FFT");
-        cudaDeviceSynchronize();
-        
-        status = cudaMemcpy( data, d_data, column_size*sizeof(cufftDoubleComplex), cudaMemcpyDeviceToHost );
-        check_cuda_error(status, "FFT copy back");
-        status = cudaFree( d_data );
-        check_cuda_error(status, "FFT copy back");
-
-        // Put the transformed data back in place
-        for(int s=0; s<nnodes; s++){
-          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
-          for(int t=0;t<node_column_size; t++){
-            field_elem[e+elements*t].re = data[t+node_column_size*s].x;
-            field_elem[e+elements*t].im = data[t+node_column_size*s].y;
+            data[t+node_column_size*s + e*column_size+ l*column_size*elements].x = field_elem[e+elements*t].re;
+            data[t+node_column_size*s + e*column_size+ l*column_size*elements].y = field_elem[e+elements*t].im;
           }
         }
       }
     }
+
+    // Copy to device
+    status = cudaMemcpy( d_data, data, sizeof(cufftDoubleComplex)*column_size*BATCH, cudaMemcpyHostToDevice );
+    check_cuda_error(status, "FFT copy");
+
+    // Run the fft
+    cufftExecZ2Z(plan, d_data, d_data, CUFFT_FORWARD);
+    check_cuda_error("Run FFT");
+    cudaDeviceSynchronize();
+   
+    // Copy result back
+    status = cudaMemcpy( data, d_data, sizeof(cufftDoubleComplex)*column_size*BATCH, cudaMemcpyDeviceToHost );
+    check_cuda_error(status, "FFT copy back");
+
+    // Reorganize back into elements
+    for( int l=0; l<cpn; l++ ) { // Columns
+      for( int e=0; e<elements; e++ ){ // Complex elements / field element
+        for(int s=0; s<nnodes; s++){
+          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+          for(int t=0;t<node_column_size; t++){
+            field_elem[e+elements*t].re = data[t+node_column_size*s + e*column_size+ l*column_size*elements].x;
+            field_elem[e+elements*t].im = data[t+node_column_size*s + e*column_size+ l*column_size*elements].y;
+          }
+        }
+      }
+    }
+
+    // Free the CUDA buffers
+    status = cudaFree( d_data );
+    check_cuda_error(status, "FFT CUDA free");
 
     // Now reverse the gather operation. After this each node will have its original local sites
     // The scatter operation cannot be asynchronous, but this coul dbe implemented with a 
