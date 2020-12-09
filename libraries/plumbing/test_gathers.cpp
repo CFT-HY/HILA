@@ -43,18 +43,17 @@ void gather_test() {
     }
   }
 
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
+  const direction max_dir = (direction)(NDIM-1);
+#if defined(SPECIAL_BOUNDARY_CONDITIONS)
   for (boundary_condition_t bc : {boundary_condition_t::PERIODIC, boundary_condition_t::ANTIPERIODIC}) {
-#if NDIM > 3
-      t.set_boundary_condition(TUP,bc);
-#endif
+      t.set_boundary_condition(max_dir,bc);
 #endif
   for (parity p : {EVEN,ODD,ALL}) {
 
     foralldir(d) {
       // Find size here, cannot call the function in a CUDA loop
       int size_d = lattice->size(d);
-      int size_t = lattice->size(TUP);
+      int size_t = lattice->size(max_dir);
       for (direction d2 : {d,-d}) {
       
         T diff = 0;
@@ -63,10 +62,10 @@ void gather_test() {
         if (is_up_dir(d2)) add = 1; else add = -1;
         onsites(p) {
           auto n = t[X+d2];
-#if defined(SPECIAL_BOUNDARY_CONDITIONS) && NDIM > 3
+#if defined(SPECIAL_BOUNDARY_CONDITIONS)
           if (bc == boundary_condition_t::ANTIPERIODIC &&
-              (( X.coordinates()[TUP] == 0 && d2 == TDOWN) || 
-               ( X.coordinates()[TUP] == size_t-1 && d2 ==TUP))) {
+              (( X.coordinates()[max_dir] == 0 && d2 == -max_dir) || 
+               ( X.coordinates()[max_dir] == size_t-1 && d2 == max_dir))) {
             n = -n;
           }
 #endif
@@ -105,13 +104,23 @@ void gather_test() {
           s_result = lattice->volume()/4.0;
 
         if (sum1 + s_result != 0.0) {
-          output0 << "Error in sum reduction!  answer " << sum1 + s_result << " should be 0, parity " << (int)p << ", direction " << (int)d2 << ", bc " << (int)bc << "\n";
-          exit(-1);
+          output0 << "Error in sum reduction!  answer " << sum1 + s_result 
+                  << " should be 0, parity " << (int)p << ", direction " << (int)d2;
+          #ifdef SPECIAL_BOUNDARY_CONDITIONS
+          output0 << ", boundary condition " << (int)bc;
+          #endif
+          output0 << '\n';
+          terminate(-1);
         }
 
         if (sum2 + s_result != 0.0) {
-          output0 << "Error in neighbour sum2 reduction!  answer " << sum2 + s_result << " should be 0, parity " << (int)p << ", direction " << (int)d2 << ", bc " << (int)bc << "\n";
-          exit(-1);
+          output0 << "Error in neighbour sum2 reduction!  answer " << sum2 + s_result 
+                  << " should be 0, parity " << (int)p << ", direction " << (int)d2;
+          #ifdef SPECIAL_BOUNDARY_CONDITIONS
+          output0 << ", boundary condition " << (int)bc;
+          #endif
+          output0 << '\n';
+          terminate(-1);
         }
 
 
@@ -150,5 +159,8 @@ void test_std_gathers()
 {
   gather_test<double>();
   gather_test<int>();
+
+  timestamp("Communication tests done");
+  print_dashed_line();
 }
 

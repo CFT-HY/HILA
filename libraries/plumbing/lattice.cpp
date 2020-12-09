@@ -934,3 +934,8 @@ lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
 }
 
 
+void print_dashed_line() {
+  output0 << "------------------------------------------------------------\n";
+}
+
+

@@ -20,7 +20,7 @@ void lattice_struct::setup_layout()
   int nfactors[NPRIMES];
   coordinate_vector nodesiz;
 
-  output0 << "------------------------------------------------------------\n";
+  print_dashed_line();
   output0 << "LAYOUT: lattice size  ";
   foralldir(d) {
     if (d != 0) output0 << " x ";
@@ -200,6 +200,6 @@ void lattice_struct::setup_layout()
 
   #endif  
 
-  output0 << "------------------------------------------------------------\n\n";
+  print_dashed_line();
 
 }
