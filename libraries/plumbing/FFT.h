@@ -68,8 +68,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
 
     // FFTW buffers
     fftw_complex *in, *out;
-    in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * column_size);
-    out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * column_size);
+    in = (fftw_complex* RESTRICT) fftw_malloc(sizeof(fftw_complex) * column_size);
+    out = (fftw_complex* RESTRICT) fftw_malloc(sizeof(fftw_complex) * column_size);
 
     int fdir = (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
     fftw_plan_timer.start();
@@ -137,7 +137,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
         static timer fft_buf_timer("copy fftw buffers");
         fft_buf_timer.start();
         for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
-          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+          complex_type * RESTRICT field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
             in[t+node_column_size*s][0] = field_elem[e+elements*t].re;
             in[t+node_column_size*s][1] = field_elem[e+elements*t].im;
@@ -153,7 +153,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
         fft_buf_timer.start();
         // Put the transformed data back in place
         for(int s=0; s<nnodes; s++){
-          complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
+          complex_type * RESTRICT field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
             field_elem[e+elements*t].re = out[t+node_column_size*s][0];
             field_elem[e+elements*t].im = out[t+node_column_size*s][1];
