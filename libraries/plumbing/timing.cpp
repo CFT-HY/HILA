@@ -9,6 +9,11 @@
 #include "com_mpi.h"
 #endif
 
+
+// This stores the start time of the program
+static double start_time = -1.0;
+
+
 /////////////////////////////////////////////////////////////////
 /// Timer routines - for high-resolution event timing
 /////////////////////////////////////////////////////////////////
@@ -16,12 +21,11 @@
 // store all timers in use
 std::vector<timer *> timer_list = {};
 
-
 // initialize timer to this timepoint
 void timer::init(const char * tag) {
-  label = tag;
-  timer_list.push_back(this);
+  if (tag != nullptr) label = tag;
   reset();
+  timer_list.push_back(this);
 }
 
 // remove the timer also from the list
@@ -36,7 +40,6 @@ void timer::remove() {
 
 void timer::reset() {
   t_start = t_total = 0.0;
-  t_initial = gettime();
   count = 0;
 }
 
@@ -61,7 +64,7 @@ void timer::report() {
     char line[202];
 
     // time used during the counter activity
-    double ttime = gettime() - t_initial;
+    double ttime = gettime() - start_time;
     if (count > 0) {
       if (t_total/count < 0.01) {
         std::snprintf(line,200,"%-20s: %14.3f %14llu %10.3f us %8.4f\n",
@@ -98,7 +101,6 @@ void report_timers() {
 /// (alternative: use gettimeofday()  or MPI_Wtime())
 /// gettime returns the time in secs since program start
 
-static double start_time = -1.0;
 
 double gettime() {
   struct timespec tp;
