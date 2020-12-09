@@ -25,7 +25,14 @@ std::vector<timer *> timer_list = {};
 void timer::init(const char * tag) {
   if (tag != nullptr) label = tag;
   reset();
-  timer_list.push_back(this);
+  // has this been inited already?  Check
+  bool found = false;
+  for (auto p : timer_list) if (p == this) {
+    found = true;
+    break;
+  }
+  // if not, push it to the list
+  if (!found) timer_list.push_back(this);
 }
 
 // remove the timer also from the list
