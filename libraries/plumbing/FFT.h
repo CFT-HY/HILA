@@ -17,7 +17,8 @@
 // The field must be complex and the underlying complex type is supplied
 // by the complex_type template argument
 template<typename T, typename complex_type>
-inline void FFT_field_complex(field<T> & input, field<T> & result){
+inline void FFT_field_complex(field<T> & input, field<T> & result, 
+                              fft_direction fftdir = fft_direction::forward ){
 
   lattice_struct * lattice = input.fs->lattice;
   field<T> * read_pointer = &input; // Read from input on first time, then work in result
@@ -25,7 +26,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
   int elements = sizeof(T)/sizeof(complex_type);
 
   static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");  // initialized 1st time used
-  
+  static timer fftw_execute_timer("FFTW execute"), fftw_plan_timer("FFTW plan");
+
   FFT_timer.start();
 
   // Make store the result is allocated and mark it changed 
@@ -48,17 +50,19 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     // Get the MPI column in this direction
     lattice_struct::mpi_column_struct mpi_column = lattice->get_mpi_column(dir);
     MPI_Comm column_communicator = mpi_column.column_communicator;
-    std::vector<int> nodelist = mpi_column.nodelist;
+    const std::vector<int> & nodelist = mpi_column.nodelist;
     int my_column_rank = mpi_column.my_column_rank;
     int nnodes = nodelist.size(); // Nodes in this column
     int cpn = cols/nnodes; // Columns per node
+
+    assert( cols % nnodes == 0 && "This FFT requires columns per node is evenly divisible");
     // Amount of data that is communicated from a single node to another
     int block_size = cpn*node_column_size*sizeof(T);
     // Size of a full column
     int col_size = node_column_size*sizeof(T);
 
     // Variables needed for constructing the columns of sites
-    std::vector<node_info> allnodes = lattice->nodelist();
+    const std::vector<node_info> & allnodes = lattice->nodelist();
     coordinate_vector min = allnodes[lattice->node_rank()].min;
     coordinate_vector size = allnodes[lattice->node_rank()].size;
 
@@ -66,9 +70,14 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     fftw_complex *in, *out;
     in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * column_size);
     out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * column_size);
-    fftw_plan plan = fftw_plan_dft_1d( column_size, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 
+    int fdir = (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
+    fftw_plan_timer.start();
+    fftw_plan plan = fftw_plan_dft_1d( column_size, in, out, fdir, FFTW_ESTIMATE);
+    fftw_plan_timer.stop();
 
+    static timer sitelist_timer("fft sitelist");
+    sitelist_timer.start();
     // Construct lists of sites for each column
     std::vector<std::vector<unsigned>> sitelist(cols);
     for( int c=0; c<cols; c++ ) {
@@ -87,18 +96,21 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         sitelist[c][i] = lattice->site_index(thiscol);
       }
     }
-
+    sitelist_timer.stop();
 
     // Gather a number of columns to each node
     MPI_Request my_request;
     MPI_Request other_reqs[nnodes];
     int ireq = 0;
     for( int r=0; r<nnodes; r++ ){
+      static timer fft_copy_payload_timer("copy payload");
+      fft_copy_payload_timer.start();
       char * sendbuf = mpi_send_buffer + block_size*r;
       for( int l=0; l<cpn; l++ ) {
         int c = r*cpn+l;
         read_pointer->fs->payload.gather_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(),  lattice);
       }
+      fft_copy_payload_timer.stop();
       FFT_MPI_timer.start();
       MPI_Request request;
       MPI_Igather( sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE, 
@@ -122,6 +134,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     for( int l=0; l<cpn; l++ ) { // Columns
       for( int e=0; e<elements; e++ ){ // Complex elements / field element
 
+        static timer fft_buf_timer("copy fftw buffers");
+        fft_buf_timer.start();
         for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
           complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
@@ -129,10 +143,14 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
             in[t+node_column_size*s][1] = field_elem[e+elements*t].im;
           }
         }
+        fft_buf_timer.stop();
         
+        fftw_execute_timer.start();
         // Run the fft
         fftw_execute(plan);
+        fftw_execute_timer.stop();
 
+        fft_buf_timer.start();
         // Put the transformed data back in place
         for(int s=0; s<nnodes; s++){
           complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
@@ -141,6 +159,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
             field_elem[e+elements*t].im = out[t+node_column_size*s][1];
           }
         }
+        fft_buf_timer.stop();
 
       }
     }
@@ -165,11 +184,14 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
       FFT_MPI_timer.stop();
 
+      static timer fft_place_timer("place payload");
+      fft_place_timer.start();
       // Place the new data into field memory
       for( int l=0; l<cpn; l++ ) {
         int c = s*cpn+l;
         result.fs->payload.place_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(), lattice);
       }
+      fft_place_timer.stop();
     }
 
     read_pointer = &result; // From now on we work in result
@@ -188,15 +210,15 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
 
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result){}
+inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir = fft_direction::forward){}
 
 
 
 #endif
 
 template<>
-inline void field<cmplx<double>>::FFT(){
-  FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this);
+inline void field<cmplx<double>>::FFT(fft_direction fdir){
+  FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this, fdir);
 }
 
 
@@ -238,8 +260,8 @@ struct complex_base<C<a,b,B>>{
 /// Run fourier transform on a complex field
 // Called with any type T with a cmplx type nested in the lowest level
 template<typename T>
-void FFT_field(field<T> & input, field<T> & result){
-  FFT_field_complex<T,typename complex_base<T>::type>(input, result);
+void FFT_field(field<T> & input, field<T> & result, fft_direction fdir = fft_direction::forward){
+  FFT_field_complex<T,typename complex_base<T>::type>(input, result, fdir);
 }
 
 

@@ -640,7 +640,7 @@ class field {
   T get_element(coordinate_vector coord) const;
 
   // Fourier transform declarations
-  void FFT();
+  void FFT(fft_direction fdir = fft_direction::forward);
 
   // Writes the field to disk
   void write_to_stream(std::ofstream & outputfile);

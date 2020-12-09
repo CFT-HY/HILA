@@ -71,7 +71,8 @@ namespace hila {
 #pragma GCC diagnostic ignored "-Wdangling-else"
 #endif
 
-
+// define a class for FFT direction
+enum class fft_direction { forward, backward, back };
 
 // Allow other than periodic boundary conditions
 #define SPECIAL_BOUNDARY_CONDITIONS
@@ -112,6 +113,9 @@ void initialize_machine(int &argc, char ***argv);
 void split_into_sublattices( int rank );
 void synchronize();
 
+// and print a dashed line
+void print_dashed_line();
+
 // Useful c++14 template missing in Puhti compilation of hilapp
 #if defined(PUHTI) && defined(HILAPP)
 namespace std {
@@ -134,6 +138,6 @@ struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> 
 
 template<typename T>
 using number_type = typename base_type_struct<T>::type;
-
+ 
 
 #endif
