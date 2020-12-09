@@ -9,7 +9,9 @@
 #include "datatypes/cmplx.h"
 #include "datatypes/vector.h"
 #include "datatypes/sun.h"
+#if NDIM == 4
 #include "datatypes/wilson_vector.h"
+#endif
 #include "plumbing/field.h"
 #include "plumbing/inputs.h"
 
@@ -19,7 +21,7 @@
 
 
 
-const int nd[4] = { 32, 32, 32, 128};
+const int nd[NDIM] = { 32, 64, 32, 50};
 
 
 inline void checkLatticeSetup(){
