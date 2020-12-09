@@ -54,7 +54,7 @@ void input::close() {
   if (is_initialized) {
     inputfile.close();
     is_initialized = false;
-    output0 << "----------------------------------------\n";
+    print_dashed_line();
   }
   // automatic cleaning of other vars
 }
