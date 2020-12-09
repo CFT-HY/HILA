@@ -2,7 +2,7 @@
 #define CUDA_INCLUDE_H
 
 
-//#define CUDA_AWARE_MPI
+#define CUDA_AWARE_MPI
 
 
 #ifdef __CUDACC__
