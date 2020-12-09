@@ -15,29 +15,33 @@
 
 /// Gather one element column from the mpi buffer
 template <typename complex_type>
-__global__ void gather_column( cufftDoubleComplex *data, char* field_elem, int elements, int nnodes, int node_column_size, int block_size, int e)
+__global__ void gather_column( cufftDoubleComplex *data, char* field_elem, int elements, int nnodes, int node_column_size, int column_size, int block_size)
 {
   int t = threadIdx.x + blockIdx.x * blockDim.x;
   if( t < node_column_size ) {
     for(int s=0; s<nnodes; s++){
-      complex_type * f = (complex_type*) (field_elem + block_size*s);
-      data[t+node_column_size*s].x = f[e+elements*t].re;
-      data[t+node_column_size*s].y = f[e+elements*t].im;
+      for( int e=0; e<elements; e++ ){ // Complex elements / field element
+        complex_type * f = (complex_type*) (field_elem + block_size*s);
+        data[t+node_column_size*s + e*column_size].x = f[e+elements*t].re;
+        data[t+node_column_size*s + e*column_size].y = f[e+elements*t].im;
+      }
     }
   }
 }
 
 /// Place results in the MPI buffer
 template <typename complex_type>
-__global__ void scatter_column( cufftDoubleComplex *data, char* field_elem, int elements, int nnodes, int node_column_size, int block_size, int e )
+__global__ void scatter_column( cufftDoubleComplex *data, char* field_elem, int elements, int nnodes, int node_column_size, int column_size, int block_size)
 {
   // Put the transformed data back in place
   int t = threadIdx.x + blockIdx.x * blockDim.x;
   if( t < node_column_size ) {
     for(int s=0; s<nnodes; s++){
-      complex_type * f = (complex_type*) (field_elem + block_size*s);
-      f[e+elements*t].re = data[t+node_column_size*s].x;
-      f[e+elements*t].im = data[t+node_column_size*s].y;
+      for( int e=0; e<elements; e++ ){ // Complex elements / field element
+        complex_type * f = (complex_type*) (field_elem + block_size*s);
+        f[e+elements*t].re = data[t+node_column_size*s + e*column_size].x;
+        f[e+elements*t].im = data[t+node_column_size*s + e*column_size].y;
+      }
     }
   }
 }
@@ -97,7 +101,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     // CUFFT buffers
     cufftHandle plan;
     cufftDoubleComplex *data;
-    int BATCH=1;
+    int BATCH=elements;
     cudaMalloc((void**)&data, sizeof(cufftDoubleComplex)*column_size*BATCH);
     cufftPlan1d(&plan, column_size, CUFFT_Z2Z, BATCH); //Z2Z for double, C2C for float
 
@@ -146,16 +150,17 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     
     // now that we have columns, run FFT on each
     for( int l=0; l<cpn; l++ ) { // Columns
-      for( int e=0; e<elements; e++ ){ // Complex elements / field element
-        int N_blocks = node_column_size/N_threads + 1;
-        gather_column<complex_type><<< N_blocks, N_threads >>>( data, mpi_recv_buffer + col_size*l,
-          elements, nnodes, node_column_size, block_size, e );
-        // Run the fft
-        cufftExecZ2Z(plan, data, data, CUFFT_FORWARD);
+      int N_blocks = node_column_size/N_threads + 1;
+      gather_column<complex_type><<< N_blocks, N_threads >>>( data,
+        mpi_recv_buffer + col_size*l,
+        elements, nnodes, node_column_size, column_size, block_size );
+      
+      // Run the fft
+      cufftExecZ2Z(plan, data, data, CUFFT_FORWARD);
 
-        scatter_column<complex_type><<< N_blocks, N_threads >>>( data, mpi_recv_buffer + col_size*l,
-            elements, nnodes, node_column_size, block_size, e );
-      }
+      scatter_column<complex_type><<< N_blocks, N_threads >>>( data,
+        mpi_recv_buffer + col_size*l,
+        elements, nnodes, node_column_size, column_size, block_size );
     }
 
     // Now reverse the gather operation. After this each node will have its original local sites
