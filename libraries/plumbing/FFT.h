@@ -206,7 +206,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
 }
 
 
-#else
+#else  // No mpi
 
 
 template<typename T, typename C>

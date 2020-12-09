@@ -6,12 +6,16 @@
 #endif
 
 int main(int argc, char **argv){
+  int n_runs=1;
+  struct timeval start, end;
+  double timing;
+
+  // Runs lattice->setup 
+  bench_setup(argc, argv);
+  seed_random(SEED);
 
   using T = matrix<2,2,cmplx<double>>;
   using Tf = matrix<2,2,cmplx<float>>;
-
-  bench_setup(argc, argv);
-  seed_random(SEED);
 
   field<T> d, d2;
 
@@ -23,9 +27,7 @@ int main(int argc, char **argv){
   // Run once to make sure everything is set up
   FFT_field(d, d2);
   
-  struct timeval start, end;
-  double timing = 0;
-  int n_runs;
+  timing = 0;
   for(n_runs=1; timing < mintime; ){
     n_runs*=2;
     gettimeofday(&start, NULL);
