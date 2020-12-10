@@ -67,7 +67,7 @@ ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 HILA_OPTS += -I$(HILA_INCLUDE_DIR)
 
 # Add the (possible) std. includes for hilapp
-HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include
+HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include $(CUSTOM_HILAPP_OPTS)
 
 # Standard rules for creating and building cpt files. These
 # build .o files in the build folder by first running them

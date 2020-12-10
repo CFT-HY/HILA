@@ -3,6 +3,8 @@
 # this is included from main.mk -file, which is in turn included from 
 # application makefile
 #
+# Before compiling, load gcc and cuda modules:
+# module load gcc/9.1.0 cuda/11.1.0 openmpi/4.0.5-cuda
 #
 
 # Define compiler
@@ -13,14 +15,12 @@ LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false
 CXXFLAGS = -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI  $(CXX_INCLUDE)
 #CXXFLAGS = -g -x c++ --std=c++17 
 
-LDLIBS = -lfftw3 -lm 
-
 # No need to give include directory to mpi for hilapp - here 2 common ones
-MPI_INCLUDE_DIRS = -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openmpi/include
+MPI_INCLUDE_DIRS = 
 
-MPI_LIBS = -L/appl/spack/install-tree/gcc-8.3.0/hpcx-mpi-2.4.0-7gyvq3/lib -lmpi
+MPI_LIBS =  -lmpi
 
-LDLIBS = -lm $(MPI_LIBS)
+LDLIBS = -lcufft -lm $(MPI_LIBS)
 
 # extra cuda objects here
 HILA_OBJECTS += build/hila_cuda.o
