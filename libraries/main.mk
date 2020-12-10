@@ -78,7 +78,7 @@ ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 HILA_OPTS += -I$(HILA_INCLUDE_DIR)
 
 # Add the (possible) std. includes for hilapp
-HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include
+HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include $(CUSTOM_HILAPP_OPTS)
 
 #
 #  GIT VERSION: tricks to get correct git version and build date
