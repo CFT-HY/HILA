@@ -53,7 +53,7 @@ void gather_test() {
     foralldir(d) {
       // Find size here, cannot call the function in a CUDA loop
       int size_d = lattice->size(d);
-      int size_t = lattice->size(max_dir);
+      int size_t = lattice->size(NDIM-1);
       for (direction d2 : {d,-d}) {
       
         T diff = 0;
@@ -64,8 +64,8 @@ void gather_test() {
           auto n = t[X+d2];
 #if defined(SPECIAL_BOUNDARY_CONDITIONS)
           if (bc == boundary_condition_t::ANTIPERIODIC &&
-              (( X.coordinates()[max_dir] == 0 && d2 == -max_dir) || 
-               ( X.coordinates()[max_dir] == size_t-1 && d2 == max_dir))) {
+              (( X.coordinates()[NDIM-1] == 0 && d2 == -(direction)(NDIM-1)) || 
+               ( X.coordinates()[NDIM-1] == size_t-1 && d2 == NDIM-1))) {
             n = -n;
           }
 #endif
