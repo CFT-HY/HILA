@@ -231,22 +231,22 @@ public:
 
   // Std accessors:
   // volume
-  long long volume() { return l_volume; }
+  long long volume() const { return l_volume; }
 
   // size routines
   int size(direction d) const { return l_size[d]; }
   int size(int d) const { return l_size[d]; }
   coordinate_vector size() const {return l_size;}
 
-  coordinate_vector mod_size(const coordinate_vector & v) { return mod(v, l_size); }
+  coordinate_vector mod_size(const coordinate_vector & v) const { return mod(v, l_size); }
 
-  int local_size(int d) { return this_node.size[d]; }
-  unsigned local_volume() {return this_node.sites;}
+  int local_size(int d) const { return this_node.size[d]; }
+  unsigned local_volume() const {return this_node.sites;}
 
-  int node_rank() { return this_node.rank; }
-  int n_nodes() { return nodes.number; }
+  int node_rank() const { return this_node.rank; }
+  int n_nodes() const { return nodes.number; }
   std::vector<node_info> nodelist() { return nodes.nodelist; }
-  coordinate_vector min_coordinate(){ return this_node.min; }
+  coordinate_vector min_coordinate() const { return this_node.min; }
   
   bool is_on_node(const coordinate_vector & c);
   int  node_rank(const coordinate_vector & c);
