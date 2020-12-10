@@ -164,7 +164,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
       elements, cpn, nnodes, node_column_size, column_size, block_size );
     
     // Run the fft
-    int direction = (fftdir == fft_direction::forward) ? CUFFT_FORWARD : CUFFT_BACKWARD;
+    int direction = (fftdir == fft_direction::forward) ? CUFFT_FORWARD : CUFFT_INVERSE;
     cufftExecZ2Z(plan, data, data, direction);
 
     // Reorganize back into elements
@@ -334,7 +334,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
     check_cuda_error(status, "FFT copy");
 
     // Run the fft
-    cufftExecZ2Z(plan, d_data, d_data, CUFFT_FORWARD);
+    int direction = (fftdir == fft_direction::forward) ? CUFFT_FORWARD : CUFFT_INVERSE;
+    cufftExecZ2Z(plan, d_data, d_data, direction);
     check_cuda_error("Run FFT");
     cudaDeviceSynchronize();
    
