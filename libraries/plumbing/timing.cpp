@@ -1,9 +1,13 @@
 
-#include "timing.h"
-
-
 #include <time.h>
 #include <chrono>
+
+#include "timing.h"
+
+//////////////////////////////////////////////////////////////////
+/// Time related routines (runtime - timing - timelimit)
+/// Check timing.h for details
+//////////////////////////////////////////////////////////////////
 
 #ifdef USE_MPI
 #include "com_mpi.h"
@@ -51,27 +55,30 @@ void timer::reset() {
 }
 
 double timer::start() {
-  if (hila::myrank() == 0) {
-    t_start = gettime();
-    return t_start;
-  } else return 0.0;
+  t_start = gettime();
+  return t_start;
 }
   
 double timer::stop() {
-  if (hila::myrank() == 0) {
-    double e = gettime();
-    t_total += (e - t_start);
-    count++;
-    return e;
-  } else return 0.0;
+  double e = gettime();
+  t_total += (e - t_start);
+  count++;
+  return e;
 }
 
-void timer::report() {
+timer_value timer::value() {
+  timer_value r;
+  r.time = t_total;
+  r.count = count;
+  return r;
+}
+
+void timer::report(bool print_not_timed ) {
   if (hila::myrank() == 0) {
     char line[202];
 
     // time used during the counter activity
-    double ttime = gettime() - start_time;
+    double ttime = gettime();
     if (count > 0) {
       if (t_total/count < 0.01) {
         std::snprintf(line,200,"%-20s: %14.3f %14llu %10.3f us %8.4f\n",
@@ -80,10 +87,11 @@ void timer::report() {
         std::snprintf(line,200,"%-20s: %14.3f %14llu %10.3f s  %8.4f\n",
                       label.c_str(), t_total, count, t_total/count, t_total/ttime );
       }
-    } else {
+      hila::output << line;
+    } else if (print_not_timed) {
       std::snprintf(line,200,"%-20s: no timed calls made\n",label.c_str());
+      hila::output << line;      
     }
-    hila::output << line;      
   }
 }
 

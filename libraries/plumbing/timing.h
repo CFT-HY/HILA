@@ -61,7 +61,7 @@ public:
   void reset();
   double start();
   double stop();
-  void report();
+  void report(bool print_not_timed = false);
 
   timer_value value();
   
