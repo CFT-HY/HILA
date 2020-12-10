@@ -25,7 +25,7 @@ void seed_random(unsigned long seed){
   unsigned int iters_per_kernel = 16;
   unsigned long n_blocks = lattice->local_volume() / (N_threads*iters_per_kernel) + 1;
   unsigned long n_sites = N_threads*n_blocks*iters_per_kernel;
-  unsigned long myseed = seed + mynode()*n_sites;
+  unsigned long myseed = seed + hila::myrank()*n_sites;
   cudaMalloc( &curandstate, n_sites*sizeof( curandState ) );
   check_cuda_error("seed_random malloc");
   seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, myseed, iters_per_kernel );
@@ -85,7 +85,7 @@ void initialize_cuda( int rank ){
   cudaGetDeviceCount(&n_devices);
   /* This assumes that each node has the same number of mpi ranks and GPUs */
   my_device = rank%n_devices;
-  printf("Rank %d choosing device %d out of %d\n", rank, my_device, n_devices);
+  printf("Cuda: rank %d choosing device %d out of %d\n", rank, my_device, n_devices);
   cudaSetDevice(my_device);
 }
 

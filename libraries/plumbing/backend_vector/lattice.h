@@ -101,7 +101,7 @@ struct vectorized_lattice_struct  {
         // to create a halo copy of neighbours that cross the boundary
         // Check here if that is the case for this direction
         bool need_halo = false;
-        if( lattice->nn_comminfo[d].from_node.rank != mynode()
+        if( lattice->nn_comminfo[d].from_node.rank != hila::myrank()
             || split[updir] > 1 ){
           need_halo = true;
         }

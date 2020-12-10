@@ -20,7 +20,7 @@ void lattice_struct::setup_layout()
   int nfactors[NPRIMES];
   coordinate_vector nodesiz;
 
-  output0 << "------------------------------------------------------------\n";
+  print_dashed_line();
   output0 << "LAYOUT: subnode lattice, with " << VECTOR_SIZE/sizeof(float) << " subnodes\n"
               << "Enabling vector length " << VECTOR_SIZE*8 << " bits = "
               << VECTOR_SIZE/sizeof(double) << " doubles or " 
@@ -316,6 +316,6 @@ void lattice_struct::setup_layout()
 
 #endif  
 
-  output0 << "------------------------------------------------------------\n\n";
+  print_dashed_line();
 
 }

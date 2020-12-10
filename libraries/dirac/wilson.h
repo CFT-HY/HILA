@@ -37,8 +37,8 @@ inline void Dirac_Wilson_hop(
       vtemp[dir][X] = h;
     }
 
-    vtemp[dir].start_get(dir, par);
-    vtemp[-dir].start_get(-dir, par);
+    vtemp[dir].start_fetch(dir, par);
+    vtemp[-dir].start_fetch(-dir, par);
   }
 
   // Calculate the derivatives. This 
@@ -77,8 +77,8 @@ inline void Dirac_Wilson_hop_set(
       vtemp[dir][X] = h;
     }
 
-    vtemp[dir].start_get(dir, par);
-    vtemp[-dir].start_get(-dir, par);
+    vtemp[dir].start_fetch(dir, par);
+    vtemp[-dir].start_fetch(-dir, par);
   }
   //Set on first direction
   direction dir = direction(0);

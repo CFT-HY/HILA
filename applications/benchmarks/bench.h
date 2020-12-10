@@ -22,25 +22,8 @@ constexpr double mintime = 1000;
 
 
 // Direct output to stdout
-std::ostream &hila::output = std::cout;
+// std::ostream &hila::output = std::cout;
 
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
-
-const int nd[4] = { 32, 32, 32, 32 };
-
-inline void bench_setup(int &argc, char **argv){
-    #if NDIM==1
-    lattice->setup( nd[0], argc, argv );
-    #elif NDIM==2
-    lattice->setup( nd[0], nd[1], argc, argv );
-    #elif NDIM==3
-    lattice->setup( nd[0], nd[1], nd[2], argc, argv );
-    #elif NDIM==4
-    lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
-    #endif
-}
 
 // Calculate time difference in milliseconds
 static inline double timediff(timeval start, timeval end){

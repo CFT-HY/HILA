@@ -30,33 +30,44 @@ HILAPP := $(TOP_DIR)/hilapp/build/hilapp
 
 LIBRARIES_DIR := $(TOP_DIR)/libraries
 PLATFORM_DIR := $(LIBRARIES_DIR)/platforms
-THESE_MAKEFILES := $(LIBRARIES_DIR)/main.mk $(PLATFORM_DIR)/$(PLATFORM).mk
 HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
 
 HILAPP_DIR := $(dir $(HILAPP))
 
+HILA_OBJECTS = \
+  build/initialize.o \
+  build/param_input.o \
+  build/mersenne_inline.o \
+  build/lattice.o \
+  build/map_node_layout_trivial.o \
+  build/memalloc.o \
+  build/timing.o \
+  build/test_gathers.o \
+  build/com_mpi.o \
+  build/com_single.o
+
+# com_mpi / com_single could be moved to platforms, but they're protected by USE_MPI guards
+
+# Read in the appropriate platform bits and perhaps extra objects
+include $(PLATFORM_DIR)/$(PLATFORM).mk
+
+# Define LAYOUT_VECTOR if vector (SUBNODE) layout is desired
+ifdef LAYOUT_VECTOR
+  HILA_OBJECTS += build/setup_layout_vector.o
+	HILA_OPTS += -DSUBNODE_LAYOUT
+else
+	HILA_OBJECTS += build/setup_layout_generic.o
+endif
+
 # To force a full remake when changing platforms or targets
-LASTMAKE := build/lastmake.${MAKECMDGOALS}.${PLATFORM}
+LASTMAKE := build/_lastmake.${MAKECMDGOALS}.${PLATFORM}
 
 $(LASTMAKE): $(MAKEFILE_LIST)
-	-rm -f build/lastmake.*
+	-mkdir -p build
+	-rm -f build/_lastmake.*
 	make clean
 	touch ${LASTMAKE}
 
-
-HILA_OBJECTS = \
-  build/inputs.o \
-  build/mersenne_inline.o \
-  build/lattice.o \
-  build/setup_layout_vector.o \
-  build/map_node_layout_trivial.o \
-  build/com_mpi.o \
-  build/memalloc.o \
-  build/test_gathers.o 
-
-  
-# Read in the appropriate platform bits and perhaps extra objects
-include $(PLATFORM_DIR)/$(PLATFORM).mk
 
 
 # Use all headers inside libraries for dependencies
@@ -69,12 +80,32 @@ HILA_OPTS += -I$(HILA_INCLUDE_DIR)
 # Add the (possible) std. includes for hilapp
 HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include $(CUSTOM_HILAPP_OPTS)
 
-# Standard rules for creating and building cpt files. These
+#
+#  GIT VERSION: tricks to get correct git version and build date
+#  on the file
+
+GIT_SHA := $(shell git rev-parse --short=8 HEAD)
+
+ifneq "$(GIT_SHA)" "" 
+HILA_OPTS += -DGIT_SHA_VALUE=$(GIT_SHA)
+GIT_SHA_FILE := build/_git_sha_$(GIT_SHA)
+
+# Force recompilation if git number has changed
+
+$(GIT_SHA_FILE):
+	-rm -f build/_git_sha_*
+	touch $(GIT_SHA_FILE)
+
+ALL_DEPEND += $(GIT_SHA_FILE)
+	
+endif
+
+# Standard rules for creating and building cpdt files. These
 # build .o files in the build folder by first running them
 # through the 
 
 
-build/%.cpt: %.cpp Makefile $(THIS_MAKEFILE) $(ALL_DEPEND) $(APP_HEADERS)
+build/%.cpt: %.cpp Makefile $(MAKEFILE_LIST) $(ALL_DEPEND) $(APP_HEADERS)
 	mkdir -p build
 	$(HILAPP) $(APP_OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
 
@@ -99,7 +130,7 @@ endif   # close the "clean" bracket
 .PHONY: clean cleanall
 
 clean:
-	rm -f build/*.o build/*.cpt build/lastmake*
+	-rm -f build/*.o build/*.cpt build/_lastmake*
 
 cleanall:
-	rm -f build/*
+	-rm -f build/*

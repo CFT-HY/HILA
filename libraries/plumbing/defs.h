@@ -21,7 +21,7 @@
 
 #include "plumbing/mersenne.h"
 #include "plumbing/memalloc.h"   // memory allocator
-
+#include "plumbing/timing.h"
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
 /// ADD HERE GUARD FOR THOSE WHICH DO not HAVE IT
@@ -50,20 +50,29 @@ using real_t = double;
 
 namespace hila {
   // this is our default output file stream
-  extern std::ostream &output;
+  extern std::ostream output;
   // this is just a hook to store output file, if it is in use
   extern std::ofstream output_file;
-};
+
+  // store the rank of this process to a global variable - this will not vanish during 
+  // object destruction at the end!
+  extern int my_rank_n;
+  inline int myrank() { return my_rank_n; }
+
+  void initialize(int argc, char **argv);
+}
 
 // this is pretty hacky but easy.  Probably could do without #define too
 // do this through else-branch in order to avoid if-statement problems
-#define output0 if (mynode() != 0) {} else hila::output
+#define output0 if (hila::myrank() != 0) {} else hila::output
 
+// the above gives often warning when used with if stmt, close that with this hammer
+#if defined(__clang__) || defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wdangling-else"
+#endif
 
-
-
-// Global functions: setup
-void initial_setup(int argc, char **argv);
+// define a class for FFT direction
+enum class fft_direction { forward, backward, back };
 
 // Allow other than periodic boundary conditions
 #define SPECIAL_BOUNDARY_CONDITIONS
@@ -81,15 +90,9 @@ void initial_setup(int argc, char **argv);
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000
 
-#ifndef USE_MPI
+#define DEFAULT_OUTPUT_NAME "output"
 
-// Trivial, no MPI
-#define mynode() 0
-#define numnodes() 1
-inline void initialize_machine(int &argc, char ***argv) {}
-inline void finishrun() {
-  exit(0);
-}
+#ifndef USE_MPI
 
 // broadcast does nothing if not MPI
 template <typename T>
@@ -98,36 +101,20 @@ void broadcast(T & v) {}
 template <typename T>
 void broadcast_array(T * var, int n) {}
 
-#else
+#endif
 
 int mynode();
 int numnodes();
 void finishrun();
+void terminate(int status);
+void error(const std::string & msg);
+void error(const char * msg);
 void initialize_machine(int &argc, char ***argv);
+void split_into_sublattices( int rank );
+void synchronize();
 
-#endif
-
-
-// Synchronization
-#ifndef USE_MPI
-
-inline void synchronize(){
-  synchronize_threads();
-}
-
-#else
-
-inline void synchronize(){
-  static int n=1;
-  synchronize_threads();
-  MPI_Barrier(MPI_COMM_WORLD); 
-  n++;
-}
-
-#endif
-
-
-
+// and print a dashed line
+void print_dashed_line();
 
 // Useful c++14 template missing in Puhti compilation of hilapp
 #if defined(PUHTI) && defined(HILAPP)
@@ -151,7 +138,6 @@ struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> 
 
 template<typename T>
 using number_type = typename base_type_struct<T>::type;
-
-
+ 
 
 #endif

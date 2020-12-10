@@ -61,6 +61,17 @@ struct vector_base_type<int, 16> {
 };
 
 template<>
+struct vector_base_type<int64_t, 4> {
+  using type = Vec4q;
+};
+
+template<>
+struct vector_base_type<int64_t, 8> {
+  using type = Vec8q;
+};
+
+
+template<>
 struct vector_base_type<coordinate_vector, 4> {
   using type = Vec4i;
 };

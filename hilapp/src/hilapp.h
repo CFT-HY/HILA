@@ -22,7 +22,7 @@ using namespace clang;
 using namespace clang::tooling;
 
 // constant names for program
-const std::string program_name("Transformer");
+const std::string program_name("hilapp");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
 const std::string output_only_keyword("output_only");
@@ -75,7 +75,7 @@ namespace state {
   extern bool compile_errors_occurred; // = false;
 };
 
-extern llvm::cl::OptionCategory TransformerCat;
+extern llvm::cl::OptionCategory HilappCategory;
 
 
 
@@ -171,13 +171,15 @@ struct dir_ptr {
 /// b) is templated type, with float/double in template and  implements 
 ///    the method using base_type = typename base_type_struct<T>::type;
 
-enum class number_type {INT, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
+enum class number_type {INT, INT64_T, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
 
 struct vectorization_info {
   bool is_vectorizable;
   int vector_size;
   number_type basetype;
-  std::string vectorized_type;
+  std::string basetype_str;              // name of the base var
+  std::string vectortype;                // basetype -> vectorized, e.g. "Vec4d" etc.
+  std::string vectorized_type;           // var.type now as vectorized
 };
 
 

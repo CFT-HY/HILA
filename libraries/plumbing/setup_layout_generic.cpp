@@ -8,8 +8,8 @@
 /***************************************************************/
 
 /* number of primes to be used in factorization */
-#define NPRIMES 9
-const static int prime[NPRIMES] = {2,3,5,7,11,13,17,19,23};
+#define NPRIMES 12
+const static int prime[NPRIMES] = {2,3,5,7,11,13,17,19,23,29,31,37};
 
 /* Set up now squaresize and nsquares - arrays 
  * Print info to outf as we proceed 
@@ -20,7 +20,7 @@ void lattice_struct::setup_layout()
   int nfactors[NPRIMES];
   coordinate_vector nodesiz;
 
-  output0 << "------------------------------------------------------------\n";
+  print_dashed_line();
   output0 << "LAYOUT: lattice size  ";
   foralldir(d) {
     if (d != 0) output0 << " x ";
@@ -200,6 +200,6 @@ void lattice_struct::setup_layout()
 
   #endif  
 
-  output0 << "------------------------------------------------------------\n\n";
+  print_dashed_line();
 
 }

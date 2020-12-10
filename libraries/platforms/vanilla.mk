@@ -12,13 +12,13 @@ CC := mpic++
 LD := mpic++
 
 # Define compilation flags
-CXXFLAGS  := -O3 -x c++ --std=c++17
+CXXFLAGS  := -O3 -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 
 
 ## The following incantation gives the include paths of the $(CC) compiler (if it is gcc or clang)
 # It may be that this path is not necessary at all, usually not for "system installed" clang
-STD_INCLUDE_DIRS := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+STD_INCLUDE_DIRS := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ /"))
 
 
 ### Need to give MPI include directory for hilapp - here 2 common ones

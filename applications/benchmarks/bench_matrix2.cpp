@@ -1,7 +1,5 @@
 
-
 #include "bench.h"
-#include "plumbing/timers.h"
 
 #ifndef MSIZE
 #define MSIZE 3
@@ -12,6 +10,8 @@
 #endif
 
 #define MADD(x) (MSIZE + x)
+
+const int latsize[4] = { 32, 32, 32, 32 };
 
 ///////////////////////////////////////
 // benchmark conjugate operations for 
@@ -26,12 +26,14 @@ int main(int argc, char **argv){
     double timing;
     double sum;
 
-    // Runs lattice->setup 
-    bench_setup(argc, argv);
-    // Seed rng generator
+
+    hila::initialize(argc, argv);
+
+    lattice->setup(latsize);
+
     seed_random(SEED);
 
-    timer timer1;
+    timer timer1("Timer1");
     
     field<matrix<MADD(0),MADD(0), cmplx<double>> > matrix1;
     field<matrix<MADD(1),MADD(1), cmplx<double>> > matrix2;
@@ -78,7 +80,6 @@ int main(int argc, char **argv){
     output0 << "matrix size " << (int) MSIZE + 1 << "*"  << (int) MSIZE + 1 << " : "<< timing << " ms \n";
 
     timer1.end();
-    timer1.report("Timer 1");
     
     // Time conj(matrix) * matrix * conj(matrix) 
     timing = 0;

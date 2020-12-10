@@ -13,15 +13,15 @@
 
 /// TEMPORARY location for vector intrinsic analogues -- result obvious
 
-template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0 >
+template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0 >
 #pragma hila loop_function
 inline T mul_add(T a, T b, T c) { return a*b + c; }
 
-template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0 >
+template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0 >
 #pragma hila loop_function
 inline T mul_sub(T a, T b, T c) { return a*b - c; }
 
-template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0 >
+template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0 >
 #pragma hila loop_function
 inline T nmul_add(T a, T b, T c) { return c - a*b; }
 
@@ -102,8 +102,10 @@ struct cmplx {
 
   #pragma hila loop_function
   inline T squarenorm() const { return re*re + im*im; }
-  // TODO: make this work for vector type!  Not double
-  
+  #pragma hila loop_function
+  inline T norm_sq() const { return re*re + im*im; }
+
+  // TODO: make this work for vector type!  Not double  
   //currently this gives a compilation error
   #pragma hila loop_function
   inline double abs() const { return sqrt(static_cast<double>(squarenorm()) ); }
@@ -120,7 +122,7 @@ struct cmplx {
   }
 
   #pragma hila loop_function
-  template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
+  template <typename A=T, std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 > 
   cmplx<A> & random(){
     re = static_cast<T>(hila_random());
     im = static_cast<T>(hila_random());
@@ -222,14 +224,14 @@ struct cmplx {
   }
 
   template <typename A = T,
-            std::enable_if_t<!is_arithmetic<A>::value, int> = 0 >
+            std::enable_if_t<!std::is_arithmetic<A>::value, int> = 0 >
   std::string str() const {
     std::string text = "(" + re.str() + "," + im.str() + ")"; 
     return text;
   }
 
   template <typename A = T,
-            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
+            std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 >
   std::string str() const {
     std::string text = "(" + std::to_string(re) + "," + std::to_string(im) + ")"; 
     return text;

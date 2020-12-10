@@ -16,7 +16,7 @@
 
 
 #ifdef USE_MPI
-#include "plumbing/comm_mpi.h"
+#include "plumbing/com_mpi.h"
 #endif
 
 
@@ -44,7 +44,7 @@ template <typename T>
 class field {
 
  public:
-  enum class status : unsigned { NOT_DONE, STARTED, DONE };
+  enum class fetch_status : unsigned { NOT_DONE, STARTED, DONE };
 
  private:
 
@@ -60,7 +60,7 @@ class field {
       vectorized_lattice_struct< vector_info<T>::vector_size > * vector_lattice;
 #endif
       unsigned assigned_to;           // keeps track of first assignment to parities
-      status move_status[3][NDIRS];     // is communication done
+      fetch_status move_status[3][NDIRS];     // is communication done
 
       // neighbour pointers - because of boundary conditions, can be different for diff. fields
       const unsigned * RESTRICT neighbours[NDIRS];
@@ -78,7 +78,7 @@ class field {
 
       void initialize_communication(){
         for (int d=0; d<NDIRS; d++) {
-          for (int p=0; p<3; p++) move_status[p][d] = status::NOT_DONE;
+          for (int p=0; p<3; p++) move_status[p][d] = fetch_status::NOT_DONE;
           send_buffer[d] = nullptr;
 #ifndef VANILLA
           receive_buffer[d] = nullptr;
@@ -201,6 +201,7 @@ class field {
       /// Place boundary elements from neighbour
       void place_comm_elements(direction d, parity par, T * RESTRICT buffer, 
                                const lattice_struct::comm_node_struct & from_node){
+// #ifdef USE_MPI
 #ifdef VECTORIZED
         if constexpr (is_vectorizable_type<T>::value) {
           // now vectorized layout, act accordingly
@@ -216,6 +217,7 @@ class field {
         // this one is only for CUDA
         payload.place_comm_elements(d, par, buffer, from_node, lattice);
 #endif
+// #endif
       }
 
       /// Place boundary elements from local lattice (used in vectorized version)
@@ -228,6 +230,8 @@ class field {
       /// Gather a list of elements to a single node
       void gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
       void send_elements(T * buffer, std::vector<coordinate_vector> coord_list, int  root=0);
+
+#if defined(USE_MPI)
 
       /// get the receive buffer pointer for the communication.    
       T * get_receive_buffer( direction d, parity par,
@@ -269,6 +273,7 @@ class field {
         }
 #endif
       } // end of get_receive_buffer
+#endif  // USE_MPI
 
   };
 
@@ -324,9 +329,8 @@ class field {
   void allocate() {
     assert(fs == nullptr);
     if (lattice == nullptr) {
-      // TODO: write to some named stream
-      std::cout << "Can not allocate field variables before lattice.setup()\n";
-      exit(1);  // TODO - more ordered exit?
+      output0 << "Can not allocate field variables before lattice.setup()\n";
+      terminate(0); 
     }
     fs = new field_struct;
     fs->lattice = lattice;
@@ -356,7 +360,7 @@ class field {
 
   void free() {
     if (fs != nullptr) {
-      for (direction d=(direction)0; d<NDIRS; ++d) drop_comms_if_needed(d,ALL);
+      for (direction d=(direction)0; d<NDIRS; ++d) drop_comms(d,ALL);
       fs->free_payload();
       fs->free_communication();
       delete fs;
@@ -371,11 +375,11 @@ class field {
   }
 
     
-  status move_status(parity p, int d) const { 
+  fetch_status move_status(parity p, int d) const { 
     assert(parity_bits(p) && d>=0 && d<NDIRS);
     return fs->move_status[(int)p - 1][d]; 
   }
-  void set_move_status(parity p, int d, status stat) const { 
+  void set_move_status(parity p, int d, fetch_status stat) const { 
     assert(parity_bits(p) && d>=0 && d<NDIRS);
     fs->move_status[(int)p - 1][d] = stat;
   }
@@ -396,14 +400,14 @@ class field {
 
     for (direction i=(direction)0; i<NDIRS; ++i) {
       // check if there's ongoing comms, invalidate it!
-      drop_comms_if_needed(i,opp_parity(p));
+      drop_comms(i,opp_parity(p));
 
-      set_move_status(opp_parity(p),i,status::NOT_DONE);
+      set_move_status(opp_parity(p),i,fetch_status::NOT_DONE);
       if (p != ALL){
-        set_move_status(ALL,i,status::NOT_DONE );
+        set_move_status(ALL,i,fetch_status::NOT_DONE );
       } else {
-        set_move_status(EVEN,i,status::NOT_DONE);
-        set_move_status(ODD,i,status::NOT_DONE);
+        set_move_status(EVEN,i,fetch_status::NOT_DONE);
+        set_move_status(ODD,i,fetch_status::NOT_DONE);
       }
     }
     fs->assigned_to |= parity_bits(p);
@@ -414,11 +418,11 @@ class field {
   // In case p=ALL we could mark everything fetched, but we'll be conservative here 
   // and mark only this parity, because there might be other parities on the fly and corresponding
   // waits should be done,  This should never happen in automatically generated loops.
-  // In any case start_get, is_fetched, get_move_parity has intelligence to figure out the right thing to do
+  // In any case start_fetch, is_fetched, get_move_parity has intelligence to figure out the right thing to do
   //
 
   void mark_fetched( int dir, const parity p) const {
-    set_move_status(p,dir,status::DONE);
+    set_move_status(p,dir,fetch_status::DONE);
   }
 
   // Check if the field has been fetched since the previous communication
@@ -426,26 +430,26 @@ class field {
   // par != ALL:  ALL or par are OK
   bool is_fetched( int dir, parity par) const {
     if (par != ALL) {
-      return move_status(par,dir) == status::DONE || move_status(ALL,dir) == status::DONE;
+      return move_status(par,dir) == fetch_status::DONE || move_status(ALL,dir) == fetch_status::DONE;
     } else {
-      return move_status(ALL,dir) == status::DONE ||
-           ( move_status(EVEN,dir) == status::DONE && move_status(ODD,dir) == status::DONE );
+      return move_status(ALL,dir) == fetch_status::DONE ||
+           ( move_status(EVEN,dir) == fetch_status::DONE && move_status(ODD,dir) == fetch_status::DONE );
     }
   }
    
   // Mark communication started -- this must be just the one
   // going on with MPI
   void mark_move_started( int dir, parity p) const{
-    set_move_status(p,dir,status::STARTED);
+    set_move_status(p,dir,fetch_status::STARTED);
   }
 
   /// Check if communication has started.  This is strict, checks exactly this parity
   bool is_move_started( int dir, parity par) const {
-    return move_status(par,dir) == status::STARTED;
+    return move_status(par,dir) == fetch_status::STARTED;
   }
     
   bool move_not_done( int dir, parity par) const {
-    return move_status(par,dir) == status::NOT_DONE;
+    return move_status(par,dir) == fetch_status::NOT_DONE;
   }
  
   void set_boundary_condition( direction dir, boundary_condition_t bc) {
@@ -618,11 +622,11 @@ class field {
 
 
   // Communication routines
-  dir_mask_t start_get(direction d, parity p) const;
-  dir_mask_t start_get(direction d) const { return start_get(d, ALL);}
-  void wait_get(direction d, parity p) const;
-  void get(direction d, parity p) const;
-  void drop_comms_if_needed(direction d, parity p) const;
+  dir_mask_t start_fetch(direction d, parity p) const;
+  dir_mask_t start_fetch(direction d) const { return start_fetch(d, ALL);}
+  void wait_fetch(direction d, parity p) const;
+  void fetch(direction d, parity p) const;
+  void drop_comms(direction d, parity p) const;
   void cancel_comm(direction d, parity p) const; 
 
   // Declaration of shift methods
@@ -636,7 +640,7 @@ class field {
   T get_element(coordinate_vector coord) const;
 
   // Fourier transform declarations
-  void FFT();
+  void FFT(fft_direction fdir = fft_direction::forward);
 
   // Writes the field to disk
   void write_to_stream(std::ofstream & outputfile);
@@ -807,11 +811,11 @@ field<T> field<T>::shift(const coordinate_vector &v, const parity par) const {
  * have access to mpi.h, it cannot process this branch.
  */
 
-/// start_get(): Communicate the field at parity par from direction
+/// start_fetch(): Communicate the field at parity par from direction
 /// d. Uses accessors to prevent dependency on the layout.
 /// return the direction mask bits where something is happening
 template<typename T>
-dir_mask_t field<T>::start_get(direction d, parity p) const {
+dir_mask_t field<T>::start_fetch(direction d, parity p) const {
 
   // get the mpi message tag right away, to ensure that we are always synchronized with the
   // mpi calls -- some nodes might not need comms, but the tags must be in sync
@@ -833,7 +837,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
   // No comms to do, nothing to wait for -- we'll use the is_fetched
   // status to keep track of vector boundary shuffle anyway
 
-  if (from_node.rank == mynode() && to_node.rank == mynode()) {
+  if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) {
     fs->set_local_boundary_elements(d,p);
     mark_fetched(d,p);
     return 0;
@@ -870,9 +874,12 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
   T * receive_buffer;
   T * send_buffer;
 
-  if (from_node.rank != mynode()) {
+
+
+  if (from_node.rank != hila::myrank()) {
 
     // HANDLE RECEIVES: get node which will send here
+    post_receive_timer.start();
 
     // buffer can be separate or in field buffer
     receive_buffer = fs->get_receive_buffer(d,par,from_node);
@@ -882,10 +889,14 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
     // c++ version does not return errors??
     MPI_Irecv( receive_buffer, sites*size, MPI_BYTE, from_node.rank,
 	             tag, lattice->mpi_comm_lat, &fs->receive_request[par_i][d] );
+    
+    post_receive_timer.stop();
   }
 
-  if (to_node.rank != mynode()) {
+  if (to_node.rank != hila::myrank()) {
     // HANDLE SENDS: Copy field elements on the boundary to a send buffer and send
+    start_send_timer.start();
+
     unsigned sites = to_node.n_sites(par);
 
     if(fs->send_buffer[d] == nullptr)
@@ -896,6 +907,7 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
  
     MPI_Isend( send_buffer, sites*size, MPI_BYTE, to_node.rank, 
                tag, lattice->mpi_comm_lat, &fs->send_request[par_i][d]);
+    start_send_timer.stop();
   }
 
   // and do the boundary shuffle here, after MPI has started
@@ -908,17 +920,17 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 
 }
 
-///  wait_get(): Wait for communication at parity par from
+///  wait_fetch(): Wait for communication at parity par from
 ///  direction d completes the communication in the function.
 ///  If the communication has not started yet, also calls
-///  start_get()
+///  start_fetch()
 ///
 ///  NOTE: This will be called even if the field is marked const.
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
 ///  of view of the user, the value of the field does not change.
 template<typename T>
-void field<T>::wait_get(direction d, parity p) const {
+void field<T>::wait_fetch(direction d, parity p) const {
 
   lattice_struct::nn_comminfo_struct  & ci = lattice->nn_comminfo[d];
   lattice_struct::comm_node_struct & from_node = ci.from_node;
@@ -927,17 +939,17 @@ void field<T>::wait_get(direction d, parity p) const {
   // check if this is done - either fetched or no comm to be done in the 1st place
   if (is_fetched(d,p)) return;
 
-  // this is the branch if no comms -- shuffle was done in start_get
-  if (from_node.rank == mynode() && to_node.rank == mynode()) return;
+  // this is the branch if no comms -- shuffle was done in start_fetch
+  if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) return;
 
   // if (!is_move_started(d,p)) {
-  //   output0 << "Wait move error - wait_get without corresponding start_get\n";
+  //   output0 << "Wait move error - wait_fetch without corresponding start_fetch\n";
   //   exit(-1);
   // }
 
   // Note: the move can be parity p OR ALL -- need to wait for it in any case
   // set par to be the "sum" over both parities
-  // There never should be ongoing ALL and other parity fetch -- start_get takes care
+  // There never should be ongoing ALL and other parity fetch -- start_fetch takes care
 
   // check here consistency, this should never happen
   if (p != ALL && is_move_started(d,p) && is_move_started(d,ALL)) {
@@ -971,9 +983,13 @@ void field<T>::wait_get(direction d, parity p) const {
 
     int par_i = (int)par - 1;
 
-    if (from_node.rank != mynode()) {
+    if (from_node.rank != hila::myrank()) {
+      wait_receive_timer.start();
+
       MPI_Status status;
       MPI_Wait( &fs->receive_request[par_i][d], &status);
+
+      wait_receive_timer.stop();
 
 #ifndef VANILLA
       fs->place_comm_elements(d, par, fs->get_receive_buffer(d,par,from_node), from_node);
@@ -981,9 +997,11 @@ void field<T>::wait_get(direction d, parity p) const {
     }
 
     // then wait for the sends
-    if (to_node.rank != mynode()) {
+    if (to_node.rank != hila::myrank()) {
+      wait_send_timer.start();
       MPI_Status status;
       MPI_Wait( &fs->send_request[par_i][d], &status );
+      wait_send_timer.stop();
     }
 
     // Mark the parity fetched from direction dir
@@ -997,18 +1015,20 @@ void field<T>::wait_get(direction d, parity p) const {
 }
 
 
-///  drop_comms_if_needed():  if field is changed or deleted,
+///  drop_comms():  if field is changed or deleted,
 ///  cancel ongoing communications.  This should happen very seldom,
-///  only if there are "by-hand" start_get operations and these are not needed
+///  only if there are "by-hand" start_fetch operations and these are not needed
 template<typename T>
-void field<T>::drop_comms_if_needed(direction d, parity p) const {
+void field<T>::drop_comms(direction d, parity p) const {
 
-  if (is_move_started(d, ALL)) cancel_comm(d, ALL);
-  if (p != ALL) {
-    if (is_move_started(d, p)) cancel_comm(d, p);
-  } else {
-    if (is_move_started(d, EVEN)) cancel_comm(d, EVEN);
-    if (is_move_started(d, ODD)) cancel_comm(d, ODD);
+  if (is_comm_initialized()) {
+    if (is_move_started(d, ALL)) cancel_comm(d, ALL);
+    if (p != ALL) {
+      if (is_move_started(d, p)) cancel_comm(d, p);
+    } else {
+      if (is_move_started(d, EVEN)) cancel_comm(d, EVEN);
+      if (is_move_started(d, ODD)) cancel_comm(d, ODD);
+    }
   }
 }
 
@@ -1016,20 +1036,24 @@ void field<T>::drop_comms_if_needed(direction d, parity p) const {
 
 template<typename T>
 void field<T>::cancel_comm(direction d, parity p) const {
-  if (lattice->nn_comminfo[d].from_node.rank != mynode()) {
+  if (lattice->nn_comminfo[d].from_node.rank != hila::myrank()) {
+    cancel_receive_timer.start();
     MPI_Cancel( &fs->receive_request[(int)p-1][d] );
+    cancel_receive_timer.stop();
   }
-  if (lattice->nn_comminfo[d].to_node.rank != mynode()) {
+  if (lattice->nn_comminfo[d].to_node.rank != hila::myrank()) {
+    cancel_send_timer.start();
     MPI_Cancel( &fs->send_request[(int)p-1][d] );
+    cancel_send_timer.stop();
   }
 }
 
 #else  // No MPI now
 
 ///* Trivial implementation when no MPI is used
-#include "plumbing/comm_vanilla.h"
+
 template<typename T>
-dir_mask_t field<T>::start_get(direction d, parity p) const {
+dir_mask_t field<T>::start_fetch(direction d, parity p) const {
   // Update local elements in the halo (necessary for vectorized version)
   // We use here simpler tracking than in MPI, may lead to slight extra work
   if (!is_fetched(d,p)) {
@@ -1040,18 +1064,18 @@ dir_mask_t field<T>::start_get(direction d, parity p) const {
 }
 
 template<typename T>
-void field<T>::wait_get(direction d, parity p) const {}
+void field<T>::wait_fetch(direction d, parity p) const {}
 
 template<typename T>
-void field<T>::drop_comms_if_needed(direction d, parity p) const {}
+void field<T>::drop_comms(direction d, parity p) const {}
 
 #endif  // MPI
 
 /// And a convenience combi function
 template<typename T>
-void field<T>::get(direction d, parity p) const {
-  start_get(d,p);
-  wait_get(d,p);
+void field<T>::fetch(direction d, parity p) const {
+  start_fetch(d,p);
+  wait_fetch(d,p);
 }
 
 
@@ -1079,14 +1103,15 @@ void field<T>::field_struct::gather_elements(T * buffer, std::vector<coordinate_
   
   std::vector<T> send_buffer(index_list.size());
   payload.gather_elements((T*) send_buffer.data(), index_list.data(), send_buffer.size(), lattice);
-  if(mynode() != root && node_list[mynode()] > 0){
-    MPI_Send((char*) send_buffer.data(), node_list[mynode()]*sizeof(T), MPI_BYTE, root, mynode(), MPI_COMM_WORLD);
+  if(hila::myrank() != root && node_list[hila::myrank()] > 0){
+    MPI_Send((char*) send_buffer.data(), node_list[hila::myrank()]*sizeof(T), MPI_BYTE, root, hila::myrank(), 
+             lattice->mpi_comm_lat);
   }
-  if(mynode() == root) {
+  if(hila::myrank() == root) {
     for( int n=0; n<node_list.size(); n++ ) if(node_list[n] > 0) {
       if(n!=root) {
         MPI_Status status;
-        MPI_Recv(buffer, node_list[n]*sizeof(T), MPI_BYTE, n, n, MPI_COMM_WORLD, &status);
+        MPI_Recv(buffer, node_list[n]*sizeof(T), MPI_BYTE, n, n, lattice->mpi_comm_lat, &status);
       } else {
         std::memcpy( buffer, (char *) send_buffer.data(), node_list[n]*sizeof(T) );
       }
@@ -1113,14 +1138,15 @@ void field<T>::field_struct::send_elements(T * buffer, std::vector<coordinate_ve
 
   std::vector<T> recv_buffer(index_list.size());
   payload.gather_elements((T*) recv_buffer.data(), index_list.data(), recv_buffer.size(), lattice);
-  if(mynode() != root && node_list[mynode()] > 0){
+  if(hila::myrank() != root && node_list[hila::myrank()] > 0){
     MPI_Status status;
-    MPI_Recv((char*) recv_buffer.data(), node_list[mynode()]*sizeof(T), MPI_BYTE, root, mynode(), MPI_COMM_WORLD, &status);
+    MPI_Recv((char*) recv_buffer.data(), node_list[hila::myrank()]*sizeof(T), MPI_BYTE, root, hila::myrank(), 
+              lattice->mpi_comm_lat, &status);
   }
-  if(mynode() == root) {
+  if(hila::myrank() == root) {
     for( int n=0; n<node_list.size(); n++ ) if(node_list[n] > 0) {
       if(n!=root) {
-        MPI_Send(buffer, node_list[n]*sizeof(T), MPI_BYTE, n, n, MPI_COMM_WORLD);
+        MPI_Send(buffer, node_list[n]*sizeof(T), MPI_BYTE, n, n, lattice->mpi_comm_lat);
       } else {
         std::memcpy( (char *) recv_buffer.data(), buffer, node_list[n]*sizeof(T) );
       }
@@ -1131,7 +1157,7 @@ void field<T>::field_struct::send_elements(T * buffer, std::vector<coordinate_ve
 }
 
 
-#else
+#else  // Now not USE_MPI
 
 /// Gather a list of elements to a single node
 template<typename T>
@@ -1200,11 +1226,11 @@ T field<T>::get_element( coordinate_vector coord) const {
   T element;
   int owner = lattice->node_rank(coord);
 
-  if( mynode() == owner ){
+  if( hila::myrank() == owner ){
     element = get_value_at( lattice->site_index(coord) );
   }
 
-  MPI_Bcast( &element, sizeof(T), MPI_BYTE, owner, MPI_COMM_WORLD);
+  MPI_Bcast( &element, sizeof(T), MPI_BYTE, owner, lattice->mpi_comm_lat);
   return element;
 }
 
@@ -1232,7 +1258,7 @@ void field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_
       T * element_buffer = (T *) malloc( sizeof(T)*node.indexes.size() );
       fs->payload.gather_elements( element_buffer, node.coords);
 
-      MPI_Bcast( &element_buffer, sizeof(T), MPI_BYTE, n, MPI_COMM_WORLD);
+      MPI_Bcast( &element_buffer, sizeof(T), MPI_BYTE, n, lattice->mpi_comm_lat);
 
       // place in the array in original order
       for( int i=0; i<node.indexes.size(); i++){
@@ -1289,7 +1315,7 @@ void field<T>::write_to_stream(std::ofstream& outputfile){
     // Write the buffer when full
     if( (i+1)%sites_per_write == 0 ){
       fs->gather_elements(buffer, coord_list);
-      if( mynode()==0 )
+      if( hila::myrank()==0 )
         outputfile.write((char*)buffer,write_size);
     }
   }
@@ -1298,7 +1324,7 @@ void field<T>::write_to_stream(std::ofstream& outputfile){
   coord_list.resize(i%sites_per_write);
   fs->gather_elements(buffer, coord_list);
   double * v = (double*) buffer;
-  if( mynode() == 0 )
+  if( hila::myrank() == 0 )
     outputfile.write((char*)buffer,sizeof(T)*(i%sites_per_write));
 
   std::free(buffer);
@@ -1365,7 +1391,7 @@ void field<T>::read_from_stream(std::ifstream& inputfile){
 
     // Read the buffer when full
     if( (i+1)%sites_per_read == 0 ){
-      if( mynode()==0 )
+      if( hila::myrank()==0 )
         inputfile.read((char*)buffer,read_size);
       fs->send_elements(buffer, coord_list);
     }
@@ -1373,7 +1399,7 @@ void field<T>::read_from_stream(std::ifstream& inputfile){
 
   // Read the rest
   coord_list.resize(i%sites_per_read);
-  if( mynode()==0 )
+  if( hila::myrank()==0 )
     inputfile.read((char*)buffer, sizeof(T)*(i%sites_per_read));
   double * v = (double*) buffer;
   fs->send_elements(buffer, coord_list);

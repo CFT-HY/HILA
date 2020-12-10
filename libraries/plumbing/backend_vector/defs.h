@@ -95,8 +95,8 @@ inline double reduce_sum(Vec8f v){
   return sum;
 }
 
-inline double reduce_sum(Vec8i v){
-  double sum = 0;
+inline int64_t reduce_sum(Vec8i v){
+  int64_t sum = 0;
   int store[8];
   v.store(&(store[0]));
   for(int i=0; i<8; i++)
@@ -122,11 +122,29 @@ inline double reduce_sum(Vec16f v){
   return sum;
 }
 
-inline double reduce_sum(Vec16i v){
-  double sum = 0;
+inline int64_t reduce_sum(Vec16i v){
+  int64_t sum = 0;
   int store[16];
   v.store(&(store[0]));
   for(int i=0; i<16; i++)
+    sum += store[i];
+  return sum;
+}
+
+inline int64_t reduce_sum(Vec4q v){
+  int64_t sum = 0;
+  int64_t store[4];
+  v.store(&(store[0]));
+  for(int i=0; i<4; i++)
+    sum += store[i];
+  return sum;
+}
+
+inline int64_t reduce_sum(Vec8q v){
+  int64_t sum = 0;
+  int64_t store[4];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
     sum += store[i];
   return sum;
 }
@@ -183,6 +201,40 @@ inline double reduce_prod(Vec16i v){
   for(int i=0; i<16; i++)
     sum *= store[i];
   return sum;
+}
+
+inline double reduce_prod(Vec4q v){
+  double sum = 0;
+  int64_t store[4];
+  v.store(&(store[0]));
+  for(int i=0; i<4; i++)
+    sum *= store[i];
+  return sum;
+}
+
+inline double reduce_prod(Vec8q v){
+  double sum = 0;
+  int64_t store[8];
+  v.store(&(store[0]));
+  for(int i=0; i<8; i++)
+    sum *= store[i];
+  return sum;
+}
+
+
+
+// Return the 
+template <typename base_t, typename vector_t, typename T, typename vecT>
+T reduce_sum_in_vector(const vecT & vt) {
+  constexpr int nvec = sizeof(vecT)/sizeof(vector_t);
+  static_assert( nvec == sizeof(T)/sizeof(base_t), "Mismatch in vectorized type sizes");
+  T res;
+  auto * vptr = (const vector_t *)(&vt);
+  base_t * bptr = (base_t *)(&res);
+  for (int i=0; i<nvec; i++) {
+    bptr[i] = reduce_sum(vptr[i]);
+  }
+  return res;
 }
 
 

@@ -107,7 +107,7 @@ void lattice_struct::setup_layout( )
   
   nodes.create_remap();
   
-  if (mynode() == 0) {
+  if (hila::myrank() == 0) {
     output0 << "\n Sites on node: ";
     foralldir(dir) {
       if (dir > 0) { output0 << " x "; }

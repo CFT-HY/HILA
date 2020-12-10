@@ -53,7 +53,7 @@ bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &i
     }
   } 
 
-  // TODO: this is for templated expr, I think -- should be removed (STILL USED; WHY)
+  // This is for arithmetic type assignments
   if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
     if (B->isAssignmentOp()) {
       iscompound = B->isCompoundAssignmentOp();
@@ -105,12 +105,12 @@ bool LoopAssignChecker::VisitDeclRefExpr(DeclRefExpr *e) {
   if(type.rfind("element<",0) != std::string::npos){
     reportDiag(DiagnosticsEngine::Level::Error,
       e->getSourceRange().getBegin(),
-      "Cannot assing an element to a non-element type");
+      "Cannot assign a field element to a non-element type");
   }
   return true;
 }
 
-/// Check if an assignment is allowed
+/// Check if an assignment is allowed -- IS THIS NOW SUPERFLUOUS?
 void MyASTVisitor::check_allowed_assignment(Stmt * s) {
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if(OP->getNumArgs() == 2){
@@ -648,7 +648,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
   // Need to recognize assignments lf[X] =  or lf[X] += etc.
   // And also assignments to other vars: t += norm2(lf[X]) etc.
   if (is_assignment_expr(s,&assignop,is_compound)) {
-    check_allowed_assignment(s);
+    // This checks the "element<> -style assigns which we do not want now!
+    // check_allowed_assignment(s);  
     assign_stmt = s;
     is_assignment = true;
     // next visit here will be to the assigned to variable
@@ -1228,7 +1229,7 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
     } else {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  pExpr->getSourceRange().getBegin(),
-                 "Transformer internal error, unknown parity" );
+                 "hilapp internal error, unknown parity" );
       exit(-1);
     }
     if (p == parity::none) {

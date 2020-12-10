@@ -8,7 +8,7 @@
 #define SEED 100
 #endif
 
-
+int latsize[4] = {32,32,32,32};
 
 int main(int argc, char **argv){
     int n_runs=1;
@@ -18,8 +18,10 @@ int main(int argc, char **argv){
     double sum;
     float fsum;
 
-    // Runs lattice->setup 
-    bench_setup(argc, argv);
+    hila::initialize(argc, argv);
+
+    lattice->setup(latsize);
+
     seed_random(SEED);
 
 
@@ -224,7 +226,7 @@ int main(int argc, char **argv){
 
 
     // Time VECTOR NORM
-    timing = 0;
+    timing = sum = 0;
     onsites(ALL){ // Warm up. Why does this affect the time?
       sum += vector1[X].norm_sq();
     }
@@ -274,7 +276,7 @@ int main(int argc, char **argv){
       for( int i=0; i<n_runs; i++){
         matrix1.mark_changed(ALL);
         for(int dir=0; dir<NDIRS; dir++){
-          matrix1.get((direction)dir,ALL);
+          matrix1.fetch((direction)dir,ALL);
         }
       }
       
