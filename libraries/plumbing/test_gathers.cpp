@@ -43,7 +43,7 @@ void gather_test() {
     }
   }
 
-  const direction max_dir = (direction)(NDIM-1);
+#define max_dir  (direction)(NDIM-1)
 #if defined(SPECIAL_BOUNDARY_CONDITIONS)
   for (boundary_condition_t bc : {boundary_condition_t::PERIODIC, boundary_condition_t::ANTIPERIODIC}) {
       t.set_boundary_condition(max_dir,bc);
