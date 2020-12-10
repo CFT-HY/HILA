@@ -12,7 +12,8 @@ CC = nvcc
 LD = nvcc -gencode arch=compute_70,code=sm_70
 
 # Define compilation flags
-CXXFLAGS = -dc -x cu -gencode arch=compute_70,code=sm_70 -DCUDA -DUSE_MPI  $(CXX_INCLUDE)
+CXXFLAGS = -dc -O3 -x cu -gencode arch=compute_70,code=sm_70 -DCUDA -DUSE_MPI  $(CXX_INCLUDE)
+
 #CXXFLAGS = -g -x c++ --std=c++17 
 
 # No need to give include directory to mpi for hilapp - here 2 common ones
