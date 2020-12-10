@@ -64,7 +64,8 @@ __global__ void scatter_column( cufftDoubleComplex *data, char* field_elem, int 
 // The field must be complex and the underlying complex type is supplied
 // by the complex_type template argument
 template<typename T, typename complex_type>
-inline void FFT_field_complex(field<T> & input, field<T> & result){
+inline void FFT_field_complex(field<T> & input, field<T> & result,
+                              fft_direction fftdir = fft_direction::forward ){
 
   lattice_struct * lattice = input.fs->lattice;
   field<T> * read_pointer = &input; // Read from input on first time, then work in result
@@ -162,7 +163,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       elements, cpn, nnodes, node_column_size, column_size, block_size );
     
     // Run the fft
-    cufftExecZ2Z(plan, data, data, CUFFT_FORWARD);
+    int direction = (fftdir == fft_direction::forward) ? CUFFT_FORWARD : CUFFT_BACKWARD;
+    cufftExecZ2Z(plan, data, data, direction);
 
     // Reorganize back into elements
     scatter_column<complex_type><<< N_blocks, N_threads >>>( data, mpi_recv_buffer,
@@ -213,7 +215,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 // Non CUDA aware. This is mostly a copy of the non-CUDA version, but calls
 // the CUDA fft library
 template<typename T, typename complex_type>
-inline void FFT_field_complex(field<T> & input, field<T> & result){
+inline void FFT_field_complex(field<T> & input, field<T> & result,
+                              fft_direction fftdir = fft_direction::forward ){
   check_cuda_error("FFT check for past errors");
 
   lattice_struct * lattice = input.fs->lattice;
@@ -380,7 +383,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 #else // No MPI
 
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result){}
+inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir=fft_direction::forward){}
 
 #endif
 
@@ -394,7 +397,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){}
 
 
 template<>
-inline void field<cmplx<double>>::FFT(){
+inline void field<cmplx<double>>::FFT(fft_direction fdir) {
   FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this);
 }
 
@@ -437,8 +440,8 @@ struct complex_base<C<a,b,B>>{
 /// Run fourier transform on a complex field
 // Called with any type T with a cmplx type nested in the lowest level
 template<typename T>
-void FFT_field(field<T> & input, field<T> & result){
-  FFT_field_complex<T,typename complex_base<T>::type>(input, result);
+void FFT_field(field<T> & input, field<T> & result, fft_direction fdir){
+  FFT_field_complex<T,typename complex_base<T>::type>(input, result, fdir);
 }
 
 
