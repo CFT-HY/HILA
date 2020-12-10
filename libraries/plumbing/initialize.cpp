@@ -220,7 +220,7 @@ void hila::initialize(int argc, char **argv)
 
   /* basic static node variables */
 #if defined(CUDA) && !defined(PIZDAINT)
-  localhost_info(&g_local_nodeid, &g_num_local_nodes);
+  // localhost_info(&g_local_nodeid, &g_num_local_nodes);
 #endif
 
 #if (defined(__GNUC__) && !defined(DARWIN)) // || defined(__bg__)

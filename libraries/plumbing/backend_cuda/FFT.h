@@ -394,14 +394,14 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
 #else // No MPI
 
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir=fft_direction::forward){}
+inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir){}
 
 #endif
 
 #else
 // Not CUDA compiler
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result){}
+inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir){}
 
 
 #endif
@@ -409,7 +409,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){}
 
 template<>
 inline void field<cmplx<double>>::FFT(fft_direction fdir) {
-  FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this);
+  FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this, fdir);
 }
 
 
@@ -451,7 +451,7 @@ struct complex_base<C<a,b,B>>{
 /// Run fourier transform on a complex field
 // Called with any type T with a cmplx type nested in the lowest level
 template<typename T>
-void FFT_field(field<T> & input, field<T> & result, fft_direction fdir){
+void FFT_field(field<T> & input, field<T> & result, fft_direction fdir = fft_direction::forward){
   FFT_field_complex<T,typename complex_base<T>::type>(input, result, fdir);
 }
 
