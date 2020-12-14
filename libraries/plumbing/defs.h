@@ -62,14 +62,21 @@ namespace hila {
   void initialize(int argc, char **argv);
 }
 
-// this is pretty hacky but easy.  Probably could do without #define too
-// do this through else-branch in order to avoid if-statement problems
-#define output0 if (hila::myrank() != 0) {} else hila::output
+// We want to define ostream
+//     "output0 << stuff;"
+// which is done only by rank 0.  
+// This is hacky but easy.  Probably should be done without #define.
+// Do this through else-branch in order to avoid if-statement problems.
+// #define output0 if (hila::myrank() != 0) {} else hila::output
+//
+//   -- the above can trigger "dangling-else" warning.  Let us
+// try to avoid it with the following a bit more ugly trick.  
+#define output0 for(int _dummy_i_=1; hila::myrank()==0 && _dummy_i_; --_dummy_i_) hila::output
 
-// the above gives often warning when used with if stmt, close that with this hammer
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wdangling-else"
-#endif
+// The following disables the "dangling-else" warning, but not needed now
+//#if defined(__clang__) || defined(__GNUC__)
+//#pragma GCC diagnostic ignored "-Wdangling-else"
+//#endif
 
 // define a class for FFT direction
 enum class fft_direction { forward, backward, back };
