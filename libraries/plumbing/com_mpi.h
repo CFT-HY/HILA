@@ -78,14 +78,14 @@ void lattice_struct::reduce_node_sum(T * value, int N, bool distribute) {
   T work[N];
   MPI_Datatype dtype;
 
-  if constexpr (std::is_same<number_type<T>,int>::value) {
+  if (std::is_same<number_type<T>,int>::value) {
     dtype = MPI_INT;
-  } else if constexpr (std::is_same<number_type<T>,float>::value) {
+  } else if (std::is_same<number_type<T>,float>::value) {
     dtype = MPI_FLOAT;
-  } else if constexpr (std::is_same<number_type<T>,double>::value) {
+  } else if (std::is_same<number_type<T>,double>::value) {
     dtype = MPI_DOUBLE;
   } else {
-    static_assert(sizeof(T)<0 && "Unknown number_type in reduce_node_sum");
+    static_assert(sizeof(T)>0, "Unknown number_type in reduce_node_sum");
   }
 
   reduction_timer.start();
@@ -111,14 +111,14 @@ void lattice_struct::reduce_node_product(T * value, int N, bool distribute) {
   T work[N];
   MPI_Datatype dtype;
 
-  if constexpr (std::is_same<T,int>::value) {
+  if (std::is_same<T,int>::value) {
     dtype = MPI_INT;
-  } else if constexpr (std::is_same<T,float>::value) {
+  } else if (std::is_same<T,float>::value) {
     dtype = MPI_FLOAT;
-  } else if constexpr (std::is_same<T,double>::value) {
+  } else if (std::is_same<T,double>::value) {
     dtype = MPI_DOUBLE;
   } else {
-    static_assert(sizeof(T)<0 && "Unknown number_type in reduce_node_product");
+    static_assert(sizeof(T)>0, "Unknown number_type in reduce_node_product");
   }
 
   reduction_timer.start();
