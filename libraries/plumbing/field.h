@@ -359,7 +359,9 @@ class field {
   }
 
   void free() {
-    if (fs != nullptr) {
+    // don't call destructors when exiting - either MPI or cuda can already
+    // be off.  
+    if (fs != nullptr && !hila::about_to_finish) {
       for (direction d=(direction)0; d<NDIRS; ++d) drop_comms(d,ALL);
       fs->free_payload();
       fs->free_communication();
