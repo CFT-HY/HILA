@@ -1,6 +1,6 @@
 
 #include <cstring>
-#include "timing.h"
+#include "defs.h"
 #include "field.h"
 #ifdef USE_MPI
 #include "com_mpi.h"
@@ -10,6 +10,7 @@
 std::ostream hila::output(NULL);
 std::ofstream hila::output_file;
 int hila::my_rank_n;
+bool hila::about_to_finish = false;
 
 // let us house the sublattices-struct here
 
@@ -288,6 +289,61 @@ void initialize_prn(long seed)
 // {
 //     taus_deinit();
 // }
+
+
+/* version of exit for multinode processes -- kill all nodes */
+void terminate(int status)
+{
+  timestamp("Terminate");
+  print_dashed_line();
+  hila::about_to_finish = true;   // avoid destructors 
+  if( is_comm_initialized() ){
+    abort_communications(status);
+  }
+  exit(status);
+}
+
+void error(const char * msg) {
+  output0 << "Error: " << msg << '\n';
+  terminate(0);
+}
+
+void error(const std::string &msg) {
+  error(msg.c_str());
+}
+
+// Normal, controlled exit of the program
+void finishrun()
+{
+  report_timers();
+
+  for( lattice_struct * lattice : lattices ){
+
+    unsigned long long gathers = lattice->n_gather_done;
+    unsigned long long avoided = lattice->n_gather_avoided;
+    if (lattice->node_rank() == 0) {
+      output0 << " COMMS from node 0: " << gathers << " done, "
+              << avoided << "(" 
+              << 100.0*avoided/(avoided+gathers)
+              << "%) optimized away\n";
+    }
+  }
+  if (sublattices.number > 1) {
+    timestamp("Waiting to sync sublattices...");
+  }  
+  synchronize();
+  timestamp("Finishing");
+
+  hila::about_to_finish = true;
+
+  finish_communications();
+
+  print_dashed_line();
+  exit(0);
+
+}
+
+
 
 
 /******************************************************

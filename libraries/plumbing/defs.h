@@ -121,6 +121,10 @@ void error(const char * msg);
 void initialize_machine(int &argc, char ***argv);
 void split_into_sublattices( int rank );
 void synchronize();
+bool is_comm_initialized(void);
+void finish_communications();
+void abort_communications(int status);
+
 
 // and print a dashed line
 void print_dashed_line();

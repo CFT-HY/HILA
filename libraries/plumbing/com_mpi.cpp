@@ -60,59 +60,23 @@ bool is_comm_initialized(void) {
 }
 
 /* version of exit for multinode processes -- kill all nodes */
-void terminate(int status)
-{
-  if( !mpi_initialized ){
-    int node;
-    MPI_Comm_rank( lattices[0]->mpi_comm_lat, &node );
-    output0 << "Node " << node << ", status = " << status << "\n";
-
-    timestamp("Terminate");
-
+void abort_communications(int status) {
+  if( mpi_initialized ){
     mpi_initialized = false;
     MPI_Abort( lattices[0]->mpi_comm_lat, 0);
   }
-  exit(status);
-}
-
-void error(const char * msg) {
-  output0 << "Error: " << msg << '\n';
-  terminate(0);
-}
-
-void error(const std::string &msg) {
-  error(msg.c_str());
 }
 
 
 /* clean exit from all nodes */
-void finishrun()
-{
-  report_timers();
-
-  for( lattice_struct * lattice : lattices ){
-
-    unsigned long long gathers = lattice->n_gather_done;
-    unsigned long long avoided = lattice->n_gather_avoided;
-    if (lattice->node_rank() == 0) {
-      output0 << " COMMS from node 0: " << gathers << " done, "
-              << avoided << "(" 
-              << 100.0*avoided/(avoided+gathers)
-              << "%) optimized away\n";
-    }
-  }
-  if (sublattices.number > 1) {
-    timestamp("Waiting to sync sublattices...");
-  } else {
-    timestamp("Finishing");
-  }
-
-  synchronize();
+void finish_communications() {
   // turn off mpi -- this is needed to avoid mpi calls in destructors
   mpi_initialized = false;
+  hila::about_to_finish = true;
 
   MPI_Finalize();
 }
+
 
 // broadcast specialization
 void broadcast(std::string & var) {
