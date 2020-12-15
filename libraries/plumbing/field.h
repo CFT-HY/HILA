@@ -330,7 +330,7 @@ class field {
     assert(fs == nullptr);
     if (lattice == nullptr) {
       output0 << "Can not allocate field variables before lattice.setup()\n";
-      terminate(0); 
+      hila::terminate(0); 
     }
     fs = new field_struct;
     fs->lattice = lattice;

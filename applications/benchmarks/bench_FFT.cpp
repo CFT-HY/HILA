@@ -66,5 +66,5 @@ int main(int argc, char **argv){
   output0 << "FFT single precision : "<< timing << " ms \n";
 
 
-  finishrun();
+  hila::finishrun();
 }

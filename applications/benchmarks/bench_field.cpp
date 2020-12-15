@@ -289,7 +289,7 @@ int main(int argc, char **argv){
     timing = timing / 2 / NDIRS / (double)n_runs;
     output0 << "Matrix nearest neighbour communication: " << timing << " ms \n";
 
-    finishrun();
+    hila::finishrun();
 }
 
 

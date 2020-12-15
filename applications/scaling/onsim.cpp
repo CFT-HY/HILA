@@ -326,6 +326,6 @@ int main(int argc, char ** argv){
 		sim.config.stream.close();
 	}
 
-	finishrun();
+	hila::finishrun();
 	return 0;
 }

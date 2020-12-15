@@ -66,5 +66,5 @@ int main(int argc, char **argv){
   //assert(sum==0 && "Write and read field");
 
 
-  finishrun();
+  hila::finishrun();
 }

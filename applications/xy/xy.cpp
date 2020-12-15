@@ -74,6 +74,6 @@ int main(int argc, char **argv){
 		output0 << "Magnetisation " << M/VOLUME << "\n";
 	}
 
-	finishrun();
+	hila::finishrun();
 	return 0;
 }

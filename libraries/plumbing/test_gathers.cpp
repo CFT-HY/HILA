@@ -110,7 +110,7 @@ void gather_test() {
           output0 << ", boundary condition " << (int)bc;
           #endif
           output0 << '\n';
-          terminate(-1);
+          hila::terminate(-1);
         }
 
         if (sum2 + s_result != 0.0) {
@@ -120,7 +120,7 @@ void gather_test() {
           output0 << ", boundary condition " << (int)bc;
           #endif
           output0 << '\n';
-          terminate(-1);
+          hila::terminate(-1);
         }
 
 

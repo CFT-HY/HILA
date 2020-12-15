@@ -119,6 +119,6 @@ int main(int argc, char **argv)
     output0 << "Plaquette " << Plaq/(lattice->volume()*NDIM*(NDIM-1)) << "\n";
   }
   
-  finishrun();
+  hila::finishrun();
   return 0;
 }

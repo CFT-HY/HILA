@@ -98,5 +98,5 @@ int main(int argc, char **argv){
 
     assert(((int) dsum) == lattice->volume()*2 && "Matrix conjugate multiplication");
     
-    finishrun();
+    hila::finishrun();
 }

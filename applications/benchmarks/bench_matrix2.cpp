@@ -174,7 +174,7 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "matrix size " << (int) MSIZE + 6 << "*"  << (int) MSIZE + 6 << " : "<< timing << " ms \n";
 
-    finishrun();
+    hila::finishrun();
 }
 
 

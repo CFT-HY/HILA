@@ -7,7 +7,6 @@
 
 #include "plumbing/lattice.h"
 
-bool is_comm_initialized(void);
 
 extern timer start_send_timer, 
              wait_send_timer, 

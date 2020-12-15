@@ -75,7 +75,7 @@ class cmdlineargs {
     if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
         || (errno != 0 && val == 0) || end == p || *end != 0) {
       output0 << "Expect a number (integer) after command line parameter '" << flag << "'\n";
-      terminate(0);      
+      hila::terminate(0);      
     }
     return val;
   }
@@ -87,7 +87,7 @@ class cmdlineargs {
     if (std::strcmp(p,"yes") == 0) return 1;
     if (std::strcmp(p,"no") == 0) return -1;
     output0 << "Command line argument " << flag << " requires value yes/no\n";
-    terminate(0);
+    hila::terminate(0);
     return 0;   // gets rid of a warning of no return value
   }
 
@@ -114,7 +114,7 @@ class cmdlineargs {
     output0 << "  sublattices=<n>         number of sublattices\n";
     output0 << "  sync=yes/no             synchronize sublattice runs (default=no)\n";
 
-    terminate(0);
+    hila::terminate(0);
   }
 
 };
@@ -185,7 +185,7 @@ void hila::initialize(int argc, char **argv)
       }
     }
     broadcast(do_exit);
-    if (do_exit) terminate(0);
+    if (do_exit) hila::terminate(0);
   }
 
   if (hila::myrank() == 0) {
@@ -292,7 +292,7 @@ void initialize_prn(long seed)
 
 
 /* version of exit for multinode processes -- kill all nodes */
-void terminate(int status)
+void hila::terminate(int status)
 {
   timestamp("Terminate");
   print_dashed_line();
@@ -303,17 +303,17 @@ void terminate(int status)
   exit(status);
 }
 
-void error(const char * msg) {
+void hila::error(const char * msg) {
   output0 << "Error: " << msg << '\n';
-  terminate(0);
+  hila::terminate(0);
 }
 
-void error(const std::string &msg) {
-  error(msg.c_str());
+void hila::error(const std::string &msg) {
+  hila::error(msg.c_str());
 }
 
 // Normal, controlled exit of the program
-void finishrun()
+void hila::finishrun()
 {
   report_timers();
 
@@ -398,7 +398,7 @@ void setup_sublattices(cmdlineargs & commandline)
   long lnum = commandline.get_int("sublattices=");
   if (lnum <= 0) {
     output0 << "sublattices=<number> command line argument value must be positive integer (or argument omitted)\n";
-    finishrun();
+    hila::finishrun();
   }
   if (lnum == LONG_MAX) {
     sublattices.number = 1;
@@ -413,7 +413,7 @@ void setup_sublattices(cmdlineargs & commandline)
   if (numnodes() % sublattices.number) {
     output0 << "** " << numnodes() << " nodes not evenly divisible into " 
             << sublattices.number <<  " sublattices\n";
-    finishrun();
+    hila::finishrun();
   }
 
 #if defined(BLUEGENE_LAYOUT)
@@ -450,7 +450,7 @@ void setup_sublattices(cmdlineargs & commandline)
     }
   }
   broadcast(do_exit);
-  if (do_exit) terminate(0);
+  if (do_exit) hila::terminate(0);
 
   /* Default sync is no */
   if (commandline.get_yesno("sync=") == 1) {    

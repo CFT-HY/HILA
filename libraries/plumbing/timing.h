@@ -15,7 +15,7 @@
 ///            < timed section >
 ///         loop_timer.stop();
 /// 
-/// All timer values are automatically reported on program exit (finishrun calls report_timers())
+/// All timer values are automatically reported on program exit (hila::finishrun calls report_timers())
 ///  
 /// Timer can be reset with 
 ///       loop_timer.reset();

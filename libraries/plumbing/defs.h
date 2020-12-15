@@ -62,6 +62,11 @@ namespace hila {
   extern bool about_to_finish;
 
   void initialize(int argc, char **argv);
+  void finishrun();
+  void terminate(int status);
+  void error(const std::string & msg);
+  void error(const char * msg);
+
 }
 
 // We want to define ostream
@@ -114,10 +119,6 @@ void broadcast_array(T * var, int n) {}
 
 int mynode();
 int numnodes();
-void finishrun();
-void terminate(int status);
-void error(const std::string & msg);
-void error(const char * msg);
 void initialize_machine(int &argc, char ***argv);
 void split_into_sublattices( int rank );
 void synchronize();

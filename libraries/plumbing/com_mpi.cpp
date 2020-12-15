@@ -11,9 +11,17 @@
 
 // declare MPI timers here too - these were externs
 
-timer start_send_timer, wait_send_timer, post_receive_timer, wait_receive_timer,
-      synchronize_timer, reduction_timer, broadcast_timer, send_timer, 
-      cancel_send_timer, cancel_receive_timer, sublattice_sync_timer;
+timer start_send_timer("MPI start send"), 
+      wait_send_timer("MPI wait send"),
+      post_receive_timer("MPI post receive"),
+      wait_receive_timer("MPI wait receive"),
+      synchronize_timer("MPI synchronize"),
+      reduction_timer("MPI reduction"),
+      broadcast_timer("MPI broadcast"),
+      send_timer("MPI send field"),
+      cancel_send_timer("MPI cancel send"),
+      cancel_receive_timer("MPI cancel receive"),
+      sublattice_sync_timer("sublattice sync");
 
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
@@ -39,18 +47,6 @@ void initialize_machine(int &argc, char ***argv)
 
   }
   hila::my_rank_n = lattice->this_node.rank;
-
-  start_send_timer.init("MPI start send");
-  wait_send_timer.init("MPI wait send");
-  post_receive_timer.init("MPI post receive");
-  wait_receive_timer.init("MPI wait receive");
-  synchronize_timer.init("MPI synchronize");
-  reduction_timer.init("MPI reduction");
-  broadcast_timer.init("MPI broadcast");
-  send_timer.init("MPI send field");
-  cancel_send_timer.init("MPI cancel send");
-  cancel_receive_timer.init("MPI cancel receive");
-  sublattice_sync_timer.init("Sublattice sync");
 
 }
 
@@ -145,7 +141,7 @@ void split_into_sublattices( int this_lattice )
   if ( MPI_Comm_split( MPI_COMM_WORLD, this_lattice, 0, &(lattice->mpi_comm_lat) )
        != MPI_SUCCESS ) {
     output0 << "MPI_Comm_split() call failed!\n";
-    finishrun();
+    hila::finishrun();
   }
   // reset also the rank and numbers -fields
   MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->this_node.rank );
