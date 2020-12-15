@@ -6,11 +6,11 @@
 #
 
 # Define compiler
-CC = nvcc
-LD = nvcc -std c++14
+CC = /usr/local/cuda-11/bin/nvcc
+LD = $(CC) -std c++17
 
-# Define compilation flags
-CXXFLAGS = -dc -x cu -gencode arch=compute_30,code=sm_30 -std c++14 -DCUDA 
+# Define compilation flags - 61 and 52 work with fairly common geForce cards
+CXXFLAGS = -O3 -dc -x cu -gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52  -std c++17 -DCUDA 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
 LDLIBS = -lfftw3 -lm 
