@@ -119,7 +119,7 @@ void broadcast_array(T * var, int n) {}
 
 int mynode();
 int numnodes();
-void initialize_machine(int &argc, char ***argv);
+void initialize_communications(int &argc, char ***argv);
 void split_into_sublattices( int rank );
 void synchronize();
 bool is_comm_initialized(void);

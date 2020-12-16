@@ -156,7 +156,11 @@ void hila::initialize(int argc, char **argv)
   inittime();
 
   // initialize MPI (if needed) so that hila::myrank() etc. works
-  initialize_machine( argc, &argv );
+  initialize_communications( argc, &argv );
+
+#ifdef CUDA
+  initialize_cuda( lattice->this_node.rank );
+#endif
 
   /// Handle commandline args here
   cmdlineargs commandline(argc, argv);
@@ -218,6 +222,9 @@ void hila::initialize(int argc, char **argv)
   // error out if there are more cmdline options
   commandline.error_if_args_remain();
 
+#ifdef CUDA
+  cuda_device_info();
+#endif
 
   /* basic static node variables */
 #if defined(CUDA) && !defined(PIZDAINT)

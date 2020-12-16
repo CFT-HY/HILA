@@ -28,7 +28,7 @@ static bool mpi_initialized = false;
 
 /* Machine initialization */
 #include <sys/types.h>
-void initialize_machine(int &argc, char ***argv)
+void initialize_communications(int &argc, char ***argv)
 {
   /* Init MPI */
   if( !mpi_initialized ){
@@ -40,10 +40,6 @@ void initialize_machine(int &argc, char ***argv)
 
     MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->this_node.rank );
     MPI_Comm_size( lattice->mpi_comm_lat, &lattice->nodes.number );
-
-#ifdef CUDA
-    initialize_cuda( lattice->this_node.rank );
-#endif
 
   }
   hila::my_rank_n = lattice->this_node.rank;

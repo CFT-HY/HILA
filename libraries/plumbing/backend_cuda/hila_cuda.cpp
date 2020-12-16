@@ -82,12 +82,76 @@ void backend_lattice_struct::setup(lattice_struct * lattice)
 
 void initialize_cuda( int rank ){
   int n_devices, my_device;
+
   cudaGetDeviceCount(&n_devices);
-  /* This assumes that each node has the same number of mpi ranks and GPUs */
+  check_cuda_error("Could not get device count");
+  // This assumes that each node has the same number of mpi ranks and GPUs
   my_device = rank%n_devices;
-  printf("Cuda: rank %d choosing device %d out of %d\n", rank, my_device, n_devices);
+
+  output0 << "CUDA Devices accessible from node 0: " << n_devices << '\n';
+  // TODO: this only for node 0?
+  if (rank < 6) {
+    hila::output << "Cuda: rank " << rank << " choosing device " << my_device << '\n';
+  }
+  if (numnodes() > 6) {
+    output0 << "  + " << numnodes() - 6 << " more nodes\n";
+  }
+
   cudaSetDevice(my_device);
 }
+
+
+void cuda_device_info() {
+  if (hila::myrank() == 0) {
+    const int kb = 1024;
+    const int mb = kb * kb;
+
+    int driverVersion, rtVersion;
+    cudaDriverGetVersion ( &driverVersion ); 
+    cudaRuntimeGetVersion ( &rtVersion ); 
+    hila::output << "CUDA driver version: " << driverVersion << ", runtime " << rtVersion << '\n';
+
+    cudaDeviceProp props;
+    int my_device;
+    cudaGetDevice(&my_device);
+    cudaGetDeviceProperties(&props, my_device);
+    hila::output << "Device on node rank 0 device "<< my_device << ":\n";
+    hila::output << "  " << props.name << "  capability: " 
+                 << props.major << "." << props.minor << '\n';
+    hila::output << "  Global memory:   " << props.totalGlobalMem / mb << "MB" << '\n';
+    hila::output << "  Shared memory:   " << props.sharedMemPerBlock / kb << "kB" << '\n';
+    hila::output << "  Constant memory: " << props.totalConstMem / kb << "kB" << '\n';
+    hila::output << "  Block registers: " << props.regsPerBlock << '\n';
+
+    hila::output << "  Warp size:         " << props.warpSize << '\n';
+    hila::output << "  Threads per block: " << props.maxThreadsPerBlock << '\n';
+    hila::output << "  Max block dimensions: [ " << props.maxThreadsDim[0] << ", " 
+                 << props.maxThreadsDim[1]  << ", " << props.maxThreadsDim[2] << " ]" << '\n';
+    hila::output << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", " 
+                 << props.maxGridSize[1]  << ", " << props.maxGridSize[2] << " ]" << '\n';
+    
+  }
+}
+
+void cuda_exit_on_error(const char * msg, const char * file, int line) {
+  cudaError code = cudaGetLastError();
+  if( cudaSuccess != code ){
+    hila::output << "CUDA error: " << msg << " in file " << file << " line " << line << '\n';
+    hila::output << "CUDA error string: "  << cudaGetErrorString(code) << "\n";
+
+    hila::terminate(0);
+  }
+}
+
+void cuda_exit_on_error(cudaError code, const char * msg, const char * file, int line) {
+  if( cudaSuccess != code ){
+    hila::output << "CUDA error: " << msg << " in file " << file << " line " << line << '\n';
+    hila::output << "CUDA error string: "  << cudaGetErrorString(code) << "\n";
+
+    hila::terminate(0);
+  }
+}
+
 
 #endif
 
