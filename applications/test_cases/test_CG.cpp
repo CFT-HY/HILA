@@ -173,7 +173,7 @@ int main(int argc, char **argv){
       diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
-  
+
     assert(diffre*diffre < 1e-16 && "test Dirac_Wilson");
     assert(diffim*diffim < 1e-16 && "test Dirac_Wilson");
 
