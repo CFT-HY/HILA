@@ -1,5 +1,5 @@
-#ifndef GENERAL_MATRIX_H
-#define GENERAL_MATRIX_H
+#ifndef GENERAL_MATRIX_H_
+#define GENERAL_MATRIX_H_
 #include<type_traits>
 #include "operations.h"
 #include "datatypes/cmplx.h"
@@ -12,77 +12,69 @@
 // #define MUL_SUM(a, b, c) c = mul_add(a, b, c)
 
 
-//forward decl 
-template <const int n, const int m, typename T>
-class matrix;
-
-//conjugate matrix class for special ops
-template <const int n, const int m, typename T>
-class conjugateMatrix {
-  public: 
-    conjugateMatrix(const matrix<n,m,T> & rhs) : ref(rhs) {};
-    const matrix<n,m,T> & ref;
-  private:
-    conjugateMatrix(){}
-    conjugateMatrix<n,m,T> & operator = (const conjugateMatrix & rhs){}
-};
-
-//transpose matrix class for special ops
-template <const int n, const int m, typename T>
-class transposeMatrix {
-  public:
-    transposeMatrix(const matrix<n,m,T> & rhs) : ref(rhs) {};
-    const matrix<n,m,T> & ref;
-  private:
-    transposeMatrix(){}
-    transposeMatrix<n,m,T> & operator = (const transposeMatrix & rhs){}
-};
-
-
 
 template <const int n, const int m, typename T>
 class matrix {
+  private:
+    T c[n*m];
+
   public:
-  using base_type = typename base_type_struct<T>::type;
+    // std incantation for field types
+    using base_type = typename base_type_struct<T>::type;
 
-  T c[n][m];
+    // define these to ensure std::is_trivial
+    matrix() = default;
+    ~matrix() = default,
+    matrix(const matrix<n,m,T> & v) = default;
 
-  matrix() = default;
+    // standard access ops m.e(i,j) - assume T is small, as it usually is
+    #pragma hila loop_function
+    inline T  e(const int i, const int j) const { return c[i*m + j]; }
+    #pragma hila loop_function
+    inline T& e(const int i, const int j) { return c[i*m + j]; }
 
-  matrix<n,m,T> operator-(void) { return -1*(*this); }
+    // unary -
+    matrix<n,m,T> operator-() const { return -1*(*this); }
 
-  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma hila loop_function
-  matrix<n,m,T> & operator= (const scalart rhs) {
-    static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
-    for (int i=0; i<n; i++){
-      c[i][i] = rhs;
-      for (int j = 0; j < i; j++){
-        c[i][j] = static_cast<T>(0.0); //ensure that matrix is zero initialized
-        c[j][i] = static_cast<T>(0.0);
+    // Assign from "scalar" for square matrix
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >  
+    #pragma hila loop_function
+    matrix<n,m,T> & operator= (const S rhs) {
+      static_assert( n==m, "rows != columns : assigning a scalar only possible for a square matrix");
+      for (int i=0; i<n*m; i++) c[i] = zero;
+      for (int i=0; i<n; i++) e(i,i) = rhs;
+      return *this;
+    }
+
+    //copy constructor from scalar  
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >  
+    #pragma hila loop_function
+    matrix(const S rhs) {
+      static_assert(n==m, "rows != columns : scalar assignment possible for square matrices only!");
+      for (int i=0; i<n*m; i++) c[i] = zero;
+      for (int i=0; i<n; i++) e(i,i) = rhs;
+    }
+
+    // assign and construct from zero
+    #pragma hila loop_function
+    matrix(const Zero z) {
+      for (int i=0; i<n*m; i++) c[i] = zero;
+    }
+
+    #pragma hila loop_function
+    matrix<n,m,T> & operator= (const Zero z) {
+      for (int i=0; i<n*m; i++) c[i] = zero;
+      return *this;
+    }
+   
+
+    //*=, +=, -= operators
+    #pragma hila loop_function
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >  
+    matrix<n,m,T> & operator+=(const matrix<n,m,S> & rhs){
+      for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+        e(i,j) += rhs.e(i,j);
       }
-    }
-    return *this;
-  }
-
-
-  //copy constructor from scalar  
-  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  #pragma hila loop_function
-  matrix(const scalart rhs) {
-    static_assert(n==m, "rowdim != coldim : cannot assign diagonal from scalar!");
-    for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-      if (i == j) c[i][j] = (rhs);
-      else c[i][j] = (0);
-    }
-  }
-
-  //*=, +=, -= operators
-  #pragma hila loop_function
-  matrix<n,m,T> & operator+=(const matrix<n,m,T> & rhs){
-    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
-      c[i][j] += rhs.c[i][j]; 
-    }
     return *this;
   }
 

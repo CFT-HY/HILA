@@ -5,13 +5,26 @@
 #include "datatypes/matrix.h"
 #include "plumbing/random.h"
 
+
 template<int n, typename T>
 class vector {
-  public:
+ public:
   T c[n];
   using base_type = typename base_type_struct<T>::type;
   
+  // empty default initialization!
   vector() = default;
+  ~vector() = default;
+  vector(const vector<n,T> &v) = default;
+
+
+  template <typename S, std::enable_if_t<std::is_assignable<T&,S>::value, int> = 0 >
+  #pragma hila loop_function
+  vector(const S rhs) {
+    for(size_t i=0; i<n; i++) c[i]=rhs;
+  }
+
+  // vector(const T val) 
 
   #pragma hila loop_function
   vector(matrix<1,n,T> m) {
@@ -25,9 +38,10 @@ class vector {
   #pragma hila loop_function
   inline T operator[](const size_t i) const { return c[i]; }
 
-  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+
+  template <typename S, std::enable_if_t<std::is_assignable<T&,S>::value, int> = 0 >
   #pragma hila loop_function
-  vector & operator= (const scalart rhs) {
+  vector & operator= (const S rhs) {
     for (int i=0; i<n; i++){
       c[i] = rhs;
     }
@@ -68,7 +82,8 @@ class vector {
   }
 
   #pragma hila loop_function
-  vector & operator+=(const vector & rhs){
+  template <typename R,std::enable_if_t<std::is_assignable<T&,R>::value, int> = 0 >
+  vector & operator+=(const vector<n,R> & rhs){
     for (int i = 0; i < n; i++){
       c[i] += rhs.c[i];
     }
@@ -137,8 +152,18 @@ class vector {
     return text;
   }
 
-};
 
+  // // cast vector to coordinate_vector, if size is NDIM
+  // template <std::enable_if_t< (NDIM == n), int> = 0>
+  // inline operator coordinate_vector() {
+  //   coordinate_vector cv;
+  //   for(int i=0; i<NDIM; i++) cv[i] = c[i];
+  //   return cv; 
+  // }
+
+
+
+};
 
 
 
@@ -313,6 +338,13 @@ inline auto norm_squared(vector<n,T> & v){
   return result;
 }
 
+
+// finally, output
+template <int n,typename T>
+std::ostream& operator<<(std::ostream &strm, const vector<n,T> & c) {
+  for (size_t d=0; d<n; d++) strm << c[d] << ' ';
+  return strm;
+}
 
 
 

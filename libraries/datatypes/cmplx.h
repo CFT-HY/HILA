@@ -11,6 +11,8 @@
 #include <type_traits>
 // #include "plumbing/defs.h"
 
+#include "datatypes/zero.h"
+
 /// TEMPORARY location for vector intrinsic analogues -- result obvious
 
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0 >
@@ -35,29 +37,37 @@ struct cmplx {
   T re,im;
   
   cmplx<T>() = default;
-  
+  ~cmplx<T>() =default;
   cmplx<T>(const cmplx<T> & a) =default;
 
   // constructor from single complex 
   template <typename A,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
   #pragma hila loop_function
-  constexpr cmplx<T>(const cmplx<A> a): re(static_cast<T>(a.re)), im(static_cast<T>(a.im)) {}
+  constexpr cmplx<T>(const cmplx<A> a) : re(static_cast<T>(a.re)), im(static_cast<T>(a.im)) {}
 
   // constructor from single scalar value 
   template <typename scalar_t,
             std::enable_if_t<is_arithmetic<scalar_t>::value, int> = 0 >
   #pragma hila loop_function
-  constexpr cmplx<T>(const scalar_t val): re(static_cast<T>(val)), im(static_cast<T>(0)) {}
+  constexpr cmplx<T>(const scalar_t val) : re(static_cast<T>(val)), im(static_cast<T>(0)) {}
+
+  // make zero constructor and assignment 
+  constexpr cmplx<T>(const Zero z) : re(static_cast<T>(0)), im(static_cast<T>(0)) {}
+  constexpr cmplx<T> & operator=(const Zero z) { 
+    re = static_cast<T>(0);
+    im = static_cast<T>(0);
+    return *this;
+  }
 
   // constructor c(a,b)
-//   template <typename A, typename B,
-//             std::enable_if_t<is_arithmetic<A>::value, int> = 0,
-//             std::enable_if_t<is_arithmetic<B>::value, int> = 0 >
-//   constexpr cmplx<T>(const A & a, const B & b) {
-//     re = static_cast<T>(a);
-//     im = static_cast<T>(b);
-//   }
+  //   template <typename A, typename B,
+  //             std::enable_if_t<is_arithmetic<A>::value, int> = 0,
+  //             std::enable_if_t<is_arithmetic<B>::value, int> = 0 >
+  //   constexpr cmplx<T>(const A & a, const B & b) {
+  //     re = static_cast<T>(a);
+  //     im = static_cast<T>(b);
+  //   }
 
   // constructor c(a,b)
   template <typename A, typename B,
@@ -66,7 +76,6 @@ struct cmplx {
   #pragma hila loop_function
   constexpr cmplx<T>(const A & a, const B & b): re(static_cast<T>(a)), im(static_cast<T>(b)) {}
 
-  ~cmplx<T>() =default;
   
   // automatic casting from cmplx<T> -> cmplx<A>
   // TODO: ensure this works if A is vector type!
