@@ -127,7 +127,7 @@ inline void Dirac_Wilson_calc_force(
   parity par,
   int sign)
 {
-  field<half_Wilson_vector<N, radix>> (&vtemp)[NDIM] = wilson_dirac_temp_vector<N, radix>;
+  field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
   vtemp[0].copy_boundary_condition(chi);
   vtemp[1].copy_boundary_condition(chi);
   
