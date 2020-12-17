@@ -5,8 +5,6 @@ TOP_DIR := ../..
 
 APP_HEADERS := Wilson.h
 
-APP_OPTS := -DNDIM=4
-
 # Read in the main makefile contents, incl. platforms
 include $(TOP_DIR)/libraries/main.mk
 

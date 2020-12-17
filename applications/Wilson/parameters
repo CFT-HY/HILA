@@ -1,8 +1,8 @@
-beta = 8
-kappa = 0.12
-hasenbusch_mass = 0.5
-n_trajectories = 1000
-hmc_steps = 10
-traj_length = 1.0
-seed = 1351
-configuration_file = config
+beta  8
+kappa  0.12
+hasenbusch_mass  0.5
+seed  1351
+n_trajectories  1000
+hmc_steps  10
+traj_length  1.0
+configuration_file  config
