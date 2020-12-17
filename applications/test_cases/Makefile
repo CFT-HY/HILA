@@ -18,7 +18,7 @@ test_CG: build/test_CG ; @:
 test_conjReduce: build/test_conjReduce ; @:
 test_FFT:   build/test_FFT ; @:
 test_forces:   build/test_forces ; @:
-bench_field:   build/bench_field ; @:
+test_fields:   build/test_fields ; @:
  
 # Now the linking step for each target executable
 build/test_CG: Makefile build/test_CG.o $(HILA_OBJECTS) $(HEADERS) 
@@ -33,7 +33,7 @@ build/test_FFT: Makefile build/test_FFT.o $(HILA_OBJECTS) $(HEADERS)
 build/test_forces: Makefile build/test_forces.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/test_forces.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
-build/bench_field: Makefile build/bench_field.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) -o $@ build/bench_field.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
+build/test_fields: Makefile build/test_fields.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/test_fields.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 
