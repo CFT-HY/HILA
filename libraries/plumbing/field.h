@@ -277,7 +277,9 @@ class field {
 
   };
 
-  static_assert( std::is_pod<T>::value, "Field expects only pod-type elements (plain data): default constructor, copy and delete");
+  // static_assert( std::is_pod<T>::value, "Field expects only pod-type elements (plain data): default constructor, copy and delete");
+  static_assert( std::is_trivial<T>::value && std::is_standard_layout<T>::value,
+                "Field expects only pod-type elements (plain data): default constructor, copy and delete");
   
  public:
 
