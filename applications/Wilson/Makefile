@@ -1,25 +1,23 @@
-CC = mpic++ -DUSE_MPI -mavx2 -mfma
-LD = mpic++
 
-include ../../libraries/Makefile_vector
+# Give the location of the top level distribution directory wrt. this.
+# Can be absolute or relative
+TOP_DIR := ../..
 
+APP_HEADERS := Wilson.h
 
-CXXFLAGS = -O3 -x c++ --std=c++17 $(MPI_OPTS) $(HILA_OPTS) 
-#CXXFLAGS = -g -x c++ --std=c++17 $(MPI_OPTS) $(HILA_OPTS)
-LDFLAGS = $(HILA_LD_FLAGS)
+APP_OPTS := -DNDIM=4
 
-
-.PRECIOUS: build/%.cpt
-
-
-Wilson: Makefile build/Wilson.o $(HILA_OBJECTS) Wilson.h
-	$(LD) $(LDFLAGS) -o build/Wilson build/Wilson.o $(HILA_OBJECTS)
+# Read in the main makefile contents, incl. platforms
+include $(TOP_DIR)/libraries/main.mk
 
 
+# With multiple targets we want to use "make target", not "make build/target".
+# This is needed to carry the dependencies to build-subdir
 
-clean:
-	rm -rf build
+Wilson: build/Wilson ; @:
 
-cleanall:
-	rm -rf build
+ 
+# Now the linking step for each target executable
+build/Wilson: Makefile build/Wilson.o $(HILA_OBJECTS) $(HEADERS) 
+	$(LD) -o $@ build/Wilson.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
