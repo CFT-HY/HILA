@@ -145,7 +145,7 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "Dirac Wilson CG: " << timing << "ms / iteration\n";
     
-    finishrun();
+    hila::finishrun();
 }
 
 

@@ -41,7 +41,7 @@ void lattice_struct::setup_layout()
   if (i != 1) {
     output0 << "Cannot factorize " << nn << " nodes with primes up to " 
             << prime[NPRIMES-1] << '\n';
-    finishrun();
+    hila::finishrun();
   }
 
   int remainder = l_volume % nn;   // remainder = 0 even division
@@ -103,7 +103,7 @@ void lattice_struct::setup_layout()
       if (dir < 0) {
         // This cannot happen
         output0 << "CANNOT HAPPEN! in setup_layout_generic.c\n";
-        finishrun();
+        hila::finishrun();
       }
 
       // Now slice it
@@ -120,7 +120,7 @@ void lattice_struct::setup_layout()
       ghosts[mdir] = 1<<28;   // this short-circuits direction mdir, some other taken next
     } else if (fail) {
       output0 << "Could not successfully lay out the lattice with " << numnodes() << " nodes\n";
-      finishrun();
+      hila::finishrun();
     }
 
   } while (secondtime);

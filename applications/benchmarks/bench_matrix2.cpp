@@ -19,6 +19,8 @@ const int latsize[4] = { 32, 32, 32, 32 };
 // from msize.  
 ///////////////////////////////////////
 
+using ntype = float;
+
 int main(int argc, char **argv){
     int n_runs=1;
     double msecs;
@@ -35,10 +37,10 @@ int main(int argc, char **argv){
 
     timer timer1("Timer1");
     
-    field<matrix<MADD(0),MADD(0), cmplx<double>> > matrix1;
-    field<matrix<MADD(1),MADD(1), cmplx<double>> > matrix2;
-    field<matrix<MADD(3),MADD(3), cmplx<double>> > matrix3;
-    field<matrix<MADD(6),MADD(6), cmplx<double>> > matrix4;
+    field<matrix<MADD(0),MADD(0), cmplx<ntype>> > matrix1;
+    field<matrix<MADD(1),MADD(1), cmplx<ntype>> > matrix2;
+    field<matrix<MADD(3),MADD(3), cmplx<ntype>> > matrix3;
+    field<matrix<MADD(6),MADD(6), cmplx<ntype>> > matrix4;
 
     onsites(ALL){
       matrix1[X].random();
@@ -62,7 +64,7 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "matrix size " << (int) MSIZE << "*"  << (int) MSIZE << " : "<< timing << " ms \n";
 
-    timer1.start();
+    // timer1.start();
     
     // Time conj(matrix) * matrix * conj(matrix) 
     timing = 0;
@@ -79,7 +81,7 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "matrix size " << (int) MSIZE + 1 << "*"  << (int) MSIZE + 1 << " : "<< timing << " ms \n";
 
-    timer1.end();
+    // timer1.end();
     
     // Time conj(matrix) * matrix * conj(matrix) 
     timing = 0;
@@ -172,7 +174,7 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "matrix size " << (int) MSIZE + 6 << "*"  << (int) MSIZE + 6 << " : "<< timing << " ms \n";
 
-    finishrun();
+    hila::finishrun();
 }
 
 

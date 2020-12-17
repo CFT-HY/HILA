@@ -11,16 +11,24 @@
 
 // declare MPI timers here too - these were externs
 
-timer start_send_timer, wait_send_timer, post_receive_timer, wait_receive_timer,
-      synchronize_timer, reduction_timer, broadcast_timer, send_timer, 
-      cancel_send_timer, cancel_receive_timer, sublattice_sync_timer;
+timer start_send_timer("MPI start send"), 
+      wait_send_timer("MPI wait send"),
+      post_receive_timer("MPI post receive"),
+      wait_receive_timer("MPI wait receive"),
+      synchronize_timer("MPI synchronize"),
+      reduction_timer("MPI reduction"),
+      broadcast_timer("MPI broadcast"),
+      send_timer("MPI send field"),
+      cancel_send_timer("MPI cancel send"),
+      cancel_receive_timer("MPI cancel receive"),
+      sublattice_sync_timer("sublattice sync");
 
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
 
 /* Machine initialization */
 #include <sys/types.h>
-void initialize_machine(int &argc, char ***argv)
+void initialize_communications(int &argc, char ***argv)
 {
   /* Init MPI */
   if( !mpi_initialized ){
@@ -33,24 +41,8 @@ void initialize_machine(int &argc, char ***argv)
     MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->this_node.rank );
     MPI_Comm_size( lattice->mpi_comm_lat, &lattice->nodes.number );
 
-#ifdef CUDA
-    initialize_cuda( lattice->this_node.rank );
-#endif
-
   }
   hila::my_rank_n = lattice->this_node.rank;
-
-  start_send_timer.init("MPI start send");
-  wait_send_timer.init("MPI wait send");
-  post_receive_timer.init("MPI post receive");
-  wait_receive_timer.init("MPI wait receive");
-  synchronize_timer.init("MPI synchronize");
-  reduction_timer.init("MPI reduction");
-  broadcast_timer.init("MPI broadcast");
-  send_timer.init("MPI send field");
-  cancel_send_timer.init("MPI cancel send");
-  cancel_receive_timer.init("MPI cancel receive");
-  sublattice_sync_timer.init("Sublattice sync");
 
 }
 
@@ -60,59 +52,23 @@ bool is_comm_initialized(void) {
 }
 
 /* version of exit for multinode processes -- kill all nodes */
-void terminate(int status)
-{
-  if( !mpi_initialized ){
-    int node;
-    MPI_Comm_rank( lattices[0]->mpi_comm_lat, &node );
-    output0 << "Node " << node << ", status = " << status << "\n";
-
-    timestamp("Terminate");
-
+void abort_communications(int status) {
+  if( mpi_initialized ){
     mpi_initialized = false;
     MPI_Abort( lattices[0]->mpi_comm_lat, 0);
   }
-  exit(status);
-}
-
-void error(const char * msg) {
-  output0 << "Error: " << msg << '\n';
-  terminate(0);
-}
-
-void error(const std::string &msg) {
-  error(msg.c_str());
 }
 
 
 /* clean exit from all nodes */
-void finishrun()
-{
-  report_timers();
-
-  for( lattice_struct * lattice : lattices ){
-
-    unsigned long long gathers = lattice->n_gather_done;
-    unsigned long long avoided = lattice->n_gather_avoided;
-    if (lattice->node_rank() == 0) {
-      output0 << " COMMS from node 0: " << gathers << " done, "
-              << avoided << "(" 
-              << 100.0*avoided/(avoided+gathers)
-              << "%) optimized away\n";
-    }
-  }
-  if (sublattices.number > 1) {
-    timestamp("Waiting to sync sublattices...");
-  } else {
-    timestamp("Finishing");
-  }
-
-  synchronize();
+void finish_communications() {
   // turn off mpi -- this is needed to avoid mpi calls in destructors
   mpi_initialized = false;
+  hila::about_to_finish = true;
 
   MPI_Finalize();
 }
+
 
 // broadcast specialization
 void broadcast(std::string & var) {
@@ -181,7 +137,7 @@ void split_into_sublattices( int this_lattice )
   if ( MPI_Comm_split( MPI_COMM_WORLD, this_lattice, 0, &(lattice->mpi_comm_lat) )
        != MPI_SUCCESS ) {
     output0 << "MPI_Comm_split() call failed!\n";
-    finishrun();
+    hila::finishrun();
   }
   // reset also the rank and numbers -fields
   MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->this_node.rank );

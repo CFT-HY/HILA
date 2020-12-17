@@ -29,7 +29,7 @@ void lattice_struct::setup_layout( )
 
   if (l_volume % numnodes()) {
     output0 << " No hope of laying out the lattice using " << numnodes() << " nodes\n";
-    finishrun();
+    hila::finishrun();
   }
 
   /* Factorize the node number in primes
@@ -43,7 +43,7 @@ void lattice_struct::setup_layout( )
   if (i != 1) {
     output0 << " Cannot factorize " << numnodes() << " nodes with primes up to " 
             << prime[NPRIMES-1] << '\n';
-    finishrun();
+    hila::finishrun();
   }
   
   for (i=0; i<NDIM; i++) {
@@ -81,7 +81,7 @@ void lattice_struct::setup_layout( )
     if (dir < 0) {
       /* This cannot happen */
       output0 << "CANNOT HAPPEN! in setup_layout_simple\n";
-      finishrun();
+      hila::finishrun();
     }
 
     /* Now slice it */

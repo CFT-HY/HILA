@@ -32,28 +32,10 @@ bool is_comm_initialized(void) {
 }
 
 /* version of exit for multinode processes -- kill all nodes */
-void terminate(int status)
-{
-  timestamp("Terminate");
-  exit(status);
-}
-
-void error(const char * msg) {
-  output0 << "Error: " << msg << '\n';
-  terminate(0);
-}
-
-void error(const std::string &msg) {
-  error (msg.c_str());
-}
+void abort_communications(int status) { }
 
 /* clean exit from all nodes */
-void finishrun()
-{
-  report_timers();
-
-  timestamp("Finishing");
-}
+void finish_communications() { }
 
 
 /* BASIC COMMUNICATIONS FUNCTIONS */

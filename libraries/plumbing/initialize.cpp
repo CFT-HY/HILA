@@ -1,6 +1,6 @@
 
 #include <cstring>
-#include "timing.h"
+#include "defs.h"
 #include "field.h"
 #ifdef USE_MPI
 #include "com_mpi.h"
@@ -10,6 +10,7 @@
 std::ostream hila::output(NULL);
 std::ofstream hila::output_file;
 int hila::my_rank_n;
+bool hila::about_to_finish = false;
 
 // let us house the sublattices-struct here
 
@@ -74,7 +75,7 @@ class cmdlineargs {
     if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN))
         || (errno != 0 && val == 0) || end == p || *end != 0) {
       output0 << "Expect a number (integer) after command line parameter '" << flag << "'\n";
-      terminate(0);      
+      hila::terminate(0);      
     }
     return val;
   }
@@ -86,7 +87,7 @@ class cmdlineargs {
     if (std::strcmp(p,"yes") == 0) return 1;
     if (std::strcmp(p,"no") == 0) return -1;
     output0 << "Command line argument " << flag << " requires value yes/no\n";
-    terminate(0);
+    hila::terminate(0);
     return 0;   // gets rid of a warning of no return value
   }
 
@@ -113,7 +114,7 @@ class cmdlineargs {
     output0 << "  sublattices=<n>         number of sublattices\n";
     output0 << "  sync=yes/no             synchronize sublattice runs (default=no)\n";
 
-    terminate(0);
+    hila::terminate(0);
   }
 
 };
@@ -155,7 +156,11 @@ void hila::initialize(int argc, char **argv)
   inittime();
 
   // initialize MPI (if needed) so that hila::myrank() etc. works
-  initialize_machine( argc, &argv );
+  initialize_communications( argc, &argv );
+
+#ifdef CUDA
+  initialize_cuda( lattice->this_node.rank );
+#endif
 
   /// Handle commandline args here
   cmdlineargs commandline(argc, argv);
@@ -184,7 +189,7 @@ void hila::initialize(int argc, char **argv)
       }
     }
     broadcast(do_exit);
-    if (do_exit) terminate(0);
+    if (do_exit) hila::terminate(0);
   }
 
   if (hila::myrank() == 0) {
@@ -217,10 +222,13 @@ void hila::initialize(int argc, char **argv)
   // error out if there are more cmdline options
   commandline.error_if_args_remain();
 
+#ifdef CUDA
+  cuda_device_info();
+#endif
 
   /* basic static node variables */
 #if defined(CUDA) && !defined(PIZDAINT)
-  localhost_info(&g_local_nodeid, &g_num_local_nodes);
+  // localhost_info(&g_local_nodeid, &g_num_local_nodes);
 #endif
 
 #if (defined(__GNUC__) && !defined(DARWIN)) // || defined(__bg__)
@@ -290,6 +298,61 @@ void initialize_prn(long seed)
 // }
 
 
+/* version of exit for multinode processes -- kill all nodes */
+void hila::terminate(int status)
+{
+  timestamp("Terminate");
+  print_dashed_line();
+  hila::about_to_finish = true;   // avoid destructors 
+  if( is_comm_initialized() ){
+    abort_communications(status);
+  }
+  exit(status);
+}
+
+void hila::error(const char * msg) {
+  output0 << "Error: " << msg << '\n';
+  hila::terminate(0);
+}
+
+void hila::error(const std::string &msg) {
+  hila::error(msg.c_str());
+}
+
+// Normal, controlled exit of the program
+void hila::finishrun()
+{
+  report_timers();
+
+  for( lattice_struct * lattice : lattices ){
+
+    unsigned long long gathers = lattice->n_gather_done;
+    unsigned long long avoided = lattice->n_gather_avoided;
+    if (lattice->node_rank() == 0) {
+      output0 << " COMMS from node 0: " << gathers << " done, "
+              << avoided << "(" 
+              << 100.0*avoided/(avoided+gathers)
+              << "%) optimized away\n";
+    }
+  }
+  if (sublattices.number > 1) {
+    timestamp("Waiting to sync sublattices...");
+  }  
+  synchronize();
+  timestamp("Finishing");
+
+  hila::about_to_finish = true;
+
+  finish_communications();
+
+  print_dashed_line();
+  exit(0);
+
+}
+
+
+
+
 /******************************************************
  * Open parameter file - moved here in order to
  * enable sublattice division if requested
@@ -342,7 +405,7 @@ void setup_sublattices(cmdlineargs & commandline)
   long lnum = commandline.get_int("sublattices=");
   if (lnum <= 0) {
     output0 << "sublattices=<number> command line argument value must be positive integer (or argument omitted)\n";
-    finishrun();
+    hila::finishrun();
   }
   if (lnum == LONG_MAX) {
     sublattices.number = 1;
@@ -357,7 +420,7 @@ void setup_sublattices(cmdlineargs & commandline)
   if (numnodes() % sublattices.number) {
     output0 << "** " << numnodes() << " nodes not evenly divisible into " 
             << sublattices.number <<  " sublattices\n";
-    finishrun();
+    hila::finishrun();
   }
 
 #if defined(BLUEGENE_LAYOUT)
@@ -394,7 +457,7 @@ void setup_sublattices(cmdlineargs & commandline)
     }
   }
   broadcast(do_exit);
-  if (do_exit) terminate(0);
+  if (do_exit) hila::terminate(0);
 
   /* Default sync is no */
   if (commandline.get_yesno("sync=") == 1) {    

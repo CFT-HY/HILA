@@ -10,7 +10,7 @@ template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
   // Allocate space for the field of the device
   auto status = cudaMalloc( (void **)&fieldbuf, sizeof(T) * lattice->field_alloc_size() );
-  check_cuda_error(status, "Allocate field memory");
+  check_cuda_error_code(status, "Allocate field memory");
   if (fieldbuf == nullptr) {
     std::cout << "Failure in field memory allocation\n";
   }
@@ -21,7 +21,7 @@ template<typename T>
 void field_storage<T>::free_field() {
   if (fieldbuf != nullptr){
     auto status = cudaFree(fieldbuf);
-    check_cuda_error(status, "Free field memory");
+    check_cuda_error_code(status, "Free field memory");
   }
   fieldbuf = nullptr;
 }

@@ -20,6 +20,11 @@ class vector {
     }
   }
 
+  #pragma hila loop_function
+  inline T& operator[](const size_t i) { return c[i]; }
+  #pragma hila loop_function
+  inline T operator[](const size_t i) const { return c[i]; }
+
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
   #pragma hila loop_function
   vector & operator= (const scalart rhs) {
@@ -44,7 +49,7 @@ class vector {
   }
 
   #pragma hila loop_function
-  inline auto norm_sq(){ 
+  inline auto norm_sq() const { 
     auto r=norm_squared(c[0]);
     for (int i = 1; i < n; i++) {
       r += norm_squared(c[i]);

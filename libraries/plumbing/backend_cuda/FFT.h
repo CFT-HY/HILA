@@ -64,7 +64,8 @@ __global__ void scatter_column( cufftDoubleComplex *data, char* field_elem, int 
 // The field must be complex and the underlying complex type is supplied
 // by the complex_type template argument
 template<typename T, typename complex_type>
-inline void FFT_field_complex(field<T> & input, field<T> & result){
+inline void FFT_field_complex(field<T> & input, field<T> & result,
+                              fft_direction fftdir = fft_direction::forward ){
 
   lattice_struct * lattice = input.fs->lattice;
   field<T> * read_pointer = &input; // Read from input on first time, then work in result
@@ -142,9 +143,9 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
         unsigned *d_site_index;
         int n = sitelist[c].size();
         auto status = cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
-        check_cuda_error(status, "FFT allocate field memory");
+        check_cuda_error_code(status, "FFT allocate field memory");
         cudaMemcpy( d_site_index, sitelist[c].data(), n*sizeof(unsigned), cudaMemcpyHostToDevice );
-        check_cuda_error(status, "FFT memcopy 1");
+        check_cuda_error_code(status, "FFT memcopy 1");
 
         int N_blocks = n/N_threads + 1;
         gather_elements_kernel<<< N_blocks, N_threads >>>(read_pointer->fs->payload, (T*)(sendbuf + col_size*l), d_site_index, n, lattice->field_alloc_size() );
@@ -163,7 +164,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
       elements, cpn, nnodes, node_column_size, column_size, block_size );
     
     // Run the fft
-    cufftExecZ2Z(plan, data, data, CUFFT_FORWARD);
+    int direction = (fftdir == fft_direction::forward) ? CUFFT_FORWARD : CUFFT_INVERSE;
+    cufftExecZ2Z(plan, data, data, direction);
 
     // Reorganize back into elements
     scatter_column<complex_type><<< N_blocks, N_threads >>>( data, mpi_recv_buffer,
@@ -215,7 +217,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 // Non CUDA aware. This is mostly a copy of the non-CUDA version, but calls
 // the CUDA fft library
 template<typename T, typename complex_type>
-inline void FFT_field_complex(field<T> & input, field<T> & result){
+inline void FFT_field_complex(field<T> & input, field<T> & result,
+                              fft_direction fftdir = fft_direction::forward ){
   check_cuda_error("FFT check for past errors");
 
   lattice_struct * lattice = input.fs->lattice;
@@ -307,7 +310,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
     // Allocate CUDA FFT buffers
     cufftDoubleComplex * d_data;
     auto status = cudaMalloc((void **)&d_data, sizeof(cufftDoubleComplex)*column_size*BATCH);
-    check_cuda_error(status, "FFT allocate memory");
+    check_cuda_error_code(status, "FFT allocate memory");
 
     // Wait for my data
     MPI_Status mpi_status;
@@ -328,16 +331,17 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
     // Copy to device
     status = cudaMemcpy( d_data, data, sizeof(cufftDoubleComplex)*column_size*BATCH, cudaMemcpyHostToDevice );
-    check_cuda_error(status, "FFT copy");
+    check_cuda_error_code(status, "FFT copy");
 
     // Run the fft
-    cufftExecZ2Z(plan, d_data, d_data, CUFFT_FORWARD);
+    int direction = (fftdir == fft_direction::forward) ? CUFFT_FORWARD : CUFFT_INVERSE;
+    cufftExecZ2Z(plan, d_data, d_data, direction);
     check_cuda_error("Run FFT");
     cudaDeviceSynchronize();
    
     // Copy result back
     status = cudaMemcpy( data, d_data, sizeof(cufftDoubleComplex)*column_size*BATCH, cudaMemcpyDeviceToHost );
-    check_cuda_error(status, "FFT copy back");
+    check_cuda_error_code(status, "FFT copy back");
 
     // Reorganize back into elements
     for( int l=0; l<cpn; l++ ) { // Columns
@@ -354,7 +358,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 
     // Free the CUDA buffers
     status = cudaFree( d_data );
-    check_cuda_error(status, "FFT CUDA free");
+    check_cuda_error_code(status, "FFT CUDA free");
 
     // Now reverse the gather operation. After this each node will have its original local sites
     // The scatter operation cannot be asynchronous, but this coul dbe implemented with a 
@@ -391,22 +395,22 @@ inline void FFT_field_complex(field<T> & input, field<T> & result){
 #else // No MPI
 
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result){}
+inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir){}
 
 #endif
 
 #else
 // Not CUDA compiler
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result){}
+inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir){}
 
 
 #endif
 
 
 template<>
-inline void field<cmplx<double>>::FFT(){
-  FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this);
+inline void field<cmplx<double>>::FFT(fft_direction fdir) {
+  FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this, fdir);
 }
 
 
@@ -448,8 +452,8 @@ struct complex_base<C<a,b,B>>{
 /// Run fourier transform on a complex field
 // Called with any type T with a cmplx type nested in the lowest level
 template<typename T>
-void FFT_field(field<T> & input, field<T> & result){
-  FFT_field_complex<T,typename complex_base<T>::type>(input, result);
+void FFT_field(field<T> & input, field<T> & result, fft_direction fdir = fft_direction::forward){
+  FFT_field_complex<T,typename complex_base<T>::type>(input, result, fdir);
 }
 
 

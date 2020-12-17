@@ -138,7 +138,7 @@ void input::check_essentials(){
     if (fail){
         hila::output << "exiting...\n";
         #ifdef USE_MPI
-        finishrun();
+        hila::finishrun();
         #else
         exit(1);
         #endif

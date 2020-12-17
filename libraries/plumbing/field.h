@@ -330,7 +330,7 @@ class field {
     assert(fs == nullptr);
     if (lattice == nullptr) {
       output0 << "Can not allocate field variables before lattice.setup()\n";
-      terminate(0); 
+      hila::terminate(0); 
     }
     fs = new field_struct;
     fs->lattice = lattice;
@@ -359,7 +359,9 @@ class field {
   }
 
   void free() {
-    if (fs != nullptr) {
+    // don't call destructors when exiting - either MPI or cuda can already
+    // be off.  
+    if (fs != nullptr && !hila::about_to_finish) {
       for (direction d=(direction)0; d<NDIRS; ++d) drop_comms(d,ALL);
       fs->free_payload();
       fs->free_communication();

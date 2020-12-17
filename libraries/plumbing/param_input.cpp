@@ -47,7 +47,7 @@ void input::open(const std::string &fname) {
     }
   }
   broadcast(got_error);
-  if (got_error) terminate(0);
+  if (got_error) hila::terminate(0);
 }
 
 void input::close() {
@@ -207,7 +207,7 @@ int input::get_int(const std::string &label) {
   } bcdata = {val, no_error};
 
   broadcast(bcdata);
-  if (!bcdata.noerr) terminate(0);
+  if (!bcdata.noerr) hila::terminate(0);
   return bcdata.val;
 }
 
@@ -235,7 +235,7 @@ double input::get_double(const std::string &label) {
   } bcdata = {val, no_error};
 
   broadcast(bcdata);
-  if (!bcdata.noerr) terminate(0);
+  if (!bcdata.noerr) hila::terminate(0);
   return bcdata.val;
 }
 
@@ -265,7 +265,7 @@ std::string input::get_string(const std::string &label) {
     }
   }
   broadcast(no_error);
-  if (!no_error) terminate(0);
+  if (!no_error) hila::terminate(0);
 
   broadcast(val);
   return val;
@@ -311,7 +311,7 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
   } bcdata = {d, i, no_error};     // helper struct to do everything in a single broadcast
 
   broadcast(bcdata);
-  if (!bcdata.noerror) terminate(0);
+  if (!bcdata.noerror) hila::terminate(0);
   if (bcdata.i == -1) *dval = bcdata.d;
   return bcdata.i;
 }
@@ -347,7 +347,7 @@ void input::get_type_vector(const std::string & label, std::vector<T> & res,
     }
   }
   broadcast(no_error);
-  if (!no_error) terminate(0);
+  if (!no_error) hila::terminate(0);
 
   // broadcast the vector too
   broadcast(res);
