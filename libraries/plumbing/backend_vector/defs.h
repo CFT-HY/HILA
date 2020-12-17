@@ -45,6 +45,12 @@ struct is_arithmetic : std::integral_constant<
 > {};
 
 
+template< class T, class U >
+struct is_assignable : std::integral_constant<
+  bool,
+  std::is_assignable<T,U>::value
+  // POSSIBLE IMPLEMENTATIONS HERE?  PERHAPS THIS IS NOT NEEDED AFTER ALL?
+> {};
 
 
 
