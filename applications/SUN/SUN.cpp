@@ -1,13 +1,5 @@
 #include "SUN.h"
 
-// Direct output to stdout
-std::ostream &hila::output = std::cout;
-std::ostream &output = std::cout;
-
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
-
 
 // Define some parameters for the simulation
 double beta = 8;
@@ -67,9 +59,10 @@ void update(
 
 int main(int argc, char **argv)
 {
+  hila::initialize(argc,argv);
+  const int nd[NDIM] = { NX, NY, NZ, NT };
+  lattice->setup(nd);
 
-  // Basic setup
-  lattice->setup( NX, NY, NZ, NT, argc, argv );
   // Define a field
   field<matrix<N,N,cmplx<double>>> U[NDIM];
   field<matrix<N,N,cmplx<double>>> staple;
