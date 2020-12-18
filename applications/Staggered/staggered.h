@@ -9,16 +9,16 @@
 #define NDIM 4
 
 // Include the lattice field definition
-#include "../../libraries/plumbing/defs.h"
-#include "../../libraries/plumbing/inputs.h"
-#include "../../libraries/datatypes/vector.h"
-#include "../../libraries/datatypes/sun.h"
-#include "../../libraries/datatypes/representations.h"
-#include "../../libraries/plumbing/field.h"
-#include "../../libraries/hmc/hmc.h"
-#include "../../libraries/hmc/gauge_field.h"
-#include "../../libraries/dirac/staggered.h"
-#include "../../libraries/hmc/fermion_field.h"
+#include "plumbing/defs.h"
+#include "datatypes/vector.h"
+#include "datatypes/sun.h"
+#include "datatypes/representations.h"
+#include "plumbing/field.h"
+#include "hmc/hmc.h"
+#include "hmc/gauge_field.h"
+#include "dirac/staggered.h"
+#include "hmc/fermion_field.h"
+#include "plumbing/param_input.h"
 
 
 const int N=3;
@@ -26,16 +26,7 @@ const int N=3;
 
 using SUN = SU<N,double>;
 using NMAT = matrix<N,N,cmplx<double>>;
-
 using VEC = SU_vector<N,double>;
-
-// Direct output to stdout
-std::ostream &hila::output = std::cout;
-
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
-
 
 
 // Define some parameters for the simulation

@@ -11,8 +11,10 @@
 
 int main(int argc, char **argv){
 
-  input parameters = input();
-  parameters.import("parameters");
+  hila::initialize(argc,argv);
+  lattice->setup(nd);
+
+  input parameters("parameters");
   double beta = parameters.get("beta");
   double mass = parameters.get("mass");
   int seed = parameters.get("seed");
@@ -21,7 +23,6 @@ int main(int argc, char **argv){
 	double traj_length = parameters.get("traj_length");
 	std::string configfile = parameters.get("configuration_file");
 
-  lattice->setup( nd[0], nd[1], nd[2], nd[3], argc, argv );
   seed_random(seed);
 
   // Define gauge field and momentum field
