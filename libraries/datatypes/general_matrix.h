@@ -56,6 +56,19 @@ class matrix {
     #pragma hila loop_function
     inline T& e(const int i, const int j) { return c[i*m + j]; }
 
+    // declare single e here too in case we have a vector 
+    // (one size == 1)
+    #pragma hila loop_function
+    template <int q=n, int p=m, 
+              std::enable_if_t< (q == 1 || p == 1), int> = 0 >
+    inline T e(const int i) const { return c[i]; }
+
+    #pragma hila loop_function
+    template <int q=n, int p=m, 
+              std::enable_if_t< (q == 1 || p == 1), int> = 0 >
+    inline T& e(const int i) { return c[i]; }
+
+
     // casting from one matrix (number) type to another: do not do this automatically.
     // but require an explicit cast operator.  This makes it easier to write code.
     // or should it be automatic?  keep/remove explicit?
@@ -366,18 +379,38 @@ inline matrix<n,m,T> operator-(const S b, matrix<n,m,T> a){
   return a;
 }
 
-////////////
-/// matrix * matrix
+////////////////////////////////////////
+/// matrix * matrix is the crucial bit here
 
 template <int n, int m, int p, typename T> 
 #pragma hila loop_function
 matrix<n,p,T> operator*(const matrix<n,m,T> & A, const matrix<m,p,T> & B) {
-  matrix<n,p,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<p; j++) { 
-    res.e(i,j) = zero;
-    for (int k=0; k<m; k++) {
-      res.e(i,j) += A.e(i,k)*B.e(k,j);
-    } 
+  matrix<n,p,T> res(zero);
+
+  if constexpr (n > 1 && p > 1) {
+    // normal matrix*matrix
+    for (int i=0; i<n; i++) for (int j=0; j<p; j++) { 
+      // res.e(i,j) = zero;
+      for (int k=0; k<m; k++) {
+        res.e(i,j) += A.e(i,k)*B.e(k,j);
+      } 
+    }
+  } else if constexpr ( p == 1 ) {
+    // matrix * vector
+    for (int i=0; i<n; i++) {
+      // res.e(i) = zero;
+      for (int k=0; k<m; k++) {
+        res.e(i) += A.e(i,k)*B.e(k);
+      }
+    }
+  } else if constexpr ( n == 1 ) {
+    // horiz. vector * matrix
+    for (int j=0; j<p; j++) {
+      //res.e(j) = zero;
+      for (int k=0; k<m; k++) {
+        res.e(j) += A.e(k)*B.e(k,j);
+      }
+    }  
   }
   return res;
 }
