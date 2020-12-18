@@ -54,14 +54,17 @@ void test_gamma_matrices(){
 int main(int argc, char **argv){
 
   #if NDIM==1
-  lattice->setup( 64, argc, argv );
+  const int nd[NDIM] = {64};
   #elif NDIM==2
-  lattice->setup( 32, 8, argc, argv );
+  const int nd[NDIM] = {32,8};
   #elif NDIM==3
-  lattice->setup( 16, 8, 8, argc, argv );
+  const int nd[NDIM] = {16,8,8};
   #elif NDIM==4
-  lattice->setup( 8, 8, 8, 8, argc, argv );
+  const int nd[NDIM] = {16,8,8,8};
   #endif
+  hila::initialize(argc,argv);
+  lattice->setup(nd);
+  
   seed_random(2);
 
   test_gamma_matrices();
@@ -170,7 +173,7 @@ int main(int argc, char **argv){
       diffre += a[X].dot(Db[X]).re - Ddaggera[X].dot(b[X]).re;
       diffim += a[X].dot(Db[X]).im - Ddaggera[X].dot(b[X]).im;
     }
-  
+
     assert(diffre*diffre < 1e-16 && "test Dirac_Wilson");
     assert(diffim*diffim < 1e-16 && "test Dirac_Wilson");
 

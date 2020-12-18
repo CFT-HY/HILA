@@ -178,14 +178,16 @@ int main(int argc, char **argv){
   /* Use a smaller lattice size since
    * the inversion takes a while */
   #if NDIM==1
-  lattice->setup( 64, argc, argv );
+  const int nd[NDIM] = {64};
   #elif NDIM==2
-  lattice->setup( 32, 16, argc, argv );
+  const int nd[NDIM] = {32,8};
   #elif NDIM==3
-  lattice->setup( 32, 8, 8, argc, argv );
+  const int nd[NDIM] = {16,8,8};
   #elif NDIM==4
-  lattice->setup( 16, 8, 8, 8, argc, argv );
+  const int nd[NDIM] = {16,8,8,8};
   #endif
+  hila::initialize(argc,argv);
+  lattice->setup(nd);
   seed_random(2);
 
   // Test the force calculation by varying one gauge link

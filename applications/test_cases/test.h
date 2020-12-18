@@ -13,7 +13,6 @@
 #include "datatypes/wilson_vector.h"
 #endif
 #include "plumbing/field.h"
-#include "plumbing/inputs.h"
 
 // // Define the lattice global variable
 // lattice_struct my_lattice;
