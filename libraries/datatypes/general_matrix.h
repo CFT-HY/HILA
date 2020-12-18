@@ -366,7 +366,7 @@ inline matrix<n,m,T> operator-(const S b, matrix<n,m,T> a){
   return a;
 }
 
-//////////
+////////////
 /// matrix * matrix
 
 template <int n, int m, int p, typename T> 
@@ -424,9 +424,9 @@ std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
 
 template<int n, int m, typename T>
 inline auto norm_squared(matrix<n,m,T> & rhs){
-  auto result = norm_squared(rhs.c[0][0]);
-  for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0 || j>0) {
-    result += norm_squared(rhs.c[i][j]);
+  auto result = norm_squared(rhs.c[0]);
+  for (int i=0; i<n*m; i++) {
+    result += norm_squared(rhs.c[i]);
   }
   return result;
 }
