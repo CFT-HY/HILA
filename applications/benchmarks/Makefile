@@ -3,6 +3,11 @@
 # Can be absolute or relative
 TOP_DIR := ../..
 
+ifndef PLATFORM
+  $(info Defaulting to PLATFORM=vanilla)
+  PLATFORM := vanilla
+endif
+
 # Read in the main makefile contents, incl. platforms
 include $(TOP_DIR)/libraries/main.mk
 
