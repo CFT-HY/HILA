@@ -1,5 +1,33 @@
+#include <sstream>
+#include <iostream>
+#include <string>
+#include <math.h>
+#include <assert.h>
+#include <sys/time.h>
+#include <ctime>
 
-#include "bench.h"
+#include "plumbing/defs.h"
+#include "datatypes/general_matrix.h"
+#include "plumbing/field.h"
+
+
+// Minimum time to run each benchmark
+// in microseconds
+constexpr double mintime = 1000;
+
+
+
+// Direct output to stdout
+// std::ostream &hila::output = std::cout;
+
+
+// Calculate time difference in milliseconds
+static inline double timediff(timeval start, timeval end){
+  long long t1 = (long long)(start.tv_usec) + 1000000*(long long)(start).tv_sec;
+  long long t2 = (long long)(end.tv_usec) + 1000000*(long long)(end).tv_sec;
+  return 1e-3*(double)(t2-t1);
+}
+
 
 #ifndef MSIZE
 #define MSIZE 3
@@ -121,7 +149,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix1[ALL] = matrix1[X].conjugate()*matrix1[X]*matrix1[X].conjugate();
+          matrix1[ALL] = matrix1[X].adjoint()*matrix1[X]*matrix1[X].adjoint();
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -130,13 +158,13 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "matrix size " << (int) MSIZE << "*"  << (int) MSIZE << " : "<< timing << " ms \n";
 
-    // Time matrix) * .conjugate()atrix * matrix) 
+    // Time matrix) * .adjoint()atrix * matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix2[ALL] = matrix2[X].conjugate()*matrix2[X]*matrix2[X].conjugate();
+          matrix2[ALL] = matrix2[X].adjoint()*matrix2[X]*matrix2[X].adjoint();
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -145,13 +173,13 @@ int main(int argc, char **argv){
     timing = timing / (double)n_runs;
     output0 << "matrix size " << (int) MSIZE + 1 << "*"  << (int) MSIZE + 1 << " : "<< timing << " ms \n";
 
-    // Time matrix) * .conjugate()atrix * matrix) 
+    // Time matrix) * .adjoint()atrix * matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix3[ALL] = matrix3[X].conjugate()*matrix3[X]*matrix3[X].conjugate();
+          matrix3[ALL] = matrix3[X].adjoint()*matrix3[X]*matrix3[X].adjoint();
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -165,7 +193,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix4[ALL] = matrix4[X].conjugate()*matrix4[X]*matrix4[X].conjugate();
+          matrix4[ALL] = matrix4[X].adjoint()*matrix4[X]*matrix4[X].adjoint();
       }
       synchronize();
       gettimeofday(&end, NULL);
