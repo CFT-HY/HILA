@@ -373,10 +373,10 @@ template <int n, int m, int p, typename T>
 #pragma hila loop_function
 matrix<n,p,T> operator*(const matrix<n,m,T> & A, const matrix<m,p,T> & B) {
   matrix<n,p,T> res;
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<p; j++)   res.e(i,j)  = A.e(i,0)*B.e(0,j);
-    for (int k=1; k<m; k++) {
-      for (int j=0; j<p; j++) res.e(i,j) += A.e(i,k)*B.e(k,j);
+  for (int i=0; i<n; i++) for (int j=0; j<p; j++) { 
+    res.e(i,j) = zero;
+    for (int k=0; k<m; k++) {
+      res.e(i,j) += A.e(i,k)*B.e(k,j);
     } 
   }
   return res;
