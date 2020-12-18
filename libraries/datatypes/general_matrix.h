@@ -11,6 +11,21 @@
 #define MUL_SUM(a, b, c) c += a*b
 // #define MUL_SUM(a, b, c) c = mul_add(a, b, c)
 
+// do here transpose() and adjoint() functions for numbers and cmplxes
+
+template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0 >
+inline T transpose(const T v) { return v; }
+
+template <typename T>
+inline cmplx<T> transpose(const cmplx<T> v) { return v; }
+
+template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0 >
+inline T adjoint(const T v) { return v; }
+
+template <typename T>
+inline cmplx<T> adjoint(const cmplx<T> v) { return v.conj(); }
+
+
 
 
 template <const int n, const int m, typename T>
@@ -46,7 +61,7 @@ class matrix {
       return *this;
     }
 
-    //copy constructor from scalar  
+    //copy constructor from scalar
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >  
     #pragma hila loop_function
     matrix(const S rhs) {
@@ -70,94 +85,76 @@ class matrix {
 
     //*=, +=, -= operators
     #pragma hila loop_function
-    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >  
+    template <typename S, 
+              std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
     matrix<n,m,T> & operator+=(const matrix<n,m,S> & rhs){
       for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
         e(i,j) += rhs.e(i,j);
       }
-    return *this;
-  }
-
-  #pragma hila loop_function
-  matrix<n,m,T> & operator-=(const matrix<n,m,T> & rhs){
-    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
-      c[i][j] -= rhs.c[i][j]; 
+      return *this;
     }
-    return *this;
-  }
 
-  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
-  #pragma hila loop_function
-  matrix<n,m,T> & operator*=(const scalart rhs){
-    T val;
-    val=rhs;
-    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
-      c[i][j]*=val;
-    }
-    return *this;
-  }
-
-  template<int p>
-  #pragma hila loop_function
-  matrix<n,m,T> & operator*=(const matrix<m,p,T> & rhs){
-    static_assert(m==p, "can't assign result of *= to matrix A, because doing so would change it's dimensions");
-    matrix<m,m,T> rhsTrans = rhs.transpose();
-    matrix<n,m,T> res;
-    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
-      res.c[i][j] = (0);
-      for (int k = 0; k < m; k++){
-        res.c[i][j] += (c[i][k] * rhsTrans.c[j][k]);
+    #pragma hila loop_function
+    template <typename S,
+              std::enable_if_t<std::is_convertible<type_minus<T,S>,T>::value, int> = 0 >
+    matrix<n,m,T> & operator-=(const matrix<n,m,T> & rhs){
+      for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+        e(i,j) -= rhs.e(i,j);
       }
+      return *this;
     }
-    for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
-      c[i][j] = res.c[i][j];
-    }
-    return *this;
-  }
 
-  //numpy style matrix fill 
-  template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 > 
-  #pragma hila loop_function
-  matrix<n,m,T> & fill(const scalart rhs) {
-    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
-      c[i][j] = (rhs);
+    #pragma hila loop_function
+    template <typename S,
+              std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
+    matrix<n,m,T> & operator*=(const S rhs){
+      T val;
+      val=rhs;
+      for (int i=0; i < n*m; i++) {
+        c[i] *= val;
+      }
+      return *this;
     }
-    return *this;
-  }
+
+    #pragma hila loop_function
+    template <int p, typename S,
+              std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
+    matrix<n,m,T> & operator*=(const matrix<m,p,S> & rhs){
+      static_assert(m==p, "can't assign result of *= to lhs matrix, because doing so would change it's dimensions");
+      *this = *this * res;
+      return *this;
+    }
+
+    //numpy style matrix fill 
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >  
+    #pragma hila loop_function
+    matrix<n,m,T> & fill(const S rhs) {
+      T t = rhs;
+      for (int i=0; i<n*m; i++) c[i] = t;
+      return *this;
+    }
   
-  //return copy of transpose of this matrix
-  #pragma hila loop_function
-  matrix<m,n,T> transpose() const {
-    matrix<m,n,T> res;
-    for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
-      res.c[i][j] =  c[j][i];
-    }
-    return res;
-  }
+    //return copy of transpose of this matrix
+    #pragma hila loop_function
+    matrix<m,n,T> transpose() const { return transpose(*this); }
 
-  //return copy of complex conjugate of this matrix
-  #pragma hila loop_function
-  matrix<m,n,T> conjugate() const {
-    matrix<m,n,T> res;
-    for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
-      res.c[i][j] =  conj(c[j][i]);
-    }
-    return res;
-  }
+    //return copy of complex conjugate = adjoint of this matrix
+    #pragma hila loop_function
+    matrix<m,n,T> adjoint() const { return adjoint(*this); }
 
-  #pragma hila loop_function
-  T trace() const {
-    static_assert(n==m, "trace not defined for non square matrices!");
-    T result = static_cast<T>(0);
-    for (int i = 0; i < n; i++){
-      result += c[i][i];
+    #pragma hila loop_function
+    T trace() const {
+      static_assert(n==m, "trace not defined for non square matrices!");
+      T result = e(0,0);
+      for (int i = 1; i < n; i++){
+        result += e(i,i);
+      }
+      return result;
     }
-    return result;
-  }
 
-  #pragma hila loop_function
-  template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
-  matrix<n, m, A> & random(){
+    #pragma hila loop_function
+    template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 > 
+    matrix<n, m, A> & random(){
     for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
       c[i][j] = static_cast<T>(hila_random());
     }
@@ -200,6 +197,26 @@ class matrix {
     return text;
   }
 };
+
+
+// do transpose and adjoint functions here
+template <const int n, const int m, typename T> 
+inline matrix<n,m,T> transpose(const matrix<m,n,T> & rhs) {
+  matrix<n,m,T> res;
+  for (int i=0; i<n; i++) for (int j=0; j<m, j++) {
+    res.e(i,j) = transpose(rhs.e(j,i));
+  }
+  return res;
+}
+// and adjoint function
+template <const int n, const int m, typename T> 
+inline matrix<n,m,T> adjoint(const matrix<m,n,T> & rhs) {
+  matrix<n,m,T> res;
+  for (int i=0; i<n; i++) for (int j=0; j<m, j++) {
+    res.e(i,j) = adjoint(rhs.e(j,i));
+  }
+  return res;
+}
 
 //templates needed for naive calculation of determinants
 

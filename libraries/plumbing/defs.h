@@ -154,4 +154,17 @@ template<typename T>
 using number_type = typename base_type_struct<T>::type;
  
 
+// These are helpers, to make generic templates
+// e.g. type_plus<A,B> gives the type of the operator a + b, where a is of type A and b B.
+template<typename A, typename B>
+using type_plus = decltype(std::declval<A>() + std::declval<B>());
+template<typename A, typename B>
+using type_minus= decltype(std::declval<A>() - std::declval<B>());
+template<typename A, typename B>
+using type_mul  = decltype(std::declval<A>() * std::declval<B>());
+template<typename A, typename B>
+using type_div  = decltype(std::declval<A>() / std::declval<B>());
+
+
+
 #endif
