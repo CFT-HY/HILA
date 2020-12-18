@@ -317,14 +317,14 @@ T det(const matrix<1,1,T> & mat) {
 
 #pragma hila loop_function
 template <int n, int m, typename T> 
-matrix<n,m,T> operator+(matrix<n,m,T> a, const matrix<n,m,T> & b){
+inline matrix<n,m,T> operator+(matrix<n,m,T> a, const matrix<n,m,T> & b){
   a += b;
   return a;
 }
 
 #pragma hila loop_function
 template <int n, int m, typename T> 
-matrix<n,m,T> operator-(matrix<n,m,T> a, const matrix<n,m,T> & b){
+inline matrix<n,m,T> operator-(matrix<n,m,T> a, const matrix<n,m,T> & b){
   a -= b;
   return a;
 }
@@ -333,7 +333,7 @@ matrix<n,m,T> operator-(matrix<n,m,T> a, const matrix<n,m,T> & b){
 #pragma hila loop_function
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
-matrix<n,m,T> operator+(matrix<n,m,T> a, const S b){
+inline matrix<n,m,T> operator+(matrix<n,m,T> a, const S b){
   a += b;
   return a;
 }
@@ -342,7 +342,7 @@ matrix<n,m,T> operator+(matrix<n,m,T> a, const S b){
 #pragma hila loop_function
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
-matrix<n,m,T> operator+(const S b, matrix<n,m,T> a){
+inline matrix<n,m,T> operator+(const S b, matrix<n,m,T> a){
   a += b;
   return a;
 }
@@ -360,7 +360,7 @@ matrix<n,m,T> operator-(matrix<n,m,T> a, const S b){
 #pragma hila loop_function
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_minus<S,T>,T>::value, int> = 0 >
-matrix<n,m,T> operator-(const S b, matrix<n,m,T> a){
+inline matrix<n,m,T> operator-(const S b, matrix<n,m,T> a){
   static_assert(n==m, "rows != columns : scalar subtraction possible for square matrices only!");
   for (int i=0; i<n; i++) a.e(i,i) = static_cast<T>(b) - a.e(i,i);
   return a;
@@ -425,7 +425,7 @@ std::ostream& operator<<(std::ostream &strm, const matrix<n,m,T> &A) {
 template<int n, int m, typename T>
 inline auto norm_squared(matrix<n,m,T> & rhs){
   auto result = norm_squared(rhs.c[0][0]);
-  for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0&&j>0) {
+  for (int i=0; i<n; i++) for (int j=0; j<m; j++) if(i>0 || j>0) {
     result += norm_squared(rhs.c[i][j]);
   }
   return result;
