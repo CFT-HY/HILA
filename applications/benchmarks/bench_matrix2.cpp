@@ -61,7 +61,11 @@ int main(int argc, char **argv){
 
     lattice->setup(latsize);
 
-    
+    Matrix<3,2,double> sm;
+    sm.e(0,1) = sm.e(1,2) = 1;
+    output0 << sm;
+    sm = zero;
+    output0 << sm; 
 
     seed_random(SEED);
 
@@ -79,13 +83,13 @@ int main(int argc, char **argv){
       matrix4[X].random();
     }
 
-    // Time conj(matrix) * matrix * conj(matrix) 
+    // Time dagger(matrix) * matrix * dagger(matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix1[ALL] = conj(matrix1[X])*matrix1[X]*conj(matrix1[X]);
+          matrix1[ALL] = dagger(matrix1[X])*matrix1[X]*dagger(matrix1[X]);
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -96,13 +100,13 @@ int main(int argc, char **argv){
 
     // timer1.start();
     
-    // Time conj(matrix) * matrix * conj(matrix) 
+    // Time dagger(matrix) * matrix * dagger(matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix2[ALL] = conj(matrix2[X])*matrix2[X]*conj(matrix2[X]);
+          matrix2[ALL] = dagger(matrix2[X])*matrix2[X]*dagger(matrix2[X]);
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -113,13 +117,13 @@ int main(int argc, char **argv){
 
     // timer1.end();
     
-    // Time conj(matrix) * matrix * conj(matrix) 
+    // Time dagger(matrix) * matrix * dagger(matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix3[ALL] = conj(matrix3[X])*matrix3[X]*conj(matrix3[X]);
+          matrix3[ALL] = dagger(matrix3[X])*matrix3[X]*dagger(matrix3[X]);
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -133,7 +137,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix4[ALL] = conj(matrix4[X])*matrix4[X]*conj(matrix4[X]);
+          matrix4[ALL] = dagger(matrix4[X])*matrix4[X]*dagger(matrix4[X]);
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -145,7 +149,7 @@ int main(int argc, char **argv){
 
     //------------------------------------------------
 
-    // Time conj(matrix) * matrix * conj(matrix) 
+    // Time dagger(matrix) * matrix * dagger(matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;

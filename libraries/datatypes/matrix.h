@@ -28,12 +28,11 @@ inline cmplx<T> adjoint(const cmplx<T> v) { return v.conj(); }
 // these fwd declarations seem to be needed
 template <const int n, const int m, typename T>
 class Matrix;
+
 template <const int n, const int m, typename T>
 Matrix<n,m,T> transpose(const Matrix<m,n,T> & rhs);
 template <const int n, const int m, typename T>
 Matrix<n,m,T> adjoint(const Matrix<m,n,T> & rhs);
-
-
 
 
 template <const int n, const int m, typename T>
@@ -199,11 +198,11 @@ class Matrix {
 
     //return copy of transpose of this matrix
     #pragma hila loop_function
-    Matrix<m,n,T> transpose() const { return ::transpose(*this); }
+    inline Matrix<m,n,T> transpose() const { return ::transpose(*this); }
 
     //return copy of complex conjugate = adjoint of this Matrix
     #pragma hila loop_function
-    Matrix<m,n,T> adjoint() const { return ::adjoint(*this); }
+    inline Matrix<m,n,T> adjoint() const { return ::adjoint(*this); }
 
     #pragma hila loop_function
     T trace() const {
@@ -215,15 +214,13 @@ class Matrix {
       return result;
     }
 
-
-    auto norm_sq() const {
-      auto result = norm_squared(c[0]);
-      for (int i=1; i<n*m; i++) {
+    number_type<T> norm_sq() const {
+      number_type<T> result = 0;
+      for (int i=0; i<n*m; i++) {
         result += norm_squared(c[i]);
       }
       return result;
     }
-
 
     // enable dot only for vectors (confusing otherwise)
     auto dot(const Matrix<n,m,T> &rhs) const {
@@ -268,6 +265,7 @@ class Matrix {
 
 // do transpose and adjoint functions here
 template <const int n, const int m, typename T>
+#pragma hila loop_function
 inline Matrix<n,m,T> transpose(const Matrix<m,n,T> & rhs) {
   Matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -277,6 +275,7 @@ inline Matrix<n,m,T> transpose(const Matrix<m,n,T> & rhs) {
 }
 // and adjoint function
 template <const int n, const int m, typename T>
+#pragma hila loop_function
 inline Matrix<n,m,T> adjoint(const Matrix<m,n,T> & rhs) {
   Matrix<n,m,T> res;
   for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
@@ -284,6 +283,11 @@ inline Matrix<n,m,T> adjoint(const Matrix<m,n,T> & rhs) {
   }
   return res;
 }
+
+template <const int n, const int m, typename T>
+#pragma hila loop_function
+inline Matrix<n,m,T> dagger(const Matrix<m,n,T> & rhs) { return adjoint(rhs); }
+
 
 //templates needed for naive calculation of determinants
 
@@ -460,12 +464,8 @@ std::ostream& operator<<(std::ostream &strm, const Matrix<n,m,T> &A) {
 
 
 template<int n, int m, typename T>
-inline auto norm_squared(Matrix<n,m,T> & rhs){
-  auto result = norm_squared(rhs.c[0]);
-  for (int i=0; i<n*m; i++) {
-    result += norm_squared(rhs.c[i]);
-  }
-  return result;
+inline number_type<T> norm_squared(const Matrix<n,m,T> & RESTRICT rhs){
+  return rhs.norm_sq();
 }
 
 template<int n, int m, typename T>
