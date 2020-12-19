@@ -4,7 +4,6 @@
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
-#include "datatypes/vector.h"
 #include "plumbing/mersenne.h" //has to be included
 #include <cmath>
 
@@ -65,7 +64,7 @@ do {                                            \
 //////////////////////////////////////////////////////////
 
 template<int n, typename radix=double>
-class SU : public squarematrix<n,cmplx<radix>>{
+class SU : public SquareMatrix<n,cmplx<radix>>{
     public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;
@@ -82,14 +81,14 @@ class SU : public squarematrix<n,cmplx<radix>>{
     }
 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    SU(squarematrix<n,cmplx<scalart>> m) {
+    SU(SquareMatrix<n,cmplx<scalart>> m) {
       for (int j=0; j<n; j++) for (int i=0; i<n; i++){
         this->c[i][j] = m.c[i][j];
       }
     }
 
-    operator squarematrix<n,cmplx<radix>>(){
-      squarematrix<n,cmplx<radix>> r;
+    operator SquareMatrix<n,cmplx<radix>>(){
+      SquareMatrix<n,cmplx<radix>> r;
       for (int j=0; j<n; j++) for (int i=0; i<n; i++){
         r.c[i][j] = this->c[i][j];
       }
@@ -126,7 +125,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
     }
 
     void exp(const int depth = 12){
-        squarematrix<n,cmplx<radix>> A, An;
+        SquareMatrix<n,cmplx<radix>> A, An;
         radix factor = 1;
         A = *this;
         An = A;
@@ -142,7 +141,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
     //more iterations are needed to generate larger elements: 12 works well for n < 10. 
 
     void random(const int depth = 12) {
-        squarematrix<n,cmplx<radix>> A, An, res;
+        SquareMatrix<n,cmplx<radix>> A, An, res;
         An = 1; 
         res = 1;
         cmplx<radix> tr(1,0), factor(1, 0);
@@ -561,7 +560,7 @@ SU2<radix> SU2<radix>::operator - (const SU2<radix> & y){
 
 /// Project to the antihermitean part of a matrix
 template<int N, typename radix>
-void project_antihermitean(squarematrix<N,cmplx<radix>> &matrix){
+void project_antihermitean(SquareMatrix<N,cmplx<radix>> &matrix){
   radix tr = 0;
   for(int i=0; i<N; i++) {
     for(int j=0; j<i; j++) {
@@ -588,7 +587,7 @@ void project_antihermitean(squarematrix<N,cmplx<radix>> &matrix){
 
 
 template<int n, typename radix>
-class SU_vector : public vector<n,cmplx<radix>>{
+class SU_vector : public Vector<n,cmplx<radix>>{
   public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;

@@ -22,7 +22,7 @@ class gauge_field_base{
     virtual void set_unity(){}
     virtual void random(){}
 
-    virtual void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){}
+    virtual void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> *force){}
     virtual void draw_momentum(){}
     virtual void zero_momentum(){}
     virtual void backup(){}
@@ -45,7 +45,7 @@ class gauge_field_base<M<N,double>>{
     virtual void set_unity(){}
     virtual void random(){}
 
-    virtual void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){}
+    virtual void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> *force){}
     virtual void draw_momentum(){}
     virtual void zero_momentum(){}
     virtual void backup(){}
@@ -166,7 +166,7 @@ double plaquette_sum(field<SU<N,radix>> *U){
 }
 
 template<int N, typename radix>
-double plaquette_sum(field<squarematrix<N,radix>> *U){
+double plaquette_sum(field<SquareMatrix<N,radix>> *U){
   double Plaq=0;
   foralldir(dir1) foralldir(dir2) if(dir2 < dir1){
     onsites(ALL){
@@ -252,7 +252,7 @@ class gauge_field : public gauge_field_base<matrix> {
 
   /// Project a force term to the algebra and add to the
   /// momentum
-  void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
+  void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> *force){
     foralldir(dir){
       onsites(ALL){
         force[dir][X] = this->gauge[dir][X]*force[dir][X];
@@ -356,7 +356,7 @@ class represented_gauge_field : public gauge_field_base<repr> {
   }
 
 
-  void add_momentum(field<squarematrix<N,cmplx<basetype>>> (&force)[NDIM]){
+  void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
         if(disable_avx[X]==0){};
@@ -434,7 +434,7 @@ class gauge_momentum_action : public action_base, public integrator_base {
     using gauge_field_type = gauge_field;
     using gauge_mat = typename gauge_field::gauge_type;
     static constexpr int N = gauge_mat::size;
-    using momtype = squarematrix<N, cmplx<typename gauge_mat::base_type>>;
+    using momtype = SquareMatrix<N, cmplx<typename gauge_mat::base_type>>;
 
     gauge_field &gauge;
     field<gauge_mat> gauge_copy[NDIM];
@@ -497,7 +497,7 @@ class gauge_action : public action_base {
     using gauge_field_type = gauge_field;
     using gauge_mat = typename gauge_field::gauge_type;
     static constexpr int N = gauge_mat::size;
-    using momtype = squarematrix<N, cmplx<typename gauge_mat::base_type>>;
+    using momtype = SquareMatrix<N, cmplx<typename gauge_mat::base_type>>;
 
     gauge_field &gauge;
     double beta;

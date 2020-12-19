@@ -24,7 +24,7 @@ int main(int argc, char **argv){
     int nx = a.get("nx");
     std::string out = a.get("output");
 
-    field<matrix<2,2,double> > matrices;
+    field<Matrix<2,2,double> > matrices;
     field<int> coordinate, nb_coordinate1, nb_coordinate2;
     field<SU<4, double>> sufield;
     
@@ -68,7 +68,7 @@ int main(int argc, char **argv){
     // Calculates M(X) * M.congugate(X+dir)
     onsites(ALL){
         if(disable_avx[X]==0){};
-        element<matrix<2,2,double>> a;
+        element<Matrix<2,2,double>> a;
         element<double> theta = 2.0*M_PI*hila_random(); //make a random rotation matrix at each even site
         a.c[0][0] =  cos(theta);
         a.c[0][1] = -sin(theta);

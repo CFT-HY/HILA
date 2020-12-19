@@ -6,7 +6,7 @@
 
 // The adjoint representation
 template<int N, typename radix>
-class adjoint : public squarematrix<N*N-1, radix> {
+class adjoint : public SquareMatrix<N*N-1, radix> {
   public:
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
@@ -68,10 +68,10 @@ class adjoint : public squarematrix<N*N-1, radix> {
 
     /* Project a complex adjoint matrix into the algebra and
      * represent as a complex NxN (momentum) matrix */
-    static squarematrix<N, cmplx<radix>> project_force(
-      squarematrix<size, cmplx<radix>> rforce
+    static SquareMatrix<N, cmplx<radix>> project_force(
+      SquareMatrix<size, cmplx<radix>> rforce
     ){
-      squarematrix<N, cmplx<radix>> fforce=0;
+      SquareMatrix<N, cmplx<radix>> fforce=0;
       for(int g=0; g<N*N-1; g++){
         adjoint rg = represented_generator_I(g);
         radix C = (rg.transpose()*rforce).trace().re;
@@ -90,13 +90,13 @@ class adjoint : public squarematrix<N*N-1, radix> {
 
 
 template<int N, typename radix>
-class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
+class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
   public:
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
 
-    using squarematrix<N*(N-1)/2, cmplx<radix>>::squarematrix;
-    using squarematrix<N*(N-1)/2, cmplx<radix>>::operator =;
+    using SquareMatrix<N*(N-1)/2, cmplx<radix>>::SquareMatrix;
+    using SquareMatrix<N*(N-1)/2, cmplx<radix>>::operator =;
 
     // Info on group generators
     constexpr static int size = N*(N-1)/2;
@@ -168,10 +168,10 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
 
     /* Project a complex antisymmetric matrix into the algebra and
      * represent as a complex NxN (momentum) matrix */
-    static squarematrix<N, cmplx<radix>> project_force(
-      squarematrix<size, cmplx<radix>> rforce
+    static SquareMatrix<N, cmplx<radix>> project_force(
+      SquareMatrix<size, cmplx<radix>> rforce
     ){
-      squarematrix<N, cmplx<radix>> fforce=0;
+      SquareMatrix<N, cmplx<radix>> fforce=0;
       for(int g=0; g<N*N-1; g++){
         antisymmetric rg = represented_generator_I(g);
         radix C = (rg.conjugate()*rforce).trace().re;
@@ -187,13 +187,13 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
 
 
 template<int N, typename radix>
-class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
+class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
   public:
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
 
-    using squarematrix<N*(N+1)/2, cmplx<radix>>::squarematrix;
-    using squarematrix<N*(N+1)/2, cmplx<radix>>::operator =;
+    using SquareMatrix<N*(N+1)/2, cmplx<radix>>::SquareMatrix;
+    using SquareMatrix<N*(N+1)/2, cmplx<radix>>::operator =;
 
     // Info on group generators
     constexpr static int size = N*(N+1)/2;
@@ -268,10 +268,10 @@ class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
 
     /* Project a complex symmetric matrix into the algebra and
      * represent as a complex NxN (momentum) matrix */
-    static squarematrix<N, cmplx<radix>> project_force(
-      squarematrix<size, cmplx<radix>> rforce
+    static SquareMatrix<N, cmplx<radix>> project_force(
+      SquareMatrix<size, cmplx<radix>> rforce
     ){
-      squarematrix<N, cmplx<radix>> fforce=0;
+      SquareMatrix<N, cmplx<radix>> fforce=0;
       for(int g=0; g<N*N-1; g++){
         symmetric rg = represented_generator_I(g);
         radix C = (rg*rforce).trace().re;

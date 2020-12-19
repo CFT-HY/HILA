@@ -106,14 +106,14 @@ int main(int argc, char **argv){
     output0 << "Float add : "<< timing << " ms \n";
 
 
-    field<squarematrix<N, cmplx<double>> > matrix1;
-    field<squarematrix<N, cmplx<double>> > matrix2;
-    field<squarematrix<N, cmplx<double>> > matrix3;
+    field<SquareMatrix<N, cmplx<double>> > matrix1;
+    field<SquareMatrix<N, cmplx<double>> > matrix2;
+    field<SquareMatrix<N, cmplx<double>> > matrix3;
     field<vector<N, cmplx<double>> > vector1;
     field<vector<N, cmplx<double>> > vector2;
-    field<squarematrix<N, cmplx<float>> > fmatrix1;
-    field<squarematrix<N, cmplx<float>> > fmatrix2;
-    field<squarematrix<N, cmplx<float>> > fmatrix3;
+    field<SquareMatrix<N, cmplx<float>> > fmatrix1;
+    field<SquareMatrix<N, cmplx<float>> > fmatrix2;
+    field<SquareMatrix<N, cmplx<float>> > fmatrix3;
     field<vector<N, cmplx<float>> > fvector1;
     field<vector<N, cmplx<float>> > fvector2;
 

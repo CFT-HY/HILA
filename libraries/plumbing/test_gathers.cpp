@@ -21,7 +21,7 @@ struct test_struct {
 };
 
 #include "field.h"
-#include "datatypes/general_matrix.h"
+#include "datatypes/matrix.h"
 
 
 

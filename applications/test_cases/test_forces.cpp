@@ -17,7 +17,7 @@ constexpr int N = 2;
 template<typename fermion_action, typename dirac, typename gauge_field_type>
 void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
   using sun = typename gauge_field_type::fund_type;
-  using forcetype = squarematrix<gauge_field_type::N, cmplx<double>>;
+  using forcetype = SquareMatrix<gauge_field_type::N, cmplx<double>>;
   field<forcetype> force[NDIM];
   double eps = 1e-5;
 

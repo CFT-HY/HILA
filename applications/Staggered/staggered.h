@@ -10,7 +10,7 @@
 
 // Include the lattice field definition
 #include "plumbing/defs.h"
-#include "datatypes/vector.h"
+#include "datatypes/matrix.h"
 #include "datatypes/sun.h"
 #include "datatypes/representations.h"
 #include "plumbing/field.h"
@@ -25,7 +25,7 @@ const int N=3;
 
 
 using SUN = SU<N,double>;
-using NMAT = matrix<N,N,cmplx<double>>;
+using NMAT = Matrix<N,N,cmplx<double>>;
 using VEC = SU_vector<N,double>;
 
 

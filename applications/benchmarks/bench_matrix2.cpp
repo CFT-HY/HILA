@@ -7,7 +7,7 @@
 #include <ctime>
 
 #include "plumbing/defs.h"
-#include "datatypes/general_matrix.h"
+#include "datatypes/matrix.h"
 #include "plumbing/field.h"
 
 
@@ -65,10 +65,10 @@ int main(int argc, char **argv){
 
     timer timer1("Timer1");
     
-    field<matrix<MADD(0),MADD(0), cmplx<ntype>> > matrix1;
-    field<matrix<MADD(1),MADD(1), cmplx<ntype>> > matrix2;
-    field<matrix<MADD(3),MADD(3), cmplx<ntype>> > matrix3;
-    field<matrix<MADD(6),MADD(6), cmplx<ntype>> > matrix4;
+    field<Matrix<MADD(0),MADD(0), cmplx<ntype>> > matrix1;
+    field<Matrix<MADD(1),MADD(1), cmplx<ntype>> > matrix2;
+    field<Matrix<MADD(3),MADD(3), cmplx<ntype>> > matrix3;
+    field<Matrix<MADD(6),MADD(6), cmplx<ntype>> > matrix4;
 
     onsites(ALL){
       matrix1[X].random();
