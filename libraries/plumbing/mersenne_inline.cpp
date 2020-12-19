@@ -33,10 +33,8 @@
 /* ACM Transactions on Modeling and Computer Simulation,           */
 /* Vol. 8, No. 1, January 1998, pp 3--30.                          */
 
-#include<stdlib.h>
 #include<stdio.h>
-
-#include "mersenne.h"
+#include<stdlib.h>
 
 /* Period parameters */  
 #define N 624
@@ -54,7 +52,8 @@
 #define TEMPERING_SHIFT_L(y)  (y >> 18)
 
 static unsigned int mt[N]; /* the array for the state vector  */
-static int mersenne_i = -1;  /*  < 0 means mt[N] is not initialized */
+int mersenne_i = -1; /*  < 0 means mt[N] is not initialized */
+double mersenne_array[N];
 
 /* initializing the array with a NONZERO seed */
 void
@@ -73,7 +72,7 @@ seed_mersenne(long seed)
   mersenne_i = 0;
 }
 
-void /* generating reals */
+double /* generating reals */
 /* unsigned int */ /* for integer generation */
 mersenne_generate()
 {
@@ -83,7 +82,7 @@ mersenne_generate()
   /* mag01[x] = x * MATRIX_A  for x=0,1 */
 
   if (mersenne_i < 0) {  /* if sgenrand() has not been called, */
-    printf("MERSENNE: you did not seed the generator!\n");
+    printf("DUMMY: you did not seed the generator!\n");
     exit(0);
   }
   
@@ -100,20 +99,17 @@ mersenne_generate()
   y = (mt[N-1]&UPPER_MASK)|(mt[0]&LOWER_MASK);
   mt[N-1] = mt[M-1] ^ (y >> 1) ^ mag01[y & 0x1];
 
-}  
-
-double mersenne() {
-  if (mersenne_i >= N) {
-    mersenne_generate();
-    mersenne_i = 0;
+  for (kk=0; kk<N; kk++) {
+    y = mt[kk];
+    y ^= TEMPERING_SHIFT_U(y);
+    y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
+    y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C;
+    y ^= TEMPERING_SHIFT_L(y);
+    mersenne_array[kk] = (double)y * 2.3283064365386963e-10;  /* reals: interval [0,1) */
   }
-  unsigned int y = mt[mersenne_i++];
-  y ^= TEMPERING_SHIFT_U(y);
-  y ^= TEMPERING_SHIFT_S(y) & TEMPERING_MASK_B;
-  y ^= TEMPERING_SHIFT_T(y) & TEMPERING_MASK_C;
-  y ^= TEMPERING_SHIFT_L(y);
-  return (double)y * 2.3283064365386963e-10;  /* reals: interval [0,1) */
+  
+  mersenne_i = N;
+  return ( mersenne_array[--mersenne_i] );
+    /* return y; */ /* for integer generation */
 }
-
- 
 
