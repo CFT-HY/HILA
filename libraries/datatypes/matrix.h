@@ -215,23 +215,6 @@ class Matrix {
       return result;
     }
 
-    #pragma hila loop_function
-    template <typename A=T, std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-    Matrix<n, m, A> & random(){
-      for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-        e(i,j) = static_cast<T>(hila_random());
-      }
-      return *this;
-    }
-
-    #pragma hila loop_function
-    template <typename A=T, std::enable_if_t<!is_arithmetic<A>::value, int> = 0 >
-    Matrix<n, m, A> & random() {
-      for (int i=0; i<n*m; i++) {
-        c[i].random();
-      }
-      return *this;
-    }
 
     auto norm_sq() const {
       auto result = norm_squared(c[0]);
@@ -251,6 +234,24 @@ class Matrix {
       }
       return r;
     }
+
+    #pragma hila loop_function
+    Matrix<n, m, T> & random() {
+      for (int i=0; i<n*m; i++) {
+        ::random(c[i]);
+      }
+      return *this;
+    }
+
+    #pragma hila loop_function
+    inline Matrix<n, m, T> & gaussian(){ 
+      for (int i = 0; i < n*m; i++) {
+        ::gaussian_random(c[i]);
+      }
+      return *this;
+    }
+
+
 
     std::string str() const {
       std::stringstream text;
@@ -467,7 +468,15 @@ inline auto norm_squared(Matrix<n,m,T> & rhs){
   return result;
 }
 
+template<int n, int m, typename T>
+inline void random(Matrix<n,m,T> & mat) {
+  mat.random();
+}
 
+template<int n, int m, typename T>
+inline void gaussian_random(Matrix<n,m,T> & mat) {
+  mat.gaussian();
+}
 
 
 // find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff

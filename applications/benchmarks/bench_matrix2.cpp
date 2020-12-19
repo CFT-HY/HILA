@@ -61,6 +61,8 @@ int main(int argc, char **argv){
 
     lattice->setup(latsize);
 
+    
+
     seed_random(SEED);
 
     timer timer1("Timer1");

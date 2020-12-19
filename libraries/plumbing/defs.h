@@ -1,5 +1,5 @@
-#ifndef DEFS_H
-#define DEFS_H
+#ifndef DEFS_H_
+#define DEFS_H_
 
 // Useful global definitions here -- this file should be included by (almost) all others
 
@@ -100,6 +100,9 @@ enum class fft_direction { forward, backward, back };
 #else
 #include "plumbing/backend_cpu/defs.h"
 #endif
+
+// this include has to be after the backend defs, because those define hila_random()
+#include "plumbing/random.h"
 
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000

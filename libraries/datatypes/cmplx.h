@@ -131,10 +131,16 @@ struct cmplx {
   }
 
   #pragma hila loop_function
-  template <typename A=T, std::enable_if_t<std::is_arithmetic<A>::value, int> = 0 > 
-  cmplx<A> & random(){
-    re = static_cast<T>(hila_random());
-    im = static_cast<T>(hila_random());
+  inline cmplx<T> & random(){
+    random(re);
+    random(im);
+    return *this;
+  }
+
+  #pragma hila loop_function
+  inline cmplx<T> & gaussian(){
+    gaussian_random(re);
+    gaussian_random(im);
     return *this;
   }
 
@@ -408,6 +414,23 @@ template<typename T>
 inline auto norm_squared(cmplx<T> val){
   return val.squarenorm();
 }
+
+template <typename T>
+#pragma hila loop_function
+inline void random( cmplx<T> & c ) {
+  random(c.re);
+  random(c.im); 
+}
+
+template <typename T>
+#pragma hila loop_function
+inline void gaussian_random( cmplx<T> & c ) {
+  gaussian_random(c.re);
+  gaussian_random(c.im); 
+}
+
+
+
 
 
 #endif
