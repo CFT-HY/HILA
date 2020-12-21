@@ -1,5 +1,5 @@
-#ifndef CMPLX_H
-#define CMPLX_H
+#ifndef CMPLX_H_
+#define CMPLX_H_
 
 // let's not include the std::complex
 //#include <complex>
@@ -28,9 +28,16 @@ template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0 >
 inline T nmul_add(T a, T b, T c) { return c - a*b; }
 
 
+
+
+///////////////////////////////////////////////////////////////////////////////
+/// main cmpx type definition
+///////////////////////////////////////////////////////////////////////////////
+
 template <typename T = double>
 struct cmplx {
   
+  static_assert( is_arithmetic<T>::value, "Cmplx can be used only with arithmetic type" );
   // This incantation is needed to make field<cmplx<>> vectorized 
   using base_type = typename base_type_struct<T>::type;
 
@@ -466,6 +473,28 @@ template<typename T, std::enable_if_t<is_arithmetic<T>::value,int> = 0 >
 inline T conj(T val){
   return val;
 }
+
+
+
+////////////////////////////////////////////////////////////////////////
+/// And utility templates
+/// Define is_cmplx<T>::value -template, using specialization
+template< typename T>
+struct is_cmplx : std::integral_constant<
+  bool, false
+> {};
+
+template< typename T>
+struct is_cmplx<cmplx<T>> : std::integral_constant<
+  bool, true
+> {};
+
+// and a template is_cmplx_or_real<T>::value
+template< typename T >
+struct is_cmplx_or_arithmetic : std::integral_constant<
+  bool,
+  is_arithmetic<T>::value || is_cmplx<T>::value
+> {};
 
 
 

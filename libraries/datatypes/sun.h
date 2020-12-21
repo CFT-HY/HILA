@@ -199,7 +199,7 @@ class SU : public SquareMatrix<n,cmplx<radix>>{
       radix thissum = 0;
       for(int i=0; i<n; i++) {
         for(int j=0; j<i; j++) {
-          thissum += (*this).c[i][j].squarenorm();
+          thissum += (*this).c[i][j].norm_sq();
         }
         radix diag = (*this).c[i][i].im;
         thissum += 0.5*diag*diag;

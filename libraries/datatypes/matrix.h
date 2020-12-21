@@ -11,36 +11,18 @@
 #define MUL_SUM(a, b, c) c += a*b
 // #define MUL_SUM(a, b, c) c = mul_add(a, b, c)
 
-// do here transpose() and adjoint() functions for numbers and cmplxes
 
-template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0 >
-inline T transpose(const T v) { return v; }
-
-template <typename T>
-inline cmplx<T> transpose(const cmplx<T> v) { return v; }
-
-template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0 >
-inline T adjoint(const T v) { return v; }
-
-template <typename T>
-inline cmplx<T> adjoint(const cmplx<T> v) { return v.conj(); }
-
-// these fwd declarations seem to be needed
-template <const int n, const int m, typename T>
-class Matrix;
-
-template <const int n, const int m, typename T>
-Matrix<n,m,T> transpose(const Matrix<m,n,T> & rhs);
-template <const int n, const int m, typename T>
-Matrix<n,m,T> adjoint(const Matrix<m,n,T> & rhs);
-
+////////////////////////////////////////////////////////////////
+/// finally, the main nxm matrix type template
+////////////////////////////////////////////////////////////////
 
 template <const int n, const int m, typename T>
 class Matrix {
-  private:
+  public:
+    static_assert(is_cmplx_or_arithmetic<T>::value, "Matrix requires cmplx or arithmetic type");
+
     T c[n*m];
 
-  public:
     // std incantation for field types
     using base_type = typename base_type_struct<T>::type;
 
@@ -88,10 +70,12 @@ class Matrix {
     // Assign from "scalar" for square matrix
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
     #pragma hila loop_function
-    Matrix<n,m,T> & operator= (const S rhs) {
+    inline Matrix<n,m,T> & operator= (const S rhs) {
       static_assert( n==m, "rows != columns : assigning a scalar only possible for a square Matrix");
-      for (int i=0; i<n*m; i++) c[i] = zero;
-      for (int i=0; i<n; i++) e(i,i) = rhs;
+      for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+        if (i==j) e(i,j) = static_cast<T>(rhs);
+        else e(i,j) = static_cast<T>(0);
+      }
       return *this;
     }
 
@@ -100,19 +84,21 @@ class Matrix {
     #pragma hila loop_function
     Matrix(const S rhs) {
       static_assert(n==m, "rows != columns : scalar assignment possible for square matrices only!");
-      for (int i=0; i<n*m; i++) c[i] = zero;
-      for (int i=0; i<n; i++) e(i,i) = rhs;
+      for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+        if (i==j) e(i,j) = static_cast<T>(rhs);
+        else e(i,j) = static_cast<T>(0);
+      }
     }
 
     // assign and construct from zero
     #pragma hila loop_function
-    Matrix(const Zero z) {
-      for (int i=0; i<n*m; i++) c[i] = zero;
+    inline Matrix(const Zero z) {
+      for (int i=0; i<n*m; i++) c[i] = static_cast<T>(0);
     }
 
     #pragma hila loop_function
-    Matrix<n,m,T> & operator= (const Zero z) {
-      for (int i=0; i<n*m; i++) c[i] = zero;
+    inline Matrix<n,m,T> & operator= (const Zero z) {
+      for (int i=0; i<n*m; i++) c[i] = static_cast<T>(0);
       return *this;
     }
 
@@ -140,7 +126,7 @@ class Matrix {
     Matrix<n,m,T> & operator+=(const S rhs){
       static_assert(n==m, "rows != columns : scalar addition possible for square matrices only!");
       for (int i=0; i < n; i++) {
-        e(i,i) += rhs;
+        e(i,i) += static_cast<T>(rhs);
       }
       return *this;
     }
@@ -151,7 +137,7 @@ class Matrix {
     Matrix<n,m,T> & operator-=(const S rhs){
       static_assert(n==m, "rows != columns : scalar subtraction possible for square matrices only!");
       for (int i=0; i < n; i++) {
-        e(i,i) -= rhs;
+        e(i,i) -= static_cast<T>(rhs);
       }
       return *this;
     }
@@ -198,17 +184,61 @@ class Matrix {
 
     //return copy of transpose of this matrix
     #pragma hila loop_function
-    inline Matrix<m,n,T> transpose() const { return ::transpose(*this); }
+    inline Matrix<m,n,T> transpose() const { 
+      Matrix<m,n,T> res;
+      for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
+        res.e(i,j) = e(j,i);
+      }
+      return res;
+    }
 
-    //return copy of complex conjugate = adjoint of this Matrix
+    // and complex conjugate
     #pragma hila loop_function
-    inline Matrix<m,n,T> adjoint() const { return ::adjoint(*this); }
+    inline Matrix<n,m,T> conj() const { 
+      Matrix<n,m,T> res;
+      for (int i=0; i<n*m; i++) {
+        res.c[i] = ::conj(c[i]);
+      }
+      return res;
+    }
+        
+    //return copy of adjoint/dagger of this Matrix
+    #pragma hila loop_function
+    inline Matrix<m,n,T> adjoint() const { 
+      Matrix<m,n,T> res;
+      for (int i=0; i<m; i++) for (int j=0; j<n; j++) {
+        res.e(i,j) = ::conj(e(j,i));
+      }
+      return res;
+    }
+    #pragma hila loop_function
+    inline Matrix<m,n,T> dagger() const { return adjoint(); }
+
+    // and real and imag -methods
+    #pragma hila loop_function
+    inline Matrix<m,n,number_type<T>> real() const { 
+      Matrix<m,n,number_type<T>> res;
+      for (int i=0; i<m*n; i++) {
+        res.c[i] = real(c[i]);
+      }
+      return res;
+    }
+
+    #pragma hila loop_function
+    inline Matrix<m,n,number_type<T>> imag() const { 
+      Matrix<m,n,number_type<T>> res;
+      for (int i=0; i<m*n; i++) {
+        res.c[i] = imag(c[i]);
+      }
+      return res;
+    }
+
 
     #pragma hila loop_function
     T trace() const {
       static_assert(n==m, "trace not defined for non square matrices!");
-      T result = e(0,0);
-      for (int i = 1; i < n; i++){
+      T result = 9;
+      for (int i=0; i < n; i++){
         result += e(i,i);
       }
       return result;
@@ -223,14 +253,16 @@ class Matrix {
     }
 
     // enable dot only for vectors (confusing otherwise)
-    auto dot(const Matrix<n,m,T> &rhs) const {
+    #pragma hila loop_function
+    T dot(const Matrix<n,m,T> &rhs) const {
       static_assert( n==1 || m==1, "dot product only for vectors");
-      auto r = adjoint(c[0]) * rhs.c[0];
-      for (int i=1; i<n*m; i++) {
-        r += adjoint(c[i]) * rhs.c[i];
+      T r = 0;
+      for (int i=0; i<n*m; i++) {
+        r += ::conj(c[i]) * rhs.c[i];
       }
       return r;
     }
+
 
     #pragma hila loop_function
     Matrix<n, m, T> & random() {
@@ -249,7 +281,6 @@ class Matrix {
     }
 
 
-
     std::string str() const {
       std::stringstream text;
       for (int i=0; i<n; i++){
@@ -266,27 +297,43 @@ class Matrix {
 // do transpose and adjoint functions here
 template <const int n, const int m, typename T>
 #pragma hila loop_function
-inline Matrix<n,m,T> transpose(const Matrix<m,n,T> & rhs) {
-  Matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-    res.e(i,j) = transpose(rhs.e(j,i));
-  }
-  return res;
+inline Matrix<n,m,T> transpose(const Matrix<m,n,T> & arg) {
+  return arg.transpose();
+}
+// conjugate
+template <const int n, const int m, typename T>
+#pragma hila loop_function
+inline Matrix<n,m,T> conj(const Matrix<n,m,T> & arg) {
+  return arg.conj();
 }
 // and adjoint function
 template <const int n, const int m, typename T>
 #pragma hila loop_function
-inline Matrix<n,m,T> adjoint(const Matrix<m,n,T> & rhs) {
-  Matrix<n,m,T> res;
-  for (int i=0; i<n; i++) for (int j=0; j<m; j++) {
-    res.e(i,j) = adjoint(rhs.e(j,i));
-  }
-  return res;
+inline Matrix<n,m,T> adjoint(const Matrix<m,n,T> & arg) {
+  return arg.adjoint();
 }
-
 template <const int n, const int m, typename T>
 #pragma hila loop_function
-inline Matrix<n,m,T> dagger(const Matrix<m,n,T> & rhs) { return adjoint(rhs); }
+inline Matrix<n,m,T> dagger(const Matrix<m,n,T> & arg) {
+  return arg.adjoint();
+}
+template <const int n, const int m, typename T>
+#pragma hila loop_function
+inline T trace(const Matrix<n,m,T> & arg) {
+  return arg.trace();
+}
+template <const int n, const int m, typename T>
+#pragma hila loop_function
+inline Matrix<n,m,number_type<T>> real(const Matrix<n,m,T> & arg) {
+  return arg.real();
+}
+template <const int n, const int m, typename T>
+#pragma hila loop_function
+inline Matrix<n,m,number_type<T>> imag(const Matrix<n,m,T> & arg) {
+  return arg.imag();
+}
+
+
 
 
 //templates needed for naive calculation of determinants
@@ -310,7 +357,7 @@ template<int n, int m, typename T>
 #pragma hila loop_function
 T det(const Matrix<n, m, T> & mat){
   static_assert(n==m, "determinants defined only for square matrices");
-  T result = 0.0;  // I'll assume this works!
+  T result = 0;
   number_type<T> parity = 1, opposite = -1;
   for (int i = 0; i < n; i++){
     Matrix<n - 1, m - 1, T> minor = Minor(mat, 0, i);
@@ -388,17 +435,17 @@ inline Matrix<n,m,T> operator-(const S b, Matrix<n,m,T> a){
 }
 
 ////////////////////////////////////////
-/// matrix * matrix is the crucial bit here
+/// matrix * matrix is the most important bit
 
 template <int n, int m, int p, typename T>
 #pragma hila loop_function
-Matrix<n,p,T> operator*(const Matrix<n,m,T> & A, const Matrix<m,p,T> & B) {
-  Matrix<n,p,T> res(zero);
+inline Matrix<n,p,T> operator*(const Matrix<n,m,T> & A, const Matrix<m,p,T> & B) {
+  Matrix<n,p,T> res;
 
   if constexpr (n > 1 && p > 1) {
     // normal matrix*matrix
     for (int i=0; i<n; i++) for (int j=0; j<p; j++) {
-      // res.e(i,j) = zero;
+      res.e(i,j) = 0;
       for (int k=0; k<m; k++) {
         res.e(i,j) += A.e(i,k)*B.e(k,j);
       }
@@ -406,7 +453,7 @@ Matrix<n,p,T> operator*(const Matrix<n,m,T> & A, const Matrix<m,p,T> & B) {
   } else if constexpr ( p == 1 ) {
     // matrix * vector
     for (int i=0; i<n; i++) {
-      // res.e(i) = zero;
+      res.e(i) = 0;
       for (int k=0; k<m; k++) {
         res.e(i) += A.e(i,k)*B.e(k);
       }
@@ -414,11 +461,22 @@ Matrix<n,p,T> operator*(const Matrix<n,m,T> & A, const Matrix<m,p,T> & B) {
   } else if constexpr ( n == 1 ) {
     // horiz. vector * matrix
     for (int j=0; j<p; j++) {
-      //res.e(j) = zero;
+      res.e(j) = 0;
       for (int k=0; k<m; k++) {
         res.e(j) += A.e(k)*B.e(k,j);
       }
     }
+  }
+  return res;
+}
+
+// and treat separately horiz. vector * vector
+template <int m, typename T>
+#pragma hila loop_function
+T operator*(const Matrix<1,m,T> & A, const Matrix<m,1,T> & B) {
+  T res = 0;
+  for (int i=0; i<m; i++) {
+    res += A.e(i)*B.e(i);
   }
   return res;
 }
@@ -436,7 +494,7 @@ Matrix<n,m,T> operator*(Matrix<n,m,T> mat, const S rhs) {
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_mul<S,T>,T>::value, int> = 0 >
 Matrix<n,m,T> operator*(const S rhs, Matrix<n,m,T> mat) {
-  mat *= rhs;         // assume here commutativity!  Fails if the "scalar" is also a matrix
+  mat *= rhs;         // assume commutativity, should be ok
   return mat;
 }
 
@@ -464,7 +522,7 @@ std::ostream& operator<<(std::ostream &strm, const Matrix<n,m,T> &A) {
 
 
 template<int n, int m, typename T>
-inline number_type<T> norm_squared(const Matrix<n,m,T> & RESTRICT rhs){
+inline number_type<T> norm_squared(const Matrix<n,m,T> & rhs){
   return rhs.norm_sq();
 }
 
