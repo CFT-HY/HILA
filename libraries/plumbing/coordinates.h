@@ -7,6 +7,7 @@
 /// These are used to traverse the lattice coordinate systems
 
 #include "plumbing/defs.h"
+#include "datatypes/vector.h"
 
 ///////////////////////////////////////////////////////////////////////////
 /// enum direction - includes the opposite direction
@@ -129,6 +130,8 @@ class coordinate_vector {
   int r[NDIM];
 
  public:
+  using base_type = int;              // this should ease using this as a field type
+
   coordinate_vector() = default;
 
   #pragma hila loop_function
@@ -153,9 +156,9 @@ class coordinate_vector {
   #pragma hila loop_function
   int& operator[] (const direction d) { return r[(int)d]; }
   #pragma hila loop_function
-  const int& operator[] (const int i) const { return r[i]; }
+  const int operator[] (const int i) const { return r[i]; }
   #pragma hila loop_function
-  const int& operator[] (const direction d) const { return r[(int)d]; }
+  const int operator[] (const direction d) const { return r[(int)d]; }
 
   // Parity of this coordinate
   #pragma hila loop_function
@@ -168,7 +171,11 @@ class coordinate_vector {
 
   // cast to std::array
   #pragma hila loop_function
-  operator std::array<int,NDIM>(){std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
+  operator std::array<int,NDIM>() const {std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
+
+  // cast to vector<NDIM,A>
+  #pragma hila loop_function
+  operator vector<NDIM,int>() const {vector<NDIM,int> v; foralldir(d) v[d]=r[d]; return v;}
 
   #pragma hila loop_function
   coordinate_vector & set(int i) {

@@ -49,6 +49,9 @@ int main(int argc, char **argv){
       matrix4[X].random();
     }
 
+
+    // test
+
     // Time conj(matrix) * matrix * conj(matrix) 
     timing = 0;
     for(n_runs=1; timing < mintime; ){

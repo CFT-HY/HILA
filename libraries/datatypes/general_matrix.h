@@ -77,6 +77,13 @@ class matrix {
     }
   }
 
+  // matrix<n,m,T> & operator= (const transposeMatrix<m,n,T> & rhs) {
+  //   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++){
+  //     c[i][j] = rhs.ref.c[j][i]; 
+  //   }
+  //   return *this;
+  // }
+
   //*=, +=, -= operators
   #pragma hila loop_function
   matrix<n,m,T> & operator+=(const matrix<n,m,T> & rhs){
