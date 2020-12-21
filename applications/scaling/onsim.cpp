@@ -11,14 +11,8 @@
 #include "datatypes/general_matrix.h"
 #include "datatypes/sun.h"
 #include "plumbing/field.h"
-#include "plumbing/inputs.h"
+#include "plumbing/param_input.h"
 
-// Direct output to stdout
-std::ostream &hila::output = std::cout;
-
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
 
 inline double scaleFactor(double t, double t_end){
 	return t/t_end;
@@ -33,7 +27,7 @@ class scaling_sim {
 	public:
 
 		scaling_sim() = default;
-		void allocate(const std::string fname, int argc, char ** argv);
+		const std::string allocate(const std::string & fname, int argc, char ** argv);
 		void initialize();
 		void write_moduli();
 		void write_energies();
@@ -66,31 +60,34 @@ class scaling_sim {
 		} config;
 };
 
-void scaling_sim::allocate(const std::string fname, int argc, char ** argv){
-	input parameters = input();
-	parameters.import(fname);
+const std::string scaling_sim::allocate(const std::string & fname, int argc, char ** argv){
+	hila::initialize(argc,argv);
+
+	input parameters(fname);
 	config.l = parameters.get("N");
 	config.m = parameters.get("m");
 	config.epsilon = parameters.get("epsilon");
 	config.seed = parameters.get("seed");
 	config.initialModulus = parameters.get("initialModulus");
 	config.sigma = parameters.get("sigma");
-  	config.dx = parameters.get("dx");
-  	config.tStart = parameters.get("tStart");
-  	config.tEnd = parameters.get("tEnd");
+  config.dx = parameters.get("dx");
+  config.tStart = parameters.get("tStart");
+  config.tEnd = parameters.get("tEnd");
 	config.lambda = parameters.get("lambda");
 	config.smoothing = parameters.get("smooth");
 	config.initalCondition = parameters.get("initialCondition");
 	config.tStats = parameters.get("tStats");
 	config.nOutputs = parameters.get("numberStatsOutputs");
 	double ratio = parameters.get("dtdxRatio");
-  	config.dt = config.dx*ratio;
+	const std::string output_file = parameters.get("output_file");
+  config.dt = config.dx*ratio;
 	t = config.tStart;
 
-	int box_dimensions[3] = {config.l,config.l,config.l}; 
-
-	lattice->setup(box_dimensions, argc, argv);
+	int box_dimensions[3] = {config.l,config.l,config.l};
+  lattice->setup(box_dimensions);
 	seed_random(config.seed);
+
+  return output_file;
 }
 
 inline double scaling_sim::scaleFactor(double t){
@@ -113,9 +110,7 @@ void scaling_sim::initialize(){
 				phi[X].im = config.sigma;
 			}
 
-			if (mynode() == 0){
-				hila::output << "Field real and imaginary components set to sigma = "<< config.sigma << '\n';
-			}
+			output0 << "Field real and imaginary components set to sigma = "<< config.sigma << '\n';
 
 			break;
 		}
@@ -128,9 +123,7 @@ void scaling_sim::initialize(){
 				phi[X].im = s*epsilon*sin(2.0*M_PI*coord[0]*m/N);
 			}
 
-			if (mynode() == 0){
-				hila::output << "Axion wave generated with amplitude: "<< config.epsilon << '\n';
-			}
+			output0 << "Axion wave generated with amplitude: "<< config.epsilon << '\n';
 
 			break;
 		}
@@ -160,9 +153,7 @@ void scaling_sim::initialize(){
 				}
 			}
 
-			if (mynode() == 0){
-				hila::output << "Field elements randomly generated \n";
-			}
+			output0 << "Field elements randomly generated \n";
 
 			break;
 		}
@@ -198,9 +189,9 @@ void scaling_sim::write_energies(){
 	double ss = config.sigma*config.sigma;
 
 	//non-weighted energies
-    double sumPi = 0.0; // 
-   	double sumDiPhi = 0.0; //
-    double sumV = 0.0; //
+  double sumPi = 0.0; // 
+  double sumDiPhi = 0.0; //
+  double sumV = 0.0; //
 	double sumPhiDiPhi = 0.0;
 	double sumPhiPi = 0.0; 
 
@@ -212,12 +203,12 @@ void scaling_sim::write_energies(){
     double w_sumPhiPi = 0.0;
 
 	onsites(ALL){
-        double phinorm = (phi[X].conj()*phi[X]).re; 
+    double phinorm = (phi[X].conj()*phi[X]).re; 
 		double v = 0.25*config.lambda*a*a*pow((phinorm - ss), 2.0);
 		double pinorm = (pi[X].conj()*pi[X]).re;
 		double pPi = (phi[X].conj()*pi[X]).re;
 
-        sumV += v;
+    sumV += v;
 		w_sumV += v*v;
 
 		sumPi += 0.5*pinorm; 
@@ -260,10 +251,10 @@ void scaling_sim::next(){
 	double aHalfMinus = scaleFactor(t - config.dt/2.0);
 
 	double aadt_aadxdx = pow( a / aHalfPlus , 2.0) * config.dt / (config.dx*config.dx);
-  	double aadt2D_aadxdx = aadt_aadxdx * 2.0 * 3.0;
+  double aadt2D_aadxdx = aadt_aadxdx * 2.0 * 3.0;
  	double aaaaldt_aa = pow( a, 4.0 ) * config.lambda * config.dt / pow(aHalfPlus, 2.0);
-  	double daa_aa = ( pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0) ) / pow(aHalfPlus, 2.0);
-  	double ss = config.sigma*config.sigma;
+  double daa_aa = ( pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0) ) / pow(aHalfPlus, 2.0);
+  double ss = config.sigma*config.sigma;
 
 	phi[ALL] = phi[X] + config.dt*pi[X];
 
@@ -288,25 +279,13 @@ void scaling_sim::next(){
 
 int main(int argc, char ** argv){
 	scaling_sim sim;
-
-	std::string input_fname;
-	std::string output_fname;
-
-	if(argc == 3) {
-	  input_fname = argv[1];
-	  output_fname = argv[2];
-  	} else {
-  	  printf("Usage: onsim \"input file\" \"output file\"\n");
-  	  return 1;
-  	}
-
-	sim.allocate(input_fname, argc, argv);
+	const std::string output_fname = sim.allocate( "sim_params.txt", argc, argv);
 	sim.initialize();
 
 	int steps = (sim.config.tEnd - sim.config.tStats)/(sim.config.dt * sim.config.nOutputs); //number of steps between printing stats 
 	int stat_counter = 0;
 
-	if (mynode() == 0){
+  if (mynode() == 0){
 		sim.config.stream.open(output_fname, std::ios::out);
 	}
 
