@@ -42,7 +42,15 @@ static_assert(false, "Wilson fermions only implemented for 1 < NDIM < 6");
 
 
 
-
+/// Wilson_vector contains the data for a single pseudofermion with the
+/// Wilson action. For each gamma dimension, contains a SU(N) vector.
+/// Wilson fermions can be multiplied by the gamma matrices gamma0, gamma1
+/// ... gamma5 (or up to gamma 2 for 2 and 3 dimensions).
+///
+/// A gamma matrix can also be projected to a half_Wilson_vector using the
+/// constructor half_Wilson_vector(wilson_vector, dir, sign). This multiplies
+/// the vector with 0.5*(1-sign*gamma_dir), leaving half the degrees of freedom.
+/// A full Wilson vector can be recovered using half_Wilson_vector::grow.
 template<int N, typename radix>
 class Wilson_vector {
   public:
@@ -274,54 +282,54 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma, const Wilson_ve
 
 /// half_Wilson_vector is a Wilson vector projected by
 /// 1 +- gamma_j and contains half the degrees of freedom
-/* 
-  (1 +- gamma_j) is a projection operator. We will apply the projection
-  to a Wilson_vector and store the result in a half_Wilson_vector. This
-  will store all necessary information in half the amount of data
-  and reduce the effort of multiplying with gauge matrices by half.
+///
+/// (1 +- gamma_j) is a projection operator. We will apply the projection
+/// to a Wilson_vector and store the result in a half_Wilson_vector. This
+/// will store all necessary information in half the amount of data
+/// and reduce the effort of multiplying with gauge matrices by half.
+///
+/// The constructor half_Wilson_vector(Wilson_vector<n, radix> w, direction d)
+/// will take the projection automatically. A positive direction d corresponds
+/// to 1+gamma_j and a negative direction d corresponds to 1-gamma_j.
+///
+/// A half_Wilson_vector can be expanded to a full Wilson_vector using the
+/// method expand(direction d). Notice that this requires knowing the direction
+/// that was used to project it. The direction is not stored. 
+///
+/// Note that the eigenvectors below are normalized to sqrt(2), or |v*v| = 2.
+/// This is why we don't explicitly multiply by 2 when expanding to full
+/// Wilson_vector.
+///
+/// gamma(XUP) 			eigenvectors	eigenvalue
+///  0  0  0  i		( 1, 0, 0,-i)	  +1
+///  0  0  i  0		( 0, 1,-i, 0)	  +1
+///  0 -i  0  0		( 1, 0, 0,+i)	  -1
+/// -i  0  0  0		( 0, 1,+i, 0)	  -1
+///
+/// gamma(YUP)			eigenvectors	eigenvalue
+///  0  0  0 -1		( 1, 0, 0,-1)	  +1
+///  0  0  1  0		( 0, 1, 1, 0)	  +1
+///  0  1  0  0		( 1, 0, 0, 1)	  -1
+/// -1  0  0  0		( 0, 1,-1, 0)	  -1
+///
+/// gamma(ZUP)			eigenvectors	eigenvalue
+///  0  0  i  0		( 1, 0,-i, 0)	  +1
+///  0  0  0 -i		( 0, 1, 0,+i)	  +1
+/// -i  0  0  0		( 1, 0,+i, 0)	  -1
+///  0  i  0  0		( 0, 1, 0,-i)	  -1
+///
+/// gamma(TUP)			eigenvectors	eigenvalue
+///  0  0  1  0		( 1, 0, 1, 0)	  +1
+///  0  0  0  1		( 0, 1, 0, 1)	  +1
+///  1  0  0  0		( 1, 0,-1, 0)	  -1
+///  0  1  0  0		( 0, 1, 0,-1)	  -1
+///
+/// gamma(FIVE) 			eigenvectors	eigenvalue
+///  1  0  0  0    sq2( 1, 0, 0, 0)   +1
+///  0  1  0  0    sq2( 0, 1, 0, 0)   +1
+///  0  0 -1  0    sq2( 0, 0, 1, 0)   -1
+///  0  0  0 -1    sq2( 0, 0, 0, 1)   -1
 
-  The constructor half_Wilson_vector(Wilson_vector<n, radix> w, direction d)
-  will take the projection automatically. A positive direction d corresponds
-  to 1+gamma_j and a negative direction d corresponds to 1-gamma_j.
-
-  A half_Wilson_vector can be expanded to a full Wilson_vector using the
-  method expand(direction d). Notice that this requires knowing the direction
-  that was used to project it. The direction is not stored. 
-
-  Note that the eigenvectors below are normalized to sqrt(2), or |v*v| = 2.
-  This is why we don't explicitly multiply by 2 when expanding to full
-  Wilson_vector.
-
- gamma(XUP) 			eigenvectors	eigenvalue
-  0  0  0  i		( 1, 0, 0,-i)	  +1
-  0  0  i  0		( 0, 1,-i, 0)	  +1
-  0 -i  0  0		( 1, 0, 0,+i)	  -1
- -i  0  0  0		( 0, 1,+i, 0)	  -1
-
- gamma(YUP)			eigenvectors	eigenvalue
-  0  0  0 -1		( 1, 0, 0,-1)	  +1
-  0  0  1  0		( 0, 1, 1, 0)	  +1
-  0  1  0  0		( 1, 0, 0, 1)	  -1
- -1  0  0  0		( 0, 1,-1, 0)	  -1
-
- gamma(ZUP)			eigenvectors	eigenvalue
-  0  0  i  0		( 1, 0,-i, 0)	  +1
-  0  0  0 -i		( 0, 1, 0,+i)	  +1
- -i  0  0  0		( 1, 0,+i, 0)	  -1
-  0  i  0  0		( 0, 1, 0,-i)	  -1
-
- gamma(TUP)			eigenvectors	eigenvalue
-  0  0  1  0		( 1, 0, 1, 0)	  +1
-  0  0  0  1		( 0, 1, 0, 1)	  +1
-  1  0  0  0		( 1, 0,-1, 0)	  -1
-  0  1  0  0		( 0, 1, 0,-1)	  -1
-
- gamma(FIVE) 			eigenvectors	eigenvalue
-  1  0  0  0    sq2( 1, 0, 0, 0)   +1
-  0  1  0  0    sq2( 0, 1, 0, 0)   +1
-  0  0 -1  0    sq2( 0, 0, 1, 0)   -1
-  0  0  0 -1    sq2( 0, 0, 0, 1)   -1
-*/
 
 
 template<int N, typename radix>

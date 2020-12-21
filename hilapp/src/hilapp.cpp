@@ -200,13 +200,18 @@ struct includeloc_struct {
 // block of static vars, easiest to move information
 static std::list<includeloc_struct> includelocs;
 
+
+/// Extend PPCallbacks to handle preprocessor directives
+/// specific to hila code
 class MyPPCallbacks : public PPCallbacks {
 public:
 
   
   // make static vars directly callable
 
-  /// This hook is called when #include (or #import) is processed
+  /// This hook is called when #include (or #import) is processed.
+  /// It adds the file to includelocs, a list of candidates that may need to be 
+  /// modified and inserted into the file buffer
   void InclusionDirective(SourceLocation HashLoc,
                           const Token & IncludeTok,
                           StringRef FileName,
@@ -238,6 +243,11 @@ public:
     
   }
 
+  /// This is triggered when a pragma directive is encountered. It checks for the
+  /// "hilapp skip" pragma and marks the tranlation unit for skipping if found.
+  ///
+  /// Note that pragmas where the code location is important are handled in 
+  /// MyASTVisitor::has_pragma(). 
   void PragmaDirective( SourceLocation Loc, PragmaIntroducerKind Introducer ) {
     SourceManager &SM = myCompilerInstance->getSourceManager();
     if (SM.isInMainFile(Loc) && Introducer == clang::PIK_HashPragma) {
