@@ -26,9 +26,6 @@ int main(int argc, char **argv)
   field<double> spin;
 
   seed_random( seed );
-
-  /* "Warm up" the rng generator */
-  for( int i=0; i<543210; i++ ) hila_random();
   
   // Set to 1
   spin[ALL] = 1;

@@ -15,8 +15,17 @@
 #endif
 
 // Define random number generator
-#define seed_random(seed) seed_mersenne(seed)
 inline double hila_random(){ return mersenne(); }
+inline void seed_random(int seed) {
+
+  /* First seed the generator */
+  seed_mersenne(seed);
+
+  /* "Warm up" to create a full state */
+	for(int i=0; i<543210; i++)
+    mersenne();
+}
+
 
 // Trivial synchronization
 inline void synchronize_threads(){}
