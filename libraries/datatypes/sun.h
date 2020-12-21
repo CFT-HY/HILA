@@ -611,7 +611,7 @@ class SU_vector : public Vector<n,cmplx<radix>>{
     }
 
     #pragma hila loop_function
-    SU_vector(vector<n,cmplx<radix>> m) {
+    SU_vector(Vector<n,cmplx<radix>> m) {
       for(int i=0; i<n; i++){
         this->c[i] = m.c[i];
       }
