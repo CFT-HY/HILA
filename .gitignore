@@ -1,4 +1,5 @@
 hilapp/build/*
+docs/*/*
 settings.json
 .vscode/
 applications/*/build/*

@@ -18,6 +18,13 @@ here involves new datatypes and a preprocessing tool that converts c++ code with
 
 # Instructions
 
+## Generating documentation
+
+Build the documentation (with the git hash as the version number) using
+~~~ bash
+PROJECT_NUMBER=$(git rev-parse --short HEAD) doxygen
+~~~
+
 ## Compiling the preprocessing tool and using it on c++ code
 
 In short, the framework can be used in these steps: 
@@ -123,8 +130,6 @@ forsites(EVEN){
 ## What doesn't work (as expected)
 
 Field element method calls in loops that change the element.
-
-Referring to the same direction twice in different field references causes an error in cuda kernel parameters.
 
 
 ## Testing
