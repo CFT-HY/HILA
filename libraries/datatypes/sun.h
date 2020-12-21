@@ -55,14 +55,13 @@ do {                                            \
 
 //--------------------------------------------------------
 
-//////////////////////////////////////////////////////////
 ///
 /// SU(N) class
-/// Implementations are found in this header file, since 
-/// non-specialized templates have to be visible to the 
-/// tranlation units that use them.
+/// 
+/// Specializes the squarematrix class with certain additional methods
+/// specific to SU(N) matrices. Allows matching SU(N) vectors and 
+/// SU(N) vectors in multiplication.
 ///
-//////////////////////////////////////////////////////////
 
 template<int n, typename radix=double>
 class SU : public squarematrix<n,cmplx<radix>>{
@@ -72,6 +71,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
 
     SU() = default;
 
+    /// Construct for a constant by setting the diagonal elements 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     #pragma hila loop_function
     SU(const scalart rhs) {
@@ -81,6 +81,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
       }
     }
 
+    /// Trivial constructor from a squarematrix
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     SU(squarematrix<n,cmplx<scalart>> m) {
       for (int j=0; j<n; j++) for (int i=0; i<n; i++){
@@ -88,6 +89,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
       }
     }
 
+    /// Trivial cast to square matrix
     operator squarematrix<n,cmplx<radix>>(){
       squarematrix<n,cmplx<radix>> r;
       for (int j=0; j<n; j++) for (int i=0; i<n; i++){
@@ -104,13 +106,19 @@ class SU : public squarematrix<n,cmplx<radix>>{
       return r;
     }
 
-    void reunitarize(){ //implement later
+    /// Retunitarize the SU(N) matrix. 
+    void reunitarize(){
         make_unitary();
         fix_det();
     };
 
-    void make_unitary(){};
+    /// Project the matrix to SU(N). Applying this operation occasionally
+    /// prevents the matrices from 
+    void make_unitary(){
+      assert(false);
+    };
 
+    /// Set the determinant of the SU(N) matrix to 1
     void fix_det()
     {
         cmplx<radix> d,factor;
@@ -125,6 +133,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
         }
     }
 
+    /// Calculate the matrix exponential using a Taylor expansion
     void exp(const int depth = 12){
         squarematrix<n,cmplx<radix>> A, An;
         radix factor = 1;
@@ -138,9 +147,8 @@ class SU : public squarematrix<n,cmplx<radix>>{
         }
     }
 
-    //generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix. 
-    //more iterations are needed to generate larger elements: 12 works well for n < 10. 
-
+    /// generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix. 
+    /// more iterations are needed to generate larger elements: 12 works well for n < 10. 
     void random(const int depth = 12) {
         squarematrix<n,cmplx<radix>> A, An, res;
         An = 1; 
@@ -170,7 +178,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
     }
 
 
-    // Generate a random algebra (antihermitean) matrix
+    /// Generate a random algebra (antihermitean) matrix
     void gaussian_algebra(){
       for(int i=0; i<n; i++) {
         for(int j=0; j<i; j++) {
@@ -195,7 +203,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
       }
     }
 
-    // The norm of an algebra matrix
+    /// The norm of an algebra matrix
     radix algebra_norm(){
       radix thissum = 0;
       for(int i=0; i<n; i++) {
@@ -209,7 +217,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
     }
 
 
-    // find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff 
+    /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff 
     cmplx<radix> det_lu(){
 
         int i, imax, j, k;
@@ -338,10 +346,16 @@ class SU3;
 template<typename radix> 
 class SU2adjoint; 
 
+/// SU3<radix> is equivalent to SU<3, radix>
 template<typename radix> 
 class SU3 : public SU<3,radix> {
 };
 
+
+/// SU2 matrices are equivalent to SU<2, radix>, but are implemented more
+/// efficiently here. This implementation represents the matrices as
+/// U = d + a * sigma_1 + b * sigma_2 + c * sigma_3. This is in SU(2) if
+/// a^2 + b^2 + c^2 + d^2 = 1. 
 template<typename radix>
 class SU2 { 
     public: 
@@ -410,7 +424,9 @@ class SU2 {
         radix a, b, c, d;  
 };
 
-
+/// An adjoint operation for SU2 matrices, which only contains a reference
+/// to the original. Expands when the actual value of the matrix is needed
+/// or an operation is applied.
 template<typename radix>
 class SU2adjoint {
     public:
@@ -421,12 +437,14 @@ class SU2adjoint {
         SU2adjoint<radix> & operator = (const SU2adjoint & rhs){}
 };
 
+/// Conj returns the adjoing of the matrix
 template<typename radix> 
 inline SU2adjoint<radix> conj(SU2<radix> & ref){
   SU2adjoint<radix> result(ref);
   return result;
 }
 
+/// Take the adjoint. Returns an SU2adjoint
 template<typename radix>
 SU2adjoint<radix> & SU2<radix>::adj(){
     return SU2adjoint<radix>(*this);
@@ -447,6 +465,8 @@ radix SU2<radix>::tr() const {
     return 2*d;
 }
 
+/// Apply normalization to make sure this is an
+/// SU2 matrix
 template<typename radix>
 SU2<radix> & SU2<radix>::normalize(){
     radix sq = sqrt(this->sqr());
@@ -457,11 +477,14 @@ SU2<radix> & SU2<radix>::normalize(){
     return *this;
 }
 
+/// Apply normalization to make sure this is an
+/// SU2 matrix
 template<typename radix>
 SU2<radix> & SU2<radix>::reunitarize(){
     return this->normalize();
 }
 
+/// Create a random SU2 matrix
 template<typename radix>
 SU2<radix> & SU2<radix>::random(){
     radix one, two;
@@ -474,12 +497,12 @@ SU2<radix> & SU2<radix>::random(){
     return this->normalize();
 }
 
+/// The inverse of an SU(N) matrix is its conjugate
 template<typename radix>
 SU2<radix> & SU2<radix>::inv(){
     a *= static_cast<radix>(-1);
     b *= static_cast<radix>(-1);
     c *= static_cast<radix>(-1);
-    d *= static_cast<radix>(-1);
     return *this;
 }
 
@@ -586,7 +609,8 @@ void project_antihermitean(squarematrix<N,cmplx<radix>> &matrix){
 
 
 
-
+/// A new vector type for color vectors. These can be multiplied with appropriate SU(N)
+/// matrices.
 template<int n, typename radix>
 class SU_vector : public vector<n,cmplx<radix>>{
   public:

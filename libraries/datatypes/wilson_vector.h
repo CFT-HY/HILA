@@ -150,8 +150,9 @@ class Wilson_vector {
     return r;
   }
 
-  /// Returns an SUN matrix, which is the sum of the outer products
-  // of the SUN vectors c
+  /// Returns a square matrix, cast into the SU(N) matrix type,
+  /// which is the sum of the outer products of the SUN vectors
+  /// in this Wilson vector and the argument
   #pragma hila loop_function
   inline auto outer_product(const Wilson_vector rhs) const{
     auto r = c[0].outer_product(rhs.c[0]);
@@ -173,7 +174,9 @@ class Wilson_vector {
 
 
 
-
+/// Replace multiplication with any most types by an element-wise multiplication.
+/// Multiplying with an SU(N) matrix should multiply each element, not the gamma-
+/// dimension
 template<int N, typename radix, typename T>
 #pragma hila loop_function
 Wilson_vector<N, radix> operator*(const T lhs, const Wilson_vector<N, radix> rhs){
@@ -184,6 +187,9 @@ Wilson_vector<N, radix> operator*(const T lhs, const Wilson_vector<N, radix> rhs
   return r;
 }
 
+/// Replace multiplication with any most types by an element-wise multiplication.
+/// Multiplying with an SU(N) matrix should multiply each element, not the gamma-
+/// dimension
 template<int N, typename radix, typename T>
 #pragma hila loop_function
 Wilson_vector<N, radix> operator*(const Wilson_vector<N, radix> lhs, const T rhs){
@@ -223,7 +229,7 @@ Wilson_vector<N, radix> operator-(const Wilson_vector<N, radix> lhs, const Wilso
 
 
 
-// Multiplication with gamma matrices
+/// Multiplication with gamma matrices
 
 #if (Gammadim==4) 
 
