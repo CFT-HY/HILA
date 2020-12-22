@@ -236,7 +236,7 @@ int main(int argc, char **argv){
 
 
   using SUN=SU<N, double>;
-  using adj=adjoint<N, double>;
+  using adj=adjointRep<N, double>;
   using sym=symmetric<N, double>;
   using asym=antisymmetric<N, double>;
 
