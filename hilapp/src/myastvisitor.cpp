@@ -240,7 +240,7 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_a
 
     } else {
 
-      // Now make a check if the reference is just constant (XUP etc.)
+      // Now make a check if the reference is just constant (e_x etc.)
       // Need to descent quite deeply into the expr chain
       Expr* e = lfe.parityExpr->IgnoreParens()->IgnoreImplicit();
       CXXOperatorCallExpr* Op = dyn_cast<CXXOperatorCallExpr>(e);

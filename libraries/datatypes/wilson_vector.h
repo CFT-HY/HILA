@@ -291,25 +291,25 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma, const Wilson_ve
   This is why we don't explicitly multiply by 2 when expanding to full
   Wilson_vector.
 
- gamma(XUP) 			eigenvectors	eigenvalue
+ gamma(e_x) 			eigenvectors	eigenvalue
   0  0  0  i		( 1, 0, 0,-i)	  +1
   0  0  i  0		( 0, 1,-i, 0)	  +1
   0 -i  0  0		( 1, 0, 0,+i)	  -1
  -i  0  0  0		( 0, 1,+i, 0)	  -1
 
- gamma(YUP)			eigenvectors	eigenvalue
+ gamma(e_y)			eigenvectors	eigenvalue
   0  0  0 -1		( 1, 0, 0,-1)	  +1
   0  0  1  0		( 0, 1, 1, 0)	  +1
   0  1  0  0		( 1, 0, 0, 1)	  -1
  -1  0  0  0		( 0, 1,-1, 0)	  -1
 
- gamma(ZUP)			eigenvectors	eigenvalue
+ gamma(e_z)			eigenvectors	eigenvalue
   0  0  i  0		( 1, 0,-i, 0)	  +1
   0  0  0 -i		( 0, 1, 0,+i)	  +1
  -i  0  0  0		( 1, 0,+i, 0)	  -1
   0  i  0  0		( 0, 1, 0,-i)	  -1
 
- gamma(TUP)			eigenvectors	eigenvalue
+ gamma(e_t)			eigenvectors	eigenvalue
   0  0  1  0		( 1, 0, 1, 0)	  +1
   0  0  0  1		( 0, 1, 0, 1)	  +1
   1  0  0  0		( 1, 0,-1, 0)	  -1
@@ -338,7 +338,7 @@ class half_Wilson_vector {
   half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
     cmplx<radix> I(0,1);
     switch(dir){
-      case XUP:
+      case e_x:
         if(sign==1){
 	        c[0] = w.c[0] + I*w.c[3];
 	        c[1] = w.c[1] + I*w.c[2];
@@ -347,7 +347,7 @@ class half_Wilson_vector {
 	        c[1] = w.c[1] - I*w.c[2];
         }
 	      break;
-      case YUP:
+      case e_y:
         if(sign==1){
 	        c[0] = w.c[0] - w.c[3];
 	        c[1] = w.c[1] + w.c[2];
@@ -356,7 +356,7 @@ class half_Wilson_vector {
 	        c[1] = w.c[1] - w.c[2];
         }
 	      break;
-      case ZUP:
+      case e_z:
         if(sign==1){
 	        c[0] = w.c[0] + I*w.c[2];
 	        c[1] = w.c[1] - I*w.c[3];
@@ -365,7 +365,7 @@ class half_Wilson_vector {
 	        c[1] = w.c[1] + I*w.c[3];
         }
 	      break;
-      case TUP:
+      case e_t:
         if(sign==1){
 	        c[0] = w.c[0] + w.c[2];
 	        c[1] = w.c[1] + w.c[3];
@@ -395,7 +395,7 @@ class half_Wilson_vector {
     Wilson_vector<N, radix> r;
     cmplx<radix> I(0,1);
     switch(dir){
-      case XUP:
+      case e_x:
         if(sign==1){
           r.c[0] = c[0]; r.c[1] = c[1];
           r.c[2] = -I*c[1];
@@ -406,7 +406,7 @@ class half_Wilson_vector {
           r.c[3] = I*c[0];
         }
 	      break;
-      case YUP:
+      case e_y:
         if(sign==1){
           r.c[0] = c[0]; r.c[1] = c[1];
           r.c[2] = c[1]; r.c[3] = -c[0];
@@ -415,7 +415,7 @@ class half_Wilson_vector {
           r.c[2] = -c[1]; r.c[3] = c[0];
         }
         break;
-      case ZUP:
+      case e_z:
         if(sign==1){
           r.c[0] = c[0]; r.c[1] = c[1];
           r.c[2] = -I*c[0];
@@ -426,7 +426,7 @@ class half_Wilson_vector {
           r.c[3] = -I*c[1];
         }
         break;
-      case TUP:
+      case e_t:
         if(sign==1){
           r.c[0] = c[0]; r.c[1] = c[1];
           r.c[2] = c[0]; r.c[3] = c[1];
@@ -454,15 +454,15 @@ class half_Wilson_vector {
 
 #elif (Gammadim==2)
 /*
- gamma(XUP) 	 eigenvectors	 eigenvalue
+ gamma(e_x) 	 eigenvectors	 eigenvalue
    0  1		      ( 1, 1)	       +1
    1  0		      ( 1,-1)	       -1
 
- gamma(YUP)		 eigenvectors	 eigenvalue
+ gamma(e_y)		 eigenvectors	 eigenvalue
    0  i	        ( 1, i)	       +1
   -i  0	  	    ( 1,-i)	       -1
 
- gamma(ZUP)		 eigenvectors  eigenvalue
+ gamma(e_z)		 eigenvectors  eigenvalue
    1  0	        ( 1, 0)	       +1
    0 -1	  	    ( 0, 1)	       -1
 */
@@ -470,14 +470,14 @@ class half_Wilson_vector {
   half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
     cmplx<radix> I(0,1);
     switch(dir){
-      case XUP:
+      case e_x:
         if(sign==1){
 	        c[0] = w.c[0] + w.c[1];
 	      } else {
 	        c[0] = w.c[0] - w.c[1];
         }
 	      break;
-      case YUP:
+      case e_y:
         if(sign==1){
 	        c[0] = w.c[0] - I*w.c[1];
 	      } else {
@@ -485,7 +485,7 @@ class half_Wilson_vector {
         }
 	      break;
 #if NDIM == 3
-      case ZUP:
+      case e_z:
         if(sign==1){
   	      c[0] = sqrt(2.0)*w.c[0];
 	      } else {
@@ -502,14 +502,14 @@ class half_Wilson_vector {
     Wilson_vector<N, radix> r;
     cmplx<radix> I(0,1);
     switch(dir){
-      case XUP:
+      case e_x:
         if(sign==1){
           r.c[0] = c[0]; r.c[1] = c[0];
 	      } else {
           r.c[0] = c[0]; r.c[1] = -c[0];
         }
 	      break;
-      case YUP:
+      case e_y:
         if(sign==1){
           r.c[0] = c[0]; r.c[1] = I*c[0];
 	      } else {
@@ -517,7 +517,7 @@ class half_Wilson_vector {
         }
         break;
 #if NDIM == 3
-      case ZUP:
+      case e_z:
         if(sign==1){
           r.c[0] = sqrt(2.0)*c[0]; r.c[1] = 0;
 	      } else {

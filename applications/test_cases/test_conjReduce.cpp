@@ -54,10 +54,10 @@ int main(int argc, char **argv){
     lattices[0]->n_gather_done = 0;
     lattices[0]->n_gather_avoided = 0;
 
-    nb_coordinate2[ALL] = coordinate[X+XDOWN];
+    nb_coordinate2[ALL] = coordinate[X-e_x];
     assert(lattices[0]->n_gather_done==1);
     assert(lattices[0]->n_gather_avoided==0);
-    nb_coordinate2[ALL] = coordinate[X+XDOWN];
+    nb_coordinate2[ALL] = coordinate[X-e_x];
     assert(lattices[0]->n_gather_done==1);
     assert(lattices[0]->n_gather_avoided==1);
     #endif
@@ -78,10 +78,10 @@ int main(int argc, char **argv){
     }
     assert(matrices.fs!=nullptr);
 
-    matrices[ODD] = matrices[X + XDOWN].conjugate(); //odd matrices are the conjugate of the previous even site in the X direction
+    matrices[ODD] = matrices[X - e_x].conjugate(); //odd matrices are the conjugate of the previous even site in the X direction
 
     onsites(EVEN){
-        matrices[X]*=matrices[X + XUP]; //multiply the even sites with the matrices stored in the neighboring odd site in X direction
+        matrices[X]*=matrices[X + e_x]; //multiply the even sites with the matrices stored in the neighboring odd site in X direction
     }
     onsites(ODD){
         matrices[X]*=matrices[X].conjugate(); //multiply odd sites by their conjugate

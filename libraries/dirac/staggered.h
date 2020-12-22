@@ -18,7 +18,7 @@ inline void init_staggered_eta(field<double> (&staggered_eta)[NDIM]){
     onsites(ALL){
       element<coordinate_vector> l = X.coordinates();
       element<int> sumcoord = 0;
-      for(int d2=XUP;d2<d;d2++){
+      for(int d2=e_x;d2<d;d2++){
         sumcoord += l[d2];
       }
       // +1 if sumcoord divisible by 2, -1 otherwise
