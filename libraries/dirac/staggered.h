@@ -68,7 +68,7 @@ void dirac_staggered_hop(
 
   // First multiply the by conjugate before communicating the vector
   foralldir(dir){
-    vtemp[dir][opp_parity(par)] = gauge[dir][X].conjugate()*v_in[X];
+    vtemp[dir][opp_parity(par)] = gauge[dir][X].adjoint()*v_in[X];
     vtemp[dir].start_fetch(-dir, par);
   }
 

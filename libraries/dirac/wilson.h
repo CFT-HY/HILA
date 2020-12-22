@@ -30,7 +30,7 @@ inline void Dirac_Wilson_hop(
     // First multiply the by conjugate before communicating
     onsites(opp_parity(par)){
       half_Wilson_vector<N, radix> h(v_in[X], dir, -sign);
-      vtemp[-dir][X] = gauge[dir][X].conjugate()*h;
+      vtemp[-dir][X] = gauge[dir][X].adjoint()*h;
     }
     onsites(opp_parity(par)){
       half_Wilson_vector<N, radix> h(v_in[X], dir, sign);
@@ -70,7 +70,7 @@ inline void Dirac_Wilson_hop_set(
     // First multiply the by conjugate before communicating
     onsites(opp_parity(par)){
       half_Wilson_vector<N, radix> h(v_in[X], dir, -sign);
-      vtemp[-dir][X] = gauge[dir][X].conjugate()*h;
+      vtemp[-dir][X] = gauge[dir][X].adjoint()*h;
     }
     onsites(opp_parity(par)){
       half_Wilson_vector<N, radix> h(v_in[X], dir, sign);

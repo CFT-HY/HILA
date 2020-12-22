@@ -458,7 +458,7 @@ public:
   MyFrontendAction() {}
 
   virtual bool BeginSourceFileAction(CompilerInstance &CI) override {
-    llvm::errs() << "** Starting operation on source file "+getCurrentFile()+"\n";
+    // llvm::errs() << "** Starting operation on source file "+getCurrentFile()+"\n";
 
     // Insert preprocessor callback functions to the stream.  This enables
     // tracking included files, ranges etc.
@@ -591,7 +591,7 @@ public:
 
   void EndSourceFileAction() override {
     SourceManager &SM = TheRewriter.getSourceMgr();
-    llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
+    // llvm::errs() << "** EndSourceFileAction for: " << getCurrentFile() << '\n';
     // << SM.getFileEntryForID(SM.getMainFileID())->getName() << "\n";
 
     // Now emit rewritten buffers.

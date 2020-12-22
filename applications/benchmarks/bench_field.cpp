@@ -109,13 +109,13 @@ int main(int argc, char **argv){
     field<SquareMatrix<N, cmplx<double>> > matrix1;
     field<SquareMatrix<N, cmplx<double>> > matrix2;
     field<SquareMatrix<N, cmplx<double>> > matrix3;
-    field<vector<N, cmplx<double>> > vector1;
-    field<vector<N, cmplx<double>> > vector2;
+    field<Vector<N, cmplx<double>> > vector1;
+    field<Vector<N, cmplx<double>> > vector2;
     field<SquareMatrix<N, cmplx<float>> > fmatrix1;
     field<SquareMatrix<N, cmplx<float>> > fmatrix2;
     field<SquareMatrix<N, cmplx<float>> > fmatrix3;
-    field<vector<N, cmplx<float>> > fvector1;
-    field<vector<N, cmplx<float>> > fvector2;
+    field<Vector<N, cmplx<float>> > fvector1;
+    field<Vector<N, cmplx<float>> > fvector2;
 
     // Generate random values
     onsites(ALL){
@@ -195,7 +195,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-        vector2[ALL] = vector1[X]*matrix1[X];
+        vector2[ALL] = matrix1[X]*vector1[X];
       }
       // synchronize();
       gettimeofday(&end, NULL);
@@ -212,7 +212,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          fvector2[ALL] = fvector1[X]*fmatrix1[X];
+          fvector2[ALL] = fmatrix1[X]*fvector1[X];
       }
       // synchronize();
       gettimeofday(&end, NULL);

@@ -1,13 +1,14 @@
-#ifndef REPRESENTATIONS_M
-#define REPRESENTATIONS_M
+#ifndef REPRESENTATIONS_H_
+#define REPRESENTATIONS_H_
 
 #include "sun.h"
 
-
 // The adjoint representation
 template<int N, typename radix>
-class adjoint : public SquareMatrix<N*N-1, radix> {
+class adjointRep : public SquareMatrix<N*N-1, radix> {
   public:
+    static_assert(is_arithmetic<radix>::value, "adjointRep<type>: type has to be real");
+
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
 
@@ -17,41 +18,33 @@ class adjoint : public SquareMatrix<N*N-1, radix> {
       return sun::generator(i);
     }
 
-    adjoint() = default;
+    // std ops required for triviality
+    adjointRep() = default;
+    ~adjointRep() = default;
+    adjointRep(const adjointRep &a) = default;
 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     #pragma hila loop_function
-    adjoint(const scalart m) {
-      for (int j=0; j<size; j++) { 
-        for (int i=0; i<size; i++){
-          this->c[i][j] = 0;
-        }
-        this->c[j][j] = m;
-      }
-    }
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    adjoint(const adjoint<N,scalart> m) {
-      for (int j=0; j<size; j++) for (int i=0; i<size; i++){
-        this->c[i][j] = m.c[i][j];
-      }
-    }
+    adjointRep(const scalart m) : SquareMatrix<size,radix>(m) {}
 
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    adjointRep(const adjointRep<N,scalart> m) : SquareMatrix<size,scalart>(m) {}
 
     /* Return a SU(N) generator in the adjoint representation,
      * multiplied by I */
-    static adjoint represented_generator_I(int i){
+    static adjointRep represented_generator_I(int i){
       static bool initialize = true;
-      static adjoint r_generators[N*N-1];
-      if(initialize) for(int g=0;g<N*N-1;g++){
+      static adjointRep r_generators[size];
+      if(initialize) for(int g=0;g<size;g++){
         r_generators[g] = 0;
         sun tg = sun::generator(g);
-        for(int j=0; j<N*N-1; j++){
+        for(int j=0; j<size; j++){
           sun tj = generator(j);
-          for(int k=0; k<N*N-1; k++){
+          for(int k=0; k<size; k++){
             sun tk = generator(k);
             cmplx<radix> tr1 = (tg*tj*tk).trace();
             cmplx<radix> tr2 = (tj*tg*tk).trace();
-            r_generators[g].c[j][k] = 2*(tr1.im - tr2.im);
+            r_generators[g].e(j,k) = 2*(tr1.im - tr2.im);
           }
         }
         initialize = false;
@@ -62,7 +55,7 @@ class adjoint : public SquareMatrix<N*N-1, radix> {
     /* Project a matrix into the adjoint representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = 2*(m.conjugate()*generator(i)*m*generator(j)).trace().re;
+        (*this).e(i,j) = 2*(m.adjoint()*generator(i)*m*generator(j)).trace().re;
       }
     }
 
@@ -72,8 +65,8 @@ class adjoint : public SquareMatrix<N*N-1, radix> {
       SquareMatrix<size, cmplx<radix>> rforce
     ){
       SquareMatrix<N, cmplx<radix>> fforce=0;
-      for(int g=0; g<N*N-1; g++){
-        adjoint rg = represented_generator_I(g);
+      for(int g=0; g<size; g++){
+        adjointRep rg = represented_generator_I(g);
         radix C = (rg.transpose()*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
@@ -95,27 +88,23 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
     using base_type = typename base_type_struct<radix>::type;
     using sun = SU<N,radix>;
 
-    using SquareMatrix<N*(N-1)/2, cmplx<radix>>::SquareMatrix;
-    using SquareMatrix<N*(N-1)/2, cmplx<radix>>::operator =;
-
-    // Info on group generators
     constexpr static int size = N*(N-1)/2;
 
+    using SquareMatrix<size, cmplx<radix>>::SquareMatrix;
+    using SquareMatrix<size, cmplx<radix>>::operator =;
+
+    // Info on group generators
+
     antisymmetric() = default;
+    
 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    antisymmetric(const scalart m) {
-      for (int j=0; j<size; j++) { 
-        for (int i=0; i<size; i++){
-          this->c[i][j] = 0;
-        }
-        this->c[j][j] = m;
-      }
-    }
+    antisymmetric(const scalart m) : SquareMatrix<size,cmplx<radix>>(m) {}
+
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     antisymmetric(const antisymmetric<N,scalart> m) {
       for (int j=0; j<size; j++) for (int i=0; i<size; i++){
-        this->c[i][j] = m.c[i][j];
+        this->e(i,j) = m.e(i,j);
       }
     }
 
@@ -140,8 +129,8 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
     /* Return a SU(N) generator in the antisymmetric representation */
     static antisymmetric represented_generator_I(int i){
       static bool initialize = true;
-      static antisymmetric r_generators[N*N-1];
-      if(initialize) for(int g=0;g<N*N-1;g++){
+      static antisymmetric r_generators[size];
+      if(initialize) for(int g=0;g<size;g++){
         r_generators[g] = 0;
         sun tg = sun::generator(g);
         for(int j=0; j<N*(N-1)/2; j++){
@@ -162,7 +151,7 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
     /* Project a matrix into the antisymmetric representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = 2*(generator(i)*m*generator(j).conjugate()*m.transpose()).trace();
+        (*this).e(i,j) = 2*(generator(i)*m*generator(j).adjoint()*m.transpose()).trace();
       }
     }
 
@@ -172,9 +161,9 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
       SquareMatrix<size, cmplx<radix>> rforce
     ){
       SquareMatrix<N, cmplx<radix>> fforce=0;
-      for(int g=0; g<N*N-1; g++){
+      for(int g=0; g<size; g++){
         antisymmetric rg = represented_generator_I(g);
-        radix C = (rg.conjugate()*rforce).trace().re;
+        radix C = (rg.adjoint()*rforce).trace().re;
         fforce += C*sun::generator(g);
       }
       cmplx<radix> ct(0,-2.0);
@@ -204,7 +193,7 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
     symmetric(const scalart m) {
       for (int j=0; j<size; j++) { 
         for (int i=0; i<size; i++){
-          this->c[i][j] = 0;
+          this->e(i,j) = 0;
         }
         this->c[j][j] = m;
       }
@@ -212,7 +201,7 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     symmetric(const symmetric<N,scalart> m) {
       for (int j=0; j<size; j++) for (int i=0; i<size; i++){
-        this->c[i][j] = m.c[i][j];
+        this->e(i,j) = m.e(i,j);
       }
     }
 
@@ -241,8 +230,8 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
     /* Return a SU(N) generator in the symmetric representation */
     static symmetric represented_generator_I(int i){
       static bool initialize = true;
-      static symmetric r_generators[N*N-1];
-      if(initialize) for(int g=0;g<N*N-1;g++){
+      static symmetric r_generators[size];
+      if(initialize) for(int g=0;g<size;g++){
         r_generators[g] = 0;
         sun tg = sun::generator(g);
         for(int j=0; j<N*(N+1)/2; j++){
@@ -262,7 +251,7 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
     /* Project a matrix into the symmetric representation */
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
-        (*this).c[i][j] = 2*(generator(i)*m*generator(j)*m.transpose()).trace();
+        (*this).e(i,j) = 2*(generator(i)*m*generator(j)*m.transpose()).trace();
       }
     }
 
@@ -272,7 +261,7 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
       SquareMatrix<size, cmplx<radix>> rforce
     ){
       SquareMatrix<N, cmplx<radix>> fforce=0;
-      for(int g=0; g<N*N-1; g++){
+      for(int g=0; g<size; g++){
         symmetric rg = represented_generator_I(g);
         radix C = (rg*rforce).trace().re;
         fforce += C*sun::generator(g);

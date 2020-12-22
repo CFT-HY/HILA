@@ -65,7 +65,11 @@ class Matrix {
 
 
     // unary -
-    Matrix<n,m,T> operator-() const { return -1*(*this); }
+    inline Matrix<n,m,T> operator-() const { 
+      Matrix<n,m,T> res;
+      for (int i=0; i<n*m; i++) res.c[i] = -c[i];
+      return res;
+    }
 
     // Assign from "scalar" for square matrix
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
@@ -252,16 +256,31 @@ class Matrix {
       return result;
     }
 
-    // enable dot only for vectors (confusing otherwise)
+    // dot product - vector . vector
     #pragma hila loop_function
-    T dot(const Matrix<n,m,T> &rhs) const {
-      static_assert( n==1 || m==1, "dot product only for vectors");
+    template <int p, std::enable_if_t<(p==1 && m==1),int> = 0>
+    inline T dot(const Matrix<n,p,T> &rhs) const {
       T r = 0;
-      for (int i=0; i<n*m; i++) {
+      for (int i=0; i<n; i++) {
         r += ::conj(c[i]) * rhs.c[i];
       }
       return r;
     }
+
+    // dot with matrix - matrix
+    #pragma hila loop_function
+    template <int p,
+              std::enable_if_t<(p>1 || m>1),int> = 0>
+    inline Matrix<m,p,T> dot(const Matrix<n,p,T> & rhs) const {
+      Matrix<m,p,T> res;
+      for (int i=0; i<m; i++) for (int j=0; j<p; j++) {
+        res.e(i,j) = 0;
+        for (int k=0; k<n; j++) res.e(i,j) += ::conj(e(k,i))*rhs.e(k,j);
+      }
+    }
+
+   
+ 
 
 
     #pragma hila loop_function
