@@ -160,15 +160,15 @@ class stout_smeared_field : public gauge_field_base<sun>{
   }
 
 
-  void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
+  void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> *force){
     // Two storage fields for the current and previous levels of the force
-    field<squarematrix<N,cmplx<basetype>>> storage1[NDIM];
-    field<squarematrix<N,cmplx<basetype>>> storage2[NDIM];
+    field<SquareMatrix<N,cmplx<basetype>>> storage1[NDIM];
+    field<SquareMatrix<N,cmplx<basetype>>> storage2[NDIM];
     foralldir(dir){
       storage1[dir] = force[dir];
     }
-    field<squarematrix<N,cmplx<basetype>>> *previous= &storage1[0];
-    field<squarematrix<N,cmplx<basetype>>> *result= &storage2[0];
+    field<SquareMatrix<N,cmplx<basetype>>> *previous= &storage1[0];
+    field<SquareMatrix<N,cmplx<basetype>>> *result= &storage2[0];
 
     // Another storage field, for the derivative of the exponential
     field<sun> Lambda[NDIM];
@@ -212,7 +212,7 @@ class stout_smeared_field : public gauge_field_base<sun>{
       }
 
       // Swap previous and result for the next iteration
-      field<squarematrix<N,cmplx<basetype>>> *tmp = previous;
+      field<SquareMatrix<N,cmplx<basetype>>> *tmp = previous;
       previous = result;
       result = tmp;
       basegauge = &smeared_fields[step][0];
@@ -367,13 +367,13 @@ struct HEX_smeared_field : public gauge_field_base<sun> {
   }
 
 
-  void add_momentum(field<squarematrix<N,cmplx<basetype>>> *force){
+  void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> *force){
     field<sun> lambda1[NDIM];
-    field<squarematrix<N,cmplx<basetype>>> result1[NDIM][NDIM];
+    field<SquareMatrix<N,cmplx<basetype>>> result1[NDIM][NDIM];
     field<sun> lambda2[NDIM][NDIM];
-    field<squarematrix<N,cmplx<basetype>>> result2[NDIM][NDIM];
+    field<SquareMatrix<N,cmplx<basetype>>> result2[NDIM][NDIM];
     field<sun> lambda3[NDIM][NDIM];
-    field<squarematrix<N,cmplx<basetype>>> result[NDIM];
+    field<SquareMatrix<N,cmplx<basetype>>> result[NDIM];
 
     foralldir(mu) {
       result[mu] = 0;

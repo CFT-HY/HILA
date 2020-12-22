@@ -13,7 +13,7 @@ const int N=2;
 
 // Include the lattice field definition
 #include "plumbing/defs.h"
-#include "datatypes/general_matrix.h"
+#include "datatypes/matrix.h"
 #include "plumbing/field.h"
 
 
@@ -27,14 +27,14 @@ extern int VOLUME;
 
 #pragma hila loop_function
 double monte(
-  matrix<N,N,cmplx<double>> &U, 
-  matrix<N,N,cmplx<double>> &staple,
+  Matrix<N,N,cmplx<double>> &U, 
+  Matrix<N,N,cmplx<double>> &staple,
   double beta);
 
 #pragma hila loop_function
 void KennedyPendleton(
-  matrix<2,2,cmplx<double>> &U,
-  matrix<2,2,cmplx<double>> &staple
+  Matrix<2,2,cmplx<double>> &U,
+  Matrix<2,2,cmplx<double>> &staple
 );
 
 

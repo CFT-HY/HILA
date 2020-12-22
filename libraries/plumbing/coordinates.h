@@ -7,7 +7,7 @@
 /// These are used to traverse the lattice coordinate systems
 
 #include "plumbing/defs.h"
-#include "datatypes/vector.h"
+#include "datatypes/matrix.h"
 
 ///////////////////////////////////////////////////////////////////////////
 /// enum direction - includes the opposite direction
@@ -173,9 +173,9 @@ class coordinate_vector {
   #pragma hila loop_function
   operator std::array<int,NDIM>() const {std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
 
-  // cast to vector<NDIM,A>
+  // cast to Vector<NDIM,A>
   #pragma hila loop_function
-  operator vector<NDIM,int>() const {vector<NDIM,int> v; foralldir(d) v[d]=r[d]; return v;}
+  operator Vector<NDIM,int>() const {Vector<NDIM,int> v; foralldir(d) v.e(d)=r[d]; return v;}
 
   #pragma hila loop_function
   coordinate_vector & set(int i) {

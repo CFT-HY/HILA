@@ -7,13 +7,11 @@
 
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
-#include "datatypes/vector.h"
 #include "datatypes/sun.h"
 #if NDIM == 4
 #include "datatypes/wilson_vector.h"
 #endif
 #include "plumbing/field.h"
-#include "plumbing/inputs.h"
 
 // // Define the lattice global variable
 // lattice_struct my_lattice;

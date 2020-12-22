@@ -1,5 +1,5 @@
-#ifndef DEFS_H
-#define DEFS_H
+#ifndef DEFS_H_
+#define DEFS_H_
 
 // Useful global definitions here -- this file should be included by (almost) all others
 
@@ -101,6 +101,9 @@ enum class fft_direction { forward, backward, back };
 #include "plumbing/backend_cpu/defs.h"
 #endif
 
+// this include has to be after the backend defs, because those define hila_random()
+#include "plumbing/random.h"
+
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000
 
@@ -153,5 +156,18 @@ struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> 
 template<typename T>
 using number_type = typename base_type_struct<T>::type;
  
+
+// These are helpers, to make generic templates
+// e.g. type_plus<A,B> gives the type of the operator a + b, where a is of type A and b B.
+template<typename A, typename B>
+using type_plus = decltype(std::declval<A>() + std::declval<B>());
+template<typename A, typename B>
+using type_minus= decltype(std::declval<A>() - std::declval<B>());
+template<typename A, typename B>
+using type_mul  = decltype(std::declval<A>() * std::declval<B>());
+template<typename A, typename B>
+using type_div  = decltype(std::declval<A>() / std::declval<B>());
+
+
 
 #endif

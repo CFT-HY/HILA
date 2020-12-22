@@ -4,7 +4,6 @@
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
-#include "datatypes/vector.h"
 #include "plumbing/mersenne.h" //has to be included
 #include <cmath>
 
@@ -65,41 +64,35 @@ do {                                            \
 //////////////////////////////////////////////////////////
 
 template<int n, typename radix=double>
-class SU : public squarematrix<n,cmplx<radix>>{
+class SU : public SquareMatrix<n,cmplx<radix>>{
     public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;
 
     SU() = default;
 
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
+    template <typename scalart, std::enable_if_t<is_cmplx_or_arithmetic<scalart>::value, int> = 0 >  
     #pragma hila loop_function
     SU(const scalart rhs) {
       for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
-        if (i == j) this->c[i][j] = (rhs);
-        else this->c[i][j] = (0);
+        if (i == j) this->e(i,j) = rhs;
+        else this->e(i,j) = (0);
       }
     }
 
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    SU(squarematrix<n,cmplx<scalart>> m) {
-      for (int j=0; j<n; j++) for (int i=0; i<n; i++){
-        this->c[i][j] = m.c[i][j];
+    template <typename S>
+    SU(const SquareMatrix<n,cmplx<S>> & m) {
+      for (int i=0; i<n*n; i++){
+        this->r[i] = m.r[i];
       }
     }
 
-    operator squarematrix<n,cmplx<radix>>(){
-      squarematrix<n,cmplx<radix>> r;
+    // Casting to different cmplx type
+    template <typename S>
+    operator SquareMatrix<n,cmplx<S>>(){
+      SquareMatrix<n,cmplx<radix>> r;
       for (int j=0; j<n; j++) for (int i=0; i<n; i++){
-        r.c[i][j] = this->c[i][j];
-      }
-      return r;
-    }
-
-    SU operator - () const {
-      SU r;
-      for (int j=0; j<n; j++) for (int i=0; i<n; i++){
-        r.c[i][j] = -this->c[i][j];
+        r.e(i,j) = this->e(i,j);
       }
       return r;
     }
@@ -121,12 +114,12 @@ class SU : public squarematrix<n,cmplx<radix>>{
         t = d.arg() / static_cast<radix>(n);
         factor = cmplx<radix>( cos(-t), sin(-t) );
         for (j=0; j<n; j++) for (i=0; i<n; i++){
-            this->c[j][i] = this->c[j][i]*factor;
+            this->e(j,i) = this->e(j,i)*factor;
         }
     }
 
     void exp(const int depth = 12){
-        squarematrix<n,cmplx<radix>> A, An;
+        SquareMatrix<n,cmplx<radix>> A, An;
         radix factor = 1;
         A = *this;
         An = A;
@@ -142,21 +135,21 @@ class SU : public squarematrix<n,cmplx<radix>>{
     //more iterations are needed to generate larger elements: 12 works well for n < 10. 
 
     void random(const int depth = 12) {
-        squarematrix<n,cmplx<radix>> A, An, res;
+        SquareMatrix<n,cmplx<radix>> A, An, res;
         An = 1; 
         res = 1;
         cmplx<radix> tr(1,0), factor(1, 0);
         for (int i = 0; i < n; i++) {
-            A.c[i][i] = cmplx<radix>(hila_random(), 0.0);
+            A.e(i,i) = cmplx<radix>(hila_random(), 0.0);
             for (int j = 0; j < i; j++){
                 cmplx<radix> a(static_cast<radix>(hila_random()/n), static_cast<radix>(hila_random()/n));
-                A.c[i][j] = a;
-                A.c[j][i] = a.conj();
+                A.e(i,j) = a;
+                A.e(j,i) = a.conj();
             }
         }
         tr = A.trace()*(static_cast<radix>(1)/static_cast<radix>(n));
         for (int i = 0; i < n; i++){
-            A.c[i][i] -= tr; 
+            A.e(i,i) -= tr;
         }
         An = A;
         for (int k = 1; k<=depth; k++){
@@ -165,7 +158,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
             An *= A;
         }
         for (int i = 0; i < n; i++) for (int j = 0; j < n; j++){
-            (*this).c[i][j] = res.c[i][j];
+            (*this).e(i,j) = res.e(i,j);
         }
     }
 
@@ -176,22 +169,22 @@ class SU : public squarematrix<n,cmplx<radix>>{
         for(int j=0; j<i; j++) {
           double a = gaussian_ran();
           double b = gaussian_ran();
-          (*this).c[i][j].re = a;
-          (*this).c[j][i].re =-a;
-          (*this).c[i][j].im = b;
-          (*this).c[j][i].im = b;
+          (*this).e(i,j).re = a;
+          (*this).e(j,i).re =-a;
+          (*this).e(i,j).im = b;
+          (*this).e(j,i).im = b;
         }
       }
 
       for(int i=0; i<n; i++) {
-        (*this).c[i][i].re = 0;
-        (*this).c[i][i].im = 0;
+        (*this).e(i,i).re = 0;
+        (*this).e(i,i).im = 0;
       }
       for(int i=1; i<n; i++) {
         double a = gaussian_ran()*sqrt(2.0/(i*(i+1)));
         for(int j=0; j<i; j++)
-          (*this).c[j][j].im += a;
-        (*this).c[i][i].im -= i*a;
+          (*this).e(j,j).im += a;
+        (*this).e(i,i).im -= i*a;
       }
     }
 
@@ -200,9 +193,9 @@ class SU : public squarematrix<n,cmplx<radix>>{
       radix thissum = 0;
       for(int i=0; i<n; i++) {
         for(int j=0; j<i; j++) {
-          thissum += (*this).c[i][j].squarenorm();
+          thissum += (*this).e(i,j).norm_sq();
         }
-        radix diag = (*this).c[i][i].im;
+        radix diag = (*this).e(i,i).im;
         thissum += 0.5*diag*diag;
       }
       return thissum;
@@ -225,7 +218,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
 
         imax = -1;
 
-        for (i=0; i<n; i++) for(j=0; j<n; j++) a[i][j] = this->c[i][j];
+        for (i=0; i<n; i++) for(j=0; j<n; j++) a[i][j] = this->e(i,j);
 
         for (i=0; i<n; i++) {
             big = 0;
@@ -297,7 +290,7 @@ class SU : public squarematrix<n,cmplx<radix>>{
           // Diagonal generators
           double w = 0.5/sqrt((g+1)*(g+2)*0.5);
           for(int i=0; i<g+1; i++ ){
-            generators[g].c[i][i].re = w;
+            generators[g].e(i,i).re = w;
           }
           generators[g].c[g+1][g+1].re = -(g+1)*w;
         } else {
@@ -561,22 +554,22 @@ SU2<radix> SU2<radix>::operator - (const SU2<radix> & y){
 
 /// Project to the antihermitean part of a matrix
 template<int N, typename radix>
-void project_antihermitean(squarematrix<N,cmplx<radix>> &matrix){
+void project_antihermitean(SquareMatrix<N,cmplx<radix>> &matrix){
   radix tr = 0;
   for(int i=0; i<N; i++) {
     for(int j=0; j<i; j++) {
-      radix a = 0.5*(matrix.c[i][j].re - matrix.c[j][i].re);
-      radix b = 0.5*(matrix.c[i][j].im + matrix.c[j][i].im);
-      matrix.c[i][j].re = a;
-      matrix.c[j][i].re =-a;
-      matrix.c[i][j].im = b;
-      matrix.c[j][i].im = b;
+      radix a = 0.5*(matrix.e(i,j).re - matrix.e(j,i).re);
+      radix b = 0.5*(matrix.e(i,j).im + matrix.e(j,i).im);
+      matrix.e(i,j).re = a;
+      matrix.e(j,i).re =-a;
+      matrix.e(i,j).im = b;
+      matrix.e(j,i).im = b;
     }
-    tr += matrix.c[i][i].im;
-    matrix.c[i][i].re = 0;
+    tr += matrix.e(i,i).im;
+    matrix.e(i,i).re = 0;
   }
   for(int i=0; i<N; i++) {
-    matrix.c[i][i].im -= tr/N;
+    matrix.e(i,i).im -= tr/N;
   }
 };
 
@@ -588,7 +581,7 @@ void project_antihermitean(squarematrix<N,cmplx<radix>> &matrix){
 
 
 template<int n, typename radix>
-class SU_vector : public vector<n,cmplx<radix>>{
+class SU_vector : public Vector<n,cmplx<radix>>{
   public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;
@@ -612,7 +605,7 @@ class SU_vector : public vector<n,cmplx<radix>>{
     }
 
     #pragma hila loop_function
-    SU_vector(vector<n,cmplx<radix>> m) {
+    SU_vector(Vector<n,cmplx<radix>> m) {
       for(int i=0; i<n; i++){
         this->c[i] = m.c[i];
       }

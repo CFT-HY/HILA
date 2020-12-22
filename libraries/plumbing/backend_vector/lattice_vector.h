@@ -85,7 +85,7 @@ struct vectorized_lattice_struct  {
 
       // the basic division is done using "float" vectors - 
       // for "double" vectors the vector_size and number of subnodes
-      // is halved to direction lattice->this_node.subnodes.last_divided.dir
+      // is halved to direction lattice->this_node.subnodes.lastype_divided.dir
 
       if ( vector_size == VECTOR_SIZE/sizeof(double) ) {
         subdivisions[ lattice->this_node.subnodes.merged_subnodes_dir ] /= 2;

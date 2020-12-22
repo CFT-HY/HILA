@@ -1,13 +1,5 @@
 #include "SUN.h"
 
-// Direct output to stdout
-std::ostream &hila::output = std::cout;
-std::ostream &output = std::cout;
-
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
-
 
 // Define some parameters for the simulation
 double beta = 8;
@@ -20,14 +12,14 @@ int NX=16, NY=16, NZ=16, NT=16;
 
 
 void calc_staples(
-  field<matrix<N,N,cmplx<double>>> (&U)[NDIM], 
-  field<matrix<N,N,cmplx<double>>> &staple_sum,
+  field<Matrix<N,N,cmplx<double>>> (&U)[NDIM], 
+  field<Matrix<N,N,cmplx<double>>> &staple_sum,
   direction dir)
 {
   /* Calculate the sum of staples connected to links in direction
    * dir 
    */
-  static field<matrix<N,N,cmplx<double>>> down_staple;
+  static field<Matrix<N,N,cmplx<double>>> down_staple;
   staple_sum[ALL] = 0;
   foralldir(d2){
     direction dir2 = (direction)d2;
@@ -56,23 +48,24 @@ void update(
 
 #pragma hila loop_function
 void update(
-  matrix<2,2,cmplx<double>> &U,
-  const matrix<2,2,cmplx<double>> &staple,
+  Matrix<2,2,cmplx<double>> &U,
+  const Matrix<2,2,cmplx<double>> &staple,
   double beta
 ){
-  matrix<2,2,cmplx<double>> temp = -beta*staple;
+  Matrix<2,2,cmplx<double>> temp = -beta*staple;
   KennedyPendleton( U, temp );
 }
 
 
 int main(int argc, char **argv)
 {
+  hila::initialize(argc,argv);
+  const int nd[NDIM] = { NX, NY, NZ, NT };
+  lattice->setup(nd);
 
-  // Basic setup
-  lattice->setup( NX, NY, NZ, NT, argc, argv );
   // Define a field
-  field<matrix<N,N,cmplx<double>>> U[NDIM];
-  field<matrix<N,N,cmplx<double>>> staple;
+  field<Matrix<N,N,cmplx<double>>> U[NDIM];
+  field<Matrix<N,N,cmplx<double>>> staple;
 
   seed_random(seed);
 
@@ -109,7 +102,7 @@ int main(int argc, char **argv)
     foralldir(d1) foralldir(d2) if(d1 != d2){
       direction dir1 = (direction)d1, dir2 = (direction)d2;
       onsites(ALL){
-        element<matrix<N,N,cmplx<double>>> temp;
+        element<Matrix<N,N,cmplx<double>>> temp;
         temp =  U[dir1][X] * U[dir2][X+dir1];
         temp *= U[dir1][X+dir2].conjugate();
         temp *= U[dir2][X].conjugate();

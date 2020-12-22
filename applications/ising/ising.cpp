@@ -3,17 +3,8 @@
 #include <string>
 #include <math.h>
 
-#define NDIM 2
-
 // Include the lattice field definition
 #include "plumbing/field.h"
-
-// Direct output to stdout
-std::ostream &hila::output = std::cout;
-
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
 
 
 // Define some parameters for the simulation
@@ -27,7 +18,10 @@ int VOLUME = NX*NY;
 int main(int argc, char **argv)
 {
   // Basic setup
-  lattice->setup( NX, NY, argc, argv );
+  const int nd[2] = { NX, NY };
+  hila::initialize(argc,argv);
+  lattice->setup(nd);
+
   // Define a field
   field<double> spin;
 
