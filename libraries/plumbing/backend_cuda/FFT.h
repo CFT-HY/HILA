@@ -419,11 +419,13 @@ inline void field<cmplx<double>>::FFT(fft_direction fdir) {
 template<typename T, class Enable = void>
 struct complex_base{};
 
+/// Match cmplx<>
 template<>
 struct complex_base<cmplx<float>>{
   using type = cmplx<float>;
 };
 
+/// Match cmplx<>
 template<>
 struct complex_base<cmplx<double>>{
   using type = cmplx<double>;

@@ -12,6 +12,7 @@ template<typename vector>
 field<vector> staggered_dirac_temp[NDIM];
 
 
+/// Initialize the staggered eta field
 inline void init_staggered_eta(field<double> (&staggered_eta)[NDIM]){
   // Initialize the staggered eta field
   foralldir(d){
@@ -30,7 +31,7 @@ inline void init_staggered_eta(field<double> (&staggered_eta)[NDIM]){
 
 
 
-// Apply the mass diagonally
+/// Apply the mass term v_out = m*v_in
 template<typename vtype>
 void dirac_staggered_diag(
   const double mass,
@@ -41,7 +42,8 @@ void dirac_staggered_diag(
   v_out[par] = v_out[X] + mass*v_in[X];
 }
 
-// Apply the mass diagonally
+/// Apply the inverse of the diagonal part,
+/// v_out = 1/m * v_in
 template<typename vtype>
 void dirac_staggered_diag_inverse(
   const double mass,
@@ -52,6 +54,7 @@ void dirac_staggered_diag_inverse(
 }
 
 
+/// Apply the derivative part
 template<typename mtype, typename vtype>
 void dirac_staggered_hop(
   const field<mtype> *gauge,
@@ -80,7 +83,8 @@ void dirac_staggered_hop(
 }
 
 
-
+/// Calculate derivative  d/dA_x,mu (chi D psi)
+/// Necessary for the HMC force calculation.
 template<typename gaugetype, typename momtype, typename vtype>
 void dirac_staggered_calc_force(
   const field<gaugetype> *gauge,
@@ -96,13 +100,17 @@ void dirac_staggered_calc_force(
       staggered_eta[dir][X] * chi[X+dir].outer_product(psi[X]);
     out[dir][opp_parity(par)] = out[dir][X] + sign*0.5 *
       staggered_eta[dir][X+dir] * psi[X+dir].outer_product(chi[X]);
-
-    //out[dir][ALL] = gauge[dir][X]*out[dir][X];
   }
 }
 
 
-
+/// An operator class that applies the staggered Dirac operator
+/// D.apply(in, out) aplies the operator
+/// D.dagger(int out) aplies the conjugate of the operator
+///
+/// This is useful for defining inverters as composite
+/// operators. For example the conjugate gradient inverter 
+/// is CG<dirac_staggered>.
 template<typename matrix>
 class dirac_staggered {
   private:
@@ -182,6 +190,23 @@ field<vector> operator* (const field<vector> & in, dirac_staggered<vector> D) {
 
 
 
+/// An even-odd decomposed Wilson Dirac operator. Applies
+/// D_{even to odd} D_{diag}^{-1} D_{odd to even} on the even
+/// sites of the vector.
+/// 
+/// The fermion partition function is 
+///   det(D) = det(D_eveneodd) + det(D_{diag odd}).
+/// Dirac_Wilson_evenodd can be used to replace D_Wilson
+/// in the HMC action, as long as the diagonal odd to odd
+/// part is accounted for.
+///
+/// This is useful for defining inverters as composite
+/// operators. For example the conjugate gradient inverter 
+/// is CG<Dirac_Wilson_evenodd>.
+///
+/// As a side effect, the output field becomes 
+/// out = D_{diag}^{-1} D_{odd to even} in
+///
 template<typename matrix>
 class dirac_staggered_evenodd {
   private:

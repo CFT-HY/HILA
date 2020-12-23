@@ -337,8 +337,7 @@ public:
 
 
 
-// file_buffer_list stores the edited source of all files
-
+/// file_buffer_list stores the edited source of all files
 struct file_buffer {
   srcBuf sbuf;
   FileID fid;
@@ -365,8 +364,8 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   return( &file_buffer_list.back().sbuf );
 }
 
-// Implementation of the ASTConsumer interface for reading an AST produced
-// by the Clang parser.
+/// Implementation of the ASTConsumer interface for reading an AST produced
+/// by the Clang parser.
 class MyASTConsumer : public ASTConsumer {
 public:
   MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { }
@@ -438,12 +437,10 @@ private:
 
 
 
-// This struct will be used to keep track of #include-chains.
-
+/// This struct will be used to keep track of #include-chains.
 std::vector<FileID> file_id_list = {};
 
-// Tiny utility to search for the list
-
+/// Tiny utility to search for the list
 bool search_fid(const FileID FID) {
   for (const FileID f : file_id_list) {
     if (f == FID) return true;
@@ -451,6 +448,7 @@ bool search_fid(const FileID FID) {
   return false;
 }
 
+/// Mark a file as modified. May need to be added to the buffer.
 void set_fid_modified(const FileID FID) {
   if (search_fid(FID) == false) {
     // new file to be added
@@ -462,7 +460,7 @@ void set_fid_modified(const FileID FID) {
 }
 
 
-// For each source file provided to the tool, a new FrontendAction is created.
+/// For each source file provided to the tool, a new FrontendAction is created.
 class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}

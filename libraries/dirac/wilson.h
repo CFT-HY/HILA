@@ -13,6 +13,7 @@ field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[2*NDIM];
 
 
 
+/// Apply the hopping term to v_out and add to v_in
 template<int N, typename radix, typename matrix>
 inline void Dirac_Wilson_hop(
   const field<matrix> *gauge, const double kappa,
@@ -52,7 +53,7 @@ inline void Dirac_Wilson_hop(
 }
 
 
-// A version of Dirac_wilson_hop that overrides the output field
+/// Apply the hopping term to v_in and overwrite v_out
 template<int N, typename radix, typename matrix>
 inline void Dirac_Wilson_hop_set(
   const field<matrix> *gauge, const double kappa,
@@ -99,6 +100,7 @@ inline void Dirac_Wilson_hop_set(
 }
 
 
+/// The diagonal part of the operator. Without clover this is just the identity
 template<int N, typename radix>
 inline void Dirac_Wilson_diag(
   const field<Wilson_vector<N, radix>> &v_in,
@@ -109,6 +111,7 @@ inline void Dirac_Wilson_diag(
 }
 
 
+/// Inverse of the diagonal part. Without clover this does nothing.
 template<int N, typename radix>
 inline void Dirac_Wilson_diag_inverse(
   field<Wilson_vector<N, radix>> &v,
@@ -117,6 +120,8 @@ inline void Dirac_Wilson_diag_inverse(
 
 
 
+/// Calculate derivative  d/dA_x,mu (chi D psi)
+/// Necessary for the HMC force calculation.
 template<int N, typename radix, typename gaugetype, typename momtype>
 inline void Dirac_Wilson_calc_force(
   const field<gaugetype> *gauge,
@@ -153,7 +158,13 @@ inline void Dirac_Wilson_calc_force(
 }
 
 
-
+/// An operator class that applies the Wilson Dirac operator
+/// D.apply(in, out) aplies the operator
+/// D.dagger(int out) aplies the conjugate of the operator
+///
+/// This is useful for defining inverters as composite
+/// operators. For example the conjugate gradient inverter 
+/// is CG<Dirac_Wilson>.
 template<typename matrix>
 class Dirac_Wilson {
   private:
@@ -221,7 +232,19 @@ field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> &
 
 
 
-
+/// An even-odd decomposed Wilson Dirac operator. Applies
+/// D_{even to odd} D_{diag}^{-1} D_{odd to even} on the even
+/// sites of the vector.
+/// 
+/// The fermion partition function is 
+///   det(D) = det(D_eveneodd) + det(D_{diag odd}).
+/// Dirac_Wilson_evenodd can be used to replace D_Wilson
+/// in the HMC action, as long as the diagonal odd to odd
+/// part is accounted for.
+///
+/// This is useful for defining inverters as composite
+/// operators. For example the conjugate gradient inverter 
+/// is CG<Dirac_Wilson_evenodd>.
 template<typename matrix>
 class Dirac_Wilson_evenodd {
   private:

@@ -2,9 +2,8 @@
 #define _BACKEND_LATTICE_H_
 
 
-/* Lattice related data that needs to be communicated
- * to kernels
- */
+/// Lattice related data that needs to be communicated
+/// to kernels
 struct backend_lattice_struct {
   unsigned * d_neighb[NDIRS];
   unsigned * d_neighb_special[NDIRS];

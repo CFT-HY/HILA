@@ -4,7 +4,23 @@
 #include "sun.h"
 
 
-// The adjoint representation
+/// A matrix in the adjoint representation of the SU(N) group
+///
+/// Members
+/// adjoint.represent(sun m): projects the sU(N) matrix to the
+///     adjoint representation and replaces this 
+///
+/// Class functions:
+/// adjoint::generator(int i): returns generators of SU(N)
+///     in the fundamental representation
+/// adjoint::represented_generator_I(int i): returns the 
+///     generator (times I) in the adjoint representation
+/// adjoint::project_force(squarematrix): projects a square
+///     matrix the size of an adjoint matrix to the SU(N)
+///     algebra. This is used to calculate the force of an
+///     adjoint action term to a derivative of the underlying
+///     su(N) group
+///
 template<int N, typename radix>
 class adjoint : public squarematrix<N*N-1, radix> {
   public:
@@ -46,7 +62,7 @@ class adjoint : public squarematrix<N*N-1, radix> {
         r_generators[g] = 0;
         sun tg = sun::generator(g);
         for(int j=0; j<N*N-1; j++){
-          sun tj = generator(j);
+          sun tj = generator(j); 
           for(int k=0; k<N*N-1; k++){
             sun tk = generator(k);
             cmplx<radix> tr1 = (tg*tj*tk).trace();
@@ -88,7 +104,24 @@ class adjoint : public squarematrix<N*N-1, radix> {
 
 
 
-
+/// A matrix in the antisymmetric representation of the SU(N) group
+///
+/// Members
+/// antisymmetric.represent(sun m): projects the sU(N) matrix to the
+///     antisymmetric representation and replaces this 
+///
+/// Class functions:
+/// antisymmetric::generator(int i): returns antisymmetric matrices
+///     in the fundamental representation
+/// antisymmetric::represented_generator_I(int i): returns 
+///     antisymmetric SU(N) matrices (times I) in the antisymmetric
+///     representation
+/// antisymmetric::project_force(squarematrix): projects a square
+///     matrix the size of an antisymmetric matrix to the SU(N)
+///     algebra. This is used to calculate the force of an
+///     antisymmetric action term to a derivative of the underlying
+///     su(N) group
+///
 template<int N, typename radix>
 class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
   public:
@@ -186,6 +219,26 @@ class antisymmetric : public squarematrix<N*(N-1)/2, cmplx<radix>> {
 
 
 
+
+
+/// A matrix in the symmetric representation of the SU(N) group
+///
+/// Members
+/// symmetric.represent(sun m): projects the sU(N) matrix to the
+///     symmetric representation and replaces this 
+///
+/// Class functions:
+/// symmetric::generator(int i): returns symmetric matrices
+///     in the fundamental representation
+/// symmetric::represented_generator_I(int i): returns 
+///     symmetric SU(N) matrices (times I) in the symmetric
+///     representation
+/// symmetric::project_force(squarematrix): projects a square
+///     matrix the size of an symmetric matrix to the SU(N)
+///     algebra. This is used to calculate the force of an
+///     symmetric action term to a derivative of the underlying
+///     su(N) group
+///
 template<int N, typename radix>
 class symmetric : public squarematrix<N*(N+1)/2, cmplx<radix>> {
   public:

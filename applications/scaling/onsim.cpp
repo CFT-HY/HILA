@@ -18,10 +18,7 @@ inline double scaleFactor(double t, double t_end){
 	return t/t_end;
 }
 
-class filewriter {
-
-};
-
+/// Container for simulation parameters and methods
 class scaling_sim {
 
 	public:

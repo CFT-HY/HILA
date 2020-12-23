@@ -3,6 +3,7 @@
 
 #include <string>
 
+/// File info for stored in the specialization database
 struct spec {
   std::string decl;
   std::string file;

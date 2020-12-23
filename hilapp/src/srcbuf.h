@@ -1,28 +1,26 @@
 #ifndef HILAPP_SRCBUF_H
 #define HILAPP_SRCBUF_H
-
-// New buffer interface.  Libtooling contains a  ReplaceText and RemoveText
-// in libtooling, but it is much easier to leave that to be original and
-// edit own copy
-
-// This is a simple buffer, keeps track of modifications to the original
-// text which remains in unmodified form.
-// This stores the original text in string buffer buf.  In addtion,
-// "vector<int> ext_ind" of length buf is allocated, and extents are
-// stored in "vector<string> extents"
-// ext_ind[i] == 1: nothing special
-// ext_ind[i] > 1: content of  extents[ext_ind[i]-2] is inserted before buf[i]
-// ext_ind[i] == 0: content of buf[i] skipped.
-// ext_ind[i] < -1: content of extents[-ext_ind[i]-2] is inserted before buf[i],
-//                  and buf[i] skipped 
-//
-// Example:  buf="0123456789", ext_ind="1111211111", extents[0] = "cat"
-//           would read as "0123cat456789"
-//       or, if ext_ind="1111(-2)0011" otherwise as above reads "0123cat789"
-
-
-
 using namespace clang;
+
+/// New buffer interface.  Libtooling contains a  ReplaceText and RemoveText
+/// in libtooling, but it is much easier to leave that to be original and
+/// edit own copy
+///
+/// This is a simple buffer, keeps track of modifications to the original
+/// text which remains in unmodified form.
+/// This stores the original text in string buffer buf.  In addtion,
+/// "vector<int> ext_ind" of length buf is allocated, and extents are
+/// stored in "vector<string> extents"
+/// ext_ind[i] == 1: nothing special
+/// ext_ind[i] > 1: content of  extents[ext_ind[i]-2] is inserted before buf[i]
+/// ext_ind[i] == 0: content of buf[i] skipped.
+/// ext_ind[i] < -1: content of extents[-ext_ind[i]-2] is inserted before buf[i],
+///                  and buf[i] skipped 
+///
+/// Example:  buf="0123456789", ext_ind="1111211111", extents[0] = "cat"
+///           would read as "0123cat456789"
+///       or, if ext_ind="1111(-2)0011" otherwise as above reads "0123cat789"
+
 
 class srcBuf {
 private:

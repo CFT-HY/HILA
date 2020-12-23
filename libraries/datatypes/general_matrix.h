@@ -16,7 +16,7 @@
 template <const int n, const int m, typename T>
 class matrix;
 
-//conjugate matrix class for special ops
+/// conjugate matrix class for special ops
 template <const int n, const int m, typename T>
 class conjugateMatrix {
   public: 
@@ -27,7 +27,7 @@ class conjugateMatrix {
     conjugateMatrix<n,m,T> & operator = (const conjugateMatrix & rhs){}
 };
 
-//transpose matrix class for special ops
+/// transpose matrix class for special ops
 template <const int n, const int m, typename T>
 class transposeMatrix {
   public:
@@ -39,7 +39,7 @@ class transposeMatrix {
 };
 
 
-
+/// A general matrix type
 template <const int n, const int m, typename T>
 class matrix {
   public:
