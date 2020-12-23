@@ -48,6 +48,7 @@ struct node_info {
 struct backend_lattice_struct;
 
 
+/// The lattice struct defines the lattice geometry ans sets up MPI communication patterns
 class lattice_struct {
 private:
  
@@ -88,7 +89,7 @@ public:
   } this_node;
 
 
-  // information about all nodes
+  /// information about all nodes
   struct allnodes {
     int number;                            // number of nodes
     unsigned n_divisions[NDIM];            // number of node divisions to dir
@@ -106,7 +107,7 @@ public:
     
   } nodes;
 
-
+  /// Information necessary to communicate with a node
   struct comm_node_struct {
     unsigned rank;                         // rank of communicated with node
     unsigned sites, evensites, oddsites;
@@ -172,20 +173,20 @@ public:
     unsigned receive_buf_size;     
   };
 
-  // nearest neighbour comminfo struct
+  /// nearest neighbour comminfo struct
   std::array<nn_comminfo_struct,NDIRS> nn_comminfo;
 
-  // Main neighbour index array
+  /// Main neighbour index array
   unsigned * RESTRICT neighb[NDIRS];
 
-  // implement waiting using mask_t - unsigned char is good for up to 4 dim. 
+  /// implement waiting using mask_t - unsigned char is good for up to 4 dim. 
   dir_mask_t * RESTRICT wait_arr_;
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-  // special boundary pointers are needed only in cases neighbour
-  // pointers must be modified (new halo elements). That is known only during runtime.
-  // is_on_edget is the only "general" info element here, true if the node to direction
-  // dir is on lattice edge.
+  /// special boundary pointers are needed only in cases neighbour
+  /// pointers must be modified (new halo elements). That is known only during runtime.
+  /// is_on_edget is the only "general" info element here, true if the node to direction
+  /// dir is on lattice edge.
   struct special_boundary_struct {
     unsigned * neighbours;
     unsigned * move_index;
