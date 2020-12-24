@@ -1,6 +1,8 @@
 #ifndef MATRIX_H_
 #define MATRIX_H_
+
 #include<type_traits>
+#include<sstream>
 #include "operations.h"
 #include "datatypes/cmplx.h"
 
@@ -31,12 +33,13 @@ class Matrix {
     ~Matrix() = default;
     Matrix(const Matrix<n,m,T> & v) = default;
 
-    // standard access ops m.e(i,j) - assume T is small, as it usually is
+    // standard access ops m.e(i,j) - assume T is small, as it should
     #pragma hila loop_function
     inline T  e(const int i, const int j) const { return c[i*m + j]; }
     #pragma hila loop_function
     inline T& e(const int i, const int j) { return c[i*m + j]; }
 
+    
     // declare single e here too in case we have a vector
     // (one size == 1)
     #pragma hila loop_function
@@ -57,7 +60,7 @@ class Matrix {
 
     template <typename S,
               std::enable_if_t<std::is_convertible<T,S>::value, int> = 0 >
-    explicit operator Matrix<n,m,S>() {
+    operator Matrix<n,m,S>() {
       Matrix<n,m,S> res;
       for (int i=0; i<n*m; i++) res.c[i] = static_cast<S>(c[i]);
       return res;
@@ -279,7 +282,21 @@ class Matrix {
       }
     }
 
-   
+    // element-by-element multiply and divide
+    #pragma hila loop_function
+    Matrix<n,m,T> element_mul(const Matrix<n,m,T> & rhs) const {
+      Matrix<n,m,T> res;
+      for (int i=0; i<n*m; i++) res.c[i] = c[i] * rhs.c[i];
+      return res;
+    }
+
+    #pragma hila loop_function
+    Matrix<n,m,T> element_div(const Matrix<n,m,T> & rhs) const {
+      Matrix<n,m,T> res;
+      for (int i=0; i<n*m; i++) res.c[i] = c[i] / rhs.c[i];
+      return res;
+    }
+  
  
 
 
@@ -528,14 +545,38 @@ Matrix<n,m,T> operator/(Matrix<n,m,T> mat, const S rhs) {
 
 template <int n, int m, typename T>
 std::ostream& operator<<(std::ostream &strm, const Matrix<n,m,T> &A) {
-  for (int i=0; i<n; i++){
-    strm << "\n";
+  if constexpr (n == 1 || m == 1) {
+    // print a vector, horizontally
+    strm << '[';
+    for (int i=0; i<n*m; i++) strm << ' ' << A.e(i);
+    strm << " ]";
+    if (n > 1) strm << "^T";
+  } else {
+    // now a matrix - split the matrix on lines.  
+    // do it so that columns are equal width...
+    std::vector<std::string> lines,columns;
+    lines.resize(n); 
+    columns.resize(n);
+
+    for (int i=0; i<n; i++) lines[i] = "[ ";
     for (int j=0; j<m; j++) {
-      strm << " " << A.e(i,j) << " ";
+      int size = 0;
+      for (int i=0; i<n; i++) {
+        std::stringstream item;
+        item << A.e(i,j);
+        columns[i] = item.str();
+        if (columns[i].size() > size) size = columns[i].size();
+      }
+      for (int i=0; i<n; i++) {
+        lines[i].append(size-columns[i].size(),' ');
+        lines[i].append(columns[i]);
+        lines[i].append(1,' ');
+      }
     }
-    strm << "\n";
+    for (int i=0; i<n; i++) {
+      strm << lines[i] << "]\n";
+    }
   }
-  strm << "\n";
   return strm;
 }
 
