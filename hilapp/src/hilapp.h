@@ -79,8 +79,7 @@ extern llvm::cl::OptionCategory HilappCategory;
 
 
 
-//class storing global state variables used in parsing
-
+/// class storing global state variables used in parsing
 struct global_state {
   std::string main_file_name = "";
   bool assert_loop_parity = false;
@@ -91,6 +90,7 @@ struct global_state {
 //  std::vector<const TemplateParameterList *> class_templ_params = {};
 //  std::vector<const TemplateArgumentList *> class_templ_args = {};
   FunctionDecl * currentFunctionDecl = nullptr;
+  /// Describes a code location
   struct location_struct {
     SourceLocation function;
     SourceLocation top;

@@ -8,7 +8,17 @@
 #include <cmath>
 
 
-
+/// Define the action of a pseudofermion for HMC
+/// 
+/// Implements methods for calculating the current action
+/// and the force (derivative with respect to the gauge
+/// field).
+///
+/// Includes an implementation of the MRE initial guess,
+/// which is calculated in the base of a few previous
+/// solutions. Using this requires a higher accuracy,
+/// since the initial guess is not time reversible.
+///
 template<typename gauge_field, typename DIRAC_OP>
 class fermion_action : public action_base{
   public:
@@ -18,15 +28,15 @@ class fermion_action : public action_base{
     DIRAC_OP &D;
     field<vector_type> chi;
 
-    // We save a few previous invertions to build an initial guess.
-    // old_chi contains a list of these
+    /// We save a few previous invertions to build an initial guess.
+    /// old_chi contains a list of these
     int MRE_size = 0;
     std::vector<field<vector_type>> old_chi_inv;
 
     void setup(int mre_guess_size){
       #if NDIM > 3
-      //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
       MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);
@@ -54,9 +64,9 @@ class fermion_action : public action_base{
       setup(fa.MRE_size);
     }
 
-    // Build an initial guess for the fermion matrix inversion
-    // by inverting first in the limited space of a few previous
-    // solutions. These are saved in old_chi.
+    /// Build an initial guess for the fermion matrix inversion
+    /// by inverting first in the limited space of a few previous
+    /// solutions. These are saved in old_chi.
     void initial_guess(field<vector_type> & chi, field<vector_type> & psi){
       psi[ALL]=0;
       if(MRE_size > 0){
@@ -80,8 +90,8 @@ class fermion_action : public action_base{
       }
     }
 
-    // Return the value of the action with the current
-    // field configuration
+    /// Return the value of the action with the current
+    /// field configuration
     double action(){ 
       field<vector_type> psi;
       psi.copy_boundary_condition(chi);
@@ -99,7 +109,7 @@ class fermion_action : public action_base{
       return action;
     }
 
-    // Calculate the action as a field of double precision numbers
+    /// Calculate the action as a field of double precision numbers
     void action(field<double> &S){
       field<vector_type> psi;
       psi.copy_boundary_condition(chi);
@@ -130,7 +140,7 @@ class fermion_action : public action_base{
       D.dagger(psi,chi);
     }
 
-    // Add new solution to the list
+    /// Add new solution to the list for MRE
     void save_new_solution(field<vector_type> & psi){
       if(MRE_size > 0){
         for(int i=1; i<MRE_size; i++){
@@ -141,8 +151,8 @@ class fermion_action : public action_base{
     }
 
 
-    // Update the momentum with the derivative of the fermion
-    // action
+    /// Update the momentum with the derivative of the fermion
+    /// action
     void force_step(double eps){
       field<vector_type> psi, Mpsi;
       psi.copy_boundary_condition(chi);
@@ -179,17 +189,17 @@ class fermion_action : public action_base{
 
 
 
-/* The Hasenbusch method for updating fermion fields:
- * Split the Dirac determinant into two parts, 
- * D_h1 = D + mh and
- * D_h2 = D * 1 / (D + mh)^dagger
- */
-
-
-/* The first action term, with D_h1 = D + mh.
- * Since the only real difference here is an addition
- * to the original operator, we can use fermion_action
- */
+/// The Hasenbusch method for updating fermion fields:
+/// Split the Dirac determinant into two parts, 
+/// D_h1 = D + mh and
+/// D_h2 = D * 1 / (D + mh)^dagger
+///
+///
+/// This is the first action term, with D_h1 = D + mh.
+/// Since the only real difference here is an addition
+/// to the original operator, we can use fermion_action
+/// with a different operator.
+///
 template<typename gauge_field, typename DIRAC_OP>
 class Hasenbusch_action_1 : public action_base {
   public:
@@ -211,8 +221,10 @@ class Hasenbusch_action_1 : public action_base {
 };
 
 
-/* The second Hasenbusch action term, D_h2 = D/(D^dagger + mh)
- */
+/// The second Hasenbusch action term, D_h2 = D/(D^dagger + mh).
+/// The force and action of the second term are significantly
+/// different from the standard fermion action and are implemented
+/// here.
 template<typename gauge_field, typename DIRAC_OP>
 class Hasenbusch_action_2 : public action_base {
   public:
@@ -231,8 +243,8 @@ class Hasenbusch_action_2 : public action_base {
 
     void setup(int mre_guess_size){
       #if NDIM > 3
-      //chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      //chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
       #endif
       MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);
@@ -259,8 +271,8 @@ class Hasenbusch_action_2 : public action_base {
     }
 
 
-    // Return the value of the action with the current
-    // field configuration
+    /// Return the value of the action with the current
+    /// field configuration
     double action(){
       field<vector_type> psi;
       field<vector_type> v;
@@ -283,7 +295,7 @@ class Hasenbusch_action_2 : public action_base {
       return action;
     }
 
-    // Calculate the action as a field of double precision numbers
+    /// Return the action as a field of double precision numbers
     void action(field<double> &S){
       field<vector_type> psi;
       field<vector_type> v;
@@ -325,9 +337,9 @@ class Hasenbusch_action_2 : public action_base {
     }
 
 
-    // Build an initial guess for the fermion matrix inversion
-    // by inverting first in the limited space of a few previous
-    // solutions. These are saved in old_chi.
+    /// Build an initial guess for the fermion matrix inversion
+    /// by inverting first in the limited space of a few previous
+    /// solutions. These are saved in old_chi.
     void initial_guess(field<vector_type> & chi, field<vector_type> & psi){
       psi[ALL]=0;
       if(MRE_size > 0){
@@ -351,7 +363,7 @@ class Hasenbusch_action_2 : public action_base {
       }
     }
 
-    // Add new solution to the list
+    /// Add new solution to the list
     void save_new_solution(field<vector_type> & psi){
       if(MRE_size > 0){
         for(int i=1; i<MRE_size; i++){
@@ -362,8 +374,8 @@ class Hasenbusch_action_2 : public action_base {
     }
 
 
-    // Update the momentum with the derivative of the fermion
-    // action
+    /// Update the momentum with the derivative of the fermion
+    /// action
     void force_step(double eps){
       field<vector_type> psi, Mpsi;
       field<vector_type> Dhchi;
