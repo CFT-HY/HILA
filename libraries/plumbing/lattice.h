@@ -61,7 +61,7 @@ private:
 
 public:
 
-  // Information about the node stored on this process
+  /// Information about the node stored on this process
   struct node_struct {
     int rank;                           // rank of this node
     unsigned sites, evensites, oddsites;
@@ -74,9 +74,9 @@ public:
     void setup(node_info & ni, lattice_struct & lattice);
 
 #ifdef SUBNODE_LAYOUT
-    // If we have vectorized-style layout, we introduce "subnodes"
-    // size is this_node.size/subnodes.divisions, which is not
-    // constant across nodes
+    /// If we have vectorized-style layout, we introduce "subnodes"
+    /// size is this_node.size/subnodes.divisions, which is not
+    /// constant across nodes
     struct subnode_struct {
       coordinate_vector divisions,size;  // div to subnodes to directions, size
       unsigned sites,evensites,oddsites;   
@@ -370,8 +370,7 @@ extern std::vector<lattice_struct*> lattices;
 // and the MPI tag generator
 int get_next_msg_tag();
 
-// let us house the sublattices-struct here
-
+/// let us house the sublattices-struct here
 struct sublattices_struct {
   unsigned number,mylattice;
   bool sync;

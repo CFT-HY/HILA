@@ -10,12 +10,12 @@
 
 #ifdef USE_MPI
 /// Run Fast Fourier Transform on the field to each direction
-// This is done by collecting a column of elements to each node,
-// running the Fourier transform on the column and redistributing
-// the result
-// Input and result are passed by reference. They may be the same.
-// The field must be complex and the underlying complex type is supplied
-// by the complex_type template argument
+/// This is done by collecting a column of elements to each node,
+/// running the Fourier transform on the column and redistributing
+/// the result
+/// Input and result are passed by reference. They may be the same.
+/// The field must be complex and the underlying complex type is supplied
+/// by the complex_type template argument
 template<typename T, typename complex_type>
 inline void FFT_field_complex(field<T> & input, field<T> & result, 
                               fft_direction fftdir = fft_direction::forward ){
@@ -223,33 +223,35 @@ inline void field<cmplx<double>>::FFT(fft_direction fdir){
 
 
 
-///
 /// Match a given type T to it's underlying complex type
 template<typename T, class Enable = void>
 struct complex_base{};
 
-// Match to a complex type
+/// Match to a complex type
 template<>
 struct complex_base<cmplx<float>>{
   using type = cmplx<float>;
 };
 
+/// Match to a complex type
 template<>
 struct complex_base<cmplx<double>>{
   using type = cmplx<double>;
 };
 
-// Match templated class B
+/// Match templated class B to it's underlying complex type
 template<template<typename B> class C, typename B>
 struct complex_base<C<B>>{
   using type = typename complex_base<B>::type;
 };
 
+/// Match templated class B to it's underlying complex type
 template<template<int a, typename B> class C, int a, typename B>
 struct complex_base<C<a, B>>{
   using type = typename complex_base<B>::type;
 };
 
+/// Match templated class B to it's underlying complex type
 template<template<int a,int b,typename B> class C, int a, int b, typename B>
 struct complex_base<C<a,b,B>>{
   using type = typename complex_base<B>::type;

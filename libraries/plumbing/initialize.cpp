@@ -18,19 +18,18 @@ sublattices_struct sublattices;
 
 // This file is largely copied from our old c program: TODO:convert?
 
-///////////////////////////////////////////////////////////////////////////////
-// very simple cmdline arg interpreter
-// p = cmdline.get_cstring("par="); 
-// returns a string of the stuff following "par="
-// n = cmdline.get_int("par=");
-// returns (long) int containing the value following "par="
-//
-// NO SPACES are allowed between par and = and the value
-///////////////////////////////////////////////////////////////////////////////
-
 #include <limits.h>
 #include <errno.h>
 
+///////////////////////////////////////////////////////////////////////////////
+/// very simple cmdline arg interpreter
+/// p = cmdline.get_cstring("par="); 
+/// returns a string of the stuff following "par="
+/// n = cmdline.get_int("par=");
+/// returns (long) int containing the value following "par="
+///
+/// NO SPACES are allowed between par and = and the value
+///////////////////////////////////////////////////////////////////////////////
 class cmdlineargs {
  private:
   int argc;

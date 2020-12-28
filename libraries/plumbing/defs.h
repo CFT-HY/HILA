@@ -145,12 +145,14 @@ namespace std {
 /// Utility for selecting the numeric base type of a class
 template<class T, class Enable = void>
 struct base_type_struct {
+  /// The base type of the class
   using type = typename T::base_type;
 };
 
 /// Utility for selecting the numeric base type of a class
 template<typename T>
 struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> {
+  /// In this case the base type is just T
   using type = T;
 };
 

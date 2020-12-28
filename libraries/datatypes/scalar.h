@@ -1,11 +1,10 @@
 #ifndef SCALAR_H
 #define SCALAR_H
 
-// let's not include the std::complex
-//#include <complex>
-//#include <cmath>
-
-
+///////////////////////////////////////////////////////////
+/// A scalar type. Templated, so that hilapp can convert
+/// to a vector type 
+///////////////////////////////////////////////////////////
 template <typename T = double>
 struct scalar {
   using base_type = typename base_type_struct<T>::type;

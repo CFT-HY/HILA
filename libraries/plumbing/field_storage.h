@@ -16,11 +16,10 @@ class field_struct;
 
 
 ////////////////////////////////////////////////////////////////////////
-// The field_storage struct contains minimal information for using 
-// the field in a loop. It is communicated to CUDA kernels and other
-// accelerator functions. 
+/// The field_storage struct contains minimal information for using 
+/// the field in a loop. It is communicated to CUDA kernels and other
+/// accelerator functions. 
 ////////////////////////////////////////////////////////////////////////
-
 template <typename T>
 class field_storage {
   public:

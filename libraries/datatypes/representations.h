@@ -26,29 +26,36 @@ class adjointRep : public SquareMatrix<N*N-1, radix> {
   public:
     static_assert(is_arithmetic<radix>::value, "adjointRep<type>: type has to be real");
 
+    /// The underlying arithmetic type of the matrix
     using base_type = typename base_type_struct<radix>::type;
+    /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N,radix>;
 
-    // Info on group generators
+    /// Matrix size
     constexpr static int size = N*N-1;
+    /// Info on group generators
     static sun generator(int i){
       return sun::generator(i);
     }
 
-    // std ops required for triviality
+    /// std ops required for triviality
     adjointRep() = default;
+    /// std ops required for triviality
     ~adjointRep() = default;
+    /// std ops required for triviality
     adjointRep(const adjointRep &a) = default;
 
+    /// Use square matrix constructor from radix
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     #pragma hila loop_function
     adjointRep(const scalart m) : SquareMatrix<size,radix>(m) {}
 
+    /// Copy constructor
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     adjointRep(const adjointRep<N,scalart> m) : SquareMatrix<size,scalart>(m) {}
 
-    /* Return a SU(N) generator in the adjoint representation,
-     * multiplied by I */
+    /// Return a SU(N) generator in the adjoint representation,
+    /// multiplied by I
     static adjointRep represented_generator_I(int i){
       static bool initialize = true;
       static adjointRep r_generators[size];
@@ -69,15 +76,15 @@ class adjointRep : public SquareMatrix<N*N-1, radix> {
       return r_generators[i];
     }
 
-    /* Project a matrix into the adjoint representation */
+    /// Project a matrix into the adjoint representation
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).e(i,j) = 2*(m.adjoint()*generator(i)*m*generator(j)).trace().re;
       }
     }
 
-    /* Project a complex adjoint matrix into the algebra and
-     * represent as a complex NxN (momentum) matrix */
+    /// Project a complex adjoint matrix into the algebra and
+    /// represent as a complex NxN (momentum) matrix
     static SquareMatrix<N, cmplx<radix>> project_force(
       SquareMatrix<size, cmplx<radix>> rforce
     ){
@@ -119,22 +126,28 @@ class adjointRep : public SquareMatrix<N*N-1, radix> {
 template<int N, typename radix>
 class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
   public:
+    /// The underlying arithmetic type of the matrix
     using base_type = typename base_type_struct<radix>::type;
+    /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N,radix>;
 
+    /// Matrix size
     constexpr static int size = N*(N-1)/2;
 
+    /// Use square matrix constructors
     using SquareMatrix<size, cmplx<radix>>::SquareMatrix;
+    /// Use square matrix constructors
     using SquareMatrix<size, cmplx<radix>>::operator =;
 
-    // Info on group generators
-
+    /// default constructor
     antisymmetric() = default;
     
 
+    /// Square matrix constructor from scalar
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     antisymmetric(const scalart m) : SquareMatrix<size,cmplx<radix>>(m) {}
 
+    /// Copy constructor
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     antisymmetric(const antisymmetric<N,scalart> m) {
       for (int j=0; j<size; j++) for (int i=0; i<size; i++){
@@ -142,6 +155,7 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
       }
     }
 
+    /// The antisymmetric generator
     static sun generator(int ng){
       static bool initialize = true;
       static sun generators[size];
@@ -160,7 +174,7 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
       return generators[ng];
     }
 
-    /* Return a SU(N) generator in the antisymmetric representation */
+    /// Return a SU(N) generator (times I) in the antisymmetric representation
     static antisymmetric represented_generator_I(int i){
       static bool initialize = true;
       static antisymmetric r_generators[size];
@@ -182,15 +196,15 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
     }
 
 
-    /* Project a matrix into the antisymmetric representation */
+    /// Project a matrix into the antisymmetric representation
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).e(i,j) = 2*(generator(i)*m*generator(j).adjoint()*m.transpose()).trace();
       }
     }
 
-    /* Project a complex antisymmetric matrix into the algebra and
-     * represent as a complex NxN (momentum) matrix */
+    /// Project a complex antisymmetric matrix into the algebra and
+    /// represent as a complex NxN (momentum) matrix
     static SquareMatrix<N, cmplx<radix>> project_force(
       SquareMatrix<size, cmplx<radix>> rforce
     ){
@@ -232,17 +246,23 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
 template<int N, typename radix>
 class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
   public:
+    /// The underlying arithmetic type of the matrix
     using base_type = typename base_type_struct<radix>::type;
+    /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N,radix>;
 
+    /// Use square matrix constructors
     using SquareMatrix<N*(N+1)/2, cmplx<radix>>::SquareMatrix;
+    /// Use square matrix constructors
     using SquareMatrix<N*(N+1)/2, cmplx<radix>>::operator =;
 
-    // Info on group generators
+    /// Matrix size
     constexpr static int size = N*(N+1)/2;
 
+    /// Use default constructor 
     symmetric() = default;
 
+    /// Constructor from scalar
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     symmetric(const scalart m) {
       for (int j=0; j<size; j++) { 
@@ -252,6 +272,8 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
         this->c[j][j] = m;
       }
     }
+
+    /// Constructor from a symmetric matrix
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
     symmetric(const symmetric<N,scalart> m) {
       for (int j=0; j<size; j++) for (int i=0; i<size; i++){
@@ -260,6 +282,7 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
     }
 
 
+    /// Symmetric generators as SU(N) matrices
     static sun generator(int ng){
       static bool initialize = true;
       static sun generators[size];
@@ -281,7 +304,7 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
       return generators[ng];
     }
 
-    /* Return a SU(N) generator in the symmetric representation */
+    /// Return a symmetric generators (times I) in the symmetric representation
     static symmetric represented_generator_I(int i){
       static bool initialize = true;
       static symmetric r_generators[size];
@@ -302,15 +325,15 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
       return r_generators[i];
     }
 
-    /* Project a matrix into the symmetric representation */
+    /// Project a matrix into the symmetric representation
     void represent(sun &m){
       for(int i=0; i<size; i++) for(int j=0; j<size; j++){
         (*this).e(i,j) = 2*(generator(i)*m*generator(j)*m.transpose()).trace();
       }
     }
 
-    /* Project a complex symmetric matrix into the algebra and
-     * represent as a complex NxN (momentum) matrix */
+    /// Project a complex symmetric matrix into the algebra and
+    /// represent as a complex NxN (momentum) matrix
     static SquareMatrix<N, cmplx<radix>> project_force(
       SquareMatrix<size, cmplx<radix>> rforce
     ){
