@@ -202,15 +202,12 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
-    std::string repl = sfc.replace_expression+"(";
-    if ( sfc.args != "" ) {
-      repl += sfc.args;
-      if ( sfc.add_loop_var ) repl += ", ";
+    std::string repl = sfc.replace_expression;  // comes with ( now
+    if ( sfc.add_loop_var ) {
+      repl += looping_var;
+      if ( sfc.argsExpr != nullptr) repl += ',';
     }
-    if ( sfc.add_loop_var ) repl += looping_var;
-    repl += ")";
-
-    loopBuf.replace(sfc.fullExpr, repl);
+    loopBuf.replace(sfc.replace_range, repl);    
   }
 
 
