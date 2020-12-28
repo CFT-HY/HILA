@@ -27,16 +27,6 @@
 template <typename T>
 using element = T;
 
-// These are helpers, to make generic templates
-// e.g. t_plus<A,B> gives the type of the operator a + b, where a is of type A and b B.
-template<typename A, typename B>
-using t_plus = decltype(std::declval<A>() + std::declval<B>());
-template<typename A, typename B>
-using t_minus= decltype(std::declval<A>() - std::declval<B>());
-template<typename A, typename B>
-using t_mul  = decltype(std::declval<A>() * std::declval<B>());
-template<typename A, typename B>
-using t_div  = decltype(std::declval<A>() / std::declval<B>());
 
 
 /// field class
@@ -625,46 +615,46 @@ class field {
   
   // is OK if T+A can be converted to type T
   template <typename A,
-            std::enable_if_t<std::is_convertible<t_plus<T,A>,T>::value, int> = 0>
+            std::enable_if_t<std::is_convertible<type_plus<T,A>,T>::value, int> = 0>
   field<T>& operator+= (const field<A>& rhs) { 
     (*this)[ALL] += rhs[X]; return *this;
   }
   
   template <typename A,
-            std::enable_if_t<std::is_convertible<t_minus<T,A>,T>::value, int> = 0>  
+            std::enable_if_t<std::is_convertible<type_minus<T,A>,T>::value, int> = 0>  
   field<T>& operator-= (const field<A>& rhs) { 
     (*this)[ALL] -= rhs[X];
     return *this;
   }
   
   template <typename A,
-            std::enable_if_t<std::is_convertible<t_mul<T,A>,T>::value, int> = 0>
+            std::enable_if_t<std::is_convertible<type_mul<T,A>,T>::value, int> = 0>
   field<T>& operator*= (const field<A>& rhs) {
     (*this)[ALL] *= rhs[X]; 
     return *this;
   }
 
   template <typename A,
-            std::enable_if_t<std::is_convertible<t_div<T,A>,T>::value, int> = 0>
+            std::enable_if_t<std::is_convertible<type_div<T,A>,T>::value, int> = 0>
   field<T>& operator/= (const field<A>& rhs) {
     (*this)[ALL] /= rhs[X];
     return *this;
   }
 
   template <typename A,
-            std::enable_if_t<std::is_convertible<t_plus<T,A>,T>::value, int> = 0>
+            std::enable_if_t<std::is_convertible<type_plus<T,A>,T>::value, int> = 0>
   field<T>& operator+= (const A & rhs) { (*this)[ALL] += rhs; return *this;}
 
   template <typename A,
-            std::enable_if_t<std::is_convertible<t_minus<T,A>,T>::value, int> = 0>  
+            std::enable_if_t<std::is_convertible<type_minus<T,A>,T>::value, int> = 0>  
   field<T>& operator-= (const A & rhs) { (*this)[ALL] -= rhs; return *this;}
 
   template <typename A,
-            std::enable_if_t<std::is_convertible<t_mul<T,A>,T>::value, int> = 0>
+            std::enable_if_t<std::is_convertible<type_mul<T,A>,T>::value, int> = 0>
   field<T>& operator*= (const A & rhs) { (*this)[ALL] *= rhs; return *this;}
   
   template <typename A,
-            std::enable_if_t<std::is_convertible<t_div<T,A>,T>::value, int> = 0>
+            std::enable_if_t<std::is_convertible<type_div<T,A>,T>::value, int> = 0>
   field<T>& operator/= (const A & rhs) { (*this)[ALL] /= rhs; return *this;}
 
 
@@ -697,53 +687,53 @@ class field {
 };
 
 
-// these operators rely on SFINAE, OK if field_t_plus<A,B> exists i.e. A+B is OK
+// these operators rely on SFINAE, OK if field_type_plus<A,B> exists i.e. A+B is OK
 /// operator +
 template <typename A, typename B>
-auto operator+( field<A> &lhs, field<B> &rhs) -> field<t_plus<A,B>>
+auto operator+( field<A> &lhs, field<B> &rhs) -> field<type_plus<A,B>>
 {
-  field <t_plus<A,B>> tmp;
+  field <type_plus<A,B>> tmp;
   tmp[ALL] = lhs[X] + rhs[X];
   return tmp;
 }
 
 template <typename A, typename B>
-auto operator+( const A &lhs, const field<B> &rhs) -> field<t_plus<A,B>>
+auto operator+( const A &lhs, const field<B> &rhs) -> field<type_plus<A,B>>
 {
-  field<t_plus<A,B>> tmp;
+  field<type_plus<A,B>> tmp;
   tmp[ALL] = lhs + rhs[X];
   return tmp;
 }
 
 template <typename A, typename B>
-auto operator+( const field<A> &lhs, const B &rhs) -> field<t_plus<A,B>>
+auto operator+( const field<A> &lhs, const B &rhs) -> field<type_plus<A,B>>
 {
-  field<t_plus<A,B>> tmp;
+  field<type_plus<A,B>> tmp;
   tmp[ALL] = lhs[X] + rhs;
   return tmp;
 }
 
 /// operator -
 template <typename A, typename B>
-auto operator-( const field<A> &lhs, const field<B> &rhs) -> field<t_minus<A,B>>
+auto operator-( const field<A> &lhs, const field<B> &rhs) -> field<type_minus<A,B>>
 {
-  field <t_minus<A,B>> tmp;
+  field <type_minus<A,B>> tmp;
   tmp[ALL] = lhs[X] - rhs[X];
   return tmp;
 }
 
 template <typename A, typename B>
-auto operator-( const A &lhs, const field<B> &rhs) -> field<t_minus<A,B>>
+auto operator-( const A &lhs, const field<B> &rhs) -> field<type_minus<A,B>>
 {
-  field<t_minus<A,B>> tmp;
+  field<type_minus<A,B>> tmp;
   tmp[ALL] = lhs - rhs[X];
   return tmp;
 }
 
 template <typename A, typename B>
-auto operator-( const field<A> &lhs, const B &rhs) -> field<t_minus<A,B>>
+auto operator-( const field<A> &lhs, const B &rhs) -> field<type_minus<A,B>>
 {
-  field<t_minus<A,B>> tmp;
+  field<type_minus<A,B>> tmp;
   tmp[ALL] = lhs[X] - rhs;
   return tmp;
 }
@@ -751,50 +741,50 @@ auto operator-( const field<A> &lhs, const B &rhs) -> field<t_minus<A,B>>
 
 /// operator *
 template <typename A, typename B>
-auto operator*( const field<A> &lhs, const field<B> &rhs) -> field<t_mul<A,B>>
+auto operator*( const field<A> &lhs, const field<B> &rhs) -> field<type_mul<A,B>>
 {
-  field <t_mul<A,B>> tmp;
+  field <type_mul<A,B>> tmp;
   tmp[ALL] = lhs[X] * rhs[X];
   return tmp;
 }
 
 template <typename A, typename B>
-auto operator*( const A &lhs, const field<B> &rhs) -> field<t_mul<A,B>>
+auto operator*( const A &lhs, const field<B> &rhs) -> field<type_mul<A,B>>
 {
-  field<t_mul<A,B>> tmp;
+  field<type_mul<A,B>> tmp;
   tmp[ALL] = lhs * rhs[X];
   return tmp;
 }
 
 template <typename A, typename B>
-auto operator*( const field<A> &lhs, const B &rhs) -> field<t_mul<A,B>>
+auto operator*( const field<A> &lhs, const B &rhs) -> field<type_mul<A,B>>
 {
-  field<t_mul<A,B>> tmp;
+  field<type_mul<A,B>> tmp;
   tmp[ALL] = lhs[X] * rhs;
   return tmp;
 }
 
 /// operator /
 template <typename A, typename B>
-auto operator/( const field<A> &lhs, const field<B> &rhs) -> field<t_div<A,B>>
+auto operator/( const field<A> &lhs, const field<B> &rhs) -> field<type_div<A,B>>
 {
-  field <t_div<A,B>> tmp;
+  field <type_div<A,B>> tmp;
   tmp[ALL] = lhs[X] / rhs[X];
   return tmp;
 }
 
 template <typename A, typename B>
-auto operator/( const A &lhs, const field<B> &rhs) -> field<t_div<A,B>>
+auto operator/( const A &lhs, const field<B> &rhs) -> field<type_div<A,B>>
 {
-  field<t_div<A,B>> tmp;
+  field<type_div<A,B>> tmp;
   tmp[ALL] = lhs / rhs[X];
   return tmp;
 }
 
 template <typename A, typename B>
-auto operator/( const field<A> &lhs, const B &rhs) -> field<t_div<A,B>>
+auto operator/( const field<A> &lhs, const B &rhs) -> field<type_div<A,B>>
 {
-  field<t_div<A,B>> tmp;
+  field<type_div<A,B>> tmp;
   tmp[ALL] = lhs[X] / rhs;
   return tmp;
 }

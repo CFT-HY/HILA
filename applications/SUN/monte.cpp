@@ -15,7 +15,7 @@
 
 #pragma hila loop_function
 void mult_su2_mat_vec_elem_n(
-  matrix<2,2,cmplx<double>> &u,
+  Matrix<2,2,cmplx<double>> &u,
   cmplx<double> &x0,
   cmplx<double> &x1)
 {
@@ -40,10 +40,10 @@ void mult_su2_mat_vec_elem_n(
 
 #pragma hila loop_function
 void left_su2_hit_n(
-  matrix<2,2,cmplx<double>> &u,
+  Matrix<2,2,cmplx<double>> &u,
   int p,
   int q,
-  matrix<N,N,cmplx<double>> &link)
+  Matrix<N,N,cmplx<double>> &link)
 {
   /* link <- u * link */
   /* The 0 row of the SU(2) matrix u matches row p of the SU(3) matrix */
@@ -58,8 +58,8 @@ void left_su2_hit_n(
 
 #pragma hila loop_function
 double monte(
-  matrix<N,N,cmplx<double>> &U, 
-  matrix<N,N,cmplx<double>> &staple,
+  Matrix<N,N,cmplx<double>> &U, 
+  Matrix<N,N,cmplx<double>> &staple,
   double beta)
 {
   /* Do K-P quasi-heat bath by SU(2) subgroups */
@@ -73,8 +73,8 @@ double monte(
   double al,d, xl,xd;
   int  k, test;
   double b3;
-  matrix<N,N,cmplx<double>> action;
-  matrix<2,2,cmplx<double>> h;
+  Matrix<N,N,cmplx<double>> action;
+  Matrix<2,2,cmplx<double>> h;
   double pi2 = PI*2.0;
 
   b3=beta/N;

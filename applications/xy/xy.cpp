@@ -41,8 +41,8 @@ int main(int argc, char **argv){
 				double deltaS;
 				double tspin=spin[X];
 				double tnspin=tspin+M_PI*(1.-2.*hila_random());
-				deltaS=cos(spin[X+XUP]-tspin)+cos(spin[X+XDOWN]-tspin)+cos(spin[X+YUP]-tspin)+cos(spin[X+YDOWN]-tspin);
-				deltaS-=cos(spin[X+XUP]-tnspin)+cos(spin[X+XDOWN]-tnspin)+cos(spin[X+YUP]-tnspin)+cos(spin[X+YDOWN]-tnspin);
+				deltaS=cos(spin[X+e_x]-tspin)+cos(spin[X-e_x]-tspin)+cos(spin[X+e_y]-tspin)+cos(spin[X-e_y]-tspin);
+				deltaS-=cos(spin[X+e_x]-tnspin)+cos(spin[X-e_x]-tnspin)+cos(spin[X+e_y]-tnspin)+cos(spin[X-e_y]-tnspin);
 
 				if(deltaS<0 || hila_random()<exp(-beta*deltaS)) {
 					if(tnspin<-M_PI) {

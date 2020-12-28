@@ -15,7 +15,7 @@
 template<typename A, typename B, typename C>
 void sum_test_function(A &a, const B &b, const C &c){
     onsites(ALL){
-        a[X] = b[X] + c[X+XUP];
+        a[X] = b[X] + c[X+e_x];
     }
 }
 
@@ -35,14 +35,14 @@ element<cmplx<double>> test_nontemplate_function(element<cmplx<double>> a){
 int main(int argc, char **argv){
 
     //check that you can increment a direction correctly
-    direction d = XUP;
+    direction d = e_x;
     direction d2 = (direction) (NDIRS - 2);
     #if NDIM > 1
     d=next_direction(d); 
     d2=next_direction(d2);
-    assert(d==YUP);
-    assert(XUP==0);
-    assert(d2==XDOWN);
+    assert(d==e_y);
+    assert(e_x==0);
+    assert(d2==-e_x);
     #endif
     double sum = 0;
 
@@ -301,8 +301,8 @@ int main(int argc, char **argv){
 
     s1[EVEN] = 1.0;
     s2[EVEN] = 1.0;
-    s2[ODD] = -s1[X+XUP];
-    s2.start_fetch(XUP,ODD);
+    s2[ODD] = -s1[X+e_x];
+    s2.start_fetch(e_x,ODD);
 
     sum = 0;
     onsites(ALL){
@@ -353,18 +353,18 @@ int main(int argc, char **argv){
     dfield[ALL] = 1;
 
 #if NDIM == 4
-    std::vector<double> arraysum(nd[TUP]);
+    std::vector<double> arraysum(nd[e_t]);
     std::fill(arraysum.begin(), arraysum.end(), 0);
 
     onsites(ALL){
       element<coordinate_vector> l = X.coordinates();
-      element<int> t = l[TUP];
+      element<int> t = l[e_t];
       
       arraysum[t] += dfield[X];
     }
     
-    for(int t=0; t<nd[TUP]; t++){
-      assert(arraysum[t] == nd[XUP]*nd[YUP]*nd[ZUP]);
+    for(int t=0; t<nd[e_t]; t++){
+      assert(arraysum[t] == nd[e_x]*nd[e_y]*nd[e_z]);
     }
 #endif
 

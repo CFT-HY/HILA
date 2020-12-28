@@ -17,7 +17,7 @@ constexpr int N = 2;
 template<typename fermion_action, typename dirac, typename gauge_field_type>
 void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
   using sun = typename gauge_field_type::fund_type;
-  using forcetype = squarematrix<gauge_field_type::N, cmplx<double>>;
+  using forcetype = SquareMatrix<gauge_field_type::N, cmplx<double>>;
   field<forcetype> force[NDIM];
   double eps = 1e-5;
 
@@ -37,8 +37,8 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
 
     field<typename dirac::vector_type> psi, chi, tmp, tmp2;
     #if NDIM > 3
-    psi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-    psi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+    psi.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
+    psi.set_boundary_condition(-e_t, boundary_condition_t::ANTIPERIODIC);
     #endif
     chi.copy_boundary_condition(psi);
     tmp.copy_boundary_condition(psi);
@@ -236,7 +236,7 @@ int main(int argc, char **argv){
 
 
   using SUN=SU<N, double>;
-  using adj=adjoint<N, double>;
+  using adj=adjointRep<N, double>;
   using sym=symmetric<N, double>;
   using asym=antisymmetric<N, double>;
 

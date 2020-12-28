@@ -63,15 +63,15 @@ int main()
 
   
   coordinate_vector 
-  v = XUP - 2*YUP;
+  v = e_x - 2*e_y;
     
   parity p = ODD;
 
-  // a[ALL] = b[X+2*XUP+YUP];
+  // a[ALL] = b[X+2*e_x+e_y];
   
   a = b.shift(v);
 
-  direction d = XUP, d2 = YUP;
+  direction d = e_x, d2 = e_y;
   
   A[ALL] = { cmplx(1,0), cmplx(0,0) };
   

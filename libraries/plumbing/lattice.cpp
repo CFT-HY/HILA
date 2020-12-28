@@ -438,7 +438,7 @@ void lattice_struct::create_std_gathers()
 
   // We set the communication and the neigbour-array here
 
-  for (direction d=XUP; d<NDIRS; ++d) {
+  for (direction d=e_x; d<NDIRS; ++d) {
 
     nn_comminfo[d].index = neighb[d];    // this is not really used for nn gathers
 

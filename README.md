@@ -89,9 +89,9 @@ The statement will apply only to this collection of sites.
 On the right hand side, use `[X]` to refer to this collection
 of sites.
 
-You can refer to neighbouring sites by adding a direction (`XUP`, `XDOWN`, `YUP`, `YDOWN`, `ZUP`, `ZDOWN`, `TUP`, `TDOWN`, ...):
+You can refer to neighbouring sites by adding a direction (`e_x`, `-e_x`, `e_y`, `-e_y`, `e_z`, `-e_z`, `e_t`, `-e_t`, ...):
 ~~~ C++
-my_field[EVEN] = my_field[X+YUP];
+my_field[EVEN] = my_field[X+e_y];
 ~~~
 
 You can also operate on fields directly,
@@ -121,7 +121,7 @@ forsites(ALL){
 As before, you can refer to neighbouring sites by adding a direction:
 ~~~ C++
 forsites(EVEN){
-    my_field[X] = my_field[X+YUP];
+    my_field[X] = my_field[X+e_y];
 }
 ~~~
 

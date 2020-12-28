@@ -7,7 +7,6 @@
 
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
-#include "datatypes/vector.h"
 #include "datatypes/sun.h"
 #if NDIM == 4
 #include "datatypes/wilson_vector.h"

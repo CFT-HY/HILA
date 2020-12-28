@@ -7,7 +7,7 @@
 #include <ctime>
 
 #include "plumbing/defs.h"
-#include "datatypes/general_matrix.h"
+#include "datatypes/matrix.h"
 #include "datatypes/sun.h"
 #include "datatypes/wilson_vector.h"
 #include "plumbing/field.h"

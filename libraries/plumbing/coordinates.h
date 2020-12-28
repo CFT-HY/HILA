@@ -7,7 +7,7 @@
 /// These are used to traverse the lattice coordinate systems
 
 #include "plumbing/defs.h"
-#include "datatypes/vector.h"
+#include "datatypes/matrix.h"
 
 ///////////////////////////////////////////////////////////////////////////
 /// enum direction - includes the opposite direction
@@ -16,13 +16,13 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #if NDIM==4
-enum direction : unsigned { XUP = 0, YUP, ZUP, TUP, TDOWN, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { e_x = 0, e_y, e_z, e_t, e_t_down, e_z_down, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM==3
-enum direction : unsigned { XUP = 0, YUP, ZUP, ZDOWN, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { e_x = 0, e_y, e_z, e_z_down, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM==2
-enum direction : unsigned { XUP = 0, YUP, YDOWN, XDOWN, NDIRECTIONS };
+enum direction : unsigned { e_x = 0, e_y, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM==1
-enum direction : unsigned { XUP = 0, XDOWN, NDIRECTIONS };
+enum direction : unsigned { e_x = 0, e_x_down, NDIRECTIONS };
 #endif
 
 constexpr unsigned NDIRS = NDIRECTIONS;    // 
@@ -46,7 +46,7 @@ static inline direction operator++(direction & dir, int) {
 }
 
 /// Basic direction looper, which defines the direction as you go.  
-#define foralldir(d) for(direction d=XUP; d<NDIM; ++d)
+#define foralldir(d) for(direction d=e_x; d<NDIM; ++d)
 
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
@@ -173,9 +173,9 @@ class coordinate_vector {
   #pragma hila loop_function
   operator std::array<int,NDIM>() const {std::array<int,NDIM> a; for(int d=0; d<NDIM;d++) a[d] = r[d]; return a;}
 
-  // cast to vector<NDIM,A>
+  // cast to Vector<NDIM,A>
   #pragma hila loop_function
-  operator vector<NDIM,int>() const {vector<NDIM,int> v; foralldir(d) v[d]=r[d]; return v;}
+  operator Vector<NDIM,int>() const {Vector<NDIM,int> v; foralldir(d) v.e(d)=r[d]; return v;}
 
   #pragma hila loop_function
   coordinate_vector & set(int i) {

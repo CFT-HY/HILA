@@ -23,7 +23,7 @@ template<typename gauge_field, typename DIRAC_OP>
 class fermion_action : public action_base{
   public:
     using vector_type = typename DIRAC_OP::vector_type;
-    using momtype = squarematrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
+    using momtype = SquareMatrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
     gauge_field &gauge;
     DIRAC_OP &D;
     field<vector_type> chi;
@@ -35,8 +35,8 @@ class fermion_action : public action_base{
 
     void setup(int mre_guess_size){
       #if NDIM > 3
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(-e_t, boundary_condition_t::ANTIPERIODIC);
       #endif
       MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);
@@ -229,7 +229,7 @@ template<typename gauge_field, typename DIRAC_OP>
 class Hasenbusch_action_2 : public action_base {
   public:
     using vector_type = typename DIRAC_OP::vector_type;
-    using momtype = squarematrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
+    using momtype = SquareMatrix<gauge_field::N, cmplx<typename gauge_field::basetype>>;
     gauge_field &gauge;
     DIRAC_OP D;
     Hasenbusch_operator<DIRAC_OP> D_h;
@@ -243,8 +243,8 @@ class Hasenbusch_action_2 : public action_base {
 
     void setup(int mre_guess_size){
       #if NDIM > 3
-      chi.set_boundary_condition(TUP, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(TDOWN, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(-e_t, boundary_condition_t::ANTIPERIODIC);
       #endif
       MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);

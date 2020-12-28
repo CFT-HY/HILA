@@ -41,8 +41,8 @@ int main(int argc, char **argv)
       // A temporary field for the local change in action
       onsites(p){
         double deltaS;
-        deltaS = 2.0*spin[X]*( spin[X+XUP] + spin[X+XDOWN]
-                             + spin[X+YUP] + spin[X+YDOWN] );
+        deltaS = 2.0*spin[X]*( spin[X+e_x] + spin[X-e_x]
+                             + spin[X+e_y] + spin[X-e_y] );
 
         if( hila_random() < exp(-beta*deltaS) ){
           spin[X] = -spin[X];

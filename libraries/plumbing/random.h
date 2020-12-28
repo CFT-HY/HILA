@@ -1,48 +1,20 @@
-#ifndef RANDOM
-#define RANDOM
+#ifndef RANDOM_H_
+#define RANDOM_H_
 
-#include "plumbing/defs.h"
 #include <cmath>
+#include "plumbing/mersenne.h"
+#include "plumbing/defs.h"
 
-// gaussian rng generation routines ----------------------
+double gaussian_ran(double variance=0.5);
+double gaussian_ran2(double & out2);
+float gaussian_ran2(float & out2);
 
+// this defines gaussian_random(T & arg) for all double -> T convertible types
+template <typename T, std::enable_if_t<std::is_convertible<double,T>::value, int> = 0 >
+inline void gaussian_random(T & d) { d = static_cast<T>(gaussian_ran()); }
 
-#pragma hila loop_function
-static double gaussian_ran(double variance=0.5)
-{
-  static double second;
-  static bool draw_new = true;
-  if( draw_new ) {
-    double first, phi, urnd, r;
-    phi = 2.0 * 3.141592654 * (double) hila_random();
-    urnd = (double)(1.0-hila_random());
-    r  = sqrt( -log(urnd) * (2.0 * variance) );
-    first = (double)(r*sin(phi));
-    second = (r*cos(phi));
-
-    draw_new = false;
-    return first;
-  } else {
-    draw_new = true;
-    return second;
-  }
-}
-
-#define VARIANCE 0.5
-#define MYSINF(X) sin(X)
-#define MYCOSF(X) cos(X)
-
-template<typename radix>
-#pragma hila loop_function
-radix gaussian_ran2(radix* out2) 
-{
-  double phi, urnd, r;
-  phi = 2.0 * 3.141592654 * (double) hila_random();
-  urnd = (double)(1.0-hila_random());
-  r  = sqrt( -log(urnd) * (2.0 * VARIANCE) );
-  *out2 = (r*MYCOSF(phi));
-  return (radix)(r*MYSINF(phi));
-}
-
+// this does the same for std. random
+template <typename T, std::enable_if_t<std::is_convertible<double,T>::value, int> = 0 >
+inline void random(T & d) { d = static_cast<T>(hila_random()); }
 
 #endif

@@ -171,7 +171,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
       while (t.find(v.reduction_name,0) != std::string::npos) v.reduction_name += "_";
       // Create a temporary variable and initialize
       if (v.reduction_type == reduction::SUM) {
-        code << v.type << " " << v.reduction_name << " = 0;\n";
+        code << v.type << " " << v.reduction_name << " = zero;\n";
       } else if (v.reduction_type == reduction::PRODUCT) {
         code << v.type << " " << v.reduction_name << " = 1;\n";
       }

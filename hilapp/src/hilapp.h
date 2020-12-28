@@ -104,15 +104,15 @@ struct global_state {
 struct field_ref {
   Expr * fullExpr;              // full expression a[X+d]
   Expr * nameExpr;              // name "a"
-  Expr * parityExpr;            // expr within [], here "X+d" or "X+XUP+YUP"
+  Expr * parityExpr;            // expr within [], here "X+d" or "X+e_x+e_y"
   // Expr * dirExpr;               // expr of the directon -- non-null only for nn-dirs! NOT VERY USEFUL
-  std::string direxpr_s;        // original dir expr: "d" or "XUP+YUP" etc.
+  std::string direxpr_s;        // original dir expr: "d" or "e_x+e_y" etc.
   struct field_info * info;     // ptr to field info struct
   // unsigned nameInd, parityInd;
   int  sequence;                // sequence of the full stmt where ref appears
   bool is_written, is_read;
   bool is_direction;            // true if ref contains nn OR offset direction - used as a general flag
-  bool is_constant_direction;   // true if dir is const. XUP etc.
+  bool is_constant_direction;   // true if dir is const. e_x etc.
   bool is_offset;               // true if dir is for offset instead of simple direction
   unsigned constant_value;
 
