@@ -26,6 +26,8 @@ template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0 >
 inline T nmul_add(T a, T b, T c) { return c - a*b; }
 
 
+/// Define complex type as a template. This allows Hilapp to replace the internal
+/// type with a vector.
 template <typename T = double>
 struct cmplx {
   

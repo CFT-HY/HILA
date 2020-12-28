@@ -314,7 +314,8 @@ class gauge_field : public gauge_field_base<matrix> {
 
 
 
-
+/// A gauge field, similar to the standard gauge_field class above,
+/// but with the gauge field projected into a higher representation.
 template<class repr>
 class represented_gauge_field : public gauge_field_base<repr> {
   public: 
@@ -427,7 +428,11 @@ using adjoint_gauge_field = represented_gauge_field<adjoint<N,radix>>;
  * Action terms 
  *******************/
 
-
+/// The action of the canonical momentum of a gauge field.
+/// Momentum actions are a special case. It does not contain
+/// a force_step()-function. It contains a step()-function,
+/// which updates the momentum itself. It can be used as
+/// the lowest level of an integrator.
 template<typename gauge_field>
 class gauge_momentum_action : public action_base, public integrator_base {
   public:
@@ -485,12 +490,10 @@ class gauge_momentum_action : public action_base, public integrator_base {
 
 
 
-/// The Wilson plaquette action of a gauge field
-/// The gauge action is a bit special, other action terms
-/// only contain the force step for the MC integrator.
-/// The gauge action also contains an update step that
-/// updates the gauge field. This is the lowest level of the
-/// integrator
+/// The Wilson plaquette action of a gauge field.
+/// Action terms contain a force_step()-function, which
+/// updates the momentum of the gauge field. To do this,
+/// it needs to have a reference to the momentum field.
 template<typename gauge_field>
 class gauge_action : public action_base {
   public:
@@ -527,10 +530,6 @@ class gauge_action : public action_base {
       gauge.add_momentum(force);
     }
 };
-
-
-
-
 
 
 

@@ -5,7 +5,8 @@
 
 #include "general_matrix.h"
 
-
+/// A square matrix. Specializes the general matrix type
+/// and implements some members as special cases.
 template <int n, typename T>
 struct squarematrix {
   using base_type = typename base_type_struct<T>::type;

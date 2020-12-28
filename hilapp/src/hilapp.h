@@ -170,6 +170,8 @@ struct dir_ptr {
 ///    the method using base_type = typename base_type_struct<T>::type;
 enum class number_type {INT, INT64_T, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
 
+
+/// Stores information about how a field is vectorized
 struct vectorization_info {
   bool is_vectorizable;
   int vector_size;
@@ -217,6 +219,8 @@ struct field_info {
   }
 };
 
+/// Stores information about a single reference
+/// to a variable
 struct var_ref {
   DeclRefExpr *ref;
   // unsigned ind;
@@ -224,11 +228,11 @@ struct var_ref {
   bool is_assigned;
 };
 
+
 /// This struct keeps track of all variables appearing in loops
 /// variable can be external or defined inside loop (loop_local)
 /// is_site_dependent means that the variable value can be site dependent,
 /// which has implications for vectorization
-
 struct var_info {
   std::vector<var_ref> refs;                // references of this var in loop
   std::string type;                         // type as string

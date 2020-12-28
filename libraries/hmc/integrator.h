@@ -32,8 +32,8 @@ class action_base {
 };
 
 
-// Represents a sum of two action terms. Useful for adding them
-// to the same integrator level.
+/// Represents a sum of two action terms. Useful for adding them
+/// to the same integrator level.
 class action_sum : public action_base {
   public:
     action_base &a1;
