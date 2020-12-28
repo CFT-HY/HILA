@@ -24,6 +24,7 @@ struct vectorized_lattice_struct  {
     std::array<unsigned*,NDIRS> neighbours;
     std::array<int*, NDIRS> boundary_permutation;
 
+    /// information on where halo sites are stored
     struct halo_sites_struct {
       unsigned first_index;
       std::vector<unsigned> nb_index;

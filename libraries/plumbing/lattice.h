@@ -8,7 +8,7 @@
 #include <vector>
 
 // SUBNODE_LAYOUT is now defined in main.mk
-// #define SUBNODE_LAYOUT 
+// #define SUBNODE_LAYOUT
 
 // TODO: assertion moved somewhere where basic params
 #undef NDEBUG

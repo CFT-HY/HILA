@@ -7,7 +7,7 @@
 
 
 
-// Calculate the exponential of Q and the matrix lambda=d/dQ (e^Q m0) 
+/// Calculate the exponential of Q and the matrix lambda=d/dQ (e^Q m0) 
 template<typename sun>
 void exp_and_derivative(sun &Q, sun &m0, sun &lambda, sun &eQ, int exp_steps){
   sun m1, qn;
@@ -33,7 +33,7 @@ void exp_and_derivative(sun &Q, sun &m0, sun &lambda, sun &eQ, int exp_steps){
 }
 
 
-// Calculate the derivative of with respect to the links a positive and negative staple and add to result
+/// Calculate the derivative of with respect to the links a positive and negative staple and add to result
 template<typename matrix, typename forcetype>
 void staple_dir_derivative(field<matrix> &basegauge1, field<matrix> &basegauge2, field<matrix> &Lambda, field<forcetype> &result1, field<forcetype> &result2, direction dir1, direction dir2){
   field<matrix> stapleder2, stapleder3; // Two derivatives that need to be communicated
@@ -67,7 +67,14 @@ void staple_dir_derivative(field<matrix> &basegauge1, field<matrix> &basegauge2,
 
 
 
-
+/// A stout smeared gauge field built of a standard gauge field.
+/// The structure is the same as for the standard and represented
+/// gauge fields.
+/// refresh(): recalculates the smeared field from the underlying
+///    gauge field.
+/// add_momentum(): transforms a derivative with respect to this
+///    field to a derivative with respect to the underlying gauge
+///    field and add to the momentum of the gauge field.
 template<typename sun>
 class stout_smeared_field : public gauge_field_base<sun>{
   public:
