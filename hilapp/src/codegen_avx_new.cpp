@@ -256,6 +256,27 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
     }
   }
 
+  // and still, check the special functions
+  if (is_vectorizable) {
+    for (auto const & sfc : special_function_call_list) {
+      if (sfc.name == "coordinates" || sfc.name == "coordinate") {
+        // returning int vector
+        if (vector_size == 0) {
+          vector_size = target.vector_size/sizeof(int);
+        } else if (vector_size != target.vector_size/sizeof(int)) {
+          is_vectorizable = false;
+          if (diag_count++ > 0) reason += '\n';
+          reason += "Functions 'X.coordinates()' and 'X.coordinate(direction)' return int, ";
+          reason += "which is not vectorizable with " + std::to_string(vector_size) + " elements";
+        }
+      } else if (sfc.name == "parity") {
+        is_vectorizable = false;
+        if (diag_count++ > 0) reason += '\n';
+        reason += "Function 'X.parity()' is not AVX vectorizable";        
+      }
+    }
+  }
+
   if (!is_vectorizable) {
     diag_str = "Loop is not AVX vectorizable because " + reason;
     if( cmdline::avx_info > 0 || cmdline::verbosity > 0) 
@@ -301,7 +322,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
       // Allocate memory for a reduction. This will be filled in the kernel
       code << v.vecinfo.vectorized_type << ' ' << v.new_name;
       if (v.reduction_type == reduction::SUM) 
-        code << "(0);\n";
+        code << "(zero);\n";
       else if (v.reduction_type == reduction::PRODUCT)
         code << "(1);\n";
     }
