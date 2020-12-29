@@ -118,7 +118,7 @@ static void replace_element_with_vector(SourceRange sr, std::string typestring, 
   if(typestring.rfind("element",0) != std::string::npos){
     std::string vector_type = typestring;
     size_t begin;
-    begin = vector_type.find("element");
+    begin = find_word(vector_type,"element");
     if(begin != std::string::npos){
       vector_type.replace(begin, 7, "vectorize_struct");
       vector_type.replace(vector_type.find_last_of(">"), 1, ", "+std::to_string(vector_size)+">::type");
@@ -145,19 +145,19 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   int smallest=1, largest=0;
   for( clang::ParmVarDecl *par : fd->parameters() ){
     std::string typestring = par->getType().getAsString(pp);
-    if(typestring.find("double") != std::string::npos){
+    if(find_word(typestring,"double") != std::string::npos){
       smallest = 4;
       largest = 8;
     }
-    if( typestring.find("float") != std::string::npos ||
-        typestring.find("int") != std::string::npos || 
-        typestring.find("coordinate_vector") != std::string::npos ){
+    if( find_word(typestring,"float") != std::string::npos ||
+        find_word(typestring,"int") != std::string::npos || 
+        find_word(typestring,"coordinate_vector") != std::string::npos ){
       smallest = 8;
       largest = 16;
     }
 
     // Check if there are elements in the first place
-    if(typestring.find("element") != std::string::npos)
+    if(find_word(typestring,"element") != std::string::npos)
       generate_function = true;
 
   }
@@ -266,13 +266,19 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
         } else if (vector_size != target.vector_size/sizeof(int)) {
           is_vectorizable = false;
           if (diag_count++ > 0) reason += '\n';
-          reason += "Functions 'X.coordinates()' and 'X.coordinate(direction)' return int, ";
+          reason += "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, ";
           reason += "which is not vectorizable with " + std::to_string(vector_size) + " elements";
         }
+ 
       } else if (sfc.name == "parity") {
         is_vectorizable = false;
         if (diag_count++ > 0) reason += '\n';
-        reason += "Function 'X.parity()' is not AVX vectorizable";        
+        reason += "function 'X.parity()' is not AVX vectorizable";        
+ 
+      } else if (sfc.name == "random" || sfc.name == "hila_random") {
+        is_vectorizable = false;
+        if (diag_count++ > 0) reason += '\n';
+        reason += "random number generators prevent vectorization";
       }
     }
   }

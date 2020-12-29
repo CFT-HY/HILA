@@ -139,7 +139,7 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
       repl += looping_var;
       if ( sfc.argsExpr != nullptr) repl += ',';
     }
-    loopBuf.replace(sfc.replace_range, repl);    
+    loopBuf.replace(sfc.replace_range, repl);
   }
 
 

@@ -242,6 +242,8 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
       } else if (name == "coordinate") {
         sfc.replace_expression = "loop_lattice->coordinate(";
         sfc.argsExpr = MCall->getArg(0);
+      } else if (name == "random") {
+        sfc.replace_expression = "hila_random(";
       } else {
         reportDiag(DiagnosticsEngine::Level::Error,
           Call->getSourceRange().getBegin(),
@@ -263,9 +265,11 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
       llvm::errs() << get_stmt_str(Call) << '\n';
       special_function_call sfc;
       sfc.fullExpr = Call;
+      sfc.argsExpr = nullptr;
       sfc.scope = parsing_state.scope_level;
       sfc.name = name;
-      sfc.replace_expression = "hila_random";
+      sfc.replace_expression = "hila_random()";
+      sfc.replace_range = Call->getSourceRange();  // replace full range
       sfc.add_loop_var = false;
       special_function_call_list.push_back(sfc);
       return true;
