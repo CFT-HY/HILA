@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 
   // Define gauge and momentum action terms
   gauge_action ga(gauge, beta);
-  gauge_momentum_action ma(gauge, beta);
+  gauge_momentum_action ma(gauge);
 
   // Define a Dirac operator
   dirac_staggered_evenodd D(mass, gauge);
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   dirac_staggered_evenodd D4(mass, adj_gauge);
   fermion_action fa4(D4, adj_gauge);
 
-  action_base fsum = fa + fa2 + fa3 + fa4;
+  action_sum fsum = fa + fa2 + fa3 + fa4;
 
   // Build two integrator levels. Gauge is on the lowest level and
   // the fermions are on higher level

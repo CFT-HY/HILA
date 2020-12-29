@@ -16,7 +16,7 @@ update order depends on the parity of the lattice points. Efficient parallel imp
 Transformer aims to make it easier for researchers to implement a broad class of these simulations by abstracting a lot of the technicalities involved, and by bringing the syntax from CUDA kernels and MPI calls to the essentials. The approach given 
 here involves new datatypes and a preprocessing tool that converts c++ code with the new simplified syntax for loops and element accessors into working c++ code and gpu kernels. 
 
-# Instructions
+# HilaPP
 
 ## Generating documentation
 
@@ -25,7 +25,7 @@ Build the documentation (with the git hash as the version number) using
 PROJECT_NUMBER=$(git rev-parse --short HEAD) doxygen
 ~~~
 
-## Compiling the preprocessing tool and using it on c++ code
+## Compiling the HilaPP and using it on c++ code
 
 In short, the framework can be used in these steps: 
 
@@ -143,8 +143,112 @@ runs incorrectly with AVX.
 
 # Extensions
 
-## Gauge field
+## HMC
 
+### Gauge field
+
+The [gauge field](@ref gauge_field_base) class is mainly a convenient wrapper containing a matrix
+field for each direction. It allows us to refer to the gauge field as ```gauge_field<SUN> U```
+rather than ```SUN U[NDIM]```, which is inconvenient to pass as a reference.
+
+The [gauge fields](@ref gauge_field_base) also contains a momentum field. Since fields are only
+allocated if necessary, this is not a large amount of data.
+[Fundamental gauge fields](@ref gauge_field) can also store a copy of the gauge field for
+HMC.
+
+### Actions
+
+[Actions](@ref action_base) represent terms in the full action of a quantum field theory and
+are used to set up the HMC simulation. Each [action](@ref action_base) implements at least
+
+ 1. `double action()`: returns the current value of the action
+ 2. `void force_step()`: calculates the derivative and updates canonical momenta
+ 3. `void draw_gaussian_fields()`: draws random values for any gaussian fields
+ 4. `void backup_fields()`: make a backup of gauge fields at the beginning of HMC
+ 5. `void restore_backup()`: restore the original field from the backup if the update
+    is rejected
+
+For example, the [gauge action](@ref gauge_action) represents the Wilson plaquette action
+\f[
+    S_{gauge} = \sum_x \beta\left [ 1 - Re \sum_{\mu>\nu} U_{x,\mu} U_{x+\mu,\nu} U^\dagger_{x+\nu, \mu} U^\dagger_{x,\nu} \right ]
+\f]
+
+The [fermion action](@ref fermion_action) represents the pseudo fermion action
+\f[
+    S_{fermion} = e^{-\sum_{x,y} \chi_x^\dagger \left(\frac{1}{D^\dagger D}\right)_{x,y} \chi_y}.
+\f]
+The Dirac operator can be any of the implemented [Wilson Dirac](@ref Dirac_Wilson) operator,
+the [even-odd preconditioned Wilson Dirac](@ref Dirac_Wilson_evenodd) operator,
+the [staggered Dirac](@ref dirac_staggered) operator or
+the [even-odd preconditioned staggered Dirac](@ref dirac_staggered_evenodd) operator.
+See operators below for more detail about how these and the matrix inversion are used.
+
+At small mass it is often more efficient to split the fermion determinant
+\f[
+    Z_{fermion} = \int d\chi e^{-S_{fermion}} = det\left( D^\dagger D \right)
+\f]
+to
+\f[
+    det\left( D^\dagger D \right) = det\left( (D + m)^\dagger (D + m) \right)
+    det\left( \frac{ D^\dagger D }{(D + m)^\dagger (D + m)} \right)
+\f]
+To use this, you need two actions, [Hasenbusch action 1](@ref Hasenbusch_action_1)
+and [Hasenbusch action 2](@ref Hasenbusch_action_2).
+
+
+### Integrators
+
+An [integrator](@ref integrator_base) updates the gauge fields and their canonical
+momenta keeping the action approximately constant. Two integrators are defined,
+the [leapfrog](@ref leapfrog_integrator) and the [O2](@ref O2_integrator) (aka Omelyan)
+integrators.
+
+[Integrators](@ref integrator_base) are constructed from an action term and a lower level
+integrator (or the momentum action on the lowest level). An integrator step updates
+the gauge field keeping the action approximately constant.
+
+[Integrators](@ref integrator_base) form a hierarchy, where lowest levels are run more often
+in a trajectory.
+The momentum action is also an integrator and forms the lowest level.
+Generally the force of the gauge action is fast to calculate and should be added second.
+The fermion action is the most expensive due to the inversion of the Dirac matrix and 
+should be added on a high level.
+
+The [leapfrog](@ref leapfrog_integrator) integrator requires a single evaluation of the
+derivative of the action term and conserves the action to second order in the step size.
+The [O2](@ref O2_integrator) integrator conserves the action to the third order in the,
+but requires two evaluations.
+
+
+### Full HMC
+
+The full process of setting up HMC is
+~~~ C++
+// First define a gauge field
+gauge_field<SU<N, double>> gauge;
+
+// Let's just start from unity
+gauge.set_unity();
+
+// Set up the action of the gauge and momentum actions
+gauge_action ga(gauge, beta);
+gauge_momentum_action ma(gauge);
+
+// Set up the first level in the intergator hierarchy
+O2_integrator integrator_level_1(ga, ma);
+
+// Define the Dirac operator
+dirac_staggered_evenodd D(mass, gauge);
+
+// and the fermion action
+fermion_action fa(D, gauge);
+
+// and finally the second level of the integrator
+O2_integrator integrator_level_2(fsum, integrator_level_1);
+
+// Now we can run an HMC trajectory
+update_hmc(integrator_level_2, hmc_steps, traj_length);
+~~~
 
 
 ## Operators
