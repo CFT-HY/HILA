@@ -253,6 +253,7 @@ public:
   SourceLocation getNextLoc(SourceLocation sl,bool forward = true);
 
   char getChar(SourceLocation sl);
+  SourceLocation findChar(SourceLocation sl, char ch);
 
   // get next word or symbol, if it is not a legal name symbol
   std::string getNextWord(SourceLocation sl);

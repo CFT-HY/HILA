@@ -48,11 +48,11 @@ struct cmplx {
   ~cmplx<T>() =default;
   cmplx<T>(const cmplx<T> & a) =default;
 
-  // constructor from single complex 
-  template <typename A,
-            std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-  #pragma hila loop_function
-  constexpr cmplx<T>(const cmplx<A> a) : re(static_cast<T>(a.re)), im(static_cast<T>(a.im)) {}
+  // constructor from single complex --IS THIS NEEDED?
+  // template <typename A,
+  //           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
+  // #pragma hila loop_function
+  // constexpr cmplx<T>(const cmplx<A> a) : re(static_cast<T>(a.re)), im(static_cast<T>(a.im)) {}
 
   // constructor from single scalar value 
   template <typename scalar_t,

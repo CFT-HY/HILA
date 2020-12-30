@@ -118,7 +118,7 @@ static void replace_element_with_vector(SourceRange sr, std::string typestring, 
   if(typestring.rfind("element",0) != std::string::npos){
     std::string vector_type = typestring;
     size_t begin;
-    begin = vector_type.find("element");
+    begin = find_word(vector_type,"element");
     if(begin != std::string::npos){
       vector_type.replace(begin, 7, "vectorize_struct");
       vector_type.replace(vector_type.find_last_of(">"), 1, ", "+std::to_string(vector_size)+">::type");
@@ -145,19 +145,19 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   int smallest=1, largest=0;
   for( clang::ParmVarDecl *par : fd->parameters() ){
     std::string typestring = par->getType().getAsString(pp);
-    if(typestring.find("double") != std::string::npos){
+    if(find_word(typestring,"double") != std::string::npos){
       smallest = 4;
       largest = 8;
     }
-    if( typestring.find("float") != std::string::npos ||
-        typestring.find("int") != std::string::npos || 
-        typestring.find("coordinate_vector") != std::string::npos ){
+    if( find_word(typestring,"float") != std::string::npos ||
+        find_word(typestring,"int") != std::string::npos || 
+        find_word(typestring,"coordinate_vector") != std::string::npos ){
       smallest = 8;
       largest = 16;
     }
 
     // Check if there are elements in the first place
-    if(typestring.find("element") != std::string::npos)
+    if(find_word(typestring,"element") != std::string::npos)
       generate_function = true;
 
   }
@@ -256,6 +256,33 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
     }
   }
 
+  // and still, check the special functions
+  if (is_vectorizable) {
+    for (auto const & sfc : special_function_call_list) {
+      if (sfc.name == "coordinates" || sfc.name == "coordinate") {
+        // returning int vector
+        if (vector_size == 0) {
+          vector_size = target.vector_size/sizeof(int);
+        } else if (vector_size != target.vector_size/sizeof(int)) {
+          is_vectorizable = false;
+          if (diag_count++ > 0) reason += '\n';
+          reason += "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, ";
+          reason += "which is not vectorizable with " + std::to_string(vector_size) + " elements";
+        }
+ 
+      } else if (sfc.name == "parity") {
+        is_vectorizable = false;
+        if (diag_count++ > 0) reason += '\n';
+        reason += "function 'X.parity()' is not AVX vectorizable";        
+ 
+      } else if (sfc.name == "random" || sfc.name == "hila_random") {
+        is_vectorizable = false;
+        if (diag_count++ > 0) reason += '\n';
+        reason += "random number generators prevent vectorization";
+      }
+    }
+  }
+
   if (!is_vectorizable) {
     diag_str = "Loop is not AVX vectorizable because " + reason;
     if( cmdline::avx_info > 0 || cmdline::verbosity > 0) 
@@ -301,7 +328,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
       // Allocate memory for a reduction. This will be filled in the kernel
       code << v.vecinfo.vectorized_type << ' ' << v.new_name;
       if (v.reduction_type == reduction::SUM) 
-        code << "(0);\n";
+        code << "(zero);\n";
       else if (v.reduction_type == reduction::PRODUCT)
         code << "(1);\n";
     }
@@ -400,15 +427,12 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
-    std::string repl = sfc.replace_expression+"(";
-    if ( sfc.args != "" ) {
-      repl += sfc.args;
-      if ( sfc.add_loop_var ) repl += ", ";
+    std::string repl = sfc.replace_expression;  // comes with ( now
+    if ( sfc.add_loop_var ) {
+      repl += looping_var;
+      if ( sfc.argsExpr != nullptr) repl += ',';
     }
-    if ( sfc.add_loop_var ) repl += looping_var;
-    repl += ")";
-
-    loopBuf.replace(sfc.fullExpr, repl);
+    loopBuf.replace(sfc.replace_range, repl);    
   }
 
   // Vector reductions must be in the sames scope as the loop body. Otherwise the index may be undefined. 

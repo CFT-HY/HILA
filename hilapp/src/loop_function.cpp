@@ -224,14 +224,26 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
       sfc.fullExpr = Call;
       sfc.scope = parsing_state.scope_level;
       sfc.name = name;
-      sfc.args = "";
+      sfc.argsExpr = nullptr;
+
+      SourceLocation sl = findChar(Call->getSourceRange().getBegin(),'(');
+      if (sl.isInvalid()) {
+        reportDiag(DiagnosticsEngine::Level::Fatal,
+                   Call->getSourceRange().getBegin(),
+                   "Open parens '(' not found, internal error");
+        exit(0);
+      }
+      sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
+
       if (name == "coordinates") {
-        sfc.replace_expression = "loop_lattice->coordinates";
+        sfc.replace_expression = "loop_lattice->coordinates(";
       } else if (name == "parity") {
-        sfc.replace_expression = "loop_lattice->site_parity";
+        sfc.replace_expression = "loop_lattice->site_parity(";
       } else if (name == "coordinate") {
-        sfc.replace_expression = "loop_lattice->coordinate";
-        sfc.args = get_stmt_str( MCall->getArg(0) );
+        sfc.replace_expression = "loop_lattice->coordinate(";
+        sfc.argsExpr = MCall->getArg(0);
+      } else if (name == "random") {
+        sfc.replace_expression = "hila_random(";
       } else {
         reportDiag(DiagnosticsEngine::Level::Error,
           Call->getSourceRange().getBegin(),
@@ -253,9 +265,11 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
       llvm::errs() << get_stmt_str(Call) << '\n';
       special_function_call sfc;
       sfc.fullExpr = Call;
+      sfc.argsExpr = nullptr;
       sfc.scope = parsing_state.scope_level;
       sfc.name = name;
-      sfc.replace_expression = "hila_random";
+      sfc.replace_expression = "hila_random()";
+      sfc.replace_range = Call->getSourceRange();  // replace full range
       sfc.add_loop_var = false;
       special_function_call_list.push_back(sfc);
       return true;

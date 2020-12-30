@@ -998,6 +998,20 @@ char MyASTVisitor::getChar(SourceLocation sl) {
   else return *c;
 }
 
+// Find the location of the next searched for char.  
+SourceLocation MyASTVisitor::findChar( SourceLocation sloc, char ct) {
+  SourceManager &SM = TheRewriter.getSourceMgr();
+  bool invalid = false;
+  while (sloc.isValid()) {
+    const char * c = SM.getCharacterData(sloc,&invalid);
+    if ( *c == ct) return sloc;
+    sloc = getNextLoc(sloc);
+  }
+  return sloc;
+
+}
+
+
 
 /// Skip paren expression following sl, points after the paren
 

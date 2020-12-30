@@ -199,14 +199,17 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   //   }
   // }
 
+
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
-    if( sfc.add_loop_var ){
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
-    } else {
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"()");
+    std::string repl = sfc.replace_expression;  // comes with ( now
+    if ( sfc.add_loop_var ) {
+      repl += looping_var;
+      if ( sfc.argsExpr != nullptr) repl += ',';
     }
+    loopBuf.replace(sfc.replace_range, repl);    
   }
+
 
   // Begin the function
   kernel << ")\n{\n";
@@ -228,7 +231,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
 
       // Initialize only the local element
       if (vi.reduction_type == reduction::SUM) {
-        kernel << vi.new_name << "_sh[threadIdx.x] = 0;\n";
+        kernel << vi.new_name << "_sh[threadIdx.x] = zero;\n";
       } else if (vi.reduction_type == reduction::PRODUCT) {
         kernel << vi.new_name << "_sh[threadIdx.x] = 1;\n";
       }
@@ -339,7 +342,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
       //Now run the thread level reduction
       kernel << "if( threadIdx.x == 0 ){\n";
       if (vi.reduction_type == reduction::SUM) {
-        kernel << vi.new_name << "[blockIdx.x] = 0;\n";
+        kernel << vi.new_name << "[blockIdx.x] = zero;\n";
       } else if (vi.reduction_type == reduction::PRODUCT) {
         kernel << vi.new_name << "[blockIdx.x] = 1;\n";
       }

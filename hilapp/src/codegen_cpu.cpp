@@ -134,12 +134,14 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
 
   // Handle calls to special in-loop functions
   for ( special_function_call & sfc : special_function_call_list ){
-    if( sfc.add_loop_var ){
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"("+looping_var+")");
-    } else {
-      loopBuf.replace(sfc.fullExpr, sfc.replace_expression+"()");
+    std::string repl = sfc.replace_expression;  // comes with ( now
+    if ( sfc.add_loop_var ) {
+      repl += looping_var;
+      if ( sfc.argsExpr != nullptr) repl += ',';
     }
+    loopBuf.replace(sfc.replace_range, repl);
   }
+
 
   // Dump the main loop code here
   code << loopBuf.dump();
