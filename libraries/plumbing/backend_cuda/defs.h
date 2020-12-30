@@ -79,7 +79,7 @@ __global__ void cuda_reduce_sum_kernel( T * vector, int vector_size, int new_siz
 template<typename T>
 T cuda_reduce_sum(  T * vector, int N ){
   const int reduce_step = 32;
-  T sum=0;
+  T sum = zero;
   T * host_vector = (T *)malloc(N*sizeof(T));
   int vector_size = N;
 
