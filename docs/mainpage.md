@@ -6,8 +6,6 @@ The Hila framework consists of
 1. the hilapp and 
 2. a lattice simulation library.
 
-The library is currently found in `programs/plumbing`.
-
 Transformer contains a C++ preprocessing tool and framework for programming lattice field theory simulations: the main method for getting measurements from non-perturbative quantum field theories.  
 
 Lattice field theory simulations involve up to 4 dimensional grids whose points are updated continuously according to some Monte Carlo update algorithm. The update at each grid point depends on the data stored at neighboring lattice points, and the ideal 
@@ -15,6 +13,16 @@ update order depends on the parity of the lattice points. Efficient parallel imp
 
 Transformer aims to make it easier for researchers to implement a broad class of these simulations by abstracting a lot of the technicalities involved, and by bringing the syntax from CUDA kernels and MPI calls to the essentials. The approach given 
 here involves new datatypes and a preprocessing tool that converts c++ code with the new simplified syntax for loops and element accessors into working c++ code and gpu kernels. 
+
+Essentially, HilaPP extends C++ with statements of the following type:
+~~~ C++
+field<double> f;
+f[ALL] = 1;
+f[EVEN] = f[X] + f[X+TUP];
+~~~
+The two latter statements are expanded into loops over all lattice sites and over EVEN sites,
+respectively. The ordering of sites in the loop is undefined.
+
 
 # HilaPP
 
