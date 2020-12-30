@@ -247,6 +247,7 @@ public:
   int n_nodes() const { return nodes.number; }
   std::vector<node_info> nodelist() { return nodes.nodelist; }
   coordinate_vector min_coordinate() const { return this_node.min; }
+  int min_coordinate(direction d) const { return this_node.min[d]; }
   
   bool is_on_node(const coordinate_vector & c);
   int  node_rank(const coordinate_vector & c);
@@ -312,7 +313,7 @@ public:
     return this_node.coordinates[idx];
   }
 
-  inline int coordinate( direction d, unsigned idx ) const {
+  inline int coordinate( unsigned idx, direction d ) const {
     return this_node.coordinates[idx][d];
   }
 

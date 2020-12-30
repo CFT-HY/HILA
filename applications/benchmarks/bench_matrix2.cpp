@@ -41,6 +41,17 @@ static inline double timediff(timeval start, timeval end){
 
 const int latsize[4] = { 32, 32, 32, 32 };
 
+  template <typename T>
+    struct test_s {
+      // std incantation for field types
+      using base_type = typename base_type_struct<T>::type;
+
+      cmplx<T> a[4][4];
+
+      cmplx<T> (& operator[](const int i))[4] {return a[i];}
+    };
+ 
+
 ///////////////////////////////////////
 // benchmark conjugate operations for 
 // increasing matrix sizes starting 
@@ -61,11 +72,26 @@ int main(int argc, char **argv){
 
     lattice->setup(latsize);
 
-    Matrix<3,2,double> sm;
-    sm.e(0,1) = sm.e(1,2) = 1;
-    output0 << sm;
-    sm = zero;
-    output0 << sm; 
+    // test matrix indexing operators
+    field<Matrix<4,4,cmplx<ntype>>> matd;
+
+    timing = 0;
+    for(n_runs=1; timing < mintime; ){
+      n_runs*=2;
+      gettimeofday(&start, NULL);
+      for( int i=0; i<n_runs; i++){
+        onsites(ALL) {
+          for (int a=0;a<4;a++) for (int b=0; b<4; b++)
+            matd[X].e(a,b) = a+b;
+        }
+      }
+      synchronize();
+      gettimeofday(&end, NULL);
+      timing = timediff(start, end);
+    }
+    timing = timing / (double)n_runs;
+    output0 << "4x4 matrix index .e : "<< timing << " ms \n";
+
 
     seed_random(SEED);
 

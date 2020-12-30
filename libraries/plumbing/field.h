@@ -341,7 +341,7 @@ class field {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     foralldir(dir){
       fs->boundary_condition[dir] = boundary_condition_t::PERIODIC;
-      fs->boundary_condition[opp_dir(dir)] = boundary_condition_t::PERIODIC;
+      fs->boundary_condition[-dir] = boundary_condition_t::PERIODIC;
     }
 #endif
 

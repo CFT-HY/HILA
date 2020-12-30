@@ -285,7 +285,7 @@ int main(int argc, char **argv){
 
         s2[ALL] = 0;
         s2[ODD] = s2[X] - s1[X+dir];
-        s2[EVEN] = s2[X] + s2[X+opp_dir(dir)];
+        s2[EVEN] = s2[X] + s2[X-dir];
 
         double r = s2.get_element(c).re;
         sum = (r+i)*(r+i);

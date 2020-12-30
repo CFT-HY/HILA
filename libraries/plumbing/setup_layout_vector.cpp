@@ -158,7 +158,7 @@ void lattice_struct::setup_layout()
 
       // check here that this can be used for vectorized division
 
-      subdiv = 1;
+      subdiv.fill(1);
       bool div_done;
       int n_subn = 1;
       do {

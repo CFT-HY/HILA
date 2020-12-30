@@ -240,7 +240,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 
   // foralldir(d) assert( ni.size[d] % this_node.subnodes.divisions[d] == 0);
 
-  coordinate_vector subsize = ni.size/this_node.subnodes.divisions;
+  coordinate_vector subsize = ni.size.element_div(this_node.subnodes.divisions);
 
   dir = this_node.subnodes.merged_subnodes_dir;
   l = loc[dir] - ni.min[dir];
@@ -292,7 +292,7 @@ void lattice_struct::setup_nodes() {
   nodes.nodelist.resize(nodes.number);
 
   // n keeps track of the node "root coordinates"
-  coordinate_vector n(0);
+  coordinate_vector n(zero);
 
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {
@@ -389,7 +389,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
 ////////////////////////////////////////////////////////////////////////
 void lattice_struct::node_struct::subnode_struct::setup(const node_struct & tn)
 {
-  size = tn.size / divisions;
+  size = tn.size.element_div(divisions);
   evensites = tn.evensites / number_of_subnodes;
   oddsites  = tn.oddsites / number_of_subnodes;
   sites     = evensites + oddsites;
@@ -660,7 +660,7 @@ void lattice_struct::init_special_boundaries() {
         special_boundaries[d].is_needed = true;
         special_boundaries[d].offset = this_node.field_alloc_size;
 
-        for (int i=0; i<this_node.sites; i++) if (coordinate(abs(d),i) == coord) {
+        for (int i=0; i<this_node.sites; i++) if (coordinate(i,abs(d)) == coord) {
           // set buffer indices
           special_boundaries[d].n_total++;
           if (site_parity(i) == EVEN) special_boundaries[d].n_even++;
@@ -713,7 +713,7 @@ void lattice_struct::setup_special_boundary_array(direction d) {
 
   int k = 0;
   for (int i=0; i<this_node.sites; i++) {
-    if (coordinate(abs(d),i) != coord) {
+    if (coordinate(i,abs(d)) != coord) {
       special_boundaries[d].neighbours[i] = neighb[d][i];
     } else {
       special_boundaries[d].neighbours[i] = offs++;
@@ -907,7 +907,7 @@ lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
     coordinate_vector min = allnodes[myrank].min;
     coordinate_vector size = allnodes[myrank].size;
     foralldir(d2){
-      assert( min[d2] == lattice->min_coordinate()[d2] );
+      assert( min[d2] == lattice->min_coordinate(d2) );
     }
     for( int rank=0; rank < allnodes.size(); rank++ ) {
       node_info node = allnodes[rank];
