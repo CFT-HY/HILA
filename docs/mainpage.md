@@ -73,8 +73,8 @@ given target backend. To compile it, run
 ~~~ bash
 make TARGET=target program_name
 ~~~
-The lower case target should be replaced by one of 'vanilla', 'AVX' or 'CUDA'. This
-will create a 'build' directory and compile the application there.
+The lower case target should be replaced by one of `vanilla`, `AVX` or `CUDA`. This
+will create a `build` directory and compile the application there.
 
 An application makefile should define any target files and include the main makefile.
 Here is an example with comments:
@@ -288,7 +288,7 @@ update_hmc(integrator_level_2, hmc_steps, traj_length);
 
 ## Operators
 
-Operators are classes that define an 'apply(field<type> input, field<type> output)' method.
+Operators are classes that define an `apply(field<type> input, field<type> output)` method.
 The method takes the a field and runs a transformation on it, returning the result in
 the output field.
 
@@ -296,7 +296,7 @@ The [Wilson Dirac](@ref Dirac_Wilson) and [staggered Dirac](@ref dirac_staggered
 are defined in libraries/dirac. They implement the two most common lattice Dirac operators.
 These files also have the even-odd preconditioned versions of these operators.
 
-The Dirac operators also have a 'dagger(field<type> input, field<type> output)' method, which
+The Dirac operators also have a `dagger(field<type> input, field<type> output)` method, which
 implements the conjugate of the operator.
 
 The [conjugate gradient](@ref CG) operator calculates the inverse of the square of an operator
@@ -313,15 +313,15 @@ libraries/dirac/conjugate_gradient.h is a utility class used in the Hasenbusch a
 
 Backends are primarily implemented in three places.
 First, in HilaPP, loop generation and loop function handling code is in the files
-'hilapp/src/codegen_*.cpp.
+`hilapp/src/codegen_*.cpp`.
 The code generation functions are called in
 [backend_handle_loop_function](@ref MyASTVisitor::backend_handle_loop_function)
 and [backend_generate_code](@ref MyASTVisitor::backend_generate_code).
 
 In order to define a new backend, you should edit the two functions above, implement the code
-generation function and add any new files to 'hilapp/Makefile'.
+generation function and add any new files to `hilapp/Makefile`.
 
-Second, in the library in the folders 'libraries/plumbing/backend_*'. These implement
+Second, in the library in the folders `libraries/plumbing/backend_*`. These implement
 field storage in (usually in `field_storage_backend.h`), any other necessary top level
 definitions in `defs.h` and possible an extension of the lattice class in `lattice.h`.
 These are included in `libraries/plumbing/field_storage.h`, `libraries/plumbing/defs.h`
@@ -330,7 +330,7 @@ and `libraries/plumbing/lattice.h` respectively.
 A new backend should implement at least the [field storage](@ref MyASTVisitor::field_storage)
 class. The new file needs to be included in `libraries/plumbing/field_storage.h`.
 
-Finally, `'libraries/platforms` has a collection of makefiles, chosen by the `PLATFORM`
+Finally, `libraries/platforms` has a collection of makefiles, chosen by the `PLATFORM`
 flag in the standard Makefile. These include combinations of a specific system and 
 a backend. New backend requires a new makefile that defines the necessary flags
 to produce and compile the correct code.
@@ -357,10 +357,10 @@ If you're on a machine with GPU's, you can test the GPU transformations with:
 
  1. Write tests for existing and new features
      * Test also things that fail. The test basically defines how things should work.
- 1. Extend to support:
+ 2. Extend to support:
      * If (or where) statements in a loop
- 1. Implement OpenACC once the compiler version is updated
- 1. Implement HIP backend (should be a simple replacement of CUDA syntax and functions)
- 1. Multiple lattices in one program
- 1. Expand and update documentation
+ 3. Implement HIP backend (should be a simple replacement of CUDA syntax and functions)
+ 4. Multiple lattices in one program
+ 5. Expand and update documentation
+ 6. Implement an OpenACC backend
 

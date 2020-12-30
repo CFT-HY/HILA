@@ -184,13 +184,13 @@ If you're on a machine with GPU's, you can test the GPU transformations with:
 
  1. Write tests for existing and new features
      * Test also things that fail. The test basically defines how things should work.
- 1. Extend both to support:
+ 2. Extend both to support:
      * Fourier transform of field variable
      * If (or where) statements in a loop
      * Reduction on dimension (so f(t) = sum_x g(x,t))
      * Array-of-Struct-of-Arrays layout
      * MPI
- 1. Implement OpenACC once the compiler version is updated
- 1. Get rid of NDIM
- 1. Extend field to allow lattice as input
- 1. Document the library
+ 3. Implement OpenACC once the compiler version is updated
+ 4. Get rid of NDIM
+ 5. Extend field to allow lattice as input
+ 6. Document the library
