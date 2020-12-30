@@ -18,7 +18,7 @@ here involves new datatypes and a preprocessing tool that converts c++ code with
 
 # HilaPP
 
-## Generating documentation
+## Generating this documentation
 
 Build the documentation (with the git hash as the version number) using
 ~~~ bash
@@ -64,6 +64,40 @@ Next, we need to initialize a lattice. The following constructs a lattice and se
 lattice_struct my_lattice;
 lattice_struct * lattice = & my_lattice;
 ~~~
+
+
+## Using the Makefile system
+
+Each of the example applications has a makefile for compiling the application with a
+given target backend. To compile it, run
+~~~ bash
+make TARGET=target program_name
+~~~
+The lower case target should be replaced by one of 'vanilla', 'AVX' or 'CUDA'. This
+will create a 'build' directory and compile the application there.
+
+An application makefile should define any target files and include the main makefile.
+Here is an example with comments:
+~~~
+# Give the location of the top level distribution directory wrt. this.
+# Can be absolute or relative
+TOP_DIR := ../..
+
+# Add an application specific header to the dependencies
+APP_HEADERS := application.h
+
+# Read in the main makefile contents, incl. platforms
+include $(TOP_DIR)/libraries/main.mk
+
+# With multiple targets we want to use "make target", not "make build/target".
+# This is needed to carry the dependencies to build-subdir
+application: build/application ; @:
+
+# Now the linking step for each target executable
+build/application: Makefile build/application.o $(HILA_OBJECTS) $(HEADERS) 
+	$(LD) -o $@ build/application.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
+~~~
+
 
 
 ### Compiling on Puhti
@@ -132,13 +166,14 @@ forsites(EVEN){
 
 ## What doesn't work (as expected)
 
-Functions that depend on the site and return a number. For example
+Functions that implicitly depend on the site and return a number. For example
 ~~~ C++
 forsites(EVEN){
     matrix_field[X].gaussian();
 }
 ~~~
-runs incorrectly with AVX.
+runs incorrectly with AVX. It does not actually run once for each site, but only
+once for each vector.
 
 
 # Extensions
@@ -273,6 +308,33 @@ In is defined in libraries/dirac/conjugate_gradient.h
 
 Note that the [Hasenbusch preconditioned operator](@ref Hasenbusch_operator) in
 libraries/dirac/conjugate_gradient.h is a utility class used in the Hasenbusch action.
+
+## Backends
+
+Backends are primarily implemented in three places.
+First, in HilaPP, loop generation and loop function handling code is in the files
+'hilapp/src/codegen_*.cpp.
+The code generation functions are called in
+[backend_handle_loop_function](@ref MyASTVisitor::backend_handle_loop_function)
+and [backend_generate_code](@ref MyASTVisitor::backend_generate_code).
+
+In order to define a new backend, you should edit the two functions above, implement the code
+generation function and add any new files to 'hilapp/Makefile'.
+
+Second, in the library in the folders 'libraries/plumbing/backend_*'. These implement
+field storage in (usually in `field_storage_backend.h`), any other necessary top level
+definitions in `defs.h` and possible an extension of the lattice class in `lattice.h`.
+These are included in `libraries/plumbing/field_storage.h`, `libraries/plumbing/defs.h`
+and `libraries/plumbing/lattice.h` respectively.
+
+A new backend should implement at least the [field storage](@ref MyASTVisitor::field_storage)
+class. The new file needs to be included in `libraries/plumbing/field_storage.h`.
+
+Finally, `'libraries/platforms` has a collection of makefiles, chosen by the `PLATFORM`
+flag in the standard Makefile. These include combinations of a specific system and 
+a backend. New backend requires a new makefile that defines the necessary flags
+to produce and compile the correct code.
+
 
 # Testing
 

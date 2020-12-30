@@ -75,6 +75,39 @@ make -f Makefile_puhti
 This will link against the llvm installation in the hila development project folder.
 
 
+## Using the Makefile system
+
+Each of the example applications has a makefile for compiling the application with a
+given target backend. To compile it, run
+~~~ bash
+make TARGET=target program_name
+~~~
+The lower case target should be replaced by one of 'vanilla', 'AVX' or 'CUDA'. This
+will create a 'build' directory and compile the application there.
+
+An application makefile should define any target files and include the main makefile.
+Here is an example with comments:
+~~~
+# Give the location of the top level distribution directory wrt. this.
+# Can be absolute or relative
+TOP_DIR := ../..
+
+# Add an application specific header to the dependencies
+APP_HEADERS := application.h
+
+# Read in the main makefile contents, incl. platforms
+include $(TOP_DIR)/libraries/main.mk
+
+# With multiple targets we want to use "make target", not "make build/target".
+# This is needed to carry the dependencies to build-subdir
+application: build/application ; @:
+
+# Now the linking step for each target executable
+build/application: Makefile build/application.o $(HILA_OBJECTS) $(HEADERS) 
+	$(LD) -o $@ build/application.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
+~~~
+
+
 ## Syntax - What works
 
 ### Single line statements
@@ -129,7 +162,7 @@ forsites(EVEN){
 
 ## What doesn't work (as expected)
 
-Field element method calls in loops that change the element.
+Random numbers in a vectorized loop return the same number for every entry in a vector.
 
 
 ## Testing
