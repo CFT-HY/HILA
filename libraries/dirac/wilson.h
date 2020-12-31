@@ -196,7 +196,6 @@ class Dirac_Wilson {
     Dirac_Wilson(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
     /// Construct from another Dirac_Wilson operator of a different type.
-    /// This is used when 
     template<typename M>
     Dirac_Wilson(Dirac_Wilson<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(d.kappa) {}
 
@@ -285,7 +284,6 @@ class Dirac_Wilson_evenodd {
     Dirac_Wilson_evenodd(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
     /// Construct from another Dirac_Wilson operator of a different type.
-    /// This is used when 
     template<typename M>
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(d.kappa) {}
 

@@ -114,16 +114,24 @@ void dirac_staggered_calc_force(
 template<typename matrix>
 class dirac_staggered {
   private:
+    /// The eta field in the staggered operator, eta_x,\nu -1^(sum_mu<nu x_\mu)
     field<double> staggered_eta[NDIM];
 
   public:
+    /// the fermion mass
     double mass;
+    /// The SU(N) vector type
     using vector_type = SU_vector<matrix::size, typename matrix::base_type>;
+    /// The matrix type
     using matrix_type = matrix;
+    /// A reference to the gauge links used in the dirac operator
     field<matrix> (&gauge)[NDIM];
 
+    /// Single precision type in case the base type is double precision.
+    /// This is used to precondition the inversion of this operator
     using type_flt = dirac_staggered<typename gauge_field_base<matrix>::gauge_type_flt>;
 
+    /// The parity this operator applies to
     parity par = ALL;
 
     // Constructor: initialize mass, gauge and eta
@@ -131,13 +139,16 @@ class dirac_staggered {
       // Initialize the eta field (Share this?)
       init_staggered_eta(staggered_eta);
     }
+    // Constructor: initialize mass, gauge and eta
     dirac_staggered(double m, field<matrix> (&g)[NDIM]) : gauge(g), mass(m)  {
       init_staggered_eta(staggered_eta);
     }
+    // Constructor: initialize mass, gauge and eta
     dirac_staggered(double m, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(m) {
       init_staggered_eta(staggered_eta);
     }
 
+    /// Construct from another Dirac_Wilson operator of a different type.
     template<typename M>
     dirac_staggered(dirac_staggered<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(d.mass) 
     {
@@ -145,22 +156,22 @@ class dirac_staggered {
     }
 
 
-    // Applies the operator to in
+    /// Applies the operator to in
     void apply( const field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       dirac_staggered_diag(mass, in, out, ALL);
       dirac_staggered_hop(gauge, in, out, staggered_eta, ALL, 1);
     }
 
-    // Applies the conjugate of the operator
+    /// Applies the conjugate of the operator
     void dagger( const field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       dirac_staggered_diag(mass, in, out, ALL);
       dirac_staggered_hop(gauge, in, out, staggered_eta, ALL, -1);
     }
 
-    // Applies the derivative of the Dirac operator with respect
-    // to the gauge field
+    /// Applies the derivative of the Dirac operator with respect
+    /// to the gauge field
     template<typename momtype>
     void force( const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign=1){
       dirac_staggered_calc_force(gauge, chi, psi, force, staggered_eta, sign, ALL);
@@ -169,7 +180,7 @@ class dirac_staggered {
 
 
 
-// Multiplying from the left applies the standard Dirac operator
+/// Multiplying from the left applies the standard Dirac operator
 template<typename vector, typename matrix>
 field<vector> operator* (dirac_staggered<matrix> D, const field<vector> & in) {
   field<vector> out;
@@ -178,7 +189,7 @@ field<vector> operator* (dirac_staggered<matrix> D, const field<vector> & in) {
   return out;
 }
 
-// Multiplying from the right applies the conjugate
+/// Multiplying from the right applies the conjugate
 template<typename vector, typename matrix>
 field<vector> operator* (const field<vector> & in, dirac_staggered<vector> D) {
   field<vector> out;
@@ -210,28 +221,40 @@ field<vector> operator* (const field<vector> & in, dirac_staggered<vector> D) {
 template<typename matrix>
 class dirac_staggered_evenodd {
   private:
+    /// The eta field in the staggered operator, eta_x,\nu -1^(sum_mu<nu x_\mu)
     field<double> staggered_eta[NDIM];
 
+    /// A reference to the gauge links used in the dirac operator
     field<matrix> (&gauge)[NDIM];
   public:
+    /// the fermion mass
     double mass;
+    /// The SU(N) vector type
     using vector_type = SU_vector<matrix::size, typename matrix::base_type>;
+    /// The matrix type
     using matrix_type = matrix;
 
+    /// Single precision type in case the base type is double precision.
+    /// This is used to precondition the inversion of this operator
     using type_flt = dirac_staggered_evenodd<typename gauge_field_base<matrix>::gauge_type_flt>;
 
+    /// The parity this operator applies to
     parity par = EVEN;
 
+    /// Constructor: initialize mass, gauge and eta
     dirac_staggered_evenodd(dirac_staggered_evenodd &d) : gauge(d.gauge), mass(d.mass) {
       init_staggered_eta(staggered_eta);
     }
+    /// Constructor: initialize mass, gauge and eta
     dirac_staggered_evenodd(double m, field<matrix> (&U)[NDIM]) : gauge(U), mass(m) {
       init_staggered_eta(staggered_eta);
     }
+    /// Constructor: initialize mass, gauge and eta
     dirac_staggered_evenodd(double m, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(m) {
       init_staggered_eta(staggered_eta);
     }
 
+    /// Construct from another Dirac_Wilson operator of a different type.
     template<typename M>
     dirac_staggered_evenodd(dirac_staggered_evenodd<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), mass(d.mass) {
       init_staggered_eta(staggered_eta);
@@ -239,7 +262,7 @@ class dirac_staggered_evenodd {
 
 
 
-    // Applies the operator to in
+    /// Applies the operator to in
     inline void apply(  field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       dirac_staggered_diag(mass, in, out, EVEN);
@@ -249,7 +272,7 @@ class dirac_staggered_evenodd {
       dirac_staggered_hop(gauge, out, out, staggered_eta, EVEN, 1);
     }
 
-    // Applies the conjugate of the operator
+    /// Applies the conjugate of the operator
     inline void dagger( field<vector_type> & in, field<vector_type> & out){
       out[ALL] = 0;
       dirac_staggered_diag(mass, in, out, EVEN);
@@ -259,8 +282,8 @@ class dirac_staggered_evenodd {
       dirac_staggered_hop(gauge, out, out, staggered_eta, EVEN, -1);
     }
 
-    // Applies the derivative of the Dirac operator with respect
-    // to the gauge field
+    /// Applies the derivative of the Dirac operator with respect
+    /// to the gauge field
     template<typename momtype>
     inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign){
       field<momtype> force2[NDIM];
