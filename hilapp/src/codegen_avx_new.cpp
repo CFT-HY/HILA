@@ -196,15 +196,20 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 ///  a) no site dependent conditional
 ///  b) fields have the same vector size (number size)
 ///  c) variables are vectorizable to the same size
+///  NOW: instead of b) and c) now vectorizeed only if everything has the same
+///       vector type.  Otherwise leads to missing type conversions 
+///  TODO: Rectify this issue!
 ///////////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::string & diag_str) {
 
   vector_size = 0;
+  number_type numtype;
   bool is_vectorizable = true;
   
   int diag_count = 0;
   std::string reason;
+
   
   // check if loop has conditional
   is_vectorizable = !loop_info.has_site_dependent_conditional;
@@ -212,6 +217,9 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
     reason = "it contains site dependent conditional";
     diag_count++;
   }
+
+  std::string vector_var_name;   // variable which determines the vectorization
+  std::string vector_var_type;   // type of variable which determines the vectorization
 
   // check if the fields are vectorizable in a compatible manner
   if (field_info_list.size() > 0) {
@@ -221,31 +229,49 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
         if (diag_count++ > 0) reason += "\n";
         reason += "field variable '" + fi.old_name + "' is not vectorizable";
       } else {
-        if (vector_size == 0) vector_size = fi.vecinfo.vector_size;
-        else if (fi.vecinfo.vector_size != vector_size) {
+        if (vector_size == 0) {
+          vector_size = fi.vecinfo.vector_size;
+          numtype = fi.vecinfo.basetype;
+          vector_var_name = fi.old_name;
+          vector_var_type = fi.vecinfo.basetype_str;
+        } else if (fi.vecinfo.vector_size != vector_size || fi.vecinfo.basetype != numtype) {
+          // TODO: let different vector types coexist!
+
           is_vectorizable = false;
 
+          // if (diag_count++ > 0) reason += "\n";
+          // reason += "vector size of variables '" + fi.old_name + "' is " 
+          //     + std::to_string(fi.vecinfo.vector_size) + " and '" + field_info_list.begin()->old_name 
+          //     + "' is " + std::to_string(vector_size);
+
           if (diag_count++ > 0) reason += "\n";
-          reason += "vector size of variables '" + fi.old_name + "' is " 
-              + std::to_string(fi.vecinfo.vector_size) + " and '" + field_info_list.begin()->old_name 
-              + "' is " + std::to_string(vector_size);
+          reason += "type of variables '" + fi.old_name + "' is " 
+              + fi.vecinfo.basetype_str + " and '" + vector_var_name
+              + "' is " + vector_var_type;
+
         }
       }
     }
   }
 
+
   // and then if the site dep. variables are vectorizable
   if (var_info_list.size() > 0) {
     for (var_info & vi : var_info_list) if (vi.is_site_dependent) {
       if (vi.vecinfo.is_vectorizable) {
-        if (vector_size == 0) vector_size = vi.vecinfo.vector_size;
-        else if (vector_size != vi.vecinfo.vector_size) {
+        if (vector_size == 0) {
+          vector_size = vi.vecinfo.vector_size;
+          numtype = vi.vecinfo.basetype;
+          vector_var_name = vi.name;
+          vector_var_type = vi.vecinfo.basetype_str;
+
+        } else if (vector_size != vi.vecinfo.vector_size || numtype != vi.vecinfo.basetype) {
           is_vectorizable = false;
 
           if (diag_count++ > 0) reason += "\n";
-          reason += "vector size of variables '" + vi.name + "' is " 
-            + std::to_string(vi.vecinfo.vector_size) + " and '" + field_info_list.begin()->old_name 
-            + "' is " + std::to_string(vector_size);
+          reason += "type of variables '" + vi.name + "' is " 
+            + vi.vecinfo.basetype_str + " and '" + vector_var_name 
+            + "' is " + vector_var_type;
         }
       } else {
         is_vectorizable = false;
@@ -263,11 +289,14 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
         // returning int vector
         if (vector_size == 0) {
           vector_size = target.vector_size/sizeof(int);
-        } else if (vector_size != target.vector_size/sizeof(int)) {
+        } else if (vector_size != target.vector_size/sizeof(int) || 
+            numtype != number_type::INT) {
           is_vectorizable = false;
           if (diag_count++ > 0) reason += '\n';
+          // reason += "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, ";
+          // reason += "which is not vectorizable with " + std::to_string(vector_size) + " elements";
           reason += "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, ";
-          reason += "which is not vectorizable with " + std::to_string(vector_size) + " elements";
+          reason += "which is not compatible with " + vector_var_type + " vectors";
         }
  
       } else if (sfc.name == "parity") {

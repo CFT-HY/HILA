@@ -146,15 +146,14 @@ struct cmplx {
 
   #pragma hila loop_function
   inline cmplx<T> & random(){
-    random(re);
-    random(im);
+    re = hila_random();
+    im = hila_random();
     return *this;
   }
 
   #pragma hila loop_function
   inline cmplx<T> & gaussian(){
-    gaussian_random(re);
-    gaussian_random(im);
+    re = gaussian_ran2(im);
     return *this;
   }
 

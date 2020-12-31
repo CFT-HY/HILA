@@ -44,9 +44,11 @@ struct vectorized_lattice_struct  {
     /// The size of the receive list in each direction
     unsigned recv_list_size[NDIRS];
     
-    /// coordinate offsets to nodes
-    typename vector_base_type<int,vector_size>::type coordinate_offset[NDIM];
-    /// The base coordinate for each vector
+    // coordinate offsets to nodes
+    using int_vector_t = typename vector_base_type<int,vector_size>::type;
+    int_vector_t coordinate_offset[NDIM];
+    // using coordinate_compound_vec_type = typename Vector<NDIM, typenamevector_base_type<int,vector_size>::type>;
+    // coordinate_compound_vec_type coordinate_offset;
     coordinate_vector * RESTRICT coordinate_base;
 
     /// Storage for neighbour indexes on each site
@@ -92,9 +94,11 @@ struct vectorized_lattice_struct  {
       subnode_size   = lattice->this_node.subnodes.size;
       subnode_origin = lattice->this_node.min;
 
-      /// the basic division is done using "float" vectors - 
-      /// for "double" vectors the vector_size and number of subnodes
-      /// is halved to direction lattice->this_node.subnodes.lastype_divided.dir
+      // output0 << "Subdivisions " << subdivisions << '\n';
+
+      // the basic division is done using "float" vectors - 
+      // for "double" vectors the vector_size and number of subnodes
+      // is halved to direction lattice->this_node.subnodes.lastype_divided.dir
 
       if ( vector_size == VECTOR_SIZE/sizeof(double) ) {
         subdivisions[ lattice->this_node.subnodes.merged_subnodes_dir ] /= 2;
@@ -136,7 +140,9 @@ struct vectorized_lattice_struct  {
         is_boundary_permutation[d] = (subdivisions[d] > 1);
 
         // upper corner of 1st subnode
-        coordinate_vector here = subnode_origin + subnode_size - 1;
+        coordinate_vector here;
+        here = (subnode_origin + subnode_size).minus_scalar(1);
+
         unsigned idx = lattice->site_index(here);
         assert (idx % vector_size == 0);  // is it really on 1st subnode
 
@@ -375,18 +381,19 @@ struct vectorized_lattice_struct  {
     /// Return the coordinates of each vector nested as
     /// coordinate[direction][vector_index]
     auto coordinates(int idx) const {
-      std::array<typename vector_base_type<int,vector_size>::type ,NDIM> r;
-      foralldir(d) r[d] = coordinate_offset[d] + coordinate_base[idx][d];
+      // std::array<typename vector_base_type<int,vector_size>::type ,NDIM> r;
+      coordinate_vector_t<int_vector_t> r;
+      // Vector<NDIM,int_vector_t> r;
+      foralldir(d) r.e(d) = coordinate_offset[d] + coordinate_base[idx][d];
       return r;
     }
 
-    /// Return the coordinate in direction d of a given index
-    auto coordinate(direction d, int idx) const {
+    auto coordinate(unsigned idx,direction d) const {
       return coordinate_offset[d] + coordinate_base[idx][d];
     }
 
-    /// parity is the same for all elements in vector, return scalar
-    ::parity parity(int idx) {
+    // parity is the same for all elements in vector, return scalar
+    ::parity site_parity(int idx) {
       return coordinate_base[idx].parity();
     }
 

@@ -39,9 +39,11 @@ template< class T >
 struct is_avx_vector : std::integral_constant<
   bool,
   std::is_same<T,Vec4d>::value ||
+  std::is_same<T,Vec4q>::value ||
   std::is_same<T,Vec8f>::value ||
   std::is_same<T,Vec8i>::value ||
   std::is_same<T,Vec8d>::value ||
+  std::is_same<T,Vec8q>::value ||
   std::is_same<T,Vec16f>::value ||
   std::is_same<T,Vec16i>::value 
 > {};
@@ -53,13 +55,66 @@ struct is_arithmetic : std::integral_constant<
   is_avx_vector<T>::value
 > {};
 
+template< class T>
+struct avx_vector_type_info {
+    using type = T;
+    static constexpr int size = sizeof(T);
+    static constexpr int elements = 1;
+};
+
+template<> struct avx_vector_type_info<Vec4d> {
+    using type = double;
+    static constexpr int size = 4*sizeof(double);
+    static constexpr int elements = 4;
+};
+template<> struct avx_vector_type_info<Vec4q> {
+    using type = int64_t;
+    static constexpr int size = 4*sizeof(int64_t);
+    static constexpr int elements = 4;
+};
+template<> struct avx_vector_type_info<Vec8i> {
+    using type = int;
+    static constexpr int size = 8*sizeof(int);
+    static constexpr int elements = 8;
+};
+template<> struct avx_vector_type_info<Vec8f> {
+    using type = float;
+    static constexpr int size = 8*sizeof(float);
+    static constexpr int elements = 8;
+};
+template<> struct avx_vector_type_info<Vec8d> {
+    using type = double;
+    static constexpr int size = 8*sizeof(double);
+    static constexpr int elements = 8;
+};
+template<> struct avx_vector_type_info<Vec8q> {
+    using type = int64_t;
+    static constexpr int size = 8*sizeof(int64_t);
+    static constexpr int elements = 8;
+};
+template<> struct avx_vector_type_info<Vec16f> {
+    using type = float;
+    static constexpr int size = 16*sizeof(float);
+    static constexpr int elements = 16;
+};
+template<> struct avx_vector_type_info<Vec16i> {
+    using type = int;
+    static constexpr int size = 16*sizeof(int);
+    static constexpr int elements = 16;
+};
+
 
 template< class T, class U >
 struct is_assignable : std::integral_constant<
   bool,
-  std::is_assignable<T,U>::value
-  // POSSIBLE IMPLEMENTATIONS HERE?  PERHAPS THIS IS NOT NEEDED AFTER ALL?
+  std::is_assignable<T,U>::value ||
+  (is_avx_vector<U>::value && (( !is_avx_vector<T>::value && 
+         std::is_assignable<T,typename avx_vector_type_info<U>::type>::value ) ||
+        (is_avx_vector<T>::value && 
+         (avx_vector_type_info<T>::size == avx_vector_type_info<U>::size) &&
+         (avx_vector_type_info<T>::elements == avx_vector_type_info<U>::elements)))) 
 > {};
+      
 
 
 
@@ -68,6 +123,10 @@ struct is_assignable : std::integral_constant<
 
 // Norm squared
 inline Vec4d norm_squared(Vec4d val){
+  return val*val;
+}
+
+inline Vec4q norm_squared(Vec4q val){
   return val*val;
 }
 
@@ -80,6 +139,10 @@ inline Vec8i norm_squared(Vec8i val){
 }
 
 inline Vec8d norm_squared(Vec8d val){
+  return val*val;
+}
+
+inline Vec8q norm_squared(Vec8q val){
   return val*val;
 }
 

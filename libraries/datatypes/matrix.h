@@ -80,6 +80,16 @@ class Matrix {
     /// Assign from "scalar" for square matrix
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
     #pragma hila loop_function
+    inline Matrix<n,m,T> & operator= (const Matrix<n,m,S> & rhs) {
+      for (int i=0; i<n*m; i++) {
+        c[i] = static_cast<T>(rhs.c[i]);
+      }
+      return *this;
+    }
+
+    /// Assign from "scalar" for square matrix
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
+    #pragma hila loop_function
     inline Matrix<n,m,T> & operator= (const S rhs) {
       static_assert( n==m, "rows != columns : assigning a scalar only possible for a square Matrix");
       for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -115,8 +125,10 @@ class Matrix {
 
 
     /// add assign a Matrix
+    template <typename S,
+              std::enable_if_t<std::is_convertible<S,T>::value, int> = 0 >
     #pragma hila loop_function
-    Matrix<n,m,T> & operator+=(const Matrix<n,m,T> & rhs){
+    Matrix<n,m,T> & operator+=(const Matrix<n,m,S> & rhs){
       for (int i=0; i < n*m; i++) {
         c[i] += rhs.c[i];
       }
@@ -124,8 +136,10 @@ class Matrix {
     }
 
     /// subtract assign a Matrix
+    template <typename S,
+              std::enable_if_t<std::is_convertible<S,T>::value, int> = 0 >
     #pragma hila loop_function
-    Matrix<n,m,T> & operator-=(const Matrix<n,m,T> & rhs){
+    Matrix<n,m,T> & operator-=(const Matrix<n,m,S> & rhs){
       for (int i=0; i < n*m; i++) {
         c[i] -= rhs.c[i];
       }
@@ -158,8 +172,9 @@ class Matrix {
 
     /// multiply assign with matrix
     #pragma hila loop_function
-    template <int p>
-    Matrix<n,m,T> & operator*=(const Matrix<m,p,T> & rhs){
+    template <int p,typename S,
+              std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
+    Matrix<n,m,T> & operator*=(const Matrix<m,p,S> & rhs){
       static_assert(m==p, "can't assign result of *= to lhs Matrix, because doing so would change it's dimensions");
       *this = *this * rhs;
       return *this;
@@ -197,6 +212,25 @@ class Matrix {
     }
 
     /// return copy of transpose of this matrix
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
+    #pragma hila loop_function
+    Matrix<n,m,T> plus_scalar(const S rhs) const {
+      Matrix<n,m,T> res;
+      for (int i=0; i<n*m; i++) res.c[i] = c[i] + rhs;
+      return res;
+    }
+
+    /// sub scalar to matrix/vector
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
+    #pragma hila loop_function
+    Matrix<n,m,T> minus_scalar(const S rhs) const {
+      Matrix<n,m,T> res;
+      for (int i=0; i<n*m; i++) res.c[i] = c[i] - rhs;
+      return res;
+    }
+
+
+    //return copy of transpose of this matrix
     #pragma hila loop_function
     inline Matrix<m,n,T> transpose() const { 
       Matrix<m,n,T> res;
@@ -232,8 +266,8 @@ class Matrix {
 
     /// return real part
     #pragma hila loop_function
-    inline Matrix<m,n,number_type<T>> real() const { 
-      Matrix<m,n,number_type<T>> res;
+    inline Matrix<n,m,number_type<T>> real() const { 
+      Matrix<n,m,number_type<T>> res;
       for (int i=0; i<m*n; i++) {
         res.c[i] = real(c[i]);
       }
@@ -242,8 +276,8 @@ class Matrix {
 
     /// return imaginary part
     #pragma hila loop_function
-    inline Matrix<m,n,number_type<T>> imag() const { 
-      Matrix<m,n,number_type<T>> res;
+    inline Matrix<n,m,number_type<T>> imag() const { 
+      Matrix<n,m,number_type<T>> res;
       for (int i=0; i<m*n; i++) {
         res.c[i] = imag(c[i]);
       }
@@ -436,16 +470,16 @@ T det(const Matrix<1,1,T> & mat) {
 
 
 /// Now matrix additions: matrix + matrix
-#pragma hila loop_function
 template <int n, int m, typename T>
+#pragma hila loop_function
 inline Matrix<n,m,T> operator+(Matrix<n,m,T> a, const Matrix<n,m,T> & b){
   a += b;
   return a;
 }
 
 /// Matrix subtract
-#pragma hila loop_function
 template <int n, int m, typename T>
+#pragma hila loop_function
 inline Matrix<n,m,T> operator-(Matrix<n,m,T> a, const Matrix<n,m,T> & b){
   a -= b;
   return a;
@@ -470,9 +504,9 @@ inline Matrix<n,m,T> operator+(const S b, Matrix<n,m,T> a){
 }
 
 /// matrix - scalar
-#pragma hila loop_function
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_minus<T,S>,T>::value, int> = 0 >
+#pragma hila loop_function
 Matrix<n,m,T> operator-(Matrix<n,m,T> a, const S b){
   a -= b;
   return a;
