@@ -11,6 +11,7 @@ std::ostream hila::output(NULL);
 std::ofstream hila::output_file;
 int hila::my_rank_n;
 bool hila::about_to_finish = false;
+logger_class hila::log;
 
 // let us house the sublattices-struct here
 

@@ -11,7 +11,7 @@ class logger_class {
   /// An output file stream, for opening and closing files
   std::ofstream output_file;
   /// Default logging level is 1, only print only at main function level
-  int logging_level = 1; 
+  int logging_level = 1;
   /// Current logging level
   int current_level = 0;
 
@@ -52,7 +52,7 @@ class logger_class {
     /// Decrease logging level. Should be called when exiting a specialized
     /// area of code.
     void decrease_level(){
-      current_level += 1;
+      current_level -= 1;
     }
 
     /// Set the output stream
@@ -73,8 +73,13 @@ class logger_class {
     }
 
     /// Log function
-    void log(std::string text){
-      output << text;
+    template<typename T>
+    void log(T text){
+      if(hila::myrank() == 0){
+        if( current_level < logging_level ){
+          output << text;
+        }
+      }
     }
 
     template<typename T>
@@ -87,7 +92,9 @@ template<typename T>
 logger_class& operator<<(logger_class& logger, T rhs)
 {
     if(hila::myrank() == 0){
-      logger.output << rhs;
+      if( logger.current_level < logger.logging_level ){
+        logger.output << rhs;
+      }
     }
     return logger;
 }
