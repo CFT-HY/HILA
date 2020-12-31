@@ -22,6 +22,19 @@ int main(int argc, char **argv) {
   double hmc_steps = parameters.get("hmc_steps");
   double traj_length = parameters.get("traj_length");
   std::string configfile = parameters.get("configuration_file");
+  int log_level = parameters.get("log_level");
+  
+  hila::log.set_verbosity(log_level);
+
+  hila::log << "Example simulation with SU(" << N << ") gauge and \n";
+  hila::log << "and a staggered fermion. \n";
+  hila::log << "Running " << n_trajectories << " HMC trajectories.\n";
+  hila::log << "beta: " << beta << "\n";
+  hila::log << "mass: " << mass << "\n";
+  hila::log << "seed: " << seed << "\n";
+  hila::log << "Steps per HMC trajectory: " << hmc_steps << "\n";
+  hila::log << "writing output to " << configfile << "\n";
+  
 
   seed_random(seed);
 
