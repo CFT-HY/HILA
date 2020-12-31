@@ -155,6 +155,16 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
       }
     }
 
+    /// Needs assignment as well
+    #pragma hila loop_function
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
+    inline antisymmetric & operator= (const antisymmetric<N,scalart> m) {
+      for (int j=0; j<size; j++) for (int i=0; i<size; i++){
+        this->e(i,j) = m.e(i,j);
+      }
+      return *this;
+    }
+
     /// The antisymmetric generator
     static sun generator(int ng){
       static bool initialize = true;
@@ -164,8 +174,8 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
         int k=0;
         for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
           if( g == k ){
-            generators[g].c[m1][m2].re = 0.5;
-            generators[g].c[m2][m1].re =-0.5;
+            generators[g].e(m1,m2).re = 0.5;
+            generators[g].e(m2,m1).re =-0.5;
           }
           k++;
         }
@@ -187,7 +197,7 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, cmplx<radix>> {
             sun tk = generator(k);
 
             cmplx<radix> tr = (tj*tg*tk).trace();
-            r_generators[g].c[j][k] = cmplx<radix>(0,4)*tr;
+            r_generators[g].e(j,k) = cmplx<radix>(0,4)*tr;
           }
         }
         initialize = false;
@@ -281,6 +291,15 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
       }
     }
 
+    /// Needs assignment as well
+    #pragma hila loop_function
+    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
+    inline symmetric & operator= (const symmetric<N,scalart> m) {
+      for (int j=0; j<size; j++) for (int i=0; i<size; i++){
+        this->e(i,j) = m.e(i,j);
+      }
+      return *this;
+    }
 
     /// Symmetric generators as SU(N) matrices
     static sun generator(int ng){
@@ -289,13 +308,13 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
       if(initialize) for(int g=0;g<size;g++){
         generators[g] = 0;
         if(g < N){
-          generators[g].c[g][g].re = sqrt(0.5);
+          generators[g].e(g,g).re = sqrt(0.5);
         }
         int k=N;
         for( int m1=0; m1<N; m1++) for( int m2=m1+1; m2<N; m2++){
           if( g == k ){
-            generators[g].c[m1][m2].re = 0.5;
-            generators[g].c[m2][m1].re = 0.5;
+            generators[g].e(m1,m2).re = 0.5;
+            generators[g].e(m2,m1).re = 0.5;
           }
           k++;
         }
@@ -317,7 +336,7 @@ class symmetric : public SquareMatrix<N*(N+1)/2, cmplx<radix>> {
             sun tk = generator(k);
 
             cmplx<radix> tr = (tj*tg*tk).trace();
-            r_generators[g].c[j][k] = cmplx<radix>(0,4)*tr;
+            r_generators[g].e(j,k) = cmplx<radix>(0,4)*tr;
           }
         }
         initialize = false;

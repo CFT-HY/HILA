@@ -142,14 +142,14 @@ field<SUN> calc_staples(field<SUN> *U1, field<SUN> *U2, direction dir1, directio
   staple_sum[ALL] = 0;
   //Calculate the down side staple.
   //This will be communicated up.
-  down_staple[ALL] = U2[dir2][X+dir1].conjugate()
-                   * U1[dir1][X].conjugate()
+  down_staple[ALL] = U2[dir2][X+dir1].conj()
+                   * U1[dir1][X].conj()
                    * U2[dir2][X];
   // Forward staple
   staple_sum[ALL]  = staple_sum[X]
                    + U2[dir2][X+dir1]
-                   * U1[dir1][X+dir2].conjugate()
-                   * U2[dir2][X].conjugate();
+                   * U1[dir1][X+dir2].conj()
+                   * U2[dir2][X].conj();
   // Add the down staple
   staple_sum[ALL] = staple_sum[X] + down_staple[X-dir2];
   return staple_sum;
@@ -166,14 +166,14 @@ field<SUN> calc_staples(field<SUN> *U, direction dir)
   foralldir(dir2) if(dir2!=dir) {
     //Calculate the down side staple.
     //This will be communicated up.
-    down_staple[ALL] = U[dir2][X+dir].conjugate()
-                     * U[dir][X].conjugate()
+    down_staple[ALL] = U[dir2][X+dir].conj()
+                     * U[dir][X].conj()
                      * U[dir2][X];
     // Forward staple
     staple_sum[ALL]  = staple_sum[X]
                      + U[dir2][X+dir]
-                     * U[dir][X+dir2].conjugate()
-                     * U[dir2][X].conjugate();
+                     * U[dir][X+dir2].conj()
+                     * U[dir2][X].conj();
     // Add the down staple
     staple_sum[ALL] = staple_sum[X] + down_staple[X-dir2];
   }
@@ -191,24 +191,25 @@ double plaquette_sum(field<SU<N,radix>> *U){
     onsites(ALL){
       element<SU<N,radix>> temp;
       temp = U[dir1][X] * U[dir2][X+dir1]
-           * U[dir1][X+dir2].conjugate()
-           * U[dir2][X].conjugate();
+           * U[dir1][X+dir2].conj()
+           * U[dir2][X].conj();
       Plaq += 1-temp.trace().re/N;
     }
   }
   return Plaq;
 }
 
+
 /// The plaquette measurement for square matrices
 template<int N, typename radix>
-double plaquette_sum(field<SquareMatrix<N,radix>> *U){
+double plaquette_sum(field<Matrix<N,N,radix>> *U){
   double Plaq=0;
   foralldir(dir1) foralldir(dir2) if(dir2 < dir1){
     onsites(ALL){
       element<SU<N,radix>> temp;
       temp = U[dir1][X] * U[dir2][X+dir1]
-           * U[dir1][X+dir2].conjugate()
-           * U[dir2][X].conjugate();
+           * U[dir1][X+dir2].conj()
+           * U[dir2][X].conj();
       Plaq += 1-temp.trace()/N;
     }
   }

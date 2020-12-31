@@ -57,18 +57,20 @@ do {                                            \
 ///
 /// SU(N) class
 /// 
-/// Specializes the squarematrix class with certain additional methods
+/// Specializes the matrix class with certain additional methods
 /// specific to SU(N) matrices. Allows matching SU(N) vectors and 
 /// SU(N) vectors in multiplication.
 ///
 template<int n, typename radix=double>
-class SU : public SquareMatrix<n,cmplx<radix>>{
+class SU : public Matrix<n,n,cmplx<radix>>{
     public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;
 
+    /// Explicitly include default constructor. Necessary for use in fields.
     SU() = default;
 
+    /// Construct from scalar by setting diagonal
     template <typename scalart, std::enable_if_t<is_cmplx_or_arithmetic<scalart>::value, int> = 0 >  
     #pragma hila loop_function
     SU(const scalart rhs) {
@@ -78,24 +80,25 @@ class SU : public SquareMatrix<n,cmplx<radix>>{
       }
     }
 
+    /// Construct from a square matrix
     template <typename S>
-    SU(const SquareMatrix<n,cmplx<S>> & m) {
+    SU(const Matrix<n,n,cmplx<S>> & m) {
       for (int i=0; i<n*n; i++){
-        this->r[i] = m.r[i];
+        this->c[i] = m.c[i];
       }
     }
 
-    // Casting to different cmplx type
+    /// Casting to different cmplx type
     template <typename S>
-    operator SquareMatrix<n,cmplx<S>>(){
-      SquareMatrix<n,cmplx<radix>> r;
+    operator Matrix<n,n,cmplx<S>>(){
+      Matrix<n,n,cmplx<radix>> r;
       for (int j=0; j<n; j++) for (int i=0; i<n; i++){
         r.e(i,j) = this->e(i,j);
       }
       return r;
     }
 
-    /// Retunitarize the SU(N) matrix. 
+    /// Reunitarize the SU(N) matrix. 
     void reunitarize(){
         make_unitary();
         fix_det();
@@ -124,7 +127,7 @@ class SU : public SquareMatrix<n,cmplx<radix>>{
 
     /// Calculate the matrix exponential using a Taylor expansion
     void exp(const int depth = 12){
-        SquareMatrix<n,cmplx<radix>> A, An;
+        Matrix<n,n,cmplx<radix>> A, An;
         radix factor = 1;
         A = *this;
         An = A;
@@ -139,7 +142,7 @@ class SU : public SquareMatrix<n,cmplx<radix>>{
     /// generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix. 
     /// more iterations are needed to generate larger elements: 12 works well for n < 10. 
     void random(const int depth = 12) {
-        SquareMatrix<n,cmplx<radix>> A, An, res;
+        Matrix<n,n,cmplx<radix>> A, An, res;
         An = 1; 
         res = 1;
         cmplx<radix> tr(1,0), factor(1, 0);
@@ -296,18 +299,18 @@ class SU : public SquareMatrix<n,cmplx<radix>>{
           for(int i=0; i<g+1; i++ ){
             generators[g].e(i,i).re = w;
           }
-          generators[g].c[g+1][g+1].re = -(g+1)*w;
+          generators[g].e(g+1,g+1).re = -(g+1)*w;
         } else {
           // Nondiagonal ones. Just run through the indexes and
           // count until they match...
           int k=n-1;
           for( int m1=0; m1<n; m1++) for( int m2=m1+1; m2<n; m2++){
             if( g == k ){
-              generators[g].c[m1][m2].re = 0.5;
-              generators[g].c[m2][m1].re = 0.5;
+              generators[g].e(m1,m2).re = 0.5;
+              generators[g].e(m2,m1).re = 0.5;
             } else if( g == k+1 ){
-              generators[g].c[m1][m2].im = 0.5;
-              generators[g].c[m2][m1].im =-0.5;
+              generators[g].e(m1,m2).im = 0.5;
+              generators[g].e(m2,m1).im =-0.5;
             }
             k+=2;
           }
@@ -355,10 +358,10 @@ class SU2 {
         SU2(radix * vals) : a(vals[0]), b(vals[1]), c(vals[2]), d(vals[3]) { normalize(); }
 
         SU2(const SU2<radix> & rhs){
-            b = rhs.b;				
-            a = rhs.a;				
-            d = rhs.d;				
-            c = rhs.c;           
+            b = rhs.b;
+            a = rhs.a;
+            d = rhs.d;
+            c = rhs.c;
         };
 
         friend SU2<radix> operator * (const SU2<radix> & x, const SU2<radix> & y){
@@ -573,7 +576,7 @@ SU2<radix> SU2<radix>::operator - (const SU2<radix> & y){
 
 /// Project to the antihermitean part of a matrix
 template<int N, typename radix>
-void project_antihermitean(SquareMatrix<N,cmplx<radix>> &matrix){
+void project_antihermitean(Matrix<N,N,cmplx<radix>> &matrix){
   radix tr = 0;
   for(int i=0; i<N; i++) {
     for(int j=0; j<i; j++) {
@@ -649,9 +652,32 @@ class SU_vector : public Vector<n,cmplx<radix>>{
       }
       return r;
     }
+
+    #pragma hila loop_function
+    Matrix<n,n,cmplx<radix>> outer_product(const SU_vector &rhs) const{
+      Matrix<n,n,cmplx<radix>> r;
+      for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
+        r.e(i,j) += this->c[i]*rhs.c[j];
+      }
+      return r;
+    }
     
 };
 
+/// Why do I need a separate implementation for SU_vector?
+template <int n, typename T>
+#pragma hila loop_function
+inline SU_vector<n,T> operator*(const Matrix<n,n,T> & A, const SU_vector<n,T> & B) {
+  SU_vector<n,T> res;
+
+  for (int i=0; i<n; i++) {
+    res.e(i) = 0;
+    for (int j=0; j<n; j++) {
+      res.e(i) += A.e(i,j)*B.e(j);
+    }
+  }
+  return res;
+}
 
 
 #endif 
