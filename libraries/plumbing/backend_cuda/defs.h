@@ -178,16 +178,17 @@ __global__ void cuda_set_zero_kernel( T * vector, int elems)
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < elems ){
-    vector[Index] = 0;
+    vector[Index] = Zero();
   }
 }
 
+#if 0
 template<typename T>
 __global__ void cuda_set_one_kernel( T * vector, int elems)
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < elems ){
-    vector[Index] = 0;
+    vector[Index] = zero();
   }
 }
 
@@ -196,6 +197,8 @@ void cuda_set_one_kernel( T * vec, size_t N ){
   int blocks = N/N_threads + 1;
   cuda_set_one_kernel<<<blocks, N_threads>>>(vec, N);
 }
+
+#endif // 0
 
 template<typename T>
 void cuda_set_zero( T * vec, size_t N ){
