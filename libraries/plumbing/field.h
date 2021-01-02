@@ -29,7 +29,50 @@ using element = T;
 
 
 
-// field class 
+/// field class
+/// Hilapp replaces the parity access patterns, field[par] with a loop over
+/// the appropriate sites.
+///
+/// The field class also contains member functions used by hilapp, as well
+/// as members that may be useful for application developers.
+///
+/// The field mainly implements the interface to the field and not the
+/// content. 
+/// 
+/// The field contains a pointer to field::field_struct, which implements 
+/// MPI communication of the field boundaries. 
+///
+/// The field::field_struct points to a field_storage, which is defined
+/// by each backend. It implements storing and accessing the field data,
+/// including buffers for storing haloes returned from MPI communication.
+///
+/// Memory allocation (mainly automised by hilapp):
+/// field.allocate(): sets up memory for field content and communication.
+/// field.free(): destroys the data.
+/// field.is_allocated(): returns true if the field data has been allocated
+/// field.is_initialized() returns true if the field has been written 
+/// field.check_alloc(): allocate if necessary
+/// field.check_alloc() const: assert that the field is allocated
+///
+/// MPI related (automatically done by hilapp, but may be useful in apps):
+/// field.move_status(): returns current fetch_status
+/// field.mark_changed(): make sure the field gets communicated 
+/// field.mark_fetched(): mark the field already fetched, no need to
+///        communicate.
+///
+/// field.shift(): create a shifted copy of the field 
+///
+/// Others
+/// field.set_boundary_condition(): set the boundary conditions in a
+///         given direction (periodic or antiperiodic)
+/// field.get_boundary_condition(): get the boundary condition of the field
+/// field.copy_boundary_condition(): copy the boundary condition to the
+///        from another field
+/// field.get_elements(): retrieve a list of elements to all nodes
+/// field.get_element(): retrieve an element to all nodes
+/// field.set_elements(): set elements in the field
+/// field.set_element(): set an element in the field
+///
 template <typename T>
 class field {
 

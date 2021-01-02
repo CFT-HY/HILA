@@ -8,12 +8,13 @@
 
 
 // Define some parameters for the simulation
-double beta = 0.1;
+double beta = 0.01;
 int n_measurements=100;
 int n_updates_per_measurement=10;
 long seed = 123456;
 int NX=64, NY=64;
 int VOLUME = NX*NY;
+int log_level = 2;
 
 int main(int argc, char **argv)
 {
@@ -22,24 +23,26 @@ int main(int argc, char **argv)
   hila::initialize(argc,argv);
   lattice->setup(nd);
 
+  // Set verbosity level
+  hila::log.set_verbosity(log_level);
+
   // Define a field
   field<double> spin;
 
   seed_random( seed );
-
-  /* "Warm up" the rng generator */
-  for( int i=0; i<543210; i++ ) hila_random();
   
   // Set to 1
   spin[ALL] = 1;
 
   // Run update-measure loop
   for( int i=0; i<n_measurements; i++ ){
+    hila::log.increase_level();
 
     // Run a number of updates, starting with EVEN sites
     // and alternating between parities
     parity p = EVEN;
     for(int j=0; j<2*n_updates_per_measurement; j++){
+      hila::log.increase_level();
 
       // A temporary field for the local change in action
       onsites(p){
@@ -52,6 +55,8 @@ int main(int argc, char **argv)
         }
       }
       p=opp_parity(p);
+      hila::log << "Update " << j << " loop done\n";
+      hila::log.decrease_level();
     }
 
     // Measure magnetisation
@@ -59,7 +64,8 @@ int main(int argc, char **argv)
     onsites(ALL){
       M += spin[X];
     }
-    output0 << "Magnetisation " << M/VOLUME << "\n";
+    hila::log.decrease_level();
+    hila::log << "Magnetisation " << M/VOLUME << "\n";
   }
   
   hila::finishrun();

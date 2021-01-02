@@ -77,7 +77,7 @@ llvm::Error OptionsParser::init(
   
   return llvm::Error::success();
 }
-  
+
 OptionsParser::OptionsParser(
       int &argc, const char **argv, cl::OptionCategory &Category,
       llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {

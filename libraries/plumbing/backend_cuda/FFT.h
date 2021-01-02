@@ -415,33 +415,40 @@ inline void field<cmplx<double>>::FFT(fft_direction fdir) {
 
 
 
-
 /// Match a given type T to it's underlying complex type
 template<typename T, class Enable = void>
 struct complex_base{};
 
-// Match to a complex type
+/// Match cmplx<>
 template<>
 struct complex_base<cmplx<float>>{
   using type = cmplx<float>;
 };
 
+/// Match cmplx<>
 template<>
 struct complex_base<cmplx<double>>{
   using type = cmplx<double>;
 };
 
-// Match templated class B
+/// Match a given type T to it's underlying complex type.
+/// This template matches compound types with a one base type.
 template<template<typename B> class C, typename B>
 struct complex_base<C<B>>{
   using type = typename complex_base<B>::type;
 };
 
+/// Match a given type T to it's underlying complex type.
+/// This template matches compound types with a one base type that
+/// depend on an integer
 template<template<int a, typename B> class C, int a, typename B>
 struct complex_base<C<a, B>>{
   using type = typename complex_base<B>::type;
 };
 
+/// Match a given type T to it's underlying complex type.
+/// This template matches compound types with a one base type that
+/// depend on two integers.
 template<template<int a,int b,typename B> class C, int a, int b, typename B>
 struct complex_base<C<a,b,B>>{
   using type = typename complex_base<B>::type;

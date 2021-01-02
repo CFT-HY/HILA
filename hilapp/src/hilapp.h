@@ -79,8 +79,7 @@ extern llvm::cl::OptionCategory HilappCategory;
 
 
 
-//class storing global state variables used in parsing
-
+/// class storing global state variables used in parsing
 struct global_state {
   std::string main_file_name = "";
   bool assert_loop_parity = false;
@@ -91,6 +90,7 @@ struct global_state {
 //  std::vector<const TemplateParameterList *> class_templ_params = {};
 //  std::vector<const TemplateArgumentList *> class_templ_args = {};
   FunctionDecl * currentFunctionDecl = nullptr;
+  /// Describes a code location
   struct location_struct {
     SourceLocation function;
     SourceLocation top;
@@ -100,8 +100,7 @@ struct global_state {
 };
 
 
-// field_ref contains info about references to field vars within loops
-
+/// field_ref contains info about references to field vars within loops
 struct field_ref {
   Expr * fullExpr;              // full expression a[X+d]
   Expr * nameExpr;              // name "a"
@@ -132,10 +131,9 @@ struct field_ref {
 };
 
 
-// dir_ptr is a "subfield" of field_info, storing direction/offset of field ref
-// There may be several equivalent field[dir] -references within the loop, 
-// these are described the same dir_ptr struct
-
+/// dir_ptr is a "subfield" of field_info, storing direction/offset of field ref
+/// There may be several equivalent field[dir] -references within the loop, 
+/// these are described the same dir_ptr struct
 struct dir_ptr {
   Expr *parityExpr;         // pointer to full parity+dir expression (1st of equivalent ones)
   // Expr *dirExpr;            // non-null only for non-const. nn  NOT USEFUL
@@ -170,9 +168,10 @@ struct dir_ptr {
 /// a) just float, double, int  or 
 /// b) is templated type, with float/double in template and  implements 
 ///    the method using base_type = typename base_type_struct<T>::type;
-
 enum class number_type {INT, INT64_T, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN};
 
+
+/// Stores information about how a field is vectorized
 struct vectorization_info {
   bool is_vectorizable;
   int vector_size;
@@ -183,9 +182,8 @@ struct vectorization_info {
 };
 
 
-// main struct for storing info about each field variable inside loops
-// one field_info for each loop variable
-  
+/// main struct for storing info about each field variable inside loops
+/// one field_info for each loop variable
 struct field_info {
   std::string type_template;             // This will be the <T> part of field<T>
   std::string element_type;              // type of the element of field
@@ -221,6 +219,8 @@ struct field_info {
   }
 };
 
+/// Stores information about a single reference
+/// to a variable
 struct var_ref {
   DeclRefExpr *ref;
   // unsigned ind;
@@ -228,11 +228,11 @@ struct var_ref {
   bool is_assigned;
 };
 
+
 /// This struct keeps track of all variables appearing in loops
 /// variable can be external or defined inside loop (loop_local)
 /// is_site_dependent means that the variable value can be site dependent,
 /// which has implications for vectorization
-
 struct var_info {
   std::vector<var_ref> refs;                // references of this var in loop
   std::string type;                         // type as string
@@ -248,9 +248,9 @@ struct var_info {
   bool is_site_dependent;                   // is the value of variable site dependent
 };
 
-// Stores onformation for a single reference to an array
-// These are similar to variable references, but often
-// need to be handled differently
+/// Stores onformation for a single reference to an array
+/// These are similar to variable references, but often
+/// need to be handled differently
 struct array_ref {
   ArraySubscriptExpr *ref;
   std::string new_name;
@@ -258,7 +258,7 @@ struct array_ref {
 };
 
 
-// store necessary information for vector reductions
+/// store necessary information for vector reductions
 struct vector_reduction_ref {
   CXXOperatorCallExpr *ref;
   std::string type;
@@ -270,7 +270,7 @@ struct vector_reduction_ref {
 };
 
 
-
+/// store information about variable declarations
 struct var_decl {
   VarDecl *decl;
   std::string name;
@@ -279,6 +279,7 @@ struct var_decl {
 };
 
 
+/// store information about calls to special Hila functions
 struct special_function_call {
   Expr * fullExpr;
   std::string full_expr;
@@ -290,8 +291,8 @@ struct special_function_call {
   int scope;
 };
 
-// Stores the parity of the current loop: Expr, value (if known), Expr as string
 
+/// Stores the parity of the current loop: Expr, value (if known), Expr as string
 struct loop_info_struct {
   const Expr * parity_expr;
   std::string parity_text;
@@ -303,6 +304,7 @@ struct loop_info_struct {
 };
 
 
+/// Stores information about function arguments
 struct argument_info {
   Expr * E;
   std::vector<var_info *> dependent_vars;
@@ -310,6 +312,7 @@ struct argument_info {
   bool is_site_dependent;
 };
 
+/// Stores information about function calls
 struct call_info_struct {
   CallExpr * call;
   std::vector<argument_info> arguments;
@@ -324,11 +327,11 @@ void set_fid_modified(const FileID FID);
 bool search_fid(const FileID FID);
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
 
-// reset the status of vectorizable types
+/// reset the status of vectorizable types
 void reset_vectorizable_types();
 
 
-// take global CI just in case
+/// take global CI just in case
 extern CompilerInstance *myCompilerInstance;
 extern global_state global;
 extern loop_info_struct loop_info;
@@ -341,8 +344,8 @@ extern ClassTemplateDecl * field_storage_decl;   // Ptr to field primary def in 
 extern const std::string field_storage_type;
 extern const std::string field_type;
 
-// global lists used in modifying the field loops
-// but they contain pointers to list elements.  pointers to vector elems are not good!
+/// global lists used in modifying the field loops
+/// but they contain pointers to list elements.  pointers to vector elems are not good!
 extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;
 extern std::list<var_info> var_info_list;

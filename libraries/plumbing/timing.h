@@ -3,9 +3,17 @@
 
 #include "plumbing/defs.h"
 
-
 ////////////////////////////////////////////////////////////////
 /// This file defines timer class and other timing related utilities
+
+
+struct timer_value {
+  double time;                   // time accumulated in this timer (in sec)
+  unsigned long long count;      // how many times this timer has been used (start - stop interval)
+};
+
+
+////////////////////////////////////////////////////////////////
 /// 
 /// Timers are used to time recurring events.  Usage:
 /// 
@@ -36,10 +44,6 @@
 ///                   
 ////////////////////////////////////////////////////////////////
 
-struct timer_value {
-  double time;                   // time accumulated in this timer (in sec)
-  unsigned long long count;      // how many times this timer has been used (start - stop interval)
-};
 
 class timer {
 private:

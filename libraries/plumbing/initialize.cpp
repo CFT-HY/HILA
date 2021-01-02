@@ -11,6 +11,7 @@ std::ostream hila::output(NULL);
 std::ofstream hila::output_file;
 int hila::my_rank_n;
 bool hila::about_to_finish = false;
+logger_class hila::log;
 
 // let us house the sublattices-struct here
 
@@ -19,19 +20,18 @@ sublattices_struct sublattices;
 
 void vector_type_info();
 
-///////////////////////////////////////////////////////////////////////////////
-// very simple cmdline arg interpreter
-// p = cmdline.get_cstring("par="); 
-// returns a string of the stuff following "par="
-// n = cmdline.get_int("par=");
-// returns (long) int containing the value following "par="
-//
-// NO SPACES are allowed between par and = and the value
-///////////////////////////////////////////////////////////////////////////////
-
 #include <limits.h>
 #include <errno.h>
 
+///////////////////////////////////////////////////////////////////////////////
+/// very simple cmdline arg interpreter
+/// p = cmdline.get_cstring("par="); 
+/// returns a string of the stuff following "par="
+/// n = cmdline.get_int("par=");
+/// returns (long) int containing the value following "par="
+///
+/// NO SPACES are allowed between par and = and the value
+///////////////////////////////////////////////////////////////////////////////
 class cmdlineargs {
  private:
   int argc;

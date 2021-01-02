@@ -17,22 +17,24 @@
 ///       - Do not allow "auto & r = var", but allow "const auto & r = var"
 ///       
 //////////////////////////////////////////////////////////////////////////////
-
 class addrOfAndRefChecker : public GeneralVisitor, public RecursiveASTVisitor<addrOfAndRefChecker> {
 
 public:
-  using GeneralVisitor::GeneralVisitor;   // use general visitor constructor
+  /// Use general visitor constructor
+  using GeneralVisitor::GeneralVisitor;
 
+  /// Used to skip child nodes while walking the syntax tree
   int skip_children;
+  /// Buffer for the generated loop text, which replaces parity-loop expressions
   srcBuf *loopBuf;
 
+  /// Constructor
   addrOfAndRefChecker(Rewriter &R,ASTContext *C, srcBuf *wb) : GeneralVisitor(R,C) {
     skip_children = 0;
     loopBuf = wb;
   }
 
-  // implement the "skip_children" method from MyASTVisitor also here
-
+  /// implement the "skip_children" method from MyASTVisitor also here
   bool TraverseStmt(Stmt *S) {  
     if (skip_children > 0) skip_children++;    
     if (!skip_children) RecursiveASTVisitor<addrOfAndRefChecker>::TraverseStmt(S);
@@ -40,6 +42,7 @@ public:
     return true;
   }
 
+  /// implement the "skip_children" method from MyASTVisitor also here
   bool TraverseDecl(Decl *D) {
     if (skip_children > 0) skip_children++;    
     if (!skip_children) RecursiveASTVisitor<addrOfAndRefChecker>::TraverseDecl(D);
@@ -50,7 +53,6 @@ public:
   ///////////////////////////////////////////////////////////////////////
   /// there does not appear to be unaryop visitor, so go through Expr visitor
   ///////////////////////////////////////////////////////////////////////
-
   bool VisitExpr(Expr *E) {
     if (UnaryOperator * UO = dyn_cast<UnaryOperator>(E)) {
       if (UO->getOpcode() == UnaryOperatorKind::UO_AddrOf) {
@@ -133,7 +135,6 @@ public:
   /// Variable declarator visitor
   /// this should catch normal declarations
   //////////////////////////////////////////////////////////////////////////
-
   bool VisitDecl(Decl *D) {
     if (VarDecl * V = dyn_cast<VarDecl>(D)) {
       // it's a variable decl inside field loop
@@ -220,7 +221,6 @@ public:
 ///////////////////////////////////////////////////////////////////////////////////
 /// And loop checker interface here
 ///////////////////////////////////////////////////////////////////////////////////
-
 void MyASTVisitor::check_addrofops_and_refs(Stmt * S) {
 
   addrOfAndRefChecker arf(TheRewriter,Context,writeBuf);

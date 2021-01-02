@@ -1,6 +1,5 @@
-*.o
-*.cpt
-*.exe
-hilapp/build/hilapp
+hilapp/build/*
+docs/*/*
 settings.json
 .vscode/
+applications/*/build/*

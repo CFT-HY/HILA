@@ -29,15 +29,21 @@ class CG{
     double maxiters = CG_DEFAULT_MAXITERS;
   public:
 
+    /// Get the type the operator applies to
     using vector_type = typename Op::vector_type;
 
-    // Constructor: initialize the operator
+    /// Constructor: initialize the operator
     CG(Op & op) : M(op) {};
+    /// Constructor: operator and accuracy
     CG(Op & op, double _accuracy) : M(op) {accuracy = _accuracy;};
+    /// Constructor: operator, accuracy and maximum number of iterations
     CG(Op & op, double _accuracy, int _maxiters) : M(op)
     {accuracy = _accuracy; maxiters=_maxiters;};
 
-
+    /// The apply() -member runs the full conjugate gradient
+    /// The operators themselves have the same structure.
+    /// The conjugate gradient operator is Hermitean, so there is
+    /// no dagger().
     void apply(field<vector_type> &in, field<vector_type> &out)
     {
       int i;

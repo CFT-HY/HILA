@@ -29,9 +29,10 @@ inline T nmul_add(T a, T b, T c) { return c - a*b; }
 
 
 
-
 ///////////////////////////////////////////////////////////////////////////////
 /// main cmpx type definition
+/// Define complex type as a template. This allows Hilapp to replace the internal
+/// type with a vector. The datatype T must be an arithmetic type.
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename T = double>

@@ -8,32 +8,24 @@
 // Include the lattice field definition
 #include "plumbing/field.h"
 
-// Direct output to stdout
-std::ostream &hila::output=std::cout;
-
-// Define the lattice global variable
-lattice_struct my_lattice;
-lattice_struct * lattice=&my_lattice;
-
 
 // Define some parameters for the simulation
 double beta=0.1;
 int n_measurements=100;
 int n_updates_per_measurement=10;
 long seed=123456;
-int NX=64,NY=64;
-int VOLUME=NX*NY;
+int nd[2] = { 64, 64 };
+int VOLUME=nd[0]*nd[1];
 
 int main(int argc, char **argv){
+
 	// Basic setup
-	lattice->setup(NX,NY, argc, argv);
+	hila::initialize(argc,argv);
+  lattice->setup(nd);
 	// Define a field
 	field<double> spin;
 
 	seed_random(seed);
-
-	/* "Warm up" the rng generator */
-	for(int i=0; i<543210; i++) hila_random();
 
 	// Set to 1
 	spin[ALL]=0;

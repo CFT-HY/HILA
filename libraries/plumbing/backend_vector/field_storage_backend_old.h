@@ -23,19 +23,21 @@ struct vectorize_struct<A, vector_size, typename std::enable_if_t<is_arithmetic<
   using type = typename vector_base_type<A,vector_size>::type;
 };
 
-// B is a templated class, so construct a vectorized type
+/// B is a templated class, so construct a vectorized type
 template<template<typename B> class C, typename B, int vector_size>
 struct vectorize_struct<C<B>, vector_size>{
   using vectorized_B = typename vectorize_struct<B, vector_size>::type;
   using type = C<vectorized_B>;
 };
 
+/// C is a templated class with an integer parameter
 template<template<int a, typename B> class C, int a, typename B, int vector_size>
 struct vectorize_struct<C<a,B>, vector_size>{
   using vectorized_B = typename  vectorize_struct<B, vector_size>::type;
   using type = C<a, vectorized_B>;
 };
 
+/// C is a templated class with two integer parameters
 template<template<int a, int b, typename B> class C, int a, int b,  typename B, int vector_size>
 struct vectorize_struct<C<a,b,B>, vector_size>{
   using vectorized_B = typename  vectorize_struct<B, vector_size>::type;
@@ -49,11 +51,13 @@ struct vectorize_struct<coordinate_vector, 4> {
   using type = std::array<Vec4i, NDIM>;
 };
 
+/// Match coordinate vectors explicitly
 template<>
 struct vectorize_struct<coordinate_vector, 8> {
   using type = std::array<Vec8i, NDIM>;
 };
 
+/// Match coordinate vectors explicitly
 template<>
 struct vectorize_struct<coordinate_vector, 16> {
   using type = std::array<Vec16i, NDIM>;
@@ -64,7 +68,6 @@ struct vectorize_struct<coordinate_vector, 16> {
 /// Short version of mapping type to longest possible vector
 template <typename T>
 using vector_type = typename vectorize_struct<T,vector_info<T>::vector_size>::type;
-
 
 
 

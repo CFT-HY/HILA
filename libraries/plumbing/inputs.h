@@ -41,6 +41,9 @@ class input {
         template< typename T >
         void add_essential(std::string const &, T const & default_value);
 
+        /// The return type of input parameters. Avoids the problem of specializing by
+        /// return type: the returned value caan be cast to double, float, int or 
+        /// std::string.
         class returntype {
             public:
             returntype(const std::string & str, input * a) : name(str), parent(a) {}

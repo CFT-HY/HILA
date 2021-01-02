@@ -1,5 +1,6 @@
 
 
+/// An array of n elements of type T
 template<int n, typename T>
 class array {
     public:

@@ -1,36 +1,21 @@
-CC = mpic++ -DUSE_MPI -mavx2 -mfma
-LD = mpic++
+# Give the location of the top level distribution directory wrt. this.
+# Can be absolute or relative
+TOP_DIR := ../..
 
-OPTS = -DNDIM=3
-
-include ../../libraries/Makefile_vector
-
-CXXFLAGS = -O3 -x c++ --std=c++17 $(MPI_OPTS) $(HILA_OPTS) 
-#CXXFLAGS = -g -x c++ --std=c++17 $(MPI_OPTS) $(OPTS)
-LDFLAGS = $(HILA_LD_FLAGS)
+APP_OPTS := -DNDIM=2
 
 
-.PRECIOUS: build/%.cpt
+# Read in the main makefile contents, incl. platforms
+include $(TOP_DIR)/libraries/main.mk
 
 
-onsim: Makefile build/onsim.o $(HILA_OBJECTS)
-	$(LD) $(LDFLAGS) -o build/onsim build/onsim.o $(HILA_OBJECTS)
+# With multiple targets we want to use "make target", not "make build/target".
+# This is needed to carry the dependencies to build-subdir
 
-#build/%.cpt: %.cpp Makefile
-#	mkdir -p build
-#	$(HILAPP) $< -o $@
+onsim: build/onsim ; @:
 
-build/%.cpt: ../../libraries/plumbing/%.cpp Makefile
-	mkdir -p build
-	$(HILAPP) $< -o $@
+ 
+# Now the linking step for each target executable
+build/onsim: Makefile build/onsim.o $(HILA_OBJECTS) $(HEADERS) 
+	$(LD) -o $@ build/onsim.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
-build/%.o : build/%.cpt
-	mkdir -p build
-	$(CC) $(CXXFLAGS) $< -c -o $@
-
-
-clean:
-	rm -rf build
-
-cleanall:
-	rm -rf build

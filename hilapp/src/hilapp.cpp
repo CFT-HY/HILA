@@ -200,13 +200,18 @@ struct includeloc_struct {
 // block of static vars, easiest to move information
 static std::list<includeloc_struct> includelocs;
 
+
+/// Extend PPCallbacks to handle preprocessor directives
+/// specific to hila code
 class MyPPCallbacks : public PPCallbacks {
 public:
 
   
   // make static vars directly callable
 
-  /// This hook is called when #include (or #import) is processed
+  /// This hook is called when #include (or #import) is processed.
+  /// It adds the file to includelocs, a list of candidates that may need to be 
+  /// modified and inserted into the file buffer
   void InclusionDirective(SourceLocation HashLoc,
                           const Token & IncludeTok,
                           StringRef FileName,
@@ -238,6 +243,11 @@ public:
     
   }
 
+  /// This is triggered when a pragma directive is encountered. It checks for the
+  /// "hilapp skip" pragma and marks the tranlation unit for skipping if found.
+  ///
+  /// Note that pragmas where the code location is important are handled in 
+  /// MyASTVisitor::has_pragma(). 
   void PragmaDirective( SourceLocation Loc, PragmaIntroducerKind Introducer ) {
     SourceManager &SM = myCompilerInstance->getSourceManager();
     if (SM.isInMainFile(Loc) && Introducer == clang::PIK_HashPragma) {
@@ -327,8 +337,7 @@ public:
 
 
 
-// file_buffer_list stores the edited source of all files
-
+/// file_buffer_list stores the edited source of all files
 struct file_buffer {
   srcBuf sbuf;
   FileID fid;
@@ -355,8 +364,8 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   return( &file_buffer_list.back().sbuf );
 }
 
-// Implementation of the ASTConsumer interface for reading an AST produced
-// by the Clang parser.
+/// Implementation of the ASTConsumer interface for reading an AST produced
+/// by the Clang parser.
 class MyASTConsumer : public ASTConsumer {
 public:
   MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { }
@@ -428,12 +437,10 @@ private:
 
 
 
-// This struct will be used to keep track of #include-chains.
-
+/// This struct will be used to keep track of #include-chains.
 std::vector<FileID> file_id_list = {};
 
-// Tiny utility to search for the list
-
+/// Tiny utility to search for the list
 bool search_fid(const FileID FID) {
   for (const FileID f : file_id_list) {
     if (f == FID) return true;
@@ -441,6 +448,7 @@ bool search_fid(const FileID FID) {
   return false;
 }
 
+/// Mark a file as modified. May need to be added to the buffer.
 void set_fid_modified(const FileID FID) {
   if (search_fid(FID) == false) {
     // new file to be added
@@ -452,7 +460,7 @@ void set_fid_modified(const FileID FID) {
 }
 
 
-// For each source file provided to the tool, a new FrontendAction is created.
+/// For each source file provided to the tool, a new FrontendAction is created.
 class MyFrontendAction : public ASTFrontendAction {
 public:
   MyFrontendAction() {}

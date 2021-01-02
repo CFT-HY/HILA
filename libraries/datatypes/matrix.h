@@ -15,49 +15,53 @@
 
 
 ////////////////////////////////////////////////////////////////
-/// finally, the main nxm matrix type template
+/// The main nxm matrix type template
 ////////////////////////////////////////////////////////////////
-
 template <const int n, const int m, typename T>
 class Matrix {
   public:
     static_assert(is_cmplx_or_arithmetic<T>::value, "Matrix requires cmplx or arithmetic type");
 
+    /// The data as a one dimensional array
     T c[n*m];
 
-    // std incantation for field types
+    /// std incantation for field types
     using base_type = typename base_type_struct<T>::type;
 
-    // define these to ensure std::is_trivial
+    /// define default constructors to ensure std::is_trivial
     Matrix() = default;
+    /// define default constructors to ensure std::is_trivial
     ~Matrix() = default;
+    /// define default constructors to ensure std::is_trivial
     Matrix(const Matrix<n,m,T> & v) = default;
 
-    // standard access ops m.e(i,j) - assume T is small, as it should
+    /// standard access ops m.e(i,j) - assume T is small, as it should
     #pragma hila loop_function
     inline T  e(const int i, const int j) const { return c[i*m + j]; }
+    /// standard access ops m.e(i,j) - assume T is small, as it should
     #pragma hila loop_function
     inline T& e(const int i, const int j) { return c[i*m + j]; }
 
     
-    // declare single e here too in case we have a vector
-    // (one size == 1)
+    /// declare single e here too in case we have a vector
+    /// (one size == 1)
     #pragma hila loop_function
     template <int q=n, int p=m,
               std::enable_if_t< (q == 1 || p == 1), int> = 0 >
     inline T e(const int i) const { return c[i]; }
 
+    /// declare single e here too in case we have a vector
+    /// (one size == 1)
     #pragma hila loop_function
     template <int q=n, int p=m,
               std::enable_if_t< (q == 1 || p == 1), int> = 0 >
     inline T& e(const int i) { return c[i]; }
 
 
-    // casting from one Matrix (number) type to another: do not do this automatically.
-    // but require an explicit cast operator.  This makes it easier to write code.
-    // or should it be automatic?  keep/remove explicit?
-    // TODO: CHECK AVX CONVERSIONS
-
+    /// casting from one Matrix (number) type to another: do not do this automatically.
+    /// but require an explicit cast operator.  This makes it easier to write code.
+    /// or should it be automatic?  keep/remove explicit?
+    /// TODO: CHECK AVX CONVERSIONS
     template <typename S,
               std::enable_if_t<std::is_convertible<T,S>::value, int> = 0 >
     operator Matrix<n,m,S>() {
@@ -66,15 +70,14 @@ class Matrix {
       return res;
     }
 
-
-    // unary -
+    /// unary -
     inline Matrix<n,m,T> operator-() const { 
       Matrix<n,m,T> res;
       for (int i=0; i<n*m; i++) res.c[i] = -c[i];
       return res;
     }
 
-    // Assign from other type matrix
+    /// Assign from "scalar" for square matrix
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
     #pragma hila loop_function
     inline Matrix<n,m,T> & operator= (const Matrix<n,m,S> & rhs) {
@@ -84,7 +87,7 @@ class Matrix {
       return *this;
     }
 
-    // Assign from "scalar" for square matrix
+    /// Assign from "scalar" for square matrix
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
     #pragma hila loop_function
     inline Matrix<n,m,T> & operator= (const S rhs) {
@@ -96,7 +99,7 @@ class Matrix {
       return *this;
     }
 
-    //copy constructor from scalar
+    /// copy constructor from scalar
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
     #pragma hila loop_function
     Matrix(const S rhs) {
@@ -107,12 +110,13 @@ class Matrix {
       }
     }
 
-    // assign and construct from zero
+    /// assign and construct from zero
     #pragma hila loop_function
     inline Matrix(const Zero z) {
       for (int i=0; i<n*m; i++) c[i] = static_cast<T>(0);
     }
 
+    /// construct from zero
     #pragma hila loop_function
     inline Matrix<n,m,T> & operator= (const Zero z) {
       for (int i=0; i<n*m; i++) c[i] = static_cast<T>(0);
@@ -120,7 +124,7 @@ class Matrix {
     }
 
 
-    // +=, -= operators for Matrix and scalar
+    /// add assign a Matrix
     template <typename S,
               std::enable_if_t<std::is_convertible<S,T>::value, int> = 0 >
     #pragma hila loop_function
@@ -131,6 +135,7 @@ class Matrix {
       return *this;
     }
 
+    /// subtract assign a Matrix
     template <typename S,
               std::enable_if_t<std::is_convertible<S,T>::value, int> = 0 >
     #pragma hila loop_function
@@ -141,6 +146,7 @@ class Matrix {
       return *this;
     }
 
+    /// add assign type T and convertible
     #pragma hila loop_function
     template <typename S,
               std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
@@ -152,6 +158,7 @@ class Matrix {
       return *this;
     }
 
+    /// subtract assign type T and convertible
     #pragma hila loop_function
     template <typename S,
               std::enable_if_t<std::is_convertible<type_minus<T,S>,T>::value, int> = 0 >
@@ -163,7 +170,7 @@ class Matrix {
       return *this;
     }
 
-    // *= operator
+    /// multiply assign with matrix
     #pragma hila loop_function
     template <int p,typename S,
               std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
@@ -173,7 +180,7 @@ class Matrix {
       return *this;
     }
 
-    // *= for scalar
+    /// multiply assign with scalar
     #pragma hila loop_function
     template <typename S,
               std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
@@ -184,7 +191,7 @@ class Matrix {
       return *this;
     }
 
-    // and operator /= for a scalar rhs
+    /// divide assign with scalar
     #pragma hila loop_function
     template <typename S,
               std::enable_if_t<std::is_convertible<type_div<T,S>,T>::value, int> = 0 >
@@ -195,7 +202,7 @@ class Matrix {
       return *this;
     }
 
-    //numpy style matrix fill
+    /// numpy style matrix fill
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
     #pragma hila loop_function
     Matrix<n,m,T> & fill(const S rhs) {
@@ -204,7 +211,7 @@ class Matrix {
       return *this;
     }
 
-    // add scalar to matrix/vector
+    /// return copy of transpose of this matrix
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
     #pragma hila loop_function
     Matrix<n,m,T> plus_scalar(const S rhs) const {
@@ -213,7 +220,7 @@ class Matrix {
       return res;
     }
 
-    // sub scalar to matrix/vector
+    /// sub scalar to matrix/vector
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
     #pragma hila loop_function
     Matrix<n,m,T> minus_scalar(const S rhs) const {
@@ -233,7 +240,7 @@ class Matrix {
       return res;
     }
 
-    // and complex conjugate
+    /// and complex conjugate
     #pragma hila loop_function
     inline Matrix<n,m,T> conj() const { 
       Matrix<n,m,T> res;
@@ -243,7 +250,7 @@ class Matrix {
       return res;
     }
         
-    //return copy of adjoint/dagger of this Matrix
+    /// return copy of adjoint/dagger of this Matrix
     #pragma hila loop_function
     inline Matrix<m,n,T> adjoint() const { 
       Matrix<m,n,T> res;
@@ -252,10 +259,12 @@ class Matrix {
       }
       return res;
     }
+
+    /// alias dagger() to adjoint()
     #pragma hila loop_function
     inline Matrix<m,n,T> dagger() const { return adjoint(); }
 
-    // and real and imag -methods
+    /// return real part
     #pragma hila loop_function
     inline Matrix<n,m,number_type<T>> real() const { 
       Matrix<n,m,number_type<T>> res;
@@ -265,6 +274,7 @@ class Matrix {
       return res;
     }
 
+    /// return imaginary part
     #pragma hila loop_function
     inline Matrix<n,m,number_type<T>> imag() const { 
       Matrix<n,m,number_type<T>> res;
@@ -275,6 +285,7 @@ class Matrix {
     }
 
 
+    /// matrix trace (return type T)
     #pragma hila loop_function
     T trace() const {
       static_assert(n==m, "trace not defined for non square matrices!");
@@ -285,6 +296,7 @@ class Matrix {
       return result;
     }
 
+    /// calculate square norm - sum of squared elements
     number_type<T> norm_sq() const {
       number_type<T> result = 0;
       for (int i=0; i<n*m; i++) {
@@ -293,7 +305,7 @@ class Matrix {
       return result;
     }
 
-    // dot product - vector . vector
+    /// dot product - vector . vector
     #pragma hila loop_function
     template <int p, std::enable_if_t<(p==1 && m==1),int> = 0>
     inline T dot(const Matrix<n,p,T> &rhs) const {
@@ -304,7 +316,7 @@ class Matrix {
       return r;
     }
 
-    // dot with matrix - matrix
+    /// dot with matrix - matrix
     #pragma hila loop_function
     template <int p,
               std::enable_if_t<(p>1 || m>1),int> = 0>
@@ -316,7 +328,7 @@ class Matrix {
       }
     }
 
-    // element-by-element multiply and divide
+    /// element-by-element multiply
     #pragma hila loop_function
     Matrix<n,m,T> element_mul(const Matrix<n,m,T> & rhs) const {
       Matrix<n,m,T> res;
@@ -324,6 +336,7 @@ class Matrix {
       return res;
     }
 
+    /// element-by-element divide
     #pragma hila loop_function
     Matrix<n,m,T> element_div(const Matrix<n,m,T> & rhs) const {
       Matrix<n,m,T> res;
@@ -333,7 +346,7 @@ class Matrix {
   
  
 
-
+    /// Generate random elements
     #pragma hila loop_function
     Matrix<n, m, T> & random() {
       for (int i=0; i<n*m; i++) {
@@ -342,6 +355,7 @@ class Matrix {
       return *this;
     }
 
+    /// Generate gaussian random elements
     #pragma hila loop_function
     inline Matrix<n, m, T> & gaussian(){ 
       for (int i = 0; i < n*m; i++) {
@@ -350,7 +364,7 @@ class Matrix {
       return *this;
     }
 
-
+    /// Convert to string for printing
     std::string str() const {
       std::stringstream text;
       for (int i=0; i<n; i++){
@@ -364,39 +378,43 @@ class Matrix {
 };
 
 
-// do transpose and adjoint functions here
+/// do transpose and adjoint functions here
 template <const int n, const int m, typename T>
 #pragma hila loop_function
 inline Matrix<n,m,T> transpose(const Matrix<m,n,T> & arg) {
   return arg.transpose();
 }
-// conjugate
+/// conjugate
 template <const int n, const int m, typename T>
 #pragma hila loop_function
 inline Matrix<n,m,T> conj(const Matrix<n,m,T> & arg) {
   return arg.conj();
 }
-// and adjoint function
+/// adjoint (=conjugate)
 template <const int n, const int m, typename T>
 #pragma hila loop_function
 inline Matrix<n,m,T> adjoint(const Matrix<m,n,T> & arg) {
   return arg.adjoint();
 }
+/// dagger (=conjugate)
 template <const int n, const int m, typename T>
 #pragma hila loop_function
 inline Matrix<n,m,T> dagger(const Matrix<m,n,T> & arg) {
   return arg.adjoint();
 }
+/// trace
 template <const int n, const int m, typename T>
 #pragma hila loop_function
 inline T trace(const Matrix<n,m,T> & arg) {
   return arg.trace();
 }
+/// real part
 template <const int n, const int m, typename T>
 #pragma hila loop_function
 inline Matrix<n,m,number_type<T>> real(const Matrix<n,m,T> & arg) {
   return arg.real();
 }
+/// imaginary part
 template <const int n, const int m, typename T>
 #pragma hila loop_function
 inline Matrix<n,m,number_type<T>> imag(const Matrix<n,m,T> & arg) {
@@ -406,8 +424,7 @@ inline Matrix<n,m,number_type<T>> imag(const Matrix<n,m,T> & arg) {
 
 
 
-//templates needed for naive calculation of determinants
-
+/// templates needed for naive calculation of determinants
 template<int n, int m, typename T>
 #pragma hila loop_function
 Matrix<n - 1, m - 1, T> Minor(const Matrix<n, m, T> & bigger, int i, int j){
@@ -422,7 +439,7 @@ Matrix<n - 1, m - 1, T> Minor(const Matrix<n, m, T> & bigger, int i, int j){
   return result;
 }
 
-//determinant -> use LU factorization later
+/// determinant -> use LU factorization later
 template<int n, int m, typename T>
 #pragma hila loop_function
 T det(const Matrix<n, m, T> & mat){
@@ -437,13 +454,14 @@ T det(const Matrix<n, m, T> & mat){
   return result;
 }
 
-// and 2x2 and 1x1 matrix dets, too...
+/// 2x2 matrix det
 template<typename T>
 #pragma hila loop_function
 T det(const Matrix<2,2,T> & mat){
   return mat.e(0,0)*mat.e(1,1) - mat.e(1,0)*mat.e(0,1);
 }
 
+/// 1x1 matrix det (trivial)
 template<typename T>
 #pragma hila loop_function
 T det(const Matrix<1,1,T> & mat) {
@@ -451,8 +469,7 @@ T det(const Matrix<1,1,T> & mat) {
 }
 
 
-//Now matrix additions: matrix + matrix
-
+/// Now matrix additions: matrix + matrix
 template <int n, int m, typename T>
 #pragma hila loop_function
 inline Matrix<n,m,T> operator+(Matrix<n,m,T> a, const Matrix<n,m,T> & b){
@@ -460,6 +477,7 @@ inline Matrix<n,m,T> operator+(Matrix<n,m,T> a, const Matrix<n,m,T> & b){
   return a;
 }
 
+/// Matrix subtract
 template <int n, int m, typename T>
 #pragma hila loop_function
 inline Matrix<n,m,T> operator-(Matrix<n,m,T> a, const Matrix<n,m,T> & b){
@@ -467,7 +485,7 @@ inline Matrix<n,m,T> operator-(Matrix<n,m,T> a, const Matrix<n,m,T> & b){
   return a;
 }
 
-// Matrix + scalar
+/// Matrix + scalar
 #pragma hila loop_function
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
@@ -476,7 +494,7 @@ inline Matrix<n,m,T> operator+(Matrix<n,m,T> a, const S b){
   return a;
 }
 
-// scalar + matrix
+/// scalar + matrix
 #pragma hila loop_function
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
@@ -485,7 +503,7 @@ inline Matrix<n,m,T> operator+(const S b, Matrix<n,m,T> a){
   return a;
 }
 
-// matrix - scalar
+/// matrix - scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_minus<T,S>,T>::value, int> = 0 >
 #pragma hila loop_function
@@ -494,7 +512,7 @@ Matrix<n,m,T> operator-(Matrix<n,m,T> a, const S b){
   return a;
 }
 
-// scalar - matrix
+/// scalar - matrix
 #pragma hila loop_function
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_minus<S,T>,T>::value, int> = 0 >
@@ -504,9 +522,9 @@ inline Matrix<n,m,T> operator-(const S b, Matrix<n,m,T> a){
   return a;
 }
 
+
 ////////////////////////////////////////
 /// matrix * matrix is the most important bit
-
 template <int n, int m, int p, typename T>
 #pragma hila loop_function
 inline Matrix<n,p,T> operator*(const Matrix<n,m,T> & A, const Matrix<m,p,T> & B) {
@@ -540,7 +558,7 @@ inline Matrix<n,p,T> operator*(const Matrix<n,m,T> & A, const Matrix<m,p,T> & B)
   return res;
 }
 
-// and treat separately horiz. vector * vector
+/// and treat separately horiz. vector * vector
 template <int m, typename T>
 #pragma hila loop_function
 T operator*(const Matrix<1,m,T> & A, const Matrix<m,1,T> & B) {
@@ -552,7 +570,7 @@ T operator*(const Matrix<1,m,T> & A, const Matrix<m,1,T> & B) {
 }
 
 
-// matrix * scalar
+/// matrix * scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
 Matrix<n,m,T> operator*(Matrix<n,m,T> mat, const S rhs) {
@@ -560,7 +578,7 @@ Matrix<n,m,T> operator*(Matrix<n,m,T> mat, const S rhs) {
   return mat;
 }
 
-// scalar * matrix
+/// scalar * matrix
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_mul<S,T>,T>::value, int> = 0 >
 Matrix<n,m,T> operator*(const S rhs, Matrix<n,m,T> mat) {
@@ -568,7 +586,7 @@ Matrix<n,m,T> operator*(const S rhs, Matrix<n,m,T> mat) {
   return mat;
 }
 
-// matrix / scalar
+/// matrix / scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_div<T,S>,T>::value, int> = 0 >
 Matrix<n,m,T> operator/(Matrix<n,m,T> mat, const S rhs) {
@@ -577,6 +595,7 @@ Matrix<n,m,T> operator/(Matrix<n,m,T> mat, const S rhs) {
 }
 
 
+/// Stream operator
 template <int n, int m, typename T>
 std::ostream& operator<<(std::ostream &strm, const Matrix<n,m,T> &A) {
   if constexpr (n == 1 || m == 1) {
@@ -614,24 +633,26 @@ std::ostream& operator<<(std::ostream &strm, const Matrix<n,m,T> &A) {
   return strm;
 }
 
-
+/// Norm squared function
 template<int n, int m, typename T>
 inline number_type<T> norm_squared(const Matrix<n,m,T> & rhs){
   return rhs.norm_sq();
 }
 
+/// Function that calls random()-method
 template<int n, int m, typename T>
 inline void random(Matrix<n,m,T> & mat) {
   mat.random();
 }
 
+/// Function that calls the gaussian()-method
 template<int n, int m, typename T>
 inline void gaussian_random(Matrix<n,m,T> & mat) {
   mat.gaussian();
 }
 
 
-// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff
+/// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff
 template <int n, typename T, typename radix=number_type<T>,
           std::enable_if_t<is_arithmetic<radix>::value, int> = 0,
           std::enable_if_t<std::is_same<T,cmplx<radix>>::value, int> = 0 >
@@ -710,7 +731,7 @@ cmplx<radix> det_lu( const Matrix<n,n,T> & mat) {
   return (csum);
 }
 
-
+/// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff
 template <int n, typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0>
 T det_lu(const Matrix<n,n,T> & mat) {
   int i, imax, j, k;
@@ -784,15 +805,20 @@ T det_lu(const Matrix<n,n,T> & mat) {
 }
 
 ///////////////////////////////////////////////////////////////
-/// Finally, define Vector, HorizontalVector and SquareMatrix
+/// Define Vector as a special case of Matrix
 ///////////////////////////////////////////////////////////////
-
 template <int n,typename T>
 using Vector = Matrix<n,1,T>;
 
+///////////////////////////////////////////////////////////////
+/// Define HorizontalVector as a special case of Matrix
+///////////////////////////////////////////////////////////////
 template <int n,typename T>
 using HorizontalVector = Matrix<1,n,T>;
 
+///////////////////////////////////////////////////////////////
+/// Define SquareMatrix as a special case of Matrix
+///////////////////////////////////////////////////////////////
 template <int n,typename T>
 using SquareMatrix = Matrix<n,n,T>;
 

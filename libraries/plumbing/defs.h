@@ -46,18 +46,17 @@ using real_t = double;
 
 
 // This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!
-#define output_only     
+#define output_only
 
 // text output section -- defines also output0, which writes from node 0 only
-
 namespace hila {
-  // this is our default output file stream
+  /// this is our default output file stream
   extern std::ostream output;
-  // this is just a hook to store output file, if it is in use
+  /// this is just a hook to store output file, if it is in use
   extern std::ofstream output_file;
 
-  // store the rank of this process to a global variable - this will not vanish during 
-  // object destruction at the end!
+  /// store the rank of this process to a global variable - this will not vanish during 
+  /// object destruction at the end!
   extern int my_rank_n;
   inline int myrank() { return my_rank_n; }
 
@@ -68,18 +67,24 @@ namespace hila {
   void terminate(int status);
   void error(const std::string & msg);
   void error(const char * msg);
-
 }
 
-// We want to define ostream
-//     "output0 << stuff;"
-// which is done only by rank 0.  
-// This is hacky but easy.  Probably should be done without #define.
-// Do this through else-branch in order to avoid if-statement problems.
-// #define output0 if (hila::myrank() != 0) {} else hila::output
-//
-// Above #define can trigger "dangling-else" warning.  Let us
-// try to avoid it with the following a bit more ugly trick:
+// The logger uses hila::myrank, so it cannot be included on top 
+#include "plumbing/logger.h"
+namespace hila {
+  /// Now declare the logger
+  extern logger_class log;
+}
+
+/// We want to define ostream
+///     "output0 << stuff;"
+/// which is done only by rank 0.  
+/// This is hacky but easy.  Probably should be done without #define.
+/// Do this through else-branch in order to avoid if-statement problems.
+/// #define output0 if (hila::myrank() != 0) {} else hila::output
+///
+/// Above #define can trigger "dangling-else" warning.  Let us
+/// try to avoid it with the following a bit more ugly trick:
 #define output0 for(int _dummy_i_=1; hila::myrank()==0 && _dummy_i_; --_dummy_i_) hila::output
 
 // The following disables the "dangling-else" warning, but not needed now
@@ -87,10 +92,10 @@ namespace hila {
 //#pragma GCC diagnostic ignored "-Wdangling-else"
 //#endif
 
-// define a class for FFT direction
+/// define a class for FFT direction
 enum class fft_direction { forward, backward, back };
 
-// Allow other than periodic boundary conditions
+/// Allow other than periodic boundary conditions
 #define SPECIAL_BOUNDARY_CONDITIONS
 
 // Backend defs-headers
@@ -147,14 +152,18 @@ namespace std {
 /// Utility for selecting the numeric base type of a class
 template<class T, class Enable = void>
 struct base_type_struct {
+  /// The base type of the class
   using type = typename T::base_type;
 };
 
+/// Utility for selecting the numeric base type of a class
 template<typename T>
 struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> {
+  /// In this case the base type is just T
   using type = T;
 };
 
+/// Utility for selecting the numeric base type of a class
 template<typename T>
 using number_type = typename base_type_struct<T>::type;
  

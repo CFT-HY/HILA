@@ -18,6 +18,13 @@ here involves new datatypes and a preprocessing tool that converts c++ code with
 
 # Instructions
 
+## Generating documentation
+
+Build the documentation (with the git hash as the version number) using
+~~~ bash
+PROJECT_NUMBER=$(git rev-parse --short HEAD) doxygen
+~~~
+
 ## Compiling the preprocessing tool and using it on c++ code
 
 In short, the framework can be used in these steps: 
@@ -45,15 +52,6 @@ Check the example programs in the programs folder. You can use almost any standa
 
 In order to use the additional features for field type variables, you should inlude `plumbing/field.h` in you program. You can also include one or more of the files in the `datatypes` folder, which contains predefined datatypes that can be used to construct a field.
 
-After this you need to define an output stream. To use `stdout`, add the line
-~~~ C++
-std::ostream &hila::output = std::cout;
-~~~
-Next, we need to initialize a lattice. The following constructs a lattice and sets it as default
-~~~ C++
-lattice_struct my_lattice;
-lattice_struct * lattice = & my_lattice;
-~~~
 
 
 ### Compiling on Puhti
@@ -66,6 +64,39 @@ make -f Makefile_puhti
 ~~~
 
 This will link against the llvm installation in the hila development project folder.
+
+
+## Using the Makefile system
+
+Each of the example applications has a makefile for compiling the application with a
+given target backend. To compile it, run
+~~~ bash
+make TARGET=target program_name
+~~~
+The lower case target should be replaced by one of 'vanilla', 'AVX' or 'CUDA'. This
+will create a 'build' directory and compile the application there.
+
+An application makefile should define any target files and include the main makefile.
+Here is an example with comments:
+~~~
+# Give the location of the top level distribution directory wrt. this.
+# Can be absolute or relative
+TOP_DIR := ../..
+
+# Add an application specific header to the dependencies
+APP_HEADERS := application.h
+
+# Read in the main makefile contents, incl. platforms
+include $(TOP_DIR)/libraries/main.mk
+
+# With multiple targets we want to use "make target", not "make build/target".
+# This is needed to carry the dependencies to build-subdir
+application: build/application ; @:
+
+# Now the linking step for each target executable
+build/application: Makefile build/application.o $(HILA_OBJECTS) $(HEADERS) 
+	$(LD) -o $@ build/application.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
+~~~
 
 
 ## Syntax - What works
@@ -122,9 +153,7 @@ forsites(EVEN){
 
 ## What doesn't work (as expected)
 
-Field element method calls in loops that change the element.
-
-Referring to the same direction twice in different field references causes an error in cuda kernel parameters.
+Random numbers in a vectorized loop return the same number for every entry in a vector.
 
 
 ## Testing
@@ -146,13 +175,13 @@ If you're on a machine with GPU's, you can test the GPU transformations with:
 
  1. Write tests for existing and new features
      * Test also things that fail. The test basically defines how things should work.
- 1. Extend both to support:
+ 2. Extend both to support:
      * Fourier transform of field variable
      * If (or where) statements in a loop
      * Reduction on dimension (so f(t) = sum_x g(x,t))
      * Array-of-Struct-of-Arrays layout
      * MPI
- 1. Implement OpenACC once the compiler version is updated
- 1. Get rid of NDIM
- 1. Extend field to allow lattice as input
- 1. Document the library
+ 3. Implement OpenACC once the compiler version is updated
+ 4. Get rid of NDIM
+ 5. Extend field to allow lattice as input
+ 6. Document the library

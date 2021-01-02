@@ -13,6 +13,7 @@ field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[2*NDIM];
 
 
 
+/// Apply the hopping term to v_out and add to v_in
 template<int N, typename radix, typename matrix>
 inline void Dirac_Wilson_hop(
   const field<matrix> *gauge, const double kappa,
@@ -52,7 +53,7 @@ inline void Dirac_Wilson_hop(
 }
 
 
-// A version of Dirac_wilson_hop that overrides the output field
+/// Apply the hopping term to v_in and overwrite v_out
 template<int N, typename radix, typename matrix>
 inline void Dirac_Wilson_hop_set(
   const field<matrix> *gauge, const double kappa,
@@ -99,6 +100,7 @@ inline void Dirac_Wilson_hop_set(
 }
 
 
+/// The diagonal part of the operator. Without clover this is just the identity
 template<int N, typename radix>
 inline void Dirac_Wilson_diag(
   const field<Wilson_vector<N, radix>> &v_in,
@@ -109,6 +111,7 @@ inline void Dirac_Wilson_diag(
 }
 
 
+/// Inverse of the diagonal part. Without clover this does nothing.
 template<int N, typename radix>
 inline void Dirac_Wilson_diag_inverse(
   field<Wilson_vector<N, radix>> &v,
@@ -117,6 +120,8 @@ inline void Dirac_Wilson_diag_inverse(
 
 
 
+/// Calculate derivative  d/dA_x,mu (chi D psi)
+/// Necessary for the HMC force calculation.
 template<int N, typename radix, typename gaugetype, typename momtype>
 inline void Dirac_Wilson_calc_force(
   const field<gaugetype> *gauge,
@@ -153,46 +158,61 @@ inline void Dirac_Wilson_calc_force(
 }
 
 
-
+/// An operator class that applies the Wilson Dirac operator
+/// D.apply(in, out) aplies the operator
+/// D.dagger(int out) aplies the conjugate of the operator
+///
+/// This is useful for defining inverters as composite
+/// operators. For example the conjugate gradient inverter 
+/// is CG<Dirac_Wilson>.
 template<typename matrix>
 class Dirac_Wilson {
   private:
-    // Note array of fields, changes with the field
+    /// A reference to the gauge links used in the dirac operator
     field<matrix> (&gauge)[NDIM];
   
   public:
+    /// The hopping parameter, kappa = 1/(8-2m)
     double kappa;
+    /// Size of the gauge matrix and color dimension of the Wilson vector
     static constexpr int N = matrix::size;
-    using radix = typename matrix::base_type;
+    /// The wilson vector type
     using vector_type = Wilson_vector<N, radix>;
+    /// The matrix type
     using matrix_type = matrix;
 
+    /// Single precision type in case the base type is double precision.
+    /// This is used to precondition the inversion of this operator
     using type_flt = Dirac_Wilson<typename gauge_field_base<matrix>::gauge_type_flt>;
 
+    /// The parity this operator applies to
     parity par = ALL;
 
-    // Constructor: initialize mass and gauge
+    /// Constructor: initialize mass and gauge
     Dirac_Wilson(Dirac_Wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
+    /// Constructor: initialize mass and gauge
     Dirac_Wilson(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
+    /// Constructor: initialize mass and gauge
     Dirac_Wilson(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
+    /// Construct from another Dirac_Wilson operator of a different type.
     template<typename M>
     Dirac_Wilson(Dirac_Wilson<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(d.kappa) {}
 
-    // Applies the operator to in
+    /// Applies the operator to in
     inline void apply( const field<vector_type> & in, field<vector_type> & out){
       Dirac_Wilson_diag(in, out, ALL);
       Dirac_Wilson_hop(gauge, kappa, in, out, ALL, 1);
     }
 
-    // Applies the conjugate of the operator
+    /// Applies the conjugate of the operator
     inline void dagger( const field<vector_type> & in, field<vector_type> & out){
       Dirac_Wilson_diag(in, out, ALL);
       Dirac_Wilson_hop(gauge, kappa, in, out, ALL, -1);
     }
 
-    // Applies the derivative of the Dirac operator with respect
-    // to the gauge field
+    /// Applies the derivative of the Dirac operator with respect
+    /// to the gauge field
     template<typename momtype>
     inline void force(const field<vector_type> & chi,  const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign=1){
       Dirac_Wilson_calc_force(gauge, kappa, chi, psi, force, ALL, sign);
@@ -200,7 +220,7 @@ class Dirac_Wilson {
 };
 
 
-// Multiplying from the left applies the standard Dirac operator
+/// Multiplying from the left applies the standard Dirac operator
 template<int N, typename radix, typename matrix>
 field<Wilson_vector<N, radix>> operator* (Dirac_Wilson<matrix> D, const field<Wilson_vector<N, radix>> & in) {
   field<Wilson_vector<N, radix>> out;
@@ -208,7 +228,7 @@ field<Wilson_vector<N, radix>> operator* (Dirac_Wilson<matrix> D, const field<Wi
   return out;
 }
 
-// Multiplying from the right applies the conjugate
+/// Multiplying from the right applies the conjugate
 template<int N, typename radix, typename matrix>
 field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> & in, Dirac_Wilson<matrix> D) {
   field<Wilson_vector<N, radix>> out;
@@ -221,33 +241,54 @@ field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> &
 
 
 
-
+/// An even-odd decomposed Wilson Dirac operator. Applies
+/// D_{even to odd} D_{diag}^{-1} D_{odd to even} on the even
+/// sites of the vector.
+/// 
+/// The fermion partition function is 
+///   det(D) = det(D_eveneodd) + det(D_{diag odd}).
+/// Dirac_Wilson_evenodd can be used to replace D_Wilson
+/// in the HMC action, as long as the diagonal odd to odd
+/// part is accounted for.
+///
+/// This is useful for defining inverters as composite
+/// operators. For example the conjugate gradient inverter 
+/// is CG<Dirac_Wilson_evenodd>.
 template<typename matrix>
 class Dirac_Wilson_evenodd {
   private:
+    /// A reference to the gauge links used in the dirac operator
     field<matrix> (&gauge)[NDIM];
   public:
+    /// The hopping parameter, kappa = 1/(8-2m)
     double kappa;
+    /// Size of the gauge matrix and color dimension of the Wilson vector
     static constexpr int N = matrix::size;
-    using radix = typename matrix::base_type;
-
+    /// The wilson vector type
     using vector_type = Wilson_vector<N, radix>;
+    /// The matrix type
     using matrix_type = matrix;
 
+    /// Single precision type in case the base type is double precision.
+    /// This is used to precondition the inversion of this operator
     using type_flt = Dirac_Wilson_evenodd<typename gauge_field_base<matrix>::gauge_type_flt>;
 
-    // The parity 
+    /// The parity this operator applies to
     parity par = EVEN;
 
+    /// Constructor: initialize mass and gauge
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
+    /// Constructor: initialize mass and gauge
     Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
+    /// Constructor: initialize mass and gauge
     Dirac_Wilson_evenodd(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
+    /// Construct from another Dirac_Wilson operator of a different type.
     template<typename M>
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(d.kappa) {}
 
 
-    // Applies the operator to in
+    /// Applies the operator to in
     inline void apply( const field<vector_type> & in, field<vector_type> & out){
       Dirac_Wilson_diag(in, out, EVEN);
 
@@ -257,7 +298,7 @@ class Dirac_Wilson_evenodd {
       out[ODD] = 0;
     }
 
-    // Applies the conjugate of the operator
+    /// Applies the conjugate of the operator
     inline void dagger( const field<vector_type> & in, field<vector_type> & out){
       Dirac_Wilson_diag(in, out, EVEN);
 
@@ -267,8 +308,8 @@ class Dirac_Wilson_evenodd {
       out[ODD] = 0;
     }
 
-    // Applies the derivative of the Dirac operator with respect
-    // to the gauge field
+    /// Applies the derivative of the Dirac operator with respect
+    /// to the gauge field
     template<typename momtype>
     inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign){
       field<momtype> force2[NDIM];

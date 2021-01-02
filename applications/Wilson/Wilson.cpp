@@ -34,7 +34,7 @@ int main(int argc, char **argv){
 
   // Define gauge and momentum action terms
   gauge_action ga(gauge, beta);
-  gauge_momentum_action ma(gauge, beta);
+  gauge_momentum_action ma(gauge);
 
   // Define a Dirac operator
   Dirac_Wilson_evenodd D(kappa, adj_gauge);

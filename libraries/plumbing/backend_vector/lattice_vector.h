@@ -14,28 +14,34 @@ SUBNODE_LAYOUT needs to be defined to use this
 /// - twist permutations when needed
 /// - allocation size, including new halo sites (replaces field_alloc_size)
 /// these are used by fields which are laid out with vector structure
-
-
 template<int vector_size>
 struct vectorized_lattice_struct  {
   public:
+    /// pointer to the original lattice
     lattice_struct * lattice;
 
-    unsigned v_sites;                                // vector sites on this node
-    coordinate_vector subdivisions;                  // subnode divisions to different directions
-    coordinate_vector subnode_origin, subnode_size;  // origin of the 1st subnode = origin of this_node
+    /// vector sites on this node
+    unsigned v_sites;
+    /// subnode divisions to different directions
+    coordinate_vector subdivisions;
+    /// origin of the 1st subnode = origin of this_node
+    coordinate_vector subnode_origin, subnode_size;
      
-    // offsets to boundary halos
+    /// True if boundary needs a permutation
     bool is_boundary_permutation[NDIM];
-    int boundary_permutation[NDIRS][vector_size];
-    unsigned halo_offset[NDIRS], halo_offset_odd[NDIRS], n_halo_vectors[NDIRS];
-    unsigned * RESTRICT halo_index[NDIRS];
+    /// True if the boundary elements are local
     bool only_local_boundary_copy[NDIRS];
+    /// permutation vectors
+    int boundary_permutation[NDIRS][vector_size];
+    /// offsets to boundary halos
+    unsigned halo_offset[NDIRS], halo_offset_odd[NDIRS], n_halo_vectors[NDIRS];
+    /// storage for indexes to halo sites
+    unsigned * RESTRICT halo_index[NDIRS];
 
-    // move data from receive buffer -- sending is fine as it is
-    // takes the role of nn_comms
-
+    /// move data from receive buffer -- sending is fine as it is
+    /// takes the role of nn_comms
     unsigned * recv_list[NDIRS];
+    /// The size of the receive list in each direction
     unsigned recv_list_size[NDIRS];
     
     // coordinate offsets to nodes
@@ -45,12 +51,15 @@ struct vectorized_lattice_struct  {
     // coordinate_compound_vec_type coordinate_offset;
     coordinate_vector * RESTRICT coordinate_base;
 
+    /// Storage for neighbour indexes on each site
     unsigned * RESTRICT neighbours[NDIRS];
-    unsigned alloc_size;
 
+    /// The storage size of a field
+    unsigned alloc_size;
+    /// A wait array for the vectorized field
     unsigned char * RESTRICT vec_wait_arr_; 
  
-
+    /// Check if this is the first subnode
     bool is_on_first_subnode( coordinate_vector v ) {
       v = mod(v,lattice->size());
       foralldir(d) {
@@ -74,13 +83,12 @@ struct vectorized_lattice_struct  {
     ///   vector_index(32) = vector_index(64)/2 and
     ///   index_in_vector(32) = index_in_vector(64) + (vector_index(64)%2)*vector_size(64)
     /// This removes the last direction where number of subnodes is divisible
-    //////////////////////////////////////////////////////////////////////////////////////////////
-
+    /////////////////////////////////////////////////////////////////////////////////////////////
     vectorized_lattice_struct(lattice_struct * _lattice) {
-      // Initialize
+      /// Initialize
       lattice =  _lattice;
 
-      /// vector
+      /// sites on vector
       v_sites = lattice->local_volume() / vector_size;
       subdivisions   = lattice->this_node.subnodes.divisions;
       subnode_size   = lattice->this_node.subnodes.size;
@@ -120,7 +128,6 @@ struct vectorized_lattice_struct  {
     /////////////////////////////////////////////////////////////////////
     /// Find the boundary permutations to different directions
     /////////////////////////////////////////////////////////////////////
-
     void get_boundary_permutations() {
 
       // boundary permutation is done in a "layout-agnostic" way:
@@ -168,7 +175,6 @@ struct vectorized_lattice_struct  {
     ///  if no mpi comm.  The copying is done to ease implementing different boundary conditions
     /// These come automatically when we tally up the neigbours below
     /////////////////////////////////////////////////////////////////////////
-
     void get_neighbours_and_local_halo() {
 
       // check special case: 1st subnode is across the whole lattice to direction d and
@@ -215,10 +221,10 @@ struct vectorized_lattice_struct  {
         halo_offset_odd[d] = halo_offset[d] + n_halo_vectors[d]/2;
         assert(n_halo_vectors[d] % 2 == 0);
 
-        // set also the index array, if needed
-        // halo_index[d] points to the subnode modded neighbour site to dir d, if 
-        // there is boundary twist (meaning there are on-node subnodes to this dir)
-        // we'll use the standard neighb array to do this.
+        /// set also the index array, if needed
+        /// halo_index[d] points to the subnode modded neighbour site to dir d, if 
+        /// there is boundary twist (meaning there are on-node subnodes to this dir)
+        /// we'll use the standard neighb array to do this.
         if (n_halo_vectors[d] > 0 && is_boundary_permutation[abs(d)]) {
           halo_index[d] = (unsigned *)memalloc(n_halo_vectors[d] * sizeof(unsigned));
           int j=0;
@@ -267,7 +273,6 @@ struct vectorized_lattice_struct  {
     //////////////////////////////////////////////////////////////////////////////
     /// Get neighbour receive indices for MPI
     //////////////////////////////////////////////////////////////////////////////
-
     void get_receive_lists() {
 
       for (direction d=(direction)0; d<NDIRS; d++) {
@@ -307,7 +312,6 @@ struct vectorized_lattice_struct  {
     /////////////////////////////////////////////////////////////////////////
     /// Build the structs for coordinates
     /////////////////////////////////////////////////////////////////////////
-
     void set_coordinates() {
 
       /// first vector_size elements should give the coordinates of vector offsets
@@ -329,7 +333,6 @@ struct vectorized_lattice_struct  {
     /// Finally, initialize wait arrays
     /// it is a bit mask array containing a bit at location dir if the neighbour
     /// at that dir is out of the local volume
-
     #ifdef USE_MPI
     void build_wait_arrays() {
       vec_wait_arr_ = (dir_mask_t *)memalloc( v_sites * sizeof(dir_mask_t) );
@@ -350,7 +353,6 @@ struct vectorized_lattice_struct  {
 
     /////////////////////////////////////////////////////////////////////////
     /// Return the communication info
-
     lattice_struct::nn_comminfo_struct get_comminfo(int d){
       return lattice->get_comminfo(d);
     }
@@ -358,14 +360,12 @@ struct vectorized_lattice_struct  {
     /////////////////////////////////////////////////////////////////////////
     /// get neighbours for this, with 2 different methods:
     /// First vector neighbour.  Now idx is the vector index
-
     unsigned vector_neighbour(direction d, int idx) const {
       return neighbours[d][idx];
     }
 
     /// this gives the neighbour when the lattice is traversed
     /// site-by-site.  Now idx is the "true" site index, not vector index
-
     unsigned site_neighbour(direction d, int idx) const {
       return vector_size * neighbours[d][idx/vector_size] + idx % vector_size;
     }
@@ -373,14 +373,12 @@ struct vectorized_lattice_struct  {
     //////////////////////////////////////////////////////////////////////////
     /// Return the number of sites that need to be allocated 
     /// returns sites, not vectors!
-
     unsigned field_alloc_size() const {
       return alloc_size;
     }
 
     //////////////////////////////////////////////////////////////////////////
     /// Return the coordinates of each vector nested as
-
     /// coordinate[direction][vector_index]
     auto coordinates(int idx) const {
       // std::array<typename vector_base_type<int,vector_size>::type ,NDIM> r;
@@ -408,7 +406,7 @@ struct vectorized_lattice_struct  {
       }
     }
 
-    // Last index in a lattice loop
+    /// Last index in a lattice loop
     int loop_end( ::parity P) const {
       if(P==EVEN){
         return v_sites/2;
@@ -417,11 +415,13 @@ struct vectorized_lattice_struct  {
       }
     }
 
+    /// A reduction over the vectorized lattice
     template <typename T>
     void reduce_node_sum(T * value, int N, bool distribute) const {
       lattice->reduce_node_sum(value, N, distribute);
     };
 
+    /// A reduction over the vectorized lattice
     template <typename T>
     void reduce_node_product(T * value, int N, bool distribute) const {
       lattice->reduce_node_product(value, N, distribute);
@@ -434,12 +434,15 @@ struct vectorized_lattice_struct  {
 ///////////////////////////////////////////////////////////////////////////////
 
 struct backend_lattice_struct {
+  /// Pointer to the original lattice
   lattice_struct * latticep;
 
+  /// The setup function is run on lattice setup
   void setup(lattice_struct * _lattice){
     latticep = _lattice;
   }
 
+  /// Returns a vectorized lattice with given vector size
   template< int vector_size >
   vectorized_lattice_struct<vector_size> * get_vectorized_lattice() {
     // Create one if not already created
