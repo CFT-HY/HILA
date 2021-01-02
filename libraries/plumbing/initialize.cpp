@@ -16,7 +16,8 @@ bool hila::about_to_finish = false;
 
 sublattices_struct sublattices;
 
-// This file is largely copied from our old c program: TODO:convert?
+
+void vector_type_info();
 
 ///////////////////////////////////////////////////////////////////////////////
 // very simple cmdline arg interpreter
@@ -224,6 +225,10 @@ void hila::initialize(int argc, char **argv)
 
 #ifdef CUDA
   cuda_device_info();
+#endif
+
+#ifdef AVX
+  vector_type_info();
 #endif
 
   /* basic static node variables */
@@ -472,7 +477,26 @@ void setup_sublattices(cmdlineargs & commandline)
 }
 
 
+#ifdef AVX
+void vector_type_info() {
 
+  output0 << "Using 'vectorclass' with instruction set level INSTRSET=" 
+          << INSTRSET << " <=> ";
 
+  switch (INSTRSET) {
+    case 2: output0 << "SSE2"; break;
+    case 3: output0 << "SSE3"; break;
+    case 4: output0 << "SSSE3"; break;
+    case 5: output0 << "SSE4.1"; break;
+    case 6: output0 << "SSE4.2"; break;
+    case 7: output0 << "AVX"; break;
+    case 8: output0 << "AVX2"; break;
+    case 9: output0 << "AVX512F"; break;
+    case 10: output0 << "AVX512BW/DQ/VL"; break;
+    default: output0 << "Unknown"; break;
+  }
+  output0 << '\n';
+  if (INSTRSET < 8) output0 << " (You probably should use options '-mavx2 -fmad' in compilation)\n";
+}
 
-
+#endif
