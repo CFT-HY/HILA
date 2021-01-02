@@ -111,8 +111,8 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
     SourceLocation sl = MD->getNameInfo().getEndLoc();
     // scan parens after name
     bool output_only = false;
-    llvm::errs() << "METHOD WORD AFTER PARENS " << getNextWord(skipParens(sl)) 
-                 << " is const? " << is_const << '\n';
+    // llvm::errs() << "METHOD WORD AFTER PARENS " << getNextWord(skipParens(sl)) 
+    //              << " is const? " << is_const << '\n';
     if (getNextWord(skipParens(sl)) == output_only_keyword) {
       output_only = true;
     }
