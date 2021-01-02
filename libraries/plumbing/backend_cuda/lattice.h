@@ -19,6 +19,12 @@ struct backend_lattice_struct {
   coordinate_vector coordinates( unsigned idx ){
     return d_coordinates[idx];
   }
+  __host__ __device__
+  int coordinate( unsigned idx, direction dir ){
+    return d_coordinates[idx][dir];
+  }
+
+
   #endif
 };
 
