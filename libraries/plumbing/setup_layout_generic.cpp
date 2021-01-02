@@ -74,7 +74,7 @@ void lattice_struct::setup_layout()
       nodes.n_divisions[i] = 1;
     }
     
-    for (int n=NPRIMES-1; n>=0; n--) for(i=0; i<nfactors[n]; i++) {
+    for (int n=NPRIMES-1; n>=0; n--) for (int i=0; i<nfactors[n]; i++) {
       // figure out which direction to divide -- start from the largest prime, because
       // we don't want this to be last divisor! (would probably wind up with size 1) 
         
