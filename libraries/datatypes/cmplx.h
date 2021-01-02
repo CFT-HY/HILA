@@ -60,7 +60,9 @@ struct cmplx {
   constexpr cmplx<T>(const scalar_t val) : re(static_cast<T>(val)), im(static_cast<T>(0)) {}
 
   // make zero constructor and assignment 
+  #pragma hila loop_function
   constexpr cmplx<T>(const Zero z) : re(static_cast<T>(0)), im(static_cast<T>(0)) {}
+  #pragma hila loop_function
   constexpr cmplx<T> & operator=(const Zero z) { 
     re = im = static_cast<T>(0);
     return *this;
@@ -143,7 +145,7 @@ struct cmplx {
     return cmplx<T>( { r*cos(theta), r*sin(theta) } );
   }
 
-  #pragma hila loop_function
+
   inline cmplx<T> & random(){
     re = hila_random();
     im = hila_random();
@@ -170,7 +172,6 @@ struct cmplx {
     return *this;
   }
 
-  // TODO: for avx vector too -- #define new template macro
   template <typename A,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
   #pragma hila loop_function
@@ -407,7 +408,7 @@ inline cmplx<T> mul_add(const cmplx<T> &a, const cmplx<T>  &b, const cmplx<T> &c
   return r;
 }
  
-
+//////////////////////////////////////////////////////////////////////////////////
 // Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
 // Underscore seems to be required here
 #pragma hila loop_function
