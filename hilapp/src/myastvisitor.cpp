@@ -360,7 +360,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     }
 
     if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
-      vip->is_site_dependent = check_rhs_of_assignment(assign_stmt, &vip->dependent_vars );
+      vip->is_site_dependent = is_rhs_site_dependent(assign_stmt, &vip->dependent_vars );
       
       llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
     } 
@@ -416,7 +416,7 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
 /// Check if the RHS of assignment is site dependent
 ///////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::check_rhs_of_assignment(Stmt *s, std::vector<var_info *> * vi) {
+bool MyASTVisitor::is_rhs_site_dependent(Stmt *s, std::vector<var_info *> * vi) {
 
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {

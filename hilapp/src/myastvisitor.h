@@ -150,7 +150,7 @@ public:
   var_info * new_var_info(VarDecl *decl);
 
   /// check the dependency chain of variables in assignments
-  bool check_rhs_of_assignment(Stmt *s, std::vector<var_info *> * dependent = nullptr);
+  bool is_rhs_site_dependent(Stmt *s, std::vector<var_info *> * dependent = nullptr);
 
   /// this checks if the statement s is site-dependent inside site loops
   /// if return is false, vi (if non-null) will contain a list of variables
