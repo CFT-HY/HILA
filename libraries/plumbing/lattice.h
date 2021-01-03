@@ -198,6 +198,7 @@ public:
   special_boundary_struct special_boundaries[NDIRS];
 #endif
 
+#ifdef USE_MPI
   /// Information about the column of nodes to a given directions
   /// (nodes that share all coordinates except 1)
   struct mpi_column_struct {
@@ -209,6 +210,7 @@ public:
 
   /// Get an MPI column in direction dir, build if necessary
   static mpi_column_struct get_mpi_column(direction dir);
+#endif
 
 #ifndef VANILLA
   backend_lattice_struct *backend_lattice;
