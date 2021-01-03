@@ -48,18 +48,26 @@ static inline direction operator++(direction & dir, int) {
 /// Basic direction looper, which defines the direction as you go.  
 #define foralldir(d) for(direction d=e_x; d<NDIM; ++d)
 
+#pragma hila loop_function
 static inline direction opp_dir(const direction d) { return static_cast<direction>(NDIRS - 1 - static_cast<int>(d)); }
+#pragma hila loop_function
 static inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
 /// unary + and -
+#pragma hila loop_function
 static inline direction operator-(const direction d) { return opp_dir(d); }
+#pragma hila loop_function
 static inline direction operator+(const direction d) { return d; }
 
 /// is_up_dir is true if the dir is "up" to coord direction
+#pragma hila loop_function
 static inline bool is_up_dir(const direction d) { return d<NDIM; }
+#pragma hila loop_function
 static inline bool is_up_dir(const int d) { return d<NDIM; }
 
+#pragma hila loop_function
 static inline direction abs(direction dir) { if (is_up_dir(dir)) return dir; else return -dir; }
 
+#pragma hila loop_function
 inline int dir_dot_product(direction d1, direction d2) {
   if (d1 == d2) return 1;
   else if (d1 == -d2) return -1;
@@ -91,6 +99,7 @@ inline const char * parity_name(parity p) {
   return parity_name_s[(int)p]; 
 }
 
+// This should not be used from loops ...
 inline std::ostream & operator<<(std::ostream& os, const parity p) {
   os << parity_name(p);
   return os;
@@ -105,6 +114,7 @@ static inline unsigned parity_bits_inverse(parity p) {
 }
 
 // turns EVEN <-> ODD, ALL remains.  X->none, none->none
+#pragma hila loop_function
 static inline parity opp_parity(const parity p) {
   unsigned u = parity_bits(p);
   return static_cast<parity>(0x3 & ((u<<1)|(u>>1)));
@@ -144,11 +154,13 @@ class coordinate_vector_t : public Vector<NDIM,T> {
     coordinate_vector_t(const coordinate_vector_t & v) = default;
 
     // initialize with direction -- useful for automatic conversion
+    #pragma hila loop_function
     inline coordinate_vector_t(const direction dir) {
       foralldir(d) this->e(d) = dir_dot_product(d,dir);
     }
 
     // construct from vector
+    #pragma hila loop_function
     coordinate_vector_t(const Vector<NDIM,T> & v) {
       foralldir(d) this->e(d) = v.e(d);
     }
@@ -170,13 +182,14 @@ class coordinate_vector_t : public Vector<NDIM,T> {
     #pragma hila loop_function
     T& operator[] (const direction d) { return this->e((int)d); }
     #pragma hila loop_function
-    const T operator[] (const int i) const { return this->e(i); }
+    T operator[] (const int i) const { return this->e(i); }
     #pragma hila loop_function
-    const T operator[] (const direction d) const { return this->e((int)d); }
+    T operator[] (const direction d) const { return this->e((int)d); }
 
 
 
     // Parity of this coordinate
+    #pragma hila loop_function
     ::parity parity() {
       int s = 0;
       foralldir(d) s += this->e(d);
@@ -226,6 +239,7 @@ class coordinate_vector_t : public Vector<NDIM,T> {
     }
 
     // unary -
+    #pragma hila loop_function
     inline coordinate_vector_t operator-() const {
       coordinate_vector_t res;
       foralldir(d) res.e(d) = -this->e(d);
@@ -245,6 +259,7 @@ using coordinate_vector = coordinate_vector_t<int>;
 /// for integer operator% in c++, which gives negative results if a<0.  This is useful in 
 /// calculating lattice vector additions on a periodic box
 
+#pragma hila loop_function
 static inline int mod(const int a, const int b) {
   int r = a % b;
   if (r < 0) r += b;
@@ -255,6 +270,7 @@ static inline int mod(const int a, const int b) {
 /// 2nd argument m is lattice.size(), this mods the vector a to periodic lattice.
 
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> mod(const coordinate_vector_t<T> & a, const coordinate_vector_t<T> & m) {
   coordinate_vector_t<T> r;
   foralldir(d) {
@@ -264,6 +280,7 @@ inline coordinate_vector_t<T> mod(const coordinate_vector_t<T> & a, const coordi
 }
 
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> operator+(coordinate_vector_t<T> cv1, const coordinate_vector_t<T> & cv2) {
   coordinate_vector_t<T> res;
   foralldir(d) res.c[d] = cv1.c[d] + cv2.c[d];
@@ -271,6 +288,7 @@ inline coordinate_vector_t<T> operator+(coordinate_vector_t<T> cv1, const coordi
 }
 
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> operator-(coordinate_vector_t<T> cv1, const coordinate_vector_t<T> & cv2) {
   coordinate_vector_t<T> res;
   foralldir(d) res.c[d] = cv1.c[d] - cv2.c[d];
@@ -279,6 +297,7 @@ inline coordinate_vector_t<T> operator-(coordinate_vector_t<T> cv1, const coordi
 
 /// Special direction operators: dir + dir -> coordinate_vector
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> operator+(const direction d1, const direction d2) {
   coordinate_vector_t<T> r;
   foralldir(d) {
@@ -289,6 +308,7 @@ inline coordinate_vector_t<T> operator+(const direction d1, const direction d2) 
 }
 
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> operator-(const direction d1, const direction d2) {
   coordinate_vector_t<T> r;
   foralldir(d) {
@@ -299,34 +319,40 @@ inline coordinate_vector_t<T> operator-(const direction d1, const direction d2) 
 }
 
 /// Special operators: int*direction -> coordinate_vector (of type int!)
+#pragma hila loop_function
 inline coordinate_vector operator*(const int i, const direction dir) {
   coordinate_vector r;
   foralldir(d) r.e(d) = i*dir_dot_product(d,dir);
   return r;
 }
 
+#pragma hila loop_function
 inline coordinate_vector operator*(const direction d, const int i) {
   return i*d;
 }
 
 // coordinate vector + direction -- dir is a unit vector
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> operator+( coordinate_vector_t<T> cv, const direction dir ) {
   cv += dir;
   return cv;
 }
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> operator-( coordinate_vector_t<T> cv, const direction dir ) {
   cv -= dir;
   return cv;
 }
 
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> operator+( const direction dir, coordinate_vector_t<T> cv ) {
   cv += dir;
   return cv;
 }
 template <typename T>
+#pragma hila loop_function
 inline coordinate_vector_t<T> operator-( const direction dir, coordinate_vector_t<T> cv ) {
   foralldir(d) cv.e(d) = dir_dot_product(dir,d) - cv.e(d);
   return cv;
@@ -343,8 +369,13 @@ inline coordinate_vector_t<T> operator-( const direction dir, coordinate_vector_
 
 class X_index_type {
   public:
+    #pragma hila loop_function
     const coordinate_vector & coordinates() const;
+
+    #pragma hila loop_function
     int coordinate(direction d) const;
+
+    #pragma hila loop_function
     ::parity parity() const;
 };
 
@@ -357,22 +388,34 @@ static const X_index_type X;
 struct X_plus_direction {};
 
 /// Declarations, no need to implement these (type removed by hilapp)
+#pragma hila loop_function
 const X_plus_direction operator+(const X_index_type x, const direction d);
+#pragma hila loop_function
 const X_plus_direction operator-(const X_index_type x, const direction d);
 
 /// X + coordinate offset, used in f[X+coordinate_vector] or f[X+dir1+dir2] etc.
 struct X_plus_offset {};
 
 // and prototypes, these operators are not defined anywhere but needed for types
+#pragma hila loop_function
 const X_plus_offset operator+(const X_index_type x, const coordinate_vector & cv);
+#pragma hila loop_function
 const X_plus_offset operator-(const X_index_type x, const coordinate_vector & cv);
+#pragma hila loop_function
 const X_plus_offset operator+(const X_plus_direction, const direction d);
+#pragma hila loop_function
 const X_plus_offset operator-(const X_plus_direction, const direction d);
+#pragma hila loop_function
 const X_plus_offset operator+(const X_plus_direction, const coordinate_vector & cv);
+#pragma hila loop_function
 const X_plus_offset operator-(const X_plus_direction, const coordinate_vector & cv);
+#pragma hila loop_function
 const X_plus_offset operator+(const X_plus_offset, const direction d);
+#pragma hila loop_function
 const X_plus_offset operator-(const X_plus_offset, const direction d);
+#pragma hila loop_function
 const X_plus_offset operator+(const X_plus_offset, const coordinate_vector & cv);
+#pragma hila loop_function
 const X_plus_offset operator-(const X_plus_offset, const coordinate_vector & cv);
 
 
