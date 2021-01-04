@@ -2,6 +2,11 @@
 #define _BACKEND_LATTICE_H_
 
 
+/// store size and volume as (device) globals
+extern __device__ coordinate_vector device_size_;
+extern __device__ int64_t device_volume_;
+
+
 /// Lattice related data that needs to be communicated
 /// to kernels
 struct backend_lattice_struct {
@@ -17,6 +22,8 @@ struct backend_lattice_struct {
   int loop_begin, loop_end;
   /// Finally a pointer to the list of coordinates, stored on device
   coordinate_vector * d_coordinates;
+  /// And store also the lattice size on device
+  coordinate_vector * d_size;
 
   /// setup the backend lattice data
   void setup(lattice_struct *lattice);
@@ -31,6 +38,17 @@ struct backend_lattice_struct {
   int coordinate( unsigned idx, direction dir ){
     return d_coordinates[idx][dir];
   }
+  __device__ coordinate_vector size(){
+    return device_size_;
+  }
+  __device__ int size(direction dir){
+    return device_size_[dir];
+  }
+  __device__ int64_t volume(){
+    return device_volume_;
+  }
+
+
 
 
   #endif
