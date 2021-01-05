@@ -327,6 +327,11 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
   
   if (isa<VarDecl>(DRE->getDecl())) {
     auto decl = dyn_cast<VarDecl>(DRE->getDecl());
+
+    clang::QualType typ = decl->getType().getUnqualifiedType().getNonReferenceType();
+    typ.removeLocalConst();
+    if (typ.getAsString(PP) == "X_index_type") return;
+
     var_ref vr;
     vr.ref = DRE;
     //vr.ind = writeBuf->markExpr(DRE);
