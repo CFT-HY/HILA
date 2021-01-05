@@ -5,9 +5,6 @@
 #include "plumbing/backend_cuda/defs.h"
 
 
-/// global memory for lattice size and volume too
-__device__ coordinate_vector device_size_;
-__device__ int64_t device_volume_;
 
 /* Random number generator */
 curandState * curandstate;
@@ -81,9 +78,7 @@ void backend_lattice_struct::setup(lattice_struct * lattice)
   // Other backend_lattice parameters
   field_alloc_size = lattice->field_alloc_size();
 
-  // volume and size
-  device_volume_ = lattice->volume();
-  device_size_ = lattice->size();
+  d_size = lattice->size();
 }
 
 

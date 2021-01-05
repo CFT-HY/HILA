@@ -215,11 +215,12 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
   if (CXXMemberCallExpr *MCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     // llvm::errs() << "It's a member call, name " << name << " objarg "
     //       << MCall->getImplicitObjectArgument()->getType().getAsString() << "\n";
-    if (MCall->getImplicitObjectArgument()->getType().getAsString() == "const class X_index_type") {
+    std::string objtype = MCall->getImplicitObjectArgument()->getType().getAsString();
+    if (objtype == "const class X_index_type" || objtype == "const class lattice_struct *") {
       // now it is a method of X
       // llvm::errs() << " X-method name " << get_stmt_str(Call) << '\n';
 
-      // llvm::errs() << get_stmt_str(Call) << '\n';
+      llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
       special_function_call sfc;
       sfc.fullExpr = Call;
       sfc.scope = parsing_state.scope_level;
@@ -235,27 +236,39 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
       }
       sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
 
+      bool replace_this = true;   // for non-cuda code replace only cases which are needed
       if (name == "coordinates") {
         sfc.replace_expression = "loop_lattice->coordinates(";
+        sfc.add_loop_var = true;
       } else if (name == "parity") {
         sfc.replace_expression = "loop_lattice->site_parity(";
+        sfc.add_loop_var = true;
       } else if (name == "coordinate") {
         sfc.replace_expression = "loop_lattice->coordinate(";
         sfc.argsExpr = MCall->getArg(0);
+        sfc.add_loop_var = true;
       } else if (name == "random") {
         sfc.replace_expression = "hila_random(";
+        sfc.add_loop_var = false;
+      } else if (name == "size") {
+        sfc.replace_expression = "loop_lattice->size(";
+        sfc.add_loop_var = false;
+        replace_this = target.CUDA;
+      } else if (name == "volume") {
+        sfc.replace_expression = "loop_lattice->volume(";
+        sfc.add_loop_var = false;
+        replace_this = target.CUDA;
       } else {
         reportDiag(DiagnosticsEngine::Level::Error,
           Call->getSourceRange().getBegin(),
         "Unknown method X.%0()", name.c_str() );
       }
 
-      sfc.add_loop_var = true;
-      special_function_call_list.push_back(sfc);
+      if (replace_this) special_function_call_list.push_back(sfc);
       return true;
 
     } else {
-
+      
       // other method calls?
       return false;
     }
@@ -298,10 +311,11 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   }
   if (handle_decl) {
     loop_functions.push_back(fd);
-    // llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
-    //   " parameters ";
-    // for (int i=0; i<fd->getNumParams(); i++) 
-    //   llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString() << '\n';
+     llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
+       " parameters ";
+     for (int i=0; i<fd->getNumParams(); i++) 
+       llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
+     llvm::errs() << '\n';
     
     backend_handle_loop_function(fd);
   }
@@ -346,7 +360,7 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
         // llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
 
         CG.addToCallGraph( dyn_cast<Decl>(fbd) );
-        // CG.dump();
+        CG.dump();
         int i = 0;
         for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
           // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
