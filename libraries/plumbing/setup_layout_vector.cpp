@@ -75,7 +75,7 @@ void lattice_struct::setup_layout()
     nsize[d] = n;
   }
 
-  long long ghost_volume = 1;
+  int64_t ghost_volume = 1;
   foralldir(d) ghost_volume *= nsize[d];
 
   // if the division goes even nsize = size() and ghost_volume = volume

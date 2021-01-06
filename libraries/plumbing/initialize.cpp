@@ -331,8 +331,8 @@ void hila::finishrun()
 
   for( lattice_struct * lattice : lattices ){
 
-    unsigned long long gathers = lattice->n_gather_done;
-    unsigned long long avoided = lattice->n_gather_avoided;
+    int64_t gathers = lattice->n_gather_done;
+    int64_t avoided = lattice->n_gather_avoided;
     if (lattice->node_rank() == 0) {
       output0 << " COMMS from node 0: " << gathers << " done, "
               << avoided << "(" 

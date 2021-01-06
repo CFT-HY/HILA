@@ -53,11 +53,9 @@ class lattice_struct {
 private:
  
   // Use ints instead of unsigned, just to avoid surprises in arithmetics
-  // I shall assume here that int is 32 bits, and long long 64 bits.  I guess these are
-  // pretty much standard for now
-  // Alternative: int_32t and int_64t (or int_fast_32t  and int_fast_64t, even more generally) 
+  // I shall assume here that int is 32 bits, and int64_t 64 bits. 
   coordinate_vector l_size;
-  long long l_volume;
+  int64_t l_volume;
 
 public:
 
@@ -234,7 +232,7 @@ public:
 
   // Std accessors:
   // volume
-  long long volume() const { return l_volume; }
+  int64_t volume() const { return l_volume; }
 
   // size routines
   int size(direction d) const { return l_size[d]; }
@@ -345,7 +343,7 @@ public:
   MPI_Comm mpi_comm_lat;
 
   // Guarantee 64 bits for these - 32 can overflow!
-  unsigned long long n_gather_done = 0, n_gather_avoided = 0;
+  int64_t n_gather_done = 0, n_gather_avoided = 0;
  
   template <typename T>
   void reduce_node_sum(T * value, int N, bool distribute);

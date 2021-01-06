@@ -9,7 +9,7 @@
 
 struct timer_value {
   double time;                   // time accumulated in this timer (in sec)
-  unsigned long long count;      // how many times this timer has been used (start - stop interval)
+  int64_t count;                 // how many times this timer has been used (start - stop interval)
 };
 
 
@@ -48,7 +48,7 @@ struct timer_value {
 class timer {
 private:
   double t_start, t_total;
-  unsigned long long count;   // need more than 32 bits
+  int64_t count;   // need more than 32 bits
   std::string label;
 
 public:  
