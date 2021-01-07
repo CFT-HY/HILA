@@ -115,7 +115,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix1[ALL] = dagger(matrix1[X])*matrix1[X]*dagger(matrix1[X]);
+          matrix1[ALL] = matrix1[X].dagger()*matrix1[X]*matrix1[X].dagger();
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -132,7 +132,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix2[ALL] = dagger(matrix2[X])*matrix2[X]*dagger(matrix2[X]);
+          matrix2[ALL] = matrix2[X].dagger()*matrix2[X]*matrix2[X].dagger();
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -149,7 +149,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix3[ALL] = dagger(matrix3[X])*matrix3[X]*dagger(matrix3[X]);
+          matrix3[ALL] = matrix3[X].dagger()*matrix3[X]*matrix3[X].dagger();
       }
       synchronize();
       gettimeofday(&end, NULL);
@@ -163,7 +163,7 @@ int main(int argc, char **argv){
       n_runs*=2;
       gettimeofday(&start, NULL);
       for( int i=0; i<n_runs; i++){
-          matrix4[ALL] = dagger(matrix4[X])*matrix4[X]*dagger(matrix4[X]);
+          matrix4[ALL] = matrix4[X].dagger()*matrix4[X]*matrix4[X].dagger();
       }
       synchronize();
       gettimeofday(&end, NULL);
