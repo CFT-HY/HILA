@@ -240,7 +240,8 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 
   // foralldir(d) assert( ni.size[d] % this_node.subnodes.divisions[d] == 0);
 
-  coordinate_vector subsize = ni.size.element_div(this_node.subnodes.divisions);
+  coordinate_vector subsize;
+  subsize.asArray() = ni.size.asArray() / this_node.subnodes.divisions.asArray() ;
 
   dir = this_node.subnodes.merged_subnodes_dir;
   l = loc[dir] - ni.min[dir];
@@ -389,7 +390,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
 ////////////////////////////////////////////////////////////////////////
 void lattice_struct::node_struct::subnode_struct::setup(const node_struct & tn)
 {
-  size = tn.size.element_div(divisions);
+  size.asArray() = tn.size.asArray() / divisions.asArray();
   evensites = tn.evensites / number_of_subnodes;
   oddsites  = tn.oddsites / number_of_subnodes;
   sites     = evensites + oddsites;
