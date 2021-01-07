@@ -2,8 +2,8 @@
 
 int main(int argc, char **argv){
 
-  using T = Matrix<2,2,cmplx<double>>;
-  // using T = cmplx<double>;
+  using T = Matrix<2,2,Cmplx<double>>;
+  // using T = Cmplx<double>;
 
   test_setup(argc, argv);
     

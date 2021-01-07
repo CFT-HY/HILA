@@ -62,7 +62,7 @@ do {                                            \
 /// SU(N) vectors in multiplication.
 ///
 template<int n, typename radix=double>
-class SU : public Matrix<n,n,cmplx<radix>>{
+class SU : public Matrix<n,n,Cmplx<radix>>{
     public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;
@@ -82,16 +82,16 @@ class SU : public Matrix<n,n,cmplx<radix>>{
 
     /// Construct from a square matrix
     template <typename S>
-    SU(const Matrix<n,n,cmplx<S>> & m) {
+    SU(const Matrix<n,n,Cmplx<S>> & m) {
       for (int i=0; i<n*n; i++){
         this->c[i] = m.c[i];
       }
     }
 
-    /// Casting to different cmplx type
+    /// Casting to different Cmplx type
     template <typename S>
-    operator Matrix<n,n,cmplx<S>>(){
-      Matrix<n,n,cmplx<radix>> r;
+    operator Matrix<n,n,Cmplx<S>>(){
+      Matrix<n,n,Cmplx<radix>> r;
       for (int j=0; j<n; j++) for (int i=0; i<n; i++){
         r.e(i,j) = this->e(i,j);
       }
@@ -113,13 +113,13 @@ class SU : public Matrix<n,n,cmplx<radix>>{
     /// Set the determinant of the SU(N) matrix to 1
     void fix_det()
     {
-        cmplx<radix> d,factor;
+        Cmplx<radix> d,factor;
         radix t;
         int i,j;
 
         d = det(*(this));
         t = d.arg() / static_cast<radix>(n);
-        factor = cmplx<radix>( cos(-t), sin(-t) );
+        factor = Cmplx<radix>( cos(-t), sin(-t) );
         for (j=0; j<n; j++) for (i=0; i<n; i++){
             this->e(j,i) = this->e(j,i)*factor;
         }
@@ -127,7 +127,7 @@ class SU : public Matrix<n,n,cmplx<radix>>{
 
     /// Calculate the matrix exponential using a Taylor expansion
     void exp(const int depth = 12){
-        Matrix<n,n,cmplx<radix>> A, An;
+        Matrix<n,n,Cmplx<radix>> A, An;
         radix factor = 1;
         A = *this;
         An = A;
@@ -142,14 +142,14 @@ class SU : public Matrix<n,n,cmplx<radix>>{
     /// generate random SU(N) element by expanding exp(A), where A is a traceless hermitian matrix. 
     /// more iterations are needed to generate larger elements: 12 works well for n < 10. 
     void random(const int depth = 12) {
-        Matrix<n,n,cmplx<radix>> A, An, res;
+        Matrix<n,n,Cmplx<radix>> A, An, res;
         An = 1; 
         res = 1;
-        cmplx<radix> tr(1,0), factor(1, 0);
+        Cmplx<radix> tr(1,0), factor(1, 0);
         for (int i = 0; i < n; i++) {
-            A.e(i,i) = cmplx<radix>(hila_random(), 0.0);
+            A.e(i,i) = Cmplx<radix>(hila_random(), 0.0);
             for (int j = 0; j < i; j++){
-                cmplx<radix> a(static_cast<radix>(hila_random()/n), static_cast<radix>(hila_random()/n));
+                Cmplx<radix> a(static_cast<radix>(hila_random()/n), static_cast<radix>(hila_random()/n));
                 A.e(i,j) = a;
                 A.e(j,i) = a.conj();
             }
@@ -160,7 +160,7 @@ class SU : public Matrix<n,n,cmplx<radix>>{
         }
         An = A;
         for (int k = 1; k<=depth; k++){
-            factor = factor*cmplx<radix>(0, 1)*(static_cast<radix>(1)/static_cast<radix>(k));
+            factor = factor*Cmplx<radix>(0, 1)*(static_cast<radix>(1)/static_cast<radix>(k));
             res += An*factor;
             An *= A;
         }
@@ -210,16 +210,16 @@ class SU : public Matrix<n,n,cmplx<radix>>{
 
 
     /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff 
-    cmplx<radix> det_lu(){
+    Cmplx<radix> det_lu(){
 
         int i, imax, j, k;
         radix big, d, temp, dum;
-        cmplx<radix> cdum, csum, ctmp1;
+        Cmplx<radix> cdum, csum, ctmp1;
         radix vv[n];
-        cmplx<radix> a[n][n];
-        cmplx<radix> one;
+        Cmplx<radix> a[n][n];
+        Cmplx<radix> one;
 
-        one=cmplx<radix>(1,0);
+        one=Cmplx<radix>(1,0);
 
         d=1;
 
@@ -268,17 +268,17 @@ class SU : public Matrix<n,n,cmplx<radix>>{
             vv[imax] = vv[j];
             }
 
-            if (a[j][j].abs() == static_cast<radix>(0.0)) a[j][j] = cmplx<radix>(1e-20,0);
+            if (a[j][j].abs() == static_cast<radix>(0.0)) a[j][j] = Cmplx<radix>(1e-20,0);
 
             if (j != n-1) {
-                cdum = one/a[j][j]; //check cmplx division
+                cdum = one/a[j][j]; //check Cmplx division
                 for (i=j+1; i<n; i++) {
                     a[i][j] = a[i][j]*cdum;
                 }
             }
         }
 
-        csum = cmplx<radix>(d,0.0);
+        csum = Cmplx<radix>(d,0.0);
         for (j=0; j<n; j++) {
             csum = csum*a[j][j];
         }
@@ -576,7 +576,7 @@ SU2<radix> SU2<radix>::operator - (const SU2<radix> & y){
 
 /// Project to the antihermitean part of a matrix
 template<int N, typename radix>
-void project_antihermitean(Matrix<N,N,cmplx<radix>> &matrix){
+void project_antihermitean(Matrix<N,N,Cmplx<radix>> &matrix){
   radix tr = 0;
   for(int i=0; i<N; i++) {
     for(int j=0; j<i; j++) {
@@ -604,7 +604,7 @@ void project_antihermitean(Matrix<N,N,cmplx<radix>> &matrix){
 /// A new vector type for color vectors. These can be multiplied with appropriate SU(N)
 /// matrices.
 template<int n, typename radix>
-class SU_vector : public Vector<n,cmplx<radix>>{
+class SU_vector : public Vector<n,Cmplx<radix>>{
   public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;
@@ -628,7 +628,7 @@ class SU_vector : public Vector<n,cmplx<radix>>{
     }
 
     #pragma hila loop_function
-    SU_vector(Vector<n,cmplx<radix>> m) {
+    SU_vector(Vector<n,Cmplx<radix>> m) {
       for(int i=0; i<n; i++){
         this->c[i] = m.c[i];
       }
@@ -654,8 +654,8 @@ class SU_vector : public Vector<n,cmplx<radix>>{
     }
 
     #pragma hila loop_function
-    Matrix<n,n,cmplx<radix>> outer_product(const SU_vector &rhs) const{
-      Matrix<n,n,cmplx<radix>> r;
+    Matrix<n,n,Cmplx<radix>> outer_product(const SU_vector &rhs) const{
+      Matrix<n,n,Cmplx<radix>> r;
       for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
         r.e(i,j) += this->c[i]*rhs.c[j];
       }

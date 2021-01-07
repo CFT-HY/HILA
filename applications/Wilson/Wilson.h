@@ -25,7 +25,7 @@
 const int N=2;
 
 using SUN = SU<N,double>;
-using NMAT = Matrix<N,N,cmplx<double>>;
+using NMAT = Matrix<N,N,Cmplx<double>>;
 using VEC = SU_vector<N,double>;
 
 

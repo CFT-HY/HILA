@@ -46,9 +46,9 @@ const int latsize[4] = { 32, 32, 32, 32 };
       // std incantation for field types
       using base_type = typename base_type_struct<T>::type;
 
-      cmplx<T> a[4][4];
+      Cmplx<T> a[4][4];
 
-      cmplx<T> (& operator[](const int i))[4] {return a[i];}
+      Cmplx<T> (& operator[](const int i))[4] {return a[i];}
     };
  
 
@@ -73,7 +73,7 @@ int main(int argc, char **argv){
     lattice->setup(latsize);
 
     // test matrix indexing operators
-    field<Matrix<4,4,cmplx<ntype>>> matd;
+    field<Matrix<4,4,Cmplx<ntype>>> matd;
 
     timing = 0;
     for(n_runs=1; timing < mintime; ){
@@ -97,10 +97,10 @@ int main(int argc, char **argv){
 
     timer timer1("Timer1");
     
-    field<Matrix<MADD(0),MADD(0), cmplx<ntype>> > matrix1;
-    field<Matrix<MADD(1),MADD(1), cmplx<ntype>> > matrix2;
-    field<Matrix<MADD(3),MADD(3), cmplx<ntype>> > matrix3;
-    field<Matrix<MADD(6),MADD(6), cmplx<ntype>> > matrix4;
+    field<Matrix<MADD(0),MADD(0), Cmplx<ntype>> > matrix1;
+    field<Matrix<MADD(1),MADD(1), Cmplx<ntype>> > matrix2;
+    field<Matrix<MADD(3),MADD(3), Cmplx<ntype>> > matrix3;
+    field<Matrix<MADD(6),MADD(6), Cmplx<ntype>> > matrix4;
 
     onsites(ALL){
       matrix1[X].random();

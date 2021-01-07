@@ -6,10 +6,10 @@
 
 // extern field<int> glob;
 
-cmplx<double> d(cmplx<double> x) {return x;}
-cmplx<double> e(cmplx<double> x) {return d(x);}
+Cmplx<double> d(Cmplx<double> x) {return x;}
+Cmplx<double> e(Cmplx<double> x) {return d(x);}
 // #pragma hila ast dump
-cmplx<double> f(const cmplx<double> & x) { return e(x);}
+Cmplx<double> f(const Cmplx<double> & x) { return e(x);}
 
 
 
@@ -20,13 +20,13 @@ T xyz( output_only T & v) {
 }
 
 
-using ft = cmplx<double>;
+using ft = Cmplx<double>;
 
 template <typename T>
 class v2 {
 public:
   using base_type = typename base_type_struct<T>::type;
-  cmplx<T> a[2];
+  Cmplx<T> a[2];
   
   void setter() output_only  { a[0]=1; }
 };
@@ -50,10 +50,10 @@ void pf(field<g> & s) {
 int main()
 {
   
-  field<cmplx<double>> a,b,c;
+  field<Cmplx<double>> a,b,c;
   int i;
   field<double> t(1.0),s;
-  field<cmplx<float>> kissa;
+  field<Cmplx<float>> kissa;
 
   auto y = X;
   
@@ -73,7 +73,7 @@ int main()
 
   direction d = e_x, d2 = e_y;
   
-  A[ALL] = { cmplx(1,0), cmplx(0,0) };
+  A[ALL] = { Cmplx(1,0), Cmplx(0,0) };
   
   double dvar;
   onsites(p) {

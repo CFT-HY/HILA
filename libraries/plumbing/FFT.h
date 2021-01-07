@@ -217,8 +217,8 @@ inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction
 #endif
 
 template<>
-inline void field<cmplx<double>>::FFT(fft_direction fdir){
-  FFT_field_complex<cmplx<double>,cmplx<double>>(*this, *this, fdir);
+inline void field<Cmplx<double>>::FFT(fft_direction fdir){
+  FFT_field_complex<Cmplx<double>,Cmplx<double>>(*this, *this, fdir);
 }
 
 
@@ -229,14 +229,14 @@ struct complex_base{};
 
 /// Match to a complex type
 template<>
-struct complex_base<cmplx<float>>{
-  using type = cmplx<float>;
+struct complex_base<Cmplx<float>>{
+  using type = Cmplx<float>;
 };
 
 /// Match to a complex type
 template<>
-struct complex_base<cmplx<double>>{
-  using type = cmplx<double>;
+struct complex_base<Cmplx<double>>{
+  using type = Cmplx<double>;
 };
 
 /// Match templated class B to it's underlying complex type
@@ -260,7 +260,7 @@ struct complex_base<C<a,b,B>>{
 
 
 /// Run fourier transform on a complex field
-// Called with any type T with a cmplx type nested in the lowest level
+// Called with any type T with a Cmplx type nested in the lowest level
 template<typename T>
 void FFT_field(field<T> & input, field<T> & result, fft_direction fdir = fft_direction::forward){
   FFT_field_complex<T,typename complex_base<T>::type>(input, result, fdir);

@@ -20,7 +20,7 @@
 template <const int n, const int m, typename T>
 class Matrix {
   public:
-    static_assert(is_cmplx_or_arithmetic<T>::value, "Matrix requires cmplx or arithmetic type");
+    static_assert(is_cmplx_or_arithmetic<T>::value, "Matrix requires Cmplx or arithmetic type");
 
     /// The data as a one dimensional array
     T c[n*m];
@@ -664,18 +664,18 @@ inline void gaussian_random(Matrix<n,m,T> & mat) {
 /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47 ff
 template <int n, typename T, typename radix=number_type<T>,
           std::enable_if_t<is_arithmetic<radix>::value, int> = 0,
-          std::enable_if_t<std::is_same<T,cmplx<radix>>::value, int> = 0 >
+          std::enable_if_t<std::is_same<T,Cmplx<radix>>::value, int> = 0 >
 #pragma hila loop_function
-cmplx<radix> det_lu( const Matrix<n,n,T> & mat) {
+Cmplx<radix> det_lu( const Matrix<n,n,T> & mat) {
 
   int i, imax, j, k;
   radix big, d, temp, dum;
-  cmplx<radix> cdum, csum, ctmp1;
+  Cmplx<radix> cdum, csum, ctmp1;
   radix vv[n];
-  cmplx<radix> a[n][n];
-  cmplx<radix> one;
+  Cmplx<radix> a[n][n];
+  Cmplx<radix> one;
 
-  one = cmplx<radix>(1,0);
+  one = Cmplx<radix>(1,0);
   d = 1;
   imax = -1;
 
@@ -723,7 +723,7 @@ cmplx<radix> det_lu( const Matrix<n,n,T> & mat) {
     }
 
     if (a[j][j].abs() == static_cast<radix>(0.0))
-      a[j][j] = cmplx<radix>(1e-20,0);
+      a[j][j] = Cmplx<radix>(1e-20,0);
 
     if (j != n-1) {
       cdum = one/a[j][j];
@@ -733,7 +733,7 @@ cmplx<radix> det_lu( const Matrix<n,n,T> & mat) {
     }
   }
 
-  csum = cmplx<radix>(d,0.0);
+  csum = Cmplx<radix>(d,0.0);
   for (j=0; j<n; j++) {
     csum = csum*a[j][j];
   }

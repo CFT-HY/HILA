@@ -27,14 +27,14 @@ extern int VOLUME;
 
 #pragma hila loop_function
 double monte(
-  Matrix<N,N,cmplx<double>> &U, 
-  Matrix<N,N,cmplx<double>> &staple,
+  Matrix<N,N,Cmplx<double>> &U, 
+  Matrix<N,N,Cmplx<double>> &staple,
   double beta);
 
 #pragma hila loop_function
 void KennedyPendleton(
-  Matrix<2,2,cmplx<double>> &U,
-  Matrix<2,2,cmplx<double>> &staple
+  Matrix<2,2,Cmplx<double>> &U,
+  Matrix<2,2,Cmplx<double>> &staple
 );
 
 

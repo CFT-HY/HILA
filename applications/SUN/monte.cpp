@@ -15,16 +15,16 @@
 
 #pragma hila loop_function
 void mult_su2_mat_vec_elem_n(
-  Matrix<2,2,cmplx<double>> &u,
-  cmplx<double> &x0,
-  cmplx<double> &x1)
+  Matrix<2,2,Cmplx<double>> &u,
+  Cmplx<double> &x0,
+  Cmplx<double> &x1)
 {
   /* Multiplies the complex column spinor (x0, x1) by the SU(2) matrix u */
   /* and puts the result in (x0,x1).  */
   /* Thus x <- u * x          */
   /* C. DeTar 3 Oct 1990 */
 
-  cmplx<double> z0, z1, t0, t1;
+  Cmplx<double> z0, z1, t0, t1;
 
   t0 = x0; t1 = x1;
   
@@ -40,10 +40,10 @@ void mult_su2_mat_vec_elem_n(
 
 #pragma hila loop_function
 void left_su2_hit_n(
-  Matrix<2,2,cmplx<double>> &u,
+  Matrix<2,2,Cmplx<double>> &u,
   int p,
   int q,
-  Matrix<N,N,cmplx<double>> &link)
+  Matrix<N,N,Cmplx<double>> &link)
 {
   /* link <- u * link */
   /* The 0 row of the SU(2) matrix u matches row p of the SU(3) matrix */
@@ -58,8 +58,8 @@ void left_su2_hit_n(
 
 #pragma hila loop_function
 double monte(
-  Matrix<N,N,cmplx<double>> &U, 
-  Matrix<N,N,cmplx<double>> &staple,
+  Matrix<N,N,Cmplx<double>> &U, 
+  Matrix<N,N,Cmplx<double>> &staple,
   double beta)
 {
   /* Do K-P quasi-heat bath by SU(2) subgroups */
@@ -73,8 +73,8 @@ double monte(
   double al,d, xl,xd;
   int  k, test;
   double b3;
-  Matrix<N,N,cmplx<double>> action;
-  Matrix<2,2,cmplx<double>> h;
+  Matrix<N,N,Cmplx<double>> action;
+  Matrix<2,2,Cmplx<double>> h;
   double pi2 = PI*2.0;
 
   b3=beta/N;

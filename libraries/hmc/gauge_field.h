@@ -33,7 +33,7 @@ class gauge_field_base{
     virtual void random(){}
 
     /// Update the momentum by given force
-    virtual void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> *force){}
+    virtual void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> *force){}
     /// Draw gaussian random momentum
     virtual void draw_momentum(){}
     /// Set the momentum to zero
@@ -72,7 +72,7 @@ class gauge_field_base<M<N,double>>{
     virtual void random(){}
 
     /// Update the momentum by given force
-    virtual void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> *force){}
+    virtual void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> *force){}
     /// Draw gaussian random momentum
     virtual void draw_momentum(){}
     /// Set the momentum to zero
@@ -296,7 +296,7 @@ class gauge_field : public gauge_field_base<matrix> {
 
   /// Project a force term to the algebra and add to the
   /// momentum
-  void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> *force){
+  void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> *force){
     foralldir(dir){
       onsites(ALL){
         force[dir][X] = this->gauge[dir][X]*force[dir][X];
@@ -417,7 +417,7 @@ class represented_gauge_field : public gauge_field_base<repr> {
 
   /// Project a force term to the algebra and add to the
   /// momentum
-  void add_momentum(field<SquareMatrix<N,cmplx<basetype>>> (&force)[NDIM]){
+  void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
         if(disable_avx[X]==0){};
@@ -508,7 +508,7 @@ class gauge_momentum_action : public action_base, public integrator_base {
     /// The size of the gauge matrix
     static constexpr int N = gauge_mat::size;
     /// The type of the momentum field
-    using momtype = SquareMatrix<N, cmplx<typename gauge_mat::base_type>>;
+    using momtype = SquareMatrix<N, Cmplx<typename gauge_mat::base_type>>;
 
     /// A reference to the gauge field
     gauge_field &gauge;
@@ -576,7 +576,7 @@ class gauge_action : public action_base {
     /// The size of the gauge matrix
     static constexpr int N = gauge_mat::size;
     /// The type of the momentum field
-    using momtype = SquareMatrix<N, cmplx<typename gauge_mat::base_type>>;
+    using momtype = SquareMatrix<N, Cmplx<typename gauge_mat::base_type>>;
 
     /// A reference to the gauge field
     gauge_field &gauge;

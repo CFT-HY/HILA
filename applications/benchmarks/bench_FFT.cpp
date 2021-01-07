@@ -14,8 +14,8 @@ int main(int argc, char **argv){
   bench_setup(argc, argv);
   seed_random(SEED);
 
-  using T = Matrix<2,2,cmplx<double>>;
-  using Tf = Matrix<2,2,cmplx<float>>;
+  using T = Matrix<2,2,Cmplx<double>>;
+  using Tf = Matrix<2,2,Cmplx<float>>;
 
   field<T> d, d2;
 

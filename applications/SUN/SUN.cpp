@@ -12,14 +12,14 @@ int NX=16, NY=16, NZ=16, NT=16;
 
 
 void calc_staples(
-  field<Matrix<N,N,cmplx<double>>> (&U)[NDIM], 
-  field<Matrix<N,N,cmplx<double>>> &staple_sum,
+  field<Matrix<N,N,Cmplx<double>>> (&U)[NDIM], 
+  field<Matrix<N,N,Cmplx<double>>> &staple_sum,
   direction dir)
 {
   /* Calculate the sum of staples connected to links in direction
    * dir 
    */
-  static field<Matrix<N,N,cmplx<double>>> down_staple;
+  static field<Matrix<N,N,Cmplx<double>>> down_staple;
   staple_sum[ALL] = 0;
   foralldir(d2){
     direction dir2 = (direction)d2;
@@ -48,11 +48,11 @@ void update(
 
 #pragma hila loop_function
 void update(
-  Matrix<2,2,cmplx<double>> &U,
-  const Matrix<2,2,cmplx<double>> &staple,
+  Matrix<2,2,Cmplx<double>> &U,
+  const Matrix<2,2,Cmplx<double>> &staple,
   double beta
 ){
-  Matrix<2,2,cmplx<double>> temp = -beta*staple;
+  Matrix<2,2,Cmplx<double>> temp = -beta*staple;
   KennedyPendleton( U, temp );
 }
 
@@ -64,8 +64,8 @@ int main(int argc, char **argv)
   lattice->setup(nd);
 
   // Define a field
-  field<Matrix<N,N,cmplx<double>>> U[NDIM];
-  field<Matrix<N,N,cmplx<double>>> staple;
+  field<Matrix<N,N,Cmplx<double>>> U[NDIM];
+  field<Matrix<N,N,Cmplx<double>>> staple;
 
   seed_random(seed);
 
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
     foralldir(d1) foralldir(d2) if(d1 != d2){
       direction dir1 = (direction)d1, dir2 = (direction)d2;
       onsites(ALL){
-        element<Matrix<N,N,cmplx<double>>> temp;
+        element<Matrix<N,N,Cmplx<double>>> temp;
         temp =  U[dir1][X] * U[dir2][X+dir1];
         temp *= U[dir1][X+dir2].conjugate();
         temp *= U[dir2][X].conjugate();

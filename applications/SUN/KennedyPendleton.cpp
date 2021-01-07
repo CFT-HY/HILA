@@ -18,12 +18,12 @@
 //this is might be too much to have in a single kernel
 #pragma hila loop_function
 void KennedyPendleton(
-  Matrix<2,2,cmplx<double>> &U,
-  Matrix<2,2,cmplx<double>> &staple
+  Matrix<2,2,Cmplx<double>> &U,
+  Matrix<2,2,Cmplx<double>> &staple
 )
 {
   int nloops;
-  Matrix<2,2,cmplx<double>> a,ua;
+  Matrix<2,2,Cmplx<double>> a,ua;
   double e,f,r1,r2,r3,rd,b,theta;
   double pi2 = PI*2.0;
 

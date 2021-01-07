@@ -132,8 +132,8 @@ class Wilson_vector {
   }
 
   #pragma hila loop_function
-  inline cmplx<radix> dot(const Wilson_vector &rhs) const {
-    cmplx<radix> r = 0;
+  inline Cmplx<radix> dot(const Wilson_vector &rhs) const {
+    Cmplx<radix> r = 0;
     for (int i=0; i<Gammadim; i++) {
       r += c[i].dot(rhs.c[i]);
     }
@@ -241,16 +241,16 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma, const Wilson_ve
       r.c[2] = rhs.c[0]; r.c[3] = rhs.c[1];
       break;
     case gamma1:
-      r.c[0] = cmplx<radix>(0,1)*rhs.c[3]; r.c[1] = cmplx<radix>(0,1)*rhs.c[2];
-      r.c[2] = cmplx<radix>(0,-1)*rhs.c[1]; r.c[3] = cmplx<radix>(0,-1)*rhs.c[0];
+      r.c[0] = Cmplx<radix>(0,1)*rhs.c[3]; r.c[1] = Cmplx<radix>(0,1)*rhs.c[2];
+      r.c[2] = Cmplx<radix>(0,-1)*rhs.c[1]; r.c[3] = Cmplx<radix>(0,-1)*rhs.c[0];
       break;
     case gamma2:
       r.c[0] = -rhs.c[3]; r.c[1] = rhs.c[2];
       r.c[2] = rhs.c[1]; r.c[3] = -rhs.c[0];
       break;
     case gamma3:
-      r.c[0] = cmplx<radix>(0,1)*rhs.c[2]; r.c[1] = cmplx<radix>(0,-1)*rhs.c[3];
-      r.c[2] = cmplx<radix>(0,-1)*rhs.c[0]; r.c[3] = cmplx<radix>(0,1)*rhs.c[1];
+      r.c[0] = Cmplx<radix>(0,1)*rhs.c[2]; r.c[1] = Cmplx<radix>(0,-1)*rhs.c[3];
+      r.c[2] = Cmplx<radix>(0,-1)*rhs.c[0]; r.c[3] = Cmplx<radix>(0,1)*rhs.c[1];
       break;
     case gamma5:
       r.c[0] = rhs.c[0]; r.c[1] = rhs.c[1];
@@ -271,7 +271,7 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma, const Wilson_ve
       r.c[0] = rhs.c[1]; r.c[1] = rhs.c[0];
       break;
     case gamma1:
-      r.c[0] = cmplx<radix>(0,-1)*rhs.c[1]; r.c[1] = cmplx<radix>(0,1)*rhs.c[0];
+      r.c[0] = Cmplx<radix>(0,-1)*rhs.c[1]; r.c[1] = Cmplx<radix>(0,1)*rhs.c[0];
       break;
     case gamma2:
       r.c[0] = rhs.c[0]; r.c[1] = -rhs.c[1];
@@ -351,7 +351,7 @@ class half_Wilson_vector {
 #if (Gammadim==4) 
   #pragma hila loop_function
   half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
-    cmplx<radix> I(0,1);
+    Cmplx<radix> I(0,1);
     switch(dir){
       case e_x:
         if(sign==1){
@@ -408,7 +408,7 @@ class half_Wilson_vector {
   #pragma hila loop_function
   Wilson_vector<N, radix> expand(direction dir, int sign) const{
     Wilson_vector<N, radix> r;
-    cmplx<radix> I(0,1);
+    Cmplx<radix> I(0,1);
     switch(dir){
       case e_x:
         if(sign==1){
@@ -483,7 +483,7 @@ class half_Wilson_vector {
 */
   #pragma hila loop_function
   half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
-    cmplx<radix> I(0,1);
+    Cmplx<radix> I(0,1);
     switch(dir){
       case e_x:
         if(sign==1){
@@ -515,7 +515,7 @@ class half_Wilson_vector {
   #pragma hila loop_function
   Wilson_vector<N, radix> expand(direction dir, int sign) const{
     Wilson_vector<N, radix> r;
-    cmplx<radix> I(0,1);
+    Cmplx<radix> I(0,1);
     switch(dir){
       case e_x:
         if(sign==1){
