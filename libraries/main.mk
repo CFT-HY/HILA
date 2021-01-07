@@ -24,7 +24,7 @@ endif
 
 ## hilapp binary (TOP_DIR defined in calling Makefile)
 
-HILAPP := $(TOP_DIR)/hilapp/build/hilapp
+HILAPP := $(TOP_DIR)/hilapp/bin/hilapp
 
 ################
 

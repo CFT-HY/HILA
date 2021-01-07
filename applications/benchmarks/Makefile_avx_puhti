@@ -1,7 +1,7 @@
 ADDITION = -DMSIZE=2
 OPTS = -DNDIM=4  $(ADDITION)
 
-HILAPP = ../../hilapp/build/hilapp -DPUHTI -DSUBNODE_LAYOUT -DAVX -DUSE_MPI -target:AVX -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I/projappl/project_2001973/llvm/lib/clang/8.0.1/include
+HILAPP = ../../hilapp/bin/hilapp -DPUHTI -DSUBNODE_LAYOUT -DAVX -DUSE_MPI -target:AVX -I../../libraries/ -I/usr/lib/x86_64-linux-gnu/openmpi/include/ -I/usr/lib/openmpi/include/ -I/projappl/project_2001973/llvm/lib/clang/8.0.1/include
 
 CC = mpic++ -DUSE_MPI -DPUHTI -DSUBNODE_LAYOUT -mavx2 -mfma -DAVX -I../../libraries/
 

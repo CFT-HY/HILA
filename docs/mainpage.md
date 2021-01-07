@@ -53,7 +53,7 @@ This will create an executable called `hilapp` in the build folder.
 
 You can then use it to compile an extended C++ file into standard C++ using
 ~~~ bash
-build/hilapp path/to/program.cpp
+bin/hilapp path/to/program.cpp
 ~~~
 This will create a `cpt` file written in standard C++.
 

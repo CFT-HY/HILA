@@ -17,8 +17,8 @@ INCLUDES =
 
 
 # The next line is set up for Puhti. If testing on laptop, comment it out and uncomment the line after
-HILAPP = ../../build/hilapp -target:CUDA -DCUDA -DPUHTI -DHILAPP -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
-#HILAPP = ../../build/hilapp -target:CUDA -DCUDA -DHILAPP $(INCLUDES) 
+HILAPP = ../../bin/hilapp -target:CUDA -DCUDA -DPUHTI -DHILAPP -I../../../llvm/lib/clang/8.0.1/include/ $(INCLUDES) 
+#HILAPP = ../../bin/hilapp -target:CUDA -DCUDA -DHILAPP $(INCLUDES) 
 CC = nvcc -dc -x cu -gencode arch=compute_70,code=sm_70 -fmad=false -DCUDA -DUSE_MPI -I../../../cub/  $(INCLUDES)
 LD = nvcc -gencode arch=compute_70,code=sm_70 -fmad=false $(MPI_LIBS)
 

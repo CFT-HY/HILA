@@ -2,7 +2,7 @@
 #
 # This Makefile defines 
 #  HILA_PP,
-#    location of the hilapp binary, ../hilapp/build/hilapp
+#    location of the hilapp binary, ../hilapp/bin/hilapp
 #  HILA_OBJECTS,
 #    the list of objects that need to be included with an
 #    application
@@ -31,7 +31,7 @@ HILA_OBJECTS = build/inputs.o build/mersenne_inline.o build/lattice.o build/setu
 MPI_OPTS = -DUSE_MPI -I$(MPI_INCLUDE_DIR)
 
 
-HILAPP = $(THIS_DIR)/../hilapp/build/hilapp -I$(HILA_INCLUDE) $(MPI_OPTS)
+HILAPP = $(THIS_DIR)/../hilapp/bin/hilapp -I$(HILA_INCLUDE) $(MPI_OPTS)
 HILA_OPTS = -I$(HILA_INCLUDE)
 
 HILA_LD_FLAGS = -lfftw3 -lm

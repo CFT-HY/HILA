@@ -37,8 +37,8 @@ $(info Using LLVM_BUILD_PATH = $(LLVM_BUILD_PATH))
 $(info Using LLVM_BIN_PATH = $(LLVM_BIN_PATH))
 $(info -----------------------------------------------)
 
-# CXX has to be a fairly modern C++ compiler that supports C++11. gcc 4.8 and
-# higher or Clang 3.2 and higher are recommended. Best of all, if you build LLVM
+# CXX has to be a modern C++ compiler that supports C++17. gcc 8 and
+# higher or Clang 8 and higher are recommended. Best of all, if you build LLVM
 # from sources, use the same compiler you built LLVM with.
 # Note: starting with release 3.7, llvm-config will inject flags that gcc may
 # not support (for example '-Wcovered-switch-default'). If you run into this
@@ -46,7 +46,7 @@ $(info -----------------------------------------------)
 
 #CXX := g++-5
 CXX := $(LLVM_BIN_PATH)/clang++
-CXXFLAGS := -fno-rtti -std=c++17 -O
+CXXFLAGS := -fno-rtti -std=c++17 -O3
 
 LLVM_CXXFLAGS := `$(LLVM_BIN_PATH)/llvm-config --cxxflags`
 LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`
@@ -96,6 +96,7 @@ CLANG_LIBS := \
 
 SRCDIR := src
 BUILDDIR := build
+BINDIR := bin
 
 HEADERS = \
   $(SRCDIR)/hilapp.h \
@@ -139,7 +140,9 @@ $(BUILDDIR)/hilapp: ${OBJECTS}
 	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
 	$(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
 
-
+install: $(BUILDDIR)/hilapp
+	@mkdir -p $(BINDIR)
+	mv $(BUILDDIR)/hilapp $(BINDIR)
 
 .PHONY: clean
 clean:
