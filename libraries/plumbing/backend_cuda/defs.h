@@ -89,14 +89,14 @@ T cuda_reduce_sum(  T * vector, int N ){
     // Calculate the size of the reduced list
     int new_size = (vector_size-first)/reduce_step;
     // Find number of blocks and launch the kernel
-    int blocks = new_size/N_threads + 1;
+    int blocks = (new_size-1)/N_threads + 1;
     cuda_reduce_sum_kernel<<< blocks, N_threads >>>( vector+first, vector_size, new_size, reduce_step );
+    check_cuda_error("cuda_reduce_sum kernel");
     // Find the full size of the resulting array
     vector_size = new_size + first;
     cudaDeviceSynchronize();
   }
 
-  check_cuda_error("cuda_reduce_sum kernel");
   cudaMemcpy( host_vector, vector, vector_size*sizeof(T), cudaMemcpyDeviceToHost );
   check_cuda_error("Memcpy in reduction");
 

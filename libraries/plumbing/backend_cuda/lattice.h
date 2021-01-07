@@ -19,13 +19,12 @@ struct backend_lattice_struct {
   int loop_begin, loop_end;
   /// Finally a pointer to the list of coordinates, stored on device
   coordinate_vector * d_coordinates;
-  /// And store also the lattice size on device
-  coordinate_vector d_size;
 
   /// setup the backend lattice data
   void setup(lattice_struct *lattice);
 
   #ifdef __CUDACC__
+
   /// get the coordinates at a given site
   __host__ __device__
   coordinate_vector coordinates( unsigned idx ){
@@ -35,24 +34,20 @@ struct backend_lattice_struct {
   int coordinate( unsigned idx, direction dir ){
     return d_coordinates[idx][dir];
   }
-  __device__ coordinate_vector size(){
-    return d_size;
-  }
-  __device__ int size(direction dir){
-    return d_size[dir];
-  }
-  __device__ int64_t volume(){
-    int64_t v = 1;
-    foralldir(d) v *= d_size[d];
-    return v;
-
-  }
-
-
-
 
   #endif
 };
+
+
+#ifdef __CUDACC__
+// define also loop_lattice_size() and _volume() methods for cuda
+
+__host__ __device__ int loop_lattice_size(direction d);
+__host__ __device__ coordinate_vector loop_lattice_size(void);
+__host__ __device__ int64_t loop_lattice_volume(void);
+
+#endif
+
 
 
 #endif

@@ -328,10 +328,12 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
   if (isa<VarDecl>(DRE->getDecl())) {
     auto decl = dyn_cast<VarDecl>(DRE->getDecl());
 
-    /// we don't want "X" -variable as a kernel parameter
+    /// we don't want "X" -variable or lattice-> as a kernel parameter
     clang::QualType typ = decl->getType().getUnqualifiedType().getNonReferenceType();
     typ.removeLocalConst();
-    if (typ.getAsString(PP) == "X_index_type") return;
+    if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT LATTICE_STRUCT PTR!!!\n";
+    if (typ.getAsString(PP) == "X_index_type" || 
+        typ.getAsString(PP) == "lattice_struct *") return;
 
     var_ref vr;
     vr.ref = DRE;

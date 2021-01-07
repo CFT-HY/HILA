@@ -81,11 +81,11 @@ void timer::report(bool print_not_timed ) {
     double ttime = gettime();
     if (count > 0) {
       if (t_total/count < 0.01) {
-        std::snprintf(line,200,"%-20s: %14.3f %14llu %10.3f us %8.4f\n",
-                      label.c_str(), t_total, count, 1e6 * t_total/count, t_total/ttime );
+        std::snprintf(line,200,"%-20s: %14.3f %14ld %10.3f us %8.4f\n",
+                      label.c_str(), t_total, (long)count, 1e6 * t_total/count, t_total/ttime );
       } else {
-        std::snprintf(line,200,"%-20s: %14.3f %14llu %10.3f s  %8.4f\n",
-                      label.c_str(), t_total, count, t_total/count, t_total/ttime );
+        std::snprintf(line,200,"%-20s: %14.3f %14ld %10.3f s  %8.4f\n",
+                      label.c_str(), t_total, (long)count, t_total/count, t_total/ttime );
       }
       hila::output << line;
     } else if (print_not_timed) {

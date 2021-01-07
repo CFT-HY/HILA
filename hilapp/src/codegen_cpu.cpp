@@ -36,8 +36,13 @@ std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcB
   std::stringstream code;
 
   // Set loop lattice
-  std::string fieldname = field_info_list.front().new_name;
-  code << "const lattice_struct * RESTRICT loop_lattice = " << fieldname << ".fs->lattice;\n";
+  if (field_info_list.size() > 0) {
+    std::string fieldname = field_info_list.front().new_name;
+    code << "const lattice_struct * RESTRICT loop_lattice = " << fieldname << ".fs->lattice;\n";
+  } else {
+    // if there is no field in loop at all
+    code << "const lattice_struct * RESTRICT loop_lattice = lattice;\n";
+  }
   
   // Set the start and end points
   code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";

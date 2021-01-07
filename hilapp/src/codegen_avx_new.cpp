@@ -364,9 +364,15 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcB
   }
 
   // Set loop lattice for neibhbour arrays
-  std::string fieldname = field_info_list.front().new_name;
-  code << "const auto * RESTRICT loop_lattice = "
-       << fieldname << ".fs->vector_lattice;\n";
+  if (field_info_list.size() > 0) {
+    std::string fieldname = field_info_list.front().new_name;
+    code << "const auto * RESTRICT loop_lattice = "
+         << fieldname << ".fs->vector_lattice;\n";
+  } else {
+    // if no field in loop
+    code << "const auto * RESTRICT loop_lattice = lattice->backend_lattice->get_vectorized_lattice<"
+         << vector_size << ">();\n";
+  }
 
   // Set the start and end points
   code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop << ");\n";

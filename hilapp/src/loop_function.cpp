@@ -251,17 +251,23 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
         sfc.replace_expression = "hila_random(";
         sfc.add_loop_var = false;
       } else if (name == "size") {
-        sfc.replace_expression = "loop_lattice->size(";
+        sfc.replace_expression = "loop_lattice_size(";
         sfc.add_loop_var = false;
         replace_this = target.CUDA;
       } else if (name == "volume") {
-        sfc.replace_expression = "loop_lattice->volume(";
+        sfc.replace_expression = "loop_lattice_volume(";
         sfc.add_loop_var = false;
         replace_this = target.CUDA;
       } else {
-        reportDiag(DiagnosticsEngine::Level::Error,
-          Call->getSourceRange().getBegin(),
-        "Unknown method X.%0()", name.c_str() );
+        if (objtype == "const class X_index_type") {
+          reportDiag(DiagnosticsEngine::Level::Error,
+            Call->getSourceRange().getBegin(),
+          "Unknown method X.%0()", name.c_str() );
+        } else {
+          reportDiag(DiagnosticsEngine::Level::Error,
+            Call->getSourceRange().getBegin(),
+          "Method 'lattice->.%0()' not allowed inside field loops", name.c_str() );
+        }
       }
 
       if (replace_this) special_function_call_list.push_back(sfc);
@@ -311,11 +317,11 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   }
   if (handle_decl) {
     loop_functions.push_back(fd);
-     llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
-       " parameters ";
-     for (int i=0; i<fd->getNumParams(); i++) 
-       llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
-     llvm::errs() << '\n';
+    //  llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
+    //    " parameters ";
+    //  for (int i=0; i<fd->getNumParams(); i++) 
+    //    llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
+    //  llvm::errs() << '\n';
     
     backend_handle_loop_function(fd);
   }
@@ -360,7 +366,7 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
         // llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
 
         CG.addToCallGraph( dyn_cast<Decl>(fbd) );
-        CG.dump();
+        // CG.dump();
         int i = 0;
         for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
           // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>

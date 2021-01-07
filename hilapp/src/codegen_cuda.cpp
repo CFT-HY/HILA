@@ -75,9 +75,13 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   }
 
   // Set loop lattice
-  std::string fieldname = field_info_list.front().old_name;
-  code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
-  
+  if (field_info_list.size() > 0) {
+    std::string fieldname = field_info_list.front().old_name;
+    code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
+  } else {
+    // now no fields in loop - default lattice
+    code << "lattice_struct * loop_lattice = lattice;\n";
+  }
 
   for (vector_reduction_ref & vrf : vector_reduction_ref_list) {
     // Allocate memory for a reduction and initialize
@@ -100,7 +104,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   kernel << "//----------\n";
 
   // Generate the function definition and call
-  kernel << "__global__ void " << kernel_name << "( backend_lattice_struct d_lattice, ";
+  kernel << "__global__ void " << kernel_name << "( backend_lattice_struct d_lattice";
   code << "backend_lattice_struct lattice_info = *(lattice->backend_lattice);\n";
   code << "lattice_info.loop_begin = lattice->loop_begin(" << parity_in_this_loop << ");\n";
   code << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop << ");\n";
@@ -127,17 +131,15 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   }
 
 
-  code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info, ";
+  code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info";
 
 
   // print field call list
   int i = 0;
   for (field_info & l : field_info_list) {
     
-    if (i>0) {
-      kernel << ", ";
-      code   << ", ";
-    }
+    kernel << ", ";
+    code   << ", ";
     
     if (!l.is_written) kernel << "const ";
     kernel << "field_storage" << l.type_template << " " << l.new_name;

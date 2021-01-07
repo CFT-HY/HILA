@@ -5,6 +5,10 @@
 #include "plumbing/backend_cuda/defs.h"
 
 
+// Save "constants" lattice size and volume here
+__constant__ int _d_size[NDIM];
+__constant__ int64_t _d_volume;
+
 
 /* Random number generator */
 curandState * curandstate;
@@ -35,13 +39,41 @@ void seed_random(unsigned long seed){
 }
 
 /* Generate random numbers on device or host */
-#pragma hila loop_function
+__device__ __host__
 double hila_random(){
   #ifdef __CUDA_ARCH__
   int x = threadIdx.x + blockIdx.x * blockDim.x;
   return curand_uniform( &d_curandstate[x] );
   #else
   return mersenne();
+  #endif
+}
+
+// Then, define global functions loop_lattice_size() and _volume()
+__device__ __host__
+int loop_lattice_size(direction dir) {
+  #ifdef __CUDA_ARCH__
+  return _d_size[dir];
+  #else
+  return lattice->size(dir);
+  #endif
+}
+__device__ __host__
+coordinate_vector loop_lattice_size(void) {
+  #ifdef __CUDA_ARCH__
+  coordinate_vector v;
+  foralldir(d) v[d]=_d_size[d];
+  return v;
+  #else
+  return lattice->size();
+  #endif
+}
+__device__ __host__
+int64_t loop_lattice_volume(void) {
+  #ifdef __CUDA_ARCH__
+  return _d_volume;
+  #else
+  return lattice->volume();
   #endif
 }
 
@@ -78,8 +110,14 @@ void backend_lattice_struct::setup(lattice_struct * lattice)
   // Other backend_lattice parameters
   field_alloc_size = lattice->field_alloc_size();
 
-  d_size = lattice->size();
-}
+  int s[NDIM]; 
+  foralldir(d) s[d] = lattice->size(d);
+  cudaMemcpyToSymbol ( _d_size, s, sizeof(int)*NDIM,  0, cudaMemcpyHostToDevice);
+  int64_t v = lattice->volume();
+  cudaMemcpyToSymbol ( _d_volume, &v, sizeof(int64_t),  0, cudaMemcpyHostToDevice); 
+  check_cuda_error("cudaMemcpy to size or volume");
+
+ }
 
 
 
