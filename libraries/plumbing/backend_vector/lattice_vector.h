@@ -141,7 +141,8 @@ struct vectorized_lattice_struct  {
 
         // upper corner of 1st subnode
         coordinate_vector here;
-        here = (subnode_origin + subnode_size).minus_scalar(1);
+        here = subnode_origin + subnode_size;
+        here.asArray() -= 1;
 
         unsigned idx = lattice->site_index(here);
         assert (idx % vector_size == 0);  // is it really on 1st subnode
