@@ -11,12 +11,12 @@ __device__ curandState * d_curandstate;
 #define cuda_rand_setup_count
 
 /* Set seed on device */
-__global__ void seed_random_kernel( curandState * state, unsigned long seed, unsigned int iters_per_kernel )
+__global__ void seed_random_kernel( curandState * state, unsigned long seed, unsigned int iters_per_kernel, unsigned int stride )
 {
   int x = threadIdx.x + blockIdx.x * blockDim.x;
+  d_curandstate = state;
   for(int i=0; i<iters_per_kernel; i++){
-    d_curandstate = state;
-    curand_init( seed + i*iters_per_kernel + x, i*iters_per_kernel + x, 0, &d_curandstate[i*iters_per_kernel + x] );
+    curand_init( seed + i*stride + x, i*stride + x, 0, &d_curandstate[i*stride + x] );
   }
 }
 
@@ -28,7 +28,7 @@ void seed_random(unsigned long seed){
   unsigned long myseed = seed + hila::myrank()*n_sites;
   cudaMalloc( &curandstate, n_sites*sizeof( curandState ) );
   check_cuda_error("seed_random malloc");
-  seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, myseed, iters_per_kernel );
+  seed_random_kernel<<< n_blocks, N_threads >>>( curandstate, myseed, iters_per_kernel, n_blocks*N_threads  );
   check_cuda_error("seed_random kernel");
   seed_mersenne(myseed+n_sites-1);
 }
@@ -107,8 +107,8 @@ void cuda_device_info() {
     const int mb = kb * kb;
 
     int driverVersion, rtVersion;
-    cudaDriverGetVersion ( &driverVersion ); 
-    cudaRuntimeGetVersion ( &rtVersion ); 
+    cudaDriverGetVersion ( &driverVersion );
+    cudaRuntimeGetVersion ( &rtVersion );
     hila::output << "CUDA driver version: " << driverVersion << ", runtime " << rtVersion << '\n';
 
     cudaDeviceProp props;
@@ -116,7 +116,7 @@ void cuda_device_info() {
     cudaGetDevice(&my_device);
     cudaGetDeviceProperties(&props, my_device);
     hila::output << "Device on node rank 0 device "<< my_device << ":\n";
-    hila::output << "  " << props.name << "  capability: " 
+    hila::output << "  " << props.name << "  capability: "
                  << props.major << "." << props.minor << '\n';
     hila::output << "  Global memory:   " << props.totalGlobalMem / mb << "MB" << '\n';
     hila::output << "  Shared memory:   " << props.sharedMemPerBlock / kb << "kB" << '\n';
@@ -125,11 +125,11 @@ void cuda_device_info() {
 
     hila::output << "  Warp size:         " << props.warpSize << '\n';
     hila::output << "  Threads per block: " << props.maxThreadsPerBlock << '\n';
-    hila::output << "  Max block dimensions: [ " << props.maxThreadsDim[0] << ", " 
+    hila::output << "  Max block dimensions: [ " << props.maxThreadsDim[0] << ", "
                  << props.maxThreadsDim[1]  << ", " << props.maxThreadsDim[2] << " ]" << '\n';
-    hila::output << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", " 
+    hila::output << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                  << props.maxGridSize[1]  << ", " << props.maxGridSize[2] << " ]" << '\n';
-    
+
   }
 }
 
@@ -154,5 +154,3 @@ void cuda_exit_on_error(cudaError code, const char * msg, const char * file, int
 
 
 #endif
-
-
