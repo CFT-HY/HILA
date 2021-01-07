@@ -21,7 +21,7 @@
 /* Random number generator */
 extern curandState * curandstate;
 __device__ extern curandState * d_curandstate;
-__global__ void seed_random_kernel( curandState * state, unsigned long seed );
+__global__ void seed_random_kernel( curandState * state, unsigned long seed, unsigned int stride );
 void seed_random(unsigned long seed);
 __host__ __device__ double hila_random();
 
@@ -49,7 +49,7 @@ T cuda_reduce_sum(  T * vector, int N ){
     cub::DeviceReduce::Sum(d_temp_storage, temp_storage_size, vector, d_sum, N);
     initialized = true;
   }
-  
+
   // Allocate temporary storage
   cudaMalloc(&d_temp_storage, temp_storage_size);
 
@@ -105,7 +105,7 @@ T cuda_reduce_sum(  T * vector, int N ){
   }
 
   free(host_vector);
-  
+
   return sum;
 }
 
@@ -151,7 +151,7 @@ T cuda_reduce_prod(  T * vector, int N ){
   }
 
   free(host_vector);
-  
+
   return prod;
 }
 
@@ -229,7 +229,7 @@ void cuda_device_info();
 #define cudaMalloc(a,b) 0
 #define cudaFree(a) 0
 
-#define check_cuda_error(a)  
+#define check_cuda_error(a)
 #define check_cuda_error_code(c,a)
 
 
@@ -246,7 +246,7 @@ void cuda_device_info();
 
 
 
-/// Implements test for basic in types, similar to 
+/// Implements test for basic in types, similar to
 /// std::is_arithmetic, but allows the backend to add
 /// it's own basic tyes (such as AVX vectors)
 template< class T >
