@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   hila::log.set_verbosity(log_level);
 
   // Define a field
-  field<double> spin;
+  Field<double> spin;
 
   seed_random( seed );
   

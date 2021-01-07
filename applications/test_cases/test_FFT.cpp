@@ -7,7 +7,7 @@ int main(int argc, char **argv){
 
   test_setup(argc, argv);
     
-  field<T> f, f2, p, p2;
+  Field<T> f, f2, p, p2;
   double sum = 0;
 
   for (int iter=0; iter<3; iter++) {

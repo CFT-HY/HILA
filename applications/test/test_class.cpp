@@ -8,14 +8,14 @@
 template<typename T>
 class testclass {
 public:
-  field<T> a;
-  testclass(field<T> _a) : a(_a) {}
+  Field<T> a;
+  testclass(Field<T> _a) : a(_a) {}
 
-  void sub(field<T> b){
+  void sub(Field<T> b){
     a[ALL] -= b[X];
   }
 
-  void add(field<T> b){
+  void add(Field<T> b){
     onsites(ALL){
       a[X] += b[X];
     }
@@ -25,7 +25,7 @@ public:
 
 int main()
 {
-  field<double> a,b,c;
+  Field<double> a,b,c;
 
   a[ALL]=1; b[ALL]=1;
 

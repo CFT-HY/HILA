@@ -122,7 +122,7 @@ public:
   /// handle the templated class specializations
   // int handle_class_specializations(ClassTemplateDecl *D);
   
-  /// special handler for field<>
+  /// special handler for Field<>
   int handle_field_specializations(ClassTemplateDecl *D);
   
   bool is_array_expr(Expr *E); 

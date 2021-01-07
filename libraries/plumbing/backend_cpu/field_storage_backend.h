@@ -25,7 +25,7 @@ template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
   fieldbuf = (T*)memalloc( sizeof(T) * lattice->field_alloc_size() );
   if (fieldbuf == nullptr) {
-    std::cout << "Failure in field memory allocation\n";
+    std::cout << "Failure in Field memory allocation\n";
     exit(1);
   }
   #pragma acc enter data create(fieldbuf)
@@ -71,7 +71,7 @@ void field_storage<T>::allocate_field(lattice_struct * lattice) {
   constexpr static int t_elements = sizeof(T) / sizeof(real_t);
   fieldbuf = malloc( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
   if (fieldbuf == nullptr) {
-    std::cout << "Failure in field memory allocation\n";
+    std::cout << "Failure in Field memory allocation\n";
     exit(1);
   }
   #pragma acc enter data create(fieldbuf)

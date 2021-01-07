@@ -227,7 +227,7 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
       if (!fi.vecinfo.is_vectorizable) {
         is_vectorizable = false;
         if (diag_count++ > 0) reason += "\n";
-        reason += "field variable '" + fi.old_name + "' is not vectorizable";
+        reason += "Field variable '" + fi.old_name + "' is not vectorizable";
       } else {
         if (vector_size == 0) {
           vector_size = fi.vecinfo.vector_size;

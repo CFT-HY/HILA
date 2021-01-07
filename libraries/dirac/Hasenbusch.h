@@ -37,18 +37,18 @@ class Hasenbusch_operator {
     }
 
 
-    inline void apply( const field<vector_type> & in, field<vector_type> & out){
+    inline void apply( const Field<vector_type> & in, Field<vector_type> & out){
       D.apply(in, out);
       out[D.par] = out[X] + h_parameter*in[X];
     }
 
-    inline void dagger( const field<vector_type> & in, field<vector_type> & out){
+    inline void dagger( const Field<vector_type> & in, Field<vector_type> & out){
       D.dagger(in, out);
       out[D.par] = out[X] + h_parameter*in[X];
     }
 
     template<typename momtype>
-    inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign){
+    inline void force(const Field<vector_type> & chi, const Field<vector_type> & psi, Field<momtype> (&force)[NDIM], int sign){
       D.force(chi, psi, force, sign);
     }
 };

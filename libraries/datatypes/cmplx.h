@@ -39,7 +39,7 @@ template <typename T = double>
 struct Cmplx {
   
   static_assert( is_arithmetic<T>::value, "Cmplx can be used only with arithmetic type" );
-  // This incantation is needed to make field<Cmplx<>> vectorized 
+  // This incantation is needed to make Field<Cmplx<>> vectorized 
   using base_type = typename base_type_struct<T>::type;
 
   T re,im;

@@ -17,7 +17,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////////
-/// Inspect the type argument of field<type>: is it good for vectors?
+/// Inspect the type argument of Field<type>: is it good for vectors?
 ///
 /// Type is vectorizable if:
 /// a) just float, double, int  or 
@@ -188,7 +188,7 @@ bool MyASTVisitor::is_vectorizable_type(const std::string & type_name, vectoriza
 }
 
 ////////////////////////////////////////////////////////////////////////////7/////
-/// Is the field<> vectorizable?
+/// Is the Field<> vectorizable?
 /// if so, return the information on field_element_info
 //////////////////////////////////////////////////////////////////////////////////
 

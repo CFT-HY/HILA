@@ -35,8 +35,8 @@ void exp_and_derivative(sun &Q, sun &m0, sun &lambda, sun &eQ, int exp_steps){
 
 /// Calculate the derivative of with respect to the links a positive and negative staple and add to result
 template<typename matrix, typename forcetype>
-void staple_dir_derivative(field<matrix> &basegauge1, field<matrix> &basegauge2, field<matrix> &Lambda, field<forcetype> &result1, field<forcetype> &result2, direction dir1, direction dir2){
-  field<matrix> stapleder2, stapleder3; // Two derivatives that need to be communicated
+void staple_dir_derivative(Field<matrix> &basegauge1, Field<matrix> &basegauge2, Field<matrix> &Lambda, Field<forcetype> &result1, Field<forcetype> &result2, direction dir1, direction dir2){
+  Field<matrix> stapleder2, stapleder3; // Two derivatives that need to be communicated
   
   onsites(ALL){
     element<matrix> U1, U2, U3, U4, L, L2;
@@ -89,8 +89,8 @@ class stout_smeared_field : public gauge_field_base<sun>{
   int exp_steps = 10;
 
   gauge_field<sun> &base_field;
-  field<sun> **staples;
-  field<sun> **smeared_fields;
+  Field<sun> **staples;
+  Field<sun> **smeared_fields;
 
   stout_smeared_field(gauge_field<fund_type>  &f, double coeff) 
     : base_field(f), c(coeff){
@@ -114,13 +114,13 @@ class stout_smeared_field : public gauge_field_base<sun>{
     }
 
   void allocate(){
-    staples = (field<sun>**)malloc(smear_steps*sizeof(field<sun>*));
-    smeared_fields = (field<sun>**)malloc(smear_steps*sizeof(field<sun>*));
+    staples = (Field<sun>**)malloc(smear_steps*sizeof(Field<sun>*));
+    smeared_fields = (Field<sun>**)malloc(smear_steps*sizeof(Field<sun>*));
     for(int step=0; step<smear_steps-1; step++){
-      staples[step] = new field<sun>[NDIM];
-      smeared_fields[step] = new field<sun>[NDIM];
+      staples[step] = new Field<sun>[NDIM];
+      smeared_fields[step] = new Field<sun>[NDIM];
     }
-    staples[smear_steps-1]  = new field<sun>[NDIM];
+    staples[smear_steps-1]  = new Field<sun>[NDIM];
     smeared_fields[smear_steps-1]  = &(this->gauge[0]);
   }
 
@@ -135,7 +135,7 @@ class stout_smeared_field : public gauge_field_base<sun>{
 
   // Represent the fields
   void refresh(){
-    field<sun> *previous;
+    Field<sun> *previous;
     previous = &base_field.gauge[0];
 
     for(int step=0; step<smear_steps; step++){
@@ -167,22 +167,22 @@ class stout_smeared_field : public gauge_field_base<sun>{
   }
 
 
-  void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> *force){
+  void add_momentum(Field<SquareMatrix<N,Cmplx<basetype>>> *force){
     // Two storage fields for the current and previous levels of the force
-    field<SquareMatrix<N,Cmplx<basetype>>> storage1[NDIM];
-    field<SquareMatrix<N,Cmplx<basetype>>> storage2[NDIM];
+    Field<SquareMatrix<N,Cmplx<basetype>>> storage1[NDIM];
+    Field<SquareMatrix<N,Cmplx<basetype>>> storage2[NDIM];
     foralldir(dir){
       storage1[dir] = force[dir];
     }
-    field<SquareMatrix<N,Cmplx<basetype>>> *previous= &storage1[0];
-    field<SquareMatrix<N,Cmplx<basetype>>> *result= &storage2[0];
+    Field<SquareMatrix<N,Cmplx<basetype>>> *previous= &storage1[0];
+    Field<SquareMatrix<N,Cmplx<basetype>>> *result= &storage2[0];
 
-    // Another storage field, for the derivative of the exponential
-    field<sun> Lambda[NDIM];
+    // Another storage Field, for the derivative of the exponential
+    Field<sun> Lambda[NDIM];
 
     for(int step=smear_steps-1; step>=0; step--){
       // Find the gauge field the current level is calculated from
-      field<sun> *basegauge;
+      Field<sun> *basegauge;
       if(step==0){
         basegauge = &base_field.gauge[0];
       } else {
@@ -219,7 +219,7 @@ class stout_smeared_field : public gauge_field_base<sun>{
       }
 
       // Swap previous and result for the next iteration
-      field<SquareMatrix<N,Cmplx<basetype>>> *tmp = previous;
+      Field<SquareMatrix<N,Cmplx<basetype>>> *tmp = previous;
       previous = result;
       result = tmp;
       basegauge = &smeared_fields[step][0];
@@ -246,10 +246,10 @@ class stout_smeared_field : public gauge_field_base<sun>{
   }
 
 
-  field<sun> & get_momentum(int dir){
+  Field<sun> & get_momentum(int dir){
     return base_field.get_momentum(dir);
   }
-  field<sun> & get_gauge(int dir){
+  Field<sun> & get_gauge(int dir){
     return base_field.get_gauge(dir);
   }
 };
@@ -279,11 +279,11 @@ struct HEX_smeared_field : public gauge_field_base<sun> {
   int exp_steps = 10;
 
   gauge_field<sun> &base_field;
-  field<sun> staples3[NDIM][NDIM];
-  field<sun> level3[NDIM][NDIM];
-  field<sun> staples2[NDIM][NDIM];
-  field<sun> level2[NDIM][NDIM];
-  field<sun> staples1[NDIM];
+  Field<sun> staples3[NDIM][NDIM];
+  Field<sun> level3[NDIM][NDIM];
+  Field<sun> staples2[NDIM][NDIM];
+  Field<sun> level2[NDIM][NDIM];
+  Field<sun> staples1[NDIM];
 
   HEX_smeared_field(gauge_field<fund_type>  &f)
     : base_field(f) {
@@ -305,7 +305,7 @@ struct HEX_smeared_field : public gauge_field_base<sun> {
 
   // Represent the fields
   void refresh(){
-    field<sun> *previous;
+    Field<sun> *previous;
     previous = &base_field.gauge[0];
 
     foralldir(mu){
@@ -332,7 +332,7 @@ struct HEX_smeared_field : public gauge_field_base<sun> {
       foralldir(rho) if(rho!=mu) if(rho!=nu){
         direction eta;
         foralldir(e) if(e!=mu && e!=nu && e!=rho) eta = e;
-        field<sun> stp = calc_staples(level3[eta], level3[eta], mu, rho);
+        Field<sun> stp = calc_staples(level3[eta], level3[eta], mu, rho);
         staples2[nu][mu][ALL] = staples2[nu][mu][X] + stp[X];
       }
       onsites(ALL){
@@ -349,7 +349,7 @@ struct HEX_smeared_field : public gauge_field_base<sun> {
     foralldir(mu) {
       staples1[mu][ALL] = 0;
       foralldir(nu) if(mu!=nu) {
-        field<sun> stp = calc_staples(level2[nu], level2[mu], mu, nu);
+        Field<sun> stp = calc_staples(level2[nu], level2[mu], mu, nu);
         staples1[mu][ALL] = staples1[mu][X] + stp[X];
       }
       onsites(ALL){
@@ -374,13 +374,13 @@ struct HEX_smeared_field : public gauge_field_base<sun> {
   }
 
 
-  void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> *force){
-    field<sun> lambda1[NDIM];
-    field<SquareMatrix<N,Cmplx<basetype>>> result1[NDIM][NDIM];
-    field<sun> lambda2[NDIM][NDIM];
-    field<SquareMatrix<N,Cmplx<basetype>>> result2[NDIM][NDIM];
-    field<sun> lambda3[NDIM][NDIM];
-    field<SquareMatrix<N,Cmplx<basetype>>> result[NDIM];
+  void add_momentum(Field<SquareMatrix<N,Cmplx<basetype>>> *force){
+    Field<sun> lambda1[NDIM];
+    Field<SquareMatrix<N,Cmplx<basetype>>> result1[NDIM][NDIM];
+    Field<sun> lambda2[NDIM][NDIM];
+    Field<SquareMatrix<N,Cmplx<basetype>>> result2[NDIM][NDIM];
+    Field<sun> lambda3[NDIM][NDIM];
+    Field<SquareMatrix<N,Cmplx<basetype>>> result[NDIM];
 
     foralldir(mu) {
       result[mu] = 0;
@@ -501,10 +501,10 @@ struct HEX_smeared_field : public gauge_field_base<sun> {
   }
 
 
-  field<sun> & get_momentum(int dir){
+  Field<sun> & get_momentum(int dir){
     return base_field.get_momentum(dir);
   }
-  field<sun> & get_gauge(int dir){
+  Field<sun> & get_gauge(int dir){
     return base_field.get_gauge(dir);
   }
 };

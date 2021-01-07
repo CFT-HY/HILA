@@ -12,14 +12,14 @@ int NX=16, NY=16, NZ=16, NT=16;
 
 
 void calc_staples(
-  field<Matrix<N,N,Cmplx<double>>> (&U)[NDIM], 
-  field<Matrix<N,N,Cmplx<double>>> &staple_sum,
+  Field<Matrix<N,N,Cmplx<double>>> (&U)[NDIM], 
+  Field<Matrix<N,N,Cmplx<double>>> &staple_sum,
   direction dir)
 {
   /* Calculate the sum of staples connected to links in direction
    * dir 
    */
-  static field<Matrix<N,N,Cmplx<double>>> down_staple;
+  static Field<Matrix<N,N,Cmplx<double>>> down_staple;
   staple_sum[ALL] = 0;
   foralldir(d2){
     direction dir2 = (direction)d2;
@@ -64,8 +64,8 @@ int main(int argc, char **argv)
   lattice->setup(nd);
 
   // Define a field
-  field<Matrix<N,N,Cmplx<double>>> U[NDIM];
-  field<Matrix<N,N,Cmplx<double>>> staple;
+  Field<Matrix<N,N,Cmplx<double>>> U[NDIM];
+  Field<Matrix<N,N,Cmplx<double>>> staple;
 
   seed_random(seed);
 

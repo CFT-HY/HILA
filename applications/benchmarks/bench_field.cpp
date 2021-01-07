@@ -25,8 +25,8 @@ int main(int argc, char **argv){
     seed_random(SEED);
 
 
-    field<double> dfield1, dfield2, dfield3;
-    field<float> ffield1, ffield2, ffield3;
+    Field<double> dfield1, dfield2, dfield3;
+    Field<float> ffield1, ffield2, ffield3;
     onsites(ALL){
       dfield1[X] = hila_random();
       dfield2[X] = hila_random();
@@ -39,7 +39,7 @@ int main(int argc, char **argv){
       ffield3[X] = hila_random();
     }
 
-    // Benchmark simple scalar field operation (Memory bandwith)
+    // Benchmark simple scalar Field operation (Memory bandwith)
     timing = 0;
     for(n_runs=1; timing < mintime; ){
       n_runs*=2;
@@ -105,16 +105,16 @@ int main(int argc, char **argv){
     output0 << "Float add : "<< timing << " ms \n";
 
 
-    field<SquareMatrix<N, Cmplx<double>> > matrix1;
-    field<SquareMatrix<N, Cmplx<double>> > matrix2;
-    field<SquareMatrix<N, Cmplx<double>> > matrix3;
-    field<Vector<N, Cmplx<double>> > vector1;
-    field<Vector<N, Cmplx<double>> > vector2;
-    field<SquareMatrix<N, Cmplx<float>> > fmatrix1;
-    field<SquareMatrix<N, Cmplx<float>> > fmatrix2;
-    field<SquareMatrix<N, Cmplx<float>> > fmatrix3;
-    field<Vector<N, Cmplx<float>> > fvector1;
-    field<Vector<N, Cmplx<float>> > fvector2;
+    Field<SquareMatrix<N, Cmplx<double>> > matrix1;
+    Field<SquareMatrix<N, Cmplx<double>> > matrix2;
+    Field<SquareMatrix<N, Cmplx<double>> > matrix3;
+    Field<Vector<N, Cmplx<double>> > vector1;
+    Field<Vector<N, Cmplx<double>> > vector2;
+    Field<SquareMatrix<N, Cmplx<float>> > fmatrix1;
+    Field<SquareMatrix<N, Cmplx<float>> > fmatrix2;
+    Field<SquareMatrix<N, Cmplx<float>> > fmatrix3;
+    Field<Vector<N, Cmplx<float>> > fvector1;
+    Field<Vector<N, Cmplx<float>> > fvector2;
 
     // Generate random values
     onsites(ALL){

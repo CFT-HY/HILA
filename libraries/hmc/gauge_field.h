@@ -20,10 +20,10 @@ class gauge_field_base{
     static constexpr int N = sun::size;
 
     /// A matrix field for each direction
-    field<sun> gauge[NDIM];
+    Field<sun> gauge[NDIM];
     /// Also create a momentum field. This is only
     /// allocated if necessary
-    field<sun> momentum[NDIM];
+    Field<sun> momentum[NDIM];
 
     /// Recalculate represented or smeared field
     virtual void refresh(){}
@@ -33,7 +33,7 @@ class gauge_field_base{
     virtual void random(){}
 
     /// Update the momentum by given force
-    virtual void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> *force){}
+    virtual void add_momentum(Field<SquareMatrix<N,Cmplx<basetype>>> *force){}
     /// Draw gaussian random momentum
     virtual void draw_momentum(){}
     /// Set the momentum to zero
@@ -59,10 +59,10 @@ class gauge_field_base<M<N,double>>{
     using gauge_type =  M<N,double>;
 
     /// A matrix field for each direction
-    field<gauge_type> gauge[NDIM];
+    Field<gauge_type> gauge[NDIM];
     /// Also create a momentum field. This is only
     /// allocated if necessary
-    field<gauge_type> momentum[NDIM];
+    Field<gauge_type> momentum[NDIM];
 
     /// Recalculate represented or smeared field
     virtual void refresh(){}
@@ -72,7 +72,7 @@ class gauge_field_base<M<N,double>>{
     virtual void random(){}
 
     /// Update the momentum by given force
-    virtual void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> *force){}
+    virtual void add_momentum(Field<SquareMatrix<N,Cmplx<basetype>>> *force){}
     /// Draw gaussian random momentum
     virtual void draw_momentum(){}
     /// Set the momentum to zero
@@ -100,12 +100,12 @@ class gauge_field_base<M<N,double>>{
 
 /// Calculate the Polyakov loop for a given gauge field.
 template<int N>
-double polyakov_loop(direction dir, field<SU<N>> (&gauge)[NDIM]){
+double polyakov_loop(direction dir, Field<SU<N>> (&gauge)[NDIM]){
   // This implementation uses the onsites() to cycle through the
   // NDIM-1 dimensional planes. This is probably not the most
   // efficient implementation.
   coordinate_vector vol = lattice->size();
-  field<SU<N>> polyakov; polyakov[ALL] = 1;
+  Field<SU<N>> polyakov; polyakov[ALL] = 1;
   for(int t=0; t<vol[dir]; t++){
     onsites(ALL){
       if(X.coordinates()[dir]==(t+1)%vol[dir]){
@@ -135,10 +135,10 @@ double polyakov_loop(direction dir, field<SU<N>> (&gauge)[NDIM]){
 /// different directions and is necessary for HEX
 /// smearing
 template<typename SUN>
-field<SUN> calc_staples(field<SUN> *U1, field<SUN> *U2, direction dir1, direction dir2)
+Field<SUN> calc_staples(Field<SUN> *U1, Field<SUN> *U2, direction dir1, direction dir2)
 {
-  field<SUN> staple_sum;
-  static field<SUN> down_staple;
+  Field<SUN> staple_sum;
+  static Field<SUN> down_staple;
   staple_sum[ALL] = 0;
   //Calculate the down side staple.
   //This will be communicated up.
@@ -158,10 +158,10 @@ field<SUN> calc_staples(field<SUN> *U1, field<SUN> *U2, direction dir1, directio
 
 /// Calculate the sum of staples connected to links in direction dir
 template<typename SUN>
-field<SUN> calc_staples(field<SUN> *U, direction dir)
+Field<SUN> calc_staples(Field<SUN> *U, direction dir)
 {
-  field<SUN> staple_sum;
-  static field<SUN> down_staple;
+  Field<SUN> staple_sum;
+  static Field<SUN> down_staple;
   staple_sum[ALL] = 0;
   foralldir(dir2) if(dir2!=dir) {
     //Calculate the down side staple.
@@ -185,7 +185,7 @@ field<SUN> calc_staples(field<SUN> *U, direction dir)
 
 /// Measure the plaquette
 template<int N, typename radix>
-double plaquette_sum(field<SU<N,radix>> *U){
+double plaquette_sum(Field<SU<N,radix>> *U){
   double Plaq=0;
   foralldir(dir1) foralldir(dir2) if(dir2 < dir1){
     onsites(ALL){
@@ -202,7 +202,7 @@ double plaquette_sum(field<SU<N,radix>> *U){
 
 /// The plaquette measurement for square matrices
 template<int N, typename radix>
-double plaquette_sum(field<Matrix<N,N,radix>> *U){
+double plaquette_sum(Field<Matrix<N,N,radix>> *U){
   double Plaq=0;
   foralldir(dir1) foralldir(dir2) if(dir2 < dir1){
     onsites(ALL){
@@ -245,7 +245,7 @@ class gauge_field : public gauge_field_base<matrix> {
   /// The size of the matrix
   static constexpr int N = matrix::size;
   /// Storage for a backup of the gauge field
-  field<matrix> gauge_backup[NDIM];
+  Field<matrix> gauge_backup[NDIM];
 
   /// Set the gauge field to unity
   void set_unity(){
@@ -296,7 +296,7 @@ class gauge_field : public gauge_field_base<matrix> {
 
   /// Project a force term to the algebra and add to the
   /// momentum
-  void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> *force){
+  void add_momentum(Field<SquareMatrix<N,Cmplx<basetype>>> *force){
     foralldir(dir){
       onsites(ALL){
         force[dir][X] = this->gauge[dir][X]*force[dir][X];
@@ -348,11 +348,11 @@ class gauge_field : public gauge_field_base<matrix> {
   }
 
   /// Return a reference to the momentum field
-  field<gauge_type> & get_momentum(int dir){
+  Field<gauge_type> & get_momentum(int dir){
     return this->momentum[dir];
   }
   /// Return a reference to the gauge field
-  field<gauge_type> & get_gauge(int dir){
+  Field<gauge_type> & get_gauge(int dir){
     return this->gauge[dir];
   }
 };
@@ -417,7 +417,7 @@ class represented_gauge_field : public gauge_field_base<repr> {
 
   /// Project a force term to the algebra and add to the
   /// momentum
-  void add_momentum(field<SquareMatrix<N,Cmplx<basetype>>> (&force)[NDIM]){
+  void add_momentum(Field<SquareMatrix<N,Cmplx<basetype>>> (&force)[NDIM]){
     foralldir(dir){
       onsites(ALL){
         if(disable_avx[X]==0){};
@@ -452,11 +452,11 @@ class represented_gauge_field : public gauge_field_base<repr> {
 
 
   /// Return a reference to the momentum field
-  field<fund_type> & get_momentum(int dir){
+  Field<fund_type> & get_momentum(int dir){
     return fundamental.get_momentum(dir);
   }
-  /// Return a reference to the gauge field
-  field<fund_type> & get_gauge(int dir){
+  /// Return a reference to the gauge Field
+  Field<fund_type> & get_gauge(int dir){
     return fundamental.get_gauge(dir);
   }
 };
@@ -598,8 +598,8 @@ class gauge_action : public action_base {
 
     /// Update the momentum with the gauge field force
     void force_step(double eps){
-      field<gauge_mat> staple;
-      field<momtype> force[NDIM];
+      Field<gauge_mat> staple;
+      Field<momtype> force[NDIM];
       foralldir(dir){
         staple = calc_staples(gauge.gauge, dir);
         onsites(ALL){

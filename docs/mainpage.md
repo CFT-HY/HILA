@@ -16,7 +16,7 @@ here involves new datatypes and a preprocessing tool that converts c++ code with
 
 Essentially, HilaPP extends C++ with statements of the following type:
 ~~~ C++
-field<double> f;
+Field<double> f;
 f[ALL] = 1;
 f[EVEN] = f[X] + f[X+TUP];
 ~~~
@@ -287,7 +287,7 @@ update_hmc(integrator_level_2, hmc_steps, traj_length);
 
 ## Operators
 
-Operators are classes that define an `apply(field<type> input, field<type> output)` method.
+Operators are classes that define an `apply(Field<type> input, Field<type> output)` method.
 The method takes the a field and runs a transformation on it, returning the result in
 the output field.
 
@@ -295,7 +295,7 @@ The [Wilson Dirac](@ref Dirac_Wilson) and [staggered Dirac](@ref dirac_staggered
 are defined in libraries/dirac. They implement the two most common lattice Dirac operators.
 These files also have the even-odd preconditioned versions of these operators.
 
-The Dirac operators also have a `dagger(field<type> input, field<type> output)` method, which
+The Dirac operators also have a `dagger(Field<type> input, Field<type> output)` method, which
 implements the conjugate of the operator.
 
 The [conjugate gradient](@ref CG) operator calculates the inverse of the square of an operator

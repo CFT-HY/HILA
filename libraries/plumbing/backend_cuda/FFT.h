@@ -56,19 +56,19 @@ __global__ void scatter_column( cufftDoubleComplex *data, char* field_elem, int 
 
 
 
-/// Run Fast Fourier Transform on the field to each direction
+/// Run Fast Fourier Transform on the Field to each direction
 // This is done by collecting a column of elements to each node,
 // running the Fourier transform on the column and redistributing
 // the result
 // Input and result are passed by reference. They may be the same.
-// The field must be complex and the underlying complex type is supplied
+// The Field must be complex and the underlying complex type is supplied
 // by the complex_type template argument
 template<typename T, typename complex_type>
-inline void FFT_field_complex(field<T> & input, field<T> & result,
+inline void FFT_field_complex(Field<T> & input, Field<T> & result,
                               fft_direction fftdir = fft_direction::forward ){
 
   lattice_struct * lattice = input.fs->lattice;
-  field<T> * read_pointer = &input; // Read from input on first time, then work in result
+  Field<T> * read_pointer = &input; // Read from input on first time, then work in result
   size_t local_volume = lattice->local_volume();
   int elements = sizeof(T)/sizeof(complex_type);
 
@@ -143,7 +143,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
         unsigned *d_site_index;
         int n = sitelist[c].size();
         auto status = cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
-        check_cuda_error_code(status, "FFT allocate field memory");
+        check_cuda_error_code(status, "FFT allocate Field memory");
         cudaMemcpy( d_site_index, sitelist[c].data(), n*sizeof(unsigned), cudaMemcpyHostToDevice );
         check_cuda_error_code(status, "FFT memcopy 1");
 
@@ -179,7 +179,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
                    sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE,
                    s, column_communicator);
 
-      // Place the new data into field memory
+      // Place the new data into Field memory
       for( int l=0; l<cpn; l++ ) {
         int c = s*cpn+l;
         unsigned *d_site_index;
@@ -207,22 +207,22 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
 
 #else // Not CUDA aware
 
-/// Run Fast Fourier Transform on the field to each direction
+/// Run Fast Fourier Transform on the Field to each direction
 // This is done by collecting a column of elements to each node,
 // running the Fourier transform on the column and redistributing
 // the result
 // Input and result are passed by reference. They may be the same.
-// The field must be complex and the underlying complex type is supplied
+// The Field must be complex and the underlying complex type is supplied
 // by the complex_type template argument
 // Non CUDA aware. This is mostly a copy of the non-CUDA version, but calls
 // the CUDA fft library
 template<typename T, typename complex_type>
-inline void FFT_field_complex(field<T> & input, field<T> & result,
+inline void FFT_field_complex(Field<T> & input, Field<T> & result,
                               fft_direction fftdir = fft_direction::forward ){
   check_cuda_error("FFT check for past errors");
 
   lattice_struct * lattice = input.fs->lattice;
-  field<T> * read_pointer = &input; // Read from input on first time, then work in result
+  Field<T> * read_pointer = &input; // Read from input on first time, then work in result
   size_t local_volume = lattice->local_volume();
   int elements = sizeof(T)/sizeof(complex_type);
 
@@ -318,7 +318,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
 
     // Reorganize the data to form columns of a single element
     for( int l=0; l<cpn; l++ ) { // Columns
-      for( int e=0; e<elements; e++ ){ // Complex elements / field element
+      for( int e=0; e<elements; e++ ){ // Complex elements / Field element
         for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
           complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
@@ -345,7 +345,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
 
     // Reorganize back into elements
     for( int l=0; l<cpn; l++ ) { // Columns
-      for( int e=0; e<elements; e++ ){ // Complex elements / field element
+      for( int e=0; e<elements; e++ ){ // Complex elements / Field element
         for(int s=0; s<nnodes; s++){
           complex_type * field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
           for(int t=0;t<node_column_size; t++){
@@ -369,7 +369,7 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
                    sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE,
                    s, column_communicator);
 
-      // Place the new data into field memory
+      // Place the new data into Field memory
       for( int l=0; l<cpn; l++ ) {
         int c = s*cpn+l;
         result.fs->payload.place_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(), lattice);
@@ -395,21 +395,21 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
 #else // No MPI
 
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir){}
+inline void FFT_field_complex(Field<T> & input, Field<T> & result, fft_direction fdir){}
 
 #endif
 
 #else
 // Not CUDA compiler
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir){}
+inline void FFT_field_complex(Field<T> & input, Field<T> & result, fft_direction fdir){}
 
 
 #endif
 
 
 template<>
-inline void field<Cmplx<double>>::FFT(fft_direction fdir) {
+inline void Field<Cmplx<double>>::FFT(fft_direction fdir) {
   FFT_field_complex<Cmplx<double>,Cmplx<double>>(*this, *this, fdir);
 }
 
@@ -456,10 +456,10 @@ struct complex_base<C<a,b,B>>{
 
 
 
-/// Run fourier transform on a complex field
+/// Run fourier transform on a complex Field
 // Called with any type T with a Cmplx type nested in the lowest level
 template<typename T>
-void FFT_field(field<T> & input, field<T> & result, fft_direction fdir = fft_direction::forward){
+void FFT_field(Field<T> & input, Field<T> & result, fft_direction fdir = fft_direction::forward){
   FFT_field_complex<T,typename complex_base<T>::type>(input, result, fdir);
 }
 

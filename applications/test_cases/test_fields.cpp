@@ -48,8 +48,8 @@ int main(int argc, char **argv){
 
     test_setup(argc, argv);
 
-    field<Cmplx<double>> s1, s2, s3;
-    field<Cmplx<double>> s4[3];
+    Field<Cmplx<double>> s1, s2, s3;
+    Field<Cmplx<double>> s4[3];
 
     // Test field assingment
     s1 = 0.0;
@@ -195,7 +195,7 @@ int main(int argc, char **argv){
 
     // Check boundary conditions by moving the data
     {
-      field<double> s1, s2;
+      Field<double> s1, s2;
       coordinate_vector coord1 = 0;
       coordinate_vector coord2 = 0;
       coord1[0] = (nd[0] - 1) % nd[0];
@@ -349,7 +349,7 @@ int main(int argc, char **argv){
 
 
     // Test array reduction
-    field<double> dfield;
+    Field<double> dfield;
     dfield[ALL] = 1;
 
 #if NDIM == 4

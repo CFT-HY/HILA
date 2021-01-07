@@ -18,7 +18,7 @@ template<typename fermion_action, typename dirac, typename gauge_field_type>
 void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
   using sun = typename gauge_field_type::fund_type;
   using forcetype = SquareMatrix<gauge_field_type::N, Cmplx<double>>;
-  field<forcetype> force[NDIM];
+  Field<forcetype> force[NDIM];
   double eps = 1e-5;
 
   for(int ng = 0; ng < 1 ; ng++ ){ //matrix::generator_count(); ng++){
@@ -35,7 +35,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
     sun h = sun(1) + Cmplx<double>(0, eps) * sun::generator(ng);
     sun g12 = h*g1;
 
-    field<typename dirac::vector_type> psi, chi, tmp, tmp2;
+    Field<typename dirac::vector_type> psi, chi, tmp, tmp2;
     #if NDIM > 3
     psi.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
     psi.set_boundary_condition(-e_t, boundary_condition_t::ANTIPERIODIC);
@@ -130,7 +130,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
 
 
     gauge.zero_momentum();
-    field<double> sf1, sf2;
+    Field<double> sf1, sf2;
     sf1[ALL]=0; sf2[ALL]=0;
 
     gauge.get_gauge(0).set_element(g12, coord);

@@ -10,16 +10,16 @@
 /// Builds an initial guess for a matrix inverter given a set of basis vectors
 template<typename vector_type, typename DIRAC_OP>
 void MRE_guess(
-  field<vector_type> & psi,
-  field<vector_type> & chi,
+  Field<vector_type> & psi,
+  Field<vector_type> & chi,
   DIRAC_OP D,
-  std::vector<field<vector_type>> old_chi_inv)
+  std::vector<Field<vector_type>> old_chi_inv)
 {
   int MRE_size = old_chi_inv.size();
   double M[MRE_size][MRE_size];
   double v[MRE_size];
-  field<vector_type> basis[MRE_size];
-  field<vector_type> tmp;
+  Field<vector_type> basis[MRE_size];
+  Field<vector_type> tmp;
 
   // Build an orthogonal basis from the previous solutions
   for(int i=0; i<MRE_size; i++) {
@@ -42,7 +42,7 @@ void MRE_guess(
 
   // Build the projected matrix, M[i][j] = v[i].v[j]
   for(int i=0; i<MRE_size; i++) {
-    field<vector_type> Dchi, DDchi;
+    Field<vector_type> Dchi, DDchi;
     D.apply(basis[i], Dchi);
     D.dagger(Dchi, DDchi);
     for(int j=0; j<MRE_size; j++) {

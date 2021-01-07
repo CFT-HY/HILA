@@ -111,7 +111,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
     
     // make a ref to the field name
     if (!l.is_written) code << "const ";
-    code << "field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
+    code << "Field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
   }
 
 
@@ -261,7 +261,7 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
         field_info_list.push_back(new_fi);
 
         // copy the shifted var
-        code << "const field" + it->type_template + " " + offset_field_name  
+        code << "const Field" + it->type_template + " " + offset_field_name  
              + " = " + it->new_name + ".shift(" + d.ref_list.at(0)->direxpr_s
              + ", " + paritystr + ");\n";
 

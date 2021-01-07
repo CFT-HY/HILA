@@ -31,9 +31,9 @@ class scaling_sim {
 		void next();
 		inline double scaleFactor(double t);
 
-		field<Cmplx<double>> phi;
-		field<Cmplx<double>> pi;
-		field<Cmplx<double>> deltaPi; 
+		Field<Cmplx<double>> phi;
+		Field<Cmplx<double>> pi;
+		Field<Cmplx<double>> deltaPi; 
 
 		double t;
 

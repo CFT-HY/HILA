@@ -1,7 +1,7 @@
 #include "plumbing/field.h"
 
 
-void add(field<int> &a, field<int> &b, parity par)
+void add(Field<int> &a, Field<int> &b, parity par)
 {
   a[par] = b[X + direction::xup];
   
@@ -10,12 +10,12 @@ void add(field<int> &a, field<int> &b, parity par)
 //#include "sub.h"
 
 template <typename T>
-void sub(field<T> &a, field<T> &b, parity p)
+void sub(Field<T> &a, Field<T> &b, parity p)
 {
   a[p] -= b[X];
 }
 
-void f(field<double> &d, double verylongvariablename) {
+void f(Field<double> &d, double verylongvariablename) {
   d[ALL] = verylongvariablename;
 }
 
@@ -23,7 +23,7 @@ void f(field<double> &d, double verylongvariablename) {
 
 class A {
 private:
-  field<double> d;
+  Field<double> d;
 public:
   A(double var) {
     d[ALL] = var  ;
@@ -40,9 +40,9 @@ public:
 int main() 
 {
   int i;
-  field<double> lf, tf[2], *p;
-  field<int> intfield, if2;
-  field<double> dd = 2.0;
+  Field<double> lf, tf[2], *p;
+  Field<int> intfield, if2;
+  Field<double> dd = 2.0;
   double da[N], t,x, *dp;
   parity par(ODD);
   direction dir;

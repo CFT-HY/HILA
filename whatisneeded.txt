@@ -14,7 +14,7 @@ the real number , e.g.
 FIELD:
 Lattice field of type T definition through template:
 
-        field<T> a;  ( or maybe latfield<T> a; ? )
+        Field<T> a;  ( or maybe latfield<T> a; ? )
 
 allocates field & resets status (deallocated when leaving scope)
 

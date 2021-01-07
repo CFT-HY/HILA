@@ -24,8 +24,8 @@ public:
   
   class f {
   public:
-    inline static field<double> sum2(field<double> & a, field<double> & b) {
-      field<double> r;
+    inline static Field<double> sum2(Field<double> & a, Field<double> & b) {
+      Field<double> r;
       r[ALL] = a[X] + b[X];
       return r;
     }
@@ -53,24 +53,24 @@ inline T sum(const T a, const T b) {
 }
 
 // template <>  
-// field<double> sum<field<double>>(const field<double> a, const field<double> b) {
-//   field<double> r;
+// Field<double> sum<Field<double>>(const Field<double> a, const Field<double> b) {
+//   Field<double> r;
 //   r[ALL] = a[X] + b[X];
 // 
 //   return r;
 // }
 
 
-// extern field<int> glob;
+// extern Field<int> glob;
 
 int main()
 {
-  field<double> a(2.0),x;
-  field<int> y;
-  c<field<int>>::f fv;
-  c<field<double>> cv;
+  Field<double> a(2.0),x;
+  Field<int> y;
+  c<Field<int>>::f fv;
+  c<Field<double>> cv;
   double dd;
-  h<field<double>> hv;
+  h<Field<double>> hv;
 
 //  int j = c<int>::sum( 1, 2);
   
@@ -80,7 +80,7 @@ int main()
   x = hv.func(a,x);
   
   extern int kissa;
-  // x = c<field<double>>::d<field<double>>::sum( a, x);
+  // x = c<Field<double>>::d<Field<double>>::sum( a, x);
   
   x = sum(a,x);
   y = sum(y,y);

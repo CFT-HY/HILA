@@ -5,7 +5,7 @@ void transformer_control(const char *);
 
 
 template <typename T>
-void sub(field<T> &a, const field<T> &b, parity p)
+void sub(Field<T> &a, const Field<T> &b, parity p)
 {
   a[p] = b[X];
 }
@@ -21,8 +21,8 @@ Miau
 int main() 
 {
   int i;
-  field<double> lf;
-  field<double> dd;
+  Field<double> lf;
+  Field<double> dd;
   double dp[10], somevar, *b, c;
 
   // cout << "Starting..\n";

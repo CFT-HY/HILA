@@ -138,12 +138,12 @@ struct dir_ptr {
   Expr *parityExpr;         // pointer to full parity+dir expression (1st of equivalent ones)
   // Expr *dirExpr;            // non-null only for non-const. nn  NOT USEFUL
   std::string direxpr_s;     // direction expression string (1st of equivalent ones)
-  std::vector<field_ref *> ref_list;  // pointers references equivalent to this field[dir]
+  std::vector<field_ref *> ref_list;  // pointers references equivalent to this Field[dir]
   unsigned count;           // how many genuine direction refs?  if count==0 this is offset
   bool is_offset;           // is this dir offset?
   bool is_constant_direction;  // if constant nn
   unsigned constant_value;  // value of it
-  std::string name_with_dir;         // new name for this field[X+dir] -variable
+  std::string name_with_dir;         // new name for this Field[X+dir] -variable
 
   dir_ptr() {
     ref_list = {};
@@ -164,7 +164,7 @@ struct dir_ptr {
 
 
 /// field_type_info contains information of the template argument of
-/// field<type> -expression.  Type is vectorizable if:
+/// Field<type> -expression.  Type is vectorizable if:
 /// a) just float, double, int  or 
 /// b) is templated type, with float/double in template and  implements 
 ///    the method using base_type = typename base_type_struct<T>::type;
@@ -185,18 +185,18 @@ struct vectorization_info {
 /// main struct for storing info about each field variable inside loops
 /// one field_info for each loop variable
 struct field_info {
-  std::string type_template;             // This will be the <T> part of field<T>
-  std::string element_type;              // type of the element of field
-  std::string old_name;                  // "name" of field variable, can be an expression
-  std::string new_name;                  // replacement field name
+  std::string type_template;             // This will be the <T> part of Field<T>
+  std::string element_type;              // type of the element of Field
+  std::string old_name;                  // "name" of Field variable, can be an expression
+  std::string new_name;                  // replacement Field name
   std::string loop_ref_name;             // var which refers to payload, loop_ref_name v = new_name->fs.payload
   std::vector<dir_ptr> dir_list;         // nb directions TODO: more general gather ptr
   std::vector<field_ref *> ref_list;     // where the var is referred at
-  Expr *nameExpr;                        // first of the name exprs to this field
-  vectorization_info vecinfo;            // info of the type in field<type>
+  Expr *nameExpr;                        // first of the name exprs to this Field
+  vectorization_info vecinfo;            // info of the type in Field<type>
 
-  bool is_written;                       // is the field written to in this loop
-  bool is_read_atX;                      // local read, i.e. field[X]
+  bool is_written;                       // is the Field written to in this loop
+  bool is_read_atX;                      // local read, i.e. Field[X]
   bool is_read_nb;                       // read using nn-neighbours 
   bool is_read_offset;                   // read with an offset (non-nn) index
   int  first_assign_seq;                 // the sequence of the first assignment

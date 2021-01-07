@@ -44,11 +44,11 @@ class CG{
     /// The operators themselves have the same structure.
     /// The conjugate gradient operator is Hermitean, so there is
     /// no dagger().
-    void apply(field<vector_type> &in, field<vector_type> &out)
+    void apply(Field<vector_type> &in, Field<vector_type> &out)
     {
       int i;
       struct timeval start, end;
-      field<vector_type> r, p, Dp, DDp;
+      Field<vector_type> r, p, Dp, DDp;
       r.copy_boundary_condition(in);
       p.copy_boundary_condition(in);
       Dp.copy_boundary_condition(in);

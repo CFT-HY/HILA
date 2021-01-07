@@ -9,19 +9,19 @@
 #include "hmc/gauge_field.h"
 
 template<int N, typename radix>
-field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[2*NDIM];
+Field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[2*NDIM];
 
 
 
 /// Apply the hopping term to v_out and add to v_in
 template<int N, typename radix, typename matrix>
 inline void Dirac_Wilson_hop(
-  const field<matrix> *gauge, const double kappa,
-  const field<Wilson_vector<N, radix>> &v_in,
-  field<Wilson_vector<N, radix>> &v_out,
+  const Field<matrix> *gauge, const double kappa,
+  const Field<Wilson_vector<N, radix>> &v_in,
+  Field<Wilson_vector<N, radix>> &v_out,
   parity par, int sign)
 {
-  field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
+  Field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
   for(int dir=0; dir < 2*NDIM; dir++){
     vtemp[dir].copy_boundary_condition(v_in);
   }
@@ -56,12 +56,12 @@ inline void Dirac_Wilson_hop(
 /// Apply the hopping term to v_in and overwrite v_out
 template<int N, typename radix, typename matrix>
 inline void Dirac_Wilson_hop_set(
-  const field<matrix> *gauge, const double kappa,
-  const field<Wilson_vector<N, radix>> &v_in,
-  field<Wilson_vector<N, radix>> &v_out,
+  const Field<matrix> *gauge, const double kappa,
+  const Field<Wilson_vector<N, radix>> &v_in,
+  Field<Wilson_vector<N, radix>> &v_out,
   parity par, int sign)
 {
-  field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
+  Field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
   for(int dir=0; dir < 2*NDIM; dir++){
     vtemp[dir].copy_boundary_condition(v_in);
   }
@@ -103,8 +103,8 @@ inline void Dirac_Wilson_hop_set(
 /// The diagonal part of the operator. Without clover this is just the identity
 template<int N, typename radix>
 inline void Dirac_Wilson_diag(
-  const field<Wilson_vector<N, radix>> &v_in,
-  field<Wilson_vector<N, radix>> &v_out,
+  const Field<Wilson_vector<N, radix>> &v_in,
+  Field<Wilson_vector<N, radix>> &v_out,
   parity par)
 {
   v_out[par] = v_in[X];
@@ -114,7 +114,7 @@ inline void Dirac_Wilson_diag(
 /// Inverse of the diagonal part. Without clover this does nothing.
 template<int N, typename radix>
 inline void Dirac_Wilson_diag_inverse(
-  field<Wilson_vector<N, radix>> &v,
+  Field<Wilson_vector<N, radix>> &v,
   parity par)
 {}
 
@@ -124,15 +124,15 @@ inline void Dirac_Wilson_diag_inverse(
 /// Necessary for the HMC force calculation.
 template<int N, typename radix, typename gaugetype, typename momtype>
 inline void Dirac_Wilson_calc_force(
-  const field<gaugetype> *gauge,
+  const Field<gaugetype> *gauge,
   const double kappa,
-  const field<Wilson_vector<N, radix>> &chi,
-  const field<Wilson_vector<N, radix>> &psi,
-  field<momtype> (&out)[NDIM],
+  const Field<Wilson_vector<N, radix>> &chi,
+  const Field<Wilson_vector<N, radix>> &psi,
+  Field<momtype> (&out)[NDIM],
   parity par,
   int sign)
 {
-  field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
+  Field<half_Wilson_vector<N, radix>> (&vtemp)[2*NDIM] = wilson_dirac_temp_vector<N, radix>;
   vtemp[0].copy_boundary_condition(chi);
   vtemp[1].copy_boundary_condition(chi);
   
@@ -169,7 +169,7 @@ template<typename matrix>
 class Dirac_Wilson {
   private:
     /// A reference to the gauge links used in the dirac operator
-    field<matrix> (&gauge)[NDIM];
+    Field<matrix> (&gauge)[NDIM];
   
   public:
     /// The hopping parameter, kappa = 1/(8-2m)
@@ -191,7 +191,7 @@ class Dirac_Wilson {
     /// Constructor: initialize mass and gauge
     Dirac_Wilson(Dirac_Wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
     /// Constructor: initialize mass and gauge
-    Dirac_Wilson(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
+    Dirac_Wilson(double k, Field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
     /// Constructor: initialize mass and gauge
     Dirac_Wilson(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
@@ -200,21 +200,21 @@ class Dirac_Wilson {
     Dirac_Wilson(Dirac_Wilson<M> &d, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(d.kappa) {}
 
     /// Applies the operator to in
-    inline void apply( const field<vector_type> & in, field<vector_type> & out){
+    inline void apply( const Field<vector_type> & in, Field<vector_type> & out){
       Dirac_Wilson_diag(in, out, ALL);
       Dirac_Wilson_hop(gauge, kappa, in, out, ALL, 1);
     }
 
     /// Applies the conjugate of the operator
-    inline void dagger( const field<vector_type> & in, field<vector_type> & out){
+    inline void dagger( const Field<vector_type> & in, Field<vector_type> & out){
       Dirac_Wilson_diag(in, out, ALL);
       Dirac_Wilson_hop(gauge, kappa, in, out, ALL, -1);
     }
 
     /// Applies the derivative of the Dirac operator with respect
-    /// to the gauge field
+    /// to the gauge Field
     template<typename momtype>
-    inline void force(const field<vector_type> & chi,  const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign=1){
+    inline void force(const Field<vector_type> & chi,  const Field<vector_type> & psi, Field<momtype> (&force)[NDIM], int sign=1){
       Dirac_Wilson_calc_force(gauge, kappa, chi, psi, force, ALL, sign);
     }
 };
@@ -222,16 +222,16 @@ class Dirac_Wilson {
 
 /// Multiplying from the left applies the standard Dirac operator
 template<int N, typename radix, typename matrix>
-field<Wilson_vector<N, radix>> operator* (Dirac_Wilson<matrix> D, const field<Wilson_vector<N, radix>> & in) {
-  field<Wilson_vector<N, radix>> out;
+Field<Wilson_vector<N, radix>> operator* (Dirac_Wilson<matrix> D, const Field<Wilson_vector<N, radix>> & in) {
+  Field<Wilson_vector<N, radix>> out;
   D.apply(in, out);
   return out;
 }
 
 /// Multiplying from the right applies the conjugate
 template<int N, typename radix, typename matrix>
-field<Wilson_vector<N, radix>> operator* (const field<Wilson_vector<N, radix>> & in, Dirac_Wilson<matrix> D) {
-  field<Wilson_vector<N, radix>> out;
+Field<Wilson_vector<N, radix>> operator* (const Field<Wilson_vector<N, radix>> & in, Dirac_Wilson<matrix> D) {
+  Field<Wilson_vector<N, radix>> out;
   D.dagger(in, out);
   return out;
 }
@@ -258,7 +258,7 @@ template<typename matrix>
 class Dirac_Wilson_evenodd {
   private:
     /// A reference to the gauge links used in the dirac operator
-    field<matrix> (&gauge)[NDIM];
+    Field<matrix> (&gauge)[NDIM];
   public:
     /// The hopping parameter, kappa = 1/(8-2m)
     double kappa;
@@ -279,7 +279,7 @@ class Dirac_Wilson_evenodd {
     /// Constructor: initialize mass and gauge
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}
     /// Constructor: initialize mass and gauge
-    Dirac_Wilson_evenodd(double k, field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
+    Dirac_Wilson_evenodd(double k, Field<matrix> (&U)[NDIM]) : gauge(U), kappa(k) {}
     /// Constructor: initialize mass and gauge
     Dirac_Wilson_evenodd(double k, gauge_field_base<matrix> &g) : gauge(g.gauge), kappa(k) {}
 
@@ -289,7 +289,7 @@ class Dirac_Wilson_evenodd {
 
 
     /// Applies the operator to in
-    inline void apply( const field<vector_type> & in, field<vector_type> & out){
+    inline void apply( const Field<vector_type> & in, Field<vector_type> & out){
       Dirac_Wilson_diag(in, out, EVEN);
 
       Dirac_Wilson_hop_set(gauge, kappa, in, out, ODD, 1);
@@ -299,7 +299,7 @@ class Dirac_Wilson_evenodd {
     }
 
     /// Applies the conjugate of the operator
-    inline void dagger( const field<vector_type> & in, field<vector_type> & out){
+    inline void dagger( const Field<vector_type> & in, Field<vector_type> & out){
       Dirac_Wilson_diag(in, out, EVEN);
 
       Dirac_Wilson_hop_set(gauge, kappa, in, out, ODD, -1);
@@ -309,11 +309,11 @@ class Dirac_Wilson_evenodd {
     }
 
     /// Applies the derivative of the Dirac operator with respect
-    /// to the gauge field
+    /// to the gauge Field
     template<typename momtype>
-    inline void force(const field<vector_type> & chi, const field<vector_type> & psi, field<momtype> (&force)[NDIM], int sign){
-      field<momtype> force2[NDIM];
-      field<vector_type> tmp;
+    inline void force(const Field<vector_type> & chi, const Field<vector_type> & psi, Field<momtype> (&force)[NDIM], int sign){
+      Field<momtype> force2[NDIM];
+      Field<vector_type> tmp;
       tmp.copy_boundary_condition(chi);
 
       tmp[ALL] = 0;

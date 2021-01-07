@@ -69,7 +69,7 @@ int main(int argc, char **argv){
 
   test_gamma_matrices();
 
-  field<SU<N>> U[NDIM];
+  Field<SU<N>> U[NDIM];
   foralldir(d) {
     onsites(ALL){
       U[d][X] = 1;
@@ -83,7 +83,7 @@ int main(int argc, char **argv){
     output0 << "Checking with dirac_staggered\n";
     using dirac = dirac_staggered<SU<N>>;
     dirac D(0.1, U);
-    field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    Field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     onsites(ALL){
       if(disable_avx[X]==0){};
       a[X].gaussian();
@@ -151,7 +151,7 @@ int main(int argc, char **argv){
     output0 << "Checking with Dirac_Wilson\n";
     using dirac = Dirac_Wilson<SU<N, double>>;
     dirac D(0.05, U);
-    field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    Field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     #if NDIM > 3
       a.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
       b.copy_boundary_condition(a);
@@ -215,7 +215,7 @@ int main(int argc, char **argv){
   {
     output0 << "Checking with dirac_staggered_evenodd\n";
     dirac_staggered_evenodd D(5.0, U);
-    field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    Field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     onsites(ALL){
       if(disable_avx[X]==0){};
       a[X].gaussian();
@@ -250,7 +250,7 @@ int main(int argc, char **argv){
     output0 << "Checking with Dirac_Wilson_evenodd\n";
     using dirac = Dirac_Wilson_evenodd<SU<N>>;
     dirac D(0.12, U);
-    field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    Field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     #if NDIM > 3
       a.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
       b.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
@@ -335,8 +335,8 @@ int main(int argc, char **argv){
     dirac_base Dbase(0.1, U);
     using dirac = Hasenbusch_operator<dirac_base>;
     dirac D(Dbase, 0.1);
-    field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
-    field<Wilson_vector<N, double>> sol;
+    Field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
+    Field<Wilson_vector<N, double>> sol;
 
     a[ODD] = 0; b[ODD] = 0;
     onsites(EVEN){

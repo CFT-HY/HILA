@@ -17,11 +17,11 @@
 /// The field must be complex and the underlying complex type is supplied
 /// by the complex_type template argument
 template<typename T, typename complex_type>
-inline void FFT_field_complex(field<T> & input, field<T> & result, 
+inline void FFT_field_complex(Field<T> & input, Field<T> & result, 
                               fft_direction fftdir = fft_direction::forward ){
 
   lattice_struct * lattice = input.fs->lattice;
-  field<T> * read_pointer = &input; // Read from input on first time, then work in result
+  Field<T> * read_pointer = &input; // Read from input on first time, then work in result
   size_t local_volume = lattice->local_volume();
   int elements = sizeof(T)/sizeof(complex_type);
 
@@ -210,14 +210,14 @@ inline void FFT_field_complex(field<T> & input, field<T> & result,
 
 
 template<typename T, typename C>
-inline void FFT_field_complex(field<T> & input, field<T> & result, fft_direction fdir = fft_direction::forward){}
+inline void FFT_field_complex(Field<T> & input, Field<T> & result, fft_direction fdir = fft_direction::forward){}
 
 
 
 #endif
 
 template<>
-inline void field<Cmplx<double>>::FFT(fft_direction fdir){
+inline void Field<Cmplx<double>>::FFT(fft_direction fdir){
   FFT_field_complex<Cmplx<double>,Cmplx<double>>(*this, *this, fdir);
 }
 
@@ -262,7 +262,7 @@ struct complex_base<C<a,b,B>>{
 /// Run fourier transform on a complex field
 // Called with any type T with a Cmplx type nested in the lowest level
 template<typename T>
-void FFT_field(field<T> & input, field<T> & result, fft_direction fdir = fft_direction::forward){
+void FFT_field(Field<T> & input, Field<T> & result, fft_direction fdir = fft_direction::forward){
   FFT_field_complex<T,typename complex_base<T>::type>(input, result, fdir);
 }
 

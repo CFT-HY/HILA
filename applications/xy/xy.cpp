@@ -23,7 +23,7 @@ int main(int argc, char **argv){
 	hila::initialize(argc,argv);
   lattice->setup(nd);
 	// Define a field
-	field<double> spin;
+	Field<double> spin;
 
 	seed_random(seed);
 

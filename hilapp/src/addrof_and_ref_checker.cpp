@@ -109,7 +109,7 @@ public:
             // now trying to take address of f[X]
             reportDiag(DiagnosticsEngine::Level::Error,
                        UO->getSourceRange().getBegin(),
-                       "taking address of field variable '%0' is not allowed, suggest using references. "
+                       "taking address of Field variable '%0' is not allowed, suggest using references. "
                        "If a pointer is necessary, copy first: 'auto v = %1; auto *p = &v;'",
                        get_stmt_str(OC).c_str(),
                        get_stmt_str(UO->getSubExpr()).c_str() );
@@ -178,7 +178,7 @@ public:
               if (is_field_with_X_and_dir(E)) {
                 reportDiag(DiagnosticsEngine::Level::Error,
                             E->getSourceRange().getBegin(),
-                            "cannot take non-const reference of a field variable with X+direction");
+                            "cannot take non-const reference of a Field variable with X+direction");
                 return true;
               }
             }

@@ -105,7 +105,7 @@ bool LoopAssignChecker::VisitDeclRefExpr(DeclRefExpr *e) {
   if(type.rfind("element<",0) != std::string::npos){
     reportDiag(DiagnosticsEngine::Level::Error,
       e->getSourceRange().getBegin(),
-      "Cannot assign a field element to a non-element type");
+      "Cannot assign a Field element to a non-element type");
   }
   return true;
 }
@@ -157,7 +157,7 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_a
     lfe.parityExpr = ASE->getRHS();
     //llvm::errs() << lfe.fullExpr << " " << lfe.nameExpr << " " << lfe.parityExpr << "\n";
   } else {
-    llvm::errs() << "Should not happen! Error in field parity\n";
+    llvm::errs() << "Should not happen! Error in Field parity\n";
     exit(1);
   }
 
@@ -191,7 +191,7 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_a
     } else {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "field[parity] not allowed here, use field[X] -type instead" );
+                 "Field[parity] not allowed here, use Field[X] -type instead" );
     }
   }
   
@@ -204,12 +204,12 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_a
     if (is_assign && !is_func_arg) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "Cannot assign to field expression with [X + dir] -type argument.");
+                 "Cannot assign to Field expression with [X + dir] -type argument.");
     }
     if (is_assign && is_func_arg) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  lfe.parityExpr->getSourceRange().getBegin(),
-                 "Cannot use a non-const. reference to field expression with [X + dir] -type argument.");
+                 "Cannot use a non-const. reference to Field expression with [X + dir] -type argument.");
 
     }
 
@@ -702,7 +702,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     //if (is_field_element_expr(E)) {
       // run this expr type up until we find field variable refs
     if (is_field_with_X_expr(E)) {
-      // It is field[X] reference
+      // It is Field[X] reference
       // get the expression for field name
       handle_field_parity_X_expr(E, is_assignment, is_compound || is_member_expr, true);
       is_assignment = false;  // next will not be assignment
@@ -897,9 +897,9 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-///  List field<> specializations
+///  List Field<> specializations
 ///  This does not currently do anything necessary, specializations are
-///  now handled as field<> are used in loops
+///  now handled as Field<> are used in loops
 ///  
 ////////////////////////////////////////////////////////////////////////////
 
@@ -909,7 +909,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
   field_decl = D;
 
   if (cmdline::verbosity >= 2)
-    llvm::errs() << "field<type> specializations in this compilation unit:\n";
+    llvm::errs() << "Field<type> specializations in this compilation unit:\n";
 
   int count = 0;
   for (auto spec = D->spec_begin(); spec != D->spec_end(); spec++ ) {
@@ -917,13 +917,13 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     auto & args = spec->getTemplateArgs();
 
     if (args.size() != 1) {
-      llvm::errs() << " *** Fatal: More than one type arg for field<>\n";
+      llvm::errs() << " *** Fatal: More than one type arg for Field<>\n";
       exit(1);
     }
     if (TemplateArgument::ArgKind::Type != args.get(0).getKind()) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  D->getSourceRange().getBegin(),
-                 "Expect type argument in \'field\' template" );
+                 "Expect type argument in \'Field\' template" );
       return(0);
     }
 
@@ -931,7 +931,7 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
     std::string typestr = args.get(0).getAsType().getAsString(PP);
 
     if (cmdline::verbosity >= 2) {
-      llvm::errs() << "  field < " << typestr << " >";
+      llvm::errs() << "  Field < " << typestr << " >";
       if (spec->isExplicitSpecialization()) llvm::errs() << " explicit specialization\n";
       else llvm::errs() << '\n';
     }
@@ -1277,7 +1277,7 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
 // }
 
 //////////////////////////////////////////////////////////////////////////////
-/// Process the field<> -references appearing in this loop, and
+/// Process the Field<> -references appearing in this loop, and
 /// construct the field_info_list
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1308,15 +1308,15 @@ bool MyASTVisitor::check_field_ref_list() {
       field_info lfv;
       lfv.old_name = name;
       lfv.type_template = get_expr_type(p.nameExpr);
-      if (lfv.type_template.find("field",0) != 0) {
+      if (lfv.type_template.find("Field",0) != 0) {
         reportDiag(DiagnosticsEngine::Level::Error,
                    p.nameExpr->getSourceRange().getBegin(),     
-                   "Confused: type of field expression?");
+                   "Confused: type of Field expression?");
         no_errors = false;
       }
-      lfv.type_template.erase(0,5);  // Remove "field"  from field<T>
+      lfv.type_template.erase(0,5);  // Remove "Field"  from Field<T>
 
-      // get also the fully canonical field<T>  type.
+      // get also the fully canonical Field<T>  type.
       lfv.element_type = p.nameExpr->getType().getUnqualifiedType().getCanonicalType().getAsString(PP);
       int a = lfv.element_type.find('<')+1;
       int b = lfv.element_type.rfind('>') - a;
@@ -1662,7 +1662,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
     ast_dump(s);
   }
 
-  // Entry point when inside field[par] = .... body
+  // Entry point when inside Field[par] = .... body
   if (parsing_state.in_loop_body) {
     return handle_loop_body_stmt(s);
   }
@@ -1721,14 +1721,14 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   }
                                    
   //  Starting point for fundamental operation
-  //  field[par] = ....  version with field<class>
+  //  Field[par] = ....  version with Field<class>
   //  Arg(0)  is the LHS of assignment
   
   CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
   bool found = false;
   if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0))) found = true;
   else {
-    // check also field<double> or some other non-class var
+    // check also Field<double> or some other non-class var
     BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
     if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS())) found = true;
   }
@@ -1745,20 +1745,20 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   // And, for correct level for pragma handling - turns to 0 for stmts inside
   if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1;
 
-  //  Finally, if we get to a field[parity] -expression without a loop or assignment flag error
+  //  Finally, if we get to a Field[parity] -expression without a loop or assignment flag error
  
   Expr * E = dyn_cast<Expr>(s);
   if (E && is_field_parity_expr(E)) {
     reportDiag(DiagnosticsEngine::Level::Error,
                 E->getSourceRange().getBegin(),
-                "field[parity] -expression is allowed only in LHS of field assignment statements (field[par] = ...)");
+                "Field[parity] -expression is allowed only in LHS of Field assignment statements (Field[par] = ...)");
     parsing_state.skip_children = 1;
     return true;
 
   } else if (E && is_field_with_X_expr(E)) {
     reportDiag(DiagnosticsEngine::Level::Error,
                 E->getSourceRange().getBegin(),
-                "field[X] -expressions allowed only in field loops");
+                "Field[X] -expressions allowed only in field loops");
     parsing_state.skip_children = 1;
     return true;
 
@@ -2141,7 +2141,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     // Comment out now, let roll through "naturally".
     // TraverseDecl(D->getTemplatedDecl());
 
-    if (D->getNameAsString() == "field") {
+    if (D->getNameAsString() == "Field") {
       handle_field_specializations(D);
     } else if (D->getNameAsString() == "field_storage") {
       field_storage_decl = D;

@@ -118,7 +118,7 @@ public:
     return (get_expr_type(E) == "parity");
   }
 
-  /// Checks if E is of type field[parity]  parity=EVEN,ODD,ALL
+  /// Checks if E is of type Field[parity]  parity=EVEN,ODD,ALL
   bool is_field_parity_expr(Expr *E) {
     E = E->IgnoreParens();
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);

@@ -33,7 +33,7 @@
 ClassTemplateDecl * field_decl = nullptr; 
 ClassTemplateDecl * field_storage_decl = nullptr;   
 const std::string field_storage_type = "field_storage<";
-const std::string field_type = "field<";
+const std::string field_type = "Field<";
 std::list<field_ref> field_ref_list = {};
 std::list<field_info> field_info_list = {};
 std::list<var_info> var_info_list = {};

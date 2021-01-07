@@ -34,7 +34,7 @@ template <typename T>
 void gather_test() {
 
   extern lattice_struct * lattice;
-  field<test_struct<T>> t;
+  Field<test_struct<T>> t;
   
   onsites(ALL) {
     coordinate_vector v = X.coordinates();
@@ -132,7 +132,7 @@ void gather_test() {
       // make it simple to keep it vectorized
         
       T difT = 0;
-      field<T> f = 1;
+      Field<T> f = 1;
       onsites(p) {
         difT += f[X+d] + f[X-d] - 2*f[X];
       }     

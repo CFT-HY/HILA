@@ -7,7 +7,7 @@
 /// Coverage:
 /// - reduction + onsites env.
 /// - EVEN + ODD accessors / neighbor access
-/// - field with matrix elements
+/// - Field with matrix elements
 /// - NOTE: Assumes periodic boundary conditions
 /////////////////////
 
@@ -24,9 +24,9 @@ int main(int argc, char **argv){
     int nx = a.get("nx");
     std::string out = a.get("output");
 
-    field<Matrix<2,2,double> > matrices;
-    field<int> coordinate, nb_coordinate1, nb_coordinate2;
-    field<SU<4, double>> sufield;
+    Field<Matrix<2,2,double> > matrices;
+    Field<int> coordinate, nb_coordinate1, nb_coordinate2;
+    Field<SU<4, double>> sufield;
     
     //check that fieldstruct allocated only after assignment
     assert(matrices.fs==nullptr);

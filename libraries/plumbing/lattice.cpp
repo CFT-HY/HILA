@@ -6,7 +6,7 @@
 
 //HACK: force disable vectorization in a loop using
 // if(disable_avx[X]==0){};
-field<double> disable_avx;
+Field<double> disable_avx;
 
 // Define the global lattice ptr, and set it to point to "my_lattice"
 lattice_struct my_lattice;

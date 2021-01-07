@@ -17,7 +17,7 @@ int main(int argc, char **argv){
   using T = Matrix<2,2,Cmplx<double>>;
   using Tf = Matrix<2,2,Cmplx<float>>;
 
-  field<T> d, d2;
+  Field<T> d, d2;
 
   // Generate a random field
   onsites(ALL){
@@ -43,7 +43,7 @@ int main(int argc, char **argv){
   output0 << "FFT double precision : "<< timing << " ms \n";
 
   // Generate a random field
-  field<Tf> f, f2;
+  Field<Tf> f, f2;
 
   // Generate a random field
   onsites(ALL){

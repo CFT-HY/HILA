@@ -26,8 +26,8 @@ int main(int argc, char **argv){
     seed_random(SEED);
 
     // Define a gauge matrix
-    field<SU<N,double>> U[NDIM];
-    field<SU_vector<N, double>> sunvec1, sunvec2;
+    Field<SU<N,double>> U[NDIM];
+    Field<SU_vector<N, double>> sunvec1, sunvec2;
 
     foralldir(d) {
       onsites(ALL){
@@ -90,7 +90,7 @@ int main(int argc, char **argv){
     output0 << "Staggered CG: " << timing << "ms / iteration\n";
 
 
-    field<Wilson_vector<N, double>> wvec1, wvec2;
+    Field<Wilson_vector<N, double>> wvec1, wvec2;
     onsites(ALL){
       if(disable_avx[X]==0){};
       wvec1[X].gaussian();

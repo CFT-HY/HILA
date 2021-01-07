@@ -10,7 +10,7 @@
 /// An AST Visitor for checking if the function body contains a field loop
 /// Logic: 
 ///   - Find if it contains X (X_index_type), which appears inside loops
-///   - Find if it has field[parity] -stmt.  This can appear without X in
+///   - Find if it has Field[parity] -stmt.  This can appear without X in
 ///      statemets like  f[EVEN] = 1;  etc.
 ///
 //////////////////////////////////////////////////////////////////////////////

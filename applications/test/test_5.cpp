@@ -4,7 +4,7 @@
 
 #include "plumbing/field.h"
 
-// extern field<int> glob;
+// extern Field<int> glob;
 
 Cmplx<double> d(Cmplx<double> x) {return x;}
 Cmplx<double> e(Cmplx<double> x) {return d(x);}
@@ -33,7 +33,7 @@ public:
 
 
 //template <typename g>
-//field<g> f2(const field<g> &f, int i);
+//Field<g> f2(const Field<g> &f, int i);
 
 
 double dv( double * d ) {
@@ -43,23 +43,23 @@ double dv( double * d ) {
 
 
 template <typename g>
-void pf(field<g> & s) {
+void pf(Field<g> & s) {
   s[ALL] = 1;
 }
 
 int main()
 {
   
-  field<Cmplx<double>> a,b,c;
+  Field<Cmplx<double>> a,b,c;
   int i;
-  field<double> t(1.0),s;
-  field<Cmplx<float>> kissa;
+  Field<double> t(1.0),s;
+  Field<Cmplx<float>> kissa;
 
   auto y = X;
   
   // pf(t);
   
-  field<v2<double>> A;  
+  Field<v2<double>> A;  
 
   
   coordinate_vector 
