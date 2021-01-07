@@ -11,7 +11,9 @@
 // mul_add operation and the normal sum
 // THE mul_add METHOD SEEMS TO BE SLOWER?
 #define MUL_SUM(a, b, c) c += a*b
-// #define MUL_SUM(a, b, c) c = mul_add(a, b, c)
+//#define MUL_SUM(a, b, c) c = mul_add(a, b, c)
+
+template <const int n, const int m, typename T> class Array;
 
 
 ////////////////////////////////////////////////////////////////
@@ -57,6 +59,13 @@ class Matrix {
               std::enable_if_t< (q == 1 || p == 1), int> = 0 >
     inline T& e(const int i) { return c[i]; }
 
+    /// interpret Matrix as Array -  for array ops
+    Array<n,m,T> & asArray() { 
+      return *reinterpret_cast<Array<n,m,T> *>(this);
+    }
+    const Array<n,m,T> asArray() const { 
+      return *reinterpret_cast<const Array<n,m,T> *>(this);
+    }
 
     /// casting from one Matrix (number) type to another: do not do this automatically.
     /// but require an explicit cast operator.  This makes it easier to write code.
@@ -78,6 +87,13 @@ class Matrix {
       for (int i=0; i<n*m; i++) res.c[i] = -c[i];
       return res;
     }
+
+    /// unary +
+    #pragma hila loop_function
+    inline Matrix<n,m,T> operator+() const { 
+      return this;
+    }
+
 
     /// Assign from "scalar" for square matrix
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
@@ -213,25 +229,6 @@ class Matrix {
       return *this;
     }
 
-    /// return copy of transpose of this matrix
-    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
-    #pragma hila loop_function
-    Matrix<n,m,T> plus_scalar(const S rhs) const {
-      Matrix<n,m,T> res;
-      for (int i=0; i<n*m; i++) res.c[i] = c[i] + rhs;
-      return res;
-    }
-
-    /// sub scalar to matrix/vector
-    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
-    #pragma hila loop_function
-    Matrix<n,m,T> minus_scalar(const S rhs) const {
-      Matrix<n,m,T> res;
-      for (int i=0; i<n*m; i++) res.c[i] = c[i] - rhs;
-      return res;
-    }
-
-
     //return copy of transpose of this matrix
     #pragma hila loop_function
     inline Matrix<m,n,T> transpose() const { 
@@ -330,24 +327,6 @@ class Matrix {
         for (int k=0; k<n; j++) res.e(i,j) += ::conj(e(k,i))*rhs.e(k,j);
       }
     }
-
-    /// element-by-element multiply
-    #pragma hila loop_function
-    Matrix<n,m,T> element_mul(const Matrix<n,m,T> & rhs) const {
-      Matrix<n,m,T> res;
-      for (int i=0; i<n*m; i++) res.c[i] = c[i] * rhs.c[i];
-      return res;
-    }
-
-    /// element-by-element divide
-    #pragma hila loop_function
-    Matrix<n,m,T> element_div(const Matrix<n,m,T> & rhs) const {
-      Matrix<n,m,T> res;
-      for (int i=0; i<n*m; i++) res.c[i] = c[i] / rhs.c[i];
-      return res;
-    }
-  
- 
 
     /// Generate random elements
     #pragma hila loop_function
@@ -835,6 +814,7 @@ using SquareMatrix = Matrix<n,n,T>;
 
 
 
+#include "datatypes/array.h"
 
 
 
