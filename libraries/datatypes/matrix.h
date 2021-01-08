@@ -37,6 +37,19 @@ class Matrix {
     /// define default constructors to ensure std::is_trivial
     Matrix(const Matrix<n,m,T> & v) = default;
 
+    constexpr int rows() { return n; }
+    constexpr int columns() { return m; }
+
+    // define method size() for vectors and square matrices only!
+    template <int q=n, int p=m, std::enable_if_t< q==1, int> = 0 >
+    constexpr int size() { return p; }
+
+    template <int q=n, int p=m, std::enable_if_t< p==1, int> = 0 >
+    constexpr int size() { return q; }
+
+    template <int q=n, int p=m, std::enable_if_t< q==p, int> = 0 >
+    constexpr int size() { return q; }
+
     /// standard access ops m.e(i,j) - assume T is small, as it should
     #pragma hila loop_function
     inline T  e(const int i, const int j) const { return c[i*m + j]; }

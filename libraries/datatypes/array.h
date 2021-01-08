@@ -24,6 +24,20 @@ class Array {
     /// define default constructors to ensure std::is_trivial
     Array(const Array<n,m,T> & v) = default;
 
+    /// Define constant methods rows(), columns() - may be useful in template code
+    constexpr int rows() { return n; }
+    constexpr int columns() { return m; }
+
+    // define also method size() for 'vector arrays' and square arrays only!
+    template <int q=n, int p=m, std::enable_if_t< q==1, int> = 0 >
+    constexpr int size() { return p; }
+
+    template <int q=n, int p=m, std::enable_if_t< p==1, int> = 0 >
+    constexpr int size() { return q; }
+
+    template <int q=n, int p=m, std::enable_if_t< q==p, int> = 0 >
+    constexpr int size() { return q; }
+
     /// access operators .e(i,j) and .e(i) from Matrix
     #pragma hila loop_function
     inline T  e(const int i, const int j) const { return c[i*m + j]; }
