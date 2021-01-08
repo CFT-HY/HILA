@@ -37,10 +37,11 @@ class Matrix {
     /// define default constructors to ensure std::is_trivial
     Matrix(const Matrix<n,m,T> & v) = default;
 
+    /// Define constant methods rows(), columns() - may be useful in template code
     constexpr int rows() { return n; }
     constexpr int columns() { return m; }
 
-    // define method size() for vectors and square matrices only!
+    // define also method size() for vectors and square matrices only!
     template <int q=n, int p=m, std::enable_if_t< q==1, int> = 0 >
     constexpr int size() { return p; }
 

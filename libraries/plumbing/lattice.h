@@ -241,7 +241,7 @@ public:
 
   coordinate_vector mod_size(const coordinate_vector & v) const { return mod(v, l_size); }
 
-  int local_size(int d) const { return this_node.size[d]; }
+  //int local_size(int d) const { return this_node.size[d]; }
   unsigned local_volume() const {return this_node.sites;}
 
   int node_rank() const { return this_node.rank; }

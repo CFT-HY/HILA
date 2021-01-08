@@ -429,6 +429,9 @@ inline void gaussian_random(Array<n,m,T> & mat) {
 }
 
 
+template <int n, typename T>
+using Array1d = Array<n,1,T>;
+
 
 
 #endif
