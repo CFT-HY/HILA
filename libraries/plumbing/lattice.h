@@ -73,7 +73,7 @@ public:
 
 #ifdef SUBNODE_LAYOUT
     /// If we have vectorized-style layout, we introduce "subnodes"
-    /// size is this_node.size/subnodes.divisions, which is not
+    /// size is mynode.size/subnodes.divisions, which is not
     /// constant across nodes
     struct subnode_struct {
       coordinate_vector divisions,size;  // div to subnodes to directions, size
@@ -86,7 +86,7 @@ public:
 
     unsigned volume() { return sites; }
 
-  } this_node;
+  } mynode;
 
 
   /// information about all nodes
@@ -243,17 +243,17 @@ public:
 
   coordinate_vector mod_size(const coordinate_vector & v) const { return mod(v, l_size); }
 
-  int node_rank() const { return this_node.rank; }
+  int node_rank() const { return mynode.rank; }
   int n_nodes() const { return nodes.number; }
   std::vector<node_info> nodelist() { return nodes.nodelist; }
-  coordinate_vector min_coordinate() const { return this_node.min; }
-  int min_coordinate(direction d) const { return this_node.min[d]; }
+  coordinate_vector min_coordinate() const { return mynode.min; }
+  int min_coordinate(direction d) const { return mynode.min[d]; }
   
   bool is_on_node(const coordinate_vector & c);
   int  node_rank(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c);
   unsigned site_index(const coordinate_vector & c, const unsigned node);
-  unsigned field_alloc_size() const {return this_node.field_alloc_size; }
+  unsigned field_alloc_size() const {return mynode.field_alloc_size; }
 
   void create_std_gathers();
   gen_comminfo_struct create_general_gather( const coordinate_vector & r);
@@ -261,7 +261,7 @@ public:
   create_comm_node_vector( coordinate_vector offset, unsigned * index, bool receive);
 
   
-  bool first_site_even() { return this_node.first_site_even; };
+  bool first_site_even() { return mynode.first_site_even; };
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
   void init_special_boundaries();
@@ -279,48 +279,48 @@ public:
   #ifdef EVEN_SITES_FIRST
   int loop_begin( parity P) const {
     if(P==ODD){
-      return this_node.evensites;
+      return mynode.evensites;
     } else {
       return 0;
     }
   }
   int loop_end( parity P) const {
     if(P==EVEN){
-      return this_node.evensites;
+      return mynode.evensites;
     } else {
-      return this_node.sites;
+      return mynode.sites;
     }
   }
   #else
   
   int loop_begin( parity P) const {
     if(P==EVEN){
-      return this_node.evensites;
+      return mynode.evensites;
     } else {
       return 0;
     }
   }
   int loop_end( parity P) const {
     if(P==ODD){
-      return this_node.evensites;
+      return mynode.evensites;
     } else {
-      return this_node.sites;
+      return mynode.sites;
     }
   }
   #endif
 
   inline const coordinate_vector & coordinates( unsigned idx ) const {
-    return this_node.coordinates[idx];
+    return mynode.coordinates[idx];
   }
 
   inline int coordinate( unsigned idx, direction d ) const {
-    return this_node.coordinates[idx][d];
+    return mynode.coordinates[idx][d];
   }
 
 
   inline parity site_parity( unsigned idx ) const {
   #ifdef EVEN_SITES_FIRST
-    if (idx < this_node.evensites) return EVEN;
+    if (idx < mynode.evensites) return EVEN;
     else return ODD;
   #else 
     return coordinates(idx).parity();
@@ -328,7 +328,7 @@ public:
   }
 
   coordinate_vector local_coordinates( unsigned idx ) const {
-    return coordinates(idx) - this_node.min;
+    return coordinates(idx) - mynode.min;
   }
 
   lattice_struct::nn_comminfo_struct get_comminfo(int d){

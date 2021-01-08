@@ -24,7 +24,7 @@ struct vectorized_lattice_struct  {
     unsigned v_sites;
     /// subnode divisions to different directions
     coordinate_vector subdivisions;
-    /// origin of the 1st subnode = origin of this_node
+    /// origin of the 1st subnode = origin of mynode
     coordinate_vector subnode_origin, subnode_size;
      
     /// True if boundary needs a permutation
@@ -89,20 +89,20 @@ struct vectorized_lattice_struct  {
       lattice =  _lattice;
 
       /// sites on vector
-      v_sites = lattice->this_node.volume() / vector_size;
-      subdivisions   = lattice->this_node.subnodes.divisions;
-      subnode_size   = lattice->this_node.subnodes.size;
-      subnode_origin = lattice->this_node.min;
+      v_sites = lattice->mynode.volume() / vector_size;
+      subdivisions   = lattice->mynode.subnodes.divisions;
+      subnode_size   = lattice->mynode.subnodes.size;
+      subnode_origin = lattice->mynode.min;
 
       // output0 << "Subdivisions " << subdivisions << '\n';
 
       // the basic division is done using "float" vectors - 
       // for "double" vectors the vector_size and number of subnodes
-      // is halved to direction lattice->this_node.subnodes.lastype_divided.dir
+      // is halved to direction lattice->mynode.subnodes.lastype_divided.dir
 
       if ( vector_size == VECTOR_SIZE/sizeof(double) ) {
-        subdivisions[ lattice->this_node.subnodes.merged_subnodes_dir ] /= 2;
-        subnode_size[ lattice->this_node.subnodes.merged_subnodes_dir ] *= 2;
+        subdivisions[ lattice->mynode.subnodes.merged_subnodes_dir ] /= 2;
+        subnode_size[ lattice->mynode.subnodes.merged_subnodes_dir ] *= 2;
       }
 
       output0 << "Setting up lattice struct with vector of size " << vector_size << " elements\n";
@@ -236,7 +236,7 @@ struct vectorized_lattice_struct  {
               int k,n = -1;
               bool found = false;
               for (k=0; k<vector_size; k++) {
-                if (lattice->neighb[d][i*vector_size+k] < lattice->this_node.sites) {
+                if (lattice->neighb[d][i*vector_size+k] < lattice->mynode.sites) {
                   if (!found) {
                     n = lattice->neighb[d][i*vector_size+k]/vector_size;
                     found = true;
@@ -283,12 +283,12 @@ struct vectorized_lattice_struct  {
           // non-vector sites.   Set the recv_list to point to where to move the stuff
           // Note: now the stuff has to be moved to boundary_halo, not to lattice n!
     
-          recv_list_size[d] = lattice->this_node.sites / lattice->this_node.size[abs(d)];
+          recv_list_size[d] = lattice->mynode.sites / lattice->mynode.size[abs(d)];
           recv_list[d] = (unsigned *)memalloc( recv_list_size[d] * sizeof(unsigned) );
 
           int j=0;
-          for (int i=0; i<lattice->this_node.sites; i++) {
-            if (lattice->neighb[d][i] >= lattice->this_node.sites) {
+          for (int i=0; i<lattice->mynode.sites; i++) {
+            if (lattice->neighb[d][i] >= lattice->mynode.sites) {
           
               // i/vector_size is the "vector index" of site, and 
               // i % vector_size the index within the vector.  

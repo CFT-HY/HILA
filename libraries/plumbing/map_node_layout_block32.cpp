@@ -61,7 +61,7 @@ void map_node_layout()
     na += (bsize[d]-1);
   }
 
-  if (this_node == 0) {
+  if (mynode == 0) {
     if (j>=0) {
       fprintf(outf," map_node_layout: logical node blocks 3x2^%d, %d nodes/block\n",
               na, blocksize);

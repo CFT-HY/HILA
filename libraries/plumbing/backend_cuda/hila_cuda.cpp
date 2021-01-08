@@ -28,7 +28,7 @@ __global__ void seed_random_kernel( curandState * state, unsigned long seed, uns
 /* Set seed on device and host */
 void seed_random(unsigned long seed){
   unsigned int iters_per_kernel = 16;
-  unsigned long n_blocks = lattice->this_node.volume() / (N_threads*iters_per_kernel) + 1;
+  unsigned long n_blocks = lattice->mynode.volume() / (N_threads*iters_per_kernel) + 1;
   unsigned long n_sites = N_threads*n_blocks*iters_per_kernel;
   unsigned long myseed = seed + hila::myrank()*n_sites;
   cudaMalloc( &curandstate, n_sites*sizeof( curandState ) );
@@ -85,25 +85,25 @@ void backend_lattice_struct::setup(lattice_struct * lattice)
   /* Setup neighbour fields in all directions */
   for (int d=0; d<NDIRS; d++) {
     // For normal boundaries
-    cudaMalloc( (void **)&(d_neighb[d]), lattice->this_node.volume() * sizeof(unsigned));
+    cudaMalloc( (void **)&(d_neighb[d]), lattice->mynode.volume() * sizeof(unsigned));
     check_cuda_error("cudaMalloc device neighbour array");
-    cudaMemcpy( d_neighb[d], lattice->neighb[d], lattice->this_node.volume() * sizeof(unsigned), cudaMemcpyHostToDevice );
+    cudaMemcpy( d_neighb[d], lattice->neighb[d], lattice->mynode.volume() * sizeof(unsigned), cudaMemcpyHostToDevice );
     check_cuda_error("cudaMemcpy device neighbour array");
 
     // For special boundaries
-    cudaMalloc( (void **)&(d_neighb_special[d]), lattice->this_node.volume() * sizeof(unsigned));
+    cudaMalloc( (void **)&(d_neighb_special[d]), lattice->mynode.volume() * sizeof(unsigned));
     check_cuda_error("cudaMalloc device neighbour array");
     const unsigned * special_neighb = lattice->get_neighbour_array((direction)d, boundary_condition_t::ANTIPERIODIC);
-    cudaMemcpy( d_neighb_special[d], special_neighb, lattice->this_node.volume() * sizeof(unsigned), cudaMemcpyHostToDevice );
+    cudaMemcpy( d_neighb_special[d], special_neighb, lattice->mynode.volume() * sizeof(unsigned), cudaMemcpyHostToDevice );
     check_cuda_error("cudaMemcpy device neighbour array");
   }
 
   /* Setup the location field */
-  cudaMalloc( (void **)&(d_coordinates), lattice->this_node.volume() * sizeof(coordinate_vector));
+  cudaMalloc( (void **)&(d_coordinates), lattice->mynode.volume() * sizeof(coordinate_vector));
   check_cuda_error("cudaMalloc device coordinate array");
-  tmp = (coordinate_vector*) malloc( lattice->this_node.volume() * sizeof(coordinate_vector) );
-  for(int i=0; i<lattice->this_node.volume(); i++) tmp[i] = lattice->coordinates(i);
-  cudaMemcpy( d_coordinates, tmp, lattice->this_node.volume() * sizeof(coordinate_vector), cudaMemcpyHostToDevice );
+  tmp = (coordinate_vector*) malloc( lattice->mynode.volume() * sizeof(coordinate_vector) );
+  for(int i=0; i<lattice->mynode.volume(); i++) tmp[i] = lattice->coordinates(i);
+  cudaMemcpy( d_coordinates, tmp, lattice->mynode.volume() * sizeof(coordinate_vector), cudaMemcpyHostToDevice );
   check_cuda_error("cudaMemcpy device coordinate array");
   free(tmp);
 

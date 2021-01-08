@@ -289,7 +289,7 @@ int main(int argc, char **argv){
 
         double r = s2.get_element(c).re;
         sum = (r+i)*(r+i);
-        if(mynode() == 0){
+        if(hila::myrank() == 0){
           assert(sum < 1e-8 && "Even-odd comm test");
         }
       }

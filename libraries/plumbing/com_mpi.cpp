@@ -38,11 +38,10 @@ void initialize_communications(int &argc, char ***argv)
     // global var lattice exists, assign the mpi comms there
     lattice->mpi_comm_lat = MPI_COMM_WORLD;
 
-    MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->this_node.rank );
+    MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->mynode.rank );
     MPI_Comm_size( lattice->mpi_comm_lat, &lattice->nodes.number );
 
   }
-  hila::my_rank_n = lattice->this_node.rank;
 
 }
 
@@ -103,11 +102,12 @@ char * machine_type()
 }
 
 /* Return my node number */
-int mynode()
+int hila::myrank()
 {
-  int node;
+  static int node = -1;
+  if (node >= 0) return node;
   MPI_Comm_rank( lattice->mpi_comm_lat, &node );
-  return(node);
+  return node;
 }
 
 /* Return number of nodes */
@@ -140,7 +140,7 @@ void split_into_sublattices( int this_lattice )
     hila::finishrun();
   }
   // reset also the rank and numbers -fields
-  MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->this_node.rank );
+  MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->mynode.rank );
   MPI_Comm_size( lattice->mpi_comm_lat, &lattice->nodes.number );
 }
 
@@ -164,7 +164,7 @@ void reset_comm(bool global)
     lattice->mpi_comm_lat = mpi_comm_saved;
     set = 0;
   }
-  this_node = mynode();
+  mynode = hila::myrank();
 }
 
 #endif

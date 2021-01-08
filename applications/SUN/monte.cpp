@@ -105,8 +105,8 @@ double monte(
       v0 = v0/z; v1 = v1/z; v2 = v2/z; v3 = v3/z;
       /* end norm check--trial SU(2) matrix is a0 + i a(j)sigma(j)*/
       /* test
-	 if(this_node == 0)printf("v= %e %e %e %e\n",v0,v1,v2,v3);
-	 if(this_node == 0)printf("z= %e\n",z);
+	 if(mynode == 0)printf("v= %e %e %e %e\n",v0,v1,v2,v3);
+	 if(mynode == 0)printf("z= %e\n",z);
       */
       /* now begin qhb */
       /* get four random numbers */
@@ -119,7 +119,7 @@ double monte(
       xr3 = cos(pi2*xr3);
 
       /*
-      if(this_node == 0)printf("rand= %e %e %e %e\n",xr1,xr2,xr3,xr4);
+      if(mynode == 0)printf("rand= %e %e %e %e\n",xr1,xr2,xr3,xr4);
       */
 
       /*
@@ -138,7 +138,7 @@ double monte(
 	a0 has prob(a0) = n0 * sqrt(1 - a0**2) * exp(al * a0)
       */
       al = b3*z;
-      /*if(this_node == 0)printf("al= %e\n",al);*/
+      /*if(mynode == 0)printf("al= %e\n",al);*/
 
       /*
 	let a0 = 1 - del**2

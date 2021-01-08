@@ -15,7 +15,7 @@ void initialize_machine(int &argc, char ***argv)
 {
   /* Init MPI */
   if( !initialized ){
-    lattice->this_node.rank = 0;
+    lattice->mynode.rank = 0;
     lattice->nodes.number = 1;
 
 #ifdef CUDA
@@ -47,7 +47,7 @@ char * machine_type() {
 }
 
 /* Return my node number */
-int mynode() {
+int hila::myrank() {
   return 0;
 }
 
@@ -87,7 +87,7 @@ void reset_comm(bool global)
     lattice->mpi_comm_lat = mpi_comm_saved;
     set = 0;
   }
-  this_node = mynode();
+  mynode = hila::myrank();
 }
 
 #endif

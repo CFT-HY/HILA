@@ -174,7 +174,7 @@ void scaling_sim::write_moduli(){
 		pimod += sqrt(p_i);
 	}
 
-	if (mynode() == 0){
+	if (hila::myrank() == 0){
 		double vol = (double) (config.l*config.l*config.l);
 		config.stream << t << "," << a << "," << config.lambda << "," << phimod/vol << "," << pimod/vol << ",";
 	}
@@ -231,7 +231,7 @@ void scaling_sim::write_energies(){
 		}
 	}
 
-	if (mynode() == 0){
+	if (hila::myrank() == 0){
 		double vol = (double) config.l*config.l*config.l;
 		config.stream << sumPi/vol << "," << w_sumPi/vol << ",";
 		config.stream << sumDiPhi/vol << "," << w_sumDiPhi/vol << ","; 
@@ -282,7 +282,7 @@ int main(int argc, char ** argv){
 	int steps = (sim.config.tEnd - sim.config.tStats)/(sim.config.dt * sim.config.nOutputs); //number of steps between printing stats 
 	int stat_counter = 0;
 
-  if (mynode() == 0){
+  if (hila::myrank() == 0){
 		sim.config.stream.open(output_fname, std::ios::out);
 	}
 
@@ -298,7 +298,7 @@ int main(int argc, char ** argv){
 		sim.next();
 	}
 
-	if (mynode() == 0){
+	if (hila::myrank() == 0){
 		sim.config.stream.close();
 	}
 

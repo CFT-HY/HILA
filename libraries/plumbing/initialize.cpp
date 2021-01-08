@@ -9,7 +9,6 @@
 // define these global var here - somehow NULL needed for ostream
 std::ostream hila::output(NULL);
 std::ofstream hila::output_file;
-int hila::my_rank_n;
 bool hila::about_to_finish = false;
 logger_class hila::log;
 
@@ -160,7 +159,7 @@ void hila::initialize(int argc, char **argv)
   initialize_communications( argc, &argv );
 
 #ifdef CUDA
-  initialize_cuda( lattice->this_node.rank );
+  initialize_cuda( lattice->mynode.rank );
 #endif
 
   /// Handle commandline args here
@@ -369,7 +368,7 @@ FILE *open_parameter_file()
   static char parameter[] = "parameter";
   FILE *fil = NULL;
 
-  if (this_node == 0) {
+  if (mynode == 0) {
 #ifdef SUBLATTICES
     if (n_sublattices > 1) {
       char parameter_name[50];
@@ -388,7 +387,7 @@ FILE *open_parameter_file()
         halt(" ** No parameter file?");
       }
     }
-  } // this_node == 0
+  } // mynode == 0
   return( fil );
 }
 

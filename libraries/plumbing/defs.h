@@ -55,10 +55,7 @@ namespace hila {
   /// this is just a hook to store output file, if it is in use
   extern std::ofstream output_file;
 
-  /// store the rank of this process to a global variable - this will not vanish during 
-  /// object destruction at the end!
-  extern int my_rank_n;
-  inline int myrank() { return my_rank_n; }
+  int myrank();    // rank of this node
 
   extern bool about_to_finish;
 
@@ -127,7 +124,6 @@ void broadcast_array(T * var, int n) {}
 
 #endif
 
-int mynode();
 int numnodes();
 void initialize_communications(int &argc, char ***argv);
 void split_into_sublattices( int rank );

@@ -22,7 +22,7 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
 
   lattice_struct * lattice = input.fs->lattice;
   Field<T> * read_pointer = &input; // Read from input on first time, then work in result
-  size_t local_volume = lattice->this_node.volume();
+  size_t local_volume = lattice->mynode.volume();
   int elements = sizeof(T)/sizeof(complex_type);
 
   static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");  // initialized 1st time used
@@ -41,11 +41,11 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
   // Run transform in all directions
   foralldir(dir){
     // Get the number of sites per column on this node and on all nodes
-    size_t node_column_size = lattice->this_node.size[dir];
+    size_t node_column_size = lattice->mynode.size[dir];
     size_t column_size = lattice->size(dir);
     // Count columns on this rank
     int cols = 1;
-    foralldir(d2) if(d2!=dir) cols *= lattice->this_node.size[d2];
+    foralldir(d2) if(d2!=dir) cols *= lattice->mynode.size[d2];
 
     // Get the MPI column in this direction
     lattice_struct::mpi_column_struct mpi_column = lattice->get_mpi_column(dir);

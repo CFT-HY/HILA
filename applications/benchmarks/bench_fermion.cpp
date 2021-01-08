@@ -98,7 +98,7 @@ int main(int argc, char **argv){
     }
     // Time staggered Dirac operator
     timing = 0;
-    //printf("node %d, dirac_staggered 0\n", mynode());
+    //printf("node %d, dirac_staggered 0\n", hila::myrank());
     using Dirac_Wilson = Dirac_Wilson_evenodd<sunmat>;
     Dirac_Wilson D_wilson(0.05, U);
     D_wilson.apply(wvec1, wvec2);

@@ -174,7 +174,7 @@ void lattice_struct::setup_layout()
             subdiv[dir] = sd;
             n_subn *= 2;
             div_done = true;
-            this_node.subnodes.merged_subnodes_dir = dir;
+            mynode.subnodes.merged_subnodes_dir = dir;
           }
         }
       } while (div_done && n_subn < number_of_subnodes);
@@ -212,9 +212,9 @@ void lattice_struct::setup_layout()
   }
 
   // set up the subnode divisions here -- rest is set in setup_node
-  foralldir(d) this_node.subnodes.divisions[d] = subdiv[d];
+  foralldir(d) mynode.subnodes.divisions[d] = subdiv[d];
 
-  // this_node is set up in setup_node
+  // mynode is set up in setup_node
 
   // Now division done - check how good it is
   int ghost_slices = 0;
@@ -281,7 +281,7 @@ void lattice_struct::setup_layout()
     }
     output0 << '\n';
 
-    direction dmerge = this_node.subnodes.merged_subnodes_dir;
+    direction dmerge = mynode.subnodes.merged_subnodes_dir;
 
     output0 << "Node subdivision to 64bit elems: ";
     foralldir(dir) {

@@ -76,7 +76,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
     double f2 = (f*Cmplx<double>(0,1)*sun::generator(ng)).trace().re;
     double diff = f2-f1;
 
-    if(mynode()==0) {
+    if(hila::myrank()==0) {
       //output0 << "Action 1 " << s1 << "\n";
       //output0 << "Action 2 " << s2 << "\n";
       //output0 << "Calculated deriv " << f2 << "\n";
@@ -119,7 +119,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
     f2 = (f*Cmplx<double>(0,1)*sun::generator(ng)).trace().re;
     diff = f2-f1;
 
-    if(mynode()==0) {
+    if(hila::myrank()==0) {
       //output0 << "Action 1 " << s1 << "\n";
       //output0 << "Action 2 " << s2 << "\n";
       //output0 << "Calculated deriv " << f2 << "\n";
@@ -156,7 +156,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
     f2 = (f*Cmplx<double>(0,1)*sun::generator(ng)).trace().re;
     diff = f2-f1;
 
-    if(mynode()==0) {
+    if(hila::myrank()==0) {
       //output0 << "Action 1 " << s1 << "\n";
       //output0 << "Action 2 " << s2 << " " << dS << " " << dS/s2 << "\n";
       //output0 << "Calculated force " << f2 << "\n";
@@ -210,13 +210,13 @@ int main(int argc, char **argv){
 
     double s1 = ga.action();
 
-    if(mynode()==0)
+    if(hila::myrank()==0)
       gauge.gauge[0].set_value_at(g12,50);
     gauge.gauge[0].mark_changed(ALL);
 
     double s2 = ga.action();
 
-    if(mynode()==0)
+    if(hila::myrank()==0)
       gauge.gauge[0].set_value_at(g1, 50);
     gauge.gauge[0].mark_changed(ALL);
 
@@ -224,7 +224,7 @@ int main(int argc, char **argv){
     SU<N> f = gauge.momentum[0].get_value_at(50);
     double diff = (f*Cmplx<double>(0,1)*SU<N>::generator(ng)).trace().re - (s2-s1)/eps;
 
-    if(mynode()==0) {
+    if(hila::myrank()==0) {
       //hila::output << "Force " << (f*Cmplx<double>(0,1)*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Force " << (f*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Deriv " << (s2-s1)/eps << "\n";
@@ -349,12 +349,12 @@ int main(int argc, char **argv){
     double s1 = ga.action();
     SU<N> h = gauge.momentum[0].get_value_at(0);
     h += eps * Cmplx<double>(0,1)*SU<N>::generator(ng);
-    if(mynode()==0)
+    if(hila::myrank()==0)
       gauge.momentum[0].set_value_at(h, 0);
     double s2 = ga.action();
 
     double diff = (h*SU<N>::generator(ng)).trace().re + (s2-s1)/eps;
-    if(mynode()==0) {
+    if(hila::myrank()==0) {
       //hila::output << "Mom 1 " << (h*SU<N>::generator(ng)).trace().re << "\n";
       //hila::output << "Mom 2 " << (s2-s1)/eps << "\n";
       //hila::output << "Mom " << ng << " diff " << diff << "\n";
