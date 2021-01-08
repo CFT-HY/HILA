@@ -84,6 +84,8 @@ public:
     } subnodes;
 #endif
 
+    unsigned volume() { return sites; }
+
   } this_node;
 
 
@@ -240,9 +242,6 @@ public:
   coordinate_vector size() const {return l_size;}
 
   coordinate_vector mod_size(const coordinate_vector & v) const { return mod(v, l_size); }
-
-  //int local_size(int d) const { return this_node.size[d]; }
-  unsigned local_volume() const {return this_node.sites;}
 
   int node_rank() const { return this_node.rank; }
   int n_nodes() const { return nodes.number; }

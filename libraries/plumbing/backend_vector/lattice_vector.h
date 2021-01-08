@@ -89,7 +89,7 @@ struct vectorized_lattice_struct  {
       lattice =  _lattice;
 
       /// sites on vector
-      v_sites = lattice->local_volume() / vector_size;
+      v_sites = lattice->this_node.volume() / vector_size;
       subdivisions   = lattice->this_node.subnodes.divisions;
       subnode_size   = lattice->this_node.subnodes.size;
       subnode_origin = lattice->this_node.min;

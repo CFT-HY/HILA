@@ -22,7 +22,7 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
 
   lattice_struct * lattice = input.fs->lattice;
   Field<T> * read_pointer = &input; // Read from input on first time, then work in result
-  size_t local_volume = lattice->local_volume();
+  size_t local_volume = lattice->this_node.volume();
   int elements = sizeof(T)/sizeof(complex_type);
 
   static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");  // initialized 1st time used
