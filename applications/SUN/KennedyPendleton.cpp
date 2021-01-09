@@ -51,7 +51,7 @@ void KennedyPendleton(
   if (nloops >= looplim) {
     //printf(" ---> K-P loop limit %d exceeded!\n",looplim);
     //printf(" ---> staple magnitude %g\n",1/b);
-    /* exit(0); */
+    /* exit(1); */
     e = 1e-9;
   }
 

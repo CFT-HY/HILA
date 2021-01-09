@@ -489,7 +489,7 @@ void lattice_struct::create_std_gathers()
           from_node.rank = rank;
         } else if (from_node.rank != rank) {
           hila::output << "Internal error in nn-communication setup\n";
-          exit(-1);
+          exit(1);
         }
 
         from_node.sites++;

@@ -578,7 +578,7 @@ public:
         llvm::errs() << "Invalid include loc!\n";
         llvm::errs() << "File to include: " << SM.getFilename(SM.getLocForStartOfFile(f)) << '\n';
 
-        exit(-1);
+        exit(1);
       }
     }
   }

@@ -311,7 +311,7 @@ void hila::terminate(int status)
   if( is_comm_initialized() ){
     abort_communications(status);
   }
-  exit(status);
+  exit(1);
 }
 
 void hila::error(const char * msg) {

@@ -61,7 +61,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
   // Handle parameters
   if (D->getNumParams() != Call->getNumArgs()) {
     llvm::errs() << "Internal error: #params != #args, function " << D->getNameAsString() << '\n';
-    exit(-1);
+    exit(1);
   }
 #endif
   
@@ -232,7 +232,7 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
         reportDiag(DiagnosticsEngine::Level::Fatal,
                    Call->getSourceRange().getBegin(),
                    "Open parens '(' not found, internal error");
-        exit(0);
+        exit(1);
       }
       sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
 

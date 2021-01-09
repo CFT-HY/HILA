@@ -34,6 +34,7 @@
 
 number_type get_number_type( const std::string & s ) {
   if      (s == "int")         return number_type::INT;
+  else if (s == "int64_t")     return number_type::INT64_T;
   else if (s == "float")       return number_type::FLOAT;
   else if (s == "double")      return number_type::DOUBLE;
   else if (s == "long double") return number_type::LONG_DOUBLE;
@@ -96,7 +97,7 @@ bool MyASTVisitor::VisitTypeAliasDecl(TypeAliasDecl * ta) {
         // Match already found!
         if (nt != n.ntype) {
           llvm::errs() << "Internal type alias classification error, bug\n";
-          exit(-1);
+          exit(1);
         }
 
         // need not to do anything more

@@ -121,7 +121,7 @@ bool input::peek_token( std::string & tok ) {
 
   if (in_quotes) {
     hila::output << "Error: unbalanced quotes\n";
-    exit(0);   // unclean exit
+    exit(1);   // unclean exit
   }
   tok = linebuffer.substr(lb_start,i-lb_start);
   return true;

@@ -981,7 +981,7 @@ void Field<T>::wait_fetch(direction d, parity p) const {
 
   // if (!is_move_started(d,p)) {
   //   output0 << "Wait move error - wait_fetch without corresponding start_fetch\n";
-  //   exit(-1);
+  //   exit(1);
   // }
 
   // Note: the move can be parity p OR ALL -- need to wait for it in any case
@@ -990,7 +990,7 @@ void Field<T>::wait_fetch(direction d, parity p) const {
 
   // check here consistency, this should never happen
   if (p != ALL && is_move_started(d,p) && is_move_started(d,ALL)) {
-    exit(-1);
+    exit(1);
   }
 
   parity par;
@@ -1000,7 +1000,7 @@ void Field<T>::wait_fetch(direction d, parity p) const {
   else if (p != ALL) {
     if (is_move_started(d,ALL)) par = ALL;      // if all is running wait for it
     else {
-      exit(-1);
+      exit(1);
     }
   } else {
     // now p == ALL and ALL is not running
@@ -1010,7 +1010,7 @@ void Field<T>::wait_fetch(direction d, parity p) const {
       n_wait = 2;  // need to wait for both! 
       par = ALL;
     } else {
-      exit(-1);
+      exit(1);
     }
   }
 

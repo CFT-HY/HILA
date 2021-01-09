@@ -21,7 +21,7 @@ void * memalloc( std::size_t size, const char * filename, const unsigned line ) 
     hila::output <<     "     requested allocation size " << size << " bytes\n" 
                  <<     " *********************************" << std::endl;
 
-    exit(-1);
+    exit(1);
   }
   return p;
 
@@ -39,7 +39,7 @@ void * memalloc( std::size_t size, const char * filename, const unsigned line ) 
     hila::output <<     "     requested allocation size " << size << " bytes\n" 
                  <<     "     posix_memalign() error code " << e 
                  <<     " *********************************" << std::endl;
-    exit(-1);
+    exit(1);
   }
   return p;
  

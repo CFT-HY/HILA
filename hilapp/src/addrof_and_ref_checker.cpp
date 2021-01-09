@@ -97,7 +97,7 @@ public:
             }
             // we get here only if this was unknown var
             llvm::errs() << "Mystery var found!\n";
-            exit(-1);
+            exit(1);
           }
           return true;
         }  // end of declRefExpr
@@ -186,7 +186,7 @@ public:
           }
           // we should never get here
           llvm::errs() << " -- Unexplored field! \n"; 
-          exit(-1);
+          exit(1);
         }
 
         // check non-const qualified references to variables

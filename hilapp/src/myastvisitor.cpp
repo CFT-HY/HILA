@@ -181,7 +181,7 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_a
   if (parity_expr_type == "parity") {
     if (is_X) {
       llvm::errs() << "Internal error in handle_loop_parity\n";
-      exit(-1);
+      exit(1);
     }
     if (parsing_state.accept_field_parity) {
       // 1st parity statement on a single line lattice loop
@@ -226,7 +226,7 @@ bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_a
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  lfe.parityExpr->getSourceRange().getBegin(),
                  "Internal error: index should have been X" );
-      exit(-1);
+      exit(1);
     }
 
     // llvm::errs() << "Direxpr " << lfe.direxpr_s << '\n';
@@ -1252,7 +1252,7 @@ parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  pExpr->getSourceRange().getBegin(),
                  "hilapp internal error, unknown parity" );
-      exit(-1);
+      exit(1);
     }
     if (p == parity::none) {
       reportDiag(DiagnosticsEngine::Level::Error,
@@ -2006,7 +2006,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
       reportDiag(DiagnosticsEngine::Level::Fatal,
                  f->getSourceRange().getBegin(),
                  "Internal error: Could not locate function name" );
-      exit(-1);
+      exit(1);
     }
     funcBuf.remove(0,l-1);
   }

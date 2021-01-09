@@ -83,7 +83,7 @@ mersenne_generate()
 
   if (mersenne_i < 0) {  /* if sgenrand() has not been called, */
     printf("DUMMY: you did not seed the generator!\n");
-    exit(0);
+    exit(1);
   }
   
   /* generate N words at one time */

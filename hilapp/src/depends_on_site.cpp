@@ -10,7 +10,7 @@
 /// An AST Visitor for checking if a statement (inside field loop)
 /// is dependent on site (X).
 /// Logic: find if it contains X (X_index_type), which takes care of field 
-/// and methods of X (check!), or it contains a local variable which is site dependent
+/// and methods of X (check!), or random number generator.
 //////////////////////////////////////////////////////////////////////////////
 
 class isSiteDependentChecker : public GeneralVisitor, public RecursiveASTVisitor<isSiteDependentChecker> {
@@ -43,18 +43,16 @@ public:
       if (isa<VarDecl>(e->getDecl())) {
         VarDecl * decl = dyn_cast<VarDecl>(e->getDecl());
         // it's a variable and found the decl, check if we have it here
-        for (var_info & v : var_info_list) {
-          if (v.decl == decl) {
-            if (v.is_site_dependent) {
-              found_var_depends_on_site = true;
-              return false;  // again, the inspection can be stopped
+        for (var_info & v : var_info_list) if (v.decl == decl) {
+          if (v.is_site_dependent) {
+            found_var_depends_on_site = true;
+            return false;  // again, the inspection can be stopped
 
-            } else { 
-              // now it is possible that v later becomes site dependent
-              found_dependent_var = true;
-              if (depends_on_var != nullptr) depends_on_var->push_back(&v);
-              // continue, may find more
-            }
+          } else { 
+            // now it is possible that v later becomes site dependent
+            found_dependent_var = true;
+            if (depends_on_var != nullptr) depends_on_var->push_back(&v);
+            // continue, may find more
           }
         }
       }
