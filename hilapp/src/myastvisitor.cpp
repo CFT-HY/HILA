@@ -1545,7 +1545,17 @@ SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
 /////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
-    
+  
+  if (var->getName().str() == "X") {
+    static bool second_def = false;
+    if (second_def) {
+      reportDiag(DiagnosticsEngine::Level::Warning,
+                 var->getSourceRange().getBegin(),
+                 "Defining variable 'X' may shadow the site index X");
+    }
+    second_def = true;
+  }
+
   if (parsing_state.in_loop_body) {
     // for now care only loop body variable declarations
 
