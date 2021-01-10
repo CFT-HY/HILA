@@ -40,7 +40,7 @@ private:
     unsigned scope_level;       // level of variable scoping: {}
     int  ast_depth;             // depth of ast nodes within loop body.  ast_depth = 0 at top level
     int  stmt_sequence;         // sequence number of full statements in loops.  Full stmts separated by ;
-    bool in_loop_body;          // true if in field loop
+    bool in_loop_body;          // true if in site loop
     bool accept_field_parity;   // if parity of loop not resolved yet
     bool loop_function_next;
   } parsing_state;
@@ -195,7 +195,7 @@ public:
   
   void requireGloballyDefined(Expr * e);
 
-  /// Entry point for the full field loop
+  /// Entry point for the full site loop
   bool handle_full_loop_stmt(Stmt *ls, bool field_parity_ok );
 
   /// Function for each stmt within loop body

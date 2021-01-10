@@ -7,7 +7,7 @@
 
 
 //////////////////////////////////////////////////////////////////////////////
-/// An AST Visitor for checking address of operators and references inside field loops
+/// An AST Visitor for checking address of operators and references inside site loops
 ///   - Flag "& f[X]""  -type operations as errors
 ///   - Taking a reference to field:  
 ///        "const auto & ref = f[X]"  : field is read (has already been flagged, nothing here)
@@ -88,7 +88,7 @@ public:
               if (!vi.is_loop_local) {
                 reportDiag(DiagnosticsEngine::Level::Error,
                            UO->getSourceRange().getBegin(),
-                           "taking address of field loop external variable '%0' is not allowed, suggest using references. "
+                           "taking address of site loop external variable '%0' is not allowed, suggest using references. "
                            "If a pointer is necessary, copy first: 'auto v = %1; auto *p = &v;'",
                            get_stmt_str(DRE).c_str(),
                            get_stmt_str(UO->getSubExpr()).c_str() );
@@ -137,13 +137,13 @@ public:
   //////////////////////////////////////////////////////////////////////////
   bool VisitDecl(Decl *D) {
     if (VarDecl * V = dyn_cast<VarDecl>(D)) {
-      // it's a variable decl inside field loop
+      // it's a variable decl inside site loop
       if (V->getStorageClass() == StorageClass::SC_Extern ||
           V->getStorageClass() == StorageClass::SC_Static ||
           V->getStorageClass() == StorageClass::SC_PrivateExtern) {
         reportDiag(DiagnosticsEngine::Level::Error,
                    D->getSourceRange().getBegin(),
-                   "cannot declare static or extern variables in field loops.");
+                   "cannot declare static or extern variables in site loops.");
         return true;
       }
 
@@ -198,7 +198,7 @@ public:
                 if (!vi.is_loop_local) {
                   reportDiag(DiagnosticsEngine::Level::Error,
                              DRE->getSourceRange().getBegin(),
-                             "cannot take non-const reference of a variable declared outside field loop");
+                             "cannot take non-const reference of a variable declared outside site loop");
                   return true;
                 }
                 // now var is loop local - nothing special to do

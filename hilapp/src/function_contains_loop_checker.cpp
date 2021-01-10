@@ -7,7 +7,7 @@
 
 
 //////////////////////////////////////////////////////////////////////////////
-/// An AST Visitor for checking if the function body contains a field loop
+/// An AST Visitor for checking if the function body contains a site loop
 /// Logic: 
 ///   - Find if it contains X (X_index_type), which appears inside loops
 ///   - Find if it has Field[parity] -stmt.  This can appear without X in
@@ -15,7 +15,7 @@
 ///
 //////////////////////////////////////////////////////////////////////////////
 
-class containsFieldLoopChecker : public GeneralVisitor, public RecursiveASTVisitor<containsFieldLoopChecker> {
+class containsSiteLoopChecker : public GeneralVisitor, public RecursiveASTVisitor<containsSiteLoopChecker> {
 
 public:
   using GeneralVisitor::GeneralVisitor;   // use general visitor constructor
@@ -25,7 +25,7 @@ public:
   bool found_field;
   bool searching_for_field;
 
-  containsFieldLoopChecker(Rewriter &R,ASTContext *C,bool fieldsearch) : GeneralVisitor(R,C) {
+  containsSiteLoopChecker(Rewriter &R,ASTContext *C,bool fieldsearch) : GeneralVisitor(R,C) {
     found_X = found_field_parity = false;
     searching_for_field = fieldsearch;
   }
@@ -64,7 +64,7 @@ public:
 bool MyASTVisitor::does_function_contain_loop(FunctionDecl * f) {
 
   if (f->hasBody()) {
-    containsFieldLoopChecker flc(TheRewriter,Context,false);
+    containsSiteLoopChecker flc(TheRewriter,Context,false);
     flc.TraverseStmt(f->getBody());
     return (flc.found_X || flc.found_field_parity);
   }
@@ -73,7 +73,7 @@ bool MyASTVisitor::does_function_contain_loop(FunctionDecl * f) {
 
 
 bool MyASTVisitor::does_expr_contain_field(Expr *E) {
-  containsFieldLoopChecker flc(TheRewriter,Context,true);
+  containsSiteLoopChecker flc(TheRewriter,Context,true);
   flc.TraverseStmt(E);
   return (flc.found_X || flc.found_field_parity || flc.found_field);
 }

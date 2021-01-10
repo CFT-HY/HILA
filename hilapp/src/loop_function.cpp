@@ -266,7 +266,7 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
         } else {
           reportDiag(DiagnosticsEngine::Level::Error,
             Call->getSourceRange().getBegin(),
-          "Method 'lattice->.%0()' not allowed inside field loops", name.c_str() );
+          "Method 'lattice->.%0()' not allowed inside site loops", name.c_str() );
         }
       }
 
@@ -334,7 +334,7 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
 
 
 ////////////////////////////////////////////////////////////////////
-/// Check if the function is allowed to be within field loops.
+/// Check if the function is allowed to be within site loops.
 /// Returns true if OK to be included; false (and flags error) if not
 ////////////////////////////////////////////////////////////////////
 

@@ -125,7 +125,7 @@ endif   # close the "clean" bracket
 .PHONY: clean cleanall
 
 clean:
-	-rm -f build/*.o build/*.cpt build/.lastmake*
+	-rm -f build/*.o build/*.cpt build/.lastmake* build/.git_sha_number*
 
 cleanall:
 	-rm -f build/*

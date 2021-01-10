@@ -352,7 +352,7 @@ extern ClassTemplateDecl * field_storage_decl;   // Ptr to field primary def in 
 extern const std::string field_storage_type;
 extern const std::string field_type;
 
-/// global lists used in modifying the field loops
+/// global lists used in modifying the site loops
 /// but they contain pointers to list elements.  pointers to vector elems are not good!
 extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;

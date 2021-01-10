@@ -315,7 +315,7 @@ reduction get_reduction_type(bool is_assign,
 }
 
 ////////////////////////////////////////////////////////////////////////////
-/// This processes references to non-field variables within field loops
+/// This processes references to non-field variables within site loops
 /// if is_assign==true, this is assigned to with assignop and assign_stmt contains
 /// the full assignment op
 ////////////////////////////////////////////////////////////////////////////
@@ -370,7 +370,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
       vip->is_site_dependent = is_rhs_site_dependent(assign_stmt, &vip->dependent_vars );
       
-      llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
+      // llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
     } 
     
   } else { 
@@ -407,7 +407,7 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
   vi.is_loop_local = false;
   for (var_decl & d : var_decl_list) {
     if (d.scope >= 0 && vi.decl == d.decl) {
-      llvm::errs() << "loop local var ref! " << vi.name << '\n';
+      // llvm::errs() << "loop local var ref! " << vi.name << '\n';
       vi.is_loop_local = true;
       break;
     }
@@ -728,7 +728,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // field without [X], bad usually (TODO: allow  scalar func(field)-type?)
       reportDiag(DiagnosticsEngine::Level::Error,
                  E->getSourceRange().getBegin(),
-                 "Field expressions without [X] not allowed within field loop");
+                 "Field expressions without [X] not allowed within site loop");
       parsing_state.skip_children = 1;  // once is enough
       return true;
     }
@@ -1459,7 +1459,7 @@ void MyASTVisitor::check_var_info_list() {
             if (vr.assignop == "+=" || vr.assignop == "*=") {
               reportDiag(DiagnosticsEngine::Level::Error,
                          vr.ref->getSourceRange().getBegin(),
-                         "Reduction variable \'%0\' used more than once within one field loop",
+                         "Reduction variable \'%0\' used more than once within one site loop",
                          vi.name.c_str());
               break;
             }
@@ -1479,7 +1479,7 @@ void MyASTVisitor::check_var_info_list() {
           if (vr.is_assigned) 
             reportDiag(DiagnosticsEngine::Level::Error,
                        vr.ref->getSourceRange().getBegin(),
-                       "Cannot assign to variable defined outside field loop (unless reduction \'+=\' or \'*=\')");
+                       "Cannot assign to variable defined outside site loop (unless reduction \'+=\' or \'*=\')");
         }
       }
     }
@@ -1538,7 +1538,7 @@ SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
 
 
 /////////////////////////////////////////////////////////////////////////////
-/// Variable decl inside field loops
+/// Variable decl inside site loops
 /////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
@@ -1559,21 +1559,21 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
     if (!var->hasLocalStorage()) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
-                 "Static or external variable declarations not allowed within field loops");
+                 "Static or external variable declarations not allowed within site loops");
       return true;
     }
 
     if (var->isStaticLocal()) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
-                 "Cannot declare static variables inside field loops");
+                 "Cannot declare static variables inside site loops");
       return true;
     }
 
     if (is_field_decl(var)) {
       reportDiag(DiagnosticsEngine::Level::Error,
                  var->getSourceRange().getBegin(),
-                 "Cannot declare field variables within field loops");
+                 "Cannot declare Field<> variables within site loops");
       parsing_state.skip_children = 1;
       return true;
     }
@@ -1765,7 +1765,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   } else if (E && is_field_with_X_expr(E)) {
     reportDiag(DiagnosticsEngine::Level::Error,
                 E->getSourceRange().getBegin(),
-                "Field[X] -expressions allowed only in field loops");
+                "Field[X] -expressions allowed only in site loops");
     parsing_state.skip_children = 1;
     return true;
 
@@ -1773,7 +1773,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
   //   else if (E && is_X_index_type(E)) {
   //   reportDiag(DiagnosticsEngine::Level::Error,
   //               E->getSourceRange().getBegin(),
-  //               "Use of \"X\" is allowed only in field loops");
+  //               "Use of \"X\" is allowed only in site loops");
   //   parsing_state.skip_children = 1;
   // }
 
@@ -1909,7 +1909,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 ////////////////////////////////////////////////////////////////////////////
 /// This does the heavy lifting of specializing function templates and
 /// methods defined within template classes.  This is needed if there are
-/// field loops within the functions
+/// site loops within the functions
 ////////////////////////////////////////////////////////////////////////////
 
 
