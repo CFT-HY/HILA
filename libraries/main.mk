@@ -12,13 +12,6 @@ ifndef PLATFORM
   $(error "make <goal> PLATFORM=<name>" required.  See directory "platforms" at top level)
 endif
 
-# allow only 0 or 1 goals in make
-ifneq ($(words $(MAKECMDGOALS)), 1)
-ifneq ($(words $(MAKECMDGOALS)), 0)
-  $(error Use (at most) one goal in make)
-endif
-endif
-
 .PRECIOUS: build/%.cpt build/%.o
 
 
@@ -61,12 +54,12 @@ else
 endif
 
 # To force a full remake when changing platforms or targets
-GOAL_LABEL := $(shell echo ${MAKECMDGOALS} | sed -e 's/ /_/g' -e 's/\//_/g')
-LASTMAKE := build/0_lastmake.${GOAL_LABEL}.${PLATFORM}
+CLEANED_GOALS := $(shell echo ${MAKECMDGOALS} | sed -e 's/ /_/g' -e 's/\//+/g' | cut -c1-60)
+LASTMAKE := build/.lastmake.${CLEANED_GOALS}.${PLATFORM}
 
 $(LASTMAKE): $(MAKEFILE_LIST)
 	-mkdir -p build
-	-rm -f build/0_lastmake.*
+	-rm -f build/.lastmake.*
 	make clean
 	touch ${LASTMAKE}
 
@@ -90,21 +83,21 @@ GIT_SHA := $(shell git rev-parse --short=8 HEAD)
 
 ifneq "$(GIT_SHA)" "" 
 HILA_OPTS += -DGIT_SHA_VALUE=$(GIT_SHA)
-GIT_SHA_FILE := build/0_git_sha_$(GIT_SHA)
+GIT_SHA_FILE := build/.git_sha_number_$(GIT_SHA)
 
 # Force recompilation if git number has changed
 
 $(GIT_SHA_FILE):
-	-rm -f build/0_git_sha_*
+	-rm -f build/.git_sha_number_*
 	touch $(GIT_SHA_FILE)
 
 ALL_DEPEND += $(GIT_SHA_FILE)
 	
 endif
 
-# Standard rules for creating and building cpdt files. These
+# Standard rules for creating and building cpt files. These
 # build .o files in the build folder by first running them
-# through the 
+# through hilapp
 
 
 build/%.cpt: %.cpp Makefile $(MAKEFILE_LIST) $(ALL_DEPEND) $(APP_HEADERS)
@@ -132,7 +125,7 @@ endif   # close the "clean" bracket
 .PHONY: clean cleanall
 
 clean:
-	-rm -f build/*.o build/*.cpt build/0_*
+	-rm -f build/*.o build/*.cpt build/.lastmake*
 
 cleanall:
 	-rm -f build/*
