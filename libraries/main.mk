@@ -61,11 +61,12 @@ else
 endif
 
 # To force a full remake when changing platforms or targets
-LASTMAKE := build/_lastmake.${MAKECMDGOALS}.${PLATFORM}
+GOAL_LABEL := $(shell echo ${MAKECMDGOALS} | sed -e 's/ /_/g' -e 's/\//_/g')
+LASTMAKE := build/0_lastmake.${GOAL_LABEL}.${PLATFORM}
 
 $(LASTMAKE): $(MAKEFILE_LIST)
 	-mkdir -p build
-	-rm -f build/_lastmake.*
+	-rm -f build/0_lastmake.*
 	make clean
 	touch ${LASTMAKE}
 
@@ -89,12 +90,12 @@ GIT_SHA := $(shell git rev-parse --short=8 HEAD)
 
 ifneq "$(GIT_SHA)" "" 
 HILA_OPTS += -DGIT_SHA_VALUE=$(GIT_SHA)
-GIT_SHA_FILE := build/_git_sha_$(GIT_SHA)
+GIT_SHA_FILE := build/0_git_sha_$(GIT_SHA)
 
 # Force recompilation if git number has changed
 
 $(GIT_SHA_FILE):
-	-rm -f build/_git_sha_*
+	-rm -f build/0_git_sha_*
 	touch $(GIT_SHA_FILE)
 
 ALL_DEPEND += $(GIT_SHA_FILE)
@@ -131,7 +132,7 @@ endif   # close the "clean" bracket
 .PHONY: clean cleanall
 
 clean:
-	-rm -f build/*.o build/*.cpt build/_lastmake*
+	-rm -f build/*.o build/*.cpt build/0_*
 
 cleanall:
 	-rm -f build/*
