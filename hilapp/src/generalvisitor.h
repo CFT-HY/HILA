@@ -54,6 +54,9 @@ public:
     Context=C;
   }
 
+  Rewriter & getRewriter() { return TheRewriter; }
+  ASTContext * getASTContext() { return Context; }
+
   /// Report diagnostic info
   template <unsigned N>
   void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation & SL,

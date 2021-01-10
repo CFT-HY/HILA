@@ -312,8 +312,10 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   // FunctionDecl *, but it does not hurt)
   for (int i=0; handle_decl && i<loop_functions.size(); i++) { 
     if (fd == loop_functions[i] || 
-        fd->getSourceRange().getBegin() == loop_functions[i]->getSourceRange().getBegin() )
+        fd->getSourceRange().getBegin() == 
+          loop_functions[i]->getSourceRange().getBegin() ) {
       handle_decl = false;
+    }
   }
   if (handle_decl) {
     loop_functions.push_back(fd);
@@ -325,6 +327,7 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
     
     backend_handle_loop_function(fd);
   }
+
   return handle_decl;
 }
 

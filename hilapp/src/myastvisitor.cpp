@@ -579,10 +579,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   vector_reduction_ref_list.clear();
   remove_expr_list.clear();
   global.location.loop = ls->getSourceRange().getBegin();
-
-  loop_info.has_site_dependent_conditional = false;  // reset
-  loop_info.conditional_vars.clear();
-  
+  loop_info.clear_except_parity();
   parsing_state.accept_field_parity = field_parity_ok;
     
   // the following is for taking the parity from next elem
@@ -1694,7 +1691,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
         std::string macro = TheRewriter.getRewrittenText( CSR.getAsRange() );
         bool internal_error = true;
 
-        // llvm::errs() << "macro str " << macro << '\n';
+        // llvm::errs() << "MACRO STRING " << macro << '\n';
         
         DeclStmt * init = dyn_cast<DeclStmt>(f->getInit());
         if (init && init->isSingleDecl() ) {

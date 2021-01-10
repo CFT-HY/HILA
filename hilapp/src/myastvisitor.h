@@ -13,6 +13,8 @@
 #include "hilapp.h" //global vars needed 
 #include "generalvisitor.h"  // Definitions for the general visitor case
 
+
+
 //////////////////////////////////////////////
 /// myastvisitor.h : overloaded ASTVisitor for 
 /// generating code from AST
@@ -156,6 +158,9 @@ public:
   /// if return is false, vi (if non-null) will contain a list of variables
   /// which may turn out to be dependent on site later.  Check after loop complete!
   bool is_site_dependent(Expr *e, std::vector<var_info *> * vi = nullptr);
+
+  /// check if stmt contains random number generator
+  bool contains_random(Stmt *s);
 
   /// Check that the addressof-operators and reference vars are OK
   void check_addrofops_and_refs(Stmt * S);

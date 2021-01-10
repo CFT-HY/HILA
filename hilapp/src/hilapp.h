@@ -299,8 +299,16 @@ struct loop_info_struct {
   parity parity_value;
 
   bool has_site_dependent_conditional;           // if, for, while w. site dep. cond?
+  bool contains_random;                          // does it contain rng (also in loop functions)?
   std::vector<var_info *> conditional_vars;      // may depend on variables
   Expr * condExpr;
+
+
+  inline void clear_except_parity() {            // do not remove parity values, may be set in loop init
+    has_site_dependent_conditional = contains_random = false;
+    conditional_vars.clear();
+    condExpr = nullptr;
+  }
 };
 
 

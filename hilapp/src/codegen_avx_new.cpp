@@ -208,13 +208,19 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
   bool is_vectorizable = true;
   
   int diag_count = 0;
-  std::string reason;
+  std::string reason = {};
 
   
   // check if loop has conditional
-  is_vectorizable = !loop_info.has_site_dependent_conditional;
-  if (!is_vectorizable) {
+  if (loop_info.has_site_dependent_conditional) {
+    is_vectorizable = false;
     reason = "it contains site dependent conditional";
+    diag_count++;
+  }
+
+  if (contains_random(S)) {
+    is_vectorizable = false;
+    reason += "it contains random number generator";
     diag_count++;
   }
 
