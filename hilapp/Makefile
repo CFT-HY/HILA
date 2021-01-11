@@ -22,7 +22,7 @@
 # LLVM_SRC_PATH := /usr/lib/llvm-8
 
 # If it is a "system library", then llvm-config should be installed:
-LLVM_SRC_PATH := $(shell llvm-config-8 --prefix)
+LLVM_SRC_PATH := $(shell llvm-config --prefix)
 
 # LLVM_BUILD_PATH is the directory in which you built LLVM - where you ran
 # configure or cmake.

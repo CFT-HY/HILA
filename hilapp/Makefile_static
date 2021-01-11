@@ -19,7 +19,7 @@
 # obtained clang/llvm using the instructions in HOWTO_GET_CLANG, this directory
 # contains subdirectories llvm and build 
 
-LLVM_ROOT := 
+LLVM_ROOT :=
 
 ifeq "$(LLVM_ROOT)" ""
   $(error LLVM_ROOT must be given)
