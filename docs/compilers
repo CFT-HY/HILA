@@ -1,0 +1,8 @@
+
+gcc:    gcc 7 or larger
+
+llvm/clang:  version 8 or larger
+
+nvcc (cuda):  c++17 requires cuda v. 11.  Not yet installed everywhere!
+     TODO: patch code so that c++14 works
+
