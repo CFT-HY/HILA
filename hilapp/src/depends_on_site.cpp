@@ -11,6 +11,9 @@
 /// is dependent on site (X).
 /// Logic: find if it contains X (X_index_type), which takes care of field 
 /// and methods of X (check!), or random number generator.
+///
+/// No need to descent into functions, it is sufficient to scan the arguments 
+/// and check random
 //////////////////////////////////////////////////////////////////////////////
 
 class isSiteDependentChecker : public GeneralVisitor, public RecursiveASTVisitor<isSiteDependentChecker> {
@@ -20,14 +23,13 @@ public:
   bool found_var_depends_on_site;
   bool found_X_method;
   bool found_dependent_var;
-  bool found_random;
   std::vector<var_info *> * depends_on_var;
 
   isSiteDependentChecker(Rewriter &R, ASTContext *C, std::vector<var_info *> * dep_var) : GeneralVisitor(R,C) {
 
     depends_on_var = dep_var;    // we do not clear the vector, because it may contain earlier dependencies
     
-    found_X = found_var_depends_on_site = found_X_method = found_dependent_var = found_random = false;
+    found_X = found_var_depends_on_site = found_X_method = found_dependent_var = false;
   }
 
   // bool VisitStmt(Stmt *s) { llvm::errs() << "In stmt\n"; return true; }
@@ -71,19 +73,6 @@ public:
     return true;
   }
 
-  // check random number calls 
-  bool VisitStmt(Stmt *S) {
-    if (CallExpr * CE = dyn_cast<CallExpr>(S)) {
-      if (FunctionDecl * FD = CE->getDirectCallee()) {
-        std::string name = FD->getNameInfo().getAsString();
-        if (name == "hila_random") {
-          found_random = true;
-          return false;
-        }
-      }
-    }
-    return true;
-  }
 
 };
 
@@ -100,6 +89,11 @@ bool MyASTVisitor::is_site_dependent(Expr * e, std::vector<var_info *> * depende
   isSiteDependentChecker checker(TheRewriter,Context,dependent_var);
 
   checker.TraverseStmt(e);
-  return (checker.found_X || checker.found_var_depends_on_site || checker.found_X_method || checker.found_random);
+  if (checker.found_X || checker.found_var_depends_on_site || checker.found_X_method ) {
+    return true;
+  }
+
+  // if nothing else found, check if there's rng generator
+  return contains_random(e);
 
 }
