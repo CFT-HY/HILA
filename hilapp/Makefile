@@ -129,6 +129,7 @@ OBJECTS = \
   $(BUILDDIR)/write_output.o
 
 
+
 $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
 	@mkdir -p $(BUILDDIR)
 	$(CXX) -c $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $< -o $@
@@ -144,6 +145,30 @@ $(BUILDDIR)/hilapp: ${OBJECTS}
 install: $(BUILDDIR)/hilapp
 	@mkdir -p $(BINDIR)
 	mv $(BUILDDIR)/hilapp $(BINDIR)
+
+# Insert git sha value to the code
+GIT_SHA := $(shell git rev-parse --short=8 HEAD)
+
+ifneq "$(GIT_SHA)" "" 
+
+SHA_OPT := -DGIT_SHA_VALUE=$(GIT_SHA)
+GIT_SHA_FILE := build/.git_sha_number_$(GIT_SHA)
+
+# Force recompilation if git number has changed
+
+$(GIT_SHA_FILE):
+	-rm -f build/.git_sha_number_*
+	touch $(GIT_SHA_FILE)
+
+# make separate rule for stringops
+$(BUILDDIR)/stringops.o : $(SRCDIR)/stringops.cpp $(HEADERS) Makefile $(GIT_SHA_FILE)
+	@mkdir -p $(BUILDDIR)
+	$(CXX) -c $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $(SHA_OPT) $< -o $@
+
+endif
+
+
+
 
 .PHONY: clean
 clean:

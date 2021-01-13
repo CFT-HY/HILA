@@ -4,6 +4,9 @@
 
 #include <string>
 
+/// Return char * to git sha value, if defined
+std::string git_sha_value();
+
 /// Convert the string so that it is a valid variable name in c++
 std::string clean_name(const std::string & s);
 

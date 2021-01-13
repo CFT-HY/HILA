@@ -158,6 +158,9 @@ global_state global;
 loop_info_struct loop_info;
 codetype target;     // declared extern (global)
 
+// save original argc and argv
+int cmdline::argc;
+const char ** cmdline::argv;
 
 /// Check command line arguments and set appropriate flags in target
 void handle_cmdline_arguments(codetype & target) {
@@ -677,11 +680,14 @@ int main(int argc, const char **argv) {
   // TODO: clang CommandLine.cpp/.h has strange category and help
   // msg handling, should we get rid of it?
 
+  cmdline::argc = argc;
+  cmdline::argv = argv;
+
   // av takes over from argv
   const char **av = new const char *[argc+6];
   argc = rearrange_cmdline(argc, argv, av);
   av[argc++] = "-std=c++17";     // use c++17 std
-  av[argc++] = "-DHILAPP";  // add global defn
+  av[argc++] = "-DHILAPP";       // add global defn
   av[argc] = nullptr;
 
 

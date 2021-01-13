@@ -69,6 +69,10 @@ namespace cmdline {
   extern llvm::cl::opt<bool> no_mpi;
   extern llvm::cl::opt<int>  verbosity;
   extern llvm::cl::opt<int>  avx_info;
+
+  // save also the original argc and argv
+  extern int argc;
+  extern const char** argv;
 };
 
 namespace state {

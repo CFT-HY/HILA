@@ -4,6 +4,22 @@
 #include <iostream>
 #include "stringops.h"
 
+/////////////////////////////////////////////////////////////////////////////////////////
+/// String manipulation operations, not dependent on the AST analysis routines
+/////////////////////////////////////////////////////////////////////////////////////////
+
+// If file has been compiled with -DGIT_SHA_VALUE=<val>, return the value
+
+std::string git_sha_value() {
+  #if defined(GIT_SHA_VALUE)
+    #define xstr(s) makestr(s)
+    #define makestr(s) #s
+    return xstr(GIT_SHA_VALUE);
+  #else
+    return "not available";
+  #endif
+}
+
 /// this routine changes the input to alphanumeric + _, for naming purposes
 std::string clean_name(const std::string & s) {
   
