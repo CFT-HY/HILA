@@ -329,7 +329,7 @@ and `libraries/plumbing/lattice.h` respectively.
 A new backend should implement at least the [field storage](@ref MyASTVisitor::field_storage)
 class. The new file needs to be included in `libraries/plumbing/field_storage.h`.
 
-Finally, `libraries/platforms` has a collection of makefiles, chosen by the `PLATFORM`
+Finally, `libraries/platforms` has a collection of makefiles, chosen by the `ARCH`
 flag in the standard Makefile. These include combinations of a specific system and 
 a backend. New backend requires a new makefile that defines the necessary flags
 to produce and compile the correct code.

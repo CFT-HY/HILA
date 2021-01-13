@@ -3,15 +3,16 @@
 # Can be absolute or relative
 TOP_DIR := ../..
 
-ifndef PLATFORM
-  $(info Defaulting to PLATFORM=vanilla)
-  PLATFORM := vanilla
+ifndef ARCH
+  $(info Defaulting to ARCH=vanilla)
+  ARCH := vanilla
 endif
 
 # Read in the main makefile contents, incl. platforms
 include $(TOP_DIR)/libraries/main.mk
 
 APP_HEADERS := bench.h
+
 
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir

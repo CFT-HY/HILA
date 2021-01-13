@@ -7,14 +7,6 @@
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),cleanall)
 
-# PLATFORM needs to be defined. Check.
-ifndef PLATFORM
-  $(error "make <goal> PLATFORM=<name>" required.  See directory "platforms" at top level)
-endif
-
-.PRECIOUS: build/%.cpt build/%.o
-
-
 ## hilapp binary (TOP_DIR defined in calling Makefile)
 
 HILAPP := $(TOP_DIR)/hilapp/bin/hilapp
@@ -22,10 +14,21 @@ HILAPP := $(TOP_DIR)/hilapp/bin/hilapp
 ################
 
 LIBRARIES_DIR := $(TOP_DIR)/libraries
-PLATFORM_DIR := $(LIBRARIES_DIR)/platforms
+ARCH_DIR := $(LIBRARIES_DIR)/target_arch
 HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
 
 HILAPP_DIR := $(dir $(HILAPP))
+
+# ARCH needs to be defined. Check.
+ifndef ARCH
+  $(info ########################################################################)
+  $(info Using ARCH=vanilla.  To override use "make ARCH=<target-arch>")
+  $(info For different targets, see the directory $(ARCH_DIR) )
+  $(info ########################################################################)
+  ARCH := vanilla
+endif
+
+.PRECIOUS: build/%.cpt build/%.o
 
 HILA_OBJECTS = \
 	build/initialize.o \
@@ -43,7 +46,7 @@ HILA_OBJECTS = \
 # com_mpi / com_single could be moved to platforms, but they're protected by USE_MPI guards
 
 # Read in the appropriate platform bits and perhaps extra objects
-include $(PLATFORM_DIR)/$(PLATFORM).mk
+include $(ARCH_DIR)/$(ARCH).mk
 
 # Define LAYOUT_VECTOR if vector (SUBNODE) layout is desired
 ifdef LAYOUT_VECTOR
@@ -55,7 +58,7 @@ endif
 
 # To force a full remake when changing platforms or targets
 CLEANED_GOALS := $(shell echo ${MAKECMDGOALS} | sed -e 's/ /_/g' -e 's/\//+/g' | cut -c1-60)
-LASTMAKE := build/.lastmake.${CLEANED_GOALS}.${PLATFORM}
+LASTMAKE := build/.lastmake.${CLEANED_GOALS}.${ARCH}
 
 $(LASTMAKE): $(MAKEFILE_LIST)
 	-mkdir -p build
