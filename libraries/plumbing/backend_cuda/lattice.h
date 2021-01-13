@@ -27,11 +27,11 @@ struct backend_lattice_struct {
 
   /// get the coordinates at a given site
   __host__ __device__
-  coordinate_vector coordinates( unsigned idx ){
+  const coordinate_vector & coordinates( unsigned idx ) const {
     return d_coordinates[idx];
   }
   __host__ __device__
-  int coordinate( unsigned idx, direction dir ){
+  int coordinate( unsigned idx, direction dir ) const {
     return d_coordinates[idx][dir];
   }
 

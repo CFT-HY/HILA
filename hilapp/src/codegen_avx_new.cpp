@@ -220,8 +220,8 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
 
   if (contains_random(S)) {
     is_vectorizable = false;
+    if (diag_count++ > 0) reason += '\n';
     reason += "it contains random number generator";
-    diag_count++;
   }
 
   std::string vector_var_name;   // variable which determines the vectorization
@@ -251,7 +251,7 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
           //     + "' is " + std::to_string(vector_size);
 
           if (diag_count++ > 0) reason += "\n";
-          reason += "type of variables '" + fi.old_name + "' is " 
+          reason += "type of variable '" + fi.old_name + "' is " 
               + fi.vecinfo.basetype_str + " and '" + vector_var_name
               + "' is " + vector_var_type;
 
@@ -339,7 +339,8 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
 ///  Main entry for AVX loop generation
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait_loops) {
+std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, 
+                                            srcBuf & loopBuf, bool generate_wait_loops) {
 
   std::stringstream code;
   int vector_size;

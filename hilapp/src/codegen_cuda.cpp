@@ -233,7 +233,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
 
       // Initialize only the local element
       if (vi.reduction_type == reduction::SUM) {
-        kernel << vi.new_name << "_sh[threadIdx.x] = zero;\n";
+        kernel << vi.new_name << "_sh[threadIdx.x] = Zero();\n";
       } else if (vi.reduction_type == reduction::PRODUCT) {
         kernel << vi.new_name << "_sh[threadIdx.x] = 1;\n";
       }
@@ -344,7 +344,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
       //Now run the thread level reduction
       kernel << "if( threadIdx.x == 0 ){\n";
       if (vi.reduction_type == reduction::SUM) {
-        kernel << vi.new_name << "[blockIdx.x] = zero;\n";
+        kernel << vi.new_name << "[blockIdx.x] = Zero();\n";
       } else if (vi.reduction_type == reduction::PRODUCT) {
         kernel << vi.new_name << "[blockIdx.x] = 1;\n";
       }

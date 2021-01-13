@@ -64,8 +64,8 @@ void gather_test() {
           auto n = t[X+d2];
 #if defined(SPECIAL_BOUNDARY_CONDITIONS)
           if (bc == boundary_condition_t::ANTIPERIODIC &&
-              (( X.coordinates()[NDIM-1] == 0 && d2 == -(direction)(NDIM-1)) || 
-               ( X.coordinates()[NDIM-1] == size_t-1 && d2 == NDIM-1))) {
+              (( X.coordinate(static_cast<direction>(NDIM-1)) == 0 && d2 == -static_cast<direction>(NDIM-1)) || 
+               ( X.coordinate(static_cast<direction>(NDIM-1)) == size_t-1 && d2 == NDIM-1))) {
             n = -n;
           }
 #endif
