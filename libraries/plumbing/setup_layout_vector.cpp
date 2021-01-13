@@ -86,20 +86,20 @@ void lattice_struct::setup_layout()
  
   coordinate_vector divisions,subdiv;
 
-  int mdir;
+  int gdir;
   bool secondtime = false;
   do {
     // try the division a couple of times, if the 1st fails
 
     if (ghost_volume > l_volume) {
-      mdir = NDIM-1;
-      foralldir(j) if (ghosts[mdir] > ghosts[j]) mdir = j;
-      // mdir is the direction where we do uneven division (if done)
-      // output0 << "MDIR " << mdir << " ghosts mdir " << ghosts[mdir] << " nsize " << nsize[mdir] << '\n';
-    } else mdir = -1;
+      gdir = NDIM-1;
+      foralldir(j) if (ghosts[gdir] > ghosts[j]) gdir = j;
+      // gdir is the direction where we do uneven division (if done)
+      // output0 << "gdir " << gdir << " ghosts gdir " << ghosts[gdir] << " nsize " << nsize[gdir] << '\n';
+    } else gdir = -1;
 
     foralldir(i) {
-      nodesiz[i] = (i == mdir) ? nsize[i] : size(i);   // start with ghosted lattice size
+      nodesiz[i] = (i == gdir) ? nsize[i] : size(i);   // start with ghosted lattice size
       divisions[i] = 1;
     }
     
@@ -107,42 +107,42 @@ void lattice_struct::setup_layout()
       // figure out which direction to divide -- start from the largest prime, because
       // we don't want this to be last divisor! (would probably wind up with size 1) 
         
-      // find largest divisible dimension of h-cubes
-      int msize = 1, dir;
-      for (dir=0; dir<NDIM; dir++)
-        if (nodesiz[dir] > msize && nodesiz[dir]%prime[n] == 0 ) msize = nodesiz[dir];
-
-      // if one direction with largest dimension has already been
-      // divided, divide it again.  Otherwise divide first direction
-      // with the largest dimension. 
-
       // Try to keep even node sizes, these are needed for vectors
-      // We don't worry about evenness to mdir
-      // for the 1st iteration this loop wants even division, 2nd time lets uneven through
+      // We don't worry about evenness to gdir  
 
-      dir = NDIM;
-      for (int rem=0; rem < 2 && dir == NDIM; rem++) {
-
-        for (dir=0; dir<NDIM; dir++)
-          if (nodesiz[dir]==msize && divisions[dir]>1 && nodesiz[dir]%prime[n] == 0 && 
-              (dir == mdir || (nodesiz[dir]/prime[n])%2 <= rem) ) break;
-
-        // If not previously sliced, take one direction to slice - try to keep even
-        if (dir == NDIM) for (dir=0; dir<NDIM; dir++)
-          if( nodesiz[dir]==msize && nodesiz[dir]%prime[n] == 0 &&
-              (dir == mdir || (nodesiz[dir]/prime[n])%2 <= rem) ) break;
-
+      // find largest divisible dimension of h-cubes
+      int msize = 1;
+      int dir,mdir;
+      for (dir=0; dir<NDIM; dir++) {
+        if (nodesiz[dir] > msize && 
+          ( (dir == gdir && nodesiz[dir]%prime[n] == 0) ||
+            (dir != gdir && nodesiz[dir]%(2*prime[n]) == 0) ) &&
+          nodesiz[dir] / prime[n] > 3) {
+          msize = nodesiz[dir];
+          mdir = dir;
+        }
       }
 
-      if (dir == NDIM) {
+      // even divide failed, divide to odd
+      if (msize == 1) {
+        for (dir=0; dir<NDIM; dir++) {
+          if (nodesiz[dir] > msize && dir != gdir && nodesiz[dir]%(prime[n]) == 0) {
+            msize = nodesiz[dir];
+            mdir = dir;
+          }
+        }
+      }
+
+      if (msize == 1) {
         // This cannot happen
         output0 << "CANNOT HAPPEN! in setup_layout_vector.c\n";
         hila::finishrun();
       }
+   
 
       // Now slice it
-      nodesiz[dir] /= prime[n]; 
-      divisions[dir] *= prime[n];
+      nodesiz[mdir] /= prime[n]; 
+      divisions[mdir] *= prime[n];
 
       //  output0 << nodesiz << ' ' << divisions << '\n';
     } 
@@ -165,11 +165,11 @@ void lattice_struct::setup_layout()
         div_done = false;
         foralldir(dir) {
           // the direction where the vector subnodes are must not be 
-          // the uneven direction, node size to the direction should be divisible by 2
+          // an uneven direction, node size to the direction should be divisible by 2
           // and the number of nodes to this dir should also be a multiple of subdivs
 
           int sd = subdiv[dir] * 2;
-          if (dir != mdir && nodesiz[dir] % 2 == 0 && divisions[dir] % sd == 0 
+          if (dir != gdir && nodesiz[dir] % 2 == 0 && divisions[dir] % sd == 0 
               && n_subn < number_of_subnodes) {
             subdiv[dir] = sd;
             n_subn *= 2;
@@ -181,11 +181,17 @@ void lattice_struct::setup_layout()
 
       if (n_subn != number_of_subnodes) fail = true;
 
+      output0 << ghosts << '\n';
+      output0 << subdiv << '\n';
+      output0 << divisions << '\n';
+      output0 << nodesiz << '\n';
+      output0 << n_subn << '\n';
+
     }
 
-    if (fail && !secondtime && mdir >= 0) {
+    if (fail && !secondtime && gdir >= 0) {
       secondtime = true;
-      ghosts[mdir] = 1<<28;   // this short-circuits direction mdir, some other taken next
+      ghosts[gdir] = 1<<28;   // this short-circuits direction gdir, some other taken next
     } else if (fail) {
       output0 << "Could not successfully lay out the lattice with " << numnodes() << " nodes\n";
       hila::finishrun();
@@ -218,21 +224,21 @@ void lattice_struct::setup_layout()
 
   // Now division done - check how good it is
   int ghost_slices = 0;
-  if (mdir >= 0) {
-    ghost_slices = nsize[mdir] - size(mdir);
+  if (gdir >= 0) {
+    ghost_slices = nsize[gdir] - size(gdir);
 
-    output0 << "\nUsing uneven node division to direction " << mdir << ":\n";
-    output0 << "Lengths: " << nodes.n_divisions[mdir]-ghost_slices << " * (" 
-            << nodesiz[mdir] << " sites) + " << ghost_slices << " * ("
-            << nodesiz[mdir]-1 << " sites)\n";
+    output0 << "\nUsing uneven node division to direction " << gdir << ":\n";
+    output0 << "Lengths: " << nodes.n_divisions[gdir]-ghost_slices << " * (" 
+            << nodesiz[gdir] << " sites) + " << ghost_slices << " * ("
+            << nodesiz[gdir]-1 << " sites)\n";
     output0 << "Divisions: ";
-    for (int i=0; i<nodes.n_divisions[mdir]; i++) {
+    for (int i=0; i<nodes.n_divisions[gdir]; i++) {
       if (i>0) output0 << " - ";
-      output0 << nodes.divisors[mdir][i+1] - nodes.divisors[mdir][i];
+      output0 << nodes.divisors[gdir][i+1] - nodes.divisors[gdir][i];
     }
-    output0 << "\nFilling efficiency: " << (100.0*size(mdir))/nsize[mdir] << "%\n";
+    output0 << "\nFilling efficiency: " << (100.0*size(gdir))/nsize[gdir] << "%\n";
 
-    if (ghost_slices > nodes.n_divisions[mdir]/2) 
+    if (ghost_slices > nodes.n_divisions[gdir]/2) 
       output0 << "NOTE: number of smaller nodes > large nodes \n";
   }
   
@@ -241,7 +247,7 @@ void lattice_struct::setup_layout()
     output0 << "\nSites on node: ";
     foralldir(dir) {
       if (dir > 0) output0 << " x ";
-      if (dir == mdir)
+      if (dir == gdir)
         output0 << '(' << nodesiz[dir]-1 << '-' << nodesiz[dir] << ')';
       else
         output0 << nodesiz[dir];
@@ -249,7 +255,7 @@ void lattice_struct::setup_layout()
     int ns = 1;
     foralldir(dir) ns *= nodesiz[dir];
     if (ghost_slices > 0) {
-      int ns2 = ns*(nodesiz[mdir]-1)/nodesiz[mdir];
+      int ns2 = ns*(nodesiz[gdir]-1)/nodesiz[gdir];
       output0 << "  =  " << ns2 << " - " << ns << '\n';
     } else {
       output0 << "  =  " << ns << '\n';
@@ -274,7 +280,7 @@ void lattice_struct::setup_layout()
     output0 << "Sites on subnodes: ";
     foralldir(dir) {
       if (dir > 0) output0 << " x ";
-      if (dir == mdir)
+      if (dir == gdir)
         output0 << '(' << nodesiz[dir]-1 << '-' << nodesiz[dir] << ')';
       else
         output0 << nodesiz[dir]/subdiv[dir];
@@ -293,7 +299,7 @@ void lattice_struct::setup_layout()
     output0 << "Sites on subnodes: ";
     foralldir(dir) {
       if (dir > 0) output0 << " x ";
-      if (dir == mdir)
+      if (dir == gdir)
         output0 << '(' << nodesiz[dir]-1 << '-' << nodesiz[dir] << ')';
       else
         output0 << ( (dir == dmerge) ? 2*nodesiz[dir]/subdiv[dir] : nodesiz[dir]/subdiv[dir] );

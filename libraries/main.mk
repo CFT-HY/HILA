@@ -51,7 +51,7 @@ include $(ARCH_DIR)/$(ARCH).mk
 
 # Define LAYOUT_VECTOR if vector (SUBNODE) layout is desired
 ifdef LAYOUT_VECTOR
-  HILA_OBJECTS += build/setup_layout_vector.o
+	HILA_OBJECTS += build/setup_layout_vector.o
 	HILA_OPTS += -DSUBNODE_LAYOUT
 else
 	HILA_OBJECTS += build/setup_layout_generic.o
