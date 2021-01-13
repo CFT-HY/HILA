@@ -181,12 +181,6 @@ void lattice_struct::setup_layout()
 
       if (n_subn != number_of_subnodes) fail = true;
 
-      output0 << ghosts << '\n';
-      output0 << subdiv << '\n';
-      output0 << divisions << '\n';
-      output0 << nodesiz << '\n';
-      output0 << n_subn << '\n';
-
     }
 
     if (fail && !secondtime && gdir >= 0) {
