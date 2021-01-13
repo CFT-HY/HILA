@@ -22,10 +22,11 @@ HILAPP_DIR := $(dir $(HILAPP))
 # ARCH needs to be defined. Check.
 ifndef ARCH
   $(info ########################################################################)
-  $(info Using ARCH=vanilla.  To override use "make ARCH=<target-arch>")
-  $(info For different targets, see the directory $(ARCH_DIR) )
+  $(info Target architecture (ARCH) is not defined.)
+  $(info Use "make ARCH=<target-arch>" or define ARCH in application Makefile)
+  $(info For available target architectures, see the directory $(ARCH_DIR) )
   $(info ########################################################################)
-  ARCH := vanilla
+  $(error )
 endif
 
 .PRECIOUS: build/%.cpt build/%.o
