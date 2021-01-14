@@ -907,14 +907,19 @@ lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
     // All nodes should have these in the same order
     coordinate_vector min = allnodes[myrank].min;
     coordinate_vector size = allnodes[myrank].size;
-    foralldir(d2){
-      assert( min[d2] == lattice->min_coordinate(d2) );
-    }
+
     for( int rank=0; rank < allnodes.size(); rank++ ) {
-      node_info node = allnodes[rank];
+      const node_info & node = allnodes[rank];
       bool in_column = true;
-      foralldir(d2) if( d2 != dir && node.min[d2] != min[d2] ){
-        in_column = false;
+      foralldir(d2) {
+        if( d2 != dir && node.min[d2] != min[d2] ){
+          in_column = false;
+        }
+        if (node.size[d2] != lattice->mynode.size[d2]) {
+          output0 << "ERROR - get_mpi_column() (FFT) works only when all nodes have same size\n";
+          output0 << "Will be repaired soon...\n";
+          hila::finishrun();
+        }
       }
       if( in_column ){
         if(rank==myrank)

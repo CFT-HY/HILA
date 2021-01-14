@@ -16,6 +16,10 @@
 /// Input and result are passed by reference. They may be the same.
 /// The field must be complex and the underlying complex type is supplied
 /// by the complex_type template argument
+
+static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");  // initialized 1st time used
+static timer fftw_execute_timer("FFTW execute"), fftw_plan_timer("FFTW plan");
+
 template<typename T, typename complex_type>
 inline void FFT_field_complex(Field<T> & input, Field<T> & result, 
                               fft_direction fftdir = fft_direction::forward ){
@@ -25,8 +29,6 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
   size_t local_volume = lattice->mynode.volume();
   int elements = sizeof(T)/sizeof(complex_type);
 
-  static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");  // initialized 1st time used
-  static timer fftw_execute_timer("FFTW execute"), fftw_plan_timer("FFTW plan");
 
   FFT_timer.start();
 
