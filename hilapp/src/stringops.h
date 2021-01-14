@@ -23,8 +23,10 @@ std::string remove_all_whitespace(const std::string & line);
 /// pattern must be delimited by non-alphanumeric chars (c++ symbol name rules)
 std::string::size_type find_word(const std::string & in, const std::string & pattern, int pos = 0, bool reverse = false);
 
-/// Check whether line contains the list of strings given in list.  Initial whitespaces skipped
-bool contains_word_list(const std::string & line, const std::vector<std::string> & list);
+/// Check whether line contains the list of strings given in list.  Initial whitespaces skipped.  
+/// if remainder != nullptr and return value == true, the string pointed by remainder contains the rest of the string.
+bool contains_word_list(const std::string & line, const std::vector<std::string> & list,
+                        std::string * remainder = nullptr);
 
 /// Indent the (multiline) string according to the levels of { in it
 std::string indent_string(const std::string & s);
