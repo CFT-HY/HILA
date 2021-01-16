@@ -36,7 +36,8 @@ void MyASTVisitor::handle_loop_function_openacc(FunctionDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
-  sb->insert(sl, "#pragma acc routine \n",true,true);
+  if (sb != nullptr)
+    sb->insert(sl, "#pragma acc routine \n",true,true);
 }
 
 void MyASTVisitor::generate_openacc_loop_header(std::stringstream & code) {

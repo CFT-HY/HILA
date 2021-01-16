@@ -134,6 +134,12 @@ static void replace_element_with_vector(SourceRange sr, std::string typestring, 
 void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   SourceRange sr = fd->getSourceRange();
   srcBuf * sourceBuf = get_file_srcBuf( sr.getBegin() );
+
+  if (sourceBuf == nullptr) {
+    // it's a system function - should probably do something?
+    return;
+  }
+
   PrintingPolicy pp(Context->getLangOpts());
 
 

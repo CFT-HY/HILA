@@ -37,6 +37,10 @@ void MyASTVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
+  if (sb == nullptr) {
+    // it's a system file -- should we do something?
+    return;
+  }
   sb->insert(sl, "__device__ __host__ ",true,true);
 }
 

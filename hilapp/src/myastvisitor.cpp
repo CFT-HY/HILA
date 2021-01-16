@@ -14,15 +14,15 @@
 //function used for development
 std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
   switch (kind) {
-    case FunctionDecl::TemplatedKind::TK_NonTemplate:  
+    case FunctionDecl::TemplatedKind::TK_NonTemplate:
       return "TK_NonTemplate";
     case FunctionDecl::TemplatedKind::TK_FunctionTemplate:
       return "TK_FunctionTemplate";
     case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
       return "TK_MemberSpecialization";
-    case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:  
+    case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
       return "TK_FunctionTemplateSpecialization";
-    case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:  
+    case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
       return "TK_DependentFunctionTemplateSpecialization";
   }
 }
@@ -1034,15 +1034,21 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
       // got it, comment out -- check that it has not been commented out before
       // the buffer may not be writeBuf, so be careful
 
-      srcBuf * sb = get_file_srcBuf(pragmaloc);
+      if (cmdline::comment_pragmas) {
+        srcBuf * sb = get_file_srcBuf(pragmaloc);
 
-      int loc = sb->find_original(pragmaloc,'#');
-      if (loc < 0) {
-        llvm::errs() << "internal error in pragma handling\n";
-        exit(1);
+        int loc;
+        if (sb != nullptr) {
+          loc = sb->find_original(pragmaloc,'#');
+        }
+
+        if (sb == nullptr || loc < 0) {
+          llvm::errs() << "internal error in pragma handling\n";
+          exit(1);
+        }
+        std::string s = sb->get(loc,loc+1);
+        if (s.at(0) == '#') sb->insert(loc ,"//-- ",true,false);
       }
-      std::string s = sb->get(loc,loc+1);
-      if (s.at(0) == '#') sb->insert(loc ,"//-- ",true,false);
 
       return true;
     }
@@ -1757,9 +1763,10 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
     if (cmdline::funcinfo) {
       // Add comment before
       std::stringstream SSBefore;
-      SSBefore << "// Begin function " << FuncName << " returning " << TypeStr
-               << " of template type " << print_TemplatedKind(f->getTemplatedKind())
-               << "\n";
+      SSBefore << "// hilapp info:\n"
+               << "//   begin function " << FuncName << " returning " << TypeStr << '\n'
+               << "//   of template type " << print_TemplatedKind(f->getTemplatedKind())
+               << '\n';
       writeBuf->insert(ST, SSBefore.str(), true,true);
     }
     
@@ -1993,9 +2000,10 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     // this block for debugging
     if (cmdline::funcinfo) {
       std::stringstream SSBefore;
-      SSBefore << "// Begin template class "
+      SSBefore << "// hilapp info:\n"
+               << "//   Begin template class "
                << D->getNameAsString()
-               << " with template params " ;
+               << " with template params\n//    " ;
       for (unsigned i = 0; i < tplp->size(); i++) 
         SSBefore << tplp->getParam(i)->getNameAsString() << " ";
       SourceLocation ST = D->getSourceRange().getBegin();

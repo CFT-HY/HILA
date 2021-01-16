@@ -54,10 +54,6 @@ llvm::cl::opt<bool> cmdline::dump_ast("dump-ast",
       llvm::cl::desc("Dump AST tree"),
       llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::no_include("noincl",
-      llvm::cl::desc("Do not insert \'#include\'-files (for debug)"),
-      llvm::cl::cat(HilappCategory));
-
 llvm::cl::opt<std::string> cmdline::dummy_def("D", 
       llvm::cl::value_desc("name"),
       llvm::cl::desc("Define name/symbol for preprocessor"),
@@ -141,9 +137,9 @@ llvm::cl::opt<bool> cmdline::openacc("target:openacc",
 
 // Debug and Utility arguments
 
-llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
-      llvm::cl::desc("write pragmas/attributes to functions called from loops"),
-      llvm::cl::cat(HilappCategory));
+// llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
+//       llvm::cl::desc("write pragmas/attributes to functions called from loops"),
+//       llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<int> cmdline::verbosity("verbosity",
       llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
@@ -152,6 +148,19 @@ llvm::cl::opt<int> cmdline::verbosity("verbosity",
 llvm::cl::opt<int> cmdline::avx_info("AVXinfo",
       llvm::cl::desc("AVX vectorization information level 0-2. 0 quiet, 1 not vectorizable loops, 2 all loops"),
       llvm::cl::cat(HilappCategory));
+
+llvm::cl::opt<bool> cmdline::comment_pragmas("comment-pragmas",
+      llvm::cl::desc("Comment out '#pragma hila' -pragmas in output"),
+      llvm::cl::cat(HilappCategory));
+
+llvm::cl::opt<bool> cmdline::insert_includes("insert-includes",
+      llvm::cl::desc("Insert all project #include files in .cpt -files (portable)"),
+      llvm::cl::cat(HilappCategory));
+
+llvm::cl::opt<bool> cmdline::no_include("no-include",
+      llvm::cl::desc("Do not insert any \'#include\'-files (for debug, may not compile)"),
+      llvm::cl::cat(HilappCategory));
+
 
 CompilerInstance *myCompilerInstance; //this is needed somewhere in the code
 global_state global;
@@ -255,8 +264,10 @@ public:
       ci.FilenameRange = FilenameRange;
       ci.newName  = File->tryGetRealPathName().str();
 
-      includelocs.push_back(ci);
-
+      // consider only files whose path contains "/hila/"
+      if (ci.newName.find("/hila/") != std::string::npos) {
+        includelocs.push_back(ci);
+      }
     }
     
   }
@@ -471,11 +482,18 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
     if (fb.fid == fid) return( &fb.sbuf );
   }
   // Now allocate and return new buffer
-    
+
+  SourceManager &SM = R.getSourceMgr();
+
+  // System files should not be buffered!  FIle is OK if its name contains /hila/
+  // if not found, return nullptr 
+  // TODO: this sounds pretty fragile!!
+  std::string path = SM.getFileEntryForID(fid)->tryGetRealPathName().str();
+  if (path.find("/hila/") == std::string::npos) return nullptr;
+
   file_buffer fb;
   fb.fid = fid;
   file_buffer_list.push_back(fb);
-  SourceManager &SM = R.getSourceMgr();
   SourceRange r(SM.getLocForStartOfFile(fid),SM.getLocForEndOfFile(fid));
  
   // llvm::errs() << "Create buf for file "
@@ -617,6 +635,8 @@ public:
 
     int n = 0;
     srcBuf * buf = get_file_buffer(TheRewriter, fid);
+    if (buf == nullptr) return 0;
+
     for (auto & inc : includelocs) {
       if (inc.fid == fid) {
         buf->replace( SourceRange(inc.FilenameRange.getBegin(),inc.FilenameRange.getEnd()),
@@ -630,10 +650,12 @@ public:
   void insert_includes_to_file_buffer(FileID myFID) {
     // this is where to write
 
+    srcBuf * buf = get_file_buffer(TheRewriter, myFID);
+    if (buf == nullptr) return;   // system file, nothing to do
+
     // change filenames to be included
     change_include_names(myFID);
 
-    srcBuf * buf = get_file_buffer(TheRewriter, myFID);
     // find files to be included
     SourceManager &SM = TheRewriter.getSourceMgr();
 
@@ -680,22 +702,24 @@ public:
         }
 
 
-        // Remove "#include"
-        buf->remove(SR);
-       
-
+        // is the included file a system file?
         srcBuf * buf_from = get_file_buffer(TheRewriter, f);
-
-        // and finally insert
-        // SourceRange r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
-         // TheRewriter.InsertText(SR.getBegin(),
-        buf->insert(SR.getBegin(),
-                    "// start include "+includestr
-                    + "---------------------------------\n"
-                    + buf_from->dump() +
-                    "// end include "+includestr
-                    + "---------------------------------\n",
-                    false);
+        if (buf_from != nullptr) {
+  
+          // Remove "#include"
+          buf->remove(SR);
+       
+          // and finally insert
+          // SourceRange r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
+          // TheRewriter.InsertText(SR.getBegin(),
+          buf->insert(SR.getBegin(),
+                      "// start include "+includestr
+                      + "---------------------------------\n"
+                      + buf_from->dump() +
+                      "// end include "+includestr
+                      + "---------------------------------\n",
+                      false);
+        }
 
       } else if (IL.isInvalid() && !SM.isInMainFile(SM.getLocForStartOfFile(f))) {
         llvm::errs() << "Invalid include loc!\n";
@@ -736,7 +760,8 @@ public:
         file_id_list.clear();
         
         for ( file_buffer & fb : file_buffer_list ) {
-          if (fb.sbuf.is_modified()) set_fid_modified(fb.fid);
+          if (fb.sbuf.is_modified() || cmdline::insert_includes) 
+            set_fid_modified(fb.fid);
         }
 
         // then, ensure that the full include chain is present in file_id_list

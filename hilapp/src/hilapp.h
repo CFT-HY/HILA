@@ -63,12 +63,14 @@ namespace cmdline {
   extern llvm::cl::opt<bool> AVX;
   extern llvm::cl::opt<bool> SSE;
   extern llvm::cl::opt<bool> openacc;
-  extern llvm::cl::opt<bool> func_attribute;
+  // extern llvm::cl::opt<bool> func_attribute;
   extern llvm::cl::opt<int>  vectorize;
   extern llvm::cl::opt<bool> no_interleaved_comm;
   extern llvm::cl::opt<bool> no_mpi;
   extern llvm::cl::opt<int>  verbosity;
   extern llvm::cl::opt<int>  avx_info;
+  extern llvm::cl::opt<bool> comment_pragmas;
+  extern llvm::cl::opt<bool> insert_includes;
 
   // save also the original argc and argv
   extern int argc;
