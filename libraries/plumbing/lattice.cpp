@@ -21,7 +21,7 @@ void lattice_struct::setup(const int siz[NDIM]) {
   lattices.push_back( this );
 
   l_volume = 1;
-  for (int i=0; i<NDIM; i++) {
+  foralldir(i) {
     l_size[i] = siz[i];
     l_volume *= siz[i];
   }
