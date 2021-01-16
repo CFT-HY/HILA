@@ -89,6 +89,8 @@ public:
   bool has_pragma(Stmt *S, const char *s);
   bool has_pragma(const SourceLocation sl, const char *s);
 
+  const char * get_pragma_value(SourceLocation sl);
+
   /// true if function contains parity loop
   bool does_function_contain_loop( FunctionDecl *f );
 
@@ -250,7 +252,7 @@ public:
   void replace_field_refs_and_funcs(srcBuf &sb);
   
   /// utility used in inserting stuff after new line in buffer
-  SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
+  // SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
   /// another utility (cannot trust r.getEnd())
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
 
@@ -261,8 +263,8 @@ public:
   SourceLocation findChar(SourceLocation sl, char ch);
 
   // get next word or symbol, if it is not a legal name symbol
-  std::string getNextWord(SourceLocation sl);
-  std::string getPreviousWord(SourceLocation sl);
+  std::string getNextWord(SourceLocation sl, SourceLocation *end = nullptr);
+  std::string getPreviousWord(SourceLocation sl, SourceLocation *start = nullptr);
 
   /// jump over following () expr
   SourceLocation skipParens( SourceLocation sl);

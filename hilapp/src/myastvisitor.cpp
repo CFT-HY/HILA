@@ -943,20 +943,6 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
 /// Source Location utilities
 ///////////////////////////////////////////////////////////////////////////////////
 
-SourceLocation MyASTVisitor::getSourceLocationAtEndOfLine( SourceLocation l ) {
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  for (int i=0; i<10000; i++) {
-    bool invalid = false;
-    const char * c = SM.getCharacterData(l.getLocWithOffset(i),&invalid);
-    if (invalid) {
-      // no new line found in buffer.  return previous loc, could be false!
-      llvm::errs() << program_name + ": no new line found in buffer, internal error\n";
-      return( l.getLocWithOffset(i-1) );
-    }
-    if (*c == '\n') return( l.getLocWithOffset(i) );
-  }
-  return l;
-}
 
 SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   int i = TheRewriter.getRangeSize(r);
@@ -966,98 +952,35 @@ SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
 /// get next character and sourcelocation, while skipping comments
 
 SourceLocation MyASTVisitor::getNextLoc(SourceLocation sl, bool forward) {
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  bool invalid = false;
-
-  int dir;
-  if (forward) dir = 1; else dir = -1;
-  SourceLocation s = sl.getLocWithOffset(dir);
-  const char * c = SM.getCharacterData(s,&invalid);
-
-  // skip comments - only c-style backwards
-  while ('/' == *c) {
-
-    if (forward && '/' == *SM.getCharacterData(s.getLocWithOffset(1),&invalid)) {
-      // a comment, skip the rest of line
-      while (!invalid && *SM.getCharacterData(s,&invalid) != '\n' ) s = s.getLocWithOffset(1);
-      c = SM.getCharacterData(s,&invalid);
-
-    } else if ('*' == *SM.getCharacterData(s.getLocWithOffset(dir),&invalid)) {
-      // c-style comment
-      s = s.getLocWithOffset(2*dir);
-      while (!invalid && *SM.getCharacterData(s,&invalid) != '*' && 
-              *SM.getCharacterData(s.getLocWithOffset(dir),&invalid) != '/' ) s = s.getLocWithOffset(dir);
-      s = s.getLocWithOffset(2*dir);
-      c = SM.getCharacterData(s,&invalid);
-    } else 
-      break;  // exit from here
-  }
-  
-  return s;
+  return ::getNextLoc(TheRewriter.getSourceMgr(),sl,forward);
 }
 
 
 char MyASTVisitor::getChar(SourceLocation sl) {
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  bool invalid = false;
-  const char * c = SM.getCharacterData(sl,&invalid);
-  if (invalid) return 0;
-  else return *c;
+  return ::getChar(TheRewriter.getSourceMgr(),sl);
 }
 
 // Find the location of the next searched for char.  
 SourceLocation MyASTVisitor::findChar( SourceLocation sloc, char ct) {
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  bool invalid = false;
-  while (sloc.isValid()) {
-    const char * c = SM.getCharacterData(sloc,&invalid);
-    if ( *c == ct) return sloc;
-    sloc = getNextLoc(sloc);
-  }
-  return sloc;
-
+  return ::findChar(TheRewriter.getSourceMgr(),sloc,ct);
 }
-
-
 
 /// Skip paren expression following sl, points after the paren
 
 SourceLocation MyASTVisitor::skipParens( SourceLocation sl ) {
-
-  while (sl.isValid() && getChar(sl) != '(') sl = getNextLoc(sl);
-
-  int lev = 1;
-  sl = getNextLoc(sl);
-  while (lev > 0 && sl.isValid()) {
-    char c = getChar(sl);
-    if (c == '(') lev++;
-    if (c == ')') lev--;
-    sl = getNextLoc(sl);
-  }
-
-  return sl;
+  return ::skipParens(TheRewriter.getSourceMgr(),sl);
 }  
 
 /// Get next word starting from sl
 
-std::string MyASTVisitor::getNextWord( SourceLocation sl ) {
-  while (std::isspace(getChar(sl))) sl = getNextLoc(sl);  // skip spaces
-  
-  std::string res;
-  char c = getChar(sl);
-  if (std::isalnum(c) || c == '_') {
-    while (sl.isValid() && (std::isalnum(c) || c== '_')) {
-      res.push_back(c);
-      sl = getNextLoc(sl);
-      c  = getChar(sl);
-    }
-  } else res.push_back(c);
-  return res;
+std::string MyASTVisitor::getNextWord( SourceLocation sl, SourceLocation *end ) {
+  return ::getNextWord(TheRewriter.getSourceMgr(), sl, end); 
 }
+
 
 /// Get prev word starting from sl - 
 
-std::string MyASTVisitor::getPreviousWord( SourceLocation sl ) {
+std::string MyASTVisitor::getPreviousWord( SourceLocation sl, SourceLocation *start ) {
   while (std::isspace(getChar(sl))) sl = getNextLoc(sl,false);  // skip spaces
   
   SourceLocation e = sl;
@@ -1069,13 +992,19 @@ std::string MyASTVisitor::getPreviousWord( SourceLocation sl ) {
     }
     sl = getNextLoc(sl); // 1 step too much
   } 
+  if (start != nullptr) *start = sl;
   return TheRewriter.getRewrittenText(SourceRange(sl,e));
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Pragma handling: has_pragma()
-/// TODO: switch to use vector produced by preprocessor pragma visitor!
+///
+///
+/// Check if the SourceLocation l is preceded by "#pragma hila" on previous line.
+/// There cannot be anything except whitespace between l and the beginning of line
+/// cannot allow templates because conditionals may contain <> -chars
+/// Pragma_args will point to the beginning of arguments of pragma
 ///////////////////////////////////////////////////////////////////////////////////
 
 bool MyASTVisitor::has_pragma(Stmt *S, const char * n) {
@@ -1097,102 +1026,33 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
     sl = CSR.getBegin();
   }
 
-  if (is_preceded_by_pragma(sl, arg, pragmaloc) && (arg.find(n) != std::string::npos) ) {
+  if (has_pragma_hila(TheRewriter.getSourceMgr(),sl, arg, pragmaloc)) {
+    // llvm::errs() << " %%% PRAGMA HILA, args " << arg << " COMPARISON " << n << '\n';
 
-    // got it, comment out -- check that it has not been commented out before
-    // the buffer may not be writeBuf, so be careful
+    if (contains_word_list(arg,n)) {
 
-    srcBuf * sb = get_file_srcBuf(pragmaloc);
+      // got it, comment out -- check that it has not been commented out before
+      // the buffer may not be writeBuf, so be careful
 
-    int loc = sb->find_original(pragmaloc,'#');
-    if (loc < 0) {
-      llvm::errs() << "internal error in pragma handling\n";
-      exit(1);
+      srcBuf * sb = get_file_srcBuf(pragmaloc);
+
+      int loc = sb->find_original(pragmaloc,'#');
+      if (loc < 0) {
+        llvm::errs() << "internal error in pragma handling\n";
+        exit(1);
+      }
+      std::string s = sb->get(loc,loc+1);
+      if (s.at(0) == '#') sb->insert(loc ,"//-- ",true,false);
+
+      return true;
     }
-    std::string s = sb->get(loc,loc+1);
-    if (s.at(0) == '#') sb->insert(loc ,"//-- ",true,false);
-
-    return true;
   }
 
   return false;
 }
 
 
-/// Check if the SourceLocation l is preceded by "#pragma hila" on previous line.
-/// There cannot be anything except whitespace between l and the beginning of line
-/// Pragma_args will point to the beginning of arguments of pragma
 
-bool MyASTVisitor::is_preceded_by_pragma( SourceLocation l0 , std::string & arguments, 
-                                          SourceLocation & pragmaloc ) {
-  SourceLocation l = l0;
-  SourceLocation lend;
-  SourceManager &SM = TheRewriter.getSourceMgr();
-  bool found_line_break = false;
-  bool got_non_space_chars = false;
-  
-  // Move backward from location l and find two linebreaks
-  // These are the beginning and the end of the previous line
-  constexpr int maxiter = 5000;
-  for (int i=0; i<maxiter; i++) {
-    l=l.getLocWithOffset(-1);
-
-    bool invalid = false;
-    const char * c = SM.getCharacterData(l,&invalid);
-    if (invalid) {
-      // Invalid character found. This is probably the beginning of a file
-      return false;
-    }
-    if (*c == '\n'){
-      if(!found_line_break) {
-        // this is the 1st line break
-        found_line_break = true;
-      } else {
-        // Second line break, exit here if this line was not empty
-        if (got_non_space_chars) break;
-      }
-    } else {
-      if (!got_non_space_chars && !isspace(*c)) {
-        // non-space chars before the beginning of line where l was
-        if (!found_line_break) return false;
-
-        // now we got non-empty line above
-        got_non_space_chars = true;
-        lend = l;    // end loc of non-trivial txt
-      } 
-    }
-    if (i == maxiter-1) {
-      llvm::errs() << "Search error in is_preceded_by_pragma\n";
-      return false;
-    }
-  }
-
-  // l points to \n, skip
-  //l = l.getLocWithOffset(1);
-  // Now l points to the beginning of prospective #pragma hila -line
-  // Get first the source text 
-  std::string txt = TheRewriter.getRewrittenText(SourceRange(l,lend));
-
-  txt = remove_extra_whitespace(txt);
-
-  std::string comp = "#pragma hila";
-  if (txt.compare(0,comp.length(),comp) == 0) {
-    // found it, set return value
-    arguments = txt.substr(comp.length()+1, std::string::npos);
-    pragmaloc = l;
-    return true;
-  }
-  // there could be space between # and pragma
-  comp = "# pragma hila";
-  if (txt.compare(0,comp.length(),comp) == 0) {
-    // found it, set return value
-    arguments = txt.substr(comp.length()+1, std::string::npos);
-    pragmaloc = l;
-    return true;
-  }
-  
-  return false; 
-}
 
 ////////////////////////////////////////////////////////////////////////////////////
 /// These are the main traverse methods
@@ -2070,12 +1930,12 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
     sb << "\n// ++++++++ Generated function/method specialization\n"
        << funcBuf.dump() 
        << "\n// ++++++++\n";
-    toplevelBuf->insert( getSourceLocationAtEndOfLine(global.location.bot),
+    toplevelBuf->insert( findChar(global.location.bot,'\n'),
                          sb.str(), false, true );
   } else { 
     // Now the function has been written before (and not inline)
     // just insert declaration, defined on another compilation unit
-    toplevelBuf->insert( getSourceLocationAtEndOfLine(global.location.bot),
+    toplevelBuf->insert( findChar(global.location.bot,'\n'),
             "\n// ++++++++ Generated specialization declaration, defined in compilation unit "
                          + wheredefined + "\n"
                          + funcBuf.get(decl_sr)
@@ -2123,7 +1983,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     // insertion pt for specializations
 //     if (state::class_level == 1) {
-//       global.location.spec_insert = getSourceLocationAtEndOfLine(D->getSourceRange().getEnd());
+//       global.location.spec_insert = findChar(D->getSourceRange().getEnd(),'\n');
 //     }
 
     const TemplateParameterList * tplp = D->getTemplateParameters();

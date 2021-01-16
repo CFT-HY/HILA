@@ -204,6 +204,21 @@ struct includeloc_struct {
 static std::list<includeloc_struct> includelocs;
 
 
+/// Store #pragma hila  commands and the sourceloc where these refer to
+struct pragma_loc_struct {
+  SourceLocation loc, ref;       // location of pragma and loc where it refers to
+  std::string args;
+};
+
+struct pragma_file_struct {
+  FileID fid;
+  std::vector<pragma_loc_struct> pragmas;
+};
+
+/// This holds the pragma locs, defined globally in hilapp.h
+static std::vector<pragma_file_struct> pragmalocs;
+
+
 /// Extend PPCallbacks to handle preprocessor directives
 /// specific to hila code
 class MyPPCallbacks : public PPCallbacks {
@@ -246,23 +261,83 @@ public:
     
   }
 
+
+
   /// This is triggered when a pragma directive is encountered. It checks for the
-  /// "hilapp skip" pragma and marks the tranlation unit for skipping if found.
+  /// "#pragma hilapp" and stores the location, file and the command
+  /// If pragma is "skip" it marks the tranlation unit for skipping.
   ///
   /// Note that pragmas where the code location is important are handled in 
   /// MyASTVisitor::has_pragma(). 
+
+
+
   void PragmaDirective( SourceLocation Loc, PragmaIntroducerKind Introducer ) {
     SourceManager &SM = myCompilerInstance->getSourceManager();
-    if (SM.isInMainFile(Loc) && Introducer == clang::PIK_HashPragma) {
-      bool invalid;
-      const char * src = SM.getCharacterData(Loc,&invalid);
-      if (invalid || *src != '#') return;
-      src++;   // skip hash
-      const char * end = strchr(src,'\n');
-      if (end == nullptr) return;
-      std::string line(src,end-src);
-      std::vector<std::string> w { "pragma","hilapp","skip" };
-      if (contains_word_list(line,w)) skip_this_translation_unit = true;
+
+    if (Introducer == clang::PIK_HashPragma) {
+
+      // we should have #, but ensure
+      if (getChar(SM,Loc) != '#') return;
+      // skip hash, find eol
+      SourceLocation sl = getNextLoc(SM,Loc);
+      SourceLocation endl = findChar(SM,sl,'\n');
+
+      if (endl.isInvalid()) return;  // should not happen
+
+      std::string line = getRangeText(SM,sl,endl);
+      std::string rest;
+
+      if (contains_word_list(line,"pragma hila",&rest)) {
+        if (contains_word_list(rest,"skip")) {
+          // OK, got #pragma hilapp skip - can quit here
+          skip_this_translation_unit = true;
+          return;
+        }
+        if (rest[rest.length()-1] == '\n') rest.resize(rest.length()-1);
+
+        FileID this_fid = SM.getFileID(Loc);
+
+        // check if this file has previous pragmas, if not create new pragma_file_struct
+        int f;
+        for (f=0; f<pragmalocs.size(); f++) {
+          if (pragmalocs[f].fid == this_fid) break;
+        }
+
+        if (f == pragmalocs.size()) {
+          // not file found
+          pragma_file_struct pfs;
+          pfs.fid = this_fid;
+          pragmalocs.push_back(pfs); 
+          // f is correct here
+        }
+
+        pragma_loc_struct pl;
+        pl.loc  = Loc;
+        pl.args = rest;
+
+        // now find the SourceLocation where this #pragma should refer to.
+        // skip whitespace, pragmas and #-macros
+        // loop until something found
+        sl = endl;
+
+        do {
+          sl = getNextLoc(SM,sl);
+          if (!sl.isValid()) return;  // File ended
+      
+          if (getChar(SM,sl) == '#') {
+            // now pragma or macro -- skip this too
+            sl = findChar(SM,sl,'\n');
+            if (!sl.isValid()) return;
+          }
+        } while (std::isspace(getChar(SM,sl)));
+
+        pl.ref = sl;
+        // finally save the pragma loc
+        pragmalocs[f].pragmas.push_back(pl);
+
+        // llvm::errs() << " - GOT PRAGMA HILA; FILE " << f << '\n';
+      }
     }
   }
 	
@@ -335,8 +410,51 @@ public:
   //   void SourceRangeSkipped(SourceRange Range, SourceLocation endLoc) {
   //     // llvm::errs() << "RANGE skipped\n";
   //   }
-};
+};   // PPCallbacks
 
+bool has_pragma_hila(const SourceManager & SM, SourceLocation loc, 
+                     std::string & args, SourceLocation & pragmaloc ) {
+
+  static FileID prev_fid;
+  static int prev_file, prev_pragma = -1;
+
+  int f;
+  FileID this_fid = SM.getFileID(loc);
+  if (prev_fid.isInvalid() || this_fid != prev_fid) {
+    for (f = 0; f < pragmalocs.size() && pragmalocs[f].fid != this_fid; f++) ;
+    if (f == pragmalocs.size()) return false;   // file not found
+    prev_file = f;
+    prev_fid = this_fid;
+    prev_pragma = -1;
+
+  } else {
+    // this_fid == prev_fid
+    f = prev_file;
+  }
+
+  const std::vector<pragma_loc_struct> & pl = pragmalocs[f].pragmas;
+  if (pl.size() == 0) return false;  // no pragmas after all
+
+  // pragma search loop start
+  int start = 0; 
+
+  // pragma locations are ordered in lists - start from prev found
+  if (prev_pragma > 0 && pl[prev_pragma].ref <= loc) 
+    start = prev_pragma;
+  
+  for (int i=start; i<pl.size() && pl[i].ref <= loc; i++) {
+    if (pl[i].ref == loc) {
+      // found the pragma, return result
+      args        = pl[i].args;
+      pragmaloc   = pl[i].loc;
+
+      prev_pragma = i;
+      return true;
+    }
+  }
+  // no hit found, so return false
+  return false;
+}
 
 
 
@@ -479,6 +597,8 @@ public:
 
     // init global variables PP callbacks use
     includelocs.clear();
+    // clear also pragma locs
+    pragmalocs.clear();
 
     global.main_file_name = getCurrentFile().str();
 
@@ -671,10 +791,6 @@ private:
 
 
 
-
-
-
-
 int main(int argc, const char **argv) {
 
   // TODO: clang CommandLine.cpp/.h has strange category and help
@@ -705,3 +821,119 @@ int main(int argc, const char **argv) {
   // To further customize this, we could create our own factory class.
   return Tool.run(newFrontendActionFactory<MyFrontendAction>().get());
 }
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// Some sourceloc utilities
+/////////////////////////////////////////////////////////////////////////////////////
+
+/// Get next character and sourcelocation, while skipping comments.  
+/// On line comments return the eol char
+
+SourceLocation getNextLoc(const SourceManager & SM, SourceLocation sl, bool forward) {
+  bool invalid = false;
+
+  int dir;
+  if (forward) dir = 1; else dir = -1;
+  SourceLocation s = sl.getLocWithOffset(dir);
+  const char * c = SM.getCharacterData(s,&invalid);
+
+  // skip comments - only c-style backwards
+  while ('/' == *c) {
+
+    if (forward && '/' == *SM.getCharacterData(s.getLocWithOffset(1),&invalid)) {
+      // a comment, skip the rest of line
+      while (!invalid && *SM.getCharacterData(s,&invalid) != '\n' ) s = s.getLocWithOffset(1);
+      c = SM.getCharacterData(s,&invalid);
+
+    } else if ('*' == *SM.getCharacterData(s.getLocWithOffset(dir),&invalid)) {
+      // c-style comment
+      s = s.getLocWithOffset(2*dir);
+      while (!invalid && *SM.getCharacterData(s,&invalid) != '*' && 
+              *SM.getCharacterData(s.getLocWithOffset(dir),&invalid) != '/' ) s = s.getLocWithOffset(dir);
+      s = s.getLocWithOffset(2*dir);
+      c = SM.getCharacterData(s,&invalid);
+    } else 
+      break;  // exit from here
+  }
+  
+  return s;
+}
+
+
+char getChar(const SourceManager & SM, SourceLocation sl) {
+  bool invalid = false;
+  const char * c = SM.getCharacterData(sl,&invalid);
+  if (invalid) return 0;
+  else return *c;
+}
+
+// Find the location of the next searched for char.  
+SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct) {
+  bool invalid = false;
+  while (sloc.isValid()) {
+    const char * c = SM.getCharacterData(sloc,&invalid);
+    if ( *c == ct) return sloc;
+    sloc = getNextLoc(SM, sloc);
+  }
+  return sloc;
+
+}
+
+
+
+/// Skip paren expression following sl, points after the paren
+
+SourceLocation skipParens(const SourceManager & SM, SourceLocation sl ) {
+
+  while (sl.isValid() && getChar(SM,sl) != '(') sl = getNextLoc(SM,sl);
+
+  int lev = 1;
+  sl = getNextLoc(SM,sl);
+  while (lev > 0 && sl.isValid()) {
+    char c = getChar(SM,sl);
+    if (c == '(') lev++;
+    if (c == ')') lev--;
+    sl = getNextLoc(SM,sl);
+  }
+
+  return sl;
+}  
+
+/// Get next word starting from sl -- if end is non-null, return the end of the 
+/// word string here (points to last char)
+
+std::string getNextWord(const SourceManager &SM, SourceLocation sl, SourceLocation *end ) {
+  while (std::isspace(getChar(SM,sl))) sl = getNextLoc(SM,sl);  // skip spaces
+  
+  std::string res;
+  SourceLocation endloc = sl;
+  char c = getChar(SM,sl);
+  if (std::isalnum(c) || c == '_') {
+    while (sl.isValid() && (std::isalnum(c) || c== '_')) {
+      res.push_back(c);
+      endloc = sl;
+      sl = getNextLoc(SM,sl);
+      c  = getChar(SM,sl);
+    }
+  } else res.push_back(c);
+  if (end != nullptr) *end = endloc;
+  return res;
+}
+
+/// Return the text within the range, inclusive (note - skip comments, as usual)
+std::string getRangeText(const SourceManager &SM, SourceLocation begin, SourceLocation end ) {
+    
+  // need to be in the same file - and end needs to be after begin
+  if (SM.getFileID(begin) != SM.getFileID(end) ||
+      begin > end) return "";
+
+  std::string res;
+  do {
+    res.push_back(getChar(SM,begin));
+    begin = getNextLoc(SM,begin);
+  } while (begin <= end);
+  return res;
+}
+

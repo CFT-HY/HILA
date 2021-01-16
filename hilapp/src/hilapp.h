@@ -333,6 +333,19 @@ struct call_info_struct {
 };
 
 
+/// Some sourceloc utilities
+
+SourceLocation getNextLoc(const SourceManager & SM, SourceLocation sl, bool forward = true);
+char getChar(const SourceManager & SM, SourceLocation sl);
+SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct);
+SourceLocation skipParens(const SourceManager & SM, SourceLocation sl );
+std::string getNextWord(const SourceManager &SM, SourceLocation sl, SourceLocation *end = nullptr);
+std::string getRangeText(const SourceManager &SM, SourceLocation begin, SourceLocation end );
+
+bool has_pragma_hila(const SourceManager &SM, SourceLocation l0 , std::string & arguments, 
+                     SourceLocation & pragmaloc );
+
+
 bool write_output_file( const std::string & name, const std::string & buf ) ;
 reduction get_reduction_type(bool, std::string &, var_info &);
 void set_fid_modified(const FileID FID);
