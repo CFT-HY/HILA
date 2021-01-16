@@ -85,23 +85,30 @@ std::string::size_type find_word(const std::string & in, const std::string & pat
 
 
 
-// returns true if line contains the word list at the beginning
-bool contains_word_list(const std::string & line, const std::vector<std::string> & list,
+// returns true if line contains the word list at the beginning of line.  list
+// contains the word separated by whitespace.  Remainder, if non-nullptr, will contain
+// the rest of the line if return is true.
+bool contains_word_list(const std::string & line, const std::string & list, 
                         std::string * remainder) {
   const char *p = line.c_str();
-  for (const std::string & r : list) {
+  const char *q = list.c_str();
+  while (*p && *q) {
     while (std::isspace(*p)) p++;
-    const char *rp = r.c_str();
-    for (int i=0; i<r.length(); i++) {
-      if (*rp != *p) return false;
-      ++rp;
-      ++p;
+    while (std::isspace(*q)) q++;
+
+    if (*p != *q) break; 
+
+    while (*p && *q && *p == *q) {
+      p++;
+      q++;
     }
   }
-  if (remainder != nullptr) {
-    while (std::isspace(*p)) p++;
-    *remainder = p;
-  }
+  // if line contained the words in list, *q = 0.
+  while (std::isspace(*q)) q++;
+  if (*q != 0) return false;
+
+  while (std::isspace(*p)) p++;
+  if (remainder != nullptr) *remainder = p;
   return true;
 }
 
