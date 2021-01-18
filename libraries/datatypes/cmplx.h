@@ -415,7 +415,6 @@ constexpr Cmplx<double> operator""_i(unsigned long long a) {
 }
 
 template <typename T>
-#pragma hila loop_function  //TODO
 std::ostream& operator<<(std::ostream &strm, const Cmplx<T> A) {
   return strm << "(" << A.re << ", " << A.im << ")";
 }
