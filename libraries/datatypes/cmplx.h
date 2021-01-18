@@ -60,18 +60,6 @@ struct Cmplx {
   #pragma hila loop_function  //TODO
   constexpr Cmplx<T>(const scalar_t val) : re(static_cast<T>(val)), im(static_cast<T>(0)) {}
 
-  // make 0 constructor and assignment 
-  #pragma hila loop_function  //TODO
-  // #pragma hila loop_function
-  constexpr Cmplx<T>(const std::nullptr_t & z) : re(static_cast<T>(0)), im(static_cast<T>(0)) {}
-  #pragma hila loop_function  //TODO
-  #pragma hila loop_function  //TODO
-  constexpr Cmplx<T> & operator=(const std::nullptr_t & z) {
-    re = im = static_cast<T>(0);
-    return *this;
-  }
-
-
 
   // constructor c(a,b)
   //   template <typename A, typename B,
@@ -150,7 +138,7 @@ struct Cmplx {
     return Cmplx<T>( { r*cos(theta), r*sin(theta) } );
   }
 
-
+  #pragma hila loop_function  //TODO
   inline Cmplx<T> & random(){
     re = hila_random();
     im = hila_random();
@@ -447,8 +435,8 @@ inline auto norm_squared(Cmplx<T> val){
 template <typename T>
 #pragma hila loop_function  //TODO
 inline void random( Cmplx<T> & c ) {
-  random(c.re);
-  random(c.im); 
+  ::random(c.re);
+  ::random(c.im); 
 }
 
 template <typename T>
