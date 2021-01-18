@@ -220,6 +220,7 @@ public:
 
   std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait);
   void backend_handle_loop_function(FunctionDecl *fd);
+  void backend_handle_loop_constructor(CXXConstructorDecl *fd);
 
   bool check_loop_vectorizable(Stmt *S, int & vector_size, std::string & diag);
 
@@ -234,6 +235,11 @@ public:
   void handle_loop_function_cuda(FunctionDecl *fd);
   void handle_loop_function_openacc(FunctionDecl *fd);
   void handle_loop_function_avx(FunctionDecl *fd);
+
+  /// Handle functions called in a loop
+  void handle_loop_constructor_cuda(CXXConstructorDecl *fd);
+  void handle_loop_constructor_openacc(CXXConstructorDecl *fd);
+  void handle_loop_constructor_avx(CXXConstructorDecl *fd);
 
 
   /// inspect if the type name is vectorizable

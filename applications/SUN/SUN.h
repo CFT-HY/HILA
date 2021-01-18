@@ -25,13 +25,13 @@ extern long seed;
 extern int NX, NY, NZ, NT;
 extern int VOLUME;
 
-#pragma hila loop_function
+#pragma hila loop_function  //TODO
 double monte(
   Matrix<N,N,Cmplx<double>> &U, 
   Matrix<N,N,Cmplx<double>> &staple,
   double beta);
 
-#pragma hila loop_function
+#pragma hila loop_function  //TODO
 void KennedyPendleton(
   Matrix<2,2,Cmplx<double>> &U,
   Matrix<2,2,Cmplx<double>> &staple

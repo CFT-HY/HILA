@@ -197,6 +197,10 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   }
 }
 
+/// Constructors - should something be done here?
+
+void MyASTVisitor::handle_loop_constructor_avx(CXXConstructorDecl *fd) {}
+
 ///////////////////////////////////////////////////////////////////////////////////
 /// Check that
 ///  a) no site dependent conditional
@@ -370,7 +374,7 @@ std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
       // Allocate memory for a reduction. This will be filled in the kernel
       code << v.vecinfo.vectorized_type << ' ' << v.new_name;
       if (v.reduction_type == reduction::SUM) 
-        code << "(zero);\n";
+        code << "(0);\n";
       else if (v.reduction_type == reduction::PRODUCT)
         code << "(1);\n";
     }

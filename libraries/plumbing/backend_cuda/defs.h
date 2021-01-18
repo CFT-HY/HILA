@@ -79,7 +79,7 @@ __global__ void cuda_reduce_sum_kernel( T * vector, int vector_size, int new_siz
 template<typename T>
 T cuda_reduce_sum(  T * vector, int N ){
   const int reduce_step = 32;
-  T sum = Zero();
+  T sum = 0;
   T * host_vector = (T *)malloc(N*sizeof(T));
   int vector_size = N;
 
@@ -178,7 +178,7 @@ __global__ void cuda_set_zero_kernel( T * vector, int elems)
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < elems ){
-    vector[Index] = Zero();
+    vector[Index] = 0;
   }
 }
 
@@ -188,7 +188,7 @@ __global__ void cuda_set_one_kernel( T * vector, int elems)
 {
   int Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < elems ){
-    vector[Index] = Zero();
+    vector[Index] = 0;
   }
 }
 

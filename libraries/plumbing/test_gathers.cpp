@@ -15,7 +15,7 @@ struct test_struct {
   using base_type = typename base_type_struct<T>::type;
 
   // define unary - for antiperiodic b.c.
-  #pragma hila loop_function
+  #pragma hila loop_function  //TODO
   test_struct<T> operator-() const { test_struct<T> t; foralldir(d) t.r[d] = -r[d]; return t; }
 
 };

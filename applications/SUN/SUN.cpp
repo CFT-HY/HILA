@@ -38,7 +38,7 @@ void calc_staples(
 }
 
  
-#pragma hila loop_function
+#pragma hila loop_function  //TODO
 template<typename T>
 void update(
   T &U, const T &staple, double beta
@@ -46,7 +46,7 @@ void update(
   monte( U, staple, beta );
 }
 
-#pragma hila loop_function
+#pragma hila loop_function  //TODO
 void update(
   Matrix<2,2,Cmplx<double>> &U,
   const Matrix<2,2,Cmplx<double>> &staple,

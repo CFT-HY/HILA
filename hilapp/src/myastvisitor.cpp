@@ -687,6 +687,10 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // return true;
   }
 
+  if( is_user_cast_stmt(s) ) {
+    llvm::errs() << "GOT USER CAST " << get_stmt_str(s) << '\n';
+  }
+
    
   // catch then expressions
   if (Expr *E = dyn_cast<Expr>(s)) {

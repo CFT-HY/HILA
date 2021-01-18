@@ -228,6 +228,19 @@ public:
     return false;
   }
 
+  /// is the stmt pointing now to a constructor
+  bool is_user_cast_stmt(Stmt * s) {
+    if (auto *ce = dyn_cast<ImplicitCastExpr>(s)) {
+    // if (CastExpr *ce = dyn_cast<CastExpr>(s)) {
+      if (ce->getCastKind() == CK_UserDefinedConversion) {
+      // llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
+        return true;
+      }
+    }
+    return false;
+  }
+
+
   /// Does the statement end with a semicolon
   bool isStmtWithSemicolon(Stmt * S) {
     SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(),

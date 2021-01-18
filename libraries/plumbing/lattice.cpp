@@ -293,7 +293,7 @@ void lattice_struct::setup_nodes() {
   nodes.nodelist.resize(nodes.number);
 
   // n keeps track of the node "root coordinates"
-  coordinate_vector n(zero);
+  coordinate_vector n(0);
 
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {

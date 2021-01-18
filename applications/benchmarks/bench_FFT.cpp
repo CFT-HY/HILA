@@ -1,17 +1,23 @@
 #include "bench.h"
-#include "plumbing/timers.h"
+#include "plumbing/timing.h"
 
 #ifndef SEED
 #define SEED 100
 #endif
+
+
+const int latsize[4] = { 32, 32, 32, 32 };
 
 int main(int argc, char **argv){
   int n_runs=1;
   struct timeval start, end;
   double timing;
 
-  // Runs lattice->setup 
-  bench_setup(argc, argv);
+  hila::initialize(argc, argv);
+
+  lattice->setup(latsize);
+
+
   seed_random(SEED);
 
   using T = Matrix<2,2,Cmplx<double>>;

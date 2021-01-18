@@ -72,7 +72,7 @@ class SU : public Matrix<n,n,Cmplx<radix>>{
 
     /// Construct from scalar by setting diagonal
     template <typename scalart, std::enable_if_t<is_cmplx_or_arithmetic<scalart>::value, int> = 0 >  
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     SU(const scalart rhs) {
       for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
         if (i == j) this->e(i,j) = rhs;
@@ -612,7 +612,7 @@ class SU_vector : public Vector<n,Cmplx<radix>>{
     SU_vector() = default;
 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     SU_vector(const scalart rhs) {
       for(int i=0; i<n; i++){
         this->c[i] = (rhs);
@@ -620,21 +620,21 @@ class SU_vector : public Vector<n,Cmplx<radix>>{
     }
 
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     SU_vector(const SU_vector<n,scalart> m) {
       for (int i=0; i<n; i++){
         this->c[i] = m.c[i];
       }
     }
 
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     SU_vector(Vector<n,Cmplx<radix>> m) {
       for(int i=0; i<n; i++){
         this->c[i] = m.c[i];
       }
     }
 
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     SU_vector operator - () const {
       SU_vector r;
       for (int i = 0; i < n; i++){
@@ -643,7 +643,7 @@ class SU_vector : public Vector<n,Cmplx<radix>>{
       return r;
     }
 
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     inline radix rdot(const SU_vector &rhs) const {
       radix r = 0;
       for (int i=0; i<n; i++) {
@@ -653,7 +653,7 @@ class SU_vector : public Vector<n,Cmplx<radix>>{
       return r;
     }
 
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     Matrix<n,n,Cmplx<radix>> outer_product(const SU_vector &rhs) const{
       Matrix<n,n,Cmplx<radix>> r;
       for (int i=0; i<n; i++) for (int j=0; j<n; j++) {
@@ -666,7 +666,7 @@ class SU_vector : public Vector<n,Cmplx<radix>>{
 
 /// Why do I need a separate implementation for SU_vector?
 template <int n, typename T>
-#pragma hila loop_function
+#pragma hila loop_function  //TODO
 inline SU_vector<n,T> operator*(const Matrix<n,n,T> & A, const SU_vector<n,T> & B) {
   SU_vector<n,T> res;
 

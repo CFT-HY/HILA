@@ -12,15 +12,15 @@
 struct Zero {
   public:
     Zero() = default;
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     operator int() const {return 0;}
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     operator int64_t() const {return (int64_t)0;}
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     operator float() const {return 0.0f; }
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     operator double() const {return 0.0;}
-    #pragma hila loop_function
+    #pragma hila loop_function  //TODO
     operator long double() const {return 0.0L;}
 };
 

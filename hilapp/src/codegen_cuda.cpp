@@ -44,6 +44,17 @@ void MyASTVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
   sb->insert(sl, "__device__ __host__ ",true,true);
 }
 
+void MyASTVisitor::handle_loop_constructor_cuda(CXXConstructorDecl *fd) {
+  
+  SourceLocation sl = fd->getSourceRange().getBegin();
+  srcBuf * sb = get_file_srcBuf(sl);
+  if (sb == nullptr) {
+    // it's a system file -- should we do something?
+    return;
+  }
+  sb->insert(sl, "__device__ __host__ ",true,true);
+}
+
 
 /// Help routine to write (part of) a name for a kernel
 std::string MyASTVisitor::make_kernel_name() {
@@ -237,7 +248,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
 
       // Initialize only the local element
       if (vi.reduction_type == reduction::SUM) {
-        kernel << vi.new_name << "_sh[threadIdx.x] = Zero();\n";
+        kernel << vi.new_name << "_sh[threadIdx.x] = 0;\n";
       } else if (vi.reduction_type == reduction::PRODUCT) {
         kernel << vi.new_name << "_sh[threadIdx.x] = 1;\n";
       }
@@ -348,7 +359,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
       //Now run the thread level reduction
       kernel << "if( threadIdx.x == 0 ){\n";
       if (vi.reduction_type == reduction::SUM) {
-        kernel << vi.new_name << "[blockIdx.x] = Zero();\n";
+        kernel << vi.new_name << "[blockIdx.x] = 0;\n";
       } else if (vi.reduction_type == reduction::PRODUCT) {
         kernel << vi.new_name << "[blockIdx.x] = 1;\n";
       }

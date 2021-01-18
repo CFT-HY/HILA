@@ -9,10 +9,10 @@
 #include "plumbing/defs.h"
 #include "datatypes/matrix.h"
 #include "datatypes/sun.h"
-#include "datatypes/wilson_vector.h"
+//#include "datatypes/wilson_vector.h"
 #include "plumbing/field.h"
-#include "dirac/staggered.h"
-#include "dirac/wilson.h"
+//#include "dirac/staggered.h"
+//#include "dirac/wilson.h"
 
 
 // Minimum time to run each benchmark

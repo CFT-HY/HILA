@@ -319,7 +319,6 @@ class Field {
   field_struct * RESTRICT fs;
   
   Field() {
-    // std::cout << "In constructor 1\n";
     fs = nullptr;             // lazy allocation on 1st use
   }
   
@@ -349,7 +348,13 @@ class Field {
     // static_assert(!std::is_same<A,int>::value, "in int constructor");
     (*this)[ALL] = val;
   }
-  
+
+  // constructor from 0 - nullptr trick in use
+  Field(const std::nullptr_t z) {
+    fs = nullptr;
+    (*this)[ALL] = 0;
+  }
+
   // move constructor - steal the content
   Field(Field && rhs) {
     // std::cout << "in move constructor\n";
@@ -601,6 +606,11 @@ class Field {
   Field<T>& operator= (const A& d) {
     (*this)[ALL] = d;
     return *this;
+  }
+
+  // assignment of 0 - nullptr
+  Field<T>& operator= (const std::nullptr_t & z) {
+    (*this)[ALL] = 0;
   }
   
   // Do also move assignment

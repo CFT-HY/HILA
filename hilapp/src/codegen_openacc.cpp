@@ -30,9 +30,16 @@ extern std::string looping_var;
 extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
-
-// Add the __host__ __device__ keywords to functions called a loop
+// add pragma
 void MyASTVisitor::handle_loop_function_openacc(FunctionDecl *fd) {
+  
+  SourceLocation sl = fd->getSourceRange().getBegin();
+  srcBuf * sb = get_file_srcBuf(sl);
+  if (sb != nullptr)
+    sb->insert(sl, "#pragma acc routine \n",true,true);
+}
+// Add pragma to constructor too?
+void MyASTVisitor::handle_loop_constructor_openacc(CXXConstructorDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);

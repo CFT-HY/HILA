@@ -176,6 +176,8 @@ class Dirac_Wilson {
     double kappa;
     /// Size of the gauge matrix and color dimension of the Wilson vector
     static constexpr int N = matrix::size;
+
+    using radix = number_type<matrix>;
     /// The wilson vector type
     using vector_type = Wilson_vector<N, radix>;
     /// The matrix type
@@ -265,6 +267,7 @@ class Dirac_Wilson_evenodd {
     /// Size of the gauge matrix and color dimension of the Wilson vector
     static constexpr int N = matrix::size;
     /// The wilson vector type
+    using radix = number_type<matrix>;
     using vector_type = Wilson_vector<N, radix>;
     /// The matrix type
     using matrix_type = matrix;

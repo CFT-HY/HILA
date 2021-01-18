@@ -171,7 +171,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
       while (t.find(v.reduction_name,0) != std::string::npos) v.reduction_name += "_";
       // Create a temporary variable and initialize
       if (v.reduction_type == reduction::SUM) {
-        code << v.type << " " << v.reduction_name << " = Zero();\n";
+        code << v.type << " " << v.reduction_name << " = 0;\n";
       } else if (v.reduction_type == reduction::PRODUCT) {
         code << v.type << " " << v.reduction_name << " = 1;\n";
       }
@@ -333,6 +333,19 @@ void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
     handle_loop_function_openacc(fd);
   } else if (target.vectorize) {
     handle_loop_function_avx(fd);
+  }
+}
+
+/// Call the backend function for handling loop functions
+void MyASTVisitor::backend_handle_loop_constructor(CXXConstructorDecl *fd) {
+  // we should mark the function, but it is not necessarily in the
+  // main file buffer
+  if (target.CUDA) {
+    handle_loop_constructor_cuda(fd);
+  } else if (target.openacc) {
+    handle_loop_constructor_openacc(fd);
+  } else if (target.vectorize) {
+    handle_loop_constructor_avx(fd);
   }
 }
 

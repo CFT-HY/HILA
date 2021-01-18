@@ -200,9 +200,37 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
   llvm::errs() << "  Constructor " << decl->getNameAsString() << '\n';
 
   // Store functions used in loops, recursively...
-  loop_function_check(decl);
-}
 
+  static std::vector<CXXConstructorDecl *> loop_constructors;
+  SourceManager &SM = Context->getSourceManager();
+
+  bool handle_decl = !SM.isInSystemHeader(decl->getBeginLoc());
+
+  // check if we already have this declaration - either the pointer is the same
+  // or the source location (actually, source location should do all, no need for 
+  // CXXConstructorDecl *, but it does not hurt)
+  for (int i=0; handle_decl && i<loop_constructors.size(); i++) { 
+    if (decl == loop_constructors[i] || 
+        decl->getSourceRange().getBegin() == 
+          loop_constructors[i]->getSourceRange().getBegin() ) {
+      handle_decl = false;
+    }
+  }
+  if (handle_decl) {
+    if (decl->isTrivial()) {
+      llvm::errs() << "TRIVIAL CONSTRUCTOR " << decl->getNameAsString() << " DO NOTHING\n";
+    } else {
+      loop_constructors.push_back(decl);
+        llvm::errs() << "NEW LOOP CONSTRUCTOR " << decl->getNameAsString() << '\n';
+        // " parameters ";
+        //  for (int i=0; i<fd->getNumParams(); i++) 
+        //  llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
+        // llvm::errs() << '\n';
+    
+      backend_handle_loop_constructor(decl);
+    }
+  }
+}
 
 
 bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
@@ -318,14 +346,21 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
     }
   }
   if (handle_decl) {
-    loop_functions.push_back(fd);
-    //  llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
-    //    " parameters ";
-    //  for (int i=0; i<fd->getNumParams(); i++) 
-    //    llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
-    //  llvm::errs() << '\n';
+    if (fd->isTrivial()) {
+      llvm::errs() << "TRIVIAL LOOP FUNCTION " << fd->getNameAsString() << " NO HANDLING\n";
+    } else {
+      loop_functions.push_back(fd);
+          llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
+                " parameters ";
+          for (int i=0; i<fd->getNumParams(); i++) 
+             llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
+             llvm::errs() << '\n';
+
+          llvm::errs() << "decl: " << getRangeText(SM,fd->getSourceRange().getBegin(), 
+                                findChar(fd->getSourceRange().getBegin(),'\n')) << '\n';
     
-    backend_handle_loop_function(fd);
+      backend_handle_loop_function(fd);
+    }
   }
 
   return handle_decl;
@@ -366,10 +401,10 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
         // And check also functions called by this func
         CallGraph CG;
         // addToCallGraph takes Decl *: cast 
-        // llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
+        llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
 
         CG.addToCallGraph( dyn_cast<Decl>(fbd) );
-        // CG.dump();
+        CG.dump();
         int i = 0;
         for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
           // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>

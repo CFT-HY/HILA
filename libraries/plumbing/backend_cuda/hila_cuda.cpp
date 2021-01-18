@@ -1,8 +1,11 @@
-#ifndef HILAPP
 
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 #include "plumbing/backend_cuda/defs.h"
+
+// hilapp needs to transform the include files above, to make them __device__ callable...
+
+#ifndef HILAPP
 
 
 // Save "constants" lattice size and volume here
