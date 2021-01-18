@@ -328,18 +328,44 @@ public:
         pl.args = rest;
 
         // now find the SourceLocation where this #pragma should refer to.
-        // skip whitespace, pragmas and #-macros
+        // skip whitespace, pragmas and #-macros 
+        // skip also template <> -bits
         // loop until something found
         sl = endl;
 
         do {
-          sl = getNextLoc(SM,sl);
+          while (std::isspace(getChar(SM,sl))) sl = getNextLoc(SM,sl);
+
           if (!sl.isValid()) return;  // File ended
       
           if (getChar(SM,sl) == '#') {
             // now pragma or macro -- skip this too
             sl = findChar(SM,sl,'\n');
             if (!sl.isValid()) return;
+          }
+
+          // Skip also templates
+          if (getNextWord(SM,sl,&sl) == "template") {
+            // skip templates
+            sl = findChar(SM,sl,'<');
+            sl = getNextLoc(SM,sl);
+            if (!sl.isValid()) return;
+
+            int tmpl_lev = 1;
+            while (tmpl_lev > 0 && sl.isValid()) {
+
+              char c = getChar(SM,sl);
+
+              if (c == '(') {
+                sl = skipParens(SM,sl);
+              } else if (c == '"' || c == '\'') { 
+                sl = skipString(SM,sl);
+              } else {
+                if (c == '>') tmpl_lev--;
+                if (c == '<') tmpl_lev++;
+                sl = getNextLoc(SM,sl);
+              }
+            }
           }
         } while (std::isspace(getChar(SM,sl)));
 
@@ -915,16 +941,56 @@ SourceLocation skipParens(const SourceManager & SM, SourceLocation sl ) {
   while (sl.isValid() && getChar(SM,sl) != '(') sl = getNextLoc(SM,sl);
 
   int lev = 1;
+  bool in_string = false;
   sl = getNextLoc(SM,sl);
   while (lev > 0 && sl.isValid()) {
     char c = getChar(SM,sl);
     if (c == '(') lev++;
     if (c == ')') lev--;
-    sl = getNextLoc(SM,sl);
+    if (c == '"' || c == '\'') {
+      sl = skipString(SM,sl);
+    } else {
+      sl = getNextLoc(SM,sl);
+    }
   }
 
   return sl;
 }  
+
+
+/// Skip " " or ' ' after location, returns the next location
+
+SourceLocation skipString(const SourceManager & SM, SourceLocation sl ) {
+
+  char c;
+  do {
+    c = getChar(SM,sl);
+    sl = getNextLoc(SM,sl);
+  }
+  while (sl.isValid() && c != '\'' && c != '"');
+
+  // first single char 
+  if (c == '\'') {
+    c = getChar(SM,sl);
+    if (c == '\\') sl = sl.getLocWithOffset(1);
+    sl = sl.getLocWithOffset(2);    // jumps over the closing '
+    return sl;
+  }
+
+  // now string " "
+  int lev = 1;
+  while (lev > 0 && sl.isValid()) {
+    char c = getChar(SM,sl);
+    if (c == '\\') sl = sl.getLocWithOffset(1);
+    if (c == '"') lev = 0;
+    sl = sl.getLocWithOffset(1);
+  }
+
+  return sl;
+}  
+
+
+
 
 /// Get next word starting from sl -- if end is non-null, return the end of the 
 /// word string here (points to last char)

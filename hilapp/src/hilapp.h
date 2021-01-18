@@ -341,6 +341,7 @@ SourceLocation getNextLoc(const SourceManager & SM, SourceLocation sl, bool forw
 char getChar(const SourceManager & SM, SourceLocation sl);
 SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct);
 SourceLocation skipParens(const SourceManager & SM, SourceLocation sl );
+SourceLocation skipString(const SourceManager & SM, SourceLocation sl );
 std::string getNextWord(const SourceManager &SM, SourceLocation sl, SourceLocation *end = nullptr);
 std::string getRangeText(const SourceManager &SM, SourceLocation begin, SourceLocation end );
 
