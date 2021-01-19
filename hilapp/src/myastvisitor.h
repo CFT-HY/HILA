@@ -146,7 +146,7 @@ public:
 
   void check_var_info_list();
   
-  bool handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X, bool is_func_arg = false);
+  bool handle_field_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X, bool is_func_arg = false);
   
   void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op, Stmt * assign_stmt = nullptr);
   int handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
@@ -170,7 +170,8 @@ public:
 
   // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
-  void handle_loop_function_args(FunctionDecl *D, CallExpr *Call);
+
+  bool handle_loop_function_args(FunctionDecl *D, CallExpr *Call, bool sitedep);
 
   void handle_member_call_in_loop(Stmt * s);
 

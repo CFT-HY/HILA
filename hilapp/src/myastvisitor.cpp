@@ -137,8 +137,8 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
 /// is_func_arg: expression is a lvalue-argument (non-const. reference) to function
 //////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_field_parity_X_expr(Expr *e, bool is_assign, bool is_also_read,
-                                              bool is_X, bool is_func_arg ) {
+bool MyASTVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_read,
+                                       bool is_X, bool is_func_arg ) {
     
   e = e->IgnoreParens();
   field_ref lfe;
@@ -707,7 +707,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     if (is_field_with_X_expr(E)) {
       // It is Field[X] reference
       // get the expression for field name
-      handle_field_parity_X_expr(E, is_assignment, is_compound || is_member_expr, true);
+      handle_field_X_expr(E, is_assignment, is_compound || is_member_expr, true);
       is_assignment = false;  // next will not be assignment
       is_member_expr = false;
       // (unless it is a[] = b[] = c[], which is OK)
@@ -721,7 +721,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
       // Now we know it is a field parity reference
       // get the expression for field name
           
-      handle_field_parity_X_expr(E, is_assignment, is_compound || is_member_expr, false);
+      handle_field_X_expr(E, is_assignment, is_compound || is_member_expr, false);
       is_assignment = false;  // next will not be assignment
       // (unless it is a[] = b[] = c[], which is OK)
       is_member_expr = false;

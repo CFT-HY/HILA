@@ -94,7 +94,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
     if (is_field_with_X_expr(E)) {
       // Mark it as changed
       // llvm::errs() << "FIELD CAN CHANGE HERE!\n";
-      handle_field_parity_X_expr(E, is_lvalue, (is_lvalue && !output_only), true, true);
+      handle_field_X_expr(E, is_lvalue, (is_lvalue && !output_only), true, true);
     }
   }
 
@@ -127,7 +127,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
     }
 
     if (is_field_with_X_expr(E)) {
-      handle_field_parity_X_expr(E,!is_const,(!is_const && !output_only),true);
+      handle_field_X_expr(E,!is_const,(!is_const && !output_only),true);
     }
   }
 
@@ -162,7 +162,7 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
       // Check for const qualifier
       if( !q.isConstQualified ()) {
         // Mark it as changed
-        handle_field_parity_X_expr(E, true, true, true);
+        handle_field_X_expr(E, true, true, true);
       }
     }
     i++;
@@ -177,7 +177,7 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
     // Check for const qualifier
     if( !Decl->isConst() ) {
       // Mark it as changed
-      handle_field_parity_X_expr(E, true, true, true);
+      handle_field_X_expr(E, true, true, true);
     }
   }
 }
@@ -401,10 +401,10 @@ bool MyASTVisitor::loop_function_check(Decl *d) {
         // And check also functions called by this func
         CallGraph CG;
         // addToCallGraph takes Decl *: cast 
-        llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
+        // llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
 
         CG.addToCallGraph( dyn_cast<Decl>(fbd) );
-        CG.dump();
+        // CG.dump();
         int i = 0;
         for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
           // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
