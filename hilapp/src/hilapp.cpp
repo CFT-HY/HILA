@@ -345,27 +345,13 @@ public:
           }
 
           // Skip also templates
-          if (getNextWord(SM,sl,&sl) == "template") {
-            // skip templates
-            sl = findChar(SM,sl,'<');
-            sl = getNextLoc(SM,sl);
+          SourceLocation sl1;
+          if (getNextWord(SM,sl,&sl1) == "template") {
+            sl = sl1;
+            // skip template <> -brackets
+            sl = skipParens(SM,sl,'<');
+
             if (!sl.isValid()) return;
-
-            int tmpl_lev = 1;
-            while (tmpl_lev > 0 && sl.isValid()) {
-
-              char c = getChar(SM,sl);
-
-              if (c == '(') {
-                sl = skipParens(SM,sl);
-              } else if (c == '"' || c == '\'') { 
-                sl = skipString(SM,sl);
-              } else {
-                if (c == '>') tmpl_lev--;
-                if (c == '<') tmpl_lev++;
-                sl = getNextLoc(SM,sl);
-              }
-            }
           }
         } while (std::isspace(getChar(SM,sl)));
 
@@ -935,25 +921,42 @@ SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct) {
 
 
 /// Skip paren expression following sl, points after the paren
+/// If partype == '(', just balance par expressions (may contain strings).
+/// If partype == '<', balance < > -parens (may contain () -parens, which are balanced in turn)
+/// This last one is useful for template scanning
 
-SourceLocation skipParens(const SourceManager & SM, SourceLocation sl ) {
+SourceLocation skipParens(const SourceManager & SM, SourceLocation sl, const char partype ) {
 
-  while (sl.isValid() && getChar(SM,sl) != '(') sl = getNextLoc(SM,sl);
+  assert((partype == '(' || partype == '<' ) && "Unknown paren type in skipParens");
 
-  int lev = 1;
-  bool in_string = false;
+  char endpar;
+  if (partype == '<') endpar = '>';
+  else endpar = ')';
+
+  while (sl.isValid() && getChar(SM,sl) != partype) sl = getNextLoc(SM,sl);
+
   sl = getNextLoc(SM,sl);
-  while (lev > 0 && sl.isValid()) {
-    char c = getChar(SM,sl);
-    if (c == '(') lev++;
-    if (c == ')') lev--;
-    if (c == '"' || c == '\'') {
+  char c = getChar(SM,sl);
+  while (sl.isValid() && c != endpar) {
+
+    if (c == partype) {
+      sl = skipParens(SM,sl,partype);
+    } else if (c == '(') {
+      sl = skipParens(SM,sl);
+    } else if (c == '"' || c == '\'') {
       sl = skipString(SM,sl);
     } else {
+      // default option, next char loc
       sl = getNextLoc(SM,sl);
     }
+
+    // and check next char
+    c = getChar(SM,sl);
   }
 
+  // successful exit here
+  if (c == endpar) return getNextLoc(SM,sl);
+  // this must be !isValid()
   return sl;
 }  
 

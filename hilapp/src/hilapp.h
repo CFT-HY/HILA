@@ -340,7 +340,7 @@ struct call_info_struct {
 SourceLocation getNextLoc(const SourceManager & SM, SourceLocation sl, bool forward = true);
 char getChar(const SourceManager & SM, SourceLocation sl);
 SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct);
-SourceLocation skipParens(const SourceManager & SM, SourceLocation sl );
+SourceLocation skipParens(const SourceManager & SM, SourceLocation sl, const char partype = '(' );
 SourceLocation skipString(const SourceManager & SM, SourceLocation sl );
 std::string getNextWord(const SourceManager &SM, SourceLocation sl, SourceLocation *end = nullptr);
 std::string getRangeText(const SourceManager &SM, SourceLocation begin, SourceLocation end );
@@ -350,7 +350,7 @@ bool has_pragma_hila(const SourceManager &SM, SourceLocation l0 , std::string & 
 
 
 bool write_output_file( const std::string & name, const std::string & buf ) ;
-reduction get_reduction_type(bool, std::string &, var_info &);
+reduction get_reduction_type(bool, const std::string &, var_info &);
 void set_fid_modified(const FileID FID);
 bool search_fid(const FileID FID);
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid);

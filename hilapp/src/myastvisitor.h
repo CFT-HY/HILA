@@ -148,7 +148,8 @@ public:
   
   bool handle_field_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X, bool is_func_arg = false);
   
-  void handle_var_ref(DeclRefExpr *E, bool is_assign, std::string & op, Stmt * assign_stmt = nullptr);
+  var_info * handle_var_ref(DeclRefExpr *E, bool is_assign, const std::string & op, Stmt * assign_stmt = nullptr);
+
   int handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
 
   var_info * new_var_info(VarDecl *decl);
@@ -172,6 +173,10 @@ public:
   void handle_function_call_in_loop(Stmt * s);
 
   bool handle_loop_function_args(FunctionDecl *D, CallExpr *Call, bool sitedep);
+
+  bool handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep,
+                             std::vector<var_info *> * out_variables, 
+                             std::vector<var_info *> * dep_variables);
 
   void handle_member_call_in_loop(Stmt * s);
 

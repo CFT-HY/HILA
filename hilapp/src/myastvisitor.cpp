@@ -305,7 +305,7 @@ bool MyASTVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_rea
 ///  Utility to find the reduction type
 
 reduction get_reduction_type(bool is_assign,
-                             std::string & assignop,
+                             const std::string & assignop,
                              var_info & vi) {
   if (is_assign && (!vi.is_loop_local)) {
     if (assignop == "+=") return reduction::SUM;
@@ -321,8 +321,8 @@ reduction get_reduction_type(bool is_assign,
 ////////////////////////////////////////////////////////////////////////////
 
 
-void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
-                                  std::string &assignop, Stmt * assign_stmt) {
+var_info * MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
+                                        const std::string &assignop, Stmt * assign_stmt) {
 
   
   if (isa<VarDecl>(DRE->getDecl())) {
@@ -333,7 +333,7 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     typ.removeLocalConst();
     if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT LATTICE_STRUCT PTR!!!\n";
     if (typ.getAsString(PP) == "X_index_type" || 
-        typ.getAsString(PP) == "lattice_struct *") return;
+        typ.getAsString(PP) == "lattice_struct *") return nullptr;
 
     var_ref vr;
     vr.ref = DRE;
@@ -342,21 +342,37 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     if (is_assign) vr.assignop = assignop;
 
 
-    bool found = false;
+    bool foundvar = false;
     var_info *vip = nullptr;
     for (var_info & vi : var_info_list) {
       if (vi.decl == decl) {
         // found already referred to decl
-        vi.refs.push_back(vr);
+        // check if this particular ref has been handled before
+        bool foundref = false;
+        for (auto & r : vi.refs) if (r.ref == DRE) {
+          foundref = true;
+          // if old check was not assignment and this is, change status
+          // can happen if var ref is a function "out" argument
+          if (r.is_assigned == false && is_assign == true) {
+            r.is_assigned = true;
+            r.assignop = assignop;
+          }
+          break;
+        }
+        if (!foundref) {
+          // a new reference
+          vi.refs.push_back(vr);
+        }
         vi.is_assigned |= is_assign;
-        vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
-        
+        if (vi.reduction_type == reduction::NONE) {
+          vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
+        }
         vip = &vi;
-        found = true;
+        foundvar = true;
         break;
       }
     }
-    if (!found) {
+    if (!foundvar) {
       // new variable referred to
       vip = new_var_info(decl);
 
@@ -371,7 +387,8 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
       vip->is_site_dependent = is_rhs_site_dependent(assign_stmt, &vip->dependent_vars );
       
       // llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
-    } 
+    }
+    return vip;
     
   } else { 
     // end of VarDecl - how about other decls, e.g. functions?
@@ -379,6 +396,8 @@ void MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
                DRE->getSourceRange().getBegin(),
                "Reference to unimplemented (non-variable) type");
   }
+
+  return nullptr;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
