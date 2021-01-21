@@ -91,6 +91,19 @@ class Matrix {
     #pragma hila loop_function  //TODO
     inline T& e(const int i) { return c[i]; }
 
+    /// And also [] for vectors (not matrices!)
+    /// (one size == 1)
+    template <int q=n, int p=m,
+              std::enable_if_t< (q == 1 || p == 1), int> = 0 >
+    #pragma hila loop_function  //TODO
+    inline T operator[](const int i) const { return c[i]; }
+
+    template <int q=n, int p=m,
+              std::enable_if_t< (q == 1 || p == 1), int> = 0 >
+    #pragma hila loop_function  //TODO
+    inline T& operator[](const int i) { return c[i]; }
+
+
     /// interpret Matrix as Array -  for array ops
     #pragma hila loop_function  //TODO
     Array<n,m,T> & asArray() { 
