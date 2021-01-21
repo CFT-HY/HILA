@@ -358,6 +358,10 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid);
 /// reset the status of vectorizable types
 void reset_vectorizable_types();
 
+/// and clear loop function info
+void clear_loop_functions_in_compilation_unit();
+
+
 
 /// take global CI just in case
 extern CompilerInstance *myCompilerInstance;

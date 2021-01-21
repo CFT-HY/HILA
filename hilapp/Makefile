@@ -46,7 +46,7 @@ $(info -----------------------------------------------)
 
 #CXX := g++-5
 CXX := $(LLVM_BIN_PATH)/clang++
-CXXFLAGS := -fno-rtti -std=c++17 -O2
+CXXFLAGS := -fno-rtti -std=c++17 -g
 
 LLVM_CXXFLAGS := `$(LLVM_BIN_PATH)/llvm-config --cxxflags`
 LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`
@@ -118,7 +118,7 @@ OBJECTS = \
   $(BUILDDIR)/codegen_openacc.o \
   $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/myastvisitor.o \
-  $(BUILDDIR)/loop_function.o \
+  $(BUILDDIR)/loop_function_new.o \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site.o \
   $(BUILDDIR)/contains_random.o \

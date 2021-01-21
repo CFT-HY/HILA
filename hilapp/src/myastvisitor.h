@@ -185,6 +185,8 @@ public:
   bool check_argument( Expr * E, bool is_lvalue, bool output_only,
        argument_info & ai, std::vector<var_info *> & lvalue_refs);
 
+  bool attach_dependent_vars( std::vector<var_info *> & variables, bool sitedep,
+                              std::vector<var_info *> & dep_variables );
 
   bool loop_function_check(Decl *fd);
 
@@ -193,6 +195,8 @@ public:
   void handle_loop_function(FunctionDecl *fd);
 
   bool handle_special_loop_function(CallExpr *Call);
+
+  void MyASTVisitor::clear_loop_function_calls();
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );

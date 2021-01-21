@@ -6,6 +6,7 @@
 #include "coordinates.h"
 #include "lattice.h"
 
+#if 0
 // Declare the test class here, element type definitions must be before field.h
 template <typename T>
 // #pragma hila dump ast
@@ -20,15 +21,14 @@ struct test_struct {
 
 };
 
+#endif
+
 #include "field.h"
 #include "datatypes/matrix.h"
 
 
-
-
-using test_int = test_struct<int>;
-using test_double = test_struct<double>;
-
+template <typename T>
+using test_struct = Vector<NDIM,T>;
 
 template <typename T>
 void gather_test() {
@@ -37,23 +37,19 @@ void gather_test() {
   Field<test_struct<T>> t;
   
   onsites(ALL) {
-    coordinate_vector v = X.coordinates();
-    foralldir(d) {
-      t[X].r[d] = v[d];
-    }
+    t[X] = X.coordinates();
   }
 
-#define max_dir  (direction)(NDIM-1)
+  coordinate_vector lsize = lattice->size();
 #if defined(SPECIAL_BOUNDARY_CONDITIONS)
   for (boundary_condition_t bc : {boundary_condition_t::PERIODIC, boundary_condition_t::ANTIPERIODIC}) {
-      t.set_boundary_condition(max_dir,bc);
+      t.set_boundary_condition(last_dir,bc);
 #endif
   for (parity p : {EVEN,ODD,ALL}) {
 
     foralldir(d) {
-      // Find size here, cannot call the function in a CUDA loop
       int size_d = lattice->size(d);
-      int size_t = lattice->size(NDIM-1);
+      int size_t = lattice->size(last_dir);
       for (direction d2 : {d,-d}) {
       
         T diff = 0;
@@ -64,37 +60,37 @@ void gather_test() {
           auto n = t[X+d2];
 #if defined(SPECIAL_BOUNDARY_CONDITIONS)
           if (bc == boundary_condition_t::ANTIPERIODIC &&
-              (( X.coordinate(static_cast<direction>(NDIM-1)) == 0 && d2 == -static_cast<direction>(NDIM-1)) || 
-               ( X.coordinate(static_cast<direction>(NDIM-1)) == size_t-1 && d2 == NDIM-1))) {
+              (( X.coordinate(last_dir) == 0 && d2 == -last_dir) || 
+               ( X.coordinate(last_dir) == lattice->size(last_dir)-1 && d2 == last_dir))) {
             n = -n;
           }
 #endif
 
-          T j = n.r[d];
-          T t_r = t[X].r[d];
-          T s = ((int)(t_r + add + size_d)) % size_d;
-
-          sum2 += n.r[d] - size_d/2.0;
-          sum1 += t[X].r[d] - size_d/2.0;
+          T j = n[d];
+          T t_r = t[X][d];
+          T s = mod(t_r + add, size_d);
+          
+          sum2 += n[d] - size_d/2.0;
+          sum1 += t[X][d] - size_d/2.0;
 
           T lv = s-j;
           T a = 0;
-          foralldir(dir) if (dir != d) a+= n.r[dir] - t[X].r[dir];
+          foralldir(dir) if (dir != d) a+= n[dir] - t[X][dir];
           
           #ifndef CUDA
           if (lv != 0 || a != 0) {
             hila::output << "Error in gather test at " << X.coordinates() << " direction " << d2 
                          << " parity " << (int)p << '\n';
-            hila::output << "Fetched element t[X+d2].r[d] = " << j << " should be " << s << " perp diff is " << a << '\n';
+            hila::output << "Fetched element t[X+d2][d] = " << j << " should be " << s << " perp diff is " << a << '\n';
             hila::output << "This element - neighbour element:  ";
-            for (int loop=0; loop<NDIM; loop++) hila::output << t[X].r[loop] << ' ';
+            for (int loop=0; loop<NDIM; loop++) hila::output << t[X][loop] << ' ';
             hila::output << " - ";
-            for (int loop=0; loop<NDIM; loop++) hila::output << n.r[loop] << ' ';
+            for (int loop=0; loop<NDIM; loop++) hila::output << n[loop] << ' ';
             
             hila::output << '\n';
           }
           #endif
-          assert(lv == 0 || a == 0 && "Test gathers");
+          assert((lv == 0 || a == 0) && "Test gathers");
         }
 
         double s_result;

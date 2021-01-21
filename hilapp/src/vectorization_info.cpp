@@ -70,6 +70,10 @@ void reset_vectorizable_types() {
   d.classname = "int";
   d.ntype = number_type::INT;
   vectorizable_types.push_back(d);
+
+  d.classname = "int64_t";
+  d.ntype = number_type::INT64_T;
+  vectorizable_types.push_back(d);
 }
 
 //////////////////////////////////////////////////////////////////////////
