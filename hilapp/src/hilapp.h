@@ -40,6 +40,7 @@ struct codetype {
   bool vectorize=false;
   int vector_size=1;
   bool openacc=false;
+  bool is_kernelized=false;
 };
 
 extern codetype target;  // make this global var
@@ -71,6 +72,8 @@ namespace cmdline {
   extern llvm::cl::opt<int>  avx_info;
   extern llvm::cl::opt<bool> comment_pragmas;
   extern llvm::cl::opt<bool> insert_includes;
+
+  extern llvm::cl::opt<bool> allow_func_globals;
 
   // save also the original argc and argv
   extern int argc;
@@ -318,7 +321,8 @@ struct loop_info_struct {
 };
 
 
-/// Stores information about function arguments
+
+/// Stores information about loop function function arguments
 struct argument_info {
   Expr * E;
   std::vector<var_info *> dependent_vars;
@@ -326,13 +330,26 @@ struct argument_info {
   bool is_site_dependent;
 };
 
-/// Stores information about function calls
+/// Stores information about loop function calls
 struct call_info_struct {
   CallExpr * call;
+  CXXConstructExpr * constr;
   std::vector<argument_info> arguments;
+  bool is_operator;
   bool is_method;
-  argument_info method;
+  bool is_vectorizable;
+  bool is_site_dependent;
+  argument_info object;
+
+  call_info_struct() {
+    call = nullptr;
+    constr = nullptr;
+    arguments.clear();
+    is_method = is_operator = is_site_dependent = false;
+    is_vectorizable = true;
+  }
 };
+
 
 
 /// Some sourceloc utilities

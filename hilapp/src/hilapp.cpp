@@ -72,6 +72,11 @@ llvm::cl::opt<bool> cmdline::method_spec_no_inline("method-spec-no-inline",
       llvm::cl::desc("Do not mark generated method specializations \"inline\""),
       llvm::cl::cat(HilappCategory));
   
+llvm::cl::opt<bool> cmdline::allow_func_globals("allow-func-globals",
+      llvm::cl::desc("Allow using global or extern variables in functions called from site loops."
+                     "\nThis will not work in kernelized code (for example GPU)"),
+      llvm::cl::cat(HilappCategory));
+
 llvm::cl::opt<bool> cmdline::funcinfo("ident-functions",
       llvm::cl::desc("Comment function call types in output"),
       llvm::cl::cat(HilappCategory));
@@ -102,7 +107,7 @@ llvm::cl::opt<bool> cmdline::no_interleaved_comm("no-interleave",
 // List of targets that can be specified in command line arguments
 
 llvm::cl::opt<bool> cmdline::kernel("target:vanilla-kernel",
-      llvm::cl::desc("Generate kernels"),
+      llvm::cl::desc("Generate site loop 'kernels' for vanilla code"),
       llvm::cl::cat(HilappCategory));
   
 llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
@@ -127,7 +132,7 @@ llvm::cl::opt<bool> cmdline::SSE("target:SSE",
 
 llvm::cl::opt<int> cmdline::vectorize("target:vectorize",
       llvm::cl::desc("Generate vectorized loops with given vector size \n"
-      "For example -target:vectorize=32 is equivalent to -target:AVX"),
+                     "For example -target:vectorize=32 is equivalent to -target:AVX"),
       llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::openacc("target:openacc",
@@ -191,6 +196,17 @@ void handle_cmdline_arguments(codetype & target) {
     target.vector_size = cmdline::vectorize;
   }
 
+  if (cmdline::CUDA || cmdline::openacc) 
+    target.is_kernelized = true;
+
+  if (target.is_kernelized && cmdline::allow_func_globals) {
+    llvm::errs() << "hilapp commandline error: kernelized target architecture '";
+    if (target.CUDA) llvm::errs() << "cuda";
+    else if (target.openacc) llvm::errs() << "openacc";
+    llvm::errs() << "' is not compatible with option '-allow-func-globals'\n";
+
+    exit(1);
+  }
 
 }
 
@@ -637,6 +653,7 @@ public:
     file_buffer_list.clear();
     field_decl = field_storage_decl = nullptr;
     reset_vectorizable_types();
+    clear_loop_functions_in_compilation_unit();
 
     return (true);
   }
@@ -826,7 +843,9 @@ private:
   // ASTContext  TheContext;
 };
 
-
+/////////////////////////////////////////////////////////////////////////////////////
+/// Main routine
+/////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, const char **argv) {
 
