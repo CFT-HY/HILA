@@ -117,6 +117,7 @@ OBJECTS = \
   $(BUILDDIR)/codegen_avx_new.o \
   $(BUILDDIR)/codegen_openacc.o \
   $(BUILDDIR)/srcbuf.o \
+  $(BUILDDIR)/generalvisitor.o \
   $(BUILDDIR)/myastvisitor.o \
   $(BUILDDIR)/loop_function_new.o \
   $(BUILDDIR)/vectorization_info.o \

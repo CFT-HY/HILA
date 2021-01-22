@@ -28,44 +28,6 @@ std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
 }
 
 
-/// is the stmt pointing now to assignment
-
-bool MyASTVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
-  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
-    if (OP->isAssignmentOp()) {
-
-      // TODO: there should be some more elegant way to do this
-      const char *sp = getOperatorSpelling(OP->getOperator());
-      if ((sp[0] == '+' || sp[0] == '-' || sp[0] == '*' || sp[0] == '/')
-          && sp[1] == '=') iscompound = true;
-      else iscompound = false;
-      if (opcodestr)
-        *opcodestr = getOperatorSpelling(OP->getOperator());
-
-      // Need to mark/handle the assignment method if necessary
-      if( is_function_call_stmt(s) ){
-        handle_function_call_in_loop(s);
-      } else if ( is_constructor_stmt(s) ){
-        handle_constructor_in_loop(s);
-      }
-
-      return true;
-    }
-  } 
-
-  // This is for arithmetic type assignments
-  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
-    if (B->isAssignmentOp()) {
-      iscompound = B->isCompoundAssignmentOp();
-      if (opcodestr)
-        *opcodestr = B->getOpcodeStr().str();
-      return true;
-    }
-  }
-
-  return false;
-}
-
 
 /// Check the validity a variable reference in a loop
 bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
@@ -440,27 +402,6 @@ var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
 
 
 ///////////////////////////////////////////////////////////////////
-/// Check if the RHS of assignment is site dependent
-///////////////////////////////////////////////////////////////////
-
-bool MyASTVisitor::is_rhs_site_dependent(Stmt *s, std::vector<var_info *> * vi) {
-
-  if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
-    if (OP->isAssignmentOp()) {
-      return is_site_dependent(OP->getArg(1),vi);
-    }
-  }
-
-  if (BinaryOperator *B = dyn_cast<BinaryOperator>(s)) {
-    if (B->isAssignmentOp()) {
-      return is_site_dependent(B->getRHS(),vi);
-    }
-  }
-  // one of these should have triggered!  
-  assert(0 && "Internal error in RHS analysis");
-}
-
-///////////////////////////////////////////////////////////////////
 /// Find the the base of a compound variable expression
 ///////////////////////////////////////////////////////////////////
 
@@ -597,6 +538,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   array_ref_list.clear();
   vector_reduction_ref_list.clear();
   remove_expr_list.clear();
+  clear_loop_function_calls();
   global.location.loop = ls->getSourceRange().getBegin();
   loop_info.clear_except_parity();
   parsing_state.accept_field_parity = field_parity_ok;
@@ -620,6 +562,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   check_var_info_list();
   check_addrofops_and_refs(ls);  // scan through the full loop again
   check_field_ref_list();
+  process_loop_functions();     // revisit functions when vars are fully resolved
 
   // check here also if conditionals are site dependent through var dependence
   // because var_info_list was checked above, once is enough
@@ -676,6 +619,13 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // check_allowed_assignment(s);  
     assign_stmt = s;
     is_assignment = true;
+    // Need to mark/handle the assignment method if necessary
+    if( is_function_call_stmt(s) ){
+      handle_function_call_in_loop(s);
+    } else if ( is_constructor_stmt(s) ){
+      handle_constructor_in_loop(s);
+    }
+
     // next visit here will be to the assigned to variable
     return true;
   }
@@ -1124,35 +1074,6 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
   return true;
 }
 
-
-
-parity MyASTVisitor::get_parity_val(const Expr *pExpr) {
-  SourceLocation SL;
-  APValue APV;
-
-  if (pExpr->isCXX11ConstantExpr( *Context, &APV, &SL )) {
-    // Parity is now constant
-    int64_t val = (APV.getInt().getExtValue());
-    parity p;
-    if (0 <= val && val <= (int)parity::all) {
-      p = static_cast<parity>(val);
-    } else {
-      reportDiag(DiagnosticsEngine::Level::Fatal,
-                 pExpr->getSourceRange().getBegin(),
-                 "hilapp internal error, unknown parity" );
-      exit(1);
-    }
-    if (p == parity::none) {
-      reportDiag(DiagnosticsEngine::Level::Error,
-                 pExpr->getSourceRange().getBegin(),
-                 "parity::none is reserved for internal use" );
-    }
-        
-    return p;
-  } else {
-    return parity::none;
-  }
-}
 
 //  Obsolete when X is new type
 // void MyASTVisitor::require_parity_X(Expr * pExpr) {

@@ -30,8 +30,6 @@ constexpr unsigned NDIRS = NDIRECTIONS;    //
 // Increment for directions:  ++dir,  dir++  does the obvious 
 // dir-- not defined, should we?
 
-static constexpr direction last_dir = (direction)(NDIM-1);
-
 #pragma hila loop_function  //TODO
 static inline direction next_direction(direction dir) {
   return static_cast<direction>(static_cast<unsigned>(dir)+1);

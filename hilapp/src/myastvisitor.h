@@ -131,16 +131,7 @@ public:
   
   bool is_array_expr(Expr *E); 
   
-  /// Checks if expr points to a variable defined in the same loop
-  var_decl * is_loop_local_var_ref(Expr *E);
-
-  bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool & is_compound);
-  
-  bool is_loop_extern_var_ref(Expr *E);
-
   void check_allowed_assignment(Stmt * s);
-  
-  parity get_parity_val(const Expr *pExpr);
       
   bool check_field_ref_list();
 
@@ -154,36 +145,22 @@ public:
 
   var_info * new_var_info(VarDecl *decl);
 
-  /// check the dependency chain of variables in assignments
-  bool is_rhs_site_dependent(Stmt *s, std::vector<var_info *> * dependent = nullptr);
-
-  /// this checks if the statement s is site-dependent inside site loops
-  /// if return is false, vi (if non-null) will contain a list of variables
-  /// which may turn out to be dependent on site later.  Check after loop complete!
-  bool is_site_dependent(Expr *e, std::vector<var_info *> * vi = nullptr);
-
-  /// check if stmt contains random number generator
-  bool contains_random(Stmt *s);
-
   /// Check that the addressof-operators and reference vars are OK
   void check_addrofops_and_refs(Stmt * S);
-
 
   // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
 
-  bool handle_loop_function_args(FunctionDecl *D, CallExpr *Call, bool sitedep);
+  call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call, bool sitedep);
 
   bool handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep,
                              std::vector<var_info *> * out_variables, 
-                             std::vector<var_info *> * dep_variables);
+                             std::vector<var_info *> * dep_variables,
+                             argument_info & ai );
 
   void handle_member_call_in_loop(Stmt * s);
 
   void handle_constructor_in_loop(Stmt * s);
-
-  bool check_argument( Expr * E, bool is_lvalue, bool output_only,
-       argument_info & ai, std::vector<var_info *> & lvalue_refs);
 
   bool attach_dependent_vars( std::vector<var_info *> & variables, bool sitedep,
                               std::vector<var_info *> & dep_variables );
@@ -192,11 +169,13 @@ public:
 
   bool handle_loop_function_if_needed(FunctionDecl *fd);
   
-  void handle_loop_function(FunctionDecl *fd);
+  void process_loop_functions();
+
+  void visit_loop_functions( std::vector<call_info_struct> & calls );
 
   bool handle_special_loop_function(CallExpr *Call);
 
-  void MyASTVisitor::clear_loop_function_calls();
+  void clear_loop_function_calls();
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );

@@ -71,7 +71,7 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////
 
 
-bool MyASTVisitor::contains_random(Stmt * s) {
+bool GeneralVisitor::contains_random(Stmt * s) {
 
   containsRandomChecker checker(TheRewriter,Context);
   fdecls.clear();

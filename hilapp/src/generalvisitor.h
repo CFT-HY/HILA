@@ -85,6 +85,9 @@ public:
     return e->getType().getUnqualifiedType().getAsString(PP);
   }
 
+  /// check if stmt contains random number generator
+  bool contains_random(Stmt *s);
+
 
   /// a list of utility inspection functions
   /// getCanonicalType takes away typedefs, getUnqualifiedType() qualifiers, pp just in case
@@ -107,14 +110,7 @@ public:
   }
 
   /// try to figure out whether expressions are duplicates
-  bool is_duplicate_expr(const Expr * a, const Expr * b) {
-    // Use the Profile function in clang, which "fingerprints"
-    // statements
-    llvm::FoldingSetNodeID IDa, IDb;
-    a->Profile(IDa, *Context, true);
-    b->Profile(IDb, *Context, true);
-    return ( IDa == IDb );
-  }
+  bool is_duplicate_expr(const Expr * a, const Expr * b);
 
   /// Just check that the expression is of type parity
   bool is_parity_index_type(Expr *E) {
@@ -122,33 +118,7 @@ public:
   }
 
   /// Checks if E is of type Field[parity]  parity=EVEN,ODD,ALL
-  bool is_field_parity_expr(Expr *E) {
-    E = E->IgnoreParens();
-    CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
-
-    if (OC &&
-        strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
-        is_field_expr(OC->getArg(0))) {
-
-      return is_parity_index_type(OC->getArg(1));
-
-    } else {
-      // DON'T DO TEMPLATES NOW!  ONLY SPECIALIZATIONS
-      #if 0
-      // This is for templated expressions
-      // for some reason, expr a[X] "getBase() gives X, getIdx() a...
-      if (ArraySubscriptExpr * ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-        Expr * lhs = ASE->getLHS()->IgnoreParens();
-        
-        if (is_field_expr(ASE->getLHS()->IgnoreParens())) {
-          // llvm::errs() << " FP: and field\n";
-          return is_parity_index_type(ASE->getRHS());
-        }
-      }
-      #endif
-    }
-    return false;   
-  }
+  bool is_field_parity_expr(Expr *E);
 
   /// true if X, X+dir, X+offset -type expression
   bool is_X_type(Expr *E) {
@@ -170,90 +140,33 @@ public:
   }
 
 
-  /// Checks if E is parity of a field (for example f[X]).
-  /// Catches both parity and X_plus_direction 
-  bool is_field_with_X_expr(Expr *E) {
-    E = E->IgnoreParens();
-    CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
-
-    if (OC &&
-        strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
-        is_field_expr(OC->getArg(0))) {
-
-      return is_X_index_type(OC->getArg(1));
-
-    }
-    return false;   
-  }
+  bool is_field_with_X_expr(Expr *E);
 
   /// Checks if E is parity plus direction of a field (for example f[X+dir]).
-  bool is_field_with_X_and_dir(Expr *E) {
-    E = E->IgnoreParens();
-    CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+  bool is_field_with_X_and_dir(Expr *E);
 
-    if (OC &&
-        strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
-        is_field_expr(OC->getArg(0))) {
-      
-      return is_X_and_dir_type(OC->getArg(1));
+  bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound);
 
-    }
-    return false;   
-  }
+  bool is_site_dependent(Expr * e, std::vector<var_info *> * dependent_var);
+
+  bool is_rhs_site_dependent(Stmt *s, std::vector<var_info *> * vi);
 
   /// is the stmt pointing now to a function call
-  bool is_function_call_stmt(Stmt * s) {
-    if (auto *Call = dyn_cast<CallExpr>(s)){
-      // llvm::errs() << "Function call found: " << get_stmt_str(s) << '\n';
-      return true;
-    }
-    return false;
-  }
-
+  bool is_function_call_stmt(Stmt * s);
+  
   /// is the stmt pointing now to a member call
-  bool is_member_call_stmt(Stmt * s) {
-    if (auto *Call = dyn_cast<CXXMemberCallExpr>(s)){
-      // llvm::errs() << "Member call found: " << get_stmt_str(s) << '\n';
-      return true;
-    }
-    return false;
-  }
+  bool is_member_call_stmt(Stmt * s);
 
   /// is the stmt pointing now to a constructor
-  bool is_constructor_stmt(Stmt * s) {
-    if (auto *Call = dyn_cast<CXXConstructExpr>(s)){
-      // llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
-      return true;
-    }
-    return false;
-  }
+  bool is_constructor_stmt(Stmt * s);
 
   /// is the stmt pointing now to a constructor
-  bool is_user_cast_stmt(Stmt * s) {
-    if (auto *ce = dyn_cast<ImplicitCastExpr>(s)) {
-    // if (CastExpr *ce = dyn_cast<CastExpr>(s)) {
-      if (ce->getCastKind() == CK_UserDefinedConversion) {
-      // llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
-        return true;
-      }
-    }
-    return false;
-  }
-
+  bool is_user_cast_stmt(Stmt * s);
 
   /// Does the statement end with a semicolon
-  bool isStmtWithSemicolon(Stmt * S) {
-    SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(),
-                                                    tok::semi,
-                                                    TheRewriter.getSourceMgr(),
-                                                    Context->getLangOpts(),
-                                                    false);
-    if (l.isValid()) {
-      //    llvm::errs() << "; found " << get_stmt_str(S) << '\n';
-      return true;
-    }
-    return false;
-  }
+  bool isStmtWithSemicolon(Stmt * S);
+  
+  parity get_parity_val(const Expr *pExpr);
 
 };
 

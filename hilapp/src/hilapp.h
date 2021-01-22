@@ -333,19 +333,24 @@ struct argument_info {
 /// Stores information about loop function calls
 struct call_info_struct {
   CallExpr * call;
-  CXXConstructExpr * constr;
+  FunctionDecl * decl;
+  CXXConstructExpr * constructor;
+  CXXConstructorDecl * ctordecl;
   std::vector<argument_info> arguments;
+  argument_info object;
   bool is_operator;
   bool is_method;
   bool is_vectorizable;
   bool is_site_dependent;
-  argument_info object;
+  bool contains_random;
 
   call_info_struct() {
     call = nullptr;
-    constr = nullptr;
+    constructor = nullptr;
+    decl = nullptr;
+    ctordecl = nullptr;
     arguments.clear();
-    is_method = is_operator = is_site_dependent = false;
+    is_method = is_operator = is_site_dependent = contains_random = false;
     is_vectorizable = true;
   }
 };

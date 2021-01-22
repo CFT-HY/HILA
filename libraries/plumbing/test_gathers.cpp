@@ -30,6 +30,8 @@ struct test_struct {
 template <typename T>
 using test_struct = Vector<NDIM,T>;
 
+constexpr direction last_dir = (direction)(NDIM-1);
+
 template <typename T>
 void gather_test() {
 

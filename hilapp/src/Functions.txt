@@ -1,0 +1,24 @@
+for functions:
+
+During initial loop scanning:
+- Check arguments:
+    - If "site dep." arguments, flag them
+    - If "out"-parameters or non-const. method mark possible site dependency chain 
+        - NOTE: may change site dependence of expression, is_site_dependent()
+- Tally up function pointers, and site dep. of arguments on a loop_func vector
+
+Post-process:
+- site dep. of loop variables -> Function arg site dep.
+- Revisit function:
+  - check site dep. of local variables -> dep. chain. 
+  - check called function arguments -> site dep.
+  - check local var dep -> function arg site dep.
+     -> go in called functions
+  - If all functions which should be are vectorizable, and local vars vectorizable -> vectorizable
+        - note: only if local var is template can be upgraded (functions are not rewritten(?))
+
+
+
+
+NEW - miniman solution:
+

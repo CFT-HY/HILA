@@ -84,7 +84,7 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////
 
 
-bool MyASTVisitor::is_site_dependent(Expr * e, std::vector<var_info *> * dependent_var) {
+bool GeneralVisitor::is_site_dependent(Expr * e, std::vector<var_info *> * dependent_var) {
 
   isSiteDependentChecker checker(TheRewriter,Context,dependent_var);
 
