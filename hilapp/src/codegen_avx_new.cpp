@@ -140,8 +140,6 @@ void TopLevelVisitor::handle_loop_function_avx(FunctionDecl *fd) {
     return;
   }
 
-  PrintingPolicy pp(Context->getLangOpts());
-
 
   // Track wether the function actually contains elements.
   // if not, no new function should be written
@@ -150,7 +148,7 @@ void TopLevelVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   // Check allowed vector sizes
   int smallest=1, largest=0;
   for( clang::ParmVarDecl *par : fd->parameters() ){
-    std::string typestring = par->getType().getAsString(pp);
+    std::string typestring = par->getType().getAsString(PP);
     if(find_word(typestring,"double") != std::string::npos){
       smallest = 4;
       largest = 8;
@@ -176,14 +174,14 @@ void TopLevelVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 
     // Handle each parameter
     for( clang::ParmVarDecl *par : fd->parameters() ){
-      std::string typestring = par->getType().getAsString(pp);
+      std::string typestring = par->getType().getAsString(PP);
       replace_element_with_vector(par->getSourceRange(), typestring, par->getNameAsString(), vector_size, lfh.functionBuffer);
     }
 
     // Handle return type
     // Note: C++ cannot specialize only based on return type. Therefore we
     // only write a new function if the parameters contain elements
-    std::string typestring = fd->getReturnType().getAsString(pp);
+    std::string typestring = fd->getReturnType().getAsString(PP);
     replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, "", vector_size, lfh.functionBuffer);
 
     lfh.TraverseStmt(fd->getBody());
