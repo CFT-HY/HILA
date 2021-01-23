@@ -22,7 +22,8 @@ class containsRandomChecker : public GeneralVisitor, public RecursiveASTVisitor<
 public:
   bool found_random;
 
-  containsRandomChecker(Rewriter &R, ASTContext *C) : GeneralVisitor(R,C) {
+  template <typename visitor_type>
+  containsRandomChecker(visitor_type & v) : GeneralVisitor(v) {
     found_random = false;
   }
 
@@ -56,7 +57,7 @@ public:
 
   // need to do new "starter pack" here, because the TopLevelVisitor version not callable here
   bool contains_random(Stmt *s) {
-    containsRandomChecker chkagain(TheRewriter,Context);
+    containsRandomChecker chkagain(*this);
     chkagain.TraverseStmt(s);
     return (chkagain.found_random);
   }
@@ -73,7 +74,7 @@ public:
 
 bool GeneralVisitor::contains_random(Stmt * s) {
 
-  containsRandomChecker checker(TheRewriter,Context);
+  containsRandomChecker checker(*this);
   fdecls.clear();
 
   checker.TraverseStmt(s);

@@ -1,6 +1,6 @@
-#include "toplevelvisitor.h"
-#include "hilapp.h"
 #include "stringops.h"
+#include "hilapp.h"
+#include "toplevelvisitor.h"
 #include "specialization_db.h"
 #include "clang/Analysis/CallGraph.h"
 #include <sstream>
@@ -80,7 +80,8 @@ void TopLevelVisitor::check_allowed_assignment(Stmt * s) {
       std::string type = OP->getArg(0)->getType().getAsString();
       type = remove_all_whitespace(type);
       if(type.rfind("element<",0) == std::string::npos){
-        LoopAssignChecker lac(TheRewriter, Context);
+
+        LoopAssignChecker lac(*this);
         lac.TraverseStmt(OP->getArg(1));
       } else {
         // llvm::errs() << " ** Element type : " << type << '\n';
@@ -253,7 +254,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
 
 
   // Check that there are no local variable references up the AST
-  FieldRefChecker frc(TheRewriter, Context);
+  FieldRefChecker frc(*this);
   frc.TraverseStmt(lfe.fullExpr);
    
   field_ref_list.push_back(lfe);
@@ -284,7 +285,7 @@ reduction get_reduction_type(bool is_assign,
 
 
 var_info * TopLevelVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
-                                        const std::string &assignop, Stmt * assign_stmt) {
+                                           const std::string &assignop, Stmt * assign_stmt) {
 
   
   if (isa<VarDecl>(DRE->getDecl())) {
@@ -386,7 +387,7 @@ var_info * TopLevelVisitor::new_var_info(VarDecl *decl) {
 
   // is it loop-local?
   vi.is_loop_local = false;
-  for (var_decl & d : var_decl_list) {
+  for (var_decl & d :  var_decl_list ) {
     if (d.scope >= 0 && vi.decl == d.decl) {
       // llvm::errs() << "loop local var ref! " << vi.name << '\n';
       vi.is_loop_local = true;
@@ -405,7 +406,7 @@ var_info * TopLevelVisitor::new_var_info(VarDecl *decl) {
 /// Find the the base of a compound variable expression
 ///////////////////////////////////////////////////////////////////
 
-DeclRefExpr * find_base_variable(Expr * E){
+DeclRefExpr * TopLevelVisitor::find_base_variable(Expr * E){
   Expr * RE = E;
 
   while(!dyn_cast<DeclRefExpr>(RE)){
@@ -433,7 +434,7 @@ DeclRefExpr * find_base_variable(Expr * E){
 }
 
 
-bool is_variable_loop_local(VarDecl * decl){
+bool TopLevelVisitor::is_variable_loop_local(VarDecl * decl){
   for (var_decl & d : var_decl_list) {
     if (d.scope >= 0 && decl == d.decl) {
       llvm::errs() << "loop local var ref! \n";

@@ -2,9 +2,9 @@
 #include <iostream>
 #include <string>
 
-#include "toplevelvisitor.h"
-#include "hilapp.h"
 #include "stringops.h"
+#include "hilapp.h"
+#include "toplevelvisitor.h"
 
 
 // helper function to finally resolve site dependence of calls
@@ -52,7 +52,7 @@ public:
   using GeneralVisitor::GeneralVisitor;
 
   bool contains_field;
-  std::list<var_info> vlist;
+
   call_info_struct * this_ci;
 
   // store calls in this function
@@ -68,7 +68,8 @@ public:
 
     contains_field = false;
     is_assignment = false;
-    vlist = {};
+    var_info_list = {};
+    var_decl_list = {};
     calls = {};
     conditional_vars = {};
   }
@@ -184,7 +185,7 @@ public:
 
     bool foundvar = false;
     var_info *vip = nullptr;
-    for (var_info & vi : vlist) {
+    for (var_info & vi : var_info_list) {
       if (vi.decl == decl) {
         // found already referred to decl
         // check if this particular ref has been handled before
@@ -277,8 +278,8 @@ public:
 
     vi.dependent_vars.clear();
 
-    vlist.push_back(vi);
-    return &(vlist.back());
+    var_info_list.push_back(vi);
+    return &(var_info_list.back());
   }
 
 

@@ -29,8 +29,6 @@
 #include "toplevelvisitor.h"
 #include "specialization_db.h"
 
-// global main visitor
-TopLevelVisitor * globalTopLevelVisitor;
 
 //definitions for global variables
 ClassTemplateDecl * field_decl = nullptr; 
@@ -39,8 +37,6 @@ const std::string field_storage_type = "field_storage<";
 const std::string field_type = "Field<";
 std::list<field_ref> field_ref_list = {};
 std::list<field_info> field_info_list = {};
-std::list<var_info> var_info_list = {};
-std::list<var_decl> var_decl_list = {};
 std::list<array_ref> array_ref_list = {};
 std::list<vector_reduction_ref> vector_reduction_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
@@ -545,12 +541,7 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
 
 class MyASTConsumer : public ASTConsumer {
 public:
-  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) {
-
-    // Make the main visitor accessible everywhere with this pointer
-    globalTopLevelVisitor = &Visitor;
-
-  }
+  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) {}
 
 
   // HandleTranslationUnit is called after the AST for the whole TU is completed

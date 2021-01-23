@@ -78,7 +78,7 @@ bool LoopFunctionHandler::VisitVarDecl(VarDecl *var){
 
   } else {
     if(var->hasInit()){
-      LoopAssignChecker lac(TheRewriter, Context);
+      LoopAssignChecker lac(*this);
       lac.TraverseStmt(var->getInit());
     }
   }
@@ -91,7 +91,7 @@ bool LoopFunctionHandler::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *op){
     std::string type = op->getArg(0)->getType().getAsString();
     type = remove_all_whitespace(type);
     if(type.rfind("element<",0) == std::string::npos){
-      LoopAssignChecker lac(TheRewriter, Context);
+      LoopAssignChecker lac(*this);
       lac.TraverseStmt(op);
     }
   }
@@ -103,7 +103,7 @@ bool LoopFunctionHandler::VisitBinaryOperator(BinaryOperator *op){
     std::string type = op->getLHS()->getType().getAsString();
     type = remove_all_whitespace(type);
     if(type.rfind("element<",0) == std::string::npos){
-      LoopAssignChecker lac(TheRewriter, Context);
+      LoopAssignChecker lac(*this);
       lac.TraverseStmt(op);
     }
   }
@@ -169,7 +169,8 @@ void TopLevelVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   }
 
   if(generate_function) for( int vector_size = smallest; vector_size <= largest; vector_size*=2 ){
-    LoopFunctionHandler lfh(TheRewriter, Context);
+
+    LoopFunctionHandler lfh(*this);
     lfh.functionBuffer.copy_from_range(sourceBuf,sr);
     lfh.vector_size = vector_size;
 

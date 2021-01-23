@@ -29,7 +29,8 @@ public:
   srcBuf *loopBuf;
 
   /// Constructor
-  addrOfAndRefChecker(Rewriter &R,ASTContext *C, srcBuf *wb) : GeneralVisitor(R,C) {
+  template <typename visitor_type>
+  addrOfAndRefChecker(visitor_type & v, srcBuf *wb) : GeneralVisitor(v) {
     skip_children = 0;
     loopBuf = wb;
   }
@@ -223,7 +224,7 @@ public:
 ///////////////////////////////////////////////////////////////////////////////////
 void TopLevelVisitor::check_addrofops_and_refs(Stmt * S) {
 
-  addrOfAndRefChecker arf(TheRewriter,Context,writeBuf);
+  addrOfAndRefChecker arf(*this,writeBuf);
   arf.TraverseStmt(S);
 }
 

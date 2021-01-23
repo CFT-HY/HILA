@@ -25,7 +25,8 @@ public:
   bool found_field;
   bool searching_for_field;
 
-  containsSiteLoopChecker(Rewriter &R,ASTContext *C,bool fieldsearch) : GeneralVisitor(R,C) {
+  template <typename visitortype>
+  containsSiteLoopChecker(visitortype & v,bool fieldsearch) : GeneralVisitor(v) {
     found_X = found_field_parity = false;
     searching_for_field = fieldsearch;
   }
@@ -64,7 +65,7 @@ public:
 bool TopLevelVisitor::does_function_contain_loop(FunctionDecl * f) {
 
   if (f->hasBody()) {
-    containsSiteLoopChecker flc(TheRewriter,Context,false);
+    containsSiteLoopChecker flc(*this,false);
     flc.TraverseStmt(f->getBody());
     return (flc.found_X || flc.found_field_parity);
   }
@@ -73,7 +74,7 @@ bool TopLevelVisitor::does_function_contain_loop(FunctionDecl * f) {
 
 
 bool TopLevelVisitor::does_expr_contain_field(Expr *E) {
-  containsSiteLoopChecker flc(TheRewriter,Context,true);
+  containsSiteLoopChecker flc(*this,true);
   flc.TraverseStmt(E);
   return (flc.found_X || flc.found_field_parity || flc.found_field);
 }

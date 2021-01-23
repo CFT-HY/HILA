@@ -25,7 +25,8 @@ public:
   bool found_dependent_var;
   std::vector<var_info *> * depends_on_var;
 
-  isSiteDependentChecker(Rewriter &R, ASTContext *C, std::vector<var_info *> * dep_var) : GeneralVisitor(R,C) {
+  template <typename visitortype>
+  isSiteDependentChecker(visitortype & v, std::vector<var_info *> * dep_var) : GeneralVisitor(v) {
 
     depends_on_var = dep_var;    // we do not clear the vector, because it may contain earlier dependencies
     
@@ -86,7 +87,7 @@ public:
 
 bool GeneralVisitor::is_site_dependent(Expr * e, std::vector<var_info *> * dependent_var) {
 
-  isSiteDependentChecker checker(TheRewriter,Context,dependent_var);
+  isSiteDependentChecker checker(*this,dependent_var);
 
   checker.TraverseStmt(e);
   if (checker.found_X || checker.found_var_depends_on_site || checker.found_X_method ) {

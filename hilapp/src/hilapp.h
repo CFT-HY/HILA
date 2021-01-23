@@ -405,8 +405,6 @@ extern const std::string field_type;
 /// but they contain pointers to list elements.  pointers to vector elems are not good!
 extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;
-extern std::list<var_info> var_info_list;
-extern std::list<var_decl> var_decl_list;
 extern std::list<array_ref> array_ref_list;
 extern std::list<vector_reduction_ref> vector_reduction_ref_list;
 extern std::list<special_function_call> special_function_call_list;

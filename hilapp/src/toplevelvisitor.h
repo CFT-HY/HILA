@@ -242,6 +242,9 @@ public:
   /// Check if the field type is vectorizable and how
   vectorization_info inspect_field_type(Expr *fE);
 
+  DeclRefExpr * find_base_variable(Expr * E);
+
+  bool is_variable_loop_local(VarDecl * decl);
 
   /// Generate a candidate for a kernel name
   std::string make_kernel_name();

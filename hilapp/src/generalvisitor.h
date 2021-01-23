@@ -39,7 +39,7 @@
 ///
 /////////////////////////////////////////////////////////////////////////////////////
 class GeneralVisitor {
-protected:
+public:
 
   /// Reference to the Clang rewriter object
   Rewriter &TheRewriter;
@@ -47,12 +47,33 @@ protected:
   ASTContext *Context;
   /// Store a printing policy. It is required quite often
   PrintingPolicy PP;
-  
+
+  /// store the variables at this level in var_info_list
+  /// use list because there will be pointers to elements and list elems
+  /// do not move
+  std::list<var_info> _var_info_list;
+  std::list<var_info> & var_info_list;
+
+  std::list<var_decl> _var_decl_list;  
+  std::list<var_decl> & var_decl_list;
+
 public:
+  /// Construct from previous visitor - we inherit the lists of the caller
+  template <typename Visitor_type>
+  GeneralVisitor(Visitor_type & caller) 
+      : TheRewriter(caller.TheRewriter), 
+        Context(caller.Context),
+        PP(caller.Context->getLangOpts()),
+        var_info_list(caller.var_info_list),
+        var_decl_list(caller.var_decl_list)  {}
+
   /// Construct with rewriter and context
-  GeneralVisitor(Rewriter &R, ASTContext *C) : TheRewriter(R), PP(C->getLangOpts()) { 
-    Context=C;
-  }
+  GeneralVisitor(Rewriter &R, ASTContext *C) 
+      : TheRewriter(R), 
+        Context(C), 
+        PP(C->getLangOpts()),
+        var_info_list(_var_info_list),
+        var_decl_list(_var_decl_list) {}
 
   Rewriter & getRewriter() { return TheRewriter; }
   ASTContext * getASTContext() { return Context; }
