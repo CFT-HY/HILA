@@ -202,9 +202,8 @@ void TopLevelVisitor::handle_constructor_in_loop(Stmt * s) {
   // Store functions used in loops, recursively...
 
   static std::vector<CXXConstructorDecl *> loop_constructors;
-  SourceManager &SM = Context->getSourceManager();
 
-  bool handle_decl = !SM.isInSystemHeader(decl->getBeginLoc());
+  bool handle_decl = !srcMgr.isInSystemHeader(decl->getBeginLoc());
 
   // check if we already have this declaration - either the pointer is the same
   // or the source location (actually, source location should do all, no need for 
@@ -332,8 +331,8 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 
 bool TopLevelVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   // Check if it is in a system header. If so, skip
-  SourceManager &SM = Context->getSourceManager();
-  bool handle_decl = !SM.isInSystemHeader(fd->getBeginLoc());
+
+  bool handle_decl = !srcMgr.isInSystemHeader(fd->getBeginLoc());
 
   // check if we already have this declaration - either the pointer is the same
   // or the source location (actually, source location should do all, no need for 
@@ -356,7 +355,7 @@ bool TopLevelVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
              llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
              llvm::errs() << '\n';
 
-          llvm::errs() << "decl: " << getRangeText(SM,fd->getSourceRange().getBegin(), 
+          llvm::errs() << "decl: " << getRangeText(srcMgr,fd->getSourceRange().getBegin(), 
                                 findChar(fd->getSourceRange().getBegin(),'\n')) << '\n';
     
       backend_handle_loop_function(fd);

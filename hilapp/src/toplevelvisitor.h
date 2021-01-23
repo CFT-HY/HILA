@@ -13,9 +13,6 @@
 #include "hilapp.h" //global vars needed 
 #include "generalvisitor.h"  // Definitions for the general visitor case
 
-class TopLevelVisitor;
-
-extern TopLevelVisitor * globalTopLevelVisitor;
 
 //////////////////////////////////////////////
 /// toplevelvisitor.h : overloaded ASTVisitor for 
@@ -48,7 +45,9 @@ private:
   } parsing_state;
 
 public:
-  using GeneralVisitor::GeneralVisitor;
+  TopLevelVisitor(Rewriter &R, ASTContext *C) : GeneralVisitor(R,C) {
+    is_top_level = true;
+  }
 
   void reset_parsing_state() {
     parsing_state.skip_children = 0;
@@ -141,11 +140,7 @@ public:
   
   bool handle_field_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X, bool is_func_arg = false);
   
-  var_info * handle_var_ref(DeclRefExpr *E, bool is_assign, const std::string & op, Stmt * assign_stmt = nullptr);
-
   int handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
-
-  var_info * new_var_info(VarDecl *decl);
 
   /// Check that the addressof-operators and reference vars are OK
   void check_addrofops_and_refs(Stmt * S);

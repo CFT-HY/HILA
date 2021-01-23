@@ -101,7 +101,7 @@ void TopLevelVisitor::check_allowed_assignment(Stmt * s) {
 //////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_read,
-                                       bool is_X, bool is_func_arg ) {
+                                          bool is_X, bool is_func_arg ) {
     
   e = e->IgnoreParens();
   field_ref lfe;
@@ -275,130 +275,6 @@ reduction get_reduction_type(bool is_assign,
     if (assignop == "*=") return reduction::PRODUCT;
   }
   return reduction::NONE;
-}
-
-////////////////////////////////////////////////////////////////////////////
-/// This processes references to non-field variables within site loops
-/// if is_assign==true, this is assigned to with assignop and assign_stmt contains
-/// the full assignment op
-////////////////////////////////////////////////////////////////////////////
-
-
-var_info * TopLevelVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
-                                           const std::string &assignop, Stmt * assign_stmt) {
-
-  
-  if (isa<VarDecl>(DRE->getDecl())) {
-    auto decl = dyn_cast<VarDecl>(DRE->getDecl());
-
-    /// we don't want "X" -variable or lattice-> as a kernel parameter
-    clang::QualType typ = decl->getType().getUnqualifiedType().getNonReferenceType();
-    typ.removeLocalConst();
-    if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT LATTICE_STRUCT PTR!!!\n";
-    if (typ.getAsString(PP) == "X_index_type" || 
-        typ.getAsString(PP) == "lattice_struct *") return nullptr;
-
-    var_ref vr;
-    vr.ref = DRE;
-    //vr.ind = writeBuf->markExpr(DRE);
-    vr.is_assigned = is_assign;
-    if (is_assign) vr.assignop = assignop;
-
-
-    bool foundvar = false;
-    var_info *vip = nullptr;
-    for (var_info & vi : var_info_list) {
-      if (vi.decl == decl) {
-        // found already referred to decl
-        // check if this particular ref has been handled before
-        bool foundref = false;
-        for (auto & r : vi.refs) if (r.ref == DRE) {
-          foundref = true;
-          // if old check was not assignment and this is, change status
-          // can happen if var ref is a function "out" argument
-          if (r.is_assigned == false && is_assign == true) {
-            r.is_assigned = true;
-            r.assignop = assignop;
-          }
-          break;
-        }
-        if (!foundref) {
-          // a new reference
-          vi.refs.push_back(vr);
-        }
-        vi.is_assigned |= is_assign;
-        if (vi.reduction_type == reduction::NONE) {
-          vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
-        }
-        vip = &vi;
-        foundvar = true;
-        break;
-      }
-    }
-    if (!foundvar) {
-      // new variable referred to
-      vip = new_var_info(decl);
-
-      vip->refs.push_back(vr);
-      vip->is_assigned = is_assign;
-      // we know refs contains only 1 element
-      vip->reduction_type = get_reduction_type(is_assign, assignop, *vip);
-
-    }
-
-    if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
-      vip->is_site_dependent = is_rhs_site_dependent(assign_stmt, &vip->dependent_vars );
-      
-      // llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
-    }
-    return vip;
-    
-  } else { 
-    // end of VarDecl - how about other decls, e.g. functions?
-    reportDiag(DiagnosticsEngine::Level::Error,
-               DRE->getSourceRange().getBegin(),
-               "Reference to unimplemented (non-variable) type");
-  }
-
-  return nullptr;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-///  Insert the new variable info
-
-
-var_info * TopLevelVisitor::new_var_info(VarDecl *decl) {
-
-  var_info vi;
-  vi.refs = {};
-  vi.decl = decl;
-  vi.name = decl->getName().str();
-  // Printing policy is somehow needed for printing type without "class" id
-  // Unqualified takes away "consts" etc and Canonical typdefs/using.
-  // Also need special handling for element type
-  clang::QualType type = decl->getType().getUnqualifiedType().getNonReferenceType();
-  type.removeLocalConst();
-  vi.type = type.getAsString(PP);
-  vi.type = remove_all_whitespace(vi.type);
-  bool is_elem = (vi.type.find("element<") == 0);
-  vi.type = type.getAsString(PP);
-  if (is_elem) vi.type = "element<" + vi.type + ">";
-  // llvm::errs() << " + Got " << vi.type << '\n';
-
-  // is it loop-local?
-  vi.is_loop_local = false;
-  for (var_decl & d :  var_decl_list ) {
-    if (d.scope >= 0 && vi.decl == d.decl) {
-      // llvm::errs() << "loop local var ref! " << vi.name << '\n';
-      vi.is_loop_local = true;
-      break;
-    }
-  }
-  vi.is_site_dependent = false;  // default case
-  vi.dependent_vars.clear();
-
-  var_info_list.push_back(vi);
-  return &(var_info_list.back());
 }
 
 
@@ -1373,9 +1249,8 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
 }
 
 void TopLevelVisitor::ast_dump_header(const char *s, const SourceRange sr_in) {
-  SourceManager &SM = TheRewriter.getSourceMgr();
   SourceRange sr = sr_in;
-  unsigned linenumber = SM.getSpellingLineNumber(sr.getBegin());
+  unsigned linenumber = srcMgr.getSpellingLineNumber(sr.getBegin());
 
   // check if it is macro
   if (sr.getBegin().isMacroID()) {
@@ -1547,15 +1422,15 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
 
       if (FD->getNameAsString() == "memalloc" && CE->getNumArgs() == 1) {
         SourceLocation sl = CE->getRParenLoc();
-        SourceManager &SM = TheRewriter.getSourceMgr();
+
         // generate new args
-        std::string name(SM.getFilename(sl));
+        std::string name(srcMgr.getFilename(sl));
         std::size_t i = name.rfind('/');
         if (i != std::string::npos) name = name.substr(i);
 
         std::string args(", \"");
         args.append(name).append( "\", " ).append(
-            std::to_string( SM.getSpellingLineNumber(sl)));
+            std::to_string( srcMgr.getSpellingLineNumber(sl)));
 
         // if (!writeBuf->is_edited(sl)) writeBuf->insert(sl,args);
       }
@@ -1855,10 +1730,10 @@ SourceRange TopLevelVisitor::get_func_decl_range(FunctionDecl *f) {
   if (f->hasBody()) {
     SourceLocation a = f->getSourceRange().getBegin();
     SourceLocation b = f->getBody()->getSourceRange().getBegin();
-    SourceManager &SM = TheRewriter.getSourceMgr();
-    while (SM.getFileOffset(b) >= SM.getFileOffset(a)) {
+
+    while (srcMgr.getFileOffset(b) >= srcMgr.getFileOffset(a)) {
       b = b.getLocWithOffset(-1);
-      const char * p = SM.getCharacterData(b);
+      const char * p = srcMgr.getCharacterData(b);
       if (!std::isspace(*p)) break;
     }
     SourceRange r(a,b);
@@ -1969,7 +1844,6 @@ void TopLevelVisitor::check_spec_insertion_point(std::vector<const TemplateArgum
                                               SourceLocation ip, 
                                               FunctionDecl *f) 
 {
-  SourceManager &SM = TheRewriter.getSourceMgr();
 
   for (const TemplateArgument * tap : typeargs) {
     // llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
@@ -1977,7 +1851,7 @@ void TopLevelVisitor::check_spec_insertion_point(std::vector<const TemplateArgum
     // Builtins are fine too
     if (tp && !tp->isBuiltinType()) {
       RecordDecl * rd = tp->getAsRecordDecl();
-      if (rd && SM.isBeforeInTranslationUnit( ip, rd->getSourceRange().getBegin() )) {
+      if (rd && srcMgr.isBeforeInTranslationUnit( ip, rd->getSourceRange().getBegin() )) {
         reportDiag(DiagnosticsEngine::Level::Warning,
                    f->getSourceRange().getBegin(),
     "Specialization point for function appears to be before the declaration of type \'%0\', code might not compile",

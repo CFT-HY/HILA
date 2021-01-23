@@ -59,11 +59,9 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
   } else {
     // TODO - these functions are at least not vectorizable ...
 
-    SourceManager &SM = TheRewriter.getSourceMgr();
-
     llvm::errs() << "FUNC DECL WITHOUT BODY - " << D->getNameAsString() << '\n';
-    llvm::errs() << "  Call appears on line " << SM.getSpellingLineNumber(Call->getBeginLoc())
-        << " in file " << SM.getFilename(Call->getBeginLoc()) << '\n';
+    llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+        << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
   }
 
@@ -158,8 +156,7 @@ void TopLevelVisitor::handle_constructor_in_loop(Stmt * s) {
   // and add the call  to check-up list
   loop_function_calls.push_back(ci);
 
-  SourceManager &SM = Context->getSourceManager();
-  bool handle_decl = !SM.isInSystemHeader(decl->getBeginLoc());
+  bool handle_decl = !srcMgr.isInSystemHeader(decl->getBeginLoc());
   
   // check if we already have this declaration - either the pointer is the same
   // or the source location (actually, source location should do all, no need for 
@@ -238,13 +235,12 @@ call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, Cal
   }
 
   if (D->getNumParams() != Call->getNumArgs()) {
-      SourceManager &SM = Context->getSourceManager();
 
       llvm::errs() << "Internal error: #params != #args, function " << D->getNameAsString() << '\n';
-      llvm::errs() << "  Call appears on line " << SM.getSpellingLineNumber(Call->getBeginLoc())
-                   << " in file " << SM.getFilename(Call->getBeginLoc()) << '\n';
-      llvm::errs() << "  Function is defined on line " << SM.getSpellingLineNumber(D->getBeginLoc())
-                   << " in file " << SM.getFilename(D->getBeginLoc()) << '\n';
+      llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+                   << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
+      llvm::errs() << "  Function is defined on line " << srcMgr.getSpellingLineNumber(D->getBeginLoc())
+                   << " in file " << srcMgr.getFilename(D->getBeginLoc()) << '\n';
 
       exit(1);
   }
@@ -609,8 +605,8 @@ void TopLevelVisitor::process_loop_functions() {
 
 bool TopLevelVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   // Check if it is in a system header. If so, skip
-  SourceManager &SM = Context->getSourceManager();
-  bool handle_decl = !SM.isInSystemHeader(fd->getBeginLoc());
+
+  bool handle_decl = !srcMgr.isInSystemHeader(fd->getBeginLoc());
 
   // check if we already have this declaration - either the pointer is the same
   // or the source location (actually, source location should do all, no need for 

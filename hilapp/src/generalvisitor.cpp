@@ -1,3 +1,4 @@
+#include "stringops.h"
 #include "generalvisitor.h"
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -281,5 +282,135 @@ std::string GeneralVisitor::getPreviousWord( SourceLocation sl, SourceLocation *
   } 
   if (start != nullptr) *start = sl;
   return TheRewriter.getRewrittenText(SourceRange(sl,e));
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////
+/// This processes references to non-field variables within site loops
+/// if is_assign==true, this is assigned to with assignop and assign_stmt contains
+/// the full assignment op
+////////////////////////////////////////////////////////////////////////////
+
+
+var_info * GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
+                                          const std::string &assignop, Stmt * assign_stmt) {
+
+  
+  if (isa<VarDecl>(DRE->getDecl())) {
+    auto decl = dyn_cast<VarDecl>(DRE->getDecl());
+
+    /// we don't want "X" -variable or lattice-> as a kernel parameter
+    clang::QualType typ = decl->getType().getUnqualifiedType().getNonReferenceType();
+    typ.removeLocalConst();
+    if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT LATTICE_STRUCT PTR!!!\n";
+    if (typ.getAsString(PP) == "X_index_type" || 
+        typ.getAsString(PP) == "lattice_struct *") return nullptr;
+
+    var_ref vr;
+    vr.ref = DRE;
+    //vr.ind = writeBuf->markExpr(DRE);
+    vr.is_assigned = is_assign;
+    if (is_assign) vr.assignop = assignop;
+
+
+    bool foundvar = false;
+    var_info *vip = nullptr;
+    for (var_info & vi : var_info_list) {
+      if (vi.decl == decl) {
+        // found already referred to decl
+        // check if this particular ref has been handled before
+        bool foundref = false;
+        for (auto & r : vi.refs) if (r.ref == DRE) {
+          foundref = true;
+          // if old check was not assignment and this is, change status
+          // can happen if var ref is a function "out" argument
+          if (r.is_assigned == false && is_assign == true) {
+            r.is_assigned = true;
+            r.assignop = assignop;
+          }
+          break;
+        }
+        if (!foundref) {
+          // a new reference
+          vi.refs.push_back(vr);
+        }
+        vi.is_assigned |= is_assign;
+        if (is_top_level && vi.reduction_type == reduction::NONE) {
+          vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
+        }
+        vip = &vi;
+        foundvar = true;
+        break;
+      }
+    }
+    if (!foundvar) {
+      // new variable referred to
+      vip = new_var_info(decl);
+
+      vip->refs.push_back(vr);
+      vip->is_assigned = is_assign;
+      // we know refs contains only 1 element
+      if (is_top_level) {
+        vip->reduction_type = get_reduction_type(is_assign, assignop, *vip);
+      }
+
+    }
+
+    if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
+      vip->is_site_dependent = is_rhs_site_dependent(assign_stmt, &vip->dependent_vars );
+      
+      // llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
+    }
+    return vip;
+    
+  } else { 
+    // end of VarDecl - how about other decls, e.g. functions?
+    reportDiag(DiagnosticsEngine::Level::Error,
+               DRE->getSourceRange().getBegin(),
+               "Reference to unimplemented (non-variable) type");
+  }
+
+  return nullptr;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///  Insert the new variable info
+
+
+var_info * GeneralVisitor::new_var_info(VarDecl *decl) {
+
+  var_info vi;
+  vi.refs = {};
+  vi.decl = decl;
+  vi.name = decl->getName().str();
+  // Printing policy is somehow needed for printing type without "class" id
+  // Unqualified takes away "consts" etc and Canonical typdefs/using.
+  // Also need special handling for element type
+  clang::QualType type = decl->getType().getUnqualifiedType().getNonReferenceType();
+  type.removeLocalConst();
+  vi.type = type.getAsString(PP);
+  vi.type = remove_all_whitespace(vi.type);
+  bool is_elem = (vi.type.find("element<") == 0);
+  vi.type = type.getAsString(PP);
+  if (is_elem) vi.type = "element<" + vi.type + ">";
+  // llvm::errs() << " + Got " << vi.type << '\n';
+
+  // is it loop-local?
+  vi.is_loop_local = false;
+  for (var_decl & d :  var_decl_list ) {
+    if (d.scope >= 0 && vi.decl == d.decl) {
+      // llvm::errs() << "loop local var ref! " << vi.name << '\n';
+      vi.is_loop_local = true;
+      break;
+    }
+  }
+  vi.is_site_dependent = false;  // default case
+  vi.reduction_type = reduction::NONE;
+
+  vi.dependent_vars.clear();
+
+  var_info_list.push_back(vi);
+  return &(var_info_list.back());
 }
 

@@ -452,6 +452,8 @@ public:
 
 };   // PPCallbacks
 
+/// General "has pragma hila" routine, can be called from any routine
+/// Checks if the sourcelocation is preceded by #pragma hila
 
 bool has_pragma_hila(const SourceManager & SM, SourceLocation loc, 
                      std::string & args, SourceLocation & pragmaloc ) {
@@ -505,7 +507,14 @@ struct file_buffer {
   FileID fid;
 };
 
+/////////////////////////////////////////////////////////////////////////////
+/// Global variable where the file buffers are hanging
+
 std::list<file_buffer> file_buffer_list = {};
+
+/////////////////////////////////////////////////////////////////////////////
+/// get the file buffer for the file; create if it does not exist
+/////////////////////////////////////////////////////////////////////////////
 
 srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   for (file_buffer & fb : file_buffer_list) {

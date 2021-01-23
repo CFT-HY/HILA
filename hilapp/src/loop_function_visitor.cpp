@@ -63,6 +63,7 @@ public:
   bool is_assginment, is_compound_assign;
   Stmt * assign_stmt;
 
+  // use the constructor which does not inherit var_info_list and var_decl_list
 
   loopFunctionVisitor(Rewriter &R, ASTContext *C) : GeneralVisitor(R,C) {
 
@@ -174,7 +175,7 @@ public:
   /// and variable refs - pretty much copied from myastvisitor
   //////////////////////////////////////////////////////////////////////////////////
 
-  void handle_var_ref(DeclRefExpr * DRE, VarDecl *decl) {
+  void x_handle_var_ref(DeclRefExpr * DRE, VarDecl *decl) {
 
     var_ref vr;
     vr.ref = DRE;
@@ -232,7 +233,7 @@ public:
 
   //////////////////////////////////////////////////////////////////////////////////////
 
-  var_info * new_var_info(VarDecl *decl) {
+  var_info * x_new_var_info(VarDecl *decl) {
 
     var_info vi;
     vi.refs = {};
@@ -325,10 +326,9 @@ public:
     } else {
       // TODO - these functions are at least not vectorizable ...
 
-      SourceManager &SM = TheRewriter.getSourceMgr();
       llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " << D->getNameAsString() << '\n';
-      llvm::errs() << "  Call appears on line " << SM.getSpellingLineNumber(Call->getBeginLoc())
-          << " in file " << SM.getFilename(Call->getBeginLoc()) << '\n';
+      llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+          << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
     }
 

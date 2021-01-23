@@ -39,22 +39,38 @@
 ///
 /////////////////////////////////////////////////////////////////////////////////////
 class GeneralVisitor {
-public:
+
+private:
+
+  // put stubs of these variables here.  These are either unused or 
+  // _lists below will point to these
+
+  std::list<var_info> _var_info_list;
+  std::list<var_decl> _var_decl_list;  
+
+protected:
 
   /// Reference to the Clang rewriter object
   Rewriter &TheRewriter;
+
   /// Store the context pointer
   ASTContext *Context;
+  
+  /// SourceManager is used all over the place
+  SourceManager & srcMgr;
+
   /// Store a printing policy. It is required quite often
   PrintingPolicy PP;
+
+  /// are we on TopLevelVisitor
+  bool is_top_level = false;
 
   /// store the variables at this level in var_info_list
   /// use list because there will be pointers to elements and list elems
   /// do not move
-  std::list<var_info> _var_info_list;
+  
   std::list<var_info> & var_info_list;
 
-  std::list<var_decl> _var_decl_list;  
   std::list<var_decl> & var_decl_list;
 
 public:
@@ -64,13 +80,15 @@ public:
       : TheRewriter(caller.TheRewriter), 
         Context(caller.Context),
         PP(caller.Context->getLangOpts()),
+        srcMgr(caller.srcMgr),
         var_info_list(caller.var_info_list),
         var_decl_list(caller.var_decl_list)  {}
 
   /// Construct with rewriter and context
   GeneralVisitor(Rewriter &R, ASTContext *C) 
       : TheRewriter(R), 
-        Context(C), 
+        Context(C),
+        srcMgr(R.getSourceMgr()),
         PP(C->getLangOpts()),
         var_info_list(_var_info_list),
         var_decl_list(_var_decl_list) {}
@@ -206,6 +224,11 @@ public:
 
   /// jump over following () expr
   SourceLocation skipParens( SourceLocation sl);
+
+  var_info * handle_var_ref(DeclRefExpr *E, bool is_assign, const std::string & op,
+                            Stmt * assign_stmt = nullptr);
+
+  var_info * new_var_info(VarDecl *decl);
 
 
 };
