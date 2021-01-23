@@ -325,6 +325,7 @@ struct loop_info_struct {
 /// Stores information about loop function function arguments
 struct argument_info {
   Expr * E;
+  const ParmVarDecl * PV;
   std::vector<var_info *> dependent_vars;
   bool is_lvalue;
   bool is_site_dependent;
@@ -337,11 +338,13 @@ struct call_info_struct {
   CXXConstructExpr * constructor;
   CXXConstructorDecl * ctordecl;
   std::vector<argument_info> arguments;
+  Expr * condExpr;
   argument_info object;
   bool is_operator;
   bool is_method;
   bool is_vectorizable;
   bool is_site_dependent;
+  bool has_site_dependent_conditional;
   bool contains_random;
 
   call_info_struct() {
@@ -351,6 +354,7 @@ struct call_info_struct {
     ctordecl = nullptr;
     arguments.clear();
     is_method = is_operator = is_site_dependent = contains_random = false;
+    has_site_dependent_conditional = false;
     is_vectorizable = true;
   }
 };
@@ -382,7 +386,6 @@ void reset_vectorizable_types();
 
 /// and clear loop function info
 void clear_loop_functions_in_compilation_unit();
-
 
 
 /// take global CI just in case

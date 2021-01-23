@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "hilapp.h"
 #include "stringops.h"
 
@@ -55,6 +55,10 @@ public:
   std::list<var_info> vlist;
   call_info_struct * this_ci;
 
+  // store calls in this function
+  std::vector<call_info_struct> calls;
+  std::vector<var_info *> conditional_vars;
+
   std::string assignment_op;
   bool is_assginment, is_compound_assign;
   Stmt * assign_stmt;
@@ -65,18 +69,61 @@ public:
     contains_field = false;
     is_assignment = false;
     vlist = {};
+    calls = {};
+    conditional_vars = {};
   }
+
 
   
   bool VisitStmt(Stmt *s) { 
+
+    // flag assignments from Stmt
     if (is_assignment_expr(s, &assignment_op, is_compound_assign)) {
       // This checks the "element<> -style assigns which we do not want now!
       assign_stmt = s;
       is_assignment = true;
       // next visit to declrefexpr will be to the assigned to variable
+      return true;
     }
+    
+    // further function calls
+    if( is_function_call_stmt(s) ){
+
+
+      handle_function_call_in_loop(s);
+
+
+    // And conditional stmts
+    if (!this_ci->has_site_dependent_conditional) {
+      Expr * condexpr = nullptr;
+      if      (IfStmt    * IS = dyn_cast<IfStmt>(s))     condexpr = IS->getCond();
+      else if (ForStmt   * FS = dyn_cast<ForStmt>(s))    condexpr = FS->getCond();
+      else if (WhileStmt * WS = dyn_cast<WhileStmt>(s))  condexpr = WS->getCond();
+      else if (DoStmt    * DS = dyn_cast<DoStmt>(s))     condexpr = DS->getCond();
+      else if (SwitchStmt* SS = dyn_cast<SwitchStmt>(s)) condexpr = SS->getCond();
+      else if (ConditionalOperator * CO = dyn_cast<ConditionalOperator>(s)) 
+                                                         condexpr = CO->getCond();
+
+      if (condexpr != nullptr) {
+        this_ci->has_site_dependent_conditional = 
+          is_site_dependent(condexpr, &conditional_vars);
+        if (this_ci->has_site_dependent_conditional) {
+          this_ci->condExpr = condexpr;
+        }
+      }
+
+      return true;
+    }
+
+
+
     return true;
   }
+
+  //////////////////////////////////////////////////////////////////////////
+  /// variable references are found here
+  //////////////////////////////////////////////////////////////////////////
+
 
   bool VisitDeclRefExpr(DeclRefExpr * e) {
     /// if we see X or field, not good for loop function
@@ -131,8 +178,8 @@ public:
     var_ref vr;
     vr.ref = DRE;
     //vr.ind = writeBuf->markExpr(DRE);
-    vr.is_assigned = is_assign;
-    if (is_assign) vr.assignop = assignop;
+    vr.is_assigned = is_assignment;
+    if (is_assign) vr.assignop = assignment_op;
 
 
     bool foundvar = false;
@@ -156,10 +203,8 @@ public:
           // a new reference
           vi.refs.push_back(vr);
         }
-        vi.is_assigned |= is_assign;
-        if (vi.reduction_type == reduction::NONE) {
-          vi.reduction_type = get_reduction_type(is_assign, assignop, vi);
-        }
+        vi.is_assigned |= is_assignment;
+        vi.reduction_type = reduction::NONE
         vip = &vi;
         foundvar = true;
         break;
@@ -170,27 +215,21 @@ public:
       vip = new_var_info(decl);
 
       vip->refs.push_back(vr);
-      vip->is_assigned = is_assign;
+      vip->is_assigned = is_assignment;
     }
 
-    if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
+    if (is_assignment && assign_stmt != nullptr && !vip->is_site_dependent) {
       vip->is_site_dependent = is_rhs_site_dependent(assign_stmt, &vip->dependent_vars );
       
       // llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
     }
-    return vip;
-    
-  } else { 
-    // end of VarDecl - how about other decls, e.g. functions?
-    reportDiag(DiagnosticsEngine::Level::Error,
-               DRE->getSourceRange().getBegin(),
-               "Reference to unimplemented (non-variable) type");
+
+    is_assignment = false;  // not an assignment any more
+
+    return;
   }
 
-  return nullptr;
-    // do something here!  Are there vectorization issues?
-
-  }
+  //////////////////////////////////////////////////////////////////////////////////////
 
   var_info * new_var_info(VarDecl *decl) {
 
@@ -202,32 +241,50 @@ public:
     // Unqualified takes away "consts" etc and Canonical typdefs/using.
     // Also need special handling for element type
     clang::QualType type = decl->getType().getUnqualifiedType().getNonReferenceType();
-    type.removeLocalConst();
-    vi.type = type.getAsString(PP);
+    vi.type = type.removeLocalConst().getAsString(PP);
     vi.type = remove_all_whitespace(vi.type);
     bool is_elem = (vi.type.find("element<") == 0);
     vi.type = type.getAsString(PP);
     if (is_elem) vi.type = "element<" + vi.type + ">";
     // llvm::errs() << " + Got " << vi.type << '\n';
 
-    // is it loop-local?
-    vi.is_loop_local = false;
-    for (var_decl & d : var_decl_list) {
-      if (d.scope >= 0 && vi.decl == d.decl) {
-        // llvm::errs() << "loop local var ref! " << vi.name << '\n';
-        vi.is_loop_local = true;
-        break;
-      }
-    }
+    vi.is_loop_local = true;
+
     vi.is_site_dependent = false;  // default case
+
+    // if this is a parameter var decl, mark the site dep.
+    if (decl->isLocalVarDeclOrParm() && !decl->isLocalVarDecl()) {
+      ParmVarDecl * pv = dyn_cast<ParmVarDecl>(decl);
+      // decl is now parameter var
+      llvm::errs() << "FOUND PARAMETER VAR " << vi.name << " of type " << vi.type;
+
+      bool found = false;
+      for (auto & arg : this_ci->arguments) {
+        if (arg.PV == pv) {
+          vi.is_site_dependent = arg.is_site_dependent;
+          llvm::errs() << " site dep " << vi.is_site_dependent;
+          found = true;
+          break;
+        }
+      }
+      llvm::errs() << '\n';
+
+      if (!found) {
+        llvm::errs() << " ERROR: PARAMETER NOT FOUND IN CALLINFO!  EXIT HERE\n";
+        exit(1);
+      }      
+    }
+
     vi.dependent_vars.clear();
 
-    var_info_list.push_back(vi);
-    return &(var_info_list.back());
+    vlist.push_back(vi);
+    return &(vlist.back());
   }
 
 
-
+  ///////////////////////////////////////////////////////////////////////////////////
+  /// Check non-trivial declarations
+  ///////////////////////////////////////////////////////////////////////////////////
 
   bool VisitDecl(Decl *D) {
 
@@ -246,8 +303,49 @@ public:
     return true;
   }
 
+  void handle_function_call(Stmt * s) {
+
+    // Get the call expression
+    CallExpr *Call = dyn_cast<CallExpr>(s);
+    
+    // Handle special loop functions
+    if( handle_special_functions(Call) ){
+      return;
+    }
+
+    // Get the declaration of the function
+    Decl* decl = Call->getCalleeDecl();
+    FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
+
+    bool contains_rng = false;
+    if (D->hasBody()) {
+      // trivially site dep if it has random
+      contains_rng = contains_random(D->getBody());
+    } else {
+      // TODO - these functions are at least not vectorizable ...
+
+      SourceManager &SM = TheRewriter.getSourceMgr();
+      llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " << D->getNameAsString() << '\n';
+      llvm::errs() << "  Call appears on line " << SM.getSpellingLineNumber(Call->getBeginLoc())
+          << " in file " << SM.getFilename(Call->getBeginLoc()) << '\n';
+
+    }
+
+    // check the arg list
+    call_info_struct ci = handle_loop_function_args(D,Call,contains_rng);
+    ci.call = Call;
+    ci.decl = D;
+    ci.contains_random = contains_rng;
+    
+    /// add to function calls to be checked ...
+    calls.push_back(ci);
+  }
+  
 
 
+  ///////////////////////////////////////////////////////////////////////////////////
+  /// Loop through functions seen
+  ///////////////////////////////////////////////////////////////////////////////////
 
 
   void visit_calls( std::vector<call_info_struct> & calls ) {
@@ -316,7 +414,10 @@ public:
 
 
 
-void MyASTVisitor::visit_loop_functions( std::vector<call_info_struct> & calls ) {
+
+
+
+void TopLevelVisitor::visit_loop_functions( std::vector<call_info_struct> & calls ) {
 
 
   visited_decls.clear();

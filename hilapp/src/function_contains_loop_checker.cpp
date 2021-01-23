@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "hilapp.h"
 
 
@@ -61,7 +61,7 @@ public:
 /// And loop checker interface here
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::does_function_contain_loop(FunctionDecl * f) {
+bool TopLevelVisitor::does_function_contain_loop(FunctionDecl * f) {
 
   if (f->hasBody()) {
     containsSiteLoopChecker flc(TheRewriter,Context,false);
@@ -72,7 +72,7 @@ bool MyASTVisitor::does_function_contain_loop(FunctionDecl * f) {
 }
 
 
-bool MyASTVisitor::does_expr_contain_field(Expr *E) {
+bool TopLevelVisitor::does_expr_contain_field(Expr *E) {
   containsSiteLoopChecker flc(TheRewriter,Context,true);
   flc.TraverseStmt(E);
   return (flc.found_X || flc.found_field_parity || flc.found_field);

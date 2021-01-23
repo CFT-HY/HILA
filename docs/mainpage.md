@@ -314,8 +314,8 @@ Backends are primarily implemented in three places.
 First, in HilaPP, loop generation and loop function handling code is in the files
 `hilapp/src/codegen_*.cpp`.
 The code generation functions are called in
-[backend_handle_loop_function](@ref MyASTVisitor::backend_handle_loop_function)
-and [backend_generate_code](@ref MyASTVisitor::backend_generate_code).
+[backend_handle_loop_function](@ref TopLevelVisitor::backend_handle_loop_function)
+and [backend_generate_code](@ref TopLevelVisitor::backend_generate_code).
 
 In order to define a new backend, you should edit the two functions above, implement the code
 generation function and add any new files to `hilapp/Makefile`.
@@ -326,7 +326,7 @@ definitions in `defs.h` and possible an extension of the lattice class in `latti
 These are included in `libraries/plumbing/field_storage.h`, `libraries/plumbing/defs.h`
 and `libraries/plumbing/lattice.h` respectively.
 
-A new backend should implement at least the [field storage](@ref MyASTVisitor::field_storage)
+A new backend should implement at least the [field storage](@ref TopLevelVisitor::field_storage)
 class. The new file needs to be included in `libraries/plumbing/field_storage.h`.
 
 Finally, `libraries/platforms` has a collection of makefiles, chosen by the `ARCH`

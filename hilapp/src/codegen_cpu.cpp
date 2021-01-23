@@ -23,7 +23,7 @@
 //#include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "stringops.h"
 
 extern std::string looping_var;
@@ -32,7 +32,7 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 
-std::string MyASTVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait_loops) {
+std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait_loops) {
   std::stringstream code;
 
   // Set loop lattice

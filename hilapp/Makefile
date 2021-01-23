@@ -101,7 +101,7 @@ BINDIR := bin
 HEADERS = \
   $(SRCDIR)/hilapp.h \
   $(SRCDIR)/generalvisitor.h \
-  $(SRCDIR)/myastvisitor.h \
+  $(SRCDIR)/toplevelvisitor.h \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \
   $(SRCDIR)/optionsparser.h \
@@ -118,7 +118,7 @@ OBJECTS = \
   $(BUILDDIR)/codegen_openacc.o \
   $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/generalvisitor.o \
-  $(BUILDDIR)/myastvisitor.o \
+  $(BUILDDIR)/toplevelvisitor.o \
   $(BUILDDIR)/loop_function_new.o \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site.o \

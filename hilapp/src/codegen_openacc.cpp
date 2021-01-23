@@ -23,7 +23,7 @@
 //#include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "stringops.h"
 
 extern std::string looping_var;
@@ -31,7 +31,7 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 // add pragma
-void MyASTVisitor::handle_loop_function_openacc(FunctionDecl *fd) {
+void TopLevelVisitor::handle_loop_function_openacc(FunctionDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
@@ -39,7 +39,7 @@ void MyASTVisitor::handle_loop_function_openacc(FunctionDecl *fd) {
     sb->insert(sl, "#pragma acc routine \n",true,true);
 }
 // Add pragma to constructor too?
-void MyASTVisitor::handle_loop_constructor_openacc(CXXConstructorDecl *fd) {
+void TopLevelVisitor::handle_loop_constructor_openacc(CXXConstructorDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
@@ -47,7 +47,7 @@ void MyASTVisitor::handle_loop_constructor_openacc(CXXConstructorDecl *fd) {
     sb->insert(sl, "#pragma acc routine \n",true,true);
 }
 
-void MyASTVisitor::generate_openacc_loop_header(std::stringstream & code) {
+void TopLevelVisitor::generate_openacc_loop_header(std::stringstream & code) {
 
   // Add openacc pragmas
   code << "#pragma acc parallel loop";

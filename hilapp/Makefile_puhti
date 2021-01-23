@@ -90,7 +90,7 @@ BUILDDIR := build
 
 HEADERS = \
   $(SRCDIR)/hilapp.h \
-  $(SRCDIR)/myastvisitor.h \
+  $(SRCDIR)/toplevelvisitor.h \
   $(SRCDIR)/srcbuf.h \
   $(SRCDIR)/stringops.h \
   $(SRCDIR)/optionsparser.h \

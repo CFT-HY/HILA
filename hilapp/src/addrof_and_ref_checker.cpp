@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "hilapp.h"
 
 
@@ -34,7 +34,7 @@ public:
     loopBuf = wb;
   }
 
-  /// implement the "skip_children" method from MyASTVisitor also here
+  /// implement the "skip_children" method from TopLevelVisitor also here
   bool TraverseStmt(Stmt *S) {  
     if (skip_children > 0) skip_children++;    
     if (!skip_children) RecursiveASTVisitor<addrOfAndRefChecker>::TraverseStmt(S);
@@ -42,7 +42,7 @@ public:
     return true;
   }
 
-  /// implement the "skip_children" method from MyASTVisitor also here
+  /// implement the "skip_children" method from TopLevelVisitor also here
   bool TraverseDecl(Decl *D) {
     if (skip_children > 0) skip_children++;    
     if (!skip_children) RecursiveASTVisitor<addrOfAndRefChecker>::TraverseDecl(D);
@@ -221,7 +221,7 @@ public:
 ///////////////////////////////////////////////////////////////////////////////////
 /// And loop checker interface here
 ///////////////////////////////////////////////////////////////////////////////////
-void MyASTVisitor::check_addrofops_and_refs(Stmt * S) {
+void TopLevelVisitor::check_addrofops_and_refs(Stmt * S) {
 
   addrOfAndRefChecker arf(TheRewriter,Context,writeBuf);
   arf.TraverseStmt(S);

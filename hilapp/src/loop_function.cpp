@@ -1,4 +1,4 @@
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "hilapp.h"
 #include "clang/Analysis/CallGraph.h"
 #include <sstream>
@@ -13,7 +13,7 @@ std::vector<FunctionDecl *> loop_functions = {};
 // any field references.
 // Assume non-const references can be assigned to.
 
-void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
+void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
 
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
@@ -136,7 +136,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 
 // this one not used now...
 
-void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
+void TopLevelVisitor::handle_member_call_in_loop(Stmt * s) {
 
   // Get the call expression
   CXXMemberCallExpr *Call = dyn_cast<CXXMemberCallExpr>(s);
@@ -184,7 +184,7 @@ void MyASTVisitor::handle_member_call_in_loop(Stmt * s) {
 
 
 
-void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
+void TopLevelVisitor::handle_constructor_in_loop(Stmt * s) {
 
   // Get the call expression
   CXXConstructExpr *CtorE = dyn_cast<CXXConstructExpr>(s);
@@ -233,7 +233,7 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 }
 
 
-bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
+bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
   // If the function is in a list of defined loop functions, add it to a list
   // Return true if the expression is a special function
 
@@ -330,7 +330,7 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
 /// Utility for checking if need to handle decls and do it
 ///////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
+bool TopLevelVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   // Check if it is in a system header. If so, skip
   SourceManager &SM = Context->getSourceManager();
   bool handle_decl = !SM.isInSystemHeader(fd->getBeginLoc());
@@ -373,7 +373,7 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
 /// Returns true if OK to be included; false (and flags error) if not
 ////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::loop_function_check(Decl *d) {
+bool TopLevelVisitor::loop_function_check(Decl *d) {
   assert(d != nullptr);
   
   FunctionDecl *fd = dyn_cast<FunctionDecl>(d);

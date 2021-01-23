@@ -26,8 +26,11 @@
 #include "hilapp.h"
 #include "optionsparser.h"
 #include "stringops.h"
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "specialization_db.h"
+
+// global main visitor
+TopLevelVisitor * globalTopLevelVisitor;
 
 //definitions for global variables
 ClassTemplateDecl * field_decl = nullptr; 
@@ -295,7 +298,7 @@ public:
   /// If pragma is "skip" it marks the tranlation unit for skipping.
   ///
   /// Note that pragmas where the code location is important are handled in 
-  /// MyASTVisitor::has_pragma(). 
+  /// TopLevelVisitor::has_pragma(). 
 
 
 
@@ -449,7 +452,10 @@ public:
   //   void SourceRangeSkipped(SourceRange Range, SourceLocation endLoc) {
   //     // llvm::errs() << "RANGE skipped\n";
   //   }
+
+
 };   // PPCallbacks
+
 
 bool has_pragma_hila(const SourceManager & SM, SourceLocation loc, 
                      std::string & args, SourceLocation & pragmaloc ) {
@@ -531,11 +537,20 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   return( &file_buffer_list.back().sbuf );
 }
 
+/////////////////////////////////////////////////////////////////////////////////
 /// Implementation of the ASTConsumer interface for reading an AST produced
 /// by the Clang parser.
+/// This starts the main AST Visitor too
+/////////////////////////////////////////////////////////////////////////////////
+
 class MyASTConsumer : public ASTConsumer {
 public:
-  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) { }
+  MyASTConsumer(Rewriter &R, ASTContext *C) : Visitor(R,C) {
+
+    // Make the main visitor accessible everywhere with this pointer
+    globalTopLevelVisitor = &Visitor;
+
+  }
 
 
   // HandleTranslationUnit is called after the AST for the whole TU is completed
@@ -598,7 +613,7 @@ public:
 
 
 private:
-  MyASTVisitor Visitor;
+  TopLevelVisitor Visitor;
 
 };
 

@@ -34,7 +34,7 @@
 /// 
 /// exampleVisitor ev(TheRewriter,Context, .... );
 ///    // here TheRewriter is of type Rewriter &, Context of type ASTContext *  
-///    // these are defined in MyASTVisitor, so this works directly there
+///    // these are defined in TopLevelVisitor, so this works directly there
 /// ev.TraverseStmt( .. some Stmt * variable ..);   // or TraverseDecl or some other Traverse
 ///
 /////////////////////////////////////////////////////////////////////////////////////
@@ -167,6 +167,25 @@ public:
   bool isStmtWithSemicolon(Stmt * S);
   
   parity get_parity_val(const Expr *pExpr);
+
+  /// utility used in inserting stuff after new line in buffer
+  // SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
+  /// another utility (cannot trust r.getEnd())
+  SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
+
+  // get next char and loc, while skipping comments
+  SourceLocation getNextLoc(SourceLocation sl,bool forward = true);
+
+  char getChar(SourceLocation sl);
+  SourceLocation findChar(SourceLocation sl, char ch);
+
+  // get next word or symbol, if it is not a legal name symbol
+  std::string getNextWord(SourceLocation sl, SourceLocation *end = nullptr);
+  std::string getPreviousWord(SourceLocation sl, SourceLocation *start = nullptr);
+
+  /// jump over following () expr
+  SourceLocation skipParens( SourceLocation sl);
+
 
 };
 

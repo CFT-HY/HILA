@@ -23,7 +23,7 @@
 //#include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "stringops.h"
 
 extern std::string looping_var;
@@ -33,7 +33,7 @@ extern std::string parity_in_this_loop;
 
 
 // Add the __host__ __device__ keywords to functions called a loop
-void MyASTVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
+void TopLevelVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
@@ -44,7 +44,7 @@ void MyASTVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
   sb->insert(sl, "__device__ __host__ ",true,true);
 }
 
-void MyASTVisitor::handle_loop_constructor_cuda(CXXConstructorDecl *fd) {
+void TopLevelVisitor::handle_loop_constructor_cuda(CXXConstructorDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
@@ -57,7 +57,7 @@ void MyASTVisitor::handle_loop_constructor_cuda(CXXConstructorDecl *fd) {
 
 
 /// Help routine to write (part of) a name for a kernel
-std::string MyASTVisitor::make_kernel_name() {
+std::string TopLevelVisitor::make_kernel_name() {
   return 
     "kernel_"
     + clean_name(global.currentFunctionDecl
@@ -69,7 +69,7 @@ std::string MyASTVisitor::make_kernel_name() {
 
 
 
-std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait_loops) {
+std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait_loops) {
   
   // "Code" is inserted at the location of the loop statement
   // and the kernel is build in "kernel"
@@ -77,7 +77,7 @@ std::string MyASTVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, src
   const std::string t = loopBuf.dump();
 
   // Get kernel name - use line number or file offset (must be deterministic)
-  std::string kernel_name = MyASTVisitor::make_kernel_name();
+  std::string kernel_name = TopLevelVisitor::make_kernel_name();
 
 
   // Wait for the communication to finish

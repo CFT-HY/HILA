@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "hilapp.h"
 
 
@@ -54,7 +54,7 @@ public:
     return true;
   }
 
-  // need to do new "starter pack" here, because the MyASTVisitor version not callable here
+  // need to do new "starter pack" here, because the TopLevelVisitor version not callable here
   bool contains_random(Stmt *s) {
     containsRandomChecker chkagain(TheRewriter,Context);
     chkagain.TraverseStmt(s);

@@ -1,4 +1,4 @@
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "hilapp.h"
 #include "stringops.h"
 #include "specialization_db.h"
@@ -73,7 +73,7 @@ bool LoopAssignChecker::VisitDeclRefExpr(DeclRefExpr *e) {
 }
 
 /// Check if an assignment is allowed -- IS THIS NOW SUPERFLUOUS?
-void MyASTVisitor::check_allowed_assignment(Stmt * s) {
+void TopLevelVisitor::check_allowed_assignment(Stmt * s) {
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if(OP->getNumArgs() == 2){
       // Walk the right hand side to check for element types. None are allowed.
@@ -99,7 +99,7 @@ void MyASTVisitor::check_allowed_assignment(Stmt * s) {
 /// is_func_arg: expression is a lvalue-argument (non-const. reference) to function
 //////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_read,
+bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_read,
                                        bool is_X, bool is_func_arg ) {
     
   e = e->IgnoreParens();
@@ -283,7 +283,7 @@ reduction get_reduction_type(bool is_assign,
 ////////////////////////////////////////////////////////////////////////////
 
 
-var_info * MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
+var_info * TopLevelVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
                                         const std::string &assignop, Stmt * assign_stmt) {
 
   
@@ -366,7 +366,7 @@ var_info * MyASTVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
 ///  Insert the new variable info
 
 
-var_info * MyASTVisitor::new_var_info(VarDecl *decl) {
+var_info * TopLevelVisitor::new_var_info(VarDecl *decl) {
 
   var_info vi;
   vi.refs = {};
@@ -446,7 +446,7 @@ bool is_variable_loop_local(VarDecl * decl){
 
 
 // handle an array subscript expression
-int MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
+int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
                                         bool is_assign,
                                         std::string &assignop) {
                                           
@@ -527,7 +527,7 @@ int MyASTVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
 /// "parity" -loops
 ///////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
+bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   // init edit buffer
   // Buf.create( &TheRewriter, ls );
           
@@ -596,7 +596,7 @@ bool MyASTVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
 ///  from VisitStmt() if the status state::in_loop_body is true
 ////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
+bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
 
   // This keeps track of the assignment to field
   // must remember the set value across calls
@@ -824,7 +824,8 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
  
   // start {...} -block or other compound
   if (isa<CompoundStmt>(s) || isa<ForStmt>(s) || isa<IfStmt>(s)
-      || isa<WhileStmt>(s) || isa<DoStmt>(s)) {
+      || isa<WhileStmt>(s) || isa<DoStmt>(s)  || isa<SwitchStmt>(s)
+      || isa<ConditionalOperator>(s)) {
 
     static bool passthrough = false;
     // traverse each stmt - use passthrough trick if needed
@@ -844,10 +845,13 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
     // check also the conditionals - are these site dependent?
     if (!loop_info.has_site_dependent_conditional) {
       Expr * condexpr = nullptr;
-      if      (IfStmt    * IS = dyn_cast<IfStmt>(s))    condexpr = IS->getCond();
-      else if (ForStmt   * FS = dyn_cast<ForStmt>(s))   condexpr = FS->getCond();
-      else if (WhileStmt * WS = dyn_cast<WhileStmt>(s)) condexpr = WS->getCond();
-      else if (DoStmt    * DS = dyn_cast<DoStmt>(s))    condexpr = DS->getCond();
+      if      (IfStmt    * IS = dyn_cast<IfStmt>(s))     condexpr = IS->getCond();
+      else if (ForStmt   * FS = dyn_cast<ForStmt>(s))    condexpr = FS->getCond();
+      else if (WhileStmt * WS = dyn_cast<WhileStmt>(s))  condexpr = WS->getCond();
+      else if (DoStmt    * DS = dyn_cast<DoStmt>(s))     condexpr = DS->getCond();
+      else if (SwitchStmt* SS = dyn_cast<SwitchStmt>(s)) condexpr = SS->getCond();
+      else if (ConditionalOperator * CO = dyn_cast<ConditionalOperator>(s)) 
+                                                         condexpr = CO->getCond();
 
       if (condexpr != nullptr) {
         loop_info.has_site_dependent_conditional = 
@@ -876,7 +880,7 @@ bool MyASTVisitor::handle_loop_body_stmt(Stmt * s) {
 ////////////////////////////////////////////////////////////////////////////
 
 
-int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
+int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
   // save global, perhaps needed (perhaps not)
   field_decl = D;
 
@@ -913,64 +917,6 @@ int MyASTVisitor::handle_field_specializations(ClassTemplateDecl *D) {
 } // end of "field"
 
 ///////////////////////////////////////////////////////////////////////////////////
-/// Source Location utilities
-///////////////////////////////////////////////////////////////////////////////////
-
-
-SourceLocation MyASTVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
-  int i = TheRewriter.getRangeSize(r);
-  return r.getBegin().getLocWithOffset(i-1);
-}
-
-/// get next character and sourcelocation, while skipping comments
-
-SourceLocation MyASTVisitor::getNextLoc(SourceLocation sl, bool forward) {
-  return ::getNextLoc(TheRewriter.getSourceMgr(),sl,forward);
-}
-
-
-char MyASTVisitor::getChar(SourceLocation sl) {
-  return ::getChar(TheRewriter.getSourceMgr(),sl);
-}
-
-// Find the location of the next searched for char.  
-SourceLocation MyASTVisitor::findChar( SourceLocation sloc, char ct) {
-  return ::findChar(TheRewriter.getSourceMgr(),sloc,ct);
-}
-
-/// Skip paren expression following sl, points after the paren
-
-SourceLocation MyASTVisitor::skipParens( SourceLocation sl ) {
-  return ::skipParens(TheRewriter.getSourceMgr(),sl);
-}  
-
-/// Get next word starting from sl
-
-std::string MyASTVisitor::getNextWord( SourceLocation sl, SourceLocation *end ) {
-  return ::getNextWord(TheRewriter.getSourceMgr(), sl, end); 
-}
-
-
-/// Get prev word starting from sl - 
-
-std::string MyASTVisitor::getPreviousWord( SourceLocation sl, SourceLocation *start ) {
-  while (std::isspace(getChar(sl))) sl = getNextLoc(sl,false);  // skip spaces
-  
-  SourceLocation e = sl;
-  char c = getChar(sl);
-  if (std::isalnum(c) || c == '_') {
-    while (sl.isValid() && (std::isalnum(c) || c== '_')) {
-      sl = getNextLoc(sl,false);
-      c  = getChar(sl);
-    }
-    sl = getNextLoc(sl); // 1 step too much
-  } 
-  if (start != nullptr) *start = sl;
-  return TheRewriter.getRewrittenText(SourceRange(sl,e));
-}
-
-
-///////////////////////////////////////////////////////////////////////////////////
 /// Pragma handling: has_pragma()
 ///
 ///
@@ -980,16 +926,16 @@ std::string MyASTVisitor::getPreviousWord( SourceLocation sl, SourceLocation *st
 /// Pragma_args will point to the beginning of arguments of pragma
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::has_pragma(Stmt *S, const char * n) {
+bool TopLevelVisitor::has_pragma(Stmt *S, const char * n) {
   return has_pragma( S->getSourceRange().getBegin(), n);
 }
 
-bool MyASTVisitor::has_pragma(Decl *F, const char * n) {
+bool TopLevelVisitor::has_pragma(Decl *F, const char * n) {
   return has_pragma( F->getSourceRange().getBegin(), n);
 }
 
 
-bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
+bool TopLevelVisitor::has_pragma(const SourceLocation l, const char * n) {
   std::string arg;
   SourceLocation pragmaloc,sl = l;
 
@@ -1035,12 +981,12 @@ bool MyASTVisitor::has_pragma(const SourceLocation l, const char * n) {
 
 ////////////////////////////////////////////////////////////////////////////////////
 /// These are the main traverse methods
-/// By overriding these methods in MyASTVisitor we can control which nodes are visited.
+/// By overriding these methods in TopLevelVisitor we can control which nodes are visited.
 /// These are control points for the depth of the traversal;
 ///  skip_children,  ast_depth
 ////////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::TraverseStmt(Stmt *S) {
+bool TopLevelVisitor::TraverseStmt(Stmt *S) {
     
   // if state::skip_children > 0 we'll skip all until return to level up
   if (parsing_state.skip_children > 0) parsing_state.skip_children++;
@@ -1048,7 +994,7 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
   // go via the original routine...
   if (!parsing_state.skip_children) {
     parsing_state.ast_depth++;
-    RecursiveASTVisitor<MyASTVisitor>::TraverseStmt(S);
+    RecursiveASTVisitor<TopLevelVisitor>::TraverseStmt(S);
     if (parsing_state.ast_depth > 0) parsing_state.ast_depth--;
   }
 
@@ -1057,7 +1003,7 @@ bool MyASTVisitor::TraverseStmt(Stmt *S) {
   return true;
 }
 
-bool MyASTVisitor::TraverseDecl(Decl *D) {
+bool TopLevelVisitor::TraverseDecl(Decl *D) {
 
   // if state::skip_children > 0 we'll skip all until return to level up
   if (parsing_state.skip_children > 0) parsing_state.skip_children++;
@@ -1065,7 +1011,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
   // go via the original routine...
   if (!parsing_state.skip_children) {
     parsing_state.ast_depth++;
-    RecursiveASTVisitor<MyASTVisitor>::TraverseDecl(D);
+    RecursiveASTVisitor<TopLevelVisitor>::TraverseDecl(D);
     if (parsing_state.ast_depth > 0) parsing_state.ast_depth--;
   }
 
@@ -1076,7 +1022,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
 
 
 //  Obsolete when X is new type
-// void MyASTVisitor::require_parity_X(Expr * pExpr) {
+// void TopLevelVisitor::require_parity_X(Expr * pExpr) {
 //   // Now parity has to be X (or the same as before?)
 //   if (get_parity_val(pExpr) != parity::x) {
 //     reportDiag(DiagnosticsEngine::Level::Error,
@@ -1090,7 +1036,7 @@ bool MyASTVisitor::TraverseDecl(Decl *D) {
 /// construct the field_info_list
 //////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::check_field_ref_list() {
+bool TopLevelVisitor::check_field_ref_list() {
 
   bool no_errors = true;
   
@@ -1260,7 +1206,7 @@ bool MyASTVisitor::check_field_ref_list() {
 /// Check now that the references to variables are as required
 /////////////////////////////////////////////////////////////////////////////
 
-void MyASTVisitor::check_var_info_list() {
+void TopLevelVisitor::check_var_info_list() {
   for (var_info & vi : var_info_list) {
     if (!vi.is_loop_local) {
       if (vi.reduction_type != reduction::NONE) {
@@ -1325,9 +1271,9 @@ void MyASTVisitor::check_var_info_list() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
-/// flag_error = true by default in myastvisitor.h
+/// flag_error = true by default in toplevelvisitor.h
 
-SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
+SourceRange TopLevelVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
   SourceRange range(S->getBeginLoc(),
                     Lexer::findLocationAfterToken(S->getEndLoc(),
                                                   tok::semi,
@@ -1353,7 +1299,7 @@ SourceRange MyASTVisitor::getRangeWithSemicolon(Stmt * S, bool flag_error) {
 /// Variable decl inside site loops
 /////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
+bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
   
   if (var->getName().str() == "X") {
     static bool second_def = false;
@@ -1425,7 +1371,7 @@ bool MyASTVisitor::VisitVarDecl(VarDecl *var) {
   return true;
 }
 
-void MyASTVisitor::ast_dump_header(const char *s, const SourceRange sr_in) {
+void TopLevelVisitor::ast_dump_header(const char *s, const SourceRange sr_in) {
   SourceManager &SM = TheRewriter.getSourceMgr();
   SourceRange sr = sr_in;
   unsigned linenumber = SM.getSpellingLineNumber(sr.getBegin());
@@ -1449,14 +1395,14 @@ void MyASTVisitor::ast_dump_header(const char *s, const SourceRange sr_in) {
 }
 
 
-void MyASTVisitor::ast_dump(const Stmt *S) {
+void TopLevelVisitor::ast_dump(const Stmt *S) {
   ast_dump_header("statement", S->getSourceRange());
   S->dumpColor();
   llvm::errs() << "*****************************\n";
 }
 
 
-void MyASTVisitor::ast_dump(const Decl *D) {
+void TopLevelVisitor::ast_dump(const Decl *D) {
   ast_dump_header("declaration", D->getSourceRange());
   D->dumpColor();
   llvm::errs() << "*****************************\n";
@@ -1464,7 +1410,7 @@ void MyASTVisitor::ast_dump(const Decl *D) {
 
 
 
-void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
+void TopLevelVisitor::remove_vars_out_of_scope(unsigned level) {
   while (var_decl_list.size() > 0 && var_decl_list.back().scope > level)
     var_decl_list.pop_back();
 }
@@ -1475,7 +1421,7 @@ void MyASTVisitor::remove_vars_out_of_scope(unsigned level) {
 /// and parsing_state.lags
 ///////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::VisitStmt(Stmt *s) {
+bool TopLevelVisitor::VisitStmt(Stmt *s) {
    
   if ( parsing_state.ast_depth == 1 && has_pragma(s,"ast dump") ) {
     ast_dump(s);
@@ -1626,7 +1572,7 @@ bool MyASTVisitor::VisitStmt(Stmt *s) {
 ////////////////////////////////////////////////////////////////////////
 
 
-bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
+bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // Only function definitions (with bodies), not declarations.
   // also only non-templated functions
   // this does not really do anything
@@ -1726,7 +1672,7 @@ bool MyASTVisitor::VisitFunctionDecl(FunctionDecl *f) {
 ////////////////////////////////////////////////////////////////////////////
 
 
-void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
+void TopLevelVisitor::specialize_function_or_method( FunctionDecl *f ) {
   // This handles all functions and methods. Parent is non-null for methods,
   // and then is_static gives the static flag
   
@@ -1903,7 +1849,7 @@ void MyASTVisitor::specialize_function_or_method( FunctionDecl *f ) {
 
 // locate range of specialization "template< ..> .. func<...>( ... )"
 // tf is ptr to template, and f to instantiated function
-SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
+SourceRange TopLevelVisitor::get_func_decl_range(FunctionDecl *f) {
 
   if (f->hasBody()) {
     SourceLocation a = f->getSourceRange().getBegin();
@@ -1927,7 +1873,7 @@ SourceRange MyASTVisitor::get_func_decl_range(FunctionDecl *f) {
 ////////////////////////////////////////////////////////////////////////////
 
 
-bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
+bool TopLevelVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
   // go through with real definitions or as a part of chain
   if (D->isThisDeclarationADefinition()) { // } || state::class_level > 0) {
@@ -1981,7 +1927,7 @@ bool MyASTVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
 // Find the element typealias here -- could not work
 // directly with VisitTypeAliasTemplateDecl below, a bug??
-bool MyASTVisitor::VisitDecl( Decl * D) {
+bool TopLevelVisitor::VisitDecl( Decl * D) {
 
   if ( parsing_state.ast_depth == 1 &&
        has_pragma(D,"ast dump") ) {
@@ -1998,7 +1944,7 @@ bool MyASTVisitor::VisitDecl( Decl * D) {
 
 
 // THis is just to enable ast dump
-bool MyASTVisitor::VisitType( Type * T) {
+bool TopLevelVisitor::VisitType( Type * T) {
 
   auto * recdecl = T->getAsCXXRecordDecl();
   if (recdecl != nullptr) {
@@ -2018,7 +1964,7 @@ bool MyASTVisitor::VisitType( Type * T) {
 /// TODO: change the insertion point
 /////////////////////////////////////////////////////////////////////////////////
 
-void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
+void TopLevelVisitor::check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
                                               SourceLocation ip, 
                                               FunctionDecl *f) 
 {
@@ -2042,7 +1988,7 @@ void MyASTVisitor::check_spec_insertion_point(std::vector<const TemplateArgument
 
 /// Returns the mapping params -> args for class templates, inner first.  Return value
 /// the number of template nestings
-int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
+int TopLevelVisitor::get_param_substitution_list( CXXRecordDecl * r,
                                                std::vector<std::string> & par,
                                                std::vector<std::string> & arg,
                                                std::vector<const TemplateArgument *> & typeargs ) {
@@ -2080,7 +2026,7 @@ int MyASTVisitor::get_param_substitution_list( CXXRecordDecl * r,
   return level;
 }
 
-void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl, 
+void TopLevelVisitor::make_mapping_lists( const TemplateParameterList * tpl, 
                                        const TemplateArgumentList & tal,
                                        std::vector<std::string> & par,
                                        std::vector<std::string> & arg,
@@ -2121,7 +2067,7 @@ void MyASTVisitor::make_mapping_lists( const TemplateParameterList * tpl,
 
 }
 
-void MyASTVisitor::set_writeBuf(const FileID fid) {
+void TopLevelVisitor::set_writeBuf(const FileID fid) {
   writeBuf = get_file_buffer(TheRewriter, fid);
   toplevelBuf = writeBuf;
 }

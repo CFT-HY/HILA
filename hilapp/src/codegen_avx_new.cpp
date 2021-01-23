@@ -23,7 +23,7 @@
 //#include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "stringops.h"
 
 extern std::string looping_var;
@@ -131,7 +131,7 @@ static void replace_element_with_vector(SourceRange sr, std::string typestring, 
 
 /// This should allow calling with element<>-type parameters from
 /// loops. Generate a copy with elements replaced with vectors.
-void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
+void TopLevelVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   SourceRange sr = fd->getSourceRange();
   srcBuf * sourceBuf = get_file_srcBuf( sr.getBegin() );
 
@@ -199,7 +199,7 @@ void MyASTVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 
 /// Constructors - should something be done here?
 
-void MyASTVisitor::handle_loop_constructor_avx(CXXConstructorDecl *fd) {}
+void TopLevelVisitor::handle_loop_constructor_avx(CXXConstructorDecl *fd) {}
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Check that
@@ -211,7 +211,7 @@ void MyASTVisitor::handle_loop_constructor_avx(CXXConstructorDecl *fd) {}
 ///  TODO: Rectify this issue!
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::string & diag_str) {
+bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::string & diag_str) {
 
   vector_size = 0;
   number_type numtype;
@@ -349,7 +349,7 @@ bool MyASTVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::stri
 ///  Main entry for AVX loop generation
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-std::string MyASTVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, 
+std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, 
                                             srcBuf & loopBuf, bool generate_wait_loops) {
 
   std::stringstream code;

@@ -23,7 +23,7 @@
 //#include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "stringops.h"
 
 std::string looping_var;
@@ -51,7 +51,7 @@ inline std::string unique_name( const std::string t,  std::string n){
 
 
 /// The main entry point for code generation
-void MyASTVisitor::generate_code(Stmt *S) {
+void TopLevelVisitor::generate_code(Stmt *S) {
   srcBuf loopBuf; // (&TheRewriter,S);
   loopBuf.copy_from_range(writeBuf,S->getSourceRange());
   
@@ -224,7 +224,7 @@ void MyASTVisitor::generate_code(Stmt *S) {
 // Handle field+offset expressions -- these are copied, ref removed
 // Use iterator for looping, because we may want to remove the field_info item.
 
-void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code, 
+void TopLevelVisitor::handle_field_plus_offsets( std::stringstream &code, 
                                               srcBuf & loopBuf, 
                                               std::string & paritystr ) {
 
@@ -324,7 +324,7 @@ void MyASTVisitor::handle_field_plus_offsets( std::stringstream &code,
 
 
 /// Call the backend function for handling loop functions
-void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
+void TopLevelVisitor::backend_handle_loop_function(FunctionDecl *fd) {
   // we should mark the function, but it is not necessarily in the
   // main file buffer
   if (target.CUDA) {
@@ -337,7 +337,7 @@ void MyASTVisitor::backend_handle_loop_function(FunctionDecl *fd) {
 }
 
 /// Call the backend function for handling loop functions
-void MyASTVisitor::backend_handle_loop_constructor(CXXConstructorDecl *fd) {
+void TopLevelVisitor::backend_handle_loop_constructor(CXXConstructorDecl *fd) {
   // we should mark the function, but it is not necessarily in the
   // main file buffer
   if (target.CUDA) {
@@ -350,7 +350,7 @@ void MyASTVisitor::backend_handle_loop_constructor(CXXConstructorDecl *fd) {
 }
 
 /// Call the backend function for generating loop code
-std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf,
+std::string TopLevelVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf,
                                                 bool generate_wait_loops) {
   std::stringstream code;
   if( target.CUDA ){
@@ -374,7 +374,7 @@ std::string MyASTVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, 
  * This is a copy of the loop body with modifications, only ran once
  */
 /*
-std::string MyASTVisitor::generate_loop_header(Stmt *S, codetype & target, bool semicolon_at_end) {
+std::string TopLevelVisitor::generate_loop_header(Stmt *S, codetype & target, bool semicolon_at_end) {
   srcBuf loopBuf;
   loopBuf.copy_from_range(writeBuf,S->getSourceRange());
   std::vector<std::string> va = {}, vb = {};

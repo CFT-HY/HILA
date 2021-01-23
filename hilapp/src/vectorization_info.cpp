@@ -11,7 +11,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 
 #include "hilapp.h"
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "stringops.h"
 
 
@@ -81,7 +81,7 @@ void reset_vectorizable_types() {
 /// Used only here to determine if the class where it appears is vectorizable
 //////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::VisitTypeAliasDecl(TypeAliasDecl * ta) {
+bool TopLevelVisitor::VisitTypeAliasDecl(TypeAliasDecl * ta) {
 
   if (ta->getNameAsString() == "base_type") {
 
@@ -124,14 +124,14 @@ bool MyASTVisitor::VisitTypeAliasDecl(TypeAliasDecl * ta) {
 /////////////////////////////////////////////////////////////////////////////////////////
 
 
-bool MyASTVisitor::is_vectorizable_type(const QualType & QT, vectorization_info & vi) {
+bool TopLevelVisitor::is_vectorizable_type(const QualType & QT, vectorization_info & vi) {
   PrintingPolicy pp(Context->getLangOpts());
   std::string tname = QT.getCanonicalType().getAsString(pp);
   return is_vectorizable_type(tname, vi);
 }
 
 
-bool MyASTVisitor::is_vectorizable_type(const std::string & type_name, vectorization_info & vi) {
+bool TopLevelVisitor::is_vectorizable_type(const std::string & type_name, vectorization_info & vi) {
 
   // Note: the std types are included in vectorizable_types
   // vectorizable_type vector filled in by VisitTypeAliasDecl above
@@ -197,7 +197,7 @@ bool MyASTVisitor::is_vectorizable_type(const std::string & type_name, vectoriza
 /// if so, return the information on field_element_info
 //////////////////////////////////////////////////////////////////////////////////
 
-vectorization_info MyASTVisitor::inspect_field_type(Expr *fE) {
+vectorization_info TopLevelVisitor::inspect_field_type(Expr *fE) {
 
   // Start from Expr for field name, need to descend rather deep
   // Assertions here should actually not be necessary, there just to ensure things happen as they should

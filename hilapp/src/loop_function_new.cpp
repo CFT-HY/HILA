@@ -3,7 +3,7 @@
 #include <string>
 #include "clang/Analysis/CallGraph.h"
 
-#include "myastvisitor.h"
+#include "toplevelvisitor.h"
 #include "hilapp.h"
 #include "stringops.h"
 
@@ -25,7 +25,7 @@ void clear_loop_functions_in_compilation_unit() {
 }
 
 // and clear calls for this loop
-void MyASTVisitor::clear_loop_function_calls() {
+void TopLevelVisitor::clear_loop_function_calls() {
   loop_function_calls.clear();
 }
 
@@ -35,7 +35,7 @@ void MyASTVisitor::clear_loop_function_calls() {
 /// special treatment, the arguments can be field[X] etc. elements
 ////////////////////////////////////////////////////////////////////////////
 
-void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
+void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
 
   // Get the call expression
   CallExpr *Call = dyn_cast<CallExpr>(s);
@@ -88,7 +88,7 @@ void MyASTVisitor::handle_function_call_in_loop(Stmt * s) {
 ////////////////////////////////////////////////////////////////////////////
 
 
-void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
+void TopLevelVisitor::handle_constructor_in_loop(Stmt * s) {
 
   // Get the call expression
   CXXConstructExpr *CtorE = dyn_cast<CXXConstructExpr>(s);
@@ -145,7 +145,7 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 
     argument_info ai;
     is_site_dependent |= handle_call_argument(E, pv, is_site_dependent, 
-                                             &out_variables, &dep_variables, ai);
+                                              &out_variables, &dep_variables, ai);
     ci.is_site_dependent |= ai.is_site_dependent;
     ci.arguments.push_back(ai);
 
@@ -197,11 +197,14 @@ void MyASTVisitor::handle_constructor_in_loop(Stmt * s) {
 ///  - lvalue args inherit site dependence
 ///  - lvalue field element args are assumed changed
 ///  - output_only flagged field elements need not be input
+///
+/// main_level == true if this is called from "level of the site loop", 
+/// if inside functions, false.
 /////////////////////////////////////////////////////////////////////////////////
 
 
-call_info_struct MyASTVisitor::handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
-                                                         bool sitedep) {
+call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
+                                                            bool sitedep, bool main_level) {
 
   call_info_struct cinfo;
 
@@ -258,7 +261,7 @@ call_info_struct MyASTVisitor::handle_loop_function_args(FunctionDecl *D, CallEx
     const ParmVarDecl * pv = D->getParamDecl(i);
 
     argument_info ai;
-    sitedep = handle_call_argument(E, pv, sitedep, &out_variables, &dep_variables, ai);
+    sitedep = handle_call_argument(E, pv, sitedep, &out_variables, &dep_variables, ai, main_level);
 
     cinfo.is_site_dependent |= ai.is_site_dependent;
     cinfo.arguments.push_back(ai);
@@ -298,7 +301,7 @@ call_info_struct MyASTVisitor::handle_loop_function_args(FunctionDecl *D, CallEx
     cinfo.is_method = true;
     cinfo.object.E = E;
 
-    if (is_field_with_X_expr(E)) {
+    if (main_level && is_field_with_X_expr(E)) {
       handle_field_X_expr(E,!is_const,(!is_const && !output_only),true);
       sitedep = true;
 
@@ -350,13 +353,14 @@ call_info_struct MyASTVisitor::handle_loop_function_args(FunctionDecl *D, CallEx
 /// and out variables
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep, 
-                                         std::vector<var_info *> * out_variables, 
-                                         std::vector<var_info *> * dep_variables,
-                                         argument_info & ai) {
+bool TopLevelVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep, 
+                                            std::vector<var_info *> * out_variables, 
+                                            std::vector<var_info *> * dep_variables,
+                                            argument_info & ai, bool main_level ) {
 
   // keep filling argument info
   ai.E = E;
+  ai.PV = pv;
 
   // check parameter type
 
@@ -385,7 +389,7 @@ bool MyASTVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, bool s
   if (is_lvalue) {
 
     // "output" vars
-    if (is_field_with_X_expr(E)) {
+    if (main_level && is_field_with_X_expr(E)) {
       // Mark it as changed
       // llvm::errs() << "FIELD CAN CHANGE HERE!\n";
       sitedep = true;
@@ -441,9 +445,9 @@ bool MyASTVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, bool s
 /// if "sitedep" is true, mark all unconditionally site dep.
 ////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::attach_dependent_vars( std::vector<var_info *> & variables, 
-                                          bool sitedep,
-                                          std::vector<var_info *> & dep_variables ) {
+bool TopLevelVisitor::attach_dependent_vars( std::vector<var_info *> & variables, 
+                                             bool sitedep,
+                                             std::vector<var_info *> & dep_variables ) {
 
   // if sitedep == true or one of the dep_variables is sitedep, we can mark
   // all vars in "variables" as site dep.
@@ -484,7 +488,7 @@ bool MyASTVisitor::attach_dependent_vars( std::vector<var_info *> & variables,
 /// Special functions:  methods X.method(), and hila_random()
 /////////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
+bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
   // If the function is in a list of defined loop functions, add it to a list
   // Return true if the expression is a special function
 
@@ -591,7 +595,7 @@ bool MyASTVisitor::handle_special_loop_function(CallExpr *Call) {
 /// Start running through loop functions again; call a special visitor
 ///////////////////////////////////////////////////////////////////////////////
 
-void MyASTVisitor::process_loop_functions() {
+void TopLevelVisitor::process_loop_functions() {
 
   // spin off to a new visitor
   // visit_loop_functions( loop_function_calls );
@@ -603,7 +607,7 @@ void MyASTVisitor::process_loop_functions() {
 /// Utility for checking if need to handle decls and do it
 ///////////////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
+bool TopLevelVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
   // Check if it is in a system header. If so, skip
   SourceManager &SM = Context->getSourceManager();
   bool handle_decl = !SM.isInSystemHeader(fd->getBeginLoc());
@@ -635,7 +639,7 @@ bool MyASTVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
 /// Returns true if OK to be included; false (and flags error) if not
 ////////////////////////////////////////////////////////////////////
 
-bool MyASTVisitor::loop_function_check(Decl *d) {
+bool TopLevelVisitor::loop_function_check(Decl *d) {
   assert(d != nullptr);
   
   FunctionDecl *fd = dyn_cast<FunctionDecl>(d);

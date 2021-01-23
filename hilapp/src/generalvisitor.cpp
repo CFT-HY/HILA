@@ -223,3 +223,63 @@ parity GeneralVisitor::get_parity_val(const Expr *pExpr) {
     return parity::none;
   }
 }
+
+
+
+///////////////////////////////////////////////////////////////////////////////////
+/// Source Location utilities
+///////////////////////////////////////////////////////////////////////////////////
+
+
+SourceLocation GeneralVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
+  int i = TheRewriter.getRangeSize(r);
+  return r.getBegin().getLocWithOffset(i-1);
+}
+
+/// get next character and sourcelocation, while skipping comments
+
+SourceLocation GeneralVisitor::getNextLoc(SourceLocation sl, bool forward) {
+  return ::getNextLoc(TheRewriter.getSourceMgr(),sl,forward);
+}
+
+
+char GeneralVisitor::getChar(SourceLocation sl) {
+  return ::getChar(TheRewriter.getSourceMgr(),sl);
+}
+
+// Find the location of the next searched for char.  
+SourceLocation GeneralVisitor::findChar( SourceLocation sloc, char ct) {
+  return ::findChar(TheRewriter.getSourceMgr(),sloc,ct);
+}
+
+/// Skip paren expression following sl, points after the paren
+
+SourceLocation GeneralVisitor::skipParens( SourceLocation sl ) {
+  return ::skipParens(TheRewriter.getSourceMgr(),sl);
+}  
+
+/// Get next word starting from sl
+
+std::string GeneralVisitor::getNextWord( SourceLocation sl, SourceLocation *end ) {
+  return ::getNextWord(TheRewriter.getSourceMgr(), sl, end); 
+}
+
+
+/// Get prev word starting from sl - 
+
+std::string GeneralVisitor::getPreviousWord( SourceLocation sl, SourceLocation *start ) {
+  while (std::isspace(getChar(sl))) sl = getNextLoc(sl,false);  // skip spaces
+  
+  SourceLocation e = sl;
+  char c = getChar(sl);
+  if (std::isalnum(c) || c == '_') {
+    while (sl.isValid() && (std::isalnum(c) || c== '_')) {
+      sl = getNextLoc(sl,false);
+      c  = getChar(sl);
+    }
+    sl = getNextLoc(sl); // 1 step too much
+  } 
+  if (start != nullptr) *start = sl;
+  return TheRewriter.getRewrittenText(SourceRange(sl,e));
+}
+

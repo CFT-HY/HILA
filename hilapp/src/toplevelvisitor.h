@@ -13,10 +13,12 @@
 #include "hilapp.h" //global vars needed 
 #include "generalvisitor.h"  // Definitions for the general visitor case
 
+class TopLevelVisitor;
 
+extern TopLevelVisitor * globalTopLevelVisitor;
 
 //////////////////////////////////////////////
-/// myastvisitor.h : overloaded ASTVisitor for 
+/// toplevelvisitor.h : overloaded ASTVisitor for 
 /// generating code from AST
 ///
 /// Used in:
@@ -28,7 +30,7 @@
 
 
 
-class MyASTVisitor : public GeneralVisitor, public RecursiveASTVisitor<MyASTVisitor> {
+class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLevelVisitor> {
 
 private:
   srcBuf *writeBuf;
@@ -151,12 +153,13 @@ public:
   // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
 
-  call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call, bool sitedep);
+  call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call, 
+                                             bool sitedep, bool main_level = true);
 
   bool handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep,
                              std::vector<var_info *> * out_variables, 
                              std::vector<var_info *> * dep_variables,
-                             argument_info & ai );
+                             argument_info & ai, bool main_level = true );
 
   void handle_member_call_in_loop(Stmt * s);
 
@@ -246,24 +249,6 @@ public:
   /// Change field references within loops
   void replace_field_refs_and_funcs(srcBuf &sb);
   
-  /// utility used in inserting stuff after new line in buffer
-  // SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
-  /// another utility (cannot trust r.getEnd())
-  SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
-
-  // get next char and loc, while skipping comments
-  SourceLocation getNextLoc(SourceLocation sl,bool forward = true);
-
-  char getChar(SourceLocation sl);
-  SourceLocation findChar(SourceLocation sl, char ch);
-
-  // get next word or symbol, if it is not a legal name symbol
-  std::string getNextWord(SourceLocation sl, SourceLocation *end = nullptr);
-  std::string getPreviousWord(SourceLocation sl, SourceLocation *start = nullptr);
-
-  /// jump over following () expr
-  SourceLocation skipParens( SourceLocation sl);
-
   /// utility used in finding pragmas on the previous line
   bool is_preceded_by_pragma( SourceLocation l, std::string & args, SourceLocation & ploc );
 
