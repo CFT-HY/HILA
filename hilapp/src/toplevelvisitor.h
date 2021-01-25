@@ -1,5 +1,5 @@
-#ifndef MYASTVISITOR_H
-#define MYASTVISITOR_H
+#ifndef TOPLEVELVISITOR_H
+#define TOPLEVELVISITOR_H
 
 #include <string>
 #include "clang/AST/AST.h"
@@ -19,12 +19,16 @@
 /// generating code from AST
 ///
 /// Used in:
-/// - myastvisitor.cpp
+/// - toplevelvisitor.cpp
 /// - loop_function.cpp
 /// - codegen.cpp and its derivatives
 /// 
 //////////////////////////////////////////////
 
+// a hack to allow for calling of top level functions through a global ptr.
+
+class TopLevelVisitor;
+extern TopLevelVisitor * g_TopLevelVisitor;
 
 
 class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLevelVisitor> {
@@ -44,9 +48,11 @@ private:
     bool loop_function_next;
   } parsing_state;
 
+ 
 public:
   TopLevelVisitor(Rewriter &R, ASTContext *C) : GeneralVisitor(R,C) {
     is_top_level = true;
+    g_TopLevelVisitor = this;
   }
 
   void reset_parsing_state() {
@@ -147,21 +153,8 @@ public:
 
   // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
   void handle_function_call_in_loop(Stmt * s);
-
-  call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call, 
-                                             bool sitedep, bool main_level = true);
-
-  bool handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep,
-                             std::vector<var_info *> * out_variables, 
-                             std::vector<var_info *> * dep_variables,
-                             argument_info & ai, bool main_level = true );
-
+                                             
   void handle_member_call_in_loop(Stmt * s);
-
-  void handle_constructor_in_loop(Stmt * s);
-
-  bool attach_dependent_vars( std::vector<var_info *> & variables, bool sitedep,
-                              std::vector<var_info *> & dep_variables );
 
   bool loop_function_check(Decl *fd);
 
@@ -172,8 +165,6 @@ public:
   void visit_loop_functions( std::vector<call_info_struct> & calls );
 
   bool handle_special_loop_function(CallExpr *Call);
-
-  void clear_loop_function_calls();
 
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );
@@ -195,19 +186,12 @@ public:
   // add handle to get rewriter too - for source control
   Rewriter &getRewriter() { return TheRewriter; }
 
-  // shofthand for obtaining file buffer within this class
-  srcBuf * get_file_srcBuf( SourceLocation sl ) {
-    return get_file_buffer( TheRewriter, TheRewriter.getSourceMgr().getFileID(sl) ); 
-  }
-
   /// Code generation headers start here
   /// Starting point for new code
   void generate_code(Stmt *S);
   void handle_field_plus_offsets(std::stringstream &code, srcBuf & loopbuf, std::string & par );
 
   std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait);
-  void backend_handle_loop_function(FunctionDecl *fd);
-  void backend_handle_loop_constructor(CXXConstructorDecl *fd);
 
   bool check_loop_vectorizable(Stmt *S, int & vector_size, std::string & diag);
 
@@ -217,22 +201,6 @@ public:
   void generate_openacc_loop_header(std::stringstream & code);
   //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
   std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
-
-  /// Handle functions called in a loop
-  void handle_loop_function_cuda(FunctionDecl *fd);
-  void handle_loop_function_openacc(FunctionDecl *fd);
-  void handle_loop_function_avx(FunctionDecl *fd);
-
-  /// Handle functions called in a loop
-  void handle_loop_constructor_cuda(CXXConstructorDecl *fd);
-  void handle_loop_constructor_openacc(CXXConstructorDecl *fd);
-  void handle_loop_constructor_avx(CXXConstructorDecl *fd);
-
-
-  /// inspect if the type name is vectorizable
-  /// returns the vectorized type in vectorized_type, if it is
-  bool is_vectorizable_type(const std::string & type_name, vectorization_info & vi);
-  bool is_vectorizable_type(const QualType & QT, vectorization_info & vi);
 
   /// Check if the field type is vectorizable and how
   vectorization_info inspect_field_type(Expr *fE);

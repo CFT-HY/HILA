@@ -62,7 +62,7 @@ protected:
   /// Store a printing policy. It is required quite often
   PrintingPolicy PP;
 
-  /// are we on TopLevelVisitor
+  /// are we on TopLevelVisitor?  False otherwise
   bool is_top_level = false;
 
   /// store the variables at this level in var_info_list
@@ -72,6 +72,11 @@ protected:
   std::list<var_info> & var_info_list;
 
   std::list<var_decl> & var_decl_list;
+
+   // calls to loop functions done in this loop or function.  Always cleared for
+   // every new visitor
+  std::vector<call_info_struct> loop_function_calls = {};
+
 
 public:
   /// Construct from previous visitor - we inherit the lists of the caller
@@ -127,6 +132,10 @@ public:
   /// check if stmt contains random number generator
   bool contains_random(Stmt *s);
 
+  // shofthand for obtaining file buffer within this class
+  srcBuf * get_file_srcBuf( SourceLocation sl ) {
+    return get_file_buffer( TheRewriter, TheRewriter.getSourceMgr().getFileID(sl) ); 
+  }
 
   /// a list of utility inspection functions
   /// getCanonicalType takes away typedefs, getUnqualifiedType() qualifiers, pp just in case
@@ -202,10 +211,17 @@ public:
   /// is the stmt pointing now to a constructor
   bool is_user_cast_stmt(Stmt * s);
 
+  /// inspect if the type name is vectorizable
+  /// returns the vectorized type in vectorized_type, if it is
+  bool is_vectorizable_type(const std::string & type_name, vectorization_info & vi);
+  bool is_vectorizable_type(const QualType & QT, vectorization_info & vi);
+
+
   /// Does the statement end with a semicolon
   bool isStmtWithSemicolon(Stmt * S);
   
   parity get_parity_val(const Expr *pExpr);
+
 
   /// utility used in inserting stuff after new line in buffer
   // SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );
@@ -229,6 +245,36 @@ public:
                             Stmt * assign_stmt = nullptr);
 
   var_info * new_var_info(VarDecl *decl);
+
+  void add_var_to_decl_list(VarDecl * var, int scope);
+
+  void handle_constructor_in_loop(Stmt * s);
+
+  call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call, 
+                                             bool sitedep );
+
+  bool handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep,
+                             std::vector<var_info *> * out_variables, 
+                             std::vector<var_info *> * dep_variables,
+                             argument_info & ai );
+
+  bool attach_dependent_vars( std::vector<var_info *> & variables, bool sitedep,
+                              std::vector<var_info *> & dep_variables );
+
+
+  void backend_handle_loop_function(FunctionDecl *fd);
+  void backend_handle_loop_constructor(CXXConstructorDecl *fd);
+
+  /// Handle functions called in a loop
+  void handle_loop_function_cuda(FunctionDecl *fd);
+  void handle_loop_function_openacc(FunctionDecl *fd);
+  void handle_loop_function_avx(FunctionDecl *fd);
+
+  /// Handle functions called in a loop
+  void handle_loop_constructor_cuda(CXXConstructorDecl *fd);
+  void handle_loop_constructor_openacc(CXXConstructorDecl *fd);
+  void handle_loop_constructor_avx(CXXConstructorDecl *fd);
+
 
 
 };

@@ -33,7 +33,7 @@ extern std::string parity_in_this_loop;
 
 
 // Add the __host__ __device__ keywords to functions called a loop
-void TopLevelVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
+void GeneralVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
@@ -44,7 +44,8 @@ void TopLevelVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
   sb->insert(sl, "__device__ __host__ ",true,true);
 }
 
-void TopLevelVisitor::handle_loop_constructor_cuda(CXXConstructorDecl *fd) {
+
+void GeneralVisitor::handle_loop_constructor_cuda(CXXConstructorDecl *fd) {
   
   SourceLocation sl = fd->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
@@ -55,6 +56,7 @@ void TopLevelVisitor::handle_loop_constructor_cuda(CXXConstructorDecl *fd) {
   sb->insert(sl, "__device__ __host__ ",true,true);
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
 
 /// Help routine to write (part of) a name for a kernel
 std::string TopLevelVisitor::make_kernel_name() {

@@ -121,17 +121,18 @@ bool TopLevelVisitor::VisitTypeAliasDecl(TypeAliasDecl * ta) {
 /////////////////////////////////////////////////////////////////////////////////////////
 /// is_vectorizable_type  true for types which can be vectorized, and returns the
 /// corresponding vectorized typename in vectorized_type
+/// These are callable from all visitors 
 /////////////////////////////////////////////////////////////////////////////////////////
 
 
-bool TopLevelVisitor::is_vectorizable_type(const QualType & QT, vectorization_info & vi) {
+bool GeneralVisitor::is_vectorizable_type(const QualType & QT, vectorization_info & vi) {
   PrintingPolicy pp(Context->getLangOpts());
   std::string tname = QT.getCanonicalType().getAsString(pp);
   return is_vectorizable_type(tname, vi);
 }
 
 
-bool TopLevelVisitor::is_vectorizable_type(const std::string & type_name, vectorization_info & vi) {
+bool GeneralVisitor::is_vectorizable_type(const std::string & type_name, vectorization_info & vi) {
 
   // Note: the std types are included in vectorizable_types
   // vectorizable_type vector filled in by VisitTypeAliasDecl above

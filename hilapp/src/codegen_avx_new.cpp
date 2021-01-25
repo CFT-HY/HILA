@@ -46,6 +46,10 @@ public:
   srcBuf functionBuffer;
   int vector_size;
 
+  template <typename visitortype>
+  LoopFunctionHandler(visitortype & v) : GeneralVisitor(v) { }
+
+
   bool TraverseStmt(Stmt *s){
     RecursiveASTVisitor<LoopFunctionHandler>::TraverseStmt(s);
     return true;
@@ -131,7 +135,7 @@ static void replace_element_with_vector(SourceRange sr, std::string typestring, 
 
 /// This should allow calling with element<>-type parameters from
 /// loops. Generate a copy with elements replaced with vectors.
-void TopLevelVisitor::handle_loop_function_avx(FunctionDecl *fd) {
+void GeneralVisitor::handle_loop_function_avx(FunctionDecl *fd) {
   SourceRange sr = fd->getSourceRange();
   srcBuf * sourceBuf = get_file_srcBuf( sr.getBegin() );
 
@@ -198,7 +202,7 @@ void TopLevelVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 
 /// Constructors - should something be done here?
 
-void TopLevelVisitor::handle_loop_constructor_avx(CXXConstructorDecl *fd) {}
+void GeneralVisitor::handle_loop_constructor_avx(CXXConstructorDecl *fd) {}
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Check that

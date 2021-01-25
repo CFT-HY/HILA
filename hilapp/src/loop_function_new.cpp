@@ -7,26 +7,17 @@
 #include "hilapp.h"
 #include "stringops.h"
 
-// collect here all loop functions in a compilation unit
+// collect here all loop functions in this compilation unit
+// these vars are accumulated over the whole translation unit
 
 static std::vector<FunctionDecl *> loop_functions = {};
 static std::vector<CXXConstructorDecl *> loop_constructors = {};
-
-// and these hold the loop-local function calls, for revisit
-
-
-static std::vector<call_info_struct> loop_function_calls = {};
 
 
 // clear function ptrs in whole compilation unit
 void clear_loop_functions_in_compilation_unit() {
   loop_functions.clear();
   loop_constructors.clear();
-}
-
-// and clear calls for this loop
-void TopLevelVisitor::clear_loop_function_calls() {
-  loop_function_calls.clear();
 }
 
 
@@ -75,7 +66,6 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
   loop_function_calls.push_back(ci);
 
   
-
   // Store functions used in loops, recursively...
   loop_function_check(decl);
 
@@ -86,7 +76,7 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
 ////////////////////////////////////////////////////////////////////////////
 
 
-void TopLevelVisitor::handle_constructor_in_loop(Stmt * s) {
+void GeneralVisitor::handle_constructor_in_loop(Stmt * s) {
 
   // Get the call expression
   CXXConstructExpr *CtorE = dyn_cast<CXXConstructExpr>(s);
@@ -200,8 +190,8 @@ void TopLevelVisitor::handle_constructor_in_loop(Stmt * s) {
 /////////////////////////////////////////////////////////////////////////////////
 
 
-call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
-                                                            bool sitedep, bool main_level) {
+call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
+                                                           bool sitedep ) {
 
   call_info_struct cinfo;
 
@@ -227,7 +217,7 @@ call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, Cal
 
   cinfo.is_site_dependent = sitedep;
 
-  // for operators, the dependency in args is handled separately in myastvisitor 
+  // for operators, the dependency in args is handled separately in toplevelisitor 
   // (Really, should treat everything here but started with that)
   if (isa<CXXOperatorCallExpr>(Call)) {
     cinfo.is_operator = true;
@@ -257,7 +247,7 @@ call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, Cal
     const ParmVarDecl * pv = D->getParamDecl(i);
 
     argument_info ai;
-    sitedep = handle_call_argument(E, pv, sitedep, &out_variables, &dep_variables, ai, main_level);
+    sitedep = handle_call_argument(E, pv, sitedep, &out_variables, &dep_variables, ai);
 
     cinfo.is_site_dependent |= ai.is_site_dependent;
     cinfo.arguments.push_back(ai);
@@ -296,13 +286,18 @@ call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, Cal
 
     cinfo.is_method = true;
     cinfo.object.E = E;
+    cinfo.object.is_output_only = output_only;
 
-    if (main_level && is_field_with_X_expr(E)) {
-      handle_field_X_expr(E,!is_const,(!is_const && !output_only),true);
+    if (is_top_level && is_field_with_X_expr(E)) {
+ 
+      // following is called only if this==g_TopLevelVisitor, this just makes it compile
+      g_TopLevelVisitor->handle_field_X_expr(E,!is_const,(!is_const && !output_only),true);
+
       sitedep = true;
 
       cinfo.object.is_site_dependent = true;
       cinfo.object.is_lvalue = !is_const;
+      cinfo.object.is_const = is_const;
 
     } else if (isa<DeclRefExpr>(E)) {
       // some other variable reference
@@ -316,6 +311,7 @@ call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, Cal
         if (!is_const) out_variables.push_back(vip);
 
         cinfo.object.is_lvalue = !is_const;
+        cinfo.object.is_const = is_const;
 
         if (is_const) {
           cinfo.object.is_site_dependent = vip->is_site_dependent;
@@ -328,15 +324,17 @@ call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, Cal
       // now some other expression -- is it site dependent
 
       cinfo.object.is_lvalue = false;
+      cinfo.object.is_const = true;
 
       sitedep |= is_site_dependent(E,&dep_variables);
     }
 
+    cinfo.is_site_dependent |= sitedep;
 
   }
 
   sitedep = attach_dependent_vars( out_variables, sitedep, dep_variables );
-  cinfo.is_site_dependent = sitedep;
+  cinfo.is_site_dependent |= sitedep;
 
   return cinfo;
 }
@@ -349,10 +347,10 @@ call_info_struct TopLevelVisitor::handle_loop_function_args(FunctionDecl *D, Cal
 /// and out variables
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep, 
-                                            std::vector<var_info *> * out_variables, 
-                                            std::vector<var_info *> * dep_variables,
-                                            argument_info & ai, bool main_level ) {
+bool GeneralVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep, 
+                                           std::vector<var_info *> * out_variables, 
+                                           std::vector<var_info *> * dep_variables,
+                                           argument_info & ai ) {
 
   // keep filling argument info
   ai.E = E;
@@ -385,11 +383,12 @@ bool TopLevelVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, boo
   if (is_lvalue) {
 
     // "output" vars
-    if (main_level && is_field_with_X_expr(E)) {
-      // Mark it as changed
-      // llvm::errs() << "FIELD CAN CHANGE HERE!\n";
+    if (is_top_level && is_field_with_X_expr(E)) {
+      // use the g_TLV hook to make this compile in GeneralVisitor, it is actually called
+      // always when this == g_TopLevelVisitor
+
       sitedep = true;
-      handle_field_X_expr(E, is_lvalue, (is_lvalue && !out_only), true, true);
+      g_TopLevelVisitor->handle_field_X_expr(E, is_lvalue, (is_lvalue && !out_only), true, true);
 
       ai.is_site_dependent = true;
 
@@ -441,9 +440,9 @@ bool TopLevelVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, boo
 /// if "sitedep" is true, mark all unconditionally site dep.
 ////////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::attach_dependent_vars( std::vector<var_info *> & variables, 
-                                             bool sitedep,
-                                             std::vector<var_info *> & dep_variables ) {
+bool GeneralVisitor::attach_dependent_vars( std::vector<var_info *> & variables, 
+                                            bool sitedep,
+                                            std::vector<var_info *> & dep_variables ) {
 
   // if sitedep == true or one of the dep_variables is sitedep, we can mark
   // all vars in "variables" as site dep.

@@ -329,6 +329,8 @@ struct argument_info {
   std::vector<var_info *> dependent_vars;
   bool is_lvalue;
   bool is_site_dependent;
+  bool is_output_only;
+  bool is_const;
 };
 
 /// Stores information about loop function calls

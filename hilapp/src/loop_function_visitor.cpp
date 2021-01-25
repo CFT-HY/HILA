@@ -56,8 +56,10 @@ public:
   call_info_struct * this_ci;
 
   // store calls in this function
-  std::vector<call_info_struct> calls;
+  std::vector<call_info_struct> function_calls;
   std::vector<var_info *> conditional_vars;
+
+  std::vector<special_function_call> special_call_list;
 
   std::string assignment_op;
   bool is_assginment, is_compound_assign;
@@ -71,7 +73,8 @@ public:
     is_assignment = false;
     var_info_list = {};
     var_decl_list = {};
-    calls = {};
+    special_call_list = {};
+    function_calls = {};
     conditional_vars = {};
   }
 
@@ -90,9 +93,15 @@ public:
     
     // further function calls
     if( is_function_call_stmt(s) ){
+      handle_function_call(s);
+      return true;
+    }
 
-
-      handle_function_call_in_loop(s);
+    // further function calls
+    if( is_constructor_stmt(s) ){
+      handle_constructor_in_loop(s);
+      return true;
+    }
 
 
     // And conditional stmts
@@ -105,13 +114,10 @@ public:
       else if (SwitchStmt* SS = dyn_cast<SwitchStmt>(s)) condexpr = SS->getCond();
       else if (ConditionalOperator * CO = dyn_cast<ConditionalOperator>(s)) 
                                                          condexpr = CO->getCond();
-
       if (condexpr != nullptr) {
         this_ci->has_site_dependent_conditional = 
-          is_site_dependent(condexpr, &conditional_vars);
-        if (this_ci->has_site_dependent_conditional) {
-          this_ci->condExpr = condexpr;
-        }
+            is_site_dependent(condexpr, &conditional_vars);
+        this_ci->condExpr = condexpr;
       }
 
       return true;
@@ -164,146 +170,39 @@ public:
       
       // handle the local var ref.
       handle_var_ref(e,vdecl);
-
       
     }
     return true;
   }
 
-
-  //////////////////////////////////////////////////////////////////////////////////
-  /// and variable refs - pretty much copied from myastvisitor
-  //////////////////////////////////////////////////////////////////////////////////
-
-  void x_handle_var_ref(DeclRefExpr * DRE, VarDecl *decl) {
-
-    var_ref vr;
-    vr.ref = DRE;
-    //vr.ind = writeBuf->markExpr(DRE);
-    vr.is_assigned = is_assignment;
-    if (is_assign) vr.assignop = assignment_op;
-
-
-    bool foundvar = false;
-    var_info *vip = nullptr;
-    for (var_info & vi : var_info_list) {
-      if (vi.decl == decl) {
-        // found already referred to decl
-        // check if this particular ref has been handled before
-        bool foundref = false;
-        for (auto & r : vi.refs) if (r.ref == DRE) {
-          foundref = true;
-          // if old check was not assignment and this is, change status
-          // can happen if var ref is a function "out" argument
-          if (r.is_assigned == false && is_assign == true) {
-            r.is_assigned = true;
-            r.assignop = assignop;
-          }
-          break;
-        }
-        if (!foundref) {
-          // a new reference
-          vi.refs.push_back(vr);
-        }
-        vi.is_assigned |= is_assignment;
-        vi.reduction_type = reduction::NONE
-        vip = &vi;
-        foundvar = true;
-        break;
-      }
-    }
-    if (!foundvar) {
-      // new variable referred to
-      vip = new_var_info(decl);
-
-      vip->refs.push_back(vr);
-      vip->is_assigned = is_assignment;
-    }
-
-    if (is_assignment && assign_stmt != nullptr && !vip->is_site_dependent) {
-      vip->is_site_dependent = is_rhs_site_dependent(assign_stmt, &vip->dependent_vars );
-      
-      // llvm::errs() << "Var " << vip->name << " depends on site: " << vip->is_site_dependent <<  "\n";
-    }
-
-    is_assignment = false;  // not an assignment any more
-
-    return;
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////
-
-  var_info * x_new_var_info(VarDecl *decl) {
-
-    var_info vi;
-    vi.refs = {};
-    vi.decl = decl;
-    vi.name = decl->getName().str();
-    // Printing policy is somehow needed for printing type without "class" id
-    // Unqualified takes away "consts" etc and Canonical typdefs/using.
-    // Also need special handling for element type
-    clang::QualType type = decl->getType().getUnqualifiedType().getNonReferenceType();
-    vi.type = type.removeLocalConst().getAsString(PP);
-    vi.type = remove_all_whitespace(vi.type);
-    bool is_elem = (vi.type.find("element<") == 0);
-    vi.type = type.getAsString(PP);
-    if (is_elem) vi.type = "element<" + vi.type + ">";
-    // llvm::errs() << " + Got " << vi.type << '\n';
-
-    vi.is_loop_local = true;
-
-    vi.is_site_dependent = false;  // default case
-
-    // if this is a parameter var decl, mark the site dep.
-    if (decl->isLocalVarDeclOrParm() && !decl->isLocalVarDecl()) {
-      ParmVarDecl * pv = dyn_cast<ParmVarDecl>(decl);
-      // decl is now parameter var
-      llvm::errs() << "FOUND PARAMETER VAR " << vi.name << " of type " << vi.type;
-
-      bool found = false;
-      for (auto & arg : this_ci->arguments) {
-        if (arg.PV == pv) {
-          vi.is_site_dependent = arg.is_site_dependent;
-          llvm::errs() << " site dep " << vi.is_site_dependent;
-          found = true;
-          break;
-        }
-      }
-      llvm::errs() << '\n';
-
-      if (!found) {
-        llvm::errs() << " ERROR: PARAMETER NOT FOUND IN CALLINFO!  EXIT HERE\n";
-        exit(1);
-      }      
-    }
-
-    vi.dependent_vars.clear();
-
-    var_info_list.push_back(vi);
-    return &(var_info_list.back());
-  }
 
 
   ///////////////////////////////////////////////////////////////////////////////////
   /// Check non-trivial declarations
   ///////////////////////////////////////////////////////////////////////////////////
 
-  bool VisitDecl(Decl *D) {
+  bool VisitVarDecl(VarDecl *V) {
 
-    if (VarDecl * V = dyn_cast<VarDecl>(D)) {
-      // it's a variable decl inside function
-      if (V->getStorageClass() == StorageClass::SC_Extern ||
-          V->getStorageClass() == StorageClass::SC_Static ||
-          V->getStorageClass() == StorageClass::SC_PrivateExtern) {
-        reportDiag(DiagnosticsEngine::Level::Error,
-                   D->getSourceRange().getBegin(),
-                   "cannot declare static or extern variables in functions called from site loops.");
-        return false;
-      }
-
+    // it's a variable decl inside function
+    if (V->getStorageClass() == StorageClass::SC_Extern ||
+        V->getStorageClass() == StorageClass::SC_Static ||
+        V->getStorageClass() == StorageClass::SC_PrivateExtern) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                  D->getSourceRange().getBegin(),
+                  "cannot declare static or extern variables in functions called from site loops.");
+      return false;
     }
+    // Now it should be automatic local variable decl
+
+    add_var_to_decl_list(V,0);
+
     return true;
-  }
+  } 
+
+  //////////////////////////////////////////////////////////////////////////
+  /// log function calls in loop functions
+  //////////////////////////////////////////////////////////////////////////
+
 
   void handle_function_call(Stmt * s) {
 
@@ -311,7 +210,7 @@ public:
     CallExpr *Call = dyn_cast<CallExpr>(s);
     
     // Handle special loop functions
-    if( handle_special_functions(Call) ){
+    if( handle_special_function(Call) ){
       return;
     }
 
@@ -339,32 +238,135 @@ public:
     ci.contains_random = contains_rng;
     
     /// add to function calls to be checked ...
-    calls.push_back(ci);
+    function_calls.push_back(ci);
   }
   
 
 
-  ///////////////////////////////////////////////////////////////////////////////////
-  /// Loop through functions seen
-  ///////////////////////////////////////////////////////////////////////////////////
 
+  /////////////////////////////////////////////////////////////////////////////////
+  /// Special functions:  methods X.method(), and hila_random()
+  /////////////////////////////////////////////////////////////////////////////////
 
-  void visit_calls( std::vector<call_info_struct> & calls ) {
+  bool handle_special_function(CallExpr *Call) {
+    // If the function is in a list of defined loop functions, add it to a list
+    // Return true if the expression is a special function
 
-    for (auto & ci : calls ) {
-      check_site_dependence(ci);
+    std::string name = Call->getDirectCallee()->getNameInfo().getAsString();
 
-      // spin new visitor for all calls here
+    if (CXXMemberCallExpr *MCall = dyn_cast<CXXMemberCallExpr>(Call)) {
+      // llvm::errs() << "It's a member call, name " << name << " objarg "
+      //       << MCall->getImplicitObjectArgument()->getType().getAsString() << "\n";
+      //    std::string objtype = MCall->getImplicitObjectArgument()->getType().getAsString();
+      std::string objtype = get_expr_type(MCall->getImplicitObjectArgument());  
+      if (objtype == "lattice_struct *") {
 
-      loopFunctionVisitor visitor(TheRewriter,Context);
-      visitor.start_visit(ci);
+        llvm::errs() << "CALL in LOOP FUNC: " << get_stmt_str(Call) << '\n';
+        special_function_call sfc;
+        sfc.fullExpr = Call;
+        sfc.name = name;
+        sfc.argsExpr = nullptr;
+
+        SourceLocation sl = findChar(Call->getSourceRange().getBegin(),'(');
+        if (sl.isInvalid()) {
+          reportDiag(DiagnosticsEngine::Level::Fatal,
+                    Call->getSourceRange().getBegin(),
+                    "Open parens '(' not found, internal error");
+          exit(1);
+        }
+        sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
+
+        bool replace_this = true;   // for non-cuda code replace only cases which are needed
+        if (name == "size") {
+          sfc.replace_expression = "loop_lattice_size(";
+          sfc.add_loop_var = false;
+          replace_this = target.CUDA;
+        } else if (name == "volume") {
+          sfc.replace_expression = "loop_lattice_volume(";
+          sfc.add_loop_var = false;
+          replace_this = target.CUDA;
+        } else {
+          reportDiag(DiagnosticsEngine::Level::Error,
+            Call->getSourceRange().getBegin(),
+          "Method 'lattice->.%0()' not allowed inside site loops", name.c_str() );
+        }
+
+        if (replace_this) special_call_list.push_back(sfc);
+
+        return true;
+
+      } else {
+        
+        // other method calls?
+        return false;
+      }
+
+    } else {
+      if( name == "hila_random" ){
+
+        // no need to do anything (yet)
+
+        // special_function_call sfc;
+        // sfc.fullExpr = Call;
+        // sfc.argsExpr = nullptr;
+        // sfc.scope = parsing_state.scope_level;
+        // sfc.name = name;
+        // sfc.replace_expression = "hila_random()";
+        // sfc.replace_range = Call->getSourceRange();  // replace full range
+        // sfc.add_loop_var = false;
+        // special_function_call_list.push_back(sfc);
+
+        return true;
+      }
     }
+
+    return true;
   }
 
 
-  void start_visit( call_info_struct & ci ) {
+  /////////////////////////////////////////////////////////////////////////////
+  /// Check now that the references to variables are as required
+  /////////////////////////////////////////////////////////////////////////////
 
-    // TODO: Should one here check first the vectorization of parameters?
+  void check_var_info() {
+
+    // iterate through var_info_list until no more is_site_dependent -relations found
+    // this should not leave any corner cases behind
+
+    int found;
+    do {
+      found = 0;
+      for (var_info & vi : var_info_list) {
+        if (vi.is_site_dependent == false) {
+          for (var_info * d : vi.dependent_vars) if (d->is_site_dependent) {
+            vi.is_site_dependent = true;
+            found++;
+            break;  // go to next var
+          }
+        }
+      } 
+    } while (found > 0);
+
+    // and also get the vectorized type for them, to be prepared...
+
+    if (target.vectorize) {
+      for (var_info & vi : var_info_list) {
+        vi.vecinfo.is_vectorizable = is_vectorizable_type(vi.decl->getType(),vi.vecinfo);
+      }
+    }
+
+  }
+
+
+
+  
+  ///////////////////////////////////////////////////////////////////////////////////
+  /// Visit each function seen
+  /// return false if things went wrong
+  ///////////////////////////////////////////////////////////////////////////////////
+
+  bool do_visit( call_info_struct & ci ) {
+
 
     this_ci = &ci;
 
@@ -390,7 +392,7 @@ public:
       else if (ci.constructor != nullptr)
         llvm::errs() << "Loop constructor decl has no body: " << ci.ctordecl->getNameAsString() << '\n';
 
-      return true;
+      return false;
     }
 
     // mark this as visited
@@ -398,17 +400,57 @@ public:
 
     // push the param vars to var list
     for (auto & arg : ci.arguments) {
-      var_info vi;
-      vi.
-      arg.
+      add_var_to_decl_list( arg.PV, 0 );     // no need to worry about scope levels
     }
 
     // start the visit here
     TraverseStmt(decl_body);
 
+    // recheck variables
+    check_var_info();
+
+    // go and visit all of the calls inside (recursively)
+    visit_calls();
+
+    // post-process vectorization info
+    if (target.vectorize) {
+      ci.is_vectorizable = !ci.contains_random;
+      if (ci.is_vectorizable) {
+        for (auto & func : function_calls) {
+          ci.is_vectorizable &= ( func.is_vectorizable || !func.is_site_dependent);
+        }
+      }
+      if (ci.is_vectorizable) {
+        for (auto & vi : var_info_list) {
+          ci.is_vectorizable &= ( vi.is_vectorizable || !vi.is_site_dependent);
+        }
+      }
+    }
+
+    
+
     return true;
 
   }
+
+  ///////////////////////////////////////////////////////////////////////////////////
+  /// Loop through functions seen - almost copy of the visit_loop_functions below, but
+  /// callable from the visitor itself
+  ///////////////////////////////////////////////////////////////////////////////////
+
+
+  void visit_calls() {
+
+    for (auto & ci : function_calls ) {
+      check_site_dependence(ci);
+
+      // spin new visitor for all calls here
+
+      loopFunctionVisitor visitor(TheRewriter,Context);
+      visitor.do_visit(ci);
+    }
+  }
+
 
 
 };
@@ -432,7 +474,7 @@ void TopLevelVisitor::visit_loop_functions( std::vector<call_info_struct> & call
     // spin new visitor for all calls here
 
     loopFunctionVisitor visitor(TheRewriter,Context);
-    visitor.start_visit(ci);
+    visitor.do_visit(ci);
 
   }
 

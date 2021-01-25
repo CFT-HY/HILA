@@ -414,3 +414,37 @@ var_info * GeneralVisitor::new_var_info(VarDecl *decl) {
   return &(var_info_list.back());
 }
 
+
+//////////////////////////////////////////////////////////////////////////////
+/// Now variable is a (loop) local var, add to list
+//////////////////////////////////////////////////////////////////////////////
+
+void GeneralVisitor::add_var_to_decl_list(VarDecl * var, int scope_level) {
+
+  // Now it should be automatic local variable decl
+  var_decl vd;
+  vd.decl = var;
+  vd.name = var->getName().str();
+  vd.type = var->getType().getAsString();
+  vd.scope = scope_level;
+
+  var_decl_list.push_back(vd);
+
+  // insert this to var_info_list too
+
+  var_info * ip = new_var_info(var);
+  ip->reduction_type = reduction::NONE;
+
+  // finally, check initialization
+  if (var->hasInit()) {
+    ip->is_site_dependent = is_site_dependent(var->getInit(), &ip->dependent_vars);
+    ip->is_assigned = true;
+  } else {
+    ip->is_assigned = false;
+  }
+  
+  llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
+  return;
+} 
+
+

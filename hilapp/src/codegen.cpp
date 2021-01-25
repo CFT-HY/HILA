@@ -324,7 +324,7 @@ void TopLevelVisitor::handle_field_plus_offsets( std::stringstream &code,
 
 
 /// Call the backend function for handling loop functions
-void TopLevelVisitor::backend_handle_loop_function(FunctionDecl *fd) {
+void GeneralVisitor::backend_handle_loop_function(FunctionDecl *fd) {
   // we should mark the function, but it is not necessarily in the
   // main file buffer
   if (target.CUDA) {
@@ -337,7 +337,7 @@ void TopLevelVisitor::backend_handle_loop_function(FunctionDecl *fd) {
 }
 
 /// Call the backend function for handling loop functions
-void TopLevelVisitor::backend_handle_loop_constructor(CXXConstructorDecl *fd) {
+void GeneralVisitor::backend_handle_loop_constructor(CXXConstructorDecl *fd) {
   // we should mark the function, but it is not necessarily in the
   // main file buffer
   if (target.CUDA) {

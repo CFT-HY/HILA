@@ -8,8 +8,12 @@
 #include <string>
 
 /////////
-/// Implementation of most myastvisitor methods
+/// Implementation of most toplevelvisitor methods
 /////////
+
+// define the ptr to the visitor here
+TopLevelVisitor * g_TopLevelVisitor;
+
 
 //function used for development
 std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
@@ -415,7 +419,8 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   array_ref_list.clear();
   vector_reduction_ref_list.clear();
   remove_expr_list.clear();
-  clear_loop_function_calls();
+  loop_function_calls.clear();
+
   global.location.loop = ls->getSourceRange().getBegin();
   loop_info.clear_except_parity();
   parsing_state.accept_field_parity = field_parity_ok;
@@ -1214,39 +1219,16 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
     }
 
     // Now it should be automatic local variable decl
-    var_decl vd;
-    vd.decl = var;
-    vd.name = var->getName().str();
-    vd.type = var->getType().getAsString();
-    vd.scope = parsing_state.scope_level;
 
-    var_decl_list.push_back(vd);
+    add_var_to_decl_list(var, parsing_state.scope_level );
 
-    // insert this to var_info_list too
-
-    var_info * ip = new_var_info(var);
-    ip->reduction_type = reduction::NONE;
-
-    // finally, check initialization
-    if (var->hasInit()) {
-      ip->is_site_dependent = is_site_dependent(var->getInit(), &ip->dependent_vars);
-      ip->is_assigned = true;
-    } else {
-      ip->is_assigned = false;
-    }
-    
-    llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
-    return true;
   } 
 
-  // if (is_field_decl(var)) {
-  //   llvm::errs() << "FIELD DECL \'" << var->getName() << "\' of type "
-  //                << var->getType().getAsString() << '\n';
-  //   if (var->isTemplated()) llvm::errs() << " .. was templated\n";
-  // }
-  
   return true;
 }
+
+///////////////////////////////////////////////////////////////////////////
+
 
 void TopLevelVisitor::ast_dump_header(const char *s, const SourceRange sr_in) {
   SourceRange sr = sr_in;
@@ -1284,6 +1266,7 @@ void TopLevelVisitor::ast_dump(const Decl *D) {
   llvm::errs() << "*****************************\n";
 }
 
+///////////////////////////////////////////////////////////////////////////////
 
 
 void TopLevelVisitor::remove_vars_out_of_scope(unsigned level) {
