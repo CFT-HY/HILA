@@ -325,38 +325,49 @@ struct loop_info_struct {
 /// Stores information about loop function function arguments
 struct argument_info {
   Expr * E;
-  const ParmVarDecl * PV;
+  ParmVarDecl * PV;
   std::vector<var_info *> dependent_vars;
   bool is_lvalue;
   bool is_site_dependent;
   bool is_output_only;
   bool is_const;
+
+  argument_info() {
+    is_lvalue = is_site_dependent = is_output_only = is_const = false;
+    E = nullptr;
+    PV = nullptr;
+    dependent_vars = {};
+  }
 };
 
 /// Stores information about loop function calls
 struct call_info_struct {
-  CallExpr * call;
-  FunctionDecl * decl;
-  CXXConstructExpr * constructor;
+  FunctionDecl * funcdecl;
   CXXConstructorDecl * ctordecl;
+  CallExpr * call;
+  CXXConstructExpr * constructor;
   std::vector<argument_info> arguments;
   Expr * condExpr;
   argument_info object;
+  bool decl_only;
   bool is_operator;
   bool is_method;
   bool is_vectorizable;
   bool is_site_dependent;
   bool has_site_dependent_conditional;
   bool contains_random;
+  bool is_defaulted;             // We assume that Clang "default" classification functions
+                                 // do not need to be handled (incl. default methods)
 
   call_info_struct() {
     call = nullptr;
     constructor = nullptr;
-    decl = nullptr;
+    funcdecl = nullptr;
     ctordecl = nullptr;
     arguments.clear();
     is_method = is_operator = is_site_dependent = contains_random = false;
-    has_site_dependent_conditional = false;
+    has_site_dependent_conditional = is_defaulted = false;
+    decl_only = false;
     is_vectorizable = true;
   }
 };

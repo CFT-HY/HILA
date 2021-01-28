@@ -214,8 +214,8 @@ int main(int argc, char **argv){
       moved_element = s2.get_element(coord1);
       assert(moved_element == 1 && "moved down");
 
-      s1.set_boundary_condition(direction(0), boundary_condition_t::ANTIPERIODIC);
-      s2.set_boundary_condition(direction(0), boundary_condition_t::ANTIPERIODIC);
+      s1.set_boundary_condition(direction(0), BoundaryCondition::ANTIPERIODIC);
+      s2.set_boundary_condition(direction(0), BoundaryCondition::ANTIPERIODIC);
       
       // Now try antiperiodic boundaries
       s1=0; s2=0;

@@ -120,6 +120,7 @@ OBJECTS = \
   $(BUILDDIR)/generalvisitor.o \
   $(BUILDDIR)/toplevelvisitor.o \
   $(BUILDDIR)/loop_function_new.o \
+  $(BUILDDIR)/loop_function_visitor.o \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site.o \
   $(BUILDDIR)/contains_random.o \

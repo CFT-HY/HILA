@@ -33,9 +33,11 @@ extern std::string parity_in_this_loop;
 
 
 // Add the __host__ __device__ keywords to functions called a loop
-void GeneralVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
-  
-  SourceLocation sl = fd->getSourceRange().getBegin();
+void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
+
+  if (ci.is_defaulted) return;     // cuda can take care of these
+
+  SourceLocation sl = ci.funcdecl->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
   if (sb == nullptr) {
     // it's a system file -- should we do something?
@@ -45,9 +47,14 @@ void GeneralVisitor::handle_loop_function_cuda(FunctionDecl *fd) {
 }
 
 
-void GeneralVisitor::handle_loop_constructor_cuda(CXXConstructorDecl *fd) {
-  
-  SourceLocation sl = fd->getSourceRange().getBegin();
+void GeneralVisitor::handle_loop_constructor_cuda(call_info_struct &ci) {
+
+  if (ci.is_defaulted) {
+    llvm::errs() << "       +++++++++++++++++ defaulted constructor " << ci.ctordecl->getNameAsString() << '\n';
+    return;
+  }
+
+  SourceLocation sl = ci.ctordecl->getSourceRange().getBegin();
   srcBuf * sb = get_file_srcBuf(sl);
   if (sb == nullptr) {
     // it's a system file -- should we do something?

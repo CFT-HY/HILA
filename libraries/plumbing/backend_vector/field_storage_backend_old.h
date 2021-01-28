@@ -95,7 +95,7 @@ void field_storage<T>::free_field() {
 
 
 template<typename T>
-#pragma hila loop_function  //TODO
+//#pragma hila loop_function  //TODO
 auto field_storage<T>::get(const int i, const int field_alloc_size) const
 {
   using vectortype = typename vector_info<T>::type;
@@ -117,7 +117,7 @@ auto field_storage<T>::get(const int i, const int field_alloc_size) const
 
 template<typename T>
 template<typename A>
-#pragma hila loop_function  //TODO
+//#pragma hila loop_function  //TODO
 inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size) 
 {
   using vectortype = typename vector_info<T>::type;

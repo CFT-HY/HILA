@@ -37,8 +37,8 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
 
     Field<typename dirac::vector_type> psi, chi, tmp, tmp2;
     #if NDIM > 3
-    psi.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
-    psi.set_boundary_condition(-e_t, boundary_condition_t::ANTIPERIODIC);
+    psi.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
+    psi.set_boundary_condition(-e_t, BoundaryCondition::ANTIPERIODIC);
     #endif
     chi.copy_boundary_condition(psi);
     tmp.copy_boundary_condition(psi);

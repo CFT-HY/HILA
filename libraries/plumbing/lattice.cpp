@@ -529,9 +529,8 @@ void lattice_struct::create_std_gathers()
 
       for (int i=0; i<mynode.sites; i++) {
         if (neighb[d][i] == mynode.sites) {
-          coordinate_vector ln, l;
+          coordinate_vector l;
           l = coordinates(i);
-          ln = mod(l + d, size()); 
 
           if (l.parity() == EVEN) {
             // THIS site is even
@@ -683,11 +682,11 @@ void lattice_struct::init_special_boundaries() {
 /////////////////////////////////////////////////////////////////////
 /// give the neighbour array pointer.  Allocate if needed
 
-const unsigned * lattice_struct::get_neighbour_array(direction d, boundary_condition_t bc) {
+const unsigned * lattice_struct::get_neighbour_array(direction d, BoundaryCondition bc) {
 
   // regular bc exit, should happen almost always
   if (special_boundaries[d].is_needed == false ||
-      bc == boundary_condition_t::PERIODIC) return neighb[d];
+      bc == BoundaryCondition::PERIODIC) return neighb[d];
 
   if (special_boundaries[d].neighbours == nullptr) {
     setup_special_boundary_array(d);

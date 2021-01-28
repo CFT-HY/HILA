@@ -88,6 +88,9 @@ public:
   /// Visit function declarations
   bool VisitFunctionDecl(FunctionDecl *f);
 
+  /// same with constructor
+  bool VisitCXXConstructorDecl(CXXConstructorDecl *c);
+
   /// typealiases are used to determine if class is vectorizable
   bool VisitTypeAliasDecl(TypeAliasDecl * ta);
 
@@ -157,8 +160,6 @@ public:
   void handle_member_call_in_loop(Stmt * s);
 
   bool loop_function_check(Decl *fd);
-
-  bool handle_loop_function_if_needed(FunctionDecl *fd);
   
   void process_loop_functions();
 

@@ -1,24 +1,12 @@
 #include <sstream>
 #include <iostream>
 #include <string>
-#include "clang/Analysis/CallGraph.h"
 
 #include "toplevelvisitor.h"
 #include "hilapp.h"
 #include "stringops.h"
 
-// collect here all loop functions in this compilation unit
-// these vars are accumulated over the whole translation unit
-
-static std::vector<FunctionDecl *> loop_functions = {};
-static std::vector<CXXConstructorDecl *> loop_constructors = {};
-
-
-// clear function ptrs in whole compilation unit
-void clear_loop_functions_in_compilation_unit() {
-  loop_functions.clear();
-  loop_constructors.clear();
-}
+// #define LOOP_FUNC_DEBUG
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -59,15 +47,12 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
   // check the arg list
   call_info_struct ci = handle_loop_function_args(D,Call,contains_rng);
   ci.call = Call;
-  ci.decl = D;
+  ci.funcdecl = D;
   ci.contains_random = contains_rng;
   
   /// add to function calls to be checked ...
   loop_function_calls.push_back(ci);
 
-  
-  // Store functions used in loops, recursively...
-  loop_function_check(decl);
 
 }
 
@@ -86,10 +71,40 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt * s) {
   // Get the declaration of the constructor
   CXXConstructorDecl* decl = CtorE->getConstructor();
 
+  // if constructor for index types return, nothing to do
+  std::string name = decl->getNameAsString();
+
+  if (find_word(name, "X_index_type") != std::string::npos ||
+      find_word(name, "X_plus_direction") != std::string::npos ||
+      find_word(name, "X_plus_offset") != std::string::npos ) return;
+
   //llvm::errs() << " callee:\n";
   //decl->dump();
 
-  llvm::errs() << "  Constructor " << decl->getNameAsString() << '\n';
+
+  #ifdef LOOP_FUNC_DEBUG
+  llvm::errs() << "FOUND LOOP CONSTRUCTOR " << decl->getQualifiedNameAsString() 
+               << "\n    defined on line " <<  srcMgr.getSpellingLineNumber(decl->getBeginLoc())
+               << " in file " <<  srcMgr.getFilename(decl->getBeginLoc())
+               << "\n    called from line " << srcMgr.getSpellingLineNumber(CtorE->getBeginLoc())
+               << " in file " <<  srcMgr.getFilename(CtorE->getBeginLoc()) << '\n';
+  
+  llvm::errs() << "#parameters: " << decl->getNumParams() << " and " << CtorE->getNumArgs() << " arguments\n";
+
+  llvm::errs() << "   Constructor args: ";
+  for (Expr * E : CtorE->arguments()) {
+    llvm::errs() << get_stmt_str(E);
+    if (E->isLValue()) llvm::errs() << "-LVALUE";
+    llvm::errs() << ", ";
+  }
+  llvm::errs() << "\n   Construtor params: ";
+  for (int i=0; i<decl->getNumParams(); i++) llvm::errs() << decl->getParamDecl(i)->getNameAsString() << ", ";
+  llvm::errs() << "\n";
+
+  #endif
+
+
+
 
   // Store functions used in loops, recursively...
 
@@ -122,6 +137,9 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt * s) {
   ci.ctordecl = decl;
   ci.contains_random = contains_rng;
 
+  // check if this is defaulted - cuda does not want these as explicit device funcs
+  ci.is_defaulted = (decl->isDefaulted() || decl->isExplicitlyDefaulted());
+
   // go through the args - If contains field[X] or site dep. vars 
   // whole call is site dep.
   // Lvalue vars can change
@@ -129,7 +147,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt * s) {
   for( int i=0; i<CtorE->getNumArgs(); i++) {
 
     Expr * E = CtorE->getArg(i);
-    const ParmVarDecl * pv = decl->getParamDecl(i);
+    ParmVarDecl * pv = decl->getParamDecl(i);
 
     argument_info ai;
     is_site_dependent |= handle_call_argument(E, pv, is_site_dependent, 
@@ -146,32 +164,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt * s) {
   // and add the call  to check-up list
   loop_function_calls.push_back(ci);
 
-  bool handle_decl = !srcMgr.isInSystemHeader(decl->getBeginLoc());
-  
-  // check if we already have this declaration - either the pointer is the same
-  // or the source location (actually, source location should do all, no need for 
-  // CXXConstructorDecl *, but it does not hurt)
-  for (int i=0; handle_decl && i<loop_constructors.size(); i++) { 
-    if (decl == loop_constructors[i] || 
-        decl->getSourceRange().getBegin() == 
-          loop_constructors[i]->getSourceRange().getBegin() ) {
-      handle_decl = false;
-    }
-  }
-  if (handle_decl) {
-    if (decl->isTrivial()) {
-      llvm::errs() << "TRIVIAL CONSTRUCTOR " << decl->getNameAsString() << " DO NOTHING\n";
-    } else {
-      loop_constructors.push_back(decl);
-        llvm::errs() << "NEW LOOP CONSTRUCTOR " << decl->getNameAsString() << '\n';
-        // " parameters ";
-        //  for (int i=0; i<fd->getNumParams(); i++) 
-        //  llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString();
-        // llvm::errs() << '\n';
-    
-      backend_handle_loop_constructor(decl);
-    }
-  }
+ 
 }
 
 
@@ -196,10 +189,14 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
   call_info_struct cinfo;
 
 
-  #define LOOP_FUNC_DEBUG
   #ifdef LOOP_FUNC_DEBUG
-  llvm::errs() << "LOOP FUNC " << D->getNameAsString() << " with "
-  << D->getNumParams() << " parameters and " << Call->getNumArgs() << " arguments\n";
+  llvm::errs() << "FOUND LOOP FUNC " << D->getQualifiedNameAsString() 
+               << "\n    defined on line " <<  srcMgr.getSpellingLineNumber(D->getBeginLoc())
+               << " in file " <<  srcMgr.getFilename(D->getBeginLoc())
+               << "\n    called from line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+               << " in file " <<  srcMgr.getFilename(Call->getBeginLoc()) << '\n';
+  
+  llvm::errs() << "#parameters: " << D->getNumParams() << " and " << Call->getNumArgs() << " arguments\n";
 
   llvm::errs() << "Is it a method? " << isa<CXXMemberCallExpr>(Call) << '\n';
 
@@ -217,6 +214,10 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
 
   cinfo.is_site_dependent = sitedep;
 
+  // check if this is trivial - trivial methods/funcs 
+  cinfo.is_defaulted = (D->isDefaulted() || D->isExplicitlyDefaulted());
+
+
   // for operators, the dependency in args is handled separately in toplevelisitor 
   // (Really, should treat everything here but started with that)
   if (isa<CXXOperatorCallExpr>(Call)) {
@@ -226,7 +227,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
 
   if (D->getNumParams() != Call->getNumArgs()) {
 
-      llvm::errs() << "Internal error: #params != #args, function " << D->getNameAsString() << '\n';
+      llvm::errs() << "Internal error: #params != #args, function " << D->getQualifiedNameAsString() << '\n';
       llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
                    << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
       llvm::errs() << "  Function is defined on line " << srcMgr.getSpellingLineNumber(D->getBeginLoc())
@@ -244,7 +245,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
   for( int i=0; i<Call->getNumArgs(); i++) {
 
     Expr * E = Call->getArg(i);
-    const ParmVarDecl * pv = D->getParamDecl(i);
+    ParmVarDecl * pv = D->getParamDecl(i);
 
     argument_info ai;
     sitedep = handle_call_argument(E, pv, sitedep, &out_variables, &dep_variables, ai);
@@ -258,80 +259,88 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
   // If the function is a method, check the member call arg too 
 
   if ( CXXMemberCallExpr * MCE = dyn_cast<CXXMemberCallExpr>(Call) ) {
-    Expr * E = MCE->getImplicitObjectArgument();
-    E = E->IgnoreParens();
-    E = E->IgnoreImplicit();
 
     CXXMethodDecl * MD = MCE->getMethodDecl();
-    bool is_const = MD->isConst();
 
-    // try this method...
-    SourceLocation sl = MD->getNameInfo().getEndLoc();
-    // scan parens after name
-    bool output_only = false;
-    // llvm::errs() << "METHOD WORD AFTER PARENS " << getNextWord(skipParens(sl)) 
-    //              << " is const? " << is_const << '\n';
-    if (getNextWord(skipParens(sl)) == output_only_keyword) {
-      output_only = true;
-    }
+    // for static methods, I don't think there is an object variable - skip all
+    if ( !MD->isStatic() ) {
 
-    if (output_only && is_const) {
-       reportDiag(DiagnosticsEngine::Level::Error,
-                 sl,
-                 "'output_only' cannot be used with 'const'");
-       reportDiag(DiagnosticsEngine::Level::Note,
-                 Call->getSourceRange().getBegin(),
-                 "Called from here");
-    }
+      bool is_const = MD->isConst();
 
-    cinfo.is_method = true;
-    cinfo.object.E = E;
-    cinfo.object.is_output_only = output_only;
+      // try this method...
+      SourceLocation sl = MD->getNameInfo().getEndLoc();
+      // scan parens after name
+      bool output_only = false;
+      // llvm::errs() << "METHOD WORD AFTER PARENS " << getNextWord(skipParens(sl)) 
+      //              << " is const? " << is_const << '\n';
+      if (getNextWord(skipParens(sl)) == output_only_keyword) {
+        output_only = true;
+      }
 
-    if (is_top_level && is_field_with_X_expr(E)) {
- 
-      // following is called only if this==g_TopLevelVisitor, this just makes it compile
-      g_TopLevelVisitor->handle_field_X_expr(E,!is_const,(!is_const && !output_only),true);
+      if (output_only && is_const) {
+        reportDiag(DiagnosticsEngine::Level::Error,
+                  sl,
+                  "'output_only' cannot be used with 'const'");
+        reportDiag(DiagnosticsEngine::Level::Note,
+                  Call->getSourceRange().getBegin(),
+                  "Called from here");
+      }
 
-      sitedep = true;
+      Expr * E = MCE->getImplicitObjectArgument();
+      E = E->IgnoreParens();
+      E = E->IgnoreImplicit();
 
-      cinfo.object.is_site_dependent = true;
-      cinfo.object.is_lvalue = !is_const;
-      cinfo.object.is_const = is_const;
+      cinfo.is_method = true;
+      cinfo.object.E = E;
+      cinfo.object.is_output_only = output_only;
 
-    } else if (isa<DeclRefExpr>(E)) {
-      // some other variable reference
-      DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(E);
-      var_info * vip = handle_var_ref(DRE,!is_const,"method",nullptr);
+      if (is_top_level && is_field_with_X_expr(E)) {
+  
+        // following is called only if this==g_TopLevelVisitor, this just makes it compile
+        g_TopLevelVisitor->handle_field_X_expr(E,!is_const,(!is_const && !output_only),true);
 
-      if (vip != nullptr) {
-        // site dep is additive
-        sitedep = (sitedep || vip->is_site_dependent);
+        sitedep = true;
 
-        if (!is_const) out_variables.push_back(vip);
-
+        cinfo.object.is_site_dependent = true;
         cinfo.object.is_lvalue = !is_const;
         cinfo.object.is_const = is_const;
 
-        if (is_const) {
-          cinfo.object.is_site_dependent = vip->is_site_dependent;
-        } else {
-          cinfo.object.is_site_dependent = sitedep;
+      } else if (isa<DeclRefExpr>(E)) {
+
+        // some other variable reference
+        DeclRefExpr * DRE = dyn_cast<DeclRefExpr>(E);
+        var_info * vip = handle_var_ref(DRE,!is_const,"method",nullptr);
+
+        if (vip != nullptr) {
+          // site dep is additive
+          sitedep = (sitedep || vip->is_site_dependent);
+
+          if (!is_const) out_variables.push_back(vip);
+
+          cinfo.object.is_lvalue = !is_const;
+          cinfo.object.is_const = is_const;
+
+          if (is_const) {
+            cinfo.object.is_site_dependent = vip->is_site_dependent;
+          } else {
+            cinfo.object.is_site_dependent = sitedep;
+          }
+
         }
+      } else {
+        // now some other expression -- is it site dependent
 
+        cinfo.object.is_lvalue = false;
+        cinfo.object.is_const = true;
+
+        sitedep |= is_site_dependent(E,&dep_variables);
       }
-    } else {
-      // now some other expression -- is it site dependent
 
-      cinfo.object.is_lvalue = false;
-      cinfo.object.is_const = true;
+      cinfo.is_site_dependent |= sitedep;
 
-      sitedep |= is_site_dependent(E,&dep_variables);
-    }
+    } // ! isStatic()
 
-    cinfo.is_site_dependent |= sitedep;
-
-  }
+  } // method
 
   sitedep = attach_dependent_vars( out_variables, sitedep, dep_variables );
   cinfo.is_site_dependent |= sitedep;
@@ -347,7 +356,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
 /// and out variables
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool GeneralVisitor::handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep, 
+bool GeneralVisitor::handle_call_argument( Expr *E, ParmVarDecl * pv, bool sitedep, 
                                            std::vector<var_info *> * out_variables, 
                                            std::vector<var_info *> * dep_variables,
                                            argument_info & ai ) {
@@ -503,7 +512,9 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
     //       << MCall->getImplicitObjectArgument()->getType().getAsString() << "\n";
     //    std::string objtype = MCall->getImplicitObjectArgument()->getType().getAsString();
     std::string objtype = get_expr_type(MCall->getImplicitObjectArgument());  
-    if (objtype == "X_index_type" || objtype == "lattice_struct *") {
+
+    if (objtype.find("X_index_type") != std::string::npos || 
+        objtype.find("lattice_struct *") != std::string::npos) {
       // now it is a method of X
       // llvm::errs() << " X-method name " << get_stmt_str(Call) << '\n';
 
@@ -593,106 +604,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 void TopLevelVisitor::process_loop_functions() {
 
   // spin off to a new visitor
-  // visit_loop_functions( loop_function_calls );
+  visit_loop_functions( loop_function_calls );
 }
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-/// Utility for checking if need to handle decls and do it
-///////////////////////////////////////////////////////////////////////////////
-
-bool TopLevelVisitor::handle_loop_function_if_needed(FunctionDecl *fd) {
-  // Check if it is in a system header. If so, skip
-
-  bool handle_decl = !srcMgr.isInSystemHeader(fd->getBeginLoc());
-
-  // check if we already have this declaration - either the pointer is the same
-  // or the source location (actually, source location should do all, no need for 
-  // FunctionDecl *, but it does not hurt)
-  for (int i=0; handle_decl && i<loop_functions.size(); i++) { 
-    if (fd == loop_functions[i] || 
-        fd->getSourceRange().getBegin() == loop_functions[i]->getSourceRange().getBegin() )
-      handle_decl = false;
-  }
-  if (handle_decl) {
-    loop_functions.push_back(fd);
-    // llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() << 
-    //   " parameters ";
-    // for (int i=0; i<fd->getNumParams(); i++) 
-    //   llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString() << '\n';
-    
-    backend_handle_loop_function(fd);
-  }
-  return handle_decl;
-}
-
-
-
-////////////////////////////////////////////////////////////////////
-/// Check if the function is allowed to be within site loops.
-/// Returns true if OK to be included; false (and flags error) if not
-////////////////////////////////////////////////////////////////////
-
-bool TopLevelVisitor::loop_function_check(Decl *d) {
-  assert(d != nullptr);
-  
-  FunctionDecl *fd = dyn_cast<FunctionDecl>(d);
-  if (fd) {
-    // fd may point to declaration (prototype) without a body.
-    // First handle it here in either case
-
-    bool is_new_func = handle_loop_function_if_needed(fd);
-
-    // Now find the declaration of the function body
-    // Argument of hasBody becomes the pointer to definition if it is in this compilation unit
-    // needs to be const FunctionDecl *
-    const FunctionDecl * cfd;
-    if (fd->hasBody(cfd)) {
-  
-      // take away const
-      FunctionDecl *fbd = const_cast<FunctionDecl *>(cfd);
-      
-      if (fbd != fd) {
-        is_new_func = handle_loop_function_if_needed(fbd);
-      }
-
-      // Now is_new_func is true if the function body has not been scanned before
-      if (is_new_func) {
-        // get params of the function
-        
-        // And check also functions called by this func
-        CallGraph CG;
-        // addToCallGraph takes Decl *: cast 
-        // llvm::errs() << " ++ callgraph for " << fbd->getNameAsString() << '\n';
-
-        CG.addToCallGraph( dyn_cast<Decl>(fbd) );
-        // CG.dump();
-        int i = 0;
-        for (auto iter = CG.begin(); iter != CG.end(); ++iter, ++i) {
-          // loop through the nodes - iter is of type map<Decl *, CallGraphNode *>
-          // root i==0 is "null function", skip
-          if (i > 0) {
-            Decl * nd = iter->second->getDecl();
-            assert(nd != nullptr);
-            if (nd != fd) {
-              loop_function_check(nd);
-            }
-          }
-          // llvm::errs() << "   ++ loop_function loop " << i << '\n';
-        }
-      }
-      return true;
-    } else {
-      // Now function has no body - could be in other compilation unit or in system library.
-      // TODO: should we handle these?
-      // llvm::errs() << "   Function has no body!\n";
-    }
-  } else {
-    // now not a function - should not happen
-  }
-  return false;
-}
-
 
 

@@ -501,11 +501,12 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
     // check_allowed_assignment(s);  
     assign_stmt = s;
     is_assignment = true;
+
     // Need to mark/handle the assignment method if necessary
-    if( is_function_call_stmt(s) ){
-      handle_function_call_in_loop(s);
-    } else if ( is_constructor_stmt(s) ){
+    if ( is_constructor_stmt(s) ) {
       handle_constructor_in_loop(s);
+    } else if( is_function_call_stmt(s) ) {
+      handle_function_call_in_loop(s);
     }
 
     // next visit here will be to the assigned to variable
@@ -518,7 +519,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
 
   if ( is_constructor_stmt(s) ){
     handle_constructor_in_loop(s);
-    llvm::errs() << "GOT CONSTRUCTOR " << get_stmt_str(s) << '\n';
     // return true;
   }
 
@@ -532,7 +532,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
   // Check for function calls parameters. We need to determine if the 
   // function can assign to the a field parameter (is not const).
   if( is_function_call_stmt(s) ){
-    llvm::errs() << "GOT CALL " << get_stmt_str(s) << '\n';
     handle_function_call_in_loop(s);
     // let this ripple trough, for - expr f[X] is a function call and is trapped below too
     // return true;
@@ -613,8 +612,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
         handle_var_ref(DRE,is_assignment,assignop,assign_stmt);
         is_assignment = false;
       
-        llvm::errs() << "Variable ref: "
-                     << TheRewriter.getRewrittenText(E->getSourceRange()) << '\n';
+        // llvm::errs() << "Variable ref: "
+        //              << TheRewriter.getRewrittenText(E->getSourceRange()) << '\n';
 
         parsing_state.skip_children = 1;
         return true;
@@ -1438,7 +1437,7 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
   if (has_pragma(f,"loop_function")) {
     // This function can be called from a loop,
-    // handle as if it was called from one
+    // mark as noticed -- note that we do not have call arguments
     loop_function_check(f);
   }
 
@@ -1521,6 +1520,21 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
     
   }
 
+  return true;
+}
+
+////////////////////////////////////////////////////////////////////////
+/// And do the visit for constructors too - used here just for flag
+////////////////////////////////////////////////////////////////////////
+
+
+bool TopLevelVisitor::VisitCXXConstructorDecl(CXXConstructorDecl *c) {
+
+  if (has_pragma(c,"loop_function")) {
+    // This function can be called from a loop,
+    // mark as noticed -- note that we do not have call arguments
+    loop_function_check(c);
+  }
   return true;
 }
 
@@ -1705,9 +1719,10 @@ void TopLevelVisitor::specialize_function_or_method( FunctionDecl *f ) {
   parsing_state.skip_children = 1;
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////////
 // locate range of specialization "template< ..> .. func<...>( ... )"
 // tf is ptr to template, and f to instantiated function
+
 SourceRange TopLevelVisitor::get_func_decl_range(FunctionDecl *f) {
 
   if (f->hasBody()) {
@@ -1784,8 +1799,12 @@ bool TopLevelVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   return true;
 }
 
-// Find the element typealias here -- could not work
-// directly with VisitTypeAliasTemplateDecl below, a bug??
+/////////////////////////////////////////////////////////////////////////////////////
+/// Find the element typealias here -- could not work
+/// directly with VisitTypeAliasTemplateDecl below, a bug??
+/// Also find the 'ast dump' pragma
+/////////////////////////////////////////////////////////////////////////////////////
+
 bool TopLevelVisitor::VisitDecl( Decl * D) {
 
   if ( parsing_state.ast_depth == 1 &&
@@ -1793,16 +1812,20 @@ bool TopLevelVisitor::VisitDecl( Decl * D) {
     ast_dump(D);
   }
 
-  auto t = dyn_cast<TypeAliasTemplateDecl>(D);
-  if (t && t->getNameAsString() == "element") {
-    llvm::errs() << "Got field storage\n";
-  }
+  // THis does nothing here
+
+  // auto t = dyn_cast<TypeAliasTemplateDecl>(D);
+  // if (t && t->getNameAsString() == "element") {
+  //   llvm::errs() << "Got field storage\n";
+  // }
   
   return true;
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+/// THis is just to enable ast dump
+/////////////////////////////////////////////////////////////////////////////////////
 
-// THis is just to enable ast dump
 bool TopLevelVisitor::VisitType( Type * T) {
 
   auto * recdecl = T->getAsCXXRecordDecl();
@@ -1824,8 +1847,8 @@ bool TopLevelVisitor::VisitType( Type * T) {
 /////////////////////////////////////////////////////////////////////////////////
 
 void TopLevelVisitor::check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
-                                              SourceLocation ip, 
-                                              FunctionDecl *f) 
+                                                 SourceLocation ip, 
+                                                 FunctionDecl *f) 
 {
 
   for (const TemplateArgument * tap : typeargs) {
@@ -1844,8 +1867,11 @@ void TopLevelVisitor::check_spec_insertion_point(std::vector<const TemplateArgum
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////////
 /// Returns the mapping params -> args for class templates, inner first.  Return value
-/// the number of template nestings
+/// is the number of template nestings
+////////////////////////////////////////////////////////////////////////////////////
+
 int TopLevelVisitor::get_param_substitution_list( CXXRecordDecl * r,
                                                std::vector<std::string> & par,
                                                std::vector<std::string> & arg,
@@ -1884,12 +1910,17 @@ int TopLevelVisitor::get_param_substitution_list( CXXRecordDecl * r,
   return level;
 }
 
+///////////////////////////////////////////////////////////////////////////////////
+/// mapping of template params <-> args
+///////////////////////////////////////////////////////////////////////////////////
+
+
 void TopLevelVisitor::make_mapping_lists( const TemplateParameterList * tpl, 
-                                       const TemplateArgumentList & tal,
-                                       std::vector<std::string> & par,
-                                       std::vector<std::string> & arg,
-                                       std::vector<const TemplateArgument *> & typeargs,
-                                       std::string * argset ) {
+                                          const TemplateArgumentList & tal,
+                                          std::vector<std::string> & par,
+                                          std::vector<std::string> & arg,
+                                          std::vector<const TemplateArgument *> & typeargs,
+                                          std::string * argset ) {
 
   if (argset) *argset = "< ";
 
@@ -1924,6 +1955,10 @@ void TopLevelVisitor::make_mapping_lists( const TemplateParameterList * tpl,
   return;
 
 }
+
+/////////////////////////////////////////////////////////////////////////
+/// Hook to set the output buffer
+
 
 void TopLevelVisitor::set_writeBuf(const FileID fid) {
   writeBuf = get_file_buffer(TheRewriter, fid);

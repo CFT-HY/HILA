@@ -97,7 +97,7 @@ class Field {
 
       // neighbour pointers - because of boundary conditions, can be different for diff. fields
       const unsigned * RESTRICT neighbours[NDIRS];
-      boundary_condition_t boundary_condition[NDIRS];
+      BoundaryCondition boundary_condition[NDIRS];
 
 #ifdef USE_MPI
       MPI_Request receive_request[3][NDIRS];
@@ -186,7 +186,7 @@ class Field {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         // note: -d in is_on_edge, because we're about to send stuff to that direction
         // (fetching from direction +d)
-        if (boundary_condition[d] == boundary_condition_t::ANTIPERIODIC &&
+        if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
             lattice->special_boundaries[-d].is_on_edge) {
           payload.gather_comm_elements(buffer, to_node, par, lattice, true);
         } else {
@@ -199,7 +199,7 @@ class Field {
 #else
         // this is vectorized branch
         bool antiperiodic = false;
-        if (boundary_condition[d] == boundary_condition_t::ANTIPERIODIC &&
+        if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
             lattice->special_boundaries[-d].is_on_edge) antiperiodic = true;
 
         if constexpr (is_vectorizable_type<T>::value) {
@@ -256,7 +256,7 @@ class Field {
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
         bool antiperiodic =
-          (boundary_condition[dir] == boundary_condition_t::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
+          (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
         payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
       }
 
@@ -388,8 +388,8 @@ class Field {
     }
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     foralldir(dir){
-      fs->boundary_condition[dir] = boundary_condition_t::PERIODIC;
-      fs->boundary_condition[-dir] = boundary_condition_t::PERIODIC;
+      fs->boundary_condition[dir] = BoundaryCondition::PERIODIC;
+      fs->boundary_condition[-dir] = BoundaryCondition::PERIODIC;
     }
 #endif
 
@@ -494,7 +494,7 @@ class Field {
     return move_status(par,dir) == fetch_status::NOT_DONE;
   }
  
-  void set_boundary_condition( direction dir, boundary_condition_t bc) {
+  void set_boundary_condition( direction dir, BoundaryCondition bc) {
 
     #ifdef SPECIAL_BOUNDARY_CONDITIONS
     // TODO: This works as intended only for periodic/antiperiodic b.c.
@@ -505,7 +505,7 @@ class Field {
     fs->neighbours[dir]  = lattice->get_neighbour_array(dir,bc);
     fs->neighbours[-dir] = lattice->get_neighbour_array(-dir,bc);
     #else
-    if(bc == boundary_condition_t::PERIODIC){
+    if(bc == BoundaryCondition::PERIODIC){
       fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb[dir];
       fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb[-dir];
     } else {
@@ -519,11 +519,11 @@ class Field {
     #endif
   }
 
-  boundary_condition_t get_boundary_condition( direction dir ) const {
+  BoundaryCondition get_boundary_condition( direction dir ) const {
     #ifdef SPECIAL_BOUNDARY_CONDITIONS
     return fs->boundary_condition[dir];
     #else
-    return boundary_condition_t::PERIODIC;
+    return BoundaryCondition::PERIODIC;
     #endif
   }
 
@@ -1500,6 +1500,36 @@ extern Field<double> disable_avx;
 #include "plumbing/FFT.h"
 #endif
 
+
+
+#ifdef HILAPP
+
+// crazy function to exercise some direction and coordinate_vector operations
+// Needed because hilapp changes X+d-d  ->   +d-d, which may involve an operator
+// not met before
+
+inline void dummy_X_f()
+{
+  direction d1 = e_x;
+  coordinate_vector v1(0);
+  onsites(ALL) {
+    direction d;
+    d = +d1;   d = -d1;  // unaryops
+    coordinate_vector v;
+    v = +v1;   v = -v1;  
+
+    // direction + vector combos
+    v = d + d1;   v = d - d1;
+    v = v1 + d1;  v = v1 - d1;
+    v = d1 + v1;  v = d1 - v1;
+    v = v + v1;   v = v - v1;
+
+    // and direction index func
+    v[e_x] = v[0] + v[e_y] + v.e(e_y);
+  }
+}
+
+#endif
 
 
 

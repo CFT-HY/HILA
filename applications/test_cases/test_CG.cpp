@@ -153,7 +153,7 @@ int main(int argc, char **argv){
     dirac D(0.05, U);
     Field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     #if NDIM > 3
-      a.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
+      a.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
       b.copy_boundary_condition(a);
       Db.copy_boundary_condition(a);
       Ddaggera.copy_boundary_condition(a);
@@ -252,11 +252,11 @@ int main(int argc, char **argv){
     dirac D(0.12, U);
     Field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     #if NDIM > 3
-      a.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
-      b.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
-      Db.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
-      Ddaggera.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
-      DdaggerDb.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
+      a.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
+      b.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
+      Db.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
+      Ddaggera.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
+      DdaggerDb.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
     #endif
 
     a[ODD] = 0; b[ODD] = 0;

@@ -324,28 +324,28 @@ void TopLevelVisitor::handle_field_plus_offsets( std::stringstream &code,
 
 
 /// Call the backend function for handling loop functions
-void GeneralVisitor::backend_handle_loop_function(FunctionDecl *fd) {
+void GeneralVisitor::backend_handle_loop_function(call_info_struct &ci) {
   // we should mark the function, but it is not necessarily in the
   // main file buffer
   if (target.CUDA) {
-    handle_loop_function_cuda(fd);
+    handle_loop_function_cuda(ci);
   } else if (target.openacc) {
-    handle_loop_function_openacc(fd);
+    handle_loop_function_openacc(ci.funcdecl);
   } else if (target.vectorize) {
-    handle_loop_function_avx(fd);
+    handle_loop_function_avx(ci);
   }
 }
 
 /// Call the backend function for handling loop functions
-void GeneralVisitor::backend_handle_loop_constructor(CXXConstructorDecl *fd) {
+void GeneralVisitor::backend_handle_loop_constructor(call_info_struct &ci) {
   // we should mark the function, but it is not necessarily in the
   // main file buffer
   if (target.CUDA) {
-    handle_loop_constructor_cuda(fd);
+    handle_loop_constructor_cuda(ci);
   } else if (target.openacc) {
-    handle_loop_constructor_openacc(fd);
+    handle_loop_constructor_openacc(ci.ctordecl);
   } else if (target.vectorize) {
-    handle_loop_constructor_avx(fd);
+    handle_loop_constructor_avx(ci);
   }
 }
 

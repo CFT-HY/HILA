@@ -16,6 +16,7 @@ SUBNODE_LAYOUT needs to be defined to use this
 /// these are used by fields which are laid out with vector structure
 template<int vector_size>
 struct vectorized_lattice_struct  {
+  static_assert( vector_size > 0, "Vector size in vectorized_lattice_struct");
   public:
     /// pointer to the original lattice
     lattice_struct * lattice;

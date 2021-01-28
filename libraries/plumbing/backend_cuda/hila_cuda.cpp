@@ -1,6 +1,7 @@
 
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
+#include "plumbing/field.h"
 #include "plumbing/backend_cuda/defs.h"
 
 // hilapp needs to transform the include files above, to make them __device__ callable...
@@ -96,7 +97,7 @@ void backend_lattice_struct::setup(lattice_struct * lattice)
     // For special boundaries
     cudaMalloc( (void **)&(d_neighb_special[d]), lattice->mynode.volume() * sizeof(unsigned));
     check_cuda_error("cudaMalloc device neighbour array");
-    const unsigned * special_neighb = lattice->get_neighbour_array((direction)d, boundary_condition_t::ANTIPERIODIC);
+    const unsigned * special_neighb = lattice->get_neighbour_array((direction)d, BoundaryCondition::ANTIPERIODIC);
     cudaMemcpy( d_neighb_special[d], special_neighb, lattice->mynode.volume() * sizeof(unsigned), cudaMemcpyHostToDevice );
     check_cuda_error("cudaMemcpy device neighbour array");
   }

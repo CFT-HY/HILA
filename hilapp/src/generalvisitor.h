@@ -126,7 +126,7 @@ public:
   std::string get_expr_type(const Expr *e) {
     // This is somehow needed for printing type without "class" id
     // TODO: perhaps reanalyse and make more robust?
-    return e->getType().getUnqualifiedType().getAsString(PP);
+    return e->getType().getCanonicalType().getUnqualifiedType().getAsString(PP);
   }
 
   /// check if stmt contains random number generator
@@ -246,14 +246,16 @@ public:
 
   var_info * new_var_info(VarDecl *decl);
 
-  void add_var_to_decl_list(VarDecl * var, int scope);
+  var_info * add_var_to_decl_list(VarDecl * var, int scope);
 
   void handle_constructor_in_loop(Stmt * s);
+
+  bool handle_loop_function_if_needed(call_info_struct & ci);
 
   call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call, 
                                              bool sitedep );
 
-  bool handle_call_argument( Expr *E, const ParmVarDecl * pv, bool sitedep,
+  bool handle_call_argument( Expr *E, ParmVarDecl * pv, bool sitedep,
                              std::vector<var_info *> * out_variables, 
                              std::vector<var_info *> * dep_variables,
                              argument_info & ai );
@@ -262,18 +264,18 @@ public:
                               std::vector<var_info *> & dep_variables );
 
 
-  void backend_handle_loop_function(FunctionDecl *fd);
-  void backend_handle_loop_constructor(CXXConstructorDecl *fd);
+  void backend_handle_loop_function(call_info_struct &ci);
+  void backend_handle_loop_constructor(call_info_struct &ci);
 
   /// Handle functions called in a loop
-  void handle_loop_function_cuda(FunctionDecl *fd);
+  void handle_loop_function_cuda(call_info_struct &ci);
   void handle_loop_function_openacc(FunctionDecl *fd);
-  void handle_loop_function_avx(FunctionDecl *fd);
+  void handle_loop_function_avx(call_info_struct &ci);
 
   /// Handle functions called in a loop
-  void handle_loop_constructor_cuda(CXXConstructorDecl *fd);
+  void handle_loop_constructor_cuda(call_info_struct &ci);
   void handle_loop_constructor_openacc(CXXConstructorDecl *fd);
-  void handle_loop_constructor_avx(CXXConstructorDecl *fd);
+  void handle_loop_constructor_avx(call_info_struct &ci);
 
 
 

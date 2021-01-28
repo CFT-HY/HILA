@@ -13,7 +13,7 @@
 
 #include "SUN.h"
 
-#pragma hila loop_function  //TODO
+//#pragma hila loop_function  //TODO
 void mult_su2_mat_vec_elem_n(
   Matrix<2,2,Cmplx<double>> &u,
   Cmplx<double> &x0,
@@ -38,7 +38,7 @@ void mult_su2_mat_vec_elem_n(
 } /* mult_su2_mat_vec_elem_n */
 
 
-#pragma hila loop_function  //TODO
+//#pragma hila loop_function  //TODO
 void left_su2_hit_n(
   Matrix<2,2,Cmplx<double>> &u,
   int p,
@@ -56,7 +56,7 @@ void left_su2_hit_n(
 } /* left_su2_hit_n */
 
 
-#pragma hila loop_function  //TODO
+//#pragma hila loop_function  //TODO
 double monte(
   Matrix<N,N,Cmplx<double>> &U, 
   Matrix<N,N,Cmplx<double>> &staple,

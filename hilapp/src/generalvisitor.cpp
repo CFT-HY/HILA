@@ -168,15 +168,18 @@ bool GeneralVisitor::is_constructor_stmt(Stmt * s) {
 }
 
 /////////////////////////////////////////////////////////////////
-/// is the stmt pointing now to a constructor
+/// is the stmt pointing now to a cast
+
 bool GeneralVisitor::is_user_cast_stmt(Stmt * s) {
-  if (auto *ce = dyn_cast<ImplicitCastExpr>(s)) {
-  // if (CastExpr *ce = dyn_cast<CastExpr>(s)) {
-    if (ce->getCastKind() == CK_UserDefinedConversion) {
-    // llvm::errs() << "Constructor found: " << get_stmt_str(s) << '\n';
+
+  if (CastExpr * ce = dyn_cast<CastExpr>(s)) {
+    if (NamedDecl * p = ce->getConversionFunction()) {
+      // now it is a user conversion function
+      llvm::errs() << " &&&&& GOT USER CONVERSION " << p->getNameAsString() << '\n';
       return true;
     }
   }
+
   return false;
 }
 
@@ -419,7 +422,7 @@ var_info * GeneralVisitor::new_var_info(VarDecl *decl) {
 /// Now variable is a (loop) local var, add to list
 //////////////////////////////////////////////////////////////////////////////
 
-void GeneralVisitor::add_var_to_decl_list(VarDecl * var, int scope_level) {
+var_info * GeneralVisitor::add_var_to_decl_list(VarDecl * var, int scope_level) {
 
   // Now it should be automatic local variable decl
   var_decl vd;
@@ -443,8 +446,9 @@ void GeneralVisitor::add_var_to_decl_list(VarDecl * var, int scope_level) {
     ip->is_assigned = false;
   }
   
-  llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
-  return;
+  //  llvm::errs() << "Local var decl " << vd.name << " of type " << vd.type << '\n';
+  
+  return ip;
 } 
 
 

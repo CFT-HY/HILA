@@ -135,7 +135,10 @@ static void replace_element_with_vector(SourceRange sr, std::string typestring, 
 
 /// This should allow calling with element<>-type parameters from
 /// loops. Generate a copy with elements replaced with vectors.
-void GeneralVisitor::handle_loop_function_avx(FunctionDecl *fd) {
+void GeneralVisitor::handle_loop_function_avx( call_info_struct &ci ) {
+
+  FunctionDecl * fd = ci.funcdecl;
+
   SourceRange sr = fd->getSourceRange();
   srcBuf * sourceBuf = get_file_srcBuf( sr.getBegin() );
 
@@ -202,7 +205,7 @@ void GeneralVisitor::handle_loop_function_avx(FunctionDecl *fd) {
 
 /// Constructors - should something be done here?
 
-void GeneralVisitor::handle_loop_constructor_avx(CXXConstructorDecl *fd) {}
+void GeneralVisitor::handle_loop_constructor_avx( call_info_struct &ci ) {}
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Check that
@@ -220,21 +223,18 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::s
   number_type numtype;
   bool is_vectorizable = true;
   
-  int diag_count = 0;
-  std::string reason = {};
+  std::vector<std::string> reason = {};
 
   
   // check if loop has conditional
   if (loop_info.has_site_dependent_conditional) {
     is_vectorizable = false;
-    reason = "it contains site dependent conditional";
-    diag_count++;
+    reason.push_back("it contains site dependent conditional");
   }
 
   if (contains_random(S)) {
     is_vectorizable = false;
-    if (diag_count++ > 0) reason += '\n';
-    reason += "it contains random number generator";
+    reason.push_back("it contains a random number generator");
   }
 
   std::string vector_var_name;   // variable which determines the vectorization
@@ -245,8 +245,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::s
     for (field_info & fi : field_info_list) {
       if (!fi.vecinfo.is_vectorizable) {
         is_vectorizable = false;
-        if (diag_count++ > 0) reason += "\n";
-        reason += "Field variable '" + fi.old_name + "' is not vectorizable";
+        reason.push_back("Field variable '" + fi.old_name + "' is not vectorizable");
       } else {
         if (vector_size == 0) {
           vector_size = fi.vecinfo.vector_size;
@@ -258,15 +257,9 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::s
 
           is_vectorizable = false;
 
-          // if (diag_count++ > 0) reason += "\n";
-          // reason += "vector size of variables '" + fi.old_name + "' is " 
-          //     + std::to_string(fi.vecinfo.vector_size) + " and '" + field_info_list.begin()->old_name 
-          //     + "' is " + std::to_string(vector_size);
-
-          if (diag_count++ > 0) reason += "\n";
-          reason += "type of variable '" + fi.old_name + "' is " 
+          reason.push_back( "type of variable '" + fi.old_name + "' is " 
               + fi.vecinfo.basetype_str + " and '" + vector_var_name
-              + "' is " + vector_var_type;
+              + "' is " + vector_var_type );
 
         }
       }
@@ -287,16 +280,14 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::s
         } else if (vector_size != vi.vecinfo.vector_size || numtype != vi.vecinfo.basetype) {
           is_vectorizable = false;
 
-          if (diag_count++ > 0) reason += "\n";
-          reason += "type of variables '" + vi.name + "' is " 
-            + vi.vecinfo.basetype_str + " and '" + vector_var_name 
-            + "' is " + vector_var_type;
+          reason.push_back( "type of variables '" + vi.name + "' is " 
+                + vi.vecinfo.basetype_str + " and '" + vector_var_name 
+                + "' is " + vector_var_type );
         }
       } else {
         is_vectorizable = false;
 
-        if (diag_count++ > 0) reason += "\n";
-        reason += "variable '" + vi.name + "' is not vectorizable";
+        reason.push_back("variable '" + vi.name + "' is not vectorizable");
       }
     }
   }
@@ -311,38 +302,58 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::s
         } else if (vector_size != target.vector_size/sizeof(int) || 
             numtype != number_type::INT) {
           is_vectorizable = false;
-          if (diag_count++ > 0) reason += '\n';
-          // reason += "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, ";
-          // reason += "which is not vectorizable with " + std::to_string(vector_size) + " elements";
-          reason += "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, ";
-          reason += "which is not compatible with " + vector_var_type + " vectors";
+ 
+          reason.push_back( "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, "
+                            "which is not compatible with " + vector_var_type + " vectors" );
         }
  
       } else if (sfc.name == "parity") {
         is_vectorizable = false;
-        if (diag_count++ > 0) reason += '\n';
-        reason += "function 'X.parity()' is not AVX vectorizable";        
+ 
+        reason.push_back("function 'X.parity()' is not AVX vectorizable");        
  
       } else if (sfc.name == "random" || sfc.name == "hila_random") {
         is_vectorizable = false;
-        if (diag_count++ > 0) reason += '\n';
-        reason += "random number generators prevent vectorization";
+        reason.push_back("random number generators prevent vectorization");
       }
     }
   }
 
+  // and check function calls
+  for (auto & ci : loop_function_calls ) {
+    if (ci.is_site_dependent && !ci.is_vectorizable) {
+      is_vectorizable = false;
+
+      if (ci.funcdecl != nullptr) {
+        reason.push_back( "loop contains function " + ci.funcdecl->getNameAsString() + " which is not vectorizable" );
+      } else if (ci.ctordecl != nullptr ) {
+        reason.push_back( "loop contains constructor " + ci.ctordecl->getNameAsString() + " which is not vectorizable" );
+      }
+    }
+  }
+
+
+  if (vector_size == 0 && is_vectorizable) {
+    // super-special case - loop does not contain fields or anything site dependent.  
+    // Loop is probably useless.  Let us just not vectorize it.
+    is_vectorizable = false;
+    reason.push_back("loop does not seem to have site dependent content");
+  }
+
   if (!is_vectorizable) {
-    diag_str = "Loop is not AVX vectorizable because " + reason;
+    diag_str = "Loop is not AVX vectorizable because:";
+    for (auto & s : reason) diag_str += "\n     " + s;
+
     if( cmdline::avx_info > 0 || cmdline::verbosity > 0) 
       reportDiag(DiagnosticsEngine::Level::Remark, S->getSourceRange().getBegin(), 
-                 "Loop is not AVX vectorizable because %0", reason.c_str());
+                 "%0",diag_str.c_str());
 
   } else {
     diag_str = "Loop is AVX vectorizable";
 
     if (cmdline::avx_info > 1 || cmdline::verbosity > 1) 
       reportDiag(DiagnosticsEngine::Level::Remark, S->getSourceRange().getBegin(), 
-                 "Loop is AVX vectorizable");
+                 "%0",diag_str.c_str());
   }
 
   return is_vectorizable;
@@ -353,7 +364,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::s
 ///////////////////////////////////////////////////////////////////////////////////////////
 
 std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, 
-                                            srcBuf & loopBuf, bool generate_wait_loops) {
+                                               srcBuf & loopBuf, bool generate_wait_loops) {
 
   std::stringstream code;
   int vector_size;

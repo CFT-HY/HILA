@@ -69,7 +69,7 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
   for( int i=0; i<Call->getNumArgs(); i++) {
     Expr * E = Call->getArg(i);
     
-    const ParmVarDecl * pv = D->getParamDecl(i);
+    ParmVarDecl * pv = D->getParamDecl(i);
     QualType q = pv->getOriginalType ();
 
 
@@ -156,7 +156,7 @@ void TopLevelVisitor::handle_member_call_in_loop(Stmt * s) {
   int i=0;
   for( Expr * E : Call->arguments() ){
     if( is_field_with_X_expr(E) ) {
-      const ParmVarDecl * pv = D->getParamDecl(i);
+      ParmVarDecl * pv = D->getParamDecl(i);
       QualType q = pv->getOriginalType ();
         
       // Check for const qualifier

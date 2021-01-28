@@ -71,15 +71,15 @@ struct vector_base_type<int64_t, 8> {
 };
 
 
-template<>
-struct vector_base_type<coordinate_vector, 4> {
-  using type = Vec4i;
-};
+// template<>
+// struct vector_base_type<coordinate_vector, 4> {
+//   using type = Vec4i;
+// };
 
-template<>
-struct vector_base_type<coordinate_vector, 8> {
-  using type = Vec8i;
-};
+// template<>
+// struct vector_base_type<coordinate_vector, 8> {
+//   using type = Vec8i;
+// };
 
 #endif // VECTORIZED
 

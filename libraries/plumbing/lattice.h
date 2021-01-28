@@ -30,7 +30,7 @@ constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
 #endif
 
 /// list boundary conditions - used only if SPECIAL_BOUNDARY_CONDITIONS defined
-enum class boundary_condition_t {PERIODIC, ANTIPERIODIC, FIXED};
+enum class BoundaryCondition {PERIODIC, ANTIPERIODIC, FIXED};
 
 void test_std_gathers();
 
@@ -267,9 +267,9 @@ public:
   void init_special_boundaries();
   void setup_special_boundary_array(direction d);
 
-  const unsigned * get_neighbour_array(direction d, boundary_condition_t bc);
+  const unsigned * get_neighbour_array(direction d, BoundaryCondition bc);
 #else
-  const unsigned * get_neighbour_array(direction d, boundary_condition_t bc) { 
+  const unsigned * get_neighbour_array(direction d, BoundaryCondition bc) { 
     return neighb[d];
   }
 #endif

@@ -35,8 +35,8 @@ class fermion_action : public action_base{
 
     void setup(int mre_guess_size){
       #if NDIM > 3
-      chi.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(-e_t, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
+      chi.set_boundary_condition(-e_t, BoundaryCondition::ANTIPERIODIC);
       #endif
       MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);
@@ -243,8 +243,8 @@ class Hasenbusch_action_2 : public action_base {
 
     void setup(int mre_guess_size){
       #if NDIM > 3
-      chi.set_boundary_condition(e_t, boundary_condition_t::ANTIPERIODIC);
-      chi.set_boundary_condition(-e_t, boundary_condition_t::ANTIPERIODIC);
+      chi.set_boundary_condition(e_t, BoundaryCondition::ANTIPERIODIC);
+      chi.set_boundary_condition(-e_t, BoundaryCondition::ANTIPERIODIC);
       #endif
       MRE_size = mre_guess_size;
       old_chi_inv.resize(MRE_size);
