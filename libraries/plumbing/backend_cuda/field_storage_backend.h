@@ -169,6 +169,10 @@ void field_storage<T>::gather_elements_negated(T * RESTRICT buffer,
   unsigned *d_site_index;
   T * d_buffer;
   
+  if constexpr (!has_unary_minus<T>::value) {
+    assert(sizeof(T) < 0 && "Unary 'operatur- ()' must be defined for Field variable for antiperiodic b.c.");
+  }
+
   // Copy the list of boundary site indexes to the device
   cudaMalloc( (void **)&(d_site_index), n*sizeof(unsigned));
   cudaMemcpy( d_site_index, index_list, n*sizeof(unsigned), cudaMemcpyHostToDevice );
