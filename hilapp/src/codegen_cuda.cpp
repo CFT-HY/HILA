@@ -125,7 +125,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
   }
 
   
-  kernel << "//----------\n";
+  kernel << "\n\n//----------\n";
 
   // Generate the function definition and call
   kernel << "__global__ void " << kernel_name << "( backend_lattice_struct d_lattice";
@@ -383,14 +383,14 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     }
   }
 
-  kernel << "}\n}\n//----------\n";
-  code << ");\n";
+  kernel << "}\n}\n//----------\n\n";
+  code << ");\n\n";
 
   code << "check_cuda_error(\"" << kernel_name << "\");\n";
 
   // Finally, emit the kernel
   // TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
-  toplevelBuf->insert(global.location.top.getLocWithOffset(-1), indent_string(kernel.str()),true,false);
+  toplevelBuf->insert(global.location.kernels.getLocWithOffset(-1), indent_string(kernel.str()),true,false);
   
   // Check reduction variables
   for (var_info & v : var_info_list) {

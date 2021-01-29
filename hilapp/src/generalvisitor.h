@@ -228,6 +228,9 @@ public:
   /// another utility (cannot trust r.getEnd())
   SourceLocation getSourceLocationAtEndOfRange( SourceRange r );
 
+  /// Find the start loc of declaration, taking into account all template<>'s
+  SourceLocation getSourceLocationAtStartOfDecl(Decl *d);
+
   // get next char and loc, while skipping comments
   SourceLocation getNextLoc(SourceLocation sl,bool forward = true);
 

@@ -124,9 +124,9 @@ public:
                            std::vector<const TemplateArgument *> & typeargs,
                            std::string *al );
 
-  void check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
-                                  SourceLocation ip, 
-                                  FunctionDecl *f);
+  SourceLocation spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
+                                      SourceLocation ip, 
+                                      FunctionDecl *f);
  
   // bool VisitCXXRecordDecl( CXXRecordDecl * D);
 

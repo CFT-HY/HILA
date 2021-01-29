@@ -105,6 +105,7 @@ struct global_state {
     SourceLocation top;
     SourceLocation bot;
     SourceLocation loop;
+    SourceLocation kernels;
   } location;
 };
 

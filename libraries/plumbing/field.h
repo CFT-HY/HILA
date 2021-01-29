@@ -25,8 +25,14 @@
 
 
 template <typename T>
-using element = T;
+class Field;
 
+template <typename T>
+void ensure_field_operators_exist(Field<T> & f);
+
+
+template <typename T>
+using element = T;
 
 
 /// Field class
@@ -316,8 +322,16 @@ class Field {
   
  public:
 
+  ////////////////////////////////////////////////
+  /// Field::fs keeps all of the field content
+  ////////////////////////////////////////////////
+
   field_struct * RESTRICT fs;
   
+  ////////////////////////////////////////////////
+  /// Field constructors 
+
+
   Field() {
     fs = nullptr;             // lazy allocation on 1st use
   }
@@ -362,8 +376,19 @@ class Field {
     rhs.fs = nullptr;
   }
 
+  /////////////////////////////////////////////////
+  /// Destructor
+
+
   ~Field() {
     free();
+
+    #ifdef HILAPP
+    // Because destructor is instantiated for all fields, 
+    // use this to put in a hook for generating call to this function
+    // in preprocessing stage
+    ensure_field_operators_exist( *this );
+    #endif
   }
     
   void allocate() {
@@ -380,22 +405,26 @@ class Field {
     fs->assigned_to = 0;    // and this means that it is not assigned
 
     for (direction d=(direction)0; d<NDIRS; ++d){
-#ifndef CUDA
+
+      #ifndef CUDA
       fs->neighbours[d] = lattice->neighb[d];
-#else
+      #else
       fs->payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
-#endif
+      #endif
     }
-#ifdef SPECIAL_BOUNDARY_CONDITIONS
+
+    #ifdef SPECIAL_BOUNDARY_CONDITIONS
     foralldir(dir){
       fs->boundary_condition[dir] = BoundaryCondition::PERIODIC;
       fs->boundary_condition[-dir] = BoundaryCondition::PERIODIC;
     }
-#endif
+    #endif
 
     #ifdef VECTORIZED
     fs->vector_lattice = lattice->backend_lattice->get_vectorized_lattice< vector_info<T>::vector_size >();
     #endif
+
+
   }
 
   void free() {
@@ -426,13 +455,14 @@ class Field {
     fs->move_status[(int)p - 1][d] = stat;
   }
 
-  // check that Field is allocated, and if not do it (if not const)
-  // call this BEFORE the var is actually written to
+  /// check that Field is allocated, and if not do it (if not const)
+  /// Must be called BEFORE the var is actually used
+  /// "hilapp" will generate these calls as needed!
   void check_alloc() { 
     if (!is_allocated()) allocate();
   }
-  // If Field is const specified, we should not be able to write to it in the first
-  // place
+  /// If Field is const specified, we should not be able to write to it in the first
+  /// place
   void check_alloc() const { 
     assert(is_allocated());
   }
@@ -544,9 +574,6 @@ class Field {
   }
 
   // Overloading [] 
-  // placemarker, should not be here
-  // T& operator[] (const int i) { return data[i]; }
-
   // declarations -- WILL BE implemented by hilapp, not written here
   element<T>& operator[] (const parity p) const;             // f[EVEN]
   element<T>& operator[] (const X_index_type) const;         // f[X]
@@ -583,16 +610,20 @@ class Field {
   inline void set_value_at(const A & value, int i) { fs->set_element( value, i); }
 #endif
 
-  // fetch the element at this loc
-  // T get(int i) const;
-  
-  // Basic copy constructor (cannot be a template)
+
+  /////////////////////////////////////////////////////////////////
+  /// Standard arithmetic ops which fields should implement
+  /// Not all are always callable, e.g. division may not be 
+  /// implemented by all field types
+  /////////////////////////////////////////////////////////////////
+
+  // Basic assignment operator
   Field<T>& operator= (const Field<T>& rhs) {
    (*this)[ALL] = rhs[X];
    return *this;
   }
 
-  // Overloading = - possible only if T = A is OK
+  // More general = - possible only if T = A is OK
   template <typename A, 
             std::enable_if_t<std::is_assignable<T&,A>::value, int> = 0 >
   Field<T>& operator= (const Field<A>& rhs) {
@@ -600,7 +631,7 @@ class Field {
     return *this;
   }
 
-  // same but without the field
+  // Assign from element
   template <typename A, 
             std::enable_if_t<std::is_assignable<T&,A>::value, int> = 0 >
   Field<T>& operator= (const A& d) {
@@ -608,7 +639,7 @@ class Field {
     return *this;
   }
 
-  // assignment of 0 - nullptr
+  // assignment of 0 - nullptr, zeroes field
   Field<T>& operator= (const std::nullptr_t & z) {
     (*this)[ALL] = 0;
   }
@@ -623,7 +654,7 @@ class Field {
     return *this;
   }
   
-  // is OK if T+A can be converted to type T
+  // +=, -=  etc operators from compatible types
   template <typename A,
             std::enable_if_t<std::is_convertible<type_plus<T,A>,T>::value, int> = 0>
   Field<T>& operator+= (const Field<A>& rhs) { 
@@ -653,20 +684,44 @@ class Field {
 
   template <typename A,
             std::enable_if_t<std::is_convertible<type_plus<T,A>,T>::value, int> = 0>
-  Field<T>& operator+= (const A & rhs) { (*this)[ALL] += rhs; return *this;}
+  Field<T>& operator+= (const A & rhs) {
+    (*this)[ALL] += rhs;
+    return *this;
+  }
 
   template <typename A,
             std::enable_if_t<std::is_convertible<type_minus<T,A>,T>::value, int> = 0>  
-  Field<T>& operator-= (const A & rhs) { (*this)[ALL] -= rhs; return *this;}
+  Field<T>& operator-= (const A & rhs) {
+    (*this)[ALL] -= rhs;
+    return *this;
+  }
 
   template <typename A,
             std::enable_if_t<std::is_convertible<type_mul<T,A>,T>::value, int> = 0>
-  Field<T>& operator*= (const A & rhs) { (*this)[ALL] *= rhs; return *this;}
+  Field<T>& operator*= (const A & rhs) {
+    (*this)[ALL] *= rhs;
+    return *this;
+  }
   
   template <typename A,
             std::enable_if_t<std::is_convertible<type_div<T,A>,T>::value, int> = 0>
-  Field<T>& operator/= (const A & rhs) { (*this)[ALL] /= rhs; return *this;}
+  Field<T>& operator/= (const A & rhs) {
+    (*this)[ALL] /= rhs;
+    return *this;
+  }
 
+  // Unary + and -
+  Field<T> operator+() const {
+    return *this;
+  }
+
+  Field<T> operator-() const {
+    Field<T> f;
+    f[ALL] = -(*this)[X];
+    return f;
+  }
+
+  ///////////////////////////////////////////////////////////////////////
 
   // Communication routines
   dir_mask_t start_fetch(direction d, parity p) const;
@@ -694,7 +749,8 @@ class Field {
   void write_to_file(std::string filename);
   void read_from_stream(std::ifstream & inputfile);
   void read_from_file(std::string filename);
-};
+
+};   // End of class Field<>
 
 
 // these operators rely on SFINAE, OK if field_type_plus<A,B> exists i.e. A+B is OK
@@ -1528,6 +1584,20 @@ inline void dummy_X_f()
     v[e_x] = v[0] + v[e_y] + v.e(e_y);
   }
 }
+
+
+template<typename T>
+inline void ensure_field_operators_exist(Field<T> & f) {
+  
+  // unary - is needed
+  f[ALL] = -f[X];
+  // same for non-vectorized loop
+  onsites(ALL) {
+    if (X.coordinate(e_x) < X.coordinate(e_y)) f[X] = -f[X];
+  }  
+}
+
+
 
 #endif
 

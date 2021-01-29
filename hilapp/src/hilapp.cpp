@@ -593,6 +593,9 @@ public:
         global.location.top = d->getSourceRange().getBegin();  
         global.location.bot = Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
 
+        // set the default insertion point for possibly generated kernels
+        global.location.kernels = global.location.top;   
+
         // Traverse the declaration using our AST visitor.
         // if theres "#pragma skip don't do it"
         if (!skip_this_translation_unit) Visitor.TraverseDecl(d);

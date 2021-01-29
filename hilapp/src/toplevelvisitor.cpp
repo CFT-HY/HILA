@@ -1187,7 +1187,7 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
     if (second_def) {
       reportDiag(DiagnosticsEngine::Level::Warning,
                  var->getSourceRange().getBegin(),
-                 "Defining variable 'X' may shadow the site index X");
+                 "Declaring variable 'X' may shadow the site index X");
     }
     second_def = true;
   }
@@ -1444,17 +1444,23 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // llvm::errs() << "Function " << f->getNameInfo().getName() << "\n";
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
+
+    if (f->getNameAsString() == "ensure_field_operators_exist") {
+    llvm::errs() << "LOOKING AT FUNC " << f->getQualifiedNameAsString() << " on line " 
+                 << srcMgr.getSpellingLineNumber(f->getBeginLoc()) << " file "
+                 << srcMgr.getFilename( f->getBeginLoc() ) << '\n';
+    llvm::errs() << "global.location.bot is line " << srcMgr.getSpellingLineNumber( global.location.bot ) << '\n';
+    }
+
     global.currentFunctionDecl = f;
     
     Stmt *FuncBody = f->getBody();
 
     // Type name as string
-    QualType QT = f->getReturnType();
-    std::string TypeStr = QT.getAsString();
-
+    std::string TypeStr = f->getReturnType().getAsString();
+    
     // Function name
-    DeclarationName DeclName = f->getNameInfo().getName();
-    std::string FuncName = DeclName.getAsString();
+    std::string FuncName = f->getNameInfo().getName().getAsString();
 
     // llvm::errs() << " - Function "<< FuncName << "\n";
 
@@ -1487,7 +1493,7 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
       // do all specializations here: either direct function template,
       // specialized through class template, or specialized
-      // because it's a base class function specialized by derived class (TODO: TEST THIS!).
+      // because it's a base class function specialized by derived class
 
       case FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization:
       case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
@@ -1681,7 +1687,11 @@ void TopLevelVisitor::specialize_function_or_method( FunctionDecl *f ) {
     funcBuf.insert(0,"template <>\n",true,true);
   }
 
-  check_spec_insertion_point(typeargs, global.location.bot, f);
+  // Insertion point for the specialization:  it seems that the template
+  // specialization "source" is the 1st declaration.  We want to go after 
+
+  SourceLocation insertion_point = 
+    spec_insertion_point(typeargs, global.location.bot, f);
 
   SourceRange decl_sr = get_func_decl_range(f);
   std::string wheredefined = "";
@@ -1697,10 +1707,13 @@ void TopLevelVisitor::specialize_function_or_method( FunctionDecl *f ) {
 
     // insert after the current toplevedecl
     std::stringstream sb;
-    sb << "\n// ++++++++ Generated function/method specialization\n"
+    sb << "\n\n// ++++++++ hilapp generated function/method specialization\n"
        << funcBuf.dump() 
-       << "\n// ++++++++\n";
-    toplevelBuf->insert( findChar(global.location.bot,'\n'),
+       << "\n// ++++++++\n\n";
+
+    llvm::errs() << " -- insertion point is line " 
+                 << srcMgr.getSpellingLineNumber( insertion_point ) << '\n';
+    toplevelBuf->insert( findChar( insertion_point,'\n'),
                          sb.str(), false, true );
   } else { 
     // Now the function has been written before (and not inline)
@@ -1843,13 +1856,98 @@ bool TopLevelVisitor::VisitType( Type * T) {
 /////////////////////////////////////////////////////////////////////////////////
 /// Check that all template specialization type arguments are defined at the point
 /// where the specialization is inserted
-/// TODO: change the insertion point
+/// 
+/// Determine that the candidate insertion point is OK, if not, make new
+/// Also do the "kernel insertion point" at the same time, from the default one
+///
 /////////////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::check_spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
-                                                 SourceLocation ip, 
-                                                 FunctionDecl *f) 
+SourceLocation TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
+                                                     SourceLocation ip,
+                                                     FunctionDecl *f) 
 {
+
+  if (f->hasBody() && 
+      srcMgr.isBeforeInTranslationUnit( ip, 
+                                        f->getBody()->getSourceRange().getEnd())
+     ) {
+    // Now the body definition comes after candidate - make new ip
+    // This situation arises if func is delcared before definition
+    
+    SourceLocation sl;
+
+    if (f->isCXXClassMember()) {
+
+      CXXMethodDecl * md = dyn_cast<CXXMethodDecl>(f);
+      // method, look at the encompassing classes
+      // llvm::errs() << " ----------------------------------- finding a location for a method specialization\n";
+
+      // find the outermost class decl
+      CXXRecordDecl *rd, *parent = dyn_cast<CXXRecordDecl>( md->getParent() );
+
+      while ( ( rd = dyn_cast<CXXRecordDecl>( parent->getParent() ) )) {
+        parent = rd;
+      }
+
+      // now parent is the outermost class or function, insertion after the end of it
+      sl = parent->getEndLoc();
+
+      // skip end chars of definition - sl points to }
+      bool error = true;
+
+      char c = getChar(sl);
+      if (c == '}') {
+
+        // class defn ends at ;  - there may be variables too
+        do {
+          sl = getNextLoc(sl);
+          c = getChar(sl);
+        } while (sl.isValid() && c != ';');
+
+        if (c == ';') {
+          sl = getNextLoc(sl);
+          error = false;
+        }
+      }
+
+      if (error) {
+
+        llvm::errs() << "hilapp internal error: confusion in finding end loc of class\n";
+        llvm::errs() << " on line " << srcMgr.getSpellingLineNumber(sl) << " file "
+                     << srcMgr.getFilename( f->getBeginLoc() ) << '\n';
+        exit(1);
+      }
+
+      // set also the kernel insertion point (if needed at all)
+      global.location.kernels = getSourceLocationAtStartOfDecl(parent);
+
+    } else {
+
+      // Now "std" function, get the location
+      f = f->getDefinition();
+      sl = f->getBody()->getSourceRange().getEnd();
+      sl = getNextLoc(sl);  // skip }
+
+      // and the kernel loc too
+      global.location.kernels = getSourceLocationAtStartOfDecl(f);
+
+    }
+
+    if (sl.isInvalid() || 
+              srcMgr.isBeforeInTranslationUnit( sl,
+              f->getBody()->getSourceRange().getBegin() )) {
+      reportDiag(DiagnosticsEngine::Level::Warning,
+                   f->getSourceRange().getBegin(),
+                   "hilapp internal error: could not resolve the specialization"
+                   " insertion point for function  \'%0\'",
+                   f->getQualifiedNameAsString().c_str() );
+    }
+  
+    ip = sl;
+
+  }
+
+  // Check if the
 
   for (const TemplateArgument * tap : typeargs) {
     // llvm::errs() << " - Checking tp type " << tap->getAsType().getAsString() << '\n';
@@ -1857,14 +1955,18 @@ void TopLevelVisitor::check_spec_insertion_point(std::vector<const TemplateArgum
     // Builtins are fine too
     if (tp && !tp->isBuiltinType()) {
       RecordDecl * rd = tp->getAsRecordDecl();
-      if (rd && srcMgr.isBeforeInTranslationUnit( ip, rd->getSourceRange().getBegin() )) {
+      if (rd && srcMgr.isBeforeInTranslationUnit( ip, 
+                                                  rd->getSourceRange().getBegin() )) {
         reportDiag(DiagnosticsEngine::Level::Warning,
                    f->getSourceRange().getBegin(),
-    "Specialization point for function appears to be before the declaration of type \'%0\', code might not compile",
-                   tap->getAsType().getAsString().c_str());
+                   "hilapp internal error: specialization insertion point for function \'%0\'"
+                   " appears to be before the declaration of type \'%1\', code might not compile",
+                   f->getQualifiedNameAsString().c_str(), 
+                   tap->getAsType().getAsString().c_str() );
       } 
     }
   }
+  return ip;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -1872,7 +1974,7 @@ void TopLevelVisitor::check_spec_insertion_point(std::vector<const TemplateArgum
 /// is the number of template nestings
 ////////////////////////////////////////////////////////////////////////////////////
 
-int TopLevelVisitor::get_param_substitution_list( CXXRecordDecl * r,
+int TopLevelVisitor:: get_param_substitution_list( CXXRecordDecl * r,
                                                std::vector<std::string> & par,
                                                std::vector<std::string> & arg,
                                                std::vector<const TemplateArgument *> & typeargs ) {

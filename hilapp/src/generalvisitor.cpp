@@ -240,6 +240,53 @@ SourceLocation GeneralVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   return r.getBegin().getLocWithOffset(i-1);
 }
 
+SourceLocation GeneralVisitor::getSourceLocationAtStartOfDecl( Decl *d ) {
+
+  SourceLocation sl;
+
+  if (ClassTemplateDecl * ctd = dyn_cast<ClassTemplateDecl>(d)) {
+    // class template decl
+
+    sl = ctd->getTemplateParameters()->getTemplateLoc();
+  
+  } else if (FunctionTemplateDecl * ftd = dyn_cast<FunctionTemplateDecl>(d)) {
+    // function template
+    
+    sl = ftd->getTemplateParameters()->getTemplateLoc();
+
+  } else if (FunctionDecl *f = dyn_cast<FunctionDecl>(d)) {
+    // now it is a function, but is it templated?
+
+    if (FunctionTemplateDecl * ftd = f->getDescribedFunctionTemplate()) {
+      sl = ftd->getTemplateParameters()->getTemplateLoc();
+    } else {
+      sl = f->getSourceRange().getBegin();
+    }
+
+  } else if (CXXRecordDecl *rd = dyn_cast<CXXRecordDecl>(d)) {
+    // it's a class, is it templated or not?
+
+    if (ClassTemplateDecl *ctd = rd->getDescribedClassTemplate()) {
+      sl = ctd->getTemplateParameters()->getTemplateLoc();
+    } else {
+      sl = rd->getSourceRange().getBegin();
+    }
+
+  } else {
+    // some other decl -- just give the beginning
+
+    sl = d->getSourceRange().getBegin();
+  }
+
+      llvm::errs() << " <<<<< Decl start loc letter is " << getChar(sl) 
+                 << " on line "
+                 << srcMgr.getSpellingLineNumber(sl) << " and file "
+                 << srcMgr.getFilename(sl) << '\n';
+
+  return sl;
+
+}
+
 /// get next character and sourcelocation, while skipping comments
 
 SourceLocation GeneralVisitor::getNextLoc(SourceLocation sl, bool forward) {
