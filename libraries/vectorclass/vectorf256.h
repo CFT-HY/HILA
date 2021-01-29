@@ -602,11 +602,11 @@ public:
         ymm = x;
         return *this;
     }
-    // Assignment operator to convert from Vec4i
-    Vec8f & operator = (Vec8i const a0) {
-        ymm = _mm256_cvtepi32_ps(a0);
-        return *this;
-    }
+    //x // Assignment operator to convert from Vec4i
+    //x Vec8f & operator = (Vec8i const a0) {
+    //x    ymm = _mm256_cvtepi32_ps(a0);
+    //x    return *this;
+    //x }
     // Type cast operator to convert to __m256 used in intrinsics
     operator __m256() const {
         return ymm;
@@ -734,12 +734,12 @@ public:
     }
     typedef __m256 registertype;
 
-    // Add assign operator to convert from Vec4i
-    Vec8f & operator += (Vec8i const a0) {
-        Vec8f a; a=a0;
-        ymm = _mm256_add_ps(ymm, a);
-        return *this;
-    }
+    //x // Add assign operator to convert from Vec4i
+    //x Vec8f & operator += (Vec8i const a0) {
+    //x     Vec8f a; a=a0;
+    //x     ymm = _mm256_add_ps(ymm, a);
+    //x    return *this;
+    //x}
 };
 
 
@@ -1595,12 +1595,12 @@ public:
     typedef __m256d registertype;
 
 
-    // Add assign operator to convert from Vec4i
-    Vec4d & operator += (Vec4i const a0) {
-        Vec4d a; a=a0;
-        ymm = _mm256_add_pd(ymm, a);
-        return *this;
-    }
+    //x // Add assign operator to convert from Vec4i
+    //x Vec4d & operator += (Vec4i const a0) {
+    //x    Vec4d a; a=a0;
+    //x    ymm = _mm256_add_pd(ymm, a);
+    //x    return *this;
+    //x}
 };
 
 
