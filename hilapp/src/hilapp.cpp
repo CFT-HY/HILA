@@ -242,15 +242,21 @@ struct pragma_file_struct {
 /// This holds the pragma locs, defined globally in hilapp.h
 static std::vector<pragma_file_struct> pragmalocs;
 
+struct HILAPP_loc_struct {
+  FileID fid;
+  SourceRange range;
+};
+
+static std::vector<HILAPP_loc_struct> HILAPP_locs;
 
 /// Extend PPCallbacks to handle preprocessor directives
 /// specific to hila code
 class MyPPCallbacks : public PPCallbacks {
 public:
 
+  bool ifdef_HILAPP_open = false;
+  SourceLocation HILAPP_sl;
   
-  // make static vars directly callable
-
   /// This hook is called when #include (or #import) is processed.
   /// It adds the file to includelocs, a list of candidates that may need to be 
   /// modified and inserted into the file buffer
@@ -286,7 +292,6 @@ public:
     }
     
   }
-
 
 
   /// This is triggered when a pragma directive is encountered. It checks for the
@@ -379,6 +384,52 @@ public:
     }
   }
 	
+  /// Also flag preprocessor directives 
+  /// #ifdef HILAPP .... #endif   or
+  /// #ifdef HILAPP .... #else
+  /// Use these for suppressing output to .cpt - it's a luxury thing, just to see that it can be done
+  /// possible low-importance TODO: generalize to #if ... ?
+
+  void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+             const MacroDefinition &MD) {
+
+    IdentifierInfo * ii = MacroNameTok.getIdentifierInfo();
+    if (!ii) return;
+    
+    const char * name = ii->getNameStart();
+    if (!name || strcmp(name,"HILAPP") != 0) return;
+
+    // Now we have #ifdef HILAPP
+    ifdef_HILAPP_open = true;
+    HILAPP_sl = Loc;
+
+  }
+
+  /// Store the begin and end loc, and also the fid where these appear
+
+  void is_end_of_hilapp(SourceLocation Loc, SourceLocation IfLoc) {
+
+    if (!ifdef_HILAPP_open) return;  // #ifdef HILAPP not seen
+    if (IfLoc != HILAPP_sl) return;  // some other if - endif
+
+    SourceManager &SM = myCompilerInstance->getSourceManager();
+
+    // and store range and fid
+    HILAPP_loc_struct hloc;
+    hloc.range = SourceRange(IfLoc,Loc);
+    hloc.fid   = SM.getFileID(IfLoc);
+
+    HILAPP_locs.push_back(hloc);
+  }
+
+  void Endif(SourceLocation Loc, SourceLocation IfLoc) {
+    is_end_of_hilapp(Loc, IfLoc);
+  }
+
+  void Else(SourceLocation Loc, SourceLocation IfLoc) {
+    is_end_of_hilapp(Loc, IfLoc);
+  }
+
 
   /// This triggers when the preprocessor changes file (#include, exit from it)
   /// Use this to track the chain of non-system include files
@@ -542,6 +593,33 @@ srcBuf * get_file_buffer(Rewriter & R, const FileID fid) {
   return( &file_buffer_list.back().sbuf );
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/// Scan the list of #ifdef HILAPP -- #endif brackets and delete the code 
+///////////////////////////////////////////////////////////////////////////////
+
+void remove_ifdef_HILAPP_sections() {
+
+  /// go through all file buffers
+  for ( file_buffer & fb : file_buffer_list ) {
+    for ( HILAPP_loc_struct & loc : HILAPP_locs ) {
+      if (loc.fid == fb.fid && fb.sbuf.is_in_range(loc.range)) {
+
+        // got it, remove - leave #ifdef HILAPP .. #endif there to show the place
+        SourceManager &SM = myCompilerInstance->getSourceManager();
+        SourceLocation a = findChar(SM,loc.range.getBegin(),'\n');
+        SourceLocation b = loc.range.getEnd();
+        while (b.isValid() && getChar(SM,b) != '\n') {
+          b = b.getLocWithOffset(-1);
+        }
+        
+        fb.sbuf.replace(SourceRange(a,b), "\n// Removed by hilapp" );
+      }
+    }
+  } 
+}
+
+
+
 /////////////////////////////////////////////////////////////////////////////////
 /// Implementation of the ASTConsumer interface for reading an AST produced
 /// by the Clang parser.
@@ -661,8 +739,9 @@ public:
 
     // init global variables PP callbacks use
     includelocs.clear();
-    // clear also pragma locs
+    // clear also pragma locs and #ifdef HILAPP-locs
     pragmalocs.clear();
+    HILAPP_locs.clear();
 
     global.main_file_name = getCurrentFile().str();
 
@@ -799,6 +878,9 @@ public:
     // Now emit rewritten buffers.
 
     if (!cmdline::no_output) {
+
+      remove_ifdef_HILAPP_sections();
+
       if (!cmdline::no_include) {
 
         // Modified files should be substituted on top of #include -directives
