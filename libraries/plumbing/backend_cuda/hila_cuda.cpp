@@ -63,9 +63,9 @@ int loop_lattice_size(direction dir) {
   #endif
 }
 __device__ __host__
-coordinate_vector loop_lattice_size(void) {
+CoordinateVector loop_lattice_size(void) {
   #ifdef __CUDA_ARCH__
-  coordinate_vector v;
+  CoordinateVector v;
   foralldir(d) v[d]=_d_size[d];
   return v;
   #else
@@ -84,7 +84,7 @@ int64_t loop_lattice_volume(void) {
 
 void backend_lattice_struct::setup(lattice_struct * lattice)
 {
-  coordinate_vector * tmp;
+  CoordinateVector * tmp;
 
   /* Setup neighbour fields in all directions */
   for (int d=0; d<NDIRS; d++) {
@@ -103,11 +103,11 @@ void backend_lattice_struct::setup(lattice_struct * lattice)
   }
 
   /* Setup the location field */
-  cudaMalloc( (void **)&(d_coordinates), lattice->mynode.volume() * sizeof(coordinate_vector));
+  cudaMalloc( (void **)&(d_coordinates), lattice->mynode.volume() * sizeof(CoordinateVector));
   check_cuda_error("cudaMalloc device coordinate array");
-  tmp = (coordinate_vector*) malloc( lattice->mynode.volume() * sizeof(coordinate_vector) );
+  tmp = (CoordinateVector*) malloc( lattice->mynode.volume() * sizeof(CoordinateVector) );
   for(int i=0; i<lattice->mynode.volume(); i++) tmp[i] = lattice->coordinates(i);
-  cudaMemcpy( d_coordinates, tmp, lattice->mynode.volume() * sizeof(coordinate_vector), cudaMemcpyHostToDevice );
+  cudaMemcpy( d_coordinates, tmp, lattice->mynode.volume() * sizeof(CoordinateVector), cudaMemcpyHostToDevice );
   check_cuda_error("cudaMemcpy device coordinate array");
   free(tmp);
 

@@ -148,7 +148,7 @@ int main(int argc, char **argv){
 
 
     // Try setting an element on node 0
-    coordinate_vector coord;
+    CoordinateVector coord;
     foralldir(d) {
       coord[d] = 0;
     }
@@ -174,7 +174,7 @@ int main(int argc, char **argv){
       s2[ALL] = s1[X-d];
 
       // Should still be on this node
-      coordinate_vector coord2 = coord;
+      CoordinateVector coord2 = coord;
       coord2[d] += 1;
       Cmplx<double> moved = s2.get_element(coord2);
       assert(elem.re == 1 && elem.im==0);
@@ -196,8 +196,8 @@ int main(int argc, char **argv){
     // Check boundary conditions by moving the data
     {
       Field<double> s1, s2;
-      coordinate_vector coord1 = 0;
-      coordinate_vector coord2 = 0;
+      CoordinateVector coord1 = 0;
+      CoordinateVector coord2 = 0;
       coord1[0] = (nd[0] - 1) % nd[0];
 
       // Move data up accross the X boundary
@@ -275,7 +275,7 @@ int main(int argc, char **argv){
 
     // Check that communicated and changed fields get marked
     // correctly
-    coordinate_vector c(0);
+    CoordinateVector c(0);
     foralldir(dir){
       for(int i=0; i<2; i++){
         s1[EVEN] = 0;
@@ -357,7 +357,7 @@ int main(int argc, char **argv){
     std::fill(arraysum.begin(), arraysum.end(), 0);
 
     onsites(ALL){
-      element<coordinate_vector> l = X.coordinates();
+      element<CoordinateVector> l = X.coordinates();
       element<int> t = l[e_t];
       
       arraysum[t] += dfield[X];

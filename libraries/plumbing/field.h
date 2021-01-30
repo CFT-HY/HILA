@@ -267,8 +267,8 @@ class Field {
       }
 
       /// Gather a list of elements to a single node
-      void gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root=0) const;
-      void send_elements(T * buffer, std::vector<coordinate_vector> coord_list, int  root=0);
+      void gather_elements(T * buffer, std::vector<CoordinateVector> coord_list, int root=0) const;
+      void send_elements(T * buffer, std::vector<CoordinateVector> coord_list, int  root=0);
 
 #if defined(USE_MPI)
 
@@ -732,14 +732,14 @@ class Field {
   void cancel_comm(direction d, parity p) const; 
 
   // Declaration of shift methods
-  Field<T> shift(const coordinate_vector &v, parity par) const;
-  Field<T> shift(const coordinate_vector &v) const { return shift(v,ALL); }
+  Field<T> shift(const CoordinateVector &v, parity par) const;
+  Field<T> shift(const CoordinateVector &v) const { return shift(v,ALL); }
 
   // General getters and setters
-  void set_elements(T * elements, std::vector<coordinate_vector> coord_list);
-  void set_element(T element, coordinate_vector coord);
-  void get_elements(T * elements, std::vector<coordinate_vector> coord_list) const;
-  T get_element(coordinate_vector coord) const;
+  void set_elements(T * elements, std::vector<CoordinateVector> coord_list);
+  void set_element(T element, CoordinateVector coord);
+  void get_elements(T * elements, std::vector<CoordinateVector> coord_list) const;
+  T get_element(CoordinateVector coord) const;
 
   // Fourier transform declarations
   void FFT(fft_direction fdir = fft_direction::forward);
@@ -863,7 +863,7 @@ auto operator/( const Field<A> &lhs, const B &rhs) -> Field<type_div<A,B>>
 // works by repeatedly nn-copying the Field
 
 template<typename T>
-Field<T> Field<T>::shift(const coordinate_vector &v, const parity par) const {
+Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
   Field<T> r1, r2;
   r2 = *this;
   foralldir(d) {
@@ -883,7 +883,7 @@ Field<T> Field<T>::shift(const coordinate_vector &v, const parity par) const {
 #elif !defined(USE_MPI)
 
 template<typename T>
-Field<T> Field<T>::shift(const coordinate_vector &v, const parity par) const {
+Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
   Field<T> result;
 
   onsites(par) {
@@ -1191,12 +1191,12 @@ void Field<T>::fetch(direction d, parity p) const {
 
 /// Gather a list of elements to a single node
 template<typename T>
-void Field<T>::field_struct::gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root) const {
+void Field<T>::field_struct::gather_elements(T * buffer, std::vector<CoordinateVector> coord_list, int root) const {
   std::vector<unsigned> index_list;
   std::vector<unsigned> node_list(lattice->n_nodes());
   std::fill(node_list.begin(), node_list.end(),0);
   
-  for(coordinate_vector c : coord_list){
+  for(CoordinateVector c : coord_list){
     if( lattice->is_on_node(c) ){
       index_list.push_back(lattice->site_index(c));
     }
@@ -1226,12 +1226,12 @@ void Field<T>::field_struct::gather_elements(T * buffer, std::vector<coordinate_
 
 /// Send elements from a single node to a list of coordinates
 template<typename T>
-void Field<T>::field_struct::send_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root) {
+void Field<T>::field_struct::send_elements(T * buffer, std::vector<CoordinateVector> coord_list, int root) {
   std::vector<unsigned> index_list;
   std::vector<unsigned> node_list(lattice->n_nodes());
   std::fill(node_list.begin(), node_list.end(),0);
 
-  for(coordinate_vector c : coord_list){
+  for(CoordinateVector c : coord_list){
     if( lattice->is_on_node(c) ){
       index_list.push_back(lattice->site_index(c));
     }
@@ -1264,9 +1264,9 @@ void Field<T>::field_struct::send_elements(T * buffer, std::vector<coordinate_ve
 
 /// Gather a list of elements to a single node
 template<typename T>
-void Field<T>::field_struct::gather_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root) const {
+void Field<T>::field_struct::gather_elements(T * buffer, std::vector<CoordinateVector> coord_list, int root) const {
   std::vector<unsigned> index_list;
-  for(coordinate_vector c : coord_list){
+  for(CoordinateVector c : coord_list){
     index_list.push_back(lattice->site_index(c));
   }
   
@@ -1276,9 +1276,9 @@ void Field<T>::field_struct::gather_elements(T * buffer, std::vector<coordinate_
 
 /// Send elements from a single node to a list of coordinates
 template<typename T>
-void Field<T>::field_struct::send_elements(T * buffer, std::vector<coordinate_vector> coord_list, int root) {
+void Field<T>::field_struct::send_elements(T * buffer, std::vector<CoordinateVector> coord_list, int root) {
   std::vector<unsigned> index_list;
-  for(coordinate_vector c : coord_list){
+  for(CoordinateVector c : coord_list){
     index_list.push_back(lattice->site_index(c));
   }
   
@@ -1295,11 +1295,11 @@ void Field<T>::field_struct::send_elements(T * buffer, std::vector<coordinate_ve
 /// Set an element. Assuming that each node calls this with the same value, it is
 /// sufficient to set the elements locally
 template<typename T>
-void Field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_list) {
+void Field<T>::set_elements( T * elements, std::vector<CoordinateVector> coord_list) {
   std::vector<unsigned> my_indexes;
   std::vector<unsigned> my_elements;
   for(int i=0; i<coord_list.size(); i++){
-    coordinate_vector c = coord_list[i];
+    CoordinateVector c = coord_list[i];
     if( lattice->is_on_node(c) ){
       my_indexes.push_back(lattice->site_index(c));
       my_elements.push_back(elements[i]);
@@ -1312,7 +1312,7 @@ void Field<T>::set_elements( T * elements, std::vector<coordinate_vector> coord_
 // Set a single element. Assuming that each node calls this with the same value, it is
 /// sufficient to set the element locally
 template<typename T>
-void Field<T>::set_element( T element, coordinate_vector coord) {
+void Field<T>::set_element( T element, CoordinateVector coord) {
   if( lattice->is_on_node(coord) ){
     set_value_at( element, lattice->site_index(coord));
   }
@@ -1325,7 +1325,7 @@ void Field<T>::set_element( T element, coordinate_vector coord) {
 #if defined(USE_MPI)
 /// This is not local, the element needs to be communicated to all nodes
 template<typename T>
-T Field<T>::get_element( coordinate_vector coord) const {
+T Field<T>::get_element( CoordinateVector coord) const {
   T element;
   int owner = lattice->node_rank(coord);
 
@@ -1340,15 +1340,15 @@ T Field<T>::get_element( coordinate_vector coord) const {
 
 /// Get a list of elements and store them into an array on all nodes
 template<typename T>
-void Field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
+void Field<T>::get_elements( T * elements, std::vector<CoordinateVector> coord_list) const {
   struct node_site_list_struct {
     std::vector<int> indexes;
-    std::vector<coordinate_vector> coords;
+    std::vector<CoordinateVector> coords;
   };
   std::vector<node_site_list_struct> nodelist(lattice->n_nodes());
   // Reorganize the list according to nodes
   for( int i=0; i<coord_list.size(); i++){
-    coordinate_vector c = coord_list[i];
+    CoordinateVector c = coord_list[i];
     int node = lattice->node_rank(c);
     nodelist[node].indexes.push_back(i);
     nodelist[node].coords.push_back(c);
@@ -1377,13 +1377,13 @@ void Field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_
 #else
 /// Without MPI, we just need to call get
 template<typename T>
-T Field<T>::get_element( coordinate_vector coord) const {
+T Field<T>::get_element( CoordinateVector coord) const {
   return get_value_at( lattice->site_index(coord) );
 }
 
 /// Without MPI, we just need to call get
 template<typename T>
-void Field<T>::get_elements( T * elements, std::vector<coordinate_vector> coord_list) const {
+void Field<T>::get_elements( T * elements, std::vector<CoordinateVector> coord_list) const {
   for( int i=0; i<coord_list.size(); i++){
     elements[i] = get_element(coord_list[i]);
   }
@@ -1400,13 +1400,13 @@ void Field<T>::write_to_stream(std::ofstream& outputfile){
   constexpr size_t sites_per_write = target_write_size / sizeof(T);
   constexpr size_t write_size = sites_per_write * sizeof(T);
 
-  std::vector<coordinate_vector> coord_list(sites_per_write);
+  std::vector<CoordinateVector> coord_list(sites_per_write);
   T * buffer = (T*) malloc(write_size);
-  coordinate_vector size = lattice->size();
+  CoordinateVector size = lattice->size();
 
   int i=0;
   for(; i<lattice->volume(); i++){
-    coordinate_vector site;
+    CoordinateVector site;
     int ii = i;
     foralldir(dir){
       site[dir] = ii%size[dir];
@@ -1477,13 +1477,13 @@ void Field<T>::read_from_stream(std::ifstream& inputfile){
 
   mark_changed(ALL);
 
-  std::vector<coordinate_vector> coord_list(sites_per_read);
+  std::vector<CoordinateVector> coord_list(sites_per_read);
   T * buffer = (T*) malloc(read_size);
-  coordinate_vector size = lattice->size();
+  CoordinateVector size = lattice->size();
 
   int i=0;
   for(; i<lattice->volume(); i++){
-    coordinate_vector site;
+    CoordinateVector site;
     int ii = i;
     foralldir(dir){
       site[dir] = ii%size[dir];
@@ -1560,18 +1560,18 @@ extern Field<double> disable_avx;
 
 #ifdef HILAPP
 
-// crazy function to exercise some direction and coordinate_vector operations
+// crazy function to exercise some direction and CoordinateVector operations
 // Needed because hilapp changes X+d-d  ->   +d-d, which may involve an operator
 // not met before
 
 inline void dummy_X_f()
 {
   direction d1 = e_x;
-  coordinate_vector v1(0);
+  CoordinateVector v1(0);
   onsites(ALL) {
     direction d;
     d = +d1;   d = -d1;  // unaryops
-    coordinate_vector v;
+    CoordinateVector v;
     v = +v1;   v = -v1;  
 
     // direction + vector combos

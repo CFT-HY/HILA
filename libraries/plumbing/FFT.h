@@ -65,8 +65,8 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
 
     // Variables needed for constructing the columns of sites
     const std::vector<node_info> & allnodes = lattice->nodelist();
-    coordinate_vector min = allnodes[lattice->node_rank()].min;
-    coordinate_vector size = allnodes[lattice->node_rank()].size;
+    CoordinateVector min = allnodes[lattice->node_rank()].min;
+    CoordinateVector size = allnodes[lattice->node_rank()].size;
 
     // FFTW buffers
     fftw_complex *in, *out;
@@ -85,7 +85,7 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
     for( int c=0; c<cols; c++ ) {
       // Get the index in the other directions
       int cc = c;
-      coordinate_vector thiscol=min;
+      CoordinateVector thiscol=min;
       foralldir(d2) if(d2!=dir) {
         thiscol[d2] += cc%size[d2];
         cc/=size[d2];

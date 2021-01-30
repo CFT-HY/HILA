@@ -36,7 +36,7 @@ void test_std_gathers();
 
 /// useful information about a node
 struct node_info {
-  coordinate_vector min,size;
+  CoordinateVector min,size;
   unsigned evensites, oddsites;
 };
 
@@ -54,7 +54,7 @@ private:
  
   // Use ints instead of unsigned, just to avoid surprises in arithmetics
   // I shall assume here that int is 32 bits, and int64_t 64 bits. 
-  coordinate_vector l_size;
+  CoordinateVector l_size;
   int64_t l_volume;
 
 public:
@@ -64,10 +64,10 @@ public:
     int rank;                           // rank of this node
     unsigned sites, evensites, oddsites;
     unsigned field_alloc_size;          // how many sites/node in allocations 
-    coordinate_vector min, size;        // node local coordinate ranges
+    CoordinateVector min, size;        // node local coordinate ranges
     unsigned nn[NDIRS];                 // nn-node of node down/up to dirs
     bool first_site_even;               // is location min even or odd?
-    std::vector<coordinate_vector> coordinates;
+    std::vector<CoordinateVector> coordinates;
 
     void setup(node_info & ni, lattice_struct & lattice);
 
@@ -76,7 +76,7 @@ public:
     /// size is mynode.size/subnodes.divisions, which is not
     /// constant across nodes
     struct subnode_struct {
-      coordinate_vector divisions,size;  // div to subnodes to directions, size
+      CoordinateVector divisions,size;  // div to subnodes to directions, size
       unsigned sites,evensites,oddsites;   
       direction merged_subnodes_dir;
 
@@ -239,26 +239,26 @@ public:
   // size routines
   int size(direction d) const { return l_size[d]; }
   int size(int d) const { return l_size[d]; }
-  coordinate_vector size() const {return l_size;}
+  CoordinateVector size() const {return l_size;}
 
-  coordinate_vector mod_size(const coordinate_vector & v) const { return mod(v, l_size); }
+  CoordinateVector mod_size(const CoordinateVector & v) const { return mod(v, l_size); }
 
   int node_rank() const { return mynode.rank; }
   int n_nodes() const { return nodes.number; }
   std::vector<node_info> nodelist() { return nodes.nodelist; }
-  coordinate_vector min_coordinate() const { return mynode.min; }
+  CoordinateVector min_coordinate() const { return mynode.min; }
   int min_coordinate(direction d) const { return mynode.min[d]; }
   
-  bool is_on_node(const coordinate_vector & c);
-  int  node_rank(const coordinate_vector & c);
-  unsigned site_index(const coordinate_vector & c);
-  unsigned site_index(const coordinate_vector & c, const unsigned node);
+  bool is_on_node(const CoordinateVector & c);
+  int  node_rank(const CoordinateVector & c);
+  unsigned site_index(const CoordinateVector & c);
+  unsigned site_index(const CoordinateVector & c, const unsigned node);
   unsigned field_alloc_size() const {return mynode.field_alloc_size; }
 
   void create_std_gathers();
-  gen_comminfo_struct create_general_gather( const coordinate_vector & r);
+  gen_comminfo_struct create_general_gather( const CoordinateVector & r);
   std::vector<comm_node_struct> 
-  create_comm_node_vector( coordinate_vector offset, unsigned * index, bool receive);
+  create_comm_node_vector( CoordinateVector offset, unsigned * index, bool receive);
 
   
   bool first_site_even() { return mynode.first_site_even; };
@@ -309,7 +309,7 @@ public:
   }
   #endif
 
-  inline const coordinate_vector & coordinates( unsigned idx ) const {
+  inline const CoordinateVector & coordinates( unsigned idx ) const {
     return mynode.coordinates[idx];
   }
 
@@ -327,7 +327,7 @@ public:
   #endif
   }
 
-  coordinate_vector local_coordinates( unsigned idx ) const {
+  CoordinateVector local_coordinates( unsigned idx ) const {
     return coordinates(idx) - mynode.min;
   }
 

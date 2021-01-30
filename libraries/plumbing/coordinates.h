@@ -3,7 +3,7 @@
 /// This header file defines:
 ///   enum direction
 ///   enum class parity
-///   class coordinate_vector
+///   class CoordinateVector
 /// These are used to traverse the lattice coordinate systems
 
 #include "plumbing/defs.h"
@@ -134,11 +134,11 @@ static std::vector<parity> loop_parities(parity par){
 
 
 //////////////////////////////////////////////////////////////////////
-/// COORDINATE_VECTOR type 
+/// CoordinateVector type 
 //////////////////////////////////////////////////////////////////////
 
 template <typename T>
-class coordinate_vector_t : public Vector<NDIM,T> {
+class CoordinateVector_t : public Vector<NDIM,T> {
 
  public:
 
@@ -146,28 +146,28 @@ class coordinate_vector_t : public Vector<NDIM,T> {
     using base_type = typename base_type_struct<T>::type;
 
     // define these to ensure std::is_trivial
-    coordinate_vector_t() = default;
-    ~coordinate_vector_t() = default;
-    coordinate_vector_t(const coordinate_vector_t & v) = default;
+    CoordinateVector_t() = default;
+    ~CoordinateVector_t() = default;
+    CoordinateVector_t(const CoordinateVector_t & v) = default;
 
     // initialize with direction -- useful for automatic conversion
-    explicit inline coordinate_vector_t(const direction dir) {
+    explicit inline CoordinateVector_t(const direction dir) {
       foralldir(d) this->e(d) = dir_dot_product(d,dir);
     }
 
     // construct from vector
-    explicit inline coordinate_vector_t(const Vector<NDIM,T> & v) {
+    explicit inline CoordinateVector_t(const Vector<NDIM,T> & v) {
       foralldir(d) this->e(d) = v.e(d);
     }
 
     // Construct from 0, using nullptr_t autocast
-    inline coordinate_vector_t(std::nullptr_t z) {
+    inline CoordinateVector_t(std::nullptr_t z) {
       foralldir(d) this->e(d) = 0;
     }
 
-    inline coordinate_vector_t & operator= (std::nullptr_t z) {
+    inline CoordinateVector_t & operator= (std::nullptr_t z) {
 
-      return static_cast<coordinate_vector_t &>( *this = z );
+      return static_cast<CoordinateVector_t &>( *this = z );
     }
 
     // these are called from cuda-sections not seen by hilapp, mark as loop functions
@@ -208,12 +208,12 @@ class coordinate_vector_t : public Vector<NDIM,T> {
 
     // add coordinate vector -- def explicit as loop_function
     // #pragma hila loop_function  //TODO
-    coordinate_vector_t & operator+=(const coordinate_vector_t & rhs) {
+    CoordinateVector_t & operator+=(const CoordinateVector_t & rhs) {
       foralldir(d) this->e(d) += rhs.e(d);
       return *this;
     }
 
-    coordinate_vector_t & operator-=(const coordinate_vector_t & rhs) {
+    CoordinateVector_t & operator-=(const CoordinateVector_t & rhs) {
       foralldir(d) this->e(d) -= rhs.e(d);
       return *this;
     }
@@ -221,27 +221,27 @@ class coordinate_vector_t : public Vector<NDIM,T> {
 
     // and also additions for direction -- dir acts like a unit vector
     // #pragma hila loop_function  //TODO
-    coordinate_vector_t & operator+=(const direction dir) {
+    CoordinateVector_t & operator+=(const direction dir) {
       if (is_up_dir(dir)) ++this->e(dir);
       else --this->e(-dir);
       return *this;
     }
 
-    coordinate_vector_t & operator-=(const direction dir) {
+    CoordinateVector_t & operator-=(const direction dir) {
       if (is_up_dir(dir)) --this->e(dir);
       else ++this->e(-dir);
       return *this;
     }
 
     // unary -   -explicitly loop_function
-    inline coordinate_vector_t operator-() const {
-      coordinate_vector_t res;
+    inline CoordinateVector_t operator-() const {
+      CoordinateVector_t res;
       foralldir(d) res.e(d) = -this->e(d);
       return res;
     }
 
     // unary +   -explicitly loop_function
-    inline coordinate_vector_t operator+() const {
+    inline CoordinateVector_t operator+() const {
       return *this;
     }
 
@@ -250,8 +250,8 @@ class coordinate_vector_t : public Vector<NDIM,T> {
 
 };
 
-/// Define the std coordinate_vector type here
-using coordinate_vector = coordinate_vector_t<int>;
+/// Define the std CoordinateVector type here
+using CoordinateVector = CoordinateVector_t<int>;
 
 /// Positive mod(): we define here the positive mod utility function mod(a,b).
 /// It mods the arguments 0 <= a < m.  This is not the standard
@@ -268,8 +268,8 @@ static inline int mod(const int a, const int b) {
 /// 2nd argument m is lattice.size(), this mods the vector a to periodic lattice.
 
 template <typename T>
-inline coordinate_vector_t<T> mod(const coordinate_vector_t<T> & a, const coordinate_vector_t<T> & m) {
-  coordinate_vector_t<T> r;
+inline CoordinateVector_t<T> mod(const CoordinateVector_t<T> & a, const CoordinateVector_t<T> & m) {
+  CoordinateVector_t<T> r;
   foralldir(d) {
     r.e(d) = mod(a[d], m[d]);
   }
@@ -277,22 +277,22 @@ inline coordinate_vector_t<T> mod(const coordinate_vector_t<T> & a, const coordi
 }
 
 template <typename T>
-inline coordinate_vector_t<T> operator+(coordinate_vector_t<T> cv1, const coordinate_vector_t<T> & cv2) {
-  coordinate_vector_t<T> res;
+inline CoordinateVector_t<T> operator+(CoordinateVector_t<T> cv1, const CoordinateVector_t<T> & cv2) {
+  CoordinateVector_t<T> res;
   foralldir(d) res.c[d] = cv1.c[d] + cv2.c[d];
   return res;
 }
 
 template <typename T>
-inline coordinate_vector_t<T> operator-(coordinate_vector_t<T> cv1, const coordinate_vector_t<T> & cv2) {
-  coordinate_vector_t<T> res;
+inline CoordinateVector_t<T> operator-(CoordinateVector_t<T> cv1, const CoordinateVector_t<T> & cv2) {
+  CoordinateVector_t<T> res;
   foralldir(d) res.c[d] = cv1.c[d] - cv2.c[d];
   return res;
 }
 
-/// Special direction operators: dir + dir -> coordinate_vector
-inline coordinate_vector operator+(const direction d1, const direction d2) {
-  coordinate_vector r;
+/// Special direction operators: dir + dir -> CoordinateVector
+inline CoordinateVector operator+(const direction d1, const direction d2) {
+  CoordinateVector r;
   foralldir(d) {
     r.e(d)  = dir_dot_product(d1,d);
     r.e(d) += dir_dot_product(d2,d);
@@ -300,8 +300,8 @@ inline coordinate_vector operator+(const direction d1, const direction d2) {
   return r;
 }
 
-inline coordinate_vector operator-(const direction d1, const direction d2) {
-  coordinate_vector r;
+inline CoordinateVector operator-(const direction d1, const direction d2) {
+  CoordinateVector r;
   foralldir(d) {
     r.e(d)  = dir_dot_product(d1,d);
     r.e(d) -= dir_dot_product(d2,d);
@@ -309,34 +309,34 @@ inline coordinate_vector operator-(const direction d1, const direction d2) {
   return r;
 }
 
-/// Special operators: int*direction -> coordinate_vector (of type int!)
-inline coordinate_vector operator*(const int i, const direction dir) {
-  coordinate_vector r;
+/// Special operators: int*direction -> CoordinateVector (of type int!)
+inline CoordinateVector operator*(const int i, const direction dir) {
+  CoordinateVector r;
   foralldir(d) r.e(d) = i*dir_dot_product(d,dir);
   return r;
 }
 
-inline coordinate_vector operator*(const direction d, const int i) {
+inline CoordinateVector operator*(const direction d, const int i) {
   return i*d;
 }
 
 // coordinate vector + direction -- dir is a unit vector
-inline coordinate_vector operator+( coordinate_vector cv, const direction dir ) {
+inline CoordinateVector operator+( CoordinateVector cv, const direction dir ) {
   cv += dir;
   return cv;
 }
 
-inline coordinate_vector operator-( coordinate_vector cv, const direction dir ) {
+inline CoordinateVector operator-( CoordinateVector cv, const direction dir ) {
   cv -= dir;
   return cv;
 }
 
-inline coordinate_vector operator+( const direction dir, coordinate_vector cv ) {
+inline CoordinateVector operator+( const direction dir, CoordinateVector cv ) {
   cv += dir;
   return cv;
 }
 
-inline coordinate_vector operator-( const direction dir, coordinate_vector cv ) {
+inline CoordinateVector operator-( const direction dir, CoordinateVector cv ) {
   foralldir(d) cv.e(d) = dir_dot_product(dir,d) - cv.e(d);
   return cv;
 }
@@ -352,7 +352,7 @@ inline coordinate_vector operator-( const direction dir, coordinate_vector cv ) 
 
 class X_index_type {
   public:
-    const coordinate_vector & coordinates() const;
+    const CoordinateVector & coordinates() const;
 
     int coordinate(direction d) const;
 
@@ -367,23 +367,23 @@ static const X_index_type X;
 /// It's a dummy type, is not used in final code
 
 struct X_plus_direction {};
-/// X + coordinate offset, used in f[X+coordinate_vector] or f[X+dir1+dir2] etc.
+/// X + coordinate offset, used in f[X+CoordinateVector] or f[X+dir1+dir2] etc.
 struct X_plus_offset {};
 
 /// Declarations X+smth, no need to implement these (type removed by hilapp)
 
 const X_plus_direction operator+(const X_index_type x, const direction d);
 const X_plus_direction operator-(const X_index_type x, const direction d);
-const X_plus_offset operator+(const X_index_type x, const coordinate_vector & cv);
-const X_plus_offset operator-(const X_index_type x, const coordinate_vector & cv);
+const X_plus_offset operator+(const X_index_type x, const CoordinateVector & cv);
+const X_plus_offset operator-(const X_index_type x, const CoordinateVector & cv);
 const X_plus_offset operator+(const X_plus_direction, const direction d);
 const X_plus_offset operator-(const X_plus_direction, const direction d);
-const X_plus_offset operator+(const X_plus_direction, const coordinate_vector & cv);
-const X_plus_offset operator-(const X_plus_direction, const coordinate_vector & cv);
+const X_plus_offset operator+(const X_plus_direction, const CoordinateVector & cv);
+const X_plus_offset operator-(const X_plus_direction, const CoordinateVector & cv);
 const X_plus_offset operator+(const X_plus_offset, const direction d);
 const X_plus_offset operator-(const X_plus_offset, const direction d);
-const X_plus_offset operator+(const X_plus_offset, const coordinate_vector & cv);
-const X_plus_offset operator-(const X_plus_offset, const coordinate_vector & cv);
+const X_plus_offset operator+(const X_plus_offset, const CoordinateVector & cv);
+const X_plus_offset operator-(const X_plus_offset, const CoordinateVector & cv);
 
 
 

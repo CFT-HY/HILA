@@ -17,7 +17,7 @@ inline void init_staggered_eta(Field<double> (&staggered_eta)[NDIM]){
   // Initialize the staggered eta field
   foralldir(d){
     onsites(ALL){
-      element<coordinate_vector> l = X.coordinates();
+      element<CoordinateVector> l = X.coordinates();
       element<int> sumcoord = 0;
       for(int d2=e_x;d2<d;d2++){
         sumcoord += l[d2];

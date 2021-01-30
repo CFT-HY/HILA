@@ -29,7 +29,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge){
       force[dir][ALL] = 0;
     }
 
-    coordinate_vector coord(0);
+    CoordinateVector coord(0);
 
     sun g1 = gauge.get_gauge(0).get_element(coord);
     sun h = sun(1) + Cmplx<double>(0, eps) * sun::generator(ng);

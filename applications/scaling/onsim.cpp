@@ -114,7 +114,7 @@ void scaling_sim::initialize(){
 
 		case 1 : {
 			onsites(ALL){
-				element<coordinate_vector> coord = X.coordinates(); //coordinates of the current lattice site
+				element<CoordinateVector> coord = X.coordinates(); //coordinates of the current lattice site
 				pi[X] = Cmplx<double>(0.0, 0.0);
 				phi[X].re = s*sqrt(1-epsilon*epsilon*sin(2.0*M_PI*coord[0]*m/N)*sin(2.0*M_PI*coord[0]*m/N));
 				phi[X].im = s*epsilon*sin(2.0*M_PI*coord[0]*m/N);

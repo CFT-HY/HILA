@@ -95,7 +95,7 @@ void lattice_struct::setup(int nx) {
 /// 
 ///////////////////////////////////////////////////////////////////////
 
-int lattice_struct::node_rank(const coordinate_vector & loc)
+int lattice_struct::node_rank(const CoordinateVector & loc)
 {
   int i;
   int dir;
@@ -115,7 +115,7 @@ int lattice_struct::node_rank(const coordinate_vector & loc)
 /// Is the coordinate on THIS node 
 ///////////////////////////////////////////////////////////////////////
 
-bool lattice_struct::is_on_node(const coordinate_vector & loc)
+bool lattice_struct::is_on_node(const CoordinateVector & loc)
 {
   int d;
 
@@ -134,7 +134,7 @@ bool lattice_struct::is_on_node(const coordinate_vector & loc)
 
 #ifndef SUBNODE_LAYOUT
 
-unsigned lattice_struct::site_index(const coordinate_vector & loc)
+unsigned lattice_struct::site_index(const CoordinateVector & loc)
 {
   int dir,l,s;
   unsigned i;
@@ -161,7 +161,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc)
 /// compare to above
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigned nodeid)
+unsigned lattice_struct::site_index(const CoordinateVector & loc, const unsigned nodeid)
 {
   int dir,l,s;
   unsigned i;
@@ -217,7 +217,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 /// In layout, this will become the "slowest" direction
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const coordinate_vector & loc)
+unsigned lattice_struct::site_index(const CoordinateVector & loc)
 {
   return site_index(loc, hila::myrank());
 }
@@ -227,7 +227,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc)
 /// compare to above
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigned nodeid)
+unsigned lattice_struct::site_index(const CoordinateVector & loc, const unsigned nodeid)
 {
   int dir,l,s,subl;
   unsigned i;
@@ -240,7 +240,7 @@ unsigned lattice_struct::site_index(const coordinate_vector & loc, const unsigne
 
   // foralldir(d) assert( ni.size[d] % mynode.subnodes.divisions[d] == 0);
 
-  coordinate_vector subsize;
+  CoordinateVector subsize;
   subsize.asArray() = ni.size.asArray() / mynode.subnodes.divisions.asArray() ;
 
   dir = mynode.subnodes.merged_subnodes_dir;
@@ -293,11 +293,11 @@ void lattice_struct::setup_nodes() {
   nodes.nodelist.resize(nodes.number);
 
   // n keeps track of the node "root coordinates"
-  coordinate_vector n(0);
+  CoordinateVector n(0);
 
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {
-    coordinate_vector l;
+    CoordinateVector l;
     foralldir(d) l[d] = nodes.divisors[d][n[d]];
 
     int nn = node_rank(l);
@@ -354,7 +354,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
    
   // neighbour node indices
   foralldir(d) {
-    coordinate_vector l = min;   // this is here on purpose
+    CoordinateVector l = min;   // this is here on purpose
     l[d] = (min[d] + size[d]) % lattice.l_size[d];
     nn[d] = lattice.node_rank(l);
     l[d] = (lattice.l_size[d] + min[d] - 1) % lattice.l_size[d];
@@ -365,7 +365,7 @@ void lattice_struct::node_struct::setup(node_info & ni, lattice_struct & lattice
   // after the above site_index should work
 
   coordinates.resize(sites);
-  coordinate_vector l = min;
+  CoordinateVector l = min;
   for(unsigned i = 0; i<sites; i++){
     coordinates[ lattice.site_index(l) ] = l;
     // walk through the coordinates
@@ -458,7 +458,7 @@ void lattice_struct::create_std_gathers()
     // pass over sites
     int num = 0;  // number of sites off node
     for (int i=0; i<mynode.sites; i++) {
-      coordinate_vector ln, l;
+      CoordinateVector ln, l;
       l = coordinates(i);
       // set ln to be the neighbour of the site
       // TODO: FIXED BOUNDARY CONDITIONS DO NOT WRAP
@@ -529,7 +529,7 @@ void lattice_struct::create_std_gathers()
 
       for (int i=0; i<mynode.sites; i++) {
         if (neighb[d][i] == mynode.sites) {
-          coordinate_vector l;
+          CoordinateVector l;
           l = coordinates(i);
 
           if (l.parity() == EVEN) {
@@ -740,7 +740,7 @@ void lattice_struct::setup_special_boundary_array(direction d) {
 /// For receive == false the is "send" half is done.
 
 std::vector<lattice_struct::comm_node_struct> 
-lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * index, bool receive) {
+lattice_struct::create_comm_node_vector( CoordinateVector offset, unsigned * index, bool receive) {
 
   // for send flip the offset
   if (!receive) offset = -offset;
@@ -755,7 +755,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
   // pass over sites
   int num = 0;  // number of sites off node
   for (int i=0; i<mynode.sites; i++) {
-    coordinate_vector ln, l;
+    CoordinateVector ln, l;
     l  = coordinates(i);
     ln = mod( l + offset, size() );
  
@@ -820,7 +820,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
     // sending end -- create sitelists
 
     for (int i=0; i<mynode.sites; i++) {
-      coordinate_vector ln, l;
+      CoordinateVector ln, l;
       l  = coordinates(i);
       ln = mod( l + offset, size() );
  
@@ -851,7 +851,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
         // find the node which sends this 
         while (node_v[n].rank != r) n++;
 
-        coordinate_vector l = coordinates(i);
+        CoordinateVector l = coordinates(i);
         if (l.parity() == EVEN)
           index[i] = node_v[n].buffer + (np_even[n]++);
         else 
@@ -866,7 +866,7 @@ lattice_struct::create_comm_node_vector( coordinate_vector offset, unsigned * in
 
 
 
-lattice_struct::gen_comminfo_struct lattice_struct::create_general_gather( const coordinate_vector & offset )
+lattice_struct::gen_comminfo_struct lattice_struct::create_general_gather( const CoordinateVector & offset )
 {
   // allocate neighbour arrays - TODO: these should 
   // be allocated on "device" memory too!
@@ -904,8 +904,8 @@ lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
       
     // Build a list of nodes in this column
     // All nodes should have these in the same order
-    coordinate_vector min = allnodes[myrank].min;
-    coordinate_vector size = allnodes[myrank].size;
+    CoordinateVector min = allnodes[myrank].min;
+    CoordinateVector size = allnodes[myrank].size;
 
     for( int rank=0; rank < allnodes.size(); rank++ ) {
       const node_info & node = allnodes[rank];

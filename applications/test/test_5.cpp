@@ -62,7 +62,7 @@ int main()
   Field<v2<double>> A;  
 
   
-  coordinate_vector 
+  CoordinateVector 
   v = e_x - 2*e_y;
     
   parity p = ODD;

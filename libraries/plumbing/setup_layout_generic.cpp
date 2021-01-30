@@ -18,7 +18,7 @@ const static int prime[NPRIMES] = {2,3,5,7,11,13,17,19,23,29,31,37};
 void lattice_struct::setup_layout()
 {
   int nfactors[NPRIMES];
-  coordinate_vector nodesiz;
+  CoordinateVector nodesiz;
 
   print_dashed_line();
   output0 << "LAYOUT: lattice size  ";
@@ -50,7 +50,7 @@ void lattice_struct::setup_layout()
   // find the optimal direction to do it
   // Use simple heuristic: take the dim with the least amount of added "ghost sites"
 
-  coordinate_vector ghosts, nsize;
+  CoordinateVector ghosts, nsize;
   foralldir(d) {
     int cosize = l_volume / size(d);
     int n = size(d);

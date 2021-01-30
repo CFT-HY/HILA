@@ -24,9 +24,9 @@ struct vectorized_lattice_struct  {
     /// vector sites on this node
     unsigned v_sites;
     /// subnode divisions to different directions
-    coordinate_vector subdivisions;
+    CoordinateVector subdivisions;
     /// origin of the 1st subnode = origin of mynode
-    coordinate_vector subnode_origin, subnode_size;
+    CoordinateVector subnode_origin, subnode_size;
      
     /// True if boundary needs a permutation
     bool is_boundary_permutation[NDIM];
@@ -50,7 +50,7 @@ struct vectorized_lattice_struct  {
     int_vector_t coordinate_offset[NDIM];
     // using coordinate_compound_vec_type = typename Vector<NDIM, typenamevector_base_type<int,vector_size>::type>;
     // coordinate_compound_vec_type coordinate_offset;
-    coordinate_vector * RESTRICT coordinate_base;
+    CoordinateVector * RESTRICT coordinate_base;
 
     /// Storage for neighbour indexes on each site
     unsigned * RESTRICT neighbours[NDIRS];
@@ -61,7 +61,7 @@ struct vectorized_lattice_struct  {
     unsigned char * RESTRICT vec_wait_arr_; 
  
     /// Check if this is the first subnode
-    bool is_on_first_subnode( coordinate_vector v ) {
+    bool is_on_first_subnode( CoordinateVector v ) {
       v = mod(v,lattice->size());
       foralldir(d) {
         if ( v[d] < subnode_origin[d] || 
@@ -141,7 +141,7 @@ struct vectorized_lattice_struct  {
         is_boundary_permutation[d] = (subdivisions[d] > 1);
 
         // upper corner of 1st subnode
-        coordinate_vector here;
+        CoordinateVector here;
         here = subnode_origin + subnode_size;
         here.asArray() -= 1;
 
@@ -152,7 +152,7 @@ struct vectorized_lattice_struct  {
         for (int i=0; i<vector_size; i++) {
 
           // get the site index of the neighbouring site
-          coordinate_vector h = lattice->coordinates(idx+i) + d;
+          CoordinateVector h = lattice->coordinates(idx+i) + d;
 
           // remember to mod the coordinate on lattice
           h = mod( h, lattice->size() );
@@ -199,7 +199,7 @@ struct vectorized_lattice_struct  {
         halo_offset[d] = c_offset;
         for (int i=0; i<v_sites; i++) {
           int j = vector_size*i;   // the "original lattice" index for the 1st site of vector
-          coordinate_vector here = lattice->coordinates(j);
+          CoordinateVector here = lattice->coordinates(j);
           // std::cout << here << '\n';
 
           if (is_on_first_subnode(here+d)) {
@@ -317,15 +317,15 @@ struct vectorized_lattice_struct  {
     void set_coordinates() {
 
       /// first vector_size elements should give the coordinates of vector offsets
-      coordinate_vector base = lattice->coordinates(0);
+      CoordinateVector base = lattice->coordinates(0);
       for (int i=0; i<vector_size; i++) {
-        coordinate_vector diff = lattice->coordinates(i) - base;
+        CoordinateVector diff = lattice->coordinates(i) - base;
         foralldir(d) 
           coordinate_offset[d].insert(i, diff[d]);
       }
 
       // and then set the coordinate_base with the original coords
-      coordinate_base = (coordinate_vector *)memalloc(v_sites * sizeof(coordinate_vector));
+      coordinate_base = (CoordinateVector *)memalloc(v_sites * sizeof(CoordinateVector));
       for (int i=0; i<v_sites; i++) {
         coordinate_base[i] = lattice->coordinates(vector_size*i);
       }
@@ -384,7 +384,7 @@ struct vectorized_lattice_struct  {
     /// coordinate[direction][vector_index]
     auto coordinates(int idx) const {
       // std::array<typename vector_base_type<int,vector_size>::type ,NDIM> r;
-      coordinate_vector_t<int_vector_t> r;
+      CoordinateVector_t<int_vector_t> r;
       // Vector<NDIM,int_vector_t> r;
       foralldir(d) r.e(d) = coordinate_offset[d] + coordinate_base[idx][d];
       return r;

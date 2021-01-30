@@ -104,7 +104,7 @@ double polyakov_loop(direction dir, Field<SU<N>> (&gauge)[NDIM]){
   // This implementation uses the onsites() to cycle through the
   // NDIM-1 dimensional planes. This is probably not the most
   // efficient implementation.
-  coordinate_vector vol = lattice->size();
+  CoordinateVector vol = lattice->size();
   Field<SU<N>> polyakov; polyakov[ALL] = 1;
   for(int t=0; t<vol[dir]; t++){
     onsites(ALL){

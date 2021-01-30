@@ -18,7 +18,7 @@ int main(int argc, char **argv){
   // After one FFT the field is 0 except at coord 0
   p2 = 0;
   T m = lattice->volume();
-  coordinate_vector c;
+  CoordinateVector c;
   foralldir(d){
     c[d] = 0;
   }

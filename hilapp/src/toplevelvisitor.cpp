@@ -183,7 +183,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
     // Now need to split the expr to parity and dir-bits
     // Because of offsets this is pretty complicated to do in AST.
     // We now know that the expr is of type
-    // [X+direction]  or  [X+coordinate_vector] -- just
+    // [X+direction]  or  [X+CoordinateVector] -- just
     // use the textual form of the expression!
 
     bool has_X;

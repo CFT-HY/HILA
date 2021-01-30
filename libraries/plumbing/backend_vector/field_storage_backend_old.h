@@ -47,19 +47,19 @@ struct vectorize_struct<C<a,b,B>, vector_size>{
 
 /// Match coordinate vectors explicitly
 template<>
-struct vectorize_struct<coordinate_vector, 4> {
+struct vectorize_struct<CoordinateVector, 4> {
   using type = std::array<Vec4i, NDIM>;
 };
 
 /// Match coordinate vectors explicitly
 template<>
-struct vectorize_struct<coordinate_vector, 8> {
+struct vectorize_struct<CoordinateVector, 8> {
   using type = std::array<Vec8i, NDIM>;
 };
 
 /// Match coordinate vectors explicitly
 template<>
-struct vectorize_struct<coordinate_vector, 16> {
+struct vectorize_struct<CoordinateVector, 16> {
   using type = std::array<Vec16i, NDIM>;
 };
 

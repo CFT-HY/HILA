@@ -162,7 +162,7 @@ void GeneralVisitor::handle_loop_function_avx( call_info_struct &ci ) {
     }
     if( find_word(typestring,"float") != std::string::npos ||
         find_word(typestring,"int") != std::string::npos || 
-        find_word(typestring,"coordinate_vector") != std::string::npos ){
+        find_word(typestring,"CoordinateVector") != std::string::npos ){
       smallest = 8;
       largest = 16;
     }
