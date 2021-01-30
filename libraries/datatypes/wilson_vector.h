@@ -65,7 +65,6 @@ class Wilson_vector {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  //#pragma hila loop_function  //TODO
   Wilson_vector(const Wilson_vector<N,scalart> m) {
     for (int i=0; i<Gammadim; i++){
       c[i] = m.c[i];
@@ -73,14 +72,12 @@ class Wilson_vector {
   }
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  //#pragma hila loop_function  //TODO
   Wilson_vector(const scalart rhs) {
     for(int i=0; i<Gammadim; i++){
       c[i] = rhs;
     }
   }
 
-  //#pragma hila loop_function  //TODO
   void gaussian(){ 
     for (int i=0; i<Gammadim; i++){
       c[i].gaussian();
@@ -89,7 +86,6 @@ class Wilson_vector {
 
 
   template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-  //#pragma hila loop_function  //TODO
   Wilson_vector & operator= (const scalart rhs) {
     for (int i=0; i<Gammadim; i++){
       c[i] = rhs;
@@ -97,7 +93,6 @@ class Wilson_vector {
     return *this;
   }
 
-  //#pragma hila loop_function  //TODO
   Wilson_vector & operator+=(const Wilson_vector & rhs){
     for (int i = 0; i < Gammadim; i++){
       c[i] += rhs.c[i];
@@ -105,7 +100,6 @@ class Wilson_vector {
     return *this;
   }
 
-  //#pragma hila loop_function  //TODO
   Wilson_vector & operator-=(const Wilson_vector & rhs){
     for (int i = 0; i < Gammadim; i++){
       c[i] -= rhs.c[i];
@@ -113,7 +107,6 @@ class Wilson_vector {
     return *this;
   }
 
-  //#pragma hila loop_function  //TODO
   Wilson_vector operator-() const {
     Wilson_vector r;
     for (int i = 0; i < Gammadim; i++){
@@ -122,7 +115,6 @@ class Wilson_vector {
     return r;
   }
 
-  //#pragma hila loop_function  //TODO
   inline radix norm_sq(){ 
     radix r=0;
     for (int i = 0; i < Gammadim; i++) {
@@ -131,7 +123,6 @@ class Wilson_vector {
     return r;
   }
 
-  //#pragma hila loop_function  //TODO
   inline Cmplx<radix> dot(const Wilson_vector &rhs) const {
     Cmplx<radix> r = 0;
     for (int i=0; i<Gammadim; i++) {
@@ -140,7 +131,6 @@ class Wilson_vector {
     return r;
   }
 
-  //#pragma hila loop_function  //TODO
   inline radix rdot(const Wilson_vector &rhs) const {
     radix r = (0.0);
     for (int i=0; i<Gammadim; i++) {
@@ -152,7 +142,6 @@ class Wilson_vector {
   /// Returns a square matrix, cast into the SU(N) matrix type,
   /// which is the sum of the outer products of the SUN vectors
   /// in this Wilson vector and the argument
-  //#pragma hila loop_function  //TODO
   inline auto outer_product(const Wilson_vector rhs) const{
     auto r = c[0].outer_product(rhs.c[0]);
     for (int i=1; i<Gammadim; i++) {
@@ -177,7 +166,6 @@ class Wilson_vector {
 /// Multiplying with an SU(N) matrix should multiply each element, not the gamma-
 /// dimension
 template<int N, typename radix, typename T>
-//#pragma hila loop_function  //TODO
 Wilson_vector<N, radix> operator*(const T lhs, const Wilson_vector<N, radix> rhs){
   Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim; i++) {
@@ -190,7 +178,6 @@ Wilson_vector<N, radix> operator*(const T lhs, const Wilson_vector<N, radix> rhs
 /// Multiplying with an SU(N) matrix should multiply each element, not the gamma-
 /// dimension
 template<int N, typename radix, typename T>
-//#pragma hila loop_function  //TODO
 Wilson_vector<N, radix> operator*(const Wilson_vector<N, radix> lhs, const T rhs){
   Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim; i++) {
@@ -201,7 +188,6 @@ Wilson_vector<N, radix> operator*(const Wilson_vector<N, radix> lhs, const T rhs
 
 
 template<int N, typename radix>
-//#pragma hila loop_function  //TODO
 Wilson_vector<N, radix> operator+(const Wilson_vector<N, radix>  lhs, const Wilson_vector<N, radix>  rhs){
   Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim; i++) {
@@ -211,7 +197,6 @@ Wilson_vector<N, radix> operator+(const Wilson_vector<N, radix>  lhs, const Wils
 }
 
 template<int N, typename radix>
-//#pragma hila loop_function  //TODO
 Wilson_vector<N, radix> operator-(const Wilson_vector<N, radix> lhs, const Wilson_vector<N, radix> rhs){
   Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim; i++) {
@@ -349,7 +334,6 @@ class half_Wilson_vector {
 
   // This will take the projection 1 +- gamma_j
 #if (Gammadim==4) 
-  //#pragma hila loop_function  //TODO
   half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
     Cmplx<radix> I(0,1);
     switch(dir){
@@ -405,7 +389,6 @@ class half_Wilson_vector {
     }
   }
 
-  //#pragma hila loop_function  //TODO
   Wilson_vector<N, radix> expand(direction dir, int sign) const{
     Wilson_vector<N, radix> r;
     Cmplx<radix> I(0,1);
@@ -481,7 +464,6 @@ class half_Wilson_vector {
    1  0	        ( 1, 0)	       +1
    0 -1	  	    ( 0, 1)	       -1
 */
-  //#pragma hila loop_function  //TODO
   half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
     Cmplx<radix> I(0,1);
     switch(dir){
@@ -512,7 +494,6 @@ class half_Wilson_vector {
         assert(false && "ERROR: Half Wilson vector projection called incorrectly \n");
   }
 
-  //#pragma hila loop_function  //TODO
   Wilson_vector<N, radix> expand(direction dir, int sign) const{
     Wilson_vector<N, radix> r;
     Cmplx<radix> I(0,1);
@@ -559,7 +540,6 @@ class half_Wilson_vector {
     return r;
   }
 
-  //#pragma hila loop_function  //TODO
   half_Wilson_vector & operator+=(const half_Wilson_vector & rhs){
     for (int i = 0; i < Gammadim/2; i++){
       c[i] += rhs.c[i];
@@ -567,7 +547,6 @@ class half_Wilson_vector {
     return *this;
   }
 
-  //#pragma hila loop_function  //TODO
   half_Wilson_vector & operator-=(const half_Wilson_vector & rhs){
     for (int i = 0; i < Gammadim/2; i++){
       c[i] -= rhs.c[i];
@@ -575,7 +554,6 @@ class half_Wilson_vector {
     return *this;
   }
 
-  //#pragma hila loop_function  //TODO
   half_Wilson_vector operator-() const {
     half_Wilson_vector r;
     for (int i = 0; i < Gammadim/2; i++){
@@ -599,7 +577,6 @@ class half_Wilson_vector {
 
 
 template<int N, typename radix, typename T>
-//#pragma hila loop_function  //TODO
 half_Wilson_vector<N, radix> operator*(const T lhs, const half_Wilson_vector<N, radix> rhs){
   half_Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim/2; i++) {
@@ -609,7 +586,6 @@ half_Wilson_vector<N, radix> operator*(const T lhs, const half_Wilson_vector<N, 
 }
 
 template<int N, typename radix, typename T>
-//#pragma hila loop_function  //TODO
 half_Wilson_vector<N, radix> operator*(const half_Wilson_vector<N, radix> lhs, const T rhs){
   half_Wilson_vector<N, radix> r;
   for (int i=0; i<Gammadim/2; i++) {
@@ -620,7 +596,6 @@ half_Wilson_vector<N, radix> operator*(const half_Wilson_vector<N, radix> lhs, c
 
 
 template<int N, typename radix>
-//#pragma hila loop_function  //TODO
 half_Wilson_vector<N, radix> operator+(const half_Wilson_vector<N, radix> lhs, const half_Wilson_vector<N, radix> rhs){
   half_Wilson_vector<N, radix>  r;
   for (int i=0; i<Gammadim/2; i++) {
@@ -630,7 +605,6 @@ half_Wilson_vector<N, radix> operator+(const half_Wilson_vector<N, radix> lhs, c
 }
 
 template<int N, typename radix>
-//#pragma hila loop_function  //TODO
 half_Wilson_vector<N, radix> operator-(const half_Wilson_vector<N, radix> lhs, const half_Wilson_vector<N, radix> rhs){
   half_Wilson_vector<N, radix>  r;
   for (int i=0; i<Gammadim/2; i++) {

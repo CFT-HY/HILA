@@ -89,7 +89,6 @@ void field_storage<T>::free_field() {
 
 template<typename T>
 template<typename vecT>
-//#pragma hila loop_function  //TODO
 inline vecT field_storage<T>::get_vector(const int i) const {
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
@@ -114,7 +113,6 @@ inline vecT field_storage<T>::get_vector(const int i) const {
 
 template<typename T>
 template<typename vecT>
-//#pragma hila loop_function  //TODO
 inline void field_storage<T>::set_vector(const vecT &value, const int i)  {
   using vectortype = typename vector_info<T>::type;
   using basetype = typename vector_info<T>::base_type;
@@ -135,7 +133,6 @@ inline void field_storage<T>::set_vector(const vecT &value, const int i)  {
 /// using the "site" index idx.
 
 template<typename T>
-//#pragma hila loop_function  //TODO
 inline void field_storage<T>::set_element(const T &value, const int idx) {
   static_assert( vector_info<T>::is_vectorizable );
   using basetype = typename vector_info<T>::base_type;
@@ -154,7 +151,6 @@ inline void field_storage<T>::set_element(const T &value, const int idx) {
 /// again, idx is the "site" index
 
 template<typename T>
-//#pragma hila loop_function  //TODO
 inline T field_storage<T>::get_element(const int idx) const {
   static_assert( vector_info<T>::is_vectorizable );
   using basetype = typename vector_info<T>::base_type;

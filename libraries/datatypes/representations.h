@@ -47,7 +47,6 @@ class adjointRep : public SquareMatrix<N*N-1, radix> {
 
     /// Use square matrix constructor from radix
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >  
-    //#pragma hila loop_function  //TODO
     adjointRep(const scalart m) : SquareMatrix<size,radix>(m) {}
 
     /// Copy constructor
@@ -156,7 +155,6 @@ class antisymmetric : public SquareMatrix<N*(N-1)/2, Cmplx<radix>> {
     }
 
     /// Needs assignment as well
-    //#pragma hila loop_function  //TODO
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
     inline antisymmetric & operator= (const antisymmetric<N,scalart> m) {
       for (int j=0; j<size; j++) for (int i=0; i<size; i++){
@@ -292,7 +290,6 @@ class symmetric : public SquareMatrix<N*(N+1)/2, Cmplx<radix>> {
     }
 
     /// Needs assignment as well
-    //#pragma hila loop_function  //TODO
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0 >
     inline symmetric & operator= (const symmetric<N,scalart> m) {
       for (int j=0; j<size; j++) for (int i=0; i<size; i++){

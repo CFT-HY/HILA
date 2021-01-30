@@ -16,7 +16,7 @@
 
 
 //this is might be too much to have in a single kernel
-//#pragma hila loop_function  //TODO
+ 
 void KennedyPendleton(
   Matrix<2,2,Cmplx<double>> &U,
   Matrix<2,2,Cmplx<double>> &staple

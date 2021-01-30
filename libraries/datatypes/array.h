@@ -25,7 +25,6 @@ class Array {
 
     /// constructor from scalar - make this also explicit, consistency
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     explicit inline Array(const S rhs) {
       for (int i=0; i<n*m; i++) {
         this->c[i] = rhs;
@@ -33,7 +32,6 @@ class Array {
     }
 
     // and make non-explicit constructor from 0
-    //#pragma hila loop_function  //TODO
     inline Array(const std::nullptr_t & z) {
       for (int i=0; i<n*m; i++) c[i] = static_cast<T>(0);
     }
@@ -54,22 +52,18 @@ class Array {
     constexpr int size() const { return q; }
 
     /// access operators .e(i,j) and .e(i) from Matrix
-    //#pragma hila loop_function  //TODO
     inline T  e(const int i, const int j) const { return c[i*m + j]; }
     /// standard access ops m.e(i,j) - assume T is small, as it should
-    //#pragma hila loop_function  //TODO
     inline T& e(const int i, const int j) { return c[i*m + j]; }
     
     /// declare single e here too in case we have a vector
     /// (one size == 1)
-    //#pragma hila loop_function  //TODO
     template <int q=n, int p=m,
               std::enable_if_t< (q == 1 || p == 1), int> = 0 >
     inline T e(const int i) const {
       return c[i]; 
     }
 
-    //#pragma hila loop_function  //TODO
     template <int q=n, int p=m,
               std::enable_if_t< (q == 1 || p == 1), int> = 0 >
     inline T& e(const int i) { 
@@ -89,7 +83,6 @@ class Array {
     /// casting from one Array (number) type to another   
     /// TODO: CHECK AVX CONVERSIONS
     template <typename S, std::enable_if_t<is_assignable<S&,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     operator Array<n,m,S>() {
       Array<n,m,S> res;
       for (int i=0; i<n*m; i++) {
@@ -99,7 +92,6 @@ class Array {
     }
 
     /// unary -
-    //#pragma hila loop_function  //TODO
     inline Array<n,m,T> operator-() const {
       Array<n,m,T> res;
       for (int i=0; i<n*m; i++) {
@@ -109,14 +101,12 @@ class Array {
     }
 
     /// unary +
-    //#pragma hila loop_function  //TODO
     inline Array<n,m,T> operator+() const {
       return *this;
     }
 
     /// Assign from scalar to array
     template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     inline Array<n,m,T> & operator= (const S rhs) {
       for (int i=0; i<n*m; i++) {
         c[i] = rhs;
@@ -127,7 +117,6 @@ class Array {
     /// add assign an Array
     template <typename S,
               std::enable_if_t<std::is_convertible<S,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     Array<n,m,T> & operator+=(const Array<n,m,S> & rhs){
       for (int i=0; i < n*m; i++) {
         c[i] += rhs.c[i];
@@ -138,7 +127,6 @@ class Array {
     /// subtract assign an Array
     template <typename S,
               std::enable_if_t<std::is_convertible<S,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     Array<n,m,T> & operator-=(const Array<n,m,S> & rhs){
       for (int i=0; i < n*m; i++) {
         c[i] -= rhs.c[i];
@@ -149,7 +137,6 @@ class Array {
     /// add assign type T and convertible
     template <typename S,
               std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     Array<n,m,T> & operator+=(const S rhs){
       for (int i=0; i<n*m; i++) {
         c[i] += rhs;
@@ -160,7 +147,6 @@ class Array {
     /// subtract assign type T and convertible
     template <typename S,
               std::enable_if_t<std::is_convertible<type_minus<T,S>,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     Array<n,m,T> & operator-=(const S rhs){
       for (int i=0; i<n*m; i++) {
         c[i] -= rhs;
@@ -171,7 +157,6 @@ class Array {
     /// multiply assign with Array
     template <typename S,
               std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     Array<n,m,T> & operator*=(const Array<n,m,S> & rhs){
       for (int i=0; i<n*m; i++) {
         c[i] *= rhs.c[i];
@@ -182,7 +167,6 @@ class Array {
     /// multiply assign with scalar
     template <typename S,
               std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     Array<n,m,T> & operator*=(const S rhs) {
       for (int i=0; i<n*m; i++) {
         c[i] *= rhs;
@@ -193,7 +177,6 @@ class Array {
     /// divide assign by Array
     template <typename S,
               std::enable_if_t<std::is_convertible<type_div<T,S>,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     Array<n,m,T> & operator/=(const Array<n,m,S> & rhs){
       for (int i=0; i<n*m; i++) {
         c[i] /= rhs.c[i];
@@ -204,7 +187,6 @@ class Array {
     /// divide assign with scalar
     template <typename S,
               std::enable_if_t<std::is_convertible<type_div<T,S>,T>::value, int> = 0 >
-    //#pragma hila loop_function  //TODO
     Array<n,m,T> & operator/=(const S rhs) {
       for (int i=0; i<n*m; i++) {
         c[i] /= rhs;
@@ -213,7 +195,6 @@ class Array {
     }
 
     /// complex conjugate
-    //#pragma hila loop_function  //TODO
     inline Array<n,m,T> conj() const { 
       Array<n,m,T> res;
       for (int i=0; i<n*m; i++) {
@@ -223,7 +204,6 @@ class Array {
     }
         
     /// return real part
-    //#pragma hila loop_function  //TODO
     inline Array<n,m,number_type<T>> real() const { 
       Array<n,m,number_type<T>> res;
       for (int i=0; i<m*n; i++) {
@@ -233,7 +213,6 @@ class Array {
     }
 
     /// return imaginary part
-    //#pragma hila loop_function  //TODO
     inline Array<n,m,number_type<T>> imag() const { 
       Array<n,m,number_type<T>> res;
       for (int i=0; i<m*n; i++) {
@@ -243,7 +222,6 @@ class Array {
     }
 
     /// calculate square norm - sum of squared elements
-    //#pragma hila loop_function  //TODO
     number_type<T> norm_sq() const {
       number_type<T> result = 0;
       for (int i=0; i<n*m; i++) {
@@ -254,7 +232,6 @@ class Array {
 
  
     /// Generate random elements
-    //#pragma hila loop_function  //TODO
     Array<n, m, T> & random() {
       for (int i=0; i<n*m; i++) {
         ::random(c[i]);
@@ -263,7 +240,6 @@ class Array {
     }
 
     /// Generate gaussian random elements
-    //#pragma hila loop_function  //TODO
     inline Array<n, m, T> & gaussian(){ 
       for (int i = 0; i < n*m; i++) {
         ::gaussian_random(c[i]);
@@ -286,19 +262,16 @@ class Array {
 
 /// conjugate
 template <const int n, const int m, typename T>
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> conj(const Array<n,m,T> & arg) {
   return arg.conj();
 }
 /// real part
 template <const int n, const int m, typename T>
-//#pragma hila loop_function  //TODO
 inline Array<n,m,number_type<T>> real(const Array<n,m,T> & arg) {
   return arg.real();
 }
 /// imaginary part
 template <const int n, const int m, typename T>
-//#pragma hila loop_function  //TODO
 inline Array<n,m,number_type<T>> imag(const Array<n,m,T> & arg) {
   return arg.imag();
 }
@@ -306,7 +279,6 @@ inline Array<n,m,number_type<T>> imag(const Array<n,m,T> & arg) {
 
 /// Now Array additions: Array + Array
 template <int n, int m, typename T>
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator+(Array<n,m,T> a, const Array<n,m,T> & b){
   a += b;
   return a;
@@ -314,7 +286,6 @@ inline Array<n,m,T> operator+(Array<n,m,T> a, const Array<n,m,T> & b){
 
 /// Array subtract
 template <int n, int m, typename T>
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator-(Array<n,m,T> a, const Array<n,m,T> & b){
   a -= b;
   return a;
@@ -323,7 +294,6 @@ inline Array<n,m,T> operator-(Array<n,m,T> a, const Array<n,m,T> & b){
 /// Array + scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator+(Array<n,m,T> a, const S b){
   a += b;
   return a;
@@ -332,7 +302,6 @@ inline Array<n,m,T> operator+(Array<n,m,T> a, const S b){
 /// scalar + Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_plus<T,S>,T>::value, int> = 0 >
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator+(const S b, Array<n,m,T> a){
   a += b;
   return a;
@@ -341,7 +310,6 @@ inline Array<n,m,T> operator+(const S b, Array<n,m,T> a){
 /// Array - scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_minus<T,S>,T>::value, int> = 0 >
-//#pragma hila loop_function  //TODO
 Array<n,m,T> operator-(Array<n,m,T> a, const S b){
   a -= b;
   return a;
@@ -350,7 +318,6 @@ Array<n,m,T> operator-(Array<n,m,T> a, const S b){
 /// scalar - Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_minus<S,T>,T>::value, int> = 0 >
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator-(const S b, Array<n,m,T> a){
   for (int i=0; i<n*m; i++) a.c[i] = static_cast<T>(b) - a.c[i];
   return a;
@@ -358,7 +325,6 @@ inline Array<n,m,T> operator-(const S b, Array<n,m,T> a){
 
 /// and Array*Array
 template <int n, int m, typename T>
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator*(Array<n,m,T> a, const Array<n,m,T> & b){
   a *= b;
   return a;
@@ -366,7 +332,6 @@ inline Array<n,m,T> operator*(Array<n,m,T> a, const Array<n,m,T> & b){
 
 /// and Array/Array
 template <int n, int m, typename T>
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator/(Array<n,m,T> a, const Array<n,m,T> & b){
   a /= b;
   return a;
@@ -375,7 +340,6 @@ inline Array<n,m,T> operator/(Array<n,m,T> a, const Array<n,m,T> & b){
 /// Array * scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator*(Array<n,m,T> a, const S b){
   a *= b;
   return a;
@@ -384,7 +348,6 @@ inline Array<n,m,T> operator*(Array<n,m,T> a, const S b){
 /// scalar * Array
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_mul<T,S>,T>::value, int> = 0 >
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator*(const S b, Array<n,m,T> a){
   a *= b;
   return a;
@@ -393,7 +356,6 @@ inline Array<n,m,T> operator*(const S b, Array<n,m,T> a){
 /// Array / scalar
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_div<T,S>,T>::value, int> = 0 >
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator/(Array<n,m,T> a, const S b){
   a /= b;
   return a;
@@ -402,7 +364,6 @@ inline Array<n,m,T> operator/(Array<n,m,T> a, const S b){
 /// scalar / Array 
 template <int n, int m, typename T, typename S,
           std::enable_if_t<std::is_convertible<type_div<S,T>,T>::value, int> = 0 >
-//#pragma hila loop_function  //TODO
 inline Array<n,m,T> operator/(const S b, Array<n,m,T> a){
   for (int i=0; i<n*m; i++) a.c[i] = b/a.c[i];
   return a;
@@ -416,21 +377,18 @@ std::ostream& operator<<(std::ostream &strm, const Array<n,m,T> &A) {
 
 /// Norm squared function
 template<int n, int m, typename T>
-//#pragma hila loop_function  //TODO
 inline number_type<T> norm_squared(const Array<n,m,T> & rhs){
   return rhs.norm_sq();
 }
 
 /// Function that calls random()-method
 template<int n, int m, typename T>
-//#pragma hila loop_function  //TODO
 inline void random(Array<n,m,T> & mat) {
   mat.random();
 }
 
 /// Function that calls the gaussian()-method
 template<int n, int m, typename T>
-//#pragma hila loop_function  //TODO
 inline void gaussian_random(Array<n,m,T> & mat) {
   mat.gaussian();
 }

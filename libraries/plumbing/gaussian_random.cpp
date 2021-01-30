@@ -10,7 +10,6 @@
 
 static constexpr double pi = 3.14159265358979;
 
-//#pragma hila loop_function  //TODO
 double gaussian_ran(double variance=0.5) {
   static double second;
   static bool draw_new = true;
@@ -32,7 +31,6 @@ double gaussian_ran(double variance=0.5) {
 
 #define VARIANCE 0.5
 
-//#pragma hila loop_function  //TODO
 double gaussian_ran2(double & out2) {
 
   double phi, urnd, r;
@@ -43,7 +41,6 @@ double gaussian_ran2(double & out2) {
   return r*sin(phi);
 }
 
-//#pragma hila loop_function  //TODO
 float gaussian_ran2(float & out2) {
   double phi, urnd, r;
   phi = 2.0 * pi * hila_random();

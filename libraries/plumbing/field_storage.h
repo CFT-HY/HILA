@@ -39,11 +39,9 @@ class field_storage {
 
 #ifndef VECTORIZED
     // Get an element in a loop
-    //#pragma hila loop_function  //TODO
     DEVICE inline auto get(const int i, const int field_alloc_size) const;
 
     template<typename A>
-    //#pragma hila loop_function  //TODO
     DEVICE inline void set(const A &value, const int i, const int field_alloc_size);
 
     // Get a single element outside loops
@@ -52,19 +50,15 @@ class field_storage {
     inline void set_element(A &value, const int i, const lattice_struct * RESTRICT lattice);
 
 #else
-    //#pragma hila loop_function  //TODO
     inline T get_element(const int i) const;
 
-    //#pragma hila loop_function  //TODO
     inline void set_element(const T &value, const int i);
 
     // in vector code, write only 1 element to field at site index idx
     template <typename vecT>
-    //#pragma hila loop_function  //TODO
     inline void set_vector( const vecT & val, const int idx );
 
     template <typename vecT>
-    //#pragma hila loop_function  //TODO
     inline vecT get_vector( const int idx ) const;
 
     void gather_comm_vectors( T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, 
