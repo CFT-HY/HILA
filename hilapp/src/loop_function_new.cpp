@@ -38,9 +38,9 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
   } else {
     // TODO - these functions are at least not vectorizable ...
 
-    llvm::errs() << "FUNC DECL WITHOUT BODY - " << D->getNameAsString() << '\n';
-    llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
-        << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
+    // llvm::errs() << "FUNC DECL WITHOUT BODY - " << D->getNameAsString() << '\n';
+    // llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+    //     << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
   }
 
@@ -518,7 +518,8 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
       // now it is a method of X
       // llvm::errs() << " X-method name " << get_stmt_str(Call) << '\n';
 
-      llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
+      // llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
+
       special_function_call sfc;
       sfc.fullExpr = Call;
       sfc.scope = parsing_state.scope_level;

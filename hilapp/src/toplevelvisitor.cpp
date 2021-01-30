@@ -453,7 +453,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
       if (n->is_site_dependent) loop_info.has_site_dependent_conditional = true;
   }
 
-  if (loop_info.has_site_dependent_conditional) llvm::errs() << "Cond is site dep!\n";
+  // if (loop_info.has_site_dependent_conditional) llvm::errs() << "Cond is site dep!\n";
 
   // and now generate the appropriate code
   generate_code(ls);
@@ -1445,12 +1445,9 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
   
   if (f->isThisDeclarationADefinition() && f->hasBody()) {
 
-    if (f->getNameAsString() == "ensure_field_operators_exist") {
-    llvm::errs() << "LOOKING AT FUNC " << f->getQualifiedNameAsString() << " on line " 
-                 << srcMgr.getSpellingLineNumber(f->getBeginLoc()) << " file "
-                 << srcMgr.getFilename( f->getBeginLoc() ) << '\n';
-    llvm::errs() << "global.location.bot is line " << srcMgr.getSpellingLineNumber( global.location.bot ) << '\n';
-    }
+    // llvm::errs() << "LOOKING AT FUNC " << f->getQualifiedNameAsString() << " on line " 
+    //              << srcMgr.getSpellingLineNumber(f->getBeginLoc()) << " file "
+    //              << srcMgr.getFilename( f->getBeginLoc() ) << '\n';
 
     global.currentFunctionDecl = f;
     
@@ -1602,9 +1599,9 @@ void TopLevelVisitor::specialize_function_or_method( FunctionDecl *f ) {
   // parent is from: CXXRecordDecl * parent = method->getParent();   
   if (parent) ntemplates += get_param_substitution_list( parent, par, arg, typeargs );
  
-  llvm::errs() << "Num nesting templates " << ntemplates << '\n';
-  llvm::errs() << "Specializing function " << f->getQualifiedNameAsString() 
-               << " template args: " << template_args << '\n';
+  // llvm::errs() << "Num nesting templates " << ntemplates << '\n';
+  // llvm::errs() << "Specializing function " << f->getQualifiedNameAsString() 
+  //              << " template args: " << template_args << '\n';
 
   funcBuf.replace_tokens(f->getSourceRange(), par, arg );
 
@@ -1616,10 +1613,6 @@ void TopLevelVisitor::specialize_function_or_method( FunctionDecl *f ) {
     is_special = true;
   }
   
-  // llvm::errs() << " FROM RETURN TYPE: "  << f->getReturnType().getAsString(PP) 
-  //              << " " << f->getQualifiedNameAsString() << template_args << '\n';
-
-  // llvm::errs() << funcBuf.dump() << '\n';
 
   // Careful here: for functions which have been declared first, defined later,
   // getNameInfo().getsourceRange() points to the declaration. Thus, it is not in the
@@ -1711,8 +1704,7 @@ void TopLevelVisitor::specialize_function_or_method( FunctionDecl *f ) {
        << funcBuf.dump() 
        << "\n// ++++++++\n\n";
 
-    llvm::errs() << " -- insertion point is line " 
-                 << srcMgr.getSpellingLineNumber( insertion_point ) << '\n';
+
     toplevelBuf->insert( findChar( insertion_point,'\n'),
                          sb.str(), false, true );
   } else { 

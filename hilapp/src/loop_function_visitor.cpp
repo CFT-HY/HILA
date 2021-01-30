@@ -269,9 +269,9 @@ public:
     } else {
       // TODO - these functions are at least not vectorizable ...
 
-      llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " << D->getNameAsString() << '\n';
-      llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
-          << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
+      // llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " << D->getNameAsString() << '\n';
+      // llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+      //     << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
     }
 
@@ -449,10 +449,10 @@ public:
     } else {
       // now decl has no body: TODO: handling!!!
 
-      if (ci.funcdecl != nullptr)
-        llvm::errs() << "Loop func decl has no body: " << ci.funcdecl->getNameAsString() << '\n';
-      else if (ci.ctordecl != nullptr)
-        llvm::errs() << "Loop constructor decl has no body: " << ci.ctordecl->getNameAsString() << '\n';
+      // if (ci.funcdecl != nullptr)
+      //   llvm::errs() << "Loop func decl has no body: " << ci.funcdecl->getNameAsString() << '\n';
+      // else if (ci.ctordecl != nullptr)
+      //   llvm::errs() << "Loop constructor decl has no body: " << ci.ctordecl->getNameAsString() << '\n';
 
       return false;
     }

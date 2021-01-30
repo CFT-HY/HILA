@@ -240,6 +240,11 @@ SourceLocation GeneralVisitor::getSourceLocationAtEndOfRange( SourceRange r ) {
   return r.getBegin().getLocWithOffset(i-1);
 }
 
+
+/// Hunt for SourceLocation at the beginning of a decl, including template<>
+/// For templated decls one has to locate the original templatedecl.
+/// I am not 100% sure these work for partially specialized templates
+
 SourceLocation GeneralVisitor::getSourceLocationAtStartOfDecl( Decl *d ) {
 
   SourceLocation sl;
@@ -251,7 +256,7 @@ SourceLocation GeneralVisitor::getSourceLocationAtStartOfDecl( Decl *d ) {
   
   } else if (FunctionTemplateDecl * ftd = dyn_cast<FunctionTemplateDecl>(d)) {
     // function template
-    
+
     sl = ftd->getTemplateParameters()->getTemplateLoc();
 
   } else if (FunctionDecl *f = dyn_cast<FunctionDecl>(d)) {
@@ -277,11 +282,6 @@ SourceLocation GeneralVisitor::getSourceLocationAtStartOfDecl( Decl *d ) {
 
     sl = d->getSourceRange().getBegin();
   }
-
-      llvm::errs() << " <<<<< Decl start loc letter is " << getChar(sl) 
-                 << " on line "
-                 << srcMgr.getSpellingLineNumber(sl) << " and file "
-                 << srcMgr.getFilename(sl) << '\n';
 
   return sl;
 
@@ -353,7 +353,9 @@ var_info * GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     /// we don't want "X" -variable or lattice-> as a kernel parameter
     clang::QualType typ = decl->getType().getUnqualifiedType().getNonReferenceType();
     typ.removeLocalConst();
-    if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT LATTICE_STRUCT PTR!!!\n";
+
+    // if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT LATTICE_STRUCT PTR!!!\n";
+    
     if (typ.getAsString(PP) == "X_index_type" || 
         typ.getAsString(PP) == "lattice_struct *") return nullptr;
 

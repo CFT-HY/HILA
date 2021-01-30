@@ -222,9 +222,10 @@ vectorization_info TopLevelVisitor::inspect_field_type(Expr *fE) {
 
   QualType QT = tal.get(0).getAsType();
 
-  if (is_vectorizable_type(QT,einfo)) {
-    llvm::errs() << "Type " << QT.getCanonicalType().getAsString() << " is vectorizable -> " << einfo.vectorized_type << '\n';
-  }
+  // if (is_vectorizable_type(QT,einfo)) {
+  //   llvm::errs() << "Type " << QT.getCanonicalType().getAsString() 
+  //                << " is vectorizable -> " << einfo.vectorized_type << '\n';
+  // }
   return einfo;
 }
 
