@@ -454,6 +454,15 @@ struct complex_base<C<a,b,B>>{
   using type = typename complex_base<B>::type;
 };
 
+template<int a, int b, typename B>
+struct complex_base<Matrix<a,b,B>>{
+  using type = typename complex_base<B>::type;
+};
+
+template<int a, int b, typename B>
+struct complex_base<Array<a,b,B>>{
+  using type = typename complex_base<B>::type;
+};
 
 
 /// Run fourier transform on a complex Field
