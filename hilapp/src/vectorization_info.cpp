@@ -137,7 +137,7 @@ bool GeneralVisitor::is_vectorizable_type(const std::string & type_name, vectori
   // Note: the std types are included in vectorizable_types
   // vectorizable_type vector filled in by VisitTypeAliasDecl above
 
-  for (auto n : vectorizable_types) if (type_name.compare(n.classname) == 0) {
+  for (auto & n : vectorizable_types) if (type_name.compare(n.classname) == 0) {
     // found it
     vi.basetype = n.ntype;
 
@@ -186,6 +186,8 @@ bool GeneralVisitor::is_vectorizable_type(const std::string & type_name, vectori
           n.ntype == number_type::INT || n.ntype == number_type::INT64_T) {
             vi.vectorized_type = "";   // in principle vectorizable, don't know the type
             vi.vector_size = 0;
+
+            llvm::errs() << "   ++++++++++ JUST SET VECTORIZED_TYPE TO empty string, probably error\n";
             return vi.is_vectorizable = true;
       } else return vi.is_vectorizable = false;          // not known vectorizable type
     }
@@ -222,10 +224,10 @@ vectorization_info TopLevelVisitor::inspect_field_type(Expr *fE) {
 
   QualType QT = tal.get(0).getAsType();
 
-  // if (is_vectorizable_type(QT,einfo)) {
-  //   llvm::errs() << "Type " << QT.getCanonicalType().getAsString() 
-  //                << " is vectorizable -> " << einfo.vectorized_type << '\n';
-  // }
+  if (is_vectorizable_type(QT,einfo)) {
+    // llvm::errs() << "Type " << QT.getCanonicalType().getAsString() 
+    //              << " is vectorizable -> " << einfo.vectorized_type << '\n';
+  }
   return einfo;
 }
 
