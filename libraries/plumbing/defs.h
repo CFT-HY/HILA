@@ -22,7 +22,6 @@
 #include "plumbing/mersenne.h"
 #include "plumbing/memalloc.h"   // memory allocator
 #include "plumbing/timing.h"
-#include "datatypes/zero.h"
 
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
