@@ -95,11 +95,9 @@ public:
   bool VisitTypeAliasDecl(TypeAliasDecl * ta);
 
   /// True if the decl is preceded by "#pragma hila <string>" where s is the string
-  bool has_pragma(Decl *d, const char *s);
-  bool has_pragma(Stmt *S, const char *s);
-  bool has_pragma(const SourceLocation sl, const char *s);
-
-  const char * get_pragma_value(SourceLocation sl);
+  bool has_pragma(Decl *d, const pragma_hila p);
+  bool has_pragma(Stmt *S, const pragma_hila p);
+  bool has_pragma(const SourceLocation sl, const pragma_hila p);
 
   /// true if function contains parity loop
   bool does_function_contain_loop( FunctionDecl *f );

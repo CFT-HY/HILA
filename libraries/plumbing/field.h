@@ -356,10 +356,9 @@ class Field {
 
   // constructor with compatible scalar
   template <typename A,
-            std::enable_if_t<std::is_convertible<A,T>::value, int> = 0 >  
+            std::enable_if_t<is_assignable<T&,A>::value, int> = 0 >  
   Field(const A& val) {
     fs = nullptr;
-    // static_assert(!std::is_same<A,int>::value, "in int constructor");
     (*this)[ALL] = val;
   }
 

@@ -209,6 +209,46 @@ void handle_cmdline_arguments(codetype & target) {
 
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/// Check allowed #pragma hila's
+/////////////////////////////////////////////////////////////////////////////
+
+// pragma_hila_args match the enum class pragma_hila
+// enum class pragma_hila { SKIP, AST_DUMP, LOOP_FUNCTION, NOT_VECTORIZABLE, VECTORIZABLE };
+
+static std::vector<std::string> pragma_hila_args  {
+  "skip",
+  "ast dump",
+  "loop function",
+  "not vectorizable",
+  "vectorizable"
+};
+
+bool is_recognized_pragma(std::string & arg) {
+
+  std::string p = remove_initial_whitespace(arg);
+
+  bool found = false;
+  while (p.length() > 0) {
+    bool found_now = false;
+    for (std::string & a : pragma_hila_args) {
+      if (contains_word_list(p,a,&p)) {
+        found = found_now = true;
+        break;
+      }
+    }
+    if (!found_now) return false;  // something not understood
+    p = remove_initial_whitespace(p);
+  }
+
+  // nothing relevant found, return false
+  if (!found) return false;
+
+  return true;
+}
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////
 /// Preprocessor callbacks are used to find include locs
@@ -345,6 +385,16 @@ public:
 
         pragma_loc_struct pl;
         pl.loc  = Loc;
+
+        if (!is_recognized_pragma(rest)) {
+           auto & DE = myCompilerInstance->getDiagnostics();
+           auto ID = DE.getCustomDiagID( DiagnosticsEngine::Level::Warning, 
+                                         "Unknown '#pragma hila'-option, ignoring");
+           auto DB = DE.Report(Loc, ID);
+        
+           return;
+        }
+
         pl.args = rest;
 
         // now find the SourceLocation where this #pragma should refer to.
@@ -376,6 +426,7 @@ public:
         } while (std::isspace(getChar(SM,sl)));
 
         pl.ref = sl;
+
         // finally save the pragma loc
         pragmalocs[f].pragmas.push_back(pl);
 
@@ -407,7 +458,7 @@ public:
 
   /// Store the begin and end loc, and also the fid where these appear
 
-  void is_end_of_hilapp(SourceLocation Loc, SourceLocation IfLoc) {
+  void is_endif_or_else(SourceLocation Loc, SourceLocation IfLoc) {
 
     if (!ifdef_HILAPP_open) return;  // #ifdef HILAPP not seen
     if (IfLoc != HILAPP_sl) return;  // some other if - endif
@@ -419,15 +470,17 @@ public:
     hloc.range = SourceRange(IfLoc,Loc);
     hloc.fid   = SM.getFileID(IfLoc);
 
+    ifdef_HILAPP_open = false;
+
     HILAPP_locs.push_back(hloc);
   }
 
   void Endif(SourceLocation Loc, SourceLocation IfLoc) {
-    is_end_of_hilapp(Loc, IfLoc);
+    is_endif_or_else(Loc, IfLoc);
   }
 
   void Else(SourceLocation Loc, SourceLocation IfLoc) {
-    is_end_of_hilapp(Loc, IfLoc);
+    is_endif_or_else(Loc, IfLoc);
   }
 
 
@@ -507,7 +560,7 @@ public:
 /// Checks if the sourcelocation is preceded by #pragma hila
 
 bool has_pragma_hila(const SourceManager & SM, SourceLocation loc, 
-                     std::string & args, SourceLocation & pragmaloc ) {
+                     pragma_hila pragma, SourceLocation & pragmaloc ) {
 
   static FileID prev_fid;
   static int prev_file, prev_pragma = -1;
@@ -538,8 +591,13 @@ bool has_pragma_hila(const SourceManager & SM, SourceLocation loc,
   
   for (int i=start; i<pl.size() && pl[i].ref <= loc; i++) {
     if (pl[i].ref == loc) {
-      // found the pragma, return result
-      args        = pl[i].args;
+      // found a pragma on this loc, check the result
+      std::string & arg = pragma_hila_args[(int)pragma];
+
+      if (!contains_word_list(pl[i].args, arg)) {
+        return false;   // was not there
+      }
+
       pragmaloc   = pl[i].loc;
 
       prev_pragma = i;

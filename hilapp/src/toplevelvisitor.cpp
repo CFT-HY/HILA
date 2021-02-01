@@ -807,16 +807,16 @@ int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
 /// Pragma_args will point to the beginning of arguments of pragma
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::has_pragma(Stmt *S, const char * n) {
-  return has_pragma( S->getSourceRange().getBegin(), n);
+bool TopLevelVisitor::has_pragma(Stmt *S, const pragma_hila pragma) {
+  return has_pragma( S->getSourceRange().getBegin(), pragma);
 }
 
-bool TopLevelVisitor::has_pragma(Decl *F, const char * n) {
-  return has_pragma( F->getSourceRange().getBegin(), n);
+bool TopLevelVisitor::has_pragma(Decl *F, const pragma_hila pragma) {
+  return has_pragma( F->getSourceRange().getBegin(), pragma);
 }
 
 
-bool TopLevelVisitor::has_pragma(const SourceLocation l, const char * n) {
+bool TopLevelVisitor::has_pragma(const SourceLocation l, const pragma_hila pragma) {
   std::string arg;
   SourceLocation pragmaloc,sl = l;
 
@@ -826,10 +826,9 @@ bool TopLevelVisitor::has_pragma(const SourceLocation l, const char * n) {
     sl = CSR.getBegin();
   }
 
-  if (has_pragma_hila(TheRewriter.getSourceMgr(),sl, arg, pragmaloc)) {
+  if (has_pragma_hila(TheRewriter.getSourceMgr(),sl, pragma, pragmaloc)) {
     // llvm::errs() << " %%% PRAGMA HILA, args " << arg << " COMPARISON " << n << '\n';
 
-    if (contains_word_list(arg,n)) {
 
       // got it, comment out -- check that it has not been commented out before
       // the buffer may not be writeBuf, so be careful
@@ -851,7 +850,6 @@ bool TopLevelVisitor::has_pragma(const SourceLocation l, const char * n) {
       }
 
       return true;
-    }
   }
 
   return false;
@@ -1281,7 +1279,7 @@ void TopLevelVisitor::remove_vars_out_of_scope(unsigned level) {
 
 bool TopLevelVisitor::VisitStmt(Stmt *s) {
    
-  if ( parsing_state.ast_depth == 1 && has_pragma(s,"ast dump") ) {
+  if ( parsing_state.ast_depth == 1 && has_pragma(s,pragma_hila::AST_DUMP) ) {
     ast_dump(s);
   }
 
@@ -1435,7 +1433,7 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
   // also only non-templated functions
   // this does not really do anything
 
-  if (has_pragma(f,"loop_function")) {
+  if (has_pragma(f,pragma_hila::LOOP_FUNCTION)) {
     // This function can be called from a loop,
     // mark as noticed -- note that we do not have call arguments
     loop_function_check(f);
@@ -1533,7 +1531,7 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
 bool TopLevelVisitor::VisitCXXConstructorDecl(CXXConstructorDecl *c) {
 
-  if (has_pragma(c,"loop_function")) {
+  if (has_pragma(c, pragma_hila::LOOP_FUNCTION )) {
     // This function can be called from a loop,
     // mark as noticed -- note that we do not have call arguments
     loop_function_check(c);
@@ -1813,7 +1811,7 @@ bool TopLevelVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 bool TopLevelVisitor::VisitDecl( Decl * D) {
 
   if ( parsing_state.ast_depth == 1 &&
-       has_pragma(D,"ast dump") ) {
+       has_pragma(D,pragma_hila::AST_DUMP) ) {
     ast_dump(D);
   }
 
@@ -1835,7 +1833,7 @@ bool TopLevelVisitor::VisitType( Type * T) {
 
   auto * recdecl = T->getAsCXXRecordDecl();
   if (recdecl != nullptr) {
-    if (has_pragma(recdecl->getInnerLocStart(),"ast dump")) {
+    if (has_pragma(recdecl->getInnerLocStart(), pragma_hila::AST_DUMP )) {
       ast_dump_header("type",recdecl->getInnerLocStart());
       recdecl->dumpColor();
     }

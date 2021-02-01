@@ -11,7 +11,7 @@
 #include <type_traits>
 // #include "plumbing/defs.h"
 
-// #include "datatypes/zero.h"
+
 
 /// TEMPORARY location for vector intrinsic analogues -- result obvious
 
@@ -54,7 +54,7 @@ struct Cmplx {
   // Remember to mark this explicit, we do not want this to be invoked
   // in automatic conversions (there should be methods)
 
-  #pragma hila loop_function
+  #pragma hila loop function
   template <typename S,
             std::enable_if_t<is_arithmetic<S>::value, int> = 0 >
   explicit constexpr Cmplx<T>(const S val) {
@@ -71,7 +71,7 @@ struct Cmplx {
   template <typename A, typename B,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0,
             std::enable_if_t<is_arithmetic<B>::value, int> = 0 >
-  #pragma hila loop_function
+  #pragma hila loop function
   explicit constexpr Cmplx<T>(const A & a, const B & b) {
     re = a;
     im = b;
@@ -88,7 +88,7 @@ struct Cmplx {
   // automatic casting from Cmplx<T> -> Cmplx<A>
   // TODO: ensure this works if A is vector type!
   template <typename A>
-  #pragma hila loop_function  //TODO
+  #pragma hila loop function  //TODO
   operator Cmplx<A>() const { 
     return Cmplx<A>( re, im );
   }

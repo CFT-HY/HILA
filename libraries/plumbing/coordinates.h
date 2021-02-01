@@ -171,13 +171,13 @@ class CoordinateVector_t : public Vector<NDIM,T> {
     }
 
     // these are called from cuda-sections not seen by hilapp, mark as loop functions
-    //#pragma hila loop_function
+    //#pragma hila loop function
     T& operator[] (const int i)            { return this->e(i); }
-    //#pragma hila loop_function
+    //#pragma hila loop function
     T& operator[] (const direction d)      { return this->e((int)d); }
-    //#pragma hila loop_function
+    //#pragma hila loop function
     T operator[] (const int i) const       { return this->e(i); }
-    //#pragma hila loop_function
+    //#pragma hila loop function
     T operator[] (const direction d) const { return this->e((int)d); }
 
 
@@ -207,7 +207,7 @@ class CoordinateVector_t : public Vector<NDIM,T> {
 
 
     // add coordinate vector -- def explicit as loop_function
-    // #pragma hila loop_function  //TODO
+    // #pragma hila loop function  //TODO
     CoordinateVector_t & operator+=(const CoordinateVector_t & rhs) {
       foralldir(d) this->e(d) += rhs.e(d);
       return *this;
@@ -220,7 +220,7 @@ class CoordinateVector_t : public Vector<NDIM,T> {
 
 
     // and also additions for direction -- dir acts like a unit vector
-    // #pragma hila loop_function  //TODO
+    // #pragma hila loop function  //TODO
     CoordinateVector_t & operator+=(const direction dir) {
       if (is_up_dir(dir)) ++this->e(dir);
       else --this->e(-dir);

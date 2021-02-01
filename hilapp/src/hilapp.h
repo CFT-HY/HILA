@@ -375,6 +375,14 @@ struct call_info_struct {
 
 
 
+enum class pragma_hila { SKIP, AST_DUMP, LOOP_FUNCTION, NOT_VECTORIZABLE, VECTORIZABLE };
+
+/// Pragma handling things
+bool has_pragma_hila(const SourceManager &SM, SourceLocation l0 , pragma_hila pragma, 
+                     SourceLocation & pragmaloc );
+
+
+
 /// Some sourceloc utilities
 
 SourceLocation getNextLoc(const SourceManager & SM, SourceLocation sl, bool forward = true);
@@ -385,8 +393,6 @@ SourceLocation skipString(const SourceManager & SM, SourceLocation sl );
 std::string getNextWord(const SourceManager &SM, SourceLocation sl, SourceLocation *end = nullptr);
 std::string getRangeText(const SourceManager &SM, SourceLocation begin, SourceLocation end );
 
-bool has_pragma_hila(const SourceManager &SM, SourceLocation l0 , std::string & arguments, 
-                     SourceLocation & pragmaloc );
 
 
 bool write_output_file( const std::string & name, const std::string & buf ) ;

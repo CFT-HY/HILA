@@ -656,7 +656,7 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct & ci) {
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
-/// This is used for "#pramga hila loop_function"  -calls
+/// This is used for "#pramga hila loop function"  -calls
 ///////////////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::loop_function_check( Decl * d) {
