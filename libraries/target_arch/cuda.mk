@@ -12,7 +12,7 @@ CC := /usr/local/cuda-11/bin/nvcc
 LD := $(CC) -std c++17
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
-CXXFLAGS := -g -dc -x cu -std c++17 -DCUDA 
+CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
 CXXFLAGS += -gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52  --use_fast_math --restrict
 CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177"
 #CXXFLAGS = -g -x c++ --std=c++17 

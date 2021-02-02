@@ -271,9 +271,9 @@ public:
     } else {
       // TODO - these functions are at least not vectorizable ...
 
-      llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " << D->getNameAsString() << '\n';
-      llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
-           << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
+      // llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " << D->getNameAsString() << '\n';
+      // llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+      //      << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
     }
 

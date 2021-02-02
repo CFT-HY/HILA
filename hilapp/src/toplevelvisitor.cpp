@@ -1371,9 +1371,13 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
 
 
 bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
-  // Only function definitions (with bodies), not declarations.
-  // also only non-templated functions
+
+  // operate only non-templated functions and template specializations
   // this does not really do anything
+
+  
+  // For the pragmas, we need to check the "previousdecl" -- prototype, if there is a pragma there
+  // Automatic now in has_pragma
 
   if (has_pragma(f,pragma_hila::LOOP_FUNCTION)) {
     // This function can be called from a loop,
@@ -1918,7 +1922,7 @@ int TopLevelVisitor:: get_param_substitution_list( CXXRecordDecl * r,
 
     ClassTemplateSpecializationDecl * sp = dyn_cast<ClassTemplateSpecializationDecl>(r);
     if (sp) {
-      llvm::errs() << "Got specialization of " << sp->getNameAsString() << '\n';
+
       const TemplateArgumentList & tal = sp->getTemplateArgs();
       assert(tal.size() > 0);
     
@@ -1933,7 +1937,7 @@ int TopLevelVisitor:: get_param_substitution_list( CXXRecordDecl * r,
       level = 1;
     }
   } else {
-    llvm::errs() << "No specialization of class " << r->getNameAsString() << '\n';
+    // llvm::errs() << "No specialization of class " << r->getNameAsString() << '\n';
   }
   
   auto * parent = r->getParent();

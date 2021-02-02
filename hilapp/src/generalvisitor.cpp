@@ -512,17 +512,39 @@ var_info * GeneralVisitor::add_var_to_decl_list(VarDecl * var, int scope_level) 
 ///////////////////////////////////////////////////////////////////////////////////
 
 bool GeneralVisitor::has_pragma(Stmt *S, const pragma_hila pragma) {
+
+  if (S == nullptr) return false;
+
   return has_pragma( S->getSourceRange().getBegin(), pragma);
 }
 
+/// For functiondecl, go through the previous decls (prototype!) too if needed
+
+bool GeneralVisitor::has_pragma(FunctionDecl *F, const pragma_hila pragma) {
+  
+  if (F == nullptr) return false;
+  if (has_pragma( F->getSourceRange().getBegin(), pragma)) return true;
+  
+  if (FunctionDecl * proto = F->getPreviousDecl()) {
+    return has_pragma(proto, pragma);
+  }
+  return false;
+
+}
+
 bool GeneralVisitor::has_pragma(Decl *F, const pragma_hila pragma) {
+  
+  if (F == nullptr) return false;
   return has_pragma( F->getSourceRange().getBegin(), pragma);
 }
 
+/// And here is the main interface to pragma
 
 bool GeneralVisitor::has_pragma(const SourceLocation l, const pragma_hila pragma) {
   std::string arg;
   SourceLocation pragmaloc,sl = l;
+
+  if (l.isInvalid()) return false;
 
   // if macro, get the unexpanded loc
   if (sl.isMacroID()) {
