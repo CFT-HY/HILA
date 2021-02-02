@@ -37,7 +37,7 @@ public:
           return false;
         } 
 
-        if (has_pragma(FD->getSourceRange().getBegin(), pragma_hila::CONTAINS_RNG )) {
+        if (has_pragma(FD, pragma_hila::CONTAINS_RNG )) {
           found_random = true;
           return false;
         }

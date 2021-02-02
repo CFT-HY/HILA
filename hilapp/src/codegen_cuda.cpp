@@ -50,7 +50,6 @@ void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
 void GeneralVisitor::handle_loop_constructor_cuda(call_info_struct &ci) {
 
   if (ci.is_defaulted) {
-    llvm::errs() << "       +++++++++++++++++ defaulted constructor " << ci.ctordecl->getNameAsString() << '\n';
     return;
   }
 
