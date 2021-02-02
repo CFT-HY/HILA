@@ -29,15 +29,9 @@ std::vector<timer *> timer_list = {};
 void timer::init(const char * tag) {
   if (tag != nullptr) label = tag;
   reset();
-  // has this been inited already?  Check
-  bool found = false;
-  for (auto p : timer_list) if (p == this) {
-    found = true;
-    break;
-  }
-  // if not, push it to the list
-  if (!found) timer_list.push_back(this);
+  // Store it on 1st use!
 }
+
 
 // remove the timer also from the list
 void timer::remove() {
@@ -52,14 +46,34 @@ void timer::remove() {
 void timer::reset() {
   t_start = t_total = 0.0;
   count = 0;
+  is_on = is_error = false;
+}
+
+void timer::error() {
+  if (!is_error) {
+    output0 << " **** Timer '" << label 
+            << "' error, unbalanced start/stop.  Removing from statistics\n";
+  }
+  is_error = true;
 }
 
 double timer::start() {
+  // Move storing the timer ptr here, because if timier is initialized
+  // in the global scope the timer_list is possibly initialized later!
+  if (is_on) error();
+
+  if (count == 0) {
+    timer_list.push_back(this);
+  }
+
+  is_on = true;
   t_start = gettime();
   return t_start;
 }
   
 double timer::stop() {
+  if (!is_on) error();
+
   double e = gettime();
   t_total += (e - t_start);
   count++;
@@ -79,7 +93,7 @@ void timer::report(bool print_not_timed ) {
 
     // time used during the counter activity
     double ttime = gettime();
-    if (count > 0) {
+    if (count > 0 && !is_error) {
       if (t_total/count < 0.01) {
         std::snprintf(line,200,"%-20s: %14.3f %14ld %10.3f us %8.4f\n",
                       label.c_str(), t_total, (long)count, 1e6 * t_total/count, t_total/ttime );
@@ -88,9 +102,12 @@ void timer::report(bool print_not_timed ) {
                       label.c_str(), t_total, (long)count, t_total/count, t_total/ttime );
       }
       hila::output << line;
-    } else if (print_not_timed) {
+    } else if (!is_error && print_not_timed) {
       std::snprintf(line,200,"%-20s: no timed calls made\n",label.c_str());
-      hila::output << line;      
+      hila::output << line;
+    } else if (is_error) {
+      std::snprintf(line,200,"%-20s: error:unbalanced start/stop\n",label.c_str());
+      hila::output << line;
     }
   }
 }
@@ -101,7 +118,9 @@ void report_timers() {
       hila::output << "TIMER REPORT:             total(sec)          calls     time/call  fraction\n";
       hila::output << "---------------------------------------------------------------------------\n";
 
-      for (auto tp : timer_list) tp->report();
+      for (auto tp : timer_list) {
+        tp->report();
+      }
 
       hila::output << "---------------------------------------------------------------------------\n";
     } else {

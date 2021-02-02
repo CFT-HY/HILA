@@ -50,6 +50,7 @@ private:
   double t_start, t_total;
   int64_t count;   // need more than 32 bits
   std::string label;
+  bool is_on, is_error;
 
 public:  
   // initialize timer to this timepoint
@@ -65,6 +66,7 @@ public:
   void reset();
   double start();
   double stop();
+  void error();
   void report(bool print_not_timed = false);
 
   timer_value value();
