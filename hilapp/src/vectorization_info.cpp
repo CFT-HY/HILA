@@ -187,7 +187,9 @@ bool GeneralVisitor::is_vectorizable_type(const std::string & type_name, vectori
             vi.vectorized_type = "";   // in principle vectorizable, don't know the type
             vi.vector_size = 0;
 
-            llvm::errs() << "   ++++++++++ JUST SET VECTORIZED_TYPE TO empty string, probably error\n";
+            if (target.vectorize) 
+              llvm::errs() << "   ++++++++++ VECTORIZED_TYPE empty string, probably error\n";
+              
             return vi.is_vectorizable = true;
       } else return vi.is_vectorizable = false;          // not known vectorizable type
     }

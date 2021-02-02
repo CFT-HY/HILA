@@ -797,64 +797,6 @@ int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
       
 } // end of "field"
 
-///////////////////////////////////////////////////////////////////////////////////
-/// Pragma handling: has_pragma()
-///
-///
-/// Check if the SourceLocation l is preceded by "#pragma hila" on previous line.
-/// There cannot be anything except whitespace between l and the beginning of line
-/// cannot allow templates because conditionals may contain <> -chars
-/// Pragma_args will point to the beginning of arguments of pragma
-///////////////////////////////////////////////////////////////////////////////////
-
-bool TopLevelVisitor::has_pragma(Stmt *S, const pragma_hila pragma) {
-  return has_pragma( S->getSourceRange().getBegin(), pragma);
-}
-
-bool TopLevelVisitor::has_pragma(Decl *F, const pragma_hila pragma) {
-  return has_pragma( F->getSourceRange().getBegin(), pragma);
-}
-
-
-bool TopLevelVisitor::has_pragma(const SourceLocation l, const pragma_hila pragma) {
-  std::string arg;
-  SourceLocation pragmaloc,sl = l;
-
-  // if macro, get the unexpanded loc
-  if (sl.isMacroID()) {
-    CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange( sl );
-    sl = CSR.getBegin();
-  }
-
-  if (has_pragma_hila(TheRewriter.getSourceMgr(),sl, pragma, pragmaloc)) {
-    // llvm::errs() << " %%% PRAGMA HILA, args " << arg << " COMPARISON " << n << '\n';
-
-
-      // got it, comment out -- check that it has not been commented out before
-      // the buffer may not be writeBuf, so be careful
-
-      if (cmdline::comment_pragmas) {
-        srcBuf * sb = get_file_srcBuf(pragmaloc);
-
-        int loc;
-        if (sb != nullptr) {
-          loc = sb->find_original(pragmaloc,'#');
-        }
-
-        if (sb == nullptr || loc < 0) {
-          llvm::errs() << "internal error in pragma handling\n";
-          exit(1);
-        }
-        std::string s = sb->get(loc,loc+1);
-        if (s.at(0) == '#') sb->insert(loc ,"//-- ",true,false);
-      }
-
-      return true;
-  }
-
-  return false;
-}
-
 
 
 

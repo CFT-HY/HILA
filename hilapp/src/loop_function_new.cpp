@@ -32,15 +32,18 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
   FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
   bool contains_rng = false;
-  if (D->hasBody()) {
+  if (has_pragma(D, pragma_hila::CONTAINS_RNG)) {
+    contains_rng = true;
+  } else if (D->hasBody()) {
     // trivially site dep if it has random
     contains_rng = contains_random(D->getBody());
   } else {
+
     // TODO - these functions are at least not vectorizable ...
 
-    // llvm::errs() << "FUNC DECL WITHOUT BODY - " << D->getNameAsString() << '\n';
-    // llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
-    //     << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
+    llvm::errs() << "FUNC DECL WITHOUT BODY - " << D->getNameAsString() << '\n';
+    llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+         << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
   }
 
@@ -49,7 +52,7 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt * s) {
   ci.call = Call;
   ci.funcdecl = D;
   ci.contains_random = contains_rng;
-  
+
   /// add to function calls to be checked ...
   loop_function_calls.push_back(ci);
 
@@ -111,7 +114,10 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt * s) {
   // handle args if any
 
   bool contains_rng = false;
-  if (decl->hasBody()) {
+  
+  if (has_pragma(decl, pragma_hila::CONTAINS_RNG)) {
+    contains_rng = true;
+  } else if (decl->hasBody()) {
     // trivially site dep if it has random
     contains_rng = contains_random(decl->getBody());
   } else {

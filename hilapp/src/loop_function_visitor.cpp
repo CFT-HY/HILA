@@ -263,15 +263,17 @@ public:
     FunctionDecl* D = (FunctionDecl*) llvm::dyn_cast<FunctionDecl>(decl);
 
     bool contains_rng = false;
-    if (D->hasBody()) {
+    if (has_pragma(D,pragma_hila::CONTAINS_RNG)) {
+      contains_rng = true;
+    } else if (D->hasBody()) {
       // trivially site dep if it has random
       contains_rng = contains_random(D->getBody());
     } else {
       // TODO - these functions are at least not vectorizable ...
 
-      // llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " << D->getNameAsString() << '\n';
-      // llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
-      //     << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
+      llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " << D->getNameAsString() << '\n';
+      llvm::errs() << "  Call appears on line " << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+           << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
     }
 
@@ -418,17 +420,16 @@ public:
       
       // this decl may not be the definition, find it ..
       FunctionDecl * fd = ci.funcdecl->getDefinition();
-      if (fd) ci.funcdecl = fd;
 
       // does it have a body?
-      if (ci.funcdecl->hasBody()) decl_body = ci.funcdecl->getBody();
+      if (fd && fd->hasBody()) decl_body = fd->getBody();
 
     } else if (ci.ctordecl != nullptr) {
 
       FunctionDecl * fd = ci.ctordecl->getDefinition();
 
       // same stuff for constructor
-      if (fd->hasBody()) decl_body = fd->getBody();
+      if (fd && fd->hasBody()) decl_body = fd->getBody();
     }
 
     if (decl_body) {

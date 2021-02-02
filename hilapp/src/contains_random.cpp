@@ -35,11 +35,17 @@ public:
         if (name == "hila_random") {
           found_random = true;
           return false;
-        } else if (FD->hasBody()) {
+        } 
+
+        if (has_pragma(FD->getSourceRange().getBegin(), pragma_hila::CONTAINS_RNG )) {
+          found_random = true;
+          return false;
+        }
+        
+        if (FD->hasBody()) {
           // some other function, go in it hierarchially
-          for (auto d : fdecls) if (d == FD) {
-            // was checked, return and continue
-            return true;
+          for (auto d : fdecls) {
+            if (d == FD) return true;    // was checked, return and continue
           }
           // llvm::errs() << "RNG CHECK FUNCTION NAME: " << name << "\n";
           fdecls.push_back(FD);

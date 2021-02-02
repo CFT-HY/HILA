@@ -221,7 +221,8 @@ static std::vector<std::string> pragma_hila_args  {
   "ast dump",
   "loop function",
   "not vectorizable",
-  "vectorizable"
+  "vectorizable",
+  "contains rng"
 };
 
 bool is_recognized_pragma(std::string & arg) {
@@ -395,7 +396,7 @@ public:
            return;
         }
 
-        pl.args = rest;
+        pl.args = remove_extra_whitespace(rest);
 
         // now find the SourceLocation where this #pragma should refer to.
         // skip whitespace, pragmas and #-macros 
@@ -594,7 +595,7 @@ bool has_pragma_hila(const SourceManager & SM, SourceLocation loc,
       // found a pragma on this loc, check the result
       std::string & arg = pragma_hila_args[(int)pragma];
 
-      if (!contains_word_list(pl[i].args, arg)) {
+      if (pl[i].args.find(arg) == std::string::npos) {
         return false;   // was not there
       }
 
@@ -733,7 +734,7 @@ public:
         global.location.kernels = global.location.top;   
 
         // Traverse the declaration using our AST visitor.
-        // if theres "#pragma skip don't do it"
+        // if theres "#pragma skip" don't do it
         if (!skip_this_translation_unit) Visitor.TraverseDecl(d);
 
         // llvm::errs() << "Dumping level " << i++ << "\n";

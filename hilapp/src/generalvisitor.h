@@ -280,6 +280,11 @@ public:
   void handle_loop_constructor_openacc(CXXConstructorDecl *fd);
   void handle_loop_constructor_avx(call_info_struct &ci);
 
+  /// True if the decl is preceded by "#pragma hila <string>" where s is the string
+  bool has_pragma(Decl *d, const pragma_hila p);
+  bool has_pragma(Stmt *S, const pragma_hila p);
+  bool has_pragma(const SourceLocation sl, const pragma_hila p);
+
 
 
 };

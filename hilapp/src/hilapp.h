@@ -375,7 +375,7 @@ struct call_info_struct {
 
 
 
-enum class pragma_hila { SKIP, AST_DUMP, LOOP_FUNCTION, NOT_VECTORIZABLE, VECTORIZABLE };
+enum class pragma_hila { SKIP, AST_DUMP, LOOP_FUNCTION, NOT_VECTORIZABLE, VECTORIZABLE, CONTAINS_RNG };
 
 /// Pragma handling things
 bool has_pragma_hila(const SourceManager &SM, SourceLocation l0 , pragma_hila pragma, 
