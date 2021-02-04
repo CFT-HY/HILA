@@ -295,6 +295,8 @@ void lattice_struct::setup_nodes() {
   // n keeps track of the node "root coordinates"
   CoordinateVector n(0);
 
+  nodes.max_size = 0;
+
   // use nodes.divisors - vectors to fill in stuff
   for (int i=0; i<nodes.number; i++) {
     CoordinateVector l;
@@ -307,6 +309,8 @@ void lattice_struct::setup_nodes() {
       ni.min[d]  = nodes.divisors[d][n[d]];
       ni.size[d] = nodes.divisors[d][n[d]+1] - nodes.divisors[d][n[d]];
       v *= ni.size[d];
+
+      if (ni.size[d] > nodes.max_size[d]) nodes.max_size[d] = ni.size[d];
     }
     if (v % 2 == 0)
       ni.evensites = ni.oddsites = v/2;

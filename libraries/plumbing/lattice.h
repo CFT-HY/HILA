@@ -96,6 +96,8 @@ public:
     // lattice division: div[d] will have num_dir[d]+1 elements, last size
     // TODO: is this needed at all?
     std::vector<unsigned> divisors[NDIM];
+    CoordinateVector max_size;             // size of largest node
+
     std::vector<node_info> nodelist;
 
     unsigned * RESTRICT map_array;                  // mapping (optional)
