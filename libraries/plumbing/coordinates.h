@@ -245,7 +245,7 @@ class CoordinateVector_t : public Vector<NDIM,T> {
       return *this;
     }
 
-    inline T dot(const CoordinateVector & v) const {
+    inline T dot(const CoordinateVector_t & v) const {
       T res(0);
       foralldir(d) res += v.e(d) * this->e(d);
       return res;
