@@ -166,8 +166,8 @@ class CoordinateVector_t : public Vector<NDIM,T> {
     }
 
     inline CoordinateVector_t & operator= (std::nullptr_t z) {
-
-      return static_cast<CoordinateVector_t &>( *this = z );
+      foralldir(d) this->e(d) = 0;
+      return *this;
     }
 
     // these are called from cuda-sections not seen by hilapp, mark as loop functions
