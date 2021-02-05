@@ -421,24 +421,6 @@ void lattice_struct::create_std_gathers()
   
   unsigned c_offset = mynode.sites;  // current offset in field-arrays
 
-#ifdef SCHROED_FUN
-  // special case for Schroedinger functional: fixed boundary
-  // This requires we allocate one extra space for
-  // CONSTANT schroedinger b.c.
-  // Thus, add 1 item to latfield arrays to
-  // take the boundary into account, and set the
-  // neighb[d] to point to it.  This is for mpi or vanilla.
-  // NOTE: IF NON-CONSTANT BOUNDARY NEED TO ADD c_offset FOR
-  // EACH SITE, and set the corresponding neighb
-
-  int sf_special_boundary = c_offset;
-  /* add space for boundary only when needed */
-  if (mynode.min[NDIM-1] + mynode.nodesize[NDIM-1] == size(NDIM-1])
-    c_offset += 1;
-  else sf_special_boundary = -(1<<30);
-
-  output0 << "SPECIAL BOUNDARY LAYOUT for SF";
-#endif
 
 
   // We set the communication and the neigbour-array here
@@ -471,15 +453,6 @@ void lattice_struct::create_std_gathers()
       //if (is_up_dir(d)) ln[d] = (l[d] + 1) % size(d);
       //else ln[d] = (l[d] + size(-d) - 1) % size(-d);
  
-#ifdef SCHROED_FUN
-      if (d == NDIM-1 && l[NDIM-1] == size(NDIM-1)-1) {
-	      // This is up-direction, give special site
-    	  neighb[d][i] = sf_special_boundary;
-      } else if (d == opp_dir(NDIM-1) && l[NDIM-1] == 0) {
-	      //  We never should need the down direction, thus, short circuit!
-	      neighb[d][i] = 1<<30;
-      } else     // NOTE THIS UGLY else-if CONSTRUCT!
-#endif
       if (is_on_node(ln)) {
         neighb[d][i] = site_index(ln);
       } else {
