@@ -179,7 +179,13 @@ public:
 
     }
 
+
     if (VarDecl * vdecl = dyn_cast<VarDecl>(e->getDecl())) {
+
+      // what if it is some system variable?  We probably should not care about those
+      // TODO: "isInSystemHeader()"" probably does not catch all, remedy it!
+      
+      if (srcMgr.isInSystemHeader(vdecl->getSourceRange().getBegin() )) return true;
 
       // we do not worry about constants -- check that this compiles in cuda!
       if (vdecl->isConstexpr()) return true;
