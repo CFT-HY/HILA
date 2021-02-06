@@ -54,7 +54,7 @@ struct Cmplx {
   // Remember to mark this explicit, we do not want this to be invoked
   // in automatic conversions (there should be methods)
 
-  #pragma hila loop function
+  #pragma hila loop_function
   template <typename S,
             std::enable_if_t<is_arithmetic<S>::value, int> = 0 >
   explicit constexpr Cmplx<T>(const S val) {
@@ -71,7 +71,7 @@ struct Cmplx {
   template <typename A, typename B,
             std::enable_if_t<is_arithmetic<A>::value, int> = 0,
             std::enable_if_t<is_arithmetic<B>::value, int> = 0 >
-  #pragma hila loop function
+  #pragma hila loop_function
   explicit constexpr Cmplx<T>(const A & a, const B & b) {
     re = a;
     im = b;
@@ -88,7 +88,7 @@ struct Cmplx {
   // automatic casting from Cmplx<T> -> Cmplx<A>
   // TODO: ensure this works if A is vector type!
   template <typename A>
-  #pragma hila loop function  //TODO
+  #pragma hila loop_function  //TODO
   operator Cmplx<A>() const { 
     return Cmplx<A>( re, im );
   }
@@ -114,7 +114,7 @@ struct Cmplx {
 
   inline T norm_sq() const { return re*re + im*im; }
 
-  // TODO: make this work for vector type!  Not double  
+  // TODO: make this work for vector type!
   //currently this gives a compilation error
   inline T abs() const { return sqrt( norm_sq() ); }
   inline T arg() const { return atan2( im, re ); }
