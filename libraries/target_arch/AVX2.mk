@@ -36,7 +36,7 @@ MPI_INCLUDE_DIRS := $(addprefix -I, $(shell  $(CC) --showme:incdirs) )
 
 # Linker libraries and possible options
 
-LDLIBS  := -lfftw3 -lm
+LDLIBS  := -lfftw3 -lfftw3f -lm
 LDFLAGS :=
 
 # These variables must be defined here
