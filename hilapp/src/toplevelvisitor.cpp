@@ -422,7 +422,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok ) {
   loop_function_calls.clear();
 
   global.location.loop = ls->getSourceRange().getBegin();
-  loop_info.clear_except_parity();
+  loop_info.clear_except_external();
   parsing_state.accept_field_parity = field_parity_ok;
     
   // the following is for taking the parity from next elem
@@ -609,7 +609,15 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
       if (isa<VarDecl>(DRE->getDecl())) {
         // now it should be var ref non-field
       
-        handle_var_ref(DRE,is_assignment,assignop,assign_stmt);
+        bool is_raw = (loop_info.has_pragma_access &&
+                       find_word(loop_info.pragma_access_args, 
+                                 DRE->getDecl()->getNameAsString()) 
+                        != std::string::npos);
+ 
+        if (!is_raw) {
+          handle_var_ref(DRE,is_assignment,assignop,assign_stmt);
+        }
+
         is_assignment = false;
       
         // llvm::errs() << "Variable ref: "
@@ -1249,6 +1257,10 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
 
         // llvm::errs() << "MACRO STRING " << macro << '\n';
         
+        loop_info.has_pragma_novector = has_pragma(s, pragma_hila::NOVECTOR );
+        loop_info.has_pragma_access = has_pragma(s, pragma_hila::ACCESS, 
+                                                 &loop_info.pragma_access_args);
+
         DeclStmt * init = dyn_cast<DeclStmt>(f->getInit());
         if (init && init->isSingleDecl() ) {
           VarDecl * vd = dyn_cast<VarDecl>(init->getSingleDecl());
@@ -1297,6 +1309,10 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
   }
 
   if (found) {
+
+    loop_info.has_pragma_novector = has_pragma(s, pragma_hila::NOVECTOR );
+    loop_info.has_pragma_access = has_pragma(s, pragma_hila::ACCESS, 
+                                             &loop_info.pragma_access_args);
 
     SourceRange full_range = getRangeWithSemicolon(s,false);
     global.full_loop_text = TheRewriter.getRewrittenText(full_range);
