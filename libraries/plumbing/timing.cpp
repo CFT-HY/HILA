@@ -58,21 +58,22 @@ void timer::error() {
 }
 
 double timer::start() {
-  // Move storing the timer ptr here, because if timier is initialized
-  // in the global scope the timer_list is possibly initialized later!
   if (is_on) error();
+  is_on = true;
 
+  // Move storing the timer ptr here, because if timer is initialized
+  // in the global scope the timer_list is possibly initialized later!
   if (count == 0) {
     timer_list.push_back(this);
   }
 
-  is_on = true;
   t_start = gettime();
   return t_start;
 }
   
 double timer::stop() {
   if (!is_on) error();
+  is_on = false;
 
   double e = gettime();
   t_total += (e - t_start);
@@ -94,12 +95,15 @@ void timer::report(bool print_not_timed ) {
     // time used during the counter activity
     double ttime = gettime();
     if (count > 0 && !is_error) {
-      if (t_total/count < 0.01) {
-        std::snprintf(line,200,"%-20s: %14.3f %14ld %10.3f us %8.4f\n",
-                      label.c_str(), t_total, (long)count, 1e6 * t_total/count, t_total/ttime );
-      } else {
+      if (t_total/count > 0.1) {
         std::snprintf(line,200,"%-20s: %14.3f %14ld %10.3f s  %8.4f\n",
                       label.c_str(), t_total, (long)count, t_total/count, t_total/ttime );
+      } else if (t_total/count > 1e-4) {
+        std::snprintf(line,200,"%-20s: %14.3f %14ld %10.3f ms %8.4f\n",
+                      label.c_str(), t_total, (long)count, 1e3 * t_total/count, t_total/ttime );
+      } else {
+        std::snprintf(line,200,"%-20s: %14.3f %14ld %10.3f us %8.4f\n",
+                      label.c_str(), t_total, (long)count, 1e6 * t_total/count, t_total/ttime );
       }
       hila::output << line;
     } else if (!is_error && print_not_timed) {
