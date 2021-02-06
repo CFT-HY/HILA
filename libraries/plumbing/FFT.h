@@ -19,6 +19,12 @@
 
 static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");  // initialized 1st time used
 static timer fftw_execute_timer("FFTW execute"), fftw_plan_timer("FFTW plan");
+static timer sitelist_timer("fft sitelist");
+static timer fft_copy_payload_timer("copy payload");
+static timer fft_buf_timer("copy fftw buffers");
+static timer fft_place_timer("place payload");
+
+
 
 template<typename T, typename complex_type>
 inline void FFT_field_complex(Field<T> & input, Field<T> & result, 
@@ -78,7 +84,6 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
     fftw_plan plan = fftw_plan_dft_1d( column_size, in, out, fdir, FFTW_ESTIMATE);
     fftw_plan_timer.stop();
 
-    static timer sitelist_timer("fft sitelist");
     sitelist_timer.start();
     // Construct lists of sites for each column
     std::vector<std::vector<unsigned>> sitelist(cols);
@@ -105,7 +110,6 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
     MPI_Request other_reqs[nnodes];
     int ireq = 0;
     for( int r=0; r<nnodes; r++ ){
-      static timer fft_copy_payload_timer("copy payload");
       fft_copy_payload_timer.start();
       char * sendbuf = mpi_send_buffer + block_size*r;
       for( int l=0; l<cpn; l++ ) {
@@ -136,7 +140,6 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
     for( int l=0; l<cpn; l++ ) { // Columns
       for( int e=0; e<elements; e++ ){ // Complex elements / field element
 
-        static timer fft_buf_timer("copy fftw buffers");
         fft_buf_timer.start();
         for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
           complex_type * RESTRICT field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
@@ -186,7 +189,6 @@ inline void FFT_field_complex(Field<T> & input, Field<T> & result,
 
       FFT_MPI_timer.stop();
 
-      static timer fft_place_timer("place payload");
       fft_place_timer.start();
       // Place the new data into field memory
       for( int l=0; l<cpn; l++ ) {

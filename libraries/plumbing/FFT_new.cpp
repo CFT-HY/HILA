@@ -1,278 +1,367 @@
 
-#include "plumbing/field.h"
-#include "datatypes/cmplx.h"
+
+#include "plumbing/defs.h"
 #include "plumbing/timing.h"
+#include "plumbing/FFT_new.h"
 #include "fftw3.h"
 
+#include <mpi.h>
+
+// just some values here
+#define WRK_GATHER_TAG  42
+#define WRK_SCATTER_TAG  43
 
 
-#ifdef USE_MPI
-/// Run Fast Fourier Transform on the field to each direction
-/// This is done by collecting a column of elements to each node,
-/// running the Fourier transform on the column and redistributing
-/// the result
-/// Input and result are passed by reference. They may be the same.
-/// The field must be complex and the underlying complex type is supplied
-/// by the complex_type template argument
+timer fft_timer("FFT total time");
+static timer fftw_plan_timer("  FFTW plan");
+static timer fft_MPI_timer("  MPI in FFT");
+static timer fftw_execute_timer("  FFTW execute");
+timer fft_reshuffle_timer("  data reshuffle");
+static timer fft_buffer_timer("  copy fftw buffers");
+timer fft_collect_timer("  copy payload");
+timer fft_save_timer("  save result");
 
 
-void FFT_field_complex
+struct fftnode_struct {
+    int node;                // node rank to send stuff for fft:ing
+    int size_to_dir;         // size of "node" to fft-dir
+    int column_offset;       // first perp-plane column to be handled by "node"
+    int column_number;       // and number of columns to be sent
+    int recv_buf_size;       // size of my fft collect buffer (in units of elements*cmplx_size)
+                             // for stuff received from / returned to "node"
+    char * work_in;          // where to hang the fft collect buffers
+    char * work_out;
+
+    MPI_Request send_request, receive_request;
+};
 
 
 
+static direction fft_dir;
+static int elements;
+static int cmplx_size;
+static int transform_dir;
+static bool is_float_fft;
+
+static int  my_columns[NDIM];  // how many columns does this node take care of
+
+static std::vector<fftnode_struct> fft_comms[NDIM];
+
+static fftw_plan fftwplan_d;   // should we save the plans?  probably, if too expensive
+static fftw_complex * RESTRICT fftwbuf_d;
+static fftwf_plan fftwplan_f;   
+static fftwf_complex * RESTRICT fftwbuf_f;
 
 
-static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT");  // initialized 1st time used
-static timer fftw_execute_timer("FFTW execute"), fftw_plan_timer("FFTW plan");
+int fft_get_buffer_offsets( const direction dir, const int elements,
+                            CoordinateVector & offset, CoordinateVector & nmin ) {
+    
+    offset[dir] = 1;
+    nmin = lattice->mynode.min;
 
-template<typename T, typename complex_type>
-inline void FFT_field_complex(Field<T> & input, Field<T> & result, 
-                              fft_direction fftdir = fft_direction::forward ){
-
-  lattice_struct * lattice = input.fs->lattice;
-  Field<T> * read_pointer = &input; // Read from input on first time, then work in result
-  size_t local_volume = lattice->mynode.volume();
-  int elements = sizeof(T)/sizeof(complex_type);
+    int element_offset = lattice->mynode.size[dir];
+    int s = element_offset * elements;
 
 
-  FFT_timer.start();
+    foralldir(d) if (d != dir) {
+        offset[d] = s;
+        s *= lattice->mynode.size[d];
+    }
 
-  // Make store the result is allocated and mark it changed 
-  result.check_alloc();
-  result.mark_changed(ALL);
+    return element_offset;
+}
 
-  // Allocate buffers for the MPI
-  char * mpi_send_buffer = (char*) malloc(local_volume*sizeof(T));
-  char * mpi_recv_buffer = (char*) malloc(local_volume*sizeof(T));
+/// THis is to be called before fft to direction dir
 
-  // Run transform in all directions
-  foralldir(dir){
-    // Get the number of sites per column on this node and on all nodes
-    size_t node_column_size = lattice->mynode.size[dir];
-    size_t column_size = lattice->size(dir);
-    // Count columns on this rank
-    int cols = 1;
-    foralldir(d2) if(d2!=dir) cols *= lattice->mynode.size[d2];
+void init_fft_direction( direction dir, int _elements, int T_size, fft_direction fftdir,
+                         void * const buf_in, void * const buf_out ) {
 
-    // Get the MPI column in this direction
-    lattice_struct::mpi_column_struct mpi_column = lattice->get_mpi_column(dir);
-    MPI_Comm column_communicator = mpi_column.column_communicator;
-    const std::vector<int> & nodelist = mpi_column.nodelist;
-    int my_column_rank = mpi_column.my_column_rank;
-    int nnodes = nodelist.size(); // Nodes in this column
-    int cpn = cols/nnodes; // Columns per node
+    fft_dir = dir;
+    elements = _elements;
+    cmplx_size = T_size / elements;
 
-    assert( cols % nnodes == 0 && "This FFT requires columns per node is evenly divisible");
-    // Amount of data that is communicated from a single node to another
-    int block_size = cpn*node_column_size*sizeof(T);
-    // Size of a full column
-    int col_size = node_column_size*sizeof(T);
 
-    // Variables needed for constructing the columns of sites
-    const std::vector<node_info> & allnodes = lattice->nodelist();
-    CoordinateVector min = allnodes[lattice->node_rank()].min;
-    CoordinateVector size = allnodes[lattice->node_rank()].size;
+    transform_dir = (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
 
-    // FFTW buffers
-    fftw_complex *in, *out;
-    in = (fftw_complex* RESTRICT) fftw_malloc(sizeof(fftw_complex) * column_size);
-    out = (fftw_complex* RESTRICT) fftw_malloc(sizeof(fftw_complex) * column_size);
-
-    int fdir = (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
     fftw_plan_timer.start();
-    fftw_plan plan = fftw_plan_dft_1d( column_size, in, out, fdir, FFTW_ESTIMATE);
+
+    // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time
+
+    if (cmplx_size == sizeof(Cmplx<double>)) {
+        is_float_fft = false;
+        fftwbuf_d  = (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * lattice->size(dir));
+        fftwplan_d = fftw_plan_dft_1d( lattice->size(dir), fftwbuf_d, fftwbuf_d, transform_dir, FFTW_ESTIMATE);
+
+    } else if (cmplx_size == sizeof(Cmplx<float>)) {
+        is_float_fft = true;
+        fftwbuf_f  = (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex) * lattice->size(dir));
+        fftwplan_f = fftwf_plan_dft_1d( lattice->size(dir), fftwbuf_f, fftwbuf_f, transform_dir, FFTW_ESTIMATE);
+    }
+
     fftw_plan_timer.stop();
 
-    static timer sitelist_timer("fft sitelist");
-    sitelist_timer.start();
-    // Construct lists of sites for each column
-    std::vector<std::vector<unsigned>> sitelist(cols);
-    for( int c=0; c<cols; c++ ) {
-      // Get the index in the other directions
-      int cc = c;
-      CoordinateVector thiscol=min;
-      foralldir(d2) if(d2!=dir) {
-        thiscol[d2] += cc%size[d2];
-        cc/=size[d2];
-      }
+    // Set up the fft_comms -struct, if not yet done
 
-      // And build the list of sites
-      sitelist[c].resize(node_column_size);
-      for(int i=0; i<node_column_size; i++ ){
-        thiscol[dir] = min[dir] + i;
-        sitelist[c][i] = lattice->site_index(thiscol);
-      }
-    }
-    sitelist_timer.stop();
+    if (fft_comms[dir].size() == 0) {  
+        // basic structs not yet set, do it here
 
-    // Gather a number of columns to each node
-    MPI_Request my_request;
-    MPI_Request other_reqs[nnodes];
-    int ireq = 0;
-    for( int r=0; r<nnodes; r++ ){
-      static timer fft_copy_payload_timer("copy payload");
-      fft_copy_payload_timer.start();
-      char * sendbuf = mpi_send_buffer + block_size*r;
-      for( int l=0; l<cpn; l++ ) {
-        int c = r*cpn+l;
-        read_pointer->fs->payload.gather_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(),  lattice);
-      }
-      fft_copy_payload_timer.stop();
-      FFT_MPI_timer.start();
-      MPI_Request request;
-      MPI_Igather( sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE, 
-                  mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE,
-                  r, column_communicator, &request);
-      if(r == my_column_rank){
-        my_request = request;
-      } else {
-        other_reqs[ireq++] = request;
-      }
-      FFT_MPI_timer.stop();
-    }
+        fft_comms[dir].resize( lattice->nodes.n_divisions[dir] );
 
-    // Wait for my data
-    FFT_MPI_timer.start();
-    MPI_Status status;
-    MPI_Wait(&my_request, &status);
-    FFT_MPI_timer.stop();
+        int nodenumber = 0;
+        for (const node_info & n : lattice->nodes.nodelist) {
+            bool is_in_column = true;
+            foralldir(d) if (d != dir && n.min[d] != lattice->mynode.min[d]) {
+                is_in_column = false;
+                break;
+            }
 
-    // now that we have columns, run FFT on each
-    for( int l=0; l<cpn; l++ ) { // Columns
-      for( int e=0; e<elements; e++ ){ // Complex elements / field element
-
-        static timer fft_buf_timer("copy fftw buffers");
-        fft_buf_timer.start();
-        for(int s=0; s<nnodes; s++){ // Cycle over sender nodes to collect the data
-          complex_type * RESTRICT field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
-          for(int t=0;t<node_column_size; t++){
-            in[t+node_column_size*s][0] = field_elem[e+elements*t].re;
-            in[t+node_column_size*s][1] = field_elem[e+elements*t].im;
-          }
+            /// store the nodes in the fft_comms -list in the right order -
+            /// nodes may be reordered by some weird layout
+            if (is_in_column) {
+                fftnode_struct fn;
+                fn.node = nodenumber;
+                fn.size_to_dir = n.size[dir];
+                for (int i=0; i<lattice->nodes.n_divisions[dir]; i++) {
+                    if (n.min[dir] == lattice->nodes.divisors[dir][i] ) {
+                        fft_comms[dir].at(i) = fn;
+                    }
+                }
+            }
+            ++nodenumber;
         }
-        fft_buf_timer.stop();
-        
+
+        int total_columns = lattice->mynode.sites / lattice->mynode.size[dir];
+
+        int nodes = fft_comms[dir].size();
+
+        // column offset and number are used for sending
+        int i = 0;
+        for (fftnode_struct & fn : fft_comms[dir]) {
+            fn.column_offset = ((i * total_columns) / nodes) * lattice->mynode.size[dir]; 
+            fn.column_number = (((i+1) * total_columns) / nodes) * lattice->mynode.size[dir] 
+                            - fn.column_offset;
+
+            if (fn.node == hila::myrank()) {
+                my_columns[dir] = fn.column_number/lattice->mynode.size[dir];
+            }
+            i++;
+        }
+
+        for (fftnode_struct & fn : fft_comms[dir]) {
+            fn.recv_buf_size = my_columns[dir]*fn.size_to_dir;
+        }
+
+    } // setup
+
+
+    // allocate work arrays which are used to feed fftw and get the results
+
+
+    for ( fftnode_struct & fn : fft_comms[dir]) {
+
+        if (fn.node != hila::myrank() ) {
+
+            // usually, out/in buffer is the same
+            fn.work_out = fn.work_in = 
+                (char *)memalloc(fn.recv_buf_size * cmplx_size * elements);
+
+        } else {
+
+            // for local node, point directly to input/output arrays
+
+            fn.work_in  = (char *)buf_in  + fn.column_offset * cmplx_size * elements;
+            fn.work_out = (char *)buf_out + fn.column_offset * cmplx_size * elements;
+        }
+
+    }
+}
+
+
+
+
+// now all work buffers are ready, slice through the data
+
+template <>
+void fft_execute<Cmplx<double>>() {
+    int n_fft = my_columns[fft_dir] * elements;
+
+    for (int i=0; i<n_fft; i++) {
+        // collect stuff from buffers
+
+        fft_buffer_timer.start();
+
+        fftw_complex * cp = fftwbuf_d;
+        for (auto & fn : fft_comms[fft_dir]) {
+            memcpy(cp, fn.work_in + i*fn.size_to_dir*sizeof(fftw_complex), 
+                   sizeof(fftw_complex)*fn.size_to_dir );
+            cp += fn.size_to_dir;
+        }
+
+        fft_buffer_timer.stop();
+ 
+ 
+        // do the fft
         fftw_execute_timer.start();
-        // Run the fft
-        fftw_execute(plan);
+ 
+        fftw_execute( fftwplan_d );
+ 
+        fftw_execute_timer.stop();
+  
+
+        fft_buffer_timer.start();
+
+        cp = fftwbuf_d;
+        for (auto & fn : fft_comms[fft_dir]) {
+            memcpy(fn.work_out + i*fn.size_to_dir*sizeof(fftw_complex), cp,
+                   sizeof(fftw_complex)*fn.size_to_dir );
+            cp += fn.size_to_dir;
+        }
+               
+
+        fft_buffer_timer.stop();
+    }
+}
+
+template <>
+void fft_execute<Cmplx<float>>() {
+    int n_fft = my_columns[fft_dir] * elements;
+
+    for (int i=0; i<n_fft; i++) {
+        // collect stuff from buffers
+
+        fft_buffer_timer.start();
+
+        fftwf_complex * cp = fftwbuf_f;
+        for (auto & fn : fft_comms[fft_dir]) {
+            memcpy(cp, fn.work_in + i*fn.size_to_dir*sizeof(fftwf_complex), 
+                   sizeof(fftwf_complex)*fn.size_to_dir );
+            cp += fn.size_to_dir;
+        }
+
+        fft_buffer_timer.stop();
+
+        // do the fft
+        fftw_execute_timer.start();
+        fftwf_execute( fftwplan_f );
         fftw_execute_timer.stop();
 
-        fft_buf_timer.start();
-        // Put the transformed data back in place
-        for(int s=0; s<nnodes; s++){
-          complex_type * RESTRICT field_elem = (complex_type*)(mpi_recv_buffer + block_size*s + col_size*l);
-          for(int t=0;t<node_column_size; t++){
-            field_elem[e+elements*t].re = out[t+node_column_size*s][0];
-            field_elem[e+elements*t].im = out[t+node_column_size*s][1];
-          }
+        fft_buffer_timer.start();
+
+        cp = fftwbuf_f;
+        for (auto & fn : fft_comms[fft_dir]) {
+            memcpy(fn.work_out + i*fn.size_to_dir*sizeof(fftwf_complex), cp,
+                   sizeof(fftwf_complex)*fn.size_to_dir );
+            cp += fn.size_to_dir;
         }
-        fft_buf_timer.stop();
 
-      }
+        fft_buffer_timer.stop();
     }
-
-    // clear the other requests -- wonder if these are needed?
-    if (nnodes > 1) {
-      FFT_MPI_timer.start();
-      MPI_Status statarr[nnodes-1];
-      MPI_Waitall(nnodes-1, other_reqs, statarr );
-      FFT_MPI_timer.stop();
-    }
-
-    // Now reverse the gather operation. After this each node will have its original local sites
-    // The scatter operation cannot be asynchronous, but this coul dbe implemented with a 
-    // gather operations instead.
-    for( int s=0; s<nnodes; s++ ){
-      FFT_MPI_timer.start();
-      char * sendbuf = mpi_send_buffer + block_size*s;
-      MPI_Scatter( mpi_recv_buffer, cpn*node_column_size*sizeof(T), MPI_BYTE, 
-                   sendbuf, cpn*node_column_size*sizeof(T), MPI_BYTE,
-                   s, column_communicator);
-
-      FFT_MPI_timer.stop();
-
-      static timer fft_place_timer("place payload");
-      fft_place_timer.start();
-      // Place the new data into field memory
-      for( int l=0; l<cpn; l++ ) {
-        int c = s*cpn+l;
-        result.fs->payload.place_elements((T*)(sendbuf + col_size*l), sitelist[c].data(), sitelist[c].size(), lattice);
-      }
-      fft_place_timer.stop();
-    }
-
-    read_pointer = &result; // From now on we work in result
-    fftw_destroy_plan(plan);
-    fftw_free(in); fftw_free(out);
-  }
-
-  free(mpi_send_buffer);
-  free(mpi_recv_buffer);
-
-  FFT_timer.stop();
-}
-
-
-#else  // No mpi
-
-
-template<typename T, typename C>
-inline void FFT_field_complex(Field<T> & input, Field<T> & result, fft_direction fdir = fft_direction::forward){}
-
-
-
-#endif
-
-template<>
-inline void Field<Cmplx<double>>::FFT(fft_direction fdir){
-  FFT_field_complex<Cmplx<double>,Cmplx<double>>(*this, *this, fdir);
 }
 
 
 
-/// Match a given type T to it's underlying complex type
-template<typename T, class Enable = void>
-struct complex_base{};
 
-/// Match to a complex type
-template<>
-struct complex_base<Cmplx<float>>{
-  using type = Cmplx<float>;
-};
+void fft_post_gather() {
+    
+    fft_MPI_timer.start();
+    for ( auto & fn : fft_comms[fft_dir] ) {
+        if (fn.node != hila::myrank() ) {
 
-/// Match to a complex type
-template<>
-struct complex_base<Cmplx<double>>{
-  using type = Cmplx<double>;
-};
+            MPI_Irecv( fn.work_in, fn.recv_buf_size * cmplx_size * elements,
+                       MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat, &fn.receive_request );
+        }
+    }
+    fft_MPI_timer.stop();
+}   
+   
+void fft_start_gather( void * buffer ) {
 
-/// Match templated class B to it's underlying complex type
-template<template<typename B> class C, typename B>
-struct complex_base<C<B>>{
-  using type = typename complex_base<B>::type;
-};
+    fft_MPI_timer.start();
+    for (auto & fn: fft_comms[fft_dir]) if (fn.node != hila::myrank() ) {
+        char * p = (char *)buffer + fn.column_offset * (cmplx_size * elements);
+        int n = fn.column_number * (cmplx_size * elements);
 
-/// Match templated class B to it's underlying complex type
-template<template<int a, typename B> class C, int a, typename B>
-struct complex_base<C<a, B>>{
-  using type = typename complex_base<B>::type;
-};
+        MPI_Isend( p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat, &fn.send_request );
+    }
 
-/// Match templated class B to it's underlying complex type
-template<template<int a,int b,typename B> class C, int a, int b, typename B>
-struct complex_base<C<a,b,B>>{
-  using type = typename complex_base<B>::type;
-};
-
-
-
-/// Run fourier transform on a complex field
-// Called with any type T with a Cmplx type nested in the lowest level
-template<typename T>
-void FFT_field(Field<T> & input, Field<T> & result, fft_direction fdir = fft_direction::forward){
-  FFT_field_complex<T,typename complex_base<T>::type>(input, result, fdir);
+    fft_MPI_timer.stop();
 }
 
+void fft_wait_send() {
 
+    fft_MPI_timer.start();
 
-#endif
+    int n = fft_comms[fft_dir].size() -1;
+    if (n > 0) {
+        MPI_Request rr[n];
+        MPI_Status stat[n];
+        int i = 0;
+        for (auto & ft : fft_comms[fft_dir]) if (ft.node != hila::myrank()) {
+            rr[i++] = ft.send_request;
+        }
+        MPI_Waitall(n, rr, stat);
+    }
+
+    fft_MPI_timer.stop();
+}
+
+void fft_wait_receive() {
+
+    fft_MPI_timer.start();
+
+    int n = fft_comms[fft_dir].size() -1;
+    if (n > 0) {
+        MPI_Request rr[n];
+        MPI_Status stat[n];
+        int i = 0;
+        for (auto & ft : fft_comms[fft_dir]) if (ft.node != hila::myrank()) {
+            rr[i++] = ft.receive_request;
+        }
+        MPI_Waitall(n, rr, stat);
+    }
+
+    fft_MPI_timer.stop();
+}
+
+// inverse of start_gather
+void fft_post_scatter( void *buffer ) {
+
+    fft_MPI_timer.start();    
+    for ( auto & fn : fft_comms[fft_dir] ) if (fn.node != hila::myrank() ) {
+        char * p = (char *)buffer + fn.column_offset * (cmplx_size * elements);
+        int n = fn.column_number * (cmplx_size * elements);
+
+        MPI_Irecv( p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat, &fn.receive_request );
+    }
+    fft_MPI_timer.stop();
+}
+
+// inverse of post_gather
+void fft_start_scatter( ) {
+
+    fft_MPI_timer.start();
+
+    for ( auto & fn : fft_comms[fft_dir] ) if (fn.node != hila::myrank() ) {
+
+        MPI_Isend( fn.work_out, fn.recv_buf_size * cmplx_size * elements,
+                   MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat, &fn.send_request );
+    }
+
+    fft_MPI_timer.stop();
+}
+
+// free the work buffers
+void fft_cleanup() {
+    for ( auto & fn : fft_comms[fft_dir] ) {
+        if (fn.node != hila::myrank() )  free( fn.work_in );
+    }
+
+    if (!is_float_fft) {
+        fftw_destroy_plan(fftwplan_d);
+        fftw_free(fftwbuf_d);
+    } else {
+        fftwf_destroy_plan(fftwplan_f);
+        fftwf_free(fftwbuf_f);
+    }    
+
+}
