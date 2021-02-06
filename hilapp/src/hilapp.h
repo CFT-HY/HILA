@@ -308,13 +308,16 @@ struct loop_info_struct {
   std::string parity_text;
   parity parity_value;
 
+  bool has_pragma_novector;
+  bool has_pragma_access;
+  const char * pragma_access_args;
   bool has_site_dependent_conditional;           // if, for, while w. site dep. cond?
   bool contains_random;                          // does it contain rng (also in loop functions)?
   std::vector<var_info *> conditional_vars;      // may depend on variables
   Expr * condExpr;
 
 
-  inline void clear_except_parity() {            // do not remove parity values, may be set in loop init
+  inline void clear_except_external() {            // do not remove parity values, may be set in loop init
     has_site_dependent_conditional = contains_random = false;
     conditional_vars.clear();
     condExpr = nullptr;
@@ -375,11 +378,11 @@ struct call_info_struct {
 
 
 
-enum class pragma_hila { SKIP, AST_DUMP, LOOP_FUNCTION, NOT_VECTORIZABLE, VECTORIZABLE, CONTAINS_RNG };
+enum class pragma_hila { SKIP, AST_DUMP, LOOP_FUNCTION, NOVECTOR, VECTORIZABLE, CONTAINS_RNG, ACCESS };
 
 /// Pragma handling things
 bool has_pragma_hila(const SourceManager &SM, SourceLocation l0 , pragma_hila pragma, 
-                     SourceLocation & pragmaloc );
+                     SourceLocation & pragmaloc, const char ** arg = nullptr);
 
 
 

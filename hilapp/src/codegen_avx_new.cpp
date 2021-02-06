@@ -227,111 +227,119 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int & vector_size, std::s
 
   
   // check if loop has conditional
-  if (loop_info.has_site_dependent_conditional) {
+  if (loop_info.has_pragma_novector) {
     is_vectorizable = false;
-    reason.push_back("it contains site dependent conditional");
-  }
+    reason.push_back("it has '#pragma hila novector'");
 
-  if (contains_random(S)) {
-    is_vectorizable = false;
-    reason.push_back("it contains a random number generator");
-  }
+  } else {
 
-  std::string vector_var_name;   // variable which determines the vectorization
-  std::string vector_var_type;   // type of variable which determines the vectorization
-
-  // check if the fields are vectorizable in a compatible manner
-  if (field_info_list.size() > 0) {
-    for (field_info & fi : field_info_list) {
-      if (!fi.vecinfo.is_vectorizable) {
-        is_vectorizable = false;
-        reason.push_back("Field variable '" + fi.old_name + "' is not vectorizable");
-      } else {
-        if (vector_size == 0) {
-          vector_size = fi.vecinfo.vector_size;
-          numtype = fi.vecinfo.basetype;
-          vector_var_name = fi.old_name;
-          vector_var_type = fi.vecinfo.basetype_str;
-        } else if (fi.vecinfo.vector_size != vector_size || fi.vecinfo.basetype != numtype) {
-          // TODO: let different vector types coexist!
-
-          is_vectorizable = false;
-
-          reason.push_back( "type of variable '" + fi.old_name + "' is " 
-              + fi.vecinfo.basetype_str + " and '" + vector_var_name
-              + "' is " + vector_var_type );
-
-        }
-      }
-    }
-  }
-
-
-  // and then if the site dep. variables are vectorizable
-  if (var_info_list.size() > 0) {
-    for (var_info & vi : var_info_list) if (vi.is_site_dependent) {
-      if (vi.vecinfo.is_vectorizable) {
-        if (vector_size == 0) {
-          vector_size = vi.vecinfo.vector_size;
-          numtype = vi.vecinfo.basetype;
-          vector_var_name = vi.name;
-          vector_var_type = vi.vecinfo.basetype_str;
-
-        } else if (vector_size != vi.vecinfo.vector_size || numtype != vi.vecinfo.basetype) {
-          is_vectorizable = false;
-
-          reason.push_back( "type of variables '" + vi.name + "' is " 
-                + vi.vecinfo.basetype_str + " and '" + vector_var_name 
-                + "' is " + vector_var_type );
-        }
-      } else {
-        is_vectorizable = false;
-
-        reason.push_back("variable '" + vi.name + "' is not vectorizable");
-      }
-    }
-  }
-
-  // and still, check the special functions
-  if (is_vectorizable) {
-    for (auto const & sfc : special_function_call_list) {
-      if (sfc.name == "coordinates" || sfc.name == "coordinate") {
-        // returning int vector
-        if (vector_size == 0) {
-          vector_size = target.vector_size/sizeof(int);
-        } else if (vector_size != target.vector_size/sizeof(int) || 
-            numtype != number_type::INT) {
-          is_vectorizable = false;
- 
-          reason.push_back( "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, "
-                            "which is not compatible with " + vector_var_type + " vectors" );
-        }
- 
-      } else if (sfc.name == "parity") {
-        is_vectorizable = false;
- 
-        reason.push_back("function 'X.parity()' is not AVX vectorizable");        
- 
-      } else if (sfc.name == "random" || sfc.name == "hila_random") {
-        is_vectorizable = false;
-        reason.push_back("random number generators prevent vectorization");
-      }
-    }
-  }
-
-  // and check function calls
-  for (auto & ci : loop_function_calls ) {
-    if (ci.is_site_dependent && !ci.is_vectorizable) {
+    if (loop_info.has_site_dependent_conditional) {
       is_vectorizable = false;
+      reason.push_back("it contains site dependent conditional");
+    }
 
-      if (ci.funcdecl != nullptr) {
-        reason.push_back( "loop contains function " + ci.funcdecl->getNameAsString() + " which is not vectorizable" );
-      } else if (ci.ctordecl != nullptr ) {
-        reason.push_back( "loop contains constructor " + ci.ctordecl->getNameAsString() + " which is not vectorizable" );
+    if (contains_random(S)) {
+      is_vectorizable = false;
+      reason.push_back("it contains a random number generator");
+    }
+
+    std::string vector_var_name;   // variable which determines the vectorization
+    std::string vector_var_type;   // type of variable which determines the vectorization
+
+    // check if the fields are vectorizable in a compatible manner
+    if (field_info_list.size() > 0) {
+      for (field_info & fi : field_info_list) {
+        if (!fi.vecinfo.is_vectorizable) {
+          is_vectorizable = false;
+          reason.push_back("Field variable '" + fi.old_name + "' is not vectorizable");
+        } else {
+          if (vector_size == 0) {
+            vector_size = fi.vecinfo.vector_size;
+            numtype = fi.vecinfo.basetype;
+            vector_var_name = fi.old_name;
+            vector_var_type = fi.vecinfo.basetype_str;
+          } else if (fi.vecinfo.vector_size != vector_size || fi.vecinfo.basetype != numtype) {
+            // TODO: let different vector types coexist!
+
+            is_vectorizable = false;
+
+            reason.push_back( "type of variable '" + fi.old_name + "' is " 
+                + fi.vecinfo.basetype_str + " and '" + vector_var_name
+                + "' is " + vector_var_type );
+
+          }
+        }
+      }
+    }
+
+
+    // and then if the site dep. variables are vectorizable
+    if (var_info_list.size() > 0) {
+      for (var_info & vi : var_info_list) if (vi.is_site_dependent) {
+        if (vi.vecinfo.is_vectorizable) {
+          if (vector_size == 0) {
+            vector_size = vi.vecinfo.vector_size;
+            numtype = vi.vecinfo.basetype;
+            vector_var_name = vi.name;
+            vector_var_type = vi.vecinfo.basetype_str;
+
+          } else if (vector_size != vi.vecinfo.vector_size || numtype != vi.vecinfo.basetype) {
+            is_vectorizable = false;
+
+            reason.push_back( "type of variables '" + vi.name + "' is " 
+                  + vi.vecinfo.basetype_str + " and '" + vector_var_name 
+                  + "' is " + vector_var_type );
+          }
+        } else {
+          is_vectorizable = false;
+
+          reason.push_back("variable '" + vi.name + "' is not vectorizable");
+        }
+      }
+    }
+
+    // and still, check the special functions
+    if (is_vectorizable) {
+      for (auto const & sfc : special_function_call_list) {
+        if (sfc.name == "coordinates" || sfc.name == "coordinate") {
+          // returning int vector
+          if (vector_size == 0) {
+            vector_size = target.vector_size/sizeof(int);
+          } else if (vector_size != target.vector_size/sizeof(int) || 
+              numtype != number_type::INT) {
+            is_vectorizable = false;
+  
+            reason.push_back( "functions 'X.coordinates()' and 'X.coordinate(direction)' return int, "
+                              "which is not compatible with " + vector_var_type + " vectors" );
+          }
+  
+        } else if (sfc.name == "parity") {
+          is_vectorizable = false;
+  
+          reason.push_back("function 'X.parity()' is not AVX vectorizable");        
+  
+        } else if (sfc.name == "random" || sfc.name == "hila_random") {
+          is_vectorizable = false;
+          reason.push_back("random number generators prevent vectorization");
+        }
+      }
+    }
+
+    // and check function calls
+    for (auto & ci : loop_function_calls ) {
+      if (ci.is_site_dependent && !ci.is_vectorizable) {
+        is_vectorizable = false;
+
+        if (ci.funcdecl != nullptr) {
+          reason.push_back( "loop contains function " + 
+                             ci.funcdecl->getNameAsString() + " which is not vectorizable" );
+        } else if (ci.ctordecl != nullptr ) {
+          reason.push_back( "loop contains constructor " + 
+                            ci.ctordecl->getNameAsString() + " which is not vectorizable" );
+        }
       }
     }
   }
-
 
   if (vector_size == 0 && is_vectorizable) {
     // super-special case - loop does not contain fields or anything site dependent.  

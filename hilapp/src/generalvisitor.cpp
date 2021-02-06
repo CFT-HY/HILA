@@ -511,36 +511,39 @@ var_info * GeneralVisitor::add_var_to_decl_list(VarDecl * var, int scope_level) 
 /// Pragma_args will point to the beginning of arguments of pragma
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool GeneralVisitor::has_pragma(Stmt *S, const pragma_hila pragma) {
+bool GeneralVisitor::has_pragma(Stmt *S, const pragma_hila pragma, const char ** arg) {
 
   if (S == nullptr) return false;
 
-  return has_pragma( S->getSourceRange().getBegin(), pragma);
+  return has_pragma( S->getSourceRange().getBegin(), pragma, arg);
 }
 
 /// For functiondecl, go through the previous decls (prototype!) too if needed
 
-bool GeneralVisitor::has_pragma(FunctionDecl *F, const pragma_hila pragma) {
+bool GeneralVisitor::has_pragma(FunctionDecl *F, const pragma_hila pragma,
+                                const char ** arg) {
   
   if (F == nullptr) return false;
-  if (has_pragma( F->getSourceRange().getBegin(), pragma)) return true;
+  if (has_pragma( F->getSourceRange().getBegin(), pragma, arg)) return true;
   
   if (FunctionDecl * proto = F->getPreviousDecl()) {
-    return has_pragma(proto, pragma);
+    return has_pragma(proto, pragma, arg);
   }
   return false;
 
 }
 
-bool GeneralVisitor::has_pragma(Decl *F, const pragma_hila pragma) {
+bool GeneralVisitor::has_pragma(Decl *F, const pragma_hila pragma, 
+                                const char ** arg) {
   
   if (F == nullptr) return false;
-  return has_pragma( F->getSourceRange().getBegin(), pragma);
+  return has_pragma( F->getSourceRange().getBegin(), pragma, arg);
 }
 
 /// And here is the main interface to pragma
 
-bool GeneralVisitor::has_pragma(const SourceLocation l, const pragma_hila pragma) {
+bool GeneralVisitor::has_pragma(const SourceLocation l, const pragma_hila pragma, 
+                                const char ** pragma_arg) {
   std::string arg;
   SourceLocation pragmaloc,sl = l;
 
@@ -552,8 +555,7 @@ bool GeneralVisitor::has_pragma(const SourceLocation l, const pragma_hila pragma
     sl = CSR.getBegin();
   }
 
-  if (has_pragma_hila(TheRewriter.getSourceMgr(),sl, pragma, pragmaloc)) {
-    // llvm::errs() << " %%% PRAGMA HILA, args " << arg << " COMPARISON " << n << '\n';
+  if (has_pragma_hila(TheRewriter.getSourceMgr(),sl, pragma, pragmaloc, pragma_arg )) {
 
 
       // got it, comment out -- check that it has not been commented out before

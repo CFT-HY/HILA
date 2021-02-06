@@ -213,43 +213,133 @@ void handle_cmdline_arguments(codetype & target) {
 /// Check allowed #pragma hila's
 /////////////////////////////////////////////////////////////////////////////
 
-// pragma_hila_args match the enum class pragma_hila
-// enum class pragma_hila { SKIP, AST_DUMP, LOOP_FUNCTION, NOT_VECTORIZABLE, VECTORIZABLE };
 
-static std::vector<std::string> pragma_hila_args  {
-  "skip",
-  "ast dump",
-  "loop function",
-  "not vectorizable",
-  "vectorizable",
-  "contains rng"
+/// Store #pragma hila  commands and the sourceloc where these refer to
+struct pragma_loc_struct {
+  SourceLocation loc, ref;       // location of pragma and loc where it refers to
+  pragma_hila type;              // type of pragma
+  std::string arg;               // possible arg string of pragma
 };
 
-bool is_recognized_pragma(std::string & arg) {
+struct pragma_file_struct {
+  FileID fid;
+  std::vector<pragma_loc_struct> pragmas;
+};
+
+/// This holds the pragma locs, defined globally in hilapp.h
+static std::vector<pragma_file_struct> pragmalocs;
+
+// pragma_hila_types match the enum class pragma_hila
+
+struct pragma_types {
+  std::string name;
+  bool has_args;
+};
+
+static std::vector<pragma_types> pragma_hila_types  {
+  { "skip",           false },
+  { "ast_dump",       false },
+  { "loop_function",  false },
+  { "novector",       false },
+  { "vectorizable",   false },
+  { "contains_rng",   false },
+  { "direct_access",  true  }
+};
+
+
+void check_pragmas(std::string & arg, 
+                   SourceLocation prloc, 
+                   SourceLocation refloc,
+                   std::vector<pragma_loc_struct> & pragmas) {
 
   std::string p = remove_initial_whitespace(arg);
 
   bool found = false;
   while (p.length() > 0) {
+   
     bool found_now = false;
-    for (std::string & a : pragma_hila_args) {
-      if (contains_word_list(p,a,&p)) {
+    for (int k=0; k<pragma_hila_types.size(); k++) {
+      auto & a = pragma_hila_types[k];
+
+      if (contains_word_list(p,a.name,&p)) {
+        // got known pragma hila
         found = found_now = true;
+
+        pragma_loc_struct pl;
+        pl.type = (pragma_hila)k;
+        pl.ref  = refloc;
+        pl.loc  = prloc;
+
+        // any args?
+        if (a.has_args) {
+
+          int i = 0;
+          bool error = false;
+
+          while (i < p.length() && std::isspace(p[i])) i++;
+          
+          if (i >= p.length() || p[i] != '(') error = true;
+          else {
+            // got args, start here
+            int j = ++i;
+            int level = 1;
+            while (j < p.length() && level > 0) {
+              if (p[j] == '(') level++;
+              if (p[j] == ')') level--;
+              j++;
+            }
+            if (level == 0) {
+
+              // copy the arg, finally - now points past ), subtract it
+              pl.arg = p.substr(i,j-2);
+
+              // and reset p to remaining str
+              p = p.substr(j,std::string::npos);
+
+            } else {
+
+              error = true;
+
+            }
+          }
+
+          if (error) {
+            auto & DE = myCompilerInstance->getDiagnostics();
+            auto ID = DE.getCustomDiagID(DiagnosticsEngine::Level::Warning,
+                           "Incorrect syntax in #pragma hila %0 arguments - ignoring\n"
+                           "correct form '#pragma hila %1(<args>)");
+            auto DB = DE.Report(prloc, ID);
+            DB.AddString(a.name.c_str());
+            DB.AddString(a.name.c_str());
+
+            return;
+          }
+        }
+
+        // add a new pragma
+
+        pragmas.push_back(pl);
+
+        // exit pragma scan loop
         break;
-      }
+      } // if found
+    } // for
+
+    if (!found_now) {
+      auto & DE = myCompilerInstance->getDiagnostics();
+      auto ID = DE.getCustomDiagID(DiagnosticsEngine::Level::Warning,
+                           "Unknown #pragma hila -argument - ignoring");
+      auto DB = DE.Report(prloc, ID);
+
+      return;
     }
-    if (!found_now) return false;  // something not understood
+
     p = remove_initial_whitespace(p);
-  }
 
-  // nothing relevant found, return false
-  if (!found) return false;
+  } // loop over whole p != 0 loop
 
-  return true;
+  return;     // successful return here
 }
-
-
-
 
 /////////////////////////////////////////////////////////////////////////////
 /// Preprocessor callbacks are used to find include locs
@@ -267,21 +357,6 @@ struct includeloc_struct {
 
 // block of static vars, easiest to move information
 static std::list<includeloc_struct> includelocs;
-
-
-/// Store #pragma hila  commands and the sourceloc where these refer to
-struct pragma_loc_struct {
-  SourceLocation loc, ref;       // location of pragma and loc where it refers to
-  std::string args;
-};
-
-struct pragma_file_struct {
-  FileID fid;
-  std::vector<pragma_loc_struct> pragmas;
-};
-
-/// This holds the pragma locs, defined globally in hilapp.h
-static std::vector<pragma_file_struct> pragmalocs;
 
 struct HILAPP_loc_struct {
   FileID fid;
@@ -384,20 +459,7 @@ public:
           // f is correct here
         }
 
-        pragma_loc_struct pl;
-        pl.loc  = Loc;
-
-        if (!is_recognized_pragma(rest)) {
-           auto & DE = myCompilerInstance->getDiagnostics();
-           auto ID = DE.getCustomDiagID( DiagnosticsEngine::Level::Warning, 
-                                         "Unknown '#pragma hila'-option, ignoring");
-           auto DB = DE.Report(Loc, ID);
-        
-           return;
-        }
-
-        pl.args = remove_extra_whitespace(rest);
-
+ 
         // now find the SourceLocation where this #pragma should refer to.
         // skip whitespace, pragmas and #-macros 
         // skip also template <> -bits
@@ -426,10 +488,9 @@ public:
           }
         } while (std::isspace(getChar(SM,sl)));
 
-        pl.ref = sl;
 
-        // finally save the pragma loc
-        pragmalocs[f].pragmas.push_back(pl);
+        // finally, check and insert pragmas as seen
+        check_pragmas(rest, Loc, sl, pragmalocs[f].pragmas);
 
         // llvm::errs() << " - GOT PRAGMA HILA; FILE " << f << '\n';
       }
@@ -559,16 +620,20 @@ public:
 
 /// General "has pragma hila" routine, can be called from any routine
 /// Checks if the sourcelocation is preceded by #pragma hila
+/// 
 
 bool has_pragma_hila(const SourceManager & SM, SourceLocation loc, 
-                     pragma_hila pragma, SourceLocation & pragmaloc ) {
+                     pragma_hila pragma, SourceLocation & pragmaloc,
+                     const char ** arg ) {
 
   static FileID prev_fid;
   static int prev_file, prev_pragma = -1;
 
+  // first find the listing for file
   int f;
   FileID this_fid = SM.getFileID(loc);
   if (prev_fid.isInvalid() || this_fid != prev_fid) {
+
     for (f = 0; f < pragmalocs.size() && pragmalocs[f].fid != this_fid; f++) ;
     if (f == pragmalocs.size()) return false;   // file not found
     prev_file = f;
@@ -587,19 +652,22 @@ bool has_pragma_hila(const SourceManager & SM, SourceLocation loc,
   int start = 0; 
 
   // pragma locations are ordered in lists - start from prev found
-  if (prev_pragma > 0 && pl[prev_pragma].ref <= loc) 
-    start = prev_pragma;
+  if (prev_pragma > 0 && pl[prev_pragma].ref <= loc) {
+
+    // if many #pragmas on same ref, reverse these
+    for (start = prev_pragma; start > 0 && pl[start].ref == loc; start--) ;
+  }
   
   for (int i=start; i<pl.size() && pl[i].ref <= loc; i++) {
-    if (pl[i].ref == loc) {
-      // found a pragma on this loc, check the result
-      std::string & arg = pragma_hila_args[(int)pragma];
+    if (pl[i].ref == loc && pl[i].type == pragma) {
+      // found it!
+    
+      pragmaloc = pl[i].loc;
 
-      if (pl[i].args.find(arg) == std::string::npos) {
-        return false;   // was not there
+      // is arg needed?  set pointer to args, if so requested
+      if (pragma_hila_types[(int)pragma].has_args && arg != nullptr) {
+        *arg = pl[i].arg.c_str();
       }
-
-      pragmaloc   = pl[i].loc;
 
       prev_pragma = i;
       return true;
