@@ -38,29 +38,29 @@ sudo apt install clang-11 clang-tools-11 clang-11-doc libclang-common-11-dev lib
 
 3. Source distribution and compiling
 
-see page https://clang.llvm.org/get_started.html  for compiler etc. requirements.  Any modern
-gcc or clang should be sufficient.  Python and cmake are also needed.
+Source distribution seems to be required if you want to make statically compiled hilapp.
 
-DOWNLOAD SEEMS TO HAVE CHANGED FROM THE ONE BELOW; NOW
+For download and compilation, see page
+  https://clang.llvm.org/get_started.html
+for instructions.  Any modern gcc or clang should be sufficient for building.
+Python and cmake are also needed.
+
+In summary:
+
+* Download with
 git clone https://github.com/llvm/llvm-project.git
-GETS ALL IN ONE GO
 
-* Download with (this gives the latest stable version)
+* Compile:
 
-git clone http://llvm.org/git/llvm.git
-cd llvm/tools
-git clone http://llvm.org/git/clang.git
-cd clang/tools
-git clone http://llvm.org/git/clang-tools-extra.git extra
-
-* Compile with 
-
-cd ../../../..  (At top level again)
+cd llvm-project
 mkdir build
-# (in-tree build is not supported)
 cd build
-cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ../llvm
-make
-* make takes several hours.
+cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release ../llvm
+make -j4
+
+* This leaves binaries in llvm-project/build/bin -directory.  This is sufficient for hilapp.
+  (make install would install these on suitable places)
+* -j -option does parallel make, best number depends on the computer doing the compilation
 * Build types are Release, MinSizeRel, Debug, RelWithDebInfo
+
 
