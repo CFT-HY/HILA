@@ -89,7 +89,7 @@ namespace hila {
 //#endif
 
 /// define a class for FFT direction
-enum class fft_direction { forward, backward, back };
+enum class fft_direction { forward, inverse };
 
 /// Allow other than periodic boundary conditions
 #define SPECIAL_BOUNDARY_CONDITIONS

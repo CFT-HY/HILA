@@ -43,25 +43,25 @@ void gather_test() {
 
     #if defined(SPECIAL_BOUNDARY_CONDITIONS)
     // test antiperiodic b.c. to one direction
-    if (d == e_t) {
-      f2.set_boundary_condition(e_t,BoundaryCondition::ANTIPERIODIC);
+    if (next_direction(d) == NDIM) {
+      f2.set_boundary_condition(d,BoundaryCondition::ANTIPERIODIC);
 
       onsites(ALL) {
-        if (X.coordinate(e_t) == lattice->size(e_t)-1) 
-          f2[X] = -f1[X];
-        else
-          f2[X] = f1[X];
-      } 
+          if (X.coordinate(d) == lattice->size(d)-1) 
+            f2[X] = -f1[X];
+          else
+            f2[X] = f1[X];
+      }
 
       dif1 = 0;
       onsites(ALL) {
-        dif1 += f1[X] - f2[X-d];  
+          dif1 += f1[X] - f2[X-d];  
       }
 
       if (dif1 != 0) {
-        output0 << " Antiperiodic up-gather test error! Node " << hila::myrank() 
-                << " direction " << (unsigned)d << '\n';
-        exit(1);
+          output0 << " Antiperiodic up-gather test error! Node " << hila::myrank() 
+                  << " direction " << (unsigned)d << '\n';
+          exit(1);
       }
     }
     #endif
@@ -73,7 +73,7 @@ void gather_test() {
 
 void test_std_gathers()
 {
-  gather_test<int>();
+  // gather_test<int>();
   gather_test<double>();
 
   timestamp("Communication tests done");

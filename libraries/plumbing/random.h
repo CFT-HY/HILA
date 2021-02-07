@@ -10,10 +10,10 @@
 /// are marked as "loop function" and "contains rng", because hilapp does not have a view
 /// inside them from all compilation units
 
-#pragma hila contains rng loop function
+#pragma hila contains_rng loop_function
 double gaussian_ran();
 
-#pragma hila contains rng loop function
+#pragma hila contains_rng loop_function
 double gaussian_ran2(double & out2);
 
 

@@ -867,7 +867,7 @@ lattice_struct::gen_comminfo_struct lattice_struct::create_general_gather( const
 #endif
 
 
-
+#if 0
 
 /// Get an MPI column in direction dir, build if necessary
 lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
@@ -915,6 +915,7 @@ lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
   return mpi_column[dir];
 }
 
+#endif
 
 void print_dashed_line() {
   output0 << "------------------------------------------------------------\n";

@@ -206,7 +206,9 @@ class Field {
         // this is vectorized branch
         bool antiperiodic = false;
         if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
-            lattice->special_boundaries[-d].is_on_edge) antiperiodic = true;
+            lattice->special_boundaries[-d].is_on_edge) {
+          antiperiodic = true;
+        }
 
         if constexpr (is_vectorizable_type<T>::value) {
           // now vectorized layout
@@ -214,9 +216,9 @@ class Field {
             // with boundary permutation need to fetch elems 1-by-1
             int n;
             const unsigned * index_list = to_node.get_sitelist(par,n);
-            if (!antiperiodic)
+            if (!antiperiodic) {
               payload.gather_elements(buffer, index_list, n, lattice);
-            else {
+            } else {
               payload.gather_elements_negated(buffer, index_list, n, lattice);
             }
           } else {
@@ -735,10 +737,10 @@ class Field {
   Field<T> shift(const CoordinateVector &v) const { return shift(v,ALL); }
 
   // General getters and setters
-  void set_elements(T * elements, std::vector<CoordinateVector> coord_list);
-  void set_element(T element, CoordinateVector coord);
-  void get_elements(T * elements, std::vector<CoordinateVector> coord_list) const;
-  T get_element(CoordinateVector coord) const;
+  void set_elements(T * elements, const std::vector<CoordinateVector> & coord_list);
+  void set_element(T element, const CoordinateVector & coord);
+  void get_elements(T * elements, const std::vector<CoordinateVector> & coord_list) const;
+  T get_element(const CoordinateVector & coord) const;
 
   // Fourier transform declarations
   void FFT(fft_direction fdir = fft_direction::forward);
@@ -748,6 +750,7 @@ class Field {
   void write_to_file(std::string filename);
   void read_from_stream(std::ifstream & inputfile);
   void read_from_file(std::string filename);
+
 
 };   // End of class Field<>
 
@@ -1294,7 +1297,7 @@ void Field<T>::field_struct::send_elements(T * buffer, std::vector<CoordinateVec
 /// Set an element. Assuming that each node calls this with the same value, it is
 /// sufficient to set the elements locally
 template<typename T>
-void Field<T>::set_elements( T * elements, std::vector<CoordinateVector> coord_list) {
+void Field<T>::set_elements( T * elements, const std::vector<CoordinateVector> & coord_list) {
   std::vector<unsigned> my_indexes;
   std::vector<unsigned> my_elements;
   for(int i=0; i<coord_list.size(); i++){
@@ -1311,7 +1314,7 @@ void Field<T>::set_elements( T * elements, std::vector<CoordinateVector> coord_l
 // Set a single element. Assuming that each node calls this with the same value, it is
 /// sufficient to set the element locally
 template<typename T>
-void Field<T>::set_element( T element, CoordinateVector coord) {
+void Field<T>::set_element( T element, const CoordinateVector & coord) {
   if( lattice->is_on_node(coord) ){
     set_value_at( element, lattice->site_index(coord));
   }
@@ -1324,7 +1327,7 @@ void Field<T>::set_element( T element, CoordinateVector coord) {
 #if defined(USE_MPI)
 /// This is not local, the element needs to be communicated to all nodes
 template<typename T>
-T Field<T>::get_element( CoordinateVector coord) const {
+T Field<T>::get_element( const CoordinateVector & coord) const {
   T element;
   int owner = lattice->node_rank(coord);
 
@@ -1339,7 +1342,7 @@ T Field<T>::get_element( CoordinateVector coord) const {
 
 /// Get a list of elements and store them into an array on all nodes
 template<typename T>
-void Field<T>::get_elements( T * elements, std::vector<CoordinateVector> coord_list) const {
+void Field<T>::get_elements( T * elements, const std::vector<CoordinateVector> & coord_list) const {
   struct node_site_list_struct {
     std::vector<int> indexes;
     std::vector<CoordinateVector> coords;
@@ -1376,13 +1379,13 @@ void Field<T>::get_elements( T * elements, std::vector<CoordinateVector> coord_l
 #else
 /// Without MPI, we just need to call get
 template<typename T>
-T Field<T>::get_element( CoordinateVector coord) const {
+T Field<T>::get_element( const CoordinateVector & coord) const {
   return get_value_at( lattice->site_index(coord) );
 }
 
 /// Without MPI, we just need to call get
 template<typename T>
-void Field<T>::get_elements( T * elements, std::vector<CoordinateVector> coord_list) const {
+void Field<T>::get_elements( T * elements, const std::vector<CoordinateVector> & coord_list) const {
   for( int i=0; i<coord_list.size(); i++){
     elements[i] = get_element(coord_list[i]);
   }
@@ -1552,7 +1555,7 @@ extern Field<double> disable_avx;
 #ifdef CUDA
 #include "plumbing/backend_cuda/FFT.h"
 #else
-#include "plumbing/FFT.h"
+// #include "plumbing/FFT.h"
 #endif
 
 
