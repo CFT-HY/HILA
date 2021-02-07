@@ -251,7 +251,7 @@ public:
   CoordinateVector min_coordinate() const { return mynode.min; }
   int min_coordinate(direction d) const { return mynode.min[d]; }
   
-  bool is_on_this_node(const CoordinateVector & c);
+  bool is_on_mynode(const CoordinateVector & c);
   int  node_rank(const CoordinateVector & c);
   unsigned site_index(const CoordinateVector & c);
   unsigned site_index(const CoordinateVector & c, const unsigned node);

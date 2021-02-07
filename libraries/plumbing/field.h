@@ -1205,7 +1205,7 @@ void Field<T>::field_struct::gather_elements(T * buffer, std::vector<CoordinateV
   std::fill(node_list.begin(), node_list.end(),0);
   
   for(CoordinateVector c : coord_list){
-    if( lattice->is_on_this_node(c) ){
+    if( lattice->is_on_mynode(c) ){
       index_list.push_back(lattice->site_index(c));
     }
 
@@ -1240,7 +1240,7 @@ void Field<T>::field_struct::send_elements(T * buffer, std::vector<CoordinateVec
   std::fill(node_list.begin(), node_list.end(),0);
 
   for(CoordinateVector c : coord_list){
-    if( lattice->is_on_this_node(c) ){
+    if( lattice->is_on_mynode(c) ){
       index_list.push_back(lattice->site_index(c));
     }
 
@@ -1308,7 +1308,7 @@ void Field<T>::set_elements( T * elements, const std::vector<CoordinateVector> &
   std::vector<unsigned> my_elements;
   for(int i=0; i<coord_list.size(); i++){
     CoordinateVector c = coord_list[i];
-    if( lattice->is_on_this_node(c) ){
+    if( lattice->is_on_mynode(c) ){
       my_indexes.push_back(lattice->site_index(c));
       my_elements.push_back(elements[i]);
     }
@@ -1321,7 +1321,7 @@ void Field<T>::set_elements( T * elements, const std::vector<CoordinateVector> &
 /// sufficient to set the element locally
 template<typename T>
 void Field<T>::set_element( T element, const CoordinateVector & coord) {
-  if( lattice->is_on_this_node(coord) ){
+  if( lattice->is_on_mynode(coord) ){
     set_value_at( element, lattice->site_index(coord));
   }
   mark_changed(ALL);
