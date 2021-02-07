@@ -1,17 +1,12 @@
-You can obtain the statically linked hilapp-executable from
-  <put here hilapp link!>
-
-If you need to develop or debug hilapp, the llvm/clang development toolchain
-is needed.  Note that if you need a statically linked hilapp (for portability), the 
-option 3 below is needed (as far as I know)
+Clang / llvm development tools are needed for compiling hila-preprocessor 'hilapp'
 
 --------------------------
 
-1. The easiest option is to use linux distribution packages (to be tested on a Mac!).
-Linux distributions include llvm and clang packages needed for the compilation.  
+1. The best option is to use linux distribution packages (to be tested on a Mac!).
+Major distributions include llvm and clang packages needed for hilapp. 
 For example, in Ubuntu 20.04 the following seems to work:
 
-> apt install clang-10 llvm-10 clang-tools-10 libclang-common-10-dev libclang-cpp10-dev libclang-10-dev clang-format-10
+> apt install clang-11 llvm-11 clang-tools-11 libclang-common-11-dev libclang-cpp11-dev libclang-11-dev clang-format-11
 
 --------------------------
 
@@ -19,26 +14,21 @@ For example, in Ubuntu 20.04 the following seems to work:
 
 See page https://apt.llvm.org/ for the correct apt/yum commands for debian/ubuntu and rpms.
 
-* add deb to sources (this for ubuntu 16.04 xenial).  Change -11 to the correct llvm/clang version!
-sudo add-apt-repository 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-11 main'
+* add deb to sources (this for ubuntu 20.04 focal).  Change -12 to the desired llvm/clang version.
+sudo add-apt-repository 'deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main'
 
 * with key
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
 
-* install (again, change 11 to suit!)
+* install (again, change 12 to suit!)
 sudo apt update
-sudo apt install clang-11 clang-tools-11 clang-11-doc libclang-common-11-dev libclang-11-dev libclang1-11 clang-format-11
+sudo apt install clang-12 clang-tools-12 clang-12-doc libclang-common-12-dev libclang-12-dev libclang1-12 clang-format-12
 
-* Clang 8 or above is required.
-
-* NOTE: this gives you only .so -libraries.  If you need a statically compiled "hilapp"-program,
-  see the instruction below.
+* Clang 10 or above is required.
 
 ---------------------------
 
 3. Source distribution and compiling
-
-Source distribution seems to be required if you want to make statically compiled hilapp.
 
 For download and compilation, see page
   https://clang.llvm.org/get_started.html
@@ -58,9 +48,7 @@ cd build
 cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release ../llvm
 make -j4
 
-* This leaves binaries in llvm-project/build/bin -directory.  This is sufficient for hilapp.
-  (make install would install these on suitable places)
-* -j -option does parallel make, best number depends on the computer doing the compilation
+* This leaves binaries in llvm-project/build/bin -directory. 
 * Build types are Release, MinSizeRel, Debug, RelWithDebInfo
 
 
