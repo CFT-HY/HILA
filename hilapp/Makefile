@@ -11,7 +11,7 @@
 # 
 #-------------------------------------------------------------------------------
 #
-# The Makefiel variables may be customized, depending on where
+# The Makefile variables may be customized, depending on where
 # and how you built LLVM & Clang. They can be overridden by setting them on the
 # make command line: "make VARNAME=VALUE", etc.
 
@@ -22,6 +22,7 @@
 # LLVM_SRC_PATH := /usr/lib/llvm-8
 
 # If it is a system distribution (linux), then llvm-config should be installed:
+
 LLVM_SRC_PATH := $(shell llvm-config --prefix)
 
 # If you built llvm/clang yourself, LLVM_BUILD_PATH is the directory 
@@ -30,7 +31,6 @@ LLVM_SRC_PATH := $(shell llvm-config --prefix)
 LLVM_BUILD_PATH := $(LLVM_SRC_PATH)
 
 LLVM_BIN_PATH 	:= $(LLVM_BUILD_PATH)/bin
-
 
 $(info --------------------------------------------------------------)
 $(info Using LLVM_SRC_PATH = $(LLVM_SRC_PATH))
@@ -134,9 +134,9 @@ CLANG_LIBS := \
 	-lclangTooling \
 	-Wl,--end-group
 
-# Internal paths in this project: where to find sources, and where to put
-# build *.o files
 
+
+# Sources for this project
 
 
 HEADERS = \
@@ -172,15 +172,6 @@ OBJECTS = \
   $(BUILDDIR)/write_output.o
 
 
-# ifeq ($(findstring static,$(MAKECMDGOALS)),static)
-
-# # Make a special rule for static lib
-# STATIC_INCLUDE := $(BINDIR)/hilapp_include
-
-# $(STATIC_INCLUDE) : $(MAKEFILE)
-# 	-ln -s $(CLANG_INCLUDE_PATH) $(STATIC_INCLUDE)
-
-# endif
 
 
 $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
@@ -221,4 +212,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILDDIR)/*.o
+	rm -rf $(BUILDDIR)/*

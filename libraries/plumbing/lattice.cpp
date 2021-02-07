@@ -77,7 +77,7 @@ void lattice_struct::setup(int nx) {
 #endif
 
 ///////////////////////////////////////////////////////////////////////
-/// The routines is_on_node(), node_rank(), site_index()
+/// The routines is_on_this_node(), node_rank(), site_index()
 /// implement the "layout" of the nodes and sites of the lattice.
 /// To be changed in different implementations!
 ///////////////////////////////////////////////////////////////////////
@@ -115,7 +115,7 @@ int lattice_struct::node_rank(const CoordinateVector & loc)
 /// Is the coordinate on THIS node 
 ///////////////////////////////////////////////////////////////////////
 
-bool lattice_struct::is_on_node(const CoordinateVector & loc)
+bool lattice_struct::is_on_this_node(const CoordinateVector & loc)
 {
   int d;
 
@@ -453,7 +453,7 @@ void lattice_struct::create_std_gathers()
       //if (is_up_dir(d)) ln[d] = (l[d] + 1) % size(d);
       //else ln[d] = (l[d] + size(-d) - 1) % size(-d);
  
-      if (is_on_node(ln)) {
+      if (is_on_this_node(ln)) {
         neighb[d][i] = site_index(ln);
       } else {
         // reset neighb array temporarily, as a flag
@@ -736,7 +736,7 @@ lattice_struct::create_comm_node_vector( CoordinateVector offset, unsigned * ind
     l  = coordinates(i);
     ln = mod( l + offset, size() );
  
-    if (is_on_node(ln)) {
+    if (is_on_this_node(ln)) {
       if (receive) index[i] = site_index(ln);
     } else {
 	    // Now site is off-node, this will leads to fetching
@@ -801,7 +801,7 @@ lattice_struct::create_comm_node_vector( CoordinateVector offset, unsigned * ind
       l  = coordinates(i);
       ln = mod( l + offset, size() );
  
-      if (!is_on_node(ln)) {
+      if (!is_on_this_node(ln)) {
         unsigned r = node_rank(ln);
         int n = 0;
         // find the node from the list 

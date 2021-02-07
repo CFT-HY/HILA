@@ -30,9 +30,11 @@ class Field;
 template <typename T>
 void ensure_field_operators_exist(Field<T> & f);
 
-
 template <typename T>
 using element = T;
+
+template <typename T>
+class Field_at;
 
 
 /// Field class
@@ -740,7 +742,10 @@ class Field {
   void set_elements(T * elements, const std::vector<CoordinateVector> & coord_list);
   void set_element(T element, const CoordinateVector & coord);
   void get_elements(T * elements, const std::vector<CoordinateVector> & coord_list) const;
-  T get_element(const CoordinateVector & coord) const;
+
+  // Access fields with coordinates 
+  T at(const CoordinateVector & coord) const;
+  Field_at<T>& at(cosnt CoordinateVector &coord);
 
   // Fourier transform declarations
   void FFT(fft_direction fdir = fft_direction::forward);
@@ -750,6 +755,7 @@ class Field {
   void write_to_file(std::string filename);
   void read_from_stream(std::ifstream & inputfile);
   void read_from_file(std::string filename);
+
 
 
 };   // End of class Field<>
@@ -1199,7 +1205,7 @@ void Field<T>::field_struct::gather_elements(T * buffer, std::vector<CoordinateV
   std::fill(node_list.begin(), node_list.end(),0);
   
   for(CoordinateVector c : coord_list){
-    if( lattice->is_on_node(c) ){
+    if( lattice->is_on_this_node(c) ){
       index_list.push_back(lattice->site_index(c));
     }
 
@@ -1234,7 +1240,7 @@ void Field<T>::field_struct::send_elements(T * buffer, std::vector<CoordinateVec
   std::fill(node_list.begin(), node_list.end(),0);
 
   for(CoordinateVector c : coord_list){
-    if( lattice->is_on_node(c) ){
+    if( lattice->is_on_this_node(c) ){
       index_list.push_back(lattice->site_index(c));
     }
 
@@ -1302,7 +1308,7 @@ void Field<T>::set_elements( T * elements, const std::vector<CoordinateVector> &
   std::vector<unsigned> my_elements;
   for(int i=0; i<coord_list.size(); i++){
     CoordinateVector c = coord_list[i];
-    if( lattice->is_on_node(c) ){
+    if( lattice->is_on_this_node(c) ){
       my_indexes.push_back(lattice->site_index(c));
       my_elements.push_back(elements[i]);
     }
@@ -1315,7 +1321,7 @@ void Field<T>::set_elements( T * elements, const std::vector<CoordinateVector> &
 /// sufficient to set the element locally
 template<typename T>
 void Field<T>::set_element( T element, const CoordinateVector & coord) {
-  if( lattice->is_on_node(coord) ){
+  if( lattice->is_on_this_node(coord) ){
     set_value_at( element, lattice->site_index(coord));
   }
   mark_changed(ALL);
@@ -1327,8 +1333,9 @@ void Field<T>::set_element( T element, const CoordinateVector & coord) {
 #if defined(USE_MPI)
 /// This is not local, the element needs to be communicated to all nodes
 template<typename T>
-T Field<T>::get_element( const CoordinateVector & coord) const {
+T Field<T>::at( const CoordinateVector & coord) const {
   T element;
+
   int owner = lattice->node_rank(coord);
 
   if( hila::myrank() == owner ){
@@ -1379,7 +1386,7 @@ void Field<T>::get_elements( T * elements, const std::vector<CoordinateVector> &
 #else
 /// Without MPI, we just need to call get
 template<typename T>
-T Field<T>::get_element( const CoordinateVector & coord) const {
+T Field<T>::at( const CoordinateVector & coord) const {
   return get_value_at( lattice->site_index(coord) );
 }
 
@@ -1546,6 +1553,7 @@ static void read_fields(std::string filename, fieldtypes&... fields){
 
 //HACK: force disable vectorization in a loop using
 // if(disable_avx[X]==0){};
+// TODO: remove all of these!
 extern Field<double> disable_avx;
 
 
