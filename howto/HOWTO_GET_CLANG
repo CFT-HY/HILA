@@ -41,6 +41,9 @@ sudo apt install clang-11 clang-tools-11 clang-11-doc libclang-common-11-dev lib
 see page https://clang.llvm.org/get_started.html  for compiler etc. requirements.  Any modern
 gcc or clang should be sufficient.  Python and cmake are also needed.
 
+DOWNLOAD SEEMS TO HAVE CHANGED FROM THE ONE BELOW; NOW
+git clone https://github.com/llvm/llvm-project.git
+GETS ALL IN ONE GO
 
 * Download with (this gives the latest stable version)
 
