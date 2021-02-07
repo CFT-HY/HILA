@@ -11,7 +11,7 @@
 # 
 #-------------------------------------------------------------------------------
 #
-# The following variables will likely need to be customized, depending on where
+# The Makefiel variables may be customized, depending on where
 # and how you built LLVM & Clang. They can be overridden by setting them on the
 # make command line: "make VARNAME=VALUE", etc.
 
@@ -21,51 +21,94 @@
 # directories of LLVM, Clang in tools/clang/, etc.
 # LLVM_SRC_PATH := /usr/lib/llvm-8
 
-# If it is a "system library", then llvm-config should be installed:
+# If it is a system distribution (linux), then llvm-config should be installed:
 LLVM_SRC_PATH := $(shell llvm-config --prefix)
 
-# LLVM_BUILD_PATH is the directory in which you built LLVM - where you ran
-# configure or cmake.
+# If you built llvm/clang yourself, LLVM_BUILD_PATH is the directory 
+# in which you built LLVM - where you ran configure or cmake.
 
 LLVM_BUILD_PATH := $(LLVM_SRC_PATH)
 
 LLVM_BIN_PATH 	:= $(LLVM_BUILD_PATH)/bin
 
-$(info -----------------------------------------------)
+
+$(info --------------------------------------------------------------)
 $(info Using LLVM_SRC_PATH = $(LLVM_SRC_PATH))
 $(info Using LLVM_BUILD_PATH = $(LLVM_BUILD_PATH))
 $(info Using LLVM_BIN_PATH = $(LLVM_BIN_PATH))
-$(info -----------------------------------------------)
+$(info --------------------------------------------------------------)
+
+
+# Main part of the Makefile
 
 # CXX has to be a modern C++ compiler that supports C++17. gcc 8 and
 # higher or Clang 8 and higher are recommended. Best of all, if you build LLVM
 # from sources, use the same compiler you built LLVM with.
-# Note: starting with release 3.7, llvm-config will inject flags that gcc may
-# not support (for example '-Wcovered-switch-default'). If you run into this
-# problem, build with CXX set to a modern clang++ binary instead of g++.
 
-#CXX := g++-5
+#CXX := g++
 CXX := $(LLVM_BIN_PATH)/clang++
-CXXFLAGS := -fno-rtti -std=c++17 -g
+CXXFLAGS := -fno-rtti -std=c++17 -O2
 
+# Directories where stuff is found and built
+SRCDIR := src
+BUILDDIR := build
+BINDIR := bin
+
+# Set some flags for compile
+# thse should be present also for own build for llvm/clang
 LLVM_CXXFLAGS := `$(LLVM_BIN_PATH)/llvm-config --cxxflags`
-LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`
 
+###############################################################################
+# Select non-static (standard) or static compile 
+# Static is useful for portability, the binary hilapp can be copied directly to
+# platforms without full llvm/clang development environment.  This unfortunately
+# includes many supercomputing environments.
+#
+# It may be that hilapp does not find all include files needed.  
+
+ifneq ($(findstring static,$(MAKECMDGOALS)),static)
+# This branch for non-static compile
+
+LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --libs --system-libs`
+STATIC := 
+
+else
+
+# Now static target
+# option --ignore-libllvm gives all libs as .a -files and libLLVM.so is not included
+
+LLVM_LDFLAGS := `$(LLVM_BIN_PATH)/llvm-config --ldflags --link-static --libs --system-libs`
+STATIC := -static
+
+# and target "static" depends only on hilapp
+static:  $(BUILDDIR)/hilapp ; @:
+
+$(info --------------------------------------------------------------)
+$(info Building statically linked program, portable )
+$(info NOTE: compilation will give warnings about possible glibc incompatibility)
+$(info issues when calling 'getpwnam' and 'getpwuid'. This seems to be harmless.)
+$(info --------------------------------------------------------------)
+
+
+endif
+# End of dynamic/static linking part
+###############################################################################
 
 # These are required when compiling vs. a source distribution of Clang. For
 # binary distributions llvm-config --cxxflags gives the right path.
+#
+#CLANG_INCLUDES := \
+#	-I$(LLVM_SRC_PATH)/include \
+#	-I$(LLVM_SRC_PATH)/tools/clang/include \
+#	-I$(LLVM_BUILD_PATH)/tools/clang/include
 
-CLANG_INCLUDES := \
-	-I$(LLVM_SRC_PATH)/include \
-	-I$(LLVM_SRC_PATH)/tools/clang/include \
-	-I$(LLVM_BUILD_PATH)/tools/clang/include
 
 # List of Clang libraries to link. The proper -L will be provided by the
 # call to llvm-config
-# Note that I'm using -Wl,--{start|end}-group around the Clang libs; this is
-# because there are circular dependencies that make the correct order difficult
-# to specify and maintain. The linker group options make the linking somewhat
-# slower, but IMHO they're still perfectly fine for tools that link with Clang.
+# Using -Wl,--{start|end}-group around the clang libs avoids
+# circular dependencies that make the correct order difficult
+# to specify and maintain.
+
 
 CLANG_LIBS := \
 	-Wl,--start-group \
@@ -92,11 +135,9 @@ CLANG_LIBS := \
 	-Wl,--end-group
 
 # Internal paths in this project: where to find sources, and where to put
-# build artifacts.
+# build *.o files
 
-SRCDIR := src
-BUILDDIR := build
-BINDIR := bin
+
 
 HEADERS = \
   $(SRCDIR)/hilapp.h \
@@ -131,17 +172,23 @@ OBJECTS = \
   $(BUILDDIR)/write_output.o
 
 
+# ifeq ($(findstring static,$(MAKECMDGOALS)),static)
+
+# # Make a special rule for static lib
+# STATIC_INCLUDE := $(BINDIR)/hilapp_include
+
+# $(STATIC_INCLUDE) : $(MAKEFILE)
+# 	-ln -s $(CLANG_INCLUDE_PATH) $(STATIC_INCLUDE)
+
+# endif
+
 
 $(BUILDDIR)/%.o : $(SRCDIR)/%.cpp ${HEADERS} Makefile
 	@mkdir -p $(BUILDDIR)
-	$(CXX) -c $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $< -o $@
+	$(CXX) -c $(CXXFLAGS) $(STATIC) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $< -o $@
 
-#$(BUILDDIR)/hilapp: ${OBJECTS}
-#	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
-#		-static $(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
-
-$(BUILDDIR)/hilapp: ${OBJECTS}
-	$(CXX) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
+$(BUILDDIR)/hilapp: ${OBJECTS} ${STATIC_INCLUDE}
+	$(CXX) $(STATIC) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(OBJECTS) \
 	$(CLANG_LIBS) $(LLVM_LDFLAGS) -o $@
 
 install: $(BUILDDIR)/hilapp
@@ -165,7 +212,7 @@ $(GIT_SHA_FILE):
 # make separate rule for stringops
 $(BUILDDIR)/stringops.o : $(SRCDIR)/stringops.cpp $(HEADERS) Makefile $(GIT_SHA_FILE)
 	@mkdir -p $(BUILDDIR)
-	$(CXX) -c $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $(SHA_OPT) $< -o $@
+	$(CXX) -c $(CXXFLAGS) $(STATIC) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $(SHA_OPT) $< -o $@
 
 endif
 
@@ -174,4 +221,4 @@ endif
 
 .PHONY: clean
 clean:
-	rm -rf $(BUILDDIR)/* *.dot test/*.pyc test/__pycache__
+	rm -rf $(BUILDDIR)/*.o
