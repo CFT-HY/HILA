@@ -4,7 +4,6 @@
 #include <math.h>
 #include <assert.h>
 
-
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
 #include "datatypes/sun.h"
@@ -19,7 +18,7 @@
 
 
 
-const int nd[NDIM] = { 32, 64, 32, 50};
+const int nd[NDIM] = { 32, 32 , 32, 32 };
 
 
 inline void checkLatticeSetup(){

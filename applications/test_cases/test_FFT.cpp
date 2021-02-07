@@ -1,9 +1,12 @@
 #include "test.h"
+#include "plumbing/FFT_new.h"
+//#include "plumbing/FFT.h"
+
 
 int main(int argc, char **argv){
 
-  using T = Matrix<2,2,Cmplx<double>>;
-  // using T = Cmplx<double>;
+  // using T = Matrix<2,2,Cmplx<double>>;
+  using T = Cmplx<double>;
 
   test_setup(argc, argv);
     
@@ -17,16 +20,15 @@ int main(int argc, char **argv){
   
   // After one FFT the field is 0 except at coord 0
   p2 = 0;
-  T m = lattice->volume();
-  CoordinateVector c;
-  foralldir(d){
-    c[d] = 0;
-  }
+  T m;
+  m = lattice->volume();
+
+  CoordinateVector c(0);
   p2.set_element(m, c);
 
-
   FFT_field(f, p);
-  
+
+  sum = 0;
   onsites(ALL) {
     sum += (p[X]-p2[X]).norm_sq();
   }
@@ -37,7 +39,7 @@ int main(int argc, char **argv){
   // After two applications the field should be back to a constant * volume
   f2[ALL] = lattice->volume();
   
-  FFT_field(p, f, fft_direction::back);
+  FFT_field(p, f, fft_direction::inverse);
   
   sum = 0;
   double tnorm = 0;
