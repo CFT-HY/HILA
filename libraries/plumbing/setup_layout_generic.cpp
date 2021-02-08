@@ -29,6 +29,11 @@ void lattice_struct::setup_layout()
   output0 << "  =  " << l_volume << " sites\n";
   output0 << "Dividing to " << numnodes() << " nodes\n";
 
+  foralldir(d) if (size(d) % 2 != 0) {
+    output0 << "Lattice must be even to all directions (odd size:TODO)\n";
+    hila::finishrun();
+  }
+
   //Factorize the node number in primes
   // These factors must be used in slicing the lattice!
   int nn = numnodes();
@@ -50,10 +55,12 @@ void lattice_struct::setup_layout()
   // find the optimal direction to do it
   // Use simple heuristic: take the dim with the least amount of added "ghost sites"
 
-  CoordinateVector ghosts, nsize;
+  CoordinateVector nsize;
+  int64_t ghosts[NDIM];    // int is too small
+
   foralldir(d) {
-    int cosize = l_volume / size(d);
-    int n = size(d);
+    int64_t cosize = l_volume / size(d);
+    int64_t n = size(d);
     while ( (n*cosize) % nn != 0 ) n++;  // virtual size can be odd
     // now nsize is the new would-be size 
     ghosts[d] = (n-size(d))*cosize;
@@ -117,7 +124,7 @@ void lattice_struct::setup_layout()
       if (nodesiz[dir] < 3) fail = true;  // don't allow nodes of size 1 or 2
     if (fail && !secondtime) {
       secondtime = true;
-      ghosts[mdir] = 1<<28;   // this short-circuits direction mdir, some other taken next
+      ghosts[mdir] = 1<<60;   // this short-circuits direction mdir, some other taken next
     } else if (fail) {
       output0 << "Could not successfully lay out the lattice with " << numnodes() << " nodes\n";
       hila::finishrun();

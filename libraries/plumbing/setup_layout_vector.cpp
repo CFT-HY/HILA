@@ -34,6 +34,11 @@ void lattice_struct::setup_layout()
   output0 << "Dividing to " << numnodes() << " nodes\n";
   output0 << "Layout using vector of " << number_of_subnodes << " elements\n";
 
+  foralldir(d) if (size(d) % 2 != 0) {
+    output0 << "Lattice must be even to all directions (odd size:TODO)\n";
+    hila::finishrun();
+  }
+
   // we want to divide up to numnode * vector_size virtual nodes
   // use the float vector size to divide to numnodes() * vector_size nodes, this is the most
   // demanding.
@@ -65,10 +70,11 @@ void lattice_struct::setup_layout()
   // find the optimal direction to do it
   // Use simple heuristic: take the dim with the least amount of added "ghost sites"
 
-  CoordinateVector ghosts, nsize;
+  CoordinateVector nsize;
+  int64_t ghosts[NDIM];
   foralldir(d) {
-    int cosize = l_volume / size(d);
-    int n = size(d);
+    int64_t cosize = l_volume / size(d);
+    int64_t n = size(d);
     while ( (n*cosize) % nn != 0 ) n++;  // virtual size can be odd
     // now nsize is the new would-be size 
     ghosts[d] = (n-size(d))*cosize;
@@ -185,7 +191,7 @@ void lattice_struct::setup_layout()
 
     if (fail && !secondtime && gdir >= 0) {
       secondtime = true;
-      ghosts[gdir] = 1<<28;   // this short-circuits direction gdir, some other taken next
+      ghosts[gdir] = 1<<60;   // this short-circuits direction gdir, some other taken next
     } else if (fail) {
       output0 << "Could not successfully lay out the lattice with " << numnodes() << " nodes\n";
       hila::finishrun();
