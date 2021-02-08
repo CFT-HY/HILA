@@ -745,7 +745,7 @@ class Field {
 
   // Access fields with coordinates 
   T at(const CoordinateVector & coord) const;
-  Field_at<T>& at(cosnt CoordinateVector &coord);
+  Field_at<T>& at(const CoordinateVector &coord);
 
   // Fourier transform declarations
   void FFT(fft_direction fdir = fft_direction::forward);
