@@ -78,5 +78,7 @@ void test_std_gathers()
 
   timestamp("Communication tests done");
   print_dashed_line();
+
+  if (hila::myrank() == 0) hila::output.flush();
 }
 
