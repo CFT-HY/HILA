@@ -124,7 +124,7 @@ void lattice_struct::setup_layout()
       if (nodesiz[dir] < 3) fail = true;  // don't allow nodes of size 1 or 2
     if (fail && !secondtime) {
       secondtime = true;
-      ghosts[mdir] = 1<<60;   // this short-circuits direction mdir, some other taken next
+      ghosts[mdir] = (1ULL << 60);   // this short-circuits direction mdir, some other taken next
     } else if (fail) {
       output0 << "Could not successfully lay out the lattice with " << numnodes() << " nodes\n";
       hila::finishrun();

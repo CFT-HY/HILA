@@ -191,7 +191,7 @@ void lattice_struct::setup_layout()
 
     if (fail && !secondtime && gdir >= 0) {
       secondtime = true;
-      ghosts[gdir] = 1<<60;   // this short-circuits direction gdir, some other taken next
+      ghosts[gdir] = (1ULL << 60);   // this short-circuits direction gdir, some other taken next
     } else if (fail) {
       output0 << "Could not successfully lay out the lattice with " << numnodes() << " nodes\n";
       hila::finishrun();
