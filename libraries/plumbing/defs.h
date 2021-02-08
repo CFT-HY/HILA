@@ -133,7 +133,7 @@ void abort_communications(int status);
 
 
 // and print a dashed line
-void print_dashed_line();
+void print_dashed_line(const std::string & txt = {});
 
 // Useful c++14 template missing in Puhti compilation of hilapp
 #if defined(PUHTI) && defined(HILAPP)
