@@ -309,7 +309,7 @@ void hila::terminate(int status)
   print_dashed_line();
   hila::about_to_finish = true;   // avoid destructors 
   if( is_comm_initialized() ){
-    abort_communications(status);
+    finish_communications();
   }
   exit(1);
 }
