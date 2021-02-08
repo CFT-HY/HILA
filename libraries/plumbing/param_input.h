@@ -156,6 +156,7 @@ class input {
 
         std::string linebuffer;
         size_t lb_start = 0;   // linebuffer start index
+        bool is_line_printed;
 
         // these store the values scanned from list items
         int item_int_val = 0;     
@@ -170,10 +171,11 @@ class input {
         bool is_value(const std::string &s, double &val);
         bool is_value(const std::string &s, int &val);
         bool is_value(const std::string &s, std::string & val);
+        bool contains_word_list(const std::string & list, int & end_of_key );
 
         std::string remove_quotes(const std::string &val);
 
-        void print_linebuf();
+        void print_linebuf(int eok);
 
         bool get_line();
         bool handle_key(const std::string & c);

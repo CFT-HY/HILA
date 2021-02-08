@@ -27,7 +27,7 @@ input::returntype input::get() {
 }
 
 void input::open(const std::string &fname) {
-  bool got_error;
+  bool got_error = false;
   if (hila::myrank() == 0) {
     if (is_initialized) {
       hila::output << "Error: file '" << fname << "' cannot be opened because '" << filename 
@@ -38,7 +38,8 @@ void input::open(const std::string &fname) {
       inputfile.open(fname);
       if (inputfile.is_open()){
         is_initialized = true;
-        hila::output << "----- Reading file '" << filename << "' -----\n";
+
+        print_dashed_line("Reading file " + filename);
 
       } else {
         hila::output << "Error: input file '" << fname << "' could not be opened\n";
@@ -47,7 +48,7 @@ void input::open(const std::string &fname) {
     }
   }
   broadcast(got_error);
-  if (got_error) hila::terminate(0);
+  if (got_error) hila::finishrun();
 }
 
 void input::close() {
@@ -73,23 +74,34 @@ bool input::get_line() {
     size_t i = linebuffer.find(COMMENT_CHAR);
     if (i != std::string::npos) linebuffer.resize(i);
     lb_start = 0;
-    print_linebuf();
+
+    is_line_printed = false;   // not yet printed
   }
   return true;  // sync this at another spot
 }
 
 // print the read-in line with a bit special formatting
-void input::print_linebuf() {
+void input::print_linebuf(int end_of_key) {
   if (hila::myrank() == 0) {
-    std::string out;
-    size_t i;
-    for (i=0; i<linebuffer.size() && !std::isspace(linebuffer[i]); i++) 
-      out.push_back(linebuffer[i]);
-    out.push_back(' ');
-    while (out.size() < 16) out.push_back(' ');
+
+    if (is_line_printed) return;
+    is_line_printed = true;
+
+    int i;
+    while (std::isspace(linebuffer[i])) i++;
+    for ( ; i<linebuffer.size() && i < end_of_key; i++) {
+      hila::output << linebuffer[i];
+    }
+    hila::output << ' ';
+    if (end_of_key > 0) {
+      for (int j=i; j<20; j++) hila::output << ' ';
+    }
+
     while (i<linebuffer.size() && std::isspace(linebuffer[i])) i++;
-    if (i < linebuffer.size()) out.append( linebuffer.substr(i) );
-    hila::output << out << '\n';
+    if (i < linebuffer.size()) {
+      hila::output << linebuffer.substr(i);
+    }
+    hila::output << '\n';
   }
 }
 
@@ -102,7 +114,46 @@ bool input::remove_whitespace() {
   return true;    // do not broadcast yet, should be used only in node 0
 }
 
-// find tokens separated by whitespace or , - 
+
+
+// returns true if line contains the word list at the beginning of line.  list
+// contains the word separated by whitespace.  If match found, advances the
+// lb_start to new position.  end_of_key is the index where key match on line ends
+
+bool input::contains_word_list(const std::string & list, int & end_of_key) {
+  const char *p = linebuffer.c_str() + lb_start;
+  const char *q = list.c_str();
+  while (std::isspace(*p)) p++;
+  while (std::isspace(*q)) q++;
+
+  while (*p && *q) {
+    // compare non-space chars
+    while (*p && *q && *p == *q && !std::isspace(*q)) {
+      p++;
+      q++;
+    }
+    if (std::isspace(*q) && std::isspace(*p)) {  
+      // matching spaces, skip
+      while (std::isspace(*p)) p++;
+      while (std::isspace(*q)) q++;
+    }
+
+    if (*p != *q) break;    
+
+  }
+  // if line contained the words in list, *q = 0.
+  while (std::isspace(*q)) q++;
+  if (*q != 0) return false;
+
+  end_of_key = p - linebuffer.c_str();
+
+  while (std::isspace(*p)) p++;
+  lb_start = p - linebuffer.c_str();
+  return true;
+}
+
+
+// find tokens separated by whitespace or , 
 // inside of " .. " is one token too.
 // returns true if the next token (on the same line) is found
 
@@ -154,12 +205,15 @@ bool input::handle_key(const std::string &key) {
   if (hila::myrank()==0) {
     // check the linebuffer for stuff
     remove_whitespace();
-    if (key.size() == 0) return true;
-    std::string l;
-    if (!get_token(l) || l != key) {
-      hila::output << "Error: expecting key '" << key << "', got '" << l << "'\n";
+
+    int end_of_key = 0;
+    if (key.size() > 0 && !contains_word_list(key, end_of_key)) {
+      print_linebuf(0);
+      hila::output << "Error: expecting key '" << key << "'\n";
       return false;
     }
+
+    print_linebuf(end_of_key);
   }
   return true;
 }
@@ -207,7 +261,7 @@ int input::get_int(const std::string &label) {
   } bcdata = {val, no_error};
 
   broadcast(bcdata);
-  if (!bcdata.noerr) hila::terminate(0);
+  if (!bcdata.noerr) hila::finishrun();
   return bcdata.val;
 }
 
@@ -235,7 +289,7 @@ double input::get_double(const std::string &label) {
   } bcdata = {val, no_error};
 
   broadcast(bcdata);
-  if (!bcdata.noerr) hila::terminate(0);
+  if (!bcdata.noerr) hila::finishrun();
   return bcdata.val;
 }
 
@@ -265,7 +319,7 @@ std::string input::get_string(const std::string &label) {
     }
   }
   broadcast(no_error);
-  if (!no_error) hila::terminate(0);
+  if (!no_error) hila::finishrun();
 
   broadcast(val);
   return val;
@@ -311,7 +365,7 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
   } bcdata = {d, i, no_error};     // helper struct to do everything in a single broadcast
 
   broadcast(bcdata);
-  if (!bcdata.noerror) hila::terminate(0);
+  if (!bcdata.noerror) hila::finishrun();
   if (bcdata.i == -1) *dval = bcdata.d;
   return bcdata.i;
 }
@@ -347,7 +401,7 @@ void input::get_type_vector(const std::string & label, std::vector<T> & res,
     }
   }
   broadcast(no_error);
-  if (!no_error) hila::terminate(0);
+  if (!no_error) hila::finishrun();
 
   // broadcast the vector too
   broadcast(res);
