@@ -189,7 +189,6 @@ public:
 
   bool is_coordinate_type(Expr *E) {
     std::string s = get_expr_type(E);
-    llvm::errs() << "Expr type " << s << ' ' << s.find("CoordinateVector") << '\n';
     return (s.find("CoordinateVector") == 0);
   }
 

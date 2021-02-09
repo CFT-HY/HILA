@@ -247,7 +247,7 @@ public:
 
   int node_rank() const { return mynode.rank; }
   int n_nodes() const { return nodes.number; }
-  std::vector<node_info> nodelist() { return nodes.nodelist; }
+  // std::vector<node_info> nodelist() { return nodes.nodelist; }
   CoordinateVector min_coordinate() const { return mynode.min; }
   int min_coordinate(direction d) const { return mynode.min[d]; }
   

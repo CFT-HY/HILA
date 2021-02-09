@@ -585,7 +585,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 
   } else {
     if( name == "hila_random" ){
-      llvm::errs() << get_stmt_str(Call) << '\n';
+      // llvm::errs() << get_stmt_str(Call) << '\n';
       special_function_call sfc;
       sfc.fullExpr = Call;
       sfc.argsExpr = nullptr;

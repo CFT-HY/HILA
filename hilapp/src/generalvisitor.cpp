@@ -94,7 +94,6 @@ bool GeneralVisitor::is_field_with_coordinate(Expr *E) {
       strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
       is_field_expr(OC->getArg(0))) {
     
-    llvm::errs() << "CHECKING COORD TYPE\n";
     return is_coordinate_type(OC->getArg(1));
 
   }
@@ -192,7 +191,7 @@ bool GeneralVisitor::is_user_cast_stmt(Stmt * s) {
   if (CastExpr * ce = dyn_cast<CastExpr>(s)) {
     if (NamedDecl * p = ce->getConversionFunction()) {
       // now it is a user conversion function
-      llvm::errs() << " &&&&& GOT USER CONVERSION " << p->getNameAsString() << '\n';
+      // llvm::errs() << "GOT USER CONVERSION " << p->getNameAsString() << '\n';
       return true;
     }
   }

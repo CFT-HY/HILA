@@ -121,7 +121,7 @@ public:
 
     // this never seems to happen?
     if( is_user_cast_stmt(s) ) {
-      llvm::errs() << " GOT USER CAST " << get_stmt_str(s) << '\n';
+      // llvm::errs() << " GOT USER CAST " << get_stmt_str(s) << '\n';
       return true;
     }
 

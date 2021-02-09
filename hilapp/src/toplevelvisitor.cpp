@@ -317,7 +317,6 @@ DeclRefExpr * TopLevelVisitor::find_base_variable(Expr * E){
 bool TopLevelVisitor::is_variable_loop_local(VarDecl * decl){
   for (var_decl & d : var_decl_list) {
     if (d.scope >= 0 && decl == d.decl) {
-      llvm::errs() << "loop local var ref! \n";
       return true;
     }
   }
@@ -358,9 +357,9 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
 
   // Now handling depends on wether it's local, global, or something else
   if(!array_local){
-    llvm::errs() << "Non-local array\n";
+    // llvm::errs() << "Non-local array\n";
     if(!index_local){
-      llvm::errs() << "Non-local index\n";
+      // llvm::errs() << "Non-local index\n";
       // It's defined completely outside the loop. Can be replaced with a
       // temporary variable
       array_ref ar;
@@ -372,7 +371,7 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
     
       array_ref_list.push_back(ar);
     } else {
-      llvm::errs() << "Local index\n";
+      // llvm::errs() << "Local index\n";
 
       // The array is defined outside, but the index is local. This is 
       // the most problematic case.
@@ -386,14 +385,14 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E,
                  "Cannot mix loop local index and predefined array. You must use std::vector in a vector reduction." );
     }
   } else {
-    llvm::errs() << "Local array\n";
+    // llvm::errs() << "Local array\n";
     if( !index_local ){
-      llvm::errs() << "Local index\n";
+      // llvm::errs() << "Local index\n";
       // The index needs to be communicated to the loop. It's a normal variable,
       // so we can handle it as such
       handle_var_ref(DRE, is_assign, assignop);
     } else {
-      llvm::errs() << "Local index\n";
+      // llvm::errs() << "Local index\n";
       // Array and index are local. This does not require any action.
     }
   }
@@ -538,7 +537,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
   }
 
   if( is_user_cast_stmt(s) ) {
-    llvm::errs() << "GOT USER CAST " << get_stmt_str(s) << '\n';
+    // llvm::errs() << "GOT USER CAST " << get_stmt_str(s) << '\n';
   }
 
    
@@ -633,8 +632,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
 #if 1
 
     if (isa<ArraySubscriptExpr>(E)) {
-      llvm::errs() << "  It's array expr "
-                   << TheRewriter.getRewrittenText(E->getSourceRange()) << "\n";
+      // llvm::errs() << "  It's array expr "
+      //              << TheRewriter.getRewrittenText(E->getSourceRange()) << "\n";
       auto a = dyn_cast<ArraySubscriptExpr>(E);
 
       // At this point this should be an allowed expression?
@@ -664,7 +663,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
         handle_var_ref(DRE,false,assignop);
 
         if( !array_local && index_local ) {
-          llvm::errs() << "Found a vector reduction\n";
+          // llvm::errs() << "Found a vector reduction\n";
           vector_reduction_ref vrf;
           vrf.ref = OC;
           vrf.vector_name = vector_decl->getName().str();
@@ -695,7 +694,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt * s) {
     if (0){
 
       // not field type non-const expr
-      llvm::errs() << "Non-const other Expr: " << get_stmt_str(E) << '\n';
+      // llvm::errs() << "Non-const other Expr: " << get_stmt_str(E) << '\n';
       // loop-local variable refs inside? If so, we cannot evaluate this as "whole"
 
       // check_local_loop_var_refs = 1;
@@ -1452,8 +1451,6 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
 
 void TopLevelVisitor::field_with_coordinate_assign( Expr *lhs, Expr *rhs, SourceLocation oploc) {
 
-  llvm::errs() << "AT FIELD WITH COORD ASSIGN\n";
-
   // lhs is field[par] -expr - we know here that arg is of the
   // right type, so this succeeds
   CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(lhs);
@@ -1944,7 +1941,6 @@ SourceLocation TopLevelVisitor::spec_insertion_point(std::vector<const TemplateA
 
       CXXMethodDecl * md = dyn_cast<CXXMethodDecl>(f);
       // method, look at the encompassing classes
-      // llvm::errs() << " ----------------------------------- finding a location for a method specialization\n";
 
       // find the outermost class decl
       CXXRecordDecl *rd, *parent = dyn_cast<CXXRecordDecl>( md->getParent() );
