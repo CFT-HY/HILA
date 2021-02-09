@@ -191,7 +191,7 @@ void lattice_struct::setup_layout()
 
     if (fail && !secondtime && gdir >= 0) {
       secondtime = true;
-      ghosts[gdir] = (1ULL << 60);   // this short-circuits direction gdir, some other taken next
+      ghosts[gdir] = (1ULL << 62);   // this short-circuits direction gdir, some other taken next
     } else if (fail) {
       output0 << "Could not successfully lay out the lattice with " << numnodes() << " nodes\n";
       hila::finishrun();
@@ -252,10 +252,10 @@ void lattice_struct::setup_layout()
       else
         output0 << nodesiz[dir];
     }
-    int ns = 1;
+    int64_t ns = 1;
     foralldir(dir) ns *= nodesiz[dir];
     if (ghost_slices > 0) {
-      int ns2 = ns*(nodesiz[gdir]-1)/nodesiz[gdir];
+      int64_t ns2 = ns*(nodesiz[gdir]-1)/nodesiz[gdir];
       output0 << "  =  " << ns2 << " - " << ns << '\n';
     } else {
       output0 << "  =  " << ns << '\n';

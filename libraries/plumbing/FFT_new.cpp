@@ -24,10 +24,10 @@ timer fft_save_timer("  save result");
 
 struct fftnode_struct {
     int node;                // node rank to send stuff for fft:ing
-    int size_to_dir;         // size of "node" to fft-dir
-    int column_offset;       // first perp-plane column to be handled by "node"
-    int column_number;       // and number of columns to be sent
-    int recv_buf_size;       // size of my fft collect buffer (in units of elements*cmplx_size)
+    unsigned size_to_dir;    // size of "node" to fft-dir
+    unsigned column_offset;  // first perp-plane column to be handled by "node"
+    unsigned column_number;  // and number of columns to be sent
+    size_t recv_buf_size;    // size of my fft collect buffer (in units of elements*cmplx_size)
                              // for stuff received from / returned to "node"
     char * work_in;          // where to hang the fft collect buffers
     char * work_out;
@@ -38,12 +38,12 @@ struct fftnode_struct {
 
 
 static direction fft_dir;
-static int elements;
-static int cmplx_size;
+static size_t elements;
+static size_t cmplx_size;
 static int transform_dir;
 static bool is_float_fft;
 
-static int  my_columns[NDIM];  // how many columns does this node take care of
+static unsigned  my_columns[NDIM];  // how many columns does this node take care of
 
 static std::vector<fftnode_struct> fft_comms[NDIM];
 
@@ -53,14 +53,14 @@ static fftwf_plan fftwplan_f;
 static fftwf_complex * RESTRICT fftwbuf_f;
 
 
-int fft_get_buffer_offsets( const direction dir, const int elements,
-                            CoordinateVector & offset, CoordinateVector & nmin ) {
+size_t fft_get_buffer_offsets( const direction dir, const size_t elements,
+                               CoordinateVector & offset, CoordinateVector & nmin ) {
     
     offset[dir] = 1;
     nmin = lattice->mynode.min;
 
-    int element_offset = lattice->mynode.size[dir];
-    int s = element_offset * elements;
+    size_t element_offset = lattice->mynode.size[dir];
+    size_t s = element_offset * elements;
 
 
     foralldir(d) if (d != dir) {
@@ -73,7 +73,7 @@ int fft_get_buffer_offsets( const direction dir, const int elements,
 
 /// THis is to be called before fft to direction dir
 
-void init_fft_direction( direction dir, int _elements, int T_size, fft_direction fftdir,
+void init_fft_direction( direction dir, size_t _elements, size_t T_size, fft_direction fftdir,
                          void * const buf_in, void * const buf_out ) {
 
     fft_dir = dir;
@@ -130,12 +130,12 @@ void init_fft_direction( direction dir, int _elements, int T_size, fft_direction
             ++nodenumber;
         }
 
-        int total_columns = lattice->mynode.sites / lattice->mynode.size[dir];
+        size_t total_columns = lattice->mynode.sites / lattice->mynode.size[dir];
 
-        int nodes = fft_comms[dir].size();
+        size_t nodes = fft_comms[dir].size();
 
         // column offset and number are used for sending
-        int i = 0;
+        size_t i = 0;
         for (fftnode_struct & fn : fft_comms[dir]) {
             fn.column_offset = ((i * total_columns) / nodes) * lattice->mynode.size[dir]; 
             fn.column_number = (((i+1) * total_columns) / nodes) * lattice->mynode.size[dir] 
@@ -183,9 +183,9 @@ void init_fft_direction( direction dir, int _elements, int T_size, fft_direction
 
 template <>
 void fft_execute<Cmplx<double>>() {
-    int n_fft = my_columns[fft_dir] * elements;
+    size_t n_fft = my_columns[fft_dir] * elements;
 
-    for (int i=0; i<n_fft; i++) {
+    for (size_t i=0; i<n_fft; i++) {
         // collect stuff from buffers
 
         fft_buffer_timer.start();
@@ -224,9 +224,9 @@ void fft_execute<Cmplx<double>>() {
 
 template <>
 void fft_execute<Cmplx<float>>() {
-    int n_fft = my_columns[fft_dir] * elements;
+    size_t n_fft = my_columns[fft_dir] * elements;
 
-    for (int i=0; i<n_fft; i++) {
+    for (size_t i=0; i<n_fft; i++) {
         // collect stuff from buffers
 
         fft_buffer_timer.start();
@@ -267,8 +267,21 @@ void fft_post_gather() {
     for ( auto & fn : fft_comms[fft_dir] ) {
         if (fn.node != hila::myrank() ) {
 
-            MPI_Irecv( fn.work_in, fn.recv_buf_size * cmplx_size * elements,
-                       MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat, &fn.receive_request );
+            size_t siz = fn.recv_buf_size * elements;
+            if (siz >= (1ULL << 31)) {
+                hila::output << "Too large MPI message in FFT! Size " << siz << " complex numbers\n";
+                hila::terminate(1);
+            }
+
+            MPI_Datatype c_type;
+            if (cmplx_size == sizeof(Cmplx<double>)) {
+                c_type = MPI_C_DOUBLE_COMPLEX;
+            } else if (cmplx_size == sizeof(Cmplx<float>)) {
+                c_type = MPI_C_FLOAT_COMPLEX;
+            }
+
+            MPI_Irecv( fn.work_in, (int)siz, c_type, fn.node, WRK_GATHER_TAG,
+                       lattice->mpi_comm_lat, &fn.receive_request );
         }
     }
     fft_MPI_timer.stop();
@@ -279,9 +292,17 @@ void fft_start_gather( void * buffer ) {
     fft_MPI_timer.start();
     for (auto & fn: fft_comms[fft_dir]) if (fn.node != hila::myrank() ) {
         char * p = (char *)buffer + fn.column_offset * (cmplx_size * elements);
-        int n = fn.column_number * (cmplx_size * elements);
+        size_t n = fn.column_number * elements;
 
-        MPI_Isend( p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat, &fn.send_request );
+        MPI_Datatype c_type;
+        if (cmplx_size == sizeof(Cmplx<double>)) {
+            c_type = MPI_C_DOUBLE_COMPLEX;
+        } else if (cmplx_size == sizeof(Cmplx<float>)) {
+            c_type = MPI_C_FLOAT_COMPLEX;
+        }
+
+        MPI_Isend( p, (int)n, c_type, fn.node, WRK_GATHER_TAG, 
+                   lattice->mpi_comm_lat, &fn.send_request );
     }
 
     fft_MPI_timer.stop();
@@ -291,7 +312,7 @@ void fft_wait_send() {
 
     fft_MPI_timer.start();
 
-    int n = fft_comms[fft_dir].size() -1;
+    size_t n = fft_comms[fft_dir].size() -1;
     if (n > 0) {
         MPI_Request rr[n];
         MPI_Status stat[n];
@@ -329,9 +350,13 @@ void fft_post_scatter( void *buffer ) {
     fft_MPI_timer.start();    
     for ( auto & fn : fft_comms[fft_dir] ) if (fn.node != hila::myrank() ) {
         char * p = (char *)buffer + fn.column_offset * (cmplx_size * elements);
-        int n = fn.column_number * (cmplx_size * elements);
+        size_t n = fn.column_number * elements;
 
-        MPI_Irecv( p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat, &fn.receive_request );
+        MPI_Datatype c_type = (cmplx_size == sizeof(Cmplx<double>)) ?
+                                  MPI_C_DOUBLE_COMPLEX : MPI_C_FLOAT_COMPLEX; 
+
+        MPI_Irecv( p, (int)n, c_type, fn.node, WRK_SCATTER_TAG,
+                   lattice->mpi_comm_lat, &fn.receive_request );
     }
     fft_MPI_timer.stop();
 }
@@ -343,8 +368,11 @@ void fft_start_scatter( ) {
 
     for ( auto & fn : fft_comms[fft_dir] ) if (fn.node != hila::myrank() ) {
 
-        MPI_Isend( fn.work_out, fn.recv_buf_size * cmplx_size * elements,
-                   MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat, &fn.send_request );
+        MPI_Datatype c_type = (cmplx_size == sizeof(Cmplx<double>)) ?
+                                  MPI_C_DOUBLE_COMPLEX : MPI_C_FLOAT_COMPLEX; 
+
+        MPI_Isend( fn.work_out, fn.recv_buf_size * elements, c_type, fn.node,
+                   WRK_SCATTER_TAG, lattice->mpi_comm_lat, &fn.send_request );
     }
 
     fft_MPI_timer.stop();

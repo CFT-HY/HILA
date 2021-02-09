@@ -499,3 +499,22 @@ void vector_type_info() {
 }
 
 #endif
+
+
+void print_dashed_line(const std::string & text) {
+  static constexpr int linelength = 60;
+
+  if (hila::myrank() == 0) {
+
+    if (text.size() == 0) {
+      for (int i=0; i<linelength; i++) hila::output << '-';
+
+    } else {
+
+      hila::output << "----- " << text << ' ';
+      for (int i = 7+text.size() ; i<linelength; i++) hila::output << '-';
+    }
+    hila::output << '\n';
+
+  }
+}

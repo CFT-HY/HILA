@@ -11,7 +11,7 @@
 /// Initialize fft to direction dir.  _elements: number of complex values in field, T_size
 /// the size of the field variable.  fftdir is fft_direction::FORWARD or fft
 
-void init_fft_direction( direction dir, int _elements, int T_size, fft_direction fftdir,
+void init_fft_direction( direction dir, size_t _elements, size_t T_size, fft_direction fftdir,
                          void * const buffer1, void * const buffer2 );
 
 
@@ -21,8 +21,8 @@ void init_fft_direction( direction dir, int _elements, int T_size, fft_direction
 ///   and then other directions, in order
 /// Returns element_offset and sets offset and nmin vectors
 
-int fft_get_buffer_offsets( const direction dir, const int elements,
-                            CoordinateVector & offset, CoordinateVector & nmin );
+size_t fft_get_buffer_offsets( const direction dir, const size_t elements,
+                               CoordinateVector & offset, CoordinateVector & nmin );
 
 
 /// FFT execute does the actual fft.  It should be called as
@@ -42,7 +42,7 @@ template <> void fft_execute<Cmplx<float>>();
 template <typename T, typename cmplx_t>
 inline void fft_collect_data( const Field<T> & f, const direction dir, cmplx_t * const RESTRICT buffer ) {
 
-    constexpr int elements = sizeof(T)/sizeof(cmplx_t);   // cmplx elements in T
+    constexpr size_t elements = sizeof(T)/sizeof(cmplx_t);   // cmplx elements in T
 
     extern timer fft_collect_timer;
     fft_collect_timer.start();
@@ -57,15 +57,15 @@ inline void fft_collect_data( const Field<T> & f, const direction dir, cmplx_t *
     // elem_offset is the same for the offset of the elements of T
     CoordinateVector offset,nmin;
 
-    const int elem_offset = fft_get_buffer_offsets(dir, elements, offset, nmin);
+    const size_t elem_offset = fft_get_buffer_offsets(dir, elements, offset, nmin);
 
     // and collect the data
     #pragma hila novector direct_access(buffer)
     onsites(ALL) {
         T_union v;
         v.val = f[X];
-        int off = offset.dot( X.coordinates() - nmin );
-        for (int i=0; i<elements; i++) {
+        size_t off = offset.dot( X.coordinates() - nmin );
+        for (size_t i=0; i<elements; i++) {
 
             buffer[off + i*elem_offset] = v.c[i];
         }
@@ -79,7 +79,7 @@ inline void fft_collect_data( const Field<T> & f, const direction dir, cmplx_t *
 template <typename T, typename cmplx_t>
 inline void fft_save_result( Field<T> & f, const direction dir, const cmplx_t * const RESTRICT buffer ) {
 
-    constexpr int elements = sizeof(T)/sizeof(cmplx_t);   // cmplx elements in T
+    constexpr size_t elements = sizeof(T)/sizeof(cmplx_t);   // cmplx elements in T
 
     extern timer fft_save_timer;
     fft_save_timer.start();
@@ -93,15 +93,15 @@ inline void fft_save_result( Field<T> & f, const direction dir, const cmplx_t * 
     // Build vector offset, which encodes where the data should be written
     CoordinateVector offset,nmin;
 
-    const int elem_offset = fft_get_buffer_offsets(dir, elements, offset, nmin);
+    const size_t elem_offset = fft_get_buffer_offsets(dir, elements, offset, nmin);
 
     // and collect the data from buffers
     #pragma hila novector direct_access(buffer)
     onsites(ALL) {
         T_union v;
 
-        int off = offset.dot( X.coordinates() - nmin );
-        for (int i=0; i<elements; i++) {
+        size_t off = offset.dot( X.coordinates() - nmin );
+        for (size_t i=0; i<elements; i++) {
             v.c[i] = buffer[off + i*elem_offset];
         }
         f[X] = v.val;
@@ -132,7 +132,7 @@ inline void increment_current_coord( CoordinateVector & current, direction odirs
 template <typename cmplx_t>
 inline void fft_reshuffle_data( const direction fft_dir, cmplx_t * const RESTRICT out, 
                                 const direction prev_dir, const cmplx_t * const RESTRICT in,
-                                const int elements) {
+                                const size_t elements) {
 
 
     extern timer fft_reshuffle_timer;
@@ -140,8 +140,8 @@ inline void fft_reshuffle_data( const direction fft_dir, cmplx_t * const RESTRIC
 
     CoordinateVector offset_in, offset_out, nmin;
 
-    const int e_offset_in  = fft_get_buffer_offsets(prev_dir, elements, offset_in, nmin);
-    const int e_offset_out = fft_get_buffer_offsets(fft_dir, elements, offset_out, nmin);
+    const size_t e_offset_in  = fft_get_buffer_offsets(prev_dir, elements, offset_in, nmin);
+    const size_t e_offset_out = fft_get_buffer_offsets(fft_dir, elements, offset_out, nmin);
 
 #if 1
     // Don't understand why this below seems to be faster than the more "direct"
@@ -151,9 +151,9 @@ inline void fft_reshuffle_data( const direction fft_dir, cmplx_t * const RESTRIC
     #pragma hila novector direct_access(out,in)
     onsites(ALL) {
         CoordinateVector v = X.coordinates() - nmin;
-        int off_in = offset_in.dot( v );
-        int off_out = offset_out.dot( v );
-        for (int e=0; e<elements; e++) {
+        size_t off_in = offset_in.dot( v );
+        size_t off_out = offset_out.dot( v );
+        for (size_t e=0; e<elements; e++) {
             out[off_out + e*e_offset_out] = in[off_in + e*e_offset_in];
         }
     }
@@ -163,7 +163,7 @@ inline void fft_reshuffle_data( const direction fft_dir, cmplx_t * const RESTRIC
     // what order directions?  Tally these up to odirs-array (other directions)
     direction odirs[NDIM-1];
     int i=0;
-    int n_columns = 1;
+    size_t n_columns = 1;
     foralldir(d) if (d != fft_dir) {
         odirs[i++] = d;
         n_columns *= lattice->mynode.size[d];
@@ -172,18 +172,18 @@ inline void fft_reshuffle_data( const direction fft_dir, cmplx_t * const RESTRIC
 
     CoordinateVector current(0);
     const CoordinateVector nodesize=lattice->mynode.size;
-    const int ns = nodesize[(int)fft_dir];
+    const size_t ns = nodesize[(int)fft_dir];
 
-    for (int col=0; col<n_columns; col++) {
+    for (size_t col=0; col<n_columns; col++) {
 
         current[fft_dir] = 0;
-        int off_out = offset_out.dot( current );
+        size_t off_out = offset_out.dot( current );
 
-        for (int e=0; e<elements; e++) {
-            for (int d0=0; d0<ns; d0++) {
+        for (size_t e=0; e<elements; e++) {
+            for (size_t d0=0; d0<ns; d0++) {
                 current[fft_dir] = d0;
                 
-                int off_in = offset_in.dot( current );
+                size_t off_in = offset_in.dot( current );
                 /// and copy cmplx number at a time
                 out[d0 + off_out + e*e_offset_out] = in[e*e_offset_in + off_in];
                         // memcpy(out + (off_out + e*e_offset_out),  in + d0 + e*e_offset_in , sizeof(cmplx_t));
@@ -213,7 +213,7 @@ template<typename T, typename cmplx_t>
 inline void FFT_field_complex(const Field<T> & input, Field<T> & result, 
                               fft_direction fftdir = fft_direction::forward ){
 
-    constexpr int elements = sizeof(T)/sizeof(cmplx_t);
+    constexpr size_t elements = sizeof(T)/sizeof(cmplx_t);
 
     assert( lattice == input.fs->lattice && "Default lattice mismatch in fft" );
 

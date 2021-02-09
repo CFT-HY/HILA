@@ -55,16 +55,16 @@ private:
   // Use ints instead of unsigned, just to avoid surprises in arithmetics
   // I shall assume here that int is 32 bits, and int64_t 64 bits. 
   CoordinateVector l_size;
-  int64_t l_volume;
+  size_t l_volume;
 
 public:
 
   /// Information about the node stored on this process
   struct node_struct {
     int rank;                           // rank of this node
-    unsigned sites, evensites, oddsites;
-    unsigned field_alloc_size;          // how many sites/node in allocations 
-    CoordinateVector min, size;        // node local coordinate ranges
+    size_t sites, evensites, oddsites;
+    size_t field_alloc_size;            // how many sites/node in allocations 
+    CoordinateVector min, size;         // node local coordinate ranges
     unsigned nn[NDIRS];                 // nn-node of node down/up to dirs
     bool first_site_even;               // is location min even or odd?
     std::vector<CoordinateVector> coordinates;
@@ -77,7 +77,7 @@ public:
     /// constant across nodes
     struct subnode_struct {
       CoordinateVector divisions,size;  // div to subnodes to directions, size
-      unsigned sites,evensites,oddsites;   
+      size_t sites,evensites,oddsites;   
       direction merged_subnodes_dir;
 
       void setup(const node_struct & tn);
@@ -112,8 +112,8 @@ public:
   /// Information necessary to communicate with a node
   struct comm_node_struct {
     unsigned rank;                         // rank of communicated with node
-    unsigned sites, evensites, oddsites;
-    unsigned buffer;                       // offset from the start of field array
+    size_t sites, evensites, oddsites;
+    size_t buffer;                         // offset from the start of field array
     unsigned * sitelist;
 
     // Get a vector containing the sites of parity par and number of elements
@@ -172,7 +172,7 @@ public:
     unsigned * index;
     std::vector<comm_node_struct> from_node;
     std::vector<comm_node_struct> to_node;
-    unsigned receive_buf_size;     
+    size_t receive_buf_size;     
   };
 
   /// nearest neighbour comminfo struct
@@ -192,7 +192,7 @@ public:
   struct special_boundary_struct {
     unsigned * neighbours;
     unsigned * move_index;
-    unsigned offset, n_even, n_odd, n_total;
+    size_t offset, n_even, n_odd, n_total;
     bool is_needed;
     bool is_on_edge;
   };
@@ -248,8 +248,8 @@ public:
   int node_rank() const { return mynode.rank; }
   int n_nodes() const { return nodes.number; }
   // std::vector<node_info> nodelist() { return nodes.nodelist; }
-  CoordinateVector min_coordinate() const { return mynode.min; }
-  int min_coordinate(direction d) const { return mynode.min[d]; }
+  // CoordinateVector min_coordinate() const { return mynode.min; }
+  // int min_coordinate(direction d) const { return mynode.min[d]; }
   
   bool is_on_mynode(const CoordinateVector & c);
   int  node_rank(const CoordinateVector & c);
@@ -264,6 +264,8 @@ public:
 
   
   bool first_site_even() { return mynode.first_site_even; };
+
+  void report_too_large();        // report on too large node
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
   void init_special_boundaries();
@@ -347,9 +349,9 @@ public:
   int64_t n_gather_done = 0, n_gather_avoided = 0;
  
   template <typename T>
-  void reduce_node_sum(T * value, int N, bool distribute);
+  void reduce_node_sum(T * value, int N, bool distribute = true);
   template <typename T>
-  void reduce_node_product(T * value, int N, bool distribute);
+  void reduce_node_product(T * value, int N, bool distribute = true);
 
   #else 
 
@@ -360,6 +362,13 @@ public:
   void reduce_node_product(T * value, int N, bool distribute) {}
 
   #endif
+
+  // simple reduce_node_sum for single variable
+  template <typename T>
+  T reduce_node_sum(T & value, bool distribute = true) {
+    reduce_node_sum( &value, 1, distribute);
+    return value;
+  }
 
 };
 

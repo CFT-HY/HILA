@@ -9,14 +9,14 @@
 // Array of Structures layout (standard)
 
 template<typename T> 
-inline auto field_storage<T>::get(const int i, const int field_alloc_size) const 
+inline auto field_storage<T>::get(const unsigned i, const unsigned field_alloc_size) const 
 {
   return fieldbuf[i];
 }
 
 template<typename T>
 template<typename A>
-inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size)
+inline void field_storage<T>::set(const A &value, const unsigned i, const unsigned field_alloc_size)
 {
   fieldbuf[i] = value;
 }
@@ -46,11 +46,11 @@ void field_storage<T>::free_field() {
 
 
 template<typename T> 
-inline auto field_storage<T>::get(const int i, const int field_alloc_size) const {
+inline auto field_storage<T>::get(const unsigned i, const unsigned field_alloc_size) const {
   assert( i < field_alloc_size);
   T value;
   real_t *value_f = (real_t *)(&value);
-  for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
+  for (unsigned e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
      value_f[e] = ((real_t*)fieldbuf)[e*field_alloc_size + i];
    }
   return value; 
@@ -58,18 +58,18 @@ inline auto field_storage<T>::get(const int i, const int field_alloc_size) const
 
 template<typename T>
 template<typename A>
-inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size){
+inline void field_storage<T>::set(const A &value, const unsigned i, const unsigned field_alloc_size){
   assert( i < field_alloc_size);
   real_t *value_f = (real_t *)(&value);
-  for (int e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
+  for (unsigned e=0; e<(sizeof(T)/sizeof(real_t)); e++) {
     ((real_t*)fieldbuf)[e*field_alloc_size + i] = value_f[e];
   }
 }
 
 template<typename T>
 void field_storage<T>::allocate_field(lattice_struct * lattice) {
-  constexpr static int t_elements = sizeof(T) / sizeof(real_t);
-  fieldbuf = malloc( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
+  constexpr static unsigned t_elements = sizeof(T) / sizeof(real_t);
+  fieldbuf = memalloc( t_elements*sizeof(real_t) * lattice->field_alloc_size() );
   if (fieldbuf == nullptr) {
     std::cout << "Failure in Field memory allocation\n";
     exit(1);
@@ -92,8 +92,8 @@ template<typename T>
 void field_storage<T>::gather_elements( T * RESTRICT buffer, 
                                         const unsigned * RESTRICT index_list, int n,
                                         const lattice_struct * RESTRICT lattice) const {
-  for (int j=0; j<n; j++) {
-    int index = index_list[j];
+  for (unsigned j=0; j<n; j++) {
+    unsigned index = index_list[j];
     buffer[j] = get(index, lattice->field_alloc_size());
     // std::memcpy( buffer + j, (char *) (&element), sizeof(T) );
   }
@@ -104,8 +104,8 @@ void field_storage<T>::gather_elements_negated( T * RESTRICT buffer,
                         const unsigned * RESTRICT index_list, int n,
                         const lattice_struct * RESTRICT lattice) const {
   if constexpr (has_unary_minus<T>::value) {
-    for (int j=0; j<n; j++) {
-      int index = index_list[j];
+    for (unsigned j=0; j<n; j++) {
+      unsigned index = index_list[j];
       buffer[j] = - get(index, lattice->field_alloc_size());    /// requires unary - !!
       // std::memcpy( buffer + j, (char *) (&element), sizeof(T) );
     }
@@ -121,7 +121,7 @@ template<typename T>
 void field_storage<T>::place_elements(T * RESTRICT buffer, 
                                       const unsigned * RESTRICT index_list, int n,
                                       const lattice_struct * RESTRICT lattice) {
-  for (int j=0; j<n; j++) {
+  for (unsigned j=0; j<n; j++) {
     set(buffer[j], index_list[j], lattice->field_alloc_size());
   }
 }
@@ -134,7 +134,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
 {
   // Only need to do something for antiperiodic boundaries
   if (antiperiodic) {
-    int n, start = 0;
+    unsigned n, start = 0;
     if (par == ODD) {
       n = lattice->special_boundaries[dir].n_odd;
       start = lattice->special_boundaries[dir].n_even;
@@ -142,7 +142,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
       if (par == EVEN) n = lattice->special_boundaries[dir].n_even;
       else n = lattice->special_boundaries[dir].n_total;
     }
-    int offset = lattice->special_boundaries[dir].offset + start;
+    unsigned offset = lattice->special_boundaries[dir].offset + start;
     gather_elements_negated( fieldbuf + offset,
         lattice->special_boundaries[dir].move_index + start, n, lattice);
   }
@@ -168,13 +168,13 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
 
 
 template<typename T>
-auto field_storage<T>::get_element( const int i, const lattice_struct * RESTRICT lattice) const {
+auto field_storage<T>::get_element( const unsigned i, const lattice_struct * RESTRICT lattice) const {
   return this->get(i, lattice->field_alloc_size());
 }
 
 template<typename T>
 template<typename A>
-void field_storage<T>::set_element(A &value, const int i, const lattice_struct * RESTRICT lattice) {
+void field_storage<T>::set_element(A &value, const unsigned i, const lattice_struct * RESTRICT lattice) {
   this->set(value, i, lattice->field_alloc_size());
 }
 

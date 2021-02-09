@@ -69,6 +69,29 @@ void broadcast_array(T * var, int n) {
 void broadcast(std::string & r);
 void broadcast(std::vector<std::string> &l);
 
+// try to get the basic data type of the message
+// this is just to enable a bit larger messages
+template <typename T>
+MPI_Datatype get_MPI_number_type(int &size) {
+
+  if (std::is_same<number_type<T>,int>::value) {
+    size = sizeof(int);
+    return MPI_INT;
+  } else if (std::is_same<number_type<T>,long>::value) {
+    size = sizeof(long);
+    return MPI_LONG;
+  } else if (std::is_same<number_type<T>,float>::value) {
+    size = sizeof(float);
+    return MPI_FLOAT;
+  } else if (std::is_same<number_type<T>,double>::value) {
+    size = sizeof(double);
+    return MPI_DOUBLE;
+  }
+  size = 1;
+  return MPI_BYTE;
+}
+
+
 // Reduction templates
 // TODO: implement using custom MPI Ops!  Then no ambiguity
 

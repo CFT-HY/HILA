@@ -22,7 +22,7 @@ struct vectorized_lattice_struct  {
     lattice_struct * lattice;
 
     /// vector sites on this node
-    unsigned v_sites;
+    size_t v_sites;
     /// subnode divisions to different directions
     CoordinateVector subdivisions;
     /// origin of the 1st subnode = origin of mynode
@@ -56,7 +56,7 @@ struct vectorized_lattice_struct  {
     unsigned * RESTRICT neighbours[NDIRS];
 
     /// The storage size of a field
-    unsigned alloc_size;
+    size_t alloc_size;
     /// A wait array for the vectorized field
     unsigned char * RESTRICT vec_wait_arr_; 
  
@@ -193,7 +193,7 @@ struct vectorized_lattice_struct  {
       }
 
       // accumulate here points off-subnode (to halo)
-      int c_offset = v_sites;  
+      size_t c_offset = v_sites;  
       for(direction d=(direction)0; d<NDIRS; ++d) {
 
         halo_offset[d] = c_offset;
@@ -268,6 +268,10 @@ struct vectorized_lattice_struct  {
 
       /// Finally, how big the field allocation should be - IN SITES, not vectors
       alloc_size = c_offset * vector_size;
+
+      if (alloc_size >= (1ULL << 32)) {
+        report_too_large();
+      }
 
     }
 
@@ -400,7 +404,7 @@ struct vectorized_lattice_struct  {
     }
 
     /// First index in a lattice loop
-    int loop_begin( ::parity P) const {
+    unsigned loop_begin( ::parity P) const {
       if(P==ODD){
         return v_sites/2;
       } else {
@@ -409,7 +413,7 @@ struct vectorized_lattice_struct  {
     }
 
     /// Last index in a lattice loop
-    int loop_end( ::parity P) const {
+    unsigned loop_end( ::parity P) const {
       if(P==EVEN){
         return v_sites/2;
       } else {

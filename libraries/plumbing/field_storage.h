@@ -39,27 +39,27 @@ class field_storage {
 
 #ifndef VECTORIZED
     // Get an element in a loop
-    DEVICE inline auto get(const int i, const int field_alloc_size) const;
+    DEVICE inline auto get(const unsigned i, const unsigned field_alloc_size) const;
 
     template<typename A>
-    DEVICE inline void set(const A &value, const int i, const int field_alloc_size);
+    DEVICE inline void set(const A &value, const unsigned i, const unsigned field_alloc_size);
 
     // Get a single element outside loops
-    inline auto get_element( const int i, const lattice_struct * RESTRICT lattice) const;
+    inline auto get_element( const unsigned i, const lattice_struct * RESTRICT lattice) const;
     template<typename A>
-    inline void set_element(A &value, const int i, const lattice_struct * RESTRICT lattice);
+    inline void set_element(A &value, const unsigned i, const lattice_struct * RESTRICT lattice);
 
 #else
-    inline T get_element(const int i) const;
+    inline T get_element(const unsigned i) const;
 
-    inline void set_element(const T &value, const int i);
+    inline void set_element(const T &value, const unsigned i);
 
     // in vector code, write only 1 element to field at site index idx
     template <typename vecT>
-    inline void set_vector( const vecT & val, const int idx );
+    inline void set_vector( const vecT & val, const unsigned idx );
 
     template <typename vecT>
-    inline vecT get_vector( const int idx ) const;
+    inline vecT get_vector( const unsigned idx ) const;
 
     void gather_comm_vectors( T * RESTRICT buffer, const lattice_struct::comm_node_struct & to_node, 
       parity par, const vectorized_lattice_struct<vector_info<T>::vector_size> * RESTRICT vlat, bool antiperiodic) const;

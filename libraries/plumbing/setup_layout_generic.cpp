@@ -49,7 +49,7 @@ void lattice_struct::setup_layout()
     hila::finishrun();
   }
 
-  int remainder = l_volume % nn;   // remainder = 0 even division
+  int64_t remainder = l_volume % nn;   // remainder = 0 even division
 
   // strategy: try to increase the box size to one of the directions until rem = 0
   // find the optimal direction to do it
@@ -124,7 +124,7 @@ void lattice_struct::setup_layout()
       if (nodesiz[dir] < 3) fail = true;  // don't allow nodes of size 1 or 2
     if (fail && !secondtime) {
       secondtime = true;
-      ghosts[mdir] = (1ULL << 60);   // this short-circuits direction mdir, some other taken next
+      ghosts[mdir] = (1ULL << 62);   // this short-circuits direction mdir, some other taken next
     } else if (fail) {
       output0 << "Could not successfully lay out the lattice with " << numnodes() << " nodes\n";
       hila::finishrun();

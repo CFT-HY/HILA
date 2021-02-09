@@ -149,38 +149,38 @@ class Field {
 
 #ifndef VECTORIZED
       /// Getter for an individual elements in a loop
-      inline auto get(const int i) const {
+      inline auto get(const unsigned i) const {
         return payload.get( i, lattice->field_alloc_size() );
       }
 
       template<typename A>
-      inline void set(const A & value, const int i) {
+      inline void set(const A & value, const unsigned i) {
         payload.set( value, i, lattice->field_alloc_size() );
       }
 
       /// Getter for an element outside a loop. Used to manipulate the field directly outside loops.
-      inline auto get_element(const int i) const {
+      inline auto get_element(const unsigned i) const {
         return payload.get_element( i, lattice );
       }
 
       template<typename A>
-      inline void set_element(const A & value, const int i) {
+      inline void set_element(const A & value, const unsigned i) {
         payload.set_element( value, i, lattice );
       }
 #else
       template <typename vecT>
-      inline vecT get_vector(const int i) const {
+      inline vecT get_vector(const unsigned i) const {
         return payload.template get_vector<vecT>( i );
       }
-      inline T get_element(const int i) const {
+      inline T get_element(const unsigned i) const {
         return payload.get_element( i );
       }
 
       template <typename vecT>
-      inline void set_vector(const vecT & val, const int i) {
+      inline void set_vector(const vecT & val, const unsigned i) {
         return payload.set_vector( val, i );
       }
-      inline void set_element(const T & val, const int i) {
+      inline void set_element(const T & val, const unsigned i) {
         return payload.set_element( val, i );
       }
 #endif
@@ -263,6 +263,7 @@ class Field {
 
       /// Place boundary elements from local lattice (used in vectorized version)
       void set_local_boundary_elements(direction dir, parity par){
+
         bool antiperiodic =
           (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC && lattice->special_boundaries[dir].is_on_edge);
         payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
@@ -283,7 +284,7 @@ class Field {
 
 #elif defined(CUDA)
 
-        int offs = 0;
+        unsigned offs = 0;
         if (par == ODD) offs = from_node.sites/2;
         if (receive_buffer[d] == nullptr) {
           receive_buffer[d] = payload.allocate_mpi_buffer( from_node.sites );
@@ -296,7 +297,7 @@ class Field {
           // use vanilla type, field laid out in std fashion
           return (T *)payload.get_buffer() + from_node.offset(par);
         } else {
-          int offs = 0;
+          unsigned offs = 0;
           if (par == ODD) offs = from_node.sites/2;
 
           if (vector_lattice->is_boundary_permutation[abs(d)]) {
@@ -307,7 +308,7 @@ class Field {
             return receive_buffer[d] + offs;
           } else {
             // directly to halo buffer
-            constexpr int vector_size = vector_info<T>::vector_size;
+            constexpr unsigned vector_size = vector_info<T>::vector_size;
             return ((T *)payload.get_buffer()
                     + (vector_lattice->halo_offset[d]*vector_size + offs) );
           }
@@ -989,12 +990,13 @@ dir_mask_t Field<T>::start_fetch(direction d, parity p) const {
 
   int par_i = static_cast<int>(par)-1;  // index to dim-3 arrays
 
-  constexpr int size = sizeof(T);
+  constexpr size_t size = sizeof(T);
 
   T * receive_buffer;
   T * send_buffer;
 
-
+  int size_type;
+  MPI_Datatype mpi_type = get_MPI_number_type<T>(size_type);
 
   if (from_node.rank != hila::myrank()) {
 
@@ -1004,10 +1006,15 @@ dir_mask_t Field<T>::start_fetch(direction d, parity p) const {
     // buffer can be separate or in Field buffer
     receive_buffer = fs->get_receive_buffer(d,par,from_node);
   
-    unsigned sites = from_node.n_sites(par);
+    size_t n = from_node.n_sites(par) * size/size_type;
 
-    // c++ version does not return errors??
-    MPI_Irecv( receive_buffer, sites*size, MPI_BYTE, from_node.rank,
+    if (n >= (1ULL << 31)) {
+      hila::output << "Too large MPI message!  Size " << n << '\n';
+      hila::terminate(1);
+    }
+
+    // c++ version does not return errors
+    MPI_Irecv( receive_buffer, n, mpi_type, from_node.rank,
 	             tag, lattice->mpi_comm_lat, &fs->receive_request[par_i][d] );
     
     post_receive_timer.stop();
@@ -1025,7 +1032,9 @@ dir_mask_t Field<T>::start_fetch(direction d, parity p) const {
 
     fs->gather_comm_elements(d,par,send_buffer,to_node);
  
-    MPI_Isend( send_buffer, sites*size, MPI_BYTE, to_node.rank, 
+    size_t n = sites * size / size_type;
+
+    MPI_Isend( send_buffer, n, mpi_type, to_node.rank, 
                tag, lattice->mpi_comm_lat, &fs->send_request[par_i][d]);
     start_send_timer.stop();
   }
@@ -1422,10 +1431,10 @@ void Field<T>::write_to_stream(std::ofstream& outputfile){
   T * buffer = (T*) malloc(write_size);
   CoordinateVector size = lattice->size();
 
-  int i=0;
+  size_t i=0;
   for(; i<lattice->volume(); i++){
     CoordinateVector site;
-    int ii = i;
+    size_t ii = i;
     foralldir(dir){
       site[dir] = ii%size[dir];
       ii = ii/size[dir];
@@ -1499,10 +1508,10 @@ void Field<T>::read_from_stream(std::ifstream& inputfile){
   T * buffer = (T*) malloc(read_size);
   CoordinateVector size = lattice->size();
 
-  int i=0;
+  size_t i=0;
   for(; i<lattice->volume(); i++){
     CoordinateVector site;
-    int ii = i;
+    size_t ii = i;
     foralldir(dir){
       site[dir] = ii%size[dir];
       ii = ii/size[dir];

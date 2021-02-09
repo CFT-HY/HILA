@@ -35,14 +35,14 @@ void field_storage<T>::free_field() {
 
 // These are used in device code. Can be called directly in a kernel.
 template<typename T> 
-__device__ auto field_storage<T>::get(const int i, const int field_alloc_size) const {
+__device__ auto field_storage<T>::get(const unsigned i, const unsigned field_alloc_size) const {
   assert( i < field_alloc_size);
   using base_type = typename base_type_struct<T>::type;
-  constexpr int n_elements = sizeof(T) / sizeof(base_type);
+  constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
   T value;
   base_type * value_f = (base_type *)&value;
   base_type * fp = (base_type *)(fieldbuf);
-  for (int e=0; e<n_elements; e++) {
+  for (unsigned e=0; e<n_elements; e++) {
     value_f[e] = fp[e*field_alloc_size + i];
   }
   return value;
@@ -51,13 +51,13 @@ __device__ auto field_storage<T>::get(const int i, const int field_alloc_size) c
 
 template<typename T>
 template<typename A>
-__device__ inline void field_storage<T>::set(const A &value, const int i, const int field_alloc_size){
+__device__ inline void field_storage<T>::set(const A &value, const unsigned i, const unsigned field_alloc_size){
   assert( i < field_alloc_size);
   using base_type = typename base_type_struct<T>::type;
-  constexpr int n_elements =sizeof(T) / sizeof(base_type);
+  constexpr unsigned n_elements =sizeof(T) / sizeof(base_type);
   const base_type * value_f = (base_type *)&value;
   base_type * fp = (base_type *)(fieldbuf);
-  for (int e=0; e<n_elements; e++) {
+  for (unsigned e=0; e<n_elements; e++) {
     fp[e*field_alloc_size + i] = value_f[e];
   }
 }
@@ -66,14 +66,14 @@ __device__ inline void field_storage<T>::set(const A &value, const int i, const 
 
 /// Get a single element from the field outside a loop. Slow, should only be used for setup
 template <typename T>
-__global__ void get_element_kernel( field_storage<T> field, char *buffer, unsigned i, const int field_alloc_size )
+__global__ void get_element_kernel( field_storage<T> field, char *buffer, unsigned i, const unsigned field_alloc_size )
 {
   *((T*) buffer) = field.get(i, field_alloc_size);
 }
 
 
 template<typename T>
-auto field_storage<T>::get_element( const int i, const lattice_struct * RESTRICT lattice) const {
+auto field_storage<T>::get_element( const unsigned i, const lattice_struct * RESTRICT lattice) const {
   char * d_buffer;
   T value;
   
@@ -90,14 +90,14 @@ auto field_storage<T>::get_element( const int i, const lattice_struct * RESTRICT
 
 /// Set a single element from outside a loop. Slow, should only be used for setup
 template <typename T>
-__global__ void set_element_kernel( field_storage<T> field, char *buffer, unsigned i, const int field_alloc_size )
+__global__ void set_element_kernel( field_storage<T> field, char *buffer, unsigned i, const unsigned field_alloc_size )
 {
   field.set( (T*) buffer, i, field_alloc_size);
 }
 
 template<typename T>
 template<typename A>
-void field_storage<T>::set_element(A &value, const int i, const lattice_struct * RESTRICT lattice) {
+void field_storage<T>::set_element(A &value, const unsigned i, const lattice_struct * RESTRICT lattice) {
   char * d_buffer;
   T t_value = value;
 
@@ -116,9 +116,9 @@ void field_storage<T>::set_element(A &value, const int i, const lattice_struct *
 
 /// A kernel that gathers elements
 template <typename T>
-__global__ void gather_elements_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void gather_elements_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const unsigned field_alloc_size )
 {
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
     buffer[Index] = field.get(site_index[Index], field_alloc_size);
   }
@@ -152,9 +152,10 @@ void field_storage<T>::gather_elements( T * RESTRICT buffer,
 /// A kernel that gathers elements negated
 // requires unary - 
 template <typename T>
-__global__ void gather_elements_negated_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void gather_elements_negated_kernel( field_storage<T> field, T *buffer, unsigned * site_index, 
+                                                const int n, const unsigned field_alloc_size )
 {
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
     buffer[Index] = - field.get(site_index[Index], field_alloc_size);
   }
@@ -191,32 +192,32 @@ void field_storage<T>::gather_elements_negated(T * RESTRICT buffer,
 
 
 template <typename T>
-__global__ void gather_comm_elements_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void gather_comm_elements_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const unsigned field_alloc_size )
 {
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
     using base_type = typename base_type_struct<T>::type;
-    constexpr int n_elements = sizeof(T) / sizeof(base_type);
+    constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
     T element = field.get(site_index[Index], field_alloc_size);
     base_type * ep = (base_type *)&element;
     base_type * fp = (base_type *)(buffer);
-    for (int e=0; e<n_elements; e++) {
+    for (unsigned e=0; e<n_elements; e++) {
       fp[Index+n*e] = ep[e];
     }
   }
 }
 
 template <typename T>
-__global__ void gather_comm_elements_negated_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void gather_comm_elements_negated_kernel( field_storage<T> field, T *buffer, unsigned * site_index, const int n, const unsigned field_alloc_size )
 {
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
     using base_type = typename base_type_struct<T>::type;
-    constexpr int n_elements = sizeof(T) / sizeof(base_type);
+    constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
     T element = -field.get(site_index[Index], field_alloc_size);
     base_type * ep = (base_type *)&element;
     base_type * fp = (base_type *)(buffer);
-    for (int e=0; e<n_elements; e++) {
+    for (unsigned e=0; e<n_elements; e++) {
       fp[Index+n*e] = ep[e];
     }
   }
@@ -289,9 +290,9 @@ void field_storage<T>::gather_comm_elements(T * RESTRICT buffer,
 
 /// A kernel that scatters the elements
 template <typename T>
-__global__ void place_elements_kernel( field_storage<T> field, T * buffer, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void place_elements_kernel( field_storage<T> field, T * buffer, unsigned * site_index, const int n, const unsigned field_alloc_size )
 {
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
     field.set( buffer[Index], site_index[Index], field_alloc_size);
   }
@@ -325,9 +326,9 @@ void field_storage<T>::place_elements(T * RESTRICT buffer,
 
 
 template <typename T>
-__global__ void set_local_boundary_elements_kernel( field_storage<T> field, int offset, unsigned * site_index, const int n, const int field_alloc_size )
+__global__ void set_local_boundary_elements_kernel( field_storage<T> field, unsigned offset, unsigned * site_index, const int n, const unsigned field_alloc_size )
 {
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
     T value;
     value = - field.get(site_index[Index], field_alloc_size);
@@ -343,7 +344,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
 {
   // Only need to do something for antiperiodic boundaries
   if (antiperiodic) {
-    int n, start = 0;
+    unsigned n, start = 0;
     if (par == ODD) {
       n = lattice->special_boundaries[dir].n_odd;
       start = lattice->special_boundaries[dir].n_even;
@@ -351,7 +352,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
       if (par == EVEN) n = lattice->special_boundaries[dir].n_even;
       else n = lattice->special_boundaries[dir].n_total;
     }
-    int offset = lattice->special_boundaries[dir].offset + start;
+    unsigned offset = lattice->special_boundaries[dir].offset + start;
 
     unsigned *d_site_index;
     check_cuda_error("earlier");
@@ -360,7 +361,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
     cudaMemcpy( d_site_index, lattice->special_boundaries[dir].move_index + start, n*sizeof(unsigned), cudaMemcpyHostToDevice );
     check_cuda_error("set_local_boundary_elements: cudaMemcpy");
 
-    int N_blocks = n/N_threads + 1;
+    unsigned N_blocks = n/N_threads + 1;
     set_local_boundary_elements_kernel<<< N_blocks, N_threads >>>( *this, offset, 
       d_site_index, n, lattice->field_alloc_size());
 
@@ -375,16 +376,16 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
 
 // Place communicated elements to the field array
 template <typename T>
-__global__ void place_comm_elements_kernel( field_storage<T> field, T * buffer, int offset, const int n, const int field_alloc_size )
+__global__ void place_comm_elements_kernel( field_storage<T> field, T * buffer, unsigned offset, const int n, const unsigned field_alloc_size )
 {
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < n ) {
     using base_type = typename base_type_struct<T>::type;
-    constexpr int n_elements = sizeof(T) / sizeof(base_type);
+    constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
     T element;
     base_type * ep = (base_type *)&element;
     base_type * fp = (base_type *)(buffer);
-    for (int e=0; e<n_elements; e++) {
+    for (unsigned e=0; e<n_elements; e++) {
       ep[e] = fp[Index+n*e];
     }
     field.set( element, offset+Index, field_alloc_size);
@@ -396,7 +397,7 @@ template<typename T>
 void field_storage<T>::place_comm_elements(direction d, parity par, T * RESTRICT buffer, 
                                            const lattice_struct::comm_node_struct & from_node, 
                                            const lattice_struct * RESTRICT lattice) {
-  int n = from_node.n_sites(par);
+  unsigned n = from_node.n_sites(par);
   T * d_buffer;
 
 #ifdef CUDA_AWARE_MPI
@@ -408,7 +409,7 @@ void field_storage<T>::place_comm_elements(direction d, parity par, T * RESTRICT
   cudaMemcpy( d_buffer, buffer, n*sizeof(T), cudaMemcpyHostToDevice );
 #endif
 
-  int N_blocks = n/N_threads + 1;
+  unsigned N_blocks = n/N_threads + 1;
   place_comm_elements_kernel<<< N_blocks, N_threads >>>((*this), d_buffer, from_node.offset(par), n, lattice->field_alloc_size());
 
 #ifndef CUDA_AWARE_MPI
@@ -425,7 +426,7 @@ void field_storage<T>::free_mpi_buffer( T * d_buffer){
 }
 
 template <typename T>
-T * field_storage<T>::allocate_mpi_buffer( int n ){
+T * field_storage<T>::allocate_mpi_buffer( unsigned n ){
   T * d_buffer;
   cudaMalloc((void **)&(d_buffer), n*sizeof(T) );
   return d_buffer;
@@ -439,7 +440,7 @@ void field_storage<T>::free_mpi_buffer( T * buffer){
 }
 
 template <typename T>
-T * field_storage<T>::allocate_mpi_buffer( int n ){
+T * field_storage<T>::allocate_mpi_buffer( unsigned n ){
   return (T *)memalloc( n * sizeof(T) );
 }
 
@@ -450,11 +451,11 @@ T * field_storage<T>::allocate_mpi_buffer( int n ){
 
 // Hilapp requires a dummy implementation for functions with auto return type
 template<typename T> 
-auto field_storage<T>::get(const int i, const int field_alloc_size) const {
+auto field_storage<T>::get(const unsigned i, const unsigned field_alloc_size) const {
   T value; return value;
 }
 template<typename T>
-auto field_storage<T>::get_element( const int i, const lattice_struct * RESTRICT lattice) const {
+auto field_storage<T>::get_element( const unsigned i, const lattice_struct * RESTRICT lattice) const {
   T value; return value;
 }
 
