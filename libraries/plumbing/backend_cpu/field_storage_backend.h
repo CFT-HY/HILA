@@ -185,7 +185,7 @@ void field_storage<T>::free_mpi_buffer( T * buffer){
 }
 
 template <typename T>
-T * field_storage<T>::allocate_mpi_buffer( int n ){
+T * field_storage<T>::allocate_mpi_buffer( unsigned n ){
   return (T *)memalloc( n * sizeof(T) );
 }
 

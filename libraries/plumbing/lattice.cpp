@@ -7,11 +7,11 @@
 // Reporting on possibly too large node: stop if
 // node size (with buffers) is larger than 2^31 - too close for comfort!
 
-void lattice_struct::report_too_large() {
+void report_too_large_node() {
   if (hila::myrank() == 0) {
-    hila::output << "Node size too large: size = " << mynode.size[0];
-    for(int d=1; d<NDIM; d++) hila::output << " x " << mynode.size[d];
-    hila::output << " + communication buffers = " << mynode.field_alloc_size;
+    hila::output << "Node size too large: size = " << lattice->mynode.size[0];
+    for(int d=1; d<NDIM; d++) hila::output << " x " << lattice->mynode.size[d];
+    hila::output << " + communication buffers = " << lattice->mynode.field_alloc_size;
     hila::output << "\nConsider using more nodes (smaller node size).\n";
     hila::output << "[TODO: allow 64bit index?]\n";
   }
@@ -330,7 +330,7 @@ void lattice_struct::setup_nodes() {
 
     if (v >= (1ULL << 32)) {
       // node size is larger than 2^32-1 - does not fit to largest unsigned int!
-      report_too_large();
+      report_too_large_node();
     }
 
     if (v % 2 == 0)
@@ -575,7 +575,7 @@ void lattice_struct::create_std_gathers()
   mynode.field_alloc_size = c_offset;
 
   if (reduce_node_sum(too_large_node) > 0) {
-   report_too_large();
+   report_too_large_node();
   }
 
 }
@@ -690,7 +690,7 @@ void lattice_struct::init_special_boundaries() {
   int toolarge = 0;
   if (mynode.field_alloc_size >= (1ULL << 32)) toolarge = 1;
   if (reduce_node_sum(toolarge) > 0) {
-    report_too_large();
+    report_too_large_node();
   }
 
 }

@@ -33,6 +33,7 @@ constexpr unsigned number_of_subnodes = VECTOR_SIZE/sizeof(float);
 enum class BoundaryCondition {PERIODIC, ANTIPERIODIC, FIXED};
 
 void test_std_gathers();
+void report_too_large_node();        // report on too large node
 
 /// useful information about a node
 struct node_info {
@@ -265,8 +266,7 @@ public:
   
   bool first_site_even() { return mynode.first_site_even; };
 
-  void report_too_large();        // report on too large node
-
+  
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
   void init_special_boundaries();
   void setup_special_boundary_array(direction d);
