@@ -155,10 +155,28 @@ class CoordinateVector_t : public Vector<NDIM,T> {
       foralldir(d) this->e(d) = dir_dot_product(d,dir);
     }
 
-    // construct from vector
-    explicit inline CoordinateVector_t(const Vector<NDIM,T> & v) {
+    // construct from vector - make this not explicit so that
+    // conversions from Vector methods are automatic
+    inline CoordinateVector_t(const Vector<NDIM,T> & v) {
       foralldir(d) this->e(d) = v.e(d);
     }
+
+    #if NDIM==2
+    explicit inline CoordinateVector_t(T a, T b) { 
+      this->e(0)=a;  this->e(1)=b;
+    }
+
+    #elif NDIM==3
+    explicit inline CoordinateVector_t(T a, T b, T c) { 
+      this->e(0)=a;  this->e(1)=b; this->e(2)=c;
+    }
+
+    #elif NDIM==4
+    explicit inline CoordinateVector_t(T a, T b, T c, T d) { 
+      this->e(0)=a;  this->e(1)=b;  this->e(2)=c;  this->e(3)=d;
+    }
+    #endif
+
 
     // Construct from 0, using nullptr_t autocast
     inline CoordinateVector_t(std::nullptr_t z) {
@@ -170,7 +188,6 @@ class CoordinateVector_t : public Vector<NDIM,T> {
       return *this;
     }
 
-    // these are called from cuda-sections not seen by hilapp, mark as loop functions
     //#pragma hila loop function
     T& operator[] (const int i)            { return this->e(i); }
     //#pragma hila loop function
