@@ -1321,12 +1321,20 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
     return true;
   }
 
+
   // And, for correct level for pragma handling - turns to 0 for stmts inside
   if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1;
 
-  //  Finally, if we get to a Field[parity] -expression without a loop or assignment flag error
  
   Expr * E = dyn_cast<Expr>(s);
+
+  // new stuff: if there is field[coordinate], modify these to appropriate 
+  // functions
+
+  if (is_field_with_coordinate_stmt(s)) return true;
+
+  //  Finally, if we get to a Field[parity] -expression without a loop or assignment flag error
+
   if (E && is_field_parity_expr(E)) {
     reportDiag(DiagnosticsEngine::Level::Error,
                 E->getSourceRange().getBegin(),
@@ -1341,7 +1349,8 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
     parsing_state.skip_children = 1;
     return true;
 
-  } 
+  }
+
   //   else if (E && is_X_index_type(E)) {
   //   reportDiag(DiagnosticsEngine::Level::Error,
   //               E->getSourceRange().getBegin(),
@@ -1354,28 +1363,131 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
   if (CallExpr * CE = dyn_cast<CallExpr>(s)) {
     if (FunctionDecl * FD = CE->getDirectCallee()) {
 
+      // THIS DOES NOT WORK BECAUSE REWRITE-BUFFERS ARE NOT CHANGED ANY MORE
       // is it memalloc(size) -call -> substitute with
       // memalloc( size, filename, linenumber)
       // don't know if this is really useful
 
-      if (FD->getNameAsString() == "memalloc" && CE->getNumArgs() == 1) {
-        SourceLocation sl = CE->getRParenLoc();
+      // if (FD->getNameAsString() == "memalloc" && CE->getNumArgs() == 1) {
+      //   SourceLocation sl = CE->getRParenLoc();
 
-        // generate new args
-        std::string name(srcMgr.getFilename(sl));
-        std::size_t i = name.rfind('/');
-        if (i != std::string::npos) name = name.substr(i);
+      //   // generate new args
+      //   std::string name(srcMgr.getFilename(sl));
+      //   std::size_t i = name.rfind('/');
+      //   if (i != std::string::npos) name = name.substr(i);
 
-        std::string args(", \"");
-        args.append(name).append( "\", " ).append(
-            std::to_string( srcMgr.getSpellingLineNumber(sl)));
+      //   std::string args(", \"");
+      //   args.append(name).append( "\", " ).append(
+      //       std::to_string( srcMgr.getSpellingLineNumber(sl)));
 
         // if (!writeBuf->is_edited(sl)) writeBuf->insert(sl,args);
-      }
+      // }
     } 
   }
 
   return true;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+/// Handle Field[Coordinate] -expressions
+////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
+
+  static bool was_previously_assigned = false;
+
+  // Check first if this is field[c] = ... -stmt
+
+
+  // assigment through operator=()
+
+  CXXOperatorCallExpr * OP = dyn_cast<CXXOperatorCallExpr>(s);
+  if (OP && OP->isAssignmentOp() && is_field_with_coordinate(OP->getArg(0))) {
+    const char *sp = getOperatorSpelling(OP->getOperator());
+    if (sp[0] != '=') {
+      // it's a compound assignment, not allowed
+      reportDiag(DiagnosticsEngine::Level::Error,
+                   OP->getOperatorLoc(),
+                   "Only direct assignment '=' allowed for Field[CoordinateVector]" );
+      return false;
+    }
+
+    field_with_coordinate_assign(OP->getArg(0), OP->getArg(1), OP->getOperatorLoc() );
+    was_previously_assigned = true;
+
+    return true;
+  }
+
+  // check also Field<double> or some other non-class assign
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
+  if (BO && BO->isAssignmentOp() && is_field_with_coordinate(BO->getLHS())) {
+    if (BO->isCompoundAssignmentOp()) {
+      reportDiag(DiagnosticsEngine::Level::Error,
+                   BO->getOperatorLoc(),
+                   "Only direct assignment '=' allowed for Field[CoordinateVector]" );
+      return false;
+    }
+    field_with_coordinate_assign(BO->getLHS(), BO->getRHS(), BO->getOperatorLoc() );
+    was_previously_assigned = true;
+
+    return true;
+  }
+
+  // Handle now just field[coord] -expressions, these are not assignments.  
+  // If assginment was previously seen, the expr has been handled already
+
+  Expr *E = dyn_cast<Expr>(s);
+  if (E && is_field_with_coordinate(E)) {
+    if (!was_previously_assigned) {
+      field_with_coordinate_read(E);
+    }
+    was_previously_assigned = false;
+
+    return true;
+  }
+
+  return false;
+}
+
+void TopLevelVisitor::field_with_coordinate_assign( Expr *lhs, Expr *rhs, SourceLocation oploc) {
+
+  llvm::errs() << "AT FIELD WITH COORD ASSIGN\n";
+
+  // lhs is field[par] -expr - we know here that arg is of the
+  // right type, so this succeeds
+  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(lhs);
+
+  if (writeBuf->get(oploc,1) == ",") return;  // this has already been changed
+
+  // now change = -> ,
+  writeBuf->replace(SourceRange(oploc,oploc),",");
+  // Remove ]
+  writeBuf->remove(SourceRange(OC->getRParenLoc(),OC->getRParenLoc()));
+  // find [ and insert method call
+  SourceLocation sl = OC->getArg(1)->getBeginLoc();
+  while (sl.isValid() && getChar(sl) != '[') sl = sl.getLocWithOffset(-1);
+  writeBuf->replace(SourceRange(sl,sl),".set_element_at(");
+  // and insert closing )
+  sl = getSourceLocationAtEndOfRange(rhs->getSourceRange());
+  sl = sl.getLocWithOffset(1);
+  writeBuf->insert(sl,")",true);
+
+}
+
+void TopLevelVisitor::field_with_coordinate_read( Expr * E) {
+
+  // expr is field[par] -expr - we know here that arg is of the
+  // right type, so this succeeds
+  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+
+  // Replace ] with )
+  writeBuf->replace(SourceRange(OC->getRParenLoc(),OC->getRParenLoc()),")");
+  // find [ and insert method call
+  SourceLocation sl = OC->getArg(1)->getBeginLoc();
+  while (sl.isValid() && getChar(sl) != '[') sl = sl.getLocWithOffset(-1);
+  writeBuf->replace(SourceRange(sl,sl),".get_element(");
+
 }
 
 

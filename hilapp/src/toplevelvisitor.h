@@ -163,8 +163,11 @@ public:
   // check if stmt is lf[par] = ... -type
   bool is_field_parity_assignment( Stmt *s );
 
-  /// Does ; follow the statement?
+  bool is_field_with_coordinate_stmt( Stmt *s );
+  void field_with_coordinate_assign( Expr * lhs, Expr * rhs, SourceLocation oploc);
+  void field_with_coordinate_read( Expr * E);
 
+  /// Does ; follow the statement?
   SourceRange getRangeWithSemicolon(Stmt * S, bool flag_error = true);
   
   void requireGloballyDefined(Expr * e);

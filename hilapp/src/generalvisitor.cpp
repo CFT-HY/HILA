@@ -86,15 +86,32 @@ bool GeneralVisitor::is_field_with_X_and_dir(Expr *E) {
 
 /////////////////////////////////////////////////////////////////
 
+bool GeneralVisitor::is_field_with_coordinate(Expr *E) {
+  E = E->IgnoreParens();
+  CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+
+  if (OC &&
+      strcmp(getOperatorSpelling(OC->getOperator()),"[]") == 0 && 
+      is_field_expr(OC->getArg(0))) {
+    
+    llvm::errs() << "CHECKING COORD TYPE\n";
+    return is_coordinate_type(OC->getArg(1));
+
+  }
+  return false;   
+}
+
+/////////////////////////////////////////////////////////////////
+
 bool GeneralVisitor::is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound) {
   if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
     if (OP->isAssignmentOp()) {
 
       // TODO: there should be some more elegant way to do this
       const char *sp = getOperatorSpelling(OP->getOperator());
-      if ((sp[0] == '+' || sp[0] == '-' || sp[0] == '*' || sp[0] == '/')
-          && sp[1] == '=') iscompound = true;
+      if (sp[0] != '=' && sp[1] == '=') iscompound = true;
       else iscompound = false;
+
       if (opcodestr)
         *opcodestr = getOperatorSpelling(OP->getOperator());
 

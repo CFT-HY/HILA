@@ -187,11 +187,18 @@ public:
     return (s == "X_plus_direction" || s == "X_plus_offset");
   }
 
+  bool is_coordinate_type(Expr *E) {
+    std::string s = get_expr_type(E);
+    llvm::errs() << "Expr type " << s << ' ' << s.find("CoordinateVector") << '\n';
+    return (s.find("CoordinateVector") == 0);
+  }
 
   bool is_field_with_X_expr(Expr *E);
 
   /// Checks if E is parity plus direction of a field (for example f[X+dir]).
   bool is_field_with_X_and_dir(Expr *E);
+
+  bool is_field_with_coordinate(Expr *E);
 
   bool is_assignment_expr(Stmt * s, std::string * opcodestr, bool &iscompound);
 

@@ -33,11 +33,9 @@ void ensure_field_operators_exist(Field<T> & f);
 template <typename T>
 using element = T;
 
-template <typename T>
-class Field_at;
-
 
 /// Field class
+/// This implements the standard methods for accessing fields 
 /// Hilapp replaces the parity access patterns, Field[par] with a loop over
 /// the appropriate sites.
 ///
@@ -68,7 +66,7 @@ class Field_at;
 /// Field.mark_fetched(): mark the Field already fetched, no need to
 ///        communicate.
 ///
-/// Field.shift(): create a shifted copy of the Field 
+/// Field.shift(): create a periodically shifted copy of the field
 ///
 /// Others
 /// Field.set_boundary_condition(): set the boundary conditions in a
@@ -578,10 +576,20 @@ class Field {
 
   // Overloading [] 
   // declarations -- WILL BE implemented by hilapp, not written here
+  // let there be const and non-const protos
   element<T>& operator[] (const parity p) const;             // f[EVEN]
   element<T>& operator[] (const X_index_type) const;         // f[X]
   element<T>& operator[] (const X_plus_direction p) const;   // f[X+dir]
   element<T>& operator[] (const X_plus_offset p) const;      // f[X+dir1+dir2] and others
+
+  element<T>& operator[] (const parity p);                   // f[EVEN]
+  element<T>& operator[] (const X_index_type);               // f[X]
+  element<T>& operator[] (const X_plus_direction p);         // f[X+dir]
+  element<T>& operator[] (const X_plus_offset p);            // f[X+dir1+dir2] and others
+
+  T& operator[] (const CoordinateVector & v);          // f[CoordinateVector]
+  T& operator[] (const CoordinateVector & v) const;    // f[CoordinateVector]
+  
 
 
   // TEMPORARY HACK: return ptr to bare array
@@ -740,12 +748,13 @@ class Field {
 
   // General getters and setters
   void set_elements(T * elements, const std::vector<CoordinateVector> & coord_list);
-  void set_element(T element, const CoordinateVector & coord);
+  void set_element(const T & element, const CoordinateVector & coord);
   void get_elements(T * elements, const std::vector<CoordinateVector> & coord_list) const;
+  T get_element(const CoordinateVector & coord) const;
 
-  // Access fields with coordinates 
-  T at(const CoordinateVector & coord) const;
-  Field_at<T>& at(const CoordinateVector &coord);
+  inline void set_element_at(const CoordinateVector &coord, const T & elem) {
+    set_element(elem,coord);
+  }
 
   // Fourier transform declarations
   void FFT(fft_direction fdir = fft_direction::forward);
@@ -1320,7 +1329,7 @@ void Field<T>::set_elements( T * elements, const std::vector<CoordinateVector> &
 // Set a single element. Assuming that each node calls this with the same value, it is
 /// sufficient to set the element locally
 template<typename T>
-void Field<T>::set_element( T element, const CoordinateVector & coord) {
+void Field<T>::set_element( const T & element, const CoordinateVector & coord) {
   if( lattice->is_on_mynode(coord) ){
     set_value_at( element, lattice->site_index(coord));
   }
@@ -1333,7 +1342,7 @@ void Field<T>::set_element( T element, const CoordinateVector & coord) {
 #if defined(USE_MPI)
 /// This is not local, the element needs to be communicated to all nodes
 template<typename T>
-T Field<T>::at( const CoordinateVector & coord) const {
+T Field<T>::get_element( const CoordinateVector & coord) const {
   T element;
 
   int owner = lattice->node_rank(coord);
@@ -1386,7 +1395,7 @@ void Field<T>::get_elements( T * elements, const std::vector<CoordinateVector> &
 #else
 /// Without MPI, we just need to call get
 template<typename T>
-T Field<T>::at( const CoordinateVector & coord) const {
+T Field<T>::get_element( const CoordinateVector & coord) const {
   return get_value_at( lattice->site_index(coord) );
 }
 
@@ -1394,7 +1403,7 @@ T Field<T>::at( const CoordinateVector & coord) const {
 template<typename T>
 void Field<T>::get_elements( T * elements, const std::vector<CoordinateVector> & coord_list) const {
   for( int i=0; i<coord_list.size(); i++){
-    elements[i] = get_element(coord_list[i]);
+    elements[i] = (*this)[coord_list[i]];
   }
 }
 #endif
@@ -1570,8 +1579,14 @@ extern Field<double> disable_avx;
 
 #ifdef HILAPP
 
-// crazy function to exercise some direction and CoordinateVector operations
-// Needed because hilapp changes X+d-d  ->   +d-d, which may involve an operator
+////////////////////////////////////////////////////////////////////////////////
+// A couple of placeholder functions, not included in produced code.
+// These are here in order for hilapp to generate explicitly
+// some direction and CoordinateVector operations, which may not exist in
+// original code as such.  It is simplest to let the general hilapp 
+// code generation to do it using this, instead of hard-coding these to hilapp.
+//
+// These are needed because hilapp changes X+d-d -> +d-d, which may involve an operator
 // not met before
 
 inline void dummy_X_f()
@@ -1595,18 +1610,18 @@ inline void dummy_X_f()
   }
 }
 
+// This ensures that unary operator-() is defined for all field types.
+// It is needed in antiperiodic boundary conditions
 
 template<typename T>
 inline void ensure_field_operators_exist(Field<T> & f) {
   
-  // unary - is needed
   f[ALL] = -f[X];
   // same for non-vectorized loop
   onsites(ALL) {
     if (X.coordinate(e_x) < X.coordinate(e_y)) f[X] = -f[X];
   }  
 }
-
 
 
 #endif
