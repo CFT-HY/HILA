@@ -5,8 +5,7 @@
 /// Probably this could be done much more elegantly
 
 #include <sstream>
-#include<iostream>
+#include <iostream>
 #include "plumbing/lattice.h"
-
 
 #endif

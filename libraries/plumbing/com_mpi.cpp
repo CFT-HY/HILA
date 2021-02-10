@@ -1,7 +1,6 @@
 
-#ifdef USE_MPI  
+#ifdef USE_MPI
 // protect with USE_MPI so can be included even in no-MPI codes
-
 
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
@@ -11,137 +10,117 @@
 
 // declare MPI timers here too - these were externs
 
-timer start_send_timer("MPI start send"), 
-      wait_send_timer("MPI wait send"),
-      post_receive_timer("MPI post receive"),
-      wait_receive_timer("MPI wait receive"),
-      synchronize_timer("MPI synchronize"),
-      reduction_timer("MPI reduction"),
-      broadcast_timer("MPI broadcast"),
-      send_timer("MPI send field"),
-      cancel_send_timer("MPI cancel send"),
-      cancel_receive_timer("MPI cancel receive"),
-      sublattice_sync_timer("sublattice sync");
+timer start_send_timer("MPI start send"), wait_send_timer("MPI wait send"),
+    post_receive_timer("MPI post receive"), wait_receive_timer("MPI wait receive"),
+    synchronize_timer("MPI synchronize"), reduction_timer("MPI reduction"),
+    broadcast_timer("MPI broadcast"), send_timer("MPI send field"),
+    cancel_send_timer("MPI cancel send"), cancel_receive_timer("MPI cancel receive"),
+    sublattice_sync_timer("sublattice sync");
 
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
 
 /* Machine initialization */
 #include <sys/types.h>
-void initialize_communications(int &argc, char ***argv)
-{
-  /* Init MPI */
-  if( !mpi_initialized ){
-    MPI_Init(&argc, argv);
-    mpi_initialized = true;
+void initialize_communications(int &argc, char ***argv) {
+    /* Init MPI */
+    if (!mpi_initialized) {
+        MPI_Init(&argc, argv);
+        mpi_initialized = true;
 
-    // global var lattice exists, assign the mpi comms there
-    lattice->mpi_comm_lat = MPI_COMM_WORLD;
+        // global var lattice exists, assign the mpi comms there
+        lattice->mpi_comm_lat = MPI_COMM_WORLD;
 
-    MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->mynode.rank );
-    MPI_Comm_size( lattice->mpi_comm_lat, &lattice->nodes.number );
-
-  }
-
+        MPI_Comm_rank(lattice->mpi_comm_lat, &lattice->mynode.rank);
+        MPI_Comm_size(lattice->mpi_comm_lat, &lattice->nodes.number);
+    }
 }
 
 // check if MPI is on
-bool is_comm_initialized(void) {
-  return mpi_initialized;
-}
+bool is_comm_initialized(void) { return mpi_initialized; }
 
 /* version of exit for multinode processes -- kill all nodes */
 void abort_communications(int status) {
-  if( mpi_initialized ){
-    mpi_initialized = false;
-    MPI_Abort( lattices[0]->mpi_comm_lat, 0);
-  }
+    if (mpi_initialized) {
+        mpi_initialized = false;
+        MPI_Abort(lattices[0]->mpi_comm_lat, 0);
+    }
 }
-
 
 /* clean exit from all nodes */
 void finish_communications() {
-  // turn off mpi -- this is needed to avoid mpi calls in destructors
-  mpi_initialized = false;
-  hila::about_to_finish = true;
+    // turn off mpi -- this is needed to avoid mpi calls in destructors
+    mpi_initialized = false;
+    hila::about_to_finish = true;
 
-  MPI_Finalize();
+    MPI_Finalize();
 }
-
 
 // broadcast specialization
-void broadcast(std::string & var) {
-  broadcast_timer.start();
-  int size = var.size();
-  broadcast(size);
+void broadcast(std::string &var) {
+    broadcast_timer.start();
+    int size = var.size();
+    broadcast(size);
 
-  if (hila::myrank()!=0) {
-    var.resize(size,' ');
-  }
-  // copy directy to data() buffer
-  MPI_Bcast((void *)var.data(),size, MPI_BYTE, 0, lattice->mpi_comm_lat);
+    if (hila::myrank() != 0) {
+        var.resize(size, ' ');
+    }
+    // copy directy to data() buffer
+    MPI_Bcast((void *)var.data(), size, MPI_BYTE, 0, lattice->mpi_comm_lat);
 }
 
-void broadcast(std::vector<std::string> & list) {
-  int size = list.size();
-  broadcast(size);
-  list.resize(size);
+void broadcast(std::vector<std::string> &list) {
+    int size = list.size();
+    broadcast(size);
+    list.resize(size);
 
-  for (auto & s : list) {
-    broadcast(s);
-  }
+    for (auto &s : list) {
+        broadcast(s);
+    }
 }
 
 /* BASIC COMMUNICATIONS FUNCTIONS */
 
 /* Tell what kind of machine we are on */
-static char name[]="MPI (portable)";
-char * machine_type()
-{
-  return(name);
-}
+static char name[] = "MPI (portable)";
+char *machine_type() { return (name); }
 
 /* Return my node number */
-int hila::myrank()
-{
-  static int node = -1;
-  if (node >= 0) return node;
-  MPI_Comm_rank( lattice->mpi_comm_lat, &node );
-  return node;
+int hila::myrank() {
+    static int node = -1;
+    if (node >= 0)
+        return node;
+    MPI_Comm_rank(lattice->mpi_comm_lat, &node);
+    return node;
 }
 
 /* Return number of nodes */
-int numnodes()
-{
-  int nodes;
-  MPI_Comm_size( lattice->mpi_comm_lat, &nodes );
-  return(nodes);
+int numnodes() {
+    int nodes;
+    MPI_Comm_size(lattice->mpi_comm_lat, &nodes);
+    return (nodes);
 }
 
-
-void synchronize()
-{
-  synchronize_timer.start();
-  synchronize_threads();
-  MPI_Barrier(lattice->mpi_comm_lat);
-  synchronize_timer.stop();
+void synchronize() {
+    synchronize_timer.start();
+    synchronize_threads();
+    MPI_Barrier(lattice->mpi_comm_lat);
+    synchronize_timer.stop();
 }
-
 
 // Split the communicator to subvolumes, using MPI_Comm_split
 // New MPI_Comm is the global mpi_comm_lat
 // NOTE: no attempt made here to reorder the nodes
 
-void split_into_sublattices( int this_lattice ) 
-{
-  if ( MPI_Comm_split( MPI_COMM_WORLD, this_lattice, 0, &(lattice->mpi_comm_lat) )
-       != MPI_SUCCESS ) {
-    output0 << "MPI_Comm_split() call failed!\n";
-    hila::finishrun();
-  }
-  // reset also the rank and numbers -fields
-  MPI_Comm_rank( lattice->mpi_comm_lat, &lattice->mynode.rank );
-  MPI_Comm_size( lattice->mpi_comm_lat, &lattice->nodes.number );
+void split_into_sublattices(int this_lattice) {
+    if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice->mpi_comm_lat)) !=
+        MPI_SUCCESS) {
+        output0 << "MPI_Comm_split() call failed!\n";
+        hila::finishrun();
+    }
+    // reset also the rank and numbers -fields
+    MPI_Comm_rank(lattice->mpi_comm_lat, &lattice->mynode.rank);
+    MPI_Comm_size(lattice->mpi_comm_lat, &lattice->nodes.number);
 }
 
 #if 0
@@ -168,7 +147,5 @@ void reset_comm(bool global)
 }
 
 #endif
-
-
 
 #endif // USE_MPI

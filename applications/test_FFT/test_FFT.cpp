@@ -1,18 +1,18 @@
 
-#include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
+#include "plumbing/FFT_new.h"
+#include "plumbing/defs.h"
 #include "plumbing/field.h"
 #include "plumbing/param_input.h"
-#include "plumbing/FFT_new.h"
 
 using vtype = Cmplx<double>;
 
-static_assert( NDIM == 3, "NDIM must be 3 in this program");
+static_assert(NDIM == 3, "NDIM must be 3 in this program");
 
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
 
-    hila::initialize(argc,argv);
+    hila::initialize(argc, argv);
 
     input par("parameters");
     int nx = par.get("nx");
@@ -23,20 +23,20 @@ int main(int argc, char **argv){
 
     par.close();
 
-    lattice->setup(nx,ny,nz);
-    
+    lattice->setup(nx, ny, nz);
+
     seed_random(seed);
 
-    Field<vtype> f,g;
-    
+    Field<vtype> f, g;
+
     f[ALL] = gaussian_ran();
 
-    static timer cmplx_timer("cmplx fft"); 
-    
-    for (int i=0; i<loops; i++) {
-      cmplx_timer.start();
-      FFT_field(f,g);
-      cmplx_timer.stop();
+    static timer cmplx_timer("cmplx fft");
+
+    for (int i = 0; i < loops; i++) {
+        cmplx_timer.start();
+        FFT_field(f, g);
+        cmplx_timer.stop();
     }
 
     // Field<Vector<6,vtype>> v = 0,v1;
@@ -54,6 +54,3 @@ int main(int argc, char **argv){
 
     hila::finishrun();
 }
-
-
-

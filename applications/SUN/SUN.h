@@ -2,20 +2,19 @@
 #define SUN_H_
 
 #include <sstream>
-#include<iostream>
+#include <iostream>
 #include <string>
 #include <math.h>
 
 #define PI 3.14159265358979323846
 
 #define NDIM 4
-const int N=2;
+const int N = 2;
 
 // Include the lattice field definition
 #include "plumbing/defs.h"
 #include "datatypes/matrix.h"
 #include "plumbing/field.h"
-
 
 // Define some parameters for the simulation
 extern double beta;
@@ -25,15 +24,10 @@ extern long seed;
 extern int NX, NY, NZ, NT;
 extern int VOLUME;
 
-double monte(
-  Matrix<N,N,Cmplx<double>> &U, 
-  Matrix<N,N,Cmplx<double>> &staple,
-  double beta);
+double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple,
+             double beta);
 
-void KennedyPendleton(
-  Matrix<2,2,Cmplx<double>> &U,
-  Matrix<2,2,Cmplx<double>> &staple
-);
+void KennedyPendleton(Matrix<2, 2, Cmplx<double>> &U,
+                      Matrix<2, 2, Cmplx<double>> &staple);
 
-
-#endif //SUN_H_
+#endif // SUN_H_

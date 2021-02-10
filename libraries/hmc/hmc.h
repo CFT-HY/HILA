@@ -1,72 +1,66 @@
 #ifndef HMC_H
 #define HMC_H
 
-
 #include <sys/time.h>
 #include <ctime>
 #include "integrator.h"
-
-
 
 /// The Hybrid Montecarlo algorithm.
 // Consists of an integration step following equations of
 // motion implemented in the integrator class gt
 // and an accept-reject step using the action
 //
-// The integrator class must implement at least two functions, 
-// action() an integrator_step(double eps) 
-template<class integrator_type>
-void update_hmc(integrator_type &integrator, int steps, double traj_length){
-  
-  static int accepted=0, trajectory=1;
-  struct timeval start, end;
-  double timing;
+// The integrator class must implement at least two functions,
+// action() an integrator_step(double eps)
+template <class integrator_type>
+void update_hmc(integrator_type &integrator, int steps, double traj_length) {
 
-  // Draw the momentum
-  integrator.draw_gaussian_fields();
+    static int accepted = 0, trajectory = 1;
+    struct timeval start, end;
+    double timing;
 
-  // Make a copy of the gauge field in case the update is rejected
-  integrator.backup_fields();
-  
-  gettimeofday(&start, NULL);
+    // Draw the momentum
+    integrator.draw_gaussian_fields();
 
-  // Calculate the starting action and print
-  double start_action = integrator.action();
-  output0 << "Begin HMC Trajectory " << trajectory << ": Action " 
-          << start_action << "\n";
+    // Make a copy of the gauge field in case the update is rejected
+    integrator.backup_fields();
 
-  // Run the integrator
-  for(int step=0; step < steps; step++){
-    integrator.step(traj_length/steps);
-  }
+    gettimeofday(&start, NULL);
 
-  // Recalculate the action
-  double end_action = integrator.action();
-  double edS = exp(-(end_action - start_action));
+    // Calculate the starting action and print
+    double start_action = integrator.action();
+    output0 << "Begin HMC Trajectory " << trajectory << ": Action " << start_action
+            << "\n";
 
-  // Accept or reject
-  bool accept = hila_random() < edS;
-  broadcast(accept);
-  if(accept){
-    output0 << "Accepted!\n";
-    accepted++;
-  } else {
-    output0 << "Rejected!\n";
-    integrator.restore_backup();
-  }
+    // Run the integrator
+    for (int step = 0; step < steps; step++) {
+        integrator.step(traj_length / steps);
+    }
 
-  output0 << "End HMC: Action " << end_action << " "
-    << end_action - start_action
-    << " exp(-dS) " << edS << ". Acceptance " << accepted << "/" << trajectory 
-    << " " << (double)accepted/(double)trajectory << "\n";
+    // Recalculate the action
+    double end_action = integrator.action();
+    double edS = exp(-(end_action - start_action));
 
-  gettimeofday(&end, NULL);
-  timing = (double)(end.tv_sec - start.tv_sec) + 1e-6*(end.tv_usec - start.tv_usec);
+    // Accept or reject
+    bool accept = hila_random() < edS;
+    broadcast(accept);
+    if (accept) {
+        output0 << "Accepted!\n";
+        accepted++;
+    } else {
+        output0 << "Rejected!\n";
+        integrator.restore_backup();
+    }
 
-  output0 << "HMC done in " << timing << " seconds \n";
-  trajectory++;
+    output0 << "End HMC: Action " << end_action << " " << end_action - start_action
+            << " exp(-dS) " << edS << ". Acceptance " << accepted << "/" << trajectory
+            << " " << (double)accepted / (double)trajectory << "\n";
+
+    gettimeofday(&end, NULL);
+    timing = (double)(end.tv_sec - start.tv_sec) + 1e-6 * (end.tv_usec - start.tv_usec);
+
+    output0 << "HMC done in " << timing << " seconds \n";
+    trajectory++;
 }
-
-
 
 #endif

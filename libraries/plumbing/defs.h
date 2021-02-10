@@ -20,19 +20,18 @@
 #endif
 
 #include "plumbing/mersenne.h"
-#include "plumbing/memalloc.h"   // memory allocator
+#include "plumbing/memalloc.h" // memory allocator
 #include "plumbing/timing.h"
-
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
 /// ADD HERE GUARD FOR THOSE WHICH DO not HAVE IT
 #ifndef CUDA
 #define RESTRICT __restrict__
 #else
-#define RESTRICT   // disabled here
+#define RESTRICT // disabled here
 #endif
 
-#define EVEN_SITES_FIRST  
+#define EVEN_SITES_FIRST
 
 // TODO: default type real_t definition somewhere (makefile?)
 using real_t = double;
@@ -43,45 +42,46 @@ using real_t = double;
 #define NDIM 4
 #endif
 
-
 // This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!
 #define output_only
 
 // text output section -- defines also output0, which writes from node 0 only
 namespace hila {
-  /// this is our default output file stream
-  extern std::ostream output;
-  /// this is just a hook to store output file, if it is in use
-  extern std::ofstream output_file;
+/// this is our default output file stream
+extern std::ostream output;
+/// this is just a hook to store output file, if it is in use
+extern std::ofstream output_file;
 
-  int myrank();    // rank of this node
+int myrank(); // rank of this node
 
-  extern bool about_to_finish;
+extern bool about_to_finish;
 
-  void initialize(int argc, char **argv);
-  void finishrun();
-  void terminate(int status);
-  void error(const std::string & msg);
-  void error(const char * msg);
-}
+void initialize(int argc, char **argv);
+void finishrun();
+void terminate(int status);
+void error(const std::string &msg);
+void error(const char *msg);
+} // namespace hila
 
-// The logger uses hila::myrank, so it cannot be included on top 
+// The logger uses hila::myrank, so it cannot be included on top
 #include "plumbing/logger.h"
 namespace hila {
-  /// Now declare the logger
-  extern logger_class log;
-}
+/// Now declare the logger
+extern logger_class log;
+} // namespace hila
 
 /// We want to define ostream
 ///     "output0 << stuff;"
-/// which is done only by rank 0.  
+/// which is done only by rank 0.
 /// This is hacky but easy.  Probably should be done without #define.
 /// Do this through else-branch in order to avoid if-statement problems.
 /// #define output0 if (hila::myrank() != 0) {} else hila::output
 ///
 /// Above #define can trigger "dangling-else" warning.  Let us
 /// try to avoid it with the following a bit more ugly trick:
-#define output0 for(int _dummy_i_=1; hila::myrank()==0 && _dummy_i_; --_dummy_i_) hila::output
+#define output0                                                                          \
+    for (int _dummy_i_ = 1; hila::myrank() == 0 && _dummy_i_; --_dummy_i_)               \
+    hila::output
 
 // The following disables the "dangling-else" warning, but not needed now
 //#if defined(__clang__) || defined(__GNUC__)
@@ -115,65 +115,55 @@ enum class fft_direction { forward, inverse };
 #ifndef USE_MPI
 
 // broadcast does nothing if not MPI
-template <typename T>
-void broadcast(T & v) {}
+template <typename T> void broadcast(T &v) {}
 
-template <typename T>
-void broadcast_array(T * var, int n) {}
+template <typename T> void broadcast_array(T *var, int n) {}
 
 #endif
 
 int numnodes();
 void initialize_communications(int &argc, char ***argv);
-void split_into_sublattices( int rank );
+void split_into_sublattices(int rank);
 void synchronize();
 bool is_comm_initialized(void);
 void finish_communications();
 void abort_communications(int status);
 
-
 // and print a dashed line
-void print_dashed_line(const std::string & txt = {});
+void print_dashed_line(const std::string &txt = {});
 
 // Useful c++14 template missing in Puhti compilation of hilapp
 #if defined(PUHTI) && defined(HILAPP)
 namespace std {
-  template< bool B, class T = void >
-  using enable_if_t = typename std::enable_if<B,T>::type;
+template <bool B, class T = void> using enable_if_t = typename std::enable_if<B, T>::type;
 }
 #endif
 
-
 /// Utility for selecting the numeric base type of a class
-template<class T, class Enable = void>
-struct base_type_struct {
-  /// The base type of the class
-  using type = typename T::base_type;
+template <class T, class Enable = void> struct base_type_struct {
+    /// The base type of the class
+    using type = typename T::base_type;
 };
 
 /// Utility for selecting the numeric base type of a class
-template<typename T>
-struct base_type_struct< T, typename std::enable_if_t<is_arithmetic<T>::value>> {
-  /// In this case the base type is just T
-  using type = T;
+template <typename T>
+struct base_type_struct<T, typename std::enable_if_t<is_arithmetic<T>::value>> {
+    /// In this case the base type is just T
+    using type = T;
 };
 
 /// Utility for selecting the numeric base type of a class
-template<typename T>
-using number_type = typename base_type_struct<T>::type;
- 
+template <typename T> using number_type = typename base_type_struct<T>::type;
 
 // These are helpers, to make generic templates
 // e.g. type_plus<A,B> gives the type of the operator a + b, where a is of type A and b B.
-template<typename A, typename B>
+template <typename A, typename B>
 using type_plus = decltype(std::declval<A>() + std::declval<B>());
-template<typename A, typename B>
-using type_minus= decltype(std::declval<A>() - std::declval<B>());
-template<typename A, typename B>
-using type_mul  = decltype(std::declval<A>() * std::declval<B>());
-template<typename A, typename B>
-using type_div  = decltype(std::declval<A>() / std::declval<B>());
-
-
+template <typename A, typename B>
+using type_minus = decltype(std::declval<A>() - std::declval<B>());
+template <typename A, typename B>
+using type_mul = decltype(std::declval<A>() * std::declval<B>());
+template <typename A, typename B>
+using type_div = decltype(std::declval<A>() / std::declval<B>());
 
 #endif

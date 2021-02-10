@@ -13,7 +13,7 @@
 #endif
 
 // end of HILAPP section
-#else   
+#else
 
 // #include <immintrin.h>   // this file should be included in vectorclass.h, if needed
 #include "vectorclass/vectorclass.h"
@@ -30,417 +30,364 @@
 #endif
 
 // Define random number generator
-inline double hila_random(){ return mersenne(); }
+inline double hila_random() { return mersenne(); }
 inline void seed_random(int seed) {
 
-  /* First seed the generator */
-  seed_mersenne(seed);
+    /* First seed the generator */
+    seed_mersenne(seed);
 
-  /* "Warm up" to create a full state */
-	for(int i=0; i<543210; i++)
-    mersenne();
+    /* "Warm up" to create a full state */
+    for (int i = 0; i < 543210; i++)
+        mersenne();
 }
 
-
 // Trivial synchronization
-inline void synchronize_threads(){}
+inline void synchronize_threads() {}
 
-
-
-/// Implements test for basic in types, similar to 
+/// Implements test for basic in types, similar to
 /// std::is_arithmetic, but allows the backend to add
 /// it's own basic types (such as AVX vectors)
-template< class T >
-struct is_avx_vector : std::integral_constant<
-  bool,
-  std::is_same<T,Vec4d>::value ||
-  std::is_same<T,Vec4q>::value ||
-  std::is_same<T,Vec8f>::value ||
-  std::is_same<T,Vec8i>::value ||
-  std::is_same<T,Vec8d>::value ||
-  std::is_same<T,Vec8q>::value ||
-  std::is_same<T,Vec16f>::value ||
-  std::is_same<T,Vec16i>::value 
-> {};
+template <class T>
+struct is_avx_vector
+    : std::integral_constant<
+          bool, std::is_same<T, Vec4d>::value || std::is_same<T, Vec4q>::value ||
+                    std::is_same<T, Vec8f>::value || std::is_same<T, Vec8i>::value ||
+                    std::is_same<T, Vec8d>::value || std::is_same<T, Vec8q>::value ||
+                    std::is_same<T, Vec16f>::value || std::is_same<T, Vec16i>::value> {};
 
-template< class T >
-struct is_arithmetic : std::integral_constant<
-  bool,
-  std::is_arithmetic<T>::value ||
-  is_avx_vector<T>::value
-> {};
+template <class T>
+struct is_arithmetic : std::integral_constant<bool, std::is_arithmetic<T>::value ||
+                                                        is_avx_vector<T>::value> {};
 
-template< class T>
-struct avx_vector_type_info {
+template <class T> struct avx_vector_type_info {
     using type = T;
     static constexpr int size = sizeof(T);
     static constexpr int elements = 1;
 };
 
-template<> struct avx_vector_type_info<Vec4d> {
+template <> struct avx_vector_type_info<Vec4d> {
     using type = double;
-    static constexpr int size = 4*sizeof(double);
+    static constexpr int size = 4 * sizeof(double);
     static constexpr int elements = 4;
 };
-template<> struct avx_vector_type_info<Vec4q> {
+template <> struct avx_vector_type_info<Vec4q> {
     using type = int64_t;
-    static constexpr int size = 4*sizeof(int64_t);
+    static constexpr int size = 4 * sizeof(int64_t);
     static constexpr int elements = 4;
 };
-template<> struct avx_vector_type_info<Vec8i> {
+template <> struct avx_vector_type_info<Vec8i> {
     using type = int;
-    static constexpr int size = 8*sizeof(int);
+    static constexpr int size = 8 * sizeof(int);
     static constexpr int elements = 8;
 };
-template<> struct avx_vector_type_info<Vec8f> {
+template <> struct avx_vector_type_info<Vec8f> {
     using type = float;
-    static constexpr int size = 8*sizeof(float);
+    static constexpr int size = 8 * sizeof(float);
     static constexpr int elements = 8;
 };
-template<> struct avx_vector_type_info<Vec8d> {
+template <> struct avx_vector_type_info<Vec8d> {
     using type = double;
-    static constexpr int size = 8*sizeof(double);
+    static constexpr int size = 8 * sizeof(double);
     static constexpr int elements = 8;
 };
-template<> struct avx_vector_type_info<Vec8q> {
+template <> struct avx_vector_type_info<Vec8q> {
     using type = int64_t;
-    static constexpr int size = 8*sizeof(int64_t);
+    static constexpr int size = 8 * sizeof(int64_t);
     static constexpr int elements = 8;
 };
-template<> struct avx_vector_type_info<Vec16f> {
+template <> struct avx_vector_type_info<Vec16f> {
     using type = float;
-    static constexpr int size = 16*sizeof(float);
+    static constexpr int size = 16 * sizeof(float);
     static constexpr int elements = 16;
 };
-template<> struct avx_vector_type_info<Vec16i> {
+template <> struct avx_vector_type_info<Vec16i> {
     using type = int;
-    static constexpr int size = 16*sizeof(int);
+    static constexpr int size = 16 * sizeof(int);
     static constexpr int elements = 16;
 };
 
-
-template< class T, class U >
-struct is_assignable : std::integral_constant<
-  bool,
-  std::is_assignable<T,U>::value ||
-  (is_avx_vector<U>::value && (( !is_avx_vector<T>::value && 
-         std::is_assignable<T,typename avx_vector_type_info<U>::type>::value ) ||
-        (is_avx_vector<T>::value && 
-         (avx_vector_type_info<T>::size == avx_vector_type_info<U>::size) &&
-         (avx_vector_type_info<T>::elements == avx_vector_type_info<U>::elements)))) 
-> {};
-      
-
-
-
+template <class T, class U>
+struct is_assignable
+    : std::integral_constant<
+          bool,
+          std::is_assignable<T, U>::value ||
+              (is_avx_vector<U>::value &&
+               ((!is_avx_vector<T>::value &&
+                 std::is_assignable<T, typename avx_vector_type_info<U>::type>::value) ||
+                (is_avx_vector<T>::value &&
+                 (avx_vector_type_info<T>::size == avx_vector_type_info<U>::size) &&
+                 (avx_vector_type_info<T>::elements ==
+                  avx_vector_type_info<U>::elements))))> {};
 
 /*** The next section contains basic operations for vectors ***/
 
 // Norm squared
-inline Vec4d norm_squared(Vec4d val){
-  return val*val;
-}
+inline Vec4d norm_squared(Vec4d val) { return val * val; }
 
-inline Vec4q norm_squared(Vec4q val){
-  return val*val;
-}
+inline Vec4q norm_squared(Vec4q val) { return val * val; }
 
-inline Vec8f norm_squared(Vec8f val){
-  return val*val;
-}
+inline Vec8f norm_squared(Vec8f val) { return val * val; }
 
-inline Vec8i norm_squared(Vec8i val){
-  return val*val;
-}
+inline Vec8i norm_squared(Vec8i val) { return val * val; }
 
-inline Vec8d norm_squared(Vec8d val){
-  return val*val;
-}
+inline Vec8d norm_squared(Vec8d val) { return val * val; }
 
-inline Vec8q norm_squared(Vec8q val){
-  return val*val;
-}
+inline Vec8q norm_squared(Vec8q val) { return val * val; }
 
-inline Vec16f norm_squared(Vec16f val){
-  return val*val;
-}
+inline Vec16f norm_squared(Vec16f val) { return val * val; }
 
-inline Vec16i norm_squared(Vec16i val){
-  return val*val;
-}
+inline Vec16i norm_squared(Vec16i val) { return val * val; }
 
 // Reductions
-inline double reduce_sum(Vec4d v){
-  double sum = 0;
-  double store[4];
-  v.store(&(store[0]));
-  for(int i=0; i<4; i++)
-    sum += store[i];
-  return sum;
+inline double reduce_sum(Vec4d v) {
+    double sum = 0;
+    double store[4];
+    v.store(&(store[0]));
+    for (int i = 0; i < 4; i++)
+        sum += store[i];
+    return sum;
 }
 
-inline double reduce_sum(Vec8f v){
-  double sum = 0;
-  float store[8];
-  v.store(&(store[0]));
-  for(int i=0; i<8; i++)
-    sum += store[i];
-  return sum;
+inline double reduce_sum(Vec8f v) {
+    double sum = 0;
+    float store[8];
+    v.store(&(store[0]));
+    for (int i = 0; i < 8; i++)
+        sum += store[i];
+    return sum;
 }
 
-inline int64_t reduce_sum(Vec8i v){
-  int64_t sum = 0;
-  int store[8];
-  v.store(&(store[0]));
-  for(int i=0; i<8; i++)
-    sum += store[i];
-  return sum;
+inline int64_t reduce_sum(Vec8i v) {
+    int64_t sum = 0;
+    int store[8];
+    v.store(&(store[0]));
+    for (int i = 0; i < 8; i++)
+        sum += store[i];
+    return sum;
 }
 
-inline double reduce_sum(Vec8d v){
-  double sum = 0;
-  double store[8];
-  v.store(&(store[0]));
-  for(int i=0; i<8; i++)
-    sum += store[i];
-  return sum;
+inline double reduce_sum(Vec8d v) {
+    double sum = 0;
+    double store[8];
+    v.store(&(store[0]));
+    for (int i = 0; i < 8; i++)
+        sum += store[i];
+    return sum;
 }
 
-inline double reduce_sum(Vec16f v){
-  double sum = 0;
-  float store[16];
-  v.store(&(store[0]));
-  for(int i=0; i<16; i++)
-    sum += store[i];
-  return sum;
+inline double reduce_sum(Vec16f v) {
+    double sum = 0;
+    float store[16];
+    v.store(&(store[0]));
+    for (int i = 0; i < 16; i++)
+        sum += store[i];
+    return sum;
 }
 
-inline int64_t reduce_sum(Vec16i v){
-  int64_t sum = 0;
-  int store[16];
-  v.store(&(store[0]));
-  for(int i=0; i<16; i++)
-    sum += store[i];
-  return sum;
+inline int64_t reduce_sum(Vec16i v) {
+    int64_t sum = 0;
+    int store[16];
+    v.store(&(store[0]));
+    for (int i = 0; i < 16; i++)
+        sum += store[i];
+    return sum;
 }
 
-inline int64_t reduce_sum(Vec4q v){
-  int64_t sum = 0;
-  int64_t store[4];
-  v.store(&(store[0]));
-  for(int i=0; i<4; i++)
-    sum += store[i];
-  return sum;
+inline int64_t reduce_sum(Vec4q v) {
+    int64_t sum = 0;
+    int64_t store[4];
+    v.store(&(store[0]));
+    for (int i = 0; i < 4; i++)
+        sum += store[i];
+    return sum;
 }
 
-inline int64_t reduce_sum(Vec8q v){
-  int64_t sum = 0;
-  int64_t store[4];
-  v.store(&(store[0]));
-  for(int i=0; i<8; i++)
-    sum += store[i];
-  return sum;
+inline int64_t reduce_sum(Vec8q v) {
+    int64_t sum = 0;
+    int64_t store[4];
+    v.store(&(store[0]));
+    for (int i = 0; i < 8; i++)
+        sum += store[i];
+    return sum;
 }
 
-inline double reduce_prod(Vec4d v){
-  double sum = 1;
-  double store[4];
-  v.store(&(store[0]));
-  for(int i=0; i<4; i++)
-    sum *= store[i];
-  return sum;
+inline double reduce_prod(Vec4d v) {
+    double sum = 1;
+    double store[4];
+    v.store(&(store[0]));
+    for (int i = 0; i < 4; i++)
+        sum *= store[i];
+    return sum;
 }
 
-inline double reduce_prod(Vec8f v){
-  double sum = 0;
-  float store[8];
-  v.store(&(store[0]));
-  for(int i=0; i<8; i++)
-    sum *= store[i];
-  return sum;
+inline double reduce_prod(Vec8f v) {
+    double sum = 0;
+    float store[8];
+    v.store(&(store[0]));
+    for (int i = 0; i < 8; i++)
+        sum *= store[i];
+    return sum;
 }
 
-inline double reduce_prod(Vec8i v){
-  double sum = 0;
-  int store[8];
-  v.store(&(store[0]));
-  for(int i=0; i<8; i++)
-    sum *= store[i];
-  return sum;
+inline double reduce_prod(Vec8i v) {
+    double sum = 0;
+    int store[8];
+    v.store(&(store[0]));
+    for (int i = 0; i < 8; i++)
+        sum *= store[i];
+    return sum;
 }
 
-inline double reduce_prod(Vec8d v){
-  double sum = 1;
-  double store[8];
-  v.store(&(store[0]));
-  for(int i=0; i<8; i++)
-    sum *= store[i];
-  return sum;
+inline double reduce_prod(Vec8d v) {
+    double sum = 1;
+    double store[8];
+    v.store(&(store[0]));
+    for (int i = 0; i < 8; i++)
+        sum *= store[i];
+    return sum;
 }
 
-inline double reduce_prod(Vec16f v){
-  double sum = 0;
-  float store[16];
-  v.store(&(store[0]));
-  for(int i=0; i<16; i++)
-    sum *= store[i];
-  return sum;
+inline double reduce_prod(Vec16f v) {
+    double sum = 0;
+    float store[16];
+    v.store(&(store[0]));
+    for (int i = 0; i < 16; i++)
+        sum *= store[i];
+    return sum;
 }
 
-inline double reduce_prod(Vec16i v){
-  double sum = 0;
-  int store[16];
-  v.store(&(store[0]));
-  for(int i=0; i<16; i++)
-    sum *= store[i];
-  return sum;
+inline double reduce_prod(Vec16i v) {
+    double sum = 0;
+    int store[16];
+    v.store(&(store[0]));
+    for (int i = 0; i < 16; i++)
+        sum *= store[i];
+    return sum;
 }
 
-inline double reduce_prod(Vec4q v){
-  double sum = 0;
-  int64_t store[4];
-  v.store(&(store[0]));
-  for(int i=0; i<4; i++)
-    sum *= store[i];
-  return sum;
+inline double reduce_prod(Vec4q v) {
+    double sum = 0;
+    int64_t store[4];
+    v.store(&(store[0]));
+    for (int i = 0; i < 4; i++)
+        sum *= store[i];
+    return sum;
 }
 
-inline double reduce_prod(Vec8q v){
-  double sum = 0;
-  int64_t store[8];
-  v.store(&(store[0]));
-  for(int i=0; i<8; i++)
-    sum *= store[i];
-  return sum;
+inline double reduce_prod(Vec8q v) {
+    double sum = 0;
+    int64_t store[8];
+    v.store(&(store[0]));
+    for (int i = 0; i < 8; i++)
+        sum *= store[i];
+    return sum;
 }
 
-
-
-// Return the 
+// Return the
 template <typename base_t, typename vector_t, typename T, typename vecT>
-T reduce_sum_in_vector(const vecT & vt) {
-  constexpr int nvec = sizeof(vecT)/sizeof(vector_t);
-  static_assert( nvec == sizeof(T)/sizeof(base_t), "Mismatch in vectorized type sizes");
-  T res;
-  auto * vptr = (const vector_t *)(&vt);
-  base_t * bptr = (base_t *)(&res);
-  for (int i=0; i<nvec; i++) {
-    bptr[i] = reduce_sum(vptr[i]);
-  }
-  return res;
+T reduce_sum_in_vector(const vecT &vt) {
+    constexpr int nvec = sizeof(vecT) / sizeof(vector_t);
+    static_assert(nvec == sizeof(T) / sizeof(base_t),
+                  "Mismatch in vectorized type sizes");
+    T res;
+    auto *vptr = (const vector_t *)(&vt);
+    base_t *bptr = (base_t *)(&res);
+    for (int i = 0; i < nvec; i++) {
+        bptr[i] = reduce_sum(vptr[i]);
+    }
+    return res;
 }
-
-
 
 /// If vector elements are implemented in the c++ code,
 /// reductions to base variables need to be supported.
 /// Will this lead to problematic behavior?
-template<typename Vec>
-inline double& operator+=(double &lhs, const Vec rhs)
-{
-  lhs += reduce_prod(rhs);
-  return lhs;
+template <typename Vec> inline double &operator+=(double &lhs, const Vec rhs) {
+    lhs += reduce_prod(rhs);
+    return lhs;
 }
 
-template<typename Vec>
-inline float& operator+=(float &lhs, const Vec rhs)
-{
-  lhs += reduce_prod(rhs);
-  return lhs;
+template <typename Vec> inline float &operator+=(float &lhs, const Vec rhs) {
+    lhs += reduce_prod(rhs);
+    return lhs;
 }
-
 
 // Define modulo operator for integer vector
-inline Vec16i operator%( const Vec16i &lhs, const int &rhs)
-{
-  Vec16i r;
-  int tvec1[16], tvec2[16];
-  lhs.store(&(tvec1[0]));
-  for(int i=0; i<16; i++)
-    tvec2[i] = tvec1[i] % rhs;
-  r.load(&(tvec2[0]));
-  return r;
+inline Vec16i operator%(const Vec16i &lhs, const int &rhs) {
+    Vec16i r;
+    int tvec1[16], tvec2[16];
+    lhs.store(&(tvec1[0]));
+    for (int i = 0; i < 16; i++)
+        tvec2[i] = tvec1[i] % rhs;
+    r.load(&(tvec2[0]));
+    return r;
 }
 
-
-inline Vec8i operator%( const Vec8i &lhs, const int &rhs)
-{
-  Vec8i r;
-  int tvec1[8], tvec2[8];
-  lhs.store(&(tvec1[0]));
-  for(int i=0; i<8; i++)
-    tvec2[i] = tvec1[i] % rhs;
-  r.load(&(tvec2[0]));
-  return r;
+inline Vec8i operator%(const Vec8i &lhs, const int &rhs) {
+    Vec8i r;
+    int tvec1[8], tvec2[8];
+    lhs.store(&(tvec1[0]));
+    for (int i = 0; i < 8; i++)
+        tvec2[i] = tvec1[i] % rhs;
+    r.load(&(tvec2[0]));
+    return r;
 }
 
-inline Vec4i operator%( const Vec4i &lhs, const int &rhs)
-{
-  Vec4i r;
-  int tvec1[4], tvec2[4];
-  lhs.store(&(tvec1[0]));
-  for(int i=0; i<4; i++)
-    tvec2[i] = tvec1[i] % rhs;
-  r.load(&(tvec2[0]));
-  return r;
+inline Vec4i operator%(const Vec4i &lhs, const int &rhs) {
+    Vec4i r;
+    int tvec1[4], tvec2[4];
+    lhs.store(&(tvec1[0]));
+    for (int i = 0; i < 4; i++)
+        tvec2[i] = tvec1[i] % rhs;
+    r.load(&(tvec2[0]));
+    return r;
 }
-
 
 // Random numbers
 // Since you cannot specialize by return type,
 // it needs to be a struct...
 #if VECTOR_SIZE == 32
-template<typename T>
-inline auto hila_random_vector(){
-  Vec8f r;
-  float tvec[8];
-  for(int i=0; i<8; i++){
-    tvec[i] = mersenne();
-  }
-  r.load(&(tvec[0]));
-  return r;
+template <typename T> inline auto hila_random_vector() {
+    Vec8f r;
+    float tvec[8];
+    for (int i = 0; i < 8; i++) {
+        tvec[i] = mersenne();
+    }
+    r.load(&(tvec[0]));
+    return r;
 };
 
-template<>
-inline auto hila_random_vector<double>(){
-  Vec4d r;
-  double tvec[4];
-  for(int i=0; i<4; i++){
-    tvec[i] = mersenne();
-  }
-  r.load(&(tvec[0]));
-  return r;
+template <> inline auto hila_random_vector<double>() {
+    Vec4d r;
+    double tvec[4];
+    for (int i = 0; i < 4; i++) {
+        tvec[i] = mersenne();
+    }
+    r.load(&(tvec[0]));
+    return r;
 };
-
 
 #elif VECTOR_SIZE == 64
 
-template<typename T>
-inline auto hila_random_vector(){
-  Vec16f r;
-  float tvec[16];
-  for(int i=0; i<16; i++){
-    tvec[i] = mersenne();
-  }
-  r.load(&(tvec[0]));
-  return r;
+template <typename T> inline auto hila_random_vector() {
+    Vec16f r;
+    float tvec[16];
+    for (int i = 0; i < 16; i++) {
+        tvec[i] = mersenne();
+    }
+    r.load(&(tvec[0]));
+    return r;
 };
 
-template<>
-inline auto hila_random_vector<double>(){
-  Vec8d r;
-  double tvec[8];
-  for(int i=0; i<8; i++){
-    tvec[i] = mersenne();
-  }
-  r.load(&(tvec[0]));
-  return r;
+template <> inline auto hila_random_vector<double>() {
+    Vec8d r;
+    double tvec[8];
+    for (int i = 0; i < 8; i++) {
+        tvec[i] = mersenne();
+    }
+    r.load(&(tvec[0]));
+    return r;
 };
 
 #endif
-
-
-
-
 
 #endif

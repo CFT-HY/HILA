@@ -2,10 +2,9 @@
 #define MERSENNE_H_
 
 /***************************************************************
- *  mersenne.h   
+ *  mersenne.h
  *  for the inline version of the mersenne generator
  */
-
 
 double mersenne();
 void seed_mersenne(long);

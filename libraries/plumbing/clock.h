@@ -11,10 +11,10 @@
 // clock_gettime() is the clock for modern Linux - TODO: check architectures!
 
 inline double gettime() {
-  struct timespec tp;
+    struct timespec tp;
 
-  clock_gettime(CLOCK_MONOTONIC, &tp);
-  return( (double)tp.tv_sec + 1.0e-9*(double)tp.tv_nsec );
+    clock_gettime(CLOCK_MONOTONIC, &tp);
+    return ((double)tp.tv_sec + 1.0e-9 * (double)tp.tv_nsec);
 }
 
 #else
@@ -23,9 +23,7 @@ inline double gettime() {
 
 #include <mpi.h>
 
-inline double gettime() { 
-  return MPI_Wtime();
-}
+inline double gettime() { return MPI_Wtime(); }
 
 #endif
 

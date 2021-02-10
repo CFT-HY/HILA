@@ -21,20 +21,17 @@
 #include "hmc/fermion_field.h"
 #include "plumbing/param_input.h"
 
+const int N = 2;
 
-const int N=2;
-
-using SUN = SU<N,double>;
-using NMAT = Matrix<N,N,Cmplx<double>>;
-using VEC = SU_vector<N,double>;
-
+using SUN = SU<N, double>;
+using NMAT = Matrix<N, N, Cmplx<double>>;
+using VEC = SU_vector<N, double>;
 
 // Define some parameters for the simulation
-extern const int nd[4] = { 8, 8, 8, 8 };
+extern const int nd[4] = {8, 8, 8, 8};
 
 extern int n_measurements;
 extern int n_updates_per_measurement;
 extern long seed;
 
-
-#endif //STAGGERED_H_
+#endif // STAGGERED_H_

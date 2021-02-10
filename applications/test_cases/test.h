@@ -1,5 +1,5 @@
 #include <sstream>
-#include<iostream>
+#include <iostream>
 #include <string>
 #include <math.h>
 #include <assert.h>
@@ -16,29 +16,26 @@
 // lattice_struct my_lattice;
 // lattice_struct * lattice = & my_lattice;
 
+const int nd[NDIM] = {32, 32, 32, 32};
 
-
-const int nd[NDIM] = { 32, 32 , 32, 32 };
-
-
-inline void checkLatticeSetup(){
-	for (int dir = 0; dir < NDIRS; dir++){
-        //check that neighbor arrays are allocated
-		assert(lattice->neighb[dir]!=nullptr);
-        #ifdef CUDA
-        assert(lattice->backend_lattice->d_neighb[dir]!=nullptr);
-        #endif
-	}
-    for(int dir = 0; dir < NDIM; dir++){
-    	assert(lattice->size(dir)==nd[dir]);
+inline void checkLatticeSetup() {
+    for (int dir = 0; dir < NDIRS; dir++) {
+        // check that neighbor arrays are allocated
+        assert(lattice->neighb[dir] != nullptr);
+#ifdef CUDA
+        assert(lattice->backend_lattice->d_neighb[dir] != nullptr);
+#endif
+    }
+    for (int dir = 0; dir < NDIM; dir++) {
+        assert(lattice->size(dir) == nd[dir]);
     }
 }
 
-inline void test_setup(int &argc, char **argv){
-  hila::initialize(argc,argv);
-  lattice->setup(nd);
+inline void test_setup(int &argc, char **argv) {
+    hila::initialize(argc, argv);
+    lattice->setup(nd);
 
-  checkLatticeSetup();
+    checkLatticeSetup();
 
-  seed_random(1);
+    seed_random(1);
 }

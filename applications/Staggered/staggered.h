@@ -26,7 +26,6 @@ using SUN = SU<N, double>;
 using NMAT = Matrix<N, N, Cmplx<double>>;
 using VEC = SU_vector<N, double>;
 
-
 // Define some parameters for the simulation
 extern const int nd[4] = {8, 8, 8, 8};
 
