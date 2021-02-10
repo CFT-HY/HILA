@@ -9,7 +9,8 @@
 #include <iostream>
 #include <math.h>
 #include <type_traits>
-// #include "plumbing/defs.h"
+
+#include "plumbing/defs.h"
 
 /// TEMPORARY location for vector intrinsic analogues -- result obvious
 

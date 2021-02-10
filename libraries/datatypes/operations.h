@@ -7,12 +7,12 @@
 ////////////////////////////////////////////
 
 // complex conjugate
-template <typename T> inline T conj(T rhs) { return rhs; }
+//template <typename T> inline T conj(T rhs) { return rhs; }
 
 // transpose
-template <typename T> inline T trans(T rhs) { return rhs; }
+// template <typename T> inline T trans(T rhs) { return rhs; }
 
-template <typename T> inline auto norm_squared(T val) { return val.norm_sq(); }
+// template <typename T> inline auto norm_squared(T val) { return val.norm_sq(); }
 
 inline double norm_squared(double val) { return val * val; }
 

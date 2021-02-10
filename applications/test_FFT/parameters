@@ -1,6 +1,6 @@
-nx 80
-ny 80
-nz 64
+nx 128
+ny 128
+nz 128
 
-loops 50
+loops 5000
 random seed 2123412

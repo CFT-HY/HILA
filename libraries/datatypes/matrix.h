@@ -3,6 +3,7 @@
 
 #include <type_traits>
 #include <sstream>
+#include "plumbing/defs.h"
 #include "operations.h"
 #include "datatypes/cmplx.h"
 
