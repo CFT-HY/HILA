@@ -2,7 +2,7 @@
 #define VECTOR_DEFS_H
 
 #include "plumbing/defs.h"
-#include <immintrin.h>
+// #include <immintrin.h>   // this file should be included in vectorclass.h, if needed
 #include "../../vectorclass/vectorclass.h"
 #include "../../vectorclass/vectormath_exp.h"
 #include "../../vectorclass/vectormath_trig.h"
