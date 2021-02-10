@@ -42,11 +42,13 @@ $(info --------------------------------------------------------------)
 # Main part of the Makefile
 
 # CXX has to be a modern C++ compiler that supports C++17. gcc 8 and
-# higher or Clang 8 and higher are recommended. Best of all, if you build LLVM
-# from sources, use the same compiler you built LLVM with.
+# higher or Clang 8 and higher are recommended.  In modern systems either of
+# these should work
 
-#CXX := g++
+# CXX := g++
+# CXX := clang++
 CXX := $(LLVM_BIN_PATH)/clang++
+
 CXXFLAGS := -fno-rtti -std=c++17 -O2
 
 # Directories where stuff is found and built
