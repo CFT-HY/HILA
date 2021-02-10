@@ -12,7 +12,8 @@ CC := mpic++
 LD := mpic++
 
 # Define compilation flags
-CXXFLAGS  := -O3 -x c++ --std=c++17 -mavx2 -mfma
+CXXFLAGS  := -O3 -x c++ --std=c++17 -march=native -mavx2 -mfma -fabi-version=0 -fomit-frame-pointer
+
 #CXXFLAGS := -g -x c++ --std=c++17
 
 # Define this to use setup_layout_vector
