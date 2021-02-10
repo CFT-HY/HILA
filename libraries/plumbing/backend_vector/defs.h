@@ -2,11 +2,26 @@
 #define VECTOR_DEFS_H
 
 #include "plumbing/defs.h"
+
+#ifdef HILAPP
+// If hilapp, include stubs for vector types
+#include "hilapp_vector.h"
+
+// If instrset is not defined, give a reasonable number (does not matter at this stage)
+#ifndef INSTRSET
+#define INSTRSET 8
+#endif
+
+// end of HILAPP section
+#else   
+
 // #include <immintrin.h>   // this file should be included in vectorclass.h, if needed
-#include "../../vectorclass/vectorclass.h"
-#include "../../vectorclass/vectormath_exp.h"
-#include "../../vectorclass/vectormath_trig.h"
-#include "../../vectorclass/vectormath_hyp.h"
+#include "vectorclass/vectorclass.h"
+#include "vectorclass/vectormath_exp.h"
+#include "vectorclass/vectormath_trig.h"
+#include "vectorclass/vectormath_hyp.h"
+
+#endif
 
 #define VECTORIZED
 
