@@ -24,63 +24,52 @@
 ///  for details on setting it up with LLVM source tree.
 ///
 ///===----------------------------------------------------------------------===//
- 
+
 #ifndef OPTIONSPARSER_H
 #define OPTIONSPARSER_H
- 
+
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
- 
+
 namespace clang {
-  namespace tooling {
-  
-  /// Parses command-line, initializes a compilation database.
-  ///
-  /// This constructor can change argc and argv contents, e.g. consume
-  /// command-line options used for creating FixedCompilationDatabase.
-  ///
-  /// All options not belonging to \p Category become hidden.
-  ///
-  /// This constructor exits program in case of error.
-  class OptionsParser {
-    public:
-      OptionsParser(int &argc, const char **argv,
-                    llvm::cl::OptionCategory &Category,
-                    const char *Overview = nullptr)
-        : OptionsParser(argc, argv, Category, llvm::cl::ZeroOrMore,
-                        Overview) {}
- 
-     
-      OptionsParser(int &argc, const char **argv,
-                    llvm::cl::OptionCategory &Category,
-                    llvm::cl::NumOccurrencesFlag OccurrencesFlag,
-                    const char *Overview = nullptr);
- 
-      /// Returns a reference to the loaded compilations database.
-      CompilationDatabase &getCompilations() {
-        return *Compilations;
-      }
- 
-      /// Returns a list of source file paths to process.
-      const std::vector<std::string> &getSourcePathList() const {
-        return SourcePathList;
-      }
-  
-    private:
-      OptionsParser() = default;
- 
-      llvm::Error init(int &argc, const char **argv,
-                       llvm::cl::OptionCategory &Category,
-                       llvm::cl::NumOccurrencesFlag OccurrencesFlag,
-                       const char *Overview);
- 
-      std::unique_ptr<CompilationDatabase> Compilations;
-      std::vector<std::string> SourcePathList;
-    };
- 
- 
-  }  // namespace tooling
-}  // namespace clang
- 
-#endif  // OPTIONSPARSER_H
+namespace tooling {
+
+/// Parses command-line, initializes a compilation database.
+///
+/// This constructor can change argc and argv contents, e.g. consume
+/// command-line options used for creating FixedCompilationDatabase.
+///
+/// All options not belonging to \p Category become hidden.
+///
+/// This constructor exits program in case of error.
+class OptionsParser {
+  public:
+    OptionsParser(int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+                  const char *Overview = nullptr)
+        : OptionsParser(argc, argv, Category, llvm::cl::ZeroOrMore, Overview) {}
+
+    OptionsParser(int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+                  llvm::cl::NumOccurrencesFlag OccurrencesFlag,
+                  const char *Overview = nullptr);
+
+    /// Returns a reference to the loaded compilations database.
+    CompilationDatabase &getCompilations() { return *Compilations; }
+
+    /// Returns a list of source file paths to process.
+    const std::vector<std::string> &getSourcePathList() const { return SourcePathList; }
+
+  private:
+    OptionsParser() = default;
+
+    llvm::Error init(int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+                     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview);
+
+    std::unique_ptr<CompilationDatabase> Compilations;
+    std::vector<std::string> SourcePathList;
+};
+
+} // namespace tooling
+} // namespace clang
+
+#endif // OPTIONSPARSER_H

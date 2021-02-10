@@ -9,246 +9,244 @@
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 
-#include "srcbuf.h" //srcbuf class interface 
-#include "hilapp.h" //global vars needed 
-#include "generalvisitor.h"  // Definitions for the general visitor case
-
+#include "srcbuf.h"         //srcbuf class interface
+#include "hilapp.h"         //global vars needed
+#include "generalvisitor.h" // Definitions for the general visitor case
 
 //////////////////////////////////////////////
-/// toplevelvisitor.h : overloaded ASTVisitor for 
+/// toplevelvisitor.h : overloaded ASTVisitor for
 /// generating code from AST
 ///
 /// Used in:
 /// - toplevelvisitor.cpp
 /// - loop_function.cpp
 /// - codegen.cpp and its derivatives
-/// 
+///
 //////////////////////////////////////////////
 
 // a hack to allow for calling of top level functions through a global ptr.
 
 class TopLevelVisitor;
-extern TopLevelVisitor * g_TopLevelVisitor;
+extern TopLevelVisitor *g_TopLevelVisitor;
 
+class TopLevelVisitor : public GeneralVisitor,
+                        public RecursiveASTVisitor<TopLevelVisitor> {
 
-class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLevelVisitor> {
+  private:
+    srcBuf *writeBuf;
+    srcBuf *toplevelBuf;
 
-private:
-  srcBuf *writeBuf;
-  srcBuf *toplevelBuf;
+    // flags used during AST parsing
+    struct {
+        unsigned skip_children; // if > 0 skip children of this ast node
+        unsigned scope_level;   // level of variable scoping: {}
+        int ast_depth; // depth of ast nodes within loop body.  ast_depth = 0 at top level
+        int stmt_sequence; // sequence number of full statements in loops.  Full stmts
+                           // separated by ;
+        bool in_loop_body; // true if in site loop
+        bool accept_field_parity; // if parity of loop not resolved yet
+        bool loop_function_next;
+    } parsing_state;
 
-  //flags used during AST parsing 
-  struct {
-    unsigned skip_children;     // if > 0 skip children of this ast node
-    unsigned scope_level;       // level of variable scoping: {}
-    int  ast_depth;             // depth of ast nodes within loop body.  ast_depth = 0 at top level
-    int  stmt_sequence;         // sequence number of full statements in loops.  Full stmts separated by ;
-    bool in_loop_body;          // true if in site loop
-    bool accept_field_parity;   // if parity of loop not resolved yet
-    bool loop_function_next;
-  } parsing_state;
+  public:
+    TopLevelVisitor(Rewriter &R, ASTContext *C) : GeneralVisitor(R, C) {
+        is_top_level = true;
+        g_TopLevelVisitor = this;
+    }
 
- 
-public:
-  TopLevelVisitor(Rewriter &R, ASTContext *C) : GeneralVisitor(R,C) {
-    is_top_level = true;
-    g_TopLevelVisitor = this;
-  }
+    void reset_parsing_state() {
+        parsing_state.skip_children = 0;
+        parsing_state.scope_level = 0;
+        parsing_state.ast_depth = 1;
+        parsing_state.stmt_sequence = 0;
+        parsing_state.in_loop_body = false;
+        parsing_state.accept_field_parity = false;
+        parsing_state.loop_function_next = false;
+    }
 
-  void reset_parsing_state() {
-    parsing_state.skip_children = 0;
-    parsing_state.scope_level = 0;
-    parsing_state.ast_depth = 1;
-    parsing_state.stmt_sequence = 0;
-    parsing_state.in_loop_body = false;
-    parsing_state.accept_field_parity = false;
-    parsing_state.loop_function_next = false;
-  }
+    bool shouldVisitTemplateInstantiations() const { return true; }
+    // is false by default, but still goes?
 
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  // is false by default, but still goes?
+    /// TraverseStmt is called recursively for each level in the AST
+    /// We can keep track of the level here
+    bool TraverseStmt(Stmt *S);
 
-  /// TraverseStmt is called recursively for each level in the AST
-  /// We can keep track of the level here
-  bool TraverseStmt(Stmt *S);
+    /// TraverseDecl is called recursively for each declaration in the AST
+    /// We can keep track of the level here
+    bool TraverseDecl(Decl *S);
 
-  /// TraverseDecl is called recursively for each declaration in the AST
-  /// We can keep track of the level here
-  bool TraverseDecl(Decl *S);
-  
-  /// VisitStmt is called for each statement in AST.  Thus, when traversing the
-  /// AST or part of it we always start from here
-  bool VisitStmt(Stmt *s);
+    /// VisitStmt is called for each statement in AST.  Thus, when traversing the
+    /// AST or part of it we always start from here
+    bool VisitStmt(Stmt *s);
 
-  bool VisitVarDecl(VarDecl *var);
+    bool VisitVarDecl(VarDecl *var);
 
-  bool VisitDecl( Decl * D);
-  bool VisitType( Type * T);
-  
-  /// Visit function declarations
-  bool VisitFunctionDecl(FunctionDecl *f);
+    bool VisitDecl(Decl *D);
+    bool VisitType(Type *T);
 
-  /// same with constructor
-  bool VisitCXXConstructorDecl(CXXConstructorDecl *c);
+    /// Visit function declarations
+    bool VisitFunctionDecl(FunctionDecl *f);
 
-  /// typealiases are used to determine if class is vectorizable
-  bool VisitTypeAliasDecl(TypeAliasDecl * ta);
+    /// same with constructor
+    bool VisitCXXConstructorDecl(CXXConstructorDecl *c);
 
-  /// true if function contains parity loop
-  bool does_function_contain_loop( FunctionDecl *f );
+    /// typealiases are used to determine if class is vectorizable
+    bool VisitTypeAliasDecl(TypeAliasDecl *ta);
 
-  /// check if there's field reference in the Expr.
-  bool does_expr_contain_field(Expr *E);
-  
-  /// same for function templates
-  // bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
+    /// true if function contains parity loop
+    bool does_function_contain_loop(FunctionDecl *f);
 
-  void specialize_function_or_method( FunctionDecl *f );
+    /// check if there's field reference in the Expr.
+    bool does_expr_contain_field(Expr *E);
 
-  int get_param_substitution_list( CXXRecordDecl * r,
-                                   std::vector<std::string> & par,
-                                   std::vector<std::string> & arg,
-                                   std::vector<const TemplateArgument *> & typeargs );
+    /// same for function templates
+    // bool VisitFunctionTemplateDecl(FunctionTemplateDecl *tf);
 
-  void make_mapping_lists( const TemplateParameterList * tpl, 
-                           const TemplateArgumentList & tal,
-                           std::vector<std::string> & par,
-                           std::vector<std::string> & arg,
-                           std::vector<const TemplateArgument *> & typeargs,
-                           std::string *al );
+    void specialize_function_or_method(FunctionDecl *f);
 
-  SourceLocation spec_insertion_point(std::vector<const TemplateArgument *> & typeargs,
-                                      SourceLocation ip, 
-                                      FunctionDecl *f);
- 
-  // bool VisitCXXRecordDecl( CXXRecordDecl * D);
+    int get_param_substitution_list(CXXRecordDecl *r, std::vector<std::string> &par,
+                                    std::vector<std::string> &arg,
+                                    std::vector<const TemplateArgument *> &typeargs);
 
-  /// and a hook for getting templated class template params
-  bool VisitClassTemplateDecl(ClassTemplateDecl *D);
+    void make_mapping_lists(const TemplateParameterList *tpl,
+                            const TemplateArgumentList &tal,
+                            std::vector<std::string> &par, std::vector<std::string> &arg,
+                            std::vector<const TemplateArgument *> &typeargs,
+                            std::string *al);
 
-  /// handle the templated class specializations
-  // int handle_class_specializations(ClassTemplateDecl *D);
-  
-  /// special handler for Field<>
-  int handle_field_specializations(ClassTemplateDecl *D);
-  
-  bool is_array_expr(Expr *E); 
-  
-  void check_allowed_assignment(Stmt * s);
-      
-  bool check_field_ref_list();
+    SourceLocation spec_insertion_point(std::vector<const TemplateArgument *> &typeargs,
+                                        SourceLocation ip, FunctionDecl *f);
 
-  void check_var_info_list();
-  
-  bool handle_field_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X, bool is_func_arg = false);
-  
-  int handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string & op);
+    // bool VisitCXXRecordDecl( CXXRecordDecl * D);
 
-  /// Check that the addressof-operators and reference vars are OK
-  void check_addrofops_and_refs(Stmt * S);
+    /// and a hook for getting templated class template params
+    bool VisitClassTemplateDecl(ClassTemplateDecl *D);
 
-  // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
-  void handle_function_call_in_loop(Stmt * s);
-                                             
-  void handle_member_call_in_loop(Stmt * s);
+    /// handle the templated class specializations
+    // int handle_class_specializations(ClassTemplateDecl *D);
 
-  bool loop_function_check(Decl *fd);
-  
-  void process_loop_functions();
+    /// special handler for Field<>
+    int handle_field_specializations(ClassTemplateDecl *D);
 
-  void visit_loop_functions( std::vector<call_info_struct> & calls );
+    bool is_array_expr(Expr *E);
 
-  bool handle_special_loop_function(CallExpr *Call);
+    void check_allowed_assignment(Stmt *s);
 
-  // check if stmt is lf[par] = ... -type
-  bool is_field_parity_assignment( Stmt *s );
+    bool check_field_ref_list();
 
-  bool is_field_with_coordinate_stmt( Stmt *s );
-  void field_with_coordinate_assign( Expr * lhs, Expr * rhs, SourceLocation oploc);
-  void field_with_coordinate_read( Expr * E);
+    void check_var_info_list();
 
-  /// Does ; follow the statement?
-  SourceRange getRangeWithSemicolon(Stmt * S, bool flag_error = true);
-  
-  void requireGloballyDefined(Expr * e);
+    bool handle_field_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X,
+                             bool is_func_arg = false);
 
-  /// Entry point for the full site loop
-  bool handle_full_loop_stmt(Stmt *ls, bool field_parity_ok );
+    int handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string &op);
 
-  /// Function for each stmt within loop body
-  bool handle_loop_body_stmt(Stmt * s);
+    /// Check that the addressof-operators and reference vars are OK
+    void check_addrofops_and_refs(Stmt *S);
 
-  void remove_vars_out_of_scope(unsigned level);
-  
-  // add handle to get rewriter too - for source control
-  Rewriter &getRewriter() { return TheRewriter; }
+    // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
+    void handle_function_call_in_loop(Stmt *s);
 
-  /// Code generation headers start here
-  /// Starting point for new code
-  void generate_code(Stmt *S);
-  void handle_field_plus_offsets(std::stringstream &code, srcBuf & loopbuf, std::string & par );
+    void handle_member_call_in_loop(Stmt *s);
 
-  std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf & loopBuf, bool generate_wait);
+    bool loop_function_check(Decl *fd);
 
-  bool check_loop_vectorizable(Stmt *S, int & vector_size, std::string & diag);
+    void process_loop_functions();
 
-  /// Generate a header for starting communication and marking fields changed
-  std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
-  std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
-  void generate_openacc_loop_header(std::stringstream & code);
-  //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
-  std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
+    void visit_loop_functions(std::vector<call_info_struct> &calls);
 
-  /// Check if the field type is vectorizable and how
-  vectorization_info inspect_field_type(Expr *fE);
+    bool handle_special_loop_function(CallExpr *Call);
 
-  DeclRefExpr * find_base_variable(Expr * E);
+    // check if stmt is lf[par] = ... -type
+    bool is_field_parity_assignment(Stmt *s);
 
-  bool is_variable_loop_local(VarDecl * decl);
+    bool is_field_with_coordinate_stmt(Stmt *s);
+    void field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceLocation oploc);
+    void field_with_coordinate_read(Expr *E);
 
-  /// Generate a candidate for a kernel name
-  std::string make_kernel_name();
+    /// Does ; follow the statement?
+    SourceRange getRangeWithSemicolon(Stmt *S, bool flag_error = true);
 
-  /// Change field references within loops
-  void replace_field_refs_and_funcs(srcBuf &sb);
-  
-  /// utility used in finding pragmas on the previous line
-  bool is_preceded_by_pragma( SourceLocation l, std::string & args, SourceLocation & ploc );
+    void requireGloballyDefined(Expr *e);
 
-  void set_writeBuf(const FileID fid);
+    /// Entry point for the full site loop
+    bool handle_full_loop_stmt(Stmt *ls, bool field_parity_ok);
 
-  SourceRange get_func_decl_range(FunctionDecl *f);
+    /// Function for each stmt within loop body
+    bool handle_loop_body_stmt(Stmt *s);
 
-  void ast_dump(const Stmt *s);
-  void ast_dump(const Decl *d);
-  void ast_dump_header(const char *s, const SourceRange sr);
+    void remove_vars_out_of_scope(unsigned level);
 
+    // add handle to get rewriter too - for source control
+    Rewriter &getRewriter() { return TheRewriter; }
+
+    /// Code generation headers start here
+    /// Starting point for new code
+    void generate_code(Stmt *S);
+    void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf,
+                                   std::string &par);
+
+    std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
+                                      bool generate_wait);
+
+    bool check_loop_vectorizable(Stmt *S, int &vector_size, std::string &diag);
+
+    /// Generate a header for starting communication and marking fields changed
+    std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb,
+                                  bool generate_wait);
+    std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb,
+                                   bool generate_wait);
+    void generate_openacc_loop_header(std::stringstream &code);
+    //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
+    std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb,
+                                  bool generate_wait);
+
+    /// Check if the field type is vectorizable and how
+    vectorization_info inspect_field_type(Expr *fE);
+
+    DeclRefExpr *find_base_variable(Expr *E);
+
+    bool is_variable_loop_local(VarDecl *decl);
+
+    /// Generate a candidate for a kernel name
+    std::string make_kernel_name();
+
+    /// Change field references within loops
+    void replace_field_refs_and_funcs(srcBuf &sb);
+
+    /// utility used in finding pragmas on the previous line
+    bool is_preceded_by_pragma(SourceLocation l, std::string &args, SourceLocation &ploc);
+
+    void set_writeBuf(const FileID fid);
+
+    SourceRange get_func_decl_range(FunctionDecl *f);
+
+    void ast_dump(const Stmt *s);
+    void ast_dump(const Decl *d);
+    void ast_dump_header(const char *s, const SourceRange sr);
 };
-
 
 /// An AST Visitor for checking constraints for a field
 /// reference expression. Walks the tree to check each
 /// variable reference
-class FieldRefChecker : public GeneralVisitor, public RecursiveASTVisitor<FieldRefChecker> {
-public:
-  using GeneralVisitor::GeneralVisitor;
+class FieldRefChecker : public GeneralVisitor,
+                        public RecursiveASTVisitor<FieldRefChecker> {
+  public:
+    using GeneralVisitor::GeneralVisitor;
 
-  bool TraverseStmt(Stmt *s);
-  bool VisitDeclRefExpr(DeclRefExpr * e);
+    bool TraverseStmt(Stmt *s);
+    bool VisitDeclRefExpr(DeclRefExpr *e);
 };
 
 /// An AST Visitor for checking constraints for assigments
 /// in lattice loops
-class LoopAssignChecker : public GeneralVisitor, public RecursiveASTVisitor<LoopAssignChecker> {
-public:
-  using GeneralVisitor::GeneralVisitor;
+class LoopAssignChecker : public GeneralVisitor,
+                          public RecursiveASTVisitor<LoopAssignChecker> {
+  public:
+    using GeneralVisitor::GeneralVisitor;
 
-  bool TraverseStmt(Stmt *s);
-  bool VisitDeclRefExpr(DeclRefExpr * e);
+    bool TraverseStmt(Stmt *s);
+    bool VisitDeclRefExpr(DeclRefExpr *e);
 };
-
-
-
-
 
 #endif
