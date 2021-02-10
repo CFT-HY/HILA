@@ -9,15 +9,14 @@ ifneq ($(MAKECMDGOALS),cleanall)
 
 ## hilapp binary (TOP_DIR defined in calling Makefile)
 
-HILAPP := $(TOP_DIR)/hilapp/bin/hilapp
+HILAPP_DIR := $(TOP_DIR)/hilapp
+HILAPP := $(HILAPP_DIR)/bin/hilapp
 
 ################
 
 LIBRARIES_DIR := $(TOP_DIR)/libraries
 ARCH_DIR := $(LIBRARIES_DIR)/target_arch
 HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
-
-HILAPP_DIR := $(dir $(HILAPP))
 
 # ARCH needs to be defined. Check.
 ifndef ARCH
@@ -97,7 +96,7 @@ $(GIT_SHA_FILE):
 	touch $(GIT_SHA_FILE)
 
 ALL_DEPEND += $(GIT_SHA_FILE)
-	
+
 endif
 
 # Standard rules for creating and building cpt files. These
@@ -107,7 +106,7 @@ endif
 
 build/%.cpt: %.cpp Makefile $(MAKEFILE_LIST) $(ALL_DEPEND) $(APP_HEADERS)
 	mkdir -p build
-	$(HILAPP) $(APP_OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
+	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@
 
 build/%.o : build/%.cpt
 	$(CC) $(CXXFLAGS) $(APP_OPTS) $(HILA_OPTS) $< -c -o $@
@@ -116,13 +115,13 @@ build/%.cpt: $(LIBRARIES_DIR)/plumbing/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 	mkdir -p build
 	$(HILAPP) $(APP_OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
 
-	
+
 # This one triggers only for cuda targets
 build/%.cpt: $(LIBRARIES_DIR)/plumbing/backend_cuda/%.cpp $(ALL_DEPEND) $(HILA_HEADERS)
 	mkdir -p build
 	$(HILAPP) $(APP_OPTS) $(HILA_OPTS) $(HILAPP_OPTS) $< -o $@
 
-	
+
 
 endif
 endif   # close the "clean" bracket
