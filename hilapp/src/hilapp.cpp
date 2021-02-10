@@ -1058,10 +1058,10 @@ public:
     // llvm::errs() << "** Creating AST consumer for: " << file << "\n";
     TheRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
     myCompilerInstance = &CI;
-    #if (__clang_major__ > 9)
-    return std::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());
-    #else
+    #if defined(__clang_major__) && (__clang_major__ <= 9)
     return llvm::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());
+    #else
+    return std::make_unique<MyASTConsumer>(TheRewriter, &CI.getASTContext());
     #endif
   }
 
