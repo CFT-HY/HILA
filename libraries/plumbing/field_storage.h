@@ -93,7 +93,7 @@ class field_storage {
     void set_local_boundary_elements(direction dir, parity par, const lattice_struct * RESTRICT lattice, bool antiperiodic);
 
     // Allocate buffers for mpi communication
-    T * allocate_mpi_buffer( int n );
+    T * allocate_mpi_buffer( unsigned n );
     void free_mpi_buffer(T * buffer);
 
     T * RESTRICT get_buffer() {

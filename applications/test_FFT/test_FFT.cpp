@@ -39,18 +39,18 @@ int main(int argc, char **argv){
       cmplx_timer.stop();
     }
 
-    Field<Vector<6,vtype>> v = 0,v1;
+    // Field<Vector<6,vtype>> v = 0,v1;
 
-    onsites(ALL) {
-      v[X].e(1).gaussian();
-    }
+    // onsites(ALL) {
+    //   v[X].e(1).gaussian();
+    // }
 
-    timer vector_timer("vector fft");
-    for (int i=0; i<loops; i++) {
-      vector_timer.start();
-      FFT_field(v,v1);
-      vector_timer.stop();
-    }
+    // timer vector_timer("vector fft");
+    // for (int i=0; i<loops; i++) {
+    //   vector_timer.start();
+    //   FFT_field(v,v1);
+    //   vector_timer.stop();
+    // }
 
     hila::finishrun();
 }

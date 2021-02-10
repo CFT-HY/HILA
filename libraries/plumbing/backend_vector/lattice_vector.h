@@ -270,7 +270,7 @@ struct vectorized_lattice_struct  {
       alloc_size = c_offset * vector_size;
 
       if (alloc_size >= (1ULL << 32)) {
-        report_too_large();
+        report_too_large_node();
       }
 
     }
