@@ -53,13 +53,14 @@ llvm::cl::opt<bool> cmdline::dump_ast("dump-ast", llvm::cl::desc("Dump AST tree"
                                       llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<std::string>
-    cmdline::dummy_def("D", llvm::cl::value_desc("name"),
-                       llvm::cl::desc("Define name/symbol for preprocessor"),
+    cmdline::dummy_def("D", llvm::cl::value_desc("macro[=value]"),
+                       llvm::cl::desc("Define name/macro for preprocessor"),
                        llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<std::string>
-    cmdline::dummy_incl("I", llvm::cl::desc("Directory for include file search"),
-                        llvm::cl::value_desc("directory"), llvm::cl::cat(HilappCategory));
+    cmdline::dummy_incl("I", llvm::cl::value_desc("directory"),
+                        llvm::cl::desc("Directory for include file search"),
+                        llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::function_spec_no_inline(
     "function-spec-no-inline",
@@ -93,7 +94,7 @@ llvm::cl::opt<bool> cmdline::syntax_only("syntax-only",
 
 llvm::cl::opt<std::string> cmdline::output_filename(
     "o", llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
-    llvm::cl::value_desc("name"), llvm::cl::cat(HilappCategory));
+    llvm::cl::value_desc("filename"), llvm::cl::cat(HilappCategory), llvm::cl::Prefix);
 
 llvm::cl::opt<bool>
     cmdline::no_mpi("no-mpi",
