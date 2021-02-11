@@ -1166,9 +1166,11 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
 
 ///////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::ast_dump_header(const char *s, const SourceRange sr_in) {
+void TopLevelVisitor::ast_dump_header(const char *s, const SourceRange sr_in,
+                                      bool is_function) {
     SourceRange sr = sr_in;
     unsigned linenumber = srcMgr.getSpellingLineNumber(sr.getBegin());
+    std::string name = srcMgr.getFilename(sr.getBegin());
 
     // check if it is macro
     if (sr.getBegin().isMacroID()) {
@@ -1177,26 +1179,38 @@ void TopLevelVisitor::ast_dump_header(const char *s, const SourceRange sr_in) {
         sr = CSR.getAsRange();
     }
 
-    std::string source = TheRewriter.getRewrittenText(sr);
-    auto n = source.find('\n');
+    if (!is_function) {
+        std::string source = TheRewriter.getRewrittenText(sr);
+        auto n = source.find('\n');
 
-    if (n == std::string::npos) {
-        llvm::errs() << "**** AST dump of " << s << " \'" << source << "\' on line "
-                     << linenumber << '\n';
+        if (n == std::string::npos) {
+            llvm::errs() << "**** AST dump of " << s << " \'" << source << "\' on line "
+                         << linenumber << " in file " << name << '\n';
+        } else {
+            llvm::errs() << "**** AST dump of " << s << " starting with \'"
+                         << source.substr(0, n) << "\' on line " << linenumber
+                         << " in file " << name << '\n';
+        }
     } else {
-        llvm::errs() << "**** AST dump of " << s << " starting with \'"
-                     << source.substr(0, n) << "\' on line " << linenumber << '\n';
+        llvm::errs() << "**** AST dump of declaration of function '" << s << "' on line "
+                     << linenumber << " in file " << name << '\n';
     }
 }
 
 void TopLevelVisitor::ast_dump(const Stmt *S) {
-    ast_dump_header("statement", S->getSourceRange());
+    ast_dump_header("statement", S->getSourceRange(), false);
     S->dumpColor();
     llvm::errs() << "*****************************\n";
 }
 
 void TopLevelVisitor::ast_dump(const Decl *D) {
-    ast_dump_header("declaration", D->getSourceRange());
+    ast_dump_header("declaration", D->getSourceRange(), false);
+    D->dumpColor();
+    llvm::errs() << "*****************************\n";
+}
+
+void TopLevelVisitor::ast_dump(const FunctionDecl *D) {
+    ast_dump_header(D->getQualifiedNameAsString().c_str(), D->getSourceRange(), true);
     D->dumpColor();
     llvm::errs() << "*****************************\n";
 }
@@ -1216,7 +1230,7 @@ void TopLevelVisitor::remove_vars_out_of_scope(unsigned level) {
 
 bool TopLevelVisitor::VisitStmt(Stmt *s) {
 
-    if (parsing_state.ast_depth == 1 && has_pragma(s, pragma_hila::AST_DUMP)) {
+    if (parsing_state.ast_depth <= 1 && has_pragma(s, pragma_hila::AST_DUMP)) {
         ast_dump(s);
     }
 
@@ -1485,8 +1499,9 @@ void TopLevelVisitor::field_with_coordinate_read(Expr *E) {
 
 bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
-    // operate only non-templated functions and template specializations
-    // this does not really do anything
+    // operate (usually) only non-templated functions and template specializations
+    if (has_pragma(f, pragma_hila::AST_DUMP))
+        ast_dump(f);
 
     // For the pragmas, we need to check the "previousdecl" -- prototype, if there is a
     // pragma there Automatic now in has_pragma
@@ -1887,7 +1902,7 @@ bool TopLevelVisitor::VisitType(Type *T) {
     auto *recdecl = T->getAsCXXRecordDecl();
     if (recdecl != nullptr) {
         if (has_pragma(recdecl->getInnerLocStart(), pragma_hila::AST_DUMP)) {
-            ast_dump_header("type", recdecl->getInnerLocStart());
+            ast_dump_header("type", recdecl->getInnerLocStart(), false);
             recdecl->dumpColor();
         }
     }

@@ -223,7 +223,8 @@ class TopLevelVisitor : public GeneralVisitor,
 
     void ast_dump(const Stmt *s);
     void ast_dump(const Decl *d);
-    void ast_dump_header(const char *s, const SourceRange sr);
+    void ast_dump(const FunctionDecl *d);
+    void ast_dump_header(const char *s, const SourceRange sr, bool is_function);
 };
 
 /// An AST Visitor for checking constraints for a field
