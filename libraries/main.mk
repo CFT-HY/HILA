@@ -42,7 +42,7 @@ HILA_OBJECTS = \
 	build/test_gathers.o \
 	build/com_mpi.o \
 	build/com_single.o \
-	build/FFT_new.o
+	build/fft_new.o
 
 # com_mpi / com_single could be moved to platforms, but they're protected by USE_MPI guards
 
@@ -101,8 +101,14 @@ endif
 
 # Standard rules for creating and building cpt files. These
 # build .o files in the build folder by first running them
-# through hilapp
+# through hilapp.
+# Source can be at . , ./src,  or under libraries/plumbing
+# If your project has more complicated hierarcy, add the rules to the
+# project Makefile
 
+build/%.cpt: src/%.cpp Makefile $(MAKEFILE_LIST) $(ALL_DEPEND) $(APP_HEADERS)
+	mkdir -p build
+	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@ $(HILAPP_TRAILING_OPTS)
 
 build/%.cpt: %.cpp Makefile $(MAKEFILE_LIST) $(ALL_DEPEND) $(APP_HEADERS)
 	mkdir -p build
