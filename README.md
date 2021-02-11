@@ -1,20 +1,29 @@
 
 # Description 
 
-The Hila framework consists of 
+Hila ("lattice" in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
 
-1. the hilapp and 
-2. a lattice simulation library.
+Purpose: make application writing straightforward and intuitive, while producing optimized executables for 
+different (super)computing platforms (parallelization with MPI, GPU computing with Cuda or HIP, AVX vectorization, 
+etc.).  Details of the parallelization and computing architecture are hidden from the application layer.
+Write once -- run anywhere.
 
-The library is currently found in `programs/plumbing`.
+Hila is based on hila preprocessor "hilapp", which converts application C++ to platform-specific C++ code.
+This is then passed on to appropriate compilers for the platforms.
 
-Transformer contains a C++ preprocessing tool and framework for programming lattice field theory simulations: the main method for getting measurements from non-perturbative quantum field theories.  
 
-Lattice field theory simulations involve up to 4 dimensional grids whose points are updated continuously according to some Monte Carlo update algorithm. The update at each grid point depends on the data stored at neighboring lattice points, and the ideal 
-update order depends on the parity of the lattice points. Efficient parallel implementations using MPI and GPU's can be quite complicated to implement, modify and debug. Some kind of simplification was clearly needed. 
+## Getting started
 
-Transformer aims to make it easier for researchers to implement a broad class of these simulations by abstracting a lot of the technicalities involved, and by bringing the syntax from CUDA kernels and MPI calls to the essentials. The approach given 
-here involves new datatypes and a preprocessing tool that converts c++ code with the new simplified syntax for loops and element accessors into working c++ code and gpu kernels. 
+1. Clone hila repository 
+```
+git clone git@bitbucket.org:Kari_Rummukainen/hila.git
+```
+2. For compiling hilapp, you need [clang](https://clang.llvm.org/) development tools.  
+These are included in most Linux distribution repos, e.g. in Ubuntu 20.04 
+```
+apt install clang-11 llvm-11 clang-tools-11 libclang-common-11-dev libclang-cpp11-dev libclang-11-dev clang-format-11
+```
+load everything needed.  
 
 # Instructions
 
