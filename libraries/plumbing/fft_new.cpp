@@ -2,7 +2,7 @@
 
 #include "plumbing/defs.h"
 #include "plumbing/timing.h"
-#include "plumbing/FFT_new.h"
+#include "plumbing/fft_new.h"
 #include "fftw3.h"
 
 #include <mpi.h>
