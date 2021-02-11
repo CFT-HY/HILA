@@ -1,7 +1,7 @@
 
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
-#include "plumbing/FFT_new.h"
+#include "plumbing/fft_new.h"
 #include "plumbing/defs.h"
 #include "plumbing/field.h"
 #include "plumbing/param_input.h"

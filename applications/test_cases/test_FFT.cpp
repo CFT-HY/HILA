@@ -1,5 +1,5 @@
 #include "test.h"
-#include "plumbing/FFT_new.h"
+#include "plumbing/fft_new.h"
 //#include "plumbing/FFT.h"
 
 int main(int argc, char **argv) {
