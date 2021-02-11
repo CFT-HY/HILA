@@ -27,6 +27,8 @@ std::string print_TemplatedKind(const enum FunctionDecl::TemplatedKind kind) {
         return "TK_FunctionTemplateSpecialization";
     case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
         return "TK_DependentFunctionTemplateSpecialization";
+    default:
+        return "unknown";
     }
 }
 

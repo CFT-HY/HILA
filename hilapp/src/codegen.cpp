@@ -42,6 +42,8 @@ std::string parity_str(parity p) {
         return "parity::odd";
     case parity::all:
         return "parity::all";
+    default:
+        return "unknown";
     }
 }
 
