@@ -1,14 +1,15 @@
 #ifndef FFT_FIELD_H
 #define FFT_FIELD_H
 
+#include "datatypes/cmplx.h"
+#include "fftw3.h"
 #include "plumbing/coordinates.h"
 #include "plumbing/field.h"
-#include "datatypes/cmplx.h"
 #include "plumbing/timing.h"
-#include "fftw3.h"
 
-/// Initialize fft to direction dir.  _elements: number of complex values in field, T_size
-/// the size of the field variable.  fftdir is fft_direction::FORWARD or fft
+/// Initialize fft to direction dir.  _elements: number of complex values in
+/// field, T_size the size of the field variable.  fftdir is
+/// fft_direction::FORWARD or fft
 
 void init_fft_direction(direction dir, size_t _elements, size_t T_size,
                         fft_direction fftdir, void *const buffer1, void *const buffer2);
@@ -119,8 +120,8 @@ inline void increment_current_coord(CoordinateVector &current,
 }
 
 ///  Reshuffle data, given that previous fft dir was to prev_dir and now to dir
-///  We order this so that the in buffer is accessed in order, out in ~random order
-///   - theoretically random writes are faster than reads
+///  We order this so that the in buffer is accessed in order, out in ~random
+///  order - theoretically random writes are faster than reads
 
 template <typename cmplx_t>
 inline void fft_reshuffle_data(const direction fft_dir, cmplx_t *const RESTRICT out,
@@ -179,8 +180,8 @@ inline void fft_reshuffle_data(const direction fft_dir, cmplx_t *const RESTRICT 
                 size_t off_in = offset_in.dot(current);
                 /// and copy cmplx number at a time
                 out[d0 + off_out + e * e_offset_out] = in[e * e_offset_in + off_in];
-                // memcpy(out + (off_out + e*e_offset_out),  in + d0 + e*e_offset_in ,
-                // sizeof(cmplx_t));
+                // memcpy(out + (off_out + e*e_offset_out),  in + d0 +
+                // e*e_offset_in , sizeof(cmplx_t));
             }
         }
         increment_current_coord(current, odirs);

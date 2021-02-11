@@ -42,11 +42,11 @@ template <typename T> class field_storage {
                            const unsigned field_alloc_size);
 
     // Get a single element outside loops
-    inline auto get_element(const unsigned i,
-                            const lattice_struct *RESTRICT lattice) const;
+    auto get_element(const unsigned i,
+                     const lattice_struct *RESTRICT lattice) const;
     template <typename A>
-    inline void set_element(A &value, const unsigned i,
-                            const lattice_struct *RESTRICT lattice);
+    void set_element(A &value, const unsigned i,
+                     const lattice_struct *RESTRICT lattice);
 
 #else
     inline T get_element(const unsigned i) const;

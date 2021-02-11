@@ -1538,7 +1538,7 @@ extern Field<double> disable_avx;
 // Include FFT implentations (mostly fftw, but for CUDA
 // we need to specialize version)
 #ifdef CUDA
-#include "plumbing/backend_cuda/FFT.h"
+// #include "plumbing/backend_cuda/FFT.h"
 #else
 // #include "plumbing/FFT.h"
 #endif
