@@ -56,7 +56,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// Construct matrix automatically from right-size initializer list
     /// This does not seem to be dangerous, so keep non-explicit
-    
+
     template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
     inline Matrix(std::initializer_list<S> rhs) {
         assert(rhs.size() == n * m &&
@@ -597,8 +597,8 @@ std::ostream &operator<<(std::ostream &strm, const Matrix<n, m, T> &A) {
         for (int i = 0; i < n * m; i++)
             strm << ' ' << A.e(i);
         strm << " ]";
-        if (n > 1)
-            strm << "^T";
+        // if (n > 1)
+        //    strm << "^T";
     } else {
         // now a matrix - split the matrix on lines.
         // do it so that columns are equal width...

@@ -19,7 +19,7 @@
 #include "hmc/gauge_field.h"
 #include "dirac/wilson.h"
 #include "hmc/fermion_field.h"
-#include "plumbing/param_input.h"
+#include "plumbing/input.h"
 
 const int N = 2;
 

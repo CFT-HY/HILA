@@ -4,7 +4,7 @@
 #include <regex>
 #include <type_traits>
 #include "defs.h"
-#include "param_input.h"
+#include "input.h"
 #include "globals.h"
 #include <errno.h>
 #include <iomanip>
@@ -13,7 +13,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 /// Parameter file input system
-/// Check param_input.h for user instructions
+/// Check input.h for user instructions
 //////////////////////////////////////////////////////////////////////////////
 
 static std::string empty_key("");

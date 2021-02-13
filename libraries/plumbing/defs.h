@@ -47,6 +47,7 @@ using real_t = double;
 
 // text output section -- defines also output0, which writes from node 0 only
 namespace hila {
+
 /// this is our default output file stream
 extern std::ostream output;
 /// this is just a hook to store output file, if it is in use
@@ -54,13 +55,20 @@ extern std::ofstream output_file;
 
 int myrank(); // rank of this node
 
-extern bool about_to_finish;
+// about_to_finish becomes true at the end.  Signals that 
+// better not rely on MPI or existence of objects any more.
+extern bool about_to_finish;  
+
+// check_input is used to notify that we're just checking the 
+// input values and will exit before fields are allocated.
+extern bool check_input;
 
 void initialize(int argc, char **argv);
 void finishrun();
 void terminate(int status);
 void error(const std::string &msg);
 void error(const char *msg);
+
 } // namespace hila
 
 // The logger uses hila::myrank, so it cannot be included on top

@@ -11,7 +11,7 @@
 #include "datatypes/matrix.h"
 #include "datatypes/sun.h"
 #include "plumbing/field.h"
-#include "plumbing/param_input.h"
+#include "plumbing/input.h"
 
 inline double scaleFactor(double t, double t_end) { return t / t_end; }
 

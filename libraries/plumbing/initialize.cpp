@@ -114,11 +114,16 @@ class cmdlineargs {
             output0 << "    " << argv[i] << '\n';
         }
         output0 << "Recognized:\n";
-        output0 << "  timelimit=<seconds>     cpu time limit\n";
+        output0 
+            << "  timelimit=<seconds> : cpu time limit\n";
+        output0 
+            << "  check               : check input & exit\n";
         output0
-            << "  output=<name>           name of output file (default: stdout/output)\n";
-        output0 << "  sublattices=<n>         number of sublattices\n";
-        output0 << "  sync=yes/no             synchronize sublattice runs (default=no)\n";
+            << "  output=<name>       : name of output file (default: stdout)\n";
+        output0 
+            << "  sublattices=<n>     : number of sublattices\n";
+        output0 
+            << "  sync=yes/no         : synchronize sublattice runs (default=no)\n";
 
         hila::terminate(0);
     }

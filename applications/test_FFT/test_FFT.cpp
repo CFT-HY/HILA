@@ -4,7 +4,7 @@
 #include "plumbing/fft_new.h"
 #include "plumbing/defs.h"
 #include "plumbing/field.h"
-#include "plumbing/param_input.h"
+#include "plumbing/input.h"
 
 using vtype = Cmplx<double>;
 

@@ -1,6 +1,6 @@
 #include "test.h"
 #include <string>
-#include "plumbing/param_input.h"
+#include "plumbing/input.h"
 
 /////////////////////
 /// test_case 1

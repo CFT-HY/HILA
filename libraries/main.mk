@@ -32,7 +32,7 @@ endif
 
 HILA_OBJECTS = \
 	build/initialize.o \
-	build/param_input.o \
+	build/input.o \
 	build/mersenne_inline.o \
 	build/gaussian_random.o \
 	build/lattice.o \

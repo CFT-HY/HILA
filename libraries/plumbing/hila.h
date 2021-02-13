@@ -10,7 +10,7 @@
 #include "plumbing/field.h"
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
-#include "plumbing/param_input.h"
+#include "plumbing/input.h"
 
 
 

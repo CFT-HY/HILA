@@ -60,6 +60,11 @@ void lattice_struct::setup(const CoordinateVector & siz) {
     backend_lattice->setup(this);
 #endif
 
+    if (hila::check_input) {
+        output0 << "Input check done, exiting\n";
+        hila::finishrun();
+    }
+
     test_std_gathers();
 
     disable_avx = 0;
