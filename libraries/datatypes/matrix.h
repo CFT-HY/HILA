@@ -56,9 +56,11 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// Construct matrix automatically from right-size initializer list
     /// This does not seem to be dangerous, so keep non-explicit
-    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0>
+    
+    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
     inline Matrix(std::initializer_list<S> rhs) {
-        assert(rhs.size() == n*m && "Matrix/Vector initializer list size must match variable size");
+        assert(rhs.size() == n * m &&
+               "Matrix/Vector initializer list size must match variable size");
         int i = 0;
         for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
             c[i] = *it;
@@ -124,6 +126,7 @@ template <const int n, const int m, typename T> class Matrix {
     /// but require an explicit cast operator.  This makes it easier to write code.
     /// or should it be automatic?  keep/remove explicit?
     /// TODO: CHECK AVX CONVERSIONS
+
     template <typename S, std::enable_if_t<std::is_convertible<T, S>::value, int> = 0>
     operator Matrix<n, m, S>() {
         Matrix<n, m, S> res;
@@ -152,7 +155,7 @@ template <const int n, const int m, typename T> class Matrix {
         return *this;
     }
 
-    // assign from different type
+    /// Assign from different type matrix
     template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
     inline Matrix<n, m, T> &operator=(const Matrix<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
@@ -165,8 +168,9 @@ template <const int n, const int m, typename T> class Matrix {
     template <typename S, int nn = n, int mm = m,
               std::enable_if_t<(is_assignable<T &, S>::value && nn == mm), int> = 0>
     inline Matrix<n, m, T> &operator=(const S rhs) {
-        // static_assert( n==m, "rows != columns : assigning a scalar only possible for a
-        // square Matrix");
+        // static_assert( n==m, "rows != columns : assigning a scalar only possible for
+        // a square Matrix");
+
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
                 if (i == j)
@@ -174,6 +178,18 @@ template <const int n, const int m, typename T> class Matrix {
                 else
                     e(i, j) = 0;
             }
+        return *this;
+    }
+
+    /// Assign from initializer list
+    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    inline Matrix<n, m, T> &operator=(std::initializer_list<S> rhs) {
+        assert(rhs.size() == n * m &&
+               "Initializer list has a wrong size in assignment");
+        int i = 0;
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
+            c[i] = *it;
+        }
         return *this;
     }
 
@@ -196,8 +212,8 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// add assign type T and convertible
-    template <typename S,
-              std::enable_if_t<std::is_assignable<T &, type_plus<T, S>>::value, int> = 0>
+    template <typename S, std::enable_if_t<
+                              std::is_assignable<T &, type_plus<T, S>>::value, int> = 0>
     Matrix<n, m, T> &operator+=(const S rhs) {
         static_assert(
             n == m,
@@ -209,8 +225,9 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// subtract assign type T and convertible
-    template <typename S,
-              std::enable_if_t<std::is_assignable<T &, type_minus<T, S>>::value, int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<std::is_assignable<T &, type_minus<T, S>>::value, int> = 0>
     Matrix<n, m, T> &operator-=(const S rhs) {
         static_assert(
             n == m,
@@ -225,8 +242,9 @@ template <const int n, const int m, typename T> class Matrix {
     template <int p, typename S,
               std::enable_if_t<std::is_assignable<T &, type_mul<T, S>>::value, int> = 0>
     Matrix<n, m, T> &operator*=(const Matrix<m, p, S> &rhs) {
-        static_assert(m == p, "can't assign result of *= to lhs Matrix, because doing so "
-                              "would change it's dimensions");
+        static_assert(m == p,
+                      "can't assign result of *= to lhs Matrix, because doing so "
+                      "would change it's dimensions");
         *this = *this * rhs;
         return *this;
     }

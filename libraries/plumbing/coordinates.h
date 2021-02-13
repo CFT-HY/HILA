@@ -51,7 +51,9 @@ constexpr unsigned NDIRS = NDIRECTIONS; //
 static inline direction next_direction(direction dir) {
     return static_cast<direction>(static_cast<unsigned>(dir) + 1);
 }
-static inline direction &operator++(direction &dir) { return dir = next_direction(dir); }
+static inline direction &operator++(direction &dir) {
+    return dir = next_direction(dir);
+}
 static inline direction operator++(direction &dir, int) {
     direction d = dir;
     ++dir;
@@ -178,15 +180,14 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
 
     /// Construct CV automatically from right-size initializer list
     /// This does not seem to be dangerous, so keep non-explicit
-    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0>
+    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
     inline CoordinateVector_t(std::initializer_list<S> rhs) {
-        assert( rhs.size() == NDIM && "CoordinateVector initializer list size does not match");
+        assert(rhs.size() == NDIM &&
+               "CoordinateVector initializer list size does not match");
         int i = 0;
-        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) 
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++)
             this->e(i) = *it;
     }
-
-
 
 #if 0
 #if NDIM == 2
@@ -212,11 +213,30 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
 #endif
 #endif
 
-    // Construct from 0, using nullptr_t autocast
+    /// Construct from 0, using nullptr_t autocast
     inline CoordinateVector_t(std::nullptr_t z) { foralldir(d) this->e(d) = 0; }
 
+    /// cast to vector<NDIM,int> - useful for method inheritance
+    inline operator Vector<NDIM, int>() {
+        Vector<NDIM, int> v;
+        foralldir(d) v.e(d) = this->e(d);
+        return v;
+    }
+
+    /// Assign from 0
     inline CoordinateVector_t &operator=(std::nullptr_t z) {
         foralldir(d) this->e(d) = 0;
+        return *this;
+    }
+
+    /// Assign from initializer list
+    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) {
+        assert(rhs.size() == NDIM && "Initializer list has a wrong size in assignment");
+        int i = 0;
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
+            this->e(i) = *it;
+        }
         return *this;
     }
 
@@ -306,8 +326,8 @@ using CoordinateVector = CoordinateVector_t<int>;
 
 /// Positive mod(): we define here the positive mod utility function mod(a,b).
 /// It mods the arguments 0 <= a < m.  This is not the standard
-/// for integer operator% in c++, which gives negative results if a<0.  This is useful in
-/// calculating lattice vector additions on a periodic box
+/// for integer operator% in c++, which gives negative results if a<0.  This is useful
+/// in calculating lattice vector additions on a periodic box
 
 static inline int mod(const int a, const int b) {
     int r = a % b;
