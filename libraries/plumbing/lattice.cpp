@@ -185,31 +185,36 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned 
 /// The (AVX) vectorized version of the site_index function.
 /// Now there are two stages: an "inner" vect index, which goes over
 /// over "virtual nodes", and the "outer" index inside the virtual node.
-/// This is to enable the (float/32bit) and the (double/64bit) vectorized structures,
-/// where the latter is achieve by merging two of the 32bit subnodes,
+/// This is to enable the (float/32bit) and the (double/64bit) vectorized
+/// structures, where the latter is achieve by merging two of the 32bit subnodes,
 /// along the direction merged_subnodes_dir
 /// E.g.
 /// a 2-dim. 4x8 node is divided into 8 / 4 subnodes as follows:
 /// here 0-3 / 0-7 is the index within subnode, and a-h / a-d the subnode label.
 ///
 ///     32bit(float)   64bit(double)
-///                                             32bit storage: 64bit storage:
-///    0a 1a | 0b 1b   0a 2a | 0b 2b            0(abcdefgh)    0(abcd) 1(abcd)
-///    2a 3a | 2b 3b   4a 6a | 4b 6b            1(abcdefgh)    2(abcd) 3(abcd)
-///    -------------                            2(abcdefgh)    4(abcd) 5(abcd)
-///    0e 1e | 0f 1f   1a 3a | 1b 3b            3(abcdefgh)    6(abcd) 7(abcd)
+///                                      32bit storage: 64bit storage:
+///    0a 1a | 0b 1b   0a 2a | 0b 2b     0(abcdefgh)    0(abcd) 1(abcd)
+///    2a 3a | 2b 3b   4a 6a | 4b 6b     1(abcdefgh)    2(abcd) 3(abcd)
+///    -------------                     2(abcdefgh)    4(abcd) 5(abcd)
+///    0e 1e | 0f 1f   1a 3a | 1b 3b     3(abcdefgh)    6(abcd) 7(abcd)
 ///    2e 3e | 2f 3f   5a 7a | 5b 7b
-///    -------------   -------------           32bit vectors 1st half <-> even 64bit
-///    vectors 0c 1c | 0d 1d   0c 2c | 0d 2d           32bit 2nd half <-> odd 64bit 2c 3c
-///    | 2d 3d   4c 6c | 4d 6d
-///    -------------                           The "storage" order above is the
-///    site-by-site 0g 1g | 0h 1h   1c 3c | 1d 3d           order, enabling site traversal
-///    with maximum locality. 2g 3g | 2h 3h   5c 7c | 5d 7d           It also enables
-///    mixed 32bit/64bit vector algebra with half vectors.
+///    -------------   -------------    32bit vec 1st half <-> even 64bit
+///    0c 1c | 0d 1d   0c 2c | 0d 2d    32bit 2nd half <-> odd 64bit
+///    2c 3c | 2d 3d   4c 6c | 4d 6d
+///    -------------
+///    0g 1g | 0h 1h   1c 3c | 1d 3d
+///    2g 3g | 2h 3h   5c 7c | 5d 7d
 ///
-/// Direction where the "doubling" is done is the last direction where subnodes are
-/// divided In layout, this will become the "slowest" direction
+/// The "storage" order above is the site-by-site order, enabling site
+/// traversal with maximum locality. It also enables mixed 32bit/64bit vector
+/// operations with half vectors.
+///
+/// Direction where the "doubling" is done is the last direction where subnodes
+/// are divided. In layout, this will become the "slowest" direction
+///
 ///////////////////////////////////////////////////////////////////////
+
 
 unsigned lattice_struct::site_index(const CoordinateVector &loc) {
     return site_index(loc, hila::myrank());
