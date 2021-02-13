@@ -1,0 +1,3 @@
+clang-format format file used in hila project is created with command
+
+clang-format-10 -style="{BasedOnStyle: llvm, IndentWidth: 4, SortIncludes: false, ColumnLimit: 88}" -dump-config
