@@ -55,6 +55,19 @@ template <typename T> void broadcast_array(T *var, int n) {
 void broadcast(std::string &r);
 void broadcast(std::vector<std::string> &l);
 
+/// and broadcast with two values
+template <typename T, typename U>
+void broadcast(T & t, U & u) {
+    struct { 
+        T tv; 
+        U uv;
+    } s = {t,u};
+    
+    broadcast(s);
+    t = s.tv;
+    u = s.uv;
+}
+
 // try to get the basic data type of the message
 // this is just to enable a bit larger messages
 template <typename T> MPI_Datatype get_MPI_number_type(int &size) {

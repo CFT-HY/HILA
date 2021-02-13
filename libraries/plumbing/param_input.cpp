@@ -18,16 +18,15 @@
 
 static std::string empty_key("");
 
-input::returntype input::get(const std::string &key) { return returntype(key, this); }
 
-input::returntype input::get() { return returntype(empty_key, this); }
-
-void input::open(const std::string &fname) {
+bool input::open(const std::string &fname, bool exit_on_error) {
     bool got_error = false;
     if (hila::myrank() == 0) {
         if (is_initialized) {
-            hila::output << "Error: file '" << fname << "' cannot be opened because '"
+            if (speaking) 
+                hila::output << "Error: file '" << fname << "' cannot be opened because '"
                          << filename << "' is open in this input variable\n";
+
             got_error = true;
         } else {
             filename = fname;
@@ -35,25 +34,32 @@ void input::open(const std::string &fname) {
             if (inputfile.is_open()) {
                 is_initialized = true;
 
-                print_dashed_line("Reading file " + filename);
+                if (speaking) 
+                    print_dashed_line("Reading file " + filename);
 
             } else {
-                hila::output << "Error: input file '" << fname
-                             << "' could not be opened\n";
+
+                if (speaking)
+                    hila::output << "Error: input file '" << fname
+                                 << "' could not be opened\n";
+
                 got_error = true;
             }
         }
     }
     broadcast(got_error);
-    if (got_error)
-        hila::finishrun();
+    if (got_error && exit_on_error) {
+        hila::finishrun();  
+    }
+
+    return !got_error;
 }
 
 void input::close() {
     if (is_initialized) {
         inputfile.close();
         is_initialized = false;
-        print_dashed_line();
+        if (speaking) print_dashed_line();
     }
     // automatic cleaning of other vars
 }
@@ -81,7 +87,7 @@ bool input::get_line() {
 
 // print the read-in line with a bit special formatting
 void input::print_linebuf(int end_of_key) {
-    if (hila::myrank() == 0) {
+    if (hila::myrank() == 0 && speaking) {
 
         if (is_line_printed)
             return;
@@ -220,8 +226,10 @@ bool input::handle_key(const std::string &key) {
 
         int end_of_key = 0;
         if (key.size() > 0 && !contains_word_list(key, end_of_key)) {
-            print_linebuf(0);
-            hila::output << "Error: expecting key '" << key << "'\n";
+            if (speaking) {
+                print_linebuf(0);
+                hila::output << "Error: expecting key '" << key << "'\n";
+            }
             return false;
         }
 
@@ -232,12 +240,19 @@ bool input::handle_key(const std::string &key) {
 
 // is the input string int/double/string and return it
 
-bool input::is_value(const std::string &str, int &val) {
+bool input::is_value(const std::string &str, long &val) {
     char *lp;
     val = std::strtol(str.c_str(), &lp, 10);
     if (str.c_str() == lp || *lp)
         return false;
     return true;
+}
+
+bool input::is_value(const std::string &str, int &val) {
+    long lval;
+    bool b = this->is_value(str, lval);
+    val = lval;
+    return b;
 }
 
 bool input::is_value(const std::string &str, double &val) {
@@ -248,67 +263,20 @@ bool input::is_value(const std::string &str, double &val) {
     return true;
 }
 
+bool input::is_value(const std::string &str, float &val) {
+    double dval;
+    bool b = this->is_value(str, dval);
+    val = dval;
+    return b;
+}
+
 // a trivial function, useful for template
 bool input::is_value(const std::string &str, std::string &val) {
     val = remove_quotes(str);
     return true;
 }
 
-// require "label <int>"
 
-int input::get_int(const std::string &label) {
-    int val = 0;
-    bool no_error = handle_key(label);
-
-    if (hila::myrank() == 0 && no_error) {
-        std::string tok;
-        if (!(get_token(tok) && is_value(tok, val))) {
-            hila::output << "Error: expecting integer after '" << label << "'\n";
-            no_error = false;
-        }
-    }
-
-    // helper to do it in a single broadcast
-    struct bc_helper {
-        int val;
-        bool noerr;
-    } bcdata = {val, no_error};
-
-    broadcast(bcdata);
-    if (!bcdata.noerr)
-        hila::finishrun();
-    return bcdata.val;
-}
-
-int input::get_int() { return get_int(empty_key); }
-
-// "label <double>"
-
-double input::get_double(const std::string &label) {
-    double val = 0;
-    bool no_error = handle_key(label); // removes whitespace
-
-    if (hila::myrank() == 0 && no_error) {
-        std::string tok;
-        if (!(get_token(tok) && is_value(tok, val))) {
-            hila::output << "Error: expecting double after '" << label << "'\n";
-            no_error = false;
-        }
-    }
-
-    // helper to do it in a single broadcast
-    struct bc_helper {
-        double val;
-        bool noerr;
-    } bcdata = {val, no_error};
-
-    broadcast(bcdata);
-    if (!bcdata.noerr)
-        hila::finishrun();
-    return bcdata.val;
-}
-
-double input::get_double() { return get_double(empty_key); }
 
 std::string input::remove_quotes(const std::string &val) {
     size_t i, j;
@@ -321,131 +289,72 @@ std::string input::remove_quotes(const std::string &val) {
     return res;
 }
 
-// find "label <string>"
-
-std::string input::get_string(const std::string &label) {
-    std::string val;
-    bool no_error = handle_key(label);
-
-    if (hila::myrank() == 0 && no_error) {
-        no_error = get_token(val);
-        if (no_error) {
-            val = remove_quotes(val);
-        } else {
-            hila::output << "Error: expecting a string value after '" << label << "'\n";
-        }
-    }
-    broadcast(no_error);
-    if (!no_error)
-        hila::finishrun();
-
-    broadcast(val);
-    return val;
-}
-
-std::string input::get_string() { return get_string(empty_key); }
 
 //  expects "label   <item>"  -line, where <item> matches one of the std::strings in
 //  items. returns the index of the item. If not found, errors out
 
 int input::get_item(const std::string &label, const std::vector<std::string> &items,
-                    double *dval) {
+                    bool bcast) {
+
     bool no_error = handle_key(label);
-    int i = 0;
+    int item = -1;
     double d;
+    std::string s;
 
-    if (hila::myrank() == 0 && no_error) {
-        std::string s;
-        no_error = get_token(s);
-        if (no_error) {
-            for (i = 0; i < items.size() && items[i] != s; i++)
-                ;
-            if (i == items.size() && dval != nullptr) {
-                no_error = is_value(s, d);
-                i = -1;
+    if (hila::myrank() == 0 ) {
+        if (no_error && peek_token(s)) {
+            bool got_string,got_int,got_float;
+            got_string = got_int = got_float = false;
+            
+            for (int i=0; i<items.size() && item < 0; i++) {
+                double dval;
+                long lval;
+                int end_of_key;
+
+                if (items[i] == "%s") {
+                    got_string = true;
+                    item = i;
+                } else if (items[i] == "%f" && is_value(s,dval))  {
+                    got_float = true;
+                    item = i;
+                } else if (items[i] == "%i" && is_value(s,lval)) {
+                    got_int =true;
+                    item = i;
+                } else if (contains_word_list(items[i],end_of_key)) {
+                    item = i;
+                }
             }
         }
-        if (!no_error || i == items.size()) {
-            hila::output << "Input '" << label << "' must be one of: ";
-            for (int j = 0; j < items.size(); j++) {
-                hila::output << '\'' << items[j] << "' ";
-            }
-            if (dval != nullptr) {
-                hila::output << " (double value)";
-            }
-            hila::output << '\n';
+
+        if (item < 0) {
+            // error, nothing was found
             no_error = false;
-        }
-    }
-
-    struct bcast_helper {
-        double d;
-        int i;
-        bool noerror;
-    } bcdata = {d, i, no_error}; // helper struct to do everything in a single broadcast
-
-    broadcast(bcdata);
-    if (!bcdata.noerror)
-        hila::finishrun();
-    if (bcdata.i == -1)
-        *dval = bcdata.d;
-    return bcdata.i;
-}
-
-int input::get_item(const std::string &label, const std::vector<std::string> &items,
-                    double &dval) {
-    return get_item(label, items, &dval);
-}
-
-// utility function to get a comma-separated list of ints/doubles
-
-template <typename T>
-void input::get_type_vector(const std::string &label, std::vector<T> &res,
-                            const char *name) {
-    bool no_error = handle_key(label);
-    const char *rest = linebuffer.c_str() + lb_start;
-    while (std::isspace(*rest))
-        rest++;
-    res.clear();
-
-    if (hila::myrank() == 0 && no_error) {
-        std::string s;
-        T val;
-        do {
-            if (get_token(s) && is_value(s, val)) {
-                res.push_back(val);
-            } else {
-                no_error = false;
+            if (speaking) {
+                hila::output << "Input '" << label << "' must be one of: ";
+                for (int i = 0; i < items.size(); i++) {
+                    if (items[i] == "%s") hila::output << "<string> ";
+                    else if (items[i] == "%f") hila::output << "<float/double> ";
+                    else if (items[i] == "%i") hila::output << "<int/long> ";
+                    else hila::output << '\'' << items[i] << "' ";
+                }
+                hila::output << '\n';
             }
-        } while (no_error && match_token(","));
-
-        if (!no_error) {
-            hila::output << "Error: expecting comma-separated list of " << name
-                         << "s after '" << label << "'\n";
         }
     }
-    broadcast(no_error);
-    if (!no_error)
-        hila::finishrun();
 
-    // broadcast the vector too
-    broadcast(res);
+
+    if (bcast) {
+        broadcast(item,no_error);
+
+        // with broadcast exit on error
+        if (!no_error)
+            hila::finishrun();
+
+    } 
+
+    return item;
 }
 
-std::vector<int> input::get_int_vector(const std::string &label) {
-    std::vector<int> res;
-    get_type_vector(label, res, "integer");
-    return res;
-}
 
-std::vector<double> input::get_double_vector(const std::string &label) {
-    std::vector<double> res;
-    get_type_vector(label, res, "double");
-    return res;
-}
 
-std::vector<std::string> input::get_string_vector(const std::string &label) {
-    std::vector<std::string> res;
-    get_type_vector(label, res, "strings");
-    return res;
-}
+

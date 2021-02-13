@@ -58,7 +58,6 @@ void finish_communications() {
 
 // broadcast specialization
 void broadcast(std::string &var) {
-    broadcast_timer.start();
     int size = var.size();
     broadcast(size);
 
@@ -66,7 +65,9 @@ void broadcast(std::string &var) {
         var.resize(size, ' ');
     }
     // copy directy to data() buffer
+    broadcast_timer.start();
     MPI_Bcast((void *)var.data(), size, MPI_BYTE, 0, lattice->mpi_comm_lat);
+    broadcast_timer.stop();
 }
 
 void broadcast(std::vector<std::string> &list) {
