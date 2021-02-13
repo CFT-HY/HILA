@@ -29,7 +29,7 @@ lattice_struct *lattice = &my_lattice;
 std::vector<lattice_struct *> lattices;
 
 /// General lattice setup
-void lattice_struct::setup(const int siz[NDIM]) {
+void lattice_struct::setup(const CoordinateVector & siz) {
     // Add this lattice to the list
     lattices.push_back(this);
 
@@ -65,27 +65,6 @@ void lattice_struct::setup(const int siz[NDIM]) {
     disable_avx = 0;
 }
 
-#if NDIM == 4
-void lattice_struct::setup(int nx, int ny, int nz, int nt) {
-    int s[NDIM] = {nx, ny, nz, nt};
-    setup(s);
-}
-#elif NDIM == 3
-void lattice_struct::setup(int nx, int ny, int nz) {
-    int s[NDIM] = {nx, ny, nz};
-    setup(s);
-}
-#elif NDIM == 2
-void lattice_struct::setup(int nx, int ny) {
-    int s[NDIM] = {nx, ny};
-    setup(s);
-}
-#elif NDIM == 1
-void lattice_struct::setup(int nx) {
-    int s[NDIM] = {nx};
-    setup(s);
-}
-#endif
 
 ///////////////////////////////////////////////////////////////////////
 /// The routines is_on_mynode(), node_rank(), site_index()

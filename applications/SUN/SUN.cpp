@@ -39,7 +39,7 @@ void update(Matrix<2, 2, Cmplx<double>> &U, const Matrix<2, 2, Cmplx<double>> &s
 
 int main(int argc, char **argv) {
     hila::initialize(argc, argv);
-    const int nd[NDIM] = {NX, NY, NZ, NT};
+    const CoordinateVector nd{NX, NY, NZ, NT};
     lattice->setup(nd);
 
     // Define a field

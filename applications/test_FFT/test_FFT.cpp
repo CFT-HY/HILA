@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 
     par.close();
 
-    lattice->setup(nx, ny, nz);
+    lattice->setup({nx, ny, nz});
 
     seed_random(seed);
 

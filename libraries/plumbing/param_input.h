@@ -304,7 +304,7 @@ class input {
             }
 
             if (!no_error && speaking) {
-                hila::output << "Error: expecting " << NDIM << " comma-separated " 
+                hila::output << "Error: expecting " << n << " comma-separated " 
                           << type_id<T>() << "s after '" << label << "'\n";
             }
         }
@@ -314,6 +314,17 @@ class input {
         }
         return no_error;
     }
+
+    /// Specialization to CoordinateVector
+
+    template <int n=NDIM>
+    bool get_value(CoordinateVector &val, const std::string &label, bool bcast=true) {
+        Vector<n,int> iv;
+        bool b = get_value(iv,label,bcast);
+        val = iv;
+        return b;
+    }
+
 
     /// Specialize -get_value() to std::vector<> 
 

@@ -215,19 +215,9 @@ class lattice_struct {
     backend_lattice_struct *backend_lattice;
 #endif
 
-    void setup(const int siz[NDIM]);
+    void setup(const CoordinateVector & siz);
     void setup_layout();
     void setup_nodes();
-
-#if NDIM == 4
-    void setup(int nx, int ny, int nz, int nt);
-#elif NDIM == 3
-    void setup(int nx, int ny, int nz);
-#elif NDIM == 2
-    void setup(int nx, int ny);
-#elif NDIM == 1
-    void setup(int nx);
-#endif
 
     void teardown();
 

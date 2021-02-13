@@ -7,7 +7,7 @@
 #define SEED 100
 #endif
 
-const int latsize[4] = {32, 32, 32, 32};
+const CoordinateVector latsize = {32, 32, 32, 32};
 
 int main(int argc, char **argv) {
     int n_runs = 1;

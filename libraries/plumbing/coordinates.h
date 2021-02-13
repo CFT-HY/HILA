@@ -161,6 +161,7 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
 
     // define these to ensure std::is_trivial
     CoordinateVector_t() = default;
+
     ~CoordinateVector_t() = default;
     CoordinateVector_t(const CoordinateVector_t &v) = default;
 
@@ -175,6 +176,19 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
         foralldir(d) this->e(d) = v.e(d);
     }
 
+    /// Construct CV automatically from right-size initializer list
+    /// This does not seem to be dangerous, so keep non-explicit
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0>
+    inline CoordinateVector_t(std::initializer_list<S> rhs) {
+        assert( rhs.size() == NDIM && "CoordinateVector initializer list size does not match");
+        int i = 0;
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) 
+            this->e(i) = *it;
+    }
+
+
+
+#if 0
 #if NDIM == 2
     explicit inline CoordinateVector_t(T a, T b) {
         this->e(0) = a;
@@ -195,6 +209,7 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
         this->e(2) = c;
         this->e(3) = d;
     }
+#endif
 #endif
 
     // Construct from 0, using nullptr_t autocast

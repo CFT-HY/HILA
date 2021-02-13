@@ -34,7 +34,7 @@ template <const int n, const int m, typename T> class Matrix {
     ~Matrix() = default;
     Matrix(const Matrix<n, m, T> &v) = default;
 
-    /// constructor from scalar -- keep it explicit!
+    /// constructor from scalar -- keep it explicit!  Not good for auto use
     template <typename S, int nn = n, int mm = m,
               std::enable_if_t<(is_assignable<T &, S>::value && nn == mm), int> = 0>
     explicit inline Matrix(const S rhs) {
@@ -51,6 +51,17 @@ template <const int n, const int m, typename T> class Matrix {
     inline Matrix(const std::nullptr_t &z) {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
+        }
+    }
+
+    /// Construct matrix automatically from right-size initializer list
+    /// This does not seem to be dangerous, so keep non-explicit
+    template <typename S, std::enable_if_t<is_assignable<T&,S>::value, int> = 0>
+    inline Matrix(std::initializer_list<S> rhs) {
+        assert(rhs.size() == n*m && "Matrix/Vector initializer list size must match variable size");
+        int i = 0;
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
+            c[i] = *it;
         }
     }
 
