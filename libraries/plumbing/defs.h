@@ -62,6 +62,7 @@ extern bool about_to_finish;
 // check_input is used to notify that we're just checking the 
 // input values and will exit before fields are allocated.
 extern bool check_input;
+extern int check_with_nodes;
 
 void initialize(int argc, char **argv);
 void finishrun();

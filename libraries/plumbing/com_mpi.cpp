@@ -24,7 +24,7 @@ static bool mpi_initialized = false;
 #include <sys/types.h>
 void initialize_communications(int &argc, char ***argv) {
     /* Init MPI */
-    if (!mpi_initialized) {
+    if (!mpi_initialized && !hila::check_input) {
         MPI_Init(&argc, argv);
         mpi_initialized = true;
 
@@ -33,6 +33,10 @@ void initialize_communications(int &argc, char ***argv) {
 
         MPI_Comm_rank(lattice->mpi_comm_lat, &lattice->mynode.rank);
         MPI_Comm_size(lattice->mpi_comm_lat, &lattice->nodes.number);
+    }
+    if (hila::check_input) {
+        lattice->mynode.rank = 0;
+        lattice->nodes.number = hila::check_with_nodes;
     }
 }
 
@@ -58,6 +62,10 @@ void finish_communications() {
 
 // broadcast specialization
 void broadcast(std::string &var) {
+
+    if (hila::check_input)
+        return;
+
     int size = var.size();
     broadcast(size);
 
@@ -71,6 +79,10 @@ void broadcast(std::string &var) {
 }
 
 void broadcast(std::vector<std::string> &list) {
+
+    if (hila::check_input)
+        return;
+
     int size = list.size();
     broadcast(size);
     list.resize(size);
@@ -86,17 +98,25 @@ void broadcast(std::vector<std::string> &list) {
 static char name[] = "MPI (portable)";
 char *machine_type() { return (name); }
 
-/* Return my node number */
+/// Return my node number - take care to return
+/// the previous node number if mpi is being
+/// torn down (used in destructors)
+
 int hila::myrank() {
-    static int node = -1;
-    if (node >= 0)
+    static int node = 0;
+
+    if (!mpi_initialized || hila::check_input)
         return node;
+
     MPI_Comm_rank(lattice->mpi_comm_lat, &node);
     return node;
 }
 
-/* Return number of nodes */
+/// Return number of nodes or "pseudo-nodes"
 int numnodes() {
+    if (hila::check_input)
+        return hila::check_with_nodes;
+
     int nodes;
     MPI_Comm_size(lattice->mpi_comm_lat, &nodes);
     return (nodes);
@@ -114,6 +134,10 @@ void synchronize() {
 // NOTE: no attempt made here to reorder the nodes
 
 void split_into_sublattices(int this_lattice) {
+
+    if (hila::check_input)
+        return;
+
     if (MPI_Comm_split(MPI_COMM_WORLD, this_lattice, 0, &(lattice->mpi_comm_lat)) !=
         MPI_SUCCESS) {
         output0 << "MPI_Comm_split() call failed!\n";

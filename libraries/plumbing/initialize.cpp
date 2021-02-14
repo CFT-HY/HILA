@@ -10,6 +10,8 @@
 std::ostream hila::output(NULL);
 std::ofstream hila::output_file;
 bool hila::about_to_finish = false;
+bool hila::check_input = false;
+int hila::check_with_nodes;
 logger_class hila::log;
 
 // let us house the sublattices-struct here
@@ -74,8 +76,8 @@ class cmdlineargs {
         long val = strtol(p, &end, 10);
         if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) ||
             (errno != 0 && val == 0) || end == p || *end != 0) {
-            output0 << "Expect a number (integer) after command line parameter '" << flag
-                    << "'\n";
+            output0 << "Expect a number (integer) after command line parameter '"
+                    << flag << "'\n";
             hila::terminate(0);
         }
         return val;
@@ -114,16 +116,12 @@ class cmdlineargs {
             output0 << "    " << argv[i] << '\n';
         }
         output0 << "Recognized:\n";
-        output0 
-            << "  timelimit=<seconds> : cpu time limit\n";
-        output0 
-            << "  check               : check input & exit\n";
-        output0
-            << "  output=<name>       : name of output file (default: stdout)\n";
-        output0 
-            << "  sublattices=<n>     : number of sublattices\n";
-        output0 
-            << "  sync=yes/no         : synchronize sublattice runs (default=no)\n";
+        output0 << "  timelimit=<seconds> : cpu time limit\n";
+        output0 << "  check=<nodes>       : check input & layout with <nodes>-nodes & "
+                   "exit\n";
+        output0 << "  output=<name>       : name of output file (default: stdout)\n";
+        output0 << "  sublattices=<n>     : number of sublattices\n";
+        output0 << "  sync=yes/no         : synchronize sublattice runs (default=no)\n";
 
         hila::terminate(0);
     }
@@ -160,14 +158,29 @@ void hila::initialize(int argc, char **argv) {
     // set the timing so that gettime() returns time from this point
     inittime();
 
+    // check the "check=<nodes>" -input early, to avoid starting MPI
+    // put in braces to have auto cleanup
+    {
+        cmdlineargs commandline(argc, argv);
+        long nodes = commandline.get_int("check=");
+        if (nodes != LONG_MAX) {
+            hila::check_input = true;
+            hila::check_with_nodes = nodes;
+            hila::output << "****** INPUT AND LAYOUT CHECK ******\n";
+        }
+    }
+
     // initialize MPI (if needed) so that hila::myrank() etc. works
-    initialize_communications(argc, &argv);
+    if (!hila::check_input) {
+        initialize_communications(argc, &argv);
 
 #ifdef CUDA
-    initialize_cuda(lattice->mynode.rank);
+        initialize_cuda(lattice->mynode.rank);
 #endif
+    }
 
-    /// Handle commandline args here
+    // Init command line again - after MPI has been started, so
+    // that all nodes do this
     cmdlineargs commandline(argc, argv);
 
     setup_sublattices(commandline);
@@ -181,7 +194,7 @@ void hila::initialize(int argc, char **argv) {
                 if (std::strlen(name) == 0) {
                     hila::output << "Filename must be given with output=<name>\n";
                     do_exit = 1;
-                } else {
+                } else if (!hila::check_input) {
                     hila::output_file.open(name, std::ios::out | std::ios::app);
                     if (hila::output_file.fail()) {
                         hila::output << "Cannot open output file " << name << '\n';
@@ -197,7 +210,7 @@ void hila::initialize(int argc, char **argv) {
         }
         broadcast(do_exit);
         if (do_exit)
-            hila::terminate(0);
+            hila::finishrun();
     }
 
     if (hila::myrank() == 0) {
@@ -228,11 +241,15 @@ void hila::initialize(int argc, char **argv) {
         output0 << "No runtime limit given\n";
     }
 
+    // re-read the check= -option, to clean up
+    commandline.get_int("check=");
+
     // error out if there are more cmdline options
     commandline.error_if_args_remain();
 
 #ifdef CUDA
-    cuda_device_info();
+    if (!hila::check_input)
+        cuda_device_info();
 #endif
 
 #ifdef AVX
@@ -341,12 +358,16 @@ void hila::finishrun() {
     if (sublattices.number > 1) {
         timestamp("Waiting to sync sublattices...");
     }
-    synchronize();
-    timestamp("Finishing");
 
-    hila::about_to_finish = true;
+    if (!hila::check_input) {
 
-    finish_communications();
+        synchronize();
+        timestamp("Finishing");
+
+        hila::about_to_finish = true;
+
+        finish_communications();
+    }
 
     print_dashed_line();
     exit(0);
@@ -428,7 +449,8 @@ void setup_sublattices(cmdlineargs &commandline) {
 #else // generic
     sublattices.mylattice = (hila::myrank() * sublattices.number) / numnodes();
     /* and divide system into sublattices */
-    split_into_sublattices(sublattices.mylattice);
+    if (!hila::check_input)
+        split_into_sublattices(sublattices.mylattice);
 #endif
 
     const char *p = commandline.get_cstring("output=");
@@ -444,23 +466,29 @@ void setup_sublattices(cmdlineargs &commandline) {
 
     // all nodes open the file -- perhaps not?  Leave only node 0
     int do_exit = 0;
-    if (hila::myrank() == 0) {
+    if (hila::myrank() == 0 && !hila::check_input) {
         hila::output_file.open(fname, std::ios::out | std::ios::app);
         if (hila::output_file.fail()) {
             std::cout << "Cannot open output file " << fname << '\n';
             do_exit = 1;
-        } else {
-            hila::output.flush();
-            hila::output.rdbuf(
-                hila::output_file.rdbuf()); // output now points to output_redirect
-            hila::output << " ---- SPLIT " << numnodes() << " nodes into "
-                         << sublattices.number << " sublattices, this "
-                         << sublattices.mylattice << " ----\n";
         }
     }
+
     broadcast(do_exit);
+
     if (do_exit)
-        hila::terminate(0);
+        hila::finishrun();
+
+    if (hila::myrank() == 0) {
+        hila::output.flush();
+        if (!hila::check_input) {
+            hila::output.rdbuf(hila::output_file.rdbuf());
+            // output now points to output_redirect
+        }
+        hila::output << " ---- SPLIT " << numnodes() << " nodes into "
+                     << sublattices.number << " sublattices, this "
+                     << sublattices.mylattice << " ----\n";
+    }
 
     /* Default sync is no */
     if (commandline.get_yesno("sync=") == 1) {
@@ -472,6 +500,8 @@ void setup_sublattices(cmdlineargs &commandline) {
                 << "Use sync=yes command line argument to override\n";
     }
 }
+
+/////////////////////////////////////////////////////////////////////////////
 
 #ifdef AVX
 void vector_type_info() {

@@ -331,7 +331,9 @@ class lattice_struct {
     // Guarantee 64 bits for these - 32 can overflow!
     int64_t n_gather_done = 0, n_gather_avoided = 0;
 
-    template <typename T> void reduce_node_sum(T *value, int N, bool distribute = true);
+    template <typename T> 
+    void reduce_node_sum(T *value, int N, bool distribute = true);
+    
     template <typename T>
     void reduce_node_product(T *value, int N, bool distribute = true);
 
@@ -345,7 +347,8 @@ class lattice_struct {
 
     // simple reduce_node_sum for single variable
     template <typename T> T reduce_node_sum(T &value, bool distribute = true) {
-        reduce_node_sum(&value, 1, distribute);
+        if (!hila::check_input) 
+            reduce_node_sum(&value, 1, distribute);
         return value;
     }
 };

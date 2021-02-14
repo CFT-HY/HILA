@@ -15,19 +15,24 @@ extern timer start_send_timer, wait_send_timer, post_receive_timer, wait_receive
 /// Implementations of communication routines.
 ///
 
-// broadcast templates
-
+/// Broadcast template for standard type
 template <typename T> void broadcast(T &var) {
     static_assert(std::is_trivial<T>::value, "broadcast(var) must use trivial type");
+    if (hila::check_input) return;
+
     broadcast_timer.start();
     MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
     broadcast_timer.stop();
 }
 
+/// Broadcast for std::vector
 template <typename T> void broadcast(std::vector<T> &list) {
-    broadcast_timer.start();
 
     static_assert(std::is_trivial<T>::value, "broadcast(vector<T>) must have trivial T");
+
+    if (hila::check_input) return;
+
+    broadcast_timer.start();
 
     int size = list.size();
     MPI_Bcast(&size, sizeof(int), MPI_BYTE, 0, lattice->mpi_comm_lat);
@@ -45,7 +50,11 @@ template <typename T> void broadcast(T *var) {
     static_assert(sizeof(T) > 0 && "Do not use pointers to broadcast()-function");
 }
 
+/// Broadcast for arrays where size must be known and same for all nodes
 template <typename T> void broadcast_array(T *var, int n) {
+
+    if (hila::check_input) return;
+
     broadcast_timer.start();
     MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, 0, lattice->mpi_comm_lat);
     broadcast_timer.stop();
@@ -58,6 +67,9 @@ void broadcast(std::vector<std::string> &l);
 /// and broadcast with two values
 template <typename T, typename U>
 void broadcast(T & t, U & u) {
+
+    if (hila::check_input) return;
+
     struct { 
         T tv; 
         U uv;

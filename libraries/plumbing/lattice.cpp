@@ -11,7 +11,8 @@ void report_too_large_node() {
         hila::output << "Node size too large: size = " << lattice->mynode.size[0];
         for (int d = 1; d < NDIM; d++)
             hila::output << " x " << lattice->mynode.size[d];
-        hila::output << " + communication buffers = " << lattice->mynode.field_alloc_size;
+        hila::output << " + communication buffers = "
+                     << lattice->mynode.field_alloc_size;
         hila::output << "\nConsider using more nodes (smaller node size).\n";
         hila::output << "[TODO: allow 64bit index?]\n";
     }
@@ -29,7 +30,7 @@ lattice_struct *lattice = &my_lattice;
 std::vector<lattice_struct *> lattices;
 
 /// General lattice setup
-void lattice_struct::setup(const CoordinateVector & siz) {
+void lattice_struct::setup(const CoordinateVector &siz) {
     // Add this lattice to the list
     lattices.push_back(this);
 
@@ -69,7 +70,6 @@ void lattice_struct::setup(const CoordinateVector & siz) {
 
     disable_avx = 0;
 }
-
 
 ///////////////////////////////////////////////////////////////////////
 /// The routines is_on_mynode(), node_rank(), site_index()
@@ -155,7 +155,8 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) {
 /// compare to above
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned nodeid) {
+unsigned lattice_struct::site_index(const CoordinateVector &loc,
+                                    const unsigned nodeid) {
     int dir, l, s;
     unsigned i;
     const node_info &ni = nodes.nodelist[nodeid];
@@ -215,7 +216,6 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned 
 ///
 ///////////////////////////////////////////////////////////////////////
 
-
 unsigned lattice_struct::site_index(const CoordinateVector &loc) {
     return site_index(loc, hila::myrank());
 }
@@ -225,7 +225,8 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) {
 /// compare to above
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned nodeid) {
+unsigned lattice_struct::site_index(const CoordinateVector &loc,
+                                    const unsigned nodeid) {
     int dir, l, s, subl;
     unsigned i;
 
@@ -494,17 +495,18 @@ void lattice_struct::create_std_gathers() {
 #ifndef VANILLA
             // non-vanilla code MAY want to have receive buffers, so we need mapping to
             // field
-            from_node.sitelist = (unsigned *)memalloc(from_node.sites * sizeof(unsigned));
+            from_node.sitelist =
+                (unsigned *)memalloc(from_node.sites * sizeof(unsigned));
 #endif
         } else {
             to_node.sitelist = nullptr;
         }
 
         if (num > 0) {
-            // set the remaining neighbour array indices and sitelists in another go over
-            // sites. temp counters NOTE: ordering is automatically right: with a given
-            // parity, neighbour node indices come in ascending order of host node index -
-            // no sorting needed
+            // set the remaining neighbour array indices and sitelists in another go
+            // over sites. temp counters NOTE: ordering is automatically right: with a
+            // given parity, neighbour node indices come in ascending order of host node
+            // index - no sorting needed
             size_t c_even, c_odd;
             c_even = c_odd = 0;
 
@@ -584,9 +586,8 @@ int get_next_msg_tag() {
  * Site OK if ((wait_arr ^ xor_mask ) & and_mask) == 0
  */
 
-static_assert(
-    NDIM <= 4 &&
-    "Dimensions at most 4 in dir_mask_t = unsigned char!  Use larger type to circumvent");
+static_assert(NDIM <= 4 && "Dimensions at most 4 in dir_mask_t = unsigned char!  Use "
+                           "larger type to circumvent");
 
 void lattice_struct::initialize_wait_arrays() {
     int i, dir;
@@ -757,8 +758,8 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
     std::vector<unsigned> np_even(nodes.number); // std::vector initializes to zero
     std::vector<unsigned> np_odd(nodes.number);
 
-    // we'll go through the sites twice, in order to first resolve the size of the needed
-    // buffers, then to fill them.  Trying to avoid memory fragmentation a bit
+    // we'll go through the sites twice, in order to first resolve the size of the
+    // needed buffers, then to fill them.  Trying to avoid memory fragmentation a bit
 
     // pass over sites
     int num = 0; // number of sites off node
@@ -821,7 +822,8 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
                 node_v[n].sitelist =
                     (unsigned *)memalloc(node_v[n].sites * sizeof(unsigned));
 
-            node_v[n].buffer = c_buffer; // running idx to comm buffer - used from receive
+            node_v[n].buffer =
+                c_buffer; // running idx to comm buffer - used from receive
             c_buffer += node_v[n].sites;
             n++;
         }
@@ -894,8 +896,9 @@ lattice_struct::create_general_gather(const CoordinateVector &offset) {
     // communication buffer
     ci.index = (unsigned *)memalloc(mynode.sites * sizeof(unsigned));
 
-    ci.from_node = create_comm_node_vector(offset, ci.index, true); // create receive end
-    ci.to_node = create_comm_node_vector(offset, nullptr, false);   // create sending end
+    ci.from_node =
+        create_comm_node_vector(offset, ci.index, true);          // create receive end
+    ci.to_node = create_comm_node_vector(offset, nullptr, false); // create sending end
 
     // set the total receive buffer size from the last vector
     const comm_node_struct &r = ci.from_node[ci.from_node.size() - 1];
