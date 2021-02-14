@@ -20,14 +20,14 @@ namespace hila {
 
 static std::string empty_key("");
 
-
 bool input::open(const std::string &fname, bool exit_on_error) {
     bool got_error = false;
     if (hila::myrank() == 0) {
         if (is_initialized) {
-            if (speaking) 
-                hila::output << "Error: file '" << fname << "' cannot be opened because '"
-                         << filename << "' is open in this input variable\n";
+            if (speaking)
+                hila::output << "Error: file '" << fname
+                             << "' cannot be opened because '" << filename
+                             << "' is open in this input variable\n";
 
             got_error = true;
         } else {
@@ -36,7 +36,7 @@ bool input::open(const std::string &fname, bool exit_on_error) {
             if (inputfile.is_open()) {
                 is_initialized = true;
 
-                if (speaking) 
+                if (speaking)
                     print_dashed_line("Reading file " + filename);
 
             } else {
@@ -51,7 +51,7 @@ bool input::open(const std::string &fname, bool exit_on_error) {
     }
     broadcast(got_error);
     if (got_error && exit_on_error) {
-        hila::finishrun();  
+        hila::finishrun();
     }
 
     return !got_error;
@@ -61,7 +61,8 @@ void input::close() {
     if (is_initialized) {
         inputfile.close();
         is_initialized = false;
-        if (speaking) print_dashed_line();
+        if (speaking)
+            print_dashed_line();
     }
     // automatic cleaning of other vars
 }
@@ -95,7 +96,7 @@ void input::print_linebuf(int end_of_key) {
             return;
         is_line_printed = true;
 
-        int i;
+        int i = 0;
         while (std::isspace(linebuffer[i]))
             i++;
         for (; i < linebuffer.size() && i < end_of_key; i++) {
@@ -278,8 +279,6 @@ bool input::is_value(const std::string &str, std::string &val) {
     return true;
 }
 
-
-
 std::string input::remove_quotes(const std::string &val) {
     size_t i, j;
     std::string res;
@@ -290,7 +289,6 @@ std::string input::remove_quotes(const std::string &val) {
     res.resize(j);
     return res;
 }
-
 
 //  expects "label   <item>"  -line, where <item> matches one of the std::strings in
 //  items. returns the index of the item. If not found, errors out
@@ -303,28 +301,22 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
     double d;
     std::string s;
 
-    if (hila::myrank() == 0 ) {
+    if (hila::myrank() == 0) {
         if (no_error && peek_token(s)) {
-            bool got_string,got_int,got_float;
-            got_string = got_int = got_float = false;
-            
-            for (int i=0; i<items.size() && item < 0; i++) {
+
+            for (int i = 0; i < items.size() && item < 0; i++) {
                 double dval;
                 long lval;
                 int end_of_key;
 
-                if (items[i] == "%s") {
-                    got_string = true;
-                    item = i;
-                } else if (items[i] == "%f" && is_value(s,dval))  {
-                    got_float = true;
-                    item = i;
-                } else if (items[i] == "%i" && is_value(s,lval)) {
-                    got_int =true;
-                    item = i;
-                } else if (contains_word_list(items[i],end_of_key)) {
+                // clang-format off
+                if ((items[i] == "%s") ||
+                    (items[i] == "%f" && is_value(s,dval)) ||
+                    (items[i] == "%i" && is_value(s,lval)) ||
+                    contains_word_list(items[i],end_of_key)) {
                     item = i;
                 }
+                // clang-format on
             }
         }
 
@@ -334,29 +326,29 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
             if (speaking) {
                 hila::output << "Input '" << label << "' must be one of: ";
                 for (int i = 0; i < items.size(); i++) {
-                    if (items[i] == "%s") hila::output << "<string> ";
-                    else if (items[i] == "%f") hila::output << "<float/double> ";
-                    else if (items[i] == "%i") hila::output << "<int/long> ";
-                    else hila::output << '\'' << items[i] << "' ";
+                    if (items[i] == "%s")
+                        hila::output << "<string> ";
+                    else if (items[i] == "%f")
+                        hila::output << "<float/double> ";
+                    else if (items[i] == "%i")
+                        hila::output << "<int/long> ";
+                    else
+                        hila::output << '\'' << items[i] << "' ";
                 }
                 hila::output << '\n';
             }
         }
     }
 
-
     if (bcast) {
-        broadcast(item,no_error);
+        broadcast(item, no_error);
 
         // with broadcast exit on error
         if (!no_error)
             hila::finishrun();
-
-    } 
+    }
 
     return item;
 }
 
 } // namespace hila
-
-

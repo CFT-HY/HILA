@@ -16,7 +16,7 @@
 // lattice_struct my_lattice;
 // lattice_struct * lattice = & my_lattice;
 
-const int nd[NDIM] = {32, 32, 32, 32};
+const CoordinateVector nd = {32, 32, 32, 32};
 
 inline void checkLatticeSetup() {
     for (int dir = 0; dir < NDIRS; dir++) {

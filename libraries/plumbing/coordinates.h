@@ -216,12 +216,13 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
     /// Construct from 0, using nullptr_t autocast
     inline CoordinateVector_t(std::nullptr_t z) { foralldir(d) this->e(d) = 0; }
 
-    /// cast to vector<NDIM,int> - useful for method inheritance
-    inline operator Vector<NDIM, int>() {
-        Vector<NDIM, int> v;
-        foralldir(d) v.e(d) = this->e(d);
-        return v;
-    }
+    // /// cast to vector<NDIM,int> - useful for method inheritance
+    // #pragma hila loop_function
+    // inline operator Vector<NDIM, int>() {
+    //     Vector<NDIM, int> v;
+    //     foralldir(d) v.e(d) = this->e(d);
+    //     return v;
+    // }
 
     /// Assign from 0
     inline CoordinateVector_t &operator=(std::nullptr_t z) {

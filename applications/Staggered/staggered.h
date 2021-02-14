@@ -27,7 +27,7 @@ using NMAT = Matrix<N, N, Cmplx<double>>;
 using VEC = SU_vector<N, double>;
 
 // Define some parameters for the simulation
-extern const int nd[4] = {8, 8, 8, 8};
+extern const CoordinateVector nd{8, 8, 8, 8};
 
 extern int n_measurements;
 extern int n_updates_per_measurement;

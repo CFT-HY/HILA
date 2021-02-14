@@ -29,7 +29,7 @@ __global__ void seed_random_kernel(curandState *state, unsigned long seed,
 }
 
 /* Set seed on device and host */
-void seed_random(unsigned long seed) {
+void hila::seed_random(unsigned long seed) {
     unsigned int iters_per_kernel = 16;
     unsigned long n_blocks =
         lattice->mynode.volume() / (N_threads * iters_per_kernel) + 1;

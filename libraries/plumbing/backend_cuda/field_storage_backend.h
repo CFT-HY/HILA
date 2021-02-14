@@ -5,7 +5,8 @@
 #include "../field_storage.h"
 
 /* CUDA implementations */
-template <typename T> void field_storage<T>::allocate_field(lattice_struct *lattice) {
+template <typename T> 
+void field_storage<T>::allocate_field(lattice_struct *lattice) {
     // Allocate space for the field of the device
     auto status = cudaMalloc((void **)&fieldbuf, sizeof(T) * lattice->field_alloc_size());
     check_cuda_error_code(status, "Allocate field memory");
@@ -15,7 +16,8 @@ template <typename T> void field_storage<T>::allocate_field(lattice_struct *latt
     assert(fieldbuf != nullptr);
 }
 
-template <typename T> void field_storage<T>::free_field() {
+template <typename T> 
+void field_storage<T>::free_field() {
     if (fieldbuf != nullptr) {
         auto status = cudaFree(fieldbuf);
         check_cuda_error_code(status, "Free field memory");

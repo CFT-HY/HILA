@@ -32,7 +32,7 @@
 // Define random number generator
 namespace hila {
     inline double random() { return mersenne(); }
-    inline void seed_random(int seed) {
+    inline void seed_random(unsigned long seed) {
 
         /* First seed the generator */
         seed_mersenne(seed);

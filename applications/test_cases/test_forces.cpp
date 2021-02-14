@@ -158,13 +158,13 @@ int main(int argc, char **argv) {
 /* Use a smaller lattice size since
  * the inversion takes a while */
 #if NDIM == 1
-    const int nd[NDIM] = {64};
+    const CoordinateVector nd = {64};
 #elif NDIM == 2
-    const int nd[NDIM] = {32, 8};
+    const CoordinateVector nd = {32, 8};
 #elif NDIM == 3
-    const int nd[NDIM] = {16, 8, 8};
+    const CoordinateVector nd = {16, 8, 8};
 #elif NDIM == 4
-    const int nd[NDIM] = {16, 8, 8, 8};
+    const CoordinateVector nd = {16, 8, 8, 8};
 #endif
     hila::initialize(argc, argv);
     lattice->setup(nd);

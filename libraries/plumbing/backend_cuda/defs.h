@@ -210,7 +210,7 @@ void cuda_device_info();
 // in hilapp
 namespace hila {
     double random() { return 0.5; }
-    void seed_random(seed) {}
+    void seed_random(unsigned long seed) {}
 }
 
 #define cudaMalloc(a, b) 0

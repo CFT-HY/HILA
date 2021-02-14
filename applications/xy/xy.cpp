@@ -13,7 +13,7 @@ double beta = 0.1;
 int n_measurements = 100;
 int n_updates_per_measurement = 10;
 long seed = 123456;
-int nd[2] = {64, 64};
+CoordinateVector nd = {64, 64};
 int VOLUME = nd[0] * nd[1];
 
 int main(int argc, char **argv) {

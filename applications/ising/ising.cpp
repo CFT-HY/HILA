@@ -17,7 +17,7 @@ int log_level = 2;
 
 int main(int argc, char **argv) {
     // Basic setup
-    const int nd[2] = {NX, NY};
+    const CoordinateVector nd = {NX, NY};
     hila::initialize(argc, argv);
     lattice->setup(nd);
 

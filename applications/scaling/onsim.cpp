@@ -76,7 +76,7 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc, char
     config.dt = config.dx * ratio;
     t = config.tStart;
 
-    int box_dimensions[3] = {config.l, config.l, config.l};
+    CoordinateVector box_dimensions = {config.l, config.l, config.l};
     lattice->setup(box_dimensions);
     hila::seed_random(config.seed);
 

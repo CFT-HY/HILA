@@ -34,7 +34,7 @@ static inline double timediff(timeval start, timeval end) {
 
 #define MADD(x) (MSIZE + x)
 
-const int latsize[4] = {32, 32, 32, 32};
+const CoordinateVector latsize = {32, 32, 32, 32};
 
 template <typename T> struct test_s {
     // std incantation for field types
