@@ -7,7 +7,7 @@
 
 #include "plumbing/lattice.h"
 
-extern timer start_send_timer, wait_send_timer, post_receive_timer, wait_receive_timer,
+extern hila::timer start_send_timer, wait_send_timer, post_receive_timer, wait_receive_timer,
     synchronize_timer, reduction_timer, broadcast_timer, send_timer, cancel_send_timer,
     cancel_receive_timer, sublattice_sync_timer;
 

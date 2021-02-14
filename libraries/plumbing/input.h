@@ -230,7 +230,11 @@ class input {
 
         returntype(const std::string &str, input *a) : label(str), parent(a) {}
 
-        template <typename T> operator T() {
+        /// cast operator does the conversion - disable nullptr_t cast used
+        /// in hila types
+        template <typename T,
+                 std::enable_if_t<!std::is_same<T,std::nullptr_t>::value, int> = 0> 
+        operator T() {
             T val;
             if (!parent->get_value(val, label, true))
                 hila::finishrun();

@@ -65,7 +65,7 @@ void test_std_gathers() {
     // gather_test<int>();
     gather_test<double>();
 
-    timestamp("Communication tests done");
+    hila::timestamp("Communication tests done");
     print_dashed_line();
 
     if (hila::myrank() == 0)

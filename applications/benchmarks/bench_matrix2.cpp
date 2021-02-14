@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 
     hila::seed_random(SEED);
 
-    timer timer1("Timer1");
+    hila::timer timer1("Timer1");
 
     Field<Matrix<MADD(0), MADD(0), Cmplx<ntype>>> matrix1;
     Field<Matrix<MADD(1), MADD(1), Cmplx<ntype>>> matrix2;

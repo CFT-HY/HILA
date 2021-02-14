@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
 
     f[ALL] = hila::gaussian_ran();
 
-    static timer cmplx_timer("cmplx fft");
+    static hila::timer cmplx_timer("cmplx fft");
 
     for (int i = 0; i < loops; i++) {
         cmplx_timer.start();
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
     //   v[X].e(1).gaussian();
     // }
 
-    // timer vector_timer("vector fft");
+    // hila::timer vector_timer("vector fft");
     // for (int i=0; i<loops; i++) {
     //   vector_timer.start();
     //   FFT_field(v,v1);

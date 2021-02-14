@@ -40,7 +40,7 @@ inline void fft_collect_data(const Field<T> &f, const direction dir,
 
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t); // cmplx elements in T
 
-    extern timer fft_collect_timer;
+    extern hila::timer fft_collect_timer;
     fft_collect_timer.start();
 
     // Use this union to convert from T to cmplx numbers
@@ -78,7 +78,7 @@ inline void fft_save_result(Field<T> &f, const direction dir,
 
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t); // cmplx elements in T
 
-    extern timer fft_save_timer;
+    extern hila::timer fft_save_timer;
     fft_save_timer.start();
 
     // Use this union to convert from T to cmplx numbers
@@ -128,7 +128,7 @@ inline void fft_reshuffle_data(const direction fft_dir, cmplx_t *const RESTRICT 
                                const direction prev_dir, const cmplx_t *const RESTRICT in,
                                const size_t elements) {
 
-    extern timer fft_reshuffle_timer;
+    extern hila::timer fft_reshuffle_timer;
     fft_reshuffle_timer.start();
 
     CoordinateVector offset_in, offset_out, nmin;
@@ -214,7 +214,7 @@ inline void FFT_field_complex(const Field<T> &input, Field<T> &result,
     size_t max_volume = 1;
     foralldir(d) max_volume *= lattice->nodes.max_size[d];
 
-    extern timer fft_timer;
+    extern hila::timer fft_timer;
     fft_timer.start();
 
     // Make sure the result is allocated and mark it changed

@@ -13,6 +13,8 @@
 #include "com_mpi.h"
 #endif
 
+namespace hila {
+
 // This stores the start time of the program
 static double start_time = -1.0;
 
@@ -217,3 +219,5 @@ void timestamp(const char *msg) {
         hila::output << " -- date " << d << "  run time " << gettime() << "s\n";
     }
 }
+
+} // namespace hila

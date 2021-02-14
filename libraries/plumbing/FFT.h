@@ -15,12 +15,12 @@
 /// The field must be complex and the underlying complex type is supplied
 /// by the complex_type template argument
 
-static timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT"); // initialized 1st time used
-static timer fftw_execute_timer("FFTW execute"), fftw_plan_timer("FFTW plan");
-static timer sitelist_timer("fft sitelist");
-static timer fft_copy_payload_timer("copy payload");
-static timer fft_buf_timer("copy fftw buffers");
-static timer fft_place_timer("place payload");
+static hila::timer FFT_timer("FFT"), FFT_MPI_timer(" MPI in FFT"); // initialized 1st time used
+static hila::timer fftw_execute_timer("FFTW execute"), fftw_plan_timer("FFTW plan");
+static hila::timer sitelist_timer("fft sitelist");
+static hila::timer fft_copy_payload_timer("copy payload");
+static hila::timer fft_buf_timer("copy fftw buffers");
+static hila::timer fft_place_timer("place payload");
 
 template <typename T, typename complex_type>
 inline void FFT_field_complex(Field<T> &input, Field<T> &result,

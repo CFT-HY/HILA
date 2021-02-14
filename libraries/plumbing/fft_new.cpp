@@ -11,14 +11,14 @@
 #define WRK_GATHER_TAG 42
 #define WRK_SCATTER_TAG 43
 
-timer fft_timer("FFT total time");
-static timer fftw_plan_timer("  FFTW plan");
-static timer fft_MPI_timer("  MPI in FFT");
-static timer fftw_execute_timer("  FFTW execute");
-timer fft_reshuffle_timer("  data reshuffle");
-static timer fft_buffer_timer("  copy fftw buffers");
-timer fft_collect_timer("  copy payload");
-timer fft_save_timer("  save result");
+hila::timer fft_timer("FFT total time");
+static hila::timer fftw_plan_timer("  FFTW plan");
+static hila::timer fft_MPI_timer("  MPI in FFT");
+static hila::timer fftw_execute_timer("  FFTW execute");
+hila::timer fft_reshuffle_timer("  data reshuffle");
+static hila::timer fft_buffer_timer("  copy fftw buffers");
+hila::timer fft_collect_timer("  copy payload");
+hila::timer fft_save_timer("  save result");
 
 struct fftnode_struct {
     int node;               // node rank to send stuff for fft:ing

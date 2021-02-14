@@ -3,6 +3,8 @@
 
 #include "plumbing/defs.h"
 
+namespace hila {
+
 ////////////////////////////////////////////////////////////////
 /// This file defines timer class and other timing related utilities
 
@@ -45,6 +47,8 @@ struct timer_value {
 ///
 ////////////////////////////////////////////////////////////////
 
+
+
 class timer {
   private:
     double t_start, t_total;
@@ -83,5 +87,8 @@ bool time_to_exit();
 void setup_timelimit(long seconds);
 
 void timestamp(const char *msg);
+
+
+} // namespace hila
 
 #endif /* timing */

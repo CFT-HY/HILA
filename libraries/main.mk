@@ -74,7 +74,7 @@ HILA_HEADERS := $(wildcard $(TOP_DIR)/libraries/*/*.h) $(wildcard $(TOP_DIR)/lib
 
 ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 
-HILA_OPTS += -I$(HILA_INCLUDE_DIR)
+HILA_OPTS += -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing
 
 # Add the (possible) std. includes for hilapp
 HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include $(CUSTOM_HILAPP_OPTS)

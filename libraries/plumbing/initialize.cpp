@@ -156,7 +156,7 @@ void hila::initialize(int argc, char **argv) {
     hila::output.rdbuf(std::cout.rdbuf());
 
     // set the timing so that gettime() returns time from this point
-    inittime();
+    hila::inittime();
 
     // check the "check=<nodes>" -input early, to avoid starting MPI
     // put in braces to have auto cleanup
@@ -230,13 +230,13 @@ void hila::initialize(int argc, char **argv) {
 #endif
         hila::output << "  Compiled " << __DATE__ << " at " << __TIME__ << '\n';
 
-        timestamp("Starting");
+        hila::timestamp("Starting");
     }
 
     long cputime = commandline.get_int("timelimit=");
     if (cputime != LONG_MAX) {
         output0 << "CPU time limit " << cputime << " seconds\n";
-        setup_timelimit(cputime);
+        hila::setup_timelimit(cputime);
     } else {
         output0 << "No runtime limit given\n";
     }
@@ -326,7 +326,7 @@ void initialize_prn(long seed) {
 
 /* version of exit for multinode processes -- kill all nodes */
 void hila::terminate(int status) {
-    timestamp("Terminate");
+    hila::timestamp("Terminate");
     print_dashed_line();
     hila::about_to_finish = true; // avoid destructors
     if (is_comm_initialized()) {
@@ -356,13 +356,13 @@ void hila::finishrun() {
         }
     }
     if (sublattices.number > 1) {
-        timestamp("Waiting to sync sublattices...");
+        hila::timestamp("Waiting to sync sublattices...");
     }
 
     if (!hila::check_input) {
 
         synchronize();
-        timestamp("Finishing");
+        hila::timestamp("Finishing");
 
         hila::about_to_finish = true;
 

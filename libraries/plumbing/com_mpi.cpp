@@ -10,7 +10,7 @@
 
 // declare MPI timers here too - these were externs
 
-timer start_send_timer("MPI start send"), wait_send_timer("MPI wait send"),
+hila::timer start_send_timer("MPI start send"), wait_send_timer("MPI wait send"),
     post_receive_timer("MPI post receive"), wait_receive_timer("MPI wait receive"),
     synchronize_timer("MPI synchronize"), reduction_timer("MPI reduction"),
     broadcast_timer("MPI broadcast"), send_timer("MPI send field"),
