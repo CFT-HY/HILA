@@ -6,7 +6,7 @@
 #include "plumbing/field.h"
 #include "plumbing/input.h"
 
-using vtype = Cmplx<double>;
+using vtype = Complex<double>;
 
 static_assert(NDIM == 3, "NDIM must be 3 in this program");
 

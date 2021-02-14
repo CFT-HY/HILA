@@ -14,7 +14,7 @@ constexpr int N = 2;
 template <typename fermion_action, typename dirac, typename gauge_field_type>
 void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
     using sun = typename gauge_field_type::fund_type;
-    using forcetype = SquareMatrix<gauge_field_type::N, Cmplx<double>>;
+    using forcetype = SquareMatrix<gauge_field_type::N, Complex<double>>;
     Field<forcetype> force[NDIM];
     double eps = 1e-5;
 
@@ -27,7 +27,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         CoordinateVector coord(0);
 
         sun g1 = gauge.get_gauge(0).get_element(coord);
-        sun h = sun(1) + Cmplx<double>(0, eps) * sun::generator(ng);
+        sun h = sun(1) + Complex<double>(0, eps) * sun::generator(ng);
         sun g12 = h * g1;
 
         Field<typename dirac::vector_type> psi, chi, tmp, tmp2;
@@ -65,7 +65,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         gauge.add_momentum(force);
         sun f = gauge.get_momentum(0).get_element(coord);
         double f1 = (s2 - s1) / eps;
-        double f2 = (f * Cmplx<double>(0, 1) * sun::generator(ng)).trace().re;
+        double f2 = (f * Complex<double>(0, 1) * sun::generator(ng)).trace().re;
         double diff = f2 - f1;
 
         if (hila::myrank() == 0) {
@@ -103,7 +103,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         gauge.add_momentum(force);
         f = gauge.get_momentum(0).get_element(coord);
         f1 = (s2 - s1) / eps;
-        f2 = (f * Cmplx<double>(0, 1) * sun::generator(ng)).trace().re;
+        f2 = (f * Complex<double>(0, 1) * sun::generator(ng)).trace().re;
         diff = f2 - f1;
 
         if (hila::myrank() == 0) {
@@ -139,7 +139,7 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         fa.force_step(1.0);
         f = gauge.get_momentum(0).get_element(coord);
         f1 = dS / eps;
-        f2 = (f * Cmplx<double>(0, 1) * sun::generator(ng)).trace().re;
+        f2 = (f * Complex<double>(0, 1) * sun::generator(ng)).trace().re;
         diff = f2 - f1;
 
         if (hila::myrank() == 0) {
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
             onsites(ALL) { gauge.momentum[dir][X] = 0; }
         }
         SU<N> g1 = gauge.gauge[0].get_value_at(50);
-        SU<N> h = SU<N>(1) + Cmplx<double>(0, eps) * SU<N>::generator(ng);
+        SU<N> h = SU<N>(1) + Complex<double>(0, eps) * SU<N>::generator(ng);
         SU<N> g12 = h * g1;
 
         double s1 = ga.action();
@@ -201,15 +201,15 @@ int main(int argc, char **argv) {
         ga.force_step(1.0);
         SU<N> f = gauge.momentum[0].get_value_at(50);
         double diff =
-            (f * Cmplx<double>(0, 1) * SU<N>::generator(ng)).trace().re - (s2 - s1) / eps;
+            (f * Complex<double>(0, 1) * SU<N>::generator(ng)).trace().re - (s2 - s1) / eps;
 
         if (hila::myrank() == 0) {
             // hila::output << "Force " <<
-            // (f*Cmplx<double>(0,1)*SU<N>::generator(ng)).trace().re << "\n"; hila::output
+            // (f*Complex<double>(0,1)*SU<N>::generator(ng)).trace().re << "\n"; hila::output
             // << "Force " << (f*SU<N>::generator(ng)).trace().re << "\n"; hila::output <<
             // "Deriv " << (s2-s1)/eps << "\n"; hila::output << "Force " << ng << " diff "
             // << diff << "\n";
-            h = Cmplx<double>(0, 1) * SU<N>::generator(ng);
+            h = Complex<double>(0, 1) * SU<N>::generator(ng);
             assert(diff * diff < eps * 10 && "Gauge force");
         }
     }
@@ -327,7 +327,7 @@ int main(int argc, char **argv) {
 
         double s1 = ga.action();
         SU<N> h = gauge.momentum[0].get_value_at(0);
-        h += eps * Cmplx<double>(0, 1) * SU<N>::generator(ng);
+        h += eps * Complex<double>(0, 1) * SU<N>::generator(ng);
         if (hila::myrank() == 0)
             gauge.momentum[0].set_value_at(h, 0);
         double s2 = ga.action();
@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
             // hila::output << "Mom 1 " << (h*SU<N>::generator(ng)).trace().re << "\n";
             // hila::output << "Mom 2 " << (s2-s1)/eps << "\n";
             // hila::output << "Mom " << ng << " diff " << diff << "\n";
-            h = Cmplx<double>(0, 1) * SU<N>::generator(ng);
+            h = Complex<double>(0, 1) * SU<N>::generator(ng);
             assert(diff * diff < eps * 10 && "Momentum derivative");
         }
     }

@@ -7,12 +7,12 @@ int n_updates_per_measurement = 10;
 long seed = 123456;
 int NX = 16, NY = 16, NZ = 16, NT = 16;
 
-void calc_staples(Field<Matrix<N, N, Cmplx<double>>> (&U)[NDIM],
-                  Field<Matrix<N, N, Cmplx<double>>> &staple_sum, direction dir) {
+void calc_staples(Field<Matrix<N, N, Complex<double>>> (&U)[NDIM],
+                  Field<Matrix<N, N, Complex<double>>> &staple_sum, direction dir) {
     /* Calculate the sum of staples connected to links in direction
      * dir
      */
-    static Field<Matrix<N, N, Cmplx<double>>> down_staple;
+    static Field<Matrix<N, N, Complex<double>>> down_staple;
     staple_sum[ALL] = 0;
     foralldir(d2) {
         direction dir2 = (direction)d2;
@@ -31,9 +31,9 @@ template <typename T> void update(T &U, const T &staple, double beta) {
     monte(U, staple, beta);
 }
 
-void update(Matrix<2, 2, Cmplx<double>> &U, const Matrix<2, 2, Cmplx<double>> &staple,
+void update(Matrix<2, 2, Complex<double>> &U, const Matrix<2, 2, Complex<double>> &staple,
             double beta) {
-    Matrix<2, 2, Cmplx<double>> temp = -beta * staple;
+    Matrix<2, 2, Complex<double>> temp = -beta * staple;
     KennedyPendleton(U, temp);
 }
 
@@ -43,8 +43,8 @@ int main(int argc, char **argv) {
     lattice->setup(nd);
 
     // Define a field
-    Field<Matrix<N, N, Cmplx<double>>> U[NDIM];
-    Field<Matrix<N, N, Cmplx<double>>> staple;
+    Field<Matrix<N, N, Complex<double>>> U[NDIM];
+    Field<Matrix<N, N, Complex<double>>> staple;
 
     hila::seed_random(seed);
 
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
         foralldir(d1) foralldir(d2) if (d1 != d2) {
             direction dir1 = (direction)d1, dir2 = (direction)d2;
             onsites(ALL) {
-                element<Matrix<N, N, Cmplx<double>>> temp;
+                element<Matrix<N, N, Complex<double>>> temp;
                 temp = U[dir1][X] * U[dir2][X + dir1];
                 temp *= U[dir1][X + dir2].conjugate();
                 temp *= U[dir2][X].conjugate();

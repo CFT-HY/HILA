@@ -27,9 +27,9 @@ class scaling_sim {
     void next();
     inline double scaleFactor(double t);
 
-    Field<Cmplx<double>> phi;
-    Field<Cmplx<double>> pi;
-    Field<Cmplx<double>> deltaPi;
+    Field<Complex<double>> phi;
+    Field<Complex<double>> pi;
+    Field<Complex<double>> deltaPi;
 
     double t;
 
@@ -96,7 +96,7 @@ void scaling_sim::initialize() {
 
     case 2: {
         onsites(ALL) {
-            pi[X] = Cmplx<double>(0.0, 0.0);
+            pi[X] = Complex<double>(0.0, 0.0);
             phi[X].re = config.sigma;
             phi[X].im = config.sigma;
         }
@@ -111,7 +111,7 @@ void scaling_sim::initialize() {
         onsites(ALL) {
             element<CoordinateVector> coord =
                 X.coordinates(); // coordinates of the current lattice site
-            pi[X] = Cmplx<double>(0.0, 0.0);
+            pi[X] = Complex<double>(0.0, 0.0);
             phi[X].re =
                 s * sqrt(1 - epsilon * epsilon * sin(2.0 * M_PI * coord[0] * m / N) *
                                  sin(2.0 * M_PI * coord[0] * m / N));
@@ -129,7 +129,7 @@ void scaling_sim::initialize() {
             double theta, r;
             r = config.initialModulus * s;
             theta = hila::random() * 2 * M_PI;
-            Cmplx<double> val;
+            Complex<double> val;
             phi[X] = val.polar(r, theta);
             pi[X] = 0;
         }
@@ -139,11 +139,11 @@ void scaling_sim::initialize() {
             pi[ALL] = 6.0 * phi[X];
             foralldir(d) { pi[ALL] = pi[X] + phi[X + d]; }
             onsites(ALL) {
-                Cmplx<double> norm = pi[X].conj() * pi[X];
+                Complex<double> norm = pi[X].conj() * pi[X];
                 if (norm.re == 0)
-                    norm = Cmplx<double>(1.0, 0.0);
+                    norm = Complex<double>(1.0, 0.0);
                 phi[X] = pi[X] / norm;
-                pi[X] = Cmplx<double>(0.0, 0.0);
+                pi[X] = Complex<double>(0.0, 0.0);
             }
         }
 
@@ -163,8 +163,8 @@ void scaling_sim::write_moduli() {
 
     onsites(ALL) {
         double p_r = 0.0, p_i = 0.0;
-        Cmplx<double> norm_1 = phi[X].conj() * phi[X];
-        Cmplx<double> norm_2 = pi[X].conj() * pi[X];
+        Complex<double> norm_1 = phi[X].conj() * phi[X];
+        Complex<double> norm_2 = pi[X].conj() * pi[X];
         p_r = norm_1.re;
         p_i = norm_2.re;
         phimod += sqrt(p_r);
@@ -216,9 +216,9 @@ void scaling_sim::write_energies() {
     direction d;
     foralldir(d) {
         onsites(ALL) {
-            Cmplx<double> norm = phi[X].conj() * phi[X];
+            Complex<double> norm = phi[X].conj() * phi[X];
             double v = 0.25 * config.lambda * a * a * pow((norm.re - ss), 2.0);
-            Cmplx<double> diff_phi = (phi[X + d] - phi[X]) / config.dx;
+            Complex<double> diff_phi = (phi[X + d] - phi[X]) / config.dx;
             double pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
 
             sumDiPhi += 0.5 * (diff_phi.conj() * diff_phi).re;
@@ -254,7 +254,7 @@ void scaling_sim::next() {
     phi[ALL] = phi[X] + config.dt * pi[X];
 
     onsites(ALL) {
-        Cmplx<double> norm = phi[X].conj() * phi[X]; // calculate phi norm
+        Complex<double> norm = phi[X].conj() * phi[X]; // calculate phi norm
         deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - norm.re) - aadt2D_aadxdx);
     }
 

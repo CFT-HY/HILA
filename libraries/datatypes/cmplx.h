@@ -35,22 +35,22 @@ inline T nmul_add(T a, T b, T c) {
 /// type with a vector. The datatype T must be an arithmetic type.
 ///////////////////////////////////////////////////////////////////////////////
 
-template <typename T = double> struct Cmplx {
+template <typename T = double> struct Complex {
 
-    static_assert(is_arithmetic<T>::value, "Cmplx can be used only with arithmetic type");
-    // This incantation is needed to make Field<Cmplx<>> vectorized
+    static_assert(is_arithmetic<T>::value, "Complex can be used only with arithmetic type");
+    // This incantation is needed to make Field<Complex<>> vectorized
     using base_type = typename base_type_struct<T>::type;
 
     T re, im;
 
-    Cmplx<T>() = default;
-    ~Cmplx<T>() = default;
-    Cmplx<T>(const Cmplx<T> &a) = default;
+    Complex<T>() = default;
+    ~Complex<T>() = default;
+    Complex<T>(const Complex<T> &a) = default;
 
     // constructor from single complex --IS THIS NEEDED?
     // template <typename A,
     //           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
-    // constexpr Cmplx<T>(const Cmplx<A> a) : re(static_cast<T>(a.re)),
+    // constexpr Complex<T>(const Complex<A> a) : re(static_cast<T>(a.re)),
     // im(static_cast<T>(a.im)) {}
 
     // constructor from single scalar value
@@ -59,19 +59,19 @@ template <typename T = double> struct Cmplx {
 
 #pragma hila loop_function
     template <typename S, std::enable_if_t<is_arithmetic<S>::value, int> = 0>
-    explicit constexpr Cmplx<T>(const S val) {
+    explicit constexpr Complex<T>(const S val) {
         re = val;
         im = 0;
     }
 
     // allow construction from 0 (nullptr)
-    constexpr Cmplx<T>(const std::nullptr_t n) { re = im = 0; }
+    constexpr Complex<T>(const std::nullptr_t n) { re = im = 0; }
 
     // constructor c(a,b)
     template <typename A, typename B, std::enable_if_t<is_arithmetic<A>::value, int> = 0,
               std::enable_if_t<is_arithmetic<B>::value, int> = 0>
 #pragma hila loop_function
-    explicit constexpr Cmplx<T>(const A &a, const B &b) {
+    explicit constexpr Complex<T>(const A &a, const B &b) {
         re = a;
         im = b;
     }
@@ -83,26 +83,26 @@ template <typename T = double> struct Cmplx {
     inline T imag() const { return im; }
     inline T &imag() { return im; }
 
-    // automatic casting from Cmplx<T> -> Cmplx<A>
+    // automatic casting from Complex<T> -> Complex<A>
     // TODO: ensure this works if A is vector type!
     template <typename A>
 #pragma hila loop_function // TODO
-    operator Cmplx<A>() const {
-        return Cmplx<A>(re, im);
+    operator Complex<A>() const {
+        return Complex<A>(re, im);
     }
 
-    inline Cmplx<T> &operator=(const Cmplx<T> &s) = default;
+    inline Complex<T> &operator=(const Complex<T> &s) = default;
 
-    // Assignment from Cmplx<A>
+    // Assignment from Complex<A>
     template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-    inline Cmplx<T> &operator=(const Cmplx<A> &s) {
+    inline Complex<T> &operator=(const Complex<A> &s) {
         re = s.re;
         im = s.im;
         return *this;
     }
 
     template <typename S, std::enable_if_t<std::is_arithmetic<S>::value, int> = 0>
-    inline Cmplx<T> &operator=(S s) {
+    inline Complex<T> &operator=(S s) {
         re = s;
         im = 0;
         return *this;
@@ -115,40 +115,40 @@ template <typename T = double> struct Cmplx {
     inline T abs() const { return sqrt(norm_sq()); }
     inline T arg() const { return atan2(im, re); }
 
-    inline Cmplx<T> conj() const { return Cmplx<T>(re, -im); }
+    inline Complex<T> conj() const { return Complex<T>(re, -im); }
 
-    inline Cmplx<T> polar(const T r, const T theta) {
-        return Cmplx<T>({r * cos(theta), r * sin(theta)});
+    inline Complex<T> polar(const T r, const T theta) {
+        return Complex<T>({r * cos(theta), r * sin(theta)});
     }
 
-    inline Cmplx<T> &random() {
+    inline Complex<T> &random() {
         re = hila::random();
         im = hila::random();
         return *this;
     }
 
-    inline Cmplx<T> &gaussian() {
+    inline Complex<T> &gaussian() {
         re = hila::gaussian_ran2(im);
         return *this;
     }
 
     // unary + and -
-    inline Cmplx<T> operator+() const { return *this; }
-    inline Cmplx<T> operator-() const { return Cmplx<T>(-re, -im); }
+    inline Complex<T> operator+() const { return *this; }
+    inline Complex<T> operator-() const { return Complex<T>(-re, -im); }
 
-    inline Cmplx<T> &operator+=(const Cmplx<T> &lhs) {
+    inline Complex<T> &operator+=(const Complex<T> &lhs) {
         re += lhs.re;
         im += lhs.im;
         return *this;
     }
 
     template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-    inline Cmplx<T> &operator+=(const A &a) {
+    inline Complex<T> &operator+=(const A &a) {
         re += a;
         return *this;
     }
 
-    inline Cmplx<T> &operator-=(const Cmplx<T> &lhs) {
+    inline Complex<T> &operator-=(const Complex<T> &lhs) {
         re -= lhs.re;
         im -= lhs.im;
         return *this;
@@ -156,19 +156,19 @@ template <typename T = double> struct Cmplx {
 
     // TODO: for vector too
     template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-    inline Cmplx<T> &operator-=(const A &a) {
+    inline Complex<T> &operator-=(const A &a) {
         re -= a;
         return *this;
     }
 
-    // inline Cmplx<T> & operator*= (const Cmplx<T> & lhs) {
+    // inline Complex<T> & operator*= (const Complex<T> & lhs) {
     //   T r = re * lhs.re - im * lhs.im;
     //   im  = im * lhs.re + re * lhs.im;
     //   re = r;
     //   return *this;
     // }
 
-    inline Cmplx<T> &operator*=(const Cmplx<T> lhs) {
+    inline Complex<T> &operator*=(const Complex<T> lhs) {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
         im = mul_add(im, lhs.re, re * lhs.im);  // a*b+c
         re = r;
@@ -177,21 +177,21 @@ template <typename T = double> struct Cmplx {
 
     // TODO: for vector too
     template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-    inline Cmplx<T> &operator*=(const A a) {
+    inline Complex<T> &operator*=(const A a) {
         re *= a;
         im *= a;
         return *this;
     }
 
     // a/b = a b*/|b|^2 = (a.re*b.re + a.im*b.im + i(a.im*b.re - a.re*b.im))/|b|^2
-    // inline Cmplx<T> & operator/= (const Cmplx<T> & lhs) {
+    // inline Complex<T> & operator/= (const Complex<T> & lhs) {
     //   T n = lhs.squarenorm();
     //   T r = (re * lhs.re + im * lhs.im)/n;
     //   im  = (im * lhs.re - re * lhs.im)/n;
     //   re = r;
     //   return *this;
     // }
-    inline Cmplx<T> &operator/=(const Cmplx<T> &lhs) {
+    inline Complex<T> &operator/=(const Complex<T> &lhs) {
         T n = lhs.norm_sq();
         T r = mul_add(re, lhs.re, im * lhs.im) / n; // a*b+c
         im = mul_sub(im, lhs.re, re * lhs.im) / n;  // a*b-c
@@ -201,7 +201,7 @@ template <typename T = double> struct Cmplx {
 
     // TODO: for vector too
     template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-    inline Cmplx<T> &operator/=(const A &a) {
+    inline Complex<T> &operator/=(const A &a) {
         re /= a;
         im /= a;
         return *this;
@@ -222,102 +222,102 @@ template <typename T = double> struct Cmplx {
 
 // functions real(), imag()
 
-template <typename T> inline T real(const Cmplx<T> a) { return a.re; }
+template <typename T> inline T real(const Complex<T> a) { return a.re; }
 
-template <typename T> inline T imag(const Cmplx<T> a) { return a.im; }
+template <typename T> inline T imag(const Complex<T> a) { return a.im; }
 
 // template <typename T>
-// inline Cmplx<T> operator+(const Cmplx<T> & a, const Cmplx<T> & b) {
-//   return Cmplx<T>(a.re + b.re, a.im + b.im);
+// inline Complex<T> operator+(const Complex<T> & a, const Complex<T> & b) {
+//   return Complex<T>(a.re + b.re, a.im + b.im);
 // }
 
-template <typename T> inline Cmplx<T> operator+(Cmplx<T> a, const Cmplx<T> &b) {
+template <typename T> inline Complex<T> operator+(Complex<T> a, const Complex<T> &b) {
     a += b;
     return a;
 }
 
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-inline Cmplx<T> operator+(const Cmplx<T> &c, const A &a) {
-    return Cmplx<T>(c.re + a, c.im);
+inline Complex<T> operator+(const Complex<T> &c, const A &a) {
+    return Complex<T>(c.re + a, c.im);
 }
 
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-inline Cmplx<T> operator+(const A &a, const Cmplx<T> &c) {
-    return Cmplx<T>(c.re + a, c.im);
+inline Complex<T> operator+(const A &a, const Complex<T> &c) {
+    return Complex<T>(c.re + a, c.im);
 }
 
 // -
 // template <typename T>
-// inline Cmplx<T> operator-(const Cmplx<T> & a, const Cmplx<T> & b) {
-//   return Cmplx<T>(a.re - b.re, a.im - b.im);
+// inline Complex<T> operator-(const Complex<T> & a, const Complex<T> & b) {
+//   return Complex<T>(a.re - b.re, a.im - b.im);
 // }
-template <typename T> inline Cmplx<T> operator-(Cmplx<T> a, const Cmplx<T> &b) {
+template <typename T> inline Complex<T> operator-(Complex<T> a, const Complex<T> &b) {
     a -= b;
     return a;
 }
 
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-inline Cmplx<T> operator-(const Cmplx<T> &c, const A &a) {
-    return Cmplx<T>(c.re - a, c.im);
+inline Complex<T> operator-(const Complex<T> &c, const A &a) {
+    return Complex<T>(c.re - a, c.im);
 }
 
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-inline Cmplx<T> operator-(const A &a, const Cmplx<T> &c) {
-    return Cmplx<T>(a - c.re, -c.im);
+inline Complex<T> operator-(const A &a, const Complex<T> &c) {
+    return Complex<T>(a - c.re, -c.im);
 }
 
 //
 // template <typename T>
-// inline Cmplx<T> operator*(const Cmplx<T> & a, const Cmplx<T> & b) {
-//   return Cmplx<T>(a.re*b.re - a.im*b.im, a.im*b.re + a.re*b.im);
+// inline Complex<T> operator*(const Complex<T> & a, const Complex<T> & b) {
+//   return Complex<T>(a.re*b.re - a.im*b.im, a.im*b.re + a.re*b.im);
 // }
-template <typename T> inline Cmplx<T> operator*(Cmplx<T> a, const Cmplx<T> &b) {
+template <typename T> inline Complex<T> operator*(Complex<T> a, const Complex<T> &b) {
     a *= b;
     return a;
 }
 
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-inline Cmplx<T> operator*(const Cmplx<T> &c, const A &a) {
-    return Cmplx<T>(c.re * a, c.im * a);
+inline Complex<T> operator*(const Complex<T> &c, const A &a) {
+    return Complex<T>(c.re * a, c.im * a);
 }
 
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-inline Cmplx<T> operator*(const A &a, const Cmplx<T> &c) {
-    return Cmplx<T>(a * c.re, a * c.im);
+inline Complex<T> operator*(const A &a, const Complex<T> &c) {
+    return Complex<T>(a * c.re, a * c.im);
 }
 
 // /   a/b = ab*/|b|^2
 // template <typename T>
-// inline Cmplx<T> operator/(const Cmplx<T> & a, const Cmplx<T> & b) {
+// inline Complex<T> operator/(const Complex<T> & a, const Complex<T> & b) {
 //   T n = b.norm_sq();
-//   return Cmplx<T>( (a.re*b.re + a.im*b.im)/n, (a.im*b.re - a.re*b.im)/n );
+//   return Complex<T>( (a.re*b.re + a.im*b.im)/n, (a.im*b.re - a.re*b.im)/n );
 // }
-template <typename T> inline Cmplx<T> operator/(Cmplx<T> a, const Cmplx<T> &b) {
+template <typename T> inline Complex<T> operator/(Complex<T> a, const Complex<T> &b) {
     a /= b;
     return a;
 }
 
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-inline Cmplx<T> operator/(const Cmplx<T> &c, const A &a) {
-    return Cmplx<T>(c.re / a, c.im / a);
+inline Complex<T> operator/(const Complex<T> &c, const A &a) {
+    return Complex<T>(c.re / a, c.im / a);
 }
 
 // a/c = ac*/|c|^2
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
-inline Cmplx<T> operator/(const A &a, const Cmplx<T> &c) {
+inline Complex<T> operator/(const A &a, const Complex<T> &c) {
     T n = c.squarenorm();
-    return Cmplx<T>((a * c.re) / n, -(a * c.im) / n);
+    return Complex<T>((a * c.re) / n, -(a * c.im) / n);
 }
 
 // write also multiply-add directly with complex numbers
 template <typename T>
-inline Cmplx<T> mul_add(const Cmplx<T> &a, const Cmplx<T> &b, const Cmplx<T> &c) {
+inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b, const Complex<T> &c) {
     // a*b + c
-    Cmplx<T> r;
+    Complex<T> r;
     T t1 = mul_add(a.re, b.re, c.re);
     T t2 = mul_add(a.re, b.im, c.im);
     r.re = nmul_add(a.im, b.im, t1); // -a.im*b.im + a.re*b.re + c.re
@@ -328,28 +328,28 @@ inline Cmplx<T> mul_add(const Cmplx<T> &a, const Cmplx<T> &b, const Cmplx<T> &c)
 //////////////////////////////////////////////////////////////////////////////////
 // Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
 // Underscore seems to be required here
-constexpr Cmplx<double> operator""_i(long double a) { return Cmplx<double>{0.0, a}; }
+constexpr Complex<double> operator""_i(long double a) { return Complex<double>{0.0, a}; }
 
-constexpr Cmplx<double> operator""_i(unsigned long long a) {
-    return Cmplx<double>(0.0, static_cast<double>(a));
+constexpr Complex<double> operator""_i(unsigned long long a) {
+    return Complex<double>(0.0, static_cast<double>(a));
 }
 
-template <typename T> std::ostream &operator<<(std::ostream &strm, const Cmplx<T> A) {
+template <typename T> std::ostream &operator<<(std::ostream &strm, const Complex<T> A) {
     return strm << "(" << A.re << ", " << A.im << ")";
 }
 
-template <typename Accuracy> inline Cmplx<Accuracy> conj(Cmplx<Accuracy> val) {
+template <typename Accuracy> inline Complex<Accuracy> conj(Complex<Accuracy> val) {
     return val.conj();
 }
 
-template <typename T> inline auto norm_squared(Cmplx<T> val) { return val.norm_sq(); }
+template <typename T> inline auto norm_squared(Complex<T> val) { return val.norm_sq(); }
 
-template <typename T> inline void random(Cmplx<T> &c) {
+template <typename T> inline void random(Complex<T> &c) {
     ::random(c.re);
     ::random(c.im);
 }
 
-template <typename T> inline void gaussian_random(Cmplx<T> &c) {
+template <typename T> inline void gaussian_random(Complex<T> &c) {
     gaussian_random(c.re);
     gaussian_random(c.im);
 }
@@ -377,7 +377,7 @@ inline T conj(T val) {
 /// Define is_cmplx<T>::value -template, using specialization
 template <typename T> struct is_cmplx : std::integral_constant<bool, false> {};
 
-template <typename T> struct is_cmplx<Cmplx<T>> : std::integral_constant<bool, true> {};
+template <typename T> struct is_cmplx<Complex<T>> : std::integral_constant<bool, true> {};
 
 // and a template is_cmplx_or_real<T>::value
 template <typename T>

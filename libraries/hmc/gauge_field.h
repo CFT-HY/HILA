@@ -30,7 +30,7 @@ template <typename sun> class gauge_field_base {
     virtual void random() {}
 
     /// Update the momentum by given force
-    virtual void add_momentum(Field<SquareMatrix<N, Cmplx<basetype>>> *force) {}
+    virtual void add_momentum(Field<SquareMatrix<N, Complex<basetype>>> *force) {}
     /// Draw gaussian random momentum
     virtual void draw_momentum() {}
     /// Set the momentum to zero
@@ -68,7 +68,7 @@ template <template <int, typename> class M, int N> class gauge_field_base<M<N, d
     virtual void random() {}
 
     /// Update the momentum by given force
-    virtual void add_momentum(Field<SquareMatrix<N, Cmplx<basetype>>> *force) {}
+    virtual void add_momentum(Field<SquareMatrix<N, Complex<basetype>>> *force) {}
     /// Draw gaussian random momentum
     virtual void draw_momentum() {}
     /// Set the momentum to zero
@@ -248,7 +248,7 @@ template <typename matrix> class gauge_field : public gauge_field_base<matrix> {
 
     /// Project a force term to the algebra and add to the
     /// momentum
-    void add_momentum(Field<SquareMatrix<N, Cmplx<basetype>>> *force) {
+    void add_momentum(Field<SquareMatrix<N, Complex<basetype>>> *force) {
         foralldir(dir) {
             onsites(ALL) {
                 force[dir][X] = this->gauge[dir][X] * force[dir][X];
@@ -348,7 +348,7 @@ template <class repr> class represented_gauge_field : public gauge_field_base<re
 
     /// Project a force term to the algebra and add to the
     /// momentum
-    void add_momentum(Field<SquareMatrix<N, Cmplx<basetype>>> (&force)[NDIM]) {
+    void add_momentum(Field<SquareMatrix<N, Complex<basetype>>> (&force)[NDIM]) {
         foralldir(dir) {
             onsites(ALL) {
                 if (disable_avx[X] == 0) {
@@ -409,7 +409,7 @@ class gauge_momentum_action : public action_base, public integrator_base {
     /// The size of the gauge matrix
     static constexpr int N = gauge_mat::size;
     /// The type of the momentum field
-    using momtype = SquareMatrix<N, Cmplx<typename gauge_mat::base_type>>;
+    using momtype = SquareMatrix<N, Complex<typename gauge_mat::base_type>>;
 
     /// A reference to the gauge field
     gauge_field &gauge;
@@ -460,7 +460,7 @@ template <typename gauge_field> class gauge_action : public action_base {
     /// The size of the gauge matrix
     static constexpr int N = gauge_mat::size;
     /// The type of the momentum field
-    using momtype = SquareMatrix<N, Cmplx<typename gauge_mat::base_type>>;
+    using momtype = SquareMatrix<N, Complex<typename gauge_mat::base_type>>;
 
     /// A reference to the gauge field
     gauge_field &gauge;

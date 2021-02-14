@@ -4,8 +4,8 @@
 
 int main(int argc, char **argv) {
 
-    // using T = Matrix<2,2,Cmplx<double>>;
-    using T = Cmplx<double>;
+    // using T = Matrix<2,2,Complex<double>>;
+    using T = Complex<double>;
 
     test_setup(argc, argv);
 

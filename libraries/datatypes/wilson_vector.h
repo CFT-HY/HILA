@@ -117,8 +117,8 @@ template <int N, typename radix> class Wilson_vector {
         return r;
     }
 
-    inline Cmplx<radix> dot(const Wilson_vector &rhs) const {
-        Cmplx<radix> r = 0;
+    inline Complex<radix> dot(const Wilson_vector &rhs) const {
+        Complex<radix> r = 0;
         for (int i = 0; i < Gammadim; i++) {
             r += c[i].dot(rhs.c[i]);
         }
@@ -214,10 +214,10 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma,
         r.c[3] = rhs.c[1];
         break;
     case gamma1:
-        r.c[0] = Cmplx<radix>(0, 1) * rhs.c[3];
-        r.c[1] = Cmplx<radix>(0, 1) * rhs.c[2];
-        r.c[2] = Cmplx<radix>(0, -1) * rhs.c[1];
-        r.c[3] = Cmplx<radix>(0, -1) * rhs.c[0];
+        r.c[0] = Complex<radix>(0, 1) * rhs.c[3];
+        r.c[1] = Complex<radix>(0, 1) * rhs.c[2];
+        r.c[2] = Complex<radix>(0, -1) * rhs.c[1];
+        r.c[3] = Complex<radix>(0, -1) * rhs.c[0];
         break;
     case gamma2:
         r.c[0] = -rhs.c[3];
@@ -226,10 +226,10 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma,
         r.c[3] = -rhs.c[0];
         break;
     case gamma3:
-        r.c[0] = Cmplx<radix>(0, 1) * rhs.c[2];
-        r.c[1] = Cmplx<radix>(0, -1) * rhs.c[3];
-        r.c[2] = Cmplx<radix>(0, -1) * rhs.c[0];
-        r.c[3] = Cmplx<radix>(0, 1) * rhs.c[1];
+        r.c[0] = Complex<radix>(0, 1) * rhs.c[2];
+        r.c[1] = Complex<radix>(0, -1) * rhs.c[3];
+        r.c[2] = Complex<radix>(0, -1) * rhs.c[0];
+        r.c[3] = Complex<radix>(0, 1) * rhs.c[1];
         break;
     case gamma5:
         r.c[0] = rhs.c[0];
@@ -253,8 +253,8 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma,
         r.c[1] = rhs.c[0];
         break;
     case gamma1:
-        r.c[0] = Cmplx<radix>(0, -1) * rhs.c[1];
-        r.c[1] = Cmplx<radix>(0, 1) * rhs.c[0];
+        r.c[0] = Complex<radix>(0, -1) * rhs.c[1];
+        r.c[1] = Complex<radix>(0, 1) * rhs.c[0];
         break;
     case gamma2:
         r.c[0] = rhs.c[0];
@@ -328,7 +328,7 @@ template <int N, typename radix> class half_Wilson_vector {
     // This will take the projection 1 +- gamma_j
 #if (Gammadim == 4)
     half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
-        Cmplx<radix> I(0, 1);
+        Complex<radix> I(0, 1);
         switch (dir) {
         case e_x:
             if (sign == 1) {
@@ -384,7 +384,7 @@ template <int N, typename radix> class half_Wilson_vector {
 
     Wilson_vector<N, radix> expand(direction dir, int sign) const {
         Wilson_vector<N, radix> r;
-        Cmplx<radix> I(0, 1);
+        Complex<radix> I(0, 1);
         switch (dir) {
         case e_x:
             if (sign == 1) {
@@ -474,7 +474,7 @@ template <int N, typename radix> class half_Wilson_vector {
        0 -1	  	    ( 0, 1)	       -1
     */
     half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
-        Cmplx<radix> I(0, 1);
+        Complex<radix> I(0, 1);
         switch (dir) {
         case e_x:
             if (sign == 1) {
@@ -505,7 +505,7 @@ template <int N, typename radix> class half_Wilson_vector {
 
         Wilson_vector<N, radix> expand(direction dir, int sign) const {
             Wilson_vector<N, radix> r;
-            Cmplx<radix> I(0, 1);
+            Complex<radix> I(0, 1);
             switch (dir) {
             case e_x:
                 if (sign == 1) {

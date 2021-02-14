@@ -162,13 +162,13 @@ template <typename sun> class stout_smeared_field : public gauge_field_base<sun>
         refresh();
     }
 
-    void add_momentum(Field<SquareMatrix<N, Cmplx<basetype>>> *force) {
+    void add_momentum(Field<SquareMatrix<N, Complex<basetype>>> *force) {
         // Two storage fields for the current and previous levels of the force
-        Field<SquareMatrix<N, Cmplx<basetype>>> storage1[NDIM];
-        Field<SquareMatrix<N, Cmplx<basetype>>> storage2[NDIM];
+        Field<SquareMatrix<N, Complex<basetype>>> storage1[NDIM];
+        Field<SquareMatrix<N, Complex<basetype>>> storage2[NDIM];
         foralldir(dir) { storage1[dir] = force[dir]; }
-        Field<SquareMatrix<N, Cmplx<basetype>>> *previous = &storage1[0];
-        Field<SquareMatrix<N, Cmplx<basetype>>> *result = &storage2[0];
+        Field<SquareMatrix<N, Complex<basetype>>> *previous = &storage1[0];
+        Field<SquareMatrix<N, Complex<basetype>>> *result = &storage2[0];
 
         // Another storage Field, for the derivative of the exponential
         Field<sun> Lambda[NDIM];
@@ -213,7 +213,7 @@ template <typename sun> class stout_smeared_field : public gauge_field_base<sun>
             }
 
             // Swap previous and result for the next iteration
-            Field<SquareMatrix<N, Cmplx<basetype>>> *tmp = previous;
+            Field<SquareMatrix<N, Complex<basetype>>> *tmp = previous;
             previous = result;
             result = tmp;
             basegauge = &smeared_fields[step][0];
@@ -341,13 +341,13 @@ template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> 
         refresh();
     }
 
-    void add_momentum(Field<SquareMatrix<N, Cmplx<basetype>>> *force) {
+    void add_momentum(Field<SquareMatrix<N, Complex<basetype>>> *force) {
         Field<sun> lambda1[NDIM];
-        Field<SquareMatrix<N, Cmplx<basetype>>> result1[NDIM][NDIM];
+        Field<SquareMatrix<N, Complex<basetype>>> result1[NDIM][NDIM];
         Field<sun> lambda2[NDIM][NDIM];
-        Field<SquareMatrix<N, Cmplx<basetype>>> result2[NDIM][NDIM];
+        Field<SquareMatrix<N, Complex<basetype>>> result2[NDIM][NDIM];
         Field<sun> lambda3[NDIM][NDIM];
-        Field<SquareMatrix<N, Cmplx<basetype>>> result[NDIM];
+        Field<SquareMatrix<N, Complex<basetype>>> result[NDIM];
 
         foralldir(mu) {
             result[mu] = 0;

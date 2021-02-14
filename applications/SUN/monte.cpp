@@ -13,14 +13,14 @@
 
 #include "SUN.h"
 
-void mult_su2_mat_vec_elem_n(Matrix<2, 2, Cmplx<double>> &u, Cmplx<double> &x0,
-                             Cmplx<double> &x1) {
+void mult_su2_mat_vec_elem_n(Matrix<2, 2, Complex<double>> &u, Complex<double> &x0,
+                             Complex<double> &x1) {
     /* Multiplies the complex column spinor (x0, x1) by the SU(2) matrix u */
     /* and puts the result in (x0,x1).  */
     /* Thus x <- u * x          */
     /* C. DeTar 3 Oct 1990 */
 
-    Cmplx<double> z0, z1, t0, t1;
+    Complex<double> z0, z1, t0, t1;
 
     t0 = x0;
     t1 = x1;
@@ -34,8 +34,8 @@ void mult_su2_mat_vec_elem_n(Matrix<2, 2, Cmplx<double>> &u, Cmplx<double> &x0,
 
 } /* mult_su2_mat_vec_elem_n */
 
-void left_su2_hit_n(Matrix<2, 2, Cmplx<double>> &u, int p, int q,
-                    Matrix<N, N, Cmplx<double>> &link) {
+void left_su2_hit_n(Matrix<2, 2, Complex<double>> &u, int p, int q,
+                    Matrix<N, N, Complex<double>> &link) {
     /* link <- u * link */
     /* The 0 row of the SU(2) matrix u matches row p of the SU(3) matrix */
     /* The 1 row of the SU(2) matrix u matches row q of the SU(3) matrix */
@@ -46,7 +46,7 @@ void left_su2_hit_n(Matrix<2, 2, Cmplx<double>> &u, int p, int q,
 
 } /* left_su2_hit_n */
 
-double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple,
+double monte(Matrix<N, N, Complex<double>> &U, Matrix<N, N, Complex<double>> &staple,
              double beta) {
     /* Do K-P quasi-heat bath by SU(2) subgroups */
     int ina, inb;
@@ -59,8 +59,8 @@ double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple
     double al, d, xl, xd;
     int k, test;
     double b3;
-    Matrix<N, N, Cmplx<double>> action;
-    Matrix<2, 2, Cmplx<double>> h;
+    Matrix<N, N, Complex<double>> action;
+    Matrix<2, 2, Complex<double>> h;
     double pi2 = PI * 2.0;
 
     b3 = beta / N;

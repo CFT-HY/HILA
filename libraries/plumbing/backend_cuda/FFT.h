@@ -434,18 +434,18 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result, fft_direction f
 
 #endif
 
-template <> inline void Field<Cmplx<double>>::FFT(fft_direction fdir) {
-    FFT_field_complex<Cmplx<double>, Cmplx<double>>(*this, *this, fdir);
+template <> inline void Field<Complex<double>>::FFT(fft_direction fdir) {
+    FFT_field_complex<Complex<double>, Complex<double>>(*this, *this, fdir);
 }
 
 /// Match a given type T to it's underlying complex type
 template <typename T, class Enable = void> struct complex_base {};
 
-/// Match Cmplx<>
-template <> struct complex_base<Cmplx<float>> { using type = Cmplx<float>; };
+/// Match Complex<>
+template <> struct complex_base<Complex<float>> { using type = Complex<float>; };
 
-/// Match Cmplx<>
-template <> struct complex_base<Cmplx<double>> { using type = Cmplx<double>; };
+/// Match Complex<>
+template <> struct complex_base<Complex<double>> { using type = Complex<double>; };
 
 /// Match a given type T to it's underlying complex type.
 /// This template matches compound types with a one base type.
@@ -478,7 +478,7 @@ template <int a, int b, typename B> struct complex_base<Array<a, b, B>> {
 };
 
 /// Run fourier transform on a complex Field
-// Called with any type T with a Cmplx type nested in the lowest level
+// Called with any type T with a Complex type nested in the lowest level
 template <typename T>
 void FFT_field(Field<T> &input, Field<T> &result,
                fft_direction fdir = fft_direction::forward) {

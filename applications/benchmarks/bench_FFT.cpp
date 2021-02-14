@@ -20,8 +20,8 @@ int main(int argc, char **argv) {
 
     hila::seed_random(SEED);
 
-    using T = Matrix<2, 2, Cmplx<double>>;
-    using Tf = Matrix<2, 2, Cmplx<float>>;
+    using T = Matrix<2, 2, Complex<double>>;
+    using Tf = Matrix<2, 2, Complex<float>>;
 
     Field<T> d, d2;
 

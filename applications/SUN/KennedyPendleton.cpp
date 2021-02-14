@@ -14,10 +14,10 @@
 
 // this is might be too much to have in a single kernel
 
-void KennedyPendleton(Matrix<2, 2, Cmplx<double>> &U,
-                      Matrix<2, 2, Cmplx<double>> &staple) {
+void KennedyPendleton(Matrix<2, 2, Complex<double>> &U,
+                      Matrix<2, 2, Complex<double>> &staple) {
     int nloops;
-    Matrix<2, 2, Cmplx<double>> a, ua;
+    Matrix<2, 2, Complex<double>> a, ua;
     double e, f, r1, r2, r3, rd, b, theta;
     double pi2 = PI * 2.0;
 

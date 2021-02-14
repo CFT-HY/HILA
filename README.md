@@ -3,13 +3,13 @@
 
 Hila ("lattice" in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
 
-Purpose: make application writing straightforward and intuitive, while producing optimized executables for 
-different (super)computing platforms (parallelization with MPI, GPU computing with Cuda or HIP, AVX vectorization, 
-etc.).  Details of the parallelization and computing architecture are hidden from the application layer.
+Purpose: make writing applications straightforward and intuitive, while producing optimized executables for 
+different (super)computing platforms (parallelisation with MPI, GPU computing with Cuda or HIP, AVX vectorization, 
+etc.).  Details of the parallelisation and computing architecture are hidden from the application layer.
 Write once -- run anywhere.
 
-Hila is based on hila preprocessor "hilapp", which converts application C++ to platform-specific C++ code.
-This is then passed on to appropriate compilers for the platforms.
+Hila is based on hila preprocessor "hilapp", which converts application C++ to platform-specific C++ code,
+which is passed to appropriate compilers for the platforms.
 
 
 ## Quick start guide
@@ -21,7 +21,7 @@ This is then passed on to appropriate compilers for the platforms.
 
 -  For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include
 files).
-These are included in most Linux distribution repos, e.g. in Ubuntu 20.04 
+These can be found in most Linux distribution repos, e.g. in Ubuntu 20.04:
 ```
 > apt install clang-11 llvm-11 clang-tools-11 libclang-common-11-dev libclang-cpp11-dev libclang-11-dev clang-format-11
 ```
@@ -44,12 +44,38 @@ By default, hilapp Makefile uses clang++ installed in stage 1. You can also use 
 
 - Build an application:
 ```
-> cd ../applications/test_hila
-> make ARCH=vanilla
-> build/test_hila  or  mpirun -np 4 build/test_hila
+> cd ../applications/hila_example
+> make
+> build/hila_example  or  mpirun -np 4 build/hila_example
 ```
 
+Computing platform is chosen by `make ARCH=<platform>`:
+- `make [ ARCH=vanilla ]` (default) builds a standard MPI-parallelized program.
+- `make ARCH=AVX2`  builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass) 
+    library.
+- `make ARCH=cuda` builds parallel Cuda-program.  Requires nvcc compiler.
 
+Typically these need to be customized for supercomputing platforms.
+
+
+# Overview
+
+## A simple hila application
+
+```
+#include "hila.h"
+
+int main(int argc, char * argv[]) {
+
+    // initialize system
+    hila::initialize(argc,argv);
+
+    // set up 32^4 lattice
+    lattice->setup({32,32,32,32});
+
+    Field<Complex>
+
+}
 
 
 # Instructions
@@ -71,10 +97,6 @@ In short, the framework can be used in these steps:
 
 ![Workflow illustration](/docs/workflowV1.png)
  
-
-To compile the hilapp, first create a build directory inside the main directory if it doesn't exist. 
-Then, compile the hilapp by typing `make` in the main folder.
-This will create an executable called `hilapp` in the build folder.
 
 You can then use it to compile an extended C++ file into standard C++ using
 ~~~ bash

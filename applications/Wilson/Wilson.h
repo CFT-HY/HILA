@@ -24,7 +24,7 @@
 const int N = 2;
 
 using SUN = SU<N, double>;
-using NMAT = Matrix<N, N, Cmplx<double>>;
+using NMAT = Matrix<N, N, Complex<double>>;
 using VEC = SU_vector<N, double>;
 
 // Define some parameters for the simulation

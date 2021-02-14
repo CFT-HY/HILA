@@ -56,7 +56,7 @@
 ///    whitespace.
 ///
 ///    Recognized types:
-///        int, long, float, double, Cmplx<float>, Cmplx<double>,
+///        int, long, float, double, Complex<float>, Complex<double>,
 ///        std::string, CoordinateVector,
 ///        Vector<n,T>, std::vector<T>     where T is one of the above types
 ///
@@ -83,7 +83,7 @@
 ///    The numbers are read until they are not followed by a comma.  If comma is
 ///    the last caracter on a line, reading continues to the next line.
 ///
-///        Cmplx<double> phase = f.get("complex phase");
+///        Complex<double> phase = f.get("complex phase");
 ///
 ///    matches "complex phase   (0.4, 0.5)"
 ///    complex values are given in pairs within ( , )
@@ -283,10 +283,10 @@ class input {
         return no_error;
     }
 
-    /// Specialize the above method to Cmplx -pair:  (re,im)
+    /// Specialize the above method to Complex -pair:  (re,im)
 
     template <typename T>
-    bool get_value(Cmplx<T> &val, const std::string &label, bool bcast = true) {
+    bool get_value(Complex<T> &val, const std::string &label, bool bcast = true) {
         val = 0;
         bool no_error = handle_key(label); // removes whitespace
 
@@ -302,7 +302,7 @@ class input {
                              << label << "'\n";
             }
 
-            val = Cmplx<T>(re, im);
+            val = Complex<T>(re, im);
         }
 
         if (bcast) {
@@ -416,10 +416,10 @@ template <> inline const char *input::type_id<long>() { return "long"; }
 template <> inline const char *input::type_id<float>() { return "float"; }
 template <> inline const char *input::type_id<double>() { return "double"; }
 template <> inline const char *input::type_id<std::string>() { return "string"; }
-template <> inline const char *input::type_id<Cmplx<float>>() {
+template <> inline const char *input::type_id<Complex<float>>() {
     return "complex value";
 }
-template <> inline const char *input::type_id<Cmplx<double>>() {
+template <> inline const char *input::type_id<Complex<double>>() {
     return "complex value";
 }
 

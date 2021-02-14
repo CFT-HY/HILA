@@ -69,7 +69,7 @@
 /// specific to SU(N) matrices. Allows matching SU(N) vectors and
 /// SU(N) vectors in multiplication.
 ///
-template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<radix>> {
+template <int n, typename radix = double> class SU : public Matrix<n, n, Complex<radix>> {
   public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;
@@ -91,15 +91,15 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
     }
 
     /// Construct from a square matrix
-    template <typename S> SU(const Matrix<n, n, Cmplx<S>> &m) {
+    template <typename S> SU(const Matrix<n, n, Complex<S>> &m) {
         for (int i = 0; i < n * n; i++) {
             this->c[i] = m.c[i];
         }
     }
 
-    /// Casting to different Cmplx type
-    template <typename S> operator Matrix<n, n, Cmplx<S>>() {
-        Matrix<n, n, Cmplx<radix>> r;
+    /// Casting to different Complex type
+    template <typename S> operator Matrix<n, n, Complex<S>>() {
+        Matrix<n, n, Complex<radix>> r;
         for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++) {
                 r.e(i, j) = this->e(i, j);
@@ -119,13 +119,13 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
 
     /// Set the determinant of the SU(N) matrix to 1
     void fix_det() {
-        Cmplx<radix> d, factor;
+        Complex<radix> d, factor;
         radix t;
         int i, j;
 
         d = det(*(this));
         t = d.arg() / static_cast<radix>(n);
-        factor = Cmplx<radix>(cos(-t), sin(-t));
+        factor = Complex<radix>(cos(-t), sin(-t));
         for (j = 0; j < n; j++)
             for (i = 0; i < n; i++) {
                 this->e(j, i) = this->e(j, i) * factor;
@@ -134,7 +134,7 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
 
     /// Calculate the matrix exponential using a Taylor expansion
     void exp(const int depth = 12) {
-        Matrix<n, n, Cmplx<radix>> A, An;
+        Matrix<n, n, Complex<radix>> A, An;
         radix factor = 1;
         A = *this;
         An = A;
@@ -150,14 +150,14 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
     /// hermitian matrix. more iterations are needed to generate larger elements: 12 works
     /// well for n < 10.
     void random(const int depth = 12) {
-        Matrix<n, n, Cmplx<radix>> A, An, res;
+        Matrix<n, n, Complex<radix>> A, An, res;
         An = 1;
         res = 1;
-        Cmplx<radix> tr(1, 0), factor(1, 0);
+        Complex<radix> tr(1, 0), factor(1, 0);
         for (int i = 0; i < n; i++) {
-            A.e(i, i) = Cmplx<radix>(hila::random(), 0.0);
+            A.e(i, i) = Complex<radix>(hila::random(), 0.0);
             for (int j = 0; j < i; j++) {
-                Cmplx<radix> a(static_cast<radix>(hila::random() / n),
+                Complex<radix> a(static_cast<radix>(hila::random() / n),
                                static_cast<radix>(hila::random() / n));
                 A.e(i, j) = a;
                 A.e(j, i) = a.conj();
@@ -169,7 +169,7 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
         }
         An = A;
         for (int k = 1; k <= depth; k++) {
-            factor = factor * Cmplx<radix>(0, 1) *
+            factor = factor * Complex<radix>(0, 1) *
                      (static_cast<radix>(1) / static_cast<radix>(k));
             res += An * factor;
             An *= A;
@@ -220,16 +220,16 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
 
     /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p.
     /// 47 ff
-    Cmplx<radix> det_lu() {
+    Complex<radix> det_lu() {
 
         int i, imax, j, k;
         radix big, d, temp, dum;
-        Cmplx<radix> cdum, csum, ctmp1;
+        Complex<radix> cdum, csum, ctmp1;
         radix vv[n];
-        Cmplx<radix> a[n][n];
-        Cmplx<radix> one;
+        Complex<radix> a[n][n];
+        Complex<radix> one;
 
-        one = Cmplx<radix>(1, 0);
+        one = Complex<radix>(1, 0);
 
         d = 1;
 
@@ -283,17 +283,17 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
             }
 
             if (a[j][j].abs() == static_cast<radix>(0.0))
-                a[j][j] = Cmplx<radix>(1e-20, 0);
+                a[j][j] = Complex<radix>(1e-20, 0);
 
             if (j != n - 1) {
-                cdum = one / a[j][j]; // check Cmplx division
+                cdum = one / a[j][j]; // check Complex division
                 for (i = j + 1; i < n; i++) {
                     a[i][j] = a[i][j] * cdum;
                 }
             }
         }
 
-        csum = Cmplx<radix>(d, 0.0);
+        csum = Complex<radix>(d, 0.0);
         for (j = 0; j < n; j++) {
             csum = csum * a[j][j];
         }
@@ -572,7 +572,7 @@ template <typename radix> SU2<radix> SU2<radix>::operator-(const SU2<radix> &y) 
 
 /// Project to the antihermitean part of a matrix
 template <int N, typename radix>
-void project_antihermitean(Matrix<N, N, Cmplx<radix>> &matrix) {
+void project_antihermitean(Matrix<N, N, Complex<radix>> &matrix) {
     radix tr = 0;
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < i; j++) {
@@ -593,7 +593,7 @@ void project_antihermitean(Matrix<N, N, Cmplx<radix>> &matrix) {
 
 /// A new vector type for color vectors. These can be multiplied with appropriate SU(N)
 /// matrices.
-template <int n, typename radix> class SU_vector : public Vector<n, Cmplx<radix>> {
+template <int n, typename radix> class SU_vector : public Vector<n, Complex<radix>> {
   public:
     using base_type = typename base_type_struct<radix>::type;
     static constexpr int size = n;
@@ -614,7 +614,7 @@ template <int n, typename radix> class SU_vector : public Vector<n, Cmplx<radix>
         }
     }
 
-    SU_vector(Vector<n, Cmplx<radix>> m) {
+    SU_vector(Vector<n, Complex<radix>> m) {
         for (int i = 0; i < n; i++) {
             this->c[i] = m.c[i];
         }
@@ -637,8 +637,8 @@ template <int n, typename radix> class SU_vector : public Vector<n, Cmplx<radix>
         return r;
     }
 
-    Matrix<n, n, Cmplx<radix>> outer_product(const SU_vector &rhs) const {
-        Matrix<n, n, Cmplx<radix>> r;
+    Matrix<n, n, Complex<radix>> outer_product(const SU_vector &rhs) const {
+        Matrix<n, n, Complex<radix>> r;
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
                 r.e(i, j) += this->c[i] * rhs.c[j];

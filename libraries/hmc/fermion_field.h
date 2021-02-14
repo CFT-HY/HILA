@@ -22,7 +22,7 @@ template <typename gauge_field, typename DIRAC_OP>
 class fermion_action : public action_base {
   public:
     using vector_type = typename DIRAC_OP::vector_type;
-    using momtype = SquareMatrix<gauge_field::N, Cmplx<typename gauge_field::basetype>>;
+    using momtype = SquareMatrix<gauge_field::N, Complex<typename gauge_field::basetype>>;
     gauge_field &gauge;
     DIRAC_OP &D;
     Field<vector_type> chi;
@@ -211,7 +211,7 @@ template <typename gauge_field, typename DIRAC_OP>
 class Hasenbusch_action_2 : public action_base {
   public:
     using vector_type = typename DIRAC_OP::vector_type;
-    using momtype = SquareMatrix<gauge_field::N, Cmplx<typename gauge_field::basetype>>;
+    using momtype = SquareMatrix<gauge_field::N, Complex<typename gauge_field::basetype>>;
     gauge_field &gauge;
     DIRAC_OP D;
     Hasenbusch_operator<DIRAC_OP> D_h;

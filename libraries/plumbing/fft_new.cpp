@@ -81,14 +81,14 @@ void init_fft_direction(direction dir, size_t _elements, size_t T_size,
 
     // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time
 
-    if (cmplx_size == sizeof(Cmplx<double>)) {
+    if (cmplx_size == sizeof(Complex<double>)) {
         is_float_fft = false;
         fftwbuf_d =
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * lattice->size(dir));
         fftwplan_d = fftw_plan_dft_1d(lattice->size(dir), fftwbuf_d, fftwbuf_d,
                                       transform_dir, FFTW_ESTIMATE);
 
-    } else if (cmplx_size == sizeof(Cmplx<float>)) {
+    } else if (cmplx_size == sizeof(Complex<float>)) {
         is_float_fft = true;
         fftwbuf_f =
             (fftwf_complex *)fftwf_malloc(sizeof(fftwf_complex) * lattice->size(dir));
@@ -174,7 +174,7 @@ void init_fft_direction(direction dir, size_t _elements, size_t T_size,
 
 // now all work buffers are ready, slice through the data
 
-template <> void fft_execute<Cmplx<double>>() {
+template <> void fft_execute<Complex<double>>() {
     size_t n_fft = my_columns[fft_dir] * elements;
 
     for (size_t i = 0; i < n_fft; i++) {
@@ -211,7 +211,7 @@ template <> void fft_execute<Cmplx<double>>() {
     }
 }
 
-template <> void fft_execute<Cmplx<float>>() {
+template <> void fft_execute<Complex<float>>() {
     size_t n_fft = my_columns[fft_dir] * elements;
 
     for (size_t i = 0; i < n_fft; i++) {
@@ -260,9 +260,9 @@ void fft_post_gather() {
             }
 
             MPI_Datatype c_type;
-            if (cmplx_size == sizeof(Cmplx<double>)) {
+            if (cmplx_size == sizeof(Complex<double>)) {
                 c_type = MPI_C_DOUBLE_COMPLEX;
-            } else if (cmplx_size == sizeof(Cmplx<float>)) {
+            } else if (cmplx_size == sizeof(Complex<float>)) {
                 c_type = MPI_C_FLOAT_COMPLEX;
             }
 
@@ -282,9 +282,9 @@ void fft_start_gather(void *buffer) {
             size_t n = fn.column_number * elements;
 
             MPI_Datatype c_type;
-            if (cmplx_size == sizeof(Cmplx<double>)) {
+            if (cmplx_size == sizeof(Complex<double>)) {
                 c_type = MPI_C_DOUBLE_COMPLEX;
-            } else if (cmplx_size == sizeof(Cmplx<float>)) {
+            } else if (cmplx_size == sizeof(Complex<float>)) {
                 c_type = MPI_C_FLOAT_COMPLEX;
             }
 
@@ -342,7 +342,7 @@ void fft_post_scatter(void *buffer) {
             char *p = (char *)buffer + fn.column_offset * (cmplx_size * elements);
             size_t n = fn.column_number * elements;
 
-            MPI_Datatype c_type = (cmplx_size == sizeof(Cmplx<double>))
+            MPI_Datatype c_type = (cmplx_size == sizeof(Complex<double>))
                                       ? MPI_C_DOUBLE_COMPLEX
                                       : MPI_C_FLOAT_COMPLEX;
 
@@ -360,7 +360,7 @@ void fft_start_scatter() {
     for (auto &fn : fft_comms[fft_dir])
         if (fn.node != hila::myrank()) {
 
-            MPI_Datatype c_type = (cmplx_size == sizeof(Cmplx<double>))
+            MPI_Datatype c_type = (cmplx_size == sizeof(Complex<double>))
                                       ? MPI_C_DOUBLE_COMPLEX
                                       : MPI_C_FLOAT_COMPLEX;
 

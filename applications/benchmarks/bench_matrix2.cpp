@@ -40,9 +40,9 @@ template <typename T> struct test_s {
     // std incantation for field types
     using base_type = typename base_type_struct<T>::type;
 
-    Cmplx<T> a[4][4];
+    Complex<T> a[4][4];
 
-    Cmplx<T> (&operator[](const int i))[4] { return a[i]; }
+    Complex<T> (&operator[](const int i))[4] { return a[i]; }
 };
 
 ///////////////////////////////////////
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
     lattice->setup(latsize);
 
     // test matrix indexing operators
-    Field<Matrix<4, 4, Cmplx<ntype>>> matd;
+    Field<Matrix<4, 4, Complex<ntype>>> matd;
 
     timing = 0;
     for (n_runs = 1; timing < mintime;) {
@@ -89,10 +89,10 @@ int main(int argc, char **argv) {
 
     hila::timer timer1("Timer1");
 
-    Field<Matrix<MADD(0), MADD(0), Cmplx<ntype>>> matrix1;
-    Field<Matrix<MADD(1), MADD(1), Cmplx<ntype>>> matrix2;
-    Field<Matrix<MADD(3), MADD(3), Cmplx<ntype>>> matrix3;
-    Field<Matrix<MADD(6), MADD(6), Cmplx<ntype>>> matrix4;
+    Field<Matrix<MADD(0), MADD(0), Complex<ntype>>> matrix1;
+    Field<Matrix<MADD(1), MADD(1), Complex<ntype>>> matrix2;
+    Field<Matrix<MADD(3), MADD(3), Complex<ntype>>> matrix3;
+    Field<Matrix<MADD(6), MADD(6), Complex<ntype>>> matrix4;
 
     onsites(ALL) {
         matrix1[X].random();

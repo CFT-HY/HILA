@@ -6,22 +6,22 @@
 
 // extern Field<int> glob;
 
-Cmplx<double> d(Cmplx<double> x) { return x; }
-Cmplx<double> e(Cmplx<double> x) { return d(x); }
+Complex<double> d(Complex<double> x) { return x; }
+Complex<double> e(Complex<double> x) { return d(x); }
 // #pragma hila ast dump
-Cmplx<double> f(const Cmplx<double> &x) { return e(x); }
+Complex<double> f(const Complex<double> &x) { return e(x); }
 
 template <typename T> T xyz(output_only T &v) {
     v = 1.3;
     return sin(v);
 }
 
-using ft = Cmplx<double>;
+using ft = Complex<double>;
 
 template <typename T> class v2 {
   public:
     using base_type = typename base_type_struct<T>::type;
-    Cmplx<T> a[2];
+    Complex<T> a[2];
 
     void setter() output_only { a[0] = 1; }
 };
@@ -35,10 +35,10 @@ template <typename g> void pf(Field<g> &s) { s[ALL] = 1; }
 
 int main() {
 
-    Field<Cmplx<double>> a, b, c;
+    Field<Complex<double>> a, b, c;
     int i;
     Field<double> t(1.0), s;
-    Field<Cmplx<float>> kissa;
+    Field<Complex<float>> kissa;
 
     auto y = X;
 
@@ -56,7 +56,7 @@ int main() {
 
     direction d = e_x, d2 = e_y;
 
-    A[ALL] = {Cmplx(1, 0), Cmplx(0, 0)};
+    A[ALL] = {Complex(1, 0), Complex(0, 0)};
 
     double dvar;
     onsites(p) {

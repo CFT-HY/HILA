@@ -19,8 +19,8 @@ void sum_test_function(A &a, const B &b, const C &c) {
 
 template <typename T> T test_template_function(T a) { return 2 * a; }
 
-element<Cmplx<double>> test_nontemplate_function(element<Cmplx<double>> a) {
-    element<Cmplx<double>> b = a;
+element<Complex<double>> test_nontemplate_function(element<Complex<double>> a) {
+    element<Complex<double>> b = a;
     return 2 * a;
 }
 
@@ -42,8 +42,8 @@ int main(int argc, char **argv) {
 
     test_setup(argc, argv);
 
-    Field<Cmplx<double>> s1, s2, s3;
-    Field<Cmplx<double>> s4[3];
+    Field<Complex<double>> s1, s2, s3;
+    Field<Complex<double>> s4[3];
 
     // Test field assingment
     s1 = 0.0;
@@ -141,13 +141,13 @@ int main(int argc, char **argv) {
     // Try setting an element on node 0
     CoordinateVector coord;
     foralldir(d) { coord[d] = 0; }
-    s1.set_element(Cmplx<double>(1), coord);
-    Cmplx<double> elem = s1.get_element(coord);
+    s1.set_element(Complex<double>(1), coord);
+    Complex<double> elem = s1.get_element(coord);
     assert(elem.re == 1 && elem.im == 0 && "set_element");
 
     // Now try setting on a different node, if the lattice is split
     foralldir(d) { coord[d] = nd[d] - 1; }
-    s1.set_element(Cmplx<double>(1), coord);
+    s1.set_element(Complex<double>(1), coord);
     elem = s1.get_element(coord);
     assert(elem.re == 1 && elem.im == 0 && "set_element on other node");
 
@@ -160,7 +160,7 @@ int main(int argc, char **argv) {
         // Should still be on this node
         CoordinateVector coord2 = coord;
         coord2[d] += 1;
-        Cmplx<double> moved = s2.get_element(coord2);
+        Complex<double> moved = s2.get_element(coord2);
         assert(elem.re == 1 && elem.im == 0);
 
         // Move data down

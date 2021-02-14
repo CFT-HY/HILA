@@ -9,7 +9,7 @@
 template <const int n, const int m, typename T> class Array {
   public:
     static_assert(is_cmplx_or_arithmetic<T>::value,
-                  "Array requires Cmplx or arithmetic type");
+                  "Array requires Complex or arithmetic type");
 
     /// Same data as Matrix, a one dimensional array
     T c[n * m];

@@ -24,10 +24,10 @@ extern long seed;
 extern int NX, NY, NZ, NT;
 extern int VOLUME;
 
-double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple,
+double monte(Matrix<N, N, Complex<double>> &U, Matrix<N, N, Complex<double>> &staple,
              double beta);
 
-void KennedyPendleton(Matrix<2, 2, Cmplx<double>> &U,
-                      Matrix<2, 2, Cmplx<double>> &staple);
+void KennedyPendleton(Matrix<2, 2, Complex<double>> &U,
+                      Matrix<2, 2, Complex<double>> &staple);
 
 #endif // SUN_H_

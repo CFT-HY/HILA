@@ -63,8 +63,8 @@ class adjointRep : public SquareMatrix<N * N - 1, radix> {
                     sun tj = generator(j);
                     for (int k = 0; k < size; k++) {
                         sun tk = generator(k);
-                        Cmplx<radix> tr1 = (tg * tj * tk).trace();
-                        Cmplx<radix> tr2 = (tj * tg * tk).trace();
+                        Complex<radix> tr1 = (tg * tj * tk).trace();
+                        Complex<radix> tr2 = (tj * tg * tk).trace();
                         r_generators[g].e(j, k) = 2 * (tr1.im - tr2.im);
                     }
                 }
@@ -84,15 +84,15 @@ class adjointRep : public SquareMatrix<N * N - 1, radix> {
 
     /// Project a complex adjoint matrix into the algebra and
     /// represent as a complex NxN (momentum) matrix
-    static SquareMatrix<N, Cmplx<radix>>
-    project_force(SquareMatrix<size, Cmplx<radix>> rforce) {
-        SquareMatrix<N, Cmplx<radix>> fforce = 0;
+    static SquareMatrix<N, Complex<radix>>
+    project_force(SquareMatrix<size, Complex<radix>> rforce) {
+        SquareMatrix<N, Complex<radix>> fforce = 0;
         for (int g = 0; g < size; g++) {
             adjointRep rg = represented_generator_I(g);
             radix C = (rg.transpose() * rforce).trace().re;
             fforce += C * sun::generator(g);
         }
-        Cmplx<radix> ct(0, 2.0);
+        Complex<radix> ct(0, 2.0);
         fforce = fforce * ct;
         project_antihermitean(fforce);
         return fforce;
@@ -118,7 +118,7 @@ class adjointRep : public SquareMatrix<N * N - 1, radix> {
 ///     su(N) group
 ///
 template <int N, typename radix>
-class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Cmplx<radix>> {
+class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Complex<radix>> {
   public:
     /// The underlying arithmetic type of the matrix
     using base_type = typename base_type_struct<radix>::type;
@@ -129,16 +129,16 @@ class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Cmplx<radix>> {
     constexpr static int size = N * (N - 1) / 2;
 
     /// Use square matrix constructors
-    using SquareMatrix<size, Cmplx<radix>>::SquareMatrix;
+    using SquareMatrix<size, Complex<radix>>::SquareMatrix;
     /// Use square matrix constructors
-    using SquareMatrix<size, Cmplx<radix>>::operator=;
+    using SquareMatrix<size, Complex<radix>>::operator=;
 
     /// default constructor
     antisymmetric() = default;
 
     /// Square matrix constructor from scalar
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
-    antisymmetric(const scalart m) : SquareMatrix<size, Cmplx<radix>>(m) {}
+    antisymmetric(const scalart m) : SquareMatrix<size, Complex<radix>>(m) {}
 
     /// Copy constructor
     template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
@@ -193,8 +193,8 @@ class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Cmplx<radix>> {
                     for (int k = 0; k < N * (N - 1) / 2; k++) {
                         sun tk = generator(k);
 
-                        Cmplx<radix> tr = (tj * tg * tk).trace();
-                        r_generators[g].e(j, k) = Cmplx<radix>(0, 4) * tr;
+                        Complex<radix> tr = (tj * tg * tk).trace();
+                        r_generators[g].e(j, k) = Complex<radix>(0, 4) * tr;
                     }
                 }
                 initialize = false;
@@ -214,15 +214,15 @@ class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Cmplx<radix>> {
 
     /// Project a complex antisymmetric matrix into the algebra and
     /// represent as a complex NxN (momentum) matrix
-    static SquareMatrix<N, Cmplx<radix>>
-    project_force(SquareMatrix<size, Cmplx<radix>> rforce) {
-        SquareMatrix<N, Cmplx<radix>> fforce = 0;
+    static SquareMatrix<N, Complex<radix>>
+    project_force(SquareMatrix<size, Complex<radix>> rforce) {
+        SquareMatrix<N, Complex<radix>> fforce = 0;
         for (int g = 0; g < size; g++) {
             antisymmetric rg = represented_generator_I(g);
             radix C = (rg.adjoint() * rforce).trace().re;
             fforce += C * sun::generator(g);
         }
-        Cmplx<radix> ct(0, -2.0);
+        Complex<radix> ct(0, -2.0);
         fforce = fforce * ct;
         project_antihermitean(fforce);
         return fforce;
@@ -248,7 +248,7 @@ class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Cmplx<radix>> {
 ///     su(N) group
 ///
 template <int N, typename radix>
-class symmetric : public SquareMatrix<N *(N + 1) / 2, Cmplx<radix>> {
+class symmetric : public SquareMatrix<N *(N + 1) / 2, Complex<radix>> {
   public:
     /// The underlying arithmetic type of the matrix
     using base_type = typename base_type_struct<radix>::type;
@@ -256,9 +256,9 @@ class symmetric : public SquareMatrix<N *(N + 1) / 2, Cmplx<radix>> {
     using sun = SU<N, radix>;
 
     /// Use square matrix constructors
-    using SquareMatrix<N *(N + 1) / 2, Cmplx<radix>>::SquareMatrix;
+    using SquareMatrix<N *(N + 1) / 2, Complex<radix>>::SquareMatrix;
     /// Use square matrix constructors
-    using SquareMatrix<N *(N + 1) / 2, Cmplx<radix>>::operator=;
+    using SquareMatrix<N *(N + 1) / 2, Complex<radix>>::operator=;
 
     /// Matrix size
     constexpr static int size = N * (N + 1) / 2;
@@ -333,8 +333,8 @@ class symmetric : public SquareMatrix<N *(N + 1) / 2, Cmplx<radix>> {
                     for (int k = 0; k < N * (N + 1) / 2; k++) {
                         sun tk = generator(k);
 
-                        Cmplx<radix> tr = (tj * tg * tk).trace();
-                        r_generators[g].e(j, k) = Cmplx<radix>(0, 4) * tr;
+                        Complex<radix> tr = (tj * tg * tk).trace();
+                        r_generators[g].e(j, k) = Complex<radix>(0, 4) * tr;
                     }
                 }
                 initialize = false;
@@ -353,15 +353,15 @@ class symmetric : public SquareMatrix<N *(N + 1) / 2, Cmplx<radix>> {
 
     /// Project a complex symmetric matrix into the algebra and
     /// represent as a complex NxN (momentum) matrix
-    static SquareMatrix<N, Cmplx<radix>>
-    project_force(SquareMatrix<size, Cmplx<radix>> rforce) {
-        SquareMatrix<N, Cmplx<radix>> fforce = 0;
+    static SquareMatrix<N, Complex<radix>>
+    project_force(SquareMatrix<size, Complex<radix>> rforce) {
+        SquareMatrix<N, Complex<radix>> fforce = 0;
         for (int g = 0; g < size; g++) {
             symmetric rg = represented_generator_I(g);
             radix C = (rg * rforce).trace().re;
             fforce += C * sun::generator(g);
         }
-        Cmplx<radix> ct(0, -2.0);
+        Complex<radix> ct(0, -2.0);
         fforce = fforce * ct;
         project_antihermitean(fforce);
         return fforce;

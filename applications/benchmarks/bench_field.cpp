@@ -99,16 +99,16 @@ int main(int argc, char **argv) {
     timing = timing / (double)n_runs;
     output0 << "Float add : " << timing << " ms \n";
 
-    Field<SquareMatrix<N, Cmplx<double>>> matrix1;
-    Field<SquareMatrix<N, Cmplx<double>>> matrix2;
-    Field<SquareMatrix<N, Cmplx<double>>> matrix3;
-    Field<Vector<N, Cmplx<double>>> vector1;
-    Field<Vector<N, Cmplx<double>>> vector2;
-    Field<SquareMatrix<N, Cmplx<float>>> fmatrix1;
-    Field<SquareMatrix<N, Cmplx<float>>> fmatrix2;
-    Field<SquareMatrix<N, Cmplx<float>>> fmatrix3;
-    Field<Vector<N, Cmplx<float>>> fvector1;
-    Field<Vector<N, Cmplx<float>>> fvector2;
+    Field<SquareMatrix<N, Complex<double>>> matrix1;
+    Field<SquareMatrix<N, Complex<double>>> matrix2;
+    Field<SquareMatrix<N, Complex<double>>> matrix3;
+    Field<Vector<N, Complex<double>>> vector1;
+    Field<Vector<N, Complex<double>>> vector2;
+    Field<SquareMatrix<N, Complex<float>>> fmatrix1;
+    Field<SquareMatrix<N, Complex<float>>> fmatrix2;
+    Field<SquareMatrix<N, Complex<float>>> fmatrix3;
+    Field<Vector<N, Complex<float>>> fvector1;
+    Field<Vector<N, Complex<float>>> fvector2;
 
     // Generate random values
     onsites(ALL) {
