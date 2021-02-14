@@ -70,13 +70,33 @@ int main(int argc, char * argv[]) {
     // initialize system
     hila::initialize(argc,argv);
 
-    // set up 32^4 lattice
-    lattice->setup({32,32,32,32});
+    // set up 12^4 lattice
+    lattice->setup({12,12,12,12});
 
-    Field<Complex>
+    // two lattice fields, set g=0
+    Field<Complex<double>> f;
+    FIeld<double> g = 0;
 
+    // make f Gaussian random distributed
+    onsites(ALL) f[X].gaussian();
+
+    // calculate sum of 2nd derivatives of f to g
+    foralldir(d) {
+        g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
+    }
+
+    // get average g (could have been done above too)
+    double ave = 0;
+    onsites(ALL) {
+        ave += g[X];
+    }
+
+    output0 << "Average of g is " << ave/lattice->volume() << '\n';
+
+    // make a clean exit
+    hila::finishrun();    
 }
-
+```
 
 # Instructions
 
