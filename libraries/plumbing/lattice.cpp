@@ -62,7 +62,7 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 #endif
 
     if (hila::check_input) {
-        output0 << "Input check done, exiting\n";
+        hila::output << "***** Input check done *****\n";
         hila::finishrun();
     }
 

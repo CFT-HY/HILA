@@ -16,6 +16,8 @@
 /// Check input.h for user instructions
 //////////////////////////////////////////////////////////////////////////////
 
+namespace hila {
+
 static std::string empty_key("");
 
 
@@ -355,6 +357,6 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
     return item;
 }
 
-
+} // namespace hila
 
 

@@ -9,7 +9,7 @@
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-/// input - Class for parsing runtime parameter files
+/// hila::input - Class for parsing runtime parameter files
 ///
 /// Input files consist normally of "key <value>" -pairs.
 ///
@@ -23,16 +23,17 @@
 ///    open(), close(), get(), get_item(), get_value(), quiet()
 ///
 ///
-///    input f("filename");   - initialization with filename opens
-///                             the file for input
-///    input f;
+///    hila::input f("filename");   - initialization with filename opens
+///                                   the file for input
+///    hila::input f;
 ///
 /// open(): open file for reading
 ///
-///      bool open(std::string filename, bool exit_on_error=true )
+///       bool hila::input::open(std::string filename,
+///                              bool exit_on_error=true)
 ///
 ///    If exit_on_error == true, quit the
-///    program on error.
+///    program on error.  The return value is passed to all MPI nodes.
 ///
 ///      f.open("filename");
 ///      bool success = f.open("filename",false);
@@ -40,11 +41,14 @@
 ///
 /// get(std::string key) - read input values
 ///
+///    hila::input::returntype hila::input::get(std::string key)
+///
+///    Use as
 ///       var = f.get("key");
 ///
 ///    reads in a key-value pair
-///             key   <value(s)>
-///    from the input file, and returns the value of type of variable var.
+///            key   <value(s)>
+///    from the input file f, and returns the value of type of variable var.
 ///    The value is broadcast to all MPI nodes.  The method infers
 ///    the type of the returned variable from the type of the assignment.
 ///
@@ -98,8 +102,9 @@
 ///
 /// get_value(): read input (alternative to get())
 ///
-///         template <typename T>
-///         bool get_value(T & val,std::string key, bool broadcast=true);
+///        template <typename T>
+///        bool hila::input::get_value(T & val,std::string key, 
+///                                    bool broadcast=true);
 ///
 ///    Val can be any value used in get()-method above.  If broadcast==false,
 ///    the value is not broadcast to other nodes.  The return value is false if
@@ -117,8 +122,9 @@
 ///
 /// get_item(): select one item from a "menu":
 ///
-///         int get_item(std::string key, std::vector<std::string> items,
-///                      bool broadcast = true);
+///        int hila::input::get_item(std::string key, 
+///                        std::vector<std::string> items,
+///                        bool broadcast = true);
 ///
 ///    "items" contains the allowed entries. Return value is the
 ///    index of the item found in input file.
@@ -159,30 +165,39 @@
 ///         (The items are tested in order and first to match is returned.)
 ///
 ///
-/// close():
+/// close():    hila::input::close()
 ///
+///         f.close();
 ///    closes the input f.  Now "f.open("file")" can be used again.
 ///    File is also closed when variable "f" goes out of scope.
 ///
 ///
-/// quiet()  and  quiet(false):
+/// quiet():    hila::input::quiet(bool be_silent=true)
 ///
-///    By default the methods print everything read to standard output, for
-///    logging.   f.quiet()  disables this, f.quiet(false) re-enables.
+///         f.quiet();      // don't print read items to hila::output
+///         f.quiet(false); // re-enable printing
+///
+///    By default hila::input methods print everything read to hila::output, 
+///    for logging.  f.quiet()  disables this.
 ///
 ///
 /// NOTE: methods which broadcast to all nodes (default) must be called
-///       from all nodes synchronously.  Thus,
+///       from all nodes synchronously. These include open(), get(), 
+///       get_value() with bcast=true, get_item with bcast=true.
 ///
-///        if (hila::myrank() == 0) {
-///            ...
-///            double v = f.get("a value");
-///            ...
-///        }
+///       Thus;
+///          if (hila::myrank() == 0) {
+///              double v = f.get("a value");
+///              ...
+///          }
 ///
-///    fails.  get_value() with broadcast=false can be used in this case.
+///       fails. Method
+///          f.get_value(v,"a value",false);
+///       can be used in this context.
 ///
 ////////////////////////////////////////////////////////////////////////
+
+namespace hila {
 
 class input {
 
@@ -207,7 +222,7 @@ class input {
     // make class quiet (no printouts), quiet(false) returns to normal
     void quiet(bool really = true) { speaking = !really; }
 
-    // Trick to "specialize" .get("label") -method to return type
+    /// returntyhpe is a special class for resolving get("label") return type 
     class returntype {
       public:
         const std::string &label;
@@ -222,38 +237,11 @@ class input {
             return val;
         }
 
-        // operator int() { return (int)parent->get_value<long>(label); }
-
-        // operator long() { return parent->get_value<long>(label); }
-
-        // operator float() { return (float)parent->get_value<double>(label); }
-
-        // operator double() { return parent->get_value<double>(label); }
-
-        // operator Cmplx<double>() { return
-        // parent->get_value<Cmplx<double>>(label); }
-
-        // operator Cmplx<float>() { return
-        // (Cmplx<float>)parent->get_value<Cmplx<double>>(label); }
-
-        // operator CoordinateVector() { return
-        // parent->get_value<CoordinateVector>(label); }
-
-        // operator std::vector<double>() { return
-        // parent->get_vector<double>(label); }
-
-        // operator std::vector<int>() { return parent->get_vector<int>(label);
-        // }
-
-        // operator std::vector<Cmplx<double>>() { return
-        // parent->get_vector<Cmplx<double>>(label); }
     };
 
     // The main get() method is simply constructor for returntype
 
-    inline returntype get(const std::string &key) {
-        return returntype(key, this);
-    }
+    inline returntype get(const std::string &key) { return returntype(key, this); }
 
     inline returntype get() { return returntype("", this); }
 
@@ -271,8 +259,8 @@ class input {
             if (!(get_token(tok) && is_value(tok, val))) {
 
                 if (speaking)
-                    hila::output << "Error: expecting " << type_id<T>()
-                                 << " after '" << label << "'\n";
+                    hila::output << "Error: expecting " << type_id<T>() << " after '"
+                                 << label << "'\n";
 
                 no_error = false;
             }
@@ -302,14 +290,12 @@ class input {
             std::string tok;
             T re, im;
 
-            no_error =
-                (match_token("(") && get_token(tok) && is_value(tok, re) &&
-                 match_token(",") && get_token(tok) && is_value(tok, im) &&
-                 match_token(")"));
+            no_error = (match_token("(") && get_token(tok) && is_value(tok, re) &&
+                        match_token(",") && get_token(tok) && is_value(tok, im) &&
+                        match_token(")"));
             if (!no_error && speaking) {
-                hila::output
-                    << "Error: expecting complex value '(re,im)' after '"
-                    << label << "'\n";
+                hila::output << "Error: expecting complex value '(re,im)' after '"
+                             << label << "'\n";
             }
 
             val = Cmplx<T>(re, im);
@@ -324,8 +310,7 @@ class input {
     /// Specialize .get_value<Vector<n,T>>() : which includes CoordinateVector
 
     template <int n, typename T>
-    bool get_value(Vector<n, T> &val, const std::string &label,
-                   bool bcast = true) {
+    bool get_value(Vector<n, T> &val, const std::string &label, bool bcast = true) {
         val = 0;
         bool no_error = true;
 
@@ -350,8 +335,7 @@ class input {
     /// Specialization to CoordinateVector
 
     template <int n = NDIM>
-    bool get_value(CoordinateVector &val, const std::string &label,
-                   bool bcast = true) {
+    bool get_value(CoordinateVector &val, const std::string &label, bool bcast = true) {
         Vector<n, int> iv;
         bool b = get_value(iv, label, bcast);
         val = iv;
@@ -361,8 +345,7 @@ class input {
     /// Specialize -get_value() to std::vector<>
 
     template <typename T>
-    bool get_value(std::vector<T> &val, const std::string &label,
-                   bool bcast = true) {
+    bool get_value(std::vector<T> &val, const std::string &label, bool bcast = true) {
         val = {};
         bool no_error = true;
 
@@ -391,8 +374,8 @@ class input {
 
     // get_item selects one from a "menu" of items
 
-    int get_item(const std::string &label,
-                 const std::vector<std::string> &items, bool bcast = true);
+    int get_item(const std::string &label, const std::vector<std::string> &items,
+                 bool bcast = true);
 
   private:
     /// a helper method to give type name
@@ -428,14 +411,15 @@ template <> inline const char *input::type_id<int>() { return "int"; }
 template <> inline const char *input::type_id<long>() { return "long"; }
 template <> inline const char *input::type_id<float>() { return "float"; }
 template <> inline const char *input::type_id<double>() { return "double"; }
-template <> inline const char *input::type_id<std::string>() {
-    return "string";
-}
+template <> inline const char *input::type_id<std::string>() { return "string"; }
 template <> inline const char *input::type_id<Cmplx<float>>() {
     return "complex value";
 }
 template <> inline const char *input::type_id<Cmplx<double>>() {
     return "complex value";
 }
+
+
+} // namespace hila
 
 #endif

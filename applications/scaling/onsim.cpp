@@ -56,7 +56,7 @@ class scaling_sim {
 const std::string scaling_sim::allocate(const std::string &fname, int argc, char **argv) {
     hila::initialize(argc, argv);
 
-    input parameters(fname);
+    hila::input parameters(fname);
     config.l = parameters.get("N");
     config.m = parameters.get("m");
     config.epsilon = parameters.get("epsilon");

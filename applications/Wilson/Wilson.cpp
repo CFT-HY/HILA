@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     hila::initialize(argc, argv);
     lattice->setup(nd);
 
-    input parameters("parameters");
+    hila::input parameters("parameters");
     double beta = parameters.get("beta");
     double kappa = parameters.get("kappa");
     double hasenbusch_mass = parameters.get("hasenbusch_mass");

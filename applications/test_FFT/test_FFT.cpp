@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
 
-    input par("parameters");
+    hila::input par("parameters");
     int nx = par.get("nx");
     int ny = par.get("ny");
     int nz = par.get("nz");
