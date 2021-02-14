@@ -323,7 +323,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
 
                     reason.push_back("function 'X.parity()' is not AVX vectorizable");
 
-                } else if (sfc.name == "random" || sfc.name == "hila_random") {
+                } else if (sfc.name == "random" || sfc.name == "hila::random") {
                     is_vectorizable = false;
                     reason.push_back("random number generators prevent vectorization");
                 }

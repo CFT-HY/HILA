@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
     double traj_length = parameters.get("traj_length");
     std::string configfile = parameters.get("configuration_file");
 
-    seed_random(seed);
+    hila::seed_random(seed);
 
     // Define gauge field and momentum field
     gauge_field<SU<N, double>> gauge;

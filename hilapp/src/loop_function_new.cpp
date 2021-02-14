@@ -489,7 +489,7 @@ bool GeneralVisitor::attach_dependent_vars(std::vector<var_info *> &variables,
 }
 
 /////////////////////////////////////////////////////////////////////////////////
-/// Special functions:  methods X.method(), and hila_random()
+/// Special functions:  methods X.method(), and hila::random()
 /////////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
@@ -549,7 +549,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 sfc.argsExpr = MCall->getArg(0);
                 sfc.add_loop_var = true;
             } else if (name == "random") {
-                sfc.replace_expression = "hila_random(";
+                sfc.replace_expression = "hila::random(";
                 sfc.add_loop_var = false;
             } else if (name == "size") {
                 sfc.replace_expression = "loop_lattice_size(";
@@ -583,14 +583,14 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
         }
 
     } else {
-        if (name == "hila_random") {
+        if (name == "hila::random") {
             // llvm::errs() << get_stmt_str(Call) << '\n';
             special_function_call sfc;
             sfc.fullExpr = Call;
             sfc.argsExpr = nullptr;
             sfc.scope = parsing_state.scope_level;
             sfc.name = name;
-            sfc.replace_expression = "hila_random()";
+            sfc.replace_expression = "hila::random()";
             sfc.replace_range = Call->getSourceRange(); // replace full range
             sfc.add_loop_var = false;
             special_function_call_list.push_back(sfc);

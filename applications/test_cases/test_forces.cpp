@@ -168,7 +168,7 @@ int main(int argc, char **argv) {
 #endif
     hila::initialize(argc, argv);
     lattice->setup(nd);
-    seed_random(2);
+    hila::seed_random(2);
 
     // Test the force calculation by varying one gauge link
     // (Needs to be moved to tests)

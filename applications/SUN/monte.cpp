@@ -101,10 +101,10 @@ double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple
             /* now begin qhb */
             /* get four random numbers */
 
-            xr1 = log(1.0 - hila_random());
-            xr2 = log(1.0 - hila_random());
-            xr3 = hila_random();
-            xr4 = hila_random();
+            xr1 = log(1.0 - hila::random());
+            xr2 = log(1.0 - hila::random());
+            xr3 = hila::random();
+            xr4 = hila::random();
 
             xr3 = cos(pi2 * xr3);
 
@@ -148,10 +148,10 @@ double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple
                     test = 0;
                     for (k = 0; k < 20 && !test; k++) {
                         /*  get four random numbers */
-                        xr1 = log(1.0 - hila_random());
-                        xr2 = log(1.0 - hila_random());
-                        xr3 = hila_random();
-                        xr4 = hila_random();
+                        xr1 = log(1.0 - hila::random());
+                        xr2 = log(1.0 - hila::random());
+                        xr3 = hila::random();
+                        xr4 = hila::random();
 
                         xr3 = cos(pi2 * xr3);
 
@@ -173,8 +173,8 @@ double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple
                     test = 0;
                     for (k = 0; k < 20 && test == 0; k++) {
                         /*        get two random numbers */
-                        xr1 = hila_random();
-                        xr2 = hila_random();
+                        xr1 = hila::random();
+                        xr2 = hila::random();
 
                         r = xl + xd * xr1;
                         a0 = 1.00 + log((double)r) / al;
@@ -205,7 +205,7 @@ double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple
             r = sqrt(r2);
 
             /* compute a3 */
-            a3 = (2.0 * hila_random() - 1.0) * r;
+            a3 = (2.0 * hila::random() - 1.0) * r;
 
             /* compute a1 and a2 */
             rho = r2 - a3 * a3;
@@ -213,7 +213,7 @@ double monte(Matrix<N, N, Cmplx<double>> &U, Matrix<N, N, Cmplx<double>> &staple
             rho = sqrt(rho);
 
             /*xr2 is a random number between 0 and 2*pi */
-            xr2 = pi2 * hila_random();
+            xr2 = pi2 * hila::random();
             a1 = rho * cos((double)xr2);
             a2 = rho * sin((double)xr2);
 

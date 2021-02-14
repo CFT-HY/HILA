@@ -16,29 +16,29 @@
 
 static constexpr double pi = 3.14159265358979;
 
-double gaussian_ran2(double &out2) {
+double hila::gaussian_ran2(double &out2) {
 
     double phi, urnd, r;
-    phi = 2.0 * pi * hila_random();
+    phi = 2.0 * pi * hila::random();
 
     // this should not really trigger
     do {
-        urnd = 1.0 - hila_random();
+        urnd = 1.0 - hila::random();
     } while (urnd == 0.0);
 
-    r = sqrt(-log(urnd) * (2.0 * VARIANCE));
+    r = sqrt(-::log(urnd) * (2.0 * VARIANCE));
     out2 = r * cos(phi);
     return r * sin(phi);
 }
 
 #ifndef CUDA
 
-double gaussian_ran() {
+double hila::gaussian_ran() {
     static double second;
     static bool draw_new = true;
     if (draw_new) {
         draw_new = false;
-        return gaussian_ran2(second);
+        return hila::gaussian_ran2(second);
     }
     draw_new = true;
     return second;
@@ -50,9 +50,9 @@ double gaussian_ran() {
 // static variables - just throw away another gaussian number.
 
 //#pragma hila loop function contains rng
-double gaussian_ran() {
+double hila::gaussian_ran() {
     double second;
-    return gaussian_ran2(second);
+    return hila::gaussian_ran2(second);
 }
 
 #endif

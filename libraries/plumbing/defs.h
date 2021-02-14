@@ -113,7 +113,7 @@ enum class fft_direction { forward, inverse };
 #include "plumbing/backend_cpu/defs.h"
 #endif
 
-// this include has to be after the backend defs, because those define hila_random()
+// this include has to be after the backend defs, because those define hila::random()
 #include "plumbing/random.h"
 
 // MPI Related functions and definitions

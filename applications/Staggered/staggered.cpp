@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     hila::log << "Steps per HMC trajectory: " << hmc_steps << "\n";
     hila::log << "writing output to " << configfile << "\n";
 
-    seed_random(seed);
+    hila::seed_random(seed);
 
     // Define gauge field and momentum field
     gauge_field<SU<N, double>> gauge;

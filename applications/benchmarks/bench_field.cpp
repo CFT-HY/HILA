@@ -22,20 +22,20 @@ int main(int argc, char **argv) {
 
     lattice->setup(latsize);
 
-    seed_random(SEED);
+    hila::seed_random(SEED);
 
     Field<double> dfield1, dfield2, dfield3;
     Field<float> ffield1, ffield2, ffield3;
     onsites(ALL) {
-        dfield1[X] = hila_random();
-        dfield2[X] = hila_random();
-        dfield3[X] = hila_random();
+        dfield1[X] = hila::random();
+        dfield2[X] = hila::random();
+        dfield3[X] = hila::random();
     }
 
     onsites(ALL) {
-        ffield1[X] = hila_random();
-        ffield2[X] = hila_random();
-        ffield3[X] = hila_random();
+        ffield1[X] = hila::random();
+        ffield2[X] = hila::random();
+        ffield3[X] = hila::random();
     }
 
     // Benchmark simple scalar Field operation (Memory bandwith)

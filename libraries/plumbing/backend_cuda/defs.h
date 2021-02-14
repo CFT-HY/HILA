@@ -21,8 +21,10 @@ extern curandState *curandstate;
 __device__ extern curandState *d_curandstate;
 __global__ void seed_random_kernel(curandState *state, unsigned long seed,
                                    unsigned int stride);
-void seed_random(unsigned long seed);
-__host__ __device__ double hila_random();
+namespace hila {
+    void seed_random(unsigned long seed);
+    __host__ __device__ double random();
+} 
 
 #define check_cuda_error(msg) cuda_exit_on_error(msg, __FILE__, __LINE__)
 #define check_cuda_error_code(code, msg) cuda_exit_on_error(code, msg, __FILE__, __LINE__)
@@ -206,8 +208,10 @@ void cuda_device_info();
 
 // define cuda functions in order to avoid compilation errors
 // in hilapp
-#define hila_random() 0.5
-#define seed_random(seed) while (0)
+namespace hila {
+    double random() { return 0.5; }
+    void seed_random(seed) {}
+}
 
 #define cudaMalloc(a, b) 0
 #define cudaFree(a) 0

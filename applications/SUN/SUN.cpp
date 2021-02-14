@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     Field<Matrix<N, N, Cmplx<double>>> U[NDIM];
     Field<Matrix<N, N, Cmplx<double>>> staple;
 
-    seed_random(seed);
+    hila::seed_random(seed);
 
     // Set to 1
     foralldir(d) { U[d][ALL] = 1; }

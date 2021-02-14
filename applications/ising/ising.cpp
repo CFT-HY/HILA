@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     // Define a field
     Field<double> spin;
 
-    seed_random(seed);
+    hila::seed_random(seed);
 
     // Set to 1
     spin[ALL] = 1;
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
                 deltaS = 2.0 * spin[X] *
                          (spin[X + e_x] + spin[X - e_x] + spin[X + e_y] + spin[X - e_y]);
 
-                if (hila_random() < exp(-beta * deltaS)) {
+                if (hila::random() < exp(-beta * deltaS)) {
                     spin[X] = -spin[X];
                 }
             }

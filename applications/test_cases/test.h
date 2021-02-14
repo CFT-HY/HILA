@@ -37,5 +37,5 @@ inline void test_setup(int &argc, char **argv) {
 
     checkLatticeSetup();
 
-    seed_random(1);
+    hila::seed_random(1);
 }

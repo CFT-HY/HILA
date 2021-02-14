@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     // Define a field
     Field<double> spin;
 
-    seed_random(seed);
+    hila::seed_random(seed);
 
     // Set to 1
     spin[ALL] = 0;
@@ -39,13 +39,13 @@ int main(int argc, char **argv) {
             onsites(p) {
                 double deltaS;
                 double tspin = spin[X];
-                double tnspin = tspin + M_PI * (1. - 2. * hila_random());
+                double tnspin = tspin + M_PI * (1. - 2. * hila::random());
                 deltaS = cos(spin[X + e_x] - tspin) + cos(spin[X - e_x] - tspin) +
                          cos(spin[X + e_y] - tspin) + cos(spin[X - e_y] - tspin);
                 deltaS -= cos(spin[X + e_x] - tnspin) + cos(spin[X - e_x] - tnspin) +
                           cos(spin[X + e_y] - tnspin) + cos(spin[X - e_y] - tnspin);
 
-                if (deltaS < 0 || hila_random() < exp(-beta * deltaS)) {
+                if (deltaS < 0 || hila::random() < exp(-beta * deltaS)) {
                     if (tnspin < -M_PI) {
                         tnspin += 2.0 * M_PI;
                     } else if (tnspin > M_PI) {
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
                     spin[X] = tnspin;
                 }
             }
-            if (hila_random() < 0.5) {
+            if (hila::random() < 0.5) {
                 p = opp_parity(p);
             }
         }

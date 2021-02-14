@@ -289,7 +289,7 @@ class loopFunctionVisitor : public GeneralVisitor,
     }
 
     /////////////////////////////////////////////////////////////////////////////////
-    /// Special functions:  methods X.method(), and hila_random()
+    /// Special functions:  methods X.method(), and hila::random()
     /////////////////////////////////////////////////////////////////////////////////
 
     bool handle_special_function(CallExpr *Call) {
@@ -352,7 +352,7 @@ class loopFunctionVisitor : public GeneralVisitor,
             }
 
         } else {
-            if (name == "hila_random") {
+            if (name == "hila::random") {
 
                 // no need to do anything (yet)
 
@@ -361,7 +361,7 @@ class loopFunctionVisitor : public GeneralVisitor,
                 // sfc.argsExpr = nullptr;
                 // sfc.scope = parsing_state.scope_level;
                 // sfc.name = name;
-                // sfc.replace_expression = "hila_random()";
+                // sfc.replace_expression = "hila::random()";
                 // sfc.replace_range = Call->getSourceRange();  // replace full range
                 // sfc.add_loop_var = false;
                 // special_function_call_list.push_back(sfc);

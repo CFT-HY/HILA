@@ -78,7 +78,7 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc, char
 
     int box_dimensions[3] = {config.l, config.l, config.l};
     lattice->setup(box_dimensions);
-    seed_random(config.seed);
+    hila::seed_random(config.seed);
 
     return output_file;
 }
@@ -128,7 +128,7 @@ void scaling_sim::initialize() {
         onsites(ALL) {
             double theta, r;
             r = config.initialModulus * s;
-            theta = hila_random() * 2 * M_PI;
+            theta = hila::random() * 2 * M_PI;
             Cmplx<double> val;
             phi[X] = val.polar(r, theta);
             pi[X] = 0;

@@ -32,7 +32,7 @@ class containsRandomChecker : public GeneralVisitor,
         if (CallExpr *CE = dyn_cast<CallExpr>(S)) {
             if (FunctionDecl *FD = CE->getDirectCallee()) {
                 std::string name = FD->getNameInfo().getAsString();
-                if (name == "hila_random") {
+                if (name == "hila::random") {
                     found_random = true;
                     return false;
                 }

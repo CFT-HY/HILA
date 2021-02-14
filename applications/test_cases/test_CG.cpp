@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
     hila::initialize(argc, argv);
     lattice->setup(nd);
 
-    seed_random(2);
+    hila::seed_random(2);
 
     test_gamma_matrices();
 

@@ -155,10 +155,10 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
         res = 1;
         Cmplx<radix> tr(1, 0), factor(1, 0);
         for (int i = 0; i < n; i++) {
-            A.e(i, i) = Cmplx<radix>(hila_random(), 0.0);
+            A.e(i, i) = Cmplx<radix>(hila::random(), 0.0);
             for (int j = 0; j < i; j++) {
-                Cmplx<radix> a(static_cast<radix>(hila_random() / n),
-                               static_cast<radix>(hila_random() / n));
+                Cmplx<radix> a(static_cast<radix>(hila::random() / n),
+                               static_cast<radix>(hila::random() / n));
                 A.e(i, j) = a;
                 A.e(j, i) = a.conj();
             }
@@ -184,8 +184,8 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
     void gaussian_algebra() {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < i; j++) {
-                double a = gaussian_ran();
-                double b = gaussian_ran();
+                double a = hila::gaussian_ran();
+                double b = hila::gaussian_ran();
                 (*this).e(i, j).re = a;
                 (*this).e(j, i).re = -a;
                 (*this).e(i, j).im = b;
@@ -198,7 +198,7 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Cmplx<r
             (*this).e(i, i).im = 0;
         }
         for (int i = 1; i < n; i++) {
-            double a = gaussian_ran() * sqrt(2.0 / (i * (i + 1)));
+            double a = hila::gaussian_ran() * sqrt(2.0 / (i * (i + 1)));
             for (int j = 0; j < i; j++)
                 (*this).e(j, j).im += a;
             (*this).e(i, i).im -= i * a;
@@ -485,10 +485,10 @@ template <typename radix> SU2<radix> &SU2<radix>::reunitarize() {
 /// Create a random SU2 matrix
 template <typename radix> SU2<radix> &SU2<radix>::random() {
     radix one, two;
-    one = gaussian_ran2(&two);
+    one = hila::gaussian_ran2(&two);
     a = one;
     b = two;
-    one = gaussian_ran2(&two);
+    one = hila::gaussian_ran2(&two);
     c = one;
     d = two;
     return this->normalize();

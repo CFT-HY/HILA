@@ -44,7 +44,7 @@ void seed_random(unsigned long seed) {
 }
 
 /* Generate random numbers on device or host */
-__device__ __host__ double hila_random() {
+__device__ __host__ double hila::random() {
 #ifdef __CUDA_ARCH__
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     return curand_uniform(&d_curandstate[x]);

@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
 
     lattice->setup(latsize);
 
-    seed_random(SEED);
+    hila::seed_random(SEED);
 
     using T = Matrix<2, 2, Cmplx<double>>;
     using Tf = Matrix<2, 2, Cmplx<float>>;

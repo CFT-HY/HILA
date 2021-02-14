@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
     timing = timing / (double)n_runs;
     output0 << "4x4 matrix index .e : " << timing << " ms \n";
 
-    seed_random(SEED);
+    hila::seed_random(SEED);
 
     timer timer1("Timer1");
 

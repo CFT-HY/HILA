@@ -122,13 +122,13 @@ template <typename T = double> struct Cmplx {
     }
 
     inline Cmplx<T> &random() {
-        re = hila_random();
-        im = hila_random();
+        re = hila::random();
+        im = hila::random();
         return *this;
     }
 
     inline Cmplx<T> &gaussian() {
-        re = gaussian_ran2(im);
+        re = hila::gaussian_ran2(im);
         return *this;
     }
 

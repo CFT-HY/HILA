@@ -25,11 +25,11 @@ int main(int argc, char **argv) {
 
     lattice->setup({nx, ny, nz});
 
-    seed_random(seed);
+    hila::seed_random(seed);
 
     Field<vtype> f, g;
 
-    f[ALL] = gaussian_ran();
+    f[ALL] = hila::gaussian_ran();
 
     static timer cmplx_timer("cmplx fft");
 

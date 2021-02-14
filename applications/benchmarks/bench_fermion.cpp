@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 
     lattice->setup(latsize);
 
-    seed_random(SEED);
+    hila::seed_random(SEED);
 
     // Define a gauge matrix
     Field<SU<N, double>> U[NDIM];
