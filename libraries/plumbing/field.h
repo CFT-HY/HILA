@@ -564,15 +564,13 @@ template <typename T> class Field {
     // Overloading []
     // declarations -- WILL BE implemented by hilapp, not written here
     // let there be const and non-const protos
-    element<T> &operator[](const parity p) const;           // f[EVEN]
-    element<T> &operator[](const X_index_type) const;       // f[X]
-    element<T> &operator[](const X_plus_direction p) const; // f[X+dir]
-    element<T> &operator[](const X_plus_offset p) const;    // f[X+dir1+dir2] and others
+    element<T> operator[](const parity p) const;           // f[EVEN]
+    element<T> operator[](const X_index_type) const;       // f[X]
+    element<T> operator[](const X_plus_direction p) const; // f[X+dir]
+    element<T> operator[](const X_plus_offset p) const;    // f[X+dir1+dir2] and others
 
     element<T> &operator[](const parity p);           // f[EVEN]
     element<T> &operator[](const X_index_type);       // f[X]
-    element<T> &operator[](const X_plus_direction p); // f[X+dir]
-    element<T> &operator[](const X_plus_offset p);    // f[X+dir1+dir2] and others
 
     T &operator[](const CoordinateVector &v);       // f[CoordinateVector]
     T &operator[](const CoordinateVector &v) const; // f[CoordinateVector]
@@ -843,29 +841,91 @@ auto operator/(const Field<A> &lhs, const B &rhs) -> Field<type_div<A, B>> {
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
 
-// Define shift method here too - this is a placeholder, very inefficient
-// works by repeatedly nn-copying the Field
+/// Definition of shift - this is currently OK only for short moves,
+/// very inefficient for longer moves
+/// TODO: make more advanced, switching to "global" move for long shifts
 
 template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
-    Field<T> r1, r2;
-    r2 = *this;
-    foralldir(d) {
-        if (abs(v[d]) > 0) {
-            direction dir;
-            if (v[d] > 0)
-                dir = d;
-            else
-                dir = -d;
 
-            for (int i = 0; i < abs(v[d]); i++) {
-                r1[ALL] = r2[X + dir];
-                r2 = r1;
+    // use this to store remaining moves
+    CoordinateVector rem = v;
+
+    // check the parity of the move
+    parity par_s;
+
+    int len = 0;
+    foralldir(d) len += abs(rem[d]);
+    
+    if (len == 0) return *this;
+
+    // opp_parity(ALL) == ALL
+    if (len % 2 == 0) par_s = opp_parity(par);
+    else par_s = par;
+
+    // is this already fetched from one of the dirs in v?
+    bool found_dir = false;
+    direction mdir;
+    foralldir(d) {
+        if (rem[d] > 0 && move_status(par_s,d) == fetch_status::DONE) {
+            mdir = d;
+            found_dir = true;
+            break;
+        } else if (rem[d] < 0 && move_status(par_s,-d) == fetch_status::DONE) {
+            mdir = -d;
+            found_dir = true;
+            break;
+        }
+    }
+
+    if (!found_dir) {
+        // now did not find a 'ready' dir. Take the 1st available
+        foralldir(d) {
+            if (rem[d] > 0) {
+                mdir = d;
+                break;
+            } else if (rem[d] < 0) {
+                mdir = -d;
+                break;
             }
         }
     }
-    return r2;
+
+    // Now do the 1st move
+    Field<T> r1;
+    r1[par_s] = (*this)[X+mdir];
+
+    if (len == 1) return r1;
+
+    // and subtract remaining moves from rem
+    rem = rem - mdir;
+    par_s = opp_parity(par_s);
+
+    Field<T> r2, *from, *to;
+
+    from = &r1;
+    to   = &r2;
+
+    foralldir(d) {
+        if (rem[d] != 0) {
+            mdir = (rem[d] > 0) ? d : -d;
+
+            while (rem[d] != 0) {
+
+                (*to)[par_s] = (*from)[X+mdir];
+
+                par_s = opp_parity(par_s);
+                rem = rem - mdir;
+                std::swap(to,from);
+            }
+        }
+    }
+    
+    // need to return *from because std::swap
+    return *from;
 }
+
+
 
 #elif !defined(USE_MPI)
 
@@ -1581,10 +1641,14 @@ inline void dummy_X_f() {
     }
 }
 
-// This ensures that unary operator-() is defined for all field types.
-// It is needed in antiperiodic boundary conditions
+/// Dummy function including Field<T> functions and methods which
+/// need to be explicitly seen by hilapp during 1st pass
+
 
 template <typename T> inline void ensure_field_operators_exist(Field<T> &f) {
+
+    // unary -
+    // It is needed in antiperiodic boundary conditions
 
     f[ALL] = -f[X];
     // same for non-vectorized loop
@@ -1592,6 +1656,11 @@ template <typename T> inline void ensure_field_operators_exist(Field<T> &f) {
         if (X.coordinate(e_x) < X.coordinate(e_y))
             f[X] = -f[X];
     }
+
+    // make shift also explicit
+    CoordinateVector v = 0;
+    f = f.shift(v,ALL);
+
 }
 
 #endif

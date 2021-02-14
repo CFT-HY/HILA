@@ -1927,7 +1927,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
     if (f->hasBody() &&
         srcMgr.isBeforeInTranslationUnit(ip, f->getBody()->getSourceRange().getEnd())) {
         // Now the body definition comes after candidate - make new ip
-        // This situation arises if func is delcared before definition
+        // This situation arises if func is declared before definition
 
         SourceLocation sl;
 
@@ -1977,6 +1977,18 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             // set also the kernel insertion point (if needed at all)
             global.location.kernels = getSourceLocationAtStartOfDecl(parent);
 
+            // It is still possible that the function is defined further down.
+            // If that is the case, we insert the
+            // specializaton after it.  Must be at the global level (not within
+            // a class).
+            if (srcMgr.isBeforeInTranslationUnit(
+                    sl, f->getBody()->getSourceRange().getBegin())) {
+
+                sl = f->getBody()->getSourceRange().getEnd();
+                sl = getNextLoc(sl);   // skip }
+            }
+
+
         } else {
 
             // Now "std" function, get the location
@@ -1990,6 +2002,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
 
         if (sl.isInvalid() || srcMgr.isBeforeInTranslationUnit(
                                   sl, f->getBody()->getSourceRange().getBegin())) {
+            
             reportDiag(DiagnosticsEngine::Level::Warning, f->getSourceRange().getBegin(),
                        "hilapp internal error: could not resolve the specialization"
                        " insertion point for function  \'%0\'",

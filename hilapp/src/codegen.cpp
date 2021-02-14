@@ -256,7 +256,6 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
 
         } else {
 
-            llvm::errs() << "CHECKING OFFSET\n";
 
             int i_offset = 0;
             for (dir_ptr &d : it->dir_list)

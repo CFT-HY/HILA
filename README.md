@@ -85,7 +85,7 @@ int main(int argc, char * argv[]) {
         g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
     }
 
-    // get average g (could have been done above too)
+    // get average value of g
     double ave = 0;
     onsites(ALL) {
         ave += g[X];
@@ -97,6 +97,8 @@ int main(int argc, char * argv[]) {
     hila::finishrun();    
 }
 ```
+
+##
 
 # Instructions
 
