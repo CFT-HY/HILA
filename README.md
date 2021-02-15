@@ -113,6 +113,7 @@ int main(int argc, char * argv[]) {
 }
 
 ~~~
+You can compile this at `hila/applications/hila_example/` with `make simple` and run it with `build/simple`
 
 ## Datatypes
 
@@ -234,7 +235,14 @@ Other features:
     f[EVEN] = g[X + v];            // Cannot be done with g.shift() alone
 ~~~
 
+Access field at a single point: `f[CoordinateVector]`.  This can be used only outside site loops.
 
+~~~ C++
+  CoordinateVector v = {2,3,4,5};
+  auto value = f[v];              // "value" is broadcast to all nodes!
+  f[v] = 1;                       // In assignment, values are not broadcast: the node which
+                                  // owns site v must have correct rhs.
+~~~
 
 
 # Instructions
