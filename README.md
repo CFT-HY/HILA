@@ -64,18 +64,20 @@ hila/libraries/target_arch
 
 ```
 #include "hila.h"
+static_assert(NDIM == 3, "NDIM must be 3");
 
 int main(int argc, char * argv[]) {
 
-    // initialize system
     hila::initialize(argc,argv);
 
-    // set up 12^4 lattice
-    lattice->setup({12,12,12,12});
+    // set up 32^3 lattice
+    lattice->setup({32,32,32});
 
-    // two lattice fields, set g=0
+    // Random numbers are used here
+    hila::seed_random(32345);
+
     Field<Complex<double>> f;
-    FIeld<double> g = 0;
+    Field<double> g = 0;
 
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian();
@@ -85,7 +87,7 @@ int main(int argc, char * argv[]) {
         g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
     }
 
-    // get average value of g
+    // get average of g
     double ave = 0;
     onsites(ALL) {
         ave += g[X];
@@ -100,14 +102,14 @@ int main(int argc, char * argv[]) {
 
 ## Datatypes
 
-- NDIM: number of dimensions, values 2..4  (TODO: NDIM=1?).  Typically set in application Makefile
+- NDIM: number of dimensions, values 2,3,4  (TODO: NDIM=1?).  Typically set in application Makefile
 
 - Standard types: `int`, `int64_t`, `float`, `double` (`long double`?)
 
 - Hila provided basic types: `Complex<S>`, `Vector<n,T>`, `Matrix<n,m,T>`, `SquareMatrix<n,T>`, `Array<n,m,T>`, `Array1d<n,T>`
 
-    Here S is any standard type, and T includes S and Complex<S>.  C++ or C standard complex types should not be used (these
-    do not AVX vectorize).  These types have lot of methods, see (TODO Doxygen docs)
+  Here S is any standard type, and T includes S and Complex<S>.  C++ or C standard complex types should not be used (do not
+  AVX vectorize).  These types have a large number of useful methods, see (TODO Doxygen docs)
 
 - Special types: 
     - `Parity`: enum with values EVEN, ODD, ALL; refers to parity of lattice sites.
@@ -118,7 +120,7 @@ int main(int argc, char * argv[]) {
        Direction variable acts as an unit vector in vector algebra:
        (assume below NDIM=4)
 
-            ```
+            
             CoordinateVector v;
             Direction d = e_x;
             v = d;             // v = [1,0,0,0]
@@ -129,13 +131,41 @@ int main(int argc, char * argv[]) {
             d = j;             // error, cannot assign int to Direction
             ++d;               // e_x -> e_y
             is_up_dir(d);      // true if d is along positive x,y,z,t -dir.
-            ```
-
+            
 
 
 ## Field access and traversal
 
-The principal traversal of the lattice is with `onsites()`
+The principal traversal of the lattice is with `onsites(Parity)`, and
+special location identifier `X`:
+
+```
+   using mytype = Matrix<3,3,Complex<double>>;
+   Field<mytype> f,g,h;
+   . . .
+
+   onsites(ALL) f[X] = 2 + g[X];       // here 2 acts as 2*I for square matrices
+   f[ALL] = 2 + g[X];                  // equivalent short form for simple 1-line assignments
+   f = 2 + g;                          // this is also equivalent!
+
+   parity p = EVEN;
+   Direction d = e_x;
+   onsites(p) {
+       auto t = g[X + d];              // X +- Direction fetches from neighbour site
+       f[X] += t + t*t;                // can define variables in the loop   
+       h[X] = g[X + e_x - 2*e_y];      // non-nearest neighbour fetch ok TODO:optimize!
+       if (X.coordinate(e_t) == 0) {   // Do this on 1st timeslice only
+            h[X] *= 0.5;
+       }
+   }
+```
+`X` has methods:
+- `CoordinateVector X.coordinates()`: this CoordinateVector
+- `int X.coordinate(Direction)`: coord to direction
+- `Parity X.parity()`: parity of this site
+
+
+The assignment `f[ALL] = 2 + g[X];` could as well be made by 
 
 # Instructions
 

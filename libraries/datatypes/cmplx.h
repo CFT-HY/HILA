@@ -278,7 +278,6 @@ template <typename T> inline Complex<T> operator*(Complex<T> a, const Complex<T>
     return a;
 }
 
-// TODO: for avx vector too -- #define new template macro
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator*(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re * a, c.im * a);
@@ -300,7 +299,6 @@ template <typename T> inline Complex<T> operator/(Complex<T> a, const Complex<T>
     return a;
 }
 
-// TODO: for avx vector too -- #define new template macro
 template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator/(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re / a, c.im / a);
@@ -324,6 +322,18 @@ inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b, const Comple
     r.im = mul_add(a.im, b.re, t2);  // a.im*b.re + a.re*b.im + c.im
     return r;
 }
+
+
+template <typename T>
+inline T abs(const Complex<T> & a) {
+    return a.abs();
+}
+
+template <typename T>
+inline T arg(const Complex<T> & a) {
+    return a.arg();
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////
 // Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
