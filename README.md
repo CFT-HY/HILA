@@ -41,13 +41,13 @@ which is passed to appropriate compilers for the platforms.
         make install
 ~~~
 
-     This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the
-     default location for the program.  Build takes 1-2 min.
-     By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`. 
+   This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the
+   default location for the program.  Build takes 1-2 min.
+   By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`. 
 
 - *NOTE: clang dev libraries are not installed in most supercomputer systems.  However, if the system has x86_64 
-  processors (by far most common), you can use `make static` -command to build statically linked hilapp in
-  `hila/hilapp/build/hilapp`.  Copy this to directory `hila/hilapp/bin` on the target machine.*
+  processors (by far most common), you can use `make static` -command to build statically linked hilapp. 
+  Copy `hila/hilapp/build/hilapp` to directory `hila/hilapp/bin` on the target machine.*
   
 
 - Test `bin/hilapp -help`
