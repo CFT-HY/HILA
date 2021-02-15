@@ -68,9 +68,7 @@ which is passed to appropriate compilers for the platforms.
    Typically these need to be customized for supercomputing platforms.  See directory 
    hila/libraries/target_arch
 
-- Linking *hilapp* statically: if the target machine does not have clang dev libraries, hilapp can be linked
-  statically on a workstation/laptop.  Use comm
-    - Move to `hila/hilapp` -directory on the workstation
+
     
 
 # Overview
