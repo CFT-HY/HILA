@@ -28,7 +28,7 @@ which is passed to appropriate compilers for the platforms.
        apt install clang-11 llvm-11 clang-tools-11 libclang-common-11-dev libclang-cpp11-dev libclang-11-dev clang-format-11
     ```
 
-  Change version number as needed; at least 8 required.  (TODO: what is needed for Macs?)
+    Change version number as needed; at least 8 required.  (TODO: what is needed for Macs?)
 
 - Compile *hilapp*:
 
@@ -38,11 +38,11 @@ which is passed to appropriate compilers for the platforms.
         make install
      ```
 
-  This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the
-  default location for the program.  Build takes 1-2 min.
-  By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`. 
+     This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the
+     default location for the program.  Build takes 1-2 min.
+     By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`. 
 
-  *NOTE: clang dev libraries are not installed in most supercomputer systems.  However, if the system has x86_64 
+- *NOTE: clang dev libraries are not installed in most supercomputer systems.  However, if the system has x86_64 
   processors (by far most common), you can use `make static` -command to build statically linked hilapp in
   `hila/hilapp/build/hilapp`.  Copy this to directory `hila/hilapp/bin` on the target machine.*
   
