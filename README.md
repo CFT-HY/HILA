@@ -69,7 +69,7 @@ which is passed to appropriate compilers for the platforms.
    hila/libraries/target_arch
 
 
-    
+
 
 # Overview
 
@@ -122,8 +122,8 @@ int main(int argc, char * argv[]) {
 
 - Hila provided basic types: `Complex<S>`, `Vector<n,T>`, `Matrix<n,m,T>`, `SquareMatrix<n,T>`, `Array<n,m,T>`, `Array1d<n,T>`
 
-  Here S is any standard type, and T includes S and Complex<S>.  C++ or C standard complex types should not be used (do not
-  AVX vectorize).  These types have a large number of useful methods, see (TODO Doxygen docs)
+  Here S is any standard type, and T includes S and Complex<S>.  C++ or C standard complex types should not be used (not
+  AVX vectorizable).   See docs for functions/methods (TODO Doxygen docs)
 
 - Special types: 
     - `Parity`: enum with values EVEN, ODD, ALL; refers to parity of the site.
@@ -137,19 +137,19 @@ int main(int argc, char * argv[]) {
        Direction variable acts as an unit vector in vector algebra:
        (assume below NDIM=4)
 
-  ~~~ C++            
-            CoordinateVector v;
-            Direction d = e_x;
-            v = d;             // v = [1,0,0,0]
-            v += e_y - 3*d;    // v = [-2,1,0,0]
-            v = {0,1,-1,0};    // v = [0,1,-1,0] equivalent v = e_y - e_z;
-            output0 << v.dot({1,2,3,4});  // dot product of 2 vectors, prints -1
-            int j = d;         // ok
-            d = j;             // ERROR: cannot assign int to Direction
-            ++d;               // e_x -> e_y
-            is_up_dir(d);      // true if d is along positive x,y,z,t -dir.
-            
-  ~~~            
+~~~ C++            
+     CoordinateVector v;
+     Direction d = e_x;
+     v = d;             // v = [1,0,0,0]
+     v += e_y - 3*d;    // v = [-2,1,0,0]
+     v = {0,1,-1,0};    // v = [0,1,-1,0] equivalent v = e_y - e_z;
+     output0 << v.dot({1,2,3,4});  // dot product of 2 vectors, prints -1
+     int j = d;         // ok
+     d = j;             // ERROR: cannot assign int to Direction
+     ++d;               // e_x -> e_y
+     is_up_dir(d);      // true if d is along positive x,y,z,t -dir.
+     
+~~~            
 
 ## Field access and traversal
 
