@@ -15,6 +15,7 @@ which is passed to appropriate compilers for the platforms.
 ## Quick start
 
 - Clone hila repository (TODO: new repo address?)
+
     ```
        git clone git@bitbucket.org:Kari_Rummukainen/hila.git
     ```
@@ -22,17 +23,21 @@ which is passed to appropriate compilers for the platforms.
 - For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include
   files).
   These can be found in most Linux distribution repos, e.g. in Ubuntu 20.04:
+
     ```
        apt install clang-11 llvm-11 clang-tools-11 libclang-common-11-dev libclang-cpp11-dev libclang-11-dev clang-format-11
     ```
+
   Change version number as needed; at least 8 required.  (TODO: what is needed for Macs?)
 
 - Compile *hilapp*:
+
      ```
         cd hila/hilapp
         make [-j4]
         make install
      ```
+
   This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the
   default location for the program.  Build takes 1-2 min.
   By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`. 
