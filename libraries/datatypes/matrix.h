@@ -68,22 +68,22 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// Define constant methods rows(), columns() - may be useful in template code
-    constexpr int rows() const { return n; }
-    constexpr int columns() const { return m; }
+    static constexpr int rows() { return n; }
+    static constexpr int columns() { return m; }
 
     // define also method size() for vectors and square matrices only!
     template <int q = n, int p = m, std::enable_if_t<q == 1, int> = 0>
-    constexpr int size() const {
+    static constexpr int size() {
         return p;
     }
 
     template <int q = n, int p = m, std::enable_if_t<p == 1, int> = 0>
-    constexpr int size() const {
+    static  constexpr int size() {
         return q;
     }
 
     template <int q = n, int p = m, std::enable_if_t<q == p, int> = 0>
-    constexpr int size() const {
+    static constexpr int size() {
         return q;
     }
 
