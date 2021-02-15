@@ -54,7 +54,7 @@ __device__ __host__ double hila::random() {
 }
 
 // Then, define global functions loop_lattice_size() and _volume()
-__device__ __host__ int loop_lattice_size(direction dir) {
+__device__ __host__ int loop_lattice_size(Direction dir) {
 #ifdef __CUDA_ARCH__
     return _d_size[dir];
 #else
@@ -95,7 +95,7 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
                    lattice->mynode.volume() * sizeof(unsigned));
         check_cuda_error("cudaMalloc device neighbour array");
         const unsigned *special_neighb =
-            lattice->get_neighbour_array((direction)d, BoundaryCondition::ANTIPERIODIC);
+            lattice->get_neighbour_array((Direction)d, BoundaryCondition::ANTIPERIODIC);
         cudaMemcpy(d_neighb_special[d], special_neighb,
                    lattice->mynode.volume() * sizeof(unsigned), cudaMemcpyHostToDevice);
         check_cuda_error("cudaMemcpy device neighbour array");

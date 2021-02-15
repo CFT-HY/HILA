@@ -54,7 +54,7 @@ int main() {
 
     a = b.shift(v);
 
-    direction d = e_x, d2 = e_y;
+    Direction d = e_x, d2 = e_y;
 
     A[ALL] = {Complex(1, 0), Complex(0, 0)};
 

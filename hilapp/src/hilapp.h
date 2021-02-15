@@ -118,10 +118,10 @@ struct field_ref {
     // unsigned nameInd, parityInd;
     int sequence; // sequence of the full stmt where ref appears
     bool is_written, is_read;
-    bool is_direction; // true if ref contains nn OR offset direction - used as a general
+    bool is_direction; // true if ref contains nn OR offset Direction - used as a general
                        // flag
     bool is_constant_direction; // true if dir is const. e_x etc.
-    bool is_offset;             // true if dir is for offset instead of simple direction
+    bool is_offset;             // true if dir is for offset instead of simple Direction
     unsigned constant_value;
 
     field_ref() {
@@ -135,16 +135,16 @@ struct field_ref {
     ~field_ref() { direxpr_s.clear(); }
 };
 
-/// dir_ptr is a "subfield" of field_info, storing direction/offset of field ref
+/// dir_ptr is a "subfield" of field_info, storing Direction/offset of field ref
 /// There may be several equivalent field[dir] -references within the loop,
 /// these are described the same dir_ptr struct
 struct dir_ptr {
     Expr *parityExpr; // pointer to full parity+dir expression (1st of equivalent ones)
     // Expr *dirExpr;            // non-null only for non-const. nn  NOT USEFUL
-    std::string direxpr_s; // direction expression string (1st of equivalent ones)
+    std::string direxpr_s; // Direction expression string (1st of equivalent ones)
     std::vector<field_ref *>
         ref_list;   // pointers references equivalent to this Field[dir]
-    unsigned count; // how many genuine direction refs?  if count==0 this is offset
+    unsigned count; // how many genuine Direction refs?  if count==0 this is offset
     bool is_offset; // is this dir offset?
     bool is_constant_direction; // if constant nn
     unsigned constant_value;    // value of it

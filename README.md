@@ -98,7 +98,9 @@ int main(int argc, char * argv[]) {
 }
 ```
 
-##
+## Field access and traversal
+
+The principal traversal of the lattice is with `onsites()`
 
 # Instructions
 
@@ -193,7 +195,7 @@ The statement will apply only to this collection of sites.
 On the right hand side, use `[X]` to refer to this collection
 of sites.
 
-You can refer to neighbouring sites by adding a direction (`e_x`, `-e_x`, `e_y`, `-e_y`, `e_z`, `-e_z`, `e_t`, `-e_t`, ...):
+You can refer to neighbouring sites by adding a Direction (`e_x`, `-e_x`, `e_y`, `-e_y`, `e_z`, `-e_z`, `e_t`, `-e_t`, ...):
 ~~~ C++
 my_field[EVEN] = my_field[X+e_y];
 ~~~
@@ -222,7 +224,7 @@ forsites(ALL){
 }
 ~~~
 
-As before, you can refer to neighbouring sites by adding a direction:
+As before, you can refer to neighbouring sites by adding a Direction:
 ~~~ C++
 forsites(EVEN){
     my_field[X] = my_field[X+e_y];

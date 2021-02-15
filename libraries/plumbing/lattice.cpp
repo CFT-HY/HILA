@@ -83,7 +83,7 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 /// are mapped.  map_node_layout MUST BE compatible with this
 /// algorithm!  So if you change this, change that too
 ///
-/// Here the node number along one direction is calculated with
+/// Here the node number along one Direction is calculated with
 ///    loc * n_divisions/l_size  (with integer division)
 /// example: with l_size=14 and n_divisions=3,
 /// the dividers are at 0, 5, 10, 14
@@ -188,7 +188,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc,
 /// over "virtual nodes", and the "outer" index inside the virtual node.
 /// This is to enable the (float/32bit) and the (double/64bit) vectorized
 /// structures, where the latter is achieve by merging two of the 32bit subnodes,
-/// along the direction merged_subnodes_dir
+/// along the Direction merged_subnodes_dir
 /// E.g.
 /// a 2-dim. 4x8 node is divided into 8 / 4 subnodes as follows:
 /// here 0-3 / 0-7 is the index within subnode, and a-h / a-d the subnode label.
@@ -211,8 +211,8 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc,
 /// traversal with maximum locality. It also enables mixed 32bit/64bit vector
 /// operations with half vectors.
 ///
-/// Direction where the "doubling" is done is the last direction where subnodes
-/// are divided. In layout, this will become the "slowest" direction
+/// Direction where the "doubling" is done is the last Direction where subnodes
+/// are divided. In layout, this will become the "slowest" Direction
 ///
 ///////////////////////////////////////////////////////////////////////
 
@@ -425,14 +425,14 @@ void lattice_struct::create_std_gathers() {
     // We set the communication and the neigbour-array here
     int too_large_node = 0;
 
-    for (direction d = e_x; d < NDIRS; ++d) {
+    for (Direction d = e_x; d < NDIRS; ++d) {
 
         nn_comminfo[d].index = neighb[d]; // this is not really used for nn gathers
 
         comm_node_struct &from_node = nn_comminfo[d].from_node;
         // we can do the opposite send during another pass of the sites.
         // This is just the gather inverted
-        // NOTE: this is not the send to direction d, but to -d!
+        // NOTE: this is not the send to Direction d, but to -d!
         comm_node_struct &to_node = nn_comminfo[-d].to_node;
 
         from_node.rank = to_node.rank =
@@ -602,7 +602,7 @@ void lattice_struct::initialize_wait_arrays() {
     for (size_t i = 0; i < mynode.sites; i++) {
         wait_arr_[i] = 0; /* basic, no wait */
         foralldir(dir) {
-            direction odir = -dir;
+            Direction odir = -dir;
             if (neighb[dir][i] >= mynode.sites)
                 wait_arr_[i] = wait_arr_[i] | (1 << dir);
             if (neighb[odir][i] >= mynode.sites)
@@ -627,7 +627,7 @@ void lattice_struct::initialize_wait_arrays() {}
 /////////////////////////////////////////////////////////////////////
 
 void lattice_struct::init_special_boundaries() {
-    for (direction d = (direction)0; d < NDIRS; ++d) {
+    for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
         // default values, nothing interesting happens
         special_boundaries[d].n_even = special_boundaries[d].n_odd =
@@ -635,7 +635,7 @@ void lattice_struct::init_special_boundaries() {
         special_boundaries[d].is_needed = false;
         special_boundaries[d].is_on_edge = false;
 
-        direction od = -d;
+        Direction od = -d;
         int coord = -1;
         // do we get up/down boundary?
         if (is_up_dir(d) && mynode.min[d] + mynode.size[d] == size(d))
@@ -683,7 +683,7 @@ void lattice_struct::init_special_boundaries() {
 /////////////////////////////////////////////////////////////////////
 /// give the neighbour array pointer.  Allocate if needed
 
-const unsigned *lattice_struct::get_neighbour_array(direction d, BoundaryCondition bc) {
+const unsigned *lattice_struct::get_neighbour_array(Direction d, BoundaryCondition bc) {
 
     // regular bc exit, should happen almost always
     if (special_boundaries[d].is_needed == false || bc == BoundaryCondition::PERIODIC)
@@ -696,10 +696,10 @@ const unsigned *lattice_struct::get_neighbour_array(direction d, BoundaryConditi
 }
 
 //////////////////////////////////////////////////////////////////////
-/// and set up the boundary to one direction
+/// and set up the boundary to one Direction
 //////////////////////////////////////////////////////////////////////
 
-void lattice_struct::setup_special_boundary_array(direction d) {
+void lattice_struct::setup_special_boundary_array(Direction d) {
     // if it is not needed or already done...
     if (special_boundaries[d].is_needed == false ||
         special_boundaries[d].neighbours != nullptr)
@@ -911,8 +911,8 @@ lattice_struct::create_general_gather(const CoordinateVector &offset) {
 
 #if 0
 
-/// Get an MPI column in direction dir, build if necessary
-lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(direction dir){
+/// Get an MPI column in Direction dir, build if necessary
+lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(Direction dir){
   static mpi_column_struct mpi_column[NDIM];
     
   if( mpi_column[dir].init ) {

@@ -205,7 +205,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer,
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
+void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
                                                    const lattice_struct *lattice,
                                                    bool antiperiodic) {
 
@@ -225,7 +225,7 @@ void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
             lattice->backend_lattice
                 ->template get_vectorized_lattice<vector_info<T>::vector_size>();
         // The halo copy and permutation is only necessary if vectorization
-        // splits the lattice in this direction or local boundary is copied
+        // splits the lattice in this Direction or local boundary is copied
         if (vector_lattice->is_boundary_permutation[abs(dir)] ||
             vector_lattice->only_local_boundary_copy[dir]) {
 
@@ -355,7 +355,7 @@ void field_storage<T>::gather_comm_vectors(
 // Place the received MPI elements to halo (neighbour) buffer
 template <typename T>
 void field_storage<T>::place_recv_elements(
-    const T *RESTRICT buffer, direction d, parity par,
+    const T *RESTRICT buffer, Direction d, parity par,
     const vectorized_lattice_struct<vector_info<T>::vector_size> *RESTRICT vlat) const {
 
     constexpr size_t vector_size = vector_info<T>::vector_size;

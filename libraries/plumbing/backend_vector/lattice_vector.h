@@ -112,7 +112,7 @@ SUBNODE_LAYOUT needs to be defined to use this
 
         get_boundary_permutations();
 
-        for (direction d = (direction)0; d < NDIRS; d++) {
+        for (Direction d = (Direction)0; d < NDIRS; d++) {
             neighbours[d] = (unsigned *)memalloc(v_sites * sizeof(unsigned));
         }
 
@@ -181,7 +181,7 @@ SUBNODE_LAYOUT needs to be defined to use this
     /////////////////////////////////////////////////////////////////////////
     void get_neighbours_and_local_halo() {
 
-        // check special case: 1st subnode is across the whole lattice to direction d and
+        // check special case: 1st subnode is across the whole lattice to Direction d and
         // no boundary permutation
         // we do the copy also in this case, in order to implement other boundary
         // conditions Slows down a bit the periodic case, but with MPI comms this should
@@ -197,7 +197,7 @@ SUBNODE_LAYOUT needs to be defined to use this
 
         // accumulate here points off-subnode (to halo)
         size_t c_offset = v_sites;
-        for (direction d = (direction)0; d < NDIRS; ++d) {
+        for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
             halo_offset[d] = c_offset;
             for (int i = 0; i < v_sites; i++) {
@@ -209,7 +209,7 @@ SUBNODE_LAYOUT needs to be defined to use this
                 if (is_on_first_subnode(here + d)) {
 
                     assert(lattice->neighb[d][j] % vector_size == 0); // consistency check
-                    direction ad = abs(d);
+                    Direction ad = abs(d);
 
                     if (only_local_boundary_copy[d] &&
                         ((is_up_dir(d) && here[ad] == lattice->size(ad) - 1) ||
@@ -291,7 +291,7 @@ SUBNODE_LAYOUT needs to be defined to use this
     //////////////////////////////////////////////////////////////////////////////
     void get_receive_lists() {
 
-        for (direction d = (direction)0; d < NDIRS; d++) {
+        for (Direction d = (Direction)0; d < NDIRS; d++) {
             if (is_boundary_permutation[abs(d)] &&
                 lattice->nodes.n_divisions[abs(d)] > 1) {
 
@@ -358,7 +358,7 @@ SUBNODE_LAYOUT needs to be defined to use this
         for (int i = 0; i < v_sites; i++) {
             vec_wait_arr_[i] = 0; /* basic, no wait */
             foralldir(dir) {
-                direction odir = -dir;
+                Direction odir = -dir;
                 if (lattice->nodes.n_divisions[dir] > 1) {
                     if (neighbours[dir][i] >= v_sites)
                         vec_wait_arr_[i] = vec_wait_arr_[i] | (1 << dir);
@@ -379,11 +379,11 @@ SUBNODE_LAYOUT needs to be defined to use this
     /////////////////////////////////////////////////////////////////////////
     /// get neighbours for this, with 2 different methods:
     /// First vector neighbour.  Now idx is the vector index
-    unsigned vector_neighbour(direction d, int idx) const { return neighbours[d][idx]; }
+    unsigned vector_neighbour(Direction d, int idx) const { return neighbours[d][idx]; }
 
     /// this gives the neighbour when the lattice is traversed
     /// site-by-site.  Now idx is the "true" site index, not vector index
-    unsigned site_neighbour(direction d, int idx) const {
+    unsigned site_neighbour(Direction d, int idx) const {
         return vector_size * neighbours[d][idx / vector_size] + idx % vector_size;
     }
 
@@ -394,7 +394,7 @@ SUBNODE_LAYOUT needs to be defined to use this
 
     //////////////////////////////////////////////////////////////////////////
     /// Return the coordinates of each vector nested as
-    /// coordinate[direction][vector_index]
+    /// coordinate[Direction][vector_index]
     auto coordinates(int idx) const {
         // std::array<typename vector_base_type<int,vector_size>::type ,NDIM> r;
         CoordinateVector_t<int_vector_t> r;
@@ -403,7 +403,7 @@ SUBNODE_LAYOUT needs to be defined to use this
         return r;
     }
 
-    auto coordinate(unsigned idx, direction d) const {
+    auto coordinate(unsigned idx, Direction d) const {
         return coordinate_offset[d] + coordinate_base[idx][d];
     }
 

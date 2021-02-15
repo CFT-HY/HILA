@@ -86,7 +86,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
 
-        // First check for direction references. If any found, create list of temp
+        // First check for Direction references. If any found, create list of temp
         // variables
         if (l.is_read_nb) {
             for (dir_ptr &d : l.dir_list) {

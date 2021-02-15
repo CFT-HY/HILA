@@ -35,7 +35,7 @@ void exp_and_derivative(sun &Q, sun &m0, sun &lambda, sun &eQ, int exp_steps) {
 template <typename matrix, typename forcetype>
 void staple_dir_derivative(Field<matrix> &basegauge1, Field<matrix> &basegauge2,
                            Field<matrix> &Lambda, Field<forcetype> &result1,
-                           Field<forcetype> &result2, direction dir1, direction dir2) {
+                           Field<forcetype> &result2, Direction dir1, Direction dir2) {
     Field<matrix> stapleder2, stapleder3; // Two derivatives that need to be communicated
 
     onsites(ALL) {
@@ -281,8 +281,8 @@ template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> 
 
         foralldir(mu) { base_field.gauge[mu].check_alloc(); }
 
-        // Level 3, link to direction mu, staples only summed to
-        // to direction nu
+        // Level 3, link to Direction mu, staples only summed to
+        // to Direction nu
         foralldir(mu) foralldir(nu) if (mu != nu) {
             staples3[nu][mu] = calc_staples(base_field.gauge, base_field.gauge, mu, nu);
             onsites(ALL) {
@@ -294,12 +294,12 @@ template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> 
             }
         }
 
-        // Level 2, link to direction mu, staples summed to direction
+        // Level 2, link to Direction mu, staples summed to Direction
         // rho != mu, nu. label directions nu and rho by eta != mu, nu, rho
         foralldir(mu) foralldir(nu) if (mu != nu) {
             staples2[nu][mu][ALL] = 0;
             foralldir(rho) if (rho != mu) if (rho != nu) {
-                direction eta;
+                Direction eta;
                 foralldir(e) if (e != mu && e != nu && e != rho) eta = e;
                 Field<sun> stp = calc_staples(level3[eta], level3[eta], mu, rho);
                 staples2[nu][mu][ALL] = staples2[nu][mu][X] + stp[X];
@@ -313,8 +313,8 @@ template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> 
             }
         }
 
-        // Level 1, link to direction mu, staples summed to directions nu
-        // with direction nu excluded from lower levels
+        // Level 1, link to Direction mu, staples summed to directions nu
+        // with Direction nu excluded from lower levels
         foralldir(mu) {
             staples1[mu][ALL] = 0;
             foralldir(nu) if (mu != nu) {
@@ -410,7 +410,7 @@ template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> 
         // level2 staple
         foralldir(mu) foralldir(nu) if (mu != nu) {
             foralldir(rho) if (rho != mu) if (rho != nu) {
-                direction eta;
+                Direction eta;
                 foralldir(e) if (e != mu && e != nu && e != rho) eta = e;
                 staple_dir_derivative(level3[eta][mu], level3[eta][rho], lambda2[nu][mu],
                                       result2[eta][mu], result2[eta][rho], mu, rho);

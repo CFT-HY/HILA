@@ -331,7 +331,7 @@ __global__ void set_local_boundary_elements_kernel(field_storage<T> field,
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
+void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
                                                    const lattice_struct *RESTRICT lattice,
                                                    bool antiperiodic) {
     // Only need to do something for antiperiodic boundaries
@@ -387,7 +387,7 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer,
 // Standard MPI, buffer is on the cpu and needs to be copied accross
 template <typename T>
 void field_storage<T>::place_comm_elements(
-    direction d, parity par, T *RESTRICT buffer,
+    Direction d, parity par, T *RESTRICT buffer,
     const lattice_struct::comm_node_struct &from_node,
     const lattice_struct *RESTRICT lattice) {
     unsigned n = from_node.n_sites(par);

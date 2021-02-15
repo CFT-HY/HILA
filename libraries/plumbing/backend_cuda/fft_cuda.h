@@ -11,7 +11,7 @@
 /// field, T_size the size of the field variable.  fftdir is
 /// fft_direction::FORWARD or fft
 
-void init_fft_direction(direction dir, size_t _elements, size_t T_size,
+void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
                         fft_direction fftdir, void *const buffer1, void *const buffer2);
 
 /// Build offsets to buffer arrays:
@@ -20,7 +20,7 @@ void init_fft_direction(direction dir, size_t _elements, size_t T_size,
 ///   and then other directions, in order
 /// Returns element_offset and sets offset and nmin vectors
 
-size_t fft_get_buffer_offsets(const direction dir, const size_t elements,
+size_t fft_get_buffer_offsets(const Direction dir, const size_t elements,
                               CoordinateVector &offset, CoordinateVector &nmin);
 
 
@@ -54,7 +54,7 @@ __global__ void gather_column(cufftDoubleComplex *data, char *field_elem, int el
 /// and other directions are slowest.
 
 template <typename T, typename cmplx_t>
-inline void fft_collect_data(const Field<T> &f, const direction dir,
+inline void fft_collect_data(const Field<T> &f, const Direction dir,
                              cmplx_t *const RESTRICT buffer) {
 
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t); // cmplx elements in T
@@ -117,7 +117,7 @@ inline void FFT_field_complex(const Field<T> &input, Field<T> &result,
     cudaMalloc((void **)&receive_buffer, local_volume * elements * sizeof(cmplx_t));
 
     bool first_dir = true;
-    direction prev_dir;
+    Direction prev_dir;
 
     foralldir(dir) {
 

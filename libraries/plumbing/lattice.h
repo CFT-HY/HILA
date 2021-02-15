@@ -76,7 +76,7 @@ class lattice_struct {
         struct subnode_struct {
             CoordinateVector divisions, size; // div to subnodes to directions, size
             size_t sites, evensites, oddsites;
-            direction merged_subnodes_dir;
+            Direction merged_subnodes_dir;
 
             void setup(const node_struct &tn);
         } subnodes;
@@ -184,7 +184,7 @@ class lattice_struct {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     /// special boundary pointers are needed only in cases neighbour
     /// pointers must be modified (new halo elements). That is known only during runtime.
-    /// is_on_edget is the only "general" info element here, true if the node to direction
+    /// is_on_edget is the only "general" info element here, true if the node to Direction
     /// dir is on lattice edge.
     struct special_boundary_struct {
         unsigned *neighbours;
@@ -207,8 +207,8 @@ class lattice_struct {
         bool init = true;
     };
 
-    /// Get an MPI column in direction dir, build if necessary
-    static mpi_column_struct get_mpi_column(direction dir);
+    /// Get an MPI column in Direction dir, build if necessary
+    static mpi_column_struct get_mpi_column(Direction dir);
 #endif
 
 #ifndef VANILLA
@@ -226,7 +226,7 @@ class lattice_struct {
     int64_t volume() const { return l_volume; }
 
     // size routines
-    int size(direction d) const { return l_size[d]; }
+    int size(Direction d) const { return l_size[d]; }
     int size(int d) const { return l_size[d]; }
     CoordinateVector size() const { return l_size; }
 
@@ -236,7 +236,7 @@ class lattice_struct {
     int n_nodes() const { return nodes.number; }
     // std::vector<node_info> nodelist() { return nodes.nodelist; }
     // CoordinateVector min_coordinate() const { return mynode.min; }
-    // int min_coordinate(direction d) const { return mynode.min[d]; }
+    // int min_coordinate(Direction d) const { return mynode.min[d]; }
 
     bool is_on_mynode(const CoordinateVector &c);
     int node_rank(const CoordinateVector &c);
@@ -253,11 +253,11 @@ class lattice_struct {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     void init_special_boundaries();
-    void setup_special_boundary_array(direction d);
+    void setup_special_boundary_array(Direction d);
 
-    const unsigned *get_neighbour_array(direction d, BoundaryCondition bc);
+    const unsigned *get_neighbour_array(Direction d, BoundaryCondition bc);
 #else
-    const unsigned *get_neighbour_array(direction d, BoundaryCondition bc) {
+    const unsigned *get_neighbour_array(Direction d, BoundaryCondition bc) {
         return neighb[d];
     }
 #endif
@@ -301,7 +301,7 @@ class lattice_struct {
         return mynode.coordinates[idx];
     }
 
-    inline int coordinate(unsigned idx, direction d) const {
+    inline int coordinate(unsigned idx, Direction d) const {
         return mynode.coordinates[idx][d];
     }
 

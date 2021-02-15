@@ -313,7 +313,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
                         is_vectorizable = false;
 
                         reason.push_back("functions 'X.coordinates()' and "
-                                         "'X.coordinate(direction)' return int, "
+                                         "'X.coordinate(Direction)' return int, "
                                          "which is not compatible with " +
                                          vector_var_type + " vectors");
                     }
@@ -459,7 +459,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
 
-        // First check for direction references. If any found, create list of temp
+        // First check for Direction references. If any found, create list of temp
         // variables
         if (l.is_read_nb) {
             for (dir_ptr &d : l.dir_list)

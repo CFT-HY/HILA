@@ -28,9 +28,9 @@ element<Complex<double>> test_nontemplate_function(element<Complex<double>> a) {
 
 int main(int argc, char **argv) {
 
-    // check that you can increment a direction correctly
-    direction d = e_x;
-    direction d2 = (direction)(NDIRS - 2);
+    // check that you can increment a Direction correctly
+    Direction d = e_x;
+    Direction d2 = (Direction)(NDIRS - 2);
 #if NDIM > 1
     d = next_direction(d);
     d2 = next_direction(d2);
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
     // Now try actually moving the data
     foralldir(d) { coord[d] = 0; }
     foralldir(d) {
-        // Move data up in direction d
+        // Move data up in Direction d
         s2[ALL] = s1[X - d];
 
         // Should still be on this node
@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
         coord2[d] = (coord[d] - 1 + nd[d]) % nd[d];
         moved = s2.get_element(coord2);
         if (elem.re != 1 || elem.im != 0) {
-            output0 << "Problem in communicating to direction " << d << "\n";
+            output0 << "Problem in communicating to Direction " << d << "\n";
             output0 << "Received " << moved << "\n";
             assert(elem.re == 1 && elem.im == 0);
         }
@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
         s1 = 0;
         s2 = 0;
         s1.set_element(1, coord1);
-        s2[ALL] = s1[X - direction(0)];
+        s2[ALL] = s1[X - Direction(0)];
         double moved_element = s2.get_element(coord2);
         assert(moved_element == 1 && "moved up");
 
@@ -196,18 +196,18 @@ int main(int argc, char **argv) {
         s1 = 0;
         s2 = 0;
         s1.set_element(1, coord2);
-        s2[ALL] = s1[X + direction(0)];
+        s2[ALL] = s1[X + Direction(0)];
         moved_element = s2.get_element(coord1);
         assert(moved_element == 1 && "moved down");
 
-        s1.set_boundary_condition(direction(0), BoundaryCondition::ANTIPERIODIC);
-        s2.set_boundary_condition(direction(0), BoundaryCondition::ANTIPERIODIC);
+        s1.set_boundary_condition(Direction(0), BoundaryCondition::ANTIPERIODIC);
+        s2.set_boundary_condition(Direction(0), BoundaryCondition::ANTIPERIODIC);
 
         // Now try antiperiodic boundaries
         s1 = 0;
         s2 = 0;
         s1.set_element(1, coord1);
-        s2[ALL] = s1[X - direction(0)];
+        s2[ALL] = s1[X - Direction(0)];
         moved_element = s2.get_element(coord2);
         assert(moved_element == -1 && "moved up antiperiodic");
 
@@ -215,12 +215,12 @@ int main(int argc, char **argv) {
         s1 = 0;
         s2 = 0;
         s1.set_element(1, coord2);
-        s2[ODD] = s1[X + direction(0)];
+        s2[ODD] = s1[X + Direction(0)];
         moved_element = s2.get_element(coord1);
         assert(moved_element == -1 && "moved down antiperiodic");
 
         s1 = 0;
-        s1[EVEN] = s2[X - direction(0)];
+        s1[EVEN] = s2[X - Direction(0)];
         moved_element = s1.get_element(coord2);
         assert(moved_element == 1 && "moved back antiperiodic");
     }

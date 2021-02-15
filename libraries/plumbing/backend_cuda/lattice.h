@@ -26,7 +26,7 @@ struct backend_lattice_struct {
     __host__ __device__ const CoordinateVector &coordinates(unsigned idx) const {
         return d_coordinates[idx];
     }
-    __host__ __device__ int coordinate(unsigned idx, direction dir) const {
+    __host__ __device__ int coordinate(unsigned idx, Direction dir) const {
         return d_coordinates[idx][dir];
     }
 
@@ -36,7 +36,7 @@ struct backend_lattice_struct {
 #ifdef __CUDACC__
 // define also loop_lattice_size() and _volume() methods for cuda
 
-__host__ __device__ int loop_lattice_size(direction d);
+__host__ __device__ int loop_lattice_size(Direction d);
 __host__ __device__ CoordinateVector loop_lattice_size(void);
 __host__ __device__ int64_t loop_lattice_volume(void);
 

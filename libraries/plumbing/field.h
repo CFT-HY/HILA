@@ -62,7 +62,7 @@ template <typename T> using element = T;
 ///
 /// Others
 /// Field.set_boundary_condition(): set the boundary conditions in a
-///         given direction (periodic or antiperiodic)
+///         given Direction (periodic or antiperiodic)
 /// Field.get_boundary_condition(): get the boundary condition of the Field
 /// Field.copy_boundary_condition(): copy the boundary condition to the
 ///        from another Field
@@ -173,12 +173,12 @@ template <typename T> class Field {
 #endif
 
         /// Gather boundary elements for communication
-        void gather_comm_elements(direction d, parity par, T *RESTRICT buffer,
+        void gather_comm_elements(Direction d, parity par, T *RESTRICT buffer,
                                   const lattice_struct::comm_node_struct &to_node) const {
 #ifndef VECTORIZED
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-            // note: -d in is_on_edge, because we're about to send stuff to that direction
-            // (fetching from direction +d)
+            // note: -d in is_on_edge, because we're about to send stuff to that Direction
+            // (fetching from Direction +d)
             if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
                 lattice->special_boundaries[-d].is_on_edge) {
                 payload.gather_comm_elements(buffer, to_node, par, lattice, true);
@@ -227,7 +227,7 @@ template <typename T> class Field {
         }
 
         /// Place boundary elements from neighbour
-        void place_comm_elements(direction d, parity par, T *RESTRICT buffer,
+        void place_comm_elements(Direction d, parity par, T *RESTRICT buffer,
                                  const lattice_struct::comm_node_struct &from_node) {
 // #ifdef USE_MPI
 #ifdef VECTORIZED
@@ -249,7 +249,7 @@ template <typename T> class Field {
         }
 
         /// Place boundary elements from local lattice (used in vectorized version)
-        void set_local_boundary_elements(direction dir, parity par) {
+        void set_local_boundary_elements(Direction dir, parity par) {
 
             bool antiperiodic =
                 (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC &&
@@ -266,7 +266,7 @@ template <typename T> class Field {
 #if defined(USE_MPI)
 
         /// get the receive buffer pointer for the communication.
-        T *get_receive_buffer(direction d, parity par,
+        T *get_receive_buffer(Direction d, parity par,
                               const lattice_struct::comm_node_struct &from_node) {
 #if defined(VANILLA)
 
@@ -394,7 +394,7 @@ template <typename T> class Field {
         mark_changed(ALL);   // guarantees communications will be done
         fs->assigned_to = 0; // and this means that it is not assigned
 
-        for (direction d = (direction)0; d < NDIRS; ++d) {
+        for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
 #ifndef CUDA
             fs->neighbours[d] = lattice->neighb[d];
@@ -420,7 +420,7 @@ template <typename T> class Field {
         // don't call destructors when exiting - either MPI or cuda can already
         // be off.
         if (fs != nullptr && !hila::about_to_finish) {
-            for (direction d = (direction)0; d < NDIRS; ++d)
+            for (Direction d = (Direction)0; d < NDIRS; ++d)
                 drop_comms(d, ALL);
             fs->free_payload();
             fs->free_communication();
@@ -458,7 +458,7 @@ template <typename T> class Field {
     // If ALL changes, both parities invalid; if p != ALL, then p and ALL.
     void mark_changed(const parity p) const {
 
-        for (direction i = (direction)0; i < NDIRS; ++i) {
+        for (Direction i = (Direction)0; i < NDIRS; ++i) {
             // check if there's ongoing comms, invalidate it!
             drop_comms(i, opp_parity(p));
 
@@ -473,7 +473,7 @@ template <typename T> class Field {
         fs->assigned_to |= parity_bits(p);
     }
 
-    /// Mark the field parity fetched from direction
+    /// Mark the field parity fetched from Direction
     // In case p=ALL we could mark everything fetched, but we'll be conservative here
     // and mark only this parity, because there might be other parities on the fly and
     // corresponding waits should be done,  This should never happen in automatically
@@ -514,7 +514,7 @@ template <typename T> class Field {
         return move_status(par, dir) == fetch_status::NOT_DONE;
     }
 
-    void set_boundary_condition(direction dir, BoundaryCondition bc) {
+    void set_boundary_condition(Direction dir, BoundaryCondition bc) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         // TODO: This works as intended only for periodic/antiperiodic b.c.
@@ -540,7 +540,7 @@ template <typename T> class Field {
 #endif
     }
 
-    BoundaryCondition get_boundary_condition(direction dir) const {
+    BoundaryCondition get_boundary_condition(Direction dir) const {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         return fs->boundary_condition[dir];
 #else
@@ -587,7 +587,7 @@ template <typename T> class Field {
     template <typename vecT> inline auto get_vector_at(int i) const {
         return fs->template get_vector<vecT>(i);
     }
-    inline auto get_value_at_nb_site(direction d, int i) const {
+    inline auto get_value_at_nb_site(Direction d, int i) const {
         return fs->get_element(fs->vector_lattice->site_neighbour(d, i));
     }
 #endif
@@ -717,11 +717,11 @@ template <typename T> class Field {
     ///////////////////////////////////////////////////////////////////////
 
     // Communication routines
-    dir_mask_t start_fetch(direction d, parity p = ALL) const;
-    void wait_fetch(direction d, parity p) const;
-    void fetch(direction d, parity p = ALL) const;
-    void drop_comms(direction d, parity p) const;
-    void cancel_comm(direction d, parity p) const;
+    dir_mask_t start_fetch(Direction d, parity p = ALL) const;
+    void wait_fetch(Direction d, parity p) const;
+    void fetch(Direction d, parity p = ALL) const;
+    void drop_comms(Direction d, parity p) const;
+    void cancel_comm(Direction d, parity p) const;
 
     // Declaration of shift methods
     Field<T> shift(const CoordinateVector &v, parity par) const;
@@ -864,7 +864,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
 
     // is this already fetched from one of the dirs in v?
     bool found_dir = false;
-    direction mdir;
+    Direction mdir;
     foralldir(d) {
         if (rem[d] > 0 && move_status(par_s,d) == fetch_status::DONE) {
             mdir = d;
@@ -936,7 +936,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
     r2 = *this;
     foralldir(d) {
         if (abs(v[d]) > 0) {
-            direction dir;
+            Direction dir;
             if (v[d] > 0)
                 dir = d;
             else
@@ -960,10 +960,10 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
  * have access to mpi.h, it cannot process this branch.
  */
 
-/// start_fetch(): Communicate the field at parity par from direction
+/// start_fetch(): Communicate the field at parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
-/// return the direction mask bits where something is happening
-template <typename T> dir_mask_t Field<T>::start_fetch(direction d, parity p) const {
+/// return the Direction mask bits where something is happening
+template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, parity p) const {
 
     // get the mpi message tag right away, to ensure that we are always synchronized with
     // the mpi calls -- some nodes might not need comms, but the tags must be in sync
@@ -1077,7 +1077,7 @@ template <typename T> dir_mask_t Field<T>::start_fetch(direction d, parity p) co
 }
 
 ///  wait_fetch(): Wait for communication at parity par from
-///  direction d completes the communication in the function.
+///  Direction d completes the communication in the function.
 ///  If the communication has not started yet, also calls
 ///  start_fetch()
 ///
@@ -1085,7 +1085,7 @@ template <typename T> dir_mask_t Field<T>::start_fetch(direction d, parity p) co
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
 ///  of view of the user, the value of the field does not change.
-template <typename T> void Field<T>::wait_fetch(direction d, parity p) const {
+template <typename T> void Field<T>::wait_fetch(Direction d, parity p) const {
 
     lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     lattice_struct::comm_node_struct &from_node = ci.from_node;
@@ -1167,7 +1167,7 @@ template <typename T> void Field<T>::wait_fetch(direction d, parity p) const {
             wait_send_timer.stop();
         }
 
-        // Mark the parity fetched from direction dir
+        // Mark the parity fetched from Direction dir
         mark_fetched(d, par);
 
         // Keep count of communications
@@ -1180,7 +1180,7 @@ template <typename T> void Field<T>::wait_fetch(direction d, parity p) const {
 ///  drop_comms():  if field is changed or deleted,
 ///  cancel ongoing communications.  This should happen very seldom,
 ///  only if there are "by-hand" start_fetch operations and these are not needed
-template <typename T> void Field<T>::drop_comms(direction d, parity p) const {
+template <typename T> void Field<T>::drop_comms(Direction d, parity p) const {
 
     if (is_comm_initialized()) {
         if (is_move_started(d, ALL))
@@ -1199,7 +1199,7 @@ template <typename T> void Field<T>::drop_comms(direction d, parity p) const {
 
 /// cancel ongoing send and receive
 
-template <typename T> void Field<T>::cancel_comm(direction d, parity p) const {
+template <typename T> void Field<T>::cancel_comm(Direction d, parity p) const {
     if (lattice->nn_comminfo[d].from_node.rank != hila::myrank()) {
         cancel_receive_timer.start();
         MPI_Cancel(&fs->receive_request[(int)p - 1][d]);
@@ -1216,7 +1216,7 @@ template <typename T> void Field<T>::cancel_comm(direction d, parity p) const {
 
 ///* Trivial implementation when no MPI is used
 
-template <typename T> dir_mask_t Field<T>::start_fetch(direction d, parity p) const {
+template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, parity p) const {
     // Update local elements in the halo (necessary for vectorized version)
     // We use here simpler tracking than in MPI, may lead to slight extra work
     if (!is_fetched(d, p)) {
@@ -1226,14 +1226,14 @@ template <typename T> dir_mask_t Field<T>::start_fetch(direction d, parity p) co
     return 0;
 }
 
-template <typename T> void Field<T>::wait_fetch(direction d, parity p) const {}
+template <typename T> void Field<T>::wait_fetch(Direction d, parity p) const {}
 
-template <typename T> void Field<T>::drop_comms(direction d, parity p) const {}
+template <typename T> void Field<T>::drop_comms(Direction d, parity p) const {}
 
 #endif // MPI
 
 /// And a convenience combi function
-template <typename T> void Field<T>::fetch(direction d, parity p) const {
+template <typename T> void Field<T>::fetch(Direction d, parity p) const {
     start_fetch(d, p);
     wait_fetch(d, p);
 }
@@ -1607,7 +1607,7 @@ extern Field<double> disable_avx;
 ////////////////////////////////////////////////////////////////////////////////
 // A couple of placeholder functions, not included in produced code.
 // These are here in order for hilapp to generate explicitly
-// some direction and CoordinateVector operations, which may not exist in
+// some Direction and CoordinateVector operations, which may not exist in
 // original code as such.  It is simplest to let the general hilapp
 // code generation to do it using this, instead of hard-coding these to hilapp.
 //
@@ -1615,17 +1615,17 @@ extern Field<double> disable_avx;
 // not met before
 
 inline void dummy_X_f() {
-    direction d1 = e_x;
+    Direction d1 = e_x;
     CoordinateVector v1(0);
     onsites(ALL) {
-        direction d;
+        Direction d;
         d = +d1;
         d = -d1; // unaryops
         CoordinateVector v;
         v = +v1;
         v = -v1;
 
-        // direction + vector combos
+        // Direction + vector combos
         v = d + d1;
         v = d - d1;
         v = v1 + d1;
@@ -1635,7 +1635,7 @@ inline void dummy_X_f() {
         v = v + v1;
         v = v - v1;
 
-        // and direction index func
+        // and Direction index func
         v[e_x] = v[0] + v[e_y] + v.e(e_y);
     }
 }

@@ -275,13 +275,13 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma,
 /// will store all necessary information in half the amount of data
 /// and reduce the effort of multiplying with gauge matrices by half.
 ///
-/// The constructor half_Wilson_vector(Wilson_vector<n, radix> w, direction d)
-/// will take the projection automatically. A positive direction d corresponds
-/// to 1+gamma_j and a negative direction d corresponds to 1-gamma_j.
+/// The constructor half_Wilson_vector(Wilson_vector<n, radix> w, Direction d)
+/// will take the projection automatically. A positive Direction d corresponds
+/// to 1+gamma_j and a negative Direction d corresponds to 1-gamma_j.
 ///
 /// A half_Wilson_vector can be expanded to a full Wilson_vector using the
-/// method expand(direction d). Notice that this requires knowing the direction
-/// that was used to project it. The direction is not stored.
+/// method expand(Direction d). Notice that this requires knowing the Direction
+/// that was used to project it. The Direction is not stored.
 ///
 /// Note that the eigenvectors below are normalized to sqrt(2), or |v*v| = 2.
 /// This is why we don't explicitly multiply by 2 when expanding to full
@@ -327,7 +327,7 @@ template <int N, typename radix> class half_Wilson_vector {
 
     // This will take the projection 1 +- gamma_j
 #if (Gammadim == 4)
-    half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
+    half_Wilson_vector(Wilson_vector<N, radix> w, Direction dir, int sign) {
         Complex<radix> I(0, 1);
         switch (dir) {
         case e_x:
@@ -382,7 +382,7 @@ template <int N, typename radix> class half_Wilson_vector {
         }
     }
 
-    Wilson_vector<N, radix> expand(direction dir, int sign) const {
+    Wilson_vector<N, radix> expand(Direction dir, int sign) const {
         Wilson_vector<N, radix> r;
         Complex<radix> I(0, 1);
         switch (dir) {
@@ -473,7 +473,7 @@ template <int N, typename radix> class half_Wilson_vector {
        1  0	        ( 1, 0)	       +1
        0 -1	  	    ( 0, 1)	       -1
     */
-    half_Wilson_vector(Wilson_vector<N, radix> w, direction dir, int sign) {
+    half_Wilson_vector(Wilson_vector<N, radix> w, Direction dir, int sign) {
         Complex<radix> I(0, 1);
         switch (dir) {
         case e_x:
@@ -503,7 +503,7 @@ template <int N, typename radix> class half_Wilson_vector {
             assert(false && "ERROR: Half Wilson vector projection called incorrectly \n");
         }
 
-        Wilson_vector<N, radix> expand(direction dir, int sign) const {
+        Wilson_vector<N, radix> expand(Direction dir, int sign) const {
             Wilson_vector<N, radix> r;
             Complex<radix> I(0, 1);
             switch (dir) {

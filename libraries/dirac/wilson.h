@@ -76,15 +76,15 @@ inline void Dirac_Wilson_hop_set(const Field<matrix> *gauge, const double kappa,
         vtemp[dir].start_fetch(dir, par);
         vtemp[-dir].start_fetch(-dir, par);
     }
-    // Set on first direction
-    direction dir = direction(0);
+    // Set on first Direction
+    Direction dir = Direction(0);
     onsites(par) {
         v_out[X] = -(kappa * gauge[dir][X] * vtemp[dir][X + dir]).expand(dir, sign) -
                    (kappa * vtemp[dir][X + dir]).expand(dir, -sign);
     }
     // Add for all other directions
     for (int d = 1; d < NDIM; d++) {
-        direction dir = direction(d);
+        Direction dir = Direction(d);
         onsites(par) {
             half_Wilson_vector<N, radix> h1(v_in[X + dir], dir, sign);
             v_out[X] = v_out[X] -

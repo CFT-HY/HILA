@@ -7,20 +7,20 @@
 #include "plumbing/field.h"
 #include "plumbing/timing.h"
 
-/// Initialize fft to direction dir.  _elements: number of complex values in
+/// Initialize fft to Direction dir.  _elements: number of complex values in
 /// field, T_size the size of the field variable.  fftdir is
 /// fft_direction::FORWARD or fft
 
-void init_fft_direction(direction dir, size_t _elements, size_t T_size,
+void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
                         fft_direction fftdir, void *const buffer1, void *const buffer2);
 
 /// Build offsets to buffer arrays:
-///   Fastest direction = dir, offset 1
+///   Fastest Direction = dir, offset 1
 ///   next fastest index of complex_t elements in T, offset elem_offset
 ///   and then other directions, in order
 /// Returns element_offset and sets offset and nmin vectors
 
-size_t fft_get_buffer_offsets(const direction dir, const size_t elements,
+size_t fft_get_buffer_offsets(const Direction dir, const size_t elements,
                               CoordinateVector &offset, CoordinateVector &nmin);
 
 /// FFT execute does the actual fft.  It should be called as
@@ -35,7 +35,7 @@ template <> void fft_execute<Complex<float>>();
 /// and other directions are slowest.
 
 template <typename T, typename cmplx_t>
-inline void fft_collect_data(const Field<T> &f, const direction dir,
+inline void fft_collect_data(const Field<T> &f, const Direction dir,
                              cmplx_t *const RESTRICT buffer) {
 
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t); // cmplx elements in T
@@ -73,7 +73,7 @@ inline void fft_collect_data(const Field<T> &f, const direction dir,
 /// Inverse of the fft_collect_data: writeh fft'd data to field.
 
 template <typename T, typename cmplx_t>
-inline void fft_save_result(Field<T> &f, const direction dir,
+inline void fft_save_result(Field<T> &f, const Direction dir,
                             const cmplx_t *const RESTRICT buffer) {
 
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t); // cmplx elements in T
@@ -110,7 +110,7 @@ inline void fft_save_result(Field<T> &f, const direction dir,
 /// Increment the coordinates in order of odirs-array
 
 inline void increment_current_coord(CoordinateVector &current,
-                                    direction odirs[NDIM - 1]) {
+                                    Direction odirs[NDIM - 1]) {
 
     int i = 0;
     while (i < NDIM - 1 && ++current[odirs[i]] >= lattice->mynode.size[odirs[i]]) {
@@ -124,8 +124,8 @@ inline void increment_current_coord(CoordinateVector &current,
 ///  order - theoretically random writes are faster than reads
 
 template <typename cmplx_t>
-inline void fft_reshuffle_data(const direction fft_dir, cmplx_t *const RESTRICT out,
-                               const direction prev_dir, const cmplx_t *const RESTRICT in,
+inline void fft_reshuffle_data(const Direction fft_dir, cmplx_t *const RESTRICT out,
+                               const Direction prev_dir, const cmplx_t *const RESTRICT in,
                                const size_t elements) {
 
     extern hila::timer fft_reshuffle_timer;
@@ -156,7 +156,7 @@ inline void fft_reshuffle_data(const direction fft_dir, cmplx_t *const RESTRICT 
 #else
 
     // what order directions?  Tally these up to odirs-array (other directions)
-    direction odirs[NDIM - 1];
+    Direction odirs[NDIM - 1];
     int i = 0;
     size_t n_columns = 1;
     foralldir(d) if (d != fft_dir) {
@@ -227,7 +227,7 @@ inline void FFT_field_complex(const Field<T> &input, Field<T> &result,
         (cmplx_t *)memalloc(local_volume * elements * sizeof(cmplx_t));
 
     bool first_dir = true;
-    direction prev_dir;
+    Direction prev_dir;
 
     foralldir(dir) {
 

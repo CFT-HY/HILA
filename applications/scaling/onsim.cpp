@@ -135,7 +135,7 @@ void scaling_sim::initialize() {
         }
         // smoothing iterations
         for (int iter = 0; iter < config.smoothing; iter++) {
-            direction d;
+            Direction d;
             pi[ALL] = 6.0 * phi[X];
             foralldir(d) { pi[ALL] = pi[X] + phi[X + d]; }
             onsites(ALL) {
@@ -213,7 +213,7 @@ void scaling_sim::write_energies() {
         w_sumPhiPi += 0.5 * pPi * pPi * v;
     }
 
-    direction d;
+    Direction d;
     foralldir(d) {
         onsites(ALL) {
             Complex<double> norm = phi[X].conj() * phi[X];
@@ -258,7 +258,7 @@ void scaling_sim::next() {
         deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - norm.re) - aadt2D_aadxdx);
     }
 
-    direction d;
+    Direction d;
     foralldir(d) {
         onsites(ALL) { deltaPi[X] = deltaPi[X] + aadt_aadxdx * phi[X + d]; }
     }

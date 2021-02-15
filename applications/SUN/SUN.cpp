@@ -8,14 +8,14 @@ long seed = 123456;
 int NX = 16, NY = 16, NZ = 16, NT = 16;
 
 void calc_staples(Field<Matrix<N, N, Complex<double>>> (&U)[NDIM],
-                  Field<Matrix<N, N, Complex<double>>> &staple_sum, direction dir) {
-    /* Calculate the sum of staples connected to links in direction
+                  Field<Matrix<N, N, Complex<double>>> &staple_sum, Direction dir) {
+    /* Calculate the sum of staples connected to links in Direction
      * dir
      */
     static Field<Matrix<N, N, Complex<double>>> down_staple;
     staple_sum[ALL] = 0;
     foralldir(d2) {
-        direction dir2 = (direction)d2;
+        Direction dir2 = (Direction)d2;
         // Calculate the down side staple.
         // This will be communicated up.
         down_staple[ALL] = U[dir2][X].conjugate() * U[dir][X] * U[dir2][X + dir];
@@ -57,8 +57,8 @@ int main(int argc, char **argv) {
         // Run a number of updates
         for (int j = 0; j < n_updates_per_measurement; j++) {
             foralldir(d) {
-                // update direction dir
-                direction dir = (direction)d;
+                // update Direction dir
+                Direction dir = (Direction)d;
                 // First we need the staple sum
                 calc_staples(U, staple, dir);
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
         // Measure plaquette
         double Plaq = 0;
         foralldir(d1) foralldir(d2) if (d1 != d2) {
-            direction dir1 = (direction)d1, dir2 = (direction)d2;
+            Direction dir1 = (Direction)d1, dir2 = (Direction)d2;
             onsites(ALL) {
                 element<Matrix<N, N, Complex<double>>> temp;
                 temp = U[dir1][X] * U[dir2][X + dir1];

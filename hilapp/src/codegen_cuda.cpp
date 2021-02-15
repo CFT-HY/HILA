@@ -275,7 +275,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                         d.parityExpr
                             ->getSourceRange())); // mapped name was get_stmt_str(d.e);
 
-                // Check if the direction is a variable. These have been renamed.
+                // Check if the Direction is a variable. These have been renamed.
                 // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
                 //   if( vr.ref == d.e )
                 //     dirname = vi.new_name;
@@ -308,11 +308,11 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 loopBuf.replace(ref->fullExpr, l.loop_ref_name);
             }
 
-        // // First create temp variables fields fetched from a direction
+        // // First create temp variables fields fetched from a Direction
         // for( field_ref *r : l.ref_list ) if( r->dirExpr ) {
         //   std::string dirname = get_stmt_str(r->dirExpr);
 
-        //   // Check if the direction is a variable. These have been renamed.
+        //   // Check if the Direction is a variable. These have been renamed.
         //   for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
         //     if( vr.ref == r->dirExpr ) {
         //       dirname = vi.new_name;
@@ -323,7 +323,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         //          << dirname << "][" << looping_var
         //          << "], loop_lattice->field_alloc_size);\n";
         // }
-        // // Check for references without a direction. If found, add temp variable
+        // // Check for references without a Direction. If found, add temp variable
         // for( field_ref *r : l.ref_list ) if(r->dirExpr == nullptr){
         //   kernel << l.element_type << " "  << l.loop_ref_name << "="
         //          << l.new_name << ".get(" << looping_var

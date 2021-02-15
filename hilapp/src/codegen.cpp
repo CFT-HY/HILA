@@ -303,7 +303,7 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code,
                         loopBuf.replace(fr->nameExpr, offset_field_name);
                         loopBuf.replace(fr->parityExpr, "X");
                         fr->direxpr_s.clear();
-                        fr->is_direction = false; // no direction
+                        fr->is_direction = false; // no Direction
                         fr->info =
                             &field_info_list.back(); // info points to new field_info
                         fr->is_written = false;

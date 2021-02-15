@@ -16,7 +16,7 @@ template <typename sun> class gauge_field_base {
     /// The size of the matrix
     static constexpr int N = sun::size;
 
-    /// A matrix field for each direction
+    /// A matrix field for each Direction
     Field<sun> gauge[NDIM];
     /// Also create a momentum field. This is only
     /// allocated if necessary
@@ -54,7 +54,7 @@ template <template <int, typename> class M, int N> class gauge_field_base<M<N, d
     /// The matrix type
     using gauge_type = M<N, double>;
 
-    /// A matrix field for each direction
+    /// A matrix field for each Direction
     Field<gauge_type> gauge[NDIM];
     /// Also create a momentum field. This is only
     /// allocated if necessary
@@ -90,7 +90,7 @@ template <template <int, typename> class M, int N> class gauge_field_base<M<N, d
 };
 
 /// Calculate the Polyakov loop for a given gauge field.
-template <int N> double polyakov_loop(direction dir, Field<SU<N>> (&gauge)[NDIM]) {
+template <int N> double polyakov_loop(Direction dir, Field<SU<N>> (&gauge)[NDIM]) {
     // This implementation uses the onsites() to cycle through the
     // NDIM-1 dimensional planes. This is probably not the most
     // efficient implementation.
@@ -116,13 +116,13 @@ template <int N> double polyakov_loop(direction dir, Field<SU<N>> (&gauge)[NDIM]
     return poly / (N * v3);
 }
 
-/// Calculate the sum of staples in direction dir2
-/// connected to links in direction dir1
+/// Calculate the sum of staples in Direction dir2
+/// connected to links in Direction dir1
 /// This version takes two different fields for the
 /// different directions and is necessary for HEX
 /// smearing
 template <typename SUN>
-Field<SUN> calc_staples(Field<SUN> *U1, Field<SUN> *U2, direction dir1, direction dir2) {
+Field<SUN> calc_staples(Field<SUN> *U1, Field<SUN> *U2, Direction dir1, Direction dir2) {
     Field<SUN> staple_sum;
     static Field<SUN> down_staple;
     staple_sum[ALL] = 0;
@@ -137,8 +137,8 @@ Field<SUN> calc_staples(Field<SUN> *U1, Field<SUN> *U2, direction dir1, directio
     return staple_sum;
 }
 
-/// Calculate the sum of staples connected to links in direction dir
-template <typename SUN> Field<SUN> calc_staples(Field<SUN> *U, direction dir) {
+/// Calculate the sum of staples connected to links in Direction dir
+template <typename SUN> Field<SUN> calc_staples(Field<SUN> *U, Direction dir) {
     Field<SUN> staple_sum;
     static Field<SUN> down_staple;
     staple_sum[ALL] = 0;
@@ -184,7 +184,7 @@ template <int N, typename radix> double plaquette_sum(Field<Matrix<N, N, radix>>
 }
 
 /// A gauge field contains a SU(N) matrix in each
-/// direction for the gauge field and for the momentum.
+/// Direction for the gauge field and for the momentum.
 /// Defines methods for HMC to update the field and the
 /// momentum.
 template <typename matrix> class gauge_field : public gauge_field_base<matrix> {

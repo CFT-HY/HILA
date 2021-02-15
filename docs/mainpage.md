@@ -125,7 +125,7 @@ The statement will apply only to this collection of sites.
 On the right hand side, use `[X]` to refer to this collection
 of sites.
 
-You can refer to neighbouring sites by adding a direction (`e_x`, `-e_x`, `e_y`, `-e_y`, `e_z`, `-e_z`, `e_t`, `-e_t`, ...):
+You can refer to neighbouring sites by adding a Direction (`e_x`, `-e_x`, `e_y`, `-e_y`, `e_z`, `-e_z`, `e_t`, `-e_t`, ...):
 ~~~ C++
 my_field[EVEN] = my_field[X+e_y];
 ~~~
@@ -154,7 +154,7 @@ forsites(ALL){
 }
 ~~~
 
-As before, you can refer to neighbouring sites by adding a direction:
+As before, you can refer to neighbouring sites by adding a Direction:
 ~~~ C++
 forsites(EVEN){
     my_field[X] = my_field[X+e_y];
@@ -182,7 +182,7 @@ once for each vector.
 ### Gauge field
 
 The [gauge field](@ref gauge_field_base) class is mainly a convenient wrapper containing a matrix
-field for each direction. It allows us to refer to the gauge field as ```gauge_field<SUN> U```
+field for each Direction. It allows us to refer to the gauge field as ```gauge_field<SUN> U```
 rather than ```SUN U[NDIM]```, which is inconvenient to pass as a reference.
 
 The [gauge fields](@ref gauge_field_base) also contains a momentum field. Since fields are only

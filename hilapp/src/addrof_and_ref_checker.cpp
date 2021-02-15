@@ -194,7 +194,7 @@ class addrOfAndRefChecker : public GeneralVisitor,
                                     reportDiag(DiagnosticsEngine::Level::Error,
                                                E->getSourceRange().getBegin(),
                                                "cannot take non-const reference of a "
-                                               "Field variable with X+direction");
+                                               "Field variable with X+Direction");
                                     return true;
                                 }
                             }

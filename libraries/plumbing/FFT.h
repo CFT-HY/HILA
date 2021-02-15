@@ -7,7 +7,7 @@
 #include "fftw3.h"
 
 #ifdef USE_MPI
-/// Run Fast Fourier Transform on the field to each direction
+/// Run Fast Fourier Transform on the field to each Direction
 /// This is done by collecting a column of elements to each node,
 /// running the Fourier transform on the column and redistributing
 /// the result
@@ -50,7 +50,7 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
         int cols = 1;
         foralldir(d2) if (d2 != dir) cols *= lattice->mynode.size[d2];
 
-        // Get the MPI column in this direction
+        // Get the MPI column in this Direction
         lattice_struct::mpi_column_struct mpi_column = lattice->get_mpi_column(dir);
         MPI_Comm column_communicator = mpi_column.column_communicator;
         const std::vector<int> &nodelist = mpi_column.nodelist;

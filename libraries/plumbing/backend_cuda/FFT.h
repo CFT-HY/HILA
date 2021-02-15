@@ -13,7 +13,7 @@
 #ifdef CUDA_AWARE_MPI
 
 /// Gather one element column from the mpi buffer
-template <typename complex_type>
+template <typename complex_type> 
 __global__ void gather_column(cufftDoubleComplex *data, char *field_elem, int elements,
                               int cpn, int nnodes, int node_column_size, int column_size,
                               int block_size) {

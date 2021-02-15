@@ -303,7 +303,7 @@ void lattice_struct::setup_layout() {
         }
         output0 << '\n';
 
-        direction dmerge = mynode.subnodes.merged_subnodes_dir;
+        Direction dmerge = mynode.subnodes.merged_subnodes_dir;
 
         output0 << "Node subdivision to 64bit elems: ";
         foralldir(dir) {

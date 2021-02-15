@@ -30,7 +30,7 @@ Miau
     double t;
     onsites(p) {
         for (int k = 0; k < 10; k++) {
-            lf[X] = dd[X + direction::xup] + *b + c;
+            lf[X] = dd[X + Direction::xup] + *b + c;
         }
         // transformer_control("dump-ast");
         t += dd[X];

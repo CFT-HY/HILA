@@ -80,12 +80,12 @@ int main(int argc, char **argv) {
 
     matrices[ODD] =
         matrices[X - e_x].conjugate(); // odd matrices are the conjugate of the previous
-                                       // even site in the X direction
+                                       // even site in the X Direction
 
     onsites(EVEN) {
         matrices[X] *=
             matrices[X + e_x]; // multiply the even sites with the matrices stored in the
-                               // neighboring odd site in X direction
+                               // neighboring odd site in X Direction
     }
     onsites(ODD) {
         matrices[X] *= matrices[X].conjugate(); // multiply odd sites by their conjugate

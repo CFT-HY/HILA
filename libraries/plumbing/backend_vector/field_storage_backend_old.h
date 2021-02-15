@@ -160,7 +160,7 @@ void field_storage<T>::place_elements(char *RESTRICT buffer,
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(direction dir, parity par,
+void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
                                                    lattice_struct *lattice) {
     constexpr int vector_size = vector_info<T>::vector_size;
     constexpr int elements = vector_info<T>::elements;

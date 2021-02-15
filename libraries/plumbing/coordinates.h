@@ -1,7 +1,7 @@
 #ifndef COORDINATES_H_
 #define COORDINATES_H_
 /// This header file defines:
-///   enum direction
+///   enum Direction
 ///   enum class parity
 ///   class CoordinateVector
 /// These are used to traverse the lattice coordinate systems
@@ -10,13 +10,13 @@
 #include "datatypes/matrix.h"
 
 ///////////////////////////////////////////////////////////////////////////
-/// enum direction - includes the opposite direction
-/// defined as unsigned, but note that direction + int is not defined
+/// enum Direction - includes the opposite Direction
+/// defined as unsigned, but note that Direction + int is not defined
 /// Direction can be used as an array index (interchangably with int)
 ///////////////////////////////////////////////////////////////////////////
 
 #if NDIM == 4
-enum direction : unsigned {
+enum Direction : unsigned {
     e_x = 0,
     e_y,
     e_z,
@@ -28,7 +28,7 @@ enum direction : unsigned {
     NDIRECTIONS
 };
 #elif NDIM == 3
-enum direction : unsigned {
+enum Direction : unsigned {
     e_x = 0,
     e_y,
     e_z,
@@ -38,9 +38,9 @@ enum direction : unsigned {
     NDIRECTIONS
 };
 #elif NDIM == 2
-enum direction : unsigned { e_x = 0, e_y, e_y_down, e_x_down, NDIRECTIONS };
+enum Direction : unsigned { e_x = 0, e_y, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM == 1
-enum direction : unsigned { e_x = 0, e_x_down, NDIRECTIONS };
+enum Direction : unsigned { e_x = 0, e_x_down, NDIRECTIONS };
 #endif
 
 constexpr unsigned NDIRS = NDIRECTIONS; //
@@ -48,44 +48,44 @@ constexpr unsigned NDIRS = NDIRECTIONS; //
 // Increment for directions:  ++dir,  dir++  does the obvious
 // dir-- not defined, should we?
 
-static inline direction next_direction(direction dir) {
-    return static_cast<direction>(static_cast<unsigned>(dir) + 1);
+static inline Direction next_direction(Direction dir) {
+    return static_cast<Direction>(static_cast<unsigned>(dir) + 1);
 }
-static inline direction &operator++(direction &dir) {
+static inline Direction &operator++(Direction &dir) {
     return dir = next_direction(dir);
 }
-static inline direction operator++(direction &dir, int) {
-    direction d = dir;
+static inline Direction operator++(Direction &dir, int) {
+    Direction d = dir;
     ++dir;
     return d;
 }
 
-/// Basic direction looper, which defines the direction as you go.
-#define foralldir(d) for (direction d = e_x; d < NDIM; ++d)
+/// Basic Direction looper, which defines the Direction as you go.
+#define foralldir(d) for (Direction d = e_x; d < NDIM; ++d)
 
-inline direction opp_dir(const direction d) {
-    return static_cast<direction>(NDIRS - 1 - static_cast<int>(d));
+inline Direction opp_dir(const Direction d) {
+    return static_cast<Direction>(NDIRS - 1 - static_cast<int>(d));
 }
 
-inline direction opp_dir(const int d) { return static_cast<direction>(NDIRS - 1 - d); }
+inline Direction opp_dir(const int d) { return static_cast<Direction>(NDIRS - 1 - d); }
 
 /// unary + and -
-inline direction operator-(const direction d) { return opp_dir(d); }
+inline Direction operator-(const Direction d) { return opp_dir(d); }
 
-static inline direction operator+(const direction d) { return d; }
+static inline Direction operator+(const Direction d) { return d; }
 
-/// is_up_dir is true if the dir is "up" to coord direction
-static inline bool is_up_dir(const direction d) { return d < NDIM; }
+/// is_up_dir is true if the dir is "up" to coord Direction
+static inline bool is_up_dir(const Direction d) { return d < NDIM; }
 static inline bool is_up_dir(const int d) { return d < NDIM; }
 
-static inline direction abs(direction dir) {
+static inline Direction abs(Direction dir) {
     if (is_up_dir(dir))
         return dir;
     else
         return -dir;
 }
 
-inline int dir_dot_product(direction d1, direction d2) {
+inline int dir_dot_product(Direction d1, Direction d2) {
     if (d1 == d2)
         return 1;
     else if (d1 == -d2)
@@ -98,7 +98,7 @@ inline int dir_dot_product(direction d1, direction d2) {
 /// unsigned char is ok up to 4 dim (2*4 bits)
 using dir_mask_t = unsigned char;
 
-inline dir_mask_t get_dir_mask(const direction d) { return (dir_mask_t)(1 << d); }
+inline dir_mask_t get_dir_mask(const Direction d) { return (dir_mask_t)(1 << d); }
 
 ////////////////////////////////////////////////////////////////////
 /// enum class parity type definition - stronger protection than std enum
@@ -167,8 +167,8 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
     ~CoordinateVector_t() = default;
     CoordinateVector_t(const CoordinateVector_t &v) = default;
 
-    // initialize with direction -- useful for automatic conversion
-    explicit inline CoordinateVector_t(const direction dir) {
+    // initialize with Direction -- useful for automatic conversion
+    explicit inline CoordinateVector_t(const Direction dir) {
         foralldir(d) this->e(d) = dir_dot_product(d, dir);
     }
 
@@ -244,11 +244,11 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
     //#pragma hila loop function
     T &operator[](const int i) { return this->e(i); }
     //#pragma hila loop function
-    T &operator[](const direction d) { return this->e((int)d); }
+    T &operator[](const Direction d) { return this->e((int)d); }
     //#pragma hila loop function
     T operator[](const int i) const { return this->e(i); }
     //#pragma hila loop function
-    T operator[](const direction d) const { return this->e((int)d); }
+    T operator[](const Direction d) const { return this->e((int)d); }
 
     // Parity of this coordinate
     ::parity parity() {
@@ -287,9 +287,9 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    // and also additions for direction -- dir acts like a unit vector
+    // and also additions for Direction -- dir acts like a unit vector
     // #pragma hila loop function  //TODO
-    CoordinateVector_t &operator+=(const direction dir) {
+    CoordinateVector_t &operator+=(const Direction dir) {
         if (is_up_dir(dir))
             ++this->e(dir);
         else
@@ -297,7 +297,7 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
-    CoordinateVector_t &operator-=(const direction dir) {
+    CoordinateVector_t &operator-=(const Direction dir) {
         if (is_up_dir(dir))
             --this->e(dir);
         else
@@ -364,8 +364,8 @@ inline CoordinateVector_t<T> operator-(CoordinateVector_t<T> cv1,
     return res;
 }
 
-/// Special direction operators: dir + dir -> CoordinateVector
-inline CoordinateVector operator+(const direction d1, const direction d2) {
+/// Special Direction operators: dir + dir -> CoordinateVector
+inline CoordinateVector operator+(const Direction d1, const Direction d2) {
     CoordinateVector r;
     foralldir(d) {
         r.e(d) = dir_dot_product(d1, d);
@@ -374,7 +374,7 @@ inline CoordinateVector operator+(const direction d1, const direction d2) {
     return r;
 }
 
-inline CoordinateVector operator-(const direction d1, const direction d2) {
+inline CoordinateVector operator-(const Direction d1, const Direction d2) {
     CoordinateVector r;
     foralldir(d) {
         r.e(d) = dir_dot_product(d1, d);
@@ -383,32 +383,32 @@ inline CoordinateVector operator-(const direction d1, const direction d2) {
     return r;
 }
 
-/// Special operators: int*direction -> CoordinateVector (of type int!)
-inline CoordinateVector operator*(const int i, const direction dir) {
+/// Special operators: int*Direction -> CoordinateVector (of type int!)
+inline CoordinateVector operator*(const int i, const Direction dir) {
     CoordinateVector r;
     foralldir(d) r.e(d) = i * dir_dot_product(d, dir);
     return r;
 }
 
-inline CoordinateVector operator*(const direction d, const int i) { return i * d; }
+inline CoordinateVector operator*(const Direction d, const int i) { return i * d; }
 
-// coordinate vector + direction -- dir is a unit vector
-inline CoordinateVector operator+(CoordinateVector cv, const direction dir) {
+// coordinate vector + Direction -- dir is a unit vector
+inline CoordinateVector operator+(CoordinateVector cv, const Direction dir) {
     cv += dir;
     return cv;
 }
 
-inline CoordinateVector operator-(CoordinateVector cv, const direction dir) {
+inline CoordinateVector operator-(CoordinateVector cv, const Direction dir) {
     cv -= dir;
     return cv;
 }
 
-inline CoordinateVector operator+(const direction dir, CoordinateVector cv) {
+inline CoordinateVector operator+(const Direction dir, CoordinateVector cv) {
     cv += dir;
     return cv;
 }
 
-inline CoordinateVector operator-(const direction dir, CoordinateVector cv) {
+inline CoordinateVector operator-(const Direction dir, CoordinateVector cv) {
     foralldir(d) cv.e(d) = dir_dot_product(dir, d) - cv.e(d);
     return cv;
 }
@@ -423,7 +423,7 @@ class X_index_type {
   public:
     const CoordinateVector &coordinates() const;
 
-    int coordinate(direction d) const;
+    int coordinate(Direction d) const;
 
     ::parity parity() const;
 };
@@ -440,16 +440,16 @@ struct X_plus_offset {};
 
 /// Declarations X+smth, no need to implement these (type removed by hilapp)
 
-const X_plus_direction operator+(const X_index_type x, const direction d);
-const X_plus_direction operator-(const X_index_type x, const direction d);
+const X_plus_direction operator+(const X_index_type x, const Direction d);
+const X_plus_direction operator-(const X_index_type x, const Direction d);
 const X_plus_offset operator+(const X_index_type x, const CoordinateVector &cv);
 const X_plus_offset operator-(const X_index_type x, const CoordinateVector &cv);
-const X_plus_offset operator+(const X_plus_direction, const direction d);
-const X_plus_offset operator-(const X_plus_direction, const direction d);
+const X_plus_offset operator+(const X_plus_direction, const Direction d);
+const X_plus_offset operator-(const X_plus_direction, const Direction d);
 const X_plus_offset operator+(const X_plus_direction, const CoordinateVector &cv);
 const X_plus_offset operator-(const X_plus_direction, const CoordinateVector &cv);
-const X_plus_offset operator+(const X_plus_offset, const direction d);
-const X_plus_offset operator-(const X_plus_offset, const direction d);
+const X_plus_offset operator+(const X_plus_offset, const Direction d);
+const X_plus_offset operator-(const X_plus_offset, const Direction d);
 const X_plus_offset operator+(const X_plus_offset, const CoordinateVector &cv);
 const X_plus_offset operator-(const X_plus_offset, const CoordinateVector &cv);
 

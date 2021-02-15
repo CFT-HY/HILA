@@ -180,7 +180,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
         // Now need to split the expr to parity and dir-bits
         // Because of offsets this is pretty complicated to do in AST.
         // We now know that the expr is of type
-        // [X+direction]  or  [X+CoordinateVector] -- just
+        // [X+Direction]  or  [X+CoordinateVector] -- just
         // use the textual form of the expression!
 
         bool has_X;
@@ -222,7 +222,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
                 reportDiag(
                     DiagnosticsEngine::Level::Fatal,
                     lfe.parityExpr->getSourceRange().getBegin(),
-                    "Internal error: could not parse X + direction/offset -statement");
+                    "Internal error: could not parse X + Direction/offset -statement");
                 exit(1);
             }
 
@@ -238,7 +238,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
                 lfe.is_constant_direction = false;
                 // llvm::errs() << "GOT DIR NOT-CONST " << lfe.direxpr_s << '\n';
 
-                // If the direction is a variable, add it to the list
+                // If the Direction is a variable, add it to the list
                 // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(lfe.dirExpr);
                 // static std::string assignop;
                 // if(DRE && isa<VarDecl>(DRE->getDecl())) {
@@ -249,7 +249,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
                 TraverseStmt(lfe.parityExpr);
             }
         }
-    } // end of "direction"-branch
+    } // end of "Direction"-branch
 
     // llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
     //              << " parity " << get_stmt_str(lfe.parityExpr)
@@ -966,13 +966,13 @@ bool TopLevelVisitor::check_field_ref_list() {
                 dp.is_offset = p.is_offset;
                 dp.is_constant_direction = p.is_constant_direction;
                 dp.constant_value = p.constant_value;
-                dp.direxpr_s = p.direxpr_s; // copy the string expr of direction
+                dp.direxpr_s = p.direxpr_s; // copy the string expr of Direction
 
                 dp.ref_list.push_back(&p);
 
                 fip->dir_list.push_back(dp);
             }
-        } // direction
+        } // Direction
     }     // p-loop
 
     for (field_info &l : field_info_list) {

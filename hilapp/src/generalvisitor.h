@@ -188,7 +188,7 @@ class GeneralVisitor {
 
     bool is_field_with_X_expr(Expr *E);
 
-    /// Checks if E is parity plus direction of a field (for example f[X+dir]).
+    /// Checks if E is parity plus Direction of a field (for example f[X+dir]).
     bool is_field_with_X_and_dir(Expr *E);
 
     bool is_field_with_coordinate(Expr *E);

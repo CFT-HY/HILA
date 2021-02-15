@@ -1,6 +1,6 @@
 #include "plumbing/field.h"
 
-void add(Field<int> &a, Field<int> &b, parity par) { a[par] = b[X + direction::xup]; }
+void add(Field<int> &a, Field<int> &b, parity par) { a[par] = b[X + Direction::xup]; }
 
 //#include "sub.h"
 
@@ -28,7 +28,7 @@ int main() {
     Field<double> dd = 2.0;
     double da[N], t, x, *dp;
     parity par(ODD);
-    direction dir;
+    Direction dir;
     A a(0);
 
     a.add(1);

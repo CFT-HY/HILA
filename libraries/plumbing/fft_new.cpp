@@ -34,7 +34,7 @@ struct fftnode_struct {
     MPI_Request send_request, receive_request;
 };
 
-static direction fft_dir;
+static Direction fft_dir;
 static size_t elements;
 static size_t cmplx_size;
 static int transform_dir;
@@ -49,7 +49,7 @@ static fftw_complex *RESTRICT fftwbuf_d;
 static fftwf_plan fftwplan_f;
 static fftwf_complex *RESTRICT fftwbuf_f;
 
-size_t fft_get_buffer_offsets(const direction dir, const size_t elements,
+size_t fft_get_buffer_offsets(const Direction dir, const size_t elements,
                               CoordinateVector &offset, CoordinateVector &nmin) {
 
     offset[dir] = 1;
@@ -66,9 +66,9 @@ size_t fft_get_buffer_offsets(const direction dir, const size_t elements,
     return element_offset;
 }
 
-/// THis is to be called before fft to direction dir
+/// THis is to be called before fft to Direction dir
 
-void init_fft_direction(direction dir, size_t _elements, size_t T_size,
+void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
                         fft_direction fftdir, void *const buf_in, void *const buf_out) {
 
     fft_dir = dir;
