@@ -119,7 +119,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer,
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
+void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                                    const lattice_struct *RESTRICT lattice,
                                                    bool antiperiodic) {
     // Only need to do something for antiperiodic boundaries
@@ -143,7 +143,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
 
 template <typename T>
 void field_storage<T>::gather_comm_elements(
-    T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, parity par,
+    T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
     const lattice_struct *RESTRICT lattice, bool antiperiodic) const {
     int n;
     const unsigned *index_list = to_node.get_sitelist(par, n);

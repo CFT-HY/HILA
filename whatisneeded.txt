@@ -22,13 +22,13 @@ Contains an array of T-objects (or an array of field_element<T> objects?)
 + status information of the field related to nn-fetches
 
 PARITY:
-        enum class parity { even, odd, all, x };
-        #define EVEN parity::even
-        #define ODD parity::odd
-        #define ALL parity::all
-        #define X parity::x
+        enum class Parity { even, odd, all, x };
+        #define EVEN Parity::even
+        #define ODD Parity::odd
+        #define ALL Parity::all
+        #define X Parity::x
 
-refers to sites of specific parity (a[EVEN]).
+refers to sites of specific Parity (a[EVEN]).
 X is a "wildcard", typographically
 could prefer a[*] or a[:] but c++ does not allow this.
 --> Textual substitution before parsing?

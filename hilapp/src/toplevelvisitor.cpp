@@ -142,7 +142,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
 
     std::string parity_expr_type = get_expr_type(lfe.parityExpr);
 
-    if (parity_expr_type == "parity") {
+    if (parity_expr_type == "Parity") {
         if (is_X) {
             llvm::errs() << "Internal error in handle_loop_parity\n";
             exit(1);
@@ -155,7 +155,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
         } else {
             reportDiag(DiagnosticsEngine::Level::Error,
                        lfe.parityExpr->getSourceRange().getBegin(),
-                       "Field[parity] not allowed here, use Field[X] -type instead");
+                       "Field[Parity] not allowed here, use Field[X] -type instead");
         }
     }
 
@@ -252,7 +252,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
     } // end of "Direction"-branch
 
     // llvm::errs() << "field expr " << get_stmt_str(lfe.nameExpr)
-    //              << " parity " << get_stmt_str(lfe.parityExpr)
+    //              << " Parity " << get_stmt_str(lfe.parityExpr)
     //              << "\n";
 
     // Check that there are no local variable references up the AST
@@ -844,10 +844,10 @@ bool TopLevelVisitor::TraverseDecl(Decl *D) {
 //  Obsolete when X is new type
 // void TopLevelVisitor::require_parity_X(Expr * pExpr) {
 //   // Now parity has to be X (or the same as before?)
-//   if (get_parity_val(pExpr) != parity::x) {
+//   if (get_parity_val(pExpr) != Parity::x) {
 //     reportDiag(DiagnosticsEngine::Level::Error,
 //                pExpr->getSourceRange().getBegin(),
-//                "Use wildcard parity \"X\" or \"parity::x\"" );
+//                "Use wildcard parity \"X\" or \"Parity::x\"" );
 //   }
 // }
 
@@ -989,7 +989,7 @@ bool TopLevelVisitor::check_field_ref_list() {
             bool found_error = false;
             for (field_ref *p : l.ref_list) {
                 if (p->is_direction && !p->is_written && !p->is_offset) {
-                    if (loop_info.parity_value == parity::all) {
+                    if (loop_info.parity_value == Parity::all) {
 
                         reportDiag(DiagnosticsEngine::Level::Error,
                                    p->parityExpr->getSourceRange().getBegin(),
@@ -999,7 +999,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                         no_errors = false;
                         found_error = true;
 
-                    } else if (loop_info.parity_value == parity::none) {
+                    } else if (loop_info.parity_value == Parity::none) {
                         reportDiag(
                             DiagnosticsEngine::Level::Remark,
                             p->parityExpr->getSourceRange().getBegin(),
@@ -1293,7 +1293,7 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
                 if (internal_error) {
                     reportDiag(DiagnosticsEngine::Level::Error,
                                f->getSourceRange().getBegin(),
-                               "\'onsites\'-macro: not a parity type argument");
+                               "\'onsites\'-macro: not a Parity type argument");
                     return true;
                 }
             }
@@ -1341,12 +1341,12 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
     if (is_field_with_coordinate_stmt(s))
         return true;
 
-    //  Finally, if we get to a Field[parity] -expression without a loop or assignment
+    //  Finally, if we get to a Field[Parity] -expression without a loop or assignment
     //  flag error
 
     if (E && is_field_parity_expr(E)) {
         reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                   "Field[parity] -expression is allowed only in LHS of Field assignment "
+                   "Field[Parity] -expression is allowed only in LHS of Field assignment "
                    "statements (Field[par] = ...)");
         parsing_state.skip_children = 1;
         return true;

@@ -1,10 +1,10 @@
 #include "plumbing/field.h"
 
-void add(Field<int> &a, Field<int> &b, parity par) { a[par] = b[X + Direction::xup]; }
+void add(Field<int> &a, Field<int> &b, Parity par) { a[par] = b[X + Direction::xup]; }
 
 //#include "sub.h"
 
-template <typename T> void sub(Field<T> &a, Field<T> &b, parity p) { a[p] -= b[X]; }
+template <typename T> void sub(Field<T> &a, Field<T> &b, Parity p) { a[p] -= b[X]; }
 
 void f(Field<double> &d, double verylongvariablename) { d[ALL] = verylongvariablename; }
 
@@ -27,7 +27,7 @@ int main() {
     Field<int> intfield, if2;
     Field<double> dd = 2.0;
     double da[N], t, x, *dp;
-    parity par(ODD);
+    Parity par(ODD);
     Direction dir;
     A a(0);
 
@@ -54,9 +54,9 @@ int main() {
 
     lf = tf[0] + (*dp) + 3 * 5.6;
 
-    tf[1][par] = t + 1 + tf[0][parity::x] + 2 * t;
+    tf[1][par] = t + 1 + tf[0][Parity::x] + 2 * t;
 
-    lf[parity::even] = t * tf[1][parity::x] + tf[0][X] * dd[X];
+    lf[Parity::even] = t * tf[1][Parity::x] + tf[0][X] * dd[X];
 
     lf[EVEN] = tf[1][X] + tf[0][X] * dd[X];
 

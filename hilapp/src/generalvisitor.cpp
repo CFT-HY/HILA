@@ -206,31 +206,31 @@ bool GeneralVisitor::isStmtWithSemicolon(Stmt *S) {
 
 /////////////////////////////////////////////////////////////////
 
-parity GeneralVisitor::get_parity_val(const Expr *pExpr) {
+Parity GeneralVisitor::get_parity_val(const Expr *pExpr) {
     SourceLocation SL;
     APValue APV;
 
     if (pExpr->isCXX11ConstantExpr(*Context, &APV, &SL)) {
         // Parity is now constant
         int64_t val = (APV.getInt().getExtValue());
-        parity p;
-        if (0 <= val && val <= (int)parity::all) {
-            p = static_cast<parity>(val);
+        Parity p;
+        if (0 <= val && val <= (int)Parity::all) {
+            p = static_cast<Parity>(val);
         } else {
             reportDiag(DiagnosticsEngine::Level::Fatal,
                        pExpr->getSourceRange().getBegin(),
                        "hilapp internal error, unknown parity");
             exit(1);
         }
-        if (p == parity::none) {
+        if (p == Parity::none) {
             reportDiag(DiagnosticsEngine::Level::Error,
                        pExpr->getSourceRange().getBegin(),
-                       "parity::none is reserved for internal use");
+                       "Parity::none is reserved for internal use");
         }
 
         return p;
     } else {
-        return parity::none;
+        return Parity::none;
     }
 }
 

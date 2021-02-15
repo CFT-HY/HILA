@@ -227,7 +227,7 @@ struct cuda_comm_node_struct {
 };
 
 inline unsigned *get_site_index(const lattice_struct::comm_node_struct &to_node,
-                                parity par, int &n) {
+                                Parity par, int &n) {
     static std::vector<struct cuda_comm_node_struct> comm_nodes;
 
     const unsigned *cpu_index = to_node.get_sitelist(par, n);
@@ -250,7 +250,7 @@ inline unsigned *get_site_index(const lattice_struct::comm_node_struct &to_node,
 // kernels to fill the buffer.
 template <typename T>
 void field_storage<T>::gather_comm_elements(
-    T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, parity par,
+    T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
     const lattice_struct *RESTRICT lattice, bool antiperiodic) const {
     int n;
     unsigned *d_site_index = get_site_index(to_node, par, n);
@@ -331,7 +331,7 @@ __global__ void set_local_boundary_elements_kernel(field_storage<T> field,
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
+void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                                    const lattice_struct *RESTRICT lattice,
                                                    bool antiperiodic) {
     // Only need to do something for antiperiodic boundaries
@@ -387,7 +387,7 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer,
 // Standard MPI, buffer is on the cpu and needs to be copied accross
 template <typename T>
 void field_storage<T>::place_comm_elements(
-    Direction d, parity par, T *RESTRICT buffer,
+    Direction d, Parity par, T *RESTRICT buffer,
     const lattice_struct::comm_node_struct &from_node,
     const lattice_struct *RESTRICT lattice) {
     unsigned n = from_node.n_sites(par);

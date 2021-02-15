@@ -28,7 +28,7 @@ const std::string default_output_suffix("cpt");
 const std::string output_only_keyword("output_only");
 
 enum class reduction { NONE, SUM, PRODUCT }; // TBD:  MIN MAX MINLOC MAXLOC
-enum class parity { none, even, odd, all };
+enum class Parity { none, even, odd, all };
 
 /// The following section contains command line options and functions
 /// for implementing a backend
@@ -294,7 +294,7 @@ struct special_function_call {
 struct loop_info_struct {
     const Expr *parity_expr;
     std::string parity_text;
-    parity parity_value;
+    Parity parity_value;
 
     bool has_pragma_novector;
     bool has_pragma_access;

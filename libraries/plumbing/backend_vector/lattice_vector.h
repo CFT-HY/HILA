@@ -408,10 +408,10 @@ SUBNODE_LAYOUT needs to be defined to use this
     }
 
     // parity is the same for all elements in vector, return scalar
-    ::parity site_parity(int idx) { return coordinate_base[idx].parity(); }
+    ::Parity site_parity(int idx) { return coordinate_base[idx].parity(); }
 
     /// First index in a lattice loop
-    unsigned loop_begin(::parity P) const {
+    unsigned loop_begin(::Parity P) const {
         if (P == ODD) {
             return v_sites / 2;
         } else {
@@ -420,7 +420,7 @@ SUBNODE_LAYOUT needs to be defined to use this
     }
 
     /// Last index in a lattice loop
-    unsigned loop_end(::parity P) const {
+    unsigned loop_end(::Parity P) const {
         if (P == EVEN) {
             return v_sites / 2;
         } else {

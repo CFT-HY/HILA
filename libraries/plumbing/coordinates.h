@@ -2,7 +2,7 @@
 #define COORDINATES_H_
 /// This header file defines:
 ///   enum Direction
-///   enum class parity
+///   enum class Parity
 ///   class CoordinateVector
 /// These are used to traverse the lattice coordinate systems
 
@@ -101,48 +101,48 @@ using dir_mask_t = unsigned char;
 inline dir_mask_t get_dir_mask(const Direction d) { return (dir_mask_t)(1 << d); }
 
 ////////////////////////////////////////////////////////////////////
-/// enum class parity type definition - stronger protection than std enum
+/// enum class Parity type definition - stronger protection than std enum
 ///
 ////////////////////////////////////////////////////////////////////
 
-enum class parity : unsigned { none = 0, even, odd, all };
+enum class Parity : unsigned { none = 0, even, odd, all };
 //
-// should use here #define instead of const parity? Makes EVEN a protected symbol
-constexpr parity EVEN = parity::even; // bit pattern:  001
-constexpr parity ODD = parity::odd;   //               010
-constexpr parity ALL = parity::all;   //               011
+// should use here #define instead of const Parity? Makes EVEN a protected symbol
+constexpr Parity EVEN = Parity::even; // bit pattern:  001
+constexpr Parity ODD = Parity::odd;   //               010
+constexpr Parity ALL = Parity::all;   //               011
 
 // this is used in diagnostics - make static inline so can be defd here
-inline const char *parity_name(parity p) {
-    const char *parity_name_s[4] = {"parity::none", "EVEN", "ODD", "ALL"};
+inline const char *parity_name(Parity p) {
+    const char *parity_name_s[4] = {"Parity::none", "EVEN", "ODD", "ALL"};
     return parity_name_s[(int)p];
 }
 
 // This should not be used from loops ...
-inline std::ostream &operator<<(std::ostream &os, const parity p) {
+inline std::ostream &operator<<(std::ostream &os, const Parity p) {
     os << parity_name(p);
     return os;
 }
 
 // utilities for getting the bit patterns
-static inline unsigned parity_bits(parity p) { return 0x3 & static_cast<unsigned>(p); }
-static inline unsigned parity_bits_inverse(parity p) {
+static inline unsigned parity_bits(Parity p) { return 0x3 & static_cast<unsigned>(p); }
+static inline unsigned parity_bits_inverse(Parity p) {
     return 0x3 & ~static_cast<unsigned>(p);
 }
 
 // turns EVEN <-> ODD, ALL remains.  X->none, none->none
-static inline parity opp_parity(const parity p) {
+static inline Parity opp_parity(const Parity p) {
     unsigned u = parity_bits(p);
-    return static_cast<parity>(0x3 & ((u << 1) | (u >> 1)));
+    return static_cast<Parity>(0x3 & ((u << 1) | (u >> 1)));
 }
 
-static inline bool is_even_odd_parity(parity p) { return (p == EVEN || p == ODD); }
+static inline bool is_even_odd_parity(Parity p) { return (p == EVEN || p == ODD); }
 
 /// Return a vector for iterating over  parities included in par
 /// If par is ALL, this returns vector of EVEN and ODD, otherwise
 /// just par
-static std::vector<parity> loop_parities(parity par) {
-    std::vector<parity> parities;
+static std::vector<Parity> loop_parities(Parity par) {
+    std::vector<Parity> parities;
     if (par == ALL) {
         parities.insert(parities.end(), {EVEN, ODD});
     } else {
@@ -251,13 +251,13 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
     T operator[](const Direction d) const { return this->e((int)d); }
 
     // Parity of this coordinate
-    ::parity parity() {
+    ::Parity parity() {
         int s = 0;
         foralldir(d) s += this->e(d);
         if (s % 2 == 0)
-            return parity::even;
+            return Parity::even;
         else
-            return parity::odd;
+            return Parity::odd;
     }
 
     // cast to std::array
@@ -425,7 +425,7 @@ class X_index_type {
 
     int coordinate(Direction d) const;
 
-    ::parity parity() const;
+    ::Parity parity() const;
 };
 
 /// this defines the "point" dummy variable!

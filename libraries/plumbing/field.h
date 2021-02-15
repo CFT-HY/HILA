@@ -18,7 +18,7 @@
 #endif
 
 // This is a marker for hilapp -- for does not survive as it is
-#define onsites(p) for (parity parity_type_var_(p);;)
+#define onsites(p) for (Parity parity_type_var_(p);;)
 
 template <typename T> class Field;
 
@@ -173,7 +173,7 @@ template <typename T> class Field {
 #endif
 
         /// Gather boundary elements for communication
-        void gather_comm_elements(Direction d, parity par, T *RESTRICT buffer,
+        void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                                   const lattice_struct::comm_node_struct &to_node) const {
 #ifndef VECTORIZED
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -227,7 +227,7 @@ template <typename T> class Field {
         }
 
         /// Place boundary elements from neighbour
-        void place_comm_elements(Direction d, parity par, T *RESTRICT buffer,
+        void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                                  const lattice_struct::comm_node_struct &from_node) {
 // #ifdef USE_MPI
 #ifdef VECTORIZED
@@ -249,7 +249,7 @@ template <typename T> class Field {
         }
 
         /// Place boundary elements from local lattice (used in vectorized version)
-        void set_local_boundary_elements(Direction dir, parity par) {
+        void set_local_boundary_elements(Direction dir, Parity par) {
 
             bool antiperiodic =
                 (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC &&
@@ -266,7 +266,7 @@ template <typename T> class Field {
 #if defined(USE_MPI)
 
         /// get the receive buffer pointer for the communication.
-        T *get_receive_buffer(Direction d, parity par,
+        T *get_receive_buffer(Direction d, Parity par,
                               const lattice_struct::comm_node_struct &from_node) {
 #if defined(VANILLA)
 
@@ -431,15 +431,15 @@ template <typename T> class Field {
 
     bool is_allocated() const { return (fs != nullptr); }
 
-    bool is_initialized(parity p) const {
+    bool is_initialized(Parity p) const {
         return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
     }
 
-    fetch_status move_status(parity p, int d) const {
+    fetch_status move_status(Parity p, int d) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
         return fs->move_status[(int)p - 1][d];
     }
-    void set_move_status(parity p, int d, fetch_status stat) const {
+    void set_move_status(Parity p, int d, fetch_status stat) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
         fs->move_status[(int)p - 1][d] = stat;
     }
@@ -456,7 +456,7 @@ template <typename T> class Field {
     void check_alloc() const { assert(is_allocated()); }
 
     // If ALL changes, both parities invalid; if p != ALL, then p and ALL.
-    void mark_changed(const parity p) const {
+    void mark_changed(const Parity p) const {
 
         for (Direction i = (Direction)0; i < NDIRS; ++i) {
             // check if there's ongoing comms, invalidate it!
@@ -481,14 +481,14 @@ template <typename T> class Field {
     // intelligence to figure out the right thing to do
     //
 
-    void mark_fetched(int dir, const parity p) const {
+    void mark_fetched(int dir, const Parity p) const {
         set_move_status(p, dir, fetch_status::DONE);
     }
 
     // Check if the field has been fetched since the previous communication
     // par = ALL:   ALL or (EVEN+ODD) are OK
     // par != ALL:  ALL or par are OK
-    bool is_fetched(int dir, parity par) const {
+    bool is_fetched(int dir, Parity par) const {
         if (par != ALL) {
             return move_status(par, dir) == fetch_status::DONE ||
                    move_status(ALL, dir) == fetch_status::DONE;
@@ -501,16 +501,16 @@ template <typename T> class Field {
 
     // Mark communication started -- this must be just the one
     // going on with MPI
-    void mark_move_started(int dir, parity p) const {
+    void mark_move_started(int dir, Parity p) const {
         set_move_status(p, dir, fetch_status::STARTED);
     }
 
     /// Check if communication has started.  This is strict, checks exactly this parity
-    bool is_move_started(int dir, parity par) const {
+    bool is_move_started(int dir, Parity par) const {
         return move_status(par, dir) == fetch_status::STARTED;
     }
 
-    bool move_not_done(int dir, parity par) const {
+    bool move_not_done(int dir, Parity par) const {
         return move_status(par, dir) == fetch_status::NOT_DONE;
     }
 
@@ -564,12 +564,12 @@ template <typename T> class Field {
     // Overloading []
     // declarations -- WILL BE implemented by hilapp, not written here
     // let there be const and non-const protos
-    element<T> operator[](const parity p) const;           // f[EVEN]
+    element<T> operator[](const Parity p) const;           // f[EVEN]
     element<T> operator[](const X_index_type) const;       // f[X]
     element<T> operator[](const X_plus_direction p) const; // f[X+dir]
     element<T> operator[](const X_plus_offset p) const;    // f[X+dir1+dir2] and others
 
-    element<T> &operator[](const parity p);           // f[EVEN]
+    element<T> &operator[](const Parity p);           // f[EVEN]
     element<T> &operator[](const X_index_type);       // f[X]
 
     T &operator[](const CoordinateVector &v);       // f[CoordinateVector]
@@ -717,14 +717,14 @@ template <typename T> class Field {
     ///////////////////////////////////////////////////////////////////////
 
     // Communication routines
-    dir_mask_t start_fetch(Direction d, parity p = ALL) const;
-    void wait_fetch(Direction d, parity p) const;
-    void fetch(Direction d, parity p = ALL) const;
-    void drop_comms(Direction d, parity p) const;
-    void cancel_comm(Direction d, parity p) const;
+    dir_mask_t start_fetch(Direction d, Parity p = ALL) const;
+    void wait_fetch(Direction d, Parity p) const;
+    void fetch(Direction d, Parity p = ALL) const;
+    void drop_comms(Direction d, Parity p) const;
+    void cancel_comm(Direction d, Parity p) const;
 
     // Declaration of shift methods
-    Field<T> shift(const CoordinateVector &v, parity par) const;
+    Field<T> shift(const CoordinateVector &v, Parity par) const;
     Field<T> shift(const CoordinateVector &v) const { return shift(v, ALL); }
 
     // General getters and setters
@@ -845,13 +845,13 @@ auto operator/(const Field<A> &lhs, const B &rhs) -> Field<type_div<A, B>> {
 /// TODO: make more advanced, switching to "global" move for long shifts
 
 template <typename T>
-Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
+Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
 
     // use this to store remaining moves
     CoordinateVector rem = v;
 
     // check the parity of the move
-    parity par_s;
+    Parity par_s;
 
     int len = 0;
     foralldir(d) len += abs(rem[d]);
@@ -929,7 +929,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
 #elif !defined(USE_MPI)
 
 template <typename T>
-Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
+Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> result;
 
     onsites(par) { if }
@@ -960,10 +960,10 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const parity par) const {
  * have access to mpi.h, it cannot process this branch.
  */
 
-/// start_fetch(): Communicate the field at parity par from Direction
+/// start_fetch(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
 /// return the Direction mask bits where something is happening
-template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, parity p) const {
+template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
 
     // get the mpi message tag right away, to ensure that we are always synchronized with
     // the mpi calls -- some nodes might not need comms, but the tags must be in sync
@@ -996,7 +996,7 @@ template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, parity p) co
         return get_dir_mask(d); // nothing to do, but still need to wait
     }
 
-    parity par = p;
+    Parity par = p;
     // if p is ALL but ODD or EVEN is going on/done, turn off parity which is not needed
     // corresponding wait must do the same thing
     if (p == ALL) {
@@ -1085,7 +1085,7 @@ template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, parity p) co
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
 ///  of view of the user, the value of the field does not change.
-template <typename T> void Field<T>::wait_fetch(Direction d, parity p) const {
+template <typename T> void Field<T>::wait_fetch(Direction d, Parity p) const {
 
     lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     lattice_struct::comm_node_struct &from_node = ci.from_node;
@@ -1104,7 +1104,7 @@ template <typename T> void Field<T>::wait_fetch(Direction d, parity p) const {
     //   exit(1);
     // }
 
-    // Note: the move can be parity p OR ALL -- need to wait for it in any case
+    // Note: the move can be Parity p OR ALL -- need to wait for it in any case
     // set par to be the "sum" over both parities
     // There never should be ongoing ALL and other parity fetch -- start_fetch takes care
 
@@ -1113,7 +1113,7 @@ template <typename T> void Field<T>::wait_fetch(Direction d, parity p) const {
         exit(1);
     }
 
-    parity par;
+    Parity par;
     int n_wait = 1;
     // what par to wait for?
     if (is_move_started(d, p))
@@ -1180,7 +1180,7 @@ template <typename T> void Field<T>::wait_fetch(Direction d, parity p) const {
 ///  drop_comms():  if field is changed or deleted,
 ///  cancel ongoing communications.  This should happen very seldom,
 ///  only if there are "by-hand" start_fetch operations and these are not needed
-template <typename T> void Field<T>::drop_comms(Direction d, parity p) const {
+template <typename T> void Field<T>::drop_comms(Direction d, Parity p) const {
 
     if (is_comm_initialized()) {
         if (is_move_started(d, ALL))
@@ -1199,7 +1199,7 @@ template <typename T> void Field<T>::drop_comms(Direction d, parity p) const {
 
 /// cancel ongoing send and receive
 
-template <typename T> void Field<T>::cancel_comm(Direction d, parity p) const {
+template <typename T> void Field<T>::cancel_comm(Direction d, Parity p) const {
     if (lattice->nn_comminfo[d].from_node.rank != hila::myrank()) {
         cancel_receive_timer.start();
         MPI_Cancel(&fs->receive_request[(int)p - 1][d]);
@@ -1216,7 +1216,7 @@ template <typename T> void Field<T>::cancel_comm(Direction d, parity p) const {
 
 ///* Trivial implementation when no MPI is used
 
-template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, parity p) const {
+template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
     // Update local elements in the halo (necessary for vectorized version)
     // We use here simpler tracking than in MPI, may lead to slight extra work
     if (!is_fetched(d, p)) {
@@ -1226,14 +1226,14 @@ template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, parity p) co
     return 0;
 }
 
-template <typename T> void Field<T>::wait_fetch(Direction d, parity p) const {}
+template <typename T> void Field<T>::wait_fetch(Direction d, Parity p) const {}
 
-template <typename T> void Field<T>::drop_comms(Direction d, parity p) const {}
+template <typename T> void Field<T>::drop_comms(Direction d, Parity p) const {}
 
 #endif // MPI
 
 /// And a convenience combi function
-template <typename T> void Field<T>::fetch(Direction d, parity p) const {
+template <typename T> void Field<T>::fetch(Direction d, Parity p) const {
     start_fetch(d, p);
     wait_fetch(d, p);
 }

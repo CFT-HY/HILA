@@ -16,9 +16,9 @@ Each of these methods are template methods with a type parameter T.
 
 * inline void set(const T &value, const int i, const int field_alloc_size) : define how elements are set into data buffer.
 
-* void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, parity par) const : define how to gather all elements with parity "par" into "buffer" that will be communicated with "to_node". The comm_node struct contains all necessary information about the destination node.  
+* void gather_comm_elements(char * buffer, lattice_struct::comm_node_struct to_node, Parity par) const : define how to gather all elements with Parity "par" into "buffer" that will be communicated with "to_node". The comm_node struct contains all necessary information about the destination node.  
 
-* void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, parity par) : place the elements of parity par from buffer into their correct places in this field_storage. from_node contains information about the node that sent the information. 
+* void place_comm_elements(char * buffer, lattice_struct::comm_node_struct from_node, Parity par) : place the elements of Parity par from buffer into their correct places in this field_storage. from_node contains information about the node that sent the information. 
 
 * void allocate_field( const int field_alloc_size ) : allocate the data buffer.
 

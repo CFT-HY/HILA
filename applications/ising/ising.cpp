@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 
         // Run a number of updates, starting with EVEN sites
         // and alternating between parities
-        parity p = EVEN;
+        Parity p = EVEN;
         for (int j = 0; j < 2 * n_updates_per_measurement; j++) {
             hila::log.increase_level();
 

@@ -48,7 +48,7 @@ int main() {
 
     CoordinateVector v = e_x - 2 * e_y;
 
-    parity p = ODD;
+    Parity p = ODD;
 
     // a[ALL] = b[X+2*e_x+e_y];
 

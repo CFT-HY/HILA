@@ -114,7 +114,7 @@ class lattice_struct {
         unsigned *sitelist;
 
         // Get a vector containing the sites of parity par and number of elements
-        const unsigned *RESTRICT get_sitelist(parity par, int &size) const {
+        const unsigned *RESTRICT get_sitelist(Parity par, int &size) const {
             if (par == ALL) {
                 size = sites;
                 return sitelist;
@@ -128,7 +128,7 @@ class lattice_struct {
         }
 
         // The number of sites that need to be communicated
-        unsigned n_sites(parity par) const {
+        unsigned n_sites(Parity par) const {
             if (par == ALL) {
                 return sites;
             } else if (par == EVEN) {
@@ -139,7 +139,7 @@ class lattice_struct {
         }
 
         // The local index of a site that is sent to neighbour
-        unsigned site_index(int site, parity par) const {
+        unsigned site_index(int site, Parity par) const {
             if (par == ODD) {
                 return sitelist[evensites + site];
             } else {
@@ -148,7 +148,7 @@ class lattice_struct {
         }
 
         // The offset of the halo from the start of the field array
-        unsigned offset(parity par) const {
+        unsigned offset(Parity par) const {
             if (par == ODD) {
                 return buffer + evensites;
             } else {
@@ -265,14 +265,14 @@ class lattice_struct {
     unsigned remap_node(const unsigned i);
 
 #ifdef EVEN_SITES_FIRST
-    int loop_begin(parity P) const {
+    int loop_begin(Parity P) const {
         if (P == ODD) {
             return mynode.evensites;
         } else {
             return 0;
         }
     }
-    int loop_end(parity P) const {
+    int loop_end(Parity P) const {
         if (P == EVEN) {
             return mynode.evensites;
         } else {
@@ -281,14 +281,14 @@ class lattice_struct {
     }
 #else
 
-    int loop_begin(parity P) const {
+    int loop_begin(Parity P) const {
         if (P == EVEN) {
             return mynode.evensites;
         } else {
             return 0;
         }
     }
-    int loop_end(parity P) const {
+    int loop_end(Parity P) const {
         if (P == ODD) {
             return mynode.evensites;
         } else {
@@ -305,7 +305,7 @@ class lattice_struct {
         return mynode.coordinates[idx][d];
     }
 
-    inline parity site_parity(unsigned idx) const {
+    inline Parity site_parity(unsigned idx) const {
 #ifdef EVEN_SITES_FIRST
         if (idx < mynode.evensites)
             return EVEN;

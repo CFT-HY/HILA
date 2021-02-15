@@ -32,16 +32,16 @@ std::string parity_name;
 std::string parity_in_this_loop = "";
 
 /// Used in lattice loop generation
-std::string parity_str(parity p) {
+std::string parity_str(Parity p) {
     switch (p) {
-    case parity::none:
-        return "parity::none";
-    case parity::even:
-        return "parity::even";
-    case parity::odd:
-        return "parity::odd";
-    case parity::all:
-        return "parity::all";
+    case Parity::none:
+        return "Parity::none";
+    case Parity::even:
+        return "Parity::even";
+    case Parity::odd:
+        return "Parity::odd";
+    case Parity::all:
+        return "Parity::all";
     default:
         return "unknown";
     }
@@ -88,9 +88,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     while (t.find(parity_name, 0) != std::string::npos)
         parity_name += "_";
 
-    if (loop_info.parity_value == parity::none) {
+    if (loop_info.parity_value == Parity::none) {
         // now unknown
-        code << "const parity " << parity_name << " = " << loop_info.parity_text
+        code << "const Parity " << parity_name << " = " << loop_info.parity_text
              << ";\n";
 
         if (global.assert_loop_parity) {
@@ -135,7 +135,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     for (field_info &l : field_info_list) {
         if (l.is_read_nb || l.is_read_atX) {
             std::string init_par;
-            if (loop_info.parity_value == parity::all ||
+            if (loop_info.parity_value == Parity::all ||
                 (l.is_read_nb && l.is_read_atX)) {
                 init_par = "ALL";
             } else {

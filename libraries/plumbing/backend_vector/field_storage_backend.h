@@ -205,7 +205,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer,
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
+void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                                    const lattice_struct *lattice,
                                                    bool antiperiodic) {
 
@@ -316,7 +316,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
 // gather full vectors from fieldbuf to buffer, for communications
 template <typename T>
 void field_storage<T>::gather_comm_vectors(
-    T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, parity par,
+    T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
     const vectorized_lattice_struct<vector_info<T>::vector_size> *RESTRICT vlat,
     bool antiperiodic) const {
 
@@ -355,7 +355,7 @@ void field_storage<T>::gather_comm_vectors(
 // Place the received MPI elements to halo (neighbour) buffer
 template <typename T>
 void field_storage<T>::place_recv_elements(
-    const T *RESTRICT buffer, Direction d, parity par,
+    const T *RESTRICT buffer, Direction d, Parity par,
     const vectorized_lattice_struct<vector_info<T>::vector_size> *RESTRICT vlat) const {
 
     constexpr size_t vector_size = vector_info<T>::vector_size;

@@ -59,18 +59,18 @@ template <typename T> class field_storage {
     template <typename vecT> inline vecT get_vector(const unsigned idx) const;
 
     void gather_comm_vectors(
-        T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, parity par,
+        T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
         const vectorized_lattice_struct<vector_info<T>::vector_size> *RESTRICT vlat,
         bool antiperiodic) const;
 
-    void place_recv_elements(const T *RESTRICT buffer, Direction d, parity par,
+    void place_recv_elements(const T *RESTRICT buffer, Direction d, Parity par,
                              const vectorized_lattice_struct<vector_info<T>::vector_size>
                                  *RESTRICT vlat) const;
 
 #endif
 
     void gather_comm_elements(T *RESTRICT buffer,
-                              const lattice_struct::comm_node_struct &to_node, parity par,
+                              const lattice_struct::comm_node_struct &to_node, Parity par,
                               const lattice_struct *RESTRICT lattice,
                               bool antiperiodic) const;
     void gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
@@ -80,13 +80,13 @@ template <typename T> class field_storage {
                                  int n, const lattice_struct *RESTRICT lattice) const;
 
     /// Place boundary elements from neighbour
-    void place_comm_elements(Direction d, parity par, T *RESTRICT buffer,
+    void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                              const lattice_struct::comm_node_struct &from_node,
                              const lattice_struct *RESTRICT lattice);
     void place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
                         const lattice_struct *RESTRICT lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
-    void set_local_boundary_elements(Direction dir, parity par,
+    void set_local_boundary_elements(Direction dir, Parity par,
                                      const lattice_struct *RESTRICT lattice,
                                      bool antiperiodic);
 

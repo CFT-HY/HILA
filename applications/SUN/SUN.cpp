@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
                 calc_staples(U, staple, dir);
 
                 // Now update, first even then odd
-                parity p = EVEN;
+                Parity p = EVEN;
                 for (int par = 0; par < 2; par++) {
                     onsites(p) {
                         if (disable_avx[X] == 0) {

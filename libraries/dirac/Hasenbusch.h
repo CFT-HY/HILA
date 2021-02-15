@@ -18,7 +18,7 @@ template <typename Dirac_type> class Hasenbusch_operator {
     using type_flt = Hasenbusch_operator<typename Dirac_type::type_flt>;
 
     Dirac_type D;
-    parity par;
+    Parity par;
     double h_parameter;
     Hasenbusch_operator(Dirac_type &d, double hasenbusch_parameter) : D(d) {
         h_parameter = hasenbusch_parameter;

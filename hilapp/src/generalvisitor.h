@@ -157,10 +157,10 @@ class GeneralVisitor {
     /// try to figure out whether expressions are duplicates
     bool is_duplicate_expr(const Expr *a, const Expr *b);
 
-    /// Just check that the expression is of type parity
-    bool is_parity_index_type(Expr *E) { return (get_expr_type(E) == "parity"); }
+    /// Just check that the expression is of type Parity
+    bool is_parity_index_type(Expr *E) { return (get_expr_type(E) == "Parity"); }
 
-    /// Checks if E is of type Field[parity]  parity=EVEN,ODD,ALL
+    /// Checks if E is of type Field[Parity]  Parity=EVEN,ODD,ALL
     bool is_field_parity_expr(Expr *E);
 
     /// true if X, X+dir, X+offset -type expression
@@ -188,7 +188,7 @@ class GeneralVisitor {
 
     bool is_field_with_X_expr(Expr *E);
 
-    /// Checks if E is parity plus Direction of a field (for example f[X+dir]).
+    /// Checks if E is Parity plus Direction of a field (for example f[X+dir]).
     bool is_field_with_X_and_dir(Expr *E);
 
     bool is_field_with_coordinate(Expr *E);
@@ -219,7 +219,7 @@ class GeneralVisitor {
     /// Does the statement end with a semicolon
     bool isStmtWithSemicolon(Stmt *S);
 
-    parity get_parity_val(const Expr *pExpr);
+    Parity get_parity_val(const Expr *pExpr);
 
     /// utility used in inserting stuff after new line in buffer
     // SourceLocation getSourceLocationAtEndOfLine( SourceLocation l );

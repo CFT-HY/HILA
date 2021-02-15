@@ -160,7 +160,7 @@ void field_storage<T>::place_elements(char *RESTRICT buffer,
 }
 
 template <typename T>
-void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
+void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                                    lattice_struct *lattice) {
     constexpr int vector_size = vector_info<T>::vector_size;
     constexpr int elements = vector_info<T>::elements;
@@ -174,7 +174,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, parity par,
     if (vlat->split[dir] > 1) {
 
         // Loop over the boundary sites
-        for (parity p : loop_parities(par)) {
+        for (Parity p : loop_parities(par)) {
             int par_int = (int)p - 1;
             const int *RESTRICT perm = vlat->boundary_permutation[dir];
             auto hs = vlat->halo_sites[par_int][dir];

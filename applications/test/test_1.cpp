@@ -3,7 +3,7 @@
 
 void transformer_control(const char *);
 
-template <typename T> void sub(Field<T> &a, const Field<T> &b, parity p) { a[p] = b[X]; }
+template <typename T> void sub(Field<T> &a, const Field<T> &b, Parity p) { a[p] = b[X]; }
 
 // #include "sub.h"
 
@@ -22,7 +22,7 @@ Miau
 
     // a[EVEN];
 
-    parity p = ALL;
+    Parity p = ALL;
     lf[ALL] = dd[X] + dp[1];
 
     lf = dd + dp[1];

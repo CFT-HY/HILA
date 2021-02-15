@@ -15,7 +15,7 @@ Field<half_Wilson_vector<N, radix>> wilson_dirac_temp_vector[2 * NDIM];
 template <int N, typename radix, typename matrix>
 inline void Dirac_Wilson_hop(const Field<matrix> *gauge, const double kappa,
                              const Field<Wilson_vector<N, radix>> &v_in,
-                             Field<Wilson_vector<N, radix>> &v_out, parity par,
+                             Field<Wilson_vector<N, radix>> &v_out, Parity par,
                              int sign) {
     Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] =
         wilson_dirac_temp_vector<N, radix>;
@@ -53,7 +53,7 @@ inline void Dirac_Wilson_hop(const Field<matrix> *gauge, const double kappa,
 template <int N, typename radix, typename matrix>
 inline void Dirac_Wilson_hop_set(const Field<matrix> *gauge, const double kappa,
                                  const Field<Wilson_vector<N, radix>> &v_in,
-                                 Field<Wilson_vector<N, radix>> &v_out, parity par,
+                                 Field<Wilson_vector<N, radix>> &v_out, Parity par,
                                  int sign) {
     Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] =
         wilson_dirac_temp_vector<N, radix>;
@@ -97,13 +97,13 @@ inline void Dirac_Wilson_hop_set(const Field<matrix> *gauge, const double kappa,
 /// The diagonal part of the operator. Without clover this is just the identity
 template <int N, typename radix>
 inline void Dirac_Wilson_diag(const Field<Wilson_vector<N, radix>> &v_in,
-                              Field<Wilson_vector<N, radix>> &v_out, parity par) {
+                              Field<Wilson_vector<N, radix>> &v_out, Parity par) {
     v_out[par] = v_in[X];
 }
 
 /// Inverse of the diagonal part. Without clover this does nothing.
 template <int N, typename radix>
-inline void Dirac_Wilson_diag_inverse(Field<Wilson_vector<N, radix>> &v, parity par) {}
+inline void Dirac_Wilson_diag_inverse(Field<Wilson_vector<N, radix>> &v, Parity par) {}
 
 /// Calculate derivative  d/dA_x,mu (chi D psi)
 /// Necessary for the HMC force calculation.
@@ -111,7 +111,7 @@ template <int N, typename radix, typename gaugetype, typename momtype>
 inline void Dirac_Wilson_calc_force(const Field<gaugetype> *gauge, const double kappa,
                                     const Field<Wilson_vector<N, radix>> &chi,
                                     const Field<Wilson_vector<N, radix>> &psi,
-                                    Field<momtype> (&out)[NDIM], parity par, int sign) {
+                                    Field<momtype> (&out)[NDIM], Parity par, int sign) {
     Field<half_Wilson_vector<N, radix>>(&vtemp)[2 * NDIM] =
         wilson_dirac_temp_vector<N, radix>;
     vtemp[0].copy_boundary_condition(chi);
@@ -165,7 +165,7 @@ template <typename matrix> class Dirac_Wilson {
     using type_flt = Dirac_Wilson<typename gauge_field_base<matrix>::gauge_type_flt>;
 
     /// The parity this operator applies to
-    parity par = ALL;
+    Parity par = ALL;
 
     /// Constructor: initialize mass and gauge
     Dirac_Wilson(Dirac_Wilson &d) : gauge(d.gauge), kappa(d.kappa) {}
@@ -253,7 +253,7 @@ template <typename matrix> class Dirac_Wilson_evenodd {
         Dirac_Wilson_evenodd<typename gauge_field_base<matrix>::gauge_type_flt>;
 
     /// The parity this operator applies to
-    parity par = EVEN;
+    Parity par = EVEN;
 
     /// Constructor: initialize mass and gauge
     Dirac_Wilson_evenodd(Dirac_Wilson_evenodd &d) : gauge(d.gauge), kappa(d.kappa) {}

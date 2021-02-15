@@ -30,14 +30,14 @@ inline void init_staggered_eta(Field<double> (&staggered_eta)[NDIM]) {
 /// Apply the mass term v_out = m*v_in
 template <typename vtype>
 void dirac_staggered_diag(const double mass, const Field<vtype> &v_in,
-                          Field<vtype> &v_out, parity par) {
+                          Field<vtype> &v_out, Parity par) {
     v_out[par] = v_out[X] + mass * v_in[X];
 }
 
 /// Apply the inverse of the diagonal part,
 /// v_out = 1/m * v_in
 template <typename vtype>
-void dirac_staggered_diag_inverse(const double mass, Field<vtype> &v_out, parity par) {
+void dirac_staggered_diag_inverse(const double mass, Field<vtype> &v_out, Parity par) {
     v_out[par] = (1.0 / mass) * v_out[X];
 }
 
@@ -45,7 +45,7 @@ void dirac_staggered_diag_inverse(const double mass, Field<vtype> &v_out, parity
 template <typename mtype, typename vtype>
 void dirac_staggered_hop(const Field<mtype> *gauge, const Field<vtype> &v_in,
                          Field<vtype> &v_out, Field<double> (&staggered_eta)[NDIM],
-                         parity par, int sign) {
+                         Parity par, int sign) {
     Field<vtype>(&vtemp)[NDIM] = staggered_dirac_temp<vtype>;
     foralldir(dir) {
         vtemp[dir].copy_boundary_condition(v_in);
@@ -71,7 +71,7 @@ template <typename gaugetype, typename momtype, typename vtype>
 void dirac_staggered_calc_force(const Field<gaugetype> *gauge, const Field<vtype> &chi,
                                 const Field<vtype> &psi, Field<momtype> (&out)[NDIM],
                                 Field<double> (&staggered_eta)[NDIM], int sign,
-                                parity par) {
+                                Parity par) {
     foralldir(dir) {
         out[dir][ALL] = 0;
         out[dir][par] =
@@ -109,7 +109,7 @@ template <typename matrix> class dirac_staggered {
     using type_flt = dirac_staggered<typename gauge_field_base<matrix>::gauge_type_flt>;
 
     /// The parity this operator applies to
-    parity par = ALL;
+    Parity par = ALL;
 
     // Constructor: initialize mass, gauge and eta
     dirac_staggered(dirac_staggered &d) : gauge(d.gauge), mass(d.mass) {
@@ -212,7 +212,7 @@ template <typename matrix> class dirac_staggered_evenodd {
         dirac_staggered_evenodd<typename gauge_field_base<matrix>::gauge_type_flt>;
 
     /// The parity this operator applies to
-    parity par = EVEN;
+    Parity par = EVEN;
 
     /// Constructor: initialize mass, gauge and eta
     dirac_staggered_evenodd(dirac_staggered_evenodd &d) : gauge(d.gauge), mass(d.mass) {
