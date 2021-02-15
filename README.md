@@ -111,12 +111,12 @@ int main(int argc, char * argv[]) {
 
 - Special types: 
     - `Parity`: enum with values EVEN, ODD, ALL; refers to parity of lattice sites.
-    - `Direction`: conceptually unit vector with values ±e_x, ±e_y, ±e_z, ±e_t  (if NDIM==4).
-            Implemented as an enum class.  Can be used to index arrays of size NDIM.
+    - `Direction`: conceptually unit vector with values `±e_x, ±e_y, ±e_z, ±e_t`  (if NDIM==4).
+       Implemented as an enum class.  Can be used to index arrays of size NDIM.
     - `CoordinateVector`: derived from Vector<NDIM,int>. 
             
-            Direction variable acts as an unit vector in vector algebra:
-            (assume below NDIM=4)
+       Direction variable acts as an unit vector in vector algebra:
+       (assume below NDIM=4)
 
             ```
             CoordinateVector v;
