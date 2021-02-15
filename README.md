@@ -12,7 +12,7 @@ Hila is based on hila preprocessor "hilapp", which converts application C++ to p
 which is passed to appropriate compilers for the platforms.
 
 
-## Quick start guide
+## Quick start
 
 -  Clone hila repository (TODO: new repo address?)
 ```
@@ -27,7 +27,7 @@ These can be found in most Linux distribution repos, e.g. in Ubuntu 20.04:
 ```
 loads everything needed.  Change version number as needed; at least 8 required.  (TODO: what is needed for Macs?)
 
-NOTE: These are not installed in most supercomputer systems.  In that case you can make a statically linked 
+NOTE: clang dev tools are not installed in most supercomputer systems.  In that case you can make a statically linked 
 hilapp-application on your workstation/laptop, and copy that to the target machine, see below.
 
 -  Compile *hilapp*:
@@ -50,13 +50,13 @@ By default, hilapp Makefile uses clang++ installed in stage 1. You can also use 
 ```
 
 Computing platform is chosen by `make ARCH=<platform>`:
-- `make [ ARCH=vanilla ]` (default) builds a standard MPI-parallelized program.
-- `make ARCH=AVX2`  builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass) 
+- `make [ ARCH=vanilla ]` (often default) builds a standard MPI-parallelized program.
+- `make ARCH=AVX2` builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass) 
     library.
 - `make ARCH=cuda` builds parallel Cuda-program.  Requires nvcc compiler.
 
-Typically these need to be customized for supercomputing platforms.
-
+Typically these need to be customized for supercomputing platforms.  See directory 
+hila/libraries/target_arch
 
 # Overview
 
@@ -97,6 +97,41 @@ int main(int argc, char * argv[]) {
     hila::finishrun();    
 }
 ```
+
+## Datatypes
+
+- NDIM: number of dimensions, values 2..4  (TODO: NDIM=1?).  Typically set in application Makefile
+
+- Standard types: `int`, `int64_t`, `float`, `double` (`long double`?)
+
+- Hila provided basic types: `Complex<S>`, `Vector<n,T>`, `Matrix<n,m,T>`, `SquareMatrix<n,T>`, `Array<n,m,T>`, `Array1d<n,T>`
+
+    Here S is any standard type, and T includes S and Complex<S>.  C++ or C standard complex types should not be used (these
+    do not AVX vectorize).  These types have lot of methods, see (TODO Doxygen docs)
+
+- Special types: 
+    - `Parity`: enum with values EVEN, ODD, ALL; refers to parity of lattice sites.
+    - `Direction`: conceptually unit vector with values ±e_x, ±e_y, ±e_z, ±e_t  (if NDIM==4).
+            Implemented as an enum class.  Can be used to index arrays of size NDIM.
+    - `CoordinateVector`: derived from Vector<NDIM,int>. 
+            
+            Direction variable acts as an unit vector in vector algebra:
+            (assume below NDIM=4)
+
+            ```
+            CoordinateVector v;
+            Direction d = e_x;
+            v = d;             // v = [1,0,0,0]
+            v += e_y - 3*d;    // v = [-2,1,0,0]
+            v = {0,1,-1,0};    // v = [0,1,-1,0] equivalent v = e_y - e_z;
+            output0 << v.dot({1,2,3,4});  // dot product of 2 vectors, prints -1
+            int j = d;         // ok
+            d = j;             // error, cannot assign int to Direction
+            ++d;               // e_x -> e_y
+            is_up_dir(d);      // true if d is along positive x,y,z,t -dir.
+            ```
+
+
 
 ## Field access and traversal
 
