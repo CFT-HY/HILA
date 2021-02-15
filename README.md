@@ -8,7 +8,10 @@ different (super)computing platforms (parallelisation with MPI, GPU computing wi
 etc.).  Details of the parallelisation and computing architecture are hidden from the application layer.
 Write once -- run anywhere.
 
-Hila is based on hila preprocessor "hilapp", which converts application C++ to platform-specific C++ code,
+Hila is based on hila preprocessor "hilapp", which is a C++ source-to-source transformer using the 
+[libtooling](https://clang.llvm.org/docs/LibTooling.html) toolbox of the
+[Clang](https://clang.llvm.org/) compiler.
+It converts application C++ to platform-specific C++ code,
 which is passed to appropriate compilers for the platforms.
 
 
@@ -16,27 +19,27 @@ which is passed to appropriate compilers for the platforms.
 
 - Clone hila repository (TODO: new repo address?)
 
-    ```
+    ~~~ bash
        git clone git@bitbucket.org:Kari_Rummukainen/hila.git
-    ```
+    ~~~
 
 - For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include
   files).
   These can be found in most Linux distribution repos, e.g. in Ubuntu 20.04:
 
-    ```
+    ~~~ bash
        apt install clang-11 llvm-11 clang-tools-11 libclang-common-11-dev libclang-cpp11-dev libclang-11-dev clang-format-11
-    ```
+    ~~~
 
     Change version number as needed; at least 8 required.  (TODO: what is needed for Macs?)
 
 - Compile *hilapp*:
 
-     ```
+     ~~~ bash
         cd hila/hilapp
         make [-j4]
         make install
-     ```
+     ~~~
 
      This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the
      default location for the program.  Build takes 1-2 min.
@@ -50,11 +53,11 @@ which is passed to appropriate compilers for the platforms.
 - Test `bin/hilapp -help`
 
 - Build an application:
-    ```
+    ~~~ bash
        cd ../applications/hila_example
        make
        build/hila_example  or  mpirun -np 4 build/hila_example
-    ```
+    ~~~
 
 - Computing platform is chosen by `make ARCH=<platform>`:
     - `make [ ARCH=vanilla ]` (often default) builds a standard MPI-parallelized program.
@@ -62,8 +65,8 @@ which is passed to appropriate compilers for the platforms.
        library.
     - `make ARCH=cuda` builds parallel Cuda-program.  Requires nvcc compiler.
 
-  Typically these need to be customized for supercomputing platforms.  See directory 
-  hila/libraries/target_arch
+   Typically these need to be customized for supercomputing platforms.  See directory 
+   hila/libraries/target_arch
 
 - Linking *hilapp* statically: if the target machine does not have clang dev libraries, hilapp can be linked
   statically on a workstation/laptop.  Use comm
@@ -74,7 +77,7 @@ which is passed to appropriate compilers for the platforms.
 
 ## A simple hila application
 
-```
+~~~ C++
 #include "hila.h"
 static_assert(NDIM == 3, "NDIM must be 3");
 
@@ -110,7 +113,8 @@ int main(int argc, char * argv[]) {
     // make a clean exit
     hila::finishrun();    
 }
-```
+
+~~~
 
 ## Datatypes
 
@@ -135,7 +139,7 @@ int main(int argc, char * argv[]) {
        Direction variable acts as an unit vector in vector algebra:
        (assume below NDIM=4)
 
-            
+  ~~~ C++            
             CoordinateVector v;
             Direction d = e_x;
             v = d;             // v = [1,0,0,0]
@@ -147,14 +151,14 @@ int main(int argc, char * argv[]) {
             ++d;               // e_x -> e_y
             is_up_dir(d);      // true if d is along positive x,y,z,t -dir.
             
-
+  ~~~            
 
 ## Field access and traversal
 
 The principal traversal of the lattice is with *site loops* `onsites(Parity)`, and a
 special location identifier `X` (effectively a new keyword).  
 
-```
+~~~ C++
    using mytype = Matrix<3,3,Complex<double>>;   // use type alias
    Field<mytype> f,g,h;
    . . .
@@ -176,10 +180,9 @@ special location identifier `X` (effectively a new keyword).
             h[X] *= 0.5;
        }
    }
-
    
+~~~
 
-```
 `X` can be used only inside site loops.  
 Access operation `f[X]` can be applied only to Field variables, and has the type of the
 Field element (in the case above `mytype`).
@@ -205,16 +208,16 @@ Because `f[X]` is of type Field element, the methods defined for the element typ
 
 Reduction:
 
-```
+~~~ C++
     mytype d = 0;
     onsites(ALL) d += f[X] - g[X+e_x];
 
     output0 << "The reduction is << d << std::endl;
-```
+~~~
 
 Other features:
 
-```
+~~~ C++
     double a = 3, b = 5;
     Field<double> f, g=0;
 
@@ -231,7 +234,7 @@ Other features:
     f[ALL] = g[X + v];             // are equivalent
 
     f[EVEN] = g[X + v];            // Cannot be done with g.shift() alone
-```
+~~~
 
 
 
@@ -270,122 +273,14 @@ In order to use the additional features for field type variables, you should inl
 
 
 
-### Compiling on Puhti
-
-There is a separate makefile for compiling hilapp on Puhti.
-To use it, run
-~~~
-module load gcc
-make -f Makefile_puhti
-~~~
-
-This will link against the llvm installation in the hila development project folder.
-
 
 ## Using the Makefile system
 
-Each of the example applications has a makefile for compiling the application with a
-given target backend. To compile it, run
-~~~ bash
-make TARGET=target program_name
-~~~
-The lower case target should be replaced by one of 'vanilla', 'AVX' or 'CUDA'. This
-will create a 'build' directory and compile the application there.
-
-An application makefile should define any target files and include the main makefile.
-Here is an example with comments:
-~~~
-# Give the location of the top level distribution directory wrt. this.
-# Can be absolute or relative
-TOP_DIR := ../..
-
-# Add an application specific header to the dependencies
-APP_HEADERS := application.h
-
-# Read in the main makefile contents, incl. platforms
-include $(TOP_DIR)/libraries/main.mk
-
-# With multiple targets we want to use "make target", not "make build/target".
-# This is needed to carry the dependencies to build-subdir
-application: build/application ; @:
-
-# Now the linking step for each target executable
-build/application: Makefile build/application.o $(HILA_OBJECTS) $(HEADERS) 
-	$(LD) -o $@ build/application.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
-~~~
 
 
 ## Syntax - What works
 
 ### Single line statements
-
-You can operate on fields using statements like
-~~~ C++
-my_field[ALL] = my_other_field[X] + my_third_field[X];
-~~~
-On the left-hand side of the statement you should specify
-either `[ALL]` lattice sites, `[EVEN]` sites or `[ODD]` sites.
-The statement will apply only to this collection of sites.
-On the right hand side, use `[X]` to refer to this collection
-of sites.
-
-You can refer to neighbouring sites by adding a Direction (`e_x`, `-e_x`, `e_y`, `-e_y`, `e_z`, `-e_z`, `e_t`, `-e_t`, ...):
-~~~ C++
-my_field[EVEN] = my_field[X+e_y];
-~~~
-
-You can also operate on fields directly,
-~~~ C++
-my_field = my_field + 1;
-~~~
-This will operate on all sites and is equivalent to 
-~~~ C++
-my_field[ALL] = my_field[X] + 1;
-~~~
-
-
-### General loops 
-Loops over all sites or a parity:
-~~~ C++
-forsites(ALL){}
-forsites(EVEN){}
-forsites(ODD){}
-~~~
-Inside the loop, refer to the sites using X:
-~~~ C++
-forsites(ALL){
-    my_field[X] = 1;
-}
-~~~
-
-As before, you can refer to neighbouring sites by adding a Direction:
-~~~ C++
-forsites(EVEN){
-    my_field[X] = my_field[X+e_y];
-}
-~~~
-
-
-
-## What doesn't work (as expected)
-
-Random numbers in a vectorized loop return the same number for every entry in a vector.
-
-
-## Testing
-
-In the `programs/test_cases` folder you can find a collection of simple test programs. To test whether the translations work on the cpu, type:
-
-~~~ bash
-./test.sh 
-~~~
-
-This tests the transform, compilation and run process for the test_*.cpp files for dimensions from 1 to 4, and outputs the exit status of each step. 
-If you're on a machine with GPU's, you can test the GPU transformations with:
-
-~~~ bash
-./test_GPU.sh
-~~~
 
 # Goals
 
