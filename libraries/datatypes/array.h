@@ -226,7 +226,7 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// Generate random elements
-    Array<n, m, T> &random() {
+    Array<n, m, T> &random() output_only {
         for (int i = 0; i < n * m; i++) {
             ::random(c[i]);
         }
@@ -234,7 +234,7 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// Generate gaussian random elements
-    inline Array<n, m, T> &gaussian() {
+    inline Array<n, m, T> &gaussian() output_only {
         for (int i = 0; i < n * m; i++) {
             ::gaussian_random(c[i]);
         }
@@ -377,15 +377,21 @@ inline number_type<T> norm_squared(const Array<n, m, T> &rhs) {
 }
 
 /// Function that calls random()-method
-template <int n, int m, typename T> inline void random(Array<n, m, T> &mat) {
+template <int n, int m, typename T> inline void random(output_only Array<n, m, T> &mat) {
     mat.random();
 }
 
 /// Function that calls the gaussian()-method
-template <int n, int m, typename T> inline void gaussian_random(Array<n, m, T> &mat) {
+template <int n, int m, typename T> inline void gaussian_random(output_only Array<n, m, T> &mat) {
     mat.gaussian();
 }
 
-template <int n, typename T> using Array1d = Array<n, 1, T>;
+/// Array1d and Array2d are just aliased to Array
+template <int n, typename T=double> 
+using Array1d = Array<n, 1, T>;
+
+template <int n, int m, typename T=double> 
+using Array2d = Array<n, m, T>;
+
 
 #endif

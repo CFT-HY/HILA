@@ -717,10 +717,9 @@ template <typename T> class Field {
     ///////////////////////////////////////////////////////////////////////
 
     // Communication routines
-    dir_mask_t start_fetch(direction d, parity p) const;
-    dir_mask_t start_fetch(direction d) const { return start_fetch(d, ALL); }
+    dir_mask_t start_fetch(direction d, parity p = ALL) const;
     void wait_fetch(direction d, parity p) const;
-    void fetch(direction d, parity p) const;
+    void fetch(direction d, parity p = ALL) const;
     void drop_comms(direction d, parity p) const;
     void cancel_comm(direction d, parity p) const;
 

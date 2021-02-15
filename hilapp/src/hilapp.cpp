@@ -76,7 +76,7 @@ llvm::cl::opt<bool> cmdline::allow_func_globals(
     "allow-func-globals",
     llvm::cl::desc(
         "Allow using global or extern variables in functions called from site loops."
-        "\nThis will not work in kernelized code (for example GPU)"),
+        "\nThis will not work in kernelized code (for example GPUs)"),
     llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool>
@@ -105,12 +105,12 @@ llvm::cl::opt<bool> cmdline::no_interleaved_comm(
     "no-interleave", llvm::cl::desc("Do not interleave communications with computation"),
     llvm::cl::cat(HilappCategory));
 
+llvm::cl::opt<bool> cmdline::check_initialization("check-init",
+    llvm::cl::desc("Insert checks that Field variables are appropriately initialized before use"),
+    llvm::cl::cat(HilappCategory));
+
 // List of targets that can be specified in command line arguments
 
-llvm::cl::opt<bool>
-    cmdline::kernel("target:vanilla-kernel",
-                    llvm::cl::desc("Generate site loop 'kernels' for vanilla code"),
-                    llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
                                      llvm::cl::desc("Generate loops in place"),

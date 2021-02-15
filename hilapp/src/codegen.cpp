@@ -90,7 +90,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     if (loop_info.parity_value == parity::none) {
         // now unknown
-        code << "const parity " << parity_name << " = " << loop_info.parity_text << ";\n";
+        code << "const parity " << parity_name << " = " << loop_info.parity_text
+             << ";\n";
 
         if (global.assert_loop_parity) {
             code << "assert( is_even_odd_parity(" << parity_name
@@ -131,7 +132,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         }
 
     // Check that read fields are initialized
-    for (field_info &l : field_info_list)
+    for (field_info &l : field_info_list) {
         if (l.is_read_nb || l.is_read_atX) {
             std::string init_par;
             if (loop_info.parity_value == parity::all ||
@@ -145,12 +146,22 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             }
 
             // TAKE THIS AWAY FOR NOW -- WE DON'T HAVE A GOOD METHOD TO CHECK "pure
-            // output" FUNCTIONS E.g. method   U[X].random(), where U does not have to be
-            // initialized
+            // output" FUNCTIONS E.g. method   U[X].random(), where U does not have to
+            // be initialized
+            // actually, we do now -- the "output_only" keyword
 
-            //  code << "assert(" << l.new_name << ".is_initialized(" << init_par <<
-            //  "));\n";
+            if (cmdline::check_initialization) {
+
+                std::string fname = srcMgr.getFilename(S->getSourceRange().getBegin());
+                code << "if (!" << l.new_name << ".is_initialized(" << init_par
+                     << ")){\noutput0 << \"File " << fname << " on line "
+                     << srcMgr.getSpellingLineNumber(S->getSourceRange().getBegin())
+                     << ":\\n Value of variable " << l.old_name
+                     << " is used but it is not properly initialized\\n\";\n";
+                code << "hila::terminate(1);\n}\n";
+            }
         }
+    }
 
     // change the f[X+offset] -references, generate code
     handle_field_plus_offsets(code, loopBuf, parity_in_this_loop);
@@ -204,7 +215,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     // Check reduction variables
     for (var_info &v : var_info_list) {
         if (v.reduction_type == reduction::SUM) {
-            code << "lattice->reduce_node_sum( &" << v.reduction_name << ", 1, true);\n";
+            code << "lattice->reduce_node_sum( &" << v.reduction_name
+                 << ", 1, true);\n";
             code << v.name << " += " << v.reduction_name << ";\n";
         } else if (v.reduction_type == reduction::PRODUCT) {
             code << "lattice->reduce_node_product( &" << v.reduction_name
@@ -245,7 +257,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 // Handle field+offset expressions -- these are copied, ref removed
 // Use iterator for looping, because we may want to remove the field_info item.
 
-void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf &loopBuf,
+void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code,
+                                                srcBuf &loopBuf,
                                                 std::string &paritystr) {
 
     for (auto it = field_info_list.begin(); it != field_info_list.end();) {
@@ -255,7 +268,6 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
             ++it;
 
         } else {
-
 
             int i_offset = 0;
             for (dir_ptr &d : it->dir_list)
@@ -282,8 +294,8 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
                     field_info_list.push_back(new_fi);
 
                     // copy the shifted var
-                    code << "const Field" + it->type_template + " " + offset_field_name +
-                                " = " + it->new_name + ".shift(" +
+                    code << "const Field" + it->type_template + " " +
+                                offset_field_name + " = " + it->new_name + ".shift(" +
                                 d.ref_list.at(0)->direxpr_s + ", " + paritystr + ");\n";
 
                     // and rewrite references to the offset field
@@ -324,7 +336,8 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf 
                         it->is_read_nb = true;
 
                 } else {
-                    // turn offset off, this ref is to the newly defined field (see above)
+                    // turn offset off, this ref is to the newly defined field (see
+                    // above)
                     fr->is_offset = false;
                 }
             }
@@ -392,9 +405,9 @@ std::string TopLevelVisitor::backend_generate_code(Stmt *S, bool semicolon_at_en
  */
 /*
 std::string TopLevelVisitor::generate_loop_header(Stmt *S, codetype & target, bool
-semicolon_at_end) { srcBuf loopBuf; loopBuf.copy_from_range(writeBuf,S->getSourceRange());
-  std::vector<std::string> va = {}, vb = {};
-  int i=0;
+semicolon_at_end) { srcBuf loopBuf;
+loopBuf.copy_from_range(writeBuf,S->getSourceRange()); std::vector<std::string> va = {},
+vb = {}; int i=0;
 
   // Replace loop references with temporary variables
   // and add calls to mark_changed() and start_fetch()

@@ -13,7 +13,7 @@
 #define MUL_SUM(a, b, c) c += a * b
 //#define MUL_SUM(a, b, c) c = mul_add(a, b, c)
 
-template <const int n, const int m, typename T> class Array;
+template <const int n, const int m, typename T=double> class Array;
 
 ////////////////////////////////////////////////////////////////
 /// The main nxm matrix type template
@@ -271,7 +271,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// numpy style matrix fill
     template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
-    Matrix<n, m, T> &fill(const S rhs) {
+    Matrix<n, m, T> &fill(const S rhs) output_only {
         for (int i = 0; i < n * m; i++)
             c[i] = rhs;
         return *this;
@@ -369,7 +369,7 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// Generate random elements
-    Matrix<n, m, T> &random() {
+    Matrix<n, m, T> &random() output_only {
         for (int i = 0; i < n * m; i++) {
             ::random(c[i]);
         }
@@ -377,7 +377,7 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// Generate gaussian random elements
-    inline Matrix<n, m, T> &gaussian() {
+    inline Matrix<n, m, T> &gaussian() output_only {
         for (int i = 0; i < n * m; i++) {
             ::gaussian_random(c[i]);
         }
@@ -637,12 +637,12 @@ inline number_type<T> norm_squared(const Matrix<n, m, T> &rhs) {
 }
 
 /// Function that calls random()-method
-template <int n, int m, typename T> inline void random(Matrix<n, m, T> &mat) {
+template <int n, int m, typename T> inline void random(output_only Matrix<n, m, T> &mat) {
     mat.random();
 }
 
 /// Function that calls the gaussian()-method
-template <int n, int m, typename T> inline void gaussian_random(Matrix<n, m, T> &mat) {
+template <int n, int m, typename T> inline void gaussian_random(output_only Matrix<n, m, T> &mat) {
     mat.gaussian();
 }
 

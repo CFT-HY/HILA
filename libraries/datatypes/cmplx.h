@@ -121,13 +121,13 @@ template <typename T = double> struct Complex {
         return Complex<T>({r * cos(theta), r * sin(theta)});
     }
 
-    inline Complex<T> &random() {
+    inline Complex<T> &random() output_only {
         re = hila::random();
         im = hila::random();
         return *this;
     }
 
-    inline Complex<T> &gaussian() {
+    inline Complex<T> &gaussian() output_only {
         re = hila::gaussian_ran2(im);
         return *this;
     }
