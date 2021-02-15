@@ -182,8 +182,8 @@ special location identifier `X` (effectively a new keyword).
 ~~~
 
 `X` can be used only inside site loops.  
-Access operation `f[X]` can be applied only to Field variables, and has the type of the
-Field element (in the case above `mytype`).
+Access operation `f[X]` can be applied only to field variables, and has the type of the
+field element (in the case above `mytype`).
 
 `X` has methods:
 
@@ -196,13 +196,13 @@ Field element (in the case above `mytype`).
 
 The assignment `f[ALL] = 2 + g[X];` can also be done with `f = 2 + g`.
 The main difference is in sequencing: the first form goes through the lattice sites in one *site loop*,
-whereas the second stores the result of 2 + g to a temporary Field variable which is copied to f (in this case
+whereas the second stores the result of 2 + g to a temporary field variable which is copied to f (in this case
 std::moved).  The site loop form is faster since it minimizes temporaries and memory accesses.  
 
-Because `f[X]` is of type Field element, the methods defined for the element type can be used.  
+Because `f[X]` is of type field element, the methods defined for the element type can be used.  
 `f[X].dagger()` is ok, `f.dagger()` is not.
 
-`f[X]` also serves as a visual identifier for a Field variable access.
+`f[X]` also serves as a visual identifier for a field variable access.
 
 Reduction:
 
@@ -221,9 +221,9 @@ Other features:
 
     onsites(ALL) {
         f[X] = (a + b);            // ok, loop extern variables a,b do not change within the loop
-        b = f[X];                  // ERROR: cannot change a loop extern non-Field variable (except reductions)
+        b = f[X];                  // ERROR: cannot change a loop extern non-field variable (except reductions)
         double c = sin(f[X]);      // ok, variable c defined within the loop
-        f[X] = c + g;              // ERROR: using Field variable g without [X]
+        f[X] = c + g;              // ERROR: using field variable g without [X]
     }
 
     CoordinateVector v = {0,1,1,0};
