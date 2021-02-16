@@ -1,4 +1,5 @@
 #include "hila.h"
+#include "fft_new.h"
 
 // define an alias for a 3x3 complex matrix
 using Mtype = SquareMatrix<3,Complex<double>>;
@@ -97,11 +98,11 @@ int main(int argc, char **argv) {
     output0 << f[{0,0,0}] << '\n';
 
 
-    // t = hila::gettime();
+    t = hila::gettime();
 
-    // FFT_field(f, g);
+    FFT_field(f, g);
 
-    // output0 << "FFT time " << hila::gettime() - t << '\n';
+    output0 << "FFT time " << hila::gettime() - t << '\n';
 
 
     hila::finishrun();

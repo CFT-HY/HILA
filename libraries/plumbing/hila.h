@@ -5,11 +5,11 @@
 /// Catch-(almost)all include to get in most of the hila-system .h -files
 
 #include "plumbing/defs.h"
+#include "datatypes/cmplx.h"
+#include "datatypes/matrix.h"
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
-#include "datatypes/cmplx.h"
-#include "datatypes/matrix.h"
 #include "plumbing/input.h"
 
 
