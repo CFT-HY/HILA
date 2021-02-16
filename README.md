@@ -271,7 +271,7 @@ It matches key-value pairs from input files.  As an example, if the file `parame
     labels        setA, setB, setC
 ```
 
-it can be read (mostly) using method get("key"):
+it can be read (mostly) using the method `input::get(std::string key)`:
 
 ~~~ C++
 #include "hila.h"
@@ -280,7 +280,8 @@ int main(int argc, char * argv[]) {
 
     hila::initialize(argc,argv);
 
-    // open file parameters.dat after hila::initialize
+    // open file after hila::initialize
+    // here to variable p
     hila::input p("parameters.dat");
 
     CoordinateVector lsize = p.get("lattice size");
@@ -316,14 +317,15 @@ int main(int argc, char * argv[]) {
 
 ~~~
 
-- The method `p.get()` above deduces the type to be read in from the expected return value.
-  The order is fixed, the items (lines) cannot be swapped (TODO: should this be allowed?).
-  If an error occurs, program exits with an error message.
+- The method `input::get()` above deduces the type to be 
+  read in from the expected return value.  The order is fixed, the items (lines)
+  cannot be swapped (TODO: should this be allowed?).
+  If an error occurs (wrong keys or values), program exits with an error message.
 
-- Because the order is fixed, the keys don't carry information for the program.  However, they
+- Because the order is fixed, the keys don't really carry information for the program.  However, they
   help to ensure that the values are as intended.
 
-- Input method `get()` broadcasts the read-in values to all nodes.  They have to be called by
+- The method `input::get()` broadcasts the values to all nodes.  They have to be called by
   all nodes simultaneously.
 
 - Method `input::get_value()` has more options for synchronization and error returns.  See 
@@ -335,7 +337,7 @@ The input files and the lattice layout can be checked with the
 commands (after the application program has been built)
 ~~~ bash
    <hila-program-name> check
-   <hila-program-name> check=<number-of-nodes>         # without spaces
+   <hila-program-name> check=<number-of-nodes>        # without spaces
 ~~~
 This runs the program without initializing MPI, Cuda or other hardware features and
 exits at `lattice->setup()` before any large memory allocations are made.  If the 
@@ -343,7 +345,6 @@ number-of-nodes argument is given, program reports how the node layout is done.
 
 Example: if you built the `hila_example` program above, in directory `hila/applications/hila_example`
 the command `build/hila_example check=32` checks the input file and the layout to 32 nodes.
-
 
 
 
