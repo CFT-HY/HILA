@@ -117,6 +117,7 @@ class cmdlineargs {
         }
         output0 << "Recognized:\n";
         output0 << "  timelimit=<seconds> : cpu time limit\n";
+        output0 << "  check\n";
         output0 << "  check=<nodes>       : check input & layout with <nodes>-nodes & "
                    "exit\n";
         output0 << "  output=<name>       : name of output file (default: stdout)\n";
@@ -163,8 +164,13 @@ void hila::initialize(int argc, char **argv) {
     {
         cmdlineargs commandline(argc, argv);
         long nodes = commandline.get_int("check=");
+        if (nodes == LONG_MAX && commandline.get_cstring("check") != nullptr) {
+            // here check without arg
+            nodes = 1;
+        }
         if (nodes != LONG_MAX) {
             hila::check_input = true;
+            if (nodes <= 0) nodes = 1;
             hila::check_with_nodes = nodes;
             hila::output << "****** INPUT AND LAYOUT CHECK ******\n";
         }
@@ -243,6 +249,7 @@ void hila::initialize(int argc, char **argv) {
 
     // re-read the check= -option, to clean up
     commandline.get_int("check=");
+    commandline.get_cstring("check");
 
     // error out if there are more cmdline options
     commandline.error_if_args_remain();

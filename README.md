@@ -251,6 +251,104 @@ Access field at a single point: `f[CoordinateVector]`.  This can be used only ou
 ~~~
 
 
+## Input library
+
+Class hila::input can be used to read parameters and other data for simulation programs.
+It matches key-value pairs from input files.  As an example, if the file `parameters.dat` contains
+
+```
+    # this is a comment
+    # Run parameters for run XYZ
+
+    lattice size  64, 64, 64, 128
+    beta          5.4
+    clover        perturbative
+
+    loops         25000
+    seed          3474212
+
+    coefficients    0.5, 0.7, 0.85, 1.3, 1.6, 2
+    labels        setA, setB, setC
+```
+
+it can be read (mostly) using method get("key"):
+
+~~~ C++
+#include "hila.h"
+
+int main(int argc, char * argv[]) {
+
+    hila::initialize(argc,argv);
+
+    // open file parameters.dat after hila::initialize
+    hila::input p("parameters.dat");
+
+    CoordinateVector lsize = p.get("lattice size");
+    double beta            = p.get("beta");
+
+    // Calling get_item() as below means that allowed values for 
+    // "clover" are:  "tree", "perturbative", or a float/double value.
+    // Return value is 0, 1, 2 respectively.
+    int i = p.get_item("clover",{"tree","perturbative","%f"});
+    double clover;
+    if (i == 0) 
+        clover = 1;
+    else if (i == 1) 
+        clover = <perturbative expression>;
+    else 
+        clover = p.get();  // the number is read here without key argument
+
+    int loops       = p.get("loops");
+    long rng_seed   = p.get("seed");
+
+    // reading a std::vector<> reads in comma-separated values
+    // this reads in a vector of 6 doubles
+    std::vector<double> run_coefficients = p.get("coefficients");
+
+    // and this a vector of 3 strings
+    std::vector<std::string> labels      = p.get("labels");
+
+    // Close the file. File is also closed when p gets out of scope
+    p.close();   
+
+    // lattice setup is convenient to do after parameters have been read
+    lattice->setup(lsize);
+
+~~~
+
+- The method `p.get()` above deduces the type to be read in from the expected return value.
+  The order is fixed, the items (lines) cannot be swapped (TODO: should this be allowed?).
+  If an error occurs, program exits with an error message.
+
+- Because the order is fixed, the keys don't carry information for the program.  However, they
+  help to ensure that the values are as intended.
+
+- Input method `get()` broadcasts the read-in values to all nodes.  They have to be called by
+  all nodes simultaneously.
+
+- Method `input::get_value()` has more options for synchronization and error returns.  See 
+  documentation in `input.h`
+
+## Check input and layout
+
+The input files and the lattice layout can be checked with the 
+commands (after the application program has been built)
+~~~ bash
+   <hila-program-name> check
+   <hila-program-name> check=<number-of-nodes>         # without spaces
+~~~
+This runs the program without initializing MPI, Cuda or other hardware features and
+exits at `lattice->setup()` before any large memory allocations are made.  If the 
+number-of-nodes argument is given, program reports how the node layout is done.
+
+Example: if you built the `hila_example` program above, in directory `hila/applications/hila_example`
+the command `build/hila_example check=32` checks the input file and the layout to 32 nodes.
+
+
+
+
+
+
 # Instructions
 
 ## Generating documentation
