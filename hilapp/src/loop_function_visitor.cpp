@@ -352,8 +352,7 @@ class loopFunctionVisitor : public GeneralVisitor,
             }
 
         } else {
-            if (name == "hila::random") {
-
+            if (Call->getDirectCallee()->getQualifiedNameAsString() == "hila::random") {
                 // no need to do anything (yet)
 
                 // special_function_call sfc;

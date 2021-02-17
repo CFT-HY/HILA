@@ -583,7 +583,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
         }
 
     } else {
-        if (name == "hila::random") {
+        if (Call->getDirectCallee()->getQualifiedNameAsString() == "hila::random") {
             // llvm::errs() << get_stmt_str(Call) << '\n';
             special_function_call sfc;
             sfc.fullExpr = Call;
