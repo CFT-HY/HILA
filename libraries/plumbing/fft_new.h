@@ -7,6 +7,7 @@
 #include "plumbing/field.h"
 #include "plumbing/timing.h"
 
+
 /// Initialize fft to Direction dir.  _elements: number of complex values in
 /// field, T_size the size of the field variable.  fftdir is
 /// fft_direction::FORWARD or fft

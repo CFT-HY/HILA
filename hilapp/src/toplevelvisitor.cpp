@@ -1057,6 +1057,7 @@ void TopLevelVisitor::check_var_info_list() {
                         j++;
                     }
                 }
+
             } else if (vi.is_assigned) {
                 // now not reduction
                 for (auto &vr : vi.refs) {
@@ -1065,6 +1066,15 @@ void TopLevelVisitor::check_var_info_list() {
                                    vr.ref->getSourceRange().getBegin(),
                                    "Cannot assign to variable defined outside site loop "
                                    "(unless reduction \'+=\' or \'*=\')");
+                }
+
+            } else if (vi.is_special_reduction_type) {
+                // Use Reduction<> -type vars only as reductions 
+                for (auto &vr : vi.refs) {
+                    reportDiag(DiagnosticsEngine::Level::Error,
+                                   vr.ref->getSourceRange().getBegin(),
+                                   "Reduction variables can be used only as reductions "
+                                   "(on the lhs of \'+=\' or \'*=\')");
                 }
             }
         }

@@ -248,6 +248,7 @@ struct var_info {
     bool is_loop_local;         // true if defined inside loop
     bool is_assigned;           // is the var assigned to
     bool is_site_dependent;     // is the value of variable site dependent
+    bool is_special_reduction_type;     // is variable defined with Reduction<T>
 };
 
 /// Stores onformation for a single reference to an array

@@ -344,11 +344,11 @@ constexpr Complex<double> operator""_i(unsigned long long a) {
     return Complex<double>(0.0, static_cast<double>(a));
 }
 
-template <typename T> std::ostream &operator<<(std::ostream &strm, const Complex<T> A) {
+template <typename T> std::ostream &operator<<(std::ostream &strm, const Complex<T> & A) {
     return strm << "(" << A.re << ", " << A.im << ")";
 }
 
-template <typename Accuracy> inline Complex<Accuracy> conj(Complex<Accuracy> val) {
+template <typename T> inline Complex<T> conj(const Complex<T> & val) {
     return val.conj();
 }
 

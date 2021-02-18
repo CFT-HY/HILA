@@ -5,7 +5,9 @@
 #include "plumbing/fft_new.h"
 #include "fftw3.h"
 
+#ifdef USE_MPI
 #include <mpi.h>
+#endif
 
 // just some values here
 #define WRK_GATHER_TAG 42
@@ -31,7 +33,9 @@ struct fftnode_struct {
     char *work_in;     // where to hang the fft collect buffers
     char *work_out;
 
+#ifdef USE_MPI
     MPI_Request send_request, receive_request;
+#endif
 };
 
 static Direction fft_dir;
@@ -248,6 +252,8 @@ template <> void fft_execute<Complex<float>>() {
 
 void fft_post_gather() {
 
+#ifdef USE_MPI
+
     fft_MPI_timer.start();
     for (auto &fn : fft_comms[fft_dir]) {
         if (fn.node != hila::myrank()) {
@@ -271,9 +277,14 @@ void fft_post_gather() {
         }
     }
     fft_MPI_timer.stop();
+
+#endif
+
 }
 
 void fft_start_gather(void *buffer) {
+
+#ifdef USE_MPI
 
     fft_MPI_timer.start();
     for (auto &fn : fft_comms[fft_dir])
@@ -293,10 +304,14 @@ void fft_start_gather(void *buffer) {
         }
 
     fft_MPI_timer.stop();
+
+#endif
+
 }
 
 void fft_wait_send() {
 
+#ifdef USE_MPI
     fft_MPI_timer.start();
 
     size_t n = fft_comms[fft_dir].size() - 1;
@@ -312,10 +327,11 @@ void fft_wait_send() {
     }
 
     fft_MPI_timer.stop();
+#endif
 }
 
 void fft_wait_receive() {
-
+#ifdef USE_MPI
     fft_MPI_timer.start();
 
     int n = fft_comms[fft_dir].size() - 1;
@@ -331,11 +347,13 @@ void fft_wait_receive() {
     }
 
     fft_MPI_timer.stop();
+#endif
 }
 
 // inverse of start_gather
 void fft_post_scatter(void *buffer) {
 
+#ifdef USE_MPI
     fft_MPI_timer.start();
     for (auto &fn : fft_comms[fft_dir])
         if (fn.node != hila::myrank()) {
@@ -350,11 +368,13 @@ void fft_post_scatter(void *buffer) {
                       &fn.receive_request);
         }
     fft_MPI_timer.stop();
+#endif
 }
 
 // inverse of post_gather
 void fft_start_scatter() {
 
+#ifdef USE_MPI
     fft_MPI_timer.start();
 
     for (auto &fn : fft_comms[fft_dir])
@@ -369,6 +389,7 @@ void fft_start_scatter() {
         }
 
     fft_MPI_timer.stop();
+#endif
 }
 
 // free the work buffers

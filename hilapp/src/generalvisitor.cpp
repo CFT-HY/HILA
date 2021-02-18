@@ -436,10 +436,11 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
     vi.decl = decl;
     vi.name = decl->getName().str();
     // Printing policy is somehow needed for printing type without "class" id
-    // Unqualified takes away "consts" etc and Canonical typdefs/using.
+    // Unqualified takes away "consts" and namespaces etc. and Canonical typdefs/using.
     // Also need special handling for element type
-    clang::QualType type = decl->getType().getUnqualifiedType().getNonReferenceType();
+    clang::QualType type = decl->getType().getUnqualifiedType().getCanonicalType().getNonReferenceType();
     type.removeLocalConst();
+
     vi.type = type.getAsString(PP);
     vi.type = remove_all_whitespace(vi.type);
     bool is_elem = (vi.type.find("element<") == 0);
@@ -459,6 +460,14 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
     }
     vi.is_site_dependent = false; // default case
     vi.reduction_type = reduction::NONE;
+
+    vi.is_special_reduction_type = (vi.type.find("Reduction<") == 0);
+    if (vi.is_special_reduction_type) {
+        // The signature of the type is Reduction< ... , void>.
+        // Remove until last ,
+
+        vi.type = vi.type.substr(10,vi.type.rfind(',')-10);
+    }
 
     vi.dependent_vars.clear();
 

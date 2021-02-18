@@ -10,8 +10,12 @@
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
+#include "plumbing/reduction.h"
+#include "plumbing/arrayreduction.h"
 #include "plumbing/input.h"
 
-
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
 
 #endif

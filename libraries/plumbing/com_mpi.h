@@ -7,9 +7,10 @@
 
 #include "plumbing/lattice.h"
 
-extern hila::timer start_send_timer, wait_send_timer, post_receive_timer, wait_receive_timer,
-    synchronize_timer, reduction_timer, broadcast_timer, send_timer, cancel_send_timer,
-    cancel_receive_timer, sublattice_sync_timer;
+extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
+    wait_receive_timer, synchronize_timer, reduction_timer, reduction_wait_timer,
+    broadcast_timer, send_timer, cancel_send_timer, cancel_receive_timer,
+    sublattice_sync_timer;
 
 ///***********************************************************
 /// Implementations of communication routines.
@@ -18,7 +19,8 @@ extern hila::timer start_send_timer, wait_send_timer, post_receive_timer, wait_r
 /// Broadcast template for standard type
 template <typename T> void broadcast(T &var) {
     static_assert(std::is_trivial<T>::value, "broadcast(var) must use trivial type");
-    if (hila::check_input) return;
+    if (hila::check_input)
+        return;
 
     broadcast_timer.start();
     MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
@@ -28,9 +30,11 @@ template <typename T> void broadcast(T &var) {
 /// Broadcast for std::vector
 template <typename T> void broadcast(std::vector<T> &list) {
 
-    static_assert(std::is_trivial<T>::value, "broadcast(vector<T>) must have trivial T");
+    static_assert(std::is_trivial<T>::value,
+                  "broadcast(vector<T>) must have trivial T");
 
-    if (hila::check_input) return;
+    if (hila::check_input)
+        return;
 
     broadcast_timer.start();
 
@@ -41,7 +45,8 @@ template <typename T> void broadcast(std::vector<T> &list) {
     }
 
     // move vectors directly to the storage
-    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, 0, lattice->mpi_comm_lat);
+    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, 0,
+              lattice->mpi_comm_lat);
 
     broadcast_timer.stop();
 }
@@ -53,7 +58,8 @@ template <typename T> void broadcast(T *var) {
 /// Broadcast for arrays where size must be known and same for all nodes
 template <typename T> void broadcast_array(T *var, int n) {
 
-    if (hila::check_input) return;
+    if (hila::check_input)
+        return;
 
     broadcast_timer.start();
     MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, 0, lattice->mpi_comm_lat);
@@ -65,16 +71,16 @@ void broadcast(std::string &r);
 void broadcast(std::vector<std::string> &l);
 
 /// and broadcast with two values
-template <typename T, typename U>
-void broadcast(T & t, U & u) {
+template <typename T, typename U> void broadcast(T &t, U &u) {
 
-    if (hila::check_input) return;
+    if (hila::check_input)
+        return;
 
-    struct { 
-        T tv; 
+    struct {
+        T tv;
         U uv;
-    } s = {t,u};
-    
+    } s = {t, u};
+
     broadcast(s);
     t = s.tv;
     u = s.uv;
@@ -96,7 +102,11 @@ template <typename T> MPI_Datatype get_MPI_number_type(int &size) {
     } else if (std::is_same<number_type<T>, double>::value) {
         size = sizeof(double);
         return MPI_DOUBLE;
+    } else if (std::is_same<number_type<T>, long double>::value) {
+        size = sizeof(long double);
+        return MPI_LONG_DOUBLE;
     }
+
     size = 1;
     return MPI_BYTE;
 }
@@ -121,8 +131,9 @@ void lattice_struct::reduce_node_sum(T *value, int N, bool distribute) {
 
     reduction_timer.start();
     if (distribute) {
-        MPI_Allreduce((void *)value, (void *)work, N * sizeof(T) / sizeof(number_type<T>),
-                      dtype, MPI_SUM, lattice->mpi_comm_lat);
+        MPI_Allreduce((void *)value, (void *)work,
+                      N * sizeof(T) / sizeof(number_type<T>), dtype, MPI_SUM,
+                      lattice->mpi_comm_lat);
         for (int i = 0; i < N; i++)
             value[i] = work[i];
     } else {

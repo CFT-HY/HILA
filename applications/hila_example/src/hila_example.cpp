@@ -40,6 +40,20 @@ int main(int argc, char **argv) {
     // We need random number here
     hila::seed_random(seed);
 
+    std::vector<double> a(10);
+
+    Field<double> d;
+    onsites(ALL) d[X] = X.coordinate(e_y);
+
+    Reduction<Vector<3,double>> r(0);
+    r.allreduce(false);
+
+    onsites(ALL) {
+        r += d[X];
+    }
+
+    hila::output << " Node " << hila::myrank() << " reduction value " << r <<  '\n';
+
 
     // 2 matrix fields
     Field<Mtype> f, g;

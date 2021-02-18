@@ -13,8 +13,9 @@
 hila::timer start_send_timer("MPI start send"), wait_send_timer("MPI wait send"),
     post_receive_timer("MPI post receive"), wait_receive_timer("MPI wait receive"),
     synchronize_timer("MPI synchronize"), reduction_timer("MPI reduction"),
-    broadcast_timer("MPI broadcast"), send_timer("MPI send field"),
-    cancel_send_timer("MPI cancel send"), cancel_receive_timer("MPI cancel receive"),
+    reduction_wait_timer("MPI reduction wait"), broadcast_timer("MPI broadcast"),
+    send_timer("MPI send field"), cancel_send_timer("MPI cancel send"),
+    cancel_receive_timer("MPI cancel receive"),
     sublattice_sync_timer("sublattice sync");
 
 /* Keep track of whether MPI has been initialized */
