@@ -352,7 +352,7 @@ template <typename T> inline Complex<T> conj(const Complex<T> & val) {
     return val.conj();
 }
 
-template <typename T> inline auto norm_squared(Complex<T> val) { return val.norm_sq(); }
+template <typename T> inline auto norm_squared(const Complex<T> & val) { return val.norm_sq(); }
 
 template <typename T> inline void random(Complex<T> &c) {
     ::random(c.re);

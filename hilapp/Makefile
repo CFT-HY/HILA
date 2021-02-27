@@ -167,6 +167,7 @@ OBJECTS = \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site.o \
   $(BUILDDIR)/contains_random.o \
+  $(BUILDDIR)/contains_loop_local_var.o \
   $(BUILDDIR)/function_contains_loop_checker.o \
   $(BUILDDIR)/addrof_and_ref_checker.o \
   $(BUILDDIR)/optionsparser.o \

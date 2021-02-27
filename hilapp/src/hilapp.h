@@ -111,15 +111,15 @@ struct field_ref {
     Expr *fullExpr;   // full expression a[X+d]
     Expr *nameExpr;   // name "a"
     Expr *parityExpr; // expr within [], here "X+d" or "X+e_x+e_y"
-    // Expr * dirExpr;               // expr of the directon -- non-null only for nn-dirs!
-    // NOT VERY USEFUL
+    // Expr * dirExpr;               // expr of the directon -- non-null only for
+    // nn-dirs! NOT VERY USEFUL
     std::string direxpr_s;   // original dir expr: "d" or "e_x+e_y" etc.
     struct field_info *info; // ptr to field info struct
     // unsigned nameInd, parityInd;
     int sequence; // sequence of the full stmt where ref appears
     bool is_written, is_read;
-    bool is_direction; // true if ref contains nn OR offset Direction - used as a general
-                       // flag
+    bool is_direction; // true if ref contains nn OR offset Direction - used as a
+                       // general flag
     bool is_constant_direction; // true if dir is const. e_x etc.
     bool is_offset;             // true if dir is for offset instead of simple Direction
     unsigned constant_value;
@@ -242,14 +242,30 @@ struct var_info {
     VarDecl *decl;              // declaration of this var
     std::string reduction_name; // name of reduction variable
     std::vector<var_info *>
-        dependent_vars;         // vector of var_infos which may affect is_site_dependent
-    reduction reduction_type;   // what type of reduction
-    vectorization_info vecinfo; // info about vectorization
-    bool is_loop_local;         // true if defined inside loop
-    bool is_assigned;           // is the var assigned to
-    bool is_site_dependent;     // is the value of variable site dependent
-    bool is_special_reduction_type;     // is variable defined with Reduction<T>
+        dependent_vars;       // vector of var_infos which may affect is_site_dependent
+    reduction reduction_type; // what type of reduction
+    vectorization_info vecinfo;     // info about vectorization
+    bool is_loop_local;             // true if defined inside loop
+    bool is_assigned;               // is the var assigned to
+    bool is_site_dependent;         // is the value of variable site dependent
+    bool is_special_reduction_type; // is variable defined with Reduction<T>
+
+    var_info() {
+        is_loop_local = is_assigned = is_site_dependent = is_special_reduction_type = false;
+        decl = nullptr;
+        reduction_type = reduction::NONE;
+    }
 };
+
+/// Store non-var code sections which can be replaced.  These happen thus far pretty much
+/// only with array references
+
+struct replace_expr {
+    Expr * E;                  // expression to be replaced
+    std::string type;          // type of expression
+    std::string repl_name;     // name of the replace 
+
+}
 
 /// Stores onformation for a single reference to an array
 /// These are similar to variable references, but often
@@ -300,14 +316,14 @@ struct loop_info_struct {
     bool has_pragma_novector;
     bool has_pragma_access;
     const char *pragma_access_args;
-    bool has_site_dependent_conditional; // if, for, while w. site dep. cond?
-    bool contains_random;                // does it contain rng (also in loop functions)?
+    bool has_site_dependent_cond_or_index; // if, for, while w. site dep. cond?
+    bool contains_random;          // does it contain rng (also in loop functions)?
     std::vector<var_info *> conditional_vars; // may depend on variables
     Expr *condExpr;
 
     inline void
     clear_except_external() { // do not remove parity values, may be set in loop init
-        has_site_dependent_conditional = contains_random = false;
+        has_site_dependent_cond_or_index = contains_random = false;
         conditional_vars.clear();
         condExpr = nullptr;
     }

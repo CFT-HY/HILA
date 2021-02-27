@@ -232,9 +232,9 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
 
     } else {
 
-        if (loop_info.has_site_dependent_conditional) {
+        if (loop_info.has_site_dependent_cond_or_index) {
             is_vectorizable = false;
-            reason.push_back("it contains site dependent conditional");
+            reason.push_back("it contains site dependent conditional or array index");
         }
 
         if (contains_random(S)) {
