@@ -257,23 +257,22 @@ struct var_info {
     }
 };
 
-/// Store non-var code sections which can be replaced.  These happen thus far pretty much
-/// only with array references
 
-struct replace_expr {
-    Expr * E;                  // expression to be replaced
-    std::string type;          // type of expression
-    std::string repl_name;     // name of the replace 
-
-}
-
-/// Stores onformation for a single reference to an array
+/// Stores information for a single reference to an loop-extern array or related variable
 /// These are similar to variable references, but often
 /// need to be handled differently
 struct array_ref {
-    ArraySubscriptExpr *ref;
-    std::string new_name;
+    Expr *E;                   // the whole expression
+    ArraySubscriptExpr *ref;   // as type says
+    std::string new_name;      
     std::string type;
+    bool replace_expr_with_var;   // if true replace the whole expression with variable
+
+    array_ref() {
+        E = nullptr;
+        ref = nullptr;
+        replace_expr_with_var = false;
+    }
 };
 
 /// store necessary information for vector reductions
@@ -439,6 +438,5 @@ extern std::list<field_info> field_info_list;
 extern std::list<array_ref> array_ref_list;
 extern std::list<vector_reduction_ref> vector_reduction_ref_list;
 extern std::list<special_function_call> special_function_call_list;
-extern std::vector<Expr *> remove_expr_list;
 
 #endif

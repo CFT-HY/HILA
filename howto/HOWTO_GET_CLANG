@@ -45,10 +45,10 @@ git clone https://github.com/llvm/llvm-project.git
 cd llvm-project
 mkdir build
 cd build
-cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release ../llvm
-make -j4
+cmake -G "Unix Makefiles" -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/install/dir ../llvm
+make -j4        # compiles everything
+make install    # installs to /install/dir, default /usr/local
 
-* This leaves binaries in llvm-project/build/bin -directory. 
 * Build types are Release, MinSizeRel, Debug, RelWithDebInfo
 
 

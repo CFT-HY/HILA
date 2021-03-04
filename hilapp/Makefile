@@ -99,10 +99,11 @@ endif
 # These are required when compiling vs. a source distribution of Clang. For
 # binary distributions llvm-config --cxxflags gives the right path.
 #
-#CLANG_INCLUDES := \
+# CLANG_INCLUDES := \
 #	-I$(LLVM_SRC_PATH)/include \
-#	-I$(LLVM_SRC_PATH)/tools/clang/include \
-#	-I$(LLVM_BUILD_PATH)/tools/clang/include
+#	-I$(LLVM_BUILD_PATH)/tools/clang/include \
+#	-I$(LLVM_SRC_PATH)/tools/clang/include 
+
 
 
 # List of Clang libraries to link. The proper -L will be provided by the

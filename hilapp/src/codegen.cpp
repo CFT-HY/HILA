@@ -152,7 +152,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
             if (cmdline::check_initialization) {
 
-                std::string fname = srcMgr.getFilename(S->getSourceRange().getBegin());
+                std::string fname = srcMgr.getFilename(S->getSourceRange().getBegin()).str();
                 code << "if (!" << l.new_name << ".is_initialized(" << init_par
                      << ")){\noutput0 << \"File " << fname << " on line "
                      << srcMgr.getSpellingLineNumber(S->getSourceRange().getBegin())

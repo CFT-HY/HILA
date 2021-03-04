@@ -40,7 +40,6 @@ std::list<field_info> field_info_list = {};
 std::list<array_ref> array_ref_list = {};
 std::list<vector_reduction_ref> vector_reduction_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
-std::vector<Expr *> remove_expr_list = {};
 
 bool state::compile_errors_occurred = false;
 

@@ -2,7 +2,6 @@
 #include "hilapp.h"
 #include "toplevelvisitor.h"
 #include "specialization_db.h"
-#include "clang/Analysis/CallGraph.h"
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -230,9 +229,17 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
             }
 
             Expr *dirE = Op->getArg(1)->IgnoreImplicit();
-            llvm::APSInt result;
-            if (dirE->isIntegerConstantExpr(result, *Context)) {
-                // Got constant
+            if (dirE->isIntegerConstantExpr(*Context)) {
+                llvm::APSInt result;
+
+                // Got constant -- interface changes in clang 12 or 13(!)
+#if defined(__clang_major__) && (__clang_major__ <= 11)
+                dirE->isIntegerConstantExpr(result,*Context);
+#else
+                auto res = dirE->getIntegerConstantExpr(*Context);
+                result = res.getValue();
+#endif
+
                 lfe.is_constant_direction = true;
                 lfe.constant_value = result.getExtValue();
                 // llvm::errs() << " GOT DIR CONST, value " << lfe.constant_value << "
@@ -322,16 +329,16 @@ bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
     return false;
 }
 
-/// handle an array subscript expression
-/// Check if array itself is loop extern or intern
-///  -> if intern, nothing special needs to be done
-///  -> if extern, check index:
-///     -> if site dep, mark loop_info.has_site_dep_cond_or_index
-///     -> if contains loop local var ref || site dep:
-///          -> whole array is input to loop: need to know array size
-///               If size not knowable, flag error
-///     -> if !site dep and !loop local:
-///          -> it is sufficient to read in this array element only,
+/// handle an array subscript expression.  Operations depend
+/// on whether the array is defined loop extern or intern:
+///  - if intern, nothing special needs to be done
+///  - if extern, check index:
+///     - if site dependent, mark loop_info.has_site_dep_cond_or_index
+///     - if contains loop local var ref or is site dependent:
+///       whole array is input to loop: need to know array size.
+///       If size not knowable, flag error
+///     - If index is not site dependent or loop local:
+///          -  it is sufficient to read in this array element only,
 ///             and remove var references to variables in index
 ///
 int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
@@ -346,10 +353,12 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
         return 0;
     }
 
-    // Check if it's local
-    VarDecl *decl = dyn_cast<VarDecl>(DRE->getDecl());
+    llvm::errs() << " %% Inside array reference\n";
 
-    if (is_variable_loop_local(decl)) {
+    // Check if it's local
+    VarDecl *vd = dyn_cast<VarDecl>(DRE->getDecl());
+
+    if (is_variable_loop_local(vd)) {
         // if array is declared within the loop, nothing special needs to
         // be done.  Let us anyway put it through the std handler in order to
         // flag it.
@@ -382,27 +391,43 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
         // Note: multiple refrences are not checked, thus, same element can be
         // referred more than once.  TODO? (small optimization)
 
-        // misusing the var_info_list here
-        var_info vi;
+        // use the array_ref_list to note this
+        array_ref ar;
+        ar.replace_expr_with_var = true;
+        ar.E = E;
+        array_ref_list.push_back(ar);
 
+        llvm::errs() << " %%% found fully extern array reference\n";
 
+        parsing_state.skip_children = 1; // no need to look inside the replacement
+                                         // variable refs inside should not be recorded
+        return 1;
     }
-    if (!site_dep) {
-        bool index_local = contains_loop_local_var(E->getIdx(), nullptr);
 
-        if (!index)
-    }
+    // Now there is site dep/loop local stuff in index.  Whole array has to be taken
+    // "in".
 
-    if (!)
-        DRE = dyn_cast<DeclRefExpr>(E->getIdx()->IgnoreImplicit());
-    if (DRE) {
-        decl = dyn_cast<VarDecl>(DRE->getDecl());
-        index_local = is_variable_loop_local(decl);
+    const ConstantArrayType *cat = Context->getAsConstantArrayType(vd->getType());
+    if (cat) {
+        llvm::errs() << " %%% Found constant array type expr, size " << cat->getSize()
+                     << "\n";
+
     } else {
-        // This happens when the index is not a variable.
-        // It's probably a compile time constant
-        index_local = true;
+        const VariableArrayType *vat = Context->getAsVariableArrayType(vd->getType());
+        if (vat) {
+            llvm::errs() << " %%% Found variable array type expr, size "
+                         << get_stmt_str(vat->getSizeExpr()) << "\n";
+        } else {
+
+            // Now different array type - flag as error
+            reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
+                       "Array size is unknown - recommend use of Vector<>, "
+                       "std::array<> or std::vector<> instead");
+            return 1;
+        }
     }
+
+#if 0
 
     // Now handling depends on wether it's local, global, or something else
     if (!array_local) {
@@ -445,6 +470,9 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
             // Array and index are local. This does not require any action.
         }
     }
+
+#endif
+
     return 1;
 }
 
@@ -480,7 +508,6 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
 
     parsing_state.in_loop_body = false;
     parsing_state.ast_depth = 0;
-
 
     // check and analyze the field expressions
     check_var_info_list();
@@ -1247,7 +1274,7 @@ void TopLevelVisitor::ast_dump_header(const char *s, const SourceRange sr_in,
                                       bool is_function) {
     SourceRange sr = sr_in;
     unsigned linenumber = srcMgr.getSpellingLineNumber(sr.getBegin());
-    std::string name = srcMgr.getFilename(sr.getBegin());
+    std::string name = srcMgr.getFilename(sr.getBegin()).str();
 
     // check if it is macro
     if (sr.getBegin().isMacroID()) {
