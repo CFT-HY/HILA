@@ -27,6 +27,10 @@ const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
 const std::string output_only_keyword("output_only");
 
+const std::string var_name_prefix("_hila_var_");
+const std::string field_name_prefix("_hila_field_");
+const std::string type_name_prefix("_hila_t_");
+
 enum class reduction { NONE, SUM, PRODUCT }; // TBD:  MIN MAX MINLOC MAXLOC
 enum class Parity { none, even, odd, all };
 
@@ -262,15 +266,20 @@ struct var_info {
 /// These are similar to variable references, but often
 /// need to be handled differently
 struct array_ref {
-    Expr *E;                   // the whole expression
-    ArraySubscriptExpr *ref;   // as type says
+    std::vector<ArraySubscriptExpr *> refs;   // vector of array references
+    VarDecl * vd;                     // declaration of array variable
+    std::string name;
     std::string new_name;      
-    std::string type;
-    bool replace_expr_with_var;   // if true replace the whole expression with variable
+    std::string type;                 // type of element
+    std::string wrapper_type;         // if need to wrap this var
+    size_t size;                      // size of array (if known)
+    Expr * size_expr;                 // if only size expression known
+    bool replace_expr_with_var;       // if true replacing the whole expression with variable
 
     array_ref() {
-        E = nullptr;
-        ref = nullptr;
+        refs = {};
+        size_expr = nullptr;
+        size = 0;
         replace_expr_with_var = false;
     }
 };
@@ -387,6 +396,7 @@ enum class pragma_hila {
     CONTAINS_RNG,
     ACCESS
 };
+
 
 /// Pragma handling things
 bool has_pragma_hila(const SourceManager &SM, SourceLocation l0, pragma_hila pragma,

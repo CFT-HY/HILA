@@ -5,7 +5,6 @@
 //
 // database for generated specializations
 //
-// Kari Rummukainen 2019
 //
 //------------------------------------------------------------------------------
 #include <string>

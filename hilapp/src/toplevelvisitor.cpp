@@ -234,7 +234,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
 
                 // Got constant -- interface changes in clang 12 or 13(!)
 #if defined(__clang_major__) && (__clang_major__ <= 11)
-                dirE->isIntegerConstantExpr(result,*Context);
+                dirE->isIntegerConstantExpr(result, *Context);
 #else
                 auto res = dirE->getIntegerConstantExpr(*Context);
                 result = res.getValue();
@@ -381,20 +381,41 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
         return 1;
     }
 
+
     // If index is site dep or contains local variables, we need
     // the whole array in the loop
 
-    if (!is_site_dependent(E->getIdx(), nullptr) &&
-        !contains_loop_local_var(E->getIdx(), nullptr)) {
+    bool site_dep = is_site_dependent(E->getIdx(), &loop_info.conditional_vars);
+    if (site_dep)
+        loop_info.has_site_dependent_cond_or_index = true;
+
+    // has this array been referred to already?
+    // if so, mark and return
+    for (array_ref & ar : array_ref_list) {
+        if (vd == ar.vd && ar.replace_expr_with_var == false) {
+            ar.refs.push_back(E);
+            TraverseStmt(E->getIdx());
+            parsing_state.skip_children = 1;
+            return 1;
+        }
+    }
+
+    // now it is a new array ref
+    array_ref ar;
+    ar.refs.push_back(E);
+    ar.vd = vd;
+
+    // get type of the element of the array
+    ar.type = E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP);
+
+    if (!site_dep && !contains_loop_local_var(E->getIdx(), nullptr)) {
 
         // now it is a fixed index - move whole arr ref outside the loop
         // Note: multiple refrences are not checked, thus, same element can be
         // referred more than once.  TODO? (small optimization)
 
         // use the array_ref_list to note this
-        array_ref ar;
         ar.replace_expr_with_var = true;
-        ar.E = E;
         array_ref_list.push_back(ar);
 
         llvm::errs() << " %%% found fully extern array reference\n";
@@ -412,67 +433,38 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
         llvm::errs() << " %%% Found constant array type expr, size " << cat->getSize()
                      << "\n";
 
-    } else {
-        const VariableArrayType *vat = Context->getAsVariableArrayType(vd->getType());
-        if (vat) {
-            llvm::errs() << " %%% Found variable array type expr, size "
-                         << get_stmt_str(vat->getSizeExpr()) << "\n";
-        } else {
+        ar.name = vd->getNameAsString();
+        ar.size = cat->getSize().getZExtValue(); // get (extended) size value
+        ar.size_expr = nullptr;
 
-            // Now different array type - flag as error
-            reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                       "Array size is unknown - recommend use of Vector<>, "
-                       "std::array<> or std::vector<> instead");
-            return 1;
-        }
+    } else {
+        // Do not accept arrays with variable size!  The size expression does not
+        // nacessarily evaluate correctly due to problems with C(++) arrays
+        // (TODO: use pragma?)
+        // 
+        // const VariableArrayType *vat =
+        // Context->getAsVariableArrayType(vd->getType()); if (vat) {
+        //     llvm::errs() << " %%% Found variable array type expr, size "
+        //                  << get_stmt_str(vat->getSizeExpr()) << "\n";
+
+        //     ar.size = 0;
+        //     ar.size_expr = vat->getSizeExpr();
+
+        // } else {
+
+        // Now different array type - flag as error
+        reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
+                   "Array size is unknown - recommend using Vector<>, "
+                   "std::array<> or std::vector<> instead");
+        return 1;
     }
 
-#if 0
+    array_ref_list.push_back(ar);
 
-    // Now handling depends on wether it's local, global, or something else
-    if (!array_local) {
-        // llvm::errs() << "Non-local array\n";
-        if (!index_local) {
-            // llvm::errs() << "Non-local index\n";
-            // It's defined completely outside the loop. Can be replaced with a
-            // temporary variable
-            array_ref ar;
-            ar.ref = E;
+    // traverse whatever is in the index in normal fashion
+    TraverseStmt(E->getIdx());
 
-            // Find the type of the full expression (that is an element of the array)
-            auto type = E->getType().getCanonicalType().getUnqualifiedType();
-            ar.type = type.getAsString(PP);
-
-            array_ref_list.push_back(ar);
-        } else {
-            // llvm::errs() << "Local index\n";
-
-            // The array is defined outside, but the index is local. This is
-            // the most problematic case.
-            // For now, only allow this if it's a
-            // histogram reduction
-
-            return 0;
-
-            reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                       "Cannot mix loop local index and predefined array. You must use "
-                       "std::vector in a vector reduction.");
-        }
-    } else {
-        // llvm::errs() << "Local array\n";
-        if (!index_local) {
-            // llvm::errs() << "Local index\n";
-            // The index needs to be communicated to the loop. It's a normal variable,
-            // so we can handle it as such
-            handle_var_ref(DRE, is_assign, assignop);
-        } else {
-            // llvm::errs() << "Local index\n";
-            // Array and index are local. This does not require any action.
-        }
-    }
-
-#endif
-
+    parsing_state.skip_children = 1;
     return 1;
 }
 
@@ -704,12 +696,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
             // At this point this should be an allowed expression?
             int is_handled = handle_array_var_ref(a, is_assignment, assignop);
-
-            // check the site dependence of index
-            if (!loop_info.has_site_dependent_cond_or_index) {
-                loop_info.has_site_dependent_cond_or_index =
-                    is_site_dependent(E, &loop_info.conditional_vars);
-            }
 
             // We don't want to handle the array variable or the index separately
             parsing_state.skip_children = is_handled;

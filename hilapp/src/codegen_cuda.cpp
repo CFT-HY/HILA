@@ -5,8 +5,6 @@
 // Uses Clang RecursiveASTVisitor and Rewriter
 // interfaces
 //
-// Kari Rummukainen 2017-18
-//
 //------------------------------------------------------------------------------
 #include <sstream>
 #include <string>
@@ -25,6 +23,9 @@
 #include "hilapp.h"
 #include "toplevelvisitor.h"
 #include "stringops.h"
+
+// define max size of an array passed as a parameter to kernels
+#define MAX_PARAM_ARRAY_SIZE 20
 
 extern std::string looping_var;
 extern std::string parity_name;
@@ -66,7 +67,8 @@ void GeneralVisitor::handle_loop_constructor_cuda(call_info_struct &ci) {
 /// Help routine to write (part of) a name for a kernel
 std::string TopLevelVisitor::make_kernel_name() {
     return "kernel_" +
-           clean_name(global.currentFunctionDecl->getNameInfo().getName().getAsString()) +
+           clean_name(
+               global.currentFunctionDecl->getNameInfo().getName().getAsString()) +
            "_" +
            std::to_string(TheRewriter.getSourceMgr().
                           // getSpellingLineNumber(global.location.loop));
@@ -107,8 +109,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
         // Allocate memory for a reduction and initialize
         code << vrf.type << " * d_" << vrf.vector_name << ";\n";
-        code << "cudaMalloc( (void **)& d_" << vrf.vector_name << ", " << vrf.vector_name
-             << ".size() * sizeof(" << vrf.type << ") * lattice->volume() );\n";
+        code << "cudaMalloc( (void **)& d_" << vrf.vector_name << ", "
+             << vrf.vector_name << ".size() * sizeof(" << vrf.type
+             << ") * lattice->volume() );\n";
         if (vrf.reduction_type == reduction::SUM) {
             code << "cuda_set_zero(d_" << vrf.vector_name << ", " << vrf.vector_name
                  << ".size()* lattice->volume());\n";
@@ -120,16 +123,54 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         code << "check_cuda_error(\"allocate_reduction\");\n";
     }
 
-    kernel << "\n\n//----------\n";
+    kernel << "\n\n//-------- start kernel " << kernel_name << "---------\n";
+
+    // if we have small arrays, encapsulate them in struct
+    // struct has to be defined before the kernel call
+    for (array_ref &ar : array_ref_list) {
+        if (!ar.replace_expr_with_var) {
+
+            if (ar.size <= MAX_PARAM_ARRAY_SIZE) {
+
+                // copy small arrays directly, create new type
+                kernel << "// create encapsulating struct for array '" << ar.name
+                       << '\n';
+                ar.new_name = var_name_prefix + clean_name(ar.name);
+                // use here offset to give unique type
+                ar.wrapper_type =
+                    "struct " + type_name_prefix + clean_name(ar.name) +
+                    std::to_string(
+                        TheRewriter.getSourceMgr().getFileOffset(global.location.loop));
+                kernel << ar.wrapper_type << " {\n";
+                kernel << ar.type << " c[" << ar.size << "];\n};\n";
+
+            } else {
+
+                // larger array, copy it directly -- allocate
+                ar.new_name = var_name_prefix + clean_name(ar.name);
+                code << "// copy array " << ar.name << " to device\n";
+                code << ar.type << " * " << ar.new_name << ";\n";
+                code << "cudaMalloc( (void **) & " << ar.new_name << ", " << ar.size
+                     << " * sizeof(" << ar.type << ") );\n";
+                code << "cudaMemcpy(" << ar.new_name << ", (char *)" << ar.name << ", "
+                     << ar.size << " * sizeof(" << ar.type
+                     << "), cudaMemcpyHostToDevice);\n";
+
+            }
+        }
+    }
 
     // Generate the function definition and call
-    kernel << "__global__ void " << kernel_name << "( backend_lattice_struct d_lattice";
+    kernel << "inline __global__ void " << kernel_name
+           << "( backend_lattice_struct d_lattice";
     code << "backend_lattice_struct lattice_info = *(lattice->backend_lattice);\n";
     code << "lattice_info.loop_begin = lattice->loop_begin(" << parity_in_this_loop
          << ");\n";
-    code << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop << ");\n";
-    code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin)/N_threads "
-            "+ 1;\n";
+    code << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop
+         << ");\n";
+    code
+        << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin)/N_threads "
+           "+ 1;\n";
 
     // Check for reductions and allocate device memory
     for (var_info &v : var_info_list) {
@@ -201,12 +242,35 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
     // In kernelized code we need to handle array expressions as well
     for (array_ref &ar : array_ref_list) {
-        // Rename the expression
-        ar.new_name = "sv_" + std::to_string(i) + "_";
-        i++;
-        kernel << ", " << ar.type << " " << ar.new_name;
-        code << ", " << get_stmt_str(ar.ref);
-        loopBuf.replace(ar.ref, ar.new_name);
+        if (ar.replace_expr_with_var) {
+            // In this case we replace array expression with a new variable
+            // Rename the expression
+            ar.new_name = var_name_prefix + std::to_string(i) + "_";
+            i++;
+            kernel << ", " << ar.type << " " << ar.new_name;
+            code << ", " << get_stmt_str(ar.refs[0]);
+
+            loopBuf.replace(ar.refs[0], ar.new_name);
+
+        } else if (ar.size <= MAX_PARAM_ARRAY_SIZE) {
+            // Now we pass the full array to the kernel
+            // ar was set already above
+            // Cast the array directly
+            code << ", *(" << ar.wrapper_type << "*)(void *)" << ar.name;
+            kernel << ", " << ar.wrapper_type << ' ' << ar.new_name;
+
+            for (ArraySubscriptExpr *E : ar.refs) {
+                loopBuf.replace(E->getBase(), ar.new_name + ".c");
+            }
+        } else {
+            // Now pass the array ptr
+            code << ", " << ar.new_name;
+            kernel << ", " << ar.type << " * " << ar.new_name;
+
+            for (ArraySubscriptExpr *E : ar.refs) {
+                loopBuf.replace(E->getBase(), ar.new_name);
+            }
+        }
     }
 
     // // change the references to field expressions in the body
@@ -281,9 +345,10 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 //     dirname = vi.new_name;
 
                 // Create the temp variable and call the getter
-                kernel << l.element_type << " " << d.name_with_dir << " = " << l.new_name
-                       << ".get(" << l.new_name << ".neighbours[" << dirname << "]["
-                       << looping_var << "], loop_lattice->field_alloc_size);\n";
+                kernel << l.element_type << " " << d.name_with_dir << " = "
+                       << l.new_name << ".get(" << l.new_name << ".neighbours["
+                       << dirname << "][" << looping_var
+                       << "], loop_lattice->field_alloc_size);\n";
 
                 // and replace references in loop body
                 for (field_ref *ref : d.ref_list) {
@@ -385,9 +450,19 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     code << "check_cuda_error(\"" << kernel_name << "\");\n";
 
     // Finally, emit the kernel
-    // TheRewriter.InsertText(global.location.function, indent_string(kernel),true,true);
+    // TheRewriter.InsertText(global.location.function,
+    // indent_string(kernel),true,true);
     toplevelBuf->insert(global.location.kernels.getLocWithOffset(-1),
                         indent_string(kernel.str()), true, false);
+
+    // If arrays were copied free memory
+
+    for (array_ref & ar : array_ref_list) {
+        if (!ar.replace_expr_with_var && ar.size > MAX_PARAM_ARRAY_SIZE) {
+            code << "cudaFree(" << ar.new_name << ");\n";
+        }
+    }
+
 
     // Check reduction variables
     for (var_info &v : var_info_list) {
@@ -421,6 +496,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             code << "check_cuda_error(\"free_reduction\");\n";
         }
     }
+
 
     return code.str();
 }
