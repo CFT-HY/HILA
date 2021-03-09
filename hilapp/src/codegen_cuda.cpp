@@ -128,13 +128,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // if we have small arrays, encapsulate them in struct
     // struct has to be defined before the kernel call
     for (array_ref &ar : array_ref_list) {
-        if (!ar.replace_expr_with_var) {
+        if (ar.type != array_ref::REPLACE) {
 
-            if (ar.size <= MAX_PARAM_ARRAY_SIZE) {
+            if (ar.size > 0 && ar.size <= MAX_PARAM_ARRAY_SIZE) {
 
                 // copy small arrays directly, create new type
-                kernel << "// create encapsulating struct for array '" << ar.name
-                       << '\n';
+                kernel << "// create encapsulating struct for '" << ar.name << "'\n";
                 ar.new_name = var_name_prefix + clean_name(ar.name);
                 // use here offset to give unique type
                 ar.wrapper_type =
@@ -142,25 +141,30 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     std::to_string(
                         TheRewriter.getSourceMgr().getFileOffset(global.location.loop));
                 kernel << ar.wrapper_type << " {\n";
-                kernel << ar.type << " c[" << ar.size << "];\n};\n";
+                kernel << ar.element_type << " c[" << ar.size << "];\n};\n\n";
 
             } else {
 
-                // larger array, copy it directly -- allocate
-                ar.new_name = var_name_prefix + clean_name(ar.name);
-                code << "// copy array " << ar.name << " to device\n";
-                code << ar.type << " * " << ar.new_name << ";\n";
-                code << "cudaMalloc( (void **) & " << ar.new_name << ", " << ar.size
-                     << " * sizeof(" << ar.type << ") );\n";
-                code << "cudaMemcpy(" << ar.new_name << ", (char *)" << ar.name << ", "
-                     << ar.size << " * sizeof(" << ar.type
-                     << "), cudaMemcpyHostToDevice);\n";
+                // larger array or vector, copy it directly -- allocate
 
+                ar.new_name = var_name_prefix + clean_name(ar.name);
+
+                code << "// copy array/vector '" << ar.name << "' to device\n";
+
+                code << ar.element_type << " * " << ar.new_name << ";\n";
+                code << "cudaMalloc( (void **) & " << ar.new_name << ", "
+                     << ar.size_expr << " * sizeof(" << ar.element_type << ") );\n";
+
+                code << "cudaMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr
+                     << ", " << ar.size_expr << " * sizeof(" << ar.element_type
+                     << "), cudaMemcpyHostToDevice);\n\n";
             }
         }
     }
 
     // Generate the function definition and call
+    // "inline" makes cuda complain, but it is needed to avoid multiple definition error
+    // use "static" instead?? 
     kernel << "inline __global__ void " << kernel_name
            << "( backend_lattice_struct d_lattice";
     code << "backend_lattice_struct lattice_info = *(lattice->backend_lattice);\n";
@@ -242,33 +246,34 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
     // In kernelized code we need to handle array expressions as well
     for (array_ref &ar : array_ref_list) {
-        if (ar.replace_expr_with_var) {
+        if (ar.type == array_ref::REPLACE) {
             // In this case we replace array expression with a new variable
             // Rename the expression
             ar.new_name = var_name_prefix + std::to_string(i) + "_";
             i++;
-            kernel << ", " << ar.type << " " << ar.new_name;
-            code << ", " << get_stmt_str(ar.refs[0]);
+            kernel << ", " << ar.element_type << " " << ar.new_name;
+            code << ", " << get_stmt_str(ar.refs[0].E);
 
-            loopBuf.replace(ar.refs[0], ar.new_name);
+            loopBuf.replace(ar.refs[0].E, ar.new_name);
 
-        } else if (ar.size <= MAX_PARAM_ARRAY_SIZE) {
+        } else if (ar.size > 0 && ar.size <= MAX_PARAM_ARRAY_SIZE) {
             // Now we pass the full array to the kernel
             // ar was set already above
-            // Cast the array directly
-            code << ", *(" << ar.wrapper_type << "*)(void *)" << ar.name;
+            // Cast the data directly
+            code << ", *(" << ar.wrapper_type << "*)(void *)" << ar.data_ptr;
+
             kernel << ", " << ar.wrapper_type << ' ' << ar.new_name;
 
-            for (ArraySubscriptExpr *E : ar.refs) {
-                loopBuf.replace(E->getBase(), ar.new_name + ".c");
+            for (bracket_ref_t &br : ar.refs) {
+                loopBuf.replace(br.DRE, ar.new_name + ".c");
             }
         } else {
             // Now pass the array ptr
             code << ", " << ar.new_name;
-            kernel << ", " << ar.type << " * " << ar.new_name;
+            kernel << ", " << ar.element_type << " * " << ar.new_name;
 
-            for (ArraySubscriptExpr *E : ar.refs) {
-                loopBuf.replace(E->getBase(), ar.new_name);
+            for (bracket_ref_t &br : ar.refs) {
+                loopBuf.replace(br.DRE, ar.new_name);
             }
         }
     }
@@ -457,12 +462,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
     // If arrays were copied free memory
 
-    for (array_ref & ar : array_ref_list) {
-        if (!ar.replace_expr_with_var && ar.size > MAX_PARAM_ARRAY_SIZE) {
+    for (array_ref &ar : array_ref_list) {
+        if (ar.type != array_ref::REPLACE &&
+            (ar.size == 0 || ar.size > MAX_PARAM_ARRAY_SIZE)) {
             code << "cudaFree(" << ar.new_name << ");\n";
         }
     }
-
 
     // Check reduction variables
     for (var_info &v : var_info_list) {
@@ -496,7 +501,6 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             code << "check_cuda_error(\"free_reduction\");\n";
         }
     }
-
 
     return code.str();
 }

@@ -341,60 +341,60 @@ bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
 ///          -  it is sufficient to read in this array element only,
 ///             and remove var references to variables in index
 ///
-int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
-                                          std::string &assignop) {
-
-    // Find the base of the array
-    DeclRefExpr *DRE = find_base_variable(E);
-    if (is_field_expr(DRE)) {
-        // The base if a field expression. This is always allowed and
-        // handled straightforwardly by handling the field.
-        // Return 0 so that the calling function knows nothing was done
-        return 0;
-    }
-
-    llvm::errs() << " %% Inside array reference\n";
+int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype type,
+                                            bool is_assign, std::string &assignop) {
 
     // Check if it's local
-    VarDecl *vd = dyn_cast<VarDecl>(DRE->getDecl());
+    VarDecl *vd = dyn_cast<VarDecl>(ref.DRE->getDecl());
 
     if (is_variable_loop_local(vd)) {
-        // if array is declared within the loop, nothing special needs to
-        // be done.  Let us anyway put it through the std handler in order to
-        // flag it.
+        if (type == array_ref::ARRAY) {
 
-        llvm::errs() << " %%%  loop local array \n";
-        handle_var_ref(DRE, is_assign, assignop);
+            // if an array is declared within the loop, nothing special needs to
+            // be done.  Let us anyway put it through the std handler in order to
+            // flag it.
 
-        // and traverse whatever is in the index in normal fashion
-        TraverseStmt(E->getIdx());
-        parsing_state.skip_children = 1; // it's handled now
-        return 1;
+            llvm::errs() << " %%%  loop local array \n";
+            handle_var_ref(ref.DRE, is_assign, assignop);
+
+            // and traverse whatever is in the index in normal fashion
+            TraverseStmt(ref.Idx);
+            parsing_state.skip_children = 1; // it's handled now
+            return 1;
+
+        } else {
+
+            reportDiag(DiagnosticsEngine::Level::Error,
+                       ref.E->getSourceRange().getBegin(),
+                       "Cannot define std::vector or std::array inside site loop");
+            parsing_state.skip_children = 1;
+            return 1;
+        }
     }
 
     // Now array is declared outside the loop
 
     if (is_assign) {
-        reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                   "Cannot assign to an array defined outside of the site loop.  Use "
+        reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                   "Cannot assign to an array, std::vector or std::array here.  Use "
                    "VectorReduction if reduction is needed.");
         return 1;
     }
 
-
     // If index is site dep or contains local variables, we need
     // the whole array in the loop
 
-    bool site_dep = is_site_dependent(E->getIdx(), &loop_info.conditional_vars);
+    bool site_dep = is_site_dependent(ref.Idx, &loop_info.conditional_vars);
     if (site_dep)
         loop_info.has_site_dependent_cond_or_index = true;
 
     // has this array been referred to already?
     // if so, mark and return
-    for (array_ref & ar : array_ref_list) {
-        if (vd == ar.vd && ar.replace_expr_with_var == false) {
-            ar.refs.push_back(E);
-            TraverseStmt(E->getIdx());
+    for (array_ref &ar : array_ref_list) {
+        if (vd == ar.vd && ar.type != array_ref::REPLACE) {
+
+            ar.refs.push_back(ref);
+            TraverseStmt(ref.Idx); // need to traverse index normally
             parsing_state.skip_children = 1;
             return 1;
         }
@@ -402,23 +402,22 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
 
     // now it is a new array ref
     array_ref ar;
-    ar.refs.push_back(E);
+    ar.refs.push_back(ref);
     ar.vd = vd;
+    ar.name = vd->getNameAsString();
 
     // get type of the element of the array
-    ar.type = E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP);
+    ar.element_type = ref.E->getType().getCanonicalType().getAsString(PP);
 
-    if (!site_dep && !contains_loop_local_var(E->getIdx(), nullptr)) {
+    if (!site_dep && !contains_loop_local_var(ref.Idx, nullptr)) {
 
         // now it is a fixed index - move whole arr ref outside the loop
         // Note: multiple refrences are not checked, thus, same element can be
         // referred more than once.  TODO? (small optimization)
 
         // use the array_ref_list to note this
-        ar.replace_expr_with_var = true;
+        ar.type = array_ref::REPLACE;
         array_ref_list.push_back(ar);
-
-        llvm::errs() << " %%% found fully extern array reference\n";
 
         parsing_state.skip_children = 1; // no need to look inside the replacement
                                          // variable refs inside should not be recorded
@@ -428,44 +427,131 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign,
     // Now there is site dep/loop local stuff in index.  Whole array has to be taken
     // "in".
 
-    const ConstantArrayType *cat = Context->getAsConstantArrayType(vd->getType());
-    if (cat) {
-        llvm::errs() << " %%% Found constant array type expr, size " << cat->getSize()
-                     << "\n";
+    ar.type = type;
 
-        ar.name = vd->getNameAsString();
-        ar.size = cat->getSize().getZExtValue(); // get (extended) size value
-        ar.size_expr = nullptr;
+    if (type == array_ref::ARRAY) {
+        const ConstantArrayType *cat = Context->getAsConstantArrayType(vd->getType());
+        if (cat) {
+            llvm::errs() << " %%% Found constant array type expr, size " << cat->getSize()
+                         << "\n";
 
+            ar.size = cat->getSize().getZExtValue(); // get (extended) size value
+            ar.size_expr = std::to_string(ar.size);
+            ar.data_ptr = ar.name;
+
+        } else {
+            // Do not accept arrays with variable size!  The size expression does not
+            // nacessarily evaluate correctly due to problems with C(++) arrays
+            // (TODO: use pragma?)
+            //
+            // const VariableArrayType *vat =
+            // Context->getAsVariableArrayType(vd->getType()); if (vat) {
+            //     llvm::errs() << " %%% Found variable array type expr, size "
+            //                  << get_stmt_str(vat->getSizeExpr()) << "\n";
+
+            //     ar.size = 0;
+            //     ar.size_expr = vat->getSizeExpr();
+
+            // } else {
+
+            // Now different array type - flag as error
+            reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                    "Array size is unknown - recommend using Vector<>, "
+                    "std::array<> or std::vector<> instead");
+
+            parsing_state.skip_children = 1;
+            return 1;
+        }
     } else {
-        // Do not accept arrays with variable size!  The size expression does not
-        // nacessarily evaluate correctly due to problems with C(++) arrays
-        // (TODO: use pragma?)
-        // 
-        // const VariableArrayType *vat =
-        // Context->getAsVariableArrayType(vd->getType()); if (vat) {
-        //     llvm::errs() << " %%% Found variable array type expr, size "
-        //                  << get_stmt_str(vat->getSizeExpr()) << "\n";
 
-        //     ar.size = 0;
-        //     ar.size_expr = vat->getSizeExpr();
+        std::string typestr = vd->getType().getCanonicalType().getAsString(PP);
 
-        // } else {
+        if (type == array_ref::STD_ARRAY) {
 
-        // Now different array type - flag as error
-        reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                   "Array size is unknown - recommend using Vector<>, "
-                   "std::array<> or std::vector<> instead");
-        return 1;
+            // find the last arg in template
+
+            int i = typestr.rfind('>');
+            int j = typestr.rfind(',',i);
+            ar.size = std::stoi(typestr.substr(j+1,i-j-1));
+            ar.size_expr = std::to_string(ar.size);
+            ar.data_ptr = ar.name + ".data()";
+
+        } else {
+
+            // Now it must be std::vector<>.  Size is dynamic
+
+            ar.size = 0;
+            ar.size_expr = ar.name + ".size()";
+            ar.data_ptr = ar.name + ".data()";
+
+        }
     }
 
     array_ref_list.push_back(ar);
 
     // traverse whatever is in the index in normal fashion
-    TraverseStmt(E->getIdx());
+    TraverseStmt(ref.Idx);
 
     parsing_state.skip_children = 1;
     return 1;
+}
+
+int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *ASE, bool is_assign,
+                                          std::string &assignop) {
+
+    bracket_ref_t br = { ASE, find_base_variable(ASE), ASE->getIdx() };
+    return handle_bracket_var_ref(br,
+                                  array_ref::ARRAY, is_assign, assignop);
+}
+///////////////////////////////////////////////////////////////////////////////
+/// is_vector_reference() true if expression is of type var[], where
+/// var is std::vector<> or std::array<>
+///////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::is_vector_reference(Stmt *s) {
+    Expr *E = dyn_cast<Expr>(s);
+    if (E) {
+        E = E->IgnoreParens();
+        CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
+        if (OC && strcmp(getOperatorSpelling(OC->getOperator()), "[]") == 0) {
+
+            std::string type =
+                OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
+            if (type.find("std::vector<") == 0 || type.find("std::array<") == 0)
+                return true;
+        }
+    }
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// handle_vector_reference() processes references like v[index], where
+/// v is std::vector or std::array.  Called only if is_vector_reference() is true
+///////////////////////////////////////////////////////////////////////////////
+bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool is_assign) {
+
+    bracket_ref_t br;
+
+    br.E = dyn_cast<Expr>(s);
+    CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(br.E);
+
+    br.DRE = find_base_variable(br.E);
+    br.Idx = OC->getArg(1)->IgnoreImplicit();
+
+    std::string type =
+            OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
+
+    array_ref::reftype rt;
+    if (type.find("std::vector<") == 0)
+        rt = array_ref::STD_VECTOR;
+    else
+        rt = array_ref::STD_ARRAY;
+
+    std::string dummy;
+
+    handle_bracket_var_ref(br, rt, is_assign, dummy );
+
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -585,6 +671,13 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         // return true;
     }
 
+    // Check for std::vector or std::array references
+    if (is_vector_reference(s)) {
+        handle_vector_reference(s,is_assignment);
+        parsing_state.skip_children = 1;
+        return true;
+    }
+
     // Check c++ methods  -- HMM: it seems above function call stmt catches these first
     if (0 && is_member_call_stmt(s)) {
         handle_member_call_in_loop(s);
@@ -597,7 +690,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     if (is_function_call_stmt(s)) {
         handle_function_call_in_loop(s);
         // let this ripple trough, for - expr f[X] is a function call and is trapped
-        // below too return true;
+        // below too
+        // return true;
     }
 
     if (is_user_cast_stmt(s)) {

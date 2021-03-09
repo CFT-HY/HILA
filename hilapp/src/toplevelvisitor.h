@@ -40,7 +40,8 @@ class TopLevelVisitor : public GeneralVisitor,
     struct {
         unsigned skip_children; // if > 0 skip children of this ast node
         unsigned scope_level;   // level of variable scoping: {}
-        int ast_depth; // depth of ast nodes within loop body.  ast_depth = 0 at top level
+        int ast_depth;     // depth of ast nodes within loop body.  ast_depth = 0 at top
+                           // level
         int stmt_sequence; // sequence number of full statements in loops.  Full stmts
                            // separated by ;
         bool in_loop_body; // true if in site loop
@@ -110,7 +111,8 @@ class TopLevelVisitor : public GeneralVisitor,
 
     void make_mapping_lists(const TemplateParameterList *tpl,
                             const TemplateArgumentList &tal,
-                            std::vector<std::string> &par, std::vector<std::string> &arg,
+                            std::vector<std::string> &par,
+                            std::vector<std::string> &arg,
                             std::vector<const TemplateArgument *> &typeargs,
                             std::string *al);
 
@@ -128,8 +130,6 @@ class TopLevelVisitor : public GeneralVisitor,
     /// special handler for Field<>
     int handle_field_specializations(ClassTemplateDecl *D);
 
-    bool is_array_expr(Expr *E);
-
     void check_allowed_assignment(Stmt *s);
 
     bool check_field_ref_list();
@@ -139,7 +139,15 @@ class TopLevelVisitor : public GeneralVisitor,
     bool handle_field_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X,
                              bool is_func_arg = false);
 
+    bool is_array_expr(Expr *E);
+
     int handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string &op);
+    int handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype typ,
+                               bool is_assign, std::string &assignop);
+
+    bool is_vector_reference(Stmt *s);
+
+    bool handle_vector_reference(Stmt *s, bool is_assign);
 
     /// Check that the addressof-operators and reference vars are OK
     void check_addrofops_and_refs(Stmt *S);
@@ -215,7 +223,8 @@ class TopLevelVisitor : public GeneralVisitor,
     void replace_field_refs_and_funcs(srcBuf &sb);
 
     /// utility used in finding pragmas on the previous line
-    bool is_preceded_by_pragma(SourceLocation l, std::string &args, SourceLocation &ploc);
+    bool is_preceded_by_pragma(SourceLocation l, std::string &args,
+                               SourceLocation &ploc);
 
     void set_writeBuf(const FileID fid);
 

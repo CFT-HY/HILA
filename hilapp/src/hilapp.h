@@ -261,26 +261,32 @@ struct var_info {
     }
 };
 
+//  Store "array-type" references inside site loops
+struct bracket_ref_t {
+    Expr *E;            // full bracket expression "a[i]"
+    DeclRefExpr *DRE;   // "a"
+    Expr *Idx;          // "i"
+};
 
 /// Stores information for a single reference to an loop-extern array or related variable
 /// These are similar to variable references, but often
 /// need to be handled differently
 struct array_ref {
-    std::vector<ArraySubscriptExpr *> refs;   // vector of array references
-    VarDecl * vd;                     // declaration of array variable
+    std::vector<bracket_ref_t> refs;     // vector of array references
+    VarDecl * vd;                     // declaration of referred to variable
     std::string name;
     std::string new_name;      
-    std::string type;                 // type of element
+    std::string element_type;         // type of element
     std::string wrapper_type;         // if need to wrap this var
     size_t size;                      // size of array (if known)
-    Expr * size_expr;                 // if only size expression known
-    bool replace_expr_with_var;       // if true replacing the whole expression with variable
+    std::string size_expr;            // if only size expression known
+    std::string data_ptr;             // == name for array, name.data() for others
+    using reftype = enum {REPLACE, ARRAY, STD_VECTOR, STD_ARRAY};
+    reftype type;
 
     array_ref() {
         refs = {};
-        size_expr = nullptr;
         size = 0;
-        replace_expr_with_var = false;
     }
 };
 
