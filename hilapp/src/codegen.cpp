@@ -197,9 +197,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     // Create temporary variables for reductions
     for (var_info &v : var_info_list) {
         if (v.reduction_type != reduction::NONE) {
-            v.reduction_name = "r_" + v.name;
-            while (t.find(v.reduction_name, 0) != std::string::npos)
-                v.reduction_name += "_";
+            v.reduction_name = "r" + var_name_prefix + clean_name(v.name);
             // Create a temporary variable and initialize
             if (v.reduction_type == reduction::SUM) {
                 code << v.type << " " << v.reduction_name << " = 0;\n";
@@ -219,37 +217,27 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
             if (v.is_special_reduction_type) {
     
-                code << "if (hila::myrank() == 0) " 
-                     << v.name << " += " << v.reduction_name << ";\n";
-                code << "else " 
-                     << v.name << " = " << v.reduction_name << ";\n";
-
-                code << v.name << ".reduce_sum();\n";    // start the reduction
+                code << v.name << ".reduce_sum_node(" << v.reduction_name << ");\n";
 
             } else {
 
                 // do the reduction here fully
-                code << "lattice->reduce_node_sum( &" << v.reduction_name
-                     << ", 1, true);\n";
-                code << v.name << " += " << v.reduction_name << ";\n";
+                code << "if (hila::myrank() == 0) { " << v.name << " += " << v.reduction_name << "; }\n";
+                code << "else { " << v.name << " = " << v.reduction_name << "; }\n"; 
+                code << "lattice->reduce_node_sum( &" << v.name << ", 1, true);\n";
             }
 
         } else if (v.reduction_type == reduction::PRODUCT) {
 
             if (v.is_special_reduction_type) {
 
-                code << "if (hila::myrank() == 0) "
-                     << v.name << " *= " << v.reduction_name << ";\n";
-                code << "else " 
-                     << v.name << " = " << v.reduction_name << ";\n";
-
-                code << v.name << ".reduce_product();\n";    // start the reduction
+                code << v.name << ".reduce_prod_node(" << v.reduction_name << ");\n";
 
             } else {
 
-                code << "lattice->reduce_node_product( &" << v.reduction_name
-                     << ", 1, true);\n";
-                code << v.name << " *= " << v.reduction_name << ";\n";
+                code << "if (hila::myrank() == 0) { " << v.name << " *= " << v.reduction_name << "; }\n";
+                code << "else { " << v.name << " = " << v.reduction_name << "; }\n"; 
+                code << "lattice->reduce_node_product( &" << v.name << ", 1, true);\n";
 
             }
         }

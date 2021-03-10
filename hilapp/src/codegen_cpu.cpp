@@ -75,9 +75,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
     for (var_info &vi : var_info_list) {
         if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE) {
-                std::string varname = "r_" + vi.name;
                 for (var_ref &vr : vi.refs) {
-                    loopBuf.replace(vr.ref, varname);
+                    loopBuf.replace(vr.ref, vi.reduction_name);
                 }
             }
         }

@@ -443,10 +443,10 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
 
     vi.type = type.getAsString(PP);
     vi.type = remove_all_whitespace(vi.type);
-    bool is_elem = (vi.type.find("element<") == 0);
-    vi.type = type.getAsString(PP);
-    if (is_elem)
-        vi.type = "element<" + vi.type + ">";
+    // bool is_elem = (vi.type.find("element<") == 0);
+    // vi.type = type.getAsString(PP);
+    // if (is_elem)
+    //     vi.type = "element<" + vi.type + ">";
     // llvm::errs() << " + Got " << vi.type << '\n';
 
     // is it loop-local?

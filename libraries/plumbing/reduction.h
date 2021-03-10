@@ -28,7 +28,7 @@ template <typename T> void do_reduce_operation(MPI_Op operation, Reduction<T> &r
     dtype = get_MPI_number_type<T>(size);
 
     if (dtype == MPI_BYTE) {
-        assert(sizeof(T) < 0 && "Unknown number_type in reduce_node_sum");
+        assert(sizeof(T) < 0 && "Unknown number_type in reduction");
     }
 
     void *ptr = r.get_ptr();
@@ -68,22 +68,29 @@ template <typename T> void do_reduce_operation(MPI_Op operation, Reduction<T> &r
 //////////////////////////////////////////////////////////////////////////////////
 /// Special reduction class: declare a reduction variable which
 /// can be used in site loops
-/// Reductions use non-blocking reduction operations.  The reduction value is
-/// calculated when the variable is used for the first time after summing it up
-/// E.g.
-///    Reduction<double> rv = 0;
+/// Example:
+///    Reduction<Complex<double>> rv = 0;
 ///    onsites(ALL) rv += fv[X];
 ///
 ///    ...  // possibly do something not involving rv
+/// 
+/// Reduction can be modified to on/off: allreduce(), nonblocking(), delayed()
+/// Example:
+///    rv.allreduce(false).delayed();      
+/// 
+/// Delayed reduction can be used e.g. in expressions like
 ///
-///    // reduction is finalized when rv is first used
-///    double average = rv/lattice->volume();
+///   Reduction<double> rv = 0;
+///   rv.allreduce(false).delayed();
+///   foralldir(d) {
+///       onsites(ALL) rv += a[X+d]*a[X];
+///   }
+///   rv.reduce();
+/// 
+/// This does only one reduction operation, not for every onsites() -loop.  
+/// Result is the same
 ///
-/// Reduction<T> r;        : value is broadcast to all nodes
-/// Reduction<T> r(false); : value is reduced only to rank==0.
-///                          value undefined on other nodes.
-///
-/// The same reduction variable can be used again
+/// Reduction variable can be used again
 ///
 
 template <typename T>
@@ -100,6 +107,9 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
     bool is_allreduce_ = true;
     bool is_nonblocking_ = false;
     bool is_delayed_ = false;
+
+    bool delay_is_on = false;        // status of the delayed reduction
+    bool is_delayed_sum = true;      // sum/product
 
     MPI_Request request;
 
@@ -213,16 +223,49 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
 
     /// Start sum reduction -- works only if the type T addition == element-wise
     /// addition. This is true for all hila predefined data types
-    void reduce_sum() { do_reduce_operation(MPI_SUM, *this); }
+    void reduce_sum_node(const T & v) {
+
+        wait();  // wait for possible ongoing
+
+        // add the node values to reduction var
+        if (hila::myrank() == 0 || is_delayed_) 
+            (T &)*this += v;
+        else
+            (T &)*this = v;
+
+        if (is_delayed_) {
+            if (delay_is_on && is_delayed_sum == false) {
+                assert(0 && "Cannot mix sum and product reductions!");
+            }
+            delay_is_on = true;
+        } else { 
+            do_reduce_operation(MPI_SUM, *this); 
+        }
+    }
 
     /// Product reduction -- currently works only for scalar data types.
     /// For Complex, Matrix and Vector data product is not element-wise.
     /// TODO: Array or std::array ?
     /// TODO: implement using custom MPI ops (if needed)
-    void reduce_product() {
+    void reduce_product_node(const T & v) {
         static_assert(std::is_arithmetic<T>::value,
                       "Type not implemented for product reduction");
-        do_reduce_operation(MPI_PROD, *this);
+
+        wait();
+
+        if (hila::myrank() == 0 || is_delayed_) 
+            (T &)*this *= v;
+        else
+            (T &)*this = v;
+
+        if (is_delayed_) {
+            if (delay_is_on && is_delayed_sum == true) {
+                assert(0 && "Cannot mix sum and product reductions!");
+            }
+            delay_is_on = true;
+        } else { 
+            do_reduce_operation(MPI_PROD, *this); 
+        }
     }
 
     /// Wait for MPI to complete, if it is currently going on
@@ -237,6 +280,20 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
             comm_is_on = false;
         }
     }
+
+    /// For delayed reduction, reduce starts or completes the reduction operation
+    void reduce() {
+        if (delay_is_on) {
+            delay_is_on = false;
+
+            if (is_delayed_sum)
+                do_reduce_operation(MPI_SUM, *this);
+            else    
+                do_reduce_operation(MPI_PROD, *this);
+
+        }
+    }
+
 
     /// get_ptr gives the pointer to the data held by the variable
     void *get_ptr() { return (void *)this; }
@@ -257,6 +314,11 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
     /// Reduction status : is this allreduce, nonblocking
     bool is_allreduce_ = true;
     bool is_nonblocking_ = false;
+    bool is_delayed_ = false;
+
+    bool delay_is_on = false;        // status of the delayed reduction
+    bool is_delayed_sum = true;      // sum/product
+
     MPI_Request request;
 
   public:
@@ -291,12 +353,25 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
     }
 
     /// allreduce(bool) turns allreduce on or off.  By default on.
-    void allreduce(bool b = true) { is_allreduce_ = b; }
+    Reduction &allreduce(bool b = true) {
+        is_allreduce_ = b;
+        return *this;
+    }
     bool is_allreduce() { return is_allreduce_; }
 
     /// nonblocking(bool) turns allreduce on or off.  By default on.
-    void nonblocking(bool b = true) { is_nonblocking_ = b; }
-    bool is_nonblocking(bool b = true) { return is_nonblocking_; }
+    Reduction &nonblocking(bool b = true) {
+        is_nonblocking_ = b;
+        return *this;
+    }
+    bool is_nonblocking() { return is_nonblocking_; }
+
+    /// deferred(bool) turns deferred on or off.  By default turns on.
+    Reduction &delayed(bool b = true) {
+        is_delayed_ = b;
+        return *this;
+    }
+    bool is_delayed() { return is_delayed_; }
 
     void set_comm_on() { comm_is_on = true; }
 
@@ -368,13 +443,51 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
 
     /// Start sum reduction -- works only if the type T addition == element-wise
     /// addition. This is true for all hila predefined data types
-    void reduce_sum() { do_reduce_operation(MPI_SUM, *this); }
+    void reduce_sum_node(const T & v) {
+
+        // if there is ongoing reduction wait for it
+        wait();   
+
+        // add the node values to reduction var
+        if (hila::myrank() == 0 || is_delayed_) 
+            val += v;
+        else
+            val = v;
+
+        if (is_delayed_) {
+            if (delay_is_on && is_delayed_sum == false) {
+                assert(0 && "Cannot mix sum and product reductions!");
+            }
+            delay_is_on = true;
+        } else { 
+            do_reduce_operation(MPI_SUM, *this); 
+        }
+    }
 
     /// Product reduction -- currently works only for scalar data types.
     /// For Complex, Matrix and Vector data product is not element-wise.
     /// TODO: Array or std::array ?
     /// TODO: implement using custom MPI ops (if needed)
-    void reduce_product() { do_reduce_operation(MPI_PROD, *this); }
+    void reduce_product_node(const T & v) {
+        static_assert(std::is_arithmetic<T>::value,
+                      "Type not implemented for product reduction");
+
+        wait();
+
+        if (hila::myrank() == 0 || is_delayed_) 
+            val *= v;
+        else
+            val = v;
+
+        if (is_delayed_) {
+            if (delay_is_on && is_delayed_sum == true) {
+                assert(0 && "Cannot mix sum and product reductions!");
+            }
+            delay_is_on = true;
+        } else { 
+            do_reduce_operation(MPI_PROD, *this); 
+        }
+    }
 
     /// Wait for MPI to complete, if it is currently going on
     /// This must be called for non-blocking reduce before use!
@@ -386,6 +499,19 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
             MPI_Wait(&request, &status);
             reduction_wait_timer.stop();
             comm_is_on = false;
+        }
+    }
+
+    /// For delayed reduction, reduce starts or completes the reduction operation
+    void reduce() {
+        if (delay_is_on) {
+            delay_is_on = false;
+
+            if (is_delayed_sum)
+                do_reduce_operation(MPI_SUM, *this);
+            else    
+                do_reduce_operation(MPI_PROD, *this);
+
         }
     }
 
@@ -402,51 +528,5 @@ std::ostream &operator<<(std::ostream &strm, Reduction<T> &r) {
 #endif // USE_MPI
 
 // TODO - define for !USE_MPI
-
-#if 0
-
-
-/// Standard arithmetic operations for reductions
-template <typename T, typename S>
-inline auto operator+(Reduction<T> & a, const S & b) -> type_plus<T, S> {
-    return  a.value() + b;
-}
-
-template <typename T, typename S>
-inline auto operator+(const S & b, Reduction<T> & a) -> type_plus<S, T> {
-    return b + a.value();
-}
-
-template <typename T, typename S>
-inline auto operator-(Reduction<T> & a, const S & b) -> type_minus<T, S> {
-    return  a.value() - b;
-}
-
-template <typename T, typename S>
-inline auto operator-(const S & b, Reduction<T> & a) -> type_minus<S, T> {
-    return b - a.value();
-}
-
-template <typename T, typename S>
-inline auto operator*(Reduction<T> & a, const S & b) -> type_mul<T, S> {
-    return  a.value() * b;
-}
-
-template <typename T, typename S>
-inline auto operator*(const S & b, Reduction<T> & a) -> type_mul<S, T> {
-    return b * a.value();
-}
-
-template <typename T, typename S>
-inline auto operator/(Reduction<T> & a, const S & b) -> type_div<T, S> {
-    return  a.value() / b;
-}
-
-template <typename T, typename S>
-inline auto operator/(const S & b, Reduction<T> & a) -> type_div<S, T> {
-    return b / a.value();
-}
-
-#endif
 
 #endif

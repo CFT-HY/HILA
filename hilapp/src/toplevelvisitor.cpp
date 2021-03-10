@@ -1272,7 +1272,7 @@ void TopLevelVisitor::check_var_info_list() {
     if (target.vectorize) {
         for (var_info &vi : var_info_list) {
             vi.vecinfo.is_vectorizable =
-                is_vectorizable_type(vi.decl->getType(), vi.vecinfo);
+                is_vectorizable_type(vi.type, vi.vecinfo);
         }
     }
 }
