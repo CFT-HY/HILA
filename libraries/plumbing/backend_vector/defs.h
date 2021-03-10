@@ -302,17 +302,17 @@ T reduce_sum_in_vector(const vecT &vt) {
 }
 
 /// If vector elements are implemented in the c++ code,
-/// reductions to base variables need to be supported.
-/// Will this lead to problematic behavior?
-template <typename Vec> inline double &operator+=(double &lhs, const Vec rhs) {
-    lhs += reduce_prod(rhs);
-    return lhs;
-}
+/// reductions tead to problematic beo base variables need to be supported.
+/// Will this lhavior?
+//template <typename Vec> inline double &operator+=(double &lhs, const Vec rhs) {
+//    lhs += reduce_prod(rhs);
+//    return lhs;
+//}
 
-template <typename Vec> inline float &operator+=(float &lhs, const Vec rhs) {
-    lhs += reduce_prod(rhs);
-    return lhs;
-}
+//template <typename Vec> inline float &operator+=(float &lhs, const Vec rhs) {
+//    lhs += reduce_prod(rhs);
+//    return lhs;
+//}
 
 // Define modulo operator for integer vector
 inline Vec16i operator%(const Vec16i &lhs, const int &rhs) {
