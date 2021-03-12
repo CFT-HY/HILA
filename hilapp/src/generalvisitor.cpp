@@ -406,6 +406,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
             if (is_top_level) {
                 vip->reduction_type = get_reduction_type(is_assign, assignop, *vip);
             }
+
         }
 
         if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {

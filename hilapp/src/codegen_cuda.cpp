@@ -169,15 +169,15 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (var_info &v : var_info_list) {
         if (v.reduction_type != reduction::NONE) {
             // Allocate memory for a reduction. This will be filled in the kernel
-            code << v.type << " * d_" << v.reduction_name << ";\n";
-            code << "cudaMalloc( (void **)& d_" << v.reduction_name << ","
+            code << v.type << " * dev_" << v.reduction_name << ";\n";
+            code << "cudaMalloc( (void **)& dev_" << v.reduction_name << ","
                  << "sizeof(" << v.type << ") * N_blocks );\n";
             code << "check_cuda_error(\"allocate_reduction\");\n";
             if (v.reduction_type == reduction::SUM) {
-                code << "cuda_set_zero(d_" << v.reduction_name << ", N_blocks);\n";
+                code << "cuda_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
             }
             if (v.reduction_type == reduction::PRODUCT) {
-                code << "cuda_set_one(d_" << v.reduction_name << ", N_blocks);\n";
+                code << "cuda_set_one(dev_" << v.reduction_name << ", N_blocks);\n";
             }
         }
     }
@@ -209,7 +209,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             if (vi.reduction_type != reduction::NONE) {
                 // Generate a temporary array for the reduction
                 kernel << ", " << vi.type << " * " << vi.new_name;
-                code << ", d_r_" << vi.name;
+                code << ", dev_" << vi.reduction_name;
             } else {
                 kernel << ", const " << vi.type << " " << vi.new_name;
                 code << ", " << vi.name;
@@ -462,17 +462,17 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (var_info &v : var_info_list) {
         // Run reduction
         if (v.reduction_type == reduction::SUM) {
-            code << v.reduction_name << " = cuda_reduce_sum( d_" << v.reduction_name
+            code << v.reduction_name << " = cuda_reduce_sum( dev_" << v.reduction_name
                  << ", N_blocks"
                  << ");\n";
         } else if (v.reduction_type == reduction::PRODUCT) {
-            code << v.reduction_name << " = cuda_reduce_product( d_" << v.reduction_name
+            code << v.reduction_name << " = cuda_reduce_product( dev_" << v.reduction_name
                  << ", N_blocks"
                  << ");\n";
         }
         // Free memory allocated for the reduction
         if (v.reduction_type != reduction::NONE) {
-            code << "cudaFree(d_" << v.reduction_name << ");\n";
+            code << "cudaFree(dev_" << v.reduction_name << ");\n";
             code << "check_cuda_error(\"free_reduction\");\n";
         }
     }

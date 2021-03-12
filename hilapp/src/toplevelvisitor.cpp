@@ -101,7 +101,7 @@ void TopLevelVisitor::check_allowed_assignment(Stmt *s) {
 /// is_func_arg: expression is a lvalue-argument (non-const. reference) to function
 //////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_read,
+bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also_read,
                                           bool is_X, bool is_func_arg) {
 
     e = e->IgnoreParens();
@@ -256,6 +256,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
                 // }
 
                 // traverse the dir-expression to find var-references etc.
+                is_assign = false;
                 TraverseStmt(lfe.parityExpr);
             }
         }
@@ -267,6 +268,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool is_assign, bool is_also_
 
     // Check that there are no local variable references up the AST
     FieldRefChecker frc(*this);
+    is_assign = false;
     frc.TraverseStmt(lfe.fullExpr);
 
     field_ref_list.push_back(lfe);
@@ -342,7 +344,7 @@ bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
 ///             and remove var references to variables in index
 ///
 int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype type,
-                                            bool is_assign, std::string &assignop) {
+                                            bool &is_assign, std::string &assignop) {
 
     // Check if it's local
     VarDecl *vd = dyn_cast<VarDecl>(ref.DRE->getDecl());
@@ -358,6 +360,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             handle_var_ref(ref.DRE, is_assign, assignop);
 
             // and traverse whatever is in the index in normal fashion
+            is_assign = false;              // we're not assigning to the index
             TraverseStmt(ref.Idx);
             parsing_state.skip_children = 1; // it's handled now
             return 1;
@@ -366,7 +369,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
             reportDiag(DiagnosticsEngine::Level::Error,
                        ref.E->getSourceRange().getBegin(),
-                       "Cannot define std::vector or std::array inside site loop");
+                       "Cannot define this variable inside site loop");
             parsing_state.skip_children = 1;
             return 1;
         }
@@ -374,7 +377,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
     // Now array is declared outside the loop
 
-    if (is_assign) {
+    if (is_assign && type != array_ref::REDUCTION) {
         reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
                    "Cannot assign to an array, std::vector or std::array here.  Use "
                    "VectorReduction if reduction is needed.");
@@ -385,16 +388,48 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     // the whole array in the loop
 
     bool site_dep = is_site_dependent(ref.Idx, &loop_info.conditional_vars);
-    if (site_dep)
+
+    // if it is assignment = reduction, don't vectorize
+    if (site_dep || is_assign)
         loop_info.has_site_dependent_cond_or_index = true;
+
+    reduction reduction_type;
+    if (is_assign) {
+        if (assignop == "+=")
+            reduction_type = reduction::SUM;
+        else
+            reduction_type = reduction::PRODUCT;
+
+    } else {
+        reduction_type = reduction::NONE;
+    }
 
     // has this array been referred to already?
     // if so, mark and return
     for (array_ref &ar : array_ref_list) {
         if (vd == ar.vd && ar.type != array_ref::REPLACE) {
 
+            if ((ar.type == array_ref::REDUCTION) ^ (type == array_ref::REDUCTION)) {
+                reportDiag(
+                    DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                    "VectorReduction cannot be used on RHS and LHS simultaneously.");
+                parsing_state.skip_children = 1;
+                return 1;
+            }
+
+            if (ar.type == array_ref::REDUCTION &&
+                ar.reduction_type != reduction_type) {
+                reportDiag(DiagnosticsEngine::Level::Error,
+                           ref.E->getSourceRange().getBegin(),
+                           "Cannot use '+=' and '*=' reduction to the same variable "
+                           "simultaneously.");
+                parsing_state.skip_children = 1;
+                return 1;
+            }
+
             ar.refs.push_back(ref);
-            TraverseStmt(ref.Idx); // need to traverse index normally
+            is_assign = false;                 // reset assign for index traversal
+            TraverseStmt(ref.Idx);             // need to traverse index normally
             parsing_state.skip_children = 1;
             return 1;
         }
@@ -409,7 +444,10 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     // get type of the element of the array
     ar.element_type = ref.E->getType().getCanonicalType().getAsString(PP);
 
-    if (!site_dep && !contains_loop_local_var(ref.Idx, nullptr)) {
+    // and save the type of reduction
+    ar.reduction_type = reduction_type;
+
+    if (!site_dep && !contains_loop_local_var(ref.Idx, nullptr) && !is_assign) {
 
         // now it is a fixed index - move whole arr ref outside the loop
         // Note: multiple refrences are not checked, thus, same element can be
@@ -432,8 +470,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     if (type == array_ref::ARRAY) {
         const ConstantArrayType *cat = Context->getAsConstantArrayType(vd->getType());
         if (cat) {
-            llvm::errs() << " %%% Found constant array type expr, size " << cat->getSize()
-                         << "\n";
+            llvm::errs() << " %%% Found constant array type expr, size "
+                         << cat->getSize() << "\n";
 
             ar.size = cat->getSize().getZExtValue(); // get (extended) size value
             ar.size_expr = std::to_string(ar.size);
@@ -455,9 +493,10 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             // } else {
 
             // Now different array type - flag as error
-            reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
-                    "Array size is unknown - recommend using Vector<>, "
-                    "std::array<> or std::vector<> instead");
+            reportDiag(DiagnosticsEngine::Level::Error,
+                       ref.E->getSourceRange().getBegin(),
+                       "Array size is unknown - recommend using Vector<>, "
+                       "std::array<> or std::vector<> instead");
 
             parsing_state.skip_children = 1;
             return 1;
@@ -471,37 +510,39 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             // find the last arg in template
 
             int i = typestr.rfind('>');
-            int j = typestr.rfind(',',i);
-            ar.size = std::stoi(typestr.substr(j+1,i-j-1));
+            int j = typestr.rfind(',', i);
+            ar.size = std::stoi(typestr.substr(j + 1, i - j - 1));
             ar.size_expr = std::to_string(ar.size);
             ar.data_ptr = ar.name + ".data()";
 
         } else {
 
-            // Now it must be std::vector<>.  Size is dynamic
+            // Now it must be std::vector<> or VectorReduction.  Size is dynamic
 
             ar.size = 0;
             ar.size_expr = ar.name + ".size()";
             ar.data_ptr = ar.name + ".data()";
 
+            if (type == array_ref::REDUCTION)
+                ar.reduction_type = reduction_type;
         }
     }
 
     array_ref_list.push_back(ar);
 
     // traverse whatever is in the index in normal fashion
+    is_assign = false;                // not assign to index
     TraverseStmt(ref.Idx);
 
     parsing_state.skip_children = 1;
     return 1;
 }
 
-int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *ASE, bool is_assign,
+int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *ASE, bool &is_assign,
                                           std::string &assignop) {
 
-    bracket_ref_t br = { ASE, find_base_variable(ASE), ASE->getIdx() };
-    return handle_bracket_var_ref(br,
-                                  array_ref::ARRAY, is_assign, assignop);
+    bracket_ref_t br = {ASE, find_base_variable(ASE), ASE->getIdx()};
+    return handle_bracket_var_ref(br, array_ref::ARRAY, is_assign, assignop);
 }
 ///////////////////////////////////////////////////////////////////////////////
 /// is_vector_reference() true if expression is of type var[], where
@@ -515,9 +556,12 @@ bool TopLevelVisitor::is_vector_reference(Stmt *s) {
         CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E);
         if (OC && strcmp(getOperatorSpelling(OC->getOperator()), "[]") == 0) {
 
+            // Arg(1) is the "root"
             std::string type =
                 OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
-            if (type.find("std::vector<") == 0 || type.find("std::array<") == 0)
+
+            if (type.find("std::vector<") == 0 || type.find("std::array<") == 0 ||
+                type.find("VectorReduction") == 0)
                 return true;
         }
     }
@@ -528,7 +572,8 @@ bool TopLevelVisitor::is_vector_reference(Stmt *s) {
 /// handle_vector_reference() processes references like v[index], where
 /// v is std::vector or std::array.  Called only if is_vector_reference() is true
 ///////////////////////////////////////////////////////////////////////////////
-bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool is_assign) {
+bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
+                                              std::string &assignop) {
 
     bracket_ref_t br;
 
@@ -538,18 +583,23 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool is_assign) {
     br.DRE = find_base_variable(br.E);
     br.Idx = OC->getArg(1)->IgnoreImplicit();
 
-    std::string type =
-            OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
+    std::string type = OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
 
     array_ref::reftype rt;
     if (type.find("std::vector<") == 0)
         rt = array_ref::STD_VECTOR;
-    else
+    else if (type.find("std::array<") == 0)
         rt = array_ref::STD_ARRAY;
+    else {
+        // now we know it is ArrayReduction.  Treat is as reduction only if it is
+        // assignment
+        if (is_assign)
+            rt = array_ref::REDUCTION;
+        else
+            rt = array_ref::STD_ARRAY;
+    }
 
-    std::string dummy;
-
-    handle_bracket_var_ref(br, rt, is_assign, dummy );
+    handle_bracket_var_ref(br, rt, is_assign, assignop);
 
     return true;
 }
@@ -673,8 +723,9 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // Check for std::vector or std::array references
     if (is_vector_reference(s)) {
-        handle_vector_reference(s,is_assignment);
+        handle_vector_reference(s, is_assignment, assignop);
         parsing_state.skip_children = 1;
+        is_assignment = false;
         return true;
     }
 
@@ -791,6 +842,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // At this point this should be an allowed expression?
             int is_handled = handle_array_var_ref(a, is_assignment, assignop);
 
+            is_assignment = false;
             // We don't want to handle the array variable or the index separately
             parsing_state.skip_children = is_handled;
             return true;
@@ -1226,6 +1278,15 @@ void TopLevelVisitor::check_var_info_list() {
                     }
                 }
 
+            } else if (vi.is_special_reduction_type) {
+                // Use Reduction<> -type vars only as reductions
+                for (auto &vr : vi.refs) {
+                    reportDiag(DiagnosticsEngine::Level::Error,
+                               vr.ref->getSourceRange().getBegin(),
+                               "Reduction variables are restricted only for reductions "
+                               "(on the lhs of \'+=\' or \'*=\')");
+                }
+
             } else if (vi.is_assigned) {
                 // now not reduction
                 for (auto &vr : vi.refs) {
@@ -1235,15 +1296,6 @@ void TopLevelVisitor::check_var_info_list() {
                             vr.ref->getSourceRange().getBegin(),
                             "Cannot assign to variable defined outside site loop "
                             "(unless reduction \'+=\' or \'*=\')");
-                }
-
-            } else if (vi.is_special_reduction_type) {
-                // Use Reduction<> -type vars only as reductions
-                for (auto &vr : vi.refs) {
-                    reportDiag(DiagnosticsEngine::Level::Error,
-                               vr.ref->getSourceRange().getBegin(),
-                               "Reduction variables can be used only as reductions "
-                               "(on the lhs of \'+=\' or \'*=\')");
                 }
             }
         }
@@ -1271,8 +1323,7 @@ void TopLevelVisitor::check_var_info_list() {
 
     if (target.vectorize) {
         for (var_info &vi : var_info_list) {
-            vi.vecinfo.is_vectorizable =
-                is_vectorizable_type(vi.type, vi.vecinfo);
+            vi.vecinfo.is_vectorizable = is_vectorizable_type(vi.type, vi.vecinfo);
         }
     }
 }

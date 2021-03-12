@@ -161,6 +161,7 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
     bool is_delayed() { return is_delayed_; }
 
     void set_comm_on() { comm_is_on = true; }
+
     MPI_Request *get_request() { return &request; }
 
     /// Return value of the reduction variable.  Wait for the comms if needed.
@@ -238,6 +239,7 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
                 assert(0 && "Cannot mix sum and product reductions!");
             }
             delay_is_on = true;
+            is_delayed_sum = true;
         } else { 
             do_reduce_operation(MPI_SUM, *this); 
         }
@@ -263,6 +265,7 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
                 assert(0 && "Cannot mix sum and product reductions!");
             }
             delay_is_on = true;
+            is_delayed_sum = false;
         } else { 
             do_reduce_operation(MPI_PROD, *this); 
         }
@@ -386,13 +389,14 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
     // }
 
     /// cast to T, with lvalue
-    operator T &() { return val; }
+    operator T&() { return val; }
+    operator T() const { return val; }
 
     /// Cast to any compatible value
-    template <typename S, std::enable_if_t<std::is_assignable<S &, T>::value, int> = 0>
-    operator S() {
-        return (S)val;
-    }
+    //template <typename S, std::enable_if_t<std::is_assignable<S &, T>::value, int> = 0>
+    //operator S() {
+    //    return (S)val;
+    //}
 
     /// Method set is the same as assignment, but without return value
     /// No need to complete comms if going on
@@ -459,6 +463,7 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
                 assert(0 && "Cannot mix sum and product reductions!");
             }
             delay_is_on = true;
+            is_delayed_sum = true;
         } else { 
             do_reduce_operation(MPI_SUM, *this); 
         }
@@ -484,6 +489,7 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
                 assert(0 && "Cannot mix sum and product reductions!");
             }
             delay_is_on = true;
+            is_delayed_sum = false;
         } else { 
             do_reduce_operation(MPI_PROD, *this); 
         }

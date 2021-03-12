@@ -152,7 +152,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
             if (cmdline::check_initialization) {
 
-                std::string fname = srcMgr.getFilename(S->getSourceRange().getBegin()).str();
+                std::string fname =
+                    srcMgr.getFilename(S->getSourceRange().getBegin()).str();
                 code << "if (!" << l.new_name << ".is_initialized(" << init_par
                      << ")){\noutput0 << \"File " << fname << " on line "
                      << srcMgr.getSpellingLineNumber(S->getSourceRange().getBegin())
@@ -207,41 +208,61 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         }
     }
 
+    // and vector reductions
+    for (array_ref &ar : array_ref_list) {
+        if (ar.type == array_ref::REDUCTION) {
+            code << ar.name;
+            if (ar.reduction_type == reduction::SUM)
+                code << ".init_sum();\n";
+            else
+                code << ".init_product();\n";
+        }
+    }
+
     // Place the content of the loop
     code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);
 
     // Check reduction variables
     for (var_info &v : var_info_list) {
-        if (v.reduction_type == reduction::SUM) {
-            // set the old value on other nodes than this to 0
 
-            if (v.is_special_reduction_type) {
-    
+        if (v.is_special_reduction_type) {
+
+            if (v.reduction_type == reduction::SUM)
                 code << v.name << ".reduce_sum_node(" << v.reduction_name << ");\n";
-
-            } else {
-
-                // do the reduction here fully
-                code << "if (hila::myrank() == 0) { " << v.name << " += " << v.reduction_name << "; }\n";
-                code << "else { " << v.name << " = " << v.reduction_name << "; }\n"; 
-                code << "lattice->reduce_node_sum( &" << v.name << ", 1, true);\n";
-            }
-
-        } else if (v.reduction_type == reduction::PRODUCT) {
-
-            if (v.is_special_reduction_type) {
-
+            else if (v.reduction_type == reduction::PRODUCT)
                 code << v.name << ".reduce_prod_node(" << v.reduction_name << ");\n";
 
-            } else {
+        } else {
 
-                code << "if (hila::myrank() == 0) { " << v.name << " *= " << v.reduction_name << "; }\n";
-                code << "else { " << v.name << " = " << v.reduction_name << "; }\n"; 
+            if (v.reduction_type == reduction::SUM) {
+
+                // set the old value on other nodes than this to 0
+                code << "if (hila::myrank() == 0) { " << v.name
+                     << " += " << v.reduction_name << "; }\n";
+                code << "else { " << v.name << " = " << v.reduction_name << "; }\n";
+                code << "lattice->reduce_node_sum( &" << v.name << ", 1, true);\n";
+
+            } else if (v.reduction_type == reduction::PRODUCT) {
+
+                code << "if (hila::myrank() == 0) { " << v.name
+                     << " *= " << v.reduction_name << "; }\n";
+                code << "else { " << v.name << " = " << v.reduction_name << "; }\n";
                 code << "lattice->reduce_node_product( &" << v.name << ", 1, true);\n";
-
             }
         }
     }
+
+    // and vector reductions
+    for (array_ref &ar : array_ref_list) {
+        if (ar.type == array_ref::REDUCTION) {
+
+            if (ar.reduction_type == reduction::SUM)
+                code << ar.name << ".reduce_sum();\n";
+            else if (ar.reduction_type == reduction::PRODUCT)
+                code << ar.name << ".reduce_product();\n";
+        }
+    }
+
     for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
         if (vrf.reduction_type == reduction::SUM) {
             code << "lattice->reduce_node_sum(" << vrf.vector_name << ".data(), "

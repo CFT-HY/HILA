@@ -300,7 +300,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
 
                 // following is called only if this==g_TopLevelVisitor, this just makes it
                 // compile
-                g_TopLevelVisitor->handle_field_X_expr(E, !is_const,
+                bool is_assign = !is_const;
+                g_TopLevelVisitor->handle_field_X_expr(E, is_assign,
                                                        (!is_const && !output_only), true);
 
                 sitedep = true;
@@ -398,7 +399,8 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
             // called always when this == g_TopLevelVisitor
 
             sitedep = true;
-            g_TopLevelVisitor->handle_field_X_expr(E, is_lvalue, (is_lvalue && !out_only),
+            bool is_assign = is_lvalue;
+            g_TopLevelVisitor->handle_field_X_expr(E, is_assign, (is_lvalue && !out_only),
                                                    true, true);
 
             ai.is_site_dependent = true;

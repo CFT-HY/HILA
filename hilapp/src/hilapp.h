@@ -281,7 +281,8 @@ struct array_ref {
     size_t size;                      // size of array (if known)
     std::string size_expr;            // if only size expression known
     std::string data_ptr;             // == name for array, name.data() for others
-    using reftype = enum {REPLACE, ARRAY, STD_VECTOR, STD_ARRAY};
+    using reftype = enum {REPLACE, ARRAY, STD_VECTOR, STD_ARRAY, REDUCTION};
+    reduction reduction_type;
     reftype type;
 
     array_ref() {

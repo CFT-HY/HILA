@@ -136,18 +136,18 @@ class TopLevelVisitor : public GeneralVisitor,
 
     void check_var_info_list();
 
-    bool handle_field_X_expr(Expr *e, bool is_assign, bool is_compound, bool is_X,
+    bool handle_field_X_expr(Expr *e, bool &is_assign, bool is_compound, bool is_X,
                              bool is_func_arg = false);
 
     bool is_array_expr(Expr *E);
 
-    int handle_array_var_ref(ArraySubscriptExpr *E, bool is_assign, std::string &op);
+    int handle_array_var_ref(ArraySubscriptExpr *E, bool &is_assign, std::string &op);
     int handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype typ,
-                               bool is_assign, std::string &assignop);
+                               bool &is_assign, std::string &assignop);
 
     bool is_vector_reference(Stmt *s);
 
-    bool handle_vector_reference(Stmt *s, bool is_assign);
+    bool handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop);
 
     /// Check that the addressof-operators and reference vars are OK
     void check_addrofops_and_refs(Stmt *S);
