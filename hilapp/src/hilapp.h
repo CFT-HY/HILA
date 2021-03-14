@@ -292,15 +292,15 @@ struct array_ref {
 };
 
 /// store necessary information for vector reductions
-struct vector_reduction_ref {
-    CXXOperatorCallExpr *ref;
-    std::string type;
-    std::string index_name;
-    std::string vector_name;
-    std::string new_vector_name;
-    reduction reduction_type;
-    std::string reduction_name;
-};
+// struct vector_reduction_ref {
+//     CXXOperatorCallExpr *ref;
+//     std::string type;
+//     std::string index_name;
+//     std::string vector_name;
+//     std::string new_vector_name;
+//     reduction reduction_type;
+//     std::string reduction_name;
+// };
 
 /// store information about variable declarations
 struct var_decl {
@@ -453,7 +453,7 @@ extern const std::string field_type;
 extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;
 extern std::list<array_ref> array_ref_list;
-extern std::list<vector_reduction_ref> vector_reduction_ref_list;
+// extern std::list<vector_reduction_ref> vector_reduction_ref_list;
 extern std::list<special_function_call> special_function_call_list;
 
 #endif

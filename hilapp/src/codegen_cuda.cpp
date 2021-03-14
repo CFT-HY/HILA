@@ -95,6 +95,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         code << "lattice_struct * loop_lattice = lattice;\n";
     }
 
+#if 0
     for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
         // Allocate memory for a reduction and initialize
         code << vrf.type << " * d_" << vrf.vector_name << ";\n";
@@ -111,13 +112,14 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
         code << "check_cuda_error(\"allocate_reduction\");\n";
     }
+#endif
 
     kernel << "\n\n//-------- start kernel " << kernel_name << "---------\n";
 
     // if we have small arrays, encapsulate them in struct
     // struct has to be defined before the kernel call
     for (array_ref &ar : array_ref_list) {
-        if (ar.type != array_ref::REPLACE) {
+        if (ar.type != array_ref::REPLACE || ar.type != array_ref::REDUCTION) {
 
             if (ar.size > 0 && ar.size <= MAX_PARAM_ARRAY_SIZE) {
 
@@ -148,6 +150,29 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                      << ", " << ar.size_expr << " * sizeof(" << ar.element_type
                      << "), cudaMemcpyHostToDevice);\n\n";
             }
+
+        } else if (ar.type == array_ref::REDUCTION) {
+
+            ar.new_name = "r_" + var_name_prefix + clean_name(ar.name);
+
+            code << "// Create reduction array\n";
+            code << ar.element_type << " * " << ar.new_name << ";\n";
+            code << "cudaMalloc( (void **)& " << ar.new_name << ", "
+                 << ar.size_expr << " * sizeof(" << ar.element_type
+                 << ") * lattice->mynode.volume() );\n";
+            
+            if (ar.reduction_type == reduction::SUM) {
+                code << "cuda_set_zero(" << ar.new_name << ", " << ar.size_expr
+                 << " * lattice->mynode.volume());\n";
+            } 
+
+            if (ar.reduction_type == reduction::PRODUCT) {
+                code << "cuda_set_one(" << ar.new_name << ", " << ar.size_expr
+                 << " * lattice->mynode.volume());\n";
+            }
+
+            code << "check_cuda_error(\"allocate_reduction\");\n";
+
         }
     }
 
@@ -220,6 +245,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             }
         }
 
+#if 0
     // Add array reductions to the argument list
     for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
         if (vrf.reduction_type != reduction::NONE) {
@@ -232,6 +258,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
         loopBuf.replace(vrf.ref, vrf.new_vector_name);
     }
+#endif
 
     // In kernelized code we need to handle array expressions as well
     for (array_ref &ar : array_ref_list) {
@@ -259,7 +286,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         } else {
             // Now pass the array ptr
             code << ", " << ar.new_name;
-            kernel << ", " << ar.element_type << " * " << ar.new_name;
+            kernel << ", " << ar.element_type << " * RESTRICT " << ar.new_name;
 
             for (bracket_ref_t &br : ar.refs) {
                 loopBuf.replace(br.DRE, ar.new_name);
@@ -291,12 +318,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // Begin the function
     kernel << ")\n{\n";
 
-    kernel << "backend_lattice_struct *loop_lattice = &d_lattice; \n";
+    // kernel << "backend_lattice_struct *loop_lattice = &d_lattice; \n";
     /* Standard boilerplate in CUDA kernels: calculate site index */
     kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
-           << " + loop_lattice->loop_begin; \n";
+           << " + d_lattice.loop_begin; \n";
     /* The last block may exceed the lattice size. Do nothing in that case. */
-    kernel << "if(Index < loop_lattice->loop_end) { \n";
+    kernel << "if(Index < d_lattice.loop_end) { \n";
 
     // Declare the shared reduction variable
     for (var_info &vi : var_info_list)
@@ -342,7 +369,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 kernel << l.element_type << " " << d.name_with_dir << " = "
                        << l.new_name << ".get(" << l.new_name << ".neighbours["
                        << dirname << "][" << looping_var
-                       << "], loop_lattice->field_alloc_size);\n";
+                       << "], d_lattice.field_alloc_size);\n";
 
                 // and replace references in loop body
                 for (field_ref *ref : d.ref_list) {
@@ -354,7 +381,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         if (l.is_read_atX) {
             // local read
             kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
-                   << ".get(" << looping_var << ", loop_lattice->field_alloc_size);\n";
+                   << ".get(" << looping_var << ", d_lattice.field_alloc_size);\n";
 
         } else if (l.is_written) {
             // and a var which is not read
@@ -403,7 +430,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             std::string type_name = l.type_template;
             type_name.erase(0, 1).erase(type_name.end() - 1, type_name.end());
             kernel << l.new_name << ".set(" << l.loop_ref_name << ", " << looping_var
-                   << ", loop_lattice->field_alloc_size );\n";
+                   << ", d_lattice.field_alloc_size );\n";
         }
 
     // Handle reductions: Need to sync threads once, then do reduction
@@ -476,6 +503,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             code << "check_cuda_error(\"free_reduction\");\n";
         }
     }
+
+#if 0
     for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
         if (vrf.reduction_type == reduction::SUM) {
             code << "cuda_multireduce_sum( " << vrf.vector_name << ", d_"
@@ -490,6 +519,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             code << "check_cuda_error(\"free_reduction\");\n";
         }
     }
+#endif
 
     return code.str();
 }

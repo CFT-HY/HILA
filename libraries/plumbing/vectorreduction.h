@@ -230,6 +230,9 @@ template <typename T> class VectorReduction {
         }
     }
 
+    /// data() returns ptr to the raw storage
+    T * data() { return val.data(); }
+
     /// methods from std::vector:
 
     size_t size() const { return val.size(); }

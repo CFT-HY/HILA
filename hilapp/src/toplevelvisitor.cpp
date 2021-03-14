@@ -618,7 +618,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     var_info_list.clear();
     var_decl_list.clear();
     array_ref_list.clear();
-    vector_reduction_ref_list.clear();
+    //    vector_reduction_ref_list.clear();
     loop_function_calls.clear();
 
     global.location.loop = ls->getSourceRange().getBegin();
@@ -849,49 +849,49 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         }
 
         // Check for a vector reduction
-        if (is_assignment && isa<CXXOperatorCallExpr>(s)) {
-            CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(s);
-            std::string type = OC->getArg(0)->getType().getAsString();
-            if (type.rfind("std::vector<", 0) != std::string::npos) {
-                // It's an assignment to a vector element
-                // Still need to check if it's a reduction
-                DeclRefExpr *DRE =
-                    dyn_cast<DeclRefExpr>(OC->getArg(0)->IgnoreImplicit());
-                VarDecl *vector_decl = dyn_cast<VarDecl>(DRE->getDecl());
-                bool array_local = is_variable_loop_local(vector_decl);
+        // if (is_assignment && isa<CXXOperatorCallExpr>(s)) {
+        //     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(s);
+        //     std::string type = OC->getArg(0)->getType().getAsString();
+        //     if (type.rfind("std::vector<", 0) != std::string::npos) {
+        //         // It's an assignment to a vector element
+        //         // Still need to check if it's a reduction
+        //         DeclRefExpr *DRE =
+        //             dyn_cast<DeclRefExpr>(OC->getArg(0)->IgnoreImplicit());
+        //         VarDecl *vector_decl = dyn_cast<VarDecl>(DRE->getDecl());
+        //         bool array_local = is_variable_loop_local(vector_decl);
 
-                DRE = dyn_cast<DeclRefExpr>(OC->getArg(1)->IgnoreImplicit());
-                VarDecl *index_decl = dyn_cast<VarDecl>(DRE->getDecl());
-                bool index_local = is_variable_loop_local(index_decl);
+        //         DRE = dyn_cast<DeclRefExpr>(OC->getArg(1)->IgnoreImplicit());
+        //         VarDecl *index_decl = dyn_cast<VarDecl>(DRE->getDecl());
+        //         bool index_local = is_variable_loop_local(index_decl);
 
-                // Handle the index as a variable (it's local, so the name won't change)
-                handle_var_ref(DRE, false, assignop);
+        //         // Handle the index as a variable (it's local, so the name won't change)
+        //         handle_var_ref(DRE, false, assignop);
 
-                if (!array_local && index_local) {
-                    // llvm::errs() << "Found a vector reduction\n";
-                    vector_reduction_ref vrf;
-                    vrf.ref = OC;
-                    vrf.vector_name = vector_decl->getName().str();
-                    vrf.index_name = index_decl->getName().str();
-                    if (type.rfind("float", 0) != std::string::npos) {
-                        vrf.type = "float";
-                    } else {
-                        vrf.type = "double";
-                    }
-                    if (assignop == "+=") {
-                        vrf.reduction_type = reduction::SUM;
-                    } else if (assignop == "*=") {
-                        vrf.reduction_type = reduction::PRODUCT;
-                    } else {
-                        vrf.reduction_type = reduction::NONE;
-                    }
-                    vector_reduction_ref_list.push_back(vrf);
-                    parsing_state.skip_children = 1;
-                }
-            }
-            is_assignment = false; // next will not be assignment
-            is_member_expr = false;
-        }
+        //         if (!array_local && index_local) {
+        //             // llvm::errs() << "Found a vector reduction\n";
+        //             vector_reduction_ref vrf;
+        //             vrf.ref = OC;
+        //             vrf.vector_name = vector_decl->getName().str();
+        //             vrf.index_name = index_decl->getName().str();
+        //             if (type.rfind("float", 0) != std::string::npos) {
+        //                 vrf.type = "float";
+        //             } else {
+        //                 vrf.type = "double";
+        //             }
+        //             if (assignop == "+=") {
+        //                 vrf.reduction_type = reduction::SUM;
+        //             } else if (assignop == "*=") {
+        //                 vrf.reduction_type = reduction::PRODUCT;
+        //             } else {
+        //                 vrf.reduction_type = reduction::NONE;
+        //             }
+        //             vector_reduction_ref_list.push_back(vrf);
+        //             parsing_state.skip_children = 1;
+        //         }
+        //     }
+        //     is_assignment = false; // next will not be assignment
+        //     is_member_expr = false;
+        // }
 
         if (0) {
 
