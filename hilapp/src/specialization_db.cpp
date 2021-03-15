@@ -93,16 +93,14 @@ bool in_specialization_db(const std::string &decl_in, std::string &here) {
         // it is waiting for compilation and it may not include it any more.
 
         struct stat status;
-        time_t mtime;
 
-        // where did the following appear?
-        //#if defined(__APPLE__)
-        //        mtime = status.st_mtimespec;
-        //#else
-        mtime = status.st_mtim.tv_sec;
-        //#endif
-
-        if (stat(s->file.c_str(), &status) == 0 && mtime > s->timestamp) {
+        if (stat(s->file.c_str(), &status) == 0 && 
+            #ifndef __APPLE__
+                 status.st_mtim.tv_sec > s->timestamp
+            #else
+                 status.st_mtimespec.tv_sec > s->timestamp
+            #endif    
+        ) {
             // If the mod time of the file is later than timestamp, future compilation
             // expected: steal the specialization
             s->timestamp = std::time(nullptr);
