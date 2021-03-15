@@ -108,35 +108,33 @@ endif
 
 # List of Clang libraries to link. The proper -L will be provided by the
 # call to llvm-config
-# Using -Wl,--{start|end}-group around the clang libs avoids
-# circular dependencies that make the correct order difficult
-# to specify and maintain.
-
+# The whole thing (all -l libs) can be encapslated withing
+# -Wl,--start-group
+# -l ...
+# -Wl,--end-group
+# which makes correct order irrelevant.  However, this does not seem
+# to work on a mac.  The order below hopefully works
 
 CLANG_LIBS := \
-	-Wl,--start-group \
-	-lclangAST \
-	-lclangAnalysis \
-	-lclangBasic \
-	-lclangDriver \
-	-lclangEdit \
+	-lclangTooling \
+	-lclangASTMatchers \
 	-lclangFrontend \
-	-lclangFrontendTool \
-	-lclangLex \
+	-lclangDriver \
 	-lclangParse \
+	-lclangSerialization \
 	-lclangSema \
 	-lclangEdit \
-	-lclangASTMatchers \
+	-lclangAnalysis \
+	-lclangToolingCore \
+	-lclangAST \
 	-lclangRewrite \
+	-lclangLex \
+	-lclangBasic \
+	-lclangFrontendTool \
 	-lclangRewriteFrontend \
 	-lclangStaticAnalyzerFrontend \
 	-lclangStaticAnalyzerCheckers \
-	-lclangStaticAnalyzerCore \
-	-lclangSerialization \
-	-lclangToolingCore \
-	-lclangTooling \
-	-Wl,--end-group
-
+	-lclangStaticAnalyzerCore
 
 
 # Sources for this project
