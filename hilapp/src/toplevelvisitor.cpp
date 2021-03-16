@@ -346,9 +346,17 @@ bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
 int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype type,
                                             bool &is_assign, std::string &assignop) {
 
-    // Check if it's local
     VarDecl *vd = dyn_cast<VarDecl>(ref.DRE->getDecl());
 
+    // if this has #pragma direct_access don't do anything
+    if (loop_info.has_pragma_access &&
+        find_word(loop_info.pragma_access_args, vd->getNameAsString()) !=
+            std::string::npos) {
+
+        return 0;
+    }
+
+    // Check if it's local
     if (is_variable_loop_local(vd)) {
         if (type == array_ref::ARRAY) {
 
@@ -360,7 +368,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             handle_var_ref(ref.DRE, is_assign, assignop);
 
             // and traverse whatever is in the index in normal fashion
-            is_assign = false;              // we're not assigning to the index
+            is_assign = false; // we're not assigning to the index
             TraverseStmt(ref.Idx);
             parsing_state.skip_children = 1; // it's handled now
             return 1;
@@ -428,8 +436,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             }
 
             ar.refs.push_back(ref);
-            is_assign = false;                 // reset assign for index traversal
-            TraverseStmt(ref.Idx);             // need to traverse index normally
+            is_assign = false;     // reset assign for index traversal
+            TraverseStmt(ref.Idx); // need to traverse index normally
             parsing_state.skip_children = 1;
             return 1;
         }
@@ -531,7 +539,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     array_ref_list.push_back(ar);
 
     // traverse whatever is in the index in normal fashion
-    is_assign = false;                // not assign to index
+    is_assign = false; // not assign to index
     TraverseStmt(ref.Idx);
 
     parsing_state.skip_children = 1;
@@ -864,8 +872,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         //         VarDecl *index_decl = dyn_cast<VarDecl>(DRE->getDecl());
         //         bool index_local = is_variable_loop_local(index_decl);
 
-        //         // Handle the index as a variable (it's local, so the name won't change)
-        //         handle_var_ref(DRE, false, assignop);
+        //         // Handle the index as a variable (it's local, so the name won't
+        //         change) handle_var_ref(DRE, false, assignop);
 
         //         if (!array_local && index_local) {
         //             // llvm::errs() << "Found a vector reduction\n";
