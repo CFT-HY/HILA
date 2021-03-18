@@ -13,7 +13,8 @@ LD := $(CC) -std c++17
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
 CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
-CXXFLAGS += -gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52  --use_fast_math --restrict
+CXXFLAGS += -gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52 --use_fast_math --restrict
+#
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
 # definitions as per c++ standard!
 CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=20050"

@@ -41,6 +41,7 @@ void hila::seed_random(unsigned long seed) {
                                                 n_blocks * N_threads);
     check_cuda_error("seed_random kernel");
     seed_mersenne(myseed + n_sites - 1);
+
 }
 
 /* Generate random numbers on device or host */

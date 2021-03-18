@@ -155,30 +155,50 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
             ar.new_name = "r_" + var_name_prefix + clean_name(ar.name);
 
+#ifdef OLD_STYLE
             code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << "cudaMalloc( (void **)& " << ar.new_name << ", "
-                 << ar.size_expr << " * sizeof(" << ar.element_type
+            code << "cudaMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
+                 << " * sizeof(" << ar.element_type
                  << ") * lattice->mynode.volume() );\n";
-            
+
             if (ar.reduction_type == reduction::SUM) {
                 code << "cuda_set_zero(" << ar.new_name << ", " << ar.size_expr
-                 << " * lattice->mynode.volume());\n";
-            } 
+                     << " * lattice->mynode.volume());\n";
+            }
 
             if (ar.reduction_type == reduction::PRODUCT) {
                 code << "cuda_set_one(" << ar.new_name << ", " << ar.size_expr
-                 << " * lattice->mynode.volume());\n";
+                     << " * lattice->mynode.volume());\n";
             }
 
             code << "check_cuda_error(\"allocate_reduction\");\n";
 
+#else
+            code << "// Create reduction array\n";
+            code << ar.element_type << " * " << ar.new_name << ";\n";
+            code << "cudaMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
+                 << " * sizeof(" << ar.element_type << "));\n";
+
+            if (ar.reduction_type == reduction::SUM) {
+                code << "cuda_set_zero(" << ar.new_name << ", " << ar.size_expr
+                     << ");\n";
+            }
+
+            if (ar.reduction_type == reduction::PRODUCT) {
+                code << "cuda_set_one(" << ar.new_name << ", " << ar.size_expr
+                     << ");\n";
+            }
+
+            code << "check_cuda_error(\"allocate_reduction\");\n";
+
+#endif
         }
     }
 
     // Generate the function definition and call
     // "inline" makes cuda complain, but it is needed to avoid multiple definition error
-    // use "static" instead?? 
+    // use "static" instead??
     kernel << "inline __global__ void " << kernel_name
            << "( backend_lattice_struct d_lattice";
     code << "backend_lattice_struct lattice_info = *(lattice->backend_lattice);\n";
@@ -263,33 +283,87 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // In kernelized code we need to handle array expressions as well
     for (array_ref &ar : array_ref_list) {
         if (ar.type == array_ref::REPLACE) {
+
             // In this case we replace array expression with a new variable
             // Rename the expression
             ar.new_name = var_name_prefix + std::to_string(i) + "_";
             i++;
-            kernel << ", " << ar.element_type << " " << ar.new_name;
+            kernel << ", const " << ar.element_type << " " << ar.new_name;
             code << ", " << get_stmt_str(ar.refs[0].E);
 
             loopBuf.replace(ar.refs[0].E, ar.new_name);
 
         } else if (ar.size > 0 && ar.size <= MAX_PARAM_ARRAY_SIZE) {
+
             // Now we pass the full array to the kernel
             // ar was set already above
             // Cast the data directly
             code << ", *(" << ar.wrapper_type << "*)(void *)" << ar.data_ptr;
 
-            kernel << ", " << ar.wrapper_type << ' ' << ar.new_name;
+            kernel << ", const " << ar.wrapper_type << ' ' << ar.new_name;
 
             for (bracket_ref_t &br : ar.refs) {
                 loopBuf.replace(br.DRE, ar.new_name + ".c");
             }
-        } else {
+
+        } else if (ar.type != array_ref::REDUCTION) {
+
             // Now pass the array ptr
+            code << ", " << ar.new_name;
+            kernel << ", const " << ar.element_type << " * RESTRICT " << ar.new_name;
+
+            for (bracket_ref_t &br : ar.refs) {
+                loopBuf.replace(br.DRE, ar.new_name);
+            }
+
+        } else {
+
+            // Finally, we have reduction
+            // substute here a[i] += b;
+            // with atomicAdd(&a[i],b);
+
             code << ", " << ar.new_name;
             kernel << ", " << ar.element_type << " * RESTRICT " << ar.new_name;
 
             for (bracket_ref_t &br : ar.refs) {
                 loopBuf.replace(br.DRE, ar.new_name);
+
+                SourceLocation oploc, beginloc, endloc;
+                beginloc = br.assign_stmt->getSourceRange().getBegin();
+                endloc =
+                    getSourceLocationAtEndOfRange(br.assign_stmt->getSourceRange());
+
+                CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(br.assign_stmt);
+                if (OP && OP->isAssignmentOp()) {
+                    oploc = OP->getOperatorLoc();
+
+                } else if (CompoundAssignOperator *CAO =
+                               dyn_cast<CompoundAssignOperator>(br.assign_stmt)) {
+                    oploc = CAO->getOperatorLoc();
+
+                } else {
+                    llvm::errs() << "hilapp internal error: vector reduction op in "
+                                    "codegen_cuda\n";
+                    exit(1);
+                }
+
+                loopBuf.replace(SourceRange(oploc, oploc.getLocWithOffset(1)), ",");
+
+                if (ar.reduction_type == reduction::SUM) {
+
+                    // Cuda has a bug where double atomicAdd is not defined for
+                    // capability < 6.0, but you nevertheless cannot use the name.
+                    // use slightly modified name
+                    if (ar.element_type == "double")
+                        loopBuf.insert(beginloc, "atomic_Add(&", true);
+                    else
+                        loopBuf.insert(beginloc, "atomicAdd(&", true);
+
+                } else {
+                    loopBuf.insert(beginloc, "atomicMultiply(&", true);
+                }
+
+                loopBuf.insert(endloc.getLocWithOffset(1), ")",false);
             }
         }
     }
@@ -357,11 +431,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     dirname = d.direxpr_s; // orig. string
                 else
                     dirname = remove_X(loopBuf.get(
-                        d.parityExpr
-                            ->getSourceRange())); // mapped name was get_stmt_str(d.e);
+                        d.parityExpr->getSourceRange())); // mapped name was
+                                                          // get_stmt_str(d.e);
 
                 // Check if the Direction is a variable. These have been renamed.
-                // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs )
+                // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs
+                // )
                 //   if( vr.ref == d.e )
                 //     dirname = vi.new_name;
 
@@ -404,7 +479,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         //       dirname = vi.new_name;
         //   }
         //   // Create the temp variable and call the getter
-        //   kernel << l.element_type << " "  << l.loop_ref_name << "_" << r->dirname
+        //   kernel << l.element_type << " "  << l.loop_ref_name << "_" <<
+        //   r->dirname
         //          << "=" << l.new_name << ".get(loop_lattice->d_neighb["
         //          << dirname << "][" << looping_var
         //          << "], loop_lattice->field_alloc_size);\n";
@@ -479,6 +555,23 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // If arrays were copied free memory
 
     for (array_ref &ar : array_ref_list) {
+        if (ar.type == array_ref::REDUCTION) {
+
+            code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp("
+                 << ar.size_expr << ");\n";
+            code << "cudaMemcpy(a_v__tmp.data(), " << ar.new_name << ", "
+                 << ar.size_expr << " * sizeof(" << ar.element_type
+                 << "), cudaMemcpyDeviceToHost);\n\n";
+            if (ar.reduction_type == reduction::SUM)
+                code << "for (int i=0; i<" << ar.size_expr << "; i++) " << ar.name
+                     << "[i] += a_v__tmp[i];\n";
+            else
+                code << "for (int i=0; i<" << ar.size_expr << "; i++) " << ar.name
+                     << "[i] *= a_v__tmp[i];\n";
+
+            code << "}\n";
+        }
+
         if (ar.type != array_ref::REPLACE &&
             (ar.size == 0 || ar.size > MAX_PARAM_ARRAY_SIZE)) {
             code << "cudaFree(" << ar.new_name << ");\n";
@@ -493,8 +586,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                  << ", N_blocks"
                  << ");\n";
         } else if (v.reduction_type == reduction::PRODUCT) {
-            code << v.reduction_name << " = cuda_reduce_product( dev_" << v.reduction_name
-                 << ", N_blocks"
+            code << v.reduction_name << " = cuda_reduce_product( dev_"
+                 << v.reduction_name << ", N_blocks"
                  << ");\n";
         }
         // Free memory allocated for the reduction

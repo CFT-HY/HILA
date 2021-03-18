@@ -43,7 +43,7 @@ struct codetype {
     bool vectorize = false;
     int vector_size = 1;
     bool openacc = false;
-    bool is_kernelized = false;
+    bool GPU = false;
 };
 
 extern codetype target; // make this global var
@@ -266,6 +266,7 @@ struct bracket_ref_t {
     Expr *E;            // full bracket expression "a[i]"
     DeclRefExpr *DRE;   // "a"
     Expr *Idx;          // "i"
+    Stmt *assign_stmt;  // if it is reduction ref, full assign stmt here
 };
 
 /// Stores information for a single reference to an loop-extern array or related variable

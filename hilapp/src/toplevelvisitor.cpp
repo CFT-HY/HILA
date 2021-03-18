@@ -581,7 +581,8 @@ bool TopLevelVisitor::is_vector_reference(Stmt *s) {
 /// v is std::vector or std::array.  Called only if is_vector_reference() is true
 ///////////////////////////////////////////////////////////////////////////////
 bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
-                                              std::string &assignop) {
+                                              std::string &assignop,
+                                              Stmt *assign_stmt) {
 
     bracket_ref_t br;
 
@@ -590,6 +591,8 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
 
     br.DRE = find_base_variable(br.E);
     br.Idx = OC->getArg(1)->IgnoreImplicit();
+
+    if (is_assign) br.assign_stmt = assign_stmt;
 
     std::string type = OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
 
@@ -731,7 +734,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // Check for std::vector or std::array references
     if (is_vector_reference(s)) {
-        handle_vector_reference(s, is_assignment, assignop);
+        handle_vector_reference(s, is_assignment, assignop, assign_stmt);
         parsing_state.skip_children = 1;
         is_assignment = false;
         return true;

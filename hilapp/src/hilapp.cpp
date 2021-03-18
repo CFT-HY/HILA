@@ -201,10 +201,10 @@ void handle_cmdline_arguments(codetype &target) {
     }
 
     if (cmdline::CUDA || cmdline::openacc)
-        target.is_kernelized = true;
+        target.GPU = true;
 
-    if (target.is_kernelized && cmdline::allow_func_globals) {
-        llvm::errs() << "hilapp commandline error: kernelized target architecture '";
+    if (target.GPU && cmdline::allow_func_globals) {
+        llvm::errs() << "hilapp commandline error: gpu target architecture '";
         if (target.CUDA)
             llvm::errs() << "cuda";
         else if (target.openacc)

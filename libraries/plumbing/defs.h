@@ -23,13 +23,15 @@
 #include "plumbing/memalloc.h" // memory allocator
 #include "plumbing/timing.h"
 
+
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
 /// ADD HERE GUARD FOR THOSE WHICH DO not HAVE IT
-#ifndef CUDA
 #define RESTRICT __restrict__
-#else
-#define RESTRICT // disabled here
-#endif
+// #ifndef CUDA
+// #define RESTRICT __restrict__
+// #else
+// #define RESTRICT // disabled here
+// #endif
 
 #define EVEN_SITES_FIRST
 
@@ -55,11 +57,11 @@ extern std::ofstream output_file;
 
 int myrank(); // rank of this node
 
-// about_to_finish becomes true at the end.  Signals that 
+// about_to_finish becomes true at the end.  Signals that
 // better not rely on MPI or existence of objects any more.
-extern bool about_to_finish;  
+extern bool about_to_finish;
 
-// check_input is used to notify that we're just checking the 
+// check_input is used to notify that we're just checking the
 // input values and will exit before fields are allocated.
 extern bool check_input;
 extern int check_with_nodes;
@@ -88,8 +90,8 @@ extern logger_class log;
 ///
 /// Above #define can trigger "dangling-else" warning.  Let us
 /// try to avoid it with the following a bit more ugly trick:
-#define output0                                                                          \
-    for (int _dummy_i_ = 1; hila::myrank() == 0 && _dummy_i_; --_dummy_i_)               \
+#define output0                                                                        \
+    for (int _dummy_i_ = 1; hila::myrank() == 0 && _dummy_i_; --_dummy_i_)             \
     hila::output
 
 // The following disables the "dangling-else" warning, but not needed now
@@ -103,6 +105,7 @@ enum class fft_direction { forward, inverse };
 /// Allow other than periodic boundary conditions
 #define SPECIAL_BOUNDARY_CONDITIONS
 
+
 // Backend defs-headers
 
 #if defined(CUDA)
@@ -115,6 +118,14 @@ enum class fft_direction { forward, inverse };
 
 // this include has to be after the backend defs, because those define hila::random()
 #include "plumbing/random.h"
+
+// This contains useful template tools
+#include "plumbing/template_tools.h"
+
+#if defined(CUDA)
+#include "plumbing/backend_cuda/cuda_templated_ops.h"
+#endif
+
 
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000
@@ -130,6 +141,8 @@ template <typename T> void broadcast_array(T *var, int n) {}
 
 #endif
 
+
+
 int numnodes();
 void initialize_communications(int &argc, char ***argv);
 void split_into_sublattices(int rank);
@@ -141,38 +154,5 @@ void abort_communications(int status);
 // and print a dashed line
 void print_dashed_line(const std::string &txt = {});
 
-// Useful c++14 template missing in Puhti compilation of hilapp
-#if defined(PUHTI) && defined(HILAPP)
-namespace std {
-template <bool B, class T = void> using enable_if_t = typename std::enable_if<B, T>::type;
-}
-#endif
-
-/// Utility for selecting the numeric base type of a class
-template <class T, class Enable = void> struct base_type_struct {
-    /// The base type of the class
-    using type = typename T::base_type;
-};
-
-/// Utility for selecting the numeric base type of a class
-template <typename T>
-struct base_type_struct<T, typename std::enable_if_t<is_arithmetic<T>::value>> {
-    /// In this case the base type is just T
-    using type = T;
-};
-
-/// Utility for selecting the numeric base type of a class
-template <typename T> using number_type = typename base_type_struct<T>::type;
-
-// These are helpers, to make generic templates
-// e.g. type_plus<A,B> gives the type of the operator a + b, where a is of type A and b B.
-template <typename A, typename B>
-using type_plus = decltype(std::declval<A>() + std::declval<B>());
-template <typename A, typename B>
-using type_minus = decltype(std::declval<A>() - std::declval<B>());
-template <typename A, typename B>
-using type_mul = decltype(std::declval<A>() * std::declval<B>());
-template <typename A, typename B>
-using type_div = decltype(std::declval<A>() / std::declval<B>());
 
 #endif

@@ -182,7 +182,8 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 /////////////////////////////////////////////////////////////////////////////////
 
 call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
-                                                           CallExpr *Call, bool sitedep) {
+                                                           CallExpr *Call,
+                                                           bool sitedep) {
 
     call_info_struct cinfo;
 
@@ -194,8 +195,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
                  << srcMgr.getSpellingLineNumber(Call->getBeginLoc()) << " in file "
                  << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
-    llvm::errs() << "#parameters: " << D->getNumParams() << " and " << Call->getNumArgs()
-                 << " arguments\n";
+    llvm::errs() << "#parameters: " << D->getNumParams() << " and "
+                 << Call->getNumArgs() << " arguments\n";
 
     llvm::errs() << "Is it a method? " << isa<CXXMemberCallExpr>(Call) << '\n';
 
@@ -275,7 +276,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
             SourceLocation sl = MD->getNameInfo().getEndLoc();
             // scan parens after name
             bool output_only = false;
-            // llvm::errs() << "METHOD WORD AFTER PARENS " << getNextWord(skipParens(sl))
+            // llvm::errs() << "METHOD WORD AFTER PARENS " <<
+            // getNextWord(skipParens(sl))
             //              << " is const? " << is_const << '\n';
             if (getNextWord(skipParens(sl)) == output_only_keyword) {
                 output_only = true;
@@ -298,11 +300,11 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
 
             if (is_top_level && is_field_with_X_expr(E)) {
 
-                // following is called only if this==g_TopLevelVisitor, this just makes it
-                // compile
+                // following is called only if this==g_TopLevelVisitor, this just makes
+                // it compile
                 bool is_assign = !is_const;
-                g_TopLevelVisitor->handle_field_X_expr(E, is_assign,
-                                                       (!is_const && !output_only), true);
+                g_TopLevelVisitor->handle_field_X_expr(
+                    E, is_assign, (!is_const && !output_only), true);
 
                 sitedep = true;
 
@@ -400,8 +402,8 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
 
             sitedep = true;
             bool is_assign = is_lvalue;
-            g_TopLevelVisitor->handle_field_X_expr(E, is_assign, (is_lvalue && !out_only),
-                                                   true, true);
+            g_TopLevelVisitor->handle_field_X_expr(
+                E, is_assign, (is_lvalue && !out_only), true, true);
 
             ai.is_site_dependent = true;
 
@@ -538,34 +540,48 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             sfc.replace_range =
                 SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
 
-            bool replace_this =
-                true; // for non-cuda code replace only cases which are needed
+            // for non-cuda code replace only cases which are needed
+            bool replace_this = true;
+
+            std::string l_lattice;
+            
+            if (target.CUDA)
+                l_lattice = "d_lattice.";
+            else
+                l_lattice = "loop_lattice->";
+
             if (name == "coordinates") {
-                sfc.replace_expression = "loop_lattice->coordinates(";
+                sfc.replace_expression = l_lattice + "coordinates(";
                 sfc.add_loop_var = true;
+
             } else if (name == "parity") {
-                sfc.replace_expression = "loop_lattice->site_parity(";
+                sfc.replace_expression = l_lattice + "site_parity(";
                 sfc.add_loop_var = true;
+
             } else if (name == "coordinate") {
-                sfc.replace_expression = "loop_lattice->coordinate(";
+                sfc.replace_expression = l_lattice + "coordinate(";
                 sfc.argsExpr = MCall->getArg(0);
                 sfc.add_loop_var = true;
+
             } else if (name == "random") {
                 sfc.replace_expression = "hila::random(";
                 sfc.add_loop_var = false;
+
             } else if (name == "size") {
                 sfc.replace_expression = "loop_lattice_size(";
                 sfc.add_loop_var = false;
                 replace_this = target.CUDA;
+
             } else if (name == "volume") {
                 sfc.replace_expression = "loop_lattice_volume(";
                 sfc.add_loop_var = false;
                 replace_this = target.CUDA;
+
             } else {
                 if (objtype == "const class X_index_type") {
                     reportDiag(DiagnosticsEngine::Level::Error,
-                               Call->getSourceRange().getBegin(), "Unknown method X.%0()",
-                               name.c_str());
+                               Call->getSourceRange().getBegin(),
+                               "Unknown method X.%0()", name.c_str());
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error,
                                Call->getSourceRange().getBegin(),
