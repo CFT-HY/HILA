@@ -206,9 +206,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
          << ");\n";
     code << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop
          << ");\n";
-    code
-        << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin)/N_threads "
-           "+ 1;\n";
+
+    code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
+            "N_threads - 1)/N_threads;\n";
 
     // Check for reductions and allocate device memory
     for (var_info &v : var_info_list) {
@@ -363,7 +363,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     loopBuf.insert(beginloc, "atomicMultiply(&", true);
                 }
 
-                loopBuf.insert(endloc.getLocWithOffset(1), ")",false);
+                loopBuf.insert(endloc.getLocWithOffset(1), ")", false);
             }
         }
     }
@@ -562,14 +562,15 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             code << "cudaMemcpy(a_v__tmp.data(), " << ar.new_name << ", "
                  << ar.size_expr << " * sizeof(" << ar.element_type
                  << "), cudaMemcpyDeviceToHost);\n\n";
-            if (ar.reduction_type == reduction::SUM)
-                code << "for (int i=0; i<" << ar.size_expr << "; i++) " << ar.name
-                     << "[i] += a_v__tmp[i];\n";
-            else
-                code << "for (int i=0; i<" << ar.size_expr << "; i++) " << ar.name
-                     << "[i] *= a_v__tmp[i];\n";
 
-            code << "}\n";
+            code << "for (int _H_tmp_idx=0; _H_tmp_idx<" << ar.size_expr
+                 << "; _H_tmp_idx++) " << ar.name << "[_H_tmp_idx]";
+            if (ar.reduction_type == reduction::SUM)
+                code << " += a_v__tmp[_H_tmp_idx];\n";
+            else
+                code << " *= a_v__tmp[_H_tmp_idx];\n";
+
+            code << " }\n";
         }
 
         if (ar.type != array_ref::REPLACE &&
