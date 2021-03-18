@@ -119,7 +119,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // if we have small arrays, encapsulate them in struct
     // struct has to be defined before the kernel call
     for (array_ref &ar : array_ref_list) {
-        if (ar.type != array_ref::REPLACE || ar.type != array_ref::REDUCTION) {
+        if (ar.type != array_ref::REPLACE && ar.type != array_ref::REDUCTION) {
 
             if (ar.size > 0 && ar.size <= MAX_PARAM_ARRAY_SIZE) {
 
