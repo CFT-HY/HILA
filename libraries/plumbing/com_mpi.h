@@ -93,9 +93,15 @@ template <typename T> MPI_Datatype get_MPI_number_type(int &size) {
     if (std::is_same<number_type<T>, int>::value) {
         size = sizeof(int);
         return MPI_INT;
-    } else if (std::is_same<number_type<T>, long>::value) {
-        size = sizeof(long);
-        return MPI_LONG;
+    } else if (std::is_same<number_type<T>, unsigned>::value) {
+        size = sizeof(unsigned);
+        return MPI_UNSIGNED;
+    } else if (std::is_same<number_type<T>, int64_t>::value) {
+        size = sizeof(int64_t);
+        return MPI_INT64_T;
+    } else if (std::is_same<number_type<T>, uint64_t>::value) {
+        size = sizeof(uint64_t);
+        return MPI_UINT64_T;
     } else if (std::is_same<number_type<T>, float>::value) {
         size = sizeof(float);
         return MPI_FLOAT;

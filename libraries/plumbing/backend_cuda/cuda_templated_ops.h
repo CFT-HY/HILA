@@ -154,7 +154,6 @@ template <typename T> __global__ void cuda_set_zero_kernel(T *vector, int elems)
     }
 }
 
-
 /// Implement here atomicAdd for double precision for less than 6.0 capability
 /// motivated by the cuda toolkit documentation.
 /// atomicCAS(long long *a, long long b, long long v)
@@ -162,88 +161,99 @@ template <typename T> __global__ void cuda_set_zero_kernel(T *vector, int elems)
 /// atomically.  Returns *a.
 
 #if __CUDA_ARCH__ < 600
-__device__ inline double atomic_Add(double* dp, double v) {
+__device__ inline double atomic_Add(double *dp, double v) {
 
-    unsigned long long int* dp_ull = (unsigned long long int*)dp;
+    unsigned long long int *dp_ull = (unsigned long long int *)dp;
     unsigned long long int old = *dp_ull;
     unsigned long long int av;
 
     do {
         av = old;
-        old = atomicCAS(dp_ull, av,
-                        __double_as_longlong(v +
-                               __longlong_as_double(av)));
+        old = atomicCAS(dp_ull, av, __double_as_longlong(v + __longlong_as_double(av)));
 
-    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+        // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
     } while (av != old);
 
     return __longlong_as_double(old);
 }
 
 #else
-__device__ inline double atomic_Add(double *dp, double v) { return atomicAdd(dp,v); }
+__device__ inline double atomic_Add(double *dp, double v) { return atomicAdd(dp, v); }
 
 #endif
 
-/// Multiply 2 doubles atomically
-__device__ inline double atomicMultiply(double* dp, double v) {
+/// Do addition for "long long" -sized int type, which in cuda is 64 bits
+/// Cuda includes a ULL atomicAdd, which is used here.  Signed
+/// version can be obtained just by casting to ULL values, and
+/// using ULL atomicAdd - this gives the correct signed addition
+/// with "wraparound" overflow behaviour
 
-    unsigned long long int* dp_ull = (unsigned long long int*)dp;
+template <typename T, typename B,
+          std::enable_if_t<std::is_integral<T>::value &&
+                               sizeof(T) == sizeof(unsigned long long) &&
+                               std::is_convertible<B, T>::value,
+                           int> = 0>
+__device__ inline T atomicAdd(T *dp, B v) {
+
+    T tv = v;
+    return atomicAdd((unsigned long long int *)dp, (unsigned long long int)tv);
+}
+
+/// Atomic add for composed datatypes - do element-by-element
+/// requires that number_type is defined
+template <
+    typename T, typename B,
+    std::enable_if_t<!std::is_arithmetic<T>::value && std::is_convertible<B, T>::value,
+                     int> = 0>
+__device__ inline void atomicAdd(T *d, const B &bv) {
+
+    T v = bv;
+    number_type<T> *dp;
+    const number_type<T> *dv;
+    constexpr int N = sizeof(T) / sizeof(number_type<T>);
+
+    dp = (number_type<T> *)(void *)d;
+    dv = (number_type<T> *)(void *)&v;
+
+    for (int i = 0; i < N; ++i) {
+        atomicAdd(dp + i, dv[i]);
+    }
+}
+
+/// Multiply 2 doubles atomically
+__device__ inline double atomicMultiply(double *dp, double v) {
+
+    unsigned long long int *dp_ull = (unsigned long long int *)dp;
     unsigned long long int old = *dp_ull;
     unsigned long long int av;
 
     do {
         av = old;
-        old = atomicCAS(dp_ull, av,
-                        __double_as_longlong(v *
-                               __longlong_as_double(av)));
+        old = atomicCAS(dp_ull, av, __double_as_longlong(v * __longlong_as_double(av)));
 
-    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+        // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
     } while (av != old);
 
     return __longlong_as_double(old);
 }
 
 /// Multiply 2 floats atomically
-__device__ inline float atomicMultiply(float* dp, float v) {
-    unsigned int* dp_ui = (unsigned int*)dp;
+__device__ inline float atomicMultiply(float *dp, float v) {
+    unsigned int *dp_ui = (unsigned int *)dp;
     unsigned int old = *dp_ui;
     unsigned int av;
 
     do {
         av = old;
-        old = atomicCAS(dp_ui, av,
-                        __float_as_int(v *
-                               __int_as_float(av)));
+        old = atomicCAS(dp_ui, av, __float_as_int(v * __int_as_float(av)));
 
-    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+        // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
     } while (av != old);
 
     return __int_as_float(old);
 }
 
-/// Atomic add for composed datatypes - do element-by-element
-/// requires that number_type is defined
-template <typename T>
-__device__ inline void atomicAdd(T * d, const T & v) {
-
-    number_type<T> *dp; 
-    const number_type<T> * dv;
-    const int N = sizeof(T)/sizeof(number_type<T>);
-
-    dp = (number_type<T> *)(void *)d;
-    dv = (number_type<T> *)(void *)&v;
-
-    for (int i=0; i<N; ++i) {
-        atomicAdd(dp + i, dv[i]);
-    }
-}
-
 ///////////////////////
-
-
-
-
 
 #if 0
 template<typename T>
@@ -268,8 +278,6 @@ template <typename T> void cuda_set_zero(T *vec, size_t N) {
     cuda_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
 }
 
-
 #endif // __CUDACC__
-
 
 #endif

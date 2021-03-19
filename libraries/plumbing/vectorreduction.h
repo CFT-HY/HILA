@@ -152,6 +152,12 @@ template <typename T> class VectorReduction {
             vp = rhs;
     }
 
+    /// Assignment from 0
+    void operator=(std::nullptr_t np) {
+        for (auto &vp : val) 
+            vp = 0;
+    }
+
     // Don't even implement compound assignments
 
     /// Init is to be called before every site loop 

@@ -175,7 +175,16 @@ struct dir_ptr {
 /// a) just float, double, int  or
 /// b) is templated type, with float/double in template and  implements
 ///    the method using base_type = typename base_type_struct<T>::type;
-enum class number_type { INT, INT64_T, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN };
+enum class number_type {
+    INT,
+    UNSIGNED,
+    INT64_T,
+    UNIT64_T,
+    FLOAT,
+    DOUBLE,
+    LONG_DOUBLE,
+    UNKNOWN
+};
 
 /// Stores information about how a field is vectorized
 struct vectorization_info {
@@ -255,7 +264,8 @@ struct var_info {
     bool is_special_reduction_type; // is variable defined with Reduction<T>
 
     var_info() {
-        is_loop_local = is_assigned = is_site_dependent = is_special_reduction_type = false;
+        is_loop_local = is_assigned = is_site_dependent = is_special_reduction_type =
+            false;
         decl = nullptr;
         reduction_type = reduction::NONE;
     }
@@ -263,26 +273,26 @@ struct var_info {
 
 //  Store "array-type" references inside site loops
 struct bracket_ref_t {
-    Expr *E;            // full bracket expression "a[i]"
-    DeclRefExpr *DRE;   // "a"
-    Expr *Idx;          // "i"
-    Stmt *assign_stmt;  // if it is reduction ref, full assign stmt here
+    Expr *E;           // full bracket expression "a[i]"
+    DeclRefExpr *DRE;  // "a"
+    Expr *Idx;         // "i"
+    Stmt *assign_stmt; // if it is reduction ref, full assign stmt here
 };
 
-/// Stores information for a single reference to an loop-extern array or related variable
-/// These are similar to variable references, but often
-/// need to be handled differently
+/// Stores information for a single reference to an loop-extern array or related
+/// variable These are similar to variable references, but often need to be handled
+/// differently
 struct array_ref {
-    std::vector<bracket_ref_t> refs;     // vector of array references
-    VarDecl * vd;                     // declaration of referred to variable
+    std::vector<bracket_ref_t> refs; // vector of array references
+    VarDecl *vd;                     // declaration of referred to variable
     std::string name;
-    std::string new_name;      
-    std::string element_type;         // type of element
-    std::string wrapper_type;         // if need to wrap this var
-    size_t size;                      // size of array (if known)
-    std::string size_expr;            // if only size expression known
-    std::string data_ptr;             // == name for array, name.data() for others
-    using reftype = enum {REPLACE, ARRAY, STD_VECTOR, STD_ARRAY, REDUCTION};
+    std::string new_name;
+    std::string element_type; // type of element
+    std::string wrapper_type; // if need to wrap this var
+    size_t size;              // size of array (if known)
+    std::string size_expr;    // if only size expression known
+    std::string data_ptr;     // == name for array, name.data() for others
+    using reftype = enum { REPLACE, ARRAY, STD_VECTOR, STD_ARRAY, REDUCTION };
     reduction reduction_type;
     reftype type;
 
@@ -333,7 +343,7 @@ struct loop_info_struct {
     bool has_pragma_access;
     const char *pragma_access_args;
     bool has_site_dependent_cond_or_index; // if, for, while w. site dep. cond?
-    bool contains_random;          // does it contain rng (also in loop functions)?
+    bool contains_random; // does it contain rng (also in loop functions)?
     std::vector<var_info *> conditional_vars; // may depend on variables
     Expr *condExpr;
 
@@ -404,7 +414,6 @@ enum class pragma_hila {
     CONTAINS_RNG,
     ACCESS
 };
-
 
 /// Pragma handling things
 bool has_pragma_hila(const SourceManager &SM, SourceLocation l0, pragma_hila pragma,

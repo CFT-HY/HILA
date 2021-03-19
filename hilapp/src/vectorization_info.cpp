@@ -31,8 +31,12 @@
 number_type get_number_type(const std::string &s) {
     if (s == "int")
         return number_type::INT;
+    else if (s == "unsigned" || s == "unsigned int")
+        return number_type::UNSIGNED;
     else if (s == "int64_t")
         return number_type::INT64_T;
+    else if (s == "unit64_t")
+        return number_type::UNIT64_T;
     else if (s == "float")
         return number_type::FLOAT;
     else if (s == "double")
