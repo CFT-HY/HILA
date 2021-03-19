@@ -112,6 +112,7 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// add assign an Array
+#pragma hila loop_function
     template <typename S, std::enable_if_t<std::is_convertible<S, T>::value, int> = 0>
     Array<n, m, T> &operator+=(const Array<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
@@ -140,8 +141,8 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// subtract assign type T and convertible
-    template <typename S,
-              std::enable_if_t<std::is_convertible<type_minus<T, S>, T>::value, int> = 0>
+    template <typename S, std::enable_if_t<
+                              std::is_convertible<type_minus<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator-=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] -= rhs;
@@ -377,21 +378,20 @@ inline number_type<T> norm_squared(const Array<n, m, T> &rhs) {
 }
 
 /// Function that calls random()-method
-template <int n, int m, typename T> inline void random(output_only Array<n, m, T> &mat) {
+template <int n, int m, typename T>
+inline void random(output_only Array<n, m, T> &mat) {
     mat.random();
 }
 
 /// Function that calls the gaussian()-method
-template <int n, int m, typename T> inline void gaussian_random(output_only Array<n, m, T> &mat) {
+template <int n, int m, typename T>
+inline void gaussian_random(output_only Array<n, m, T> &mat) {
     mat.gaussian();
 }
 
 /// Array1d and Array2d are just aliased to Array
-template <int n, typename T=double> 
-using Array1d = Array<n, 1, T>;
+template <int n, typename T = double> using Array1d = Array<n, 1, T>;
 
-template <int n, int m, typename T=double> 
-using Array2d = Array<n, m, T>;
-
+template <int n, int m, typename T = double> using Array2d = Array<n, m, T>;
 
 #endif

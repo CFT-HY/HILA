@@ -528,13 +528,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 } else if (vi.reduction_type == reduction::PRODUCT) {
                     kernel << vi.new_name << "[blockIdx.x] = 1;\n";
                 }
-                kernel << "for( int i=0; i<N_threads; i++ ){\n";
+                kernel << "for( int _H_i=0; _H_i<N_threads; _H_i++ ){\n";
                 if (vi.reduction_type == reduction::SUM) {
                     kernel << vi.new_name << "[blockIdx.x] += " << vi.new_name
-                           << "_sh[i];\n";
+                           << "_sh[_H_i];\n";
                 } else if (vi.reduction_type == reduction::PRODUCT) {
                     kernel << vi.new_name << "[blockIdx.x] *= " << vi.new_name
-                           << "_sh[i];\n";
+                           << "_sh[_H_i];\n";
                 }
                 kernel << "}\n";
                 kernel << "}\n";

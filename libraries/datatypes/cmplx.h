@@ -136,6 +136,9 @@ template <typename T = double> struct Complex {
     inline Complex<T> operator+() const { return *this; }
     inline Complex<T> operator-() const { return Complex<T>(-re, -im); }
 
+    // mark += and *= as loop_functions, because these can be used
+    // in reductions implicitly
+#pragma hila loop_function
     inline Complex<T> &operator+=(const Complex<T> &lhs) {
         re += lhs.re;
         im += lhs.im;
@@ -168,6 +171,7 @@ template <typename T = double> struct Complex {
     //   return *this;
     // }
 
+#pragma hila loop_function
     inline Complex<T> &operator*=(const Complex<T> lhs) {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
         im = mul_add(im, lhs.re, re * lhs.im);  // a*b+c
