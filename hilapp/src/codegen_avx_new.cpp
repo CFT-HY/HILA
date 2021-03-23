@@ -91,7 +91,7 @@ bool LoopFunctionHandler::VisitVarDecl(VarDecl *var) {
 bool LoopFunctionHandler::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *op) {
     if (op && op->isAssignmentOp()) {
         std::string type = op->getArg(0)->getType().getAsString();
-        type = remove_all_whitespace(type);
+        type = remove_extra_whitespace(type);
         if (type.rfind("element<", 0) == std::string::npos) {
             LoopAssignChecker lac(*this);
             lac.TraverseStmt(op);
@@ -103,7 +103,7 @@ bool LoopFunctionHandler::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *op) {
 bool LoopFunctionHandler::VisitBinaryOperator(BinaryOperator *op) {
     if (op && op->isAssignmentOp()) {
         std::string type = op->getLHS()->getType().getAsString();
-        type = remove_all_whitespace(type);
+        type = remove_extra_whitespace(type);
         if (type.rfind("element<", 0) == std::string::npos) {
             LoopAssignChecker lac(*this);
             lac.TraverseStmt(op);

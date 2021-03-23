@@ -65,7 +65,7 @@ bool LoopAssignChecker::TraverseStmt(Stmt *s) {
 /// Check the validity a variable reference in a loop
 bool LoopAssignChecker::VisitDeclRefExpr(DeclRefExpr *e) {
     std::string type = e->getType().getAsString();
-    type = remove_all_whitespace(type);
+    type = remove_extra_whitespace(type);
     if (type.rfind("element<", 0) != std::string::npos) {
         reportDiag(DiagnosticsEngine::Level::Error, e->getSourceRange().getBegin(),
                    "Cannot assign a Field element to a non-element type");
@@ -79,7 +79,7 @@ void TopLevelVisitor::check_allowed_assignment(Stmt *s) {
         if (OP->getNumArgs() == 2) {
             // Walk the right hand side to check for element types. None are allowed.
             std::string type = OP->getArg(0)->getType().getAsString();
-            type = remove_all_whitespace(type);
+            type = remove_extra_whitespace(type);
             if (type.rfind("element<", 0) == std::string::npos) {
 
                 LoopAssignChecker lac(*this);

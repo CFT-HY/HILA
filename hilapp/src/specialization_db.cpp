@@ -77,7 +77,7 @@ spec *search_spec_db(std::string &decl) {
 // "here". if not, returns false and adds the item in db
 bool in_specialization_db(const std::string &decl_in, std::string &here) {
 
-    std::string decl = remove_all_whitespace(decl_in);
+    std::string decl = remove_extra_whitespace(decl_in);
 
     if (!db_loaded)
         load_spec_db();

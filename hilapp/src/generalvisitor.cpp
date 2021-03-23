@@ -443,7 +443,7 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
     type.removeLocalConst();
 
     vi.type = type.getAsString(PP);
-    vi.type = remove_all_whitespace(vi.type);
+    vi.type = remove_extra_whitespace(vi.type);
     // bool is_elem = (vi.type.find("element<") == 0);
     // vi.type = type.getAsString(PP);
     // if (is_elem)
