@@ -27,13 +27,15 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
                               fft_direction fftdir = fft_direction::forward) {
 
     lattice_struct *lattice = input.fs->lattice;
-    Field<T> *read_pointer = &input; // Read from input on first time, then work in result
+    
+    // Read from input on first time, then work in result
+    Field<T> *read_pointer = &input;
     size_t local_volume = lattice->mynode.volume();
     int elements = sizeof(T) / sizeof(complex_type);
 
     FFT_timer.start();
 
-    // Make store the result is allocated and mark it changed
+    // Make sure the result is allocated and mark it changed
     result.check_alloc();
     result.mark_changed(ALL);
 

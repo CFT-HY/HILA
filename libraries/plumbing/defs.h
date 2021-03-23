@@ -55,7 +55,11 @@ extern std::ostream output;
 /// this is just a hook to store output file, if it is in use
 extern std::ofstream output_file;
 
-int myrank(); // rank of this node
+///  rank of this node
+int myrank();
+
+/// Seed random generators
+void seed_random(unsigned long seed);
 
 // about_to_finish becomes true at the end.  Signals that
 // better not rely on MPI or existence of objects any more.

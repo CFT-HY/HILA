@@ -27,10 +27,10 @@ struct fftnode_struct {
     unsigned size_to_dir;   // size of "node" to fft-dir
     unsigned column_offset; // first perp-plane column to be handled by "node"
     unsigned column_number; // and number of columns to be sent
-    size_t
-        recv_buf_size; // size of my fft collect buffer (in units of elements*cmplx_size)
-                       // for stuff received from / returned to "node"
-    char *work_in;     // where to hang the fft collect buffers
+    size_t recv_buf_size;   // size of my fft collect buffer (in units of
+                          // elements*cmplx_size) for stuff received from / returned to
+                          // "node"
+    char *work_in; // where to hang the fft collect buffers
     char *work_out;
 
 #ifdef USE_MPI
@@ -139,7 +139,8 @@ void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
         // column offset and number are used for sending
         size_t i = 0;
         for (fftnode_struct &fn : fft_comms[dir]) {
-            fn.column_offset = ((i * total_columns) / nodes) * lattice->mynode.size[dir];
+            fn.column_offset =
+                ((i * total_columns) / nodes) * lattice->mynode.size[dir];
             fn.column_number =
                 (((i + 1) * total_columns) / nodes) * lattice->mynode.size[dir] -
                 fn.column_offset;
@@ -279,7 +280,6 @@ void fft_post_gather() {
     fft_MPI_timer.stop();
 
 #endif
-
 }
 
 void fft_start_gather(void *buffer) {
@@ -306,7 +306,6 @@ void fft_start_gather(void *buffer) {
     fft_MPI_timer.stop();
 
 #endif
-
 }
 
 void fft_wait_send() {
@@ -364,8 +363,8 @@ void fft_post_scatter(void *buffer) {
                                       ? MPI_C_DOUBLE_COMPLEX
                                       : MPI_C_FLOAT_COMPLEX;
 
-            MPI_Irecv(p, (int)n, c_type, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat,
-                      &fn.receive_request);
+            MPI_Irecv(p, (int)n, c_type, fn.node, WRK_SCATTER_TAG,
+                      lattice->mpi_comm_lat, &fn.receive_request);
         }
     fft_MPI_timer.stop();
 #endif

@@ -56,7 +56,7 @@ int mersenne_i = -1;       /*  < 0 means mt[N] is not initialized */
 double mersenne_array[N];
 
 /* initializing the array with a NONZERO seed */
-void seed_mersenne(long seed) {
+void seed_mersenne(unsigned long seed) {
     int mti;
     /* setting initial seeds to mt[N] using         */
     /* the generator Line 25 of Table 1 in          */

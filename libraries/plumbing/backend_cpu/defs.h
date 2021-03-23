@@ -8,15 +8,6 @@
 // Define random number generator
 namespace hila {
     inline double random() { return mersenne(); }
-    inline void seed_random(unsigned long seed) {
-
-        /* First seed the generator */
-        seed_mersenne(seed);
-
-        /* "Warm up" to create a full state */
-        for (int i = 0; i < 543210; i++)
-            mersenne();
-    }
 } // namespace hila
 
 // Trivial synchronization

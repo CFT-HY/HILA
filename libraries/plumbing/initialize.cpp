@@ -274,11 +274,12 @@ void hila::initialize(int argc, char **argv) {
 #endif
 }
 
-/**************************************************
- * random number generators
- */
+/// Seed random number generators
+/// Seed is shuffled so that different nodes
+/// get different rng seeds.  If seed == 0,
+/// generate seed using the time() -function.
 
-void initialize_prn(long seed) {
+void hila::seed_random(unsigned long seed) {
 
 #ifndef SITERAND
 
@@ -297,12 +298,18 @@ void initialize_prn(long seed) {
     seed += 1121 * n;
     seed = seed ^ ((511 * n) << 18);
 
-    output0 << " Using node random numbers, seed for node 0: " << seed << '\n';
+    output0 << "Using node random numbers, seed for node 0: " << seed << '\n';
 
     seed_mersenne(seed);
     // warm it up
     for (int i = 0; i < 90000; i++)
         mersenne();
+
+#ifdef CUDA
+    double d = mersenne();
+    seed = seed ^ (*(unsigned long *)(void *)&d);
+    hila::seed_device_rng(seed);
+#endif
 
         // taus_initialize();
 

@@ -29,7 +29,7 @@ __global__ void seed_random_kernel(curandState *state, unsigned long seed,
 }
 
 /* Set seed on device and host */
-void hila::seed_random(unsigned long seed) {
+void hila::seed_device_rng(unsigned long seed) {
     unsigned int iters_per_kernel = 16;
     unsigned long n_blocks =
         lattice->mynode.volume() / (N_threads * iters_per_kernel) + 1;
@@ -40,7 +40,6 @@ void hila::seed_random(unsigned long seed) {
     seed_random_kernel<<<n_blocks, N_threads>>>(curandstate, myseed, iters_per_kernel,
                                                 n_blocks * N_threads);
     check_cuda_error("seed_random kernel");
-    seed_mersenne(myseed + n_sites - 1);
 
 }
 

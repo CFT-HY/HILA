@@ -10,5 +10,5 @@ extern double mersenne_array[MERSENNE_N];
 
 #define mersenne() (mersenne_i > 0 ? mersenne_array[--mersenne_i] : mersenne_generate())
 
-void seed_mersenne(long);
+void seed_mersenne(unsigned long);
 double mersenne_generate();
