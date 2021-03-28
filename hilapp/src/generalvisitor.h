@@ -245,7 +245,7 @@ class GeneralVisitor {
     SourceLocation skipParens(SourceLocation sl);
 
     var_info *handle_var_ref(DeclRefExpr *E, bool is_assign, const std::string &op,
-                             Stmt *assign_stmt = nullptr);
+                             Stmt *assign_stmt = nullptr, bool is_raw = false);
 
     var_info *new_var_info(VarDecl *decl);
 

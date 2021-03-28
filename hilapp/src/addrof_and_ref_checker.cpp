@@ -91,7 +91,7 @@ class addrOfAndRefChecker : public GeneralVisitor,
                     if (VarDecl *decl = dyn_cast<VarDecl>(DRE->getDecl())) {
                         // if we are inspecting address of operator
                         for (var_info &vi : var_info_list)
-                            if (vi.decl == decl) {
+                            if (vi.decl == decl && !vi.is_raw) {
                                 // found decl
                                 if (!vi.is_loop_local) {
                                     reportDiag(
@@ -211,7 +211,7 @@ class addrOfAndRefChecker : public GeneralVisitor,
                         if (VarDecl *decl = dyn_cast<VarDecl>(DRE->getDecl())) {
                             // it's variable ref.
                             for (var_info &vi : var_info_list)
-                                if (vi.decl == decl) {
+                                if (vi.decl == decl && !vi.is_raw) {
                                     if (!vi.is_loop_local) {
                                         reportDiag(DiagnosticsEngine::Level::Error,
                                                    DRE->getSourceRange().getBegin(),

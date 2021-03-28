@@ -353,6 +353,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
         find_word(loop_info.pragma_access_args, vd->getNameAsString()) !=
             std::string::npos) {
 
+        // no need to handle the expression here, bubble up and handle the raw ptr on 
+        // next visit
         return 0;
     }
 
@@ -364,7 +366,6 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             // be done.  Let us anyway put it through the std handler in order to
             // flag it.
 
-            llvm::errs() << " %%%  loop local array \n";
             handle_var_ref(ref.DRE, is_assign, assignop);
 
             // and traverse whatever is in the index in normal fashion
@@ -592,7 +593,8 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
     br.DRE = find_base_variable(br.E);
     br.Idx = OC->getArg(1)->IgnoreImplicit();
 
-    if (is_assign) br.assign_stmt = assign_stmt;
+    if (is_assign)
+        br.assign_stmt = assign_stmt;
 
     std::string type = OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
 
@@ -823,12 +825,15 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             if (isa<VarDecl>(DRE->getDecl())) {
                 // now it should be var ref non-field
 
-                bool is_raw =
-                    (loop_info.has_pragma_access &&
-                     find_word(loop_info.pragma_access_args,
-                               DRE->getDecl()->getNameAsString()) != std::string::npos);
+                // check if it is raw ptr access, mark if so
+                if (loop_info.has_pragma_access &&
+                    find_word(loop_info.pragma_access_args,
+                              DRE->getDecl()->getNameAsString()) != std::string::npos) {
 
-                if (!is_raw) {
+                    handle_var_ref(DRE, is_assignment, assignop, assign_stmt, true);
+
+                } else {
+
                     handle_var_ref(DRE, is_assignment, assignop, assign_stmt);
                 }
 
@@ -1333,9 +1338,10 @@ void TopLevelVisitor::check_var_info_list() {
     // and also get the vectorized type for them, to be prepared...
 
     if (target.vectorize) {
-        for (var_info &vi : var_info_list) {
-            vi.vecinfo.is_vectorizable = is_vectorizable_type(vi.type, vi.vecinfo);
-        }
+        for (var_info &vi : var_info_list)
+            if (!vi.is_raw) {
+                vi.vecinfo.is_vectorizable = is_vectorizable_type(vi.type, vi.vecinfo);
+            }
     }
 }
 

@@ -245,8 +245,17 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
     i = 0;
     // and non-field vars
-    for (var_info &vi : var_info_list)
-        if (!vi.is_loop_local) {
+    for (var_info &vi : var_info_list) {
+
+        if (vi.is_raw) {
+            // pass the raw ptr as is
+            llvm::errs() << " &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& RAW " << vi.name << '\n';
+
+            kernel << ", " << vi.type << " * " << vi.name;
+            code   << ", " << vi.name;
+
+        } else if (!vi.is_loop_local) {
+
             // Rename the variable
             vi.new_name = "sv_" + std::to_string(i) + "_";
             i++;
@@ -264,6 +273,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 }
             }
         }
+    }
 
 #if 0
     // Add array reductions to the argument list

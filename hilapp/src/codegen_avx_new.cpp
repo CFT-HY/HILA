@@ -276,7 +276,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
         // and then if the site dep. variables are vectorizable
         if (var_info_list.size() > 0) {
             for (var_info &vi : var_info_list)
-                if (vi.is_site_dependent) {
+                if (!vi.is_raw && vi.is_site_dependent) {
                     if (vi.vecinfo.is_vectorizable) {
                         if (vector_size == 0) {
                             vector_size = vi.vecinfo.vector_size;

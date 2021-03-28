@@ -342,13 +342,15 @@ std::string GeneralVisitor::getPreviousWord(SourceLocation sl, SourceLocation *s
 ////////////////////////////////////////////////////////////////////////////
 
 var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
-                                         const std::string &assignop, Stmt *assign_stmt) {
+                                         const std::string &assignop, Stmt *assign_stmt,
+                                         bool is_raw) {
 
     if (isa<VarDecl>(DRE->getDecl())) {
         auto decl = dyn_cast<VarDecl>(DRE->getDecl());
 
         /// we don't want "X" -variable or lattice-> as a kernel parameter
-        clang::QualType typ = decl->getType().getUnqualifiedType().getNonReferenceType();
+        clang::QualType typ =
+            decl->getType().getUnqualifiedType().getNonReferenceType();
         typ.removeLocalConst();
 
         // if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT
@@ -368,7 +370,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
         bool foundvar = false;
         var_info *vip = nullptr;
         for (var_info &vi : var_info_list) {
-            if (vi.decl == decl) {
+            if (vi.decl == decl && !is_raw) {
                 // found already referred to decl
                 // check if this particular ref has been handled before
                 bool foundref = false;
@@ -394,6 +396,11 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
                 vip = &vi;
                 foundvar = true;
                 break;
+
+            } else if (vi.decl == decl) {
+                // now is_raw == true, old variable, do not have to check refs
+                foundvar = true;
+                break;
             }
         }
         if (!foundvar) {
@@ -402,14 +409,20 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
 
             vip->refs.push_back(vr);
             vip->is_assigned = is_assign;
-            // we know refs contains only 1 element
-            if (is_top_level) {
-                vip->reduction_type = get_reduction_type(is_assign, assignop, *vip);
-            }
 
+            if (is_raw) {
+                vip->is_raw = true;
+                vip->is_site_dependent = true; // probably does not matter
+            } else {
+
+                // we know refs contains only 1 element
+                if (is_top_level) {
+                    vip->reduction_type = get_reduction_type(is_assign, assignop, *vip);
+                }
+            }
         }
 
-        if (is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
+        if (!is_raw && is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
             vip->is_site_dependent =
                 is_rhs_site_dependent(assign_stmt, &vip->dependent_vars);
 
@@ -439,7 +452,8 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
     // Printing policy is somehow needed for printing type without "class" id
     // Unqualified takes away "consts" and namespaces etc. and Canonical typdefs/using.
     // Also need special handling for element type
-    clang::QualType type = decl->getType().getUnqualifiedType().getCanonicalType().getNonReferenceType();
+    clang::QualType type =
+        decl->getType().getUnqualifiedType().getCanonicalType().getNonReferenceType();
     type.removeLocalConst();
 
     vi.type = type.getAsString(PP);
@@ -467,7 +481,7 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
         // The signature of the type is Reduction< ... , void>.
         // Remove until last ,
 
-        vi.type = vi.type.substr(10,vi.type.rfind(',')-10);
+        vi.type = vi.type.substr(10, vi.type.rfind(',') - 10);
     }
 
     vi.dependent_vars.clear();
@@ -566,7 +580,8 @@ bool GeneralVisitor::has_pragma(const SourceLocation l, const pragma_hila pragma
         sl = CSR.getBegin();
     }
 
-    if (has_pragma_hila(TheRewriter.getSourceMgr(), sl, pragma, pragmaloc, pragma_arg)) {
+    if (has_pragma_hila(TheRewriter.getSourceMgr(), sl, pragma, pragmaloc,
+                        pragma_arg)) {
 
         // got it, comment out -- check that it has not been commented out before
         // the buffer may not be writeBuf, so be careful

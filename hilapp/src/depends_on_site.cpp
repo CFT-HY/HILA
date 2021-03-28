@@ -50,7 +50,7 @@ class isSiteDependentChecker : public GeneralVisitor,
                 VarDecl *decl = dyn_cast<VarDecl>(e->getDecl());
                 // it's a variable and found the decl, check if we have it here
                 for (var_info &v : var_info_list)
-                    if (v.decl == decl) {
+                    if (v.decl == decl && !v.is_raw) {
                         if (v.is_site_dependent) {
                             found_var_depends_on_site = true;
                             return false; // again, the inspection can be stopped

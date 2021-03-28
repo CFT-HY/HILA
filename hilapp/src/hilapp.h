@@ -1,4 +1,3 @@
-// -*- mode: c++ -*-
 #ifndef HILAPP_H
 #define HILAPP_H
 
@@ -262,10 +261,11 @@ struct var_info {
     bool is_assigned;               // is the var assigned to
     bool is_site_dependent;         // is the value of variable site dependent
     bool is_special_reduction_type; // is variable defined with Reduction<T>
+    bool is_raw;                    // is it raw access var?
 
     var_info() {
         is_loop_local = is_assigned = is_site_dependent = is_special_reduction_type =
-            false;
+            is_raw = false;
         decl = nullptr;
         reduction_type = reduction::NONE;
     }
