@@ -328,11 +328,11 @@ class loopFunctionVisitor : public GeneralVisitor,
                 if (name == "size") {
                     sfc.replace_expression = "loop_lattice_size(";
                     sfc.add_loop_var = false;
-                    replace_this = target.CUDA;
+                    replace_this = target.cuda;
                 } else if (name == "volume") {
                     sfc.replace_expression = "loop_lattice_volume(";
                     sfc.add_loop_var = false;
-                    replace_this = target.CUDA;
+                    replace_this = target.cuda;
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error,
                                Call->getSourceRange().getBegin(),

@@ -399,7 +399,7 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code,
 void GeneralVisitor::backend_handle_loop_function(call_info_struct &ci) {
     // we should mark the function, but it is not necessarily in the
     // main file buffer
-    if (target.CUDA) {
+    if (target.cuda) {
         handle_loop_function_cuda(ci);
     } else if (target.openacc) {
         handle_loop_function_openacc(ci.funcdecl);
@@ -412,7 +412,7 @@ void GeneralVisitor::backend_handle_loop_function(call_info_struct &ci) {
 void GeneralVisitor::backend_handle_loop_constructor(call_info_struct &ci) {
     // we should mark the function, but it is not necessarily in the
     // main file buffer
-    if (target.CUDA) {
+    if (target.cuda) {
         handle_loop_constructor_cuda(ci);
     } else if (target.openacc) {
         handle_loop_constructor_openacc(ci.ctordecl);
@@ -426,7 +426,7 @@ std::string TopLevelVisitor::backend_generate_code(Stmt *S, bool semicolon_at_en
                                                    srcBuf &loopBuf,
                                                    bool generate_wait_loops) {
     std::stringstream code;
-    if (target.CUDA) {
+    if (target.cuda) {
         code << generate_code_cuda(S, semicolon_at_end, loopBuf, generate_wait_loops);
     } else if (target.openacc) {
         code << generate_code_cpu(S, semicolon_at_end, loopBuf,

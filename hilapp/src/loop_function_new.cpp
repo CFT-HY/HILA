@@ -545,7 +545,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 
             std::string l_lattice;
             
-            if (target.CUDA)
+            if (target.cuda)
                 l_lattice = "d_lattice.";
             else
                 l_lattice = "loop_lattice->";
@@ -570,12 +570,12 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             } else if (name == "size") {
                 sfc.replace_expression = "loop_lattice_size(";
                 sfc.add_loop_var = false;
-                replace_this = target.CUDA;
+                replace_this = target.cuda;
 
             } else if (name == "volume") {
                 sfc.replace_expression = "loop_lattice_volume(";
                 sfc.add_loop_var = false;
-                replace_this = target.CUDA;
+                replace_this = target.cuda;
 
             } else {
                 if (objtype == "const class X_index_type") {

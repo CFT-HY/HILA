@@ -183,7 +183,7 @@ const char **cmdline::argv;
 /// Check command line arguments and set appropriate flags in target
 void handle_cmdline_arguments(codetype &target) {
     if (cmdline::CUDA) {
-        target.CUDA = true;
+        target.cuda = true;
     } else if (cmdline::openacc) {
         target.openacc = true;
     } else if (cmdline::AVX) {
@@ -200,12 +200,15 @@ void handle_cmdline_arguments(codetype &target) {
         target.vector_size = cmdline::vectorize;
     }
 
+    if (cmdline::CUDA) 
+        target.kernelize = true;
+
     if (cmdline::CUDA || cmdline::openacc)
         target.GPU = true;
 
     if (target.GPU && cmdline::allow_func_globals) {
         llvm::errs() << "hilapp commandline error: gpu target architecture '";
-        if (target.CUDA)
+        if (target.cuda)
             llvm::errs() << "cuda";
         else if (target.openacc)
             llvm::errs() << "openacc";
