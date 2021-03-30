@@ -71,7 +71,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // "Code" is inserted at the location of the loop statement
     // and the kernel is build in "kernel"
     std::stringstream code, kernel;
-    const std::string t = loopBuf.dump();
+    // const std::string t = loopBuf.dump();
 
     // Get kernel name - use line number or file offset (must be deterministic)
     std::string kernel_name = TopLevelVisitor::make_kernel_name();
@@ -249,9 +249,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
         if (vi.is_raw) {
             // pass the raw ptr as is
-            llvm::errs() << " &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& RAW " << vi.name << '\n';
 
-            kernel << ", " << vi.type << " * " << vi.name;
+            kernel << ", " << vi.type << vi.name;
             code   << ", " << vi.name;
 
         } else if (!vi.is_loop_local) {

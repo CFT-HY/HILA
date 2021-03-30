@@ -131,6 +131,9 @@ class GeneralVisitor {
         return get_file_buffer(TheRewriter, TheRewriter.getSourceMgr().getFileID(sl));
     }
 
+    /// Get FileID for SourceLocation
+    FileID get_FileId(SourceLocation sl) { return TheRewriter.getSourceMgr().getFileID(sl); }
+
     /// a list of utility inspection functions
     /// getCanonicalType takes away typedefs, getUnqualifiedType() qualifiers, pp just in
     /// case the type string needs to begin with the string

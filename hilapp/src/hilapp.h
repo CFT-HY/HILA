@@ -347,6 +347,8 @@ struct loop_info_struct {
     std::vector<var_info *> conditional_vars; // may depend on variables
     Expr *condExpr;
 
+    SourceRange range;
+
     inline void
     clear_except_external() { // do not remove parity values, may be set in loop init
         has_site_dependent_cond_or_index = contains_random = false;

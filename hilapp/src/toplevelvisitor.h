@@ -150,6 +150,8 @@ class TopLevelVisitor : public GeneralVisitor,
     bool handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop,
                                  Stmt *assingstmt);
 
+    bool handle_constant_expr(Expr *E);
+
     /// Check that the addressof-operators and reference vars are OK
     void check_addrofops_and_refs(Stmt *S);
 

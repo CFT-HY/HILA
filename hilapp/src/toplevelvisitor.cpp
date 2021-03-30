@@ -353,7 +353,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
         find_word(loop_info.pragma_access_args, vd->getNameAsString()) !=
             std::string::npos) {
 
-        // no need to handle the expression here, bubble up and handle the raw ptr on 
+        // no need to handle the expression here, bubble up and handle the raw ptr on
         // next visit
         return 0;
     }
@@ -618,6 +618,62 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+///  Handle constant expressions referred to in loops
+///  Const reference is left as is, EXCEPT if:
+///   - target is kernelized
+///   - const is defined outside loop body but after the point where
+///     kernels are included
+///  If this is true, const ref is substituted with the const value
+///  This may cause problems if types are different: e.g. const is enum value,
+///  and it is substituted with an int literal.  Try to help with type casting!
+///////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::handle_constant_expr(Expr *E) {
+
+    APValue val;
+    if (!E->isCXX11ConstantExpr(*Context, &val, nullptr))
+        return false; // nothing
+
+    E = E->IgnoreImplicit();
+    // If it is not a declrefexpr continue to next node in ast
+    DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
+    if (DRE == nullptr)
+        return true;
+
+    SourceLocation sl = DRE->getDecl()->getSourceRange().getBegin();
+    if (sl.isValid()) {
+        if (get_FileId(sl) == get_FileId(global.location.loop)) {
+            llvm::errs() << "       Decl in same file ";
+            if (sl < global.location.loop && sl > global.location.kernels) {
+                llvm::errs() << "AFTER KERNEL INSERTION, insert value\n";
+
+                // what is the type of the const?
+                QualType ty = DRE->getType().getCanonicalType();
+                std::string typestr = ty.getAsString();
+
+                // replace int const expr by the value
+                if (val.isInt()) {
+                    writeBuf->replace(DRE->getSourceRange(),
+                                      std::to_string(val.getInt().getExtValue()));
+
+                } else if (val.isFloat()) {
+                    writeBuf->replace(DRE->getSourceRange(),
+                                      std::to_string(val.getFloat().convertToDouble()));
+                } else {
+                    // Not int or float, retunr
+                    return true;
+                }
+
+                parsing_state.skip_children = 1;
+                return true;
+            }
+        }
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /// handle_full_loop_stmt() is the starting point for the analysis of all
 /// "parity" -loops
 ///////////////////////////////////////////////////////////////////////////////
@@ -636,6 +692,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
 
     global.location.loop = ls->getSourceRange().getBegin();
     loop_info.clear_except_external();
+    loop_info.range = ls->getSourceRange();
     parsing_state.accept_field_parity = field_parity_ok;
 
     // the following is for taking the parity from next elem
@@ -766,8 +823,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     if (Expr *E = dyn_cast<Expr>(s)) {
 
         // Avoid treating constexprs as variables
-        if (E->isCXX11ConstantExpr(*Context, nullptr, nullptr)) {
-            parsing_state.skip_children = 1; // nothing to be done
+        if (handle_constant_expr(E)) {
             return true;
         }
 
