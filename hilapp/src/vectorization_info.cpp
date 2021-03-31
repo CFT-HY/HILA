@@ -1,15 +1,6 @@
 #include <sstream>
 #include <string>
 
-#include "clang/AST/AST.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Frontend/ASTConsumers.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Tooling/Tooling.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-
 #include "hilapp.h"
 #include "toplevelvisitor.h"
 #include "stringops.h"
@@ -20,12 +11,12 @@
 /// Type is vectorizable if:
 /// a) just float, double, int  or
 /// b) is templated type, with float/double in template and  implements
-///    the method using base_type = typename base_type_struct<T>::type;
+///    the method using base_type = number_type<T>;
 ///
 ///////////////////////////////////////////////////////////////////////////////////
 
 /// type alias decl visitor is used to locate
-///    using = base_type = typename base_type_struct<T>::type;
+///    using base_type = number_type<T>;
 /// expressions
 
 number_type get_number_type(const std::string &s) {
@@ -91,8 +82,9 @@ bool TopLevelVisitor::VisitTypeAliasDecl(TypeAliasDecl *ta) {
 
     if (ta->getNameAsString() == "base_type") {
 
+        // found_base = false;
         std::string class_name = ta->getQualifiedNameAsString();
-        std::string type_name = ta->getUnderlyingType().getCanonicalType().getAsString();
+        std::string type_name = ta->getUnderlyingType().getCanonicalType().getAsString(PP);
 
         number_type nt = get_number_type(type_name);
         if (nt == number_type::UNKNOWN)
@@ -121,6 +113,7 @@ bool TopLevelVisitor::VisitTypeAliasDecl(TypeAliasDecl *ta) {
         n.ntype = nt;
         vectorizable_types.push_back(n);
     }
+
     return true;
 }
 

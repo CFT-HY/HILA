@@ -145,6 +145,46 @@ bool GeneralVisitor::is_rhs_site_dependent(Stmt *s, std::vector<var_info *> *vi)
     assert(0 && "Internal error in RHS analysis");
 }
 
+///////////////////////////////////////////////////////////////////
+/// Check the site dependence of the args of "access operators",
+/// [] or .e().  These prevent vectorization
+///////////////////////////////////////////////////////////////////
+
+bool GeneralVisitor::is_site_dependent_access_op(Expr *e) {
+    e = e->IgnoreParens();
+
+    if (ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(e)) {
+
+        return is_site_dependent(ASE->getIdx(), &loop_info.conditional_vars);
+    }
+
+    CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(e);
+    if (OC && strcmp(getOperatorSpelling(OC->getOperator()), "[]") == 0 &&
+        !is_field_expr(OC->getArg(0))) {
+
+        return is_site_dependent(OC->getArg(1), &loop_info.conditional_vars);
+    }
+
+    if (CallExpr *CE = dyn_cast<CallExpr>(e)) {
+        FunctionDecl *FD = CE->getDirectCallee();
+        if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
+
+            std::string method = MD->getNameAsString();
+            std::string parent = MD->getParent()->getNameAsString();
+
+            if (method == "e" && (parent == "Matrix" || parent == "Array" ||
+                                  parent == "CoordinateVector_t")) {
+                bool dep = is_site_dependent(CE->getArg(0), &loop_info.conditional_vars);
+                // For matrix or array e may have 1 or 2 args
+                if (CE->getNumArgs() > 1) 
+                    dep = dep || is_site_dependent(CE->getArg(1), &loop_info.conditional_vars);
+                return dep;
+            }
+        }
+    }
+    return false;
+}
+
 /////////////////////////////////////////////////////////////////
 
 bool GeneralVisitor::is_function_call_stmt(Stmt *s) {

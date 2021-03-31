@@ -553,6 +553,8 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *ASE, bool &is_assi
     bracket_ref_t br = {ASE, find_base_variable(ASE), ASE->getIdx()};
     return handle_bracket_var_ref(br, array_ref::ARRAY, is_assign, assignop);
 }
+
+
 ///////////////////////////////////////////////////////////////////////////////
 /// is_vector_reference() true if expression is of type var[], where
 /// var is std::vector<> or std::array<>
@@ -860,6 +862,12 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
                        "Field expressions without [X] not allowed within site loop");
             parsing_state.skip_children = 1; // once is enough
             return true;
+        }
+
+        // check in general array-type access ops - may prevent vectorization
+        // if index is site dependent
+        if (is_site_dependent_access_op(E)) {
+            loop_info.has_site_dependent_cond_or_index = true;
         }
 
         // if (UnaryOperator * UO = dyn_cast<UnaryOperator>(E)) {

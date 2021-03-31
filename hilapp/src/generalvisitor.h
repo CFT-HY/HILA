@@ -202,6 +202,8 @@ class GeneralVisitor {
 
     bool is_rhs_site_dependent(Stmt *s, std::vector<var_info *> *vi);
 
+    bool is_site_dependent_access_op(Expr *e);
+
     bool contains_loop_local_var(Expr *e, std::vector<var_info *> *loop_var = nullptr);
 
     /// is the stmt pointing now to a function call
