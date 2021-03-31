@@ -1,10 +1,11 @@
+#include "plumbing/memalloc.h"
+
+
 /// Memory allocator -- gives back aligned memory, if ALIGN defined
 /// This is a hacky method to insert automatic check to success of
 /// memalloc, so that we get the file name and line number where the
 /// the failure happened:
-///
 
-#include "plumbing/memalloc.h"
 
 void *memalloc(std::size_t size, const char *filename, const unsigned line) {
 
@@ -50,3 +51,23 @@ void *memalloc(std::size_t size, const char *filename, const unsigned line) {
 
 // version without the filename
 void *memalloc(std::size_t size) { return memalloc(size, nullptr, 0); }
+
+
+/// d_malloc allocates memory from "device", either from 
+
+void *d_malloc(std::size_t size) { 
+
+#ifndef CUDA
+
+    return memalloc(size);
+
+#else
+
+    void * p;
+    cudaMalloc(&p, size);
+    check_cuda_error("d_malloc error");
+    return p;
+
+#endif
+
+}

@@ -23,11 +23,11 @@ template <const int n, const int m, typename T> class Matrix {
     static_assert(is_cmplx_or_arithmetic<T>::value,
                   "Matrix requires Complex or arithmetic type");
 
+    /// std incantation for field types
+    using base_type = number_type<T>;
+
     /// The data as a one dimensional array
     T c[n * m];
-
-    /// std incantation for field types
-    using base_type = typename base_type_struct<T>::type;
 
     /// define default constructors to ensure std::is_trivial
     Matrix() = default;

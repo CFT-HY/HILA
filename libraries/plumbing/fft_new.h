@@ -31,6 +31,15 @@ template <typename cmplx_t> void fft_execute() { assert("Don't call this!"); }
 template <> void fft_execute<Complex<double>>();
 template <> void fft_execute<Complex<float>>();
 
+
+// Define type to map from T to complex_t
+template <typename T, typename cmplx_t>
+union T_union {
+    T val;
+    cmplx_t c[sizeof(T)/sizeof(cmplx_t)];
+};
+
+
 /// Collect the data from field to buffer for sending or fft'ing.
 /// Order: Direction dir goes fastest, then the index to complex data in T,
 /// and other directions are slowest.
@@ -39,30 +48,25 @@ template <typename T, typename cmplx_t>
 inline void fft_collect_data(const Field<T> &f, const Direction dir,
                              cmplx_t *const RESTRICT buffer) {
 
-    constexpr size_t elements = sizeof(T) / sizeof(cmplx_t); // cmplx elements in T
+    constexpr int elements = sizeof(T)/sizeof(cmplx_t);
 
     extern hila::timer fft_collect_timer;
     fft_collect_timer.start();
-
-    // Use this union to convert from T to cmplx numbers
-    union T_union {
-        T val;
-        cmplx_t c[elements];
-    };
 
     // Build vector offset, which encodes where the data should be written
     // elem_offset is the same for the offset of the elements of T
     CoordinateVector offset, nmin;
 
-    const size_t elem_offset = fft_get_buffer_offsets(dir, elements, offset, nmin);
+    const size_t elem_offset = fft_get_buffer_offsets(dir, sizeof(T)/sizeof(cmplx_t), offset, nmin);
 
 // and collect the data
 #pragma hila novector direct_access(buffer)
     onsites(ALL) {
-        T_union v;
+       
+        T_union<T,cmplx_t> v;
         v.val = f[X];
         size_t off = offset.dot(X.coordinates() - nmin);
-        for (size_t i = 0; i < elements; i++) {
+        for (int i = 0; i < elements/2; i++) {
 
             buffer[off + i * elem_offset] = v.c[i];
         }
@@ -82,11 +86,6 @@ inline void fft_save_result(Field<T> &f, const Direction dir,
     extern hila::timer fft_save_timer;
     fft_save_timer.start();
 
-    // Use this union to convert from T to cmplx numbers
-    union T_union {
-        T val;
-        cmplx_t c[elements];
-    };
 
     // Build vector offset, which encodes where the data should be written
     CoordinateVector offset, nmin;
@@ -96,10 +95,12 @@ inline void fft_save_result(Field<T> &f, const Direction dir,
 // and collect the data from buffers
 #pragma hila novector direct_access(buffer)
     onsites(ALL) {
-        T_union v;
+        constexpr int elementz = sizeof(T)/sizeof(cmplx_t);
+
+        T_union<T,cmplx_t> v;
 
         size_t off = offset.dot(X.coordinates() - nmin);
-        for (size_t i = 0; i < elements; i++) {
+        for (size_t i = 0; i < elementz; i++) {
             v.c[i] = buffer[off + i * elem_offset];
         }
         f[X] = v.val;

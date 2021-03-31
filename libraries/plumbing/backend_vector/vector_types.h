@@ -74,7 +74,7 @@ struct vector_info<T, typename std::enable_if_t<std::is_arithmetic<
                           typename base_type_struct<T>::type>::value>> {
     static constexpr bool is_vectorizable = true;
     // Get base type first
-    using base_type = typename base_type_struct<T>::type;
+    using base_type = number_type<T>;
     // Find vector length
     static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
     // Find the vector type from above

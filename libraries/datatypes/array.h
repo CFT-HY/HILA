@@ -15,7 +15,7 @@ template <const int n, const int m, typename T> class Array {
     T c[n * m];
 
     /// std incantation for field types
-    using base_type = typename base_type_struct<T>::type;
+    using base_type = number_type<T>;
 
     /// define default constructors to ensure std::is_trivial
     Array() = default;

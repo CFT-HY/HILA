@@ -37,10 +37,14 @@ inline T nmul_add(T a, T b, T c) {
 
 template <typename T = double> struct Complex {
 
-    static_assert(is_arithmetic<T>::value, "Complex can be used only with arithmetic type");
+    static_assert(is_arithmetic<T>::value,
+                  "Complex can be used only with arithmetic type");
     // This incantation is needed to make Field<Complex<>> vectorized
-    using base_type = typename base_type_struct<T>::type;
+ 
+    using base_type = number_type<T>;
+    constexpr bool complex_base = true;
 
+    // and the content of the complex number
     T re, im;
 
     Complex<T>() = default;
@@ -68,7 +72,8 @@ template <typename T = double> struct Complex {
     constexpr Complex<T>(const std::nullptr_t n) { re = im = 0; }
 
     // constructor c(a,b)
-    template <typename A, typename B, std::enable_if_t<is_arithmetic<A>::value, int> = 0,
+    template <typename A, typename B,
+              std::enable_if_t<is_arithmetic<A>::value, int> = 0,
               std::enable_if_t<is_arithmetic<B>::value, int> = 0>
 #pragma hila loop_function
     explicit constexpr Complex<T>(const A &a, const B &b) {
@@ -317,7 +322,8 @@ inline Complex<T> operator/(const A &a, const Complex<T> &c) {
 
 // write also multiply-add directly with complex numbers
 template <typename T>
-inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b, const Complex<T> &c) {
+inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b,
+                          const Complex<T> &c) {
     // a*b + c
     Complex<T> r;
     T t1 = mul_add(a.re, b.re, c.re);
@@ -327,37 +333,26 @@ inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b, const Comple
     return r;
 }
 
-
-template <typename T>
-inline T abs(const Complex<T> & a) {
-    return a.abs();
-}
-
-template <typename T>
-inline T arg(const Complex<T> & a) {
-    return a.arg();
-}
-
-
 //////////////////////////////////////////////////////////////////////////////////
-// Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
-// Underscore seems to be required here
-constexpr Complex<double> operator""_i(long double a) { return Complex<double>{0.0, a}; }
+// Some operations in function form.  Useful in templates when the arg type is not known
 
-constexpr Complex<double> operator""_i(unsigned long long a) {
-    return Complex<double>(0.0, static_cast<double>(a));
-}
+/// abs
+template <typename T> inline T abs(const Complex<T> &a) { return a.abs(); }
 
-template <typename T> std::ostream &operator<<(std::ostream &strm, const Complex<T> & A) {
-    return strm << "(" << A.re << ", " << A.im << ")";
-}
+/// arg
+template <typename T> inline T arg(const Complex<T> &a) { return a.arg(); }
 
-template <typename T> inline Complex<T> conj(const Complex<T> & val) {
+/// Conjugate
+template <typename T> inline Complex<T> conj(const Complex<T> &val) {
     return val.conj();
 }
 
-template <typename T> inline auto norm_squared(const Complex<T> & val) { return val.norm_sq(); }
+/// norm_squared
+template <typename T> inline auto norm_squared(const Complex<T> &val) {
+    return val.norm_sq();
+}
 
+/// random() : set argument to random vals [0,1]
 template <typename T> inline void random(Complex<T> &c) {
     ::random(c.re);
     ::random(c.im);
@@ -366,6 +361,28 @@ template <typename T> inline void random(Complex<T> &c) {
 template <typename T> inline void gaussian_random(Complex<T> &c) {
     gaussian_random(c.re);
     gaussian_random(c.im);
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+/// Print a complex value as (re,im)
+//////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+std::ostream &operator<<(std::ostream &strm, const Complex<T> &A) {
+    return strm << "(" << A.re << ", " << A.im << ")";
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+/// Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
+/// This is defined as an user-defined literal, which requires an underscore.
+////////////////////////////////////////////////////////////////////////////////
+
+constexpr Complex<double> operator""_i(long double a) {
+    return Complex<double>{0.0, a};
+}
+
+constexpr Complex<double> operator""_i(unsigned long long a) {
+    return Complex<double>(0.0, static_cast<double>(a));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -391,7 +408,8 @@ inline T conj(T val) {
 /// Define is_cmplx<T>::value -template, using specialization
 template <typename T> struct is_cmplx : std::integral_constant<bool, false> {};
 
-template <typename T> struct is_cmplx<Complex<T>> : std::integral_constant<bool, true> {};
+template <typename T>
+struct is_cmplx<Complex<T>> : std::integral_constant<bool, true> {};
 
 // and a template is_cmplx_or_real<T>::value
 template <typename T>

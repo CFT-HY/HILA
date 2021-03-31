@@ -114,7 +114,7 @@ void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
             bool is_in_column = true;
             foralldir(d) if (d != dir && n.min[d] != lattice->mynode.min[d]) {
                 is_in_column = false;
-                break;
+                break;         // breaks out of foralldir
             }
 
             /// store the nodes in the fft_comms -list in the right order -

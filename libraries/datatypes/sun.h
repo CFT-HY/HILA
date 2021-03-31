@@ -71,7 +71,7 @@
 ///
 template <int n, typename radix = double> class SU : public Matrix<n, n, Complex<radix>> {
   public:
-    using base_type = typename base_type_struct<radix>::type;
+    using base_type = number_type<radix>;
     static constexpr int size = n;
 
     /// Explicitly include default constructor. Necessary for use in fields.
@@ -354,7 +354,7 @@ template <typename radix> class SU3 : public SU<3, radix> {};
 /// a^2 + b^2 + c^2 + d^2 = 1.
 template <typename radix> class SU2 {
   public:
-    using base_type = typename base_type_struct<radix>::type;
+    using base_type = number_type<radix>;
 
     SU2() : a(0), b(0), c(0), d(1) {}
 
@@ -595,7 +595,7 @@ void project_antihermitean(Matrix<N, N, Complex<radix>> &matrix) {
 /// matrices.
 template <int n, typename radix> class SU_vector : public Vector<n, Complex<radix>> {
   public:
-    using base_type = typename base_type_struct<radix>::type;
+    using base_type =  number_type<radix>;
     static constexpr int size = n;
 
     SU_vector() = default;

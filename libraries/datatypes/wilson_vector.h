@@ -49,7 +49,7 @@ static_assert(false, "Wilson fermions only implemented for 1 < NDIM < 6");
 template <int N, typename radix> class Wilson_vector {
   public:
     SU_vector<N, radix> c[Gammadim];
-    using base_type = typename base_type_struct<SU_vector<N, radix>>::type;
+    using base_type = number_type<SU_vector<N, radix>>;
 
     Wilson_vector() = default;
 
@@ -321,7 +321,7 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma,
 template <int N, typename radix> class half_Wilson_vector {
   public:
     SU_vector<N, radix> c[Gammadim / 2];
-    using base_type = typename base_type_struct<SU_vector<N, radix>>::type;
+    using base_type = number_type<SU_vector<N, radix>>;
 
     half_Wilson_vector() = default;
 

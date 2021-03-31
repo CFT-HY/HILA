@@ -36,14 +36,6 @@ static inline double timediff(timeval start, timeval end) {
 
 const CoordinateVector latsize = {32, 32, 32, 32};
 
-template <typename T> struct test_s {
-    // std incantation for field types
-    using base_type = typename base_type_struct<T>::type;
-
-    Complex<T> a[4][4];
-
-    Complex<T> (&operator[](const int i))[4] { return a[i]; }
-};
 
 ///////////////////////////////////////
 // benchmark conjugate operations for
