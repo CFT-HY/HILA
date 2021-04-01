@@ -20,11 +20,12 @@ template <const int n, const int m, typename T = double> class Array;
 ////////////////////////////////////////////////////////////////
 template <const int n, const int m, typename T> class Matrix {
   public:
-    static_assert(is_cmplx_or_arithmetic<T>::value,
+    static_assert(is_complex_or_arithmetic<T>::value,
                   "Matrix requires Complex or arithmetic type");
 
     /// std incantation for field types
     using base_type = number_type<T>;
+    using argument_type = T;
 
     /// The data as a one dimensional array
     T c[n * m];

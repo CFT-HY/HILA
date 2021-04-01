@@ -8,7 +8,7 @@
 ////////////////////////////////////////////////////////////////
 template <const int n, const int m, typename T> class Array {
   public:
-    static_assert(is_cmplx_or_arithmetic<T>::value,
+    static_assert(is_complex_or_arithmetic<T>::value,
                   "Array requires Complex or arithmetic type");
 
     /// Same data as Matrix, a one dimensional array
@@ -16,6 +16,7 @@ template <const int n, const int m, typename T> class Array {
 
     /// std incantation for field types
     using base_type = number_type<T>;
+    using argument_type = T;
 
     /// define default constructors to ensure std::is_trivial
     Array() = default;

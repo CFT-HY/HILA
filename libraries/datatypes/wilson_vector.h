@@ -48,8 +48,12 @@ static_assert(false, "Wilson fermions only implemented for 1 < NDIM < 6");
 /// A full Wilson vector can be recovered using half_Wilson_vector::grow.
 template <int N, typename radix> class Wilson_vector {
   public:
-    SU_vector<N, radix> c[Gammadim];
+
     using base_type = number_type<SU_vector<N, radix>>;
+    using argument_type = SU_vector<N,radix>;
+
+    SU_vector<N, radix> c[Gammadim];
+
 
     Wilson_vector() = default;
 
@@ -320,8 +324,11 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma,
 
 template <int N, typename radix> class half_Wilson_vector {
   public:
-    SU_vector<N, radix> c[Gammadim / 2];
+
     using base_type = number_type<SU_vector<N, radix>>;
+    using argument_type = SU_vector<N, radix>;
+
+    SU_vector<N, radix> c[Gammadim / 2];
 
     half_Wilson_vector() = default;
 

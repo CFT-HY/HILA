@@ -160,6 +160,7 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
   public:
     // std incantation for field types
     using base_type = number_type<T>;
+    using argument_type = T;
 
     // define these to ensure std::is_trivial
     CoordinateVector_t() = default;

@@ -27,6 +27,7 @@ class adjointRep : public SquareMatrix<N * N - 1, radix> {
 
     /// The underlying arithmetic type of the matrix
     using base_type = number_type<radix>;
+    using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;
 
@@ -122,6 +123,7 @@ class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Complex<radix>> {
   public:
     /// The underlying arithmetic type of the matrix
     using base_type = number_type<radix>;
+    using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;
 
@@ -252,6 +254,7 @@ class symmetric : public SquareMatrix<N *(N + 1) / 2, Complex<radix>> {
   public:
     /// The underlying arithmetic type of the matrix
     using base_type = number_type<radix>;
+    using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;
 

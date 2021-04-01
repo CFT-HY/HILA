@@ -34,11 +34,11 @@ template <typename T>
 __device__ auto field_storage<T>::get(const unsigned i,
                                       const unsigned field_alloc_size) const {
     assert(i < field_alloc_size);
-    using base_type = number_type<T>;
-    constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
+    using base_t = number_type<T>;
+    constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
     T value;
-    base_type *value_f = (base_type *)&value;
-    base_type *fp = (base_type *)(fieldbuf);
+    base_t *value_f = (base_t *)&value;
+    base_t *fp = (base_t *)(fieldbuf);
     for (unsigned e = 0; e < n_elements; e++) {
         value_f[e] = fp[e * field_alloc_size + i];
     }
@@ -50,10 +50,10 @@ template <typename A>
 __device__ inline void field_storage<T>::set(const A &value, const unsigned i,
                                              const unsigned field_alloc_size) {
     assert(i < field_alloc_size);
-    using base_type = number_type<T>;
-    constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
-    const base_type *value_f = (base_type *)&value;
-    base_type *fp = (base_type *)(fieldbuf);
+    using base_t = number_type<T>;
+    constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
+    const base_t *value_f = (base_t *)&value;
+    base_t *fp = (base_t *)(fieldbuf);
     for (unsigned e = 0; e < n_elements; e++) {
         fp[e * field_alloc_size + i] = value_f[e];
     }
@@ -191,11 +191,11 @@ __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer,
                                             const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_type = number_type<T>;
-        constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
+        using base_t = number_type<T>;
+        constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element = field.get(site_index[Index], field_alloc_size);
-        base_type *ep = (base_type *)&element;
-        base_type *fp = (base_type *)(buffer);
+        base_t *ep = (base_t *)&element;
+        base_t *fp = (base_t *)(buffer);
         for (unsigned e = 0; e < n_elements; e++) {
             fp[Index + n * e] = ep[e];
         }
@@ -208,11 +208,11 @@ __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *b
                                                     const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_type = number_type<T>;
-        constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
+        using base_t = number_type<T>;
+        constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element = -field.get(site_index[Index], field_alloc_size);
-        base_type *ep = (base_type *)&element;
-        base_type *fp = (base_type *)(buffer);
+        base_t *ep = (base_t *)&element;
+        base_t *fp = (base_t *)(buffer);
         for (unsigned e = 0; e < n_elements; e++) {
             fp[Index + n * e] = ep[e];
         }
@@ -372,11 +372,11 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer,
                                            const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_type = number_type<T>;
-        constexpr unsigned n_elements = sizeof(T) / sizeof(base_type);
+        using base_t = number_type<T>;
+        constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element;
-        base_type *ep = (base_type *)&element;
-        base_type *fp = (base_type *)(buffer);
+        base_t *ep = (base_t *)&element;
+        base_t *fp = (base_t *)(buffer);
         for (unsigned e = 0; e < n_elements; e++) {
             ep[e] = fp[Index + n * e];
         }

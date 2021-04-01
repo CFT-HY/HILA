@@ -40,9 +40,9 @@ template <typename T = double> struct Complex {
     static_assert(is_arithmetic<T>::value,
                   "Complex can be used only with arithmetic type");
     // This incantation is needed to make Field<Complex<>> vectorized
- 
+
     using base_type = number_type<T>;
-    constexpr bool complex_base = true;
+    using argument_type = T;
 
     // and the content of the complex number
     T re, im;
@@ -405,15 +405,22 @@ inline T conj(T val) {
 
 ////////////////////////////////////////////////////////////////////////
 /// And utility templates
-/// Define is_cmplx<T>::value -template, using specialization
-template <typename T> struct is_cmplx : std::integral_constant<bool, false> {};
+/// Define is_complex<T>::value -template, using specialization
+template <typename T> struct is_complex : std::integral_constant<bool, false> {};
 
 template <typename T>
-struct is_cmplx<Complex<T>> : std::integral_constant<bool, true> {};
+struct is_complex<Complex<T>> : std::integral_constant<bool, true> {};
 
-// and a template is_cmplx_or_real<T>::value
+// and a template is_complex_or_arithmetic<T>::value
 template <typename T>
-struct is_cmplx_or_arithmetic
-    : std::integral_constant<bool, is_arithmetic<T>::value || is_cmplx<T>::value> {};
+struct is_complex_or_arithmetic
+    : std::integral_constant<bool, is_arithmetic<T>::value || is_complex<T>::value> {};
+
+
+/// Utility to check that the type contains complex numbers
+/// Use as contains_complex<T>::value
+template <typename T>
+using contains_complex = contains_type<T,Complex<number_type<T>>>;
+
 
 #endif

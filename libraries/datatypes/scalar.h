@@ -7,6 +7,8 @@
 ///////////////////////////////////////////////////////////
 template <typename T = double> struct scalar {
     using base_type =  number_type<T>;
+    using argument_type = T;
+
     T value;
 
     // assignment is automatically OK, by c-standard

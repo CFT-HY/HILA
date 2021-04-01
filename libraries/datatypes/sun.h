@@ -72,6 +72,8 @@
 template <int n, typename radix = double> class SU : public Matrix<n, n, Complex<radix>> {
   public:
     using base_type = number_type<radix>;
+    using argument_type = radix;
+
     static constexpr int size = n;
 
     /// Explicitly include default constructor. Necessary for use in fields.
@@ -79,7 +81,7 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
 
     /// Construct from scalar by setting diagonal
     template <typename scalart,
-              std::enable_if_t<is_cmplx_or_arithmetic<scalart>::value, int> = 0>
+              std::enable_if_t<is_complex_or_arithmetic<scalart>::value, int> = 0>
     SU(const scalart rhs) {
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
@@ -355,6 +357,7 @@ template <typename radix> class SU3 : public SU<3, radix> {};
 template <typename radix> class SU2 {
   public:
     using base_type = number_type<radix>;
+    using argument_type = radix;
 
     SU2() : a(0), b(0), c(0), d(1) {}
 
@@ -596,6 +599,8 @@ void project_antihermitean(Matrix<N, N, Complex<radix>> &matrix) {
 template <int n, typename radix> class SU_vector : public Vector<n, Complex<radix>> {
   public:
     using base_type =  number_type<radix>;
+    using argument_type = radix;
+
     static constexpr int size = n;
 
     SU_vector() = default;
