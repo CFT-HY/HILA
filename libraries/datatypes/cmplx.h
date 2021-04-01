@@ -37,11 +37,11 @@ inline T nmul_add(T a, T b, T c) {
 
 template <typename T = double> struct Complex {
 
-    static_assert(is_arithmetic<T>::value,
+    static_assert(hila::is_arithmetic<T>::value,
                   "Complex can be used only with arithmetic type");
     // This incantation is needed to make Field<Complex<>> vectorized
 
-    using base_type = number_type<T>;
+    using base_type = hila::number_type<T>;
     using argument_type = T;
 
     // and the content of the complex number
@@ -53,7 +53,7 @@ template <typename T = double> struct Complex {
 
     // constructor from single complex --IS THIS NEEDED?
     // template <typename A,
-    //           std::enable_if_t<is_arithmetic<A>::value, int> = 0 >
+    //           std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0 >
     // constexpr Complex<T>(const Complex<A> a) : re(static_cast<T>(a.re)),
     // im(static_cast<T>(a.im)) {}
 
@@ -62,7 +62,7 @@ template <typename T = double> struct Complex {
     // in automatic conversions (there should be methods)
 
 #pragma hila loop_function
-    template <typename S, std::enable_if_t<is_arithmetic<S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     explicit constexpr Complex<T>(const S val) {
         re = val;
         im = 0;
@@ -73,8 +73,8 @@ template <typename T = double> struct Complex {
 
     // constructor c(a,b)
     template <typename A, typename B,
-              std::enable_if_t<is_arithmetic<A>::value, int> = 0,
-              std::enable_if_t<is_arithmetic<B>::value, int> = 0>
+              std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0,
+              std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
 #pragma hila loop_function
     explicit constexpr Complex<T>(const A &a, const B &b) {
         re = a;
@@ -99,7 +99,7 @@ template <typename T = double> struct Complex {
     inline Complex<T> &operator=(const Complex<T> &s) = default;
 
     // Assignment from Complex<A>
-    template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator=(const Complex<A> &s) {
         re = s.re;
         im = s.im;
@@ -150,7 +150,7 @@ template <typename T = double> struct Complex {
         return *this;
     }
 
-    template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator+=(const A &a) {
         re += a;
         return *this;
@@ -163,7 +163,7 @@ template <typename T = double> struct Complex {
     }
 
     // TODO: for vector too
-    template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator-=(const A &a) {
         re -= a;
         return *this;
@@ -185,7 +185,7 @@ template <typename T = double> struct Complex {
     }
 
     // TODO: for vector too
-    template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator*=(const A a) {
         re *= a;
         im *= a;
@@ -209,7 +209,7 @@ template <typename T = double> struct Complex {
     }
 
     // TODO: for vector too
-    template <typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator/=(const A &a) {
         re /= a;
         im /= a;
@@ -246,12 +246,12 @@ template <typename T> inline Complex<T> operator+(Complex<T> a, const Complex<T>
 }
 
 // TODO: for avx vector too -- #define new template macro
-template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator+(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re + a, c.im);
 }
 
-template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator+(const A &a, const Complex<T> &c) {
     return Complex<T>(c.re + a, c.im);
 }
@@ -267,12 +267,12 @@ template <typename T> inline Complex<T> operator-(Complex<T> a, const Complex<T>
 }
 
 // TODO: for avx vector too -- #define new template macro
-template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator-(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re - a, c.im);
 }
 
-template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator-(const A &a, const Complex<T> &c) {
     return Complex<T>(a - c.re, -c.im);
 }
@@ -287,12 +287,12 @@ template <typename T> inline Complex<T> operator*(Complex<T> a, const Complex<T>
     return a;
 }
 
-template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator*(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re * a, c.im * a);
 }
 
-template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator*(const A &a, const Complex<T> &c) {
     return Complex<T>(a * c.re, a * c.im);
 }
@@ -308,13 +308,13 @@ template <typename T> inline Complex<T> operator/(Complex<T> a, const Complex<T>
     return a;
 }
 
-template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator/(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re / a, c.im / a);
 }
 
 // a/c = ac*/|c|^2
-template <typename T, typename A, std::enable_if_t<is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator/(const A &a, const Complex<T> &c) {
     T n = c.squarenorm();
     return Complex<T>((a * c.re) / n, -(a * c.im) / n);
@@ -388,21 +388,22 @@ constexpr Complex<double> operator""_i(unsigned long long a) {
 //////////////////////////////////////////////////////////////////////////
 
 // define also real(), imag(), conj() -functions for basic arithmetic types
-template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T real(T val) {
     return val;
 }
 
-template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T imag(T val) {
     return 0;
 }
 
-template <typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T conj(T val) {
     return val;
 }
 
+namespace hila {
 ////////////////////////////////////////////////////////////////////////
 /// And utility templates
 /// Define is_complex<T>::value -template, using specialization
@@ -414,13 +415,14 @@ struct is_complex<Complex<T>> : std::integral_constant<bool, true> {};
 // and a template is_complex_or_arithmetic<T>::value
 template <typename T>
 struct is_complex_or_arithmetic
-    : std::integral_constant<bool, is_arithmetic<T>::value || is_complex<T>::value> {};
+    : std::integral_constant<bool, hila::is_arithmetic<T>::value || hila::is_complex<T>::value> {};
 
 
 /// Utility to check that the type contains complex numbers
 /// Use as contains_complex<T>::value
 template <typename T>
-using contains_complex = contains_type<T,Complex<number_type<T>>>;
+using contains_complex = hila::contains_type<T,Complex<hila::number_type<T>>>;
 
+} // namespace hila
 
 #endif

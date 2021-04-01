@@ -77,7 +77,7 @@ template <typename sun> class stout_smeared_field : public gauge_field_base<sun>
   public:
     using gauge_type = sun;
     using fund_type = sun;
-    using basetype = number_type<sun>;
+    using basetype = hila::number_type<sun>;
     static constexpr int Nf = sun::size;
     static constexpr int N = sun::size;
 
@@ -240,7 +240,7 @@ template <typename sun> class stout_smeared_field : public gauge_field_base<sun>
 template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> {
     using gauge_type = sun;
     using fund_type = sun;
-    using basetype = number_type<sun>;
+    using basetype = hila::number_type<sun>;
     static constexpr int Nf = sun::size;
     static constexpr int N = sun::size;
 

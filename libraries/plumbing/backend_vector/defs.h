@@ -38,6 +38,8 @@ namespace hila {
 // Trivial synchronization
 inline void synchronize_threads() {}
 
+namespace hila {
+
 /// Implements test for basic in types, similar to
 /// std::is_arithmetic, but allows the backend to add
 /// it's own basic types (such as AVX vectors)
@@ -112,6 +114,8 @@ struct is_assignable
                  (avx_vector_type_info<T>::size == avx_vector_type_info<U>::size) &&
                  (avx_vector_type_info<T>::elements ==
                   avx_vector_type_info<U>::elements))))> {};
+
+} // namespace hila
 
 /*** The next section contains basic operations for vectors ***/
 

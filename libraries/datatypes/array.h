@@ -8,14 +8,14 @@
 ////////////////////////////////////////////////////////////////
 template <const int n, const int m, typename T> class Array {
   public:
-    static_assert(is_complex_or_arithmetic<T>::value,
+    static_assert(hila::is_complex_or_arithmetic<T>::value,
                   "Array requires Complex or arithmetic type");
 
     /// Same data as Matrix, a one dimensional array
     T c[n * m];
 
     /// std incantation for field types
-    using base_type = number_type<T>;
+    using base_type = hila::number_type<T>;
     using argument_type = T;
 
     /// define default constructors to ensure std::is_trivial
@@ -24,7 +24,7 @@ template <const int n, const int m, typename T> class Array {
     Array(const Array<n, m, T> &v) = default;
 
     /// constructor from scalar - make this also explicit, consistency
-    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     explicit inline Array(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             this->c[i] = rhs;
@@ -82,7 +82,7 @@ template <const int n, const int m, typename T> class Array {
 
     /// casting from one Array (number) type to another
     /// TODO: CHECK AVX CONVERSIONS
-    template <typename S, std::enable_if_t<is_assignable<S &, T>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<S &, T>::value, int> = 0>
     operator Array<n, m, S>() {
         Array<n, m, S> res;
         for (int i = 0; i < n * m; i++) {
@@ -104,7 +104,7 @@ template <const int n, const int m, typename T> class Array {
     inline Array<n, m, T> operator+() const { return *this; }
 
     /// Assign from scalar to array
-    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Array<n, m, T> &operator=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] = rhs;
@@ -133,7 +133,7 @@ template <const int n, const int m, typename T> class Array {
 
     /// add assign type T and convertible
     template <typename S,
-              std::enable_if_t<std::is_convertible<type_plus<T, S>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator+=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] += rhs;
@@ -143,7 +143,7 @@ template <const int n, const int m, typename T> class Array {
 
     /// subtract assign type T and convertible
     template <typename S, std::enable_if_t<
-                              std::is_convertible<type_minus<T, S>, T>::value, int> = 0>
+                              std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator-=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] -= rhs;
@@ -153,7 +153,7 @@ template <const int n, const int m, typename T> class Array {
 
     /// multiply assign with Array
     template <typename S,
-              std::enable_if_t<std::is_convertible<type_mul<T, S>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator*=(const Array<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] *= rhs.c[i];
@@ -163,7 +163,7 @@ template <const int n, const int m, typename T> class Array {
 
     /// multiply assign with scalar
     template <typename S,
-              std::enable_if_t<std::is_convertible<type_mul<T, S>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator*=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] *= rhs;
@@ -173,7 +173,7 @@ template <const int n, const int m, typename T> class Array {
 
     /// divide assign by Array
     template <typename S,
-              std::enable_if_t<std::is_convertible<type_div<T, S>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator/=(const Array<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] /= rhs.c[i];
@@ -183,7 +183,7 @@ template <const int n, const int m, typename T> class Array {
 
     /// divide assign with scalar
     template <typename S,
-              std::enable_if_t<std::is_convertible<type_div<T, S>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator/=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] /= rhs;
@@ -201,8 +201,8 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// return real part
-    inline Array<n, m, number_type<T>> real() const {
-        Array<n, m, number_type<T>> res;
+    inline Array<n, m, hila::number_type<T>> real() const {
+        Array<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = real(c[i]);
         }
@@ -210,8 +210,8 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// return imaginary part
-    inline Array<n, m, number_type<T>> imag() const {
-        Array<n, m, number_type<T>> res;
+    inline Array<n, m, hila::number_type<T>> imag() const {
+        Array<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = imag(c[i]);
         }
@@ -219,8 +219,8 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// calculate square norm - sum of squared elements
-    number_type<T> norm_sq() const {
-        number_type<T> result = 0;
+    hila::number_type<T> norm_sq() const {
+        hila::number_type<T> result = 0;
         for (int i = 0; i < n * m; i++) {
             result += norm_squared(c[i]);
         }
@@ -263,12 +263,12 @@ inline Array<n, m, T> conj(const Array<n, m, T> &arg) {
 }
 /// real part
 template <const int n, const int m, typename T>
-inline Array<n, m, number_type<T>> real(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::number_type<T>> real(const Array<n, m, T> &arg) {
     return arg.real();
 }
 /// imaginary part
 template <const int n, const int m, typename T>
-inline Array<n, m, number_type<T>> imag(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::number_type<T>> imag(const Array<n, m, T> &arg) {
     return arg.imag();
 }
 
@@ -288,7 +288,7 @@ inline Array<n, m, T> operator-(Array<n, m, T> a, const Array<n, m, T> &b) {
 
 /// Array + scalar
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_plus<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator+(Array<n, m, T> a, const S b) {
     a += b;
     return a;
@@ -296,7 +296,7 @@ inline Array<n, m, T> operator+(Array<n, m, T> a, const S b) {
 
 /// scalar + Array
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_plus<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator+(const S b, Array<n, m, T> a) {
     a += b;
     return a;
@@ -304,7 +304,7 @@ inline Array<n, m, T> operator+(const S b, Array<n, m, T> a) {
 
 /// Array - scalar
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_minus<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
 Array<n, m, T> operator-(Array<n, m, T> a, const S b) {
     a -= b;
     return a;
@@ -312,7 +312,7 @@ Array<n, m, T> operator-(Array<n, m, T> a, const S b) {
 
 /// scalar - Array
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_minus<S, T>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_minus<S, T>, T>::value, int> = 0>
 inline Array<n, m, T> operator-(const S b, Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
         a.c[i] = static_cast<T>(b) - a.c[i];
@@ -335,7 +335,7 @@ inline Array<n, m, T> operator/(Array<n, m, T> a, const Array<n, m, T> &b) {
 
 /// Array * scalar
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_mul<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator*(Array<n, m, T> a, const S b) {
     a *= b;
     return a;
@@ -343,7 +343,7 @@ inline Array<n, m, T> operator*(Array<n, m, T> a, const S b) {
 
 /// scalar * Array
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_mul<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator*(const S b, Array<n, m, T> a) {
     a *= b;
     return a;
@@ -351,7 +351,7 @@ inline Array<n, m, T> operator*(const S b, Array<n, m, T> a) {
 
 /// Array / scalar
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_div<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator/(Array<n, m, T> a, const S b) {
     a /= b;
     return a;
@@ -359,7 +359,7 @@ inline Array<n, m, T> operator/(Array<n, m, T> a, const S b) {
 
 /// scalar / Array
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_div<S, T>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_div<S, T>, T>::value, int> = 0>
 inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
         a.c[i] = b / a.c[i];
@@ -374,7 +374,7 @@ std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
 
 /// Norm squared function
 template <int n, int m, typename T>
-inline number_type<T> norm_squared(const Array<n, m, T> &rhs) {
+inline hila::number_type<T> norm_squared(const Array<n, m, T> &rhs) {
     return rhs.norm_sq();
 }
 

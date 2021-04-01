@@ -6,7 +6,7 @@
 /// to a vector type
 ///////////////////////////////////////////////////////////
 template <typename T = double> struct scalar {
-    using base_type =  number_type<T>;
+    using base_type =  hila::number_type<T>;
     using argument_type = T;
 
     T value;

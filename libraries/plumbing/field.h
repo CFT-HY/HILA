@@ -86,7 +86,7 @@ template <typename T> class Field {
         lattice_struct *lattice;
 #ifdef VECTORIZED
         // get a direct ptr from here too, ease access
-        vectorized_lattice_struct<vector_info<T>::vector_size> *vector_lattice;
+        vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
 #endif
         unsigned assigned_to;               // keeps track of first assignment to parities
         fetch_status move_status[3][NDIRS]; // is communication done
@@ -197,7 +197,7 @@ template <typename T> class Field {
                 antiperiodic = true;
             }
 
-            if constexpr (is_vectorizable_type<T>::value) {
+            if constexpr (hila::is_vectorizable_type<T>::value) {
                 // now vectorized layout
                 if (vector_lattice->is_boundary_permutation[abs(d)]) {
                     // with boundary permutation need to fetch elems 1-by-1
@@ -231,7 +231,7 @@ template <typename T> class Field {
                                  const lattice_struct::comm_node_struct &from_node) {
 // #ifdef USE_MPI
 #ifdef VECTORIZED
-            if constexpr (is_vectorizable_type<T>::value) {
+            if constexpr (hila::is_vectorizable_type<T>::value) {
                 // now vectorized layout, act accordingly
                 if (vector_lattice->is_boundary_permutation[abs(d)]) {
                     payload.place_recv_elements(buffer, d, par, vector_lattice);
@@ -284,7 +284,7 @@ template <typename T> class Field {
 
 #elif defined(VECTORIZED)
 
-            if constexpr (!is_vectorizable_type<T>::value) {
+            if constexpr (!hila::is_vectorizable_type<T>::value) {
                 // use vanilla type, field laid out in std fashion
                 return (T *)payload.get_buffer() + from_node.offset(par);
             } else {
@@ -300,7 +300,7 @@ template <typename T> class Field {
                     return receive_buffer[d] + offs;
                 } else {
                     // directly to halo buffer
-                    constexpr unsigned vector_size = vector_info<T>::vector_size;
+                    constexpr unsigned vector_size = hila::vector_info<T>::vector_size;
                     return ((T *)payload.get_buffer() +
                             (vector_lattice->halo_offset[d] * vector_size + offs));
                 }
@@ -348,7 +348,7 @@ template <typename T> class Field {
     }
 
     // constructor with compatible scalar
-    template <typename A, std::enable_if_t<is_assignable<T &, A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
     Field(const A &val) {
         fs = nullptr;
         (*this)[ALL] = val;
@@ -412,7 +412,7 @@ template <typename T> class Field {
 
 #ifdef VECTORIZED
         fs->vector_lattice = lattice->backend_lattice
-                                 ->get_vectorized_lattice<vector_info<T>::vector_size>();
+                                 ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
 #endif
     }
 
@@ -622,14 +622,14 @@ template <typename T> class Field {
     }
 
     // More general = - possible only if T = A is OK
-    template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
     Field<T> &operator=(const Field<A> &rhs) {
         (*this)[ALL] = rhs[X];
         return *this;
     }
 
     // Assign from element
-    template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
     Field<T> &operator=(const A &d) {
         (*this)[ALL] = d;
         return *this;
@@ -650,56 +650,56 @@ template <typename T> class Field {
 
     // +=, -=  etc operators from compatible types
     template <typename A,
-              std::enable_if_t<std::is_convertible<type_plus<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const Field<A> &rhs) {
         (*this)[ALL] += rhs[X];
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<type_minus<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const Field<A> &rhs) {
         (*this)[ALL] -= rhs[X];
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<type_mul<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const Field<A> &rhs) {
         (*this)[ALL] *= rhs[X];
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<type_div<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const Field<A> &rhs) {
         (*this)[ALL] /= rhs[X];
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<type_plus<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const A &rhs) {
         (*this)[ALL] += rhs;
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<type_minus<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const A &rhs) {
         (*this)[ALL] -= rhs;
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<type_mul<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const A &rhs) {
         (*this)[ALL] *= rhs;
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<type_div<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const A &rhs) {
         (*this)[ALL] /= rhs;
         return *this;
@@ -748,91 +748,91 @@ template <typename T> class Field {
 
 }; // End of class Field<>
 
-// these operators rely on SFINAE, OK if field_type_plus<A,B> exists i.e. A+B is OK
+// these operators rely on SFINAE, OK if field_hila::type_plus<A,B> exists i.e. A+B is OK
 /// operator +
 template <typename A, typename B>
-auto operator+(Field<A> &lhs, Field<B> &rhs) -> Field<type_plus<A, B>> {
-    Field<type_plus<A, B>> tmp;
+auto operator+(Field<A> &lhs, Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
+    Field<hila::type_plus<A, B>> tmp;
     tmp[ALL] = lhs[X] + rhs[X];
     return tmp;
 }
 
 template <typename A, typename B>
-auto operator+(const A &lhs, const Field<B> &rhs) -> Field<type_plus<A, B>> {
-    Field<type_plus<A, B>> tmp;
+auto operator+(const A &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
+    Field<hila::type_plus<A, B>> tmp;
     tmp[ALL] = lhs + rhs[X];
     return tmp;
 }
 
 template <typename A, typename B>
-auto operator+(const Field<A> &lhs, const B &rhs) -> Field<type_plus<A, B>> {
-    Field<type_plus<A, B>> tmp;
+auto operator+(const Field<A> &lhs, const B &rhs) -> Field<hila::type_plus<A, B>> {
+    Field<hila::type_plus<A, B>> tmp;
     tmp[ALL] = lhs[X] + rhs;
     return tmp;
 }
 
 /// operator -
 template <typename A, typename B>
-auto operator-(const Field<A> &lhs, const Field<B> &rhs) -> Field<type_minus<A, B>> {
-    Field<type_minus<A, B>> tmp;
+auto operator-(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
+    Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs[X] - rhs[X];
     return tmp;
 }
 
 template <typename A, typename B>
-auto operator-(const A &lhs, const Field<B> &rhs) -> Field<type_minus<A, B>> {
-    Field<type_minus<A, B>> tmp;
+auto operator-(const A &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
+    Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs - rhs[X];
     return tmp;
 }
 
 template <typename A, typename B>
-auto operator-(const Field<A> &lhs, const B &rhs) -> Field<type_minus<A, B>> {
-    Field<type_minus<A, B>> tmp;
+auto operator-(const Field<A> &lhs, const B &rhs) -> Field<hila::type_minus<A, B>> {
+    Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs[X] - rhs;
     return tmp;
 }
 
 /// operator *
 template <typename A, typename B>
-auto operator*(const Field<A> &lhs, const Field<B> &rhs) -> Field<type_mul<A, B>> {
-    Field<type_mul<A, B>> tmp;
+auto operator*(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
+    Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs[X] * rhs[X];
     return tmp;
 }
 
 template <typename A, typename B>
-auto operator*(const A &lhs, const Field<B> &rhs) -> Field<type_mul<A, B>> {
-    Field<type_mul<A, B>> tmp;
+auto operator*(const A &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
+    Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs * rhs[X];
     return tmp;
 }
 
 template <typename A, typename B>
-auto operator*(const Field<A> &lhs, const B &rhs) -> Field<type_mul<A, B>> {
-    Field<type_mul<A, B>> tmp;
+auto operator*(const Field<A> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>> {
+    Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs[X] * rhs;
     return tmp;
 }
 
 /// operator /
 template <typename A, typename B>
-auto operator/(const Field<A> &lhs, const Field<B> &rhs) -> Field<type_div<A, B>> {
-    Field<type_div<A, B>> tmp;
+auto operator/(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>> {
+    Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = lhs[X] / rhs[X];
     return tmp;
 }
 
 template <typename A, typename B>
-auto operator/(const A &lhs, const Field<B> &rhs) -> Field<type_div<A, B>> {
-    Field<type_div<A, B>> tmp;
+auto operator/(const A &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>> {
+    Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = lhs / rhs[X];
     return tmp;
 }
 
 template <typename A, typename B>
-auto operator/(const Field<A> &lhs, const B &rhs) -> Field<type_div<A, B>> {
-    Field<type_div<A, B>> tmp;
+auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>> {
+    Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = lhs[X] / rhs;
     return tmp;
 }

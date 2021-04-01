@@ -47,10 +47,10 @@ SUBNODE_LAYOUT needs to be defined to use this
     unsigned recv_list_size[NDIRS];
 
     // coordinate offsets to nodes
-    using int_vector_t = typename vector_base_type<int, vector_size>::type;
+    using int_vector_t = typename hila::vector_base_type<int, vector_size>::type;
     int_vector_t coordinate_offset[NDIM];
     // using coordinate_compound_vec_type = typename Vector<NDIM,
-    // typenamevector_base_type<int,vector_size>::type>; coordinate_compound_vec_type
+    // typename vector_base_type<int,vector_size>::type>; coordinate_compound_vec_type
     // coordinate_offset;
     CoordinateVector *RESTRICT coordinate_base;
 

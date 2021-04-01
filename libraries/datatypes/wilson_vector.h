@@ -49,7 +49,7 @@ static_assert(false, "Wilson fermions only implemented for 1 < NDIM < 6");
 template <int N, typename radix> class Wilson_vector {
   public:
 
-    using base_type = number_type<SU_vector<N, radix>>;
+    using base_type = hila::number_type<SU_vector<N, radix>>;
     using argument_type = SU_vector<N,radix>;
 
     SU_vector<N, radix> c[Gammadim];
@@ -63,14 +63,14 @@ template <int N, typename radix> class Wilson_vector {
         }
     }
 
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     Wilson_vector(const Wilson_vector<N, scalart> m) {
         for (int i = 0; i < Gammadim; i++) {
             c[i] = m.c[i];
         }
     }
 
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     Wilson_vector(const scalart rhs) {
         for (int i = 0; i < Gammadim; i++) {
             c[i] = rhs;
@@ -83,7 +83,7 @@ template <int N, typename radix> class Wilson_vector {
         }
     }
 
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     Wilson_vector &operator=(const scalart rhs) {
         for (int i = 0; i < Gammadim; i++) {
             c[i] = rhs;
@@ -325,7 +325,7 @@ Wilson_vector<N, radix> operator*(const gamma_matrix_type gamma,
 template <int N, typename radix> class half_Wilson_vector {
   public:
 
-    using base_type = number_type<SU_vector<N, radix>>;
+    using base_type = hila::number_type<SU_vector<N, radix>>;
     using argument_type = SU_vector<N, radix>;
 
     SU_vector<N, radix> c[Gammadim / 2];

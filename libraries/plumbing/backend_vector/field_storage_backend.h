@@ -18,8 +18,8 @@ template <typename A, int vector_size, class Enable = void> struct vectorize_str
 /// A is a basic type, so just return the matching vector type
 template <typename A, int vector_size>
 struct vectorize_struct<A, vector_size,
-                        typename std::enable_if_t<is_arithmetic<A>::value>> {
-    using type = typename vector_base_type<A, vector_size>::type;
+                        typename std::enable_if_t<hila::is_arithmetic<A>::value>> {
+    using type = typename hila::vector_base_type<A, vector_size>::type;
 };
 
 // B is a templated class, so construct a vectorized type
@@ -60,13 +60,13 @@ struct vectorize_struct<C<a, b, B>, vector_size> {
 
 /// Short version of mapping type to longest possible vector
 template <typename T>
-using vector_type = typename vectorize_struct<T, vector_info<T>::vector_size>::type;
+using vector_type = typename vectorize_struct<T, hila::vector_info<T>::vector_size>::type;
 
 template <typename T> void field_storage<T>::allocate_field(lattice_struct *lattice) {
-    if constexpr (is_vectorizable_type<T>::value) {
+    if constexpr (hila::is_vectorizable_type<T>::value) {
         fieldbuf =
             (T *)memalloc(lattice->backend_lattice
-                              ->get_vectorized_lattice<vector_info<T>::vector_size>()
+                              ->get_vectorized_lattice<hila::vector_info<T>::vector_size>()
                               ->field_alloc_size() *
                           sizeof(T));
     } else {
@@ -86,10 +86,10 @@ template <typename T> void field_storage<T>::free_field() {
 template <typename T>
 template <typename vecT>
 inline vecT field_storage<T>::get_vector(const unsigned i) const {
-    using vectortype = typename vector_info<T>::type;
-    using basetype = typename vector_info<T>::base_type;
-    constexpr size_t elements = vector_info<T>::elements;
-    constexpr size_t vector_size = vector_info<T>::vector_size;
+    using vectortype = typename hila::vector_info<T>::type;
+    using basetype = typename hila::vector_info<T>::base_type;
+    constexpr size_t elements = hila::vector_info<T>::elements;
+    constexpr size_t vector_size = hila::vector_info<T>::vector_size;
     // using vectorized_type = vector_type<T>;
 
     static_assert(sizeof(vecT) == sizeof(T) * vector_size);
@@ -109,10 +109,10 @@ inline vecT field_storage<T>::get_vector(const unsigned i) const {
 template <typename T>
 template <typename vecT>
 inline void field_storage<T>::set_vector(const vecT &value, const unsigned i) {
-    using vectortype = typename vector_info<T>::type;
-    using basetype = typename vector_info<T>::base_type;
-    constexpr size_t elements = vector_info<T>::elements;
-    constexpr size_t vector_size = vector_info<T>::vector_size;
+    using vectortype = typename hila::vector_info<T>::type;
+    using basetype = typename hila::vector_info<T>::base_type;
+    constexpr size_t elements = hila::vector_info<T>::elements;
+    constexpr size_t vector_size = hila::vector_info<T>::vector_size;
 
     static_assert(sizeof(vecT) == sizeof(T) * vector_size);
 
@@ -128,10 +128,10 @@ inline void field_storage<T>::set_vector(const vecT &value, const unsigned i) {
 
 template <typename T>
 inline void field_storage<T>::set_element(const T &value, const unsigned idx) {
-    static_assert(vector_info<T>::is_vectorizable);
-    using basetype = typename vector_info<T>::base_type;
-    constexpr size_t elements = vector_info<T>::elements;
-    constexpr size_t vector_size = vector_info<T>::vector_size;
+    static_assert(hila::vector_info<T>::is_vectorizable);
+    using basetype = typename hila::vector_info<T>::base_type;
+    constexpr size_t elements = hila::vector_info<T>::elements;
+    constexpr size_t vector_size = hila::vector_info<T>::vector_size;
 
     // "base" of the vector is (idx/vector_size)*elements; index in vector is idx %
     // vector_size
@@ -148,10 +148,10 @@ inline void field_storage<T>::set_element(const T &value, const unsigned idx) {
 /// again, idx is the "site" index
 
 template <typename T> inline T field_storage<T>::get_element(const unsigned idx) const {
-    static_assert(vector_info<T>::is_vectorizable);
-    using basetype = typename vector_info<T>::base_type;
-    constexpr size_t elements = vector_info<T>::elements;
-    constexpr size_t vector_size = vector_info<T>::vector_size;
+    static_assert(hila::vector_info<T>::is_vectorizable);
+    using basetype = typename hila::vector_info<T>::base_type;
+    constexpr size_t elements = hila::vector_info<T>::elements;
+    constexpr size_t vector_size = hila::vector_info<T>::vector_size;
 
     static_assert(sizeof(T) == sizeof(basetype) * elements);
 
@@ -209,21 +209,21 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                                    const lattice_struct *lattice,
                                                    bool antiperiodic) {
 
-    if constexpr (is_vectorizable_type<T>::value) {
+    if constexpr (hila::is_vectorizable_type<T>::value) {
 
         // do the boundary vectorized copy
 
-        constexpr size_t vector_size = vector_info<T>::vector_size;
-        constexpr size_t elements = vector_info<T>::elements;
-        using vectortype = typename vector_info<T>::type;
-        using basetype = typename vector_info<T>::base_type;
+        constexpr size_t vector_size = hila::vector_info<T>::vector_size;
+        constexpr size_t elements = hila::vector_info<T>::elements;
+        using vectortype = typename hila::vector_info<T>::type;
+        using basetype = typename hila::vector_info<T>::base_type;
 
         // output0 << "Vectorized boundary dir " << dir << " parity " << (int)par << " bc
         // " << (int)antiperiodic << '\n';
 
         const auto vector_lattice =
             lattice->backend_lattice
-                ->template get_vectorized_lattice<vector_info<T>::vector_size>();
+                ->template get_vectorized_lattice<hila::vector_info<T>::vector_size>();
         // The halo copy and permutation is only necessary if vectorization
         // splits the lattice in this Direction or local boundary is copied
         if (vector_lattice->is_boundary_permutation[abs(dir)] ||
@@ -317,14 +317,14 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
 template <typename T>
 void field_storage<T>::gather_comm_vectors(
     T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
-    const vectorized_lattice_struct<vector_info<T>::vector_size> *RESTRICT vlat,
+    const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat,
     bool antiperiodic) const {
 
     // Use sitelist in to_node, but use only every vector_size -index.  These point to the
     // beginning of the vector
-    constexpr size_t vector_size = vector_info<T>::vector_size;
-    constexpr size_t elements = vector_info<T>::elements;
-    using basetype = typename vector_info<T>::base_type;
+    constexpr size_t vector_size = hila::vector_info<T>::vector_size;
+    constexpr size_t elements = hila::vector_info<T>::elements;
+    using basetype = typename hila::vector_info<T>::base_type;
 
     int n;
     const unsigned *index_list = to_node.get_sitelist(par, n);
@@ -356,11 +356,11 @@ void field_storage<T>::gather_comm_vectors(
 template <typename T>
 void field_storage<T>::place_recv_elements(
     const T *RESTRICT buffer, Direction d, Parity par,
-    const vectorized_lattice_struct<vector_info<T>::vector_size> *RESTRICT vlat) const {
+    const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat) const {
 
-    constexpr size_t vector_size = vector_info<T>::vector_size;
-    constexpr size_t elements = vector_info<T>::elements;
-    using basetype = typename vector_info<T>::base_type;
+    constexpr size_t vector_size = hila::vector_info<T>::vector_size;
+    constexpr size_t elements = hila::vector_info<T>::elements;
+    using basetype = typename hila::vector_info<T>::base_type;
 
     unsigned start = 0;
     if (par == ODD)

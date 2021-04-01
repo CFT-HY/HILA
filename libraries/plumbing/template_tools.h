@@ -7,6 +7,8 @@
 
 #include "plumbing/defs.h"
 
+namespace hila {
+
 /////////////////////////////////////////////////////////////////////////////////
 /// Utility for obtaining the numeric base type of a class
 ///   Use as "typename base_type_struct<T>" which returns the "arithmetic type"
@@ -19,13 +21,13 @@ template <typename T, typename Enable = void> struct base_type_struct {
 
 /// Utility for selecting the numeric base type of a class
 template <typename T>
-struct base_type_struct<T, typename std::enable_if_t<is_arithmetic<T>::value>> {
+struct base_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::value>> {
     // In this case the base type is just T
     using type = T;
 };
 
 /// Main utility for obtaining the numeric base type of a hila class.
-/// Use as number_type<T>
+/// Use as hila::number_type<T>
 template <typename T> using number_type = typename base_type_struct<T>::type;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -36,7 +38,7 @@ template <typename T, typename Enable = void> struct inner_type_struct {
 };
 
 template <typename T>
-struct inner_type_struct<T, typename std::enable_if_t<is_arithmetic<T>::value>> {
+struct inner_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::value>> {
     using type = T;
 };
 
@@ -48,13 +50,13 @@ template <typename T> using inner_type = typename inner_type_struct<T>::type;
 
 template <typename A, typename B, typename Enable = void>
 struct contains_type
-    : std::integral_constant<bool, contains_type<inner_type<A>, B>::value> {};
+    : std::integral_constant<bool, hila::contains_type<inner_type<A>, B>::value> {};
 
 template <typename A>
 struct contains_type<A, A> : std::integral_constant<bool, true> {};
 
 template <typename A, typename B>
-struct contains_type<A, B, typename std::enable_if_t<is_arithmetic<A>::value>>
+struct contains_type<A, B, typename std::enable_if_t<hila::is_arithmetic<A>::value>>
     : std::integral_constant<bool, std::is_same<A, B>::value> {};
 
 // Useful c++14 template missing in Puhti compilation of hilapp
@@ -66,7 +68,7 @@ using enable_if_t = typename std::enable_if<B, T>::type;
 #endif
 
 // These are helpers, to make generic templates
-// e.g. type_plus<A,B> gives the type of the operator a + b, where a is of type A and b
+// e.g. hila::type_plus<A,B> gives the type of the operator a + b, where a is of type A and b
 // B.
 template <typename A, typename B>
 using type_plus = decltype(std::declval<A>() + std::declval<B>());
@@ -76,5 +78,7 @@ template <typename A, typename B>
 using type_mul = decltype(std::declval<A>() * std::declval<B>());
 template <typename A, typename B>
 using type_div = decltype(std::declval<A>() / std::declval<B>());
+
+} // namespace hila
 
 #endif

@@ -20,11 +20,11 @@ template <const int n, const int m, typename T = double> class Array;
 ////////////////////////////////////////////////////////////////
 template <const int n, const int m, typename T> class Matrix {
   public:
-    static_assert(is_complex_or_arithmetic<T>::value,
+    static_assert(hila::is_complex_or_arithmetic<T>::value,
                   "Matrix requires Complex or arithmetic type");
 
     /// std incantation for field types
-    using base_type = number_type<T>;
+    using base_type = hila::number_type<T>;
     using argument_type = T;
 
     /// The data as a one dimensional array
@@ -37,7 +37,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// constructor from scalar -- keep it explicit!  Not good for auto use
     template <typename S, int nn = n, int mm = m,
-              std::enable_if_t<(is_assignable<T &, S>::value && nn == mm), int> = 0>
+              std::enable_if_t<(hila::is_assignable<T &, S>::value && nn == mm), int> = 0>
     explicit inline Matrix(const S rhs) {
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
@@ -58,7 +58,7 @@ template <const int n, const int m, typename T> class Matrix {
     /// Construct matrix automatically from right-size initializer list
     /// This does not seem to be dangerous, so keep non-explicit
 
-    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Matrix(std::initializer_list<S> rhs) {
         assert(rhs.size() == n * m &&
                "Matrix/Vector initializer list size must match variable size");
@@ -157,7 +157,7 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// Assign from different type matrix
-    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Matrix<n, m, T> &operator=(const Matrix<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] = rhs.c[i];
@@ -167,7 +167,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// Assign from "scalar" for square matrix
     template <typename S, int nn = n, int mm = m,
-              std::enable_if_t<(is_assignable<T &, S>::value && nn == mm), int> = 0>
+              std::enable_if_t<(hila::is_assignable<T &, S>::value && nn == mm), int> = 0>
     inline Matrix<n, m, T> &operator=(const S rhs) {
         // static_assert( n==m, "rows != columns : assigning a scalar only possible for
         // a square Matrix");
@@ -183,7 +183,7 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// Assign from initializer list
-    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Matrix<n, m, T> &operator=(std::initializer_list<S> rhs) {
         assert(rhs.size() == n * m &&
                "Initializer list has a wrong size in assignment");
@@ -196,7 +196,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// add assign a Matrix
 #pragma hila loop_function
-    template <typename S, std::enable_if_t<std::is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Matrix<n, m, T> &operator+=(const Matrix<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] += rhs.c[i];
@@ -205,7 +205,7 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// subtract assign a Matrix
-    template <typename S, std::enable_if_t<std::is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Matrix<n, m, T> &operator-=(const Matrix<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] -= rhs.c[i];
@@ -215,7 +215,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// add assign type T and convertible
     template <typename S, std::enable_if_t<
-                              std::is_assignable<T &, type_plus<T, S>>::value, int> = 0>
+                              hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Matrix<n, m, T> &operator+=(const S rhs) {
         static_assert(
             n == m,
@@ -229,7 +229,7 @@ template <const int n, const int m, typename T> class Matrix {
     /// subtract assign type T and convertible
     template <
         typename S,
-        std::enable_if_t<std::is_assignable<T &, type_minus<T, S>>::value, int> = 0>
+        std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     Matrix<n, m, T> &operator-=(const S rhs) {
         static_assert(
             n == m,
@@ -242,7 +242,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// multiply assign with matrix
     template <int p, typename S,
-              std::enable_if_t<std::is_assignable<T &, type_mul<T, S>>::value, int> = 0>
+              std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Matrix<n, m, T> &operator*=(const Matrix<m, p, S> &rhs) {
         static_assert(m == p,
                       "can't assign result of *= to lhs Matrix, because doing so "
@@ -253,7 +253,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// multiply assign with scalar
     template <typename S,
-              std::enable_if_t<std::is_assignable<T &, type_mul<T, S>>::value, int> = 0>
+              std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Matrix<n, m, T> &operator*=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] *= rhs;
@@ -263,7 +263,7 @@ template <const int n, const int m, typename T> class Matrix {
 
     /// divide assign with scalar
     template <typename S,
-              std::enable_if_t<std::is_assignable<T &, type_div<T, S>>::value, int> = 0>
+              std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
     Matrix<n, m, T> &operator/=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] /= rhs;
@@ -272,7 +272,7 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// numpy style matrix fill
-    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Matrix<n, m, T> &fill(const S rhs) output_only {
         for (int i = 0; i < n * m; i++)
             c[i] = rhs;
@@ -312,8 +312,8 @@ template <const int n, const int m, typename T> class Matrix {
     inline Matrix<m, n, T> dagger() const { return adjoint(); }
 
     /// return real part
-    inline Matrix<n, m, number_type<T>> real() const {
-        Matrix<n, m, number_type<T>> res;
+    inline Matrix<n, m, hila::number_type<T>> real() const {
+        Matrix<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = real(c[i]);
         }
@@ -321,8 +321,8 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// return imaginary part
-    inline Matrix<n, m, number_type<T>> imag() const {
-        Matrix<n, m, number_type<T>> res;
+    inline Matrix<n, m, hila::number_type<T>> imag() const {
+        Matrix<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = imag(c[i]);
         }
@@ -340,8 +340,8 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// calculate square norm - sum of squared elements
-    number_type<T> norm_sq() const {
-        number_type<T> result = 0;
+    hila::number_type<T> norm_sq() const {
+        hila::number_type<T> result = 0;
         for (int i = 0; i < n * m; i++) {
             result += norm_squared(c[i]);
         }
@@ -426,12 +426,12 @@ inline T trace(const Matrix<n, m, T> &arg) {
 }
 /// real part
 template <const int n, const int m, typename T>
-inline Matrix<n, m, number_type<T>> real(const Matrix<n, m, T> &arg) {
+inline Matrix<n, m, hila::number_type<T>> real(const Matrix<n, m, T> &arg) {
     return arg.real();
 }
 /// imaginary part
 template <const int n, const int m, typename T>
-inline Matrix<n, m, number_type<T>> imag(const Matrix<n, m, T> &arg) {
+inline Matrix<n, m, hila::number_type<T>> imag(const Matrix<n, m, T> &arg) {
     return arg.imag();
 }
 
@@ -454,7 +454,7 @@ Matrix<n - 1, m - 1, T> Minor(const Matrix<n, m, T> &bigger, int i, int j) {
 template <int n, int m, typename T> T det(const Matrix<n, m, T> &mat) {
     static_assert(n == m, "determinants defined only for square matrices");
     T result = 0;
-    number_type<T> parity = 1, opposite = -1;
+    hila::number_type<T> parity = 1, opposite = -1;
     for (int i = 0; i < n; i++) {
         Matrix<n - 1, m - 1, T> minor = Minor(mat, 0, i);
         result += parity * det(minor) * mat.e(0, i);
@@ -487,7 +487,7 @@ inline Matrix<n, m, T> operator-(Matrix<n, m, T> a, const Matrix<n, m, T> &b) {
 
 /// Matrix + scalar
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_plus<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
 inline Matrix<n, m, T> operator+(Matrix<n, m, T> a, const S b) {
     a += b;
     return a;
@@ -495,7 +495,7 @@ inline Matrix<n, m, T> operator+(Matrix<n, m, T> a, const S b) {
 
 /// scalar + matrix
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_plus<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
 inline Matrix<n, m, T> operator+(const S b, Matrix<n, m, T> a) {
     a += b;
     return a;
@@ -503,7 +503,7 @@ inline Matrix<n, m, T> operator+(const S b, Matrix<n, m, T> a) {
 
 /// matrix - scalar
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_minus<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
 Matrix<n, m, T> operator-(Matrix<n, m, T> a, const S b) {
     a -= b;
     return a;
@@ -511,7 +511,7 @@ Matrix<n, m, T> operator-(Matrix<n, m, T> a, const S b) {
 
 /// scalar - matrix
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_minus<S, T>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_minus<S, T>, T>::value, int> = 0>
 inline Matrix<n, m, T> operator-(const S b, Matrix<n, m, T> a) {
     static_assert(
         n == m,
@@ -568,7 +568,7 @@ T operator*(const Matrix<1, m, T> &A, const Matrix<m, 1, T> &B) {
 
 /// matrix * scalar
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_mul<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 Matrix<n, m, T> operator*(Matrix<n, m, T> mat, const S rhs) {
     mat *= rhs;
     return mat;
@@ -576,7 +576,7 @@ Matrix<n, m, T> operator*(Matrix<n, m, T> mat, const S rhs) {
 
 /// scalar * matrix
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_mul<S, T>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_mul<S, T>, T>::value, int> = 0>
 Matrix<n, m, T> operator*(const S rhs, Matrix<n, m, T> mat) {
     mat *= rhs; // assume commutativity, should be ok
     return mat;
@@ -584,7 +584,7 @@ Matrix<n, m, T> operator*(const S rhs, Matrix<n, m, T> mat) {
 
 /// matrix / scalar
 template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<type_div<T, S>, T>::value, int> = 0>
+          std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
 Matrix<n, m, T> operator/(Matrix<n, m, T> mat, const S rhs) {
     mat /= rhs;
     return mat;
@@ -634,7 +634,7 @@ std::ostream &operator<<(std::ostream &strm, const Matrix<n, m, T> &A) {
 
 /// Norm squared function
 template <int n, int m, typename T>
-inline number_type<T> norm_squared(const Matrix<n, m, T> &rhs) {
+inline hila::number_type<T> norm_squared(const Matrix<n, m, T> &rhs) {
     return rhs.norm_sq();
 }
 
@@ -652,8 +652,8 @@ inline void gaussian_random(output_only Matrix<n, m, T> &mat) {
 
 /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47
 /// ff
-template <int n, typename T, typename radix = number_type<T>,
-          std::enable_if_t<is_arithmetic<radix>::value, int> = 0,
+template <int n, typename T, typename radix = hila::number_type<T>,
+          std::enable_if_t<hila::is_arithmetic<radix>::value, int> = 0,
           std::enable_if_t<std::is_same<T, Complex<radix>>::value, int> = 0>
 Complex<radix> det_lu(const Matrix<n, n, T> &mat) {
 
@@ -734,7 +734,7 @@ Complex<radix> det_lu(const Matrix<n, n, T> &mat) {
 
 /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47
 /// ff
-template <int n, typename T, std::enable_if_t<is_arithmetic<T>::value, int> = 0>
+template <int n, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 T det_lu(const Matrix<n, n, T> &mat) {
     int i, imax, j, k;
     T big, d, temp, dum;

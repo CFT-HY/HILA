@@ -1,6 +1,8 @@
 #ifndef VECTOR_TYPES_H
 #define VECTOR_TYPES_H
 
+namespace hila {
+
 /// is_vectorizable_type<T>::value  is always false if the target is not vectorizable
 template <typename T, typename A = void> struct is_vectorizable_type {
     static constexpr bool value = false;
@@ -11,7 +13,7 @@ template <typename T, typename A = void> struct is_vectorizable_type {
 ///  exists
 template <typename T>
 struct is_vectorizable_type<T, typename std::enable_if_t<std::is_arithmetic<
-                                   typename base_type_struct<T>::type>::value>> {
+                                   typename hila::base_type_struct<T>::type>::value>> {
     static constexpr bool value = true;
 };
 
@@ -71,10 +73,10 @@ template <typename T, typename A = void> struct vector_info {
 /// and specializre the same for vectorizable type
 template <typename T>
 struct vector_info<T, typename std::enable_if_t<std::is_arithmetic<
-                          typename base_type_struct<T>::type>::value>> {
+                          typename hila::base_type_struct<T>::type>::value>> {
     static constexpr bool is_vectorizable = true;
     // Get base type first
-    using base_type = number_type<T>;
+    using base_type = hila::number_type<T>;
     // Find vector length
     static constexpr int vector_size = VECTOR_SIZE / sizeof(base_type);
     // Find the vector type from above
@@ -86,5 +88,7 @@ struct vector_info<T, typename std::enable_if_t<std::is_arithmetic<
 };
 
 #endif // VECTORIZED
+
+} // namespace hila
 
 #endif

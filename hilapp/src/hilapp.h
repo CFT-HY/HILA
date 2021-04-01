@@ -174,7 +174,7 @@ struct dir_ptr {
 /// Field<type> -expression.  Type is vectorizable if:
 /// a) just float, double, int  or
 /// b) is templated type, with float/double in template and  implements
-///    the method using base_type = number_type<T>;
+///    the method using base_type = hila::number_type<T>;
 enum class number_type {
     INT,
     UNSIGNED,

@@ -34,7 +34,7 @@ template <typename T>
 __device__ auto field_storage<T>::get(const unsigned i,
                                       const unsigned field_alloc_size) const {
     assert(i < field_alloc_size);
-    using base_t = number_type<T>;
+    using base_t = hila::number_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
     T value;
     base_t *value_f = (base_t *)&value;
@@ -50,7 +50,7 @@ template <typename A>
 __device__ inline void field_storage<T>::set(const A &value, const unsigned i,
                                              const unsigned field_alloc_size) {
     assert(i < field_alloc_size);
-    using base_t = number_type<T>;
+    using base_t = hila::number_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
     const base_t *value_f = (base_t *)&value;
     base_t *fp = (base_t *)(fieldbuf);
@@ -191,7 +191,7 @@ __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer,
                                             const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_t = number_type<T>;
+        using base_t = hila::number_type<T>;
         constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element = field.get(site_index[Index], field_alloc_size);
         base_t *ep = (base_t *)&element;
@@ -208,7 +208,7 @@ __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *b
                                                     const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_t = number_type<T>;
+        using base_t = hila::number_type<T>;
         constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element = -field.get(site_index[Index], field_alloc_size);
         base_t *ep = (base_t *)&element;
@@ -372,7 +372,7 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer,
                                            const unsigned field_alloc_size) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < n) {
-        using base_t = number_type<T>;
+        using base_t = hila::number_type<T>;
         constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
         T element;
         base_t *ep = (base_t *)&element;

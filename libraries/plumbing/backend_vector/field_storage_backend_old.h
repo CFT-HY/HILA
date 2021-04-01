@@ -16,8 +16,8 @@ template <typename A, int vector_size, class Enable = void> struct vectorize_str
 /// A is a basic type, so just return the matching vector type
 template <typename A, int vector_size>
 struct vectorize_struct<A, vector_size,
-                        typename std::enable_if_t<is_arithmetic<A>::value>> {
-    using type = typename vector_base_type<A, vector_size>::type;
+                        typename std::enable_if_t<hila::is_arithmetic<A>::value>> {
+    using type = typename hila::vector_base_type<A, vector_size>::type;
 };
 
 /// B is a templated class, so construct a vectorized type
@@ -119,7 +119,7 @@ void field_storage<T>::gather_elements(char *RESTRICT buffer,
                                        const lattice_struct *RESTRICT lattice) const {
     constexpr int vector_size = vector_info<T>::vector_size;
     vectorized_lattice_struct<vector_size> *vlat =
-        lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
+        lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
     for (int j = 0; j < n; j++) {
         int index = index_list[j];
         int v_index = vlat->vector_index[index];
@@ -142,7 +142,7 @@ void field_storage<T>::place_elements(char *RESTRICT buffer,
                                       const lattice_struct *RESTRICT lattice) {
     constexpr int vector_size = vector_info<T>::vector_size;
     const vectorized_lattice_struct<vector_size> *RESTRICT vlat =
-        lattice->backend_lattice->get_vectorized_lattice<vector_info<T>::vector_size>();
+        lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
     for (int j = 0; j < n; j++) {
         int index = index_list[j];
         int v_index = vlat->vector_index[index];

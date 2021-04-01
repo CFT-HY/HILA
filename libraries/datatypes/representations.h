@@ -23,10 +23,10 @@
 template <int N, typename radix>
 class adjointRep : public SquareMatrix<N * N - 1, radix> {
   public:
-    static_assert(is_arithmetic<radix>::value, "adjointRep<type>: type has to be real");
+    static_assert(hila::is_arithmetic<radix>::value, "adjointRep<type>: type has to be real");
 
     /// The underlying arithmetic type of the matrix
-    using base_type = number_type<radix>;
+    using base_type = hila::number_type<radix>;
     using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;
@@ -44,11 +44,11 @@ class adjointRep : public SquareMatrix<N * N - 1, radix> {
     adjointRep(const adjointRep &a) = default;
 
     /// Use square matrix constructor from radix
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     adjointRep(const scalart m) : SquareMatrix<size, radix>(m) {}
 
     /// Copy constructor
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     adjointRep(const adjointRep<N, scalart> m) : SquareMatrix<size, scalart>(m) {}
 
     /// Return a SU(N) generator in the adjoint representation,
@@ -122,7 +122,7 @@ template <int N, typename radix>
 class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Complex<radix>> {
   public:
     /// The underlying arithmetic type of the matrix
-    using base_type = number_type<radix>;
+    using base_type = hila::number_type<radix>;
     using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;
@@ -139,11 +139,11 @@ class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Complex<radix>> {
     antisymmetric() = default;
 
     /// Square matrix constructor from scalar
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     antisymmetric(const scalart m) : SquareMatrix<size, Complex<radix>>(m) {}
 
     /// Copy constructor
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     antisymmetric(const antisymmetric<N, scalart> m) {
         for (int j = 0; j < size; j++)
             for (int i = 0; i < size; i++) {
@@ -152,7 +152,7 @@ class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Complex<radix>> {
     }
 
     /// Needs assignment as well
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     inline antisymmetric &operator=(const antisymmetric<N, scalart> m) {
         for (int j = 0; j < size; j++)
             for (int i = 0; i < size; i++) {
@@ -253,7 +253,7 @@ template <int N, typename radix>
 class symmetric : public SquareMatrix<N *(N + 1) / 2, Complex<radix>> {
   public:
     /// The underlying arithmetic type of the matrix
-    using base_type = number_type<radix>;
+    using base_type = hila::number_type<radix>;
     using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;
@@ -270,7 +270,7 @@ class symmetric : public SquareMatrix<N *(N + 1) / 2, Complex<radix>> {
     symmetric() = default;
 
     /// Constructor from scalar
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     symmetric(const scalart m) {
         for (int j = 0; j < size; j++) {
             for (int i = 0; i < size; i++) {
@@ -281,7 +281,7 @@ class symmetric : public SquareMatrix<N *(N + 1) / 2, Complex<radix>> {
     }
 
     /// Constructor from a symmetric matrix
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     symmetric(const symmetric<N, scalart> m) {
         for (int j = 0; j < size; j++)
             for (int i = 0; i < size; i++) {
@@ -290,7 +290,7 @@ class symmetric : public SquareMatrix<N *(N + 1) / 2, Complex<radix>> {
     }
 
     /// Needs assignment as well
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     inline symmetric &operator=(const symmetric<N, scalart> m) {
         for (int j = 0; j < size; j++)
             for (int i = 0; i < size; i++) {

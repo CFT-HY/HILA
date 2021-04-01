@@ -60,11 +60,11 @@ template <typename T> class field_storage {
 
     void gather_comm_vectors(
         T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
-        const vectorized_lattice_struct<vector_info<T>::vector_size> *RESTRICT vlat,
+        const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat,
         bool antiperiodic) const;
 
     void place_recv_elements(const T *RESTRICT buffer, Direction d, Parity par,
-                             const vectorized_lattice_struct<vector_info<T>::vector_size>
+                             const vectorized_lattice_struct<hila::vector_info<T>::vector_size>
                                  *RESTRICT vlat) const;
 
 #endif

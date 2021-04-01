@@ -20,7 +20,7 @@ using ft = Complex<double>;
 
 template <typename T> class v2 {
   public:
-    using base_type = number_type<T>;
+    using base_type = hila::number_type<T>;
     Complex<T> a[2];
 
     void setter() output_only { a[0] = 1; }

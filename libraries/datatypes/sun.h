@@ -71,7 +71,7 @@
 ///
 template <int n, typename radix = double> class SU : public Matrix<n, n, Complex<radix>> {
   public:
-    using base_type = number_type<radix>;
+    using base_type = hila::number_type<radix>;
     using argument_type = radix;
 
     static constexpr int size = n;
@@ -356,7 +356,7 @@ template <typename radix> class SU3 : public SU<3, radix> {};
 /// a^2 + b^2 + c^2 + d^2 = 1.
 template <typename radix> class SU2 {
   public:
-    using base_type = number_type<radix>;
+    using base_type = hila::number_type<radix>;
     using argument_type = radix;
 
     SU2() : a(0), b(0), c(0), d(1) {}
@@ -598,21 +598,21 @@ void project_antihermitean(Matrix<N, N, Complex<radix>> &matrix) {
 /// matrices.
 template <int n, typename radix> class SU_vector : public Vector<n, Complex<radix>> {
   public:
-    using base_type =  number_type<radix>;
+    using base_type =  hila::number_type<radix>;
     using argument_type = radix;
 
     static constexpr int size = n;
 
     SU_vector() = default;
 
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     SU_vector(const scalart rhs) {
         for (int i = 0; i < n; i++) {
             this->c[i] = (rhs);
         }
     }
 
-    template <typename scalart, std::enable_if_t<is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     SU_vector(const SU_vector<n, scalart> m) {
         for (int i = 0; i < n; i++) {
             this->c[i] = m.c[i];

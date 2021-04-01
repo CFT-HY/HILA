@@ -159,7 +159,7 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
 
   public:
     // std incantation for field types
-    using base_type = number_type<T>;
+    using base_type = hila::number_type<T>;
     using argument_type = T;
 
     // define these to ensure std::is_trivial
@@ -181,7 +181,7 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
 
     /// Construct CV automatically from right-size initializer list
     /// This does not seem to be dangerous, so keep non-explicit
-    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline CoordinateVector_t(std::initializer_list<S> rhs) {
         assert(rhs.size() == NDIM &&
                "CoordinateVector initializer list size does not match");
@@ -232,7 +232,7 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
     }
 
     /// Assign from initializer list
-    template <typename S, std::enable_if_t<is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline CoordinateVector_t &operator=(std::initializer_list<S> rhs) {
         assert(rhs.size() == NDIM && "Initializer list has a wrong size in assignment");
         int i = 0;

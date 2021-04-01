@@ -37,27 +37,27 @@ template <typename T> void do_reduce_operation(MPI_Op operation, Reduction<T> &r
     reduction_timer.start();
     if (r.is_allreduce()) {
         if (r.is_nonblocking()) {
-            MPI_Iallreduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(number_type<T>), dtype,
+            MPI_Iallreduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::number_type<T>), dtype,
                            operation, lattice->mpi_comm_lat, rp);
         } else {
-            MPI_Allreduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(number_type<T>), dtype,
+            MPI_Allreduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::number_type<T>), dtype,
                           operation, lattice->mpi_comm_lat);
         }
     } else {
         if (hila::myrank() == 0) {
             if (r.is_nonblocking()) {
-                MPI_Ireduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(number_type<T>),
+                MPI_Ireduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::number_type<T>),
                             dtype, operation, 0, lattice->mpi_comm_lat, rp);
             } else {
-                MPI_Reduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(number_type<T>), dtype,
+                MPI_Reduce(MPI_IN_PLACE, ptr, sizeof(T) / sizeof(hila::number_type<T>), dtype,
                            operation, 0, lattice->mpi_comm_lat);
             }
         } else {
             if (r.is_nonblocking()) {
-                MPI_Ireduce(ptr, ptr, sizeof(T) / sizeof(number_type<T>), dtype,
+                MPI_Ireduce(ptr, ptr, sizeof(T) / sizeof(hila::number_type<T>), dtype,
                             operation, 0, lattice->mpi_comm_lat, rp);
             } else {
-                MPI_Reduce(ptr, ptr, sizeof(T) / sizeof(number_type<T>), dtype,
+                MPI_Reduce(ptr, ptr, sizeof(T) / sizeof(hila::number_type<T>), dtype,
                            operation, 0, lattice->mpi_comm_lat);
             }
         }
@@ -177,7 +177,7 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
 
     /// Method set is the same as assignment, but without return value
     /// No need to complete comms if going on
-    template <typename S, std::enable_if_t<std::is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     void set(S &rhs) {
         if (comm_is_on)
             MPI_Cancel(&request);
@@ -187,7 +187,7 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
     }
 
     /// Assignment is used only outside site loops - drop comms if on, no need to wait
-    template <typename S, std::enable_if_t<std::is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     T &operator=(const S &rhs) {
         set(rhs);
         return *this;
@@ -198,26 +198,26 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
     /// Thus  a = (r += b); is disallowed
     /// Within site loops hilapp will change operations
     template <typename S, std::enable_if_t<
-                              std::is_assignable<T &, type_plus<T, S>>::value, int> = 0>
+                              hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     void operator+=(const S &rhs) {
         (T &)*this += rhs;
     }
 
     template <
         typename S,
-        std::enable_if_t<std::is_assignable<T &, type_minus<T, S>>::value, int> = 0>
+        std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     void operator-=(const S &rhs) {
         (T &)*this -= rhs;
     }
 
     template <typename S,
-              std::enable_if_t<std::is_assignable<T &, type_mul<T, S>>::value, int> = 0>
+              std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     void operator*=(const S &rhs) {
         (T &)*this *= rhs;
     }
 
     template <typename S,
-              std::enable_if_t<std::is_assignable<T &, type_div<T, S>>::value, int> = 0>
+              std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
     void operator/=(const S &rhs) {
         (T &)*this /= rhs;
     }
@@ -339,7 +339,7 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
     // explicit Reduction(const T &v, bool all) : val(v), is_allreduce(all) {}
 
     /// Assign from assignable type too
-    template <typename S, std::enable_if_t<std::is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Reduction(const S &s) {
         val = s;
     }
@@ -393,14 +393,14 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
     operator T() const { return val; }
 
     /// Cast to any compatible value
-    //template <typename S, std::enable_if_t<std::is_assignable<S &, T>::value, int> = 0>
+    //template <typename S, std::enable_if_t<hila::is_assignable<S &, T>::value, int> = 0>
     //operator S() {
     //    return (S)val;
     //}
 
     /// Method set is the same as assignment, but without return value
     /// No need to complete comms if going on
-    template <typename S, std::enable_if_t<std::is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     void set(S &rhs) {
         if (comm_is_on)
             MPI_Cancel(&request);
@@ -410,7 +410,7 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
     }
 
     /// Assignment is used only outside site loops - drop comms if on, no need to wait
-    template <typename S, std::enable_if_t<std::is_assignable<T &, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     T &operator=(const S &rhs) {
         set(rhs);
         return val;
@@ -421,26 +421,26 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
     /// Thus  a = (r += b); is disallowed
     /// Within site loops hilapp will change operations
     template <typename S, std::enable_if_t<
-                              std::is_assignable<T &, type_plus<T, S>>::value, int> = 0>
+                              hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     void operator+=(const S &rhs) {
         val += rhs;
     }
 
     template <
         typename S,
-        std::enable_if_t<std::is_assignable<T &, type_minus<T, S>>::value, int> = 0>
+        std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     void operator-=(const S &rhs) {
         val -= rhs;
     }
 
     template <typename S,
-              std::enable_if_t<std::is_assignable<T &, type_mul<T, S>>::value, int> = 0>
+              std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     void operator*=(const S &rhs) {
         val *= rhs;
     }
 
     template <typename S,
-              std::enable_if_t<std::is_assignable<T &, type_div<T, S>>::value, int> = 0>
+              std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
     void operator/=(const S &rhs) {
         val /= rhs;
     }

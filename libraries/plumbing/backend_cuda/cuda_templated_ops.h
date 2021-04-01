@@ -200,7 +200,7 @@ __device__ inline T atomicAdd(T *dp, B v) {
 }
 
 /// Atomic add for composed datatypes - do element-by-element
-/// requires that number_type is defined
+/// requires that hila::number_type is defined
 template <
     typename T, typename B,
     std::enable_if_t<!std::is_arithmetic<T>::value && std::is_convertible<B, T>::value,
@@ -208,12 +208,12 @@ template <
 __device__ inline void atomicAdd(T *d, const B &bv) {
 
     T v = bv;
-    number_type<T> *dp;
-    const number_type<T> *dv;
-    constexpr int N = sizeof(T) / sizeof(number_type<T>);
+    hila::number_type<T> *dp;
+    const hila::number_type<T> *dv;
+    constexpr int N = sizeof(T) / sizeof(hila::number_type<T>);
 
-    dp = (number_type<T> *)(void *)d;
-    dv = (number_type<T> *)(void *)&v;
+    dp = (hila::number_type<T> *)(void *)d;
+    dv = (hila::number_type<T> *)(void *)&v;
 
     for (int i = 0; i < N; ++i) {
         atomicAdd(dp + i, dv[i]);
