@@ -7,7 +7,7 @@
 // this include has to be after the backend defs, because those define hila::random()
 #include "plumbing/random.h"
 
-#include "plumbing/template_tools.h"
+#include "plumbing/type_tools.h"
 
 #ifdef __CUDACC__
 

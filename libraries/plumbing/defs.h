@@ -124,7 +124,7 @@ enum class fft_direction { forward, inverse };
 #include "plumbing/random.h"
 
 // This contains useful template tools
-#include "plumbing/template_tools.h"
+#include "plumbing/type_tools.h"
 
 #if defined(CUDA)
 #include "plumbing/backend_cuda/cuda_templated_ops.h"
