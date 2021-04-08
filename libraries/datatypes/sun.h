@@ -81,7 +81,7 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
 
     /// Construct from scalar by setting diagonal
     template <typename scalart,
-              std::enable_if_t<is_complex_or_arithmetic<scalart>::value, int> = 0>
+              std::enable_if_t<hila::is_complex_or_arithmetic<scalart>::value, int> = 0>
     SU(const scalart rhs) {
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
