@@ -462,10 +462,14 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             }
         }
 
-        if (l.is_read_atX) {
+        // TODO:
+        if (l.is_read_atX || l.is_written) {
             // local read
             kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
                    << ".get(" << looping_var << ", d_lattice.field_alloc_size);\n";
+            if (l.is_written) 
+                kernel << "// TODO: Read may be unnecessary!\n";
+
 
         } else if (l.is_written) {
             // and a var which is not read

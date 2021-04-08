@@ -119,10 +119,14 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
         }
 
         // and then get (possible) local refs
-        if (l.is_read_atX) {
+        // TODO:
+        if (l.is_read_atX || l.is_written) {
             // now reading var without nb. reference
             code << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
                  << ".get_value_at(" << looping_var << ");\n";
+            if (l.is_written)
+                code << "// TODO: READ MAY BE UNNECESSARY, write more careful "
+                        "analysis\n";
 
         } else if (l.is_written) {
             code << l.element_type << " " << l.loop_ref_name << ";\n";

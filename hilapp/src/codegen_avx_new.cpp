@@ -484,10 +484,12 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
                 }
         }
 
-        if (l.is_read_atX) {
+        if (l.is_read_atX || l.is_written) {
             code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << " = "
                  << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type << ">("
                  << looping_var << ");\n";
+            if (!l.is_read_atX) 
+                code << "// TODO: Read may be unnecessary!\n";
         } else if (l.is_written) {
             code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << ";\n";
         }

@@ -275,7 +275,7 @@ struct var_info {
 //  Store "array-type" references inside site loops
 struct bracket_ref_t {
     Expr *E;           // full bracket expression "a[i]"
-    DeclRefExpr *DRE;  // "a"
+    Expr *DRE;         // "a"  - can be DeclRefExpr or MemberExpr
     Expr *Idx;         // "i"
     Stmt *assign_stmt; // if it is reduction ref, full assign stmt here
 };
