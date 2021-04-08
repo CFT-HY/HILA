@@ -733,9 +733,21 @@ template <typename T> class Field {
     void get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const;
     T get_element(const CoordinateVector &coord) const;
 
-    inline void set_element_at(const CoordinateVector &coord, const T &elem) {
-        set_element(elem, coord);
+    template <typename A, std::enable_if_t<std::is_assignable<T&,A>::value,int> = 0>
+    inline void set_element_at(const CoordinateVector coord, const A elem) {
+        T e;
+        e = elem;
+        set_element(e, coord);
     }
+
+    inline void set_element_at(const CoordinateVector coord, std::nullptr_t elem) {
+        T e;
+        e = 0;
+        set_element(e, coord);
+    }
+
+
+
 
     // Fourier transform declarations
     void FFT(fft_direction fdir = fft_direction::forward);
