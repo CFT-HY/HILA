@@ -1,6 +1,8 @@
 #include "test.h"
-#include "plumbing/fft_new.h"
+#include "plumbing/fft.h"
 //#include "plumbing/FFT.h"
+
+constexpr double Pi = 3.14159265358979;
 
 int main(int argc, char **argv) {
 
@@ -19,11 +21,10 @@ int main(int argc, char **argv) {
 
         // After one FFT the field is 0 except at coord 0
         p2 = 0;
-        T m;
-        m = lattice->volume();
 
-        CoordinateVector c(0);
-        p2.set_element(m, c);
+        p2[{0,0,0,0}] = lattice->volume();
+
+        output0 << "Start fft\n";
 
         FFT_field(f, p);
 
@@ -45,6 +46,24 @@ int main(int argc, char **argv) {
         }
         output0 << "Norm " << sum / tnorm << '\n';
         assert(fabs(sum / tnorm) < 1e-10 && "Second FFT\n");
+
+
+        onsites(ALL) {
+            double d = X.coordinate(e_x)*2.0*Pi/lattice->size(e_x);
+            f[X] = Complex<double>(cos(d),sin(d));
+        }
+
+        FFT_field(f, p);
+
+        p2 = 0;
+        p2[{1,0,0,0}] = lattice->volume();
+
+
+        sum = 0;
+        onsites(ALL) { sum += (p[X] - p2[X]).norm_sq(); }
+        output0 << "Wave sum " << sum << '\n';
+        assert(fabs(sum) < 1e-10 && "Wave FFT\n");
+
     }
 
     // Test reading and writing a field

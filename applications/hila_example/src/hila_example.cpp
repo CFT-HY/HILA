@@ -1,5 +1,5 @@
 #include "hila.h"
-#include "fft_new.h"
+#include "fft.h"
 
 // define an alias for a 3x3 complex matrix
 using Mtype = SquareMatrix<3,Complex<double>>;
