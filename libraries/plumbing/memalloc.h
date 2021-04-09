@@ -13,5 +13,6 @@ void *memalloc(std::size_t size);
 void *memalloc(std::size_t size, const char *filename, const unsigned line);
 
 /// d_malloc allocates memory from "device": either from cpu or from gpu,
-/// depending on the target.  
+/// depending on the target.  Free with d_free()
 void *d_malloc(std::size_t size);
+void d_free(void * dptr);

@@ -71,3 +71,18 @@ void *d_malloc(std::size_t size) {
 #endif
 
 }
+
+void d_free(void *dptr) {
+
+#ifndef CUDA
+
+    if (dptr != nullptr) free(dptr);
+
+#else
+
+    cudaFree(dptr);
+    check_cuda_error("CUDA d_free");
+
+#endif
+
+}
