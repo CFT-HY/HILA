@@ -14,9 +14,9 @@
 #define WRK_SCATTER_TAG 43
 
 hila::timer fft_timer("FFT total time");
-static hila::timer fftw_plan_timer("  FFTW plan");
+static hila::timer fft_plan_timer("  FFTW plan");
 static hila::timer fft_MPI_timer("  MPI in FFT");
-static hila::timer fftw_execute_timer("  FFTW execute");
+static hila::timer fft_execute_timer("  FFTW execute");
 hila::timer fft_reshuffle_timer("  data reshuffle");
 static hila::timer fft_buffer_timer("  copy fftw buffers");
 hila::timer fft_collect_timer("  copy payload");
@@ -81,7 +81,7 @@ void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
 
     transform_dir = (fftdir == fft_direction::forward) ? FFTW_FORWARD : FFTW_BACKWARD;
 
-    fftw_plan_timer.start();
+    fft_plan_timer.start();
 
     // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time
 
@@ -100,7 +100,7 @@ void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
                                        transform_dir, FFTW_ESTIMATE);
     }
 
-    fftw_plan_timer.stop();
+    fft_plan_timer.stop();
 
     // Set up the fft_comms -struct, if not yet done
 
@@ -155,6 +155,7 @@ void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
             fn.recv_buf_size = my_columns[dir] * fn.size_to_dir;
         }
 
+
     } // setup
 
     // allocate work arrays which are used to feed fftw and get the results
@@ -197,11 +198,11 @@ template <> void fft_execute<Complex<double>>() {
         fft_buffer_timer.stop();
 
         // do the fft
-        fftw_execute_timer.start();
+        fft_execute_timer.start();
 
         fftw_execute(fftwplan_d);
 
-        fftw_execute_timer.stop();
+        fft_execute_timer.stop();
 
         fft_buffer_timer.start();
 
@@ -234,9 +235,9 @@ template <> void fft_execute<Complex<float>>() {
         fft_buffer_timer.stop();
 
         // do the fft
-        fftw_execute_timer.start();
+        fft_execute_timer.start();
         fftwf_execute(fftwplan_f);
-        fftw_execute_timer.stop();
+        fft_execute_timer.stop();
 
         fft_buffer_timer.start();
 

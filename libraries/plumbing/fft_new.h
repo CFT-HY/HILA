@@ -7,7 +7,6 @@
 #include "plumbing/field.h"
 #include "plumbing/timing.h"
 
-
 /// Initialize fft to Direction dir.  _elements: number of complex values in
 /// field, T_size the size of the field variable.  fftdir is
 /// fft_direction::FORWARD or fft
@@ -31,14 +30,11 @@ template <typename cmplx_t> void fft_execute() { assert("Don't call this!"); }
 template <> void fft_execute<Complex<double>>();
 template <> void fft_execute<Complex<float>>();
 
-
 // Define type to map from T to complex_t
-template <typename T, typename cmplx_t>
-union T_union {
+template <typename T, typename cmplx_t> union T_union {
     T val;
-    cmplx_t c[sizeof(T)/sizeof(cmplx_t)];
+    cmplx_t c[sizeof(T) / sizeof(cmplx_t)];
 };
-
 
 /// Collect the data from field to buffer for sending or fft'ing.
 /// Order: Direction dir goes fastest, then the index to complex data in T,
@@ -48,7 +44,7 @@ template <typename T, typename cmplx_t>
 inline void fft_collect_data(const Field<T> &f, const Direction dir,
                              cmplx_t *const RESTRICT buffer) {
 
-    constexpr int elements = sizeof(T)/sizeof(cmplx_t);
+    constexpr int elements = sizeof(T) / sizeof(cmplx_t);
 
     extern hila::timer fft_collect_timer;
     fft_collect_timer.start();
@@ -57,16 +53,17 @@ inline void fft_collect_data(const Field<T> &f, const Direction dir,
     // elem_offset is the same for the offset of the elements of T
     CoordinateVector offset, nmin;
 
-    const size_t elem_offset = fft_get_buffer_offsets(dir, sizeof(T)/sizeof(cmplx_t), offset, nmin);
+    const size_t elem_offset =
+        fft_get_buffer_offsets(dir, sizeof(T) / sizeof(cmplx_t), offset, nmin);
 
 // and collect the data
 #pragma hila novector direct_access(buffer)
     onsites(ALL) {
-       
-        T_union<T,cmplx_t> v;
+
+        T_union<T, cmplx_t> v;
         v.val = f[X];
         size_t off = offset.dot(X.coordinates() - nmin);
-        for (int i = 0; i < elements/2; i++) {
+        for (int i = 0; i < elements; i++) {
 
             buffer[off + i * elem_offset] = v.c[i];
         }
@@ -86,7 +83,6 @@ inline void fft_save_result(Field<T> &f, const Direction dir,
     extern hila::timer fft_save_timer;
     fft_save_timer.start();
 
-
     // Build vector offset, which encodes where the data should be written
     CoordinateVector offset, nmin;
 
@@ -95,12 +91,11 @@ inline void fft_save_result(Field<T> &f, const Direction dir,
 // and collect the data from buffers
 #pragma hila novector direct_access(buffer)
     onsites(ALL) {
-        constexpr int elementz = sizeof(T)/sizeof(cmplx_t);
 
-        T_union<T,cmplx_t> v;
+        T_union<T, cmplx_t> v;
 
         size_t off = offset.dot(X.coordinates() - nmin);
-        for (size_t i = 0; i < elementz; i++) {
+        for (size_t i = 0; i < elements; i++) {
             v.c[i] = buffer[off + i * elem_offset];
         }
         f[X] = v.val;
@@ -127,7 +122,8 @@ inline void increment_current_coord(CoordinateVector &current,
 
 template <typename cmplx_t>
 inline void fft_reshuffle_data(const Direction fft_dir, cmplx_t *const RESTRICT out,
-                               const Direction prev_dir, const cmplx_t *const RESTRICT in,
+                               const Direction prev_dir,
+                               const cmplx_t *const RESTRICT in,
                                const size_t elements) {
 
     extern hila::timer fft_reshuffle_timer;
@@ -203,10 +199,15 @@ void fft_post_scatter(void *buffer);
 void fft_start_scatter();
 void fft_cleanup();
 
-template <typename T, typename cmplx_t>
-inline void FFT_field_complex(const Field<T> &input, Field<T> &result,
-                              fft_direction fftdir = fft_direction::forward) {
+template <typename T>
+inline void FFT_field(const Field<T> &input, Field<T> &result,
+                      fft_direction fftdir = fft_direction::forward) {
 
+    static_assert(hila::contains_complex<T>::value,
+                  "FFT_field argument fields must contain complex type");
+
+    // get the type of the complex number here
+    using cmplx_t = Complex<hila::number_type<T>>;
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t);
 
     assert(lattice == input.fs->lattice && "Default lattice mismatch in fft");
@@ -224,9 +225,9 @@ inline void FFT_field_complex(const Field<T> &input, Field<T> &result,
     result.mark_changed(ALL);
 
     cmplx_t *const RESTRICT collect_buffer =
-        (cmplx_t *)memalloc(local_volume * elements * sizeof(cmplx_t));
+        (cmplx_t *)d_malloc(local_volume * sizeof(T));
     cmplx_t *const RESTRICT receive_buffer =
-        (cmplx_t *)memalloc(local_volume * elements * sizeof(cmplx_t));
+        (cmplx_t *)d_malloc(local_volume * sizeof(T));
 
     bool first_dir = true;
     Direction prev_dir;
@@ -267,44 +268,10 @@ inline void FFT_field_complex(const Field<T> &input, Field<T> &result,
 
     fft_save_result(result, prev_dir, receive_buffer);
 
-    free(collect_buffer);
-    free(receive_buffer);
+    d_free(collect_buffer);
+    d_free(receive_buffer);
 
     fft_timer.stop();
-}
-
-/// Match a given type T to it's underlying complex type
-template <typename T, class Enable = void> struct complex_base {};
-
-/// Match to a complex type
-template <> struct complex_base<Complex<float>> { using type = Complex<float>; };
-
-/// Match to a complex type
-template <> struct complex_base<Complex<double>> { using type = Complex<double>; };
-
-/// Match templated class B to it's underlying complex type
-template <template <typename B> class C, typename B> struct complex_base<C<B>> {
-    using type = typename complex_base<B>::type;
-};
-
-/// Match templated class B to it's underlying complex type
-template <template <int a, typename B> class C, int a, typename B>
-struct complex_base<C<a, B>> {
-    using type = typename complex_base<B>::type;
-};
-
-/// Match templated class B to it's underlying complex type
-template <template <int a, int b, typename B> class C, int a, int b, typename B>
-struct complex_base<C<a, b, B>> {
-    using type = typename complex_base<B>::type;
-};
-
-/// Run fourier transform on a complex field
-// Called with any type T with a Complex type nested in the lowest level
-template <typename T>
-void FFT_field(const Field<T> &input, Field<T> &result,
-               fft_direction fdir = fft_direction::forward) {
-    FFT_field_complex<T, typename complex_base<T>::type>(input, result, fdir);
 }
 
 #endif
