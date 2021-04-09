@@ -42,7 +42,7 @@ HILA_OBJECTS = \
 	build/test_gathers.o \
 	build/com_mpi.o \
 	build/com_single.o \
-	build/fft_new.o
+	build/fft.o
 
 # com_mpi / com_single could be moved to platforms, but they're protected by USE_MPI guards
 
