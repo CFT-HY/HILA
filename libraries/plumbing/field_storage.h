@@ -37,8 +37,8 @@ template <typename T> class field_storage {
     // Get an element in a loop
     DEVICE inline auto get(const unsigned i, const unsigned field_alloc_size) const;
 
-    template <typename A>
-    DEVICE inline void set(const A &value, const unsigned i,
+    //template <typename A>
+    DEVICE inline void set(const T &value, const unsigned i,
                            const unsigned field_alloc_size);
 
     // Get a single element outside loops
