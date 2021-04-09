@@ -322,6 +322,8 @@ DeclRefExpr *TopLevelVisitor::find_base_variable(Expr *E) {
     return dyn_cast<DeclRefExpr>(RE);
 }
 
+///////////////////////////////////////////////////////////////////////
+
 bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
     for (var_decl &d : var_decl_list) {
         if (d.scope >= 0 && decl == d.decl) {
@@ -346,17 +348,30 @@ bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
 int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype type,
                                             bool &is_assign, std::string &assignop) {
 
-    VarDecl *vd = dyn_cast<VarDecl>(ref.DRE->getDecl());
+    if (ref.DRE == nullptr) {
+        llvm::errs()
+            << "hilapp internal error: bracket_var_ref type unknown, ignoring...\n";
+        return 0;
+    }
 
     // if this has #pragma direct_access don't do anything
     if (loop_info.has_pragma_access &&
-        find_word(loop_info.pragma_access_args, vd->getNameAsString()) !=
+        find_word(loop_info.pragma_access_args, get_stmt_str(ref.DRE)) !=
             std::string::npos) {
 
         // no need to handle the expression here, bubble up and handle the raw ptr on
         // next visit
         return 0;
     }
+
+    VarDecl *vd;
+    DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ref.DRE);
+    if (DRE == nullptr) {
+        llvm::errs()
+            << "hilapp error: array refs to member variables not yet implemented\n";
+        llvm::errs() << "Expression: " << get_stmt_str(ref.E) << '\n';
+    }
+    vd = dyn_cast<VarDecl>(DRE->getDecl());
 
     // Check if it's local
     if (is_variable_loop_local(vd)) {
@@ -366,7 +381,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             // be done.  Let us anyway put it through the std handler in order to
             // flag it.
 
-            handle_var_ref(ref.DRE, is_assign, assignop);
+            handle_var_ref(DRE, is_assign, assignop);
 
             // and traverse whatever is in the index in normal fashion
             is_assign = false; // we're not assigning to the index
@@ -547,13 +562,14 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     return 1;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
 int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *ASE, bool &is_assign,
                                           std::string &assignop) {
 
     bracket_ref_t br = {ASE, find_base_variable(ASE), ASE->getIdx()};
     return handle_bracket_var_ref(br, array_ref::ARRAY, is_assign, assignop);
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 /// is_vector_reference() true if expression is of type var[], where
@@ -645,9 +661,8 @@ bool TopLevelVisitor::handle_constant_expr(Expr *E) {
     SourceLocation sl = DRE->getDecl()->getSourceRange().getBegin();
     if (sl.isValid()) {
         if (get_FileId(sl) == get_FileId(global.location.loop)) {
-            llvm::errs() << "       Decl in same file ";
+
             if (sl < global.location.loop && sl > global.location.kernels) {
-                llvm::errs() << "AFTER KERNEL INSERTION, insert value\n";
 
                 // what is the type of the const?
                 QualType ty = DRE->getType().getCanonicalType();
@@ -920,6 +935,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             auto a = dyn_cast<ArraySubscriptExpr>(E);
 
             // At this point this should be an allowed expression?
+            // llvm::errs() << " ARRAY EXPRS " << get_stmt_str(E) << '\n';
             int is_handled = handle_array_var_ref(a, is_assignment, assignop);
 
             is_assignment = false;
