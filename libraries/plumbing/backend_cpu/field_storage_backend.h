@@ -14,8 +14,8 @@ inline auto field_storage<T>::get(const unsigned i,
 }
 
 template <typename T>
-template <typename A>
-inline void field_storage<T>::set(const A &value, const unsigned i,
+// template <typename A>
+inline void field_storage<T>::set(const T &value, const unsigned i,
                                   const unsigned field_alloc_size) {
     fieldbuf[i] = value;
 }
@@ -52,8 +52,8 @@ inline auto field_storage<T>::get(const unsigned i,
 }
 
 template <typename T>
-template <typename A>
-inline void field_storage<T>::set(const A &value, const unsigned i,
+// template <typename A>
+inline void field_storage<T>::set(const T &value, const unsigned i,
                                   const unsigned field_alloc_size) {
     assert(i < field_alloc_size);
     real_t *value_f = (real_t *)(&value);

@@ -46,8 +46,8 @@ __device__ auto field_storage<T>::get(const unsigned i,
 }
 
 template <typename T>
-template <typename A>
-__device__ inline void field_storage<T>::set(const A &value, const unsigned i,
+//template <typename A>
+__device__ inline void field_storage<T>::set(const T &value, const unsigned i,
                                              const unsigned field_alloc_size) {
     assert(i < field_alloc_size);
     using base_t = hila::number_type<T>;
@@ -85,9 +85,9 @@ auto field_storage<T>::get_element(const unsigned i,
 
 /// Set a single element from outside a loop. Slow, should only be used for setup
 template <typename T>
-__global__ void set_element_kernel(field_storage<T> field, char *buffer, unsigned i,
+__global__ void set_element_kernel(field_storage<T> field, T value, unsigned i,
                                    const unsigned field_alloc_size) {
-    field.set((T *)buffer, i, field_alloc_size);
+    field.set(value, i, field_alloc_size);
 }
 
 template <typename T>
@@ -98,12 +98,14 @@ void field_storage<T>::set_element(A &value, const unsigned i,
     T t_value = value;
 
     // Allocate space and copy the buffer to the device
-    cudaMalloc((void **)&(d_buffer), sizeof(T));
-    cudaMemcpy(d_buffer, (char *)&t_value, sizeof(T), cudaMemcpyHostToDevice);
+ //   cudaMalloc((void **)&(d_buffer), sizeof(T));
+ //   cudaMemcpy(d_buffer, (char *)&t_value, sizeof(T), cudaMemcpyHostToDevice);
 
     // call the kernel to set correct indexes
-    set_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->field_alloc_size());
-    cudaFree(d_buffer);
+ //   set_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->field_alloc_size());
+ //   cudaFree(d_buffer);
+
+    set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice->field_alloc_size());
 }
 
 /// A kernel that gathers elements
