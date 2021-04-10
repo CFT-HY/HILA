@@ -520,7 +520,7 @@ void setup_sublattices(cmdlineargs &commandline) {
 #ifdef AVX
 void vector_type_info() {
 
-    output0 << "Using 'vectorclass' with instruction set level INSTRSET=" << INSTRSET
+    output0 << "Using VCL vector class with instruction set level INSTRSET=" << INSTRSET
             << " <=> ";
 
     switch (INSTRSET) {
@@ -558,7 +558,9 @@ void vector_type_info() {
     output0 << '\n';
     if (INSTRSET < 8)
         output0 << " (You probably should use options '-mavx2 -fmad' in compilation)\n";
+
 }
+
 
 #endif
 

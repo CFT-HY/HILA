@@ -9,6 +9,7 @@
 #include <iostream>
 #include <math.h>
 #include <type_traits>
+#include <cmath>
 
 #include "plumbing/defs.h"
 
@@ -246,12 +247,14 @@ template <typename T> inline Complex<T> operator+(Complex<T> a, const Complex<T>
 }
 
 // TODO: for avx vector too -- #define new template macro
-template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A,
+          std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator+(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re + a, c.im);
 }
 
-template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A,
+          std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator+(const A &a, const Complex<T> &c) {
     return Complex<T>(c.re + a, c.im);
 }
@@ -267,12 +270,14 @@ template <typename T> inline Complex<T> operator-(Complex<T> a, const Complex<T>
 }
 
 // TODO: for avx vector too -- #define new template macro
-template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A,
+          std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator-(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re - a, c.im);
 }
 
-template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A,
+          std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator-(const A &a, const Complex<T> &c) {
     return Complex<T>(a - c.re, -c.im);
 }
@@ -287,12 +292,14 @@ template <typename T> inline Complex<T> operator*(Complex<T> a, const Complex<T>
     return a;
 }
 
-template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A,
+          std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator*(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re * a, c.im * a);
 }
 
-template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A,
+          std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator*(const A &a, const Complex<T> &c) {
     return Complex<T>(a * c.re, a * c.im);
 }
@@ -308,13 +315,15 @@ template <typename T> inline Complex<T> operator/(Complex<T> a, const Complex<T>
     return a;
 }
 
-template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A,
+          std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator/(const Complex<T> &c, const A &a) {
     return Complex<T>(c.re / a, c.im / a);
 }
 
 // a/c = ac*/|c|^2
-template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+template <typename T, typename A,
+          std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline Complex<T> operator/(const A &a, const Complex<T> &c) {
     T n = c.squarenorm();
     return Complex<T>((a * c.re) / n, -(a * c.im) / n);
@@ -351,6 +360,7 @@ template <typename T> inline Complex<T> conj(const Complex<T> &val) {
 template <typename T> inline auto norm_squared(const Complex<T> &val) {
     return val.norm_sq();
 }
+
 
 /// random() : set argument to random vals [0,1]
 template <typename T> inline void random(Complex<T> &c) {
@@ -403,6 +413,121 @@ inline T conj(T val) {
     return val;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/// Set of complex functions
+///////////////////////////////////////////////////////////////////////////////
+
+/// multiply_by_i(z)
+/// an auxiliary function, less operations than with 1_i * z == (0,1) * z
+template <typename T> inline Complex<T> multiply_by_i(Complex<T> z) {
+    return Complex<T>(-z.im, z.re);
+}
+
+/// exp(z)
+template <typename T> inline Complex<T> exp(const Complex<T> z) {
+    return exp(z.re) * Complex<T>(cos(z.im), sin(z.im));
+}
+
+/// exp(i x)
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+inline Complex<T> expi(T a) {
+    return Complex<T>(cos(a), sin(a));
+}
+
+/// log(z)
+template <typename T> inline Complex<T> log(Complex<T> z) {
+    return Complex<T>(static_cast<T>(0.5) * log(z.norm_sq()), z.arg());
+}
+
+/// sqrt(z) branch cut at -x axis
+template <typename T> inline Complex<T> sqrt(Complex<T> z) {
+    return exp(static_cast<T>(0.5) * log(z));
+}
+
+/// pow(z.p) = z^p = exp(p*log(z))
+template <typename T> inline Complex<T> pow(Complex<T> z, Complex<T> p) {
+    return exp(p * log(z));
+}
+
+/// pow(z.p) with scalar power
+template <typename T> inline Complex<T> pow(Complex<T> z, T p) {
+    return exp(p * log(z));
+}
+
+/// pow(z.p) with scalar base
+template <typename T> inline Complex<T> pow(T z, Complex<T> p) {
+    return exp(p * log(z));
+}
+
+/// sin(z)
+/// = sin(re + i im) = sin(re)cos(i im) + cos(re)sin(i im)
+/// = sin(re) cosh(im) + i cos(re) sinh(im)
+template <typename T> inline Complex<T> sin(Complex<T> z) {
+    return Complex<T>(sin(z.re) * cosh(z.im), cos(z.re) * sinh(z.im));
+}
+
+/// cos(z)
+/// = cos(re)cos(i im) - sin(re)sin(i im) = cos(re)cosh(im) - i sin(re)sinh(im)
+template <typename T> inline Complex<T> cos(Complex<T> z) {
+    return Complex<T>(cos(z.re) * cosh(z.im), -sin(z.re) * sinh(z.im));
+}
+
+/// tan(z) - rely on optimizer to simplify
+template <typename T> inline Complex<T> tan(Complex<T> z) { return sin(z) / cos(z); }
+
+/// sinh(z) = sinh(re)cosh(i im) + cosh(re)sinh(i im)
+/// = sinh(re)cos(im) + i cosh(re)sin(im)
+template <typename T> inline Complex<T> sinh(Complex<T> z) {
+    return Complex<T>(sinh(z.re) * cos(z.im), cosh(z.re) * sin(z.im));
+}
+
+/// cosh(z) = cosh(re)cosh(i im) - sinh(re)sinh(i im)
+/// = cosh(re)cos(im) - i sinh(re)sin(im)
+template <typename T> inline Complex<T> cosh(Complex<T> z) {
+    return Complex<T>(cosh(z.re) * cos(z.im), sinh(z.re) * sin(z.im));
+}
+
+/// tanh(z)
+template <typename T> inline Complex<T> tanh(Complex<T> z) {
+     return sinh(z) / cosh(z);
+}
+
+/// arctan(z)
+template <typename T> inline Complex<T> atan(Complex<T> z) {
+    return -0.5 * multiply_by_i(log((1_i - z) / (1_i + z)));
+}
+
+/// arcsin(z)
+template <typename T> inline Complex<T> asin(Complex<T> z) {
+    return -multiply_by_i(log(multiply_by_i(z) + sqrt(1 - z * z)));
+}
+
+/// arccos(z)
+template <typename T> inline Complex<T> acos(Complex<T> z) {
+    return -multiply_by_i(log(z + multiply_by_i(sqrt(1 - z * z))));
+}
+
+/// artanh(z)
+template <typename T> inline Complex<T> atanh(Complex<T> z) {
+    return 0.5*log( (1+z)/(1-z) );
+}
+
+/// arsinh(z)
+template <typename T> inline Complex<T> asinh(Complex<T> z) {
+    return log( z + sqrt(1 + z*z));
+}
+
+/// arcosh(z)
+template <typename T> inline Complex<T> acosh(Complex<T> z) {
+    return log( z + sqrt(z*z - 1));
+}
+
+
+
+
+
+
+
 namespace hila {
 ////////////////////////////////////////////////////////////////////////
 /// And utility templates
@@ -415,13 +540,13 @@ struct is_complex<Complex<T>> : std::integral_constant<bool, true> {};
 // and a template is_complex_or_arithmetic<T>::value
 template <typename T>
 struct is_complex_or_arithmetic
-    : std::integral_constant<bool, hila::is_arithmetic<T>::value || hila::is_complex<T>::value> {};
-
+    : std::integral_constant<bool, hila::is_arithmetic<T>::value ||
+                                       hila::is_complex<T>::value> {};
 
 /// Utility to check that the type contains complex numbers
 /// Use as contains_complex<T>::value
 template <typename T>
-using contains_complex = hila::contains_type<T,Complex<hila::number_type<T>>>;
+using contains_complex = hila::contains_type<T, Complex<hila::number_type<T>>>;
 
 } // namespace hila
 
