@@ -441,8 +441,18 @@ template <typename T> inline Complex<T> log(Complex<T> z) {
 
 /// sqrt(z) branch cut at -x axis
 template <typename T> inline Complex<T> sqrt(Complex<T> z) {
-    return exp(static_cast<T>(0.5) * log(z));
+    T r = z.norm_sq();
+    T a = z.arg();
+    return pow(r,0.25) * expi(0.5*a);
 }
+
+/// cbrt(z)
+template <typename T> inline Complex<T> cbrt(Complex<T> z) {
+    T r = z.norm_sq();
+    T a = z.arg();
+    return pow(r,(1.0/6.0)) * expi((1.0/3.0)*a);
+}
+
 
 /// pow(z.p) = z^p = exp(p*log(z))
 template <typename T> inline Complex<T> pow(Complex<T> z, Complex<T> p) {
