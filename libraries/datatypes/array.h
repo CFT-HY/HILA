@@ -37,6 +37,20 @@ template <const int n, const int m, typename T> class Array {
             c[i] = static_cast<T>(0);
     }
 
+    /// Construct array automatically from right-size initializer list
+    /// This does not seem to be dangerous, so keep non-explicit
+
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    inline Array(std::initializer_list<S> rhs) {
+        assert(rhs.size() == n * m &&
+               "Array initializer list size must match variable size");
+        int i = 0;
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
+            c[i] = *it;
+        }
+    }
+
+
     /// Define constant methods rows(), columns() - may be useful in template code
     constexpr int rows() const { return n; }
     constexpr int columns() const { return m; }
@@ -132,8 +146,9 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// add assign type T and convertible
-    template <typename S,
-              std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator+=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] += rhs;
@@ -142,8 +157,9 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// subtract assign type T and convertible
-    template <typename S, std::enable_if_t<
-                              std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
+    template <typename S,
+              std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value,
+                               int> = 0>
     Array<n, m, T> &operator-=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] -= rhs;
@@ -152,8 +168,9 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// multiply assign with Array
-    template <typename S,
-              std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator*=(const Array<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] *= rhs.c[i];
@@ -162,8 +179,9 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// multiply assign with scalar
-    template <typename S,
-              std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator*=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] *= rhs;
@@ -172,8 +190,9 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// divide assign by Array
-    template <typename S,
-              std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator/=(const Array<n, m, S> &rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] /= rhs.c[i];
@@ -182,8 +201,9 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// divide assign with scalar
-    template <typename S,
-              std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
     Array<n, m, T> &operator/=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] /= rhs;
@@ -287,32 +307,36 @@ inline Array<n, m, T> operator-(Array<n, m, T> a, const Array<n, m, T> &b) {
 }
 
 /// Array + scalar
-template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
+template <
+    int n, int m, typename T, typename S,
+    std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator+(Array<n, m, T> a, const S b) {
     a += b;
     return a;
 }
 
 /// scalar + Array
-template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
+template <
+    int n, int m, typename T, typename S,
+    std::enable_if_t<std::is_convertible<hila::type_plus<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator+(const S b, Array<n, m, T> a) {
     a += b;
     return a;
 }
 
 /// Array - scalar
-template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
+template <
+    int n, int m, typename T, typename S,
+    std::enable_if_t<std::is_convertible<hila::type_minus<T, S>, T>::value, int> = 0>
 Array<n, m, T> operator-(Array<n, m, T> a, const S b) {
     a -= b;
     return a;
 }
 
 /// scalar - Array
-template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<hila::type_minus<S, T>, T>::value, int> = 0>
+template <
+    int n, int m, typename T, typename S,
+    std::enable_if_t<std::is_convertible<hila::type_minus<S, T>, T>::value, int> = 0>
 inline Array<n, m, T> operator-(const S b, Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
         a.c[i] = static_cast<T>(b) - a.c[i];
@@ -334,32 +358,36 @@ inline Array<n, m, T> operator/(Array<n, m, T> a, const Array<n, m, T> &b) {
 }
 
 /// Array * scalar
-template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
+template <
+    int n, int m, typename T, typename S,
+    std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator*(Array<n, m, T> a, const S b) {
     a *= b;
     return a;
 }
 
 /// scalar * Array
-template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
+template <
+    int n, int m, typename T, typename S,
+    std::enable_if_t<std::is_convertible<hila::type_mul<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator*(const S b, Array<n, m, T> a) {
     a *= b;
     return a;
 }
 
 /// Array / scalar
-template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
+template <
+    int n, int m, typename T, typename S,
+    std::enable_if_t<std::is_convertible<hila::type_div<T, S>, T>::value, int> = 0>
 inline Array<n, m, T> operator/(Array<n, m, T> a, const S b) {
     a /= b;
     return a;
 }
 
 /// scalar / Array
-template <int n, int m, typename T, typename S,
-          std::enable_if_t<std::is_convertible<hila::type_div<S, T>, T>::value, int> = 0>
+template <
+    int n, int m, typename T, typename S,
+    std::enable_if_t<std::is_convertible<hila::type_div<S, T>, T>::value, int> = 0>
 inline Array<n, m, T> operator/(const S b, Array<n, m, T> a) {
     for (int i = 0; i < n * m; i++)
         a.c[i] = b / a.c[i];
@@ -389,6 +417,50 @@ template <int n, int m, typename T>
 inline void gaussian_random(output_only Array<n, m, T> &mat) {
     mat.gaussian();
 }
+
+////////////////////////////////////////////////////////////////////////////////
+/// Standard arithmetic functions - do element by element
+////////////////////////////////////////////////////////////////////////////////
+
+/// Because all functions have the same structure, we do a cheap preprocessor trick to
+/// avoid writing all again and again
+
+#define Array_func(name)                                                               \
+    template <int n, int m, typename T> inline Array<n, m, T> name(Array<n, m, T> a) { \
+        for (int i = 0; i < n * m; i++)                                                \
+            a.c[i] = name(a.c[i]);                                                     \
+        return a;                                                                      \
+    }
+
+Array_func(sqrt)
+Array_func(cbrt)
+Array_func(exp)
+Array_func(log)
+Array_func(sin)
+Array_func(cos)
+Array_func(tan)
+Array_func(asin)
+Array_func(acos)
+Array_func(atan)
+Array_func(sinh)
+Array_func(cosh)
+Array_func(tanh)
+Array_func(asinh)
+Array_func(acosh)
+Array_func(atanh)
+
+template <int n, int m, typename T> inline Array<n, m, T> pow(Array<n, m, T> a, T b) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = pow(a.c[i],b);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> pow(Array<n, m, T> a, const Array<n,m,T> & b) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = pow(a.c[i],b.c[i]);
+    return a;
+}
+
 
 /// Array1d and Array2d are just aliased to Array
 template <int n, typename T = double> using Array1d = Array<n, 1, T>;
