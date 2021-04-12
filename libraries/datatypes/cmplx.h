@@ -469,6 +469,7 @@ template <typename T> inline Complex<T> pow(T z, Complex<T> p) {
     return exp(p * log(z));
 }
 
+
 /// sin(z)
 /// = sin(re + i im) = sin(re)cos(i im) + cos(re)sin(i im)
 /// = sin(re) cosh(im) + i cos(re) sinh(im)

@@ -50,7 +50,6 @@ template <const int n, const int m, typename T> class Array {
         }
     }
 
-
     /// Define constant methods rows(), columns() - may be useful in template code
     constexpr int rows() const { return n; }
     constexpr int columns() const { return m; }
@@ -422,45 +421,120 @@ inline void gaussian_random(output_only Array<n, m, T> &mat) {
 /// Standard arithmetic functions - do element by element
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Because all functions have the same structure, we do a cheap preprocessor trick to
-/// avoid writing all again and again
+template <int n, int m, typename T> inline Array<n, m, T> sqrt(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = sqrt(a.c[i]);
+    return a;
+}
 
-#define Array_func(name)                                                               \
-    template <int n, int m, typename T> inline Array<n, m, T> name(Array<n, m, T> a) { \
-        for (int i = 0; i < n * m; i++)                                                \
-            a.c[i] = name(a.c[i]);                                                     \
-        return a;                                                                      \
-    }
+template <int n, int m, typename T> inline Array<n, m, T> cbrt(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = cbrt(a.c[i]);
+    return a;
+}
 
-Array_func(sqrt)
-Array_func(cbrt)
-Array_func(exp)
-Array_func(log)
-Array_func(sin)
-Array_func(cos)
-Array_func(tan)
-Array_func(asin)
-Array_func(acos)
-Array_func(atan)
-Array_func(sinh)
-Array_func(cosh)
-Array_func(tanh)
-Array_func(asinh)
-Array_func(acosh)
-Array_func(atanh)
+template <int n, int m, typename T> inline Array<n, m, T> exp(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = exp(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> log(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = log(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> sin(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = sin(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> cos(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = cos(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> tan(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = tan(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> asin(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = asin(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> acos(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = acos(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> atan(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = atan(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> sinh(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = sinh(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> cosh(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = cosh(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> tanh(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = tanh(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> asinh(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = asinh(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> acosh(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = acosh(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> atanh(Array<n, m, T> a) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = atanh(a.c[i]);
+    return a;
+}
+
+template <int n, int m, typename T> inline Array<n, m, T> pow(Array<n, m, T> a, int b) {
+    for (int i = 0; i < n * m; i++)
+        a.c[i] = pow(a.c[i], b);
+    return a;
+}
 
 template <int n, int m, typename T> inline Array<n, m, T> pow(Array<n, m, T> a, T b) {
     for (int i = 0; i < n * m; i++)
-        a.c[i] = pow(a.c[i],b);
+        a.c[i] = pow(a.c[i], b);
     return a;
 }
 
-template <int n, int m, typename T> inline Array<n, m, T> pow(Array<n, m, T> a, const Array<n,m,T> & b) {
+template <int n, int m, typename T>
+inline Array<n, m, T> pow(Array<n, m, T> a, const Array<n, m, T> &b) {
     for (int i = 0; i < n * m; i++)
-        a.c[i] = pow(a.c[i],b.c[i]);
+        a.c[i] = pow(a.c[i], b.c[i]);
     return a;
 }
-
 
 /// Array1d and Array2d are just aliased to Array
 template <int n, typename T = double> using Array1d = Array<n, 1, T>;
