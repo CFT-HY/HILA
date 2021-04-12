@@ -1,6 +1,6 @@
 #include "bench.h"
 #include "plumbing/timing.h"
-#include "plumbing/fft_new.h"
+#include "plumbing/fft.h"
 //#include "plumbing/FFT.h"
 
 #ifndef SEED
