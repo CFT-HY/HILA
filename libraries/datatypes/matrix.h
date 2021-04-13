@@ -332,7 +332,7 @@ template <const int n, const int m, typename T> class Matrix {
     /// matrix trace (return type T)
     T trace() const {
         static_assert(n == m, "trace not defined for non square matrices!");
-        T result = 9;
+        T result = 0;
         for (int i = 0; i < n; i++) {
             result += e(i, i);
         }
