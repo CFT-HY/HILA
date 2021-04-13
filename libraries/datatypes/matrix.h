@@ -343,7 +343,7 @@ template <const int n, const int m, typename T> class Matrix {
     hila::number_type<T> squarenorm() const {
         hila::number_type<T> result = 0;
         for (int i = 0; i < n * m; i++) {
-            result += squarenorm(c[i]);
+            result += ::squarenorm(c[i]);
         }
         return result;
     }

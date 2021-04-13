@@ -43,7 +43,7 @@ const CoordinateVector latsize = {32, 32, 32, 32};
 // from msize.
 ///////////////////////////////////////
 
-using ntype = float;
+using ntype = double;
 
 int main(int argc, char **argv) {
     int n_runs = 1;
