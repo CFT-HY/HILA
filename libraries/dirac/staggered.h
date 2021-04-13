@@ -202,7 +202,7 @@ template <typename matrix> class dirac_staggered_evenodd {
     /// the fermion mass
     double mass;
     /// The SU(N) vector type
-    using vector_type = SU_vector<matrix::size, typename matrix::base::type>;
+    using vector_type = SU_vector<matrix::size, hila::number_type<matrix>>;
     /// The matrix type
     using matrix_type = matrix;
 

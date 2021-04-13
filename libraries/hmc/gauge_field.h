@@ -1,6 +1,7 @@
 #ifndef GAUGE_FIELD_H
 #define GAUGE_FIELD_H
 
+#include "hila.h"
 #include "datatypes/sun.h"
 #include "datatypes/representations.h"
 #include "integrator.h"
@@ -128,10 +129,10 @@ Field<SUN> calc_staples(Field<SUN> *U1, Field<SUN> *U2, Direction dir1, Directio
     staple_sum[ALL] = 0;
     // Calculate the down side staple.
     // This will be communicated up.
-    down_staple[ALL] = U2[dir2][X + dir1].conj() * U1[dir1][X].conj() * U2[dir2][X];
+    down_staple[ALL] = U2[dir2][X + dir1].dagger() * U1[dir1][X].dagger() * U2[dir2][X];
     // Forward staple
     staple_sum[ALL] = staple_sum[X] +
-                      U2[dir2][X + dir1] * U1[dir1][X + dir2].conj() * U2[dir2][X].conj();
+                      U2[dir2][X + dir1] * U1[dir1][X + dir2].dagger() * U2[dir2][X].dagger();
     // Add the down staple
     staple_sum[ALL] = staple_sum[X] + down_staple[X - dir2];
     return staple_sum;
@@ -145,10 +146,10 @@ template <typename SUN> Field<SUN> calc_staples(Field<SUN> *U, Direction dir) {
     foralldir(dir2) if (dir2 != dir) {
         // Calculate the down side staple.
         // This will be communicated up.
-        down_staple[ALL] = U[dir2][X + dir].conj() * U[dir][X].conj() * U[dir2][X];
+        down_staple[ALL] = U[dir2][X + dir].dagger() * U[dir][X].dagger() * U[dir2][X];
         // Forward staple
         staple_sum[ALL] = staple_sum[X] +
-                          U[dir2][X + dir] * U[dir][X + dir2].conj() * U[dir2][X].conj();
+                          U[dir2][X + dir] * U[dir][X + dir2].dagger() * U[dir2][X].dagger();
         // Add the down staple
         staple_sum[ALL] = staple_sum[X] + down_staple[X - dir2];
     }
@@ -157,15 +158,17 @@ template <typename SUN> Field<SUN> calc_staples(Field<SUN> *U, Direction dir) {
 
 /// Measure the plaquette
 template <int N, typename radix> double plaquette_sum(Field<SU<N, radix>> *U) {
-    double Plaq = 0;
+    Reduction<double> Plaq = 0;
+    Plaq.delayed();
     foralldir(dir1) foralldir(dir2) if (dir2 < dir1) {
         onsites(ALL) {
             element<SU<N, radix>> temp;
-            temp = U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].conj() *
-                   U[dir2][X].conj();
+            temp = U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+                   U[dir2][X].dagger();
             Plaq += 1 - temp.trace().re / N;
         }
     }
+    Plaq.reduce();
     return Plaq;
 }
 
@@ -175,8 +178,8 @@ template <int N, typename radix> double plaquette_sum(Field<Matrix<N, N, radix>>
     foralldir(dir1) foralldir(dir2) if (dir2 < dir1) {
         onsites(ALL) {
             element<SU<N, radix>> temp;
-            temp = U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].conj() *
-                   U[dir2][X].conj();
+            temp = U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
+                   U[dir2][X].dagger();
             Plaq += 1 - temp.trace() / N;
         }
     }

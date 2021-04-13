@@ -51,6 +51,10 @@ class adjointRep : public SquareMatrix<N * N - 1, radix> {
     template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     adjointRep(const adjointRep<N, scalart> m) : SquareMatrix<size, scalart>(m) {}
 
+    /// Automatic conversion from SquareMatrix is needed!
+    adjointRep(const SquareMatrix<size,radix> m) : SquareMatrix<size,radix>(m) {}
+
+
     /// Return a SU(N) generator in the adjoint representation,
     /// multiplied by I
     static adjointRep represented_generator_I(int i) {
@@ -150,6 +154,9 @@ class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Complex<radix>> {
                 this->e(i, j) = m.e(i, j);
             }
     }
+
+    /// automatic conversion from SquareMatrix -- needed for methods!
+    antisymmetric(const SquareMatrix<size,Complex<radix>> m) : SquareMatrix<size,Complex<radix>>(m) {}
 
     /// Needs assignment as well
     template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>

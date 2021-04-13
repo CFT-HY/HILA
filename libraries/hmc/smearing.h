@@ -39,7 +39,7 @@ void staple_dir_derivative(Field<matrix> &basegauge1, Field<matrix> &basegauge2,
     Field<matrix> stapleder2, stapleder3; // Two derivatives that need to be communicated
 
     onsites(ALL) {
-        element<matrix> U1, U2, U3, U4, L, L2;
+        matrix U1, U2, U3, U4, L, L2;
         U1 = basegauge1[X];
         U2 = basegauge2[X + dir1];
         U3 = basegauge1[X + dir2];
@@ -48,14 +48,14 @@ void staple_dir_derivative(Field<matrix> &basegauge1, Field<matrix> &basegauge2,
         L2 = Lambda[X + dir2];
 
         // Up staple
-        result2[X] += (L * U2 * U3.conjugate()).conjugate();
-        stapleder2[X] = U3.conjugate() * U4.conjugate() * L;
-        stapleder3[X] = (U4.conjugate() * L * U2).conjugate();
+        result2[X] += (L * U2 * U3.dagger()).dagger();
+        stapleder2[X] = U3.dagger() * U4.dagger() * L;
+        stapleder3[X] = (U4.dagger() * L * U2).dagger();
 
         // Down staple
-        stapleder2[X] = stapleder2[X] + L2.conjugate() * U4.conjugate() * U1;
-        result1[X] += U2 * L2.conjugate() * U4.conjugate();
-        result2[X] += L2 * U2.conjugate() * U1.conjugate();
+        stapleder2[X] = stapleder2[X] + L2.dagger() * U4.dagger() * U1;
+        result1[X] += U2 * L2.dagger() * U4.dagger();
+        result2[X] += L2 * U2.dagger() * U1.dagger();
     }
 
     // Move derivatives up where necessary
