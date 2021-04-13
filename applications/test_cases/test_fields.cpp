@@ -272,15 +272,13 @@ int main(int argc, char **argv) {
     foralldir(dir) {
         for (int i = 0; i < 2; i++) {
             s1[EVEN] = 0;
-            s1.set_element(i, c);
-            // s1.mark_changed(EVEN);
-            s1.mark_changed(ODD);
+            s1[c] = i;
 
             s2[ALL] = 0;
             s2[ODD] = s2[X] - s1[X + dir];
             s2[EVEN] = s2[X] + s2[X - dir];
 
-            double r = s2.get_element(c).re;
+            double r = s2[c].re;
             sum = (r + i) * (r + i);
             if (hila::myrank() == 0) {
                 assert(sum < 1e-8 && "Even-odd comm test");
