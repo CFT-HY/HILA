@@ -12,10 +12,10 @@
 // transpose
 // template <typename T> inline T trans(T rhs) { return rhs; }
 
-// template <typename T> inline auto norm_squared(T val) { return val.norm_sq(); }
+// template <typename T> inline auto squarenorm(T val) { return val.squarenorm(); }
 
-inline double norm_squared(double val) { return val * val; }
+inline double squarenorm(double val) { return val * val; }
 
-inline float norm_squared(float val) { return val * val; }
+inline float squarenorm(float val) { return val * val; }
 
 #endif

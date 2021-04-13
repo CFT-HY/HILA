@@ -120,21 +120,21 @@ struct is_assignable
 /*** The next section contains basic operations for vectors ***/
 
 // Norm squared
-inline Vec4d norm_squared(Vec4d val) { return val * val; }
+inline Vec4d squarenorm(Vec4d val) { return val * val; }
 
-inline Vec4q norm_squared(Vec4q val) { return val * val; }
+inline Vec4q squarenorm(Vec4q val) { return val * val; }
 
-inline Vec8f norm_squared(Vec8f val) { return val * val; }
+inline Vec8f squarenorm(Vec8f val) { return val * val; }
 
-inline Vec8i norm_squared(Vec8i val) { return val * val; }
+inline Vec8i squarenorm(Vec8i val) { return val * val; }
 
-inline Vec8d norm_squared(Vec8d val) { return val * val; }
+inline Vec8d squarenorm(Vec8d val) { return val * val; }
 
-inline Vec8q norm_squared(Vec8q val) { return val * val; }
+inline Vec8q squarenorm(Vec8q val) { return val * val; }
 
-inline Vec16f norm_squared(Vec16f val) { return val * val; }
+inline Vec16f squarenorm(Vec16f val) { return val * val; }
 
-inline Vec16i norm_squared(Vec16i val) { return val * val; }
+inline Vec16i squarenorm(Vec16i val) { return val * val; }
 
 // Reductions
 inline double reduce_sum(Vec4d v) {

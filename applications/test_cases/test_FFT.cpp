@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
         FFT_field(f, p);
 
         sum = 0;
-        onsites(ALL) { sum += (p[X] - p2[X]).norm_sq(); }
+        onsites(ALL) { sum += (p[X] - p2[X]).squarenorm(); }
         output0 << "Sum " << sum << '\n';
         assert(fabs(sum) < 1e-10 && "First FFT\n");
 
@@ -41,8 +41,8 @@ int main(int argc, char **argv) {
         sum = 0;
         double tnorm = 0;
         onsites(ALL) {
-            sum += (f[X] - f2[X]).norm_sq();
-            tnorm += f[X].norm_sq();
+            sum += (f[X] - f2[X]).squarenorm();
+            tnorm += f[X].squarenorm();
         }
         output0 << "Norm " << sum / tnorm << '\n';
         assert(fabs(sum / tnorm) < 1e-10 && "Second FFT\n");
@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
 
 
         sum = 0;
-        onsites(ALL) { sum += (p[X] - p2[X]).norm_sq(); }
+        onsites(ALL) { sum += (p[X] - p2[X]).squarenorm(); }
         output0 << "Wave sum " << sum << '\n';
         assert(fabs(sum) < 1e-10 && "Wave FFT\n");
 
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 
     // sum=0;
     // onsites(ALL) {
-    //  sum += (f2[X]-f[X]).norm_sq();
+    //  sum += (f2[X]-f[X]).squarenorm();
     //}
 
     // assert(sum==0 && "Write and read field");

@@ -46,11 +46,11 @@ template <typename T = double> struct scalar {
     T real() const { return value; }
     T imag() const { return 0; }
 
-    T norm() const { return value * value; }
+    T squarenorm() const { return value * value; }
     // TODO: make this work for vector type!  Not double
 
     // currently this gives a compilation error
-    double abs() const { return sqrt(static_cast<double>(norm())); }
+    double abs() const { return sqrt(static_cast<double>(squarenorm())); }
 
     scalar<T> conj() const { return scalar<T>({value}); }
 

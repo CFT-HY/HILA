@@ -340,10 +340,10 @@ template <const int n, const int m, typename T> class Matrix {
     }
 
     /// calculate square norm - sum of squared elements
-    hila::number_type<T> norm_sq() const {
+    hila::number_type<T> squarenorm() const {
         hila::number_type<T> result = 0;
         for (int i = 0; i < n * m; i++) {
-            result += norm_squared(c[i]);
+            result += squarenorm(c[i]);
         }
         return result;
     }
@@ -634,8 +634,8 @@ std::ostream &operator<<(std::ostream &strm, const Matrix<n, m, T> &A) {
 
 /// Norm squared function
 template <int n, int m, typename T>
-inline hila::number_type<T> norm_squared(const Matrix<n, m, T> &rhs) {
-    return rhs.norm_sq();
+inline hila::number_type<T> squarenorm(const Matrix<n, m, T> &rhs) {
+    return rhs.squarenorm();
 }
 
 /// Function that calls random()-method

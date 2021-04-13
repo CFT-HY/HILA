@@ -58,7 +58,7 @@ template <typename Op> class CG {
 
         gettimeofday(&start, NULL);
 
-        onsites(M.par) { source_norm += norm_squared(in[X]); }
+        onsites(M.par) { source_norm += squarenorm(in[X]); }
 
         target_rr = accuracy * accuracy * source_norm;
 
@@ -69,14 +69,14 @@ template <typename Op> class CG {
             p[X] = r[X];
         }
 
-        onsites(M.par) { rr += norm_squared(r[X]); }
+        onsites(M.par) { rr += squarenorm(r[X]); }
         rr_start = rr;
 
         for (i = 0; i < maxiters; i++) {
             pDp = rrnew = 0;
             M.apply(p, Dp);
             M.dagger(Dp, DDp);
-            onsites(M.par) { pDp += norm_squared(Dp[X]); }
+            onsites(M.par) { pDp += squarenorm(Dp[X]); }
 
             alpha = rr / pDp;
 
@@ -84,7 +84,7 @@ template <typename Op> class CG {
                 out[X] = out[X] + alpha * p[X];
                 r[X] = r[X] - alpha * DDp[X];
             }
-            onsites(M.par) { rrnew += norm_squared(r[X]); }
+            onsites(M.par) { rrnew += squarenorm(r[X]); }
 #ifdef DEBUG_CG
             output0 << "CG step " i << ", residue " << sqrt(rrnew / target_rr) << "\n";
 #endif

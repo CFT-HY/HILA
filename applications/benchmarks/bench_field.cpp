@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
     // Time VECTOR NORM
     timing = sum = 0;
     onsites(ALL) { // Warm up. Why does this affect the time?
-        sum += vector1[X].norm_sq();
+        sum += vector1[X].squarenorm();
     }
     for (n_runs = 1; timing < mintime;) {
         n_runs *= 2;
@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
 
         sum = 0;
         for (int i = 0; i < n_runs; i++) {
-            onsites(ALL) { sum += vector1[X].norm_sq(); }
+            onsites(ALL) { sum += vector1[X].squarenorm(); }
         }
         // synchronize();
         gettimeofday(&end, NULL);
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
         gettimeofday(&start, NULL);
         fsum = 0;
         for (int i = 0; i < n_runs; i++) {
-            onsites(ALL) { fsum += fvector1[X].norm_sq(); }
+            onsites(ALL) { fsum += fvector1[X].squarenorm(); }
         }
         // synchronize();
         gettimeofday(&end, NULL);

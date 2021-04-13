@@ -114,11 +114,11 @@ template <typename T = double> struct Complex {
         return *this;
     }
 
-    inline T norm_sq() const { return re * re + im * im; }
+    inline T squarenorm() const { return re * re + im * im; }
 
     // TODO: make this work for vector type!
     // currently this gives a compilation error
-    inline T abs() const { return sqrt(norm_sq()); }
+    inline T abs() const { return sqrt(squarenorm()); }
     inline T arg() const { return atan2(im, re); }
 
     inline Complex<T> conj() const { return Complex<T>(re, -im); }
@@ -202,7 +202,7 @@ template <typename T = double> struct Complex {
     //   return *this;
     // }
     inline Complex<T> &operator/=(const Complex<T> &lhs) {
-        T n = lhs.norm_sq();
+        T n = lhs.squarenorm();
         T r = mul_add(re, lhs.re, im * lhs.im) / n; // a*b+c
         im = mul_sub(im, lhs.re, re * lhs.im) / n;  // a*b-c
         re = r;
@@ -307,7 +307,7 @@ inline Complex<T> operator*(const A &a, const Complex<T> &c) {
 // /   a/b = ab*/|b|^2
 // template <typename T>
 // inline Complex<T> operator/(const Complex<T> & a, const Complex<T> & b) {
-//   T n = b.norm_sq();
+//   T n = b.squarenorm();
 //   return Complex<T>( (a.re*b.re + a.im*b.im)/n, (a.im*b.re - a.re*b.im)/n );
 // }
 template <typename T> inline Complex<T> operator/(Complex<T> a, const Complex<T> &b) {
@@ -357,8 +357,8 @@ template <typename T> inline Complex<T> conj(const Complex<T> &val) {
 }
 
 /// norm_squared
-template <typename T> inline auto norm_squared(const Complex<T> &val) {
-    return val.norm_sq();
+template <typename T> inline auto squarenorm(const Complex<T> &val) {
+    return val.squarenorm();
 }
 
 
@@ -436,19 +436,19 @@ inline Complex<T> expi(T a) {
 
 /// log(z)
 template <typename T> inline Complex<T> log(Complex<T> z) {
-    return Complex<T>(static_cast<T>(0.5) * log(z.norm_sq()), z.arg());
+    return Complex<T>(static_cast<T>(0.5) * log(z.squarenorm()), z.arg());
 }
 
 /// sqrt(z) branch cut at -x axis
 template <typename T> inline Complex<T> sqrt(Complex<T> z) {
-    T r = z.norm_sq();
+    T r = z.squarenorm();
     T a = z.arg();
     return pow(r,0.25) * expi(0.5*a);
 }
 
 /// cbrt(z)
 template <typename T> inline Complex<T> cbrt(Complex<T> z) {
-    T r = z.norm_sq();
+    T r = z.squarenorm();
     T a = z.arg();
     return pow(r,(1.0/6.0)) * expi((1.0/3.0)*a);
 }

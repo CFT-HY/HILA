@@ -15,29 +15,29 @@ void test_gamma_matrices() {
 
 #if NDIM == 4
     w2 = w1 - gamma5 * (gamma5 * w1);
-    assert(w2.norm_sq() < 0.0001 && "g5*g5 = 1");
+    assert(w2.squarenorm() < 0.0001 && "g5*g5 = 1");
 #endif
 
     foralldir(d) {
         half_Wilson_vector<N, double> h1;
         w2 = w1 - gamma_matrix[d] * (gamma_matrix[d] * w1);
-        assert(w2.norm_sq() < 0.0001 && "gamma_d*gamma_d = 1");
+        assert(w2.squarenorm() < 0.0001 && "gamma_d*gamma_d = 1");
 
         w2 = w1 + gamma_matrix[d] * w1;
         h1 = half_Wilson_vector(w1, d, 1);
-        double diff = w2.norm_sq() - 2 * h1.norm_sq();
+        double diff = w2.squarenorm() - 2 * h1.squarenorm();
         assert(diff * diff < 0.0001 && "half_Wilson_vector projection +1 norm");
 
         w3 = (U * h1).expand(d, 1) - U * w2;
-        assert(w3.norm_sq() < 0.0001 && "half_wilson_vector expand");
+        assert(w3.squarenorm() < 0.0001 && "half_wilson_vector expand");
 
         w2 = w1 - gamma_matrix[d] * w1;
         h1 = half_Wilson_vector(w1, d, -1);
-        diff = w2.norm_sq() - 2 * h1.norm_sq();
+        diff = w2.squarenorm() - 2 * h1.squarenorm();
         assert(diff * diff < 0.0001 && "half_Wilson_vector projection -1 norm");
 
         w3 = (U * h1).expand(d, -1) - U * w2;
-        assert(w3.norm_sq() < 0.0001 && "half_wilson_vector expand");
+        assert(w3.squarenorm() < 0.0001 && "half_wilson_vector expand");
     }
 }
 
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
     D.apply(b, Db);
 
     diffre = 0;
-    onsites(ALL) { diffre += norm_squared(a[X] - Db[X]); }
+    onsites(ALL) { diffre += squarenorm(a[X] - Db[X]); }
     assert(diffre * diffre < 1e-16 && "test D (DdgD)^-1 Ddg");
 
     // Run CG on a, multiply by DdaggerD and check the same
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
     D.dagger(Db, DdaggerDb);
 
     diffre = 0;
-    onsites(ALL) { diffre += norm_squared(a[X] - DdaggerDb[X]); }
+    onsites(ALL) { diffre += squarenorm(a[X] - DdaggerDb[X]); }
     assert(diffre * diffre < 1e-16 && "test DdgD (DdgD)^-1");
 
     // The other way around, multiply first
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
     inverse.apply(DdaggerDb, a);
 
     diffre = 0;
-    onsites(ALL) { diffre += norm_squared(a[X] - b[X]); }
+    onsites(ALL) { diffre += squarenorm(a[X] - b[X]); }
     assert(diffre * diffre < 1e-16 && "test (DdgD)^-1 DdgD");
 }
 
@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
     D.apply(Db, DdaggerDb);
 
     diffre = 0;
-    onsites(ALL) { diffre += norm_squared(a[X] - DdaggerDb[X]); }
+    onsites(ALL) { diffre += squarenorm(a[X] - DdaggerDb[X]); }
     assert(diffre * diffre < 1e-8 && "test DdgD (DdgD)^-1");
 
     // Now run CG on Ddaggera. b=1/D a -> Db = a
@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
     D.apply(b, Db);
 
     diffre = 0;
-    onsites(ALL) { diffre += norm_squared(a[X] - Db[X]); }
+    onsites(ALL) { diffre += squarenorm(a[X] - Db[X]); }
     assert(diffre * diffre < 1e-8 && "test D (DdgD)^-1 Ddg");
 }
 
@@ -208,7 +208,7 @@ int main(int argc, char **argv) {
     inverse.apply(Ddaggera, b);
     D.apply(b, Db);
 
-    onsites(EVEN) { diffre += norm_squared(a[X] - Db[X]); }
+    onsites(EVEN) { diffre += squarenorm(a[X] - Db[X]); }
     assert(diffre * diffre < 1e-8 && "test CG");
 }
 
@@ -256,7 +256,7 @@ int main(int argc, char **argv) {
     D.apply(b, Db);
 
     diffre = 0;
-    onsites(EVEN) { diffre += norm_squared(a[X] - Db[X]); }
+    onsites(EVEN) { diffre += squarenorm(a[X] - Db[X]); }
     output0 << "D inv Dg " << diffre << "\n";
     assert(diffre * diffre < 1e-16 && "test D (DdgD)^-1 Ddg");
 
@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
     D.dagger(Db, DdaggerDb);
 
     diffre = 0;
-    onsites(EVEN) { diffre += norm_squared(a[X] - DdaggerDb[X]); }
+    onsites(EVEN) { diffre += squarenorm(a[X] - DdaggerDb[X]); }
     assert(diffre * diffre < 1e-16 && "test DdgD (DdgD)^-1");
 
     // The other way around, multiply first
@@ -283,7 +283,7 @@ int main(int argc, char **argv) {
     inverse.apply(DdaggerDb, a);
 
     diffre = 0;
-    onsites(EVEN) { diffre += norm_squared(a[X] - b[X]); }
+    onsites(EVEN) { diffre += squarenorm(a[X] - b[X]); }
     assert(diffre * diffre < 1e-16 && "test (DdgD)^-1 DdgD");
 }
 
@@ -322,7 +322,7 @@ int main(int argc, char **argv) {
     inverse.apply(Ddaggera, b);
     D.apply(b, Db);
 
-    onsites(EVEN) { diffre += norm_squared(a[X] - Db[X]); }
+    onsites(EVEN) { diffre += squarenorm(a[X] - Db[X]); }
     assert(diffre * diffre < 1e-16 && "test CG");
 
     // Run CG on a, multiply by DdaggerD and check the same
@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
     D.dagger(Db, DdaggerDb);
 
     diffre = 0;
-    onsites(EVEN) { diffre += norm_squared(a[X] - DdaggerDb[X]); }
+    onsites(EVEN) { diffre += squarenorm(a[X] - DdaggerDb[X]); }
     assert(diffre * diffre < 1e-16 && "test DdgD (DdgD)^-1");
 
     // The other way around, multiply first
@@ -348,7 +348,7 @@ int main(int argc, char **argv) {
     inverse.apply(DdaggerDb, a);
 
     diffre = 0;
-    onsites(EVEN) { diffre += norm_squared(a[X] - b[X]); }
+    onsites(EVEN) { diffre += squarenorm(a[X] - b[X]); }
     assert(diffre * diffre < 1e-16 && "test (DdgD)^-1 DdgD");
 }
 

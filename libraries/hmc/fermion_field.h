@@ -265,7 +265,7 @@ class Hasenbusch_action_2 : public action_base {
         inverse.apply(psi, v);
         D.apply(v, psi);
         onsites(D.par) {
-            action += norm_squared(psi[X]);
+            action += squarenorm(psi[X]);
         }
 
         return action;
@@ -285,7 +285,7 @@ class Hasenbusch_action_2 : public action_base {
         D.dagger(chi, psi);
         inverse.apply(psi, v);
         D.apply(v, psi);
-        onsites(EVEN) { S[X] += norm_squared(psi[X]); }
+        onsites(EVEN) { S[X] += squarenorm(psi[X]); }
     }
 
     /// Generate a pseudofermion field with a distribution given

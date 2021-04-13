@@ -212,7 +212,7 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
         radix thissum = 0;
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < i; j++) {
-                thissum += (*this).e(i, j).norm_sq();
+                thissum += (*this).e(i, j).squarenorm();
             }
             radix diag = (*this).e(i, i).im;
             thissum += 0.5 * diag * diag;

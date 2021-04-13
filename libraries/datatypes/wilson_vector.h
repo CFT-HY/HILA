@@ -113,10 +113,10 @@ template <int N, typename radix> class Wilson_vector {
         return r;
     }
 
-    inline radix norm_sq() {
+    inline radix squarenorm() {
         radix r = 0;
         for (int i = 0; i < Gammadim; i++) {
-            r += c[i].norm_sq();
+            r += c[i].squarenorm();
         }
         return r;
     }
@@ -554,10 +554,10 @@ template <int N, typename radix> class half_Wilson_vector {
 
     /// Returns the norm squared of (1+-gamma_j) * wilson_vector.
     /// Thus the factor 2.
-    inline radix norm_sq() {
+    inline radix squarenorm() {
         radix r = 0;
         for (int i = 0; i < Gammadim / 2; i++) {
-            r += c[i].norm_sq();
+            r += c[i].squarenorm();
         }
         return r;
     }
