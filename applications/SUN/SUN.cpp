@@ -66,8 +66,6 @@ int main(int argc, char **argv) {
                 Parity p = EVEN;
                 for (int par = 0; par < 2; par++) {
                     onsites(p) {
-                        if (disable_avx[X] == 0) {
-                        };
                         update(U[dir][X], staple[X], beta);
                     }
                     p = opp_parity(p);

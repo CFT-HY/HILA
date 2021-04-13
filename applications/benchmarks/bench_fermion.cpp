@@ -32,8 +32,6 @@ int main(int argc, char **argv) {
         onsites(ALL) { U[d][X].random(); }
     }
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         sunvec1[X].gaussian();
         sunvec2[X].gaussian();
     }
@@ -88,8 +86,6 @@ int main(int argc, char **argv) {
 
     Field<Wilson_vector<N, double>> wvec1, wvec2;
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         wvec1[X].gaussian();
         wvec2[X].gaussian();
     }

@@ -40,8 +40,6 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         tmp2.copy_boundary_condition(psi);
 
         onsites(D.par) {
-            if (disable_avx[X] == 0) {
-            };
             psi[X].gaussian();
             chi[X].gaussian();
         }
@@ -78,8 +76,6 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         }
 
         onsites(D.par) {
-            if (disable_avx[X] == 0) {
-            };
             psi[X].gaussian();
             chi[X].gaussian();
         }

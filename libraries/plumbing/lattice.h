@@ -197,6 +197,8 @@ class lattice_struct {
     special_boundary_struct special_boundaries[NDIRS];
 #endif
 
+#if 0
+// mpi_column not needed any more
 #ifdef USE_MPI
     /// Information about the column of nodes to a given directions
     /// (nodes that share all coordinates except 1)
@@ -209,6 +211,7 @@ class lattice_struct {
 
     /// Get an MPI column in Direction dir, build if necessary
     static mpi_column_struct get_mpi_column(Direction dir);
+#endif
 #endif
 
 #ifndef VANILLA

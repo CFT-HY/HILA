@@ -1,3 +1,4 @@
+#include "hila.h"
 #include "test.h"
 
 /////////////////////
@@ -338,12 +339,12 @@ int main(int argc, char **argv) {
     dfield[ALL] = 1;
 
 #if NDIM == 4
-    std::vector<double> arraysum(nd[e_t]);
-    std::fill(arraysum.begin(), arraysum.end(), 0);
+    VectorReduction<double> arraysum(nd[e_t]);
+    arraysum = 0;
 
     onsites(ALL) {
-        element<CoordinateVector> l = X.coordinates();
-        element<int> t = l[e_t];
+        CoordinateVector l = X.coordinates();
+        int t = l[e_t];
 
         arraysum[t] += dfield[X];
     }

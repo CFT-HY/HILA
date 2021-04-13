@@ -21,7 +21,7 @@ void report_too_large_node() {
 
 // HACK: force disable vectorization in a loop using
 // if(disable_avx[X]==0){};
-Field<double> disable_avx;
+// Field<double> disable_avx;
 
 // Define the global lattice ptr, and set it to point to "my_lattice"
 lattice_struct my_lattice;
@@ -68,7 +68,7 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 
     test_std_gathers();
 
-    disable_avx = 0;
+    // disable_avx = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////

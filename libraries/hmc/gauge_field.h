@@ -212,8 +212,6 @@ template <typename matrix> class gauge_field : public gauge_field_base<matrix> {
     void random() {
         foralldir(dir) {
             onsites(ALL) {
-                if (disable_avx[X] == 0) {
-                };
                 this->gauge[dir][X].random();
             }
         }
@@ -223,8 +221,6 @@ template <typename matrix> class gauge_field : public gauge_field_base<matrix> {
     void draw_momentum() {
         foralldir(dir) {
             onsites(ALL) {
-                if (disable_avx[X] == 0) {
-                };
                 this->momentum[dir][X].gaussian_algebra();
             }
         }
@@ -325,8 +321,6 @@ template <class repr> class represented_gauge_field : public gauge_field_base<re
         foralldir(dir) {
             this->gauge[dir].check_alloc();
             onsites(ALL) {
-                if (disable_avx[X] == 0) {
-                };
                 this->gauge[dir][X].represent(fundamental.gauge[dir][X]);
             }
         }
@@ -351,8 +345,6 @@ template <class repr> class represented_gauge_field : public gauge_field_base<re
     void add_momentum(Field<SquareMatrix<N, Complex<basetype>>> (&force)[NDIM]) {
         foralldir(dir) {
             onsites(ALL) {
-                if (disable_avx[X] == 0) {
-                };
                 element<fund_type> fforce;
                 fforce = repr::project_force(this->gauge[dir][X] * force[dir][X]);
                 fundamental.momentum[dir][X] = fundamental.momentum[dir][X] + fforce;

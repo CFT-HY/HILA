@@ -71,8 +71,6 @@ int main(int argc, char **argv) {
     dirac D(0.1, U);
     Field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
         b[X].gaussian();
     }
@@ -91,8 +89,6 @@ int main(int argc, char **argv) {
     // Now run CG on Ddaggera. b=1/D a -> Db = a
     CG<dirac> inverse(D);
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
     }
     b[ALL] = 0;
@@ -115,8 +111,6 @@ int main(int argc, char **argv) {
 
     // The other way around, multiply first
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         b[X].gaussian();
     }
     D.apply(b, Db);
@@ -144,8 +138,6 @@ int main(int argc, char **argv) {
 #endif
 
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
         b[X].gaussian();
     }
@@ -165,8 +157,6 @@ int main(int argc, char **argv) {
     CG<dirac> inverse(D);
     b[ALL] = 0;
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
     }
     inverse.apply(a, b);
@@ -180,8 +170,6 @@ int main(int argc, char **argv) {
     // Now run CG on Ddaggera. b=1/D a -> Db = a
     b[ALL] = 0;
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
     }
     D.dagger(a, Ddaggera);
@@ -199,8 +187,6 @@ int main(int argc, char **argv) {
     dirac_staggered_evenodd D(5.0, U);
     Field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     onsites(ALL) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
         b[X].gaussian();
     }
@@ -243,8 +229,6 @@ int main(int argc, char **argv) {
     a[ODD] = 0;
     b[ODD] = 0;
     onsites(EVEN) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
         b[X].gaussian();
     }
@@ -265,8 +249,6 @@ int main(int argc, char **argv) {
     a[ALL] = 0;
     b[ALL] = 0;
     onsites(EVEN) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
     }
     D.dagger(a, Ddaggera);
@@ -280,8 +262,6 @@ int main(int argc, char **argv) {
 
     // Run CG on a, multiply by DdaggerD and check the same
     onsites(EVEN) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
     }
     b[ALL] = 0;
@@ -295,8 +275,6 @@ int main(int argc, char **argv) {
 
     // The other way around, multiply first
     onsites(EVEN) {
-        if (disable_avx[X] == 0) {
-        };
         b[X].gaussian();
     }
     D.apply(b, Db);
@@ -322,8 +300,6 @@ int main(int argc, char **argv) {
     a[ODD] = 0;
     b[ODD] = 0;
     onsites(EVEN) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
         b[X].gaussian();
         sol[X] = 0;
@@ -351,8 +327,6 @@ int main(int argc, char **argv) {
 
     // Run CG on a, multiply by DdaggerD and check the same
     onsites(EVEN) {
-        if (disable_avx[X] == 0) {
-        };
         a[X].gaussian();
     }
     b[ALL] = 0;
@@ -366,8 +340,6 @@ int main(int argc, char **argv) {
 
     // The other way around, multiply first
     onsites(EVEN) {
-        if (disable_avx[X] == 0) {
-        };
         b[X].gaussian();
     }
     D.apply(b, Db);

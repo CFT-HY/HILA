@@ -1604,15 +1604,8 @@ static void read_fields(std::string filename, fieldtypes &...fields) {
 // HACK: force disable vectorization in a loop using
 // if(disable_avx[X]==0){};
 // TODO: remove all of these!
-extern Field<double> disable_avx;
+// extern Field<double> disable_avx;
 
-// Include FFT implentations (mostly fftw, but for CUDA
-// we need to specialize version)
-#ifdef CUDA
-// #include "plumbing/backend_cuda/FFT.h"
-#else
-// #include "plumbing/FFT.h"
-#endif
 
 #ifdef HILAPP
 

@@ -114,8 +114,6 @@ class fermion_action : public action_base {
         initial_guess(chi, psi);
         inverse.apply(chi, psi);
         onsites(D.par) {
-            if (disable_avx[X] == 0) {
-            };
             S[X] += chi[X].rdot(psi[X]);
         }
     }
@@ -128,8 +126,6 @@ class fermion_action : public action_base {
         gauge.refresh();
 
         onsites(D.par) {
-            if (disable_avx[X] == 0) {
-            };
             psi[X].gaussian();
         }
         D.dagger(psi, chi);
@@ -269,8 +265,6 @@ class Hasenbusch_action_2 : public action_base {
         inverse.apply(psi, v);
         D.apply(v, psi);
         onsites(D.par) {
-            if (disable_avx[X] == 0) {
-            };
             action += norm_squared(psi[X]);
         }
 
@@ -306,8 +300,6 @@ class Hasenbusch_action_2 : public action_base {
 
         psi[ALL] = 0;
         onsites(D.par) {
-            if (disable_avx[X] == 0) {
-            };
             psi[X].gaussian();
         }
         D.dagger(psi, v);
