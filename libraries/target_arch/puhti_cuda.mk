@@ -18,10 +18,11 @@ LD = nvcc -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
 
 # Define compilation flags
 CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict 
-# 20050 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
-# it allows multiple definitions of a function as required by c++ standard!!  Quiet it.
+# 3162 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
+# it allows definition of a function in multiple compilation units as required by c++ standard!!  
+# Quiet it.
 # Warning 177 is about unused variables 
-CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=20050"
+CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=3162"
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
