@@ -7,6 +7,13 @@
 # USE:
 # module load  gcc/9.1.0 
 
+
+$(info ########################################################################)
+$(info Target puhti:  remember to )
+$(info   module load gcc/9.1.0 fftw openmpi/4.0.5-cuda )
+$(info ########################################################################)
+
+
 ### Define compiler and options
 
 # Define compiler

@@ -23,6 +23,9 @@
 #include "plumbing/memalloc.h" // memory allocator
 #include "plumbing/timing.h"
 
+/// Allow other than periodic boundary conditions
+// #define SPECIAL_BOUNDARY_CONDITIONS
+
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
 /// ADD HERE GUARD FOR THOSE WHICH DO not HAVE IT
@@ -106,8 +109,6 @@ extern logger_class log;
 /// define a class for FFT direction
 enum class fft_direction { forward, inverse };
 
-/// Allow other than periodic boundary conditions
-#define SPECIAL_BOUNDARY_CONDITIONS
 
 
 // Backend defs-headers
