@@ -12,13 +12,16 @@ $(info Target puhti_cuda:  remember to )
 $(info   module load gcc/9.1.0 cuda/11.1.0 openmpi/4.0.5-cuda )
 $(info ########################################################################)
 
-
 # Define compiler
 CC = nvcc
-LD = nvcc -gencode arch=compute_70,code=sm_70
+LD = nvcc -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
 
 # Define compilation flags
-CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 -DCUDA -DUSE_MPI  $(CXX_INCLUDE)
+CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict 
+# 20050 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
+# it allows multiple definitions of a function as required by c++ standard!!  Quiet it.
+# Warning 177 is about unused variables 
+CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=20050"
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
@@ -38,7 +41,7 @@ HILA_OBJECTS += build/hila_cuda.o
 
 # These variables must be defined here
 #
-HILAPP_OPTS = -target:CUDA -DCUDA -DUSE_MPI -DPUHTI $(STD_INCLUDE_DIRS) $(MPI_INCLUDE_DIRS)
+HILAPP_OPTS = -target:CUDA $(STD_INCLUDE_DIRS) $(MPI_INCLUDE_DIRS)
 HILA_OPTS = -DUSE_MPI -DCUDA -DPUHTI
 
 
