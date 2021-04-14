@@ -36,7 +36,7 @@ template <typename T> void gather_test() {
             exit(1);
         }
 
-#if defined(SPECIAL_BOUNDARY_CONDITIONS)
+#if 0 && defined(SPECIAL_BOUNDARY_CONDITIONS)
         // test antiperiodic b.c. to one direction
         if (next_direction(d) == NDIM) {
             f2.set_boundary_condition(d, BoundaryCondition::ANTIPERIODIC);

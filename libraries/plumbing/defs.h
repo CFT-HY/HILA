@@ -24,7 +24,7 @@
 #include "plumbing/timing.h"
 
 /// Allow other than periodic boundary conditions
-// #define SPECIAL_BOUNDARY_CONDITIONS
+#define SPECIAL_BOUNDARY_CONDITIONS
 
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.

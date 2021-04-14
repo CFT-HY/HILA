@@ -192,10 +192,12 @@ template <typename T> class Field {
 #else
             // this is vectorized branch
             bool antiperiodic = false;
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
             if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
                 lattice->special_boundaries[-d].is_on_edge) {
                 antiperiodic = true;
             }
+#endif
 
             if constexpr (hila::is_vectorizable_type<T>::value) {
                 // now vectorized layout
@@ -251,9 +253,13 @@ template <typename T> class Field {
         /// Place boundary elements from local lattice (used in vectorized version)
         void set_local_boundary_elements(Direction dir, Parity par) {
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
             bool antiperiodic =
                 (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC &&
                  lattice->special_boundaries[dir].is_on_edge);
+#else       
+            bool antiperiodic = false;
+#endif
             payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
         }
 
