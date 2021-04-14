@@ -26,7 +26,15 @@ CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
-STD_INCLUDE_DIRS := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+# hilapp needs to know where c++ system include files are located.  This is not a problem if
+# hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere
+# and copied here it must be told.  Instead of hunting the directories by hand, we can ask
+# system installed compilers.  g++ should be present almost everywhere.  The strange incantation
+# below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
+
+STD_HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+$(shell echo "$(STD_HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
+STD_HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
 # No need to give include directory to mpi for hilapp - here 2 common ones
 MPI_INCLUDE_DIRS = 
@@ -42,7 +50,7 @@ HILA_OBJECTS += build/hila_cuda.o
 
 # These variables must be defined here
 #
-HILAPP_OPTS = -target:CUDA $(STD_INCLUDE_DIRS) $(MPI_INCLUDE_DIRS)
+HILAPP_OPTS = -target:CUDA $(STD_HILAPP_INCLUDES) $(MPI_INCLUDE_DIRS)
 HILA_OPTS = -DUSE_MPI -DCUDA -DPUHTI
 
 

@@ -3,12 +3,12 @@
 #
 # This version builds hilapp from "system level" distribution
 #
-# Modelled after the example clang tool Makefile by Eli Bendersky (eliben@gmail.com)
-#    https://github.com/eliben/llvm-clang-samples
-#
-# Kari Rummukainen
-# Jarno Rantaharju
-# 
+# Use:
+# >  make [-j N]      - build hilapp to directory hilapp/build
+# >  make install     - build and move hilapp to hilapp/bin
+# >  make static      - build a statically compiled hilapp.  This can
+#                       be copied to systems without llvm/clang libraries
+#                       (assuming architectures are binary compatible)
 #-------------------------------------------------------------------------------
 #
 # The Makefile variables may be customized, depending on where
