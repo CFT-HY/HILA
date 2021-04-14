@@ -4,7 +4,8 @@
 # this is included from main.mk -file, which is in turn included from 
 # application makefile
 #
-#
+# USE:
+# module load  gcc/9.1.0 
 
 ### Define compiler and options
 
@@ -23,7 +24,7 @@ CXXFLAGS := -O3 -x c++ --std=c++17
 # system installed compilers.  g++ should be present almost everywhere.  The strange incantation
 # below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
 
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
 
 ### Need to give include directory to mpi for hilapp - here 2 common ones
 # MPI_INCLUDE_DIRS = -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openmpi/include
