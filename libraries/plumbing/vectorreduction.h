@@ -18,8 +18,29 @@
 ///       a[i] += ...
 ///   }
 ///
+/// or outside site loops as usual.
+/// Reductions:    +=  *=    sum or product reduction
+/// NOTE: size of the reduction vector must be same on all nodes!
+/// By default reduction is "allreduce", i.e. all nodes get the same result.
 ///
+/// Reduction can be customized by using methods:
+///   a.size()              : return the size of the array
+///   a.resize(new_size)    : change size of array (all nodes must use same size!)
+///   a[i]                  : get/set element i
 ///
+///   a.allreduce(bool)     : turn allreduce on/off  (default=true)
+///   a.nonblocking(bool)   : turn non-blocking reduction on/off
+///   a.delayed(bool)       : turn delayed reduction on/off
+///
+///   a.wait()              : for non-blocking reduction, wait() has to be called
+///                           after the loop to complete the reduction
+///   a.reduce()            : for delayed reduction starts/completes the reduction
+///
+///   a.is_allreduce()      : queries the reduction status
+///     is_nonblocking()
+///     is_delayed()
+///
+///   a.push_back(element)   : add one element to
 /// The same reduction variable can be used again
 ///
 
@@ -62,33 +83,33 @@ template <typename T> class VectorReduction {
         if (is_allreduce_) {
             if (is_nonblocking_) {
                 MPI_Iallreduce(MPI_IN_PLACE, (void *)val.data(),
-                               sizeof(T) * val.size() / sizeof(hila::number_type<T>), dtype,
-                               operation, lattice->mpi_comm_lat, &request);
+                               sizeof(T) * val.size() / sizeof(hila::number_type<T>),
+                               dtype, operation, lattice->mpi_comm_lat, &request);
             } else {
                 MPI_Allreduce(MPI_IN_PLACE, (void *)val.data(),
-                              sizeof(T) * val.size() / sizeof(hila::number_type<T>), dtype,
-                              operation, lattice->mpi_comm_lat);
+                              sizeof(T) * val.size() / sizeof(hila::number_type<T>),
+                              dtype, operation, lattice->mpi_comm_lat);
             }
         } else {
             if (hila::myrank() == 0) {
                 if (is_nonblocking_) {
                     MPI_Ireduce(MPI_IN_PLACE, (void *)val.data(),
-                                sizeof(T) * val.size() / sizeof(hila::number_type<T>), dtype,
-                                operation, 0, lattice->mpi_comm_lat, &request);
+                                sizeof(T) * val.size() / sizeof(hila::number_type<T>),
+                                dtype, operation, 0, lattice->mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce(MPI_IN_PLACE, (void *)val.data(),
-                               sizeof(T) * val.size() / sizeof(hila::number_type<T>), dtype,
-                               operation, 0, lattice->mpi_comm_lat);
+                               sizeof(T) * val.size() / sizeof(hila::number_type<T>),
+                               dtype, operation, 0, lattice->mpi_comm_lat);
                 }
             } else {
                 if (is_nonblocking_) {
                     MPI_Ireduce((void *)val.data(), (void *)val.data(),
-                                sizeof(T) * val.size() / sizeof(hila::number_type<T>), dtype,
-                                operation, 0, lattice->mpi_comm_lat, &request);
+                                sizeof(T) * val.size() / sizeof(hila::number_type<T>),
+                                dtype, operation, 0, lattice->mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce((void *)val.data(), (void *)val.data(),
-                               sizeof(T) * val.size() / sizeof(hila::number_type<T>), dtype,
-                               operation, 0, lattice->mpi_comm_lat);
+                               sizeof(T) * val.size() / sizeof(hila::number_type<T>),
+                               dtype, operation, 0, lattice->mpi_comm_lat);
                 }
             }
         }
@@ -154,25 +175,27 @@ template <typename T> class VectorReduction {
 
     /// Assignment from 0
     void operator=(std::nullptr_t np) {
-        for (auto &vp : val) 
+        for (auto &vp : val)
             vp = 0;
     }
 
     // Don't even implement compound assignments
 
-    /// Init is to be called before every site loop 
+    /// Init is to be called before every site loop
     void init_sum() {
         // if something is happening wait
-        wait();  
+        wait();
         if (hila::myrank() != 0 && !delay_is_on) {
-            for (auto &vp : val) vp = 0;
+            for (auto &vp : val)
+                vp = 0;
         }
     }
-    /// Init is to be called before every site loop 
+    /// Init is to be called before every site loop
     void init_product() {
-        wait();  
+        wait();
         if (hila::myrank() != 0 && !delay_is_on) {
-            for (auto &vp : val) vp = 1;
+            for (auto &vp : val)
+                vp = 1;
         }
     }
 
@@ -237,7 +260,7 @@ template <typename T> class VectorReduction {
     }
 
     /// data() returns ptr to the raw storage
-    T * data() { return val.data(); }
+    T *data() { return val.data(); }
 
     /// methods from std::vector:
 

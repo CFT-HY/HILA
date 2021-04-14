@@ -30,9 +30,10 @@ struct base_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::val
 /// Use as hila::number_type<T>
 template <typename T> using number_type = typename base_type_struct<T>::type;
 
+/// struct to return the inner type, i.e.
+///    typename inner_type_struct<A<B>>::type
+/// returns type B.
 //////////////////////////////////////////////////////////////////////////////
-/// struct to return the inner type, i.e. typename inner_type_struct<A<B>>::type returns
-/// type B.
 template <typename T, typename Enable = void> struct inner_type_struct {
     using type = typename T::argument_type;
 };
@@ -42,11 +43,21 @@ struct inner_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::va
     using type = T;
 };
 
-/// Interface to inquire inner type
+//////////////////////////////////////////////////////////////////////////////
+/// Main interface to inquire inner type in nesting templates:
+///    inner_type<A<B<C>>>
+/// teturns type B<C>
+//////////////////////////////////////////////////////////////////////////////
+
 template <typename T> using inner_type = typename inner_type_struct<T>::type;
 
 //////////////////////////////////////////////////////////////////////////////
-/// Define boolean contains_type<A,B>::value, which 
+/// Define boolean contains_type<A,B>::value, which returns true if
+/// type A "wraps" type B at some level
+/// Example:
+///    hila::contains_type<Vector<4,Complex<double>>>, Complex<double>>::value
+/// is true
+//////////////////////////////////////////////////////////////////////////////
 
 template <typename A, typename B, typename Enable = void>
 struct contains_type
@@ -67,9 +78,11 @@ using enable_if_t = typename std::enable_if<B, T>::type;
 }
 #endif
 
-// These are helpers, to make generic templates
-// e.g. hila::type_plus<A,B> gives the type of the operator a + b, where a is of type A and b
-// B.
+//////////////////////////////////////////////////////////////////////////////
+/// Helper operations to make generic templates for arithmetic operators
+/// e.g. hila::type_plus<A,B> gives the type of the operator a + b, where a is of type A
+/// and b type B.
+//////////////////////////////////////////////////////////////////////////////
 template <typename A, typename B>
 using type_plus = decltype(std::declval<A>() + std::declval<B>());
 template <typename A, typename B>
