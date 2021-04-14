@@ -18,7 +18,7 @@ CC = nvcc
 LD = nvcc -gencode arch=compute_70,code=sm_70
 
 # Define compilation flags
-CXXFLAGS = -dc -O3 -x cu -gencode arch=compute_70,code=sm_70 -DCUDA -DUSE_MPI  $(CXX_INCLUDE)
+CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 -DCUDA -DUSE_MPI  $(CXX_INCLUDE)
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 

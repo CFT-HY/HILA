@@ -45,14 +45,14 @@ namespace hila {
 /// it's own basic types (such as AVX vectors)
 template <class T>
 struct is_avx_vector
-    : ::std::integral_constant<
-          bool, ::std::is_same<T, Vec4d>::value || ::std::is_same<T, Vec4q>::value ||
-                    ::std::is_same<T, Vec8f>::value || ::std::is_same<T, Vec8i>::value ||
-                    ::std::is_same<T, Vec8d>::value || ::std::is_same<T, Vec8q>::value ||
-                    ::std::is_same<T, Vec16f>::value || ::std::is_same<T, Vec16i>::value> {};
+    : std::integral_constant<
+          bool, std::is_same<T, Vec4d>::value || std::is_same<T, Vec4q>::value ||
+                    std::is_same<T, Vec8f>::value || std::is_same<T, Vec8i>::value ||
+                    std::is_same<T, Vec8d>::value || std::is_same<T, Vec8q>::value ||
+                    std::is_same<T, Vec16f>::value || std::is_same<T, Vec16i>::value> {};
 
 template <class T>
-struct is_arithmetic : ::std::integral_constant<bool, ::std::is_arithmetic<T>::value ||
+struct is_arithmetic : std::integral_constant<bool, std::is_arithmetic<T>::value ||
                                                         is_avx_vector<T>::value> {};
 
 template <class T> struct avx_vector_type_info {
@@ -104,12 +104,12 @@ template <> struct avx_vector_type_info<Vec16i> {
 
 template <class T, class U>
 struct is_assignable
-    : ::std::integral_constant<
+    : std::integral_constant<
           bool,
-          ::std::is_assignable<T, U>::value ||
+          std::is_assignable<T, U>::value ||
               (is_avx_vector<U>::value &&
                ((!is_avx_vector<T>::value &&
-                 ::std::is_assignable<T, typename avx_vector_type_info<U>::type>::value) ||
+                 std::is_assignable<T, typename avx_vector_type_info<U>::type>::value) ||
                 (is_avx_vector<T>::value &&
                  (avx_vector_type_info<T>::size == avx_vector_type_info<U>::size) &&
                  (avx_vector_type_info<T>::elements ==

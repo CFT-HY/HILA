@@ -7,6 +7,16 @@
 
 #include "plumbing/defs.h"
 
+
+// // Useful c++14 template missing in Puhti compilation of hilapp
+// #if defined(PUHTI) && defined(HILAPP)
+// namespace std {
+// template <bool B, class T = void>
+// using enable_if_t = typename std::enable_if<B, T>::type;
+// }
+// #endif
+
+
 namespace hila {
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -21,7 +31,7 @@ template <typename T, typename Enable = void> struct base_type_struct {
 
 /// Utility for selecting the numeric base type of a class
 template <typename T>
-struct base_type_struct<T, typename ::std::enable_if_t<hila::is_arithmetic<T>::value>> {
+struct base_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::value>> {
     // In this case the base type is just T
     using type = T;
 };
@@ -39,7 +49,7 @@ template <typename T, typename Enable = void> struct inner_type_struct {
 };
 
 template <typename T>
-struct inner_type_struct<T, typename ::std::enable_if_t<hila::is_arithmetic<T>::value>> {
+struct inner_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::value>> {
     using type = T;
 };
 
@@ -61,22 +71,15 @@ template <typename T> using inner_type = typename inner_type_struct<T>::type;
 
 template <typename A, typename B, typename Enable = void>
 struct contains_type
-    : ::std::integral_constant<bool, hila::contains_type<inner_type<A>, B>::value> {};
+    : std::integral_constant<bool, hila::contains_type<inner_type<A>, B>::value> {};
 
 template <typename A>
-struct contains_type<A, A> : ::std::integral_constant<bool, true> {};
+struct contains_type<A, A> : std::integral_constant<bool, true> {};
 
 template <typename A, typename B>
-struct contains_type<A, B, typename ::std::enable_if_t<hila::is_arithmetic<A>::value>>
-    : ::std::integral_constant<bool, ::std::is_same<A, B>::value> {};
+struct contains_type<A, B, typename std::enable_if_t<hila::is_arithmetic<A>::value>>
+    : std::integral_constant<bool, std::is_same<A, B>::value> {};
 
-// Useful c++14 template missing in Puhti compilation of hilapp
-#if defined(PUHTI) && defined(HILAPP)
-namespace std {
-template <bool B, class T = void>
-using enable_if_t = typename ::std::enable_if<B, T>::type;
-}
-#endif
 
 //////////////////////////////////////////////////////////////////////////////
 /// Helper operations to make generic templates for arithmetic operators
@@ -84,13 +87,13 @@ using enable_if_t = typename ::std::enable_if<B, T>::type;
 /// and b type B.
 //////////////////////////////////////////////////////////////////////////////
 template <typename A, typename B>
-using type_plus = decltype(::std::declval<A>() + ::std::declval<B>());
+using type_plus = decltype(std::declval<A>() + std::declval<B>());
 template <typename A, typename B>
-using type_minus = decltype(::std::declval<A>() - ::std::declval<B>());
+using type_minus = decltype(std::declval<A>() - std::declval<B>());
 template <typename A, typename B>
-using type_mul = decltype(::std::declval<A>() * ::std::declval<B>());
+using type_mul = decltype(std::declval<A>() * std::declval<B>());
 template <typename A, typename B>
-using type_div = decltype(::std::declval<A>() / ::std::declval<B>());
+using type_div = decltype(std::declval<A>() / std::declval<B>());
 
 } // namespace hila
 
