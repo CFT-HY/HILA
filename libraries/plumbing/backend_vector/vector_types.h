@@ -12,7 +12,7 @@ template <typename T, typename A = void> struct is_vectorizable_type {
 ///  specialize is_vectorizable_type<T>::value to true if the base_type_struct<T>::type
 ///  exists
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_arithmetic<
+struct is_vectorizable_type<T, typename ::std::enable_if_t<::std::is_arithmetic<
                                    typename hila::base_type_struct<T>::type>::value>> {
     static constexpr bool value = true;
 };
@@ -72,7 +72,7 @@ template <typename T, typename A = void> struct vector_info {
 
 /// and specializre the same for vectorizable type
 template <typename T>
-struct vector_info<T, typename std::enable_if_t<std::is_arithmetic<
+struct vector_info<T, typename ::std::enable_if_t<::std::is_arithmetic<
                           typename hila::base_type_struct<T>::type>::value>> {
     static constexpr bool is_vectorizable = true;
     // Get base type first

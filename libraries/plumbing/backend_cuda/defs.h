@@ -68,10 +68,10 @@ namespace hila {
 /// std::is_arithmetic, but allows the backend to add
 /// it's own basic tyes (such as AVX vectors)
 template <class T>
-struct is_arithmetic : std::integral_constant<bool, std::is_arithmetic<T>::value> {};
+struct is_arithmetic : ::std::integral_constant<bool, ::std::is_arithmetic<T>::value> {};
 
 template <class T, class U>
-struct is_assignable : std::integral_constant<bool, std::is_assignable<T, U>::value> {};
+struct is_assignable : ::std::integral_constant<bool, ::std::is_assignable<T, U>::value> {};
 
 } // namespace hila
 

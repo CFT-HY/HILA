@@ -23,7 +23,7 @@ static double start_time = -1.0;
 /////////////////////////////////////////////////////////////////
 
 // store all timers in use
-std::vector<timer *> timer_list = {};
+::std::vector<timer *> timer_list = {};
 
 // initialize timer to this timepoint
 void timer::init(const char *tag) {
@@ -98,24 +98,24 @@ void timer::report(bool print_not_timed) {
         double ttime = gettime();
         if (count > 0 && !is_error) {
             if (t_total / count > 0.1) {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f s  %8.4f\n",
+                ::std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f s  %8.4f\n",
                               label.c_str(), t_total, (long)count, t_total / count,
                               t_total / ttime);
             } else if (t_total / count > 1e-4) {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f ms %8.4f\n",
+                ::std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f ms %8.4f\n",
                               label.c_str(), t_total, (long)count, 1e3 * t_total / count,
                               t_total / ttime);
             } else {
-                std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f us %8.4f\n",
+                ::std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f us %8.4f\n",
                               label.c_str(), t_total, (long)count, 1e6 * t_total / count,
                               t_total / ttime);
             }
             hila::output << line;
         } else if (!is_error && print_not_timed) {
-            std::snprintf(line, 200, "%-20s: no timed calls made\n", label.c_str());
+            ::std::snprintf(line, 200, "%-20s: no timed calls made\n", label.c_str());
             hila::output << line;
         } else if (is_error) {
-            std::snprintf(line, 200, "%-20s: error:unbalanced start/stop\n",
+            ::std::snprintf(line, 200, "%-20s: error:unbalanced start/stop\n",
                           label.c_str());
             hila::output << line;
         }
@@ -211,10 +211,10 @@ bool time_to_exit() {
 
 void timestamp(const char *msg) {
     if (hila::myrank() == 0) {
-        std::time_t ct = std::time(NULL);
+        ::std::time_t ct = ::std::time(NULL);
         if (msg != NULL)
             hila::output << msg;
-        std::string d = ctime(&ct);
+        ::std::string d = ctime(&ct);
         d.resize(d.size() - 1); // take away \n at the end
         hila::output << " -- date " << d << "  run time " << gettime() << "s\n";
     }

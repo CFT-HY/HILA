@@ -202,11 +202,11 @@ namespace hila {
 class input {
 
   private:
-    std::ifstream inputfile;
+    ::std::ifstream inputfile;
     bool is_initialized = false;
-    std::string filename;
+    ::std::string filename;
 
-    std::string linebuffer;
+    ::std::string linebuffer;
     size_t lb_start = 0; // linebuffer start index
     bool is_line_printed;
     bool speaking = true; // false does not print information
@@ -214,9 +214,9 @@ class input {
   public:
     input() {}
     ~input() { close(); }
-    input(const std::string &fname) { open(fname); }
+    input(const ::std::string &fname) { open(fname); }
 
-    bool open(const std::string &fname, bool exit_on_error = true);
+    bool open(const ::std::string &fname, bool exit_on_error = true);
     void close();
 
     // make class quiet (no printouts), quiet(false) returns to normal
@@ -225,15 +225,15 @@ class input {
     /// returntyhpe is a special class for resolving get("label") return type 
     class returntype {
       public:
-        const std::string &label;
+        const ::std::string &label;
         input *parent;
 
-        returntype(const std::string &str, input *a) : label(str), parent(a) {}
+        returntype(const ::std::string &str, input *a) : label(str), parent(a) {}
 
         /// cast operator does the conversion - disable nullptr_t cast used
         /// in hila types
         template <typename T,
-                 std::enable_if_t<!std::is_same<T,std::nullptr_t>::value, int> = 0> 
+                 ::std::enable_if_t<!::std::is_same<T,::std::nullptr_t>::value, int> = 0> 
         operator T() {
             T val;
             if (!parent->get_value(val, label, true))
@@ -245,7 +245,7 @@ class input {
 
     // The main get() method is simply constructor for returntype
 
-    inline returntype get(const std::string &key) { return returntype(key, this); }
+    inline returntype get(const ::std::string &key) { return returntype(key, this); }
 
     inline returntype get() { return returntype("", this); }
 
@@ -254,12 +254,12 @@ class input {
     /// but typically used in .get() -methods
 
     template <typename T>
-    bool get_value(T &val, const std::string &label, bool bcast = true) {
+    bool get_value(T &val, const ::std::string &label, bool bcast = true) {
         val = {};
         bool no_error = handle_key(label); // removes whitespace
 
         if (hila::myrank() == 0 && no_error) {
-            std::string tok;
+            ::std::string tok;
             if (!(get_token(tok) && is_value(tok, val))) {
 
                 if (speaking)
@@ -272,7 +272,7 @@ class input {
 
         if (bcast) {
             // string has to be treated separately
-            if constexpr (std::is_same<T, std::string>::value) {
+            if constexpr (::std::is_same<T, ::std::string>::value) {
                 broadcast(val);
                 broadcast(no_error);
             } else {
@@ -286,12 +286,12 @@ class input {
     /// Specialize the above method to Complex -pair:  (re,im)
 
     template <typename T>
-    bool get_value(Complex<T> &val, const std::string &label, bool bcast = true) {
+    bool get_value(Complex<T> &val, const ::std::string &label, bool bcast = true) {
         val = 0;
         bool no_error = handle_key(label); // removes whitespace
 
         if (hila::myrank() == 0 && no_error) {
-            std::string tok;
+            ::std::string tok;
             T re, im;
 
             no_error = (match_token("(") && get_token(tok) && is_value(tok, re) &&
@@ -314,7 +314,7 @@ class input {
     /// Specialize .get_value<Vector<n,T>>() : which includes CoordinateVector
 
     template <int n, typename T>
-    bool get_value(Vector<n, T> &val, const std::string &label, bool bcast = true) {
+    bool get_value(Vector<n, T> &val, const ::std::string &label, bool bcast = true) {
         val = 0;
         bool no_error = true;
 
@@ -339,17 +339,17 @@ class input {
     /// Specialization to CoordinateVector
 
     template <int n = NDIM>
-    bool get_value(CoordinateVector &val, const std::string &label, bool bcast = true) {
+    bool get_value(CoordinateVector &val, const ::std::string &label, bool bcast = true) {
         Vector<n, int> iv;
         bool b = get_value(iv, label, bcast);
         val = iv;
         return b;
     }
 
-    /// Specialize -get_value() to std::vector<>
+    /// Specialize -get_value() to ::std::vector<>
 
     template <typename T>
-    bool get_value(std::vector<T> &val, const std::string &label, bool bcast = true) {
+    bool get_value(::std::vector<T> &val, const ::std::string &label, bool bcast = true) {
         val = {};
         bool no_error = true;
 
@@ -378,33 +378,33 @@ class input {
 
     // get_item selects one from a "menu" of items
 
-    int get_item(const std::string &label, const std::vector<std::string> &items,
+    int get_item(const ::std::string &label, const ::std::vector<::std::string> &items,
                  bool bcast = true);
 
   private:
     /// a helper method to give type name
     template <typename T> inline const char *type_id() { return nullptr; }
 
-    bool peek_token(std::string &tok);
-    bool get_token(std::string &tok);
-    bool match_token(const std::string &tok);
+    bool peek_token(::std::string &tok);
+    bool get_token(::std::string &tok);
+    bool match_token(const ::std::string &tok);
 
-    bool scan_string(std::string &val);
+    bool scan_string(::std::string &val);
 
-    bool is_value(const std::string &s, int &val);
-    bool is_value(const std::string &s, long &val);
-    bool is_value(const std::string &s, std::string &val);
-    bool is_value(const std::string &s, double &val);
-    bool is_value(const std::string &s, float &val);
+    bool is_value(const ::std::string &s, int &val);
+    bool is_value(const ::std::string &s, long &val);
+    bool is_value(const ::std::string &s, ::std::string &val);
+    bool is_value(const ::std::string &s, double &val);
+    bool is_value(const ::std::string &s, float &val);
 
-    bool contains_word_list(const std::string &list, int &end_of_key);
+    bool contains_word_list(const ::std::string &list, int &end_of_key);
 
-    std::string remove_quotes(const std::string &val);
+    ::std::string remove_quotes(const ::std::string &val);
 
     void print_linebuf(int eok);
 
     bool get_line();
-    bool handle_key(const std::string &c);
+    bool handle_key(const ::std::string &c);
 
     bool remove_whitespace();
 };
@@ -415,7 +415,7 @@ template <> inline const char *input::type_id<int>() { return "int"; }
 template <> inline const char *input::type_id<long>() { return "long"; }
 template <> inline const char *input::type_id<float>() { return "float"; }
 template <> inline const char *input::type_id<double>() { return "double"; }
-template <> inline const char *input::type_id<std::string>() { return "string"; }
+template <> inline const char *input::type_id<::std::string>() { return "string"; }
 template <> inline const char *input::type_id<Complex<float>>() {
     return "complex value";
 }

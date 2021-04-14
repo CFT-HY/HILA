@@ -18,9 +18,9 @@
 
 namespace hila {
 
-static std::string empty_key("");
+static ::std::string empty_key("");
 
-bool input::open(const std::string &fname, bool exit_on_error) {
+bool input::open(const ::std::string &fname, bool exit_on_error) {
     bool got_error = false;
     if (hila::myrank() == 0) {
         if (is_initialized) {
@@ -71,15 +71,15 @@ void input::close() {
 bool input::get_line() {
     if (hila::myrank() == 0) {
         do {
-            inputfile >> std::ws; // remove initial whitespace
-            if (!std::getline(inputfile, linebuffer)) {
+            inputfile >> ::std::ws; // remove initial whitespace
+            if (!::std::getline(inputfile, linebuffer)) {
                 linebuffer.clear();
                 lb_start = 0;
                 return false;
             }
         } while (linebuffer.at(0) == COMMENT_CHAR);
         size_t i = linebuffer.find(COMMENT_CHAR);
-        if (i != std::string::npos)
+        if (i != ::std::string::npos)
             linebuffer.resize(i);
         lb_start = 0;
 
@@ -97,7 +97,7 @@ void input::print_linebuf(int end_of_key) {
         is_line_printed = true;
 
         int i = 0;
-        while (std::isspace(linebuffer[i]))
+        while (::std::isspace(linebuffer[i]))
             i++;
         for (; i < linebuffer.size() && i < end_of_key; i++) {
             hila::output << linebuffer[i];
@@ -108,7 +108,7 @@ void input::print_linebuf(int end_of_key) {
                 hila::output << ' ';
         }
 
-        while (i < linebuffer.size() && std::isspace(linebuffer[i]))
+        while (i < linebuffer.size() && ::std::isspace(linebuffer[i]))
             i++;
         if (i < linebuffer.size()) {
             hila::output << linebuffer.substr(i);
@@ -120,7 +120,7 @@ void input::print_linebuf(int end_of_key) {
 // remove leading whitespace, incl. lines
 bool input::remove_whitespace() {
     if (hila::myrank() == 0) {
-        while (lb_start < linebuffer.size() && std::isspace(linebuffer[lb_start]))
+        while (lb_start < linebuffer.size() && ::std::isspace(linebuffer[lb_start]))
             lb_start++;
         if (lb_start == linebuffer.size())
             return get_line();
@@ -132,25 +132,25 @@ bool input::remove_whitespace() {
 // contains the word separated by whitespace.  If match found, advances the
 // lb_start to new position.  end_of_key is the index where key match on line ends
 
-bool input::contains_word_list(const std::string &list, int &end_of_key) {
+bool input::contains_word_list(const ::std::string &list, int &end_of_key) {
     const char *p = linebuffer.c_str() + lb_start;
     const char *q = list.c_str();
-    while (std::isspace(*p))
+    while (::std::isspace(*p))
         p++;
-    while (std::isspace(*q))
+    while (::std::isspace(*q))
         q++;
 
     while (*p && *q) {
         // compare non-space chars
-        while (*p && *q && *p == *q && !std::isspace(*q)) {
+        while (*p && *q && *p == *q && !::std::isspace(*q)) {
             p++;
             q++;
         }
-        if (std::isspace(*q) && std::isspace(*p)) {
+        if (::std::isspace(*q) && ::std::isspace(*p)) {
             // matching spaces, skip
-            while (std::isspace(*p))
+            while (::std::isspace(*p))
                 p++;
-            while (std::isspace(*q))
+            while (::std::isspace(*q))
                 q++;
         }
 
@@ -158,14 +158,14 @@ bool input::contains_word_list(const std::string &list, int &end_of_key) {
             break;
     }
     // if line contained the words in list, *q = 0.
-    while (std::isspace(*q))
+    while (::std::isspace(*q))
         q++;
     if (*q != 0)
         return false;
 
     end_of_key = p - linebuffer.c_str();
 
-    while (std::isspace(*p))
+    while (::std::isspace(*p))
         p++;
     lb_start = p - linebuffer.c_str();
     return true;
@@ -175,14 +175,14 @@ bool input::contains_word_list(const std::string &list, int &end_of_key) {
 // inside of " .. " is one token too.
 // returns true if the next token (on the same line) is found
 
-bool input::peek_token(std::string &tok) {
+bool input::peek_token(::std::string &tok) {
     if (!remove_whitespace())
         return false;
     size_t i;
     bool in_quotes = false;
     for (i = lb_start;
          i < linebuffer.size() &&
-         ((!std::isspace(linebuffer[i]) && linebuffer[i] != ',') || in_quotes);
+         ((!::std::isspace(linebuffer[i]) && linebuffer[i] != ',') || in_quotes);
          i++) {
         if (linebuffer[i] == '"') {
             in_quotes = !in_quotes;
@@ -201,7 +201,7 @@ bool input::peek_token(std::string &tok) {
 
 // consumes the token too
 
-bool input::get_token(std::string &tok) {
+bool input::get_token(::std::string &tok) {
     if (peek_token(tok)) {
         lb_start += tok.size();
         return true;
@@ -211,8 +211,8 @@ bool input::get_token(std::string &tok) {
 
 // match_token returns true and consumes the token if it matches the argument
 
-bool input::match_token(const std::string &tok) {
-    std::string s;
+bool input::match_token(const ::std::string &tok) {
+    ::std::string s;
     if (peek_token(s) && s == tok) {
         lb_start += tok.size();
         return true;
@@ -222,7 +222,7 @@ bool input::match_token(const std::string &tok) {
 
 // require the (typically beginning of line) key for parameters
 
-bool input::handle_key(const std::string &key) {
+bool input::handle_key(const ::std::string &key) {
     if (hila::myrank() == 0) {
         // check the linebuffer for stuff
         remove_whitespace();
@@ -243,30 +243,30 @@ bool input::handle_key(const std::string &key) {
 
 // is the input string int/double/string and return it
 
-bool input::is_value(const std::string &str, long &val) {
+bool input::is_value(const ::std::string &str, long &val) {
     char *lp;
-    val = std::strtol(str.c_str(), &lp, 10);
+    val = ::std::strtol(str.c_str(), &lp, 10);
     if (str.c_str() == lp || *lp)
         return false;
     return true;
 }
 
-bool input::is_value(const std::string &str, int &val) {
+bool input::is_value(const ::std::string &str, int &val) {
     long lval;
     bool b = this->is_value(str, lval);
     val = lval;
     return b;
 }
 
-bool input::is_value(const std::string &str, double &val) {
+bool input::is_value(const ::std::string &str, double &val) {
     char *lp;
-    val = std::strtod(str.c_str(), &lp);
+    val = ::std::strtod(str.c_str(), &lp);
     if (str.c_str() == lp || *lp)
         return false;
     return true;
 }
 
-bool input::is_value(const std::string &str, float &val) {
+bool input::is_value(const ::std::string &str, float &val) {
     double dval;
     bool b = this->is_value(str, dval);
     val = dval;
@@ -274,14 +274,14 @@ bool input::is_value(const std::string &str, float &val) {
 }
 
 // a trivial function, useful for template
-bool input::is_value(const std::string &str, std::string &val) {
+bool input::is_value(const ::std::string &str, ::std::string &val) {
     val = remove_quotes(str);
     return true;
 }
 
-std::string input::remove_quotes(const std::string &val) {
+::std::string input::remove_quotes(const ::std::string &val) {
     size_t i, j;
-    std::string res;
+    ::std::string res;
     res = val;
     for (j = i = 0; i < val.size(); i++)
         if (val[i] != '"')
@@ -290,16 +290,16 @@ std::string input::remove_quotes(const std::string &val) {
     return res;
 }
 
-//  expects "label   <item>"  -line, where <item> matches one of the std::strings in
+//  expects "label   <item>"  -line, where <item> matches one of the ::std::strings in
 //  items. returns the index of the item. If not found, errors out
 
-int input::get_item(const std::string &label, const std::vector<std::string> &items,
+int input::get_item(const ::std::string &label, const ::std::vector<::std::string> &items,
                     bool bcast) {
 
     bool no_error = handle_key(label);
     int item = -1;
     double d;
-    std::string s;
+    ::std::string s;
 
     if (hila::myrank() == 0) {
         if (no_error && peek_token(s)) {

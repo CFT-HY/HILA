@@ -543,15 +543,15 @@ namespace hila {
 ////////////////////////////////////////////////////////////////////////
 /// And utility templates
 /// Define is_complex<T>::value -template, using specialization
-template <typename T> struct is_complex : std::integral_constant<bool, false> {};
+template <typename T> struct is_complex : ::std::integral_constant<bool, false> {};
 
 template <typename T>
-struct is_complex<Complex<T>> : std::integral_constant<bool, true> {};
+struct is_complex<Complex<T>> : ::std::integral_constant<bool, true> {};
 
 // and a template is_complex_or_arithmetic<T>::value
 template <typename T>
 struct is_complex_or_arithmetic
-    : std::integral_constant<bool, hila::is_arithmetic<T>::value ||
+    : ::std::integral_constant<bool, hila::is_arithmetic<T>::value ||
                                        hila::is_complex<T>::value> {};
 
 /// Utility to check that the type contains complex numbers
