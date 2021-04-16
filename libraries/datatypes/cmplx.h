@@ -535,10 +535,6 @@ template <typename T> inline Complex<T> acosh(Complex<T> z) {
 
 
 
-
-
-
-
 namespace hila {
 ////////////////////////////////////////////////////////////////////////
 /// And utility templates
@@ -560,5 +556,22 @@ template <typename T>
 using contains_complex = hila::contains_type<T, Complex<hila::number_type<T>>>;
 
 } // namespace hila
+
+
+////////////////////////////////////////////////////////////////////////
+/// as_complex_array(T var)
+/// casts the var to a pointer to complex<number_type<T>>
+/// assuming var contains complex type.  This enables access 
+/// of complex elements as 
+///  as_complex_array(var)[i]
+////////////////////////////////////////////////////////////////////////
+
+template <typename T, std::enable_if_t<hila::contains_complex<T>::value,int> = 0>
+inline Complex<hila::number_type<T> *> as_complex_array(T & var) {
+    return (Complex<hila::number_type<T>> *)(void *)&var;
+}
+
+
+
 
 #endif
