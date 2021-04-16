@@ -348,6 +348,12 @@ template <const int n, const int m, typename T> class Matrix {
         return result;
     }
 
+    /// calculate vector norm - sqrt of squarenorm
+    hila::number_type<T> norm() const {
+        return sqrt(squarenorm());
+    }
+
+
     /// dot product - vector . vector
     template <int p, std::enable_if_t<(p == 1 && m == 1), int> = 0>
     inline T dot(const Matrix<n, p, T> &rhs) const {
@@ -637,6 +643,13 @@ template <int n, int m, typename T>
 inline hila::number_type<T> squarenorm(const Matrix<n, m, T> &rhs) {
     return rhs.squarenorm();
 }
+
+/// Vector norm - sqrt of squarenorm()
+template <int n, int m, typename T>
+inline hila::number_type<T> norm(const Matrix<n, m, T> &rhs) {
+    return rhs.norm();
+}
+
 
 /// Function that calls random()-method
 template <int n, int m, typename T>
