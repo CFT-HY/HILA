@@ -190,29 +190,6 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
             this->e(i) = *it;
     }
 
-#if 0
-#if NDIM == 2
-    explicit inline CoordinateVector_t(T a, T b) {
-        this->e(0) = a;
-        this->e(1) = b;
-    }
-
-#elif NDIM == 3
-    explicit inline CoordinateVector_t(T a, T b, T c) {
-        this->e(0) = a;
-        this->e(1) = b;
-        this->e(2) = c;
-    }
-
-#elif NDIM == 4
-    explicit inline CoordinateVector_t(T a, T b, T c, T d) {
-        this->e(0) = a;
-        this->e(1) = b;
-        this->e(2) = c;
-        this->e(3) = d;
-    }
-#endif
-#endif
 
     /// Construct from 0, using nullptr_t autocast
     inline CoordinateVector_t(std::nullptr_t z) { foralldir(d) this->e(d) = 0; }
