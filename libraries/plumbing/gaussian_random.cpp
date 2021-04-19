@@ -31,7 +31,7 @@ double hila::gaussian_ran2(double &out2) {
     return r * sin(phi);
 }
 
-#ifndef CUDA
+#if !defined(CUDA) && !defined(HIP)
 
 double hila::gaussian_ran() {
     static double second;

@@ -180,7 +180,7 @@ void hila::initialize(int argc, char **argv) {
     if (!hila::check_input) {
         initialize_communications(argc, &argv);
 
-#ifdef CUDA
+#if defined(CUDA) || defined(HIP)
         initialize_cuda(lattice->mynode.rank);
 #endif
     }
@@ -254,7 +254,7 @@ void hila::initialize(int argc, char **argv) {
     // error out if there are more cmdline options
     commandline.error_if_args_remain();
 
-#ifdef CUDA
+#if defined(CUDA) || defined(HIP)
     if (!hila::check_input)
         cuda_device_info();
 #endif
@@ -305,7 +305,7 @@ void hila::seed_random(unsigned long seed) {
     for (int i = 0; i < 90000; i++)
         mersenne();
 
-#ifdef CUDA
+#if defined(CUDA) || defined(HIP)
     double d = mersenne();
     seed = seed ^ (*(unsigned long *)(void *)&d);
     hila::seed_device_rng(seed);

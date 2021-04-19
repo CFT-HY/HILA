@@ -114,7 +114,7 @@ enum class fft_direction { forward, inverse };
 
 // Backend defs-headers
 
-#if defined(CUDA)
+#if defined(CUDA) || defined(HIP)
 #include "plumbing/backend_cuda/defs.h"
 #elif defined(AVX)
 #include "plumbing/backend_vector/defs.h"
@@ -128,7 +128,7 @@ enum class fft_direction { forward, inverse };
 // This contains useful template tools
 #include "plumbing/type_tools.h"
 
-#if defined(CUDA)
+#if defined(CUDA) || defined(HIP)
 #include "plumbing/backend_cuda/cuda_templated_ops.h"
 #endif
 

@@ -278,7 +278,7 @@ template <typename T> class Field {
 
             return (T *)payload.get_buffer() + from_node.offset(par);
 
-#elif defined(CUDA)
+#elif defined(CUDA) || defined(HIP)
 
             unsigned offs = 0;
             if (par == ODD)
@@ -402,7 +402,7 @@ template <typename T> class Field {
 
         for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
-#ifndef CUDA
+#if !defined(CUDA) && !defined(HIP)
             fs->neighbours[d] = lattice->neighb[d];
 #else
             fs->payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
@@ -527,7 +527,7 @@ template <typename T> class Field {
         check_alloc();
         fs->boundary_condition[dir] = bc;
         fs->boundary_condition[-dir] = bc;
-#ifndef CUDA
+#if !defined(CUDA) && !defined(HIP)
         fs->neighbours[dir] = lattice->get_neighbour_array(dir, bc);
         fs->neighbours[-dir] = lattice->get_neighbour_array(-dir, bc);
 #else

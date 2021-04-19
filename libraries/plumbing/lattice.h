@@ -19,7 +19,7 @@
 
 #ifdef SUBNODE_LAYOUT
 #ifndef VECTOR_SIZE
-#ifdef CUDA
+#if defined(CUDA) || defined(HIP)
 #define VECTOR_SIZE 8 // Size of float, length 1 vectors
 #else
 #define VECTOR_SIZE (256 / 8) // this is for AVX2
@@ -400,7 +400,7 @@ extern sublattices_struct sublattices;
 
 #ifdef VANILLA
 #include "plumbing/backend_cpu/lattice.h"
-#elif defined(CUDA)
+#elif defined(CUDA) || defined(HIP)
 #include "plumbing/backend_cuda/lattice.h"
 #elif defined(VECTORIZED)
 #include "plumbing/backend_vector/lattice_vector.h"

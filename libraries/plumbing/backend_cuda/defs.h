@@ -24,7 +24,6 @@
 
 #define N_threads 256 // Threads per block for CUDA   TODO: make configurable?
 
-using gpuRandState = curandState;
 using gpuError = cudaError;
 #define gpuSuccess cudaSuccess
 #define gpuMalloc(a,b) cudaMalloc(a,b)
@@ -53,7 +52,6 @@ inline void synchronize_threads() {
 
 #define N_threads 256 // Threads per block for CUDA
 
-using gpuRandState = hiprandState;
 using gpuError = hipError_t;
 #define gpuSuccess hipSuccess
 #define gpuMalloc(a,b) hipMalloc(a,b)
@@ -76,11 +74,6 @@ inline void synchronize_threads() {
 // General GPU (cuda/hip) definitions
 ////////////////////////////////////////////////////////////////////////////////////
 
-/* Random number generator */
-extern gpuRandState *gpurandstate;
-__device__ extern gpuRandState *d_gpurandstate;
-__global__ void seed_random_kernel(gpuRandState *state, unsigned long seed,
-                                   unsigned int stride);
 
 namespace hila {
 __device__ __host__ double random();

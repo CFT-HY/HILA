@@ -1,7 +1,7 @@
 #ifndef HILA_FFT_H
 #define HILA_FFT_H
 
-#ifndef CUDA
+#if !defined(CUDA) && !defined(HIP)
 #define USE_FFTW
 #endif
 
@@ -276,7 +276,7 @@ template <typename cmplx_t> class hila_fft {
 
 #include "plumbing/fft_fftw_transform.h"
 
-#elif defined(CUDA)
+#elif defined(CUDA) || defined(HIP)
 
 #include "plumbing/backend_cuda/fft_cuda_transform.h"
 

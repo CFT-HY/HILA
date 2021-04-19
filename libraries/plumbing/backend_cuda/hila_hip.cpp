@@ -13,21 +13,25 @@
 
 #if defined(CUDA)
 
+using gpurandState = curandState;
 #define gpurand_init  curand_init
 #define gpurand_uniform curand_uniform
-#define gpuMemcpyToSymbol(a,b,size,dir) cudaMemcpyToSymbol(a,b,size,dir)
+#define gpuMemcpyToSymbol(a,b,size,c,dir) cudaMemcpyToSymbol(a,b,size,c,dir)
 #define gpuGetDeviceCount cudaGetDeviceCount
 #define gpuSetDevice cudaSetDevice
 #define gpuGetLastError cudaGetLastError
+#define gpuGetErrorString cudaGetErrorString
 
 #elif defined(HIP)
 
+using gpurandState = hiprandState;
 #define gpurand_init  hiprand_init
 #define gpurand_uniform hiprand_uniform
-#define gpuMemcpyToSymbol(a,b,size,dir) hipMemcpyToSymbol(HIP_SYMBOL(a),b,size,0,dir)
+#define gpuMemcpyToSymbol(a,b,size,c,dir) hipMemcpyToSymbol(HIP_SYMBOL(a),b,size,c,dir)
 #define gpuGetDeviceCount hipGetDeviceCount
 #define gpuSetDevice hipSetDevice
 #define gpuGetLastError hipGetLastError
+#define gpuGetErrorString hipGetErrorString
 
 #endif
 
@@ -59,7 +63,7 @@ void hila::seed_device_rng(unsigned long seed) {
     unsigned long n_sites = N_threads * n_blocks * iters_per_kernel;
     unsigned long myseed = seed + hila::myrank() * n_sites;
     gpuMalloc(&gpurandstate, n_sites * sizeof(gpurandState));
-    check_gpu_error("seed_random malloc");
+    check_device_error("seed_random malloc");
 #ifdef CUDA
     seed_random_kernel<<<n_blocks, N_threads>>>(gpurandstate, myseed, iters_per_kernel,
                                                 n_blocks * N_threads);
@@ -68,7 +72,7 @@ void hila::seed_device_rng(unsigned long seed) {
                                                 gpurandstate, myseed, iters_per_kernel,
                                                 n_blocks * N_threads);
 #endif
-    check_gpu_error("seed_random kernel");
+    check_device_error("seed_random kernel");
 
 }
 
@@ -76,7 +80,7 @@ void hila::seed_device_rng(unsigned long seed) {
 __device__ __host__ double hila::random() {
 #ifdef __GPU_DEVICE_COMPILE__
     int x = threadIdx.x + blockIdx.x * blockDim.x;
-    return gpurand_uniform(&d_hiprandstate[x]);
+    return gpurand_uniform(&d_gpurandstate[x]);
 #else
     return mersenne();
 #endif
@@ -114,33 +118,33 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
     for (int d = 0; d < NDIRS; d++) {
         // For normal boundaries
         gpuMalloc((void **)&(d_neighb[d]), lattice->mynode.volume() * sizeof(unsigned));
-        check_gpu_error("gpuMalloc device neighbour array");
+        check_device_error("gpuMalloc device neighbour array");
         gpuMemcpy(d_neighb[d], lattice->neighb[d],
                    lattice->mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
-        check_gpu_error("gpuMemcpy device neighbour array");
+        check_device_error("gpuMemcpy device neighbour array");
 
         // For special boundaries
         gpuMalloc((void **)&(d_neighb_special[d]),
                    lattice->mynode.volume() * sizeof(unsigned));
-        check_gpu_error("gpuMalloc device neighbour array");
+        check_device_error("gpuMalloc device neighbour array");
         const unsigned *special_neighb =
             lattice->get_neighbour_array((Direction)d, BoundaryCondition::ANTIPERIODIC);
         gpuMemcpy(d_neighb_special[d], special_neighb,
                    lattice->mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
-        check_gpu_error("gpuMemcpy device neighbour array");
+        check_device_error("gpuMemcpy device neighbour array");
     }
 
     /* Setup the location field */
     gpuMalloc((void **)&(d_coordinates),
               lattice->mynode.volume() * sizeof(CoordinateVector));
-    check_gpu_error("gpuMalloc device coordinate array");
+    check_device_error("gpuMalloc device coordinate array");
     tmp = (CoordinateVector *)memalloc(lattice->mynode.volume() * sizeof(CoordinateVector));
     for (int i = 0; i < lattice->mynode.volume(); i++)
         tmp[i] = lattice->coordinates(i);
 
     gpuMemcpy(d_coordinates, tmp, lattice->mynode.volume() * sizeof(CoordinateVector),
              gpuMemcpyHostToDevice);
-    check_gpu_error("gpuMemcpy device coordinate array");
+    check_device_error("gpuMemcpy device coordinate array");
     free(tmp);
 
     // Other backe nd_lattice parameters
@@ -148,17 +152,17 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
 
     int s[NDIM];
     foralldir(d) s[d] = lattice->size(d);
-    gpuMemcpyToSymbol(_d_size, s, sizeof(int) * NDIM, gpuMemcpyHostToDevice);
+    gpuMemcpyToSymbol(_d_size, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
     int64_t v = lattice->volume();
-    gpuMemcpyToSymbol(_d_volume, &v, sizeof(int64_t), gpuMemcpyHostToDevice);
-    check_gpu_error("gpuMemcpy to size or volume");
+    gpuMemcpyToSymbol(_d_volume, &v, sizeof(int64_t), 0, gpuMemcpyHostToDevice);
+    check_device_error("gpuMemcpy to size or volume");
 }
 
 void initialize_cuda(int rank) {
     int n_devices, my_device;
 
     gpuGetDeviceCount(&n_devices);
-    check_gpu_error("Could not get device count");
+    check_device_error("Could not get device count");
     // This assumes that each node has the same number of mpi ranks and GPUs
     my_device = rank % n_devices;
 
@@ -259,7 +263,7 @@ void gpu_exit_on_error(const char *msg, const char *file, int line) {
     if (gpuSuccess != code) {
         hila::output << "CUDA error: " << msg << " in file " << file << " line " << line
                      << '\n';
-        hila::output << "CUDA error string: " << hipGetErrorString(code) << "\n";
+        hila::output << "CUDA error string: " << gpuGetErrorString(code) << "\n";
 
         hila::terminate(0);
     }
@@ -269,7 +273,7 @@ void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int lin
     if (gpuSuccess != code) {
         hila::output << "CUDA error: " << msg << " in file " << file << " line " << line
                      << '\n';
-        hila::output << "CUDA error string: " << hipGetErrorString(code) << "\n";
+        hila::output << "CUDA error string: " << gpuGetErrorString(code) << "\n";
 
         hila::terminate(0);
     }

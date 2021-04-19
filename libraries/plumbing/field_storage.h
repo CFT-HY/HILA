@@ -105,7 +105,7 @@ Import backend
 
 #include "plumbing/backend_vector/field_storage_backend.h"
 
-#elif defined(CUDA)
+#elif defined(CUDA) || defined(HIP)
 
 #include "plumbing/backend_cuda/field_storage_backend.h"
 
@@ -113,7 +113,7 @@ Import backend
 
 #include "plumbing/backend_cpu/field_storage_backend.h"
 
-#elif
+#else
 Something must be defined !
 
 #endif

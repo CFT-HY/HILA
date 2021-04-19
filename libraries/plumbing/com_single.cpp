@@ -16,7 +16,7 @@ void initialize_machine(int &argc, char ***argv) {
         lattice->mynode.rank = 0;
         lattice->nodes.number = 1;
 
-#ifdef CUDA
+#if defined(CUDA) || defined(HIP)
         initialize_cuda(0);
 #endif
         initialized = true;
