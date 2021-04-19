@@ -48,7 +48,8 @@ struct node_info {
 /// this through lattice->backend_lattice.
 struct backend_lattice_struct;
 
-/// The lattice struct defines the lattice geometry ans sets up MPI communication patterns
+/// The lattice struct defines the lattice geometry ans sets up MPI communication
+/// patterns
 class lattice_struct {
   private:
     // Use ints instead of unsigned, just to avoid surprises in arithmetics
@@ -82,7 +83,9 @@ class lattice_struct {
         } subnodes;
 #endif
 
-        unsigned volume() { return sites; }
+        unsigned volume() {
+            return sites;
+        }
 
     } mynode;
 
@@ -183,9 +186,9 @@ class lattice_struct {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     /// special boundary pointers are needed only in cases neighbour
-    /// pointers must be modified (new halo elements). That is known only during runtime.
-    /// is_on_edget is the only "general" info element here, true if the node to Direction
-    /// dir is on lattice edge.
+    /// pointers must be modified (new halo elements). That is known only during
+    /// runtime. is_on_edget is the only "general" info element here, true if the node
+    /// to Direction dir is on lattice edge.
     struct special_boundary_struct {
         unsigned *neighbours;
         unsigned *move_index;
@@ -218,7 +221,7 @@ class lattice_struct {
     backend_lattice_struct *backend_lattice;
 #endif
 
-    void setup(const CoordinateVector & siz);
+    void setup(const CoordinateVector &siz);
     void setup_layout();
     void setup_nodes();
 
@@ -226,17 +229,31 @@ class lattice_struct {
 
     // Std accessors:
     // volume
-    int64_t volume() const { return l_volume; }
+    int64_t volume() const {
+        return l_volume;
+    }
 
     // size routines
-    int size(Direction d) const { return l_size[d]; }
-    int size(int d) const { return l_size[d]; }
-    CoordinateVector size() const { return l_size; }
+    int size(Direction d) const {
+        return l_size[d];
+    }
+    int size(int d) const {
+        return l_size[d];
+    }
+    CoordinateVector size() const {
+        return l_size;
+    }
 
-    CoordinateVector mod_size(const CoordinateVector &v) const { return mod(v, l_size); }
+    CoordinateVector mod_size(const CoordinateVector &v) const {
+        return mod(v, l_size);
+    }
 
-    int node_rank() const { return mynode.rank; }
-    int n_nodes() const { return nodes.number; }
+    int node_rank() const {
+        return mynode.rank;
+    }
+    int n_nodes() const {
+        return nodes.number;
+    }
     // std::vector<node_info> nodelist() { return nodes.nodelist; }
     // CoordinateVector min_coordinate() const { return mynode.min; }
     // int min_coordinate(Direction d) const { return mynode.min[d]; }
@@ -245,14 +262,18 @@ class lattice_struct {
     int node_rank(const CoordinateVector &c);
     unsigned site_index(const CoordinateVector &c);
     unsigned site_index(const CoordinateVector &c, const unsigned node);
-    unsigned field_alloc_size() const { return mynode.field_alloc_size; }
+    unsigned field_alloc_size() const {
+        return mynode.field_alloc_size;
+    }
 
     void create_std_gathers();
     gen_comminfo_struct create_general_gather(const CoordinateVector &r);
-    std::vector<comm_node_struct> create_comm_node_vector(CoordinateVector offset,
-                                                          unsigned *index, bool receive);
+    std::vector<comm_node_struct>
+    create_comm_node_vector(CoordinateVector offset, unsigned *index, bool receive);
 
-    bool first_site_even() { return mynode.first_site_even; };
+    bool first_site_even() {
+        return mynode.first_site_even;
+    };
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     void init_special_boundaries();
@@ -323,7 +344,9 @@ class lattice_struct {
         return coordinates(idx) - mynode.min;
     }
 
-    lattice_struct::nn_comminfo_struct get_comminfo(int d) { return nn_comminfo[d]; }
+    lattice_struct::nn_comminfo_struct get_comminfo(int d) {
+        return nn_comminfo[d];
+    }
 
     /* MPI functions and variables. Define here in lattice? */
     void initialize_wait_arrays();
@@ -334,24 +357,26 @@ class lattice_struct {
     // Guarantee 64 bits for these - 32 can overflow!
     int64_t n_gather_done = 0, n_gather_avoided = 0;
 
-    template <typename T> 
+    template <typename T>
     void reduce_node_sum(T *value, int N, bool distribute = true);
-    
+
     template <typename T>
     void reduce_node_product(T *value, int N, bool distribute = true);
 
 #else
 
     // define to nothing
-    template <typename T> void reduce_node_sum(T *value, int N, bool distribute) {}
-    template <typename T> void reduce_node_product(T *value, int N, bool distribute) {}
+    template <typename T>
+    void reduce_node_sum(T *value, int N, bool distribute) {}
+    template <typename T>
+    void reduce_node_product(T *value, int N, bool distribute) {}
 
 #endif
 
     // simple reduce_node_sum for single variable
-    template <typename T> T reduce_node_sum(T &value, bool distribute = true) {
-        if (!hila::check_input) 
-            reduce_node_sum(&value, 1, distribute);
+    template <typename T>
+    T reduce_node_sum(T &value, bool distribute = true) {
+        if (!hila::check_input) reduce_node_sum(&value, 1, distribute);
         return value;
     }
 };

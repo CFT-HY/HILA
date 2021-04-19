@@ -95,6 +95,7 @@ using type_mul = decltype(std::declval<A>() * std::declval<B>());
 template <typename A, typename B>
 using type_div = decltype(std::declval<A>() / std::declval<B>());
 
+
 } // namespace hila
 
 #endif

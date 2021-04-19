@@ -145,10 +145,10 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
                 unsigned *d_site_index;
                 int n = sitelist[c].size();
                 auto status = cudaMalloc((void **)&(d_site_index), n * sizeof(unsigned));
-                check_cuda_error_code(status, "FFT allocate Field memory");
+                check_device_error_code(status, "FFT allocate Field memory");
                 cudaMemcpy(d_site_index, sitelist[c].data(), n * sizeof(unsigned),
                            cudaMemcpyHostToDevice);
-                check_cuda_error_code(status, "FFT memcopy 1");
+                check_device_error_code(status, "FFT memcopy 1");
 
                 int N_blocks = n / N_threads + 1;
                 gather_elements_kernel<<<N_blocks, N_threads>>>(
@@ -227,7 +227,7 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
 template <typename T, typename complex_type>
 inline void FFT_field_complex(Field<T> &input, Field<T> &result,
                               fft_direction fftdir = fft_direction::forward) {
-    check_cuda_error("FFT check for past errors");
+    check_device_error("FFT check for past errors");
 
     lattice_struct *lattice = input.fs->lattice;
     Field<T> *read_pointer = &input; // Read from input on first time, then work in result
@@ -244,7 +244,7 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
 
     // Run transform in all directions
     foralldir(dir) {
-        check_cuda_error("FFT check before cycle");
+        check_device_error("FFT check before cycle");
         // Get the number of sites per column on this node and on all nodes
         size_t node_column_size = lattice->mynode.size[dir];
         size_t column_size = lattice->size(dir);
@@ -276,7 +276,7 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
             sizeof(cufftDoubleComplex) * column_size * BATCH);
         cufftPlan1d(&plan, column_size, CUFFT_Z2Z, BATCH); // Z2Z for double, C2C for
                                                            // float
-        check_cuda_error("FFT plan");
+        check_device_error("FFT plan");
 
         // Construct lists of sites for each column
         std::vector<std::vector<unsigned>> sitelist(cols);
@@ -306,7 +306,7 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
                 read_pointer->fs->payload.gather_elements((T *)(sendbuf + col_size * l),
                                                           sitelist[c].data(),
                                                           sitelist[c].size(), lattice);
-                check_cuda_error("FFT gather");
+                check_device_error("FFT gather");
             }
             MPI_Request request;
             MPI_Igather(sendbuf, cpn * node_column_size * sizeof(T), MPI_BYTE,
@@ -321,7 +321,7 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
         cufftDoubleComplex *d_data;
         auto status = cudaMalloc((void **)&d_data,
                                  sizeof(cufftDoubleComplex) * column_size * BATCH);
-        check_cuda_error_code(status, "FFT allocate memory");
+        check_device_error_code(status, "FFT allocate memory");
 
         // Wait for my data
         MPI_Status mpi_status;
@@ -350,20 +350,20 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
         status =
             cudaMemcpy(d_data, data, sizeof(cufftDoubleComplex) * column_size * BATCH,
                        cudaMemcpyHostToDevice);
-        check_cuda_error_code(status, "FFT copy");
+        check_device_error_code(status, "FFT copy");
 
         // Run the fft
         int direction =
             (fftdir == fft_direction::forward) ? CUFFT_FORWARD : CUFFT_INVERSE;
         cufftExecZ2Z(plan, d_data, d_data, direction);
-        check_cuda_error("Run FFT");
+        check_device_error("Run FFT");
         cudaDeviceSynchronize();
 
         // Copy result back
         status =
             cudaMemcpy(data, d_data, sizeof(cufftDoubleComplex) * column_size * BATCH,
                        cudaMemcpyDeviceToHost);
-        check_cuda_error_code(status, "FFT copy back");
+        check_device_error_code(status, "FFT copy back");
 
         // Reorganize back into elements
         for (int l = 0; l < cpn; l++) {          // Columns
@@ -387,7 +387,7 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
 
         // Free the CUDA buffers
         status = cudaFree(d_data);
-        check_cuda_error_code(status, "FFT CUDA free");
+        check_device_error_code(status, "FFT CUDA free");
 
         // Now reverse the gather operation. After this each node will have its original
         // local sites The scatter operation cannot be asynchronous, but this coul dbe
@@ -404,14 +404,14 @@ inline void FFT_field_complex(Field<T> &input, Field<T> &result,
                 result.fs->payload.place_elements((T *)(sendbuf + col_size * l),
                                                   sitelist[c].data(), sitelist[c].size(),
                                                   lattice);
-                check_cuda_error("FFT place");
+                check_device_error("FFT place");
             }
         }
 
         read_pointer = &result; // From now on we work in result
-        check_cuda_error("before cufftDestroy");
+        check_device_error("before cufftDestroy");
         cufftDestroy(plan);
-        check_cuda_error("Destroy plan");
+        check_device_error("Destroy plan");
         free(data);
     }
 

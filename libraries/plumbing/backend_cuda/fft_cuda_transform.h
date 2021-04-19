@@ -102,7 +102,7 @@ template <typename cmplx_t> void hila_fft<cmplx_t>::transform() {
 
     // CUFFT_C2C for float transform, Z2Z for double
     cufftPlan1d(&plan, lattice->size(dir), is_float ? CUFFT_C2C : CUFFT_Z2Z, batch);
-    check_cuda_error("FFT plan");
+    check_device_error("FFT plan");
 
     fft_plan_timer.stop();
 
@@ -137,7 +137,7 @@ template <typename cmplx_t> void hila_fft<cmplx_t>::transform() {
         cmplx_t *cp = fft_wrk + i * (batch * lattice->size(dir));
 
         cufft_execute(plan, cp, direction);
-        check_cuda_error("FFT execute");
+        check_device_error("FFT execute");
 
         fft_execute_timer.stop();
     }

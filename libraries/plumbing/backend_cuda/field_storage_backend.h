@@ -4,12 +4,12 @@
 #include "../defs.h"
 #include "../field_storage.h"
 
-/* CUDA implementations */
+/* CUDA / HIP implementations */
 template <typename T> 
 void field_storage<T>::allocate_field(lattice_struct *lattice) {
     // Allocate space for the field of the device
-    auto status = cudaMalloc((void **)&fieldbuf, sizeof(T) * lattice->field_alloc_size());
-    check_cuda_error_code(status, "Allocate field memory");
+    auto status = gpuMalloc((void **)&fieldbuf, sizeof(T) * lattice->field_alloc_size());
+    check_device_error_code(status, "Allocate field memory");
     if (fieldbuf == nullptr) {
         std::cout << "Failure in field memory allocation\n";
     }
@@ -19,15 +19,15 @@ void field_storage<T>::allocate_field(lattice_struct *lattice) {
 template <typename T> 
 void field_storage<T>::free_field() {
     if (fieldbuf != nullptr) {
-        auto status = cudaFree(fieldbuf);
-        check_cuda_error_code(status, "Free field memory");
+        auto status = gpuFree(fieldbuf);
+        check_device_error_code(status, "Free field memory");
     }
     fieldbuf = nullptr;
 }
 
 // Only attempt to compile with CUDA compiler.
 // Hilapp will skip these.
-#ifdef __CUDACC__
+#if defined(__CUDACC__) || defined(__HIPCC__)
 
 // These are used in device code. Can be called directly in a kernel.
 template <typename T>
@@ -74,12 +74,12 @@ auto field_storage<T>::get_element(const unsigned i,
     T value;
 
     // Call the kernel to collect the element
-    cudaMalloc((void **)&(d_buffer), sizeof(T));
+    gpuMalloc((void **)&(d_buffer), sizeof(T));
     get_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->field_alloc_size());
 
     // Copy the result to the host
-    cudaMemcpy((char *)(&value), d_buffer, sizeof(T), cudaMemcpyDeviceToHost);
-    cudaFree(d_buffer);
+    gpuMemcpy((char *)(&value), d_buffer, sizeof(T), gpuMemcpyDeviceToHost);
+    gpuFree(d_buffer);
     return value;
 }
 
@@ -98,12 +98,12 @@ void field_storage<T>::set_element(A &value, const unsigned i,
     T t_value = value;
 
     // Allocate space and copy the buffer to the device
- //   cudaMalloc((void **)&(d_buffer), sizeof(T));
- //   cudaMemcpy(d_buffer, (char *)&t_value, sizeof(T), cudaMemcpyHostToDevice);
+ //   gpuMalloc((void **)&(d_buffer), sizeof(T));
+ //   gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
 
     // call the kernel to set correct indexes
  //   set_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->field_alloc_size());
- //   cudaFree(d_buffer);
+ //   gpuFree(d_buffer);
 
     set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice->field_alloc_size());
 }
@@ -128,20 +128,20 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer,
     T *d_buffer;
 
     // Copy the list of boundary site indexes to the device
-    cudaMalloc((void **)&(d_site_index), n * sizeof(unsigned));
-    cudaMemcpy(d_site_index, index_list, n * sizeof(unsigned), cudaMemcpyHostToDevice);
+    gpuMalloc((void **)&(d_site_index), n * sizeof(unsigned));
+    gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
     // Call the kernel to build the list of elements
-    cudaMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
     int N_blocks = n / N_threads + 1;
     gather_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
                                                     lattice->field_alloc_size());
 
     // Copy the result to the host
-    cudaMemcpy((char *)buffer, d_buffer, n * sizeof(T), cudaMemcpyDeviceToHost);
+    gpuMemcpy((char *)buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
 
-    cudaFree(d_site_index);
-    cudaFree(d_buffer);
+    gpuFree(d_site_index);
+    gpuFree(d_buffer);
 }
 
 /// A kernel that gathers elements negated
@@ -171,20 +171,20 @@ void field_storage<T>::gather_elements_negated(
     }
 
     // Copy the list of boundary site indexes to the device
-    cudaMalloc((void **)&(d_site_index), n * sizeof(unsigned));
-    cudaMemcpy(d_site_index, index_list, n * sizeof(unsigned), cudaMemcpyHostToDevice);
+    gpuMalloc((void **)&(d_site_index), n * sizeof(unsigned));
+    gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
     // Call the kernel to build the list of elements
-    cudaMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
     int N_blocks = n / N_threads + 1;
     gather_elements_negated_kernel<<<N_blocks, N_threads>>>(
         *this, d_buffer, d_site_index, n, lattice->field_alloc_size());
 
     // Copy the result to the host
-    cudaMemcpy(buffer, d_buffer, n * sizeof(T), cudaMemcpyDeviceToHost);
+    gpuMemcpy(buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
 
-    cudaFree(d_site_index);
-    cudaFree(d_buffer);
+    gpuFree(d_site_index);
+    gpuFree(d_buffer);
 }
 
 template <typename T>
@@ -241,9 +241,9 @@ inline unsigned *get_site_index(const lattice_struct::comm_node_struct &to_node,
     struct cuda_comm_node_struct comm_node;
     comm_node.cpu_index = cpu_index;
     comm_node.n = n;
-    cudaMalloc((void **)&(comm_node.gpu_index), n * sizeof(unsigned));
-    cudaMemcpy(comm_node.gpu_index, cpu_index, n * sizeof(unsigned),
-               cudaMemcpyHostToDevice);
+    gpuMalloc((void **)&(comm_node.gpu_index), n * sizeof(unsigned));
+    gpuMemcpy(comm_node.gpu_index, cpu_index, n * sizeof(unsigned),
+               gpuMemcpyHostToDevice);
     comm_nodes.push_back(comm_node);
     return comm_node.gpu_index;
 }
@@ -263,7 +263,7 @@ void field_storage<T>::gather_comm_elements(
     d_buffer = buffer;
 #else
     // Allocate a buffer on the device
-    cudaMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
 #endif
 
     // Call the kernel to build the list of elements
@@ -278,8 +278,8 @@ void field_storage<T>::gather_comm_elements(
 
 #ifndef CUDA_AWARE_MPI
     // Copy the result to the host
-    cudaMemcpy((char *)buffer, d_buffer, n * sizeof(T), cudaMemcpyDeviceToHost);
-    cudaFree(d_buffer);
+    gpuMemcpy((char *)buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
+    gpuFree(d_buffer);
 #endif
 }
 
@@ -303,20 +303,20 @@ void field_storage<T>::place_elements(T *RESTRICT buffer,
     T *d_buffer;
 
     // Allocate space and copy the buffer to the device
-    cudaMalloc((void **)&(d_buffer), n * sizeof(T));
-    cudaMemcpy(d_buffer, buffer, n * sizeof(T), cudaMemcpyHostToDevice);
+    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMemcpy(d_buffer, buffer, n * sizeof(T), gpuMemcpyHostToDevice);
 
     // Copy the list of boundary site indexes to the device
-    cudaMalloc((void **)&(d_site_index), n * sizeof(unsigned));
-    cudaMemcpy(d_site_index, index_list, n * sizeof(unsigned), cudaMemcpyHostToDevice);
+    gpuMalloc((void **)&(d_site_index), n * sizeof(unsigned));
+    gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
     // Call the kernel to place the elements
     int N_blocks = n / N_threads + 1;
     place_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
                                                    lattice->field_alloc_size());
 
-    cudaFree(d_buffer);
-    cudaFree(d_site_index);
+    gpuFree(d_buffer);
+    gpuFree(d_site_index);
 }
 
 template <typename T>
@@ -351,19 +351,19 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
         unsigned offset = lattice->special_boundaries[dir].offset + start;
 
         unsigned *d_site_index;
-        check_cuda_error("earlier");
-        cudaMalloc((void **)(&d_site_index), n * sizeof(unsigned));
-        check_cuda_error("set_local_boundary_elements: cudaMalloc");
-        cudaMemcpy(d_site_index, lattice->special_boundaries[dir].move_index + start,
-                   n * sizeof(unsigned), cudaMemcpyHostToDevice);
-        check_cuda_error("set_local_boundary_elements: cudaMemcpy");
+        check_device_error("earlier");
+        gpuMalloc((void **)(&d_site_index), n * sizeof(unsigned));
+        check_device_error("set_local_boundary_elements: gpuMalloc");
+        gpuMemcpy(d_site_index, lattice->special_boundaries[dir].move_index + start,
+                   n * sizeof(unsigned), gpuMemcpyHostToDevice);
+        check_device_error("set_local_boundary_elements: gpuMemcpy");
 
         unsigned N_blocks = n / N_threads + 1;
         set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(
             *this, offset, d_site_index, n, lattice->field_alloc_size());
 
-        cudaFree(d_site_index);
-        check_cuda_error("set_local_boundary_elements: cudaFree");
+        gpuFree(d_site_index);
+        check_device_error("set_local_boundary_elements: gpuFree");
     }
 }
 
@@ -400,8 +400,8 @@ void field_storage<T>::place_comm_elements(
     d_buffer = buffer;
 #else
     // Allocate space and copy the buffer to the device
-    cudaMalloc((void **)&(d_buffer), n * sizeof(T));
-    cudaMemcpy(d_buffer, buffer, n * sizeof(T), cudaMemcpyHostToDevice);
+    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMemcpy(d_buffer, buffer, n * sizeof(T), gpuMemcpyHostToDevice);
 #endif
 
     unsigned N_blocks = n / N_threads + 1;
@@ -409,19 +409,19 @@ void field_storage<T>::place_comm_elements(
         (*this), d_buffer, from_node.offset(par), n, lattice->field_alloc_size());
 
 #ifndef CUDA_AWARE_MPI
-    cudaFree(d_buffer);
+    gpuFree(d_buffer);
 #endif
 }
 
 #ifdef CUDA_AWARE_MPI
 
 template <typename T> void field_storage<T>::free_mpi_buffer(T *d_buffer) {
-    cudaFree(d_buffer);
+    gpuFree(d_buffer);
 }
 
 template <typename T> T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
     T *d_buffer;
-    cudaMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
     return d_buffer;
 }
 

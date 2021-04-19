@@ -70,14 +70,14 @@ template <typename T> T cuda_reduce_sum(T *vector, int N) {
         int blocks = (new_size - 1) / N_threads + 1;
         cuda_reduce_sum_kernel<<<blocks, N_threads>>>(vector + first, vector_size,
                                                       new_size, reduce_step);
-        check_cuda_error("cuda_reduce_sum kernel");
+        check_device_error("cuda_reduce_sum kernel");
         // Find the full size of the resulting array
         vector_size = new_size + first;
         cudaDeviceSynchronize();
     }
 
     cudaMemcpy(host_vector, vector, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
-    check_cuda_error("Memcpy in reduction");
+    check_device_error("Memcpy in reduction");
 
     for (int i = 0; i < vector_size; i++) {
         sum += host_vector[i];
@@ -120,9 +120,9 @@ template <typename T> T cuda_reduce_prod(T *vector, int N) {
         cudaDeviceSynchronize();
     }
 
-    check_cuda_error("cuda_reduce_prod kernel");
+    check_device_error("cuda_reduce_prod kernel");
     cudaMemcpy(host_vector, vector, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
-    check_cuda_error("Memcpy in reduction");
+    check_device_error("Memcpy in reduction");
 
     for (int i = 0; i < vector_size; i++) {
         prod *= host_vector[i];

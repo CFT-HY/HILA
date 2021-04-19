@@ -57,15 +57,15 @@ void *memalloc(std::size_t size) { return memalloc(size, nullptr, 0); }
 
 void *d_malloc(std::size_t size) { 
 
-#ifndef CUDA
+#if !defined(CUDA) && !defined(HIP)
 
     return memalloc(size);
 
 #else
 
     void * p;
-    cudaMalloc(&p, size);
-    check_cuda_error("d_malloc error");
+    gpuMalloc(&p, size);
+    check_device_error("d_malloc error");
     return p;
 
 #endif
@@ -74,14 +74,14 @@ void *d_malloc(std::size_t size) {
 
 void d_free(void *dptr) {
 
-#ifndef CUDA
+#if !defined(CUDA) && !defined(HIP)
 
     if (dptr != nullptr) free(dptr);
 
 #else
 
-    cudaFree(dptr);
-    check_cuda_error("CUDA d_free");
+    gpuFree(dptr);
+    check_device_error("CUDA/HIP d_free");
 
 #endif
 
