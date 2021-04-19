@@ -12,8 +12,8 @@
 #include <sstream>
 #include <iostream>
 #include <string>
-// #include <filesystem>  <- this should be used for pathname resolution, but llvm-9 does
-// not properly handle
+// #include <filesystem>  <- this should be used for pathname resolution, but llvm-9
+// does not properly handle
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -83,9 +83,9 @@ llvm::cl::opt<bool>
                       llvm::cl::desc("Comment function call types in output"),
                       llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::no_output("no-output",
-                                       llvm::cl::desc("No output file, for syntax check"),
-                                       llvm::cl::cat(HilappCategory));
+llvm::cl::opt<bool>
+    cmdline::no_output("no-output", llvm::cl::desc("No output file, for syntax check"),
+                       llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::syntax_only("syntax-only",
                                          llvm::cl::desc("Same as no-output"),
@@ -101,22 +101,28 @@ llvm::cl::opt<bool>
                     llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::no_interleaved_comm(
-    "no-interleave", llvm::cl::desc("Do not interleave communications with computation"),
+    "no-interleave",
+    llvm::cl::desc("Do not interleave communications with computation"),
     llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::check_initialization("check-init",
-    llvm::cl::desc("Insert checks that Field variables are appropriately initialized before use"),
+llvm::cl::opt<bool> cmdline::check_initialization(
+    "check-init",
+    llvm::cl::desc(
+        "Insert checks that Field variables are appropriately initialized before use"),
     llvm::cl::cat(HilappCategory));
 
 // List of targets that can be specified in command line arguments
-
 
 llvm::cl::opt<bool> cmdline::vanilla("target:vanilla",
                                      llvm::cl::desc("Generate loops in place"),
                                      llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::CUDA("target:CUDA", llvm::cl::desc("Generate CUDA kernels"),
+llvm::cl::opt<bool> cmdline::CUDA("target:CUDA",
+                                  llvm::cl::desc("Generate CUDA kernels"),
                                   llvm::cl::cat(HilappCategory));
+
+llvm::cl::opt<bool> cmdline::HIP("target:HIP", llvm::cl::desc("Generate HIP kernels"),
+                                 llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::AVX512("target:AVX512",
                                     llvm::cl::desc("Generate AVX512 vectorized loops"),
@@ -151,11 +157,11 @@ llvm::cl::opt<int>
                        llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),
                        llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<int>
-    cmdline::avx_info("AVXinfo",
-                      llvm::cl::desc("AVX vectorization information level 0-2. 0 quiet, "
-                                     "1 not vectorizable loops, 2 all loops"),
-                      llvm::cl::cat(HilappCategory));
+llvm::cl::opt<int> cmdline::avx_info(
+    "AVXinfo",
+    llvm::cl::desc("AVX vectorization information level 0-2. 0 quiet, "
+                   "1 not vectorizable loops, 2 all loops"),
+    llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::comment_pragmas(
     "comment-pragmas", llvm::cl::desc("Comment out '#pragma hila' -pragmas in output"),
@@ -184,6 +190,8 @@ const char **cmdline::argv;
 void handle_cmdline_arguments(codetype &target) {
     if (cmdline::CUDA) {
         target.cuda = true;
+    } else if (cmdline::HIP) {
+        target.hip = true;
     } else if (cmdline::openacc) {
         target.openacc = true;
     } else if (cmdline::AVX) {
@@ -200,16 +208,18 @@ void handle_cmdline_arguments(codetype &target) {
         target.vector_size = cmdline::vectorize;
     }
 
-    if (cmdline::CUDA) 
+    if (cmdline::CUDA || cmdline::HIP)
         target.kernelize = true;
 
-    if (cmdline::CUDA || cmdline::openacc)
+    if (cmdline::CUDA || cmdline::HIP || cmdline::openacc)
         target.GPU = true;
 
     if (target.GPU && cmdline::allow_func_globals) {
         llvm::errs() << "hilapp commandline error: gpu target architecture '";
         if (target.cuda)
             llvm::errs() << "cuda";
+        else if (target.hip)
+            llvm::errs() << "hip";
         else if (target.openacc)
             llvm::errs() << "openacc";
         llvm::errs() << "' is not compatible with option '-allow-func-globals'\n";
@@ -382,7 +392,8 @@ class MyPPCallbacks : public PPCallbacks {
                             StringRef FileName, bool IsAngled,
                             CharSourceRange FilenameRange, const FileEntry *File,
                             StringRef SearchPath, StringRef RelativePath,
-                            const Module *Imported, SrcMgr::CharacteristicKind FileType) {
+                            const Module *Imported,
+                            SrcMgr::CharacteristicKind FileType) {
 
         SourceManager &SM = myCompilerInstance->getSourceManager();
 
@@ -502,7 +513,8 @@ class MyPPCallbacks : public PPCallbacks {
     /// Use these for suppressing output to .cpt - it's a luxury thing, just to see that
     /// it can be done possible low-importance TODO: generalize to #if ... ?
 
-    void Ifdef(SourceLocation Loc, const Token &MacroNameTok, const MacroDefinition &MD) {
+    void Ifdef(SourceLocation Loc, const Token &MacroNameTok,
+               const MacroDefinition &MD) {
 
         IdentifierInfo *ii = MacroNameTok.getIdentifierInfo();
         if (!ii)
@@ -538,9 +550,13 @@ class MyPPCallbacks : public PPCallbacks {
         HILAPP_locs.push_back(hloc);
     }
 
-    void Endif(SourceLocation Loc, SourceLocation IfLoc) { is_endif_or_else(Loc, IfLoc); }
+    void Endif(SourceLocation Loc, SourceLocation IfLoc) {
+        is_endif_or_else(Loc, IfLoc);
+    }
 
-    void Else(SourceLocation Loc, SourceLocation IfLoc) { is_endif_or_else(Loc, IfLoc); }
+    void Else(SourceLocation Loc, SourceLocation IfLoc) {
+        is_endif_or_else(Loc, IfLoc);
+    }
 
     /// This triggers when the preprocessor changes file (#include, exit from it)
     /// Use this to track the chain of non-system include files
@@ -730,7 +746,8 @@ void remove_ifdef_HILAPP_sections() {
         for (HILAPP_loc_struct &loc : HILAPP_locs) {
             if (loc.fid == fb.fid && fb.sbuf.is_in_range(loc.range)) {
 
-                // got it, remove - leave #ifdef HILAPP .. #endif there to show the place
+                // got it, remove - leave #ifdef HILAPP .. #endif there to show the
+                // place
                 SourceManager &SM = myCompilerInstance->getSourceManager();
                 SourceLocation a = findChar(SM, loc.range.getBegin(), '\n');
                 SourceLocation b = loc.range.getEnd();
@@ -786,7 +803,8 @@ class MyASTConsumer : public ASTConsumer {
 
             if (!SM.isInSystemHeader(beginloc) && SM.getFilename(beginloc) != "") {
 
-                // llvm::errs() << "Processing file " << SM.getFilename(beginloc) << "\n";
+                // llvm::errs() << "Processing file " << SM.getFilename(beginloc) <<
+                // "\n";
                 // TODO: ensure that we go only through files which are needed!
 
                 // get our own file edit buffer (unless it exists)
@@ -841,7 +859,8 @@ void set_fid_modified(const FileID FID) {
         file_id_list.push_back(FID);
 
         SourceManager &SM = myCompilerInstance->getSourceManager();
-        // llvm::errs() << "NEW BUFFER ADDED " << SM.getFileEntryForID(FID)->getName() <<
+        // llvm::errs() << "NEW BUFFER ADDED " << SM.getFileEntryForID(FID)->getName()
+        // <<
         // '\n';
     }
 }
@@ -852,7 +871,8 @@ class MyFrontendAction : public ASTFrontendAction {
     MyFrontendAction() {}
 
     virtual bool BeginSourceFileAction(CompilerInstance &CI) override {
-        // llvm::errs() << "** Starting operation on source file "+getCurrentFile()+"\n";
+        // llvm::errs() << "** Starting operation on source file
+        // "+getCurrentFile()+"\n";
 
         // Insert preprocessor callback functions to the stream.  This enables
         // tracking included files, ranges etc.
@@ -889,9 +909,9 @@ class MyFrontendAction : public ASTFrontendAction {
 
         for (auto &inc : includelocs) {
             if (inc.fid == fid) {
-                buf->replace(
-                    SourceRange(inc.FilenameRange.getBegin(), inc.FilenameRange.getEnd()),
-                    std::string("\"") + inc.newName + "\"");
+                buf->replace(SourceRange(inc.FilenameRange.getBegin(),
+                                         inc.FilenameRange.getEnd()),
+                             std::string("\"") + inc.newName + "\"");
                 n++;
             }
         }
@@ -948,7 +968,8 @@ class MyFrontendAction : public ASTFrontendAction {
                         ++p;
                         while (std::isspace(*p))
                             ++p;
-                        assert(strncmp(p, "include", 7) == 0 && "Did not find #include");
+                        assert(strncmp(p, "include", 7) == 0 &&
+                               "Did not find #include");
                         SR = SourceRange(b.getLocWithOffset(-i), e);
                         break;
                     }
@@ -962,7 +983,8 @@ class MyFrontendAction : public ASTFrontendAction {
                     buf->remove(SR);
 
                     // and finally insert
-                    // SourceRange r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
+                    // SourceRange
+                    // r(SM.getLocForStartOfFile(f),SM.getLocForEndOfFile(f));
                     // TheRewriter.InsertText(SR.getBegin(),
                     buf->insert(SR.getBegin(),
                                 "// start include " + includestr +
@@ -1170,8 +1192,8 @@ SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct) {
 
 /// Skip paren expression following sl, points after the paren
 /// If partype == '(', just balance par expressions (may contain strings).
-/// If partype == '<', balance < > -parens (may contain () -parens, which are balanced in
-/// turn) This last one is useful for template scanning
+/// If partype == '<', balance < > -parens (may contain () -parens, which are balanced
+/// in turn) This last one is useful for template scanning
 
 SourceLocation skipParens(const SourceManager &SM, SourceLocation sl,
                           const char partype) {
@@ -1249,7 +1271,8 @@ SourceLocation skipString(const SourceManager &SM, SourceLocation sl) {
 /// Get next word starting from sl -- if end is non-null, return the end of the
 /// word string here (points to last char)
 
-std::string getNextWord(const SourceManager &SM, SourceLocation sl, SourceLocation *end) {
+std::string getNextWord(const SourceManager &SM, SourceLocation sl,
+                        SourceLocation *end) {
     while (std::isspace(getChar(SM, sl)))
         sl = getNextLoc(SM, sl); // skip spaces
 

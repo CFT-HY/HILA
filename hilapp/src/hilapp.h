@@ -26,9 +26,11 @@ const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
 const std::string output_only_keyword("output_only");
 
-const std::string var_name_prefix("_hila_var_");
-const std::string field_name_prefix("_hila_field_");
-const std::string type_name_prefix("_hila_t_");
+const std::string var_name_prefix("_HILA_var_");
+const std::string field_name_prefix("_HILA_field_");
+const std::string type_name_prefix("_HILA_type_");
+const std::string kernel_name_prefix("_HILA_kernel_");
+
 
 enum class reduction { NONE, SUM, PRODUCT }; // TBD:  MIN MAX MINLOC MAXLOC
 enum class Parity { none, even, odd, all };
@@ -39,6 +41,7 @@ enum class Parity { none, even, odd, all };
 // variables describing the type of code to be generated
 struct codetype {
     bool cuda = false;
+    bool hip = false;
     bool vectorize = false;
     int vector_size = 1;
     bool openacc = false;
@@ -63,6 +66,7 @@ extern llvm::cl::opt<bool> check_initialization;
 extern llvm::cl::opt<std::string> output_filename;
 extern llvm::cl::opt<bool> vanilla;
 extern llvm::cl::opt<bool> CUDA;
+extern llvm::cl::opt<bool> HIP;
 extern llvm::cl::opt<bool> AVX512;
 extern llvm::cl::opt<bool> AVX;
 extern llvm::cl::opt<bool> SSE;

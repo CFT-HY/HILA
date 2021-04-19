@@ -21,6 +21,14 @@ extern std::string parity_name;
 
 extern std::string parity_in_this_loop;
 
+
+// Define cuda/hip dependent function name prefix
+std::string d_prefix() {
+    if (target.cuda) return "cuda";
+    return "hip";
+}
+
+
 // Add the __host__ __device__ keywords to functions called a loop
 void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
 
@@ -55,7 +63,7 @@ void GeneralVisitor::handle_loop_constructor_cuda(call_info_struct &ci) {
 
 /// Help routine to write (part of) a name for a kernel
 std::string TopLevelVisitor::make_kernel_name() {
-    return "kernel_" +
+    return kernel_name_prefix +
            clean_name(
                global.currentFunctionDecl->getNameInfo().getName().getAsString()) +
            "_" +
@@ -99,7 +107,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
         // Allocate memory for a reduction and initialize
         code << vrf.type << " * d_" << vrf.vector_name << ";\n";
-        code << "cudaMalloc( (void **)& d_" << vrf.vector_name << ", "
+        code << d_prefix() << "Malloc( (void **)& d_" << vrf.vector_name << ", "
              << vrf.vector_name << ".size() * sizeof(" << vrf.type
              << ") * lattice->volume() );\n";
         if (vrf.reduction_type == reduction::SUM) {
@@ -110,7 +118,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             code << "cuda_set_one(d_" << vrf.vector_name << ", " << vrf.vector_name
                  << ".size()* lattice->volume());\n";
         }
-        code << "check_cuda_error(\"allocate_reduction\");\n";
+        code << "check_device_error(\"allocate_reduction\");\n";
     }
 #endif
 
@@ -143,12 +151,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 code << "// copy array/vector '" << ar.name << "' to device\n";
 
                 code << ar.element_type << " * " << ar.new_name << ";\n";
-                code << "cudaMalloc( (void **) & " << ar.new_name << ", "
+                code << d_prefix() << "Malloc( (void **) & " << ar.new_name << ", "
                      << ar.size_expr << " * sizeof(" << ar.element_type << ") );\n";
 
-                code << "cudaMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr
+                code << d_prefix() << "Memcpy(" << ar.new_name << ", (char *)" << ar.data_ptr
                      << ", " << ar.size_expr << " * sizeof(" << ar.element_type
-                     << "), cudaMemcpyHostToDevice);\n\n";
+                     << "), " << d_prefix() << "MemcpyHostToDevice);\n\n";
             }
 
         } else if (ar.type == array_ref::REDUCTION) {
@@ -158,7 +166,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 #ifdef OLD_STYLE
             code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << "cudaMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
+            code << d_prefix() << "Malloc( (void **)& " << ar.new_name << ", " << ar.size_expr
                  << " * sizeof(" << ar.element_type
                  << ") * lattice->mynode.volume() );\n";
 
@@ -172,12 +180,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                      << " * lattice->mynode.volume());\n";
             }
 
-            code << "check_cuda_error(\"allocate_reduction\");\n";
+            code << "check_device_error(\"allocate_reduction\");\n";
 
 #else
             code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << "cudaMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
+            code << d_prefix() << "Malloc( (void **)& " << ar.new_name << ", " << ar.size_expr
                  << " * sizeof(" << ar.element_type << "));\n";
 
             if (ar.reduction_type == reduction::SUM) {
@@ -190,7 +198,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                      << ");\n";
             }
 
-            code << "check_cuda_error(\"allocate_reduction\");\n";
+            code << "check_device_error(\"allocate_reduction\");\n";
 
 #endif
         }
@@ -198,8 +206,10 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
     // Generate the function definition and call
     // "inline" makes cuda complain, but it is needed to avoid multiple definition error
-    // use "static" instead??
-    kernel << "inline __global__ void " << kernel_name
+    // use "static" instead??  
+    // Add __launch_bounds__ directive here
+    kernel << "inline __global__ void __launch_bounds__(N_threads) "
+           << kernel_name
            << "( backend_lattice_struct d_lattice";
     code << "backend_lattice_struct lattice_info = *(lattice->backend_lattice);\n";
     code << "lattice_info.loop_begin = lattice->loop_begin(" << parity_in_this_loop
@@ -215,9 +225,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         if (v.reduction_type != reduction::NONE) {
             // Allocate memory for a reduction. This will be filled in the kernel
             code << v.type << " * dev_" << v.reduction_name << ";\n";
-            code << "cudaMalloc( (void **)& dev_" << v.reduction_name << ","
+            code << d_prefix() << "Malloc( (void **)& dev_" << v.reduction_name << ","
                  << "sizeof(" << v.type << ") * N_blocks );\n";
-            code << "check_cuda_error(\"allocate_reduction\");\n";
+            code << "check_device_error(\"allocate_reduction\");\n";
             if (v.reduction_type == reduction::SUM) {
                 code << "cuda_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
             }
@@ -227,7 +237,14 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
     }
 
-    code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info";
+    if (target.cuda) {
+        code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info";
+    } else if (target.hip) {
+        code << "hipLaunchKernel(" << kernel_name << ", dim3(N_blocks), dim3(N_threads), 0, 0, lattice_info";
+    } else {
+        llvm::errs() << "Internal bug - unknown kernelized target\n";
+        exit(1);
+    }
 
     // print field call list
     int i = 0;
@@ -557,7 +574,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     kernel << "}\n}\n//----------\n\n";
     code << ");\n\n";
 
-    code << "check_cuda_error(\"" << kernel_name << "\");\n";
+    code << "check_device_error(\"" << kernel_name << "\");\n";
 
     // Finally, emit the kernel
     // TheRewriter.InsertText(global.location.function,
@@ -572,9 +589,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
             code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp("
                  << ar.size_expr << ");\n";
-            code << "cudaMemcpy(a_v__tmp.data(), " << ar.new_name << ", "
+            code << d_prefix() << "Memcpy(a_v__tmp.data(), " << ar.new_name << ", "
                  << ar.size_expr << " * sizeof(" << ar.element_type
-                 << "), cudaMemcpyDeviceToHost);\n\n";
+                 << "), " << d_prefix() << "MemcpyDeviceToHost);\n\n";
 
             code << "for (int _H_tmp_idx=0; _H_tmp_idx<" << ar.size_expr
                  << "; _H_tmp_idx++) " << ar.name << "[_H_tmp_idx]";
@@ -588,7 +605,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
         if (ar.type != array_ref::REPLACE &&
             (ar.size == 0 || ar.size > MAX_PARAM_ARRAY_SIZE)) {
-            code << "cudaFree(" << ar.new_name << ");\n";
+            code << d_prefix() << "Free(" << ar.new_name << ");\n";
         }
     }
 
@@ -606,8 +623,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
         // Free memory allocated for the reduction
         if (v.reduction_type != reduction::NONE) {
-            code << "cudaFree(dev_" << v.reduction_name << ");\n";
-            code << "check_cuda_error(\"free_reduction\");\n";
+            code << d_prefix() << "Free(dev_" << v.reduction_name << ");\n";
+            code << "check_device_error(\"free_reduction\");\n";
         }
     }
 
@@ -622,8 +639,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                  << vrf.vector_name << ", loop_lattice->volume() );\n";
         }
         if (vrf.reduction_type != reduction::NONE) {
-            code << "cudaFree(d_" << vrf.vector_name << ");\n";
-            code << "check_cuda_error(\"free_reduction\");\n";
+            code << d_prefix() << "Free(d_" << vrf.vector_name << ");\n";
+            code << "check_device_error(\"free_reduction\");\n";
         }
     }
 #endif
