@@ -240,7 +240,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     if (target.cuda) {
         code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info";
     } else if (target.hip) {
-        code << "hipLaunchKernel(" << kernel_name << ", dim3(N_blocks), dim3(N_threads), 0, 0, lattice_info";
+        code << "hipLaunchKernelGGL(" << kernel_name << ", dim3(N_blocks), dim3(N_threads), 0, 0, lattice_info";
     } else {
         llvm::errs() << "Internal bug - unknown kernelized target\n";
         exit(1);
