@@ -193,7 +193,7 @@ void gpu_exit_on_error(const char *msg, const char *file, int line) {
 
 void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int line) {
     if (cudaSuccess != code) {
-        hila::output << "CUDA error: " << msg << " in file " << file << " line " << line
+        hila::output << "CUDA error in command: " << msg << " in file " << file << " line " << line
                      << '\n';
         hila::output << "CUDA error string: " << cudaGetErrorString(code) << "\n";
 

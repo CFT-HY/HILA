@@ -22,12 +22,6 @@ extern std::string parity_name;
 extern std::string parity_in_this_loop;
 
 
-// Define cuda/hip dependent function name prefix
-std::string d_prefix() {
-    if (target.cuda) return "cuda";
-    return "hip";
-}
-
 
 // Add the __host__ __device__ keywords to functions called a loop
 void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
@@ -107,7 +101,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
         // Allocate memory for a reduction and initialize
         code << vrf.type << " * d_" << vrf.vector_name << ";\n";
-        code << d_prefix() << "Malloc( (void **)& d_" << vrf.vector_name << ", "
+        code << "gpuMalloc( (void **)& d_" << vrf.vector_name << ", "
              << vrf.vector_name << ".size() * sizeof(" << vrf.type
              << ") * lattice->volume() );\n";
         if (vrf.reduction_type == reduction::SUM) {
@@ -151,12 +145,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 code << "// copy array/vector '" << ar.name << "' to device\n";
 
                 code << ar.element_type << " * " << ar.new_name << ";\n";
-                code << d_prefix() << "Malloc( (void **) & " << ar.new_name << ", "
+                code << "gpuMalloc( (void **) & " << ar.new_name << ", "
                      << ar.size_expr << " * sizeof(" << ar.element_type << ") );\n";
 
-                code << d_prefix() << "Memcpy(" << ar.new_name << ", (char *)" << ar.data_ptr
+                code << "gpuMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr
                      << ", " << ar.size_expr << " * sizeof(" << ar.element_type
-                     << "), " << d_prefix() << "MemcpyHostToDevice);\n\n";
+                     << "), " << "gpuMemcpyHostToDevice);\n\n";
             }
 
         } else if (ar.type == array_ref::REDUCTION) {
@@ -166,7 +160,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 #ifdef OLD_STYLE
             code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << d_prefix() << "Malloc( (void **)& " << ar.new_name << ", " << ar.size_expr
+            code << "gpuMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
                  << " * sizeof(" << ar.element_type
                  << ") * lattice->mynode.volume() );\n";
 
@@ -185,7 +179,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 #else
             code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << d_prefix() << "Malloc( (void **)& " << ar.new_name << ", " << ar.size_expr
+            code << "gpuMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
                  << " * sizeof(" << ar.element_type << "));\n";
 
             if (ar.reduction_type == reduction::SUM) {
@@ -225,9 +219,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         if (v.reduction_type != reduction::NONE) {
             // Allocate memory for a reduction. This will be filled in the kernel
             code << v.type << " * dev_" << v.reduction_name << ";\n";
-            code << d_prefix() << "Malloc( (void **)& dev_" << v.reduction_name << ","
+            code << "gpuMalloc( (void **)& dev_" << v.reduction_name << ","
                  << "sizeof(" << v.type << ") * N_blocks );\n";
-            code << "check_device_error(\"allocate_reduction\");\n";
             if (v.reduction_type == reduction::SUM) {
                 code << "cuda_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
             }
@@ -589,9 +582,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
             code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp("
                  << ar.size_expr << ");\n";
-            code << d_prefix() << "Memcpy(a_v__tmp.data(), " << ar.new_name << ", "
+            code << "gpuMemcpy(a_v__tmp.data(), " << ar.new_name << ", "
                  << ar.size_expr << " * sizeof(" << ar.element_type
-                 << "), " << d_prefix() << "MemcpyDeviceToHost);\n\n";
+                 << "), " << "gpuMemcpyDeviceToHost);\n\n";
 
             code << "for (int _H_tmp_idx=0; _H_tmp_idx<" << ar.size_expr
                  << "; _H_tmp_idx++) " << ar.name << "[_H_tmp_idx]";
@@ -605,7 +598,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
         if (ar.type != array_ref::REPLACE &&
             (ar.size == 0 || ar.size > MAX_PARAM_ARRAY_SIZE)) {
-            code << d_prefix() << "Free(" << ar.new_name << ");\n";
+            code << "gpuFree(" << ar.new_name << ");\n";
         }
     }
 
@@ -623,8 +616,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
         // Free memory allocated for the reduction
         if (v.reduction_type != reduction::NONE) {
-            code << d_prefix() << "Free(dev_" << v.reduction_name << ");\n";
-            code << "check_device_error(\"free_reduction\");\n";
+            code << "gpuFree(dev_" << v.reduction_name << ");\n";
         }
     }
 
@@ -639,8 +631,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                  << vrf.vector_name << ", loop_lattice->volume() );\n";
         }
         if (vrf.reduction_type != reduction::NONE) {
-            code << d_prefix() << "Free(d_" << vrf.vector_name << ");\n";
-            code << "check_device_error(\"free_reduction\");\n";
+            code << "gpuFree(d_" << vrf.vector_name << ");\n";
         }
     }
 #endif

@@ -8,8 +8,7 @@
 template <typename T> 
 void field_storage<T>::allocate_field(lattice_struct *lattice) {
     // Allocate space for the field of the device
-    auto status = gpuMalloc((void **)&fieldbuf, sizeof(T) * lattice->field_alloc_size());
-    check_device_error_code(status, "Allocate field memory");
+    gpuMalloc((void **)&fieldbuf, sizeof(T) * lattice->field_alloc_size());
     if (fieldbuf == nullptr) {
         std::cout << "Failure in field memory allocation\n";
     }
@@ -19,8 +18,7 @@ void field_storage<T>::allocate_field(lattice_struct *lattice) {
 template <typename T> 
 void field_storage<T>::free_field() {
     if (fieldbuf != nullptr) {
-        auto status = gpuFree(fieldbuf);
-        check_device_error_code(status, "Free field memory");
+        gpuFree(fieldbuf);
     }
     fieldbuf = nullptr;
 }
@@ -353,17 +351,14 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
         unsigned *d_site_index;
         check_device_error("earlier");
         gpuMalloc((void **)(&d_site_index), n * sizeof(unsigned));
-        check_device_error("set_local_boundary_elements: gpuMalloc");
         gpuMemcpy(d_site_index, lattice->special_boundaries[dir].move_index + start,
                    n * sizeof(unsigned), gpuMemcpyHostToDevice);
-        check_device_error("set_local_boundary_elements: gpuMemcpy");
 
         unsigned N_blocks = n / N_threads + 1;
         set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(
             *this, offset, d_site_index, n, lattice->field_alloc_size());
 
         gpuFree(d_site_index);
-        check_device_error("set_local_boundary_elements: gpuFree");
     }
 }
 

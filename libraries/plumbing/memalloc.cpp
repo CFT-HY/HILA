@@ -65,7 +65,6 @@ void *d_malloc(std::size_t size) {
 
     void * p;
     gpuMalloc(&p, size);
-    check_device_error("d_malloc error");
     return p;
 
 #endif
@@ -81,7 +80,6 @@ void d_free(void *dptr) {
 #else
 
     gpuFree(dptr);
-    check_device_error("CUDA/HIP d_free");
 
 #endif
 
