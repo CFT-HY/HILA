@@ -6,22 +6,27 @@
 
 $(info ########################################################################)
 $(info Target puhti_hip:  remember to )
-$(info   module load gcc/9.1.0 hip openmpi/4.0.5-cuda )
+$(info   module load hip/4.0.0 )
 $(info ########################################################################)
 
 # Define compiler
 CC = hipcc
-LD = hipcc
+LD = hipcc -D__HIP_PLATFORM_NVCC__=1
 
 # Define compilation flags
-CXXFLAGS = -dc -O3 -std=c++17 -x cu --gpu-architecture=sm_70
-#-gencode arch=compute_70,code=sm_70 --use_fast_math --restrict 
+CXXFLAGS = -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
 
-# 3162 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
-# it allows definition of a function in multiple compilation units as required by c++ standard!!  
+# --gpu-architecture=sm_70
+
+# 3162 is a warning about ignored inline in __global__ functions - it's not really 
+# ignored by nvcc, it allows definition of a function in multiple compilation units 
+# as required by c++ standard!!  
 # Quiet it.
 # Warning 177 is about unused variables 
-# CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=3162"
+CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress=3162"
+
+# CXXFLAGS += 
+
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
@@ -52,6 +57,6 @@ HILA_OBJECTS += build/hila_hip.o
 
 # These variables must be defined here
 #
-HILAPP_OPTS = -target:HIP $(STD_HILAPP_INCLUDES) $(MPI_INCLUDE_DIRS)
-HILA_OPTS = -DUSE_MPI -DHIP -DPUHTI -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -D__HIP_PLATFORM_NVCC__
+HILAPP_OPTS = -target:HIP $(STD_HILAPP_INCLUDES) $(MPI_INCLUDE_DIRS) -D__HIP_PLATFORM_NVCC__
+HILA_OPTS = -DUSE_MPI -DHIP -DPUHTI -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include 
 
