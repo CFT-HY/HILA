@@ -49,7 +49,7 @@ MPI_LIBS =  -lmpi
 LDLIBS = -lm $(MPI_LIBS)
 
 HIP_PATH ?= $(shell hipconfig --path)
-HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(HIP_PATH)/../hipfft/include
+HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(HIP_PATH)/../rocfft/include
 
 # extra cuda objects here
 HILA_OBJECTS += build/hila_hip.o
