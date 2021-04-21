@@ -26,7 +26,7 @@ using gpurandState = curandState;
 
 #elif defined(HIP)
 
-using gpurandState = hiprandState;
+using gpurandState = hiprandState_t;
 #define gpurand_init hiprand_init
 #define gpurand_uniform hiprand_uniform
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                          \
