@@ -14,7 +14,7 @@ CC = hipcc
 LD = hipcc -D__HIP_PLATFORM_NVCC__=1
 
 # Define compilation flags
-CXXFLAGS = -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
+CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
 
 # --gpu-architecture=sm_70
 
