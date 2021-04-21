@@ -6,7 +6,7 @@
 
 $(info ########################################################################)
 $(info Target puhti_hip:  remember to )
-$(info   module load gcc/9.1.0 hip openmpi/4.0.5-cuda )
+$(info   module load hip/4.0.0 )
 $(info ########################################################################)
 
 # Define compiler
@@ -14,8 +14,7 @@ CC = hipcc
 LD = hipcc
 
 # Define compilation flags
-CXXFLAGS = -dc -O3 -std=c++17 -x cu --gpu-architecture=sm_70
-#-gencode arch=compute_70,code=sm_70 --use_fast_math --restrict 
+CXXFLAGS = -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict 
 
 # 3162 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
 # it allows definition of a function in multiple compilation units as required by c++ standard!!  

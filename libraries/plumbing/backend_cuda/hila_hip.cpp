@@ -150,7 +150,6 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
     gpuMemcpyToSymbol(_d_size, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
     int64_t v = lattice->volume();
     gpuMemcpyToSymbol(_d_volume, &v, sizeof(int64_t), 0, gpuMemcpyHostToDevice);
-    check_device_error("gpuMemcpy to size or volume");
 }
 
 void initialize_cuda(int rank) {

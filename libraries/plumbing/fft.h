@@ -278,7 +278,7 @@ template <typename cmplx_t> class hila_fft {
 
 #elif defined(CUDA) || defined(HIP)
 
-#include "plumbing/backend_cuda/fft_cuda_transform.h"
+#include "plumbing/backend_cuda/fft_hip_transform.h"
 
 #endif
 
