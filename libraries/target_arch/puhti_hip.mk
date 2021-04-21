@@ -49,6 +49,7 @@ MPI_LIBS =  -lmpi
 LDLIBS = -lm $(MPI_LIBS)
 
 HIP_PATH ?= $(shell hipconfig --path)
+HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(HIP_PATH)/../hipfft/include
 
 # extra cuda objects here
 HILA_OBJECTS += build/hila_hip.o
@@ -58,5 +59,5 @@ HILA_OBJECTS += build/hila_hip.o
 # These variables must be defined here
 #
 HILAPP_OPTS = -target:HIP $(STD_HILAPP_INCLUDES) $(MPI_INCLUDE_DIRS) -D__HIP_PLATFORM_NVCC__
-HILA_OPTS = -DUSE_MPI -DHIP -DPUHTI -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include 
+HILA_OPTS = -DUSE_MPI -DHIP -DPUHTI $(HIP_INCLUDE_DIRS)
 
