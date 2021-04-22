@@ -19,7 +19,6 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <curand_kernel.h>
 //#include <cub/cub.cuh>
 
 #define N_threads 256 // Threads per block for CUDA   TODO: make configurable?

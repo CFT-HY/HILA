@@ -1,6 +1,3 @@
-#ifdef HIP
-#include "hip/hip_runtime.h"
-#endif
 
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
@@ -14,7 +11,9 @@
 
 #if defined(CUDA)
 
-using gpurandState = curandState;
+#include <curand_kernel.h>
+
+using gpurandState = curandState_t;
 #define gpurand_init curand_init
 #define gpurand_uniform curand_uniform
 #define gpuMemcpyToSymbol(a, b, size, c, dir) \
@@ -25,6 +24,9 @@ using gpurandState = curandState;
 #define gpuGetErrorString cudaGetErrorString
 
 #elif defined(HIP)
+
+#include <hip/hip_runtime.h>
+#include <hiprand_kernel.h>
 
 using gpurandState = hiprandState_t;
 #define gpurand_init hiprand_init

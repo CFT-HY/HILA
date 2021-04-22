@@ -8,6 +8,8 @@
 
 #ifndef HILAPP
 
+#include <curand_kernel.h>
+
 // Save "constants" lattice size and volume here
 __constant__ int _d_size[NDIM];
 __constant__ int64_t _d_volume;
