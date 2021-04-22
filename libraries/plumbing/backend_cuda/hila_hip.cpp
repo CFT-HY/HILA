@@ -17,9 +17,9 @@ using gpurandState = curandState_t;
 #define gpurand_init curand_init
 #define gpurand_uniform curand_uniform
 #define gpuMemcpyToSymbol(a, b, size, c, dir) \
-    check_gpu_error( cudaMemcpyToSymbol(a, b, size, c, dir) )
-#define gpuGetDeviceCount cudaGetDeviceCount
-#define gpuSetDevice cudaSetDevice
+    GPU_CHECK( cudaMemcpyToSymbol(a, b, size, c, dir) )
+#define gpuGetDeviceCount(a) GPU_CHECK( cudaGetDeviceCount(a) )
+#define gpuSetDevice(dev) GPU_CHECK( cudaSetDevice(dev) )
 #define gpuGetLastError cudaGetLastError
 #define gpuGetErrorString cudaGetErrorString
 
@@ -32,9 +32,9 @@ using gpurandState = hiprandState_t;
 #define gpurand_init hiprand_init
 #define gpurand_uniform hiprand_uniform
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                          \
-    check_gpu_error( hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir) )
-#define gpuGetDeviceCount hipGetDeviceCount
-#define gpuSetDevice hipSetDevice
+    GPU_CHECK( hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir) )
+#define gpuGetDeviceCount(a) GPU_CHECK( hipGetDeviceCount(a) )
+#define gpuSetDevice(dev) GPU_CHECK( hipSetDevice(dev) )
 #define gpuGetLastError hipGetLastError
 #define gpuGetErrorString hipGetErrorString
 

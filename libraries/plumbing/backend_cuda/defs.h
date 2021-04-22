@@ -25,13 +25,13 @@
 
 using gpuError = cudaError;
 #define gpuSuccess cudaSuccess
-#define gpuMalloc(a, b) check_gpu_error(cudaMalloc(a, b))
-#define gpuFree(a) check_gpu_error(cudaFree(a))
+#define gpuMalloc(a, b) GPU_CHECK(cudaMalloc(a, b))
+#define gpuFree(a) GPU_CHECK(cudaFree(a))
 #define gpuGetLastError cudaGetLastError
-#define gpuMemcpy(a, b, c, d) check_gpu_error(cudaMemcpy(a, b, c, d))
+#define gpuMemcpy(a, b, c, d) GPU_CHECK(cudaMemcpy(a, b, c, d))
 #define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
 #define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
-#define gpuDeviceSynchronize() check_gpu_error(cudaDeviceSynchronize())
+#define gpuDeviceSynchronize() GPU_CHECK(cudaDeviceSynchronize())
 
 #define GPUTYPESTR "CUDA"
 
@@ -53,13 +53,13 @@ using gpuError = cudaError;
 
 using gpuError = hipError_t;
 #define gpuSuccess hipSuccess
-#define gpuMalloc(a, b) check_gpu_error(hipMalloc(a, b))
-#define gpuFree(a) check_gpu_error(hipFree(a))
+#define gpuMalloc(a, b) GPU_CHECK(hipMalloc(a, b))
+#define gpuFree(a) GPU_CHECK(hipFree(a))
 #define gpuGetLastError hipGetLastError
-#define gpuMemcpy(a, b, siz, d) check_gpu_error(hipMemcpy(a, b, siz, d))
+#define gpuMemcpy(a, b, siz, d) GPU_CHECK(hipMemcpy(a, b, siz, d))
 #define gpuMemcpyHostToDevice hipMemcpyHostToDevice
 #define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
-#define gpuDeviceSynchronize() check_gpu_error(hipDeviceSynchronize())
+#define gpuDeviceSynchronize() GPU_CHECK(hipDeviceSynchronize())
 
 #define GPUTYPESTR "HIP"
 
@@ -77,11 +77,12 @@ __device__ __host__ double random();
 void seed_device_rng(unsigned long seed);
 } // namespace hila
 
-#define check_gpu_error(cmd)                                                           \
+#define GPU_CHECK(cmd)                                                           \
     do {                                                                               \
         auto code = cmd;                                                               \
         gpu_exit_on_error(code, #cmd, __FILE__, __LINE__);                             \
     } while (0)
+
 #define check_device_error(msg) gpu_exit_on_error(msg, __FILE__, __LINE__)
 #define check_device_error_code(code, msg)                                             \
     gpu_exit_on_error(code, msg, __FILE__, __LINE__)
