@@ -11,7 +11,7 @@ $(info ########################################################################)
 
 # Define compiler
 CC = hipcc
-LD = hipcc -D__HIP_PLATFORM_NVCC__=1
+LD = hipcc  -gencode arch=compute_70,code=sm_70 --use_fast_math 
 
 # Define compilation flags
 CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_70,code=sm_70 --use_fast_math --restrict
@@ -46,10 +46,12 @@ MPI_INCLUDE_DIRS =
 
 MPI_LIBS =  -lmpi
 
-LDLIBS = -lm $(MPI_LIBS)
+LDLIBS = -lm $(MPI_LIBS) 
 
 HIP_PATH ?= $(shell hipconfig --path)
 HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(HIP_PATH)/../rocfft/include
+
+LDLIBS += -L$(HIP_PATH)/../rocfft/lib -lrocfft
 
 # extra cuda objects here
 HILA_OBJECTS += build/hila_hip.o
