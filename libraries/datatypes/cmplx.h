@@ -143,8 +143,8 @@ struct Complex {
     }
 
     inline Complex<T> conj_mul(Complex<T> rhs) const {
-        lhs *= *this.conj();
-        return lhs;
+        rhs *= this->conj();
+        return rhs;
     }
 
     inline Complex<T> polar(const T r, const T theta) {
