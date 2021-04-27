@@ -100,7 +100,7 @@ template <int N> double polyakov_loop(Direction dir, Field<SU<N>> (&gauge)[NDIM]
     polyakov[ALL] = 1;
     for (int t = 0; t < vol[dir]; t++) {
         onsites(ALL) {
-            if (X.coordinates()[dir] == (t + 1) % vol[dir]) {
+            if (X.coordinate(dir) == (t + 1) % vol[dir]) {
                 polyakov[X] = polyakov[X] * gauge[dir][X - dir];
             }
         }
@@ -238,8 +238,7 @@ template <typename matrix> class gauge_field : public gauge_field_base<matrix> {
     void gauge_update(double eps) {
         foralldir(dir) {
             onsites(ALL) {
-                element<matrix> momexp = eps * this->momentum[dir][X];
-                momexp.exp();
+                element<matrix> momexp = (eps * this->momentum[dir][X]).exp();
                 this->gauge[dir][X] = momexp * this->gauge[dir][X];
             }
         }

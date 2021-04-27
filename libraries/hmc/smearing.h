@@ -144,7 +144,7 @@ template <typename sun> class stout_smeared_field : public gauge_field_base<sun>
                     element<sun> Q;
                     Q = -c * previous[dir][X] * staples[step][dir][X];
                     project_antihermitean(Q);
-                    Q.exp(exp_steps);
+                    Q = Q.exp(exp_steps);
                     smeared_fields[step][dir][X] = previous[dir][X] * Q;
                 }
             }
@@ -289,7 +289,7 @@ template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> 
                 element<sun> Q;
                 Q = -c3 * base_field.gauge[mu][X] * staples3[nu][mu][X];
                 project_antihermitean(Q);
-                Q.exp(exp_steps);
+                Q = Q.exp(exp_steps);
                 level3[nu][mu][X] = base_field.gauge[mu][X] * Q;
             }
         }
@@ -308,7 +308,7 @@ template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> 
                 element<sun> Q;
                 Q = -c2 * base_field.gauge[mu][X] * staples2[nu][mu][X];
                 project_antihermitean(Q);
-                Q.exp(exp_steps);
+                Q = Q.exp(exp_steps);
                 level2[nu][mu][X] = base_field.gauge[mu][X] * Q;
             }
         }
@@ -325,7 +325,7 @@ template <typename sun> struct HEX_smeared_field : public gauge_field_base<sun> 
                 element<sun> Q;
                 Q = -c1 * base_field.gauge[mu][X] * staples1[mu][X];
                 project_antihermitean(Q);
-                Q.exp(exp_steps);
+                Q = Q.exp(exp_steps);
                 this->gauge[mu][X] = base_field.gauge[mu][X] * Q;
             }
         }

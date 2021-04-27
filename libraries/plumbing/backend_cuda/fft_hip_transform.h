@@ -1,6 +1,8 @@
 #ifndef FFT_HIP_TRANSFORM_H
 #define FFT_HIP_TRANSFORM_H
 
+#ifndef HILAPP
+
 #if defined(CUDA)
 
 #include <cufft.h>
@@ -20,6 +22,7 @@ using gpufftHandle = cufftHandle;
 #define GPUFFT_Z2Z CUFFT_Z2Z
 
 #else
+
 
 #include "hip/hip_runtime.h"
 #include <hipfft.h>
@@ -398,5 +401,7 @@ void hila_fft<cmplx_t>::scatter_data() {
     fft_MPI_timer.stop();
 #endif
 }
+
+#endif // HILAPP
 
 #endif

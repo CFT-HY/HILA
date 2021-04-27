@@ -9,33 +9,33 @@
 
 // Macros for sped-up operations
 
-#define CMULJJ(a, b, c)                                                                  \
-    do {                                                                                 \
-        (c).re = (a).re * (b).re - (a).im * (b).im;                                      \
-        (c).im = -(a).re * (b).im - (a).im * (b).re;                                     \
+#define CMULJJ(a, b, c)                                                                \
+    do {                                                                               \
+        (c).re = (a).re * (b).re - (a).im * (b).im;                                    \
+        (c).im = -(a).re * (b).im - (a).im * (b).re;                                   \
     } while (0)
-#define CMULJJ_ADD(a, b, c)                                                              \
-    do {                                                                                 \
-        (c).re += (a).re * (b).re - (a).im * (b).im;                                     \
-        (c).im += -(a).re * (b).im - (a).im * (b).re;                                    \
+#define CMULJJ_ADD(a, b, c)                                                            \
+    do {                                                                               \
+        (c).re += (a).re * (b).re - (a).im * (b).im;                                   \
+        (c).im += -(a).re * (b).im - (a).im * (b).re;                                  \
     } while (0)
-#define CMULJJ_SUB(a, b, c)                                                              \
-    do {                                                                                 \
-        (c).re -= (a).re * (b).re - (a).im * (b).im;                                     \
-        (c).im += (a).re * (b).im + (a).im * (b).re;                                     \
+#define CMULJJ_SUB(a, b, c)                                                            \
+    do {                                                                               \
+        (c).re -= (a).re * (b).re - (a).im * (b).im;                                   \
+        (c).im += (a).re * (b).im + (a).im * (b).re;                                   \
     } while (0)
 
-#define su3_vector_crossprod_conj(av, bv, res)                                           \
-    do {                                                                                 \
-                                                                                         \
-        CMULJJ((av).c[1], (bv).c[2], (res).c[0]);                                        \
-        CMULJJ_SUB((av).c[2], (bv).c[1], (res).c[0]);                                    \
-                                                                                         \
-        CMULJJ((av).c[2], (bv).c[0], (res).c[1]);                                        \
-        CMULJJ_SUB((av).c[0], (bv).c[2], (res).c[1]);                                    \
-                                                                                         \
-        CMULJJ((av).c[0], (bv).c[1], (res).c[2]);                                        \
-        CMULJJ_SUB((av).c[1], (bv).c[0], (res).c[2]);                                    \
+#define su3_vector_crossprod_conj(av, bv, res)                                         \
+    do {                                                                               \
+                                                                                       \
+        CMULJJ((av).c[1], (bv).c[2], (res).c[0]);                                      \
+        CMULJJ_SUB((av).c[2], (bv).c[1], (res).c[0]);                                  \
+                                                                                       \
+        CMULJJ((av).c[2], (bv).c[0], (res).c[1]);                                      \
+        CMULJJ_SUB((av).c[0], (bv).c[2], (res).c[1]);                                  \
+                                                                                       \
+        CMULJJ((av).c[0], (bv).c[1], (res).c[2]);                                      \
+        CMULJJ_SUB((av).c[1], (bv).c[0], (res).c[2]);                                  \
     } while (0)
 
 // SU2 matrix multiplication routines ------------------------
@@ -69,7 +69,8 @@
 /// specific to SU(N) matrices. Allows matching SU(N) vectors and
 /// SU(N) vectors in multiplication.
 ///
-template <int n, typename radix = double> class SU : public Matrix<n, n, Complex<radix>> {
+template <int n, typename radix = double>
+class SU : public SquareMatrix<n, Complex<radix>> {
   public:
     using base_type = hila::number_type<radix>;
     using argument_type = radix;
@@ -93,15 +94,17 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
     }
 
     /// Construct from a square matrix
-    template <typename S> SU(const Matrix<n, n, Complex<S>> &m) {
+    template <typename S>
+    SU(const SquareMatrix<n, Complex<S>> &m) {
         for (int i = 0; i < n * n; i++) {
             this->c[i] = m.c[i];
         }
     }
 
     /// Casting to different Complex type
-    template <typename S> operator Matrix<n, n, Complex<S>>() {
-        Matrix<n, n, Complex<radix>> r;
+    template <typename S>
+    operator SquareMatrix<n, Complex<S>>() {
+        SquareMatrix<n, Complex<radix>> r;
         for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++) {
                 r.e(i, j) = this->e(i, j);
@@ -109,15 +112,46 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
         return r;
     }
 
-    /// Reunitarize the SU(N) matrix.
+    /// Reunitarize the SU(N) matrix.  This should be OK when removing
+    /// small deviations, but it is not a projective method which
+    /// should be used when "unbiased" reunitarization is needed
     void reunitarize() {
         make_unitary();
         fix_det();
     };
 
-    /// Project the matrix to SU(N). Applying this operation occasionally
-    /// prevents the matrices from
-    void make_unitary() { assert(false); };
+    /// Mame the matrix unitary by orthogonalizing the rows
+    /// There must be a faster way to do this, but this is simple
+    ///  i = 0 ... n-1
+    ///     normalize row i
+    ///     make rows i+1 .. (n-1) orthogonal to row i
+    void make_unitary() {
+
+        for (int r = 0; r < n; r++) {
+
+            // normalize row r
+            radix n2 = 0;
+            for (int c = 0; c < n; c++) n2 += this->e(r, c).squarenorm();
+            n2 = 1.0 / sqrt(n2);
+            for (int c = 0; c < n; c++) this->e(r, c) *= n2;
+
+            // Now make rows r+1 .. n-1 orthogonal to row r,
+            // by doing j = j - (r^* j) r
+
+            Complx<radix> d;
+            for (int j = r + 1; j < n; j++) {
+                // dot productof r^* j
+                d = 0;
+                for (int i = 0; i < n : i++) {
+                    d += this->e(r, i).conj_mul(this->e(j, i));
+                }
+                // and j -= d * r
+                for (int i = 0; i < n : i++) {
+                    this->e(j, i) -= d * this->e(r, i);
+                }
+            }
+        }
+    }
 
     /// Set the determinant of the SU(N) matrix to 1
     void fix_det() {
@@ -134,23 +168,29 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
             }
     }
 
-    /// Calculate the matrix exponential using a Taylor expansion
-    void exp(const int depth = 12) {
-        Matrix<n, n, Complex<radix>> A, An;
-        radix factor = 1;
+    /// exp() - method for square matrices using Taylor expansion
+    /// Evaluate as exp(H) = 1 + H + H^2/2! + H^3/3! ...
+
+    // TODO:do this with eigevalues!
+    SU exp(const int order = 20) const {
+
+        SU A, Mp;
         A = *this;
-        An = A;
-        *this = 1;
-        for (int k = 1; k <= depth; k++) {
-            factor = factor / static_cast<radix>(k);
-            (*this) += An * factor;
-            An *= A;
+        Mp = *this;
+        radix multiplier;
+        for (int k = 2; k <= order; k++) {
+            multiplier = 1.0 / k;
+            Mp *= *this;
+            Mp *= multiplier;
+            A += Mp;
         }
+        A += 1;
+        return A;
     }
 
     /// generate random SU(N) element by expanding exp(A), where A is a traceless
-    /// hermitian matrix. more iterations are needed to generate larger elements: 12 works
-    /// well for n < 10.
+    /// hermitian matrix. more iterations are needed to generate larger elements: 12
+    /// works well for n < 10.
     void random(const int depth = 12) {
         Matrix<n, n, Complex<radix>> A, An, res;
         An = 1;
@@ -160,7 +200,7 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
             A.e(i, i) = Complex<radix>(hila::random(), 0.0);
             for (int j = 0; j < i; j++) {
                 Complex<radix> a(static_cast<radix>(hila::random() / n),
-                               static_cast<radix>(hila::random() / n));
+                                 static_cast<radix>(hila::random() / n));
                 A.e(i, j) = a;
                 A.e(j, i) = a.conj();
             }
@@ -201,8 +241,7 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
         }
         for (int i = 1; i < n; i++) {
             double a = hila::gaussian_ran() * sqrt(2.0 / (i * (i + 1)));
-            for (int j = 0; j < i; j++)
-                (*this).e(j, j).im += a;
+            for (int j = 0; j < i; j++) (*this).e(j, j).im += a;
             (*this).e(i, i).im -= i * a;
         }
     }
@@ -220,8 +259,8 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
         return thissum;
     }
 
-    /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p.
-    /// 47 ff
+    /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed.
+    /// p. 47 ff
     Complex<radix> det_lu() {
 
         int i, imax, j, k;
@@ -238,17 +277,14 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
         imax = -1;
 
         for (i = 0; i < n; i++)
-            for (j = 0; j < n; j++)
-                a[i][j] = this->e(i, j);
+            for (j = 0; j < n; j++) a[i][j] = this->e(i, j);
 
         for (i = 0; i < n; i++) {
             big = 0;
             for (j = 0; j < n; j++) {
-                if ((temp = a[i][j].abs()) > big)
-                    big = temp;
+                if ((temp = a[i][j].abs()) > big) big = temp;
             }
-            if (big == 0.0)
-                exit(1);
+            if (big == 0.0) exit(1);
             vv[i] = 1.0 / big;
         }
 
@@ -338,30 +374,39 @@ template <int n, typename radix = double> class SU : public Matrix<n, n, Complex
         return generators[ng];
     }
 
-    static constexpr int generator_count() { return n * n - 1; }
+    static constexpr int generator_count() {
+        return n * n - 1;
+    }
 };
 
-template <typename radix> class SU2;
+template <typename radix>
+class SU2;
 
-template <typename radix> class SU3;
+template <typename radix>
+class SU3;
 
-template <typename radix> class SU2adjoint;
+template <typename radix>
+class SU2adjoint;
 
 /// SU3<radix> is equivalent to SU<3, radix>
-template <typename radix> class SU3 : public SU<3, radix> {};
+template <typename radix>
+class SU3 : public SU<3, radix> {};
 
 /// SU2 matrices are equivalent to SU<2, radix>, but are implemented more
 /// efficiently here. This implementation represents the matrices as
 /// U = d + a * sigma_1 + b * sigma_2 + c * sigma_3. This is in SU(2) if
 /// a^2 + b^2 + c^2 + d^2 = 1.
-template <typename radix> class SU2 {
+template <typename radix>
+class SU2 {
   public:
     using base_type = hila::number_type<radix>;
     using argument_type = radix;
 
     SU2() : a(0), b(0), c(0), d(1) {}
 
-    SU2(radix *vals) : a(vals[0]), b(vals[1]), c(vals[2]), d(vals[3]) { normalize(); }
+    SU2(radix *vals) : a(vals[0]), b(vals[1]), c(vals[2]), d(vals[3]) {
+        normalize();
+    }
 
     SU2(const SU2<radix> &rhs) {
         b = rhs.b;
@@ -397,7 +442,8 @@ template <typename radix> class SU2 {
         return r;
     }
 
-    friend SU2<radix> operator*(const SU2adjoint<radix> &x, const SU2adjoint<radix> &y) {
+    friend SU2<radix> operator*(const SU2adjoint<radix> &x,
+                                const SU2adjoint<radix> &y) {
         SU2<radix> r;
         r.a = aa_a(x.ref, y.ref);
         r.b = aa_b(x.ref, y.ref);
@@ -423,8 +469,8 @@ template <typename radix> class SU2 {
         const SU2<radix> &); // same ops as above, except store result in lhs matrix
     SU2<radix> &operator-=(const SU2<radix> &);
     SU2<radix> &operator*=(const SU2<radix> &);
-    SU2<radix> &operator+=(const SU2adjoint<radix>
-                               &); // same ops as above, except store result in lhs matrix
+    SU2<radix> &operator+=(const SU2adjoint<radix> &); // same ops as above, except
+                                                       // store result in lhs matrix
     SU2<radix> &operator-=(const SU2adjoint<radix> &);
     SU2<radix> &operator*=(const SU2adjoint<radix> &);
     SU2<radix> &operator*=(const radix &);
@@ -437,7 +483,8 @@ template <typename radix> class SU2 {
 /// An adjoint operation for SU2 matrices, which only contains a reference
 /// to the original. Expands when the actual value of the matrix is needed
 /// or an operation is applied.
-template <typename radix> class SU2adjoint {
+template <typename radix>
+class SU2adjoint {
   public:
     SU2adjoint(const SU2<radix> &rhs) : ref(rhs){};
     const SU2<radix> &ref;
@@ -448,29 +495,37 @@ template <typename radix> class SU2adjoint {
 };
 
 /// Conj returns the adjoing of the matrix
-template <typename radix> inline SU2adjoint<radix> conj(SU2<radix> &ref) {
+template <typename radix>
+inline SU2adjoint<radix> conj(SU2<radix> &ref) {
     SU2adjoint<radix> result(ref);
     return result;
 }
 
 /// Take the adjoint. Returns an SU2adjoint
-template <typename radix> SU2adjoint<radix> &SU2<radix>::adj() {
+template <typename radix>
+SU2adjoint<radix> &SU2<radix>::adj() {
     return SU2adjoint<radix>(*this);
 };
 
-template <typename radix> radix SU2<radix>::sqr() const {
+template <typename radix>
+radix SU2<radix>::sqr() const {
     return a * a + b * b + c * c + d * d;
 }
 
-template <typename radix> radix SU2<radix>::det() const {
+template <typename radix>
+radix SU2<radix>::det() const {
     return a * a + b * b + c * c + d * d;
 }
 
-template <typename radix> radix SU2<radix>::tr() const { return 2 * d; }
+template <typename radix>
+radix SU2<radix>::tr() const {
+    return 2 * d;
+}
 
 /// Apply normalization to make sure this is an
 /// SU2 matrix
-template <typename radix> SU2<radix> &SU2<radix>::normalize() {
+template <typename radix>
+SU2<radix> &SU2<radix>::normalize() {
     radix sq = sqrt(this->sqr());
     a /= sq;
     b /= sq;
@@ -481,12 +536,14 @@ template <typename radix> SU2<radix> &SU2<radix>::normalize() {
 
 /// Apply normalization to make sure this is an
 /// SU2 matrix
-template <typename radix> SU2<radix> &SU2<radix>::reunitarize() {
+template <typename radix>
+SU2<radix> &SU2<radix>::reunitarize() {
     return this->normalize();
 }
 
 /// Create a random SU2 matrix
-template <typename radix> SU2<radix> &SU2<radix>::random() {
+template <typename radix>
+SU2<radix> &SU2<radix>::random() {
     radix one, two;
     one = hila::gaussian_ran2(&two);
     a = one;
@@ -498,14 +555,16 @@ template <typename radix> SU2<radix> &SU2<radix>::random() {
 }
 
 /// The inverse of an SU(N) matrix is its conjugate
-template <typename radix> SU2<radix> &SU2<radix>::inv() {
+template <typename radix>
+SU2<radix> &SU2<radix>::inv() {
     a *= static_cast<radix>(-1);
     b *= static_cast<radix>(-1);
     c *= static_cast<radix>(-1);
     return *this;
 }
 
-template <typename radix> SU2<radix> &SU2<radix>::operator=(const SU2<radix> &rhs) {
+template <typename radix>
+SU2<radix> &SU2<radix>::operator=(const SU2<radix> &rhs) {
     a = rhs.a;
     b = rhs.b;
     c = rhs.c;
@@ -522,7 +581,8 @@ SU2<radix> &SU2<radix>::operator=(const SU2adjoint<radix> &rhs) {
     return *this;
 };
 
-template <typename radix> SU2<radix> &SU2<radix>::operator*=(const SU2<radix> &y) {
+template <typename radix>
+SU2<radix> &SU2<radix>::operator*=(const SU2<radix> &y) {
     a = nn_a((*this), y);
     b = nn_b((*this), y);
     c = nn_c((*this), y);
@@ -530,7 +590,8 @@ template <typename radix> SU2<radix> &SU2<radix>::operator*=(const SU2<radix> &y
     return *this;
 }
 
-template <typename radix> SU2<radix> &SU2<radix>::operator*=(const SU2adjoint<radix> &y) {
+template <typename radix>
+SU2<radix> &SU2<radix>::operator*=(const SU2adjoint<radix> &y) {
     a = na_a((*this), y);
     b = na_b((*this), y);
     c = na_c((*this), y);
@@ -538,7 +599,8 @@ template <typename radix> SU2<radix> &SU2<radix>::operator*=(const SU2adjoint<ra
     return *this;
 }
 
-template <typename radix> SU2<radix> &SU2<radix>::operator*=(const radix &rhs) {
+template <typename radix>
+SU2<radix> &SU2<radix>::operator*=(const radix &rhs) {
     a *= rhs;
     b *= rhs;
     c *= rhs;
@@ -546,7 +608,8 @@ template <typename radix> SU2<radix> &SU2<radix>::operator*=(const radix &rhs) {
     return *this;
 };
 
-template <typename radix> SU2<radix> SU2<radix>::operator*(const radix &rhs) {
+template <typename radix>
+SU2<radix> SU2<radix>::operator*(const radix &rhs) {
     SU2<radix> r;
     r.a = a * rhs;
     r.b = b * rhs;
@@ -555,7 +618,8 @@ template <typename radix> SU2<radix> SU2<radix>::operator*(const radix &rhs) {
     return r;
 };
 
-template <typename radix> SU2<radix> SU2<radix>::operator+(const SU2<radix> &y) {
+template <typename radix>
+SU2<radix> SU2<radix>::operator+(const SU2<radix> &y) {
     SU2<radix> r;
     r.a = a + y.a;
     r.b = b + y.b;
@@ -564,7 +628,8 @@ template <typename radix> SU2<radix> SU2<radix>::operator+(const SU2<radix> &y) 
     return r;
 };
 
-template <typename radix> SU2<radix> SU2<radix>::operator-(const SU2<radix> &y) {
+template <typename radix>
+SU2<radix> SU2<radix>::operator-(const SU2<radix> &y) {
     SU2<radix> r;
     r.a = a - y.a;
     r.b = b - y.b;
@@ -596,23 +661,26 @@ void project_antihermitean(Matrix<N, N, Complex<radix>> &matrix) {
 
 /// A new vector type for color vectors. These can be multiplied with appropriate SU(N)
 /// matrices.
-template <int n, typename radix> class SU_vector : public Vector<n, Complex<radix>> {
+template <int n, typename radix>
+class SU_vector : public Vector<n, Complex<radix>> {
   public:
-    using base_type =  hila::number_type<radix>;
+    using base_type = hila::number_type<radix>;
     using argument_type = radix;
 
     static constexpr int size = n;
 
     SU_vector() = default;
 
-    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart,
+              std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     SU_vector(const scalart rhs) {
         for (int i = 0; i < n; i++) {
             this->c[i] = (rhs);
         }
     }
 
-    template <typename scalart, std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
+    template <typename scalart,
+              std::enable_if_t<hila::is_arithmetic<scalart>::value, int> = 0>
     SU_vector(const SU_vector<n, scalart> m) {
         for (int i = 0; i < n; i++) {
             this->c[i] = m.c[i];
