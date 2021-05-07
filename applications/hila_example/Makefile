@@ -1,7 +1,7 @@
 
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative
-TOP_DIR := ../..
+HILA_DIR := ../..
 
 # Set default goal and arch
 .DEFAULT_GOAL := hila_example
@@ -11,7 +11,7 @@ ARCH := vanilla
 endif
 
 # Read in the main makefile contents, incl. platforms
-include $(TOP_DIR)/libraries/main.mk
+include $(HILA_DIR)/libraries/main.mk
 
 #HILAPP_OPTS += -insert-includes
 #HILAPP_OPTS += -comment-pragmas

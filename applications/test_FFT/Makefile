@@ -1,12 +1,12 @@
 
 # Give the location of the top level distribution directory wrt. this.
 # Can be absolute or relative
-TOP_DIR := ../..
+HILA_DIR := ../..
 
 .DEFAULT_GOAL := test_FFT
 
 # Read in the main makefile contents, incl. platforms
-include $(TOP_DIR)/libraries/main.mk
+include $(HILA_DIR)/libraries/main.mk
 
 #HILAPP_OPTS += -insert-includes
 #HILAPP_OPTS += -comment-pragmas

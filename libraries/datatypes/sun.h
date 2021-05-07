@@ -259,6 +259,9 @@ class SU : public SquareMatrix<n, Complex<radix>> {
         return thissum;
     }
 
+
+
+
     /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed.
     /// p. 47 ff
     Complex<radix> det_lu() {
@@ -282,9 +285,10 @@ class SU : public SquareMatrix<n, Complex<radix>> {
         for (i = 0; i < n; i++) {
             big = 0;
             for (j = 0; j < n; j++) {
-                if ((temp = a[i][j].abs()) > big) big = temp;
+                if ((temp = a[i][j].squarenorm()) > big) big = temp;
             }
-            if (big == 0.0) exit(1);
+            big = sqrt(big);
+            if (big == 0.0) return 0;
             vv[i] = 1.0 / big;
         }
 
@@ -331,7 +335,7 @@ class SU : public SquareMatrix<n, Complex<radix>> {
             }
         }
 
-        csum = Complex<radix>(d, 0.0);
+        csum = d;
         for (j = 0; j < n; j++) {
             csum = csum * a[j][j];
         }

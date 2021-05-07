@@ -1,7 +1,7 @@
 
 # Give the location of the top level distribution directory wrt. this.
 # Can be absolute or relative
-TOP_DIR := ../..
+HILA_DIR := ../..
 
 ifndef ARCH
   $(info Defaulting to ARCH=vanilla)
@@ -9,7 +9,7 @@ ifndef ARCH
 endif
 
 # Read in the main makefile contents, incl. platforms
-include $(TOP_DIR)/libraries/main.mk
+include $(HILA_DIR)/libraries/main.mk
 
 APP_HEADERS := bench.h
 

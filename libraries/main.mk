@@ -7,16 +7,16 @@
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),cleanall)
 
-## hilapp binary (TOP_DIR defined in calling Makefile)
+## hilapp binary (HILA_DIR defined in calling Makefile)
 
-HILAPP_DIR := $(TOP_DIR)/hilapp
+HILAPP_DIR := $(HILA_DIR)/hilapp
 HILAPP := $(HILAPP_DIR)/bin/hilapp
 
 ################
 
-LIBRARIES_DIR := $(TOP_DIR)/libraries
+LIBRARIES_DIR := $(HILA_DIR)/libraries
 ARCH_DIR := $(LIBRARIES_DIR)/target_arch
-HILA_INCLUDE_DIR := $(TOP_DIR)/libraries
+HILA_INCLUDE_DIR := $(HILA_DIR)/libraries
 
 # ARCH needs to be defined. Check.
 ifndef ARCH
@@ -70,7 +70,7 @@ $(LASTMAKE): $(MAKEFILE_LIST)
 
 
 # Use all headers inside libraries for dependencies
-HILA_HEADERS := $(wildcard $(TOP_DIR)/libraries/*/*.h) $(wildcard $(TOP_DIR)/libraries/*/*/*.h)
+HILA_HEADERS := $(wildcard $(HILA_DIR)/libraries/*/*.h) $(wildcard $(HILA_DIR)/libraries/*/*/*.h)
 
 ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 

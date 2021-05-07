@@ -128,6 +128,19 @@ class Matrix {
         return c[i];
     }
 
+    Vector<m,T> row(int r) const { 
+        Vector<m,T> v;
+        for (int i=0; i<m; i++) v[i] = e(r,i);
+        return v;
+    }
+
+    Vector<n,T> column(int c) const { 
+        Vector<n,T> v;
+        for (int i=0; i<n; i++) v[i] = e(i,c);
+        return v;
+    }
+
+
     /// interpret Matrix as Array -  for array ops
     Array<n, m, T> &asArray() {
         return *reinterpret_cast<Array<n, m, T> *>(this);
