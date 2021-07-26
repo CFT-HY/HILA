@@ -124,12 +124,12 @@ void hila_fft<cmplx_t>::transform() {
     // Timer will tell the proportional timing
 
     gpufftHandle plan;
-    int batch = n_columns;
+    int batch = hila_fft_my_columns[dir];
     int n_fft = 1;
     // reduce very large batch to smaller, avoid large buffer space
 
     bool is_divisible = true;
-    while (batch > 1000 && is_divisible) {
+    while (batch > 512 && is_divisible) {
         is_divisible = false;
         for (int div : {2, 3, 5, 7}) {
             if (batch % div == 0) {
