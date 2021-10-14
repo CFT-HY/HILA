@@ -147,8 +147,10 @@ struct Complex {
         return rhs;
     }
 
-    inline Complex<T> polar(const T r, const T theta) {
-        return Complex<T>({r * cos(theta), r * sin(theta)});
+    inline Complex<T> set_polar(const T r, const T theta) output_only {
+        re = r * cos(theta);
+        im = r * sin(theta);
+        return *this;
     }
 
     inline Complex<T> &random() output_only {
@@ -267,6 +269,14 @@ inline T real(const Complex<T> a) {
 template <typename T>
 inline T imag(const Complex<T> a) {
     return a.im;
+}
+
+template <typename T, typename A, typename B,
+          std::enable_if_t<
+              hila::is_arithmetic<A>::value && hila::is_arithmetic<B>::value, int> = 0>
+Complex<T> polar(A r, B arg) {
+    Complex<T> res(r * cos(arg), r * sin(arg));
+    return res;
 }
 
 // template <typename T>
