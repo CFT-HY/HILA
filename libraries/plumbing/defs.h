@@ -39,8 +39,8 @@ constexpr double PI = 3.1415926535897935;
 
 #define EVEN_SITES_FIRST
 
-// TODO: default type real_t definition somewhere (makefile?)
-using real_t = double;
+// TODO: default type real_t definition somewhere (makefile?)  - remove this
+// using real_t = double;  
 
 // move these somewhere - use consts?
 // Have this defined in the program?
