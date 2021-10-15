@@ -2,8 +2,14 @@
 # Can be absolute or relative
 HILA_DIR := ../..
 
-APP_OPTS := -DNDIM=2
+APP_OPTS := -DNDIM=3
 
+# Set default goal and arch
+.DEFAULT_GOAL := onsim
+
+ifndef ARCH
+ARCH := vanilla
+endif
 
 # Read in the main makefile contents, incl. platforms
 include $(HILA_DIR)/libraries/main.mk
@@ -14,7 +20,6 @@ include $(HILA_DIR)/libraries/main.mk
 
 onsim: build/onsim ; @:
 
- 
 # Now the linking step for each target executable
 build/onsim: Makefile build/onsim.o $(HILA_OBJECTS) $(HEADERS) 
 	$(LD) -o $@ build/onsim.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)

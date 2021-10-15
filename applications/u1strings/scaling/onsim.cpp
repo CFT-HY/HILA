@@ -6,14 +6,14 @@
 #include <math.h>
 #include <assert.h>
 
-#include "plumbing/defs.h"
-#include "datatypes/cmplx.h"
-#include "datatypes/matrix.h"
-#include "datatypes/sun.h"
-#include "plumbing/field.h"
-#include "plumbing/input.h"
+#include "plumbing/hila.h"
 
-inline double scaleFactor(double t, double t_end) { return t / t_end; }
+using real_t = double;
+using complex_t = Complex<real_t>;
+
+// inline double scaleFactor(double t, double t_end) {
+//     return t / t_end;
+// }
 
 /// Container for simulation parameters and methods
 class scaling_sim {
@@ -53,7 +53,8 @@ class scaling_sim {
     } config;
 };
 
-const std::string scaling_sim::allocate(const std::string &fname, int argc, char **argv) {
+const std::string scaling_sim::allocate(const std::string &fname, int argc,
+                                        char **argv) {
     hila::initialize(argc, argv);
 
     hila::input parameters(fname);
@@ -83,7 +84,9 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc, char
     return output_file;
 }
 
-inline double scaling_sim::scaleFactor(double t) { return t / config.tEnd; }
+inline double scaling_sim::scaleFactor(double t) {
+    return t / config.tEnd;
+}
 
 void scaling_sim::initialize() {
 
@@ -95,8 +98,8 @@ void scaling_sim::initialize() {
     switch (config.initalCondition) {
 
     case 2: {
-        onsites(ALL) {
-            pi[X] = Complex<double>(0.0, 0.0);
+        onsites (ALL) {
+            pi[X] = 0;
             phi[X].re = config.sigma;
             phi[X].im = config.sigma;
         }
@@ -108,14 +111,13 @@ void scaling_sim::initialize() {
     }
 
     case 1: {
-        onsites(ALL) {
-            element<CoordinateVector> coord =
-                X.coordinates(); // coordinates of the current lattice site
-            pi[X] = Complex<double>(0.0, 0.0);
+        onsites (ALL) {
+            auto xcoord = X.coordinate(Direction::e_x);
+            pi[X] = 0;
             phi[X].re =
-                s * sqrt(1 - epsilon * epsilon * sin(2.0 * M_PI * coord[0] * m / N) *
-                                 sin(2.0 * M_PI * coord[0] * m / N));
-            phi[X].im = s * epsilon * sin(2.0 * M_PI * coord[0] * m / N);
+                s * sqrt(1 - epsilon * epsilon * sin(2.0 * M_PI * xcoord * m / N) *
+                                 sin(2.0 * M_PI * xcoord * m / N));
+            phi[X].im = s * epsilon * sin(2.0 * M_PI * xcoord * m / N);
         }
 
         output0 << "Axion wave generated with amplitude: " << config.epsilon << '\n';
@@ -125,25 +127,23 @@ void scaling_sim::initialize() {
 
     default: {
 
-        onsites(ALL) {
-            double theta, r;
+        onsites (ALL) {
+            real_t theta, r;
             r = config.initialModulus * s;
             theta = hila::random() * 2 * M_PI;
-            Complex<double> val;
-            phi[X] = val.polar(r, theta);
+            phi[X].polar(r, theta);
             pi[X] = 0;
         }
+
         // smoothing iterations
         for (int iter = 0; iter < config.smoothing; iter++) {
-            Direction d;
             pi[ALL] = 6.0 * phi[X];
-            foralldir(d) { pi[ALL] = pi[X] + phi[X + d]; }
+            foralldir(d) { pi[ALL] += phi[X + d] + phi[X - d]; }
             onsites(ALL) {
-                Complex<double> norm = pi[X].conj() * pi[X];
-                if (norm.re == 0)
-                    norm = Complex<double>(1.0, 0.0);
+                auto norm = pi[X].squarenorm();
+                if (norm == 0.0) norm = 1.0;
                 phi[X] = pi[X] / norm;
-                pi[X] = Complex<double>(0.0, 0.0);
+                pi[X] = 0;
             }
         }
 
@@ -161,14 +161,9 @@ void scaling_sim::write_moduli() {
     double phimod = 0.0;
     double pimod = 0.0;
 
-    onsites(ALL) {
-        double p_r = 0.0, p_i = 0.0;
-        Complex<double> norm_1 = phi[X].conj() * phi[X];
-        Complex<double> norm_2 = pi[X].conj() * pi[X];
-        p_r = norm_1.re;
-        p_i = norm_2.re;
-        phimod += sqrt(p_r);
-        pimod += sqrt(p_i);
+    onsites (ALL) {
+        phimod += phi[X].abs();
+        pimod += pi[X].abs();
     }
 
     if (hila::myrank() == 0) {
@@ -197,11 +192,11 @@ void scaling_sim::write_energies() {
     double w_sumPhiDiPhi = 0.0;
     double w_sumPhiPi = 0.0;
 
-    onsites(ALL) {
-        double phinorm = (phi[X].conj() * phi[X]).re;
+    onsites (ALL) {
+        double phinorm = phi[X].squarenorm();
         double v = 0.25 * config.lambda * a * a * pow((phinorm - ss), 2.0);
-        double pinorm = (pi[X].conj() * pi[X]).re;
-        double pPi = (phi[X].conj() * pi[X]).re;
+        double pinorm = pi[X].squarenorm();
+        double pPi = phi[X].squarenorm();
 
         sumV += v;
         w_sumV += v * v;
@@ -214,18 +209,19 @@ void scaling_sim::write_energies() {
     }
 
     Direction d;
-    foralldir(d) {
-        onsites(ALL) {
-            Complex<double> norm = phi[X].conj() * phi[X];
-            double v = 0.25 * config.lambda * a * a * pow((norm.re - ss), 2.0);
-            Complex<double> diff_phi = (phi[X + d] - phi[X]) / config.dx;
+    foralldir (d) {
+        onsites (ALL) {
+            auto norm = phi[X].squarenorm();
+            double v = 0.25 * config.lambda * a * a * pow((norm - ss), 2.0);
+            auto diff_phi = (phi[X + d] - phi[X]) / config.dx;
             double pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
+            double diff_phi_norm2 = diff_phi.squarenorm();
 
-            sumDiPhi += 0.5 * (diff_phi.conj() * diff_phi).re;
-            sumPhiDiPhi += pDphi * pDphi / norm.re;
+            sumDiPhi += 0.5 * diff_phi_norm2;
+            sumPhiDiPhi += pDphi * pDphi / norm;
 
-            w_sumDiPhi += 0.5 * (diff_phi.conj() * diff_phi).re * v;
-            w_sumPhiDiPhi += pDphi * pDphi / norm.re * v;
+            w_sumDiPhi += 0.5 * diff_phi_norm2 * v;
+            w_sumPhiDiPhi += pDphi * pDphi / norm * v;
         }
     }
 
@@ -253,14 +249,12 @@ void scaling_sim::next() {
 
     phi[ALL] = phi[X] + config.dt * pi[X];
 
-    onsites(ALL) {
-        Complex<double> norm = phi[X].conj() * phi[X]; // calculate phi norm
-        deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - norm.re) - aadt2D_aadxdx);
+    onsites (ALL) {
+        deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx);
     }
 
-    Direction d;
-    foralldir(d) {
-        onsites(ALL) { deltaPi[X] = deltaPi[X] + aadt_aadxdx * phi[X + d]; }
+    foralldir (d) {
+        onsites (ALL) { deltaPi[X] += aadt_aadxdx * (phi[X + d] + phi[X - d]); }
     }
 
     pi[ALL] = pi[X] - daa_aa * pi[X];

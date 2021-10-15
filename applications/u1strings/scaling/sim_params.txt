@@ -1,4 +1,4 @@
-N                   32
+N                   64
 m                   3
 epsilon             1.0
 seed                3
@@ -6,7 +6,7 @@ initialModulus      1.0
 sigma               1.0
 dx                  0.5
 tStart              50
-tEnd                102
+tEnd                202
 lambda              2.0
 smooth              0
 initialCondition    2
