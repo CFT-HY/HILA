@@ -179,18 +179,18 @@ void hila_fft<cmplx_t>::transform() {
 
     fft_buffer_timer.stop();
 
-    for (int i = 0; i < n_fft; i++) {
+    // do the fft
+    fft_execute_timer.start();
 
-        // do the fft
-        fft_execute_timer.start();
+    for (int i = 0; i < n_fft; i++) {
 
         cmplx_t *cp = fft_wrk + i * (batch * lattice->size(dir));
 
         gpufft_execute(plan, cp, direction);
         check_device_error("FFT execute");
-
-        fft_execute_timer.stop();
     }
+
+    fft_execute_timer.stop();
 
     fft_buffer_timer.start();
 
