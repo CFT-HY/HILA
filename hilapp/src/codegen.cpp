@@ -281,7 +281,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         }
 
     // and close
-    code << "}\n//----------";
+    code << "}\n//----------\n";
 
     // Remove old code + replace
     if (semicolon_at_end) {
