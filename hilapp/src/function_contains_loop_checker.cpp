@@ -27,7 +27,7 @@ class containsSiteLoopChecker : public GeneralVisitor,
 
     template <typename visitortype>
     containsSiteLoopChecker(visitortype &v, bool fieldsearch) : GeneralVisitor(v) {
-        found_X = found_field_parity = false;
+        found_field = found_X = found_field_parity = false;
         searching_for_field = fieldsearch;
     }
 
