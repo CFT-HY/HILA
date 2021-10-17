@@ -1632,22 +1632,22 @@ inline void dummy_X_f() {
         Direction d;
         d = +d1;
         d = -d1; // unaryops
-        CoordinateVector v;
-        v = +v1;
-        v = -v1;
+        CoordinateVector vec;
+        vec = +v1;
+        vec = -v1;
 
         // Direction + vector combos
-        v = d + d1;
-        v = d - d1;
-        v = v1 + d1;
-        v = v1 - d1;
-        v = d1 + v1;
-        v = d1 - v1;
-        v = v + v1;
-        v = v - v1;
+        vec = d + d1;
+        vec = d - d1;
+        vec = v1 + d1;
+        vec = v1 - d1;
+        vec = d1 + v1;
+        vec = d1 - v1;
+        vec = vec + v1;
+        vec = vec - v1;
 
         // and Direction index func
-        v[e_x] = v[0] + v[e_y] + v.e(e_y);
+        vec[e_x] = vec[0] + vec[e_y] + vec.e(e_y);
     }
 }
 
