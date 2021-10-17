@@ -200,6 +200,8 @@ class GeneralVisitor {
 
     bool is_site_dependent(Expr *e, std::vector<var_info *> *dependent_var);
 
+    bool is_loop_constant(Expr *e);
+
     bool is_rhs_site_dependent(Stmt *s, std::vector<var_info *> *vi);
 
     bool is_site_dependent_access_op(Expr *e);
