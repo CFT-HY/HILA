@@ -164,11 +164,11 @@ OBJECTS = \
   $(BUILDDIR)/loop_function_new.o \
   $(BUILDDIR)/loop_function_visitor.o \
   $(BUILDDIR)/vectorization_info.o \
-  $(BUILDDIR)/depends_on_site.o \
-  $(BUILDDIR)/contains_random.o \
-  $(BUILDDIR)/contains_loop_local_var.o \
-  $(BUILDDIR)/function_contains_loop_checker.o \
-  $(BUILDDIR)/addrof_and_ref_checker.o \
+  $(BUILDDIR)/depends_on_site_visitor.o \
+  $(BUILDDIR)/contains_random_visitor.o \
+  $(BUILDDIR)/contains_loop_local_var_visitor.o \
+  $(BUILDDIR)/function_contains_loop_visitor.o \
+  $(BUILDDIR)/addrof_and_ref_visitor.o \
   $(BUILDDIR)/optionsparser.o \
   $(BUILDDIR)/specialization_db.o \
   $(BUILDDIR)/write_output.o
