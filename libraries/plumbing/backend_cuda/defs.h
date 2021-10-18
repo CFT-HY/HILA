@@ -122,7 +122,7 @@ inline void synchronize_threads() {}
 ////////////////////////////////////////////////////////////////////////////////////
 
 void initialize_cuda(int rank);
-void cuda_device_info();
+void gpu_device_info();
 
 // This is not the CUDA compiler
 // Maybe hilapp?

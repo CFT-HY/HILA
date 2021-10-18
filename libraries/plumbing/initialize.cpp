@@ -256,7 +256,7 @@ void hila::initialize(int argc, char **argv) {
 
 #if defined(CUDA) || defined(HIP)
     if (!hila::check_input)
-        cuda_device_info();
+        gpu_device_info();
 #endif
 
 #ifdef AVX

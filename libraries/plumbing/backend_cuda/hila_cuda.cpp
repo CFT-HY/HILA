@@ -146,7 +146,7 @@ void initialize_cuda(int rank) {
     cudaSetDevice(my_device);
 }
 
-void cuda_device_info() {
+void gpu_device_info() {
     if (hila::myrank() == 0) {
         const int kb = 1024;
         const int mb = kb * kb;
@@ -179,6 +179,9 @@ void cuda_device_info() {
         hila::output << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                      << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]"
                      << '\n';
+
+
+        hila::output << "Number of threads : " << N_threads << '\n';
     }
 }
 

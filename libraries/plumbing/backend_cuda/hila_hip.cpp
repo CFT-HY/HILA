@@ -177,7 +177,7 @@ void initialize_cuda(int rank) {
 
 #ifdef CUDA
 
-void cuda_device_info() {
+void gpu_device_info() {
     if (hila::myrank() == 0) {
         const int kb = 1024;
         const int mb = kb * kb;
@@ -211,6 +211,8 @@ void cuda_device_info() {
         hila::output << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                      << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]"
                      << '\n';
+
+        hila::output << "Threads in use: " << N_threads << '\n';
     }
 }
 
@@ -218,7 +220,7 @@ void cuda_device_info() {
 
 #ifdef HIP
 
-void cuda_device_info() {
+void gpu_device_info() {
     if (hila::myrank() == 0) {
         const int kb = 1024;
         const int mb = kb * kb;
@@ -252,6 +254,7 @@ void cuda_device_info() {
         hila::output << "  Max grid dimensions:  [ " << props.maxGridSize[0] << ", "
                      << props.maxGridSize[1] << ", " << props.maxGridSize[2] << " ]"
                      << '\n';
+        hila::output << "Threads in use: " << N_threads << '\n';
     }
 }
 
