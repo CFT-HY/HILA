@@ -442,19 +442,6 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
              << "] & _dir_mask_) != 0) == _wait_i_) {\n";
     }
 
-    // // Add vector reduction variable here, inside the loop
-    // for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
-    //     // Allocate memory for a reduction and initialize
-    //     if (vrf.reduction_type == reduction::SUM) {
-    //         code << "vectorize_struct<" << vrf.type << ", vector_size>::type v_"
-    //              << vrf.vector_name << "(0);\n";
-    //     }
-    //     if (vrf.reduction_type == reduction::PRODUCT) {
-    //         code << "vectorize_struct<" << vrf.type << ", vector_size>::type v_"
-    //              << vrf.vector_name << "(1);\n";
-    //     }
-    //     loopBuf.replace(vrf.ref, "v_" + vrf.vector_name);
-    // }
 
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
@@ -542,25 +529,6 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
         code << ";";
     code << "\n";
 
-    // // Add vector reductions
-    // int i = 0;
-    // for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
-    //     // run reduction over the vector
-    //     code << "int v_index_" << i << "[vector_size];\n";
-    //     code << vrf.index_name << ".store(&v_index_" << i << "[0]);\n";
-    //     code << vrf.type << " a_" << vrf.vector_name << "[vector_size];\n";
-    //     code << "v_" << vrf.vector_name << ".store(&a_" << vrf.vector_name << "[0]);\n";
-    //     code << "for( int i=0; i<vector_size; i++){\n";
-    //     if (vrf.reduction_type == reduction::SUM) {
-    //         code << vrf.vector_name << "[v_index_" << i << "[i]] += "
-    //              << "a_" << vrf.vector_name << "[i];\n";
-    //     }
-    //     if (vrf.reduction_type == reduction::PRODUCT) {
-    //         code << vrf.vector_name << "[v_index_" << i << "[i]] *= "
-    //              << "a_" << vrf.vector_name << "[i];\n";
-    //     }
-    //     code << "}\n";
-    // }
 
     if (!semicolon_at_end) {
         code << "}";

@@ -35,6 +35,7 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s) {
         contains_rng = true;
     } else if (D->hasBody()) {
         // trivially site dep if it has random
+        // TODO: loop const calls move outside of loops! (Use loop_const_expr)
         contains_rng = contains_random(D->getBody());
     } else {
 

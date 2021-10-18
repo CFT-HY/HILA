@@ -263,16 +263,6 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         }
     }
 
-    // for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
-    //     if (vrf.reduction_type == reduction::SUM) {
-    //         code << "lattice->reduce_node_sum(" << vrf.vector_name << ".data(), "
-    //              << vrf.vector_name << ".size(), true);\n";
-    //     }
-    //     if (vrf.reduction_type == reduction::PRODUCT) {
-    //         code << "lattice->reduce_node_product(" << vrf.vector_name << ".data(), "
-    //              << vrf.vector_name << ".size(), true);\n";
-    //     }
-    // }
 
     // finally mark modified fields
     for (field_info &l : field_info_list)

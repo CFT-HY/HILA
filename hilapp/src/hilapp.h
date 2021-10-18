@@ -238,6 +238,7 @@ struct field_info {
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////////////
 /// Stores information about a single reference
 /// to a variable
 struct var_ref {
@@ -276,6 +277,19 @@ struct var_info {
     }
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////
+/// Store reference to constant expression (field of a struct, array element)
+
+struct loop_const_expr_ref {
+    std::vector<Expr *> refs;   // references of this expression in loop
+    std::string type;           // type as string
+    std::string exprstring;     // expression as a string (with compressed whitespace)
+    std::string new_name;       // name to be used in loop
+
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////
 //  Store "array-type" references inside site loops
 struct bracket_ref_t {
     Expr *E;           // full bracket expression "a[i]"
@@ -470,7 +484,7 @@ extern const std::string field_type;
 extern std::list<field_ref> field_ref_list;
 extern std::list<field_info> field_info_list;
 extern std::list<array_ref> array_ref_list;
-// extern std::list<vector_reduction_ref> vector_reduction_ref_list;
+extern std::list<loop_const_expr_ref> loop_const_expr_ref_list;
 extern std::list<special_function_call> special_function_call_list;
 
 #endif

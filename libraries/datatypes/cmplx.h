@@ -85,18 +85,13 @@ struct Complex {
         im = b;
     }
 
-    // make also std accessors real() and imag() - though no real difference to .re, .im
+    // make also std accessors real() and imag() - don't return reference, because 
+    // v.real() would not then work inside loops!
     inline T real() const {
-        return re;
-    }
-    inline T &real() {
         return re;
     }
 
     inline T imag() const {
-        return im;
-    }
-    inline T &imag() {
         return im;
     }
 

@@ -74,24 +74,25 @@ bool LoopAssignChecker::VisitDeclRefExpr(DeclRefExpr *e) {
 }
 
 /// Check if an assignment is allowed -- IS THIS NOW SUPERFLUOUS?
-void TopLevelVisitor::check_allowed_assignment(Stmt *s) {
-    if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
-        if (OP->getNumArgs() == 2) {
-            // Walk the right hand side to check for element types. None are allowed.
-            std::string type = OP->getArg(0)->getType().getAsString();
-            type = remove_extra_whitespace(type);
-            if (type.rfind("element<", 0) == std::string::npos) {
+// void TopLevelVisitor::check_allowed_assignment(Stmt *s) {
+//     if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
+//         if (OP->getNumArgs() == 2) {
+//             // Walk the right hand side to check for element types. None are allowed.
+//             std::string type = OP->getArg(0)->getType().getAsString();
+//             type = remove_extra_whitespace(type);
+//             if (type.rfind("element<", 0) == std::string::npos) {
 
-                LoopAssignChecker lac(*this);
-                lac.TraverseStmt(OP->getArg(1));
-            } else {
-                // llvm::errs() << " ** Element type : " << type << '\n';
-                // llvm::errs() << " ** Canonical type without keywords: " <<
-                // OP->getArg(0)->getType().getCanonicalType().getAsString(PP) << '\n';
-            }
-        }
-    }
-}
+//                 LoopAssignChecker lac(*this);
+//                 lac.TraverseStmt(OP->getArg(1));
+//             } else {
+//                 // llvm::errs() << " ** Element type : " << type << '\n';
+//                 // llvm::errs() << " ** Canonical type without keywords: " <<
+//                 // OP->getArg(0)->getType().getCanonicalType().getAsString(PP) <<
+//                 '\n';
+//             }
+//         }
+//     }
+// }
 
 /// -- Handler utility functions --
 
@@ -283,10 +284,8 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
 reduction get_reduction_type(bool is_assign, const std::string &assignop,
                              var_info &vi) {
     if (is_assign && (!vi.is_loop_local)) {
-        if (assignop == "+=")
-            return reduction::SUM;
-        if (assignop == "*=")
-            return reduction::PRODUCT;
+        if (assignop == "+=") return reduction::SUM;
+        if (assignop == "*=") return reduction::PRODUCT;
     }
     return reduction::NONE;
 }
@@ -300,14 +299,11 @@ DeclRefExpr *TopLevelVisitor::find_base_variable(Expr *E) {
 
     while (!dyn_cast<DeclRefExpr>(RE)) {
         // RE may be a compound expression. We want the base variable.
-        if (dyn_cast<ArraySubscriptExpr>(RE)) {
-            ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(RE);
+        if (ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(RE)) {
             RE = ASE->getBase()->IgnoreImplicit();
-        } else if (dyn_cast<MemberExpr>(RE)) {
-            MemberExpr *ME = dyn_cast<MemberExpr>(RE);
+        } else if (MemberExpr *ME = dyn_cast<MemberExpr>(RE)) {
             RE = ME->getBase()->IgnoreImplicit();
-        } else if (dyn_cast<CXXOperatorCallExpr>(RE)) {
-            CXXOperatorCallExpr *OCE = dyn_cast<CXXOperatorCallExpr>(RE);
+        } else if (CXXOperatorCallExpr *OCE = dyn_cast<CXXOperatorCallExpr>(RE)) {
             if (strcmp(getOperatorSpelling(OCE->getOperator()), "[]") == 0) {
                 RE = OCE->getArg(0)->IgnoreImplicit();
             } else {
@@ -414,8 +410,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     bool site_dep = is_site_dependent(ref.Idx, &loop_info.conditional_vars);
 
     // if it is assignment = reduction, don't vectorize
-    if (site_dep || is_assign)
-        loop_info.has_site_dependent_cond_or_index = true;
+    if (site_dep || is_assign) loop_info.has_site_dependent_cond_or_index = true;
 
     reduction reduction_type;
     if (is_assign) {
@@ -547,8 +542,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             ar.size_expr = ar.name + ".size()";
             ar.data_ptr = ar.name + ".data()";
 
-            if (type == array_ref::REDUCTION)
-                ar.reduction_type = reduction_type;
+            if (type == array_ref::REDUCTION) ar.reduction_type = reduction_type;
         }
     }
 
@@ -611,8 +605,7 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
     br.DRE = find_base_variable(br.E);
     br.Idx = OC->getArg(1)->IgnoreImplicit();
 
-    if (is_assign)
-        br.assign_stmt = assign_stmt;
+    if (is_assign) br.assign_stmt = assign_stmt;
 
     std::string type = OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
 
@@ -646,17 +639,15 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
 ///  and it is substituted with an int literal.  Try to help with type casting!
 ///////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::handle_constant_expr(Expr *E) {
+bool TopLevelVisitor::handle_constant_ref(Expr *E) {
 
     APValue val;
-    if (!E->isCXX11ConstantExpr(*Context, &val, nullptr))
-        return false; // nothing
+    if (!E->isCXX11ConstantExpr(*Context, &val, nullptr)) return false; // nothing
 
     E = E->IgnoreImplicit();
     // If it is not a declrefexpr continue to next node in ast
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
-    if (DRE == nullptr)
-        return true;
+    if (DRE == nullptr) return true;
 
     SourceLocation sl = DRE->getDecl()->getSourceRange().getBegin();
     if (sl.isValid()) {
@@ -691,6 +682,42 @@ bool TopLevelVisitor::handle_constant_expr(Expr *E) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/// handle_constant_expr_ref handles (non-variable) expressions which are site
+/// loop constants.  This includes struct/class members (and array refs?)
+///////////////////////////////////////////////////////////////////////////////
+
+void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
+
+    // First, get the string rep of the expression
+    std::string expstr = remove_all_whitespace(get_stmt_str(E));
+
+    // Did we already have it?
+    for (loop_const_expr_ref &cer : loop_const_expr_ref_list) {
+        if (cer.exprstring == expstr) {
+            cer.refs.push_back(E);
+            return;
+        }
+    }
+
+    // New ref
+    loop_const_expr_ref eref;
+
+    eref.refs.push_back(E);
+    eref.exprstring = expstr;
+
+    // Get the type of the expr
+    clang::QualType typ =
+        E->getType().getUnqualifiedType().getCanonicalType().getNonReferenceType();
+    typ.removeLocalConst();
+    eref.type = typ.getAsString(PP);
+
+    loop_const_expr_ref_list.push_back(eref);
+
+    llvm::errs() << "Got new loop const expr: " << eref.exprstring << "  of type "
+                 << eref.type << '\n';
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /// handle_full_loop_stmt() is the starting point for the analysis of all
 /// "parity" -loops
 ///////////////////////////////////////////////////////////////////////////////
@@ -704,7 +731,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     var_info_list.clear();
     var_decl_list.clear();
     array_ref_list.clear();
-    //    vector_reduction_ref_list.clear();
+    loop_const_expr_ref_list.clear();
     loop_function_calls.clear();
 
     global.location.loop = ls->getSourceRange().getBegin();
@@ -734,8 +761,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     // because var_info_list was checked above, once is enough
     if (loop_info.has_site_dependent_cond_or_index == false) {
         for (auto *n : loop_info.conditional_vars)
-            if (n->is_site_dependent)
-                loop_info.has_site_dependent_cond_or_index = true;
+            if (n->is_site_dependent) loop_info.has_site_dependent_cond_or_index = true;
     }
 
     // if (loop_info.has_site_dependent_conditional) llvm::errs() << "Cond is site
@@ -776,8 +802,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // depth = 1 is the "top level" statement, should give fully formed
     // c++ statements separated by ';'.  These act as sequencing points
     // This is used to obtain assignment and read ordering
-    if (parsing_state.ast_depth == 1)
-        parsing_state.stmt_sequence++;
+    if (parsing_state.ast_depth == 1) parsing_state.stmt_sequence++;
 
     // Need to recognize assignments lf[X] =  or lf[X] += etc.
     // And also assignments to other vars: t += norm2(lf[X]) etc.
@@ -799,8 +824,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     }
 
     if (isa<MemberExpr>(s)) {
-        if (is_assignment)
-            is_member_expr = true;
+        llvm::errs() << "Got member expr: " << get_stmt_str(s) << '\n';
+        if (is_assignment) is_member_expr = true;
     }
 
     if (is_constructor_stmt(s)) {
@@ -840,7 +865,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     if (Expr *E = dyn_cast<Expr>(s)) {
 
         // Avoid treating constexprs as variables
-        if (handle_constant_expr(E)) {
+        if (handle_constant_ref(E)) {
             return true;
         }
 
@@ -928,6 +953,20 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // TODO: function ref?
         }
 
+        if (MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+
+            // nothing to do if not loop const (PROBABLY?)
+            // Check also the type: if it is not trivial, don't know what to do here
+            if (!is_assignment && is_loop_constant(E) &&
+                ME->getType().isTrivialType(*Context)) {
+
+                handle_loop_const_expr_ref(E);
+
+                parsing_state.skip_children = 1;
+                return true;
+            }
+        }
+
         if (isa<ArraySubscriptExpr>(E)) {
             // llvm::errs() << "  It's array expr "
             //              << TheRewriter.getRewrittenText(E->getSourceRange()) <<
@@ -943,51 +982,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             parsing_state.skip_children = is_handled;
             return true;
         }
-
-        // Check for a vector reduction
-        // if (is_assignment && isa<CXXOperatorCallExpr>(s)) {
-        //     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(s);
-        //     std::string type = OC->getArg(0)->getType().getAsString();
-        //     if (type.rfind("std::vector<", 0) != std::string::npos) {
-        //         // It's an assignment to a vector element
-        //         // Still need to check if it's a reduction
-        //         DeclRefExpr *DRE =
-        //             dyn_cast<DeclRefExpr>(OC->getArg(0)->IgnoreImplicit());
-        //         VarDecl *vector_decl = dyn_cast<VarDecl>(DRE->getDecl());
-        //         bool array_local = is_variable_loop_local(vector_decl);
-
-        //         DRE = dyn_cast<DeclRefExpr>(OC->getArg(1)->IgnoreImplicit());
-        //         VarDecl *index_decl = dyn_cast<VarDecl>(DRE->getDecl());
-        //         bool index_local = is_variable_loop_local(index_decl);
-
-        //         // Handle the index as a variable (it's local, so the name won't
-        //         change) handle_var_ref(DRE, false, assignop);
-
-        //         if (!array_local && index_local) {
-        //             // llvm::errs() << "Found a vector reduction\n";
-        //             vector_reduction_ref vrf;
-        //             vrf.ref = OC;
-        //             vrf.vector_name = vector_decl->getName().str();
-        //             vrf.index_name = index_decl->getName().str();
-        //             if (type.rfind("float", 0) != std::string::npos) {
-        //                 vrf.type = "float";
-        //             } else {
-        //                 vrf.type = "double";
-        //             }
-        //             if (assignop == "+=") {
-        //                 vrf.reduction_type = reduction::SUM;
-        //             } else if (assignop == "*=") {
-        //                 vrf.reduction_type = reduction::PRODUCT;
-        //             } else {
-        //                 vrf.reduction_type = reduction::NONE;
-        //             }
-        //             vector_reduction_ref_list.push_back(vrf);
-        //             parsing_state.skip_children = 1;
-        //         }
-        //     }
-        //     is_assignment = false; // next will not be assignment
-        //     is_member_expr = false;
-        // }
 
         if (0) {
 
@@ -1024,8 +1018,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         passthrough = true; // next visit will be to the same node, skip
 
         // Reset ast_depth, so that depth == 0 again for the block.
-        if (isa<CompoundStmt>(s))
-            parsing_state.ast_depth = -1;
+        if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1;
 
         TraverseStmt(s);
 
@@ -1118,19 +1111,16 @@ int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
 bool TopLevelVisitor::TraverseStmt(Stmt *S) {
 
     // if state::skip_children > 0 we'll skip all until return to level up
-    if (parsing_state.skip_children > 0)
-        parsing_state.skip_children++;
+    if (parsing_state.skip_children > 0) parsing_state.skip_children++;
 
     // go via the original routine...
     if (!parsing_state.skip_children) {
         parsing_state.ast_depth++;
         RecursiveASTVisitor<TopLevelVisitor>::TraverseStmt(S);
-        if (parsing_state.ast_depth > 0)
-            parsing_state.ast_depth--;
+        if (parsing_state.ast_depth > 0) parsing_state.ast_depth--;
     }
 
-    if (parsing_state.skip_children > 0)
-        parsing_state.skip_children--;
+    if (parsing_state.skip_children > 0) parsing_state.skip_children--;
 
     return true;
 }
@@ -1138,19 +1128,16 @@ bool TopLevelVisitor::TraverseStmt(Stmt *S) {
 bool TopLevelVisitor::TraverseDecl(Decl *D) {
 
     // if state::skip_children > 0 we'll skip all until return to level up
-    if (parsing_state.skip_children > 0)
-        parsing_state.skip_children++;
+    if (parsing_state.skip_children > 0) parsing_state.skip_children++;
 
     // go via the original routine...
     if (!parsing_state.skip_children) {
         parsing_state.ast_depth++;
         RecursiveASTVisitor<TopLevelVisitor>::TraverseDecl(D);
-        if (parsing_state.ast_depth > 0)
-            parsing_state.ast_depth--;
+        if (parsing_state.ast_depth > 0) parsing_state.ast_depth--;
     }
 
-    if (parsing_state.skip_children > 0)
-        parsing_state.skip_children--;
+    if (parsing_state.skip_children > 0) parsing_state.skip_children--;
 
     return true;
 }
@@ -1239,8 +1226,7 @@ bool TopLevelVisitor::check_field_ref_list() {
             }
         }
 
-        if (p.is_offset)
-            fip->is_read_offset = true;
+        if (p.is_offset) fip->is_read_offset = true;
 
         // save expr record
         fip->ref_list.push_back(&p);
@@ -1660,16 +1646,14 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
     }
 
     // And, for correct level for pragma handling - turns to 0 for stmts inside
-    if (isa<CompoundStmt>(s))
-        parsing_state.ast_depth = -1;
+    if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1;
 
     Expr *E = dyn_cast<Expr>(s);
 
     // new stuff: if there is field[coordinate], modify these to appropriate
     // functions
 
-    if (is_field_with_coordinate_stmt(s))
-        return true;
+    if (is_field_with_coordinate_stmt(s)) return true;
 
     //  Finally, if we get to a Field[Parity] -expression without a loop or assignment
     //  flag error
@@ -1794,8 +1778,7 @@ void TopLevelVisitor::field_with_coordinate_assign(Expr *lhs, Expr *rhs,
     // right type, so this succeeds
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(lhs);
 
-    if (writeBuf->get(oploc, 1) == ",")
-        return; // this has already been changed
+    if (writeBuf->get(oploc, 1) == ",") return; // this has already been changed
 
     // now change = -> ,
     writeBuf->replace(SourceRange(oploc, oploc), ",");
@@ -1803,8 +1786,7 @@ void TopLevelVisitor::field_with_coordinate_assign(Expr *lhs, Expr *rhs,
     writeBuf->remove(SourceRange(OC->getRParenLoc(), OC->getRParenLoc()));
     // find [ and insert method call
     SourceLocation sl = OC->getArg(1)->getBeginLoc();
-    while (sl.isValid() && getChar(sl) != '[')
-        sl = sl.getLocWithOffset(-1);
+    while (sl.isValid() && getChar(sl) != '[') sl = sl.getLocWithOffset(-1);
     writeBuf->replace(SourceRange(sl, sl), ".set_element_at(");
     // and insert closing )
     sl = getSourceLocationAtEndOfRange(rhs->getSourceRange());
@@ -1822,8 +1804,7 @@ void TopLevelVisitor::field_with_coordinate_read(Expr *E) {
     writeBuf->replace(SourceRange(OC->getRParenLoc(), OC->getRParenLoc()), ")");
     // find [ and insert method call
     SourceLocation sl = OC->getArg(1)->getBeginLoc();
-    while (sl.isValid() && getChar(sl) != '[')
-        sl = sl.getLocWithOffset(-1);
+    while (sl.isValid() && getChar(sl) != '[') sl = sl.getLocWithOffset(-1);
     writeBuf->replace(SourceRange(sl, sl), ".get_element(");
 }
 
@@ -1836,8 +1817,7 @@ void TopLevelVisitor::field_with_coordinate_read(Expr *E) {
 bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // operate (usually) only non-templated functions and template specializations
-    if (has_pragma(f, pragma_hila::AST_DUMP))
-        ast_dump(f);
+    if (has_pragma(f, pragma_hila::AST_DUMP)) ast_dump(f);
 
     // For the pragmas, we need to check the "previousdecl" -- prototype, if there is a
     // pragma there Automatic now in has_pragma
@@ -2004,8 +1984,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
 
     // Get template mapping for classes
     // parent is from: CXXRecordDecl * parent = method->getParent();
-    if (parent)
-        ntemplates += get_param_substitution_list(parent, par, arg, typeargs);
+    if (parent) ntemplates += get_param_substitution_list(parent, par, arg, typeargs);
 
     // llvm::errs() << "Num nesting templates " << ntemplates << '\n';
     // llvm::errs() << "Specializing function " << f->getQualifiedNameAsString()
@@ -2045,8 +2024,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
         if (l > 0) {
             // llvm::errs() << "Searching name " << f->getNameAsString() << '\n';
             int j = funcBuf.find_original_word(0, f->getNameAsString());
-            if (j < 0 || j > l)
-                l = -1; // name not found
+            if (j < 0 || j > l) l = -1; // name not found
         }
         if (l < 0) {
             reportDiag(DiagnosticsEngine::Level::Fatal, f->getSourceRange().getBegin(),
@@ -2081,8 +2059,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     //                         "static","");
     // }
 
-    if (!f->isInlineSpecified() && !no_inline)
-        funcBuf.insert(0, "inline ", true, true);
+    if (!f->isInlineSpecified() && !no_inline) funcBuf.insert(0, "inline ", true, true);
 
     for (int i = 0; i < ntemplates; i++) {
         funcBuf.insert(0, "template <>\n", true, true);
@@ -2142,8 +2119,7 @@ SourceRange TopLevelVisitor::get_func_decl_range(FunctionDecl *f) {
         while (srcMgr.getFileOffset(b) >= srcMgr.getFileOffset(a)) {
             b = b.getLocWithOffset(-1);
             const char *p = srcMgr.getCharacterData(b);
-            if (!std::isspace(*p))
-                break;
+            if (!std::isspace(*p)) break;
         }
         SourceRange r(a, b);
         return r;
@@ -2382,8 +2358,7 @@ int TopLevelVisitor::get_param_substitution_list(
     CXXRecordDecl *r, std::vector<std::string> &par, std::vector<std::string> &arg,
     std::vector<const TemplateArgument *> &typeargs) {
 
-    if (r == nullptr)
-        return 0;
+    if (r == nullptr) return 0;
 
     int level = 0;
     if (r->getTemplateSpecializationKind() ==
@@ -2428,28 +2403,24 @@ void TopLevelVisitor::make_mapping_lists(
     std::vector<std::string> &par, std::vector<std::string> &arg,
     std::vector<const TemplateArgument *> &typeargs, std::string *argset) {
 
-    if (argset)
-        *argset = "< ";
+    if (argset) *argset = "< ";
 
     // Get argument strings without class, struct... qualifiers
 
     for (int i = 0; i < tal.size(); i++) {
-        if (argset && i > 0)
-            *argset += ", ";
+        if (argset && i > 0) *argset += ", ";
         switch (tal.get(i).getKind()) {
         case TemplateArgument::ArgKind::Type:
             arg.push_back(tal.get(i).getAsType().getAsString(PP));
             par.push_back(tpl->getParam(i)->getNameAsString());
-            if (argset)
-                *argset += arg.back();       // write just added arg
-            typeargs.push_back(&tal.get(i)); // save type-type arguments
+            if (argset) *argset += arg.back(); // write just added arg
+            typeargs.push_back(&tal.get(i));   // save type-type arguments
             break;
 
         case TemplateArgument::ArgKind::Integral:
             arg.push_back(tal.get(i).getAsIntegral().toString(10));
             par.push_back(tpl->getParam(i)->getNameAsString());
-            if (argset)
-                *argset += arg.back();
+            if (argset) *argset += arg.back();
             break;
 
         default:
@@ -2459,8 +2430,7 @@ void TopLevelVisitor::make_mapping_lists(
             exit(1); // Don't know what to do
         }
     }
-    if (argset)
-        *argset += " >";
+    if (argset) *argset += " >";
 
     return;
 }

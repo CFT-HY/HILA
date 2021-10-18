@@ -97,24 +97,6 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         code << "lattice_struct * loop_lattice = lattice;\n";
     }
 
-#if 0
-    for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
-        // Allocate memory for a reduction and initialize
-        code << vrf.type << " * d_" << vrf.vector_name << ";\n";
-        code << "gpuMalloc( (void **)& d_" << vrf.vector_name << ", "
-             << vrf.vector_name << ".size() * sizeof(" << vrf.type
-             << ") * lattice->volume() );\n";
-        if (vrf.reduction_type == reduction::SUM) {
-            code << "cuda_set_zero(d_" << vrf.vector_name << ", " << vrf.vector_name
-                 << ".size()* lattice->volume());\n";
-        }
-        if (vrf.reduction_type == reduction::PRODUCT) {
-            code << "cuda_set_one(d_" << vrf.vector_name << ", " << vrf.vector_name
-                 << ".size()* lattice->volume());\n";
-        }
-        code << "check_device_error(\"allocate_reduction\");\n";
-    }
-#endif
 
     kernel << "\n\n//-------- start kernel " << kernel_name << "---------\n";
 
@@ -260,13 +242,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         if (vi.is_raw) {
             // pass the raw ptr as is
 
-            kernel << ", " << vi.type << vi.name;
+            kernel << ", " << vi.type << ' ' << vi.name;
             code   << ", " << vi.name;
 
         } else if (!vi.is_loop_local) {
 
             // Rename the variable
-            vi.new_name = "sv_" + std::to_string(i) + "_";
+            vi.new_name = "kernel_par_" + std::to_string(i) + "_";
             i++;
 
             if (vi.reduction_type != reduction::NONE) {
@@ -284,20 +266,21 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
     }
 
-#if 0
-    // Add array reductions to the argument list
-    for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
-        if (vrf.reduction_type != reduction::NONE) {
-            kernel << ", " << vrf.type << " * " << vrf.vector_name;
-            code << ", d_" << vrf.vector_name;
-            vrf.new_vector_name =
-                vrf.vector_name +
-                "[ (loop_lattice->loop_end - loop_lattice->loop_begin)*" +
-                vrf.index_name + " + Index]";
+    // Then loop constant expressions upgraded
+    i = 0;
+    for (loop_const_expr_ref lcer : loop_const_expr_ref_list) {
+        lcer.new_name = "lconst_par_" + std::to_string(i) + "_";
+        i++;
+
+        kernel << ", const " << lcer.type << ' ' << lcer.new_name;
+        code << ", " << lcer.exprstring;
+
+        // Replace references in loop body
+        for (Expr * ep : lcer.refs) {
+            loopBuf.replace(ep, lcer.new_name);
         }
-        loopBuf.replace(vrf.ref, vrf.new_vector_name);
     }
-#endif
+
 
     // In kernelized code we need to handle array expressions as well
     for (array_ref &ar : array_ref_list) {
@@ -620,21 +603,6 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
     }
 
-#if 0
-    for (vector_reduction_ref &vrf : vector_reduction_ref_list) {
-        if (vrf.reduction_type == reduction::SUM) {
-            code << "cuda_multireduce_sum( " << vrf.vector_name << ", d_"
-                 << vrf.vector_name << ", loop_lattice->volume() );\n";
-        }
-        if (vrf.reduction_type == reduction::PRODUCT) {
-            code << "cuda_multireduce_mul( " << vrf.vector_name << ", d_"
-                 << vrf.vector_name << ", loop_lattice->volume() );\n";
-        }
-        if (vrf.reduction_type != reduction::NONE) {
-            code << "gpuFree(d_" << vrf.vector_name << ");\n";
-        }
-    }
-#endif
 
     return code.str();
 }

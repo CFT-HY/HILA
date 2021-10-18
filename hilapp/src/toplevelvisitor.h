@@ -150,7 +150,7 @@ class TopLevelVisitor : public GeneralVisitor,
     bool handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop,
                                  Stmt *assingstmt);
 
-    bool handle_constant_expr(Expr *E);
+    bool handle_constant_ref(Expr *E);
 
     /// Check that the addressof-operators and reference vars are OK
     void check_addrofops_and_refs(Stmt *S);
@@ -159,6 +159,8 @@ class TopLevelVisitor : public GeneralVisitor,
     void handle_function_call_in_loop(Stmt *s);
 
     void handle_member_call_in_loop(Stmt *s);
+
+    void handle_loop_const_expr_ref(Expr *E);
 
     bool loop_function_check(Decl *fd);
 
