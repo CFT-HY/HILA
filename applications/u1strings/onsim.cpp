@@ -9,7 +9,6 @@
 #include "plumbing/hila.h"
 
 using real_t = double;
-using complex_t = Complex<real_t>;
 
 // inline double scaleFactor(double t, double t_end) {
 //     return t / t_end;
@@ -25,30 +24,30 @@ class scaling_sim {
     void write_moduli();
     void write_energies();
     void next();
-    inline double scaleFactor(double t);
+    inline real_t scaleFactor(real_t t);
 
-    Field<Complex<double>> phi;
-    Field<Complex<double>> pi;
-    Field<Complex<double>> deltaPi;
+    Field<Complex<real_t>> phi;
+    Field<Complex<real_t>> pi;
+    Field<Complex<real_t>> deltaPi;
 
-    double t;
+    real_t t;
 
-    struct {
+    struct config {
         int l;
         int m;
         int seed;
         int smoothing;
         int initalCondition;
-        double initialModulus;
-        double epsilon;
-        double sigma;
-        double dx;
-        double dt;
-        double tStart;
-        double tStats;
-        double nOutputs;
-        double tEnd;
-        double lambda;
+        real_t initialModulus;
+        real_t epsilon;
+        real_t sigma;
+        real_t dx;
+        real_t dt;
+        real_t tStart;
+        real_t tStats;
+        real_t nOutputs;
+        real_t tEnd;
+        real_t lambda;
         std::fstream stream;
     } config;
 };
@@ -72,7 +71,7 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
     config.initalCondition = parameters.get("initialCondition");
     config.tStats = parameters.get("tStats");
     config.nOutputs = parameters.get("numberStatsOutputs");
-    double ratio = parameters.get("dtdxRatio");
+    real_t ratio = parameters.get("dtdxRatio");
     const std::string output_file = parameters.get("output_file");
     config.dt = config.dx * ratio;
     t = config.tStart;
@@ -84,15 +83,15 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
     return output_file;
 }
 
-inline double scaling_sim::scaleFactor(double t) {
+inline real_t scaling_sim::scaleFactor(real_t t) {
     return t / config.tEnd;
 }
 
 void scaling_sim::initialize() {
 
     int m = config.m;
-    double epsilon = config.epsilon;
-    double s = config.sigma;
+    real_t epsilon = config.epsilon;
+    real_t s = config.sigma;
     int N = config.l;
 
     switch (config.initalCondition) {
@@ -127,9 +126,12 @@ void scaling_sim::initialize() {
 
     default: {
 
+        Complex<real_t> test;
+        test = 1;
+        // #pragma hila ast_dump
         onsites (ALL) {
             real_t theta, r;
-            r = config.initialModulus * s;
+            r = config.initialModulus * s + test.re;
             theta = hila::random() * 2 * M_PI;
             phi[X].polar(r, theta);
             pi[X] = 0;
@@ -156,10 +158,10 @@ void scaling_sim::initialize() {
 
 void scaling_sim::write_moduli() {
 
-    double a = scaleFactor(t);
+    real_t a = scaleFactor(t);
 
-    double phimod = 0.0;
-    double pimod = 0.0;
+    real_t phimod = 0.0;
+    real_t pimod = 0.0;
 
     onsites (ALL) {
         phimod += phi[X].abs();
@@ -208,14 +210,13 @@ void scaling_sim::write_energies() {
         w_sumPhiPi += 0.5 * pPi * pPi * v;
     }
 
-    Direction d;
     foralldir (d) {
         onsites (ALL) {
             auto norm = phi[X].squarenorm();
-            double v = 0.25 * config.lambda * a * a * pow((norm - ss), 2.0);
+            real_t v = 0.25 * config.lambda * a * a * pow((norm - ss), 2.0);
             auto diff_phi = (phi[X + d] - phi[X]) / config.dx;
-            double pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
-            double diff_phi_norm2 = diff_phi.squarenorm();
+            real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
+            real_t diff_phi_norm2 = diff_phi.squarenorm();
 
             sumDiPhi += 0.5 * diff_phi_norm2;
             sumPhiDiPhi += pDphi * pDphi / norm;
@@ -237,19 +238,18 @@ void scaling_sim::write_energies() {
 
 void scaling_sim::next() {
 
-    double a = scaleFactor(t);
-    double aHalfPlus = scaleFactor(t + config.dt / 2.0);
-    double aHalfMinus = scaleFactor(t - config.dt / 2.0);
+    real_t a = scaleFactor(t);
+    real_t aHalfPlus = scaleFactor(t + config.dt / 2.0);
+    real_t aHalfMinus = scaleFactor(t - config.dt / 2.0);
 
-    double aadt_aadxdx = pow(a / aHalfPlus, 2.0) * config.dt / (config.dx * config.dx);
-    double aadt2D_aadxdx = aadt_aadxdx * 2.0 * 3.0;
-    double aaaaldt_aa = pow(a, 4.0) * config.lambda * config.dt / pow(aHalfPlus, 2.0);
-    double daa_aa = (pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0)) / pow(aHalfPlus, 2.0);
-    double ss = config.sigma * config.sigma;
-
-    phi[ALL] = phi[X] + config.dt * pi[X];
+    real_t aadt_aadxdx = pow(a / aHalfPlus, 2.0) * config.dt / (config.dx * config.dx);
+    real_t aadt2D_aadxdx = aadt_aadxdx * 2.0 * 3.0;
+    real_t aaaaldt_aa = pow(a, 4.0) * config.lambda * config.dt / pow(aHalfPlus, 2.0);
+    real_t daa_aa = (pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0)) / pow(aHalfPlus, 2.0);
+    real_t ss = config.sigma * config.sigma;
 
     onsites (ALL) {
+        phi[X] += config.dt * pi[X];
         deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx);
     }
 
@@ -257,8 +257,7 @@ void scaling_sim::next() {
         onsites (ALL) { deltaPi[X] += aadt_aadxdx * (phi[X + d] + phi[X - d]); }
     }
 
-    pi[ALL] = pi[X] - daa_aa * pi[X];
-    pi[ALL] = pi[X] + deltaPi[X];
+    pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
 
     t += config.dt;
 }
