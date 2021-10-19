@@ -120,16 +120,19 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
 
         // and then get (possible) local refs
         // TODO:
-        if (l.is_read_atX || l.is_written) {
+        if (l.is_read_atX || loop_info.has_conditional) {
             // now reading var without nb. reference
             code << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
                  << ".get_value_at(" << looping_var << ");\n";
-            if (l.is_written)
-                code << "// TODO: READ MAY BE UNNECESSARY, write more careful "
-                        "analysis\n";
+
+            if (loop_info.has_conditional && !l.is_read_atX) {
+                code << "// Value of var " << l.loop_ref_name << " read in because loop has conditional\n";
+                code << "// TODO: MAY BE UNNECESSARY, write more careful analysis\n";
+            }
 
         } else if (l.is_written) {
             code << l.element_type << " " << l.loop_ref_name << ";\n";
+            code << "// Initial value of variable " << l.loop_ref_name << " not needed\n";
         }
 
         // and finally replace references in body

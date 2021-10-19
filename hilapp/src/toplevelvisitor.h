@@ -130,7 +130,7 @@ class TopLevelVisitor : public GeneralVisitor,
     /// special handler for Field<>
     int handle_field_specializations(ClassTemplateDecl *D);
 
-    void check_allowed_assignment(Stmt *s);
+    // void check_allowed_assignment(Stmt *s);
 
     bool check_field_ref_list();
 
@@ -171,7 +171,7 @@ class TopLevelVisitor : public GeneralVisitor,
     bool handle_special_loop_function(CallExpr *Call);
 
     // check if stmt is lf[par] = ... -type
-    bool is_field_parity_assignment(Stmt *s);
+    // bool is_field_parity_assignment(Stmt *s);
 
     bool is_field_with_coordinate_stmt(Stmt *s);
     void field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceLocation oploc);

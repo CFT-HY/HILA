@@ -5,12 +5,6 @@
 //#include <complex>
 //#include <cmath>
 
-#include <sstream>
-#include <iostream>
-#include <math.h>
-#include <type_traits>
-#include <cmath>
-
 #include "plumbing/defs.h"
 
 /// TEMPORARY location for vector intrinsic analogues -- result obvious

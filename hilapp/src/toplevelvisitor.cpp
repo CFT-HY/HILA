@@ -713,8 +713,6 @@ void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
 
     loop_const_expr_ref_list.push_back(eref);
 
-    llvm::errs() << "Got new loop const expr: " << eref.exprstring << "  of type "
-                 << eref.type << '\n';
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -797,7 +795,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     static bool is_compound = false;
     static Stmt *assign_stmt = nullptr;
     static std::string assignop;
-    static bool is_member_expr = false;
+    static bool is_field_assign = false;
 
     // depth = 1 is the "top level" statement, should give fully formed
     // c++ statements separated by ';'.  These act as sequencing points
@@ -806,8 +804,9 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // Need to recognize assignments lf[X] =  or lf[X] += etc.
     // And also assignments to other vars: t += norm2(lf[X]) etc.
-    if (is_assignment_expr(s, &assignop, is_compound)) {
-        // This checks the "element<> -style assigns which we do not want now!
+    Expr *assignee;
+    if (is_assignment_expr(s, &assignop, is_compound, &assignee)) {
+
         // check_allowed_assignment(s);
         assign_stmt = s;
         is_assignment = true;
@@ -820,13 +819,16 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         }
 
         // next visit here will be to the assigned to variable
+        // Check type, if it is f[X] or f[parity] - then we do not (necessarily)
+        // need to read in the variable
+        is_field_assign = (is_field_parity_expr(assignee) || is_field_with_X_expr(assignee));
+
         return true;
     }
 
-    if (isa<MemberExpr>(s)) {
-        llvm::errs() << "Got member expr: " << get_stmt_str(s) << '\n';
-        if (is_assignment) is_member_expr = true;
-    }
+    // if (isa<MemberExpr>(s)) {
+    //     if (is_assignment) is_member_expr = true;
+    // }
 
     if (is_constructor_stmt(s)) {
         handle_constructor_in_loop(s);
@@ -874,9 +876,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         if (is_field_with_X_expr(E)) {
             // It is Field[X] reference
             // get the expression for field name
-            handle_field_X_expr(E, is_assignment, is_compound || is_member_expr, true);
+            handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign, true);
             is_assignment = false; // next will not be assignment
-            is_member_expr = false;
             // (unless it is a[] = b[] = c[], which is OK)
 
             parsing_state.skip_children = 1;
@@ -887,10 +888,9 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // Now we know it is a field parity reference
             // get the expression for field name
 
-            handle_field_X_expr(E, is_assignment, is_compound || is_member_expr, false);
+            handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign, false);
             is_assignment = false; // next will not be assignment
             // (unless it is a[] = b[] = c[], which is OK)
-            is_member_expr = false;
 
             parsing_state.skip_children = 1;
             return true;
@@ -1043,6 +1043,9 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
                     is_site_dependent(condexpr, &loop_info.conditional_vars);
                 if (loop_info.has_site_dependent_cond_or_index)
                     loop_info.condExpr = condexpr;
+
+                // Flag general cond expression
+                loop_info.has_conditional = true;
             }
         }
 

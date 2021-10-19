@@ -100,7 +100,7 @@ class Matrix {
         return c[i * m + j];
     }
     /// standard access ops m.e(i,j) - assume T is small, as it should
-    inline T &e(const int i, const int j) {
+    inline T &e(const int i, const int j) const_method {
         return c[i * m + j];
     }
 
@@ -112,7 +112,7 @@ class Matrix {
     }
 
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
-    inline T &e(const int i) {
+    inline T &e(const int i) const_method {
         return c[i];
     }
 
@@ -128,18 +128,17 @@ class Matrix {
         return c[i];
     }
 
-    Matrix<1,m,T> row(int r) const { 
-        Matrix<1,m,T> v;
-        for (int i=0; i<m; i++) v[i] = e(r,i);
+    Matrix<1, m, T> row(int r) const {
+        Matrix<1, m, T> v;
+        for (int i = 0; i < m; i++) v[i] = e(r, i);
         return v;
     }
 
-    Matrix<n,1,T> column(int c) const { 
-        Matrix<n,1,T> v;
-        for (int i=0; i<n; i++) v[i] = e(i,c);
+    Matrix<n, 1, T> column(int c) const {
+        Matrix<n, 1, T> v;
+        for (int i = 0; i < n; i++) v[i] = e(i, c);
         return v;
     }
-
 
     /// interpret Matrix as Array -  for array ops
     Array<n, m, T> &asArray() {
@@ -407,7 +406,6 @@ class Matrix {
                     res.e(i, j) += ::conj(e(k, i)) * rhs.e(k, j);
             }
     }
-
 
     /// Generate random elements
     Matrix<n, m, T> &random() output_only {

@@ -456,17 +456,22 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
 
         // TODO:
-        if (l.is_read_atX || l.is_written) {
+        if (l.is_read_atX || loop_info.has_conditional) {
             // local read
             kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
-                   << ".get(" << looping_var << ", d_lattice.field_alloc_size);\n";
-            if (l.is_written) 
-                kernel << "// TODO: Read may be unnecessary!\n";
+                   << ".get(" << looping_var << ", d_lattice.field_alloc_size);\n           ";
+            // if (l.is_written) 
+            //    kernel << "// TODO: READ MAY BE UNNECESSARY!  Do more careful assignment analysis!\n";
 
+            if (loop_info.has_conditional && !l.is_read_atX) {
+                kernel << "// Value of var " << l.loop_ref_name << " read in because loop has conditional\n";
+                kernel << "// TODO: MAY BE UNNECESSARY, write more careful analysis\n";
+            }
 
         } else if (l.is_written) {
             // and a var which is not read
             kernel << l.element_type << " " << l.loop_ref_name << ";\n";
+            kernel << "// Initial value of var " << l.loop_ref_name << " not needed\n";
         }
 
         // and finally replace references in body

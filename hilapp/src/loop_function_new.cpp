@@ -277,11 +277,15 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
             SourceLocation sl = MD->getNameInfo().getEndLoc();
             // scan parens after name
             bool output_only = false;
+            bool const_method = false;
             // llvm::errs() << "METHOD WORD AFTER PARENS " <<
             // getNextWord(skipParens(sl))
             //              << " is const? " << is_const << '\n';
-            if (getNextWord(skipParens(sl)) == output_only_keyword) {
+            std::string modifier = getNextWord(skipParens(sl));
+            if (modifier == output_only_keyword) {
                 output_only = true;
+            } else if (modifier == const_method_keyword) {
+                const_method = true;
             }
 
             if (output_only && is_const) {
@@ -298,6 +302,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
             cinfo.is_method = true;
             cinfo.object.E = E;
             cinfo.object.is_output_only = output_only;
+            cinfo.object.is_const_method = const_method;
 
             if (is_top_level && is_field_with_X_expr(E)) {
 
@@ -317,7 +322,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
 
                 // some other variable reference
                 DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
-                var_info *vip = handle_var_ref(DRE, !is_const, "method", nullptr);
+                var_info *vip = handle_var_ref(DRE, !(is_const || const_method), "method", nullptr);
 
                 if (vip != nullptr) {
                     // site dep is additive

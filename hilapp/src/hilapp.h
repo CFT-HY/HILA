@@ -25,6 +25,8 @@ const std::string program_name("hilapp");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
 const std::string output_only_keyword("output_only");
+const std::string const_method_keyword("const_method");
+
 
 const std::string var_name_prefix("_HILA_var_");
 const std::string field_name_prefix("_HILA_field_");
@@ -363,6 +365,7 @@ struct loop_info_struct {
     const char *pragma_access_args;
     bool has_site_dependent_cond_or_index; // if, for, while w. site dep. cond?
     bool contains_random; // does it contain rng (also in loop functions)?
+    bool has_conditional;  // if, for, while, switch, ternary in loop 
     std::vector<var_info *> conditional_vars; // may depend on variables
     Expr *condExpr;
 
@@ -370,7 +373,7 @@ struct loop_info_struct {
 
     inline void
     clear_except_external() { // do not remove parity values, may be set in loop init
-        has_site_dependent_cond_or_index = contains_random = false;
+        has_site_dependent_cond_or_index = contains_random = has_conditional = false;
         conditional_vars.clear();
         condExpr = nullptr;
     }
@@ -383,11 +386,12 @@ struct argument_info {
     std::vector<var_info *> dependent_vars;
     bool is_lvalue;
     bool is_site_dependent;
-    bool is_output_only;
     bool is_const;
+    bool is_output_only;
+    bool is_const_method;
 
     argument_info() {
-        is_lvalue = is_site_dependent = is_output_only = is_const = false;
+        is_lvalue = is_site_dependent = is_output_only = is_const = is_const_method = false;
         E = nullptr;
         PV = nullptr;
         dependent_vars = {};

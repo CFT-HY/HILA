@@ -471,14 +471,19 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
                 }
         }
 
-        if (l.is_read_atX || l.is_written) {
+        if (l.is_read_atX || loop_info.has_conditional) {
             code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << " = "
                  << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type << ">("
                  << looping_var << ");\n";
-            if (!l.is_read_atX) 
-                code << "// TODO: Read may be unnecessary!\n";
+
+            if (loop_info.has_conditional && !l.is_read_atX) {
+                code << "// Value of var " << l.loop_ref_name << " read in because loop has conditional\n";
+                code << "// TODO: MAY BE UNNECESSARY, write more careful analysis\n";
+            }
+
         } else if (l.is_written) {
             code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << ";\n";
+            code << "// Value of var " << l.loop_ref_name << " not needed\n";
         }
 
         // and finally replace these references in body
