@@ -141,7 +141,7 @@ class Matrix {
     }
 
     /// interpret Matrix as Array -  for array ops
-    Array<n, m, T> &asArray() {
+    Array<n, m, T> &asArray() const_method {
         return *reinterpret_cast<Array<n, m, T> *>(this);
     }
     const Array<n, m, T> asArray() const {

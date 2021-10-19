@@ -118,8 +118,6 @@ struct Complex {
         return re * re + im * im;
     }
 
-    // TODO: make this work for vector type!
-    // currently this gives a compilation error
     inline T abs() const {
         return sqrt(squarenorm());
     }
