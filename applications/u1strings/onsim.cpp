@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <math.h>
+//#include <math.h>
 #include <assert.h>
 
 #include "plumbing/hila.h"
@@ -143,7 +143,6 @@ void scaling_sim::initialize() {
             foralldir(d) { pi[ALL] += phi[X + d] + phi[X - d]; }
             onsites(ALL) {
                 auto norm = pi[X].squarenorm();
-                if (norm == 0.0) norm = 1.0;
                 phi[X] = pi[X] / norm;
                 pi[X] = 0;
             }
@@ -248,9 +247,10 @@ void scaling_sim::next() {
     real_t daa_aa = (pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0)) / pow(aHalfPlus, 2.0);
     real_t ss = config.sigma * config.sigma;
 
+    Vector<3,real_t> vv = {1,2,3};
     onsites (ALL) {
         phi[X] += config.dt * pi[X];
-        deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx);
+        deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx) + vv.e(1);
     }
 
     foralldir (d) {
