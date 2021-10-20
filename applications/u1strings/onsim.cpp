@@ -191,7 +191,7 @@ void scaling_sim::write_energies() {
         double phinorm = phi[X].squarenorm();
         double v = 0.25 * config.lambda * a * a * pow((phinorm - ss), 2.0);
         double pinorm = pi[X].squarenorm();
-        double pPi = phi[X].squarenorm();
+        double pPi = (phi[X].conj()*pi[X]).re;
 
         sumV += v;
         w_sumV += v * v;
