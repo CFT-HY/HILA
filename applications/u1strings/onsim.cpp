@@ -8,7 +8,7 @@
 
 #include "plumbing/hila.h"
 
-using real_t = double;
+using real_t = float;
 
 // inline double scaleFactor(double t, double t_end) {
 //     return t / t_end;
@@ -288,17 +288,22 @@ int main(int argc, char **argv) {
         sim.config.stream.open(output_fname, std::ios::out);
     }
 
+    static hila::timer run_timer("Simulation time"), meas_timer("Measurements");
+    run_timer.start();
     while (sim.t < sim.config.tEnd) {
         if (sim.t >= sim.config.tStats) {
             if (stat_counter % steps == 0) {
-                synchronize();
+                meas_timer.start();
                 sim.write_moduli();
                 sim.write_energies();
+                meas_timer.stop();
             }
             stat_counter++;
         }
         sim.next();
+        synchronize();
     }
+    run_timer.stop();
 
     if (hila::myrank() == 0) {
         sim.config.stream.close();
