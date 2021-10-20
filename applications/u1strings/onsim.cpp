@@ -97,11 +97,8 @@ void scaling_sim::initialize() {
     switch (config.initalCondition) {
 
     case 2: {
-        onsites (ALL) {
-            pi[X] = 0;
-            phi[X].re = config.sigma;
-            phi[X].im = config.sigma;
-        }
+        pi = 0;
+        phi = Complex<real_t>(config.sigma, config.sigma);
 
         output0 << "Field real and imaginary components set to sigma = " << config.sigma
                 << '\n';
@@ -110,9 +107,9 @@ void scaling_sim::initialize() {
     }
 
     case 1: {
+        pi = 0;
         onsites (ALL) {
-            auto xcoord = X.coordinate(Direction::e_x);
-            pi[X] = 0;
+            auto xcoord = X.coordinate(e_x);
             phi[X].re =
                 s * sqrt(1 - epsilon * epsilon * sin(2.0 * M_PI * xcoord * m / N) *
                                  sin(2.0 * M_PI * xcoord * m / N));
@@ -126,12 +123,10 @@ void scaling_sim::initialize() {
 
     default: {
 
-        Complex<real_t> test;
-        test = 1;
         // #pragma hila ast_dump
         onsites (ALL) {
             real_t theta, r;
-            r = config.initialModulus * s + test.re;
+            r = config.initialModulus * s;
             theta = hila::random() * 2 * M_PI;
             phi[X].polar(r, theta);
             pi[X] = 0;
@@ -140,10 +135,9 @@ void scaling_sim::initialize() {
         // smoothing iterations
         for (int iter = 0; iter < config.smoothing; iter++) {
             pi[ALL] = 6.0 * phi[X];
-            foralldir(d) { pi[ALL] += phi[X + d] + phi[X - d]; }
-            onsites(ALL) {
-                auto norm = pi[X].squarenorm();
-                phi[X] = pi[X] / norm;
+            foralldir (d) { pi[ALL] += phi[X + d] + phi[X - d]; }
+            onsites (ALL) {
+                phi[X] = pi[X] / pi[X].abs();
                 pi[X] = 0;
             }
         }
@@ -159,8 +153,8 @@ void scaling_sim::write_moduli() {
 
     real_t a = scaleFactor(t);
 
-    real_t phimod = 0.0;
-    real_t pimod = 0.0;
+    double phimod = 0.0;
+    double pimod = 0.0;
 
     onsites (ALL) {
         phimod += phi[X].abs();
@@ -168,9 +162,9 @@ void scaling_sim::write_moduli() {
     }
 
     if (hila::myrank() == 0) {
-        double vol = (double)(config.l * config.l * config.l);
-        config.stream << t << "," << a << "," << config.lambda << "," << phimod / vol
-                      << "," << pimod / vol << ",";
+        config.stream << t << "," << a << "," << config.lambda << ","
+                      << phimod / lattice->volume() << "," << pimod / lattice->volume()
+                      << ",";
     }
 }
 
@@ -213,7 +207,7 @@ void scaling_sim::write_energies() {
         onsites (ALL) {
             auto norm = phi[X].squarenorm();
             real_t v = 0.25 * config.lambda * a * a * pow((norm - ss), 2.0);
-            auto diff_phi = (phi[X + d] - phi[X]) / config.dx;
+            auto diff_phi = (phi[X + d] - phi[X - d]) / (2 * config.dx);
             real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
             real_t diff_phi_norm2 = diff_phi.squarenorm();
 
@@ -247,17 +241,35 @@ void scaling_sim::next() {
     real_t daa_aa = (pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0)) / pow(aHalfPlus, 2.0);
     real_t ss = config.sigma * config.sigma;
 
-    Vector<3,real_t> vv = {1,2,3};
-    onsites (ALL) {
-        phi[X] += config.dt * pi[X];
-        deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx) + vv.e(1);
-    }
+    static hila::timer next_timer("timestep");
+
+    next_timer.start();
 
     foralldir (d) {
-        onsites (ALL) { deltaPi[X] += aadt_aadxdx * (phi[X + d] + phi[X - d]); }
+              phi.start_fetch(d);
+              phi.start_fetch(-d);
+    }
+
+    onsites (ALL) {
+        phi[X] += config.dt * pi[X];
+        deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx);
+    }
+
+    // foralldir (d) {
+    //      onsites (ALL) {
+    //          deltaPi[X] += aadt_aadxdx * (phi[X + d] + phi[X - d]);
+    //      }
+    // }
+
+    onsites (ALL) {
+        deltaPi[X] += aadt_aadxdx * (phi[X + e_x] + phi[X - e_x] + 
+                                     phi[X + e_y] + phi[X - e_y] + 
+                                     phi[X + e_z] + phi[X - e_z]);
     }
 
     pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
+
+    next_timer.stop();
 
     t += config.dt;
 }
