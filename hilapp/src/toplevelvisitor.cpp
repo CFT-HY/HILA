@@ -207,7 +207,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
         } else {
 
             // Now make a check if the reference is just constant (e_x etc.)
-            // Need to descent quite deeply into the expr chain
+            // Need to descend quite deeply into the expr chain
             Expr *e = lfe.parityExpr->IgnoreParens()->IgnoreImplicit();
             CXXOperatorCallExpr *Op = dyn_cast<CXXOperatorCallExpr>(e);
             if (!Op) {
@@ -241,8 +241,23 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
                 result = res.getValue();
 #endif
 
+                // Op must be + or - --get the sign
+                const char * ops = getOperatorSpelling(Op->getOperator());
+
+                int offset = 0;
+                if (strcmp(ops,"+") == 0) offset = 0;
+                else if (strcmp(ops,"-") == 0) offset = 50;
+                else {
+                    llvm::errs() << "This cannot happen, direction op " << ops << '\n';
+                    exit(0);
+                }
+
                 lfe.is_constant_direction = true;
-                lfe.constant_value = result.getExtValue();
+                // constant_value is used to uniquely label directions.  
+                // Give negative dirs an offset of 50.
+                lfe.constant_value = result.getExtValue() + offset;
+
+
                 // llvm::errs() << " GOT DIR CONST, value " << lfe.constant_value << "
                 // expr " << lfe.direxpr_s << '\n';
             } else {
