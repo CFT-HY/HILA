@@ -2010,6 +2010,25 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
 
     funcBuf.replace_tokens(f->getSourceRange(), par, arg);
 
+    // Check real parameters: default values must be removed, i.e. remove "= value"
+    for (unsigned i=0; i<f->getNumParams(); i++) {
+        ParmVarDecl * pvd = f->getParamDecl(i);
+        if (pvd->hasDefaultArg() && !pvd->hasInheritedDefaultArg()) {
+            // llvm::errs() << "Default arg! " << get_stmt_str(pvd->getDefaultArg()) << '\n';
+            
+            SourceRange sr = pvd->getDefaultArgRange();
+            SourceLocation b = sr.getBegin();
+            SourceLocation m = pvd->getSourceRange().getBegin(); 
+        
+            while (funcBuf.get(b,1) != "=" && b > m) b = b.getLocWithOffset(-1);
+
+            sr.setBegin(b);
+            funcBuf.remove(sr);
+
+        }
+    }
+
+
     // if we have special function do not try to explicitly specialize the name
     bool is_special = false;
     if (isa<CXXConstructorDecl>(f) || isa<CXXConversionDecl>(f) ||
