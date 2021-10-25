@@ -2,7 +2,6 @@
 #define VectorReduction_H_
 
 #include "hila.h"
-#include "reduction.h"
 
 // MPI is needed here
 

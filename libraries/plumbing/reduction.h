@@ -27,9 +27,7 @@ template <typename T> void do_reduce_operation(MPI_Op operation, Reduction<T> &r
 
     dtype = get_MPI_number_type<T>(size);
 
-    if (dtype == MPI_BYTE) {
-        assert(sizeof(T) < 0 && "Unknown number_type in reduction");
-    }
+    assert(dtype != MPI_BYTE && "Unknown number_type in reduction");
 
     void *ptr = r.get_ptr();
     MPI_Request *rp = r.get_request();
@@ -335,6 +333,11 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
         val = v;
         comm_is_on = false;
     }
+    Reduction(std::nullptr_t np) {
+        val = 0;
+        comm_is_on = false;
+    }
+
     // explicit Reduction(bool all) : val(0), is_allreduce(all) {}
     // explicit Reduction(const T &v, bool all) : val(v), is_allreduce(all) {}
 
@@ -415,6 +418,14 @@ class Reduction<T, typename std::enable_if<std::is_arithmetic<T>::value>::type> 
         set(rhs);
         return val;
     }
+
+    /// Assignment from 0
+#pragma hila loop_function
+    T &operator=(const std::nullptr_t n) {
+        val = 0;
+        return val;
+    }
+
 
     /// Make compound ops return void, unconventionally:
     /// these are used within site loops but their value is not well-defined.
@@ -530,6 +541,31 @@ template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
 std::ostream &operator<<(std::ostream &strm, Reduction<T> &r) {
     return strm << r.value();
 }
+
+
+
+#if defined(CUDA) || defined(HIP) 
+#include "backend_cuda/gpu_reduction.h"
+
+template <typename T>
+T reduce_sum(const Field<T> &f, bool allreduce = true) {
+    return gpu_reduce_field(f,allreduce);
+}
+
+#else
+
+template <typename T>
+T reduce_sum(const Field<T> &f, bool allreduce = true) {
+
+    Reduction<T> result;
+    result.allreduce(allreduce);
+    onsites(ALL) result += f[X];
+    return result;
+
+}
+
+#endif
+
 
 #endif // USE_MPI
 

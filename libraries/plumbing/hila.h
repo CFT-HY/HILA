@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////
 /// Catch-(almost)all include to get in most of the hila-system .h -files
 
+
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
@@ -14,8 +15,10 @@
 #include "plumbing/vectorreduction.h"
 #include "plumbing/input.h"
 
-#ifdef USE_MPI
-#include <mpi.h>
+
+#if defined(CUDA) || defined(HIP)
+#include "plumbing/backend_cuda/gpu_reduction.h"
 #endif
+
 
 #endif

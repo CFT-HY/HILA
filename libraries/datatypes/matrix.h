@@ -175,6 +175,7 @@ class Matrix {
     }
 
     /// assign from 0
+#pragma hila loop_function
     inline Matrix<n, m, T> &operator=(const std::nullptr_t &z) {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
@@ -210,6 +211,7 @@ class Matrix {
     }
 
     /// Assign from initializer list
+#pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Matrix<n, m, T> &operator=(std::initializer_list<S> rhs) {
         assert(rhs.size() == n * m &&

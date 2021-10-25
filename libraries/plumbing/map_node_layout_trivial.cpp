@@ -3,7 +3,8 @@
 // This is the trivial version, so that the order is straight
 // here.
 
-#include "plumbing/globals.h"
+#include "plumbing/defs.h"
+#include "plumbing/lattice.h"
 
 void lattice_struct::allnodes::create_remap() {
     output0 << "Node remapping: TRIVIAL (no effort made to reorder)\n";

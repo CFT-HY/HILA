@@ -5,7 +5,6 @@
 #include <type_traits>
 #include "defs.h"
 #include "input.h"
-#include "globals.h"
 #include <errno.h>
 #include <iomanip>
 

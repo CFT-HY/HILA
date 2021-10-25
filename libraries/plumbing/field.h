@@ -8,8 +8,9 @@
 #include <type_traits>
 
 #include "plumbing/defs.h"
-#include "plumbing/field_storage.h"
+#include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
+#include "plumbing/field_storage.h"
 
 #include "plumbing/backend_vector/vector_types.h"
 
@@ -20,11 +21,16 @@
 // This is a marker for hilapp -- for does not survive as it is
 #define onsites(p) for (Parity parity_type_var_(p);;)
 
-template <typename T> class Field;
+template <typename T>
+class Field;
 
-template <typename T> void ensure_field_operators_exist(Field<T> &f);
+template <typename T>
+void ensure_field_operators_exist(Field<T> &f);
 
-template <typename T> using element = T;
+template <typename T>
+using element = T;
+
+
 
 /// Field class
 /// This implements the standard methods for accessing fields
@@ -71,7 +77,8 @@ template <typename T> using element = T;
 /// Field.set_elements(): set elements in the Field
 /// Field.set_element(): set an element in the Field
 ///
-template <typename T> class Field {
+template <typename T>
+class Field {
 
   public:
     enum class fetch_status : unsigned { NOT_DONE, STARTED, DONE };
@@ -88,11 +95,11 @@ template <typename T> class Field {
         // get a direct ptr from here too, ease access
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
 #endif
-        unsigned assigned_to;               // keeps track of first assignment to parities
+        unsigned assigned_to; // keeps track of first assignment to parities
         fetch_status move_status[3][NDIRS]; // is communication done
 
-        // neighbour pointers - because of boundary conditions, can be different for diff.
-        // fields
+        // neighbour pointers - because of boundary conditions, can be different for
+        // diff. fields
         const unsigned *RESTRICT neighbours[NDIRS];
         BoundaryCondition boundary_condition[NDIRS];
 
@@ -107,8 +114,7 @@ template <typename T> class Field {
 
         void initialize_communication() {
             for (int d = 0; d < NDIRS; d++) {
-                for (int p = 0; p < 3; p++)
-                    move_status[p][d] = fetch_status::NOT_DONE;
+                for (int p = 0; p < 3; p++) move_status[p][d] = fetch_status::NOT_DONE;
                 send_buffer[d] = nullptr;
 #ifndef VANILLA
                 receive_buffer[d] = nullptr;
@@ -118,8 +124,7 @@ template <typename T> class Field {
 
         void free_communication() {
             for (int d = 0; d < NDIRS; d++) {
-                if (send_buffer[d] != nullptr)
-                    payload.free_mpi_buffer(send_buffer[d]);
+                if (send_buffer[d] != nullptr) payload.free_mpi_buffer(send_buffer[d]);
 #ifndef VANILLA
                 if (receive_buffer[d] != nullptr)
                     payload.free_mpi_buffer(receive_buffer[d]);
@@ -135,8 +140,12 @@ template <typename T> class Field {
 
 #endif
 
-        void allocate_payload() { payload.allocate_field(lattice); }
-        void free_payload() { payload.free_field(); }
+        void allocate_payload() {
+            payload.allocate_field(lattice);
+        }
+        void free_payload() {
+            payload.free_field();
+        }
 
 #ifndef VECTORIZED
         /// Getter for an individual elements in a loop
@@ -144,7 +153,8 @@ template <typename T> class Field {
             return payload.get(i, lattice->field_alloc_size());
         }
 
-        template <typename A> inline void set(const A &value, const unsigned i) {
+        template <typename A>
+        inline void set(const A &value, const unsigned i) {
             payload.set(value, i, lattice->field_alloc_size());
         }
 
@@ -154,14 +164,18 @@ template <typename T> class Field {
             return payload.get_element(i, lattice);
         }
 
-        template <typename A> inline void set_element(const A &value, const unsigned i) {
+        template <typename A>
+        inline void set_element(const A &value, const unsigned i) {
             payload.set_element(value, i, lattice);
         }
 #else
-        template <typename vecT> inline vecT get_vector(const unsigned i) const {
+        template <typename vecT>
+        inline vecT get_vector(const unsigned i) const {
             return payload.template get_vector<vecT>(i);
         }
-        inline T get_element(const unsigned i) const { return payload.get_element(i); }
+        inline T get_element(const unsigned i) const {
+            return payload.get_element(i);
+        }
 
         template <typename vecT>
         inline void set_vector(const vecT &val, const unsigned i) {
@@ -173,12 +187,13 @@ template <typename T> class Field {
 #endif
 
         /// Gather boundary elements for communication
-        void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                                  const lattice_struct::comm_node_struct &to_node) const {
+        void
+        gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
+                             const lattice_struct::comm_node_struct &to_node) const {
 #ifndef VECTORIZED
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-            // note: -d in is_on_edge, because we're about to send stuff to that Direction
-            // (fetching from Direction +d)
+            // note: -d in is_on_edge, because we're about to send stuff to that
+            // Direction (fetching from Direction +d)
             if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
                 lattice->special_boundaries[-d].is_on_edge) {
                 payload.gather_comm_elements(buffer, to_node, par, lattice, true);
@@ -257,7 +272,7 @@ template <typename T> class Field {
             bool antiperiodic =
                 (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC &&
                  lattice->special_boundaries[dir].is_on_edge);
-#else       
+#else
             bool antiperiodic = false;
 #endif
             payload.set_local_boundary_elements(dir, par, lattice, antiperiodic);
@@ -281,8 +296,7 @@ template <typename T> class Field {
 #elif defined(CUDA) || defined(HIP)
 
             unsigned offs = 0;
-            if (par == ODD)
-                offs = from_node.sites / 2;
+            if (par == ODD) offs = from_node.sites / 2;
             if (receive_buffer[d] == nullptr) {
                 receive_buffer[d] = payload.allocate_mpi_buffer(from_node.sites);
             }
@@ -295,13 +309,13 @@ template <typename T> class Field {
                 return (T *)payload.get_buffer() + from_node.offset(par);
             } else {
                 unsigned offs = 0;
-                if (par == ODD)
-                    offs = from_node.sites / 2;
+                if (par == ODD) offs = from_node.sites / 2;
 
                 if (vector_lattice->is_boundary_permutation[abs(d)]) {
                     // extra copy operation needed
                     if (receive_buffer[d] == nullptr) {
-                        receive_buffer[d] = payload.allocate_mpi_buffer(from_node.sites);
+                        receive_buffer[d] =
+                            payload.allocate_mpi_buffer(from_node.sites);
                     }
                     return receive_buffer[d] + offs;
                 } else {
@@ -316,8 +330,8 @@ template <typename T> class Field {
 #endif    // USE_MPI
     };
 
-    // static_assert( std::is_pod<T>::value, "Field expects only pod-type elements (plain
-    // data): default constructor, copy and delete");
+    // static_assert( std::is_pod<T>::value, "Field expects only pod-type elements
+    // (plain data): default constructor, copy and delete");
     static_assert(std::is_trivial<T>::value && std::is_standard_layout<T>::value,
                   "Field expects only pod-type elements (plain data): default "
                   "constructor, copy and delete");
@@ -410,15 +424,16 @@ template <typename T> class Field {
         }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir(dir) {
+        foralldir (dir) {
             fs->boundary_condition[dir] = BoundaryCondition::PERIODIC;
             fs->boundary_condition[-dir] = BoundaryCondition::PERIODIC;
         }
 #endif
 
 #ifdef VECTORIZED
-        fs->vector_lattice = lattice->backend_lattice
-                                 ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
+        fs->vector_lattice =
+            lattice->backend_lattice
+                ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
 #endif
     }
 
@@ -426,8 +441,7 @@ template <typename T> class Field {
         // don't call destructors when exiting - either MPI or cuda can already
         // be off.
         if (fs != nullptr && !hila::about_to_finish) {
-            for (Direction d = (Direction)0; d < NDIRS; ++d)
-                drop_comms(d, ALL);
+            for (Direction d = (Direction)0; d < NDIRS; ++d) drop_comms(d, ALL);
             fs->free_payload();
             fs->free_communication();
             delete fs;
@@ -435,7 +449,9 @@ template <typename T> class Field {
         }
     }
 
-    bool is_allocated() const { return (fs != nullptr); }
+    bool is_allocated() const {
+        return (fs != nullptr);
+    }
 
     bool is_initialized(Parity p) const {
         return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
@@ -454,12 +470,14 @@ template <typename T> class Field {
     /// Must be called BEFORE the var is actually used
     /// "hilapp" will generate these calls as needed!
     void check_alloc() {
-        if (!is_allocated())
-            allocate();
+        if (!is_allocated()) allocate();
     }
+
     /// If Field is const specified, we should not be able to write to it in the first
     /// place
-    void check_alloc() const { assert(is_allocated()); }
+    void check_alloc() const {
+        assert(is_allocated());
+    }
 
     // If ALL changes, both parities invalid; if p != ALL, then p and ALL.
     void mark_changed(const Parity p) const {
@@ -535,7 +553,8 @@ template <typename T> class Field {
             fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb[dir];
             fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb[-dir];
         } else {
-            fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb_special[dir];
+            fs->payload.neighbours[dir] =
+                lattice->backend_lattice->d_neighb_special[dir];
             fs->payload.neighbours[-dir] =
                 lattice->backend_lattice->d_neighb_special[-dir];
         }
@@ -563,8 +582,11 @@ template <typename T> class Field {
         output0 << ")\n";
     }
 
-    template <typename A> void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir(dir) { set_boundary_condition(dir, rhs.get_boundary_condition(dir)); }
+    template <typename A>
+    void copy_boundary_condition(const Field<A> &rhs) {
+        foralldir (dir) {
+            set_boundary_condition(dir, rhs.get_boundary_condition(dir));
+        }
     }
 
     // Overloading []
@@ -575,22 +597,29 @@ template <typename T> class Field {
     element<T> operator[](const X_plus_direction p) const; // f[X+dir]
     element<T> operator[](const X_plus_offset p) const;    // f[X+dir1+dir2] and others
 
-    element<T> &operator[](const Parity p);           // f[EVEN]
-    element<T> &operator[](const X_index_type);       // f[X]
+    element<T> &operator[](const Parity p);     // f[EVEN]
+    element<T> &operator[](const X_index_type); // f[X]
 
     T &operator[](const CoordinateVector &v);       // f[CoordinateVector]
     T &operator[](const CoordinateVector &v) const; // f[CoordinateVector]
 
     // TEMPORARY HACK: return ptr to bare array
-    inline auto field_buffer() const { return fs->payload.get_buffer(); }
+    inline auto field_buffer() const {
+        return fs->payload.get_buffer();
+    }
 
 #ifndef VECTORIZED
     /// Get an individual element outside a loop. This is also used as a getter in the
     /// vanilla code.
-    inline auto get_value_at(int i) const { return fs->get_element(i); }
+    inline auto get_value_at(int i) const {
+        return fs->get_element(i);
+    }
 #else
-    inline auto get_value_at(int i) const { return fs->get_element(i); }
-    template <typename vecT> inline auto get_vector_at(int i) const {
+    inline auto get_value_at(int i) const {
+        return fs->get_element(i);
+    }
+    template <typename vecT>
+    inline auto get_vector_at(int i) const {
         return fs->template get_vector<vecT>(i);
     }
     inline auto get_value_at_nb_site(Direction d, int i) const {
@@ -601,16 +630,19 @@ template <typename T> class Field {
 #ifndef VECTORIZED
     /// Set an individual element outside a loop. This is also used as a setter in the
     /// vanilla code.
-    template <typename A> inline void set_value_at(const A &value, int i) {
+    template <typename A>
+    inline void set_value_at(const A &value, int i) {
         fs->set_element(value, i);
     }
 
 #else
-    template <typename vecT> inline void set_vector_at(const vecT &value, int i) {
+    template <typename vecT>
+    inline void set_vector_at(const vecT &value, int i) {
         fs->set_vector(value, i);
     }
 
-    template <typename A> inline void set_value_at(const A &value, int i) {
+    template <typename A>
+    inline void set_value_at(const A &value, int i) {
         fs->set_element(value, i);
     }
 #endif
@@ -642,7 +674,9 @@ template <typename T> class Field {
     }
 
     // assignment of 0 - nullptr, zeroes field
-    Field<T> &operator=(const std::nullptr_t &z) { (*this)[ALL] = 0; }
+    Field<T> &operator=(const std::nullptr_t &z) {
+        (*this)[ALL] = 0;
+    }
 
     // Do also move assignment
     Field<T> &operator=(Field<T> &&rhs) {
@@ -655,64 +689,74 @@ template <typename T> class Field {
     }
 
     // +=, -=  etc operators from compatible types
-    template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
+    template <
+        typename A,
+        std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const Field<A> &rhs) {
         (*this)[ALL] += rhs[X];
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value,
+                               int> = 0>
     Field<T> &operator-=(const Field<A> &rhs) {
         (*this)[ALL] -= rhs[X];
         return *this;
     }
 
-    template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
+    template <
+        typename A,
+        std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const Field<A> &rhs) {
         (*this)[ALL] *= rhs[X];
         return *this;
     }
 
-    template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
+    template <
+        typename A,
+        std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const Field<A> &rhs) {
         (*this)[ALL] /= rhs[X];
         return *this;
     }
 
-    template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
+    template <
+        typename A,
+        std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const A &rhs) {
         (*this)[ALL] += rhs;
         return *this;
     }
 
     template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
+              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value,
+                               int> = 0>
     Field<T> &operator-=(const A &rhs) {
         (*this)[ALL] -= rhs;
         return *this;
     }
 
-    template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
+    template <
+        typename A,
+        std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const A &rhs) {
         (*this)[ALL] *= rhs;
         return *this;
     }
 
-    template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
+    template <
+        typename A,
+        std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const A &rhs) {
         (*this)[ALL] /= rhs;
         return *this;
     }
 
     // Unary + and -
-    Field<T> operator+() const { return *this; }
+    Field<T> operator+() const {
+        return *this;
+    }
 
     Field<T> operator-() const {
         Field<T> f;
@@ -731,15 +775,18 @@ template <typename T> class Field {
 
     // Declaration of shift methods
     Field<T> shift(const CoordinateVector &v, Parity par) const;
-    Field<T> shift(const CoordinateVector &v) const { return shift(v, ALL); }
+    Field<T> shift(const CoordinateVector &v) const {
+        return shift(v, ALL);
+    }
 
     // General getters and setters
     void set_elements(T *elements, const std::vector<CoordinateVector> &coord_list);
     void set_element(const T &element, const CoordinateVector &coord);
-    void get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const;
+    void get_elements(T *elements,
+                      const std::vector<CoordinateVector> &coord_list) const;
     T get_element(const CoordinateVector &coord) const;
 
-    template <typename A, std::enable_if_t<std::is_assignable<T&,A>::value,int> = 0>
+    template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
     inline void set_element_at(const CoordinateVector coord, const A elem) {
         T e;
         e = elem;
@@ -752,9 +799,6 @@ template <typename T> class Field {
         set_element(e, coord);
     }
 
-
-
-
     // Fourier transform declarations
     void FFT(fft_direction fdir = fft_direction::forward);
 
@@ -766,7 +810,8 @@ template <typename T> class Field {
 
 }; // End of class Field<>
 
-// these operators rely on SFINAE, OK if field_hila::type_plus<A,B> exists i.e. A+B is OK
+// these operators rely on SFINAE, OK if field_hila::type_plus<A,B> exists i.e. A+B is
+// OK
 /// operator +
 template <typename A, typename B>
 auto operator+(Field<A> &lhs, Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
@@ -791,7 +836,8 @@ auto operator+(const Field<A> &lhs, const B &rhs) -> Field<hila::type_plus<A, B>
 
 /// operator -
 template <typename A, typename B>
-auto operator-(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
+auto operator-(const Field<A> &lhs, const Field<B> &rhs)
+    -> Field<hila::type_minus<A, B>> {
     Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs[X] - rhs[X];
     return tmp;
@@ -813,7 +859,8 @@ auto operator-(const Field<A> &lhs, const B &rhs) -> Field<hila::type_minus<A, B
 
 /// operator *
 template <typename A, typename B>
-auto operator*(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
+auto operator*(const Field<A> &lhs, const Field<B> &rhs)
+    -> Field<hila::type_mul<A, B>> {
     Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs[X] * rhs[X];
     return tmp;
@@ -835,7 +882,8 @@ auto operator*(const Field<A> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>>
 
 /// operator /
 template <typename A, typename B>
-auto operator/(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>> {
+auto operator/(const Field<A> &lhs, const Field<B> &rhs)
+    -> Field<hila::type_div<A, B>> {
     Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = lhs[X] / rhs[X];
     return tmp;
@@ -872,23 +920,26 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Parity par_s;
 
     int len = 0;
-    foralldir(d) len += abs(rem[d]);
-    
+    foralldir (d)
+        len += abs(rem[d]);
+
     if (len == 0) return *this;
 
     // opp_parity(ALL) == ALL
-    if (len % 2 == 0) par_s = opp_parity(par);
-    else par_s = par;
+    if (len % 2 == 0)
+        par_s = opp_parity(par);
+    else
+        par_s = par;
 
     // is this already fetched from one of the dirs in v?
     bool found_dir = false;
     Direction mdir;
-    foralldir(d) {
-        if (rem[d] > 0 && move_status(par_s,d) == fetch_status::DONE) {
+    foralldir (d) {
+        if (rem[d] > 0 && move_status(par_s, d) == fetch_status::DONE) {
             mdir = d;
             found_dir = true;
             break;
-        } else if (rem[d] < 0 && move_status(par_s,-d) == fetch_status::DONE) {
+        } else if (rem[d] < 0 && move_status(par_s, -d) == fetch_status::DONE) {
             mdir = -d;
             found_dir = true;
             break;
@@ -897,7 +948,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
 
     if (!found_dir) {
         // now did not find a 'ready' dir. Take the 1st available
-        foralldir(d) {
+        foralldir (d) {
             if (rem[d] > 0) {
                 mdir = d;
                 break;
@@ -910,7 +961,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
 
     // Now do the 1st move
     Field<T> r1;
-    r1[par_s] = (*this)[X+mdir];
+    r1[par_s] = (*this)[X + mdir];
 
     if (len == 1) return r1;
 
@@ -921,28 +972,26 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> r2, *from, *to;
 
     from = &r1;
-    to   = &r2;
+    to = &r2;
 
-    foralldir(d) {
+    foralldir (d) {
         if (rem[d] != 0) {
             mdir = (rem[d] > 0) ? d : -d;
 
             while (rem[d] != 0) {
 
-                (*to)[par_s] = (*from)[X+mdir];
+                (*to)[par_s] = (*from)[X + mdir];
 
                 par_s = opp_parity(par_s);
                 rem = rem - mdir;
-                std::swap(to,from);
+                std::swap(to, from);
             }
         }
     }
-    
+
     // need to return *from because std::swap
     return *from;
 }
-
-
 
 #elif !defined(USE_MPI)
 
@@ -950,9 +999,9 @@ template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> result;
 
-    onsites(par) { if }
+    onsites (par) { if }
     r2 = *this;
-    foralldir(d) {
+    foralldir (d) {
         if (abs(v[d]) > 0) {
             Direction dir;
             if (v[d] > 0)
@@ -981,10 +1030,12 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
 /// start_fetch(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
 /// return the Direction mask bits where something is happening
-template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
+template <typename T>
+dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
 
-    // get the mpi message tag right away, to ensure that we are always synchronized with
-    // the mpi calls -- some nodes might not need comms, but the tags must be in sync
+    // get the mpi message tag right away, to ensure that we are always synchronized
+    // with the mpi calls -- some nodes might not need comms, but the tags must be in
+    // sync
 
     int tag = get_next_msg_tag();
 
@@ -1060,8 +1111,8 @@ template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, Parity p) co
         }
 
         // c++ version does not return errors
-        MPI_Irecv(receive_buffer, n, mpi_type, from_node.rank, tag, lattice->mpi_comm_lat,
-                  &fs->receive_request[par_i][d]);
+        MPI_Irecv(receive_buffer, n, mpi_type, from_node.rank, tag,
+                  lattice->mpi_comm_lat, &fs->receive_request[par_i][d]);
 
         post_receive_timer.stop();
     }
@@ -1103,19 +1154,18 @@ template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, Parity p) co
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
 ///  of view of the user, the value of the field does not change.
-template <typename T> void Field<T>::wait_fetch(Direction d, Parity p) const {
+template <typename T>
+void Field<T>::wait_fetch(Direction d, Parity p) const {
 
     lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     lattice_struct::comm_node_struct &from_node = ci.from_node;
     lattice_struct::comm_node_struct &to_node = ci.to_node;
 
     // check if this is done - either fetched or no comm to be done in the 1st place
-    if (is_fetched(d, p))
-        return;
+    if (is_fetched(d, p)) return;
 
     // this is the branch if no comms -- shuffle was done in start_fetch
-    if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank())
-        return;
+    if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) return;
 
     // if (!is_move_started(d,p)) {
     //   output0 << "Wait move error - wait_fetch without corresponding start_fetch\n";
@@ -1124,7 +1174,8 @@ template <typename T> void Field<T>::wait_fetch(Direction d, Parity p) const {
 
     // Note: the move can be Parity p OR ALL -- need to wait for it in any case
     // set par to be the "sum" over both parities
-    // There never should be ongoing ALL and other parity fetch -- start_fetch takes care
+    // There never should be ongoing ALL and other parity fetch -- start_fetch takes
+    // care
 
     // check here consistency, this should never happen
     if (p != ALL && is_move_started(d, p) && is_move_started(d, ALL)) {
@@ -1156,8 +1207,7 @@ template <typename T> void Field<T>::wait_fetch(Direction d, Parity p) const {
         }
     }
 
-    if (n_wait == 2)
-        par = EVEN; // we'll flip both
+    if (n_wait == 2) par = EVEN; // we'll flip both
 
     for (int wait_i = 0; wait_i < n_wait; ++wait_i) {
 
@@ -1198,26 +1248,24 @@ template <typename T> void Field<T>::wait_fetch(Direction d, Parity p) const {
 ///  drop_comms():  if field is changed or deleted,
 ///  cancel ongoing communications.  This should happen very seldom,
 ///  only if there are "by-hand" start_fetch operations and these are not needed
-template <typename T> void Field<T>::drop_comms(Direction d, Parity p) const {
+template <typename T>
+void Field<T>::drop_comms(Direction d, Parity p) const {
 
     if (is_comm_initialized()) {
-        if (is_move_started(d, ALL))
-            cancel_comm(d, ALL);
+        if (is_move_started(d, ALL)) cancel_comm(d, ALL);
         if (p != ALL) {
-            if (is_move_started(d, p))
-                cancel_comm(d, p);
+            if (is_move_started(d, p)) cancel_comm(d, p);
         } else {
-            if (is_move_started(d, EVEN))
-                cancel_comm(d, EVEN);
-            if (is_move_started(d, ODD))
-                cancel_comm(d, ODD);
+            if (is_move_started(d, EVEN)) cancel_comm(d, EVEN);
+            if (is_move_started(d, ODD)) cancel_comm(d, ODD);
         }
     }
 }
 
 /// cancel ongoing send and receive
 
-template <typename T> void Field<T>::cancel_comm(Direction d, Parity p) const {
+template <typename T>
+void Field<T>::cancel_comm(Direction d, Parity p) const {
     if (lattice->nn_comminfo[d].from_node.rank != hila::myrank()) {
         cancel_receive_timer.start();
         MPI_Cancel(&fs->receive_request[(int)p - 1][d]);
@@ -1234,7 +1282,8 @@ template <typename T> void Field<T>::cancel_comm(Direction d, Parity p) const {
 
 ///* Trivial implementation when no MPI is used
 
-template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
+template <typename T>
+dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
     // Update local elements in the halo (necessary for vectorized version)
     // We use here simpler tracking than in MPI, may lead to slight extra work
     if (!is_fetched(d, p)) {
@@ -1244,14 +1293,17 @@ template <typename T> dir_mask_t Field<T>::start_fetch(Direction d, Parity p) co
     return 0;
 }
 
-template <typename T> void Field<T>::wait_fetch(Direction d, Parity p) const {}
+template <typename T>
+void Field<T>::wait_fetch(Direction d, Parity p) const {}
 
-template <typename T> void Field<T>::drop_comms(Direction d, Parity p) const {}
+template <typename T>
+void Field<T>::drop_comms(Direction d, Parity p) const {}
 
 #endif // MPI
 
 /// And a convenience combi function
-template <typename T> void Field<T>::fetch(Direction d, Parity p) const {
+template <typename T>
+void Field<T>::fetch(Direction d, Parity p) const {
     start_fetch(d, p);
     wait_fetch(d, p);
 }
@@ -1336,8 +1388,8 @@ void Field<T>::field_struct::send_elements(T *buffer,
                 buffer += node_list[n];
             }
     }
-    payload.place_elements((T *)recv_buffer.data(), index_list.data(), recv_buffer.size(),
-                           lattice);
+    payload.place_elements((T *)recv_buffer.data(), index_list.data(),
+                           recv_buffer.size(), lattice);
 }
 
 #else // Now not USE_MPI
@@ -1404,7 +1456,8 @@ void Field<T>::set_element(const T &element, const CoordinateVector &coord) {
 /// Get an element and return it on all nodes
 #if defined(USE_MPI)
 /// This is not local, the element needs to be communicated to all nodes
-template <typename T> T Field<T>::get_element(const CoordinateVector &coord) const {
+template <typename T>
+T Field<T>::get_element(const CoordinateVector &coord) const {
     T element;
 
     int owner = lattice->node_rank(coord);
@@ -1455,7 +1508,8 @@ void Field<T>::get_elements(T *elements,
 
 #else
 /// Without MPI, we just need to call get
-template <typename T> T Field<T>::get_element(const CoordinateVector &coord) const {
+template <typename T>
+T Field<T>::get_element(const CoordinateVector &coord) const {
     return get_value_at(lattice->site_index(coord));
 }
 
@@ -1470,7 +1524,8 @@ void Field<T>::get_elements(T *elements,
 #endif
 
 // Write the field to an file stream
-template <typename T> void Field<T>::write_to_stream(std::ofstream &outputfile) {
+template <typename T>
+void Field<T>::write_to_stream(std::ofstream &outputfile) {
     constexpr size_t target_write_size = 1000000;
     constexpr size_t sites_per_write = target_write_size / sizeof(T);
     constexpr size_t write_size = sites_per_write * sizeof(T);
@@ -1483,7 +1538,7 @@ template <typename T> void Field<T>::write_to_stream(std::ofstream &outputfile) 
     for (; i < lattice->volume(); i++) {
         CoordinateVector site;
         size_t ii = i;
-        foralldir(dir) {
+        foralldir (dir) {
             site[dir] = ii % size[dir];
             ii = ii / size[dir];
         }
@@ -1493,8 +1548,7 @@ template <typename T> void Field<T>::write_to_stream(std::ofstream &outputfile) 
         // Write the buffer when full
         if ((i + 1) % sites_per_write == 0) {
             fs->gather_elements(buffer, coord_list);
-            if (hila::myrank() == 0)
-                outputfile.write((char *)buffer, write_size);
+            if (hila::myrank() == 0) outputfile.write((char *)buffer, write_size);
         }
     }
 
@@ -1509,7 +1563,8 @@ template <typename T> void Field<T>::write_to_stream(std::ofstream &outputfile) 
 }
 
 // Write the Field to a file replacing the file
-template <typename T> void Field<T>::write_to_file(std::string filename) {
+template <typename T>
+void Field<T>::write_to_file(std::string filename) {
     std::ofstream outputfile;
     outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
     write_to_stream(outputfile);
@@ -1524,14 +1579,14 @@ static void write_fields(std::ofstream &outputfile, Field<T> &last) {
 
 template <typename T, typename... fieldtypes>
 static void write_fields(std::ofstream &outputfile, Field<T> &next,
-                         fieldtypes &...fields) {
+                         fieldtypes &... fields) {
     next.write_to_stream(outputfile);
     write_fields(outputfile, fields...);
 }
 
 // Write a list of fields to a file
 template <typename... fieldtypes>
-static void write_fields(std::string filename, fieldtypes &...fields) {
+static void write_fields(std::string filename, fieldtypes &... fields) {
     std::ofstream outputfile;
     outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
     write_fields(outputfile, fields...);
@@ -1539,7 +1594,8 @@ static void write_fields(std::string filename, fieldtypes &...fields) {
 }
 
 // Read the Field from a stream
-template <typename T> void Field<T>::read_from_stream(std::ifstream &inputfile) {
+template <typename T>
+void Field<T>::read_from_stream(std::ifstream &inputfile) {
     constexpr size_t target_read_size = 1000000;
     constexpr size_t sites_per_read = target_read_size / sizeof(T);
     constexpr size_t read_size = sites_per_read * sizeof(T);
@@ -1554,7 +1610,7 @@ template <typename T> void Field<T>::read_from_stream(std::ifstream &inputfile) 
     for (; i < lattice->volume(); i++) {
         CoordinateVector site;
         size_t ii = i;
-        foralldir(dir) {
+        foralldir (dir) {
             site[dir] = ii % size[dir];
             ii = ii / size[dir];
         }
@@ -1563,8 +1619,7 @@ template <typename T> void Field<T>::read_from_stream(std::ifstream &inputfile) 
 
         // Read the buffer when full
         if ((i + 1) % sites_per_read == 0) {
-            if (hila::myrank() == 0)
-                inputfile.read((char *)buffer, read_size);
+            if (hila::myrank() == 0) inputfile.read((char *)buffer, read_size);
             fs->send_elements(buffer, coord_list);
         }
     }
@@ -1580,7 +1635,8 @@ template <typename T> void Field<T>::read_from_stream(std::ifstream &inputfile) 
 }
 
 // Read Field contennts from the beginning of a file
-template <typename T> void Field<T>::read_from_file(std::string filename) {
+template <typename T>
+void Field<T>::read_from_file(std::string filename) {
     std::ifstream inputfile;
     inputfile.open(filename, std::ios::in | std::ios::binary);
     read_from_stream(inputfile);
@@ -1588,19 +1644,21 @@ template <typename T> void Field<T>::read_from_file(std::string filename) {
 }
 
 // Read a list of fields from an input stream
-template <typename T> static void read_fields(std::ifstream &inputfile, Field<T> &last) {
+template <typename T>
+static void read_fields(std::ifstream &inputfile, Field<T> &last) {
     last.read_from_stream(inputfile);
 }
 
 template <typename T, typename... fieldtypes>
-static void read_fields(std::ifstream &inputfile, Field<T> &next, fieldtypes &...fields) {
+static void read_fields(std::ifstream &inputfile, Field<T> &next,
+                        fieldtypes &... fields) {
     next.read_from_stream(inputfile);
     read_fields(inputfile, fields...);
 }
 
 // Read a list of fields from a file
 template <typename... fieldtypes>
-static void read_fields(std::string filename, fieldtypes &...fields) {
+static void read_fields(std::string filename, fieldtypes &... fields) {
     std::ifstream inputfile;
     inputfile.open(filename, std::ios::in | std::ios::binary);
     read_fields(inputfile, fields...);
@@ -1611,7 +1669,6 @@ static void read_fields(std::string filename, fieldtypes &...fields) {
 // if(disable_avx[X]==0){};
 // TODO: remove all of these!
 // extern Field<double> disable_avx;
-
 
 #ifdef HILAPP
 
@@ -1628,7 +1685,7 @@ static void read_fields(std::string filename, fieldtypes &...fields) {
 inline void dummy_X_f() {
     Direction d1 = e_x;
     CoordinateVector v1(0);
-    onsites(ALL) {
+    onsites (ALL) {
         Direction d;
         d = +d1;
         d = -d1; // unaryops
@@ -1654,23 +1711,21 @@ inline void dummy_X_f() {
 /// Dummy function including Field<T> functions and methods which
 /// need to be explicitly seen by hilapp during 1st pass
 
-
-template <typename T> inline void ensure_field_operators_exist(Field<T> &f) {
+template <typename T>
+inline void ensure_field_operators_exist(Field<T> &f) {
 
     // unary -
     // It is needed in antiperiodic boundary conditions
 
     f[ALL] = -f[X];
     // same for non-vectorized loop
-    onsites(ALL) {
-        if (X.coordinate(e_x) < X.coordinate(e_y))
-            f[X] = -f[X];
+    onsites (ALL) {
+        if (X.coordinate(e_x) < X.coordinate(e_y)) f[X] = -f[X];
     }
 
     // make shift also explicit
     CoordinateVector v = 0;
-    f = f.shift(v,ALL);
-
+    f = f.shift(v, ALL);
 }
 
 #endif

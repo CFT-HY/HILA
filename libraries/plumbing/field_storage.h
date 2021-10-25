@@ -1,9 +1,8 @@
 #ifndef FIELD_STORAGEH
 #define FIELD_STORAGEH
 
-#include "plumbing/globals.h"
-
 #include "plumbing/defs.h"
+#include "plumbing/coordinates.h"
 #include "plumbing/field.h"
 #include "plumbing/backend_vector/vector_types.h"
 

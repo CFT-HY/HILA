@@ -3,7 +3,7 @@
 /// nodes, and if that fails allows slightly different
 /// node sizes.
 
-#include "plumbing/globals.h"
+#include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 
 /***************************************************************/
