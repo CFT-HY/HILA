@@ -203,21 +203,40 @@ void scaling_sim::write_energies() {
         w_sumPhiPi += 0.5 * pPi * pPi * v;
     }
 
-    foralldir (d) {
-        onsites (ALL) {
+    static hila::timer vreduction("reduction");
+
+    vreduction.start();
+
+    VectorReduction<double> red(4);
+    red.allreduce(false);
+    red = 0;
+
+    onsites (ALL) {
             auto norm = phi[X].squarenorm();
             real_t v = 0.25 * config.lambda * a * a * pow((norm - ss), 2.0);
-            auto diff_phi = (phi[X + d] - phi[X - d]) / (2 * config.dx);
+            auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
+                             phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
             real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
             real_t diff_phi_norm2 = diff_phi.squarenorm();
 
-            sumDiPhi += 0.5 * diff_phi_norm2;
+            sumDiPhi += 0.5 * diff_phi_norm2; 
+            // red[0] += 0.5 * diff_phi_norm2;
             sumPhiDiPhi += pDphi * pDphi / norm;
-
-            w_sumDiPhi += 0.5 * diff_phi_norm2 * v;
+            // red[1] += pDphi * pDphi / norm;
+            w_sumDiPhi += 0.5 * diff_phi_norm2 * v; 
+            // red[2] += 0.5 * diff_phi_norm2 * v;
             w_sumPhiDiPhi += pDphi * pDphi / norm * v;
-        }
+            // red[3] += pDphi * pDphi / norm * v;
+
+        
     }
+
+    // sumDiPhi = red[0];
+    // sumPhiDiPhi = red[1];
+    // w_sumDiPhi = red[2];
+    // w_sumPhiDiPhi = red[3];
+    
+    vreduction.stop();
 
     if (hila::myrank() == 0) {
         double vol = (double)config.l * config.l * config.l;
@@ -287,6 +306,11 @@ int main(int argc, char **argv) {
     if (hila::myrank() == 0) {
         sim.config.stream.open(output_fname, std::ios::out);
     }
+
+    Field<Complex<double>> test;
+    test = 1;
+    auto res = reduce_sum(test);
+    output0 << "Test reduce " << res << '\n';
 
     static hila::timer run_timer("Simulation time"), meas_timer("Measurements");
     run_timer.start();
