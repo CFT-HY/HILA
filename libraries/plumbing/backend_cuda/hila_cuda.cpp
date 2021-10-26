@@ -37,7 +37,7 @@ void hila::seed_device_rng(unsigned long seed) {
         lattice->mynode.volume() / (N_threads * iters_per_kernel) + 1;
     unsigned long n_sites = N_threads * n_blocks * iters_per_kernel;
     unsigned long myseed = seed + hila::myrank() * n_sites;
-    cudaMallocAsync(&gpurandstate, n_sites * sizeof(curandState),0);
+    gpuMalloc(&gpurandstate, n_sites * sizeof(curandState));
     check_device_error("seed_random malloc");
     seed_random_kernel<<<n_blocks, N_threads>>>(gpurandstate, myseed, iters_per_kernel,
                                                 n_blocks * N_threads);
@@ -86,15 +86,15 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
     /* Setup neighbour fields in all directions */
     for (int d = 0; d < NDIRS; d++) {
         // For normal boundaries
-        cudaMallocAsync((void **)&(d_neighb[d]), lattice->mynode.volume() * sizeof(unsigned),0);
+        gpuMalloc((void **)&(d_neighb[d]), lattice->mynode.volume() * sizeof(unsigned));
         check_device_error("cudaMalloc device neighbour array");
         cudaMemcpy(d_neighb[d], lattice->neighb[d],
                    lattice->mynode.volume() * sizeof(unsigned), cudaMemcpyHostToDevice);
         check_device_error("cudaMemcpy device neighbour array");
 
         // For special boundaries
-        cudaMallocAsync((void **)&(d_neighb_special[d]),
-                   lattice->mynode.volume() * sizeof(unsigned),0);
+        gpuMalloc((void **)&(d_neighb_special[d]),
+                   lattice->mynode.volume() * sizeof(unsigned));
         check_device_error("cudaMalloc device neighbour array");
         const unsigned *special_neighb =
             lattice->get_neighbour_array((Direction)d, BoundaryCondition::ANTIPERIODIC);
@@ -104,8 +104,8 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
     }
 
     /* Setup the location field */
-    cudaMallocAsync((void **)&(d_coordinates),
-               lattice->mynode.volume() * sizeof(CoordinateVector),0);
+    gpuMalloc((void **)&(d_coordinates),
+               lattice->mynode.volume() * sizeof(CoordinateVector));
     check_device_error("cudaMalloc device coordinate array");
     tmp = (CoordinateVector *)malloc(lattice->mynode.volume() * sizeof(CoordinateVector));
     for (int i = 0; i < lattice->mynode.volume(); i++)

@@ -113,8 +113,8 @@ inline void FFT_field_complex(const Field<T> &input, Field<T> &result,
 
     // alloc work buffers
     char * collect_buffer, * receive_buffer;
-    cudaMallocAsync((void **)&collect_buffer, local_volume * elements * sizeof(cmplx_t), 0);
-    cudaMallocAsync((void **)&receive_buffer, local_volume * elements * sizeof(cmplx_t), 0);
+    gpuMalloc((void **)&collect_buffer, local_volume * elements * sizeof(cmplx_t));
+    gpuMalloc((void **)&receive_buffer, local_volume * elements * sizeof(cmplx_t));
 
     bool first_dir = true;
     Direction prev_dir;
@@ -155,8 +155,8 @@ inline void FFT_field_complex(const Field<T> &input, Field<T> &result,
 
     fft_save_result(result, prev_dir, receive_buffer);
 
-    cudaFreeAsync(collect_buffer,0);
-    cudaFreeAsync(receive_buffer,0);
+    gpuFree(collect_buffer);
+    gpuFree(receive_buffer);
 
     fft_timer.stop();
 }

@@ -194,6 +194,10 @@ void gpu_device_info() {
         cudaRuntimeGetVersion(&rtVersion);
         hila::output << "CUDA driver version: " << driverVersion << ", runtime "
                      << rtVersion << '\n';
+        hila::output << "CUDART_VERSION " << CUDART_VERSION << '\n';
+        if (CUDART_VERSION >= 11020) {
+            hila::output << "Using cudaMallocAsync() to allocate memory\n";
+        }
 
         cudaDeviceProp props;
         int my_device;
