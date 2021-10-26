@@ -7,7 +7,7 @@
 
 $(info ########################################################################)
 $(info Target mahti: remember to )
-$(info   module load cuda gcc/10.3.0 openmpi/4.1.0 )
+$(info   module load cuda gcc/9.3.0 openmpi/4.0.3 amdfftw/2.2-mpi)
 $(info ########################################################################)
 
 
