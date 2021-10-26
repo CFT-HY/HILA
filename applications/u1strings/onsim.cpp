@@ -207,10 +207,6 @@ void scaling_sim::write_energies() {
 
     vreduction.start();
 
-    VectorReduction<double> red(4);
-    red.allreduce(false);
-    red = 0;
-
     onsites (ALL) {
             auto norm = phi[X].squarenorm();
             real_t v = 0.25 * config.lambda * a * a * pow((norm - ss), 2.0);
@@ -307,11 +303,9 @@ int main(int argc, char **argv) {
         sim.config.stream.open(output_fname, std::ios::out);
     }
 
-    Field<Complex<double>> test;
-    test = 1;
-    auto res = reduce_sum(test);
-    output0 << "Test reduce " << res << '\n';
 
+    // on gpu the simulation timer is fake, because there's no synch here.  
+    // BUt we want to avoid unnecessary sync anyway.
     static hila::timer run_timer("Simulation time"), meas_timer("Measurements");
     run_timer.start();
     while (sim.t < sim.config.tEnd) {
@@ -325,7 +319,6 @@ int main(int argc, char **argv) {
             stat_counter++;
         }
         sim.next();
-        synchronize();
     }
     run_timer.stop();
 
