@@ -26,6 +26,8 @@ CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
+mkdir -p build
+
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
 # hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere
 # and copied here it must be told.  Instead of hunting the directories by hand, we can ask

@@ -21,6 +21,7 @@ LD = nvcc -ccbin /appl/spack/v014/install-tree/gcc-4.8.5/gcc-9.3.0-3cdxud/bin/g+
 # CC = nvcc 
 # LD = nvcc -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict
 
+mkdir -p build
 
 # Define compilation flags  -  80 for Ampere
 CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict 

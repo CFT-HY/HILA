@@ -24,6 +24,7 @@ LD := mpic++
 CXXFLAGS := -O3 -x c++ --std=c++17
 #CXXFLAGS := -g -x c++ --std=c++17 
 
+mkdir -p build
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
 # hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere
@@ -39,7 +40,7 @@ HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,
 # This in general works with OpenMPI: --showme:incdirs gives the include path of the mpic++
 MPI_INCLUDE_DIRS := $(addprefix -I, $(shell  $(CC) --showme:incdirs) )
 
-# Write hilapp inlcudes to a file 0hilapp_incl_dirs
+# Write hilapp includes to a file 0hilapp_incl_dirs
 HILAPP_INCLUDE_LIST += $(MPI_INCLUDE_DIRS)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
