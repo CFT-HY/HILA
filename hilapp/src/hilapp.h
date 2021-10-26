@@ -81,6 +81,7 @@ extern llvm::cl::opt<int> verbosity;
 extern llvm::cl::opt<int> avx_info;
 extern llvm::cl::opt<bool> comment_pragmas;
 extern llvm::cl::opt<bool> insert_includes;
+extern llvm::cl::opt<bool> slow_gpu_reduce;
 
 extern llvm::cl::opt<bool> allow_func_globals;
 

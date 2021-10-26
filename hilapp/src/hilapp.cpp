@@ -153,6 +153,10 @@ llvm::cl::opt<bool> cmdline::openacc("target:openacc",
 //       llvm::cl::desc("write pragmas/attributes to functions called from loops"),
 //       llvm::cl::cat(HilappCategory));
 
+llvm::cl::opt<bool> cmdline::slow_gpu_reduce(
+    "gpu-slow-reduce", llvm::cl::desc("Use slow (but memory economical) reduction on gpus"),
+    llvm::cl::cat(HilappCategory));
+
 llvm::cl::opt<int>
     cmdline::verbosity("verbosity",
                        llvm::cl::desc("Verbosity level 0-2.  Default 0 (quiet)"),

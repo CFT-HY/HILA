@@ -2,12 +2,7 @@
 /// Test the standard gather here
 //////////////////////////////////////////////////////////////////////////////
 
-#include "defs.h"
-#include "coordinates.h"
-#include "lattice.h"
-
-#include "field.h"
-#include "datatypes/matrix.h"
+#include "hila.h"
 
 template <typename T> void gather_test() {
 

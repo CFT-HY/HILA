@@ -34,8 +34,8 @@ HILA_OBJECTS += build/hila_hip.o
 ################
 
 # These variables must be defined here
-#
-HILAPP_OPTS := -target:CUDA 
+# NOTE: adding --gpu-slow-reduce below makes one to use slower but memory stingy sum reduction
+HILAPP_OPTS := -target:CUDA  
 HILA_OPTS := -DCUDA -DUSE_MPI $(MPI_INCLUDE_DIRS)
 
 

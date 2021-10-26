@@ -407,7 +407,7 @@ class Field {
             output0 << "Can not allocate Field variables before lattice.setup()\n";
             hila::terminate(0);
         }
-        fs = new field_struct;
+        fs = (field_struct *)memalloc(sizeof(field_struct));
         fs->lattice = lattice;
         fs->allocate_payload();
         fs->initialize_communication();
@@ -444,7 +444,7 @@ class Field {
             for (Direction d = (Direction)0; d < NDIRS; ++d) drop_comms(d, ALL);
             fs->free_payload();
             fs->free_communication();
-            delete fs;
+            std::free(fs);
             fs = nullptr;
         }
     }
@@ -1491,7 +1491,7 @@ void Field<T>::get_elements(T *elements,
     for (int n = 0; n < nodelist.size(); n++) {
         node_site_list_struct node = nodelist[n];
         if (node.indexes.size() > 0) {
-            T *element_buffer = (T *)malloc(sizeof(T) * node.indexes.size());
+            T *element_buffer = (T *)memalloc(sizeof(T) * node.indexes.size());
             fs->payload.gather_elements(element_buffer, node.coords);
 
             MPI_Bcast(&element_buffer, sizeof(T), MPI_BYTE, n, lattice->mpi_comm_lat);
@@ -1501,7 +1501,7 @@ void Field<T>::get_elements(T *elements,
                 elements[i] = element_buffer[node.indexes[i]];
             }
 
-            free(element_buffer);
+            std::free(element_buffer);
         }
     }
 }
