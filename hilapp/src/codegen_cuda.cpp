@@ -19,9 +19,6 @@
 extern std::string looping_var;
 extern std::string parity_name;
 
-extern std::string parity_in_this_loop;
-
-
 
 // Add the __host__ __device__ keywords to functions called a loop
 void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
@@ -84,7 +81,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         for (dir_ptr &d : l.dir_list)
             if (d.count > 0) {
                 code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
-                     << parity_in_this_loop << ");\n";
+                     << loop_info.parity_str << ");\n";
             }
     }
 
@@ -188,9 +185,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
            << kernel_name
            << "( backend_lattice_struct d_lattice";
     code << "backend_lattice_struct lattice_info = *(lattice->backend_lattice);\n";
-    code << "lattice_info.loop_begin = lattice->loop_begin(" << parity_in_this_loop
+    code << "lattice_info.loop_begin = lattice->loop_begin(" << loop_info.parity_str
          << ");\n";
-    code << "lattice_info.loop_end = lattice->loop_end(" << parity_in_this_loop
+    code << "lattice_info.loop_end = lattice->loop_end(" << loop_info.parity_str
          << ");\n";
 
     code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
@@ -647,7 +644,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         } else {
             // Now fast reduce  -- skip MPI at this stage
             code << v.reduction_name << " = gpu_reduce_field(reduction_field_" << v.reduction_name 
-            << ", true, false);\n";
+            << ", true, " << loop_info.parity_str <<  ", false);\n";
         }
     }
 

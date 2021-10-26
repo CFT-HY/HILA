@@ -29,8 +29,6 @@
 extern std::string looping_var;
 extern std::string parity_name;
 
-extern std::string parity_in_this_loop;
-
 /// An AST walker for finding and handling variable declarations
 /// in a loop function
 class LoopFunctionHandler : public GeneralVisitor,
@@ -424,9 +422,9 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
     }
 
     // Set the start and end points
-    code << "const int loop_begin = loop_lattice->loop_begin(" << parity_in_this_loop
+    code << "const int loop_begin = loop_lattice->loop_begin(" << loop_info.parity_str
          << ");\n";
-    code << "const int loop_end   = loop_lattice->loop_end(" << parity_in_this_loop
+    code << "const int loop_end   = loop_lattice->loop_end(" << loop_info.parity_str
          << ");\n";
 
     if (generate_wait_loops) {
@@ -559,7 +557,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
             for (dir_ptr &d : l.dir_list)
                 if (d.count > 0) {
                     code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
-                         << parity_in_this_loop << ");\n";
+                         << loop_info.parity_str << ");\n";
                 }
         }
         code << "}\n";

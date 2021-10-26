@@ -29,8 +29,6 @@
 std::string looping_var;
 std::string parity_name;
 
-std::string parity_in_this_loop = "";
-
 /// Used in lattice loop generation
 std::string parity_str(Parity p) {
     switch (p) {
@@ -97,10 +95,10 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             code << "assert( is_even_odd_parity(" << parity_name
                  << ") && \"Parity should be EVEN or ODD in this loop\");\n";
         }
-        parity_in_this_loop = parity_name;
+        loop_info.parity_str = parity_name;
 
     } else
-        parity_in_this_loop = parity_str(loop_info.parity_value);
+        loop_info.parity_str = parity_str(loop_info.parity_value);
 
     // then, generate new names for field variables in loop
 
@@ -140,9 +138,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
                 init_par = "ALL";
             } else {
                 if (l.is_read_atX)
-                    init_par = parity_in_this_loop;
+                    init_par = loop_info.parity_str;
                 else
-                    init_par = "opp_parity(" + parity_in_this_loop + ")";
+                    init_par = "opp_parity(" + loop_info.parity_str + ")";
             }
 
             // TAKE THIS AWAY FOR NOW -- WE DON'T HAVE A GOOD METHOD TO CHECK "pure
@@ -165,7 +163,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     }
 
     // change the f[X+offset] -references, generate code
-    handle_field_plus_offsets(code, loopBuf, parity_in_this_loop);
+    handle_field_plus_offsets(code, loopBuf, loop_info.parity_str);
 
     bool first = true;
     bool generate_wait_loops;
@@ -180,14 +178,14 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             if (d.count > 0) {
                 if (!generate_wait_loops) {
                     code << l.new_name << ".fetch(" << d.direxpr_s << ", "
-                         << parity_in_this_loop << ");\n";
+                         << loop_info.parity_str << ");\n";
                 } else {
                     if (first)
                         code << "dir_mask_t  _dir_mask_ = 0;\n";
                     first = false;
 
                     code << "_dir_mask_ |= " << l.new_name << ".start_fetch("
-                         << d.direxpr_s << ", " << parity_in_this_loop << ");\n";
+                         << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
                 }
             }
     }
@@ -267,7 +265,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     // finally mark modified fields
     for (field_info &l : field_info_list)
         if (l.is_written) {
-            code << l.new_name << ".mark_changed(" << parity_in_this_loop << ");\n";
+            code << l.new_name << ".mark_changed(" << loop_info.parity_str << ");\n";
         }
 
     // and close
@@ -454,13 +452,13 @@ vb = {}; int i=0;
       if( le->is_written ){
         // Mark changed fields - do it BEFORE using vars, possible alloc
         loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".mark_changed(" +
-parity_in_this_loop + ");", true,   true);
+loop_info.parity_str + ");", true,   true);
       }
       if( le->dirExpr != nullptr ){
         // If a field needs to be communicated, start here
         loopBuf.insert_before_stmt(e, get_stmt_str(e) + ".wait_move(" +
 get_stmt_str(le->dirExpr) + ", "
-           + parity_in_this_loop + ");", true, true);
+           + loop_info.parity_str + ");", true, true);
       }
       if( le->is_read ){
         // If a field is read, check that is has been allocated

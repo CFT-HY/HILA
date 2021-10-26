@@ -805,8 +805,12 @@ T gpu_reduce(int size, T *d_idata, bool keep_buffers);
 /////////////////////////////////////////////////////////////////////////////////////////
 // Reduce field var over the lattice
 
+#ifndef EVEN_SITES_FIRST
+EVEN_SITES_FIRST must be defined for gpu_reduce_field
+#endif
+
 template <typename T>
-T gpu_reduce_field(const Field<T> &f, bool allreduce = true, bool do_mpi = true) {
+T gpu_reduce_field(const Field<T> &f, bool allreduce = true, Parity par = Parity::all, bool do_mpi = true) {
 
     using base_t = hila::number_type<T>;
     constexpr int n = sizeof(T) / sizeof(base_t);
@@ -816,6 +820,7 @@ T gpu_reduce_field(const Field<T> &f, bool allreduce = true, bool do_mpi = true)
     T *fb = f.field_buffer();
     // address data with bptr
     base_t *bptr = (base_t *)(fb);
+    const lattice_struct * lat = f.fs->lattice;
 
     // use this union to set the value element by element
     union {
@@ -823,8 +828,16 @@ T gpu_reduce_field(const Field<T> &f, bool allreduce = true, bool do_mpi = true)
         base_t element[n];
     } result;
 
-    unsigned fsize = f.fs->lattice->field_alloc_size();
-    unsigned size = f.fs->lattice->mynode.volume();
+    unsigned fsize = lat->field_alloc_size();
+    unsigned size = lat->mynode.volume();
+
+    if (par == Parity::even) {
+        size = lat->mynode.evensites;
+    } else if (par == Parity::odd) {
+        size = lat->mynode.oddsites;
+        bptr += lat->mynode.evensites;
+    }
+
     for (int i = 0; i < n; i++) {
         // keep buffers until last element
         result.element[i] = gpu_reduce<base_t>(size, bptr, i < (n - 1));

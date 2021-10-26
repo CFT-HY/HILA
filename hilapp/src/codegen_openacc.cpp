@@ -28,7 +28,6 @@
 
 extern std::string looping_var;
 extern std::string parity_name;
-extern std::string parity_in_this_loop;
 
 // add pragma
 void GeneralVisitor::handle_loop_function_openacc(FunctionDecl *fd) {

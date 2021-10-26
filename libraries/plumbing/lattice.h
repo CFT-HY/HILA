@@ -83,7 +83,7 @@ class lattice_struct {
         } subnodes;
 #endif
 
-        unsigned volume() {
+        unsigned volume() const {
             return sites;
         }
 

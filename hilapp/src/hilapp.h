@@ -358,7 +358,8 @@ struct special_function_call {
 /// Stores the parity of the current loop: Expr, value (if known), Expr as string
 struct loop_info_struct {
     const Expr *parity_expr;
-    std::string parity_text;
+    std::string parity_text;  // parity text in source
+    std::string parity_str;   // what string to use
     Parity parity_value;
 
     bool has_pragma_novector;
