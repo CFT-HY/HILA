@@ -5,6 +5,12 @@
 #
 #
 
+$(info ########################################################################)
+$(info Target mahti: remember to )
+$(info   module load cuda gcc/10.3.0 openmpi/4.1.0 )
+$(info ########################################################################)
+
+
 ### Define compiler and options
 
 # Define compiler

@@ -9,7 +9,7 @@
 
 $(info ########################################################################)
 $(info Target mahti_cuda: remember to )
-$(info   module load cuda gcc/9.3.0 openmpi )
+$(info   module load cuda gcc/10.3.0 openmpi/4.0.5-cuda )
 $(info ########################################################################)
 
 # Define compiler
