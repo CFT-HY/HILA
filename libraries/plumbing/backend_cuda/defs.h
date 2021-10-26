@@ -25,8 +25,8 @@
 
 using gpuError = cudaError;
 #define gpuSuccess cudaSuccess
-#define gpuMalloc(a, b) GPU_CHECK(cudaMalloc(a, b))
-#define gpuFree(a) GPU_CHECK(cudaFree(a))
+#define gpuMalloc(a, b) GPU_CHECK(cudaMallocAsync(a, b, 0))
+#define gpuFree(a) GPU_CHECK(cudaFreeAsync(a, 0))
 #define gpuGetLastError cudaGetLastError
 #define gpuMemcpy(a, b, c, d) GPU_CHECK(cudaMemcpy(a, b, c, d))
 #define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
@@ -47,9 +47,9 @@ using gpuError = cudaError;
 #include <hip/hip_runtime.h>
 #include <hiprand.h>
 
-//#include <hipcub/hipcub.hpp>
+//#include <hipcub/hipcub.hpp>*
 
-#define N_threads 256 // Threads per block for CUDA
+#define N_threads 256 // Threads per block for CUDAs
 
 using gpuError = hipError_t;
 #define gpuSuccess hipSuccess

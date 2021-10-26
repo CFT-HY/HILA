@@ -173,6 +173,13 @@ void initialize_cuda(int rank) {
     }
 
     gpuSetDevice(my_device);
+
+    // set memory pool
+    cudaMemPool_t mempool;
+    cudaDeviceGetDefaultMemPool(&mempool, my_device);
+    uint64_t threshold = UINT64_MAX;
+    cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
+
 }
 
 #ifdef CUDA
