@@ -21,8 +21,6 @@ LD = nvcc -ccbin /appl/spack/v014/install-tree/gcc-4.8.5/gcc-9.3.0-3cdxud/bin/g+
 # CC = nvcc 
 # LD = nvcc -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict
 
-mkdir -p build
-
 # Define compilation flags  -  80 for Ampere
 CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict 
 # 3162 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
@@ -41,6 +39,7 @@ CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress
 # HERE: use specific path to recent version of g++, the default one is too old!
 
 STD_HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | /appl/spack/v014/install-tree/gcc-4.8.5/gcc-9.3.0-3cdxud/bin/g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+$(shell mkdir -p build)
 $(shell echo "$(STD_HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 STD_HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 

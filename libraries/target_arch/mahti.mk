@@ -31,6 +31,7 @@ MPI_INCLUDE_DIRS := $(addprefix -I, $(shell  $(CC) --showme:incdirs) )
 
 # Write hilapp inlcudes to a file 0hilapp_incl_dirs
 HILAPP_INCLUDE_LIST += $(MPI_INCLUDE_DIRS)
+$(shell mkdir -p build)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 

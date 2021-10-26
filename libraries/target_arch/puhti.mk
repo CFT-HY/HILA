@@ -24,8 +24,6 @@ LD := mpic++
 CXXFLAGS := -O3 -x c++ --std=c++17
 #CXXFLAGS := -g -x c++ --std=c++17 
 
-mkdir -p build
-
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
 # hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere
 # and copied here it must be told.  Instead of hunting the directories by hand, we can ask
@@ -42,7 +40,7 @@ MPI_INCLUDE_DIRS := $(addprefix -I, $(shell  $(CC) --showme:incdirs) )
 
 # Write hilapp includes to a file 0hilapp_incl_dirs
 HILAPP_INCLUDE_LIST += $(MPI_INCLUDE_DIRS)
-$(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
+$(shell mkdir -p build; echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
 

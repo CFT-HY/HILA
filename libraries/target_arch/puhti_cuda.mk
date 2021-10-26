@@ -26,8 +26,6 @@ CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress
 
 #CXXFLAGS = -g -x c++ --std=c++17 
 
-mkdir -p build
-
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
 # hilapp was built from system installed clang, but if hilapp was statically compiled elsewhere
 # and copied here it must be told.  Instead of hunting the directories by hand, we can ask
@@ -35,6 +33,7 @@ mkdir -p build
 # below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
 
 STD_HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+$(shell mkdir -p build)
 $(shell echo "$(STD_HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 STD_HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
