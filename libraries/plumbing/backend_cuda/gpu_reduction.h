@@ -49,8 +49,8 @@
 // Number from 0 to 9, can benchmark ...
 // TODO: make this makefile-define!
 
-static constexpr int whichKernel = 6;
-static constexpr int numThreads = 512;
+static constexpr int whichKernel = GPU_REDUCE_KERNEL;
+static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 
 // Utility class used to avoid linker errors with extern
 // unsized shared memory arrays with templated type

@@ -118,7 +118,6 @@ void hila_fft<cmplx_t>::transform() {
     int direction =
         (fftdir == fft_direction::forward) ? GPUFFT_FORWARD : GPUFFT_INVERSE;
 
-    fft_plan_timer.start();
 
     // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time?
     // Timer will tell the proportional timing
@@ -128,8 +127,13 @@ void hila_fft<cmplx_t>::transform() {
     int n_fft = 1;
     // reduce very large batch to smaller, avoid large buffer space
 
+    
+
+    fft_plan_timer.start();
+
+
     bool is_divisible = true;
-    while (batch > 512 && is_divisible) {
+    while (batch > GPUFFT_BATCH_SIZE && is_divisible) {
         is_divisible = false;
         for (int div : {2, 3, 5, 7}) {
             if (batch % div == 0) {

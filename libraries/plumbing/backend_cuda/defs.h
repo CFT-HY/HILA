@@ -21,7 +21,8 @@
 #include <cuda_runtime.h>
 //#include <cub/cub.cuh>
 
-#define N_threads 256 // Threads per block for CUDA   TODO: make configurable?
+// THis set in params.h now
+// #define N_threads 256 // Threads per block for CUDA   TODO: make configurable?
 
 using gpuError = cudaError;
 #define gpuSuccess cudaSuccess
@@ -58,7 +59,8 @@ using gpuError = cudaError;
 
 //#include <hipcub/hipcub.hpp>*
 
-#define N_threads 256 // Threads per block for CUDAs
+// Set in params.h now
+// #define N_threads 256 // Threads per block for CUDAs
 
 using gpuError = hipError_t;
 #define gpuSuccess hipSuccess

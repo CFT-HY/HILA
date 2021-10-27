@@ -46,14 +46,9 @@
 
 #define EVEN_SITES_FIRST
 
-// TODO: default type real_t definition somewhere (makefile?)  - remove this
-// using real_t = double;  
 
-// move these somewhere - use consts?
-// Have this defined in the program?
-#ifndef NDIM
-#define NDIM 4
-#endif
+// Read in Makefile tunable parameters
+#include "params.h"
 
 // This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!
 #define output_only
