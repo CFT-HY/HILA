@@ -127,8 +127,6 @@ void hila_fft<cmplx_t>::transform() {
     int n_fft = 1;
     // reduce very large batch to smaller, avoid large buffer space
 
-    
-
     fft_plan_timer.start();
 
 

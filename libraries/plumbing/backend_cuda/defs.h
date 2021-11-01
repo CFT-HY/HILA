@@ -27,7 +27,7 @@
 using gpuError = cudaError;
 #define gpuSuccess cudaSuccess
 
-#if CUDART_VERSION >= 11020
+#if 0 && CUDART_VERSION >= 11020
 #define gpuMalloc(a, b) GPU_CHECK(cudaMallocAsync(a, b, 0))
 #define gpuFree(a) GPU_CHECK(cudaFreeAsync(a, 0))
 
