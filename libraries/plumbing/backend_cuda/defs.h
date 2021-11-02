@@ -8,6 +8,13 @@
 #include <sstream>
 #include <iostream>
 
+// Prototypes for memory pool ops 
+void gpu_memory_pool_alloc(void **p, size_t req_size);
+void gpu_memory_pool_free(void * ptr);
+void gpu_memory_pool_purge();
+void gpu_memory_pool_report();
+
+
 #ifndef HILAPP
 
 // GPU specific definitions
@@ -27,7 +34,21 @@
 using gpuError = cudaError;
 #define gpuSuccess cudaSuccess
 
-#if 0 && CUDART_VERSION >= 11020
+/////////////////////////////////////////////
+// If gpu memory pool in use, the interface to memory
+#if GPU_MEMORY_POOL == 1
+#define gpuMalloc(a,b) gpu_memory_pool_alloc((void **)a,b)
+#define gpuFree(a) gpu_memory_pool_free(a)
+#define gpuMemPoolPurge() gpu_memory_pool_purge()
+#define gpuMemPoolReport() gpu_memory_pool_report()
+
+#else 
+// here std interfaces
+
+#define gpuMemPoolPurge() do {} while(0)
+#define gpuMemPoolReport() do {} while(0)
+
+#if CUDA_MALLOC_ASYNC == 1
 #define gpuMalloc(a, b) GPU_CHECK(cudaMallocAsync(a, b, 0))
 #define gpuFree(a) GPU_CHECK(cudaFreeAsync(a, 0))
 
@@ -36,6 +57,10 @@ using gpuError = cudaError;
 #define gpuFree(a) GPU_CHECK(cudaFree(a))
 
 #endif
+
+#endif  // gpu memory pool
+/////////////////////////////////////////////
+
 
 #define gpuGetLastError cudaGetLastError
 #define gpuMemcpy(a, b, c, d) GPU_CHECK(cudaMemcpy(a, b, c, d))
@@ -64,8 +89,24 @@ using gpuError = cudaError;
 
 using gpuError = hipError_t;
 #define gpuSuccess hipSuccess
+
+/////////////////////////////////////////////
+// If gpu memory pool in use, the interface to memory
+#if GPU_MEMORY_POOL == 1
+#define gpuMalloc(a,b) gpu_memory_pool_alloc(a,b)
+#define gpuFree(a) gpu_memory_pool_free(a)
+#define gpuMemPoolPurge() gpu_memory_pool_purge()
+
+#else
+// here std interfaces
+
+#define gpuMemPoolPurge() do {} while(0)
+
 #define gpuMalloc(a, b) GPU_CHECK(hipMalloc(a, b))
 #define gpuFree(a) GPU_CHECK(hipFree(a))
+
+#endif // ifdef memory pool
+
 #define gpuGetLastError hipGetLastError
 #define gpuMemcpy(a, b, siz, d) GPU_CHECK(hipMemcpy(a, b, siz, d))
 #define gpuMemcpyHostToDevice hipMemcpyHostToDevice
@@ -105,7 +146,7 @@ inline void synchronize_threads() {
  } 
  
 
-#else
+#else  // NOW HILAPP
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Now not cuda or hip - hilapp stage scans this section
@@ -119,11 +160,14 @@ void seed_device_rng(unsigned long seed);
 using gpuError = int;
 
 // Define empty stubs - return 1 (true)
-#define gpuMalloc(a, b) 1
-#define gpuFree(a) 1
-#define gpuMemcpy(a, b, siz, d) 1
-#define check_device_error(msg) 1
-#define check_device_error_code(code, msg) 1
+#define gpuMalloc(a, b) do {} while(0)
+#define gpuFree(a) do {} while(0)
+#define gpuMemcpy(a, b, siz, d) do {} while(0)
+#define gpuMemPoolPurge() do {} while(0)
+#define gpuMemPoolReport() do {} while(0)
+
+#define check_device_error(msg) do {} while(0)
+#define check_device_error_code(code, msg) do {} while(0)
 
 #define GPUTYPESTR "NONE"
 

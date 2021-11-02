@@ -60,6 +60,10 @@ void test_std_gathers() {
     // gather_test<int>();
     gather_test<double>();
 
+#if defined(CUDA) || defined(HIP)
+    gpuMemPoolPurge();
+#endif
+
     hila::timestamp("Communication tests done");
     print_dashed_line();
 

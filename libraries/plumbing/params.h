@@ -43,6 +43,26 @@
 #define GPUFFT_BATCH_SIZE 256
 #endif
 
+// Use gpu memory pool by default 
+#ifndef GPU_MEMORY_POOL
+#define GPU_MEMORY_POOL 1
+#endif
+
+#if GPU_MEMORY_POOL == 0
+// Use async malloc only if version is large enough
+// NOTE: does not seem to work with OpenMPI
+#ifndef CUDA_MALLOC_ASYNC
+// Disable async malloc, seems to crash openmpi!
+#if 0 && CUDART_VERSION >= 11020
+#define CUDA_MALLOC_ASYNC 1
+#else
+#define CUDA_MALLOC_ASYNC 0
+#endif
+
+#endif // if not GPU_MEMORY_POOL
+
+#endif // CUDA
+
 ///////////////////////////////////////////////////////////////////////////
 // Same for HIP
 
@@ -68,7 +88,13 @@
 #define GPUFFT_BATCH_SIZE 256
 #endif
 
+// Use gpu memory pool by default 
+#ifndef GPU_MEMORY_POOL
+#define GPU_MEMORY_POOL 1
+#endif
+
+
 // End of GPU defines
-#endif     
+#endif   // HIP
 
 #endif

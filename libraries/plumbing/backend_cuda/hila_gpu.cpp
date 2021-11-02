@@ -176,11 +176,14 @@ void initialize_cuda(int rank) {
 
     gpuSetDevice(my_device);
 
+#if defined(CUDA_MALLOC_ASYNC) && CUDA_MALLOC_ASYNC == 1
     // set memory pool
     cudaMemPool_t mempool;
     cudaDeviceGetDefaultMemPool(&mempool, my_device);
     uint64_t threshold = UINT64_MAX;
     cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
+
+#endif
 
 }
 
@@ -197,9 +200,11 @@ void gpu_device_info() {
         hila::output << "CUDA driver version: " << driverVersion << ", runtime "
                      << rtVersion << '\n';
         hila::output << "CUDART_VERSION " << CUDART_VERSION << '\n';
+#if defined(CUDA_MALLOC_ASYNC) && CUDA_MALLOC_ASYNC == 1
         if (CUDART_VERSION >= 11020) {
             hila::output << "Using cudaMallocAsync() to allocate memory\n";
         }
+#endif
 
         cudaDeviceProp props;
         int my_device;
