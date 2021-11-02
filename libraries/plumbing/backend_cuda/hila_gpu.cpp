@@ -162,8 +162,6 @@ void initialize_cuda(int rank) {
     // This assumes that each node has the same number of mpi ranks and GPUs
     my_device = rank % n_devices;
 
-    hila::output << "Devices " << n_devices << " mydevice " << my_device << " my rank " << rank << std::endl;
-
     output0 << "CUDA/HIP Devices accessible from node 0: " << n_devices << '\n';
     // TODO: this only for node 0?
     if (rank < 6) {
