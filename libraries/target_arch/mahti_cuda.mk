@@ -24,7 +24,7 @@ CC = nvcc
 LD = nvcc -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict
 
 # Define compilation flags  -  80 for Ampere
-CXXFLAGS = -dc -g -std=c++17 -x cu -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict 
+CXXFLAGS = -dc -O3 -std=c++17 -x cu -gencode arch=compute_80,code=sm_80 --use_fast_math --restrict 
 # 3162 is a warning about ignored inline in __global__ functions - it's not really ignored by nvcc,
 # it allows definition of a function in multiple compilation units as required by c++ standard!!  
 # Quiet it.
