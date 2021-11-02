@@ -24,6 +24,7 @@ class scaling_sim {
     void write_moduli();
     void write_energies();
     void next();
+    void updateCosmology(); 
     inline real_t scaleFactor(real_t t);
 
     Field<Complex<real_t>> phi;
@@ -31,6 +32,15 @@ class scaling_sim {
     Field<Complex<real_t>> deltaPi;
 
     real_t t;
+    real_t a;
+    real_t aHalfPlus;
+    real_t aHalfMinus;
+    real_t lambda;
+
+    real_t adif;
+    real_t lambdadif;
+    real_t acg;
+    real_t lambdacg;
 
     struct config {
         int l;
@@ -43,11 +53,17 @@ class scaling_sim {
         real_t sigma;
         real_t dx;
         real_t dt;
+	real_t era;
         real_t tStart;
-        real_t tStats;
+        real_t tdif;
+        real_t difFac;
+        real_t tcg;
+	real_t s1;
+	real_t s2;
+   	real_t tStats;
         real_t nOutputs;
         real_t tEnd;
-        real_t lambda;
+        real_t lambda0;
         std::fstream stream;
     } config;
 };
@@ -64,9 +80,15 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
     config.initialModulus = parameters.get("initialModulus");
     config.sigma = parameters.get("sigma");
     config.dx = parameters.get("dx");
+    config.era = parameters.get("era");
     config.tStart = parameters.get("tStart");
     config.tEnd = parameters.get("tEnd");
-    config.lambda = parameters.get("lambda");
+    config.lambda0 = parameters.get("lambda");
+    config.tdif = parameters.get("tdif");
+    config.difFac = parameters.get("difFac");
+    config.tcg = parameters.get("tcg");
+    config.s1 = parameters.get("s1");
+    config.s2 = parameters.get("s2");
     config.smoothing = parameters.get("smooth");
     config.initalCondition = parameters.get("initialCondition");
     config.tStats = parameters.get("tStats");
@@ -76,6 +98,19 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
     config.dt = config.dx * ratio;
     t = config.tStart;
 
+    if (config.tcg<config.tdif)
+    {
+	output0 << "Core growth time has to be bigger or equal to Diffusion time"<< '\n';
+	output0 << "Setting Core growth time equal to Diffusion time"<< '\n';
+	config.tcg=config.tdif;		
+    }
+ 
+    acg = pow(config.tcg/config.tEnd, config.era);
+    adif = acg * pow (config.tdif/config.tcg, config.era);
+
+    lambdacg = config.lambda0 * pow(acg, -2.0*(1.0-config.s2));
+    lambdadif = lambdacg * pow( adif/acg, -2.0*(1.0-config.s1));
+     
     CoordinateVector box_dimensions = {config.l, config.l, config.l};
     lattice->setup(box_dimensions);
     hila::seed_random(config.seed);
@@ -84,7 +119,33 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
 }
 
 inline real_t scaling_sim::scaleFactor(real_t t) {
-    return t / config.tEnd;
+    return pow(t / config.tEnd, config.era);
+}
+
+void scaling_sim::updateCosmology() { 
+
+
+    if (t <= config.tdif)
+    {
+        a = adif;
+        aHalfPlus = adif;
+        aHalfMinus = adif;
+    	lambda = lambdadif;
+    }
+    else if (t > config.tdif && t<= config.tcg)
+    {
+	a = acg * pow(t/config.tcg, config.era);
+    	aHalfPlus = acg * pow((t+0.5*config.dt)/config.tcg, config.era);
+    	aHalfMinus = acg * pow((t+0.5*config.dt)/config.tcg, config.era);
+	lambda = lambdacg * pow (a/acg, -2.0*(1.0-config.s1));
+    }    
+    else
+    {
+	a = scaleFactor(t);
+	aHalfPlus = scaleFactor(t+0.5*config.dt);
+	aHalfMinus = scaleFactor(t-0.5*config.dt);
+	lambda = lambdacg * pow(a/acg, -2.0*(1.0-config.s2));	
+    }
 }
 
 void scaling_sim::initialize() {
@@ -151,7 +212,7 @@ void scaling_sim::initialize() {
 
 void scaling_sim::write_moduli() {
 
-    real_t a = scaleFactor(t);
+   // real_t a = scaleFactor(t);
 
     double phimod = 0.0;
     double pimod = 0.0;
@@ -162,15 +223,15 @@ void scaling_sim::write_moduli() {
     }
 
     if (hila::myrank() == 0) {
-        config.stream << t << "," << a << "," << config.lambda << ","
-                      << phimod / lattice->volume() << "," << pimod / lattice->volume()
-                      << ",";
+        config.stream << t << " " << a << " " << lambda << " "
+                      << phimod / lattice->volume() << " " << pimod / lattice->volume()
+                      << " ";
     }
 }
 
 void scaling_sim::write_energies() {
 
-    double a = scaleFactor(t);
+   // double a = scaleFactor(t);
     double ss = config.sigma * config.sigma;
 
     // non-weighted energies
@@ -189,7 +250,7 @@ void scaling_sim::write_energies() {
 
     onsites (ALL) {
         double phinorm = phi[X].squarenorm();
-        double v = 0.25 * config.lambda * a * a * pow((phinorm - ss), 2.0);
+        double v = 0.25 * lambda * a * a * pow((phinorm - ss), 2.0);
         double pinorm = pi[X].squarenorm();
         double pPi = (phi[X].conj()*pi[X]).re;
 
@@ -209,7 +270,7 @@ void scaling_sim::write_energies() {
 
     onsites (ALL) {
             auto norm = phi[X].squarenorm();
-            real_t v = 0.25 * config.lambda * a * a * pow((norm - ss), 2.0);
+            real_t v = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
             auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
                              phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
             real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
@@ -236,23 +297,23 @@ void scaling_sim::write_energies() {
 
     if (hila::myrank() == 0) {
         double vol = (double)config.l * config.l * config.l;
-        config.stream << sumPi / vol << "," << w_sumPi / vol << ",";
-        config.stream << sumDiPhi / vol << "," << w_sumDiPhi / vol << ",";
-        config.stream << sumPhiPi / vol << "," << w_sumPhiPi / vol << ",";
-        config.stream << sumPhiDiPhi / vol << "," << w_sumPhiDiPhi / vol << ",";
-        config.stream << sumV / vol << "," << w_sumV / vol << "\n";
+        config.stream << sumPi / vol << " " << w_sumPi / vol << " ";
+        config.stream << sumDiPhi / vol << " " << w_sumDiPhi / vol << " ";
+        config.stream << sumPhiPi / vol << " " << w_sumPhiPi / vol << " ";
+        config.stream << sumPhiDiPhi / vol << " " << w_sumPhiDiPhi / vol << " ";
+        config.stream << sumV / vol << " " << w_sumV / vol << "\n";
     }
 }
 
 void scaling_sim::next() {
 
-    real_t a = scaleFactor(t);
-    real_t aHalfPlus = scaleFactor(t + config.dt / 2.0);
-    real_t aHalfMinus = scaleFactor(t - config.dt / 2.0);
+    //real_t a = scaleFactor(t);
+    //real_t aHalfPlus = scaleFactor(t + config.dt / 2.0);
+    //real_t aHalfMinus = scaleFactor(t - config.dt / 2.0);
 
     real_t aadt_aadxdx = pow(a / aHalfPlus, 2.0) * config.dt / (config.dx * config.dx);
     real_t aadt2D_aadxdx = aadt_aadxdx * 2.0 * 3.0;
-    real_t aaaaldt_aa = pow(a, 4.0) * config.lambda * config.dt / pow(aHalfPlus, 2.0);
+    real_t aaaaldt_aa = pow(a, 4.0) * lambda * config.dt / pow(aHalfPlus, 2.0);
     real_t daa_aa = (pow(aHalfPlus, 2.0) - pow(aHalfMinus, 2.0)) / pow(aHalfPlus, 2.0);
     real_t ss = config.sigma * config.sigma;
 
@@ -282,11 +343,22 @@ void scaling_sim::next() {
                                      phi[X + e_z] + phi[X - e_z]);
     }
 
-    pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
+    //pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
+
+    if (t < config.tdif)
+    {
+        pi[ALL] = deltaPi[X]/(config.difFac*config.dt);
+        t += config.dt/config.difFac;
+    }
+    else
+    {
+        pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
+        t += config.dt;
+    }
 
     next_timer.stop();
 
-    t += config.dt;
+    //t += config.dt;
 }
 
 int main(int argc, char **argv) {
@@ -308,7 +380,9 @@ int main(int argc, char **argv) {
     // BUt we want to avoid unnecessary sync anyway.
     static hila::timer run_timer("Simulation time"), meas_timer("Measurements");
     run_timer.start();
+    
     while (sim.t < sim.config.tEnd) {
+	sim.updateCosmology();
         if (sim.t >= sim.config.tStats) {
             if (stat_counter % steps == 0) {
                 meas_timer.start();
