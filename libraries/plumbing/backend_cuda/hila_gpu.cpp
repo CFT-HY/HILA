@@ -66,7 +66,7 @@ void hila::seed_device_rng(unsigned long seed) {
         lattice->mynode.volume() / (N_threads * iters_per_kernel) + 1;
     unsigned long n_sites = N_threads * n_blocks * iters_per_kernel;
     unsigned long myseed = seed + hila::myrank() * n_sites;
-    gpuMalloc(&gpurandstate, n_sites * sizeof(gpurandState));
+    gpuMalloc((void **)&gpurandstate, n_sites * sizeof(gpurandState));
 #ifdef CUDA
     seed_random_kernel<<<n_blocks, N_threads>>>(gpurandstate, myseed, iters_per_kernel,
                                                 n_blocks * N_threads);

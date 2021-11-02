@@ -37,7 +37,7 @@ using gpuError = cudaError;
 /////////////////////////////////////////////
 // If gpu memory pool in use, the interface to memory
 #if GPU_MEMORY_POOL == 1
-#define gpuMalloc(a,b) gpu_memory_pool_alloc((void **)a,b)
+#define gpuMalloc(a,b) gpu_memory_pool_alloc(a,b)
 #define gpuFree(a) gpu_memory_pool_free(a)
 #define gpuMemPoolPurge() gpu_memory_pool_purge()
 #define gpuMemPoolReport() gpu_memory_pool_report()
