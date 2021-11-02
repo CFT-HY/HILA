@@ -4,6 +4,7 @@
 ///////////////////////////////////////////////////////////////////////////
 //  This file contains #defined constants
 //  These can be overruled in Makefile, with "-DPARAM=value"
+//  On switches which are by default on, "-DPARAM=0" undefs' them
 ///////////////////////////////////////////////////////////////////////////
 
 
@@ -19,7 +20,24 @@
 
 
 ///////////////////////////////////////////////////////////////////////////
+// Special defines for GPU targets
+#if defined(CUDA) || defined(HIP)
+
+// Use gpu memory pool by default 
+// set off by using -DGPU_MEMORY_POOL=0 in Makefile
+#if defined(GPU_MEMORY_POOL)
+#if GPU_MEMORY_POOL == 0
+#undef GPU_MEMORY_POOL
+#endif
+#else 
+#define GPU_MEMORY_POOL
+#endif
+
+#endif  // CUDA || HIP
+
+///////////////////////////////////////////////////////////////////////////
 // Special defines for CUDA target
+
 
 #if defined(CUDA)
 
@@ -43,20 +61,19 @@
 #define GPUFFT_BATCH_SIZE 256
 #endif
 
-// Use gpu memory pool by default 
-#ifndef GPU_MEMORY_POOL
-#define GPU_MEMORY_POOL 1
-#endif
 
-#if GPU_MEMORY_POOL == 0
+#ifndef GPU_MEMORY_POOL
+
+// CUDA_MALLOC_ASYNC 
+#if defined(CUDA_MALLOC_ASYNC)
+#if CUDA_MALLOC_ASYNC == 0
+#undef CUDA_MALLOC_ASYNC
+#endif
+// Now CUDA_MALLOC_ASYNC is not defined
 // Use async malloc only if version is large enough
-// NOTE: does not seem to work with OpenMPI
-#ifndef CUDA_MALLOC_ASYNC
-// Disable async malloc, seems to crash openmpi!
-#if 0 && CUDART_VERSION >= 11020
-#define CUDA_MALLOC_ASYNC 1
-#else
-#define CUDA_MALLOC_ASYNC 0
+// NOTE: does not seem to work with OpenMPI, disable
+#elif 0 && CUDART_VERSION >= 11020
+#define CUDA_MALLOC_ASYNC
 #endif
 
 #endif // if not GPU_MEMORY_POOL
@@ -66,7 +83,7 @@
 ///////////////////////////////////////////////////////////////////////////
 // Same for HIP
 
-#elif defined(HIP)
+#if defined(HIP)
 
 // General # of threads
 #ifndef N_threads
@@ -86,11 +103,6 @@
 // How many fft's in parallel - large value faster, small less memory.
 #ifndef GPUFFT_BATCH_SIZE
 #define GPUFFT_BATCH_SIZE 256
-#endif
-
-// Use gpu memory pool by default 
-#ifndef GPU_MEMORY_POOL
-#define GPU_MEMORY_POOL 1
 #endif
 
 

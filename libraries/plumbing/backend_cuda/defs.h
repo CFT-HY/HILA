@@ -3,6 +3,7 @@
 
 // On Puhti, use UCX_MEMTYPE_CACHE=n with
 // CUDA_AWARE_MPI
+
 #define CUDA_AWARE_MPI
 
 #include <sstream>
@@ -36,7 +37,7 @@ using gpuError = cudaError;
 
 /////////////////////////////////////////////
 // If gpu memory pool in use, the interface to memory
-#if GPU_MEMORY_POOL == 1
+#ifdef GPU_MEMORY_POOL
 #define gpuMalloc(a,b) gpu_memory_pool_alloc(a,b)
 #define gpuFree(a) gpu_memory_pool_free(a)
 #define gpuMemPoolPurge() gpu_memory_pool_purge()
@@ -48,7 +49,7 @@ using gpuError = cudaError;
 #define gpuMemPoolPurge() do {} while(0)
 #define gpuMemPoolReport() do {} while(0)
 
-#if CUDA_MALLOC_ASYNC == 1
+#ifdef CUDA_MALLOC_ASYNC
 #define gpuMalloc(a, b) GPU_CHECK(cudaMallocAsync(a, b, 0))
 #define gpuFree(a) GPU_CHECK(cudaFreeAsync(a, 0))
 
@@ -92,7 +93,7 @@ using gpuError = hipError_t;
 
 /////////////////////////////////////////////
 // If gpu memory pool in use, the interface to memory
-#if GPU_MEMORY_POOL == 1
+#ifdef GPU_MEMORY_POOL
 #define gpuMalloc(a,b) gpu_memory_pool_alloc(a,b)
 #define gpuFree(a) gpu_memory_pool_free(a)
 #define gpuMemPoolPurge() gpu_memory_pool_purge()

@@ -8,7 +8,7 @@
 #include <list>
 #include <iomanip>
 
-#if GPU_MEMORY_POOL == 1 && !defined(HILAPP)
+#if defined(GPU_MEMORY_POOL) && !defined(HILAPP)
 
 #if defined(HIP)
 #define gpuMallocDirect(a, b) GPU_CHECK(hipMalloc(a, b))
