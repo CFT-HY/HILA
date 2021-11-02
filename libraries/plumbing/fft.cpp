@@ -25,6 +25,10 @@ std::vector<fftnode_struct> hila_fft_comms[NDIM];
 unsigned hila_fft_my_columns[NDIM]; // how many columns does this node take care of
 size_t fft_recv_buf_size[NDIM];
 
+#if defined(CUDA) || defined(HIP)
+// save plan 
+
+#endif
 
 
 size_t fft_get_buffer_offsets(const Direction dir, const size_t elements,

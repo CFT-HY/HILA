@@ -1,10 +1,6 @@
 
 #include <cstring>
-#include "defs.h"
-#include "field.h"
-#ifdef USE_MPI
-#include "com_mpi.h"
-#endif
+#include "hila.h"
 
 // define these global var here - somehow NULL needed for ostream
 std::ostream hila::output(NULL);
@@ -372,6 +368,10 @@ void hila::finishrun() {
     if (sublattices.number > 1) {
         hila::timestamp("Waiting to sync sublattices...");
     }
+
+#if defined(CUDA) || defined(HIP)
+    gpuMemPoolReport();
+#endif
 
     if (!hila::check_input) {
 

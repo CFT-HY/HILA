@@ -66,7 +66,7 @@ void hila::seed_device_rng(unsigned long seed) {
         lattice->mynode.volume() / (N_threads * iters_per_kernel) + 1;
     unsigned long n_sites = N_threads * n_blocks * iters_per_kernel;
     unsigned long myseed = seed + hila::myrank() * n_sites;
-    gpuMalloc(&gpurandstate, n_sites * sizeof(gpurandState));
+    gpuMalloc((void **)&gpurandstate, n_sites * sizeof(gpurandState));
 #ifdef CUDA
     seed_random_kernel<<<n_blocks, N_threads>>>(gpurandstate, myseed, iters_per_kernel,
                                                 n_blocks * N_threads);
@@ -174,11 +174,14 @@ void initialize_cuda(int rank) {
 
     gpuSetDevice(my_device);
 
+#if defined(CUDA_MALLOC_ASYNC) && CUDA_MALLOC_ASYNC == 1
     // set memory pool
     cudaMemPool_t mempool;
     cudaDeviceGetDefaultMemPool(&mempool, my_device);
     uint64_t threshold = UINT64_MAX;
     cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
+
+#endif
 
 }
 
@@ -195,9 +198,11 @@ void gpu_device_info() {
         hila::output << "CUDA driver version: " << driverVersion << ", runtime "
                      << rtVersion << '\n';
         hila::output << "CUDART_VERSION " << CUDART_VERSION << '\n';
+#if defined(CUDA_MALLOC_ASYNC) && CUDA_MALLOC_ASYNC == 1
         if (CUDART_VERSION >= 11020) {
             hila::output << "Using cudaMallocAsync() to allocate memory\n";
         }
+#endif
 
         cudaDeviceProp props;
         int my_device;

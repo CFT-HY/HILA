@@ -164,8 +164,6 @@ enum class fft_direction { forward, inverse };
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000
 
-#define DEFAULT_OUTPUT_NAME "output"
-
 #ifndef USE_MPI
 
 // broadcast does nothing if not MPI
