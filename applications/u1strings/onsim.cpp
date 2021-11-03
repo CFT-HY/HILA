@@ -248,21 +248,58 @@ void scaling_sim::write_energies() {
     double w_sumPhiDiPhi = 0.0;
     double w_sumPhiPi = 0.0;
 
+    // Split to 3 
+
     onsites (ALL) {
         double phinorm = phi[X].squarenorm();
         double v = 0.25 * lambda * a * a * pow((phinorm - ss), 2.0);
-        double pinorm = pi[X].squarenorm();
-        double pPi = (phi[X].conj()*pi[X]).re;
+        // double pinorm = pi[X].squarenorm();
+        // double pPi = (phi[X].conj()*pi[X]).re;
 
         sumV += v;
         w_sumV += v * v;
 
+        // sumPi += 0.5 * pinorm;
+        // w_sumPi += 0.5 * pinorm * v;
+
+        // sumPhiPi += 0.5 * pPi * pPi;
+        // w_sumPhiPi += 0.5 * pPi * pPi * v;
+    }
+
+    onsites (ALL) {
+        double phinorm = phi[X].squarenorm();
+        double v = 0.25 * lambda * a * a * pow((phinorm - ss), 2.0);
+        double pinorm = pi[X].squarenorm();
+        // double pPi = (phi[X].conj()*pi[X]).re;
+
+        // sumV += v;
+        // w_sumV += v * v;
+
         sumPi += 0.5 * pinorm;
         w_sumPi += 0.5 * pinorm * v;
+
+        // sumPhiPi += 0.5 * pPi * pPi;
+        // w_sumPhiPi += 0.5 * pPi * pPi * v;
+    }
+
+    onsites (ALL) {
+        double phinorm = phi[X].squarenorm();
+        double v = 0.25 * lambda * a * a * pow((phinorm - ss), 2.0);
+        // double pinorm = pi[X].squarenorm();
+        double pPi = (phi[X].conj()*pi[X]).re;
+
+        // sumV += v;
+        // w_sumV += v * v;
+
+        // sumPi += 0.5 * pinorm;
+        // w_sumPi += 0.5 * pinorm * v;
 
         sumPhiPi += 0.5 * pPi * pPi;
         w_sumPhiPi += 0.5 * pPi * pPi * v;
     }
+
+
+
 
     static hila::timer vreduction("reduction");
 
@@ -273,14 +310,34 @@ void scaling_sim::write_energies() {
             real_t v = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
             auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
                              phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
-            real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
+            // real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
             real_t diff_phi_norm2 = diff_phi.squarenorm();
 
             sumDiPhi += 0.5 * diff_phi_norm2; 
             // red[0] += 0.5 * diff_phi_norm2;
-            sumPhiDiPhi += pDphi * pDphi / norm;
+            // sumPhiDiPhi += pDphi * pDphi / norm;
             // red[1] += pDphi * pDphi / norm;
             w_sumDiPhi += 0.5 * diff_phi_norm2 * v; 
+            // red[2] += 0.5 * diff_phi_norm2 * v;
+            // w_sumPhiDiPhi += pDphi * pDphi / norm * v;
+            // red[3] += pDphi * pDphi / norm * v;
+
+        
+    }
+
+    onsites (ALL) {
+            auto norm = phi[X].squarenorm();
+            real_t v = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
+            auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
+                             phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
+            real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
+            // real_t diff_phi_norm2 = diff_phi.squarenorm();
+
+            // sumDiPhi += 0.5 * diff_phi_norm2; 
+            // red[0] += 0.5 * diff_phi_norm2;
+            sumPhiDiPhi += pDphi * pDphi / norm;
+            // red[1] += pDphi * pDphi / norm;
+            // w_sumDiPhi += 0.5 * diff_phi_norm2 * v; 
             // red[2] += 0.5 * diff_phi_norm2 * v;
             w_sumPhiDiPhi += pDphi * pDphi / norm * v;
             // red[3] += pDphi * pDphi / norm * v;
@@ -288,10 +345,6 @@ void scaling_sim::write_energies() {
         
     }
 
-    // sumDiPhi = red[0];
-    // sumPhiDiPhi = red[1];
-    // w_sumDiPhi = red[2];
-    // w_sumPhiDiPhi = red[3];
     
     vreduction.stop();
 
