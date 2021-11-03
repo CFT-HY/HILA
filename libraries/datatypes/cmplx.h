@@ -79,7 +79,7 @@ struct Complex {
         im = b;
     }
 
-    // make also std accessors real() and imag() - don't return reference, because 
+    // make also std accessors real() and imag() - don't return reference, because
     // v.real() would not then work inside loops!
     inline T real() const {
         return re;
@@ -127,11 +127,6 @@ struct Complex {
 
     inline Complex<T> conj() const {
         return Complex<T>(re, -im);
-    }
-
-    inline Complex<T> conj_mul(Complex<T> rhs) const {
-        rhs *= this->conj();
-        return rhs;
     }
 
     inline Complex<T> polar(const T r, const T theta) output_only {
@@ -245,18 +240,15 @@ struct Complex {
         return text;
     }
 
-
-    // Convenience method a.conj_mul(b) == a^* b 
-    Complex<T> conj_mul(const Complex<T> & b) const {
-        return Complex<T>( re * b.re + im * b.im, re * b.im - im * b.re );
+    // Convenience method a.conj_mul(b) == a^* b
+    inline Complex<T> conj_mul(const Complex<T> &b) const {
+        return Complex<T>(re * b.re + im * b.im, re * b.im - im * b.re);
     }
 
     // Convenience method a.mul_conj(b) == a * b^*
-    Complex<T> mul_conj(const Complex<T> & b) const {
-        return Complex<T>( re * b.re + im * b.im, im * b.re - re * b.im );
+    inline Complex<T> mul_conj(const Complex<T> &b) const {
+        return Complex<T>(re * b.re + im * b.im, im * b.re - re * b.im);
     }
-
-
 };
 
 // functions real(), imag()
@@ -276,8 +268,6 @@ Complex<T> polar(T r, T arg) {
     Complex<T> res(r * cos(arg), r * sin(arg));
     return res;
 }
-
-
 
 // template <typename T>
 // inline Complex<T> operator+(const Complex<T> & a, const Complex<T> & b) {

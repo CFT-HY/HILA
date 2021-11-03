@@ -398,16 +398,16 @@ class Matrix {
     }
 
     /// dot with matrix - matrix
-    template <int p, std::enable_if_t<(p > 1 || m > 1), int> = 0>
-    inline Matrix<m, p, T> dot(const Matrix<n, p, T> &rhs) const {
-        Matrix<m, p, T> res;
-        for (int i = 0; i < m; i++)
-            for (int j = 0; j < p; j++) {
-                res.e(i, j) = 0;
-                for (int k = 0; k < n; j++)
-                    res.e(i, j) += ::conj(e(k, i)) * rhs.e(k, j);
-            }
-    }
+    // template <int p, std::enable_if_t<(p > 1 || m > 1), int> = 0>
+    // inline Matrix<m, p, T> dot(const Matrix<n, p, T> &rhs) const {
+    //     Matrix<m, p, T> res;
+    //     for (int i = 0; i < m; i++)
+    //         for (int j = 0; j < p; j++) {
+    //             res.e(i, j) = 0;
+    //             for (int k = 0; k < n; j++)
+    //                 res.e(i, j) += ::conj(e(k, i)) * rhs.e(k, j);
+    //         }
+    // }
 
     /// Generate random elements
     Matrix<n, m, T> &random() output_only {
@@ -436,6 +436,20 @@ class Matrix {
         }
         return text.str();
     }
+
+    // Methods only for complex square matrices
+
+    /// Make the matrix unitary by orthogonalizing the rows
+    /// There must be a faster way to do this, but this is simple
+    ///  i = 0 ... n-1
+    ///     normalize row i
+    ///     make rows i+1 .. (n-1) orthogonal to row i
+
+    inline void make_unitary();
+
+    /// Set the determinant of the SU(N) matrix to 1
+    inline void fix_det();
+    inline void make_SU();
 };
 
 /// do transpose and adjoint functions here
@@ -503,16 +517,24 @@ T det(const Matrix<n, m, T> &mat) {
     return result;
 }
 
+/// 1x1 matrix det (trivial)
+template <typename T>
+T det(const Matrix<1, 1, T> &mat) {
+    return mat.e(0, 0);
+}
+
 /// 2x2 matrix det
 template <typename T>
 T det(const Matrix<2, 2, T> &mat) {
     return mat.e(0, 0) * mat.e(1, 1) - mat.e(1, 0) * mat.e(0, 1);
 }
 
-/// 1x1 matrix det (trivial)
+/// 3x3 matrix det
 template <typename T>
-T det(const Matrix<1, 1, T> &mat) {
-    return mat.e(0, 0);
+T det(const Matrix<3, 3, T> &mat) {
+    return mat.e(0, 0) * (mat.e(1, 1) * mat.e(2, 2) - mat.e(2, 1) * mat.e(1, 2)) -
+           mat.e(0, 1) * (mat.e(1, 0) * mat.e(2, 2) - mat.e(1, 2) * mat.e(2, 0)) +
+           mat.e(0, 2) * (mat.e(1, 0) * mat.e(2, 1) - mat.e(1, 1) * mat.e(2, 0));
 }
 
 /// Now matrix additions: matrix + matrix
@@ -703,11 +725,10 @@ inline void gaussian_random(output_only Matrix<n, m, T> &mat) {
     mat.gaussian();
 }
 
-/// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47
-/// ff
+/// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed.
+/// p. 47 ff
 template <int n, typename T, typename radix = hila::number_type<T>,
-          std::enable_if_t<hila::is_arithmetic<radix>::value, int> = 0,
-          std::enable_if_t<std::is_same<T, Complex<radix>>::value, int> = 0>
+          std::enable_if_t<hila::is_complex<T>::value, int> = 0>
 Complex<radix> det_lu(const Matrix<n, n, T> &mat) {
 
     int i, imax, j, k;
@@ -783,8 +804,8 @@ Complex<radix> det_lu(const Matrix<n, n, T> &mat) {
     return (csum);
 }
 
-/// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed. p. 47
-/// ff
+/// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed.
+/// p. 47 ff
 template <int n, typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 T det_lu(const Matrix<n, n, T> &mat) {
     int i, imax, j, k;

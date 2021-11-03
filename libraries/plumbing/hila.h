@@ -8,6 +8,7 @@
 #include "plumbing/defs.h"
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
+#include "datatypes/sun_matrix_ops.h"
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"

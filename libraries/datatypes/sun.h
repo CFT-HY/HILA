@@ -138,7 +138,7 @@ class SU : public SquareMatrix<n, Complex<radix>> {
             // Now make rows r+1 .. n-1 orthogonal to row r,
             // by doing j = j - (r^* j) r
 
-            Complx<radix> d;
+            Complex<radix> d;
             for (int j = r + 1; j < n; j++) {
                 // dot productof r^* j
                 d = 0;
