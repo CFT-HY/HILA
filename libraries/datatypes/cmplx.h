@@ -244,6 +244,19 @@ struct Complex {
         std::string text = "(" + std::to_string(re) + "," + std::to_string(im) + ")";
         return text;
     }
+
+
+    // Convenience method a.conj_mul(b) == a^* b 
+    Complex<T> conj_mul(const Complex<T> & b) const {
+        return Complex<T>( re * b.re + im * b.im, re * b.im - im * b.re );
+    }
+
+    // Convenience method a.mul_conj(b) == a * b^*
+    Complex<T> mul_conj(const Complex<T> & b) const {
+        return Complex<T>( re * b.re + im * b.im, im * b.re - re * b.im );
+    }
+
+
 };
 
 // functions real(), imag()
