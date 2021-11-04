@@ -4,8 +4,6 @@
 // On Puhti, use UCX_MEMTYPE_CACHE=n with
 // CUDA_AWARE_MPI
 
-#define CUDA_AWARE_MPI
-
 #include <sstream>
 #include <iostream>
 

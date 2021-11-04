@@ -26,6 +26,9 @@
 #define __host__
 #endif
 
+// Read in Makefile tunable parameters first
+#include "params.h"
+
 #include "plumbing/mersenne.h"
 #include "plumbing/memalloc.h" // memory allocator
 #include "plumbing/timing.h"
@@ -46,9 +49,6 @@
 
 #define EVEN_SITES_FIRST
 
-
-// Read in Makefile tunable parameters
-#include "params.h"
 
 // This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!
 #define output_only
