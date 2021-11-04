@@ -61,19 +61,25 @@
 #define GPUFFT_BATCH_SIZE 256
 #endif
 
+// Undef cuda-aware mpi at makefile with -DCUDA_AWARE_MPI=0
+#ifndef CUDA_AWARE_MPI
+#define CUDA_AWARE_MPI 1
+#elif CUDA_AWARE_MPI == 0
+#undef CUDA_AWARE_MPI
+#endif
 
 #ifndef GPU_MEMORY_POOL
 
 // CUDA_MALLOC_ASYNC 
-#if defined(CUDA_MALLOC_ASYNC)
-#if CUDA_MALLOC_ASYNC == 0
-#undef CUDA_MALLOC_ASYNC
-#endif
-// Now CUDA_MALLOC_ASYNC is not defined
+#ifndef CUDA_MALLOC_ASYNC
 // Use async malloc only if version is large enough
 // NOTE: does not seem to work with OpenMPI, disable
-#elif 0 && CUDART_VERSION >= 11020
+#if 0 && CUDART_VERSION >= 11020
 #define CUDA_MALLOC_ASYNC
+#endif
+
+#elif CUDA_MALLOC_ASYNC == 0
+#undef CUDA_MALLOC_ASYNC
 #endif
 
 #endif // if not GPU_MEMORY_POOL
