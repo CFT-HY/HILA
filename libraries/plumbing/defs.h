@@ -33,10 +33,6 @@
 #include "plumbing/memalloc.h" // memory allocator
 #include "plumbing/timing.h"
 
-/// Allow other than periodic boundary conditions
-// #define SPECIAL_BOUNDARY_CONDITIONS
-
-// constexpr double PI = 3.1415926535897935;
 
 /// Define __restrict__?  It is non-standard but supported by most (all?) compilers.
 /// ADD HERE GUARD FOR THOSE WHICH DO not HAVE IT
@@ -46,8 +42,6 @@
 // #else
 // #define RESTRICT // disabled here
 // #endif
-
-#define EVEN_SITES_FIRST
 
 
 // This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!

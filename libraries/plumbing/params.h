@@ -2,9 +2,10 @@
 #define PARAMS_H_
 
 ///////////////////////////////////////////////////////////////////////////
-//  This file contains #defined constants
-//  These can be overruled in Makefile, with "-DPARAM=value"
-//  On switches which are by default on, "-DPARAM=0" undefs' them
+///  This file contains #defined constants
+///  These can be overruled in app Makefile, with 
+///  APP_OPTS := -DPARAMETER=value
+///  On switches which are by default on, "-DPARAMETER=0" undefines them
 ///////////////////////////////////////////////////////////////////////////
 
 
@@ -18,6 +19,15 @@
 #define DEFAULT_OUTPUT_NAME "output"
 #endif
 
+// EVEN_SITES_FIRST is the default
+#ifndef EVEN_SITES_FIRST
+#define EVEN_SITES_FIRST
+#elif EVEN_SITES_FIRST == 0
+#undef EVEN_SITES_FIRST
+#endif
+
+// boundary conditions are "off" by default -- no need to do anything here
+// #ifndef SPECIAL_BOUNDARY_CONDITIONS
 
 ///////////////////////////////////////////////////////////////////////////
 // Special defines for GPU targets
@@ -25,12 +35,10 @@
 
 // Use gpu memory pool by default 
 // set off by using -DGPU_MEMORY_POOL=0 in Makefile
-#if defined(GPU_MEMORY_POOL)
-#if GPU_MEMORY_POOL == 0
-#undef GPU_MEMORY_POOL
-#endif
-#else 
+#ifndef GPU_MEMORY_POOL
 #define GPU_MEMORY_POOL
+#elif GPU_MEMORY_POOL == 0
+#undef GPU_MEMORY_POOL
 #endif
 
 #endif  // CUDA || HIP

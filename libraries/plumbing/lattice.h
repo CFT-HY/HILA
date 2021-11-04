@@ -273,14 +273,14 @@ class lattice_struct {
     unsigned remap_node(const unsigned i);
 
 #ifdef EVEN_SITES_FIRST
-    int loop_begin(Parity P) const {
+    inline unsigned loop_begin(Parity P) const {
         if (P == ODD) {
             return mynode.evensites;
         } else {
             return 0;
         }
     }
-    int loop_end(Parity P) const {
+    inline unsigned loop_end(Parity P) const {
         if (P == EVEN) {
             return mynode.evensites;
         } else {
@@ -289,19 +289,12 @@ class lattice_struct {
     }
 #else
 
-    int loop_begin(Parity P) const {
-        if (P == EVEN) {
-            return mynode.evensites;
-        } else {
-            return 0;
-        }
+    inline unsigned loop_begin(Parity P) const {
+        assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
+        return 0;
     }
-    int loop_end(Parity P) const {
-        if (P == ODD) {
-            return mynode.evensites;
-        } else {
-            return mynode.sites;
-        }
+    inline unsigned loop_end(Parity P) const {
+        return mynode.sites;
     }
 #endif
 
