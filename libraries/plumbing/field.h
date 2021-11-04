@@ -808,6 +808,9 @@ class Field {
     void read_from_stream(std::ifstream &inputfile);
     void read_from_file(std::string filename);
 
+    // and sum reduction
+    T reduce_sum(bool allreduce = true) const;
+
 }; // End of class Field<>
 
 // these operators rely on SFINAE, OK if field_hila::type_plus<A,B> exists i.e. A+B is

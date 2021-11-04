@@ -124,16 +124,9 @@ template <typename T>
 void lattice_struct::reduce_node_sum(T *value, int N, bool distribute) {
     T work[N];
     MPI_Datatype dtype;
+    int size;
 
-    if (std::is_same<hila::number_type<T>, int>::value) {
-        dtype = MPI_INT;
-    } else if (std::is_same<hila::number_type<T>, float>::value) {
-        dtype = MPI_FLOAT;
-    } else if (std::is_same<hila::number_type<T>, double>::value) {
-        dtype = MPI_DOUBLE;
-    } else {
-        static_assert(sizeof(T) > 0, "Unknown number_type in reduce_node_sum");
-    }
+    dtype = get_MPI_number_type<T>(size);
 
     reduction_timer.start();
     if (distribute) {
