@@ -229,7 +229,7 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
     T operator[](const Direction d) const { return this->e((int)d); }
 
     // Parity of this coordinate
-    ::Parity parity() {
+    ::Parity parity() const {
         int s = 0;
         foralldir(d) s += this->e(d);
         if (s % 2 == 0)

@@ -1,4 +1,4 @@
-N                   512
+N                   128
 m                   3
 epsilon             1.0
 seed                3
@@ -7,7 +7,7 @@ sigma               1.0
 dx                  0.5
 era                 1.0
 tStart              50.0
-tEnd                180.0
+tEnd                200.0
 lambda              2.0
 tdif                70.0
 difFac              3.0
@@ -19,4 +19,4 @@ initialCondition    0
 tStats              50.0
 numberStatsOutputs  130
 dtdxRatio           0.2
-output_file         stats/512dx05s0rad.dat
+output_file         output

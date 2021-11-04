@@ -123,6 +123,7 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
         gpuMemcpy(d_neighb[d], lattice->neighb[d],
                   lattice->mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
         // For special boundaries
         gpuMalloc((void **)&(d_neighb_special[d]),
                   lattice->mynode.volume() * sizeof(unsigned));
@@ -130,6 +131,7 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
             lattice->get_neighbour_array((Direction)d, BoundaryCondition::ANTIPERIODIC);
         gpuMemcpy(d_neighb_special[d], special_neighb,
                   lattice->mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
+#endif
     }
 
     /* Setup the location field */
@@ -143,7 +145,7 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
               gpuMemcpyHostToDevice);
     free(tmp);
 
-    // Other backe nd_lattice parameters
+    // Other backend_lattice parameters
     field_alloc_size = lattice->field_alloc_size();
 
     int s[NDIM];

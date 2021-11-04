@@ -685,6 +685,11 @@ void lattice_struct::init_special_boundaries() {
 
 const unsigned *lattice_struct::get_neighbour_array(Direction d, BoundaryCondition bc) {
 
+#ifndef SPECIAL_BOUNDARY_CONDITIONS
+    assert(bc == BoundaryCondition::PERIODIC && "non-periodic BC only if SPECIAL_BOUNDARY_CONDITIONS defined");
+    return neighb[d];
+#else
+
     // regular bc exit, should happen almost always
     if (special_boundaries[d].is_needed == false || bc == BoundaryCondition::PERIODIC)
         return neighb[d];
@@ -693,6 +698,8 @@ const unsigned *lattice_struct::get_neighbour_array(Direction d, BoundaryConditi
         setup_special_boundary_array(d);
     }
     return special_boundaries[d].neighbours;
+
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -909,52 +916,3 @@ lattice_struct::create_general_gather(const CoordinateVector &offset) {
 
 #endif
 
-#if 0
-
-/// Get an MPI column in Direction dir, build if necessary
-lattice_struct::mpi_column_struct lattice_struct::get_mpi_column(Direction dir){
-  static mpi_column_struct mpi_column[NDIM];
-    
-  if( mpi_column[dir].init ) {
-    // The communicator does not exist yet, so build it now
-  
-    std::vector<node_info> allnodes = lattice->nodelist();
-    int myrank = lattice->node_rank();
-      
-    // Build a list of nodes in this column
-    // All nodes should have these in the same order
-    CoordinateVector min = allnodes[myrank].min;
-    CoordinateVector size = allnodes[myrank].size;
-
-    for( int rank=0; rank < allnodes.size(); rank++ ) {
-      const node_info & node = allnodes[rank];
-      bool in_column = true;
-      foralldir(d2) {
-        if( d2 != dir && node.min[d2] != min[d2] ){
-          in_column = false;
-        }
-        if (node.size[d2] != lattice->mynode.size[d2]) {
-          output0 << "ERROR - get_mpi_column() (FFT) works only when all nodes have same size\n";
-          output0 << "Will be repaired soon...\n";
-          hila::finishrun();
-        }
-      }
-      if( in_column ){
-        if(rank==myrank)
-          mpi_column[dir].my_column_rank = mpi_column[dir].nodelist.size();
-        mpi_column[dir].nodelist.push_back(rank);
-        //printf(" node %d: %d in my column\n", myrank, rank);
-      }
-    }
-  
-    MPI_Comm_split( lattice->mpi_comm_lat, mpi_column[dir].nodelist[0], 
-                    mpi_column[dir].my_column_rank, &mpi_column[dir].column_communicator );
-  
-    mpi_column[dir].init = false;
-  
-  }
-  
-  return mpi_column[dir];
-}
-
-#endif

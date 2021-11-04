@@ -805,12 +805,12 @@ T gpu_reduce(int size, T *d_idata, bool keep_buffers);
 /////////////////////////////////////////////////////////////////////////////////////////
 // Reduce field var over the lattice
 
-#ifndef EVEN_SITES_FIRST
-EVEN_SITES_FIRST must be defined for gpu_reduce_field
-#endif
-
 template <typename T>
 T gpu_reduce_field(const Field<T> &f, bool allreduce = true, Parity par = Parity::all, bool do_mpi = true) {
+
+#ifndef EVEN_SITES_FIRST
+    assert(par == Parity::all && "EVEN_SITES_FIRST neede for gpu reduction with parity");
+#endif
 
     using base_t = hila::number_type<T>;
     constexpr int n = sizeof(T) / sizeof(base_t);

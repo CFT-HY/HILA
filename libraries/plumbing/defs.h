@@ -34,7 +34,7 @@
 #include "plumbing/timing.h"
 
 /// Allow other than periodic boundary conditions
-#define SPECIAL_BOUNDARY_CONDITIONS
+// #define SPECIAL_BOUNDARY_CONDITIONS
 
 // constexpr double PI = 3.1415926535897935;
 

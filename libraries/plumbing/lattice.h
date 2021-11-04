@@ -200,22 +200,6 @@ class lattice_struct {
     special_boundary_struct special_boundaries[NDIRS];
 #endif
 
-#if 0
-// mpi_column not needed any more
-#ifdef USE_MPI
-    /// Information about the column of nodes to a given directions
-    /// (nodes that share all coordinates except 1)
-    struct mpi_column_struct {
-        std::vector<int> nodelist;
-        MPI_Comm column_communicator = nullptr;
-        int my_column_rank;
-        bool init = true;
-    };
-
-    /// Get an MPI column in Direction dir, build if necessary
-    static mpi_column_struct get_mpi_column(Direction dir);
-#endif
-#endif
 
 #ifndef VANILLA
     backend_lattice_struct *backend_lattice;

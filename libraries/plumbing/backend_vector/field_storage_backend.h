@@ -13,7 +13,8 @@
 /// First base definition for replace_type, which recursively looks for the
 /// base type and replaces it in the end
 /// General template, never matched
-template <typename A, int vector_size, class Enable = void> struct vectorize_struct {};
+template <typename A, int vector_size, class Enable = void>
+struct vectorize_struct {};
 
 /// A is a basic type, so just return the matching vector type
 template <typename A, int vector_size>
@@ -60,24 +61,26 @@ struct vectorize_struct<C<a, b, B>, vector_size> {
 
 /// Short version of mapping type to longest possible vector
 template <typename T>
-using vector_type = typename vectorize_struct<T, hila::vector_info<T>::vector_size>::type;
+using vector_type =
+    typename vectorize_struct<T, hila::vector_info<T>::vector_size>::type;
 
-template <typename T> void field_storage<T>::allocate_field(lattice_struct *lattice) {
+template <typename T>
+void field_storage<T>::allocate_field(lattice_struct *lattice) {
     if constexpr (hila::is_vectorizable_type<T>::value) {
-        fieldbuf =
-            (T *)memalloc(lattice->backend_lattice
-                              ->get_vectorized_lattice<hila::vector_info<T>::vector_size>()
-                              ->field_alloc_size() *
-                          sizeof(T));
+        fieldbuf = (T *)memalloc(
+            lattice->backend_lattice
+                ->get_vectorized_lattice<hila::vector_info<T>::vector_size>()
+                ->field_alloc_size() *
+            sizeof(T));
     } else {
         fieldbuf = (T *)memalloc(sizeof(T) * lattice->field_alloc_size());
     }
 }
 
-template <typename T> void field_storage<T>::free_field() {
+template <typename T>
+void field_storage<T>::free_field() {
 #pragma acc exit data delete (fieldbuf)
-    if (fieldbuf != nullptr)
-        free(fieldbuf);
+    if (fieldbuf != nullptr) free(fieldbuf);
     fieldbuf = nullptr;
 }
 
@@ -147,7 +150,8 @@ inline void field_storage<T>::set_element(const T &value, const unsigned idx) {
 /// get_element fetches one T-element from vectorized store
 /// again, idx is the "site" index
 
-template <typename T> inline T field_storage<T>::get_element(const unsigned idx) const {
+template <typename T>
+inline T field_storage<T>::get_element(const unsigned idx) const {
     static_assert(hila::vector_info<T>::is_vectorizable);
     using basetype = typename hila::vector_info<T>::base_type;
     constexpr size_t elements = hila::vector_info<T>::elements;
@@ -161,7 +165,8 @@ template <typename T> inline T field_storage<T>::get_element(const unsigned idx)
     const basetype *RESTRICT b = (basetype *)(fieldbuf) +
                                  (idx / vector_size) * vector_size * elements +
                                  idx % vector_size;
-    basetype *RESTRICT vp = (basetype *)(&value); // does going through address slow down?
+    basetype *RESTRICT vp =
+        (basetype *)(&value); // does going through address slow down?
     for (unsigned e = 0; e < elements; e++) {
         vp[e] = b[e * vector_size];
     }
@@ -179,6 +184,8 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer,
     }
 }
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+
 template <typename T>
 void field_storage<T>::gather_elements_negated(
     T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
@@ -193,6 +200,8 @@ void field_storage<T>::gather_elements_negated(
                                 "-operator is defined!");
     }
 }
+
+#endif
 
 /// Vectorized implementation of setting elements
 template <typename T>
@@ -209,6 +218,10 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                                    const lattice_struct *lattice,
                                                    bool antiperiodic) {
 
+#ifndef SPECIAL_BOUNDARY_CONDITIONS
+    assert(!antiperiodic && "antiperiodic only with SPECIAL_BOUNDARY_CONDITIONS");
+#endif
+
     if constexpr (hila::is_vectorizable_type<T>::value) {
 
         // do the boundary vectorized copy
@@ -218,8 +231,8 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
         using vectortype = typename hila::vector_info<T>::type;
         using basetype = typename hila::vector_info<T>::base_type;
 
-        // output0 << "Vectorized boundary dir " << dir << " parity " << (int)par << " bc
-        // " << (int)antiperiodic << '\n';
+        // output0 << "Vectorized boundary dir " << dir << " parity " << (int)par << "
+        // bc " << (int)antiperiodic << '\n';
 
         const auto vector_lattice =
             lattice->backend_lattice
@@ -231,10 +244,8 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
 
             unsigned start = 0;
             unsigned end = vector_lattice->n_halo_vectors[dir];
-            if (par == ODD)
-                start = vector_lattice->n_halo_vectors[dir] / 2;
-            if (par == EVEN)
-                end = vector_lattice->n_halo_vectors[dir] / 2;
+            if (par == ODD) start = vector_lattice->n_halo_vectors[dir] / 2;
+            if (par == EVEN) end = vector_lattice->n_halo_vectors[dir] / 2;
             unsigned offset = vector_lattice->halo_offset[dir];
 
             /// Loop over the boundary sites - i is the vector index
@@ -248,18 +259,23 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                 basetype *fp = static_cast<basetype *>(static_cast<void *>(fieldbuf));
                 for (unsigned idx = start; idx < end; idx++) {
                     /// get ptrs to target and source vec elements
-                    basetype *RESTRICT t = fp + (idx + offset) * (elements * vector_size);
+                    basetype *RESTRICT t =
+                        fp + (idx + offset) * (elements * vector_size);
                     basetype *RESTRICT s = fp + vector_lattice->halo_index[dir][idx] *
                                                     (elements * vector_size);
 
                     if (!antiperiodic) {
-                        for (unsigned e = 0; e < elements * vector_size; e += vector_size)
+                        for (unsigned e = 0; e < elements * vector_size;
+                             e += vector_size)
                             for (unsigned i = 0; i < vector_size; i++)
                                 t[e + i] = s[e + perm[i]];
                     } else {
-                        for (unsigned e = 0; e < elements * vector_size; e += vector_size)
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+                        for (unsigned e = 0; e < elements * vector_size;
+                             e += vector_size)
                             for (unsigned i = 0; i < vector_size; i++)
                                 t[e + i] = -s[e + perm[i]];
+#endif
                     }
                 }
             } else {
@@ -274,16 +290,20 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                     sizeof(T) * vector_size);
                     }
                 } else {
-                    basetype *fp = static_cast<basetype *>(static_cast<void *>(fieldbuf));
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+                    basetype *fp =
+                        static_cast<basetype *>(static_cast<void *>(fieldbuf));
                     for (unsigned idx = start; idx < end; idx++) {
                         /// get ptrs to target and source vec elements
                         basetype *RESTRICT t =
                             fp + (idx + offset) * (elements * vector_size);
-                        basetype *RESTRICT s = fp + vector_lattice->halo_index[dir][idx] *
-                                                        (elements * vector_size);
+                        basetype *RESTRICT s =
+                            fp + vector_lattice->halo_index[dir][idx] *
+                                     (elements * vector_size);
                         for (unsigned e = 0; e < elements * vector_size; e++)
                             t[e] = -s[e];
                     }
+#endif
                 }
             }
         }
@@ -292,6 +312,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
         // now the field is not vectorized.  Std. access copy
         // needed only if b.c. is not periodic
 
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
         if (antiperiodic) {
             // need to copy or do something w. local boundary
             unsigned n, start = 0;
@@ -310,6 +331,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                     lattice->special_boundaries[dir].move_index + start,
                                     n, lattice);
         }
+#endif
     }
 }
 
@@ -320,8 +342,8 @@ void field_storage<T>::gather_comm_vectors(
     const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat,
     bool antiperiodic) const {
 
-    // Use sitelist in to_node, but use only every vector_size -index.  These point to the
-    // beginning of the vector
+    // Use sitelist in to_node, but use only every vector_size -index.  These point to
+    // the beginning of the vector
     constexpr size_t vector_size = hila::vector_info<T>::vector_size;
     constexpr size_t elements = hila::vector_info<T>::elements;
     using basetype = typename hila::vector_info<T>::base_type;
@@ -346,8 +368,7 @@ void field_storage<T>::gather_comm_vectors(
                 static_cast<basetype *>(static_cast<void *>(buffer + i));
             basetype *RESTRICT s =
                 static_cast<basetype *>(static_cast<void *>(fieldbuf + index_list[i]));
-            for (unsigned e = 0; e < elements * vector_size; e++)
-                t[e] = -s[e];
+            for (unsigned e = 0; e < elements * vector_size; e++) t[e] = -s[e];
         }
     }
 }
@@ -356,18 +377,17 @@ void field_storage<T>::gather_comm_vectors(
 template <typename T>
 void field_storage<T>::place_recv_elements(
     const T *RESTRICT buffer, Direction d, Parity par,
-    const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat) const {
+    const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT
+        vlat) const {
 
     constexpr size_t vector_size = hila::vector_info<T>::vector_size;
     constexpr size_t elements = hila::vector_info<T>::elements;
     using basetype = typename hila::vector_info<T>::base_type;
 
     unsigned start = 0;
-    if (par == ODD)
-        start = vlat->recv_list_size[d] / 2;
+    if (par == ODD) start = vlat->recv_list_size[d] / 2;
     unsigned n = vlat->recv_list_size[d];
-    if (par != ALL)
-        n /= 2;
+    if (par != ALL) n /= 2;
 
     // remove const  --  the payload of the buffer remains const, but the halo  bits are
     // changed
@@ -387,11 +407,13 @@ void field_storage<T>::place_recv_elements(
     }
 }
 
-template <typename T> void field_storage<T>::free_mpi_buffer(T *buffer) {
+template <typename T>
+void field_storage<T>::free_mpi_buffer(T *buffer) {
     std::free(buffer);
 }
 
-template <typename T> T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
+template <typename T>
+T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
     return (T *)memalloc(n * sizeof(T));
 }
 

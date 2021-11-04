@@ -123,6 +123,9 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
                                                    const lattice_struct *RESTRICT lattice,
                                                    bool antiperiodic) {
     // Only need to do something for antiperiodic boundaries
+
+ #ifdef SPECIAL_BOUNDARY_CONDITIONS
+
     if (antiperiodic) {
         unsigned n, start = 0;
         if (par == ODD) {
@@ -138,7 +141,14 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
         gather_elements_negated(fieldbuf + offset,
                                 lattice->special_boundaries[dir].move_index + start, n,
                                 lattice);
+
+
     }
+
+#else
+    assert(!antiperiodic && "antiperiodic BC possible only if SPECIAL_BOUNDARY_CONDITIONS defined");
+#endif
+
 }
 
 template <typename T>

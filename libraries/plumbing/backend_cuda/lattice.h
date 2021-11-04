@@ -6,8 +6,12 @@
 struct backend_lattice_struct {
     /// Storage for the neighbour indexes. Stored on device
     unsigned *d_neighb[NDIRS];
+
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
     /// Neighbour indexes with special boundaries. Stored on device
     unsigned *d_neighb_special[NDIRS];
+#endif
+
     /// The full number of elements in a field, including haloes.
     /// This is necessary for structure-of-arrays -storage
     unsigned field_alloc_size;
