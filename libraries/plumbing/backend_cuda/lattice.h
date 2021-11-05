@@ -18,13 +18,12 @@ struct backend_lattice_struct {
     /// beginning and end of this loop (using lattice to communicate,
     /// which may not be the clearest choice.)
     int loop_begin, loop_end;
+
+#ifdef EVEN_SITES_FIRST
     /// Finally a pointer to the list of coordinates, stored on device
     CoordinateVector *d_coordinates;
 
-    /// setup the backend lattice data
-    void setup(lattice_struct *lattice);
-
-#ifdef __CUDACC__
+#if defined(__CUDACC__) || defined(__HIPCC__)
 
     /// get the coordinates at a given site
     __host__ __device__ const CoordinateVector &coordinates(unsigned idx) const {
@@ -35,9 +34,22 @@ struct backend_lattice_struct {
     }
 
 #endif
+
+#else  
+    // Now not EVEN_SITES_FIRST
+
+    // these defined in hila_gpu.cpp
+    __device__ const CoordinateVector coordinates(unsigned idx) const;
+    __device__ int coordinate(unsigned idx, Direction dir) const;
+
+#endif
+
+    /// setup the backend lattice data
+    void setup(lattice_struct *lattice);
+
 };
 
-#ifdef __CUDACC__
+#if defined(__CUDACC__) || defined(__HIPCC__)
 // define also loop_lattice_size() and _volume() methods for cuda
 
 __host__ __device__ int loop_lattice_size(Direction d);

@@ -66,8 +66,11 @@ class lattice_struct {
         CoordinateVector min, size; // node local coordinate ranges
         unsigned nn[NDIRS];         // nn-node of node down/up to dirs
         bool first_site_even;       // is location min even or odd?
+#ifdef EVEN_SITES_FIRST
         std::vector<CoordinateVector> coordinates;
-
+#else
+        unsigned size_factor[NDIM];   // components: 1, size[0], size[0]*size[1], ...
+#endif
         void setup(node_info &ni, lattice_struct &lattice);
 
 #ifdef SUBNODE_LAYOUT
@@ -200,7 +203,6 @@ class lattice_struct {
     special_boundary_struct special_boundaries[NDIRS];
 #endif
 
-
 #ifndef VANILLA
     backend_lattice_struct *backend_lattice;
 #endif
@@ -287,16 +289,6 @@ class lattice_struct {
             return mynode.sites;
         }
     }
-#else
-
-    unsigned loop_begin(Parity P) const {
-        assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
-        return 0;
-    }
-    unsigned loop_end(Parity P) const {
-        return mynode.sites;
-    }
-#endif
 
     inline const CoordinateVector &coordinates(unsigned idx) const {
         return mynode.coordinates[idx];
@@ -307,15 +299,51 @@ class lattice_struct {
     }
 
     inline Parity site_parity(unsigned idx) const {
-#ifdef EVEN_SITES_FIRST
         if (idx < mynode.evensites)
             return EVEN;
         else
             return ODD;
-#else
-        return coordinates(idx).parity();
-#endif
     }
+
+#else // Now not EVEN_SITES_FIRST
+
+    unsigned loop_begin(Parity P) const {
+        assert(P == ALL && "Only parity ALL when EVEN_SITES_FIRST is off");
+        return 0;
+    }
+    unsigned loop_end(Parity P) const {
+        return mynode.sites;
+    }
+
+    // Use computation to get coordinates: from fastest
+    // to lowest, dir = 0, 1, 2, ...
+    // each coordinate is c[d] = (idx/size_factor[d]) % size[d] + min[d], but
+    // do it like below to avoid the mod
+
+    inline const CoordinateVector coordinates(unsigned idx) const {
+        CoordinateVector c;
+        unsigned vdiv,ndiv;
+
+        vdiv = idx;
+        for (int d = 0; d < NDIM-1; ++d) {
+            ndiv = vdiv / mynode.size[d];
+            c[d] = vdiv - ndiv * mynode.size[d] + mynode.min[d];
+            vdiv = ndiv;
+        }
+        c[NDIM-1] = vdiv + mynode.min[NDIM-1];
+
+        return c;
+    }
+
+    inline int coordinate(unsigned idx, Direction d) const {
+        return (idx / mynode.size_factor[d]) % mynode.size[d] + mynode.min[d];
+    }
+
+    inline Parity site_parity(unsigned idx) const {
+        return coordinates(idx).parity();
+    }
+
+#endif
 
     CoordinateVector local_coordinates(unsigned idx) const {
         return coordinates(idx) - mynode.min;

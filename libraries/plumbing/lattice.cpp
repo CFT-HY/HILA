@@ -372,6 +372,7 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
     // map site indexes to locations -- coordinates array
     // after the above site_index should work
 
+#ifdef EVEN_SITES_FIRST
     coordinates.resize(sites);
     CoordinateVector l = min;
     for (unsigned i = 0; i < sites; i++) {
@@ -383,6 +384,17 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
             l[d] = min[d];
         }
     }
+
+#else 
+
+    // set up the auxiliary site_factor array
+    unsigned v = 1;
+    foralldir(d) {
+        size_factor[d] = v;     // = size[d-1] * size[d-2] * ..
+        v *= size[d];
+    }
+
+#endif
 
 #ifdef SUBNODE_LAYOUT
 

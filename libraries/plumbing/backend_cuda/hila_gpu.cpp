@@ -41,8 +41,13 @@ using gpurandState = hiprandState_t;
 #endif
 
 // Save "constants" lattice size and volume here
-__constant__ int _d_size[NDIM];
 __constant__ int64_t _d_volume;
+__constant__ int _d_size[NDIM];
+#ifndef EVEN_SITES_FIRST
+__constant__ int _d_nodesize[NDIM];
+__constant__ int _d_nodemin[NDIM];
+__constant__ int _d_nodefactor[NDIM];
+#endif
 
 /* Random number generator */
 gpurandState *gpurandstate;
@@ -113,6 +118,30 @@ __device__ __host__ int64_t loop_lattice_volume(void) {
 #endif
 }
 
+#ifndef EVEN_SITES_FIRST
+
+__device__ const CoordinateVector backend_lattice_struct::coordinates(unsigned idx) const {
+    CoordinateVector c;
+    unsigned vdiv,ndiv;
+
+    vdiv = idx;
+    for (int d = 0; d < NDIM-1; ++d) {
+        ndiv = vdiv / _d_nodesize[d];
+        c[d] = vdiv - ndiv * _d_nodesize[d] + _d_nodemin[d];
+        vdiv = ndiv;
+    }
+    c[NDIM-1] = vdiv + _d_nodemin[NDIM-1];
+
+    return c;
+}
+
+__device__ int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const {
+    return ( idx / _d_nodefactor[dir] ) % _d_nodesize[dir] + _d_nodemin[dir];
+}
+
+#endif
+
+
 void backend_lattice_struct::setup(lattice_struct *lattice) {
     CoordinateVector *tmp;
 
@@ -125,15 +154,22 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         // For special boundaries
-        gpuMalloc((void **)&(d_neighb_special[d]),
-                  lattice->mynode.volume() * sizeof(unsigned));
+        // TODO: check this really works now!
         const unsigned *special_neighb =
             lattice->get_neighbour_array((Direction)d, BoundaryCondition::ANTIPERIODIC);
-        gpuMemcpy(d_neighb_special[d], special_neighb,
-                  lattice->mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
+
+        if (special_neighb != lattice->neighb[d]) {
+            gpuMalloc((void **)&(d_neighb_special[d]),
+                      lattice->mynode.volume() * sizeof(unsigned));
+            gpuMemcpy(d_neighb_special[d], special_neighb,
+                      lattice->mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
+        } else {
+            d_neighb_special[d] = d_neighb[d];
+        }
 #endif
     }
 
+#ifdef EVEN_SITES_FIRST
     /* Setup the location field */
     gpuMalloc((void **)&(d_coordinates),
               lattice->mynode.volume() * sizeof(CoordinateVector));
@@ -144,16 +180,29 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
     gpuMemcpy(d_coordinates, tmp, lattice->mynode.volume() * sizeof(CoordinateVector),
               gpuMemcpyHostToDevice);
     free(tmp);
+#endif
 
     // Other backend_lattice parameters
     field_alloc_size = lattice->field_alloc_size();
 
+    int64_t v = lattice->volume();
+    gpuMemcpyToSymbol(_d_volume, &v, sizeof(int64_t), 0, gpuMemcpyHostToDevice);
     int s[NDIM];
     foralldir (d)
         s[d] = lattice->size(d);
     gpuMemcpyToSymbol(_d_size, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
-    int64_t v = lattice->volume();
-    gpuMemcpyToSymbol(_d_volume, &v, sizeof(int64_t), 0, gpuMemcpyHostToDevice);
+
+#ifndef EVEN_SITES_FIRST
+    foralldir(d) s[d] = lattice->mynode.size[d];
+    gpuMemcpyToSymbol(_d_nodesize, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+
+    foralldir(d) s[d] = lattice->mynode.min[d];
+    gpuMemcpyToSymbol(_d_nodemin, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+
+    foralldir(d) s[d] = lattice->mynode.size_factor[d];
+    gpuMemcpyToSymbol(_d_nodefactor, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
+
+#endif    
 }
 
 void initialize_cuda(int rank) {

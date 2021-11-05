@@ -18,8 +18,8 @@
 #include "plumbing/com_mpi.h"
 #endif
 
-// This is a marker for hilapp -- for does not survive as it is
-#define onsites(p) for (Parity parity_type_var_(p);;)
+// This is a marker for hilapp -- will be removed by it
+#define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__=ODD)
 
 template <typename T>
 class Field;
