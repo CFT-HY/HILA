@@ -581,7 +581,7 @@ std::ostream &operator<<(std::ostream &strm, Reduction<T> &r) {
 
 template <typename T>
 T Field<T>::reduce_sum(bool allreduce) const {
-    return gpu_reduce_field(f, allreduce);
+    return gpu_reduce_field(*this, allreduce);
 }
 
 #else
