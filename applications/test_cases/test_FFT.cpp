@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
         // After two applications the field should be back to a constant * volume
         f2[ALL] = lattice->volume();
 
-        FFT_field(p, f, fft_direction::inverse);
+        FFT_field(p, f, fft_direction::back);
 
         sum = 0;
         double tnorm = 0;

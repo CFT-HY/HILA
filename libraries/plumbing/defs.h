@@ -131,7 +131,7 @@ extern logger_class log;
 //#endif
 
 /// define a class for FFT direction
-enum class fft_direction { forward, inverse };
+enum class fft_direction { forward, back };
 
 
 

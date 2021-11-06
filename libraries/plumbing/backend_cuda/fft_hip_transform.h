@@ -119,6 +119,9 @@ class hila_saved_fftplan_t {
         is_empty = true;
     }
 
+
+    // get cached plan or create new.  If the saved plan is incompatible with
+    // the one required, destroy plans
     gpufftHandle get_plan(Direction dir, int size, int batch, bool _is_float) {
 
         extern hila::timer fft_plan_timer;
