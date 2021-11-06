@@ -9,7 +9,7 @@
 
 /// Initialize fft to direction dir.  _elements: number of complex values in
 /// field, T_size the size of the field variable.  fftdir is
-/// fft_direction::FORWARD or fft
+/// fft_direction::forward or fft_direction::back
 
 void init_fft_direction(Direction dir, size_t _elements, size_t T_size,
                         fft_direction fftdir, void *const buffer1, void *const buffer2);

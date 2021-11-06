@@ -30,6 +30,15 @@ size_t fft_recv_buf_size[NDIM];
 hila_saved_fftplan_t hila_saved_fftplan;
 #endif
 
+// Delete saved plans if required - no-op for non-gpu
+void FFT_delete_plans() {
+#if (defined(HIP) || defined(CUDA)) && !defined(HILAPP)
+    hila_saved_fftplan.delete_plans();
+#endif
+}
+
+
+
 size_t fft_get_buffer_offsets(const Direction dir, const size_t elements,
                               CoordinateVector &offset, CoordinateVector &nmin) {
 

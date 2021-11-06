@@ -385,12 +385,15 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
 ///
 /// Field method for performing FFT
 ///   a.FFT();   does in-place transform of field a
-/// fftdir:  fft_direction::forward (default)  or fft_direction::inverse
+/// fftdir:  fft_direction::forward (default)  or fft_direction::back
 //////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
 void Field<T>::FFT(fft_direction fftdir) {
     FFT_field(*this, *this, fftdir);
 }
+
+// prototype for plan deletion
+void FFT_delete_plans();
 
 #endif
