@@ -24,6 +24,7 @@
 // The compiler is hilapp
 #define __device__
 #define __host__
+#define __global__
 #endif
 
 // Read in Makefile tunable parameters first

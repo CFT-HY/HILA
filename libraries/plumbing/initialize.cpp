@@ -230,7 +230,16 @@ void hila::initialize(int argc, char **argv) {
 #else
         hila::output << "no git information available\n";
 #endif
-        hila::output << "  Compiled " << __DATE__ << " at " << __TIME__ << '\n';
+        hila::output << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
+
+        hila::output << "with options:";
+#ifdef EVEN_SITES_FIRST
+        hila::output << " EVEN_SITES_FIRST";
+#endif  
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+        hila::output << " SPECIAL_BOUNDARY_CONDITIONS";
+#endif
+        hila::output << '\n';
 
         hila::timestamp("Starting");
     }

@@ -46,7 +46,8 @@ size_t fft_get_buffer_offsets(const Direction dir, const size_t elements,
 void init_fft_direction(Direction d);
 
 // Helper class to transform data
-template <typename T, typename cmplx_t> union T_union {
+template <typename T, typename cmplx_t>
+union T_union {
     T val;
     cmplx_t c[sizeof(T) / sizeof(cmplx_t)];
 };
@@ -54,7 +55,8 @@ template <typename T, typename cmplx_t> union T_union {
 /// Class to hold fft relevant variables - note: fft.cpp holds static info, which is not
 /// here
 
-template <typename cmplx_t> class hila_fft {
+template <typename cmplx_t>
+class hila_fft {
   public:
     Direction dir;
     int elements;
@@ -85,15 +87,14 @@ template <typename cmplx_t> class hila_fft {
         local_volume = lattice->mynode.volume();
 
         // init dirs here at one go
-        foralldir(d) init_fft_direction(d);
+        foralldir (d)
+            init_fft_direction(d);
 
         buf_size = 1;
-        foralldir(d) {
-            if (fft_recv_buf_size[d] > buf_size)
-                buf_size = fft_recv_buf_size[d];
+        foralldir (d) {
+            if (fft_recv_buf_size[d] > buf_size) buf_size = fft_recv_buf_size[d];
         }
-        if (buf_size < local_volume)
-            buf_size = local_volume;
+        if (buf_size < local_volume) buf_size = local_volume;
 
         // get fully aligned buffer space
         send_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
@@ -161,7 +162,8 @@ template <typename cmplx_t> class hila_fft {
     /// Order: Direction dir goes fastest, then the index to complex data in T,
     /// and other directions are slowest.
 
-    template <typename T> void collect_data(const Field<T> &f) {
+    template <typename T>
+    void collect_data(const Field<T> &f) {
 
         extern hila::timer fft_collect_timer;
         fft_collect_timer.start();
@@ -179,7 +181,7 @@ template <typename cmplx_t> class hila_fft {
 
         // and collect the data
 #pragma hila novector direct_access(sb)
-        onsites(ALL) {
+        onsites (ALL) {
 
             T_union<T, cmplx_t> v;
             v.val = f[X];
@@ -194,7 +196,8 @@ template <typename cmplx_t> class hila_fft {
 
     /// Inverse of the fft_collect_data: write fft'd data from receive_buf to field.
 
-    template <typename T> void save_result(Field<T> &f) {
+    template <typename T>
+    void save_result(Field<T> &f) {
 
         constexpr int elements = sizeof(T) / sizeof(cmplx_t);
 
@@ -210,7 +213,7 @@ template <typename cmplx_t> class hila_fft {
 
 // and collect the data from buffers
 #pragma hila novector direct_access(rb)
-        onsites(ALL) {
+        onsites (ALL) {
 
             T_union<T, cmplx_t> v;
 
@@ -247,7 +250,7 @@ template <typename cmplx_t> class hila_fft {
         cmplx_t *rb = receive_buf;
 
 #pragma hila novector direct_access(sb, rb)
-        onsites(ALL) {
+        onsites (ALL) {
             CoordinateVector v = X.coordinates() - nmin;
             size_t off_in = offset_in.dot(v);
             size_t off_out = offset_out.dot(v);
@@ -263,11 +266,14 @@ template <typename cmplx_t> class hila_fft {
     void cleanup() {}
 
     // just swap the buf pointers
-    void swap_buffers() { std::swap(send_buf, receive_buf); }
+    void swap_buffers() {
+        std::swap(send_buf, receive_buf);
+    }
 
     // communication functions for slicing the lattice
     void scatter_data();
     void gather_data();
+
 };
 
 // Implementation dependent core fft collect and transforms are defined here
@@ -287,9 +293,8 @@ template <typename cmplx_t> class hila_fft {
 /// input and result can be same, "in-place".
 /// Both input and output are of type Field<T>, where T must contain complex type,
 /// Complex<float> or Complex<double>.
-/// directions: if directions[dir] == false (or 0), transform is not done to direction
-/// dir. 
-/// fftdir: direction of the transform itself:
+/// directions: if directions[dir] == false (or 0), transform is not done to
+/// direction dir. fftdir: direction of the transform itself:
 ///     fft_direction::forward (default)  x -> k
 ///     fft_direction::inverse  k-> x
 /// FFT is unnormalized: transform + inverse transform yields source multiplied
@@ -322,33 +327,34 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
     bool first_dir = true;
     Direction prev_dir;
 
-    foralldir(dir) if (directions[dir]) {
+    foralldir (dir)
+        if (directions[dir]) {
 
-        fft.setup_direction(dir);
+            fft.setup_direction(dir);
 
-        if (first_dir) {
-            fft.collect_data(input);
-            // in_p = &result;
-        } else {
-            fft.reshuffle_data(prev_dir);
+            if (first_dir) {
+                fft.collect_data(input);
+                // in_p = &result;
+            } else {
+                fft.reshuffle_data(prev_dir);
+            }
+
+            fft.gather_data();
+
+            fft.transform();
+
+            fft.scatter_data();
+
+            fft.cleanup();
+
+            // fft_save_result( result, dir, receive_buf );
+
+            prev_dir = dir;
+            first_dir = false;
+
+            // swap the pointers
+            fft.swap_buffers();
         }
-
-        fft.gather_data();
-
-        fft.transform();
-
-        fft.scatter_data();
-
-        fft.cleanup();
-
-        // fft_save_result( result, dir, receive_buf );
-
-        prev_dir = dir;
-        first_dir = false;
-
-        // swap the pointers
-        fft.swap_buffers();
-    }
 
     fft.save_result(result);
 
@@ -382,10 +388,9 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
 /// fftdir:  fft_direction::forward (default)  or fft_direction::inverse
 //////////////////////////////////////////////////////////////////////////////////
 
-template <typename T> void Field<T>::FFT(fft_direction fftdir) {
+template <typename T>
+void Field<T>::FFT(fft_direction fftdir) {
     FFT_field(*this, *this, fftdir);
 }
-
-
 
 #endif

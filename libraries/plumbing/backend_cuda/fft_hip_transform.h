@@ -23,7 +23,6 @@ using gpufftHandle = cufftHandle;
 
 #else
 
-
 #include "hip/hip_runtime.h"
 #include <hipfft.h>
 
@@ -47,8 +46,10 @@ using gpufftHandle = hipfftHandle;
 
 /// Gather one element column from the mpi buffer
 template <typename cmplx_t>
-__global__ void gather_column(cmplx_t *RESTRICT data, cmplx_t *RESTRICT *d_ptr,
-                              int *RESTRICT d_size, int n, int colsize, int columns) {
+__global__ void hila_fft_gather_column(cmplx_t *RESTRICT data,
+                                                 cmplx_t *RESTRICT *d_ptr,
+                                                 int *RESTRICT d_size, int n,
+                                                 int colsize, int columns) {
 
     int ind = threadIdx.x + blockIdx.x * blockDim.x;
     if (ind < columns) {
@@ -66,8 +67,10 @@ __global__ void gather_column(cmplx_t *RESTRICT data, cmplx_t *RESTRICT *d_ptr,
 
 /// Gather one element column from the mpi buffer
 template <typename cmplx_t>
-__global__ void scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRICT *d_ptr,
-                               int *RESTRICT d_size, int n, int colsize, int columns) {
+__global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data,
+                                                  cmplx_t *RESTRICT *d_ptr,
+                                                  int *RESTRICT d_size, int n,
+                                                  int colsize, int columns) {
 
     int ind = threadIdx.x + blockIdx.x * blockDim.x;
     if (ind < columns) {
@@ -83,6 +86,100 @@ __global__ void scatter_column(cmplx_t *RESTRICT data, cmplx_t *RESTRICT *d_ptr,
     }
 }
 
+// Define datatype for saved plans
+
+struct hila_saved_fftplan_struct {
+    struct plan_d {
+        gpufftHandle plan;
+        int size;
+        int batch;
+        bool is_initialized;
+    };
+    std::array<plan_d,NDIM> plans;
+
+    bool is_float;
+    bool is_empty;
+
+    hila_saved_fftplan_struct() {
+        for ( auto & p : plans) p.is_initialized = false;
+        is_empty = true;
+    }
+
+    ~hila_saved_fftplan_struct() {
+        delete_plans();
+    }
+
+    void delete_plans() {
+        for ( auto & p : plans) {
+            if (p.is_initialized) {
+                gpufftDestroy(p.plan);
+                p.is_initialized = false;
+            }
+        }
+        is_empty = true;
+    }
+
+    gpufftHandle get_plan(Direction dir, int size, int batch, bool _is_float) {
+
+        extern hila::timer fft_plan_timer;
+
+        // do we have saved plan of the same type?
+
+        if (!is_empty && is_float == _is_float) {
+            auto & p = plans[dir];
+            if (p.is_initialized && p.size == size && p.batch == batch) {
+                // Now we got it!
+                return p.plan;
+            }
+
+            // if dir was not initialized then check other dirs, if match copy
+            if (!p.is_initialized) {
+                foralldir(d) if (d != dir) {
+                    auto & pp = plans[d];
+                    if (pp.is_initialized && pp.size == size && pp.batch == batch) {
+                        p = pp;
+                        output0 << " found fft copy, dir " << dir << '\n';
+                        return p.plan;
+                    }
+                }
+                // Did not find a match from other dirs -- create new
+
+            } else {
+                delete_plans();
+            }
+
+        } else {
+            if (!is_empty) delete_plans();
+        }
+
+        // If we got here we need to make a plan
+
+        if (is_empty) {
+            is_empty = false;
+            is_float = _is_float;
+        }
+
+        fft_plan_timer.start();
+
+        gpufftHandle plan;
+
+        // HIPFFT_C2C for float transform, Z2Z for double
+        gpufftPlan1d(&plan, size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch);
+        check_device_error("FFT plan");
+
+        fft_plan_timer.stop();
+
+        plans[dir].is_initialized = true;
+        plans[dir].plan = plan;
+        plans[dir].size = size;
+        plans[dir].batch = batch;
+
+        return plan;
+
+    }
+};
+
+
 /// Define appropriate cufft-type depending on the cmplx_t -type
 /// these types are 1-1 compatible anyway
 /// use as cufft_cmplx_t<T>::type
@@ -94,13 +191,15 @@ using fft_cmplx_t = typename std::conditional<sizeof(gpufftComplex) == sizeof(cm
 
 template <typename cmplx_t,
           std::enable_if_t<sizeof(cmplx_t) == sizeof(gpufftComplex), int> = 0>
-inline void gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
+inline void hila_gpufft_execute(gpufftHandle plan, cmplx_t *buf,
+                                              int direction) {
     gpufftExecC2C(plan, (gpufftComplex *)buf, (gpufftComplex *)buf, direction);
 }
 
 template <typename cmplx_t,
           std::enable_if_t<sizeof(cmplx_t) == sizeof(gpufftDoubleComplex), int> = 0>
-inline void gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
+inline void hila_gpufft_execute(gpufftHandle plan, cmplx_t *buf,
+                                              int direction) {
     gpufftExecZ2Z(plan, (gpufftDoubleComplex *)buf, (gpufftDoubleComplex *)buf,
                   direction);
 }
@@ -108,8 +207,10 @@ inline void gpufft_execute(gpufftHandle plan, cmplx_t *buf, int direction) {
 template <typename cmplx_t>
 void hila_fft<cmplx_t>::transform() {
 
+    // these externs defined in fft.cpp
     extern unsigned hila_fft_my_columns[NDIM];
-    extern hila::timer fft_plan_timer, fft_execute_timer, fft_buffer_timer;
+    extern hila::timer fft_execute_timer, fft_buffer_timer;
+    extern hila_saved_fftplan_struct hila_saved_fftplan;
 
     constexpr bool is_float = (sizeof(cmplx_t) == sizeof(Complex<float>));
 
@@ -118,17 +219,12 @@ void hila_fft<cmplx_t>::transform() {
     int direction =
         (fftdir == fft_direction::forward) ? GPUFFT_FORWARD : GPUFFT_INVERSE;
 
-
     // allocate here fftw plans.  TODO: perhaps store, if plans take appreciable time?
     // Timer will tell the proportional timing
 
-    gpufftHandle plan;
     int batch = hila_fft_my_columns[dir];
-    int n_fft = 1;
+    int n_fft = elements;
     // reduce very large batch to smaller, avoid large buffer space
-
-    fft_plan_timer.start();
-
 
     bool is_divisible = true;
     while (batch > GPUFFT_BATCH_SIZE && is_divisible) {
@@ -143,13 +239,12 @@ void hila_fft<cmplx_t>::transform() {
         }
     }
 
+
+    gpufftHandle plan;
+    plan = hila_saved_fftplan.get_plan(dir,lattice->size(dir),batch,is_float);
+
     // output0 << " Batch " << batch << " nfft " << n_fft << '\n';
 
-    // HIPFFT_C2C for float transform, Z2Z for double
-    gpufftPlan1d(&plan, lattice->size(dir), is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch);
-    check_device_error("FFT plan");
-
-    fft_plan_timer.stop();
 
     // alloc work array
     cmplx_t *fft_wrk = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
@@ -171,10 +266,10 @@ void hila_fft<cmplx_t>::transform() {
     int N_blocks = (n_columns + N_threads - 1) / N_threads;
 
 #if defined(CUDA)
-    gather_column<cmplx_t><<<N_blocks, N_threads>>>(
+    hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads>>>(
         fft_wrk, d_ptr, d_size, rec_p.size(), lattice->size(dir), n_columns);
 #else
-    hipLaunchKernelGGL(HIP_KERNEL_NAME(gather_column<cmplx_t>), dim3(N_blocks),
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice->size(dir), n_columns);
 #endif
@@ -188,7 +283,7 @@ void hila_fft<cmplx_t>::transform() {
 
         cmplx_t *cp = fft_wrk + i * (batch * lattice->size(dir));
 
-        gpufft_execute(plan, cp, direction);
+        hila_gpufft_execute(plan, cp, direction);
         check_device_error("FFT execute");
     }
 
@@ -197,10 +292,10 @@ void hila_fft<cmplx_t>::transform() {
     fft_buffer_timer.start();
 
 #if defined(CUDA)
-    scatter_column<cmplx_t><<<N_blocks, N_threads>>>(
+    hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads>>>(
         fft_wrk, d_ptr, d_size, rec_p.size(), lattice->size(dir), n_columns);
 #else
-    hipLaunchKernelGGL(HIP_KERNEL_NAME(scatter_column<cmplx_t>), dim3(N_blocks),
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
                        lattice->size(dir), n_columns);
 #endif
@@ -211,7 +306,6 @@ void hila_fft<cmplx_t>::transform() {
     d_free(d_ptr);
     d_free(fft_wrk);
 
-    gpufftDestroy(plan);
 }
 
 #endif // HILAPP
