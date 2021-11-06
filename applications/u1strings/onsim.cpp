@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include "plumbing/hila.h"
+#include "plumbing/fft.h"
 
 using real_t = float;
 
@@ -367,11 +368,12 @@ int main(int argc, char **argv) {
     }
 
 
-    // on gpu the simulation timer is fake, because there's no synch here.  
+    // on gpu the simulation timer is fake, because there's no sync here.  
     // BUt we want to avoid unnecessary sync anyway.
     static hila::timer run_timer("Simulation time"), meas_timer("Measurements");
     run_timer.start();
     
+    auto tildephi = sim.phi;
     while (sim.t < sim.config.tEnd) {
 	sim.updateCosmology();
         if (sim.t >= sim.config.tStats) {
@@ -380,6 +382,8 @@ int main(int argc, char **argv) {
                 sim.write_moduli();
                 sim.write_energies();
                 meas_timer.stop();
+
+                FFT_field(sim.phi,tildephi);
             }
             stat_counter++;
         }
