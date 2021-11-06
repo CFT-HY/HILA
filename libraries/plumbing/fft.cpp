@@ -27,7 +27,7 @@ size_t fft_recv_buf_size[NDIM];
 
 // static variable to hold fft plans
 #if (defined(HIP) || defined(CUDA)) && !defined(HILAPP)
-hila_saved_fftplan_struct hila_saved_fftplan;
+hila_saved_fftplan_t hila_saved_fftplan;
 #endif
 
 size_t fft_get_buffer_offsets(const Direction dir, const size_t elements,

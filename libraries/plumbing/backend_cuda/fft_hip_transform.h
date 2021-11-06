@@ -88,7 +88,7 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data,
 
 // Define datatype for saved plans
 
-struct hila_saved_fftplan_struct {
+class hila_saved_fftplan_t {
     struct plan_d {
         gpufftHandle plan;
         int size;
@@ -138,7 +138,6 @@ struct hila_saved_fftplan_struct {
                     auto & pp = plans[d];
                     if (pp.is_initialized && pp.size == size && pp.batch == batch) {
                         p = pp;
-                        output0 << " found fft copy, dir " << dir << '\n';
                         return p.plan;
                     }
                 }
