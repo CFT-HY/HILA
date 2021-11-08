@@ -10,7 +10,10 @@
 
 #if defined(GPU_MEMORY_POOL)
 
-#if defined(HIP)
+#if defined(HILAPP)
+#define gpuMallocDirect(a, b) 
+#define gpuFreeDirect(a)
+#elif defined(HIP)
 #define gpuMallocDirect(a, b) GPU_CHECK(hipMalloc(a, b))
 #define gpuFreeDirect(a) GPU_CHECK(hipFree(a))
 #elif defined(CUDA)
