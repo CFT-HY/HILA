@@ -8,7 +8,7 @@
 #include <list>
 #include <iomanip>
 
-#if defined(GPU_MEMORY_POOL) && !defined(HILAPP)
+#if defined(GPU_MEMORY_POOL)
 
 #if defined(HIP)
 #define gpuMallocDirect(a, b) GPU_CHECK(hipMalloc(a, b))
@@ -19,6 +19,7 @@
 #else
 static_assert(0 && "HIP or CUDA must be defined");
 #endif
+
 
 // keep relatively large min allocation
 #define MIN_ALLOC_SIZE 128
