@@ -29,7 +29,7 @@ MPI_LIBS := -L/usr/lib/openmpi/lib -lmpi
 LDLIBS += $(MPI_LIBS)
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
 
 ################
 

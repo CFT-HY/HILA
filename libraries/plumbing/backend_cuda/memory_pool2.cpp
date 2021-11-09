@@ -88,6 +88,8 @@ block *get_block_descriptor() {
     }
     block *ret = unused_blocks;
     unused_blocks = unused_blocks->up;
+    ret->ptr = nullptr;
+    ret->up = ret->down = ret->next = ret->prev = nullptr;
     return ret;
 }
 
@@ -139,7 +141,8 @@ void gpu_memory_pool_init() {
     cudaGetDeviceProperties(&props, my_device);
 #elif defined(HIP)
     hipDeviceProp props;
-    int my_device hipGetDevice(&my_device);
+    int my_device;
+    hipGetDevice(&my_device);
     hipGetDeviceProperties(&props, my_device);
 #endif
 
@@ -241,6 +244,7 @@ block *split_free_block(block *p, size_t req_size) {
     p->size -= req_size;
 
     b->is_free = false;
+    // Free list pointers remain OK (p is there)
 
     return b;
 }
@@ -303,7 +307,7 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
 
         if (p->size > req_size) {
             // find smallest free block which is OK
-            if (ptr->size > p->size) {
+            if (!found_match || ptr->size > p->size) {
                 ptr = p;
             }
             found_match = true;

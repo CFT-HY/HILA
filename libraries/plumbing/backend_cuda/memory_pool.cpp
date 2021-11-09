@@ -8,12 +8,10 @@
 #include <list>
 #include <iomanip>
 
-#if defined(GPU_MEMORY_POOL)
+// no real need for HILAPP to go through here 
+#if defined(GPU_MEMORY_POOL) && !defined(HILAPP)
 
-#if defined(HILAPP)
-#define gpuMallocDirect(a, b) 
-#define gpuFreeDirect(a)
-#elif defined(HIP)
+#if defined(HIP)
 #define gpuMallocDirect(a, b) GPU_CHECK(hipMalloc(a, b))
 #define gpuFreeDirect(a) GPU_CHECK(hipFree(a))
 #elif defined(CUDA)
