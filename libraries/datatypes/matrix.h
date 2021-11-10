@@ -100,7 +100,7 @@ class Matrix {
         return c[i * m + j];
     }
     /// standard access ops m.e(i,j) - assume T is small, as it should
-    inline T &e(const int i, const int j) const_method {
+    inline T &e(const int i, const int j) const_function {
         return c[i * m + j];
     }
 
@@ -112,7 +112,7 @@ class Matrix {
     }
 
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
-    inline T &e(const int i) const_method {
+    inline T &e(const int i) const_function {
         return c[i];
     }
 
@@ -141,7 +141,7 @@ class Matrix {
     }
 
     /// interpret Matrix as Array -  for array ops
-    Array<n, m, T> &asArray() const_method {
+    Array<n, m, T> &asArray() const_function {
         return *reinterpret_cast<Array<n, m, T> *>(this);
     }
     const Array<n, m, T> asArray() const {

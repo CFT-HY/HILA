@@ -25,7 +25,7 @@ const std::string program_name("hilapp");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
 const std::string output_only_keyword("output_only");
-const std::string const_method_keyword("const_method");
+const std::string const_function_keyword("const_function");
 
 
 const std::string var_name_prefix("_HILA_var_");
@@ -390,10 +390,10 @@ struct argument_info {
     bool is_site_dependent;
     bool is_const;
     bool is_output_only;
-    bool is_const_method;
+    bool is_const_function;
 
     argument_info() {
-        is_lvalue = is_site_dependent = is_output_only = is_const = is_const_method = false;
+        is_lvalue = is_site_dependent = is_output_only = is_const = is_const_function = false;
         E = nullptr;
         PV = nullptr;
         dependent_vars = {};

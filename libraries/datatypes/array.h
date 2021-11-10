@@ -73,7 +73,7 @@ template <const int n, const int m, typename T> class Array {
     /// access operators .e(i,j) and .e(i) from Matrix
     inline T e(const int i, const int j) const { return c[i * m + j]; }
     /// standard access ops m.e(i,j) - assume T is small, as it should
-    inline T &e(const int i, const int j) const_method { return c[i * m + j]; }
+    inline T &e(const int i, const int j) const_function { return c[i * m + j]; }
 
     /// declare single e here too in case we have a vector
     /// (one size == 1)
@@ -83,12 +83,12 @@ template <const int n, const int m, typename T> class Array {
     }
 
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
-    inline T &e(const int i) const_method {
+    inline T &e(const int i) const_function {
         return c[i];
     }
 
     // cast from array to matrix
-    Matrix<n, m, T> &asMatrix() const_method { 
+    Matrix<n, m, T> &asMatrix() const_function { 
         return *reinterpret_cast<Matrix<n, m, T> *>(this); 
     }
 

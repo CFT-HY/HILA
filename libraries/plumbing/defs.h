@@ -56,22 +56,22 @@
 //    int func( output_only double & p, ..);  
 
 // Defined empty on purpose, same as above!
-#define const_method
-// const_method does not change the base variable, but can return a (non-const) reference.
+#define const_function
+// const_function does not change the base variable, but can return a (non-const) reference.
 // Needed typically for access operators for loop extern variables:
 //     class v {
 //         double c[N];
-//         double & e(const int i) const_method { return c[i]; }
+//         double & e(const int i) const_function { return c[i]; }
 //     };
 //
 //     v vv;
 //     Field<v>  f;
 //     onsites(ALL) { f[X].e(0) += vv.e(0); }
-// This would not work without const_method, because vv.e(1) might modify loop
+// This would not work without const_function, because vv.e(1) might modify loop
 // extern variable vv, which is not allowed.  If method is marked "const", 
 // then the assignment would not work.
 // 
-// const_method is weaker than const.
+// const_function is weaker than const.
 
 
 // text output section -- defines also output0, which writes from node 0 only
