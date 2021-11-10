@@ -8,7 +8,7 @@
 #include "plumbing/defs.h"
 
 
-// // Useful c++14 template missing in Puhti compilation of hilapp
+// // Useful c++14 template missing in c++11
 // #if defined(PUHTI) && defined(HILAPP)
 // namespace std {
 // template <bool B, class T = void>
@@ -21,23 +21,22 @@ namespace hila {
 
 /////////////////////////////////////////////////////////////////////////////////
 /// Utility for obtaining the numeric base type of a class
-///   Use as "typename base_type_struct<T>" which returns the "arithmetic type"
-/// which is used to construct T
+/// Use as  "hila::number_type<T>"
+/// which returns the underlying arithmetic type used in class T (e.g. float, double etc.)
+/// 
+/// Alt form  "typename base_type_struct<T>"
 
 template <typename T, typename Enable = void> struct base_type_struct {
     /// The base type of the class
     using type = typename T::base_type;
 };
 
-/// Utility for selecting the numeric base type of a class
 template <typename T>
 struct base_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::value>> {
     // In this case the base type is just T
     using type = T;
 };
 
-/// Main utility for obtaining the numeric base type of a hila class.
-/// Use as hila::number_type<T>
 template <typename T> using number_type = typename base_type_struct<T>::type;
 
 /// struct to return the inner type, i.e.
