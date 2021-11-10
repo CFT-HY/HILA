@@ -3,6 +3,11 @@
 
 #include "plumbing/defs.h"
 
+#ifndef EVEN_SITES_FIRST
+static_assert( 0 && "EVEN_SITES_FIRST must be defined for vectorized code");
+// TODO: Make this work also without EVEN_SITES_FIRST!
+#else
+
 #ifdef HILAPP
 // If hilapp, include stubs for vector types
 #include "hilapp_vector.h"
@@ -386,6 +391,8 @@ template <> inline auto hila_random_vector<double>() {
     return r;
 };
 
-#endif
+#endif  // not HILAPP
+
+#endif  // EVEN_SITES_FIRST
 
 #endif
