@@ -540,6 +540,27 @@ inline Array<n, m, T> pow(Array<n, m, T> a, const Array<n, m, T> &b) {
     return a;
 }
 
+// Cast operators to different number or Complex type
+// cast_to<double>(a);  
+// cast_to<Complex<float>>(b);
+// Cast from number->number, number->Complex, Complex->Complex OK,
+//     Complex->number not.
+
+template <typename Ntype, typename T, int n, int m, std::enable_if_t<hila::is_arithmetic<T>::value,int> = 0>
+Array<n,m,Ntype> cast_to(const Array<n,m,T> &mat) {
+    Array <n,m,Ntype> res;
+    for (int i=0; i<n*m; i++) res.c[i] = mat.c[i];
+    return res;
+}
+
+template <typename Ntype, typename T, int n, int m, std::enable_if_t<hila::is_complex<T>::value,int> = 0>
+Array<n,m,Ntype> cast_to(const Array<n,m,T> &mat) {
+    Array <n,m,Ntype> res;
+    for (int i=0; i<n*m; i++) res.c[i] = cast_to<Ntype>(mat.c[i]);
+    return res;
+}
+
+
 /// Array1d and Array2d are just aliased to Array
 template <int n, typename T = double> using Array1d = Array<n, 1, T>;
 
