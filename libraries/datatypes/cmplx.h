@@ -249,6 +249,16 @@ struct Complex {
     inline Complex<T> mul_conj(const Complex<T> &b) const {
         return Complex<T>(re * b.re + im * b.im, im * b.re - re * b.im);
     }
+
+    // cast to another number type (IS THIS NEEDED FOR COMPLEX?)
+    template <typename Ntype>
+    Complex<Ntype> cast_to() const {
+        Complex<Ntype> res;
+        res.re = re;
+        res.im = im;
+        return res;
+    }
+
 };
 
 // functions real(), imag()
@@ -378,6 +388,20 @@ inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b,
     r.im = mul_add(a.im, b.re, t2);  // a.im*b.re + a.re*b.im + c.im
     return r;
 }
+
+// Cast operators to different number or Complex type
+// cast_to<double>(a);  
+// cast_to<Complex<float>>(b);
+// Cast from number->number, number->Complex, Complex->Complex OK,
+//     Complex->number not.
+
+template <typename Ntype, typename T, std::enable_if_t<hila::is_arithmetic<T>::value,int> = 0>
+Complex<Ntype> cast_to(const Complex<T> &m) {
+    Complex <Ntype> res;
+    res = m;
+    return res;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////
 // Some operations in function form.  Useful in templates when the arg type is not known

@@ -144,7 +144,7 @@ class Matrix {
     Array<n, m, T> &asArray() const_function {
         return *reinterpret_cast<Array<n, m, T> *>(this);
     }
-    const Array<n, m, T> asArray() const {
+    const Array<n, m, T> &asArray() const {
         return *reinterpret_cast<const Array<n, m, T> *>(this);
     }
 
@@ -153,7 +153,7 @@ class Matrix {
     /// or should it be automatic?  keep/remove explicit?
     /// TODO: CHECK AVX CONVERSIONS
 
-    template <typename S, std::enable_if_t<std::is_convertible<T, S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_assignable<S&, T>::value, int> = 0>
     operator Matrix<n, m, S>() {
         Matrix<n, m, S> res;
         for (int i = 0; i < n * m; i++) res.c[i] = c[i];
@@ -436,6 +436,8 @@ class Matrix {
         }
         return text.str();
     }
+
+
 
     // Methods only for complex square matrices
 
@@ -876,6 +878,28 @@ T det_lu(const Matrix<n, n, T> &mat) {
 
     return (csum);
 }
+
+
+// Cast operators to different number or Complex type
+// cast_to<double>(a);  
+// cast_to<Complex<float>>(b);
+// Cast from number->number, number->Complex, Complex->Complex OK,
+//     Complex->number not.
+
+template <typename Ntype, typename T, int n, int m, std::enable_if_t<hila::is_arithmetic<T>::value,int> = 0>
+Matrix<n,m,Ntype> cast_to(const Matrix<n,m,T> &mat) {
+    Matrix <n,m,Ntype> res;
+    for (int i=0; i<n*m; i++) res.c[i] = mat.c[i];
+    return res;
+}
+
+template <typename Ntype, typename T, int n, int m, std::enable_if_t<hila::is_complex<T>::value,int> = 0>
+Matrix<n,m,Ntype> cast_to(const Matrix<n,m,T> &mat) {
+    Matrix <n,m,Ntype> res;
+    for (int i=0; i<n*m; i++) res.c[i] = cast_to<Ntype>(mat.c[i]);
+    return res;
+}
+
 
 ///////////////////////////////////////////////////////////////
 /// Define Vector as a special case of Matrix

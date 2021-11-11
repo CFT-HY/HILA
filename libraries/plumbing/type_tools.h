@@ -39,9 +39,11 @@ struct base_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::val
 
 template <typename T> using number_type = typename base_type_struct<T>::type;
 
-/// struct to return the inner type, i.e.
-///    typename inner_type_struct<A<B>>::type
-/// returns type B.
+//////////////////////////////////////////////////////////////////////////////
+/// Get the inner type in nesting templates:
+///    inner_type<A<B<C>>>
+/// returns type B<C>
+/// If type is arithmetic, returns it
 //////////////////////////////////////////////////////////////////////////////
 template <typename T, typename Enable = void> struct inner_type_struct {
     using type = typename T::argument_type;
@@ -51,12 +53,6 @@ template <typename T>
 struct inner_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::value>> {
     using type = T;
 };
-
-//////////////////////////////////////////////////////////////////////////////
-/// Main interface to inquire inner type in nesting templates:
-///    inner_type<A<B<C>>>
-/// teturns type B<C>
-//////////////////////////////////////////////////////////////////////////////
 
 template <typename T> using inner_type = typename inner_type_struct<T>::type;
 

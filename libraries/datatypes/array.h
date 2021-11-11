@@ -92,7 +92,7 @@ template <const int n, const int m, typename T> class Array {
         return *reinterpret_cast<Matrix<n, m, T> *>(this); 
     }
 
-    const Matrix<n, m, T> asMatrix() const {
+    const Matrix<n, m, T> &asMatrix() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
 
@@ -276,6 +276,7 @@ template <const int n, const int m, typename T> class Array {
         }
         return text.str();
     }
+
 };
 
 /// conjugate
