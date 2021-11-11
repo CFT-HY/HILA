@@ -280,9 +280,22 @@ void gpu_device_info() {
                      << '\n';
 
         hila::output << "Threads in use: " << N_threads << '\n';
+
+
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+        if (MPIX_Query_cuda_support() == 1) {
+            hila::output << "Supports CUDA-Aware MPI\n";
+        } else
+#endif
+        {
+            hila::output << "CUDA-Aware MPI is not supported\n";
+#if defined(CUDA_AWARE_MPI)
+            hila::output << "Cannot use CUDA_AWARE_MPI!\n";
+#endif
+        }
+
     }
 }
-
 #endif
 
 #ifdef HIP
