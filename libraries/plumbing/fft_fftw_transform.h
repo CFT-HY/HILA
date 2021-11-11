@@ -9,7 +9,7 @@
 
 /// transform does the actual fft.
 template <typename cmplx_t> void hila_fft<cmplx_t>::transform() {
-    assert("Don't call this!");
+    assert(0 && "Don't call this!");
 }
 
 template <> inline void hila_fft<Complex<double>>::transform() {
