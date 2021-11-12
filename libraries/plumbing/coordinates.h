@@ -278,9 +278,12 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     //   return a;
     // }
 
-    // cast to Vector - make this only explicit
-    explicit operator Vector<NDIM, T>() {
-        Vector<NDIM, T> a;
+    // cast to Vector - make this only explicit.  
+    // S can be any type, because int is convertible to it
+
+    template <typename S>
+    explicit operator Vector<NDIM, S>() {
+        Vector<NDIM, S> a;
         for (int d = 0; d < NDIM; d++) a[d] = this->e(d);
         return a;
     }
