@@ -238,6 +238,11 @@ void initialize_cuda(int rank) {
 
 #ifdef CUDA
 
+#ifdef OPEN_MPI
+// here functions to inquire cuda-aware MPI defined
+#include "mpi-ext.h"
+#endif
+
 void gpu_device_info() {
     if (hila::myrank() == 0) {
         const int kb = 1024;
@@ -281,18 +286,26 @@ void gpu_device_info() {
 
         hila::output << "Threads in use: " << N_threads << '\n';
 
-
+// Following should be OK in open MPI
+#ifdef OPEN_MPI
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-        if (MPIX_Query_cuda_support() == 1) {
-            hila::output << "Supports CUDA-Aware MPI\n";
-        } else
-#endif
-        {
-            hila::output << "CUDA-Aware MPI is not supported\n";
+        hila::output << "OpenMPI library supports CUDA-Aware MPI\n";
+        if (MPIX_Query_cuda_support() == 1)
+            hila::output << "  Runtime library supports CUDA-Aware MPI\n";
+        else {
+            hila::output << "  Runtime library does not support CUDA-Aware MPI!\n";
 #if defined(CUDA_AWARE_MPI)
-            hila::output << "Cannot use CUDA_AWARE_MPI!\n";
+            hila::output << "CUDA_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
 #endif
         }
+#else
+        hila::output << "OpenMPI library does not support CUDA-Aware MPI\n";
+#if defined(CUDA_AWARE_MPI)
+        hila::output << "CUDA_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
+#endif
+#endif // MPIX
+#endif // OPEN_MPI
+
 
     }
 }
