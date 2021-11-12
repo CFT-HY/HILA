@@ -16,6 +16,9 @@
 template <const int n, const int m, typename T = double>
 class Array;
 
+// template <const int n, const int m, typename T>
+// class DaggerMatrix;
+
 ////////////////////////////////////////////////////////////////
 /// The main nxm matrix type template
 ////////////////////////////////////////////////////////////////
@@ -154,7 +157,7 @@ class Matrix {
     /// TODO: CHECK AVX CONVERSIONS
 
     template <typename S, std::enable_if_t<hila::is_assignable<S&, T>::value, int> = 0>
-    operator Matrix<n, m, S>() {
+    explicit operator Matrix<n, m, S>() {
         Matrix<n, m, S> res;
         for (int i = 0; i < n * m; i++) res.c[i] = c[i];
         return res;
@@ -331,7 +334,7 @@ class Matrix {
     }
 
     /// return copy of adjoint/dagger of this Matrix
-    inline Matrix<m, n, T> adjoint() const {
+    inline Matrix<m, n, T> dagger() const {
         Matrix<m, n, T> res;
         for (int i = 0; i < m; i++)
             for (int j = 0; j < n; j++) {
@@ -341,9 +344,15 @@ class Matrix {
     }
 
     /// alias dagger() to adjoint()
-    inline Matrix<m, n, T> dagger() const {
-        return adjoint();
+    inline Matrix<m, n, T> adjoint() const {
+        return dagger();
     }
+
+    // It seems that using special "Dagger" type makes the code slower!
+    // Disable it now
+    // inline const DaggerMatrix<m,n,T> & dagger() const {
+    //     return *reinterpret_cast<const DaggerMatrix<m,n,T>*>(this);
+    // }
 
     /// return real part
     inline Matrix<n, m, hila::number_type<T>> real() const {
@@ -920,5 +929,7 @@ template <int n, typename T>
 using SquareMatrix = Matrix<n, n, T>;
 
 #include "datatypes/array.h"
+
+// #include "datatypes/dagger.h"
 
 #endif
