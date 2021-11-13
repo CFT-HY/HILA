@@ -343,7 +343,10 @@ void hila::seed_random(unsigned long seed) {
 //     taus_deinit();
 // }
 
-/* version of exit for multinode processes -- kill all nodes */
+///////////////////////////////////////////////////////////////
+/// Force quit for multinode processes -- kill all nodes
+/// No synchronisation done
+///////////////////////////////////////////////////////////////
 void hila::terminate(int status) {
     hila::timestamp("Terminate");
     print_dashed_line();
@@ -354,6 +357,10 @@ void hila::terminate(int status) {
     exit(1);
 }
 
+////////////////////////////////////////////////////////////////
+/// Print message and force quit
+////////////////////////////////////////////////////////////////
+
 void hila::error(const char *msg) {
     output0 << "Error: " << msg << '\n';
     hila::terminate(0);
@@ -361,7 +368,12 @@ void hila::error(const char *msg) {
 
 void hila::error(const std::string &msg) { hila::error(msg.c_str()); }
 
-// Normal, controlled exit of the program
+////////////////////////////////////////////////////////////////
+/// Normal, controlled exit - all nodes must call this.
+/// Prints timing information and information about
+/// communications
+////////////////////////////////////////////////////////////////
+
 void hila::finishrun() {
     report_timers();
 
@@ -370,8 +382,12 @@ void hila::finishrun() {
         int64_t gathers = lattice->n_gather_done;
         int64_t avoided = lattice->n_gather_avoided;
         if (lattice->node_rank() == 0) {
-            output0 << " COMMS from node 0: " << gathers << " done, " << avoided << "("
-                    << 100.0 * avoided / (avoided + gathers) << "%) optimized away\n";
+            if (gathers + avoided > 0) {
+                output0 << " COMMS from node 0: " << gathers << " done, " << avoided << "("
+                        << 100.0 * avoided / (avoided + gathers) << "%) optimized away\n";
+            } else {
+                output0 << " No communications done from node 0\n";
+            }
         }
     }
     if (sublattices.number > 1) {
