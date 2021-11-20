@@ -1,8 +1,7 @@
-# Platform specific makefile for vanilla (linux) mpi code 
+# Platform specific makefile for LUMI standard (CPU) code
 #
 # this is included from main.mk -file, which is in turn included from 
 # application makefile
-#
 #
 
 $(info ########################################################################)
@@ -13,7 +12,7 @@ $(info ########################################################################)
 
 ### Define compiler and options
 
-# Define compiler
+# Define compiler - use cray CC wrapper
 CC := CC
 LD := CC
 
@@ -49,7 +48,7 @@ HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 # Linker libraries and possible options
 
 LDLIBS  := -lfftw3 -lfftw3f -lm
-LDFLAGS :=
+LDFLAGS := $(CXXFLAGS)
 
 # These variables must be defined here
 #
