@@ -126,7 +126,7 @@ class fermion_action : public action_base {
         gauge.refresh();
 
         onsites(D.par) {
-            psi[X].gaussian();
+            psi[X].gaussian_random();
         }
         D.dagger(psi, chi);
     }
@@ -300,7 +300,7 @@ class Hasenbusch_action_2 : public action_base {
 
         psi[ALL] = 0;
         onsites(D.par) {
-            psi[X].gaussian();
+            psi[X].gaussian_random();
         }
         D.dagger(psi, v);
         psi[ALL] = 0;

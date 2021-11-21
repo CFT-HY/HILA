@@ -32,8 +32,8 @@ int main(int argc, char **argv) {
         onsites(ALL) { U[d][X].random(); }
     }
     onsites(ALL) {
-        sunvec1[X].gaussian();
-        sunvec2[X].gaussian();
+        sunvec1[X].gaussian_random();
+        sunvec2[X].gaussian_random();
     }
 
     // Time staggered Dirac operator
@@ -86,8 +86,8 @@ int main(int argc, char **argv) {
 
     Field<Wilson_vector<N, double>> wvec1, wvec2;
     onsites(ALL) {
-        wvec1[X].gaussian();
-        wvec2[X].gaussian();
+        wvec1[X].gaussian_random();
+        wvec2[X].gaussian_random();
     }
     // Time staggered Dirac operator
     timing = 0;

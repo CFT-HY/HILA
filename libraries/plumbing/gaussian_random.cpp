@@ -4,19 +4,19 @@
 
 ///////////////////////////////////////////////////////////////////
 /// gaussian rng generation routines
-/// By default these give random numbers with variance 0.5, i.e.
+/// By default these give random numbers with variance 1.0, i.e.
 /// probability distribution is
-///           exp( -x*x ), so < x^2 > = 1/2
+///           exp( -x*x/2 ), so < x^2 > = 1
 /// If you want random numbers with variance sigma, multiply the
-/// result by  sqrt(2*sigma):
-///       sqrt(2.0*sigma) * gaussian_ran();
+/// result by  sqrt(sigma):
+///       sqrt(sigma) * gaussrand();
 ////////////////////////////////////////////////////////////////////
 
-#define VARIANCE 0.5
+#define VARIANCE 1.0
 
 static constexpr double pi = 3.14159265358979;
 
-double hila::gaussian_ran2(double &out2) {
+double hila::gaussrand2(double &out2) {
 
     double phi, urnd, r;
     phi = 2.0 * pi * hila::random();
@@ -33,12 +33,12 @@ double hila::gaussian_ran2(double &out2) {
 
 #if !defined(CUDA) && !defined(HIP)
 
-double hila::gaussian_ran() {
+double hila::gaussrand() {
     static double second;
     static bool draw_new = true;
     if (draw_new) {
         draw_new = false;
-        return hila::gaussian_ran2(second);
+        return hila::gaussrand2(second);
     }
     draw_new = true;
     return second;
@@ -50,9 +50,9 @@ double hila::gaussian_ran() {
 // static variables - just throw away another gaussian number.
 
 //#pragma hila loop function contains rng
-double hila::gaussian_ran() {
+double hila::gaussrand() {
     double second;
-    return hila::gaussian_ran2(second);
+    return hila::gaussrand2(second);
 }
 
 #endif
