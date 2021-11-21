@@ -11,7 +11,7 @@ void test_gamma_matrices() {
     Wilson_vector<N, double> w1, w2, w3;
     SU<N> U;
     U.random();
-    w1.gaussian();
+    w1.gaussian_random();
 
 #if NDIM == 4
     w2 = w1 - gamma5 * (gamma5 * w1);
@@ -71,8 +71,8 @@ int main(int argc, char **argv) {
     dirac D(0.1, U);
     Field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     onsites(ALL) {
-        a[X].gaussian();
-        b[X].gaussian();
+        a[X].gaussian_random();
+        b[X].gaussian_random();
     }
 
     double diffre = 0, diffim = 0;
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
     // Now run CG on Ddaggera. b=1/D a -> Db = a
     CG<dirac> inverse(D);
     onsites(ALL) {
-        a[X].gaussian();
+        a[X].gaussian_random();
     }
     b[ALL] = 0;
     D.dagger(a, Ddaggera);
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
 
     // The other way around, multiply first
     onsites(ALL) {
-        b[X].gaussian();
+        b[X].gaussian_random();
     }
     D.apply(b, Db);
     D.dagger(Db, DdaggerDb);
@@ -138,8 +138,8 @@ int main(int argc, char **argv) {
 #endif
 
     onsites(ALL) {
-        a[X].gaussian();
-        b[X].gaussian();
+        a[X].gaussian_random();
+        b[X].gaussian_random();
     }
 
     double diffre = 0, diffim = 0;
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
     CG<dirac> inverse(D);
     b[ALL] = 0;
     onsites(ALL) {
-        a[X].gaussian();
+        a[X].gaussian_random();
     }
     inverse.apply(a, b);
     D.dagger(b, Db);
@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
     // Now run CG on Ddaggera. b=1/D a -> Db = a
     b[ALL] = 0;
     onsites(ALL) {
-        a[X].gaussian();
+        a[X].gaussian_random();
     }
     D.dagger(a, Ddaggera);
     inverse.apply(Ddaggera, b);
@@ -187,8 +187,8 @@ int main(int argc, char **argv) {
     dirac_staggered_evenodd D(5.0, U);
     Field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     onsites(ALL) {
-        a[X].gaussian();
-        b[X].gaussian();
+        a[X].gaussian_random();
+        b[X].gaussian_random();
     }
 
     double diffre = 0, diffim = 0;
@@ -229,8 +229,8 @@ int main(int argc, char **argv) {
     a[ODD] = 0;
     b[ODD] = 0;
     onsites(EVEN) {
-        a[X].gaussian();
-        b[X].gaussian();
+        a[X].gaussian_random();
+        b[X].gaussian_random();
     }
 
     double diffre = 0, diffim = 0;
@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
     a[ALL] = 0;
     b[ALL] = 0;
     onsites(EVEN) {
-        a[X].gaussian();
+        a[X].gaussian_random();
     }
     D.dagger(a, Ddaggera);
     inverse.apply(Ddaggera, b);
@@ -262,7 +262,7 @@ int main(int argc, char **argv) {
 
     // Run CG on a, multiply by DdaggerD and check the same
     onsites(EVEN) {
-        a[X].gaussian();
+        a[X].gaussian_random();
     }
     b[ALL] = 0;
     inverse.apply(a, b);
@@ -275,7 +275,7 @@ int main(int argc, char **argv) {
 
     // The other way around, multiply first
     onsites(EVEN) {
-        b[X].gaussian();
+        b[X].gaussian_random();
     }
     D.apply(b, Db);
     D.dagger(Db, DdaggerDb);
@@ -300,8 +300,8 @@ int main(int argc, char **argv) {
     a[ODD] = 0;
     b[ODD] = 0;
     onsites(EVEN) {
-        a[X].gaussian();
-        b[X].gaussian();
+        a[X].gaussian_random();
+        b[X].gaussian_random();
         sol[X] = 0;
     }
 
@@ -327,7 +327,7 @@ int main(int argc, char **argv) {
 
     // Run CG on a, multiply by DdaggerD and check the same
     onsites(EVEN) {
-        a[X].gaussian();
+        a[X].gaussian_random();
     }
     b[ALL] = 0;
     inverse.apply(a, b);
@@ -340,7 +340,7 @@ int main(int argc, char **argv) {
 
     // The other way around, multiply first
     onsites(EVEN) {
-        b[X].gaussian();
+        b[X].gaussian_random();
     }
     D.apply(b, Db);
     D.dagger(Db, DdaggerDb);

@@ -27,8 +27,7 @@ std::vector<timer *> timer_list = {};
 
 // initialize timer to this timepoint
 void timer::init(const char *tag) {
-    if (tag != nullptr)
-        label = tag;
+    if (tag != nullptr) label = tag;
     reset();
     // Store it on 1st use!
 }
@@ -58,8 +57,7 @@ void timer::error() {
 }
 
 double timer::start() {
-    if (is_on)
-        error();
+    if (is_on) error();
     is_on = true;
 
     // Move storing the timer ptr here, because if timer is initialized
@@ -68,16 +66,15 @@ double timer::start() {
         timer_list.push_back(this);
     }
 
-    t_start = gettime();
+    t_start = hila::gettime();
     return t_start;
 }
 
 double timer::stop() {
-    if (!is_on)
-        error();
+    if (!is_on) error();
     is_on = false;
 
-    double e = gettime();
+    double e = hila::gettime();
     t_total += (e - t_start);
     count++;
     return e;
@@ -103,12 +100,12 @@ void timer::report(bool print_not_timed) {
                               t_total / ttime);
             } else if (t_total / count > 1e-4) {
                 std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f ms %8.4f\n",
-                              label.c_str(), t_total, (long)count, 1e3 * t_total / count,
-                              t_total / ttime);
+                              label.c_str(), t_total, (long)count,
+                              1e3 * t_total / count, t_total / ttime);
             } else {
                 std::snprintf(line, 200, "%-20s: %14.3f %14ld %10.3f us %8.4f\n",
-                              label.c_str(), t_total, (long)count, 1e6 * t_total / count,
-                              t_total / ttime);
+                              label.c_str(), t_total, (long)count,
+                              1e6 * t_total / count, t_total / ttime);
             }
             hila::output << line;
         } else if (!is_error && print_not_timed) {
@@ -127,15 +124,17 @@ void report_timers() {
         if (timer_list.size() > 0) {
             hila::output << "TIMER REPORT:             total(sec)          calls     "
                             "time/call  fraction\n";
-            hila::output << "------------------------------------------------------------"
-                            "---------------\n";
+            hila::output
+                << "------------------------------------------------------------"
+                   "---------------\n";
 
             for (auto tp : timer_list) {
                 tp->report();
             }
 
-            hila::output << "------------------------------------------------------------"
-                            "---------------\n";
+            hila::output
+                << "------------------------------------------------------------"
+                   "---------------\n";
         } else {
             hila::output << "No timers defined\n";
         }
@@ -150,8 +149,7 @@ void report_timers() {
 double gettime() {
     struct timespec tp;
 
-    if (start_time == -1.0)
-        inittime();
+    if (start_time == -1.0) inittime();
 
     clock_gettime(CLOCK_MONOTONIC, &tp);
     return (((double)tp.tv_sec - start_time) + 1.0e-9 * (double)tp.tv_nsec);
@@ -173,7 +171,9 @@ void inittime() {
 
 static double timelimit = 0;
 
-void setup_timelimit(long seconds) { timelimit = (double)seconds; }
+void setup_timelimit(long seconds) {
+    timelimit = (double)seconds;
+}
 
 bool time_to_exit() {
     static double max_interval = 0.0;
@@ -181,8 +181,7 @@ bool time_to_exit() {
     bool finish;
 
     // if no time limit set
-    if (timelimit == 0.0)
-        return false;
+    if (timelimit == 0.0) return false;
 
     if (hila::myrank() == 0) {
         double this_time = gettime();
@@ -196,10 +195,9 @@ bool time_to_exit() {
         else
             finish = false;
 
-        hila::output << "TIMECHECK: " << this_time << "s used, " << timelimit - this_time
-                     << "s remaining\n";
-        if (finish)
-            hila::output << "CPU TIME LIMIT, EXITING THE PROGRAM\n";
+        hila::output << "TIMECHECK: " << this_time << "s used, "
+                     << timelimit - this_time << "s remaining\n";
+        if (finish) hila::output << "CPU TIME LIMIT, EXITING THE PROGRAM\n";
     }
     broadcast(finish);
     return finish;
@@ -212,11 +210,10 @@ bool time_to_exit() {
 void timestamp(const char *msg) {
     if (hila::myrank() == 0) {
         std::time_t ct = std::time(NULL);
-        if (msg != NULL)
-            hila::output << msg;
+        if (msg != NULL) hila::output << msg;
         std::string d = ctime(&ct);
         d.resize(d.size() - 1); // take away \n at the end
-        hila::output << " -- date " << d << "  run time " << gettime() << "s\n";
+        hila::output << " -- date " << d << "  run time " << hila::gettime() << "s\n";
     }
 }
 

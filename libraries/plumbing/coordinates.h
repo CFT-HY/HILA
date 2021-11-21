@@ -67,16 +67,26 @@ inline Direction opp_dir(const Direction d) {
     return static_cast<Direction>(NDIRS - 1 - static_cast<int>(d));
 }
 
-inline Direction opp_dir(const int d) { return static_cast<Direction>(NDIRS - 1 - d); }
+inline Direction opp_dir(const int d) {
+    return static_cast<Direction>(NDIRS - 1 - d);
+}
 
 /// unary + and -
-inline Direction operator-(const Direction d) { return opp_dir(d); }
+inline Direction operator-(const Direction d) {
+    return opp_dir(d);
+}
 
-static inline Direction operator+(const Direction d) { return d; }
+static inline Direction operator+(const Direction d) {
+    return d;
+}
 
 /// is_up_dir is true if the dir is "up" to coord Direction
-static inline bool is_up_dir(const Direction d) { return d < NDIM; }
-static inline bool is_up_dir(const int d) { return d < NDIM; }
+static inline bool is_up_dir(const Direction d) {
+    return d < NDIM;
+}
+static inline bool is_up_dir(const int d) {
+    return d < NDIM;
+}
 
 static inline Direction abs(Direction dir) {
     if (is_up_dir(dir))
@@ -98,7 +108,9 @@ inline int dir_dot_product(Direction d1, Direction d2) {
 /// unsigned char is ok up to 4 dim (2*4 bits)
 using dir_mask_t = unsigned char;
 
-inline dir_mask_t get_dir_mask(const Direction d) { return (dir_mask_t)(1 << d); }
+inline dir_mask_t get_dir_mask(const Direction d) {
+    return (dir_mask_t)(1 << d);
+}
 
 ////////////////////////////////////////////////////////////////////
 /// enum class Parity type definition - stronger protection than std enum
@@ -125,7 +137,9 @@ inline std::ostream &operator<<(std::ostream &os, const Parity p) {
 }
 
 // utilities for getting the bit patterns
-static inline unsigned parity_bits(Parity p) { return 0x3 & static_cast<unsigned>(p); }
+static inline unsigned parity_bits(Parity p) {
+    return 0x3 & static_cast<unsigned>(p);
+}
 static inline unsigned parity_bits_inverse(Parity p) {
     return 0x3 & ~static_cast<unsigned>(p);
 }
@@ -136,7 +150,14 @@ static inline Parity opp_parity(const Parity p) {
     return static_cast<Parity>(0x3 & ((u << 1) | (u >> 1)));
 }
 
-static inline bool is_even_odd_parity(Parity p) { return (p == EVEN || p == ODD); }
+// Define ~parity as opp_parity
+static inline Parity operator~(const Parity p) {
+    return opp_parity(p);
+}
+
+static inline bool is_even_odd_parity(Parity p) {
+    return (p == EVEN || p == ODD);
+}
 
 /// Return a vector for iterating over  parities included in par
 /// If par is ALL, this returns vector of EVEN and ODD, otherwise
@@ -155,7 +176,8 @@ static std::vector<Parity> loop_parities(Parity par) {
 /// CoordinateVector type
 //////////////////////////////////////////////////////////////////////
 
-template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
+template <typename T>
+class CoordinateVector_t : public Vector<NDIM, T> {
 
   public:
     // std incantation for field types
@@ -170,13 +192,15 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
 
     // initialize with Direction -- useful for automatic conversion
     explicit inline CoordinateVector_t(const Direction dir) {
-        foralldir(d) this->e(d) = dir_dot_product(d, dir);
+        foralldir (d)
+            this->e(d) = dir_dot_product(d, dir);
     }
 
     // construct from vector - make this not explicit so that
     // conversions from Vector methods are automatic
     inline CoordinateVector_t(const Vector<NDIM, T> &v) {
-        foralldir(d) this->e(d) = v.e(d);
+        foralldir (d)
+            this->e(d) = v.e(d);
     }
 
     /// Construct CV automatically from right-size initializer list
@@ -186,13 +210,14 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
         assert(rhs.size() == NDIM &&
                "CoordinateVector initializer list size does not match");
         int i = 0;
-        for (auto it = rhs.begin(); it != rhs.end(); it++, i++)
-            this->e(i) = *it;
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) this->e(i) = *it;
     }
 
-
     /// Construct from 0, using nullptr_t autocast
-    inline CoordinateVector_t(std::nullptr_t z) { foralldir(d) this->e(d) = 0; }
+    inline CoordinateVector_t(std::nullptr_t z) {
+        foralldir (d)
+            this->e(d) = 0;
+    }
 
     // /// cast to vector<NDIM,int> - useful for method inheritance
     // #pragma hila loop_function
@@ -204,7 +229,8 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
 
     /// Assign from 0
     inline CoordinateVector_t &operator=(std::nullptr_t z) {
-        foralldir(d) this->e(d) = 0;
+        foralldir (d)
+            this->e(d) = 0;
         return *this;
     }
 
@@ -219,19 +245,30 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
         return *this;
     }
 
+    // Assign
+
     //#pragma hila loop function
-    T &operator[](const int i) { return this->e(i); }
+    T &operator[](const int i) {
+        return this->e(i);
+    }
     //#pragma hila loop function
-    T &operator[](const Direction d) { return this->e((int)d); }
+    T &operator[](const Direction d) {
+        return this->e((int)d);
+    }
     //#pragma hila loop function
-    T operator[](const int i) const { return this->e(i); }
+    T operator[](const int i) const {
+        return this->e(i);
+    }
     //#pragma hila loop function
-    T operator[](const Direction d) const { return this->e((int)d); }
+    T operator[](const Direction d) const {
+        return this->e((int)d);
+    }
 
     // Parity of this coordinate
     ::Parity parity() const {
         int s = 0;
-        foralldir(d) s += this->e(d);
+        foralldir (d)
+            s += this->e(d);
         if (s % 2 == 0)
             return Parity::even;
         else
@@ -239,29 +276,34 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
     }
 
     // cast to std::array
-    operator std::array<int, NDIM>() {
-        std::array<int, NDIM> a;
-        for (int d = 0; d < NDIM; d++)
-            a[d] = this->e(d);
-        return a;
-    }
-
-    // cast to Vector
-    // operator Vector<NDIM,T>(){
-    //   Vector<NDIM,T> a;
-    //   for(int d=0; d<NDIM;d++) a[d] = this->e(d);
+    // operator std::array<int, NDIM>() {
+    //  std::array<int, NDIM> a;
+    //   for (int d = 0; d < NDIM; d++)
+    //      a[d] = this->e(d);
     //   return a;
     // }
+
+    // cast to Vector - make this only explicit.  
+    // S can be any type, because int is convertible to it
+
+    template <typename S>
+    explicit operator Vector<NDIM, S>() {
+        Vector<NDIM, S> a;
+        for (int d = 0; d < NDIM; d++) a[d] = this->e(d);
+        return a;
+    }
 
     // add coordinate vector -- def explicit as loop_function
     // #pragma hila loop function  //TODO
     CoordinateVector_t &operator+=(const CoordinateVector_t &rhs) {
-        foralldir(d) this->e(d) += rhs.e(d);
+        foralldir (d)
+            this->e(d) += rhs.e(d);
         return *this;
     }
 
     CoordinateVector_t &operator-=(const CoordinateVector_t &rhs) {
-        foralldir(d) this->e(d) -= rhs.e(d);
+        foralldir (d)
+            this->e(d) -= rhs.e(d);
         return *this;
     }
 
@@ -286,16 +328,20 @@ template <typename T> class CoordinateVector_t : public Vector<NDIM, T> {
     // unary -   -explicitly loop_function
     inline CoordinateVector_t operator-() const {
         CoordinateVector_t res;
-        foralldir(d) res.e(d) = -this->e(d);
+        foralldir (d)
+            res.e(d) = -this->e(d);
         return res;
     }
 
     // unary +   -explicitly loop_function
-    inline CoordinateVector_t operator+() const { return *this; }
+    inline CoordinateVector_t operator+() const {
+        return *this;
+    }
 
     inline T dot(const CoordinateVector_t &v) const {
         T res(0);
-        foralldir(d) res += v.e(d) * this->e(d);
+        foralldir (d)
+            res += v.e(d) * this->e(d);
         return res;
     }
 };
@@ -310,8 +356,7 @@ using CoordinateVector = CoordinateVector_t<int>;
 
 static inline int mod(const int a, const int b) {
     int r = a % b;
-    if (r < 0)
-        r += b;
+    if (r < 0) r += b;
     return r;
 }
 
@@ -322,7 +367,7 @@ template <typename T>
 inline CoordinateVector_t<T> mod(const CoordinateVector_t<T> &a,
                                  const CoordinateVector_t<T> &m) {
     CoordinateVector_t<T> r;
-    foralldir(d) { r.e(d) = mod(a[d], m[d]); }
+    foralldir (d) { r.e(d) = mod(a[d], m[d]); }
     return r;
 }
 
@@ -330,7 +375,8 @@ template <typename T>
 inline CoordinateVector_t<T> operator+(CoordinateVector_t<T> cv1,
                                        const CoordinateVector_t<T> &cv2) {
     CoordinateVector_t<T> res;
-    foralldir(d) res.c[d] = cv1.c[d] + cv2.c[d];
+    foralldir (d)
+        res.c[d] = cv1.c[d] + cv2.c[d];
     return res;
 }
 
@@ -338,14 +384,15 @@ template <typename T>
 inline CoordinateVector_t<T> operator-(CoordinateVector_t<T> cv1,
                                        const CoordinateVector_t<T> &cv2) {
     CoordinateVector_t<T> res;
-    foralldir(d) res.c[d] = cv1.c[d] - cv2.c[d];
+    foralldir (d)
+        res.c[d] = cv1.c[d] - cv2.c[d];
     return res;
 }
 
 /// Special Direction operators: dir + dir -> CoordinateVector
 inline CoordinateVector operator+(const Direction d1, const Direction d2) {
     CoordinateVector r;
-    foralldir(d) {
+    foralldir (d) {
         r.e(d) = dir_dot_product(d1, d);
         r.e(d) += dir_dot_product(d2, d);
     }
@@ -354,7 +401,7 @@ inline CoordinateVector operator+(const Direction d1, const Direction d2) {
 
 inline CoordinateVector operator-(const Direction d1, const Direction d2) {
     CoordinateVector r;
-    foralldir(d) {
+    foralldir (d) {
         r.e(d) = dir_dot_product(d1, d);
         r.e(d) -= dir_dot_product(d2, d);
     }
@@ -364,11 +411,14 @@ inline CoordinateVector operator-(const Direction d1, const Direction d2) {
 /// Special operators: int*Direction -> CoordinateVector (of type int!)
 inline CoordinateVector operator*(const int i, const Direction dir) {
     CoordinateVector r;
-    foralldir(d) r.e(d) = i * dir_dot_product(d, dir);
+    foralldir (d)
+        r.e(d) = i * dir_dot_product(d, dir);
     return r;
 }
 
-inline CoordinateVector operator*(const Direction d, const int i) { return i * d; }
+inline CoordinateVector operator*(const Direction d, const int i) {
+    return i * d;
+}
 
 // coordinate vector + Direction -- dir is a unit vector
 inline CoordinateVector operator+(CoordinateVector cv, const Direction dir) {
@@ -387,7 +437,8 @@ inline CoordinateVector operator+(const Direction dir, CoordinateVector cv) {
 }
 
 inline CoordinateVector operator-(const Direction dir, CoordinateVector cv) {
-    foralldir(d) cv.e(d) = dir_dot_product(dir, d) - cv.e(d);
+    foralldir (d)
+        cv.e(d) = dir_dot_product(dir, d) - cv.e(d);
     return cv;
 }
 

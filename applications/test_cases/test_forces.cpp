@@ -40,8 +40,8 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         tmp2.copy_boundary_condition(psi);
 
         onsites(D.par) {
-            psi[X].gaussian();
-            chi[X].gaussian();
+            psi[X].gaussian_random();
+            chi[X].gaussian_random();
         }
 
         double s1 = 0;
@@ -76,8 +76,8 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         }
 
         onsites(D.par) {
-            psi[X].gaussian();
-            chi[X].gaussian();
+            psi[X].gaussian_random();
+            chi[X].gaussian_random();
         }
         gauge.zero_momentum();
 

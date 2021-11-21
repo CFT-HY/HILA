@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
     Field<vtype> f, g;
 
-    f[ALL] = hila::gaussian_ran();
+    f[ALL] = hila::gaussrand();
 
     static hila::timer cmplx_timer("cmplx fft");
 
@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     // Field<Vector<6,vtype>> v = 0,v1;
 
     // onsites(ALL) {
-    //   v[X].e(1).gaussian();
+    //   v[X].e(1).gaussian_random();
     // }
 
     // hila::timer vector_timer("vector fft");

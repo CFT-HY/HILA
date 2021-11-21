@@ -2,7 +2,8 @@
 # Can be absolute or relative
 HILA_DIR := ../..
 
-APP_OPTS := -DNDIM=3 -DEVEN_SITES_FIRST=0
+APP_OPTS := -DNDIM=3
+#-DEVEN_SITES_FIRST=0
 
 # Set default goal and arch
 .DEFAULT_GOAL := onsim

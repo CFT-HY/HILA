@@ -7,7 +7,6 @@
 
 #include "plumbing/defs.h"
 
-
 // // Useful c++14 template missing in c++11
 // #if defined(PUHTI) && defined(HILAPP)
 // namespace std {
@@ -16,17 +15,18 @@
 // }
 // #endif
 
-
 namespace hila {
 
 /////////////////////////////////////////////////////////////////////////////////
 /// Utility for obtaining the numeric base type of a class
 /// Use as  "hila::number_type<T>"
-/// which returns the underlying arithmetic type used in class T (e.g. float, double etc.)
-/// 
+/// which returns the underlying arithmetic type used in class T (e.g. float, double
+/// etc.)
+///
 /// Alt form  "typename base_type_struct<T>"
 
-template <typename T, typename Enable = void> struct base_type_struct {
+template <typename T, typename Enable = void>
+struct base_type_struct {
     /// The base type of the class
     using type = typename T::base_type;
 };
@@ -37,13 +37,17 @@ struct base_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::val
     using type = T;
 };
 
-template <typename T> using number_type = typename base_type_struct<T>::type;
+template <typename T>
+using number_type = typename base_type_struct<T>::type;
 
-/// struct to return the inner type, i.e.
-///    typename inner_type_struct<A<B>>::type
-/// returns type B.
 //////////////////////////////////////////////////////////////////////////////
-template <typename T, typename Enable = void> struct inner_type_struct {
+/// Get the inner type in nesting templates:
+///    inner_type<A<B<C>>>
+/// returns type B<C>
+/// If type is arithmetic, returns it
+//////////////////////////////////////////////////////////////////////////////
+template <typename T, typename Enable = void>
+struct inner_type_struct {
     using type = typename T::argument_type;
 };
 
@@ -52,13 +56,8 @@ struct inner_type_struct<T, typename std::enable_if_t<hila::is_arithmetic<T>::va
     using type = T;
 };
 
-//////////////////////////////////////////////////////////////////////////////
-/// Main interface to inquire inner type in nesting templates:
-///    inner_type<A<B<C>>>
-/// teturns type B<C>
-//////////////////////////////////////////////////////////////////////////////
-
-template <typename T> using inner_type = typename inner_type_struct<T>::type;
+template <typename T>
+using inner_type = typename inner_type_struct<T>::type;
 
 //////////////////////////////////////////////////////////////////////////////
 /// Define boolean contains_type<A,B>::value, which returns true if
@@ -79,7 +78,6 @@ template <typename A, typename B>
 struct contains_type<A, B, typename std::enable_if_t<hila::is_arithmetic<A>::value>>
     : std::integral_constant<bool, std::is_same<A, B>::value> {};
 
-
 //////////////////////////////////////////////////////////////////////////////
 /// Helper operations to make generic templates for arithmetic operators
 /// e.g. hila::type_plus<A,B> gives the type of the operator a + b, where a is of type A
@@ -93,7 +91,6 @@ template <typename A, typename B>
 using type_mul = decltype(std::declval<A>() * std::declval<B>());
 template <typename A, typename B>
 using type_div = decltype(std::declval<A>() / std::declval<B>());
-
 
 } // namespace hila
 

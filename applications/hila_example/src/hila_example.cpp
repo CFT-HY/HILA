@@ -2,7 +2,7 @@
 #include "fft.h"
 
 // define an alias for a 3x3 complex matrix
-using Mtype = SquareMatrix<3,Complex<double>>;
+using Mtype = Matrix<3,3,Complex<double>>;
 
 int main(int argc, char **argv) {
 
@@ -40,13 +40,11 @@ int main(int argc, char **argv) {
     // We need random number here
     hila::seed_random(seed);
 
-
-
     // 2 matrix fields
     Field<Mtype> f, g;
 
     // set g to gaussian rnd matrix
-    onsites(ALL) g[X].gaussian();
+    onsites(ALL) g[X].gaussian_random();
 
     output0 << "Smearing a Gaussian random "
             << Mtype::rows() << "x" << Mtype::columns() 

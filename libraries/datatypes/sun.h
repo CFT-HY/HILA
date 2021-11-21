@@ -226,8 +226,8 @@ class SU : public SquareMatrix<n, Complex<radix>> {
     void gaussian_algebra() {
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < i; j++) {
-                double a = hila::gaussian_ran();
-                double b = hila::gaussian_ran();
+                double a = hila::gaussrand();
+                double b = hila::gaussrand();
                 (*this).e(i, j).re = a;
                 (*this).e(j, i).re = -a;
                 (*this).e(i, j).im = b;
@@ -240,7 +240,7 @@ class SU : public SquareMatrix<n, Complex<radix>> {
             (*this).e(i, i).im = 0;
         }
         for (int i = 1; i < n; i++) {
-            double a = hila::gaussian_ran() * sqrt(2.0 / (i * (i + 1)));
+            double a = hila::gaussrand() * sqrt(2.0 / (i * (i + 1)));
             for (int j = 0; j < i; j++) (*this).e(j, j).im += a;
             (*this).e(i, i).im -= i * a;
         }
@@ -549,10 +549,10 @@ SU2<radix> &SU2<radix>::reunitarize() {
 template <typename radix>
 SU2<radix> &SU2<radix>::random() {
     radix one, two;
-    one = hila::gaussian_ran2(&two);
+    one = hila::gaussrand2(&two);
     a = one;
     b = two;
-    one = hila::gaussian_ran2(&two);
+    one = hila::gaussrand2(&two);
     c = one;
     d = two;
     return this->normalize();

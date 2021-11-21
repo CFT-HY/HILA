@@ -77,9 +77,9 @@ template <int N, typename radix> class Wilson_vector {
         }
     }
 
-    void gaussian() {
+    void gaussian_random() {
         for (int i = 0; i < Gammadim; i++) {
-            c[i].gaussian();
+            c[i].gaussian_random();
         }
     }
 

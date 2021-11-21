@@ -203,8 +203,8 @@ void scaling_sim::initialize() {
 
 	if (kSqu > 0.0) {
 	  std = sqrt(0.5*constant*exp(-0.5*kSqu*config.PhiLength*config.PhiLength));
-	  kphi[X].re = hila::gaussian_ran()*std;
-	  kphi[X].im = hila::gaussian_ran()*std;
+	  kphi[X].re = hila::gaussrand()*std;
+	  kphi[X].im = hila::gaussrand()*std;
 	}
 	else {
 	  kphi[X].re = 0.0;
@@ -352,15 +352,15 @@ void scaling_sim::next() {
 
     next_timer.start();
 
-    foralldir (d) {
-              phi.start_fetch(d);
-              phi.start_fetch(-d);
-    }
-
     onsites (ALL) {
         phi[X] += config.dt * pi[X];
         deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx);
     }
+
+    // foralldir(d) {
+    //     phi.start_fetch(d); 
+    //     phi.start_fetch(-d);
+    // }
 
     // foralldir (d) {
     //      onsites (ALL) {
@@ -421,8 +421,6 @@ int main(int argc, char **argv) {
                 sim.write_moduli();
                 sim.write_energies();
                 meas_timer.stop();
-
-                //FFT_field(sim.phi,tildephi);
             }
             stat_counter++;
         }

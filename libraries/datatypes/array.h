@@ -87,14 +87,28 @@ template <const int n, const int m, typename T> class Array {
         return c[i];
     }
 
+#if 1
     // cast from array to matrix
     Matrix<n, m, T> &asMatrix() const_function { 
         return *reinterpret_cast<Matrix<n, m, T> *>(this); 
     }
 
-    const Matrix<n, m, T> asMatrix() const {
+    const Matrix<n, m, T> &asMatrix() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
+#else
+    // cast from array to matrix
+    Matrix<n, T> &asMatrix() const_function { 
+        static_assert(n == m, "asMatrix() only for square arrays");
+        return *reinterpret_cast<Matrix<n, T> *>(this); 
+    }
+
+    const Matrix<n, T> &asMatrix() const {
+        static_assert(n == m, "asMatrix() only for square arrays");
+        return *reinterpret_cast<const Matrix<n, T> *>(this);
+    }
+#endif
+
 
     /// casting from one Array (number) type to another
     /// TODO: CHECK AVX CONVERSIONS
@@ -258,7 +272,7 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// Generate gaussian random elements
-    inline Array<n, m, T> &gaussian() output_only {
+    inline Array<n, m, T> &gaussian_random() output_only {
         for (int i = 0; i < n * m; i++) {
             ::gaussian_random(c[i]);
         }
@@ -276,6 +290,7 @@ template <const int n, const int m, typename T> class Array {
         }
         return text.str();
     }
+
 };
 
 /// conjugate
@@ -414,10 +429,10 @@ inline void random(output_only Array<n, m, T> &mat) {
     mat.random();
 }
 
-/// Function that calls the gaussian()-method
+/// Function that calls the gaussian_random()-method
 template <int n, int m, typename T>
 inline void gaussian_random(output_only Array<n, m, T> &mat) {
-    mat.gaussian();
+    mat.gaussian_random();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -538,6 +553,27 @@ inline Array<n, m, T> pow(Array<n, m, T> a, const Array<n, m, T> &b) {
         a.c[i] = pow(a.c[i], b.c[i]);
     return a;
 }
+
+// Cast operators to different number or Complex type
+// cast_to<double>(a);  
+// cast_to<Complex<float>>(b);
+// Cast from number->number, number->Complex, Complex->Complex OK,
+//     Complex->number not.
+
+template <typename Ntype, typename T, int n, int m, std::enable_if_t<hila::is_arithmetic<T>::value,int> = 0>
+Array<n,m,Ntype> cast_to(const Array<n,m,T> &mat) {
+    Array <n,m,Ntype> res;
+    for (int i=0; i<n*m; i++) res.c[i] = mat.c[i];
+    return res;
+}
+
+template <typename Ntype, typename T, int n, int m, std::enable_if_t<hila::is_complex<T>::value,int> = 0>
+Array<n,m,Ntype> cast_to(const Array<n,m,T> &mat) {
+    Array <n,m,Ntype> res;
+    for (int i=0; i<n*m; i++) res.c[i] = cast_to<Ntype>(mat.c[i]);
+    return res;
+}
+
 
 /// Array1d and Array2d are just aliased to Array
 template <int n, typename T = double> using Array1d = Array<n, 1, T>;
