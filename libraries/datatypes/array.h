@@ -87,6 +87,7 @@ template <const int n, const int m, typename T> class Array {
         return c[i];
     }
 
+#if 1
     // cast from array to matrix
     Matrix<n, m, T> &asMatrix() const_function { 
         return *reinterpret_cast<Matrix<n, m, T> *>(this); 
@@ -95,6 +96,19 @@ template <const int n, const int m, typename T> class Array {
     const Matrix<n, m, T> &asMatrix() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
+#else
+    // cast from array to matrix
+    Matrix<n, T> &asMatrix() const_function { 
+        static_assert(n == m, "asMatrix() only for square arrays");
+        return *reinterpret_cast<Matrix<n, T> *>(this); 
+    }
+
+    const Matrix<n, T> &asMatrix() const {
+        static_assert(n == m, "asMatrix() only for square arrays");
+        return *reinterpret_cast<const Matrix<n, T> *>(this);
+    }
+#endif
+
 
     /// casting from one Array (number) type to another
     /// TODO: CHECK AVX CONVERSIONS
@@ -258,7 +272,7 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// Generate gaussian random elements
-    inline Array<n, m, T> &gaussian() output_only {
+    inline Array<n, m, T> &gaussian_random() output_only {
         for (int i = 0; i < n * m; i++) {
             ::gaussian_random(c[i]);
         }
@@ -415,10 +429,10 @@ inline void random(output_only Array<n, m, T> &mat) {
     mat.random();
 }
 
-/// Function that calls the gaussian()-method
+/// Function that calls the gaussian_random()-method
 template <int n, int m, typename T>
 inline void gaussian_random(output_only Array<n, m, T> &mat) {
-    mat.gaussian();
+    mat.gaussian_random();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
