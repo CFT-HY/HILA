@@ -150,6 +150,11 @@ static inline Parity opp_parity(const Parity p) {
     return static_cast<Parity>(0x3 & ((u << 1) | (u >> 1)));
 }
 
+// Define ~parity as opp_parity
+static inline Parity operator~(const Parity p) {
+    return opp_parity(p);
+}
+
 static inline bool is_even_odd_parity(Parity p) {
     return (p == EVEN || p == ODD);
 }
