@@ -19,7 +19,7 @@
 #endif
 
 // This is a marker for hilapp -- will be removed by it
-#define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__=ODD)
+#define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
 
 template <typename T>
 class Field;
@@ -29,8 +29,6 @@ void ensure_field_operators_exist(Field<T> &f);
 
 template <typename T>
 using element = T;
-
-
 
 /// Field class
 /// This implements the standard methods for accessing fields
@@ -114,7 +112,8 @@ class Field {
 
         void initialize_communication() {
             for (int d = 0; d < NDIRS; d++) {
-                for (int p = 0; p < 3; p++) move_status[p][d] = fetch_status::NOT_DONE;
+                for (int p = 0; p < 3; p++)
+                    move_status[p][d] = fetch_status::NOT_DONE;
                 send_buffer[d] = nullptr;
 #ifndef VANILLA
                 receive_buffer[d] = nullptr;
@@ -124,7 +123,8 @@ class Field {
 
         void free_communication() {
             for (int d = 0; d < NDIRS; d++) {
-                if (send_buffer[d] != nullptr) payload.free_mpi_buffer(send_buffer[d]);
+                if (send_buffer[d] != nullptr)
+                    payload.free_mpi_buffer(send_buffer[d]);
 #ifndef VANILLA
                 if (receive_buffer[d] != nullptr)
                     payload.free_mpi_buffer(receive_buffer[d]);
@@ -296,7 +296,8 @@ class Field {
 #elif defined(CUDA) || defined(HIP)
 
             unsigned offs = 0;
-            if (par == ODD) offs = from_node.sites / 2;
+            if (par == ODD)
+                offs = from_node.sites / 2;
             if (receive_buffer[d] == nullptr) {
                 receive_buffer[d] = payload.allocate_mpi_buffer(from_node.sites);
             }
@@ -309,7 +310,8 @@ class Field {
                 return (T *)payload.get_buffer() + from_node.offset(par);
             } else {
                 unsigned offs = 0;
-                if (par == ODD) offs = from_node.sites / 2;
+                if (par == ODD)
+                    offs = from_node.sites / 2;
 
                 if (vector_lattice->is_boundary_permutation[abs(d)]) {
                     // extra copy operation needed
@@ -368,7 +370,9 @@ class Field {
     }
 
     // constructor with compatible scalar
-    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value ||
+                                               std::is_convertible<A, T>::value,
+                                           int> = 0>
     Field(const A &val) {
         fs = nullptr;
         (*this)[ALL] = val;
@@ -424,7 +428,7 @@ class Field {
         }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir (dir) {
+        foralldir(dir) {
             fs->boundary_condition[dir] = BoundaryCondition::PERIODIC;
             fs->boundary_condition[-dir] = BoundaryCondition::PERIODIC;
         }
@@ -441,7 +445,8 @@ class Field {
         // don't call destructors when exiting - either MPI or cuda can already
         // be off.
         if (fs != nullptr && !hila::about_to_finish) {
-            for (Direction d = (Direction)0; d < NDIRS; ++d) drop_comms(d, ALL);
+            for (Direction d = (Direction)0; d < NDIRS; ++d)
+                drop_comms(d, ALL);
             fs->free_payload();
             fs->free_communication();
             std::free(fs);
@@ -470,7 +475,8 @@ class Field {
     /// Must be called BEFORE the var is actually used
     /// "hilapp" will generate these calls as needed!
     void check_alloc() {
-        if (!is_allocated()) allocate();
+        if (!is_allocated())
+            allocate();
     }
 
     /// If Field is const specified, we should not be able to write to it in the first
@@ -584,7 +590,7 @@ class Field {
 
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir (dir) {
+        foralldir(dir) {
             set_boundary_condition(dir, rhs.get_boundary_condition(dir));
         }
     }
@@ -660,14 +666,18 @@ class Field {
     }
 
     // More general = - possible only if T = A is OK
-    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value ||
+                                               std::is_convertible<A, T>::value,
+                                           int> = 0>
     Field<T> &operator=(const Field<A> &rhs) {
         (*this)[ALL] = rhs[X];
         return *this;
     }
 
     // Assign from element
-    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
+    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value ||
+                                               std::is_convertible<A, T>::value,
+                                           int> = 0>
     Field<T> &operator=(const A &d) {
         (*this)[ALL] = d;
         return *this;
@@ -676,6 +686,7 @@ class Field {
     // assignment of 0 - nullptr, zeroes field
     Field<T> &operator=(const std::nullptr_t &z) {
         (*this)[ALL] = 0;
+        return *this;
     }
 
     // Do also move assignment
@@ -923,10 +934,10 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Parity par_s;
 
     int len = 0;
-    foralldir (d)
-        len += abs(rem[d]);
+    foralldir(d) len += abs(rem[d]);
 
-    if (len == 0) return *this;
+    if (len == 0)
+        return *this;
 
     // opp_parity(ALL) == ALL
     if (len % 2 == 0)
@@ -937,7 +948,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     // is this already fetched from one of the dirs in v?
     bool found_dir = false;
     Direction mdir;
-    foralldir (d) {
+    foralldir(d) {
         if (rem[d] > 0 && move_status(par_s, d) == fetch_status::DONE) {
             mdir = d;
             found_dir = true;
@@ -951,7 +962,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
 
     if (!found_dir) {
         // now did not find a 'ready' dir. Take the 1st available
-        foralldir (d) {
+        foralldir(d) {
             if (rem[d] > 0) {
                 mdir = d;
                 break;
@@ -966,7 +977,8 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> r1;
     r1[par_s] = (*this)[X + mdir];
 
-    if (len == 1) return r1;
+    if (len == 1)
+        return r1;
 
     // and subtract remaining moves from rem
     rem = rem - mdir;
@@ -977,7 +989,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     from = &r1;
     to = &r2;
 
-    foralldir (d) {
+    foralldir(d) {
         if (rem[d] != 0) {
             mdir = (rem[d] > 0) ? d : -d;
 
@@ -1002,9 +1014,11 @@ template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> result;
 
-    onsites (par) { if }
+    onsites(par) {
+        if
+    }
     r2 = *this;
-    foralldir (d) {
+    foralldir(d) {
         if (abs(v[d]) > 0) {
             Direction dir;
             if (v[d] > 0)
@@ -1165,10 +1179,12 @@ void Field<T>::wait_fetch(Direction d, Parity p) const {
     lattice_struct::comm_node_struct &to_node = ci.to_node;
 
     // check if this is done - either fetched or no comm to be done in the 1st place
-    if (is_fetched(d, p)) return;
+    if (is_fetched(d, p))
+        return;
 
     // this is the branch if no comms -- shuffle was done in start_fetch
-    if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) return;
+    if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank())
+        return;
 
     // if (!is_move_started(d,p)) {
     //   output0 << "Wait move error - wait_fetch without corresponding start_fetch\n";
@@ -1210,7 +1226,8 @@ void Field<T>::wait_fetch(Direction d, Parity p) const {
         }
     }
 
-    if (n_wait == 2) par = EVEN; // we'll flip both
+    if (n_wait == 2)
+        par = EVEN; // we'll flip both
 
     for (int wait_i = 0; wait_i < n_wait; ++wait_i) {
 
@@ -1255,12 +1272,16 @@ template <typename T>
 void Field<T>::drop_comms(Direction d, Parity p) const {
 
     if (is_comm_initialized()) {
-        if (is_move_started(d, ALL)) cancel_comm(d, ALL);
+        if (is_move_started(d, ALL))
+            cancel_comm(d, ALL);
         if (p != ALL) {
-            if (is_move_started(d, p)) cancel_comm(d, p);
+            if (is_move_started(d, p))
+                cancel_comm(d, p);
         } else {
-            if (is_move_started(d, EVEN)) cancel_comm(d, EVEN);
-            if (is_move_started(d, ODD)) cancel_comm(d, ODD);
+            if (is_move_started(d, EVEN))
+                cancel_comm(d, EVEN);
+            if (is_move_started(d, ODD))
+                cancel_comm(d, ODD);
         }
     }
 }
@@ -1541,7 +1562,7 @@ void Field<T>::write_to_stream(std::ofstream &outputfile) {
     for (; i < lattice->volume(); i++) {
         CoordinateVector site;
         size_t ii = i;
-        foralldir (dir) {
+        foralldir(dir) {
             site[dir] = ii % size[dir];
             ii = ii / size[dir];
         }
@@ -1551,7 +1572,8 @@ void Field<T>::write_to_stream(std::ofstream &outputfile) {
         // Write the buffer when full
         if ((i + 1) % sites_per_write == 0) {
             fs->gather_elements(buffer, coord_list);
-            if (hila::myrank() == 0) outputfile.write((char *)buffer, write_size);
+            if (hila::myrank() == 0)
+                outputfile.write((char *)buffer, write_size);
         }
     }
 
@@ -1613,7 +1635,7 @@ void Field<T>::read_from_stream(std::ifstream &inputfile) {
     for (; i < lattice->volume(); i++) {
         CoordinateVector site;
         size_t ii = i;
-        foralldir (dir) {
+        foralldir(dir) {
             site[dir] = ii % size[dir];
             ii = ii / size[dir];
         }
@@ -1622,7 +1644,8 @@ void Field<T>::read_from_stream(std::ifstream &inputfile) {
 
         // Read the buffer when full
         if ((i + 1) % sites_per_read == 0) {
-            if (hila::myrank() == 0) inputfile.read((char *)buffer, read_size);
+            if (hila::myrank() == 0)
+                inputfile.read((char *)buffer, read_size);
             fs->send_elements(buffer, coord_list);
         }
     }
@@ -1688,7 +1711,7 @@ static void read_fields(std::string filename, fieldtypes &... fields) {
 inline void dummy_X_f() {
     Direction d1 = e_x;
     CoordinateVector v1(0);
-    onsites (ALL) {
+    onsites(ALL) {
         Direction d;
         d = +d1;
         d = -d1; // unaryops
@@ -1722,8 +1745,9 @@ inline void ensure_field_operators_exist(Field<T> &f) {
 
     f[ALL] = -f[X];
     // same for non-vectorized loop
-    onsites (ALL) {
-        if (X.coordinate(e_x) < X.coordinate(e_y)) f[X] = -f[X];
+    onsites(ALL) {
+        if (X.coordinate(e_x) < X.coordinate(e_y))
+            f[X] = -f[X];
     }
 
     // make shift also explicit
