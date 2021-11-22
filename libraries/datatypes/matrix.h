@@ -30,6 +30,13 @@ using Vector = Matrix<n, 1, T>;
 template <int n, typename T>
 using HorizontalVector = Matrix<1, n, T>;
 
+///////////////////////////////////////////////////////////////
+/// Define SquareMatrix as an alias
+///////////////////////////////////////////////////////////////
+
+template <int n, typename T>
+using SquareMatrix = Matrix<n, n, T>;
+
 // template <const int n, const int m, typename T>
 // class DaggerMatrix;
 
@@ -252,7 +259,8 @@ class Matrix_t {
     }
 
     /// Assign from "scalar" for square matrix
-    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
+    template <typename S,
+              std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
     inline Mtype &operator=(const S rhs) output_only {
 
         for (int i = 0; i < n; i++)
@@ -543,7 +551,6 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator-=;
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator*=;
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator/=;
-
 };
 
 namespace hila {
