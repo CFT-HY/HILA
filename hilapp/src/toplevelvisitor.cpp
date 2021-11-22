@@ -112,8 +112,8 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     if (CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(e)) {
         lfe.fullExpr = OC;
         // take name
-        lfe.nameExpr = OC->getArg(0);
-        lfe.parityExpr = OC->getArg(1);
+        lfe.nameExpr = OC->getArg(0)->IgnoreImplicit();
+        lfe.parityExpr = OC->getArg(1)->IgnoreImplicit();
     } else if (ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(e)) {
         // In template definition TODO: should be removed?
 
@@ -1641,12 +1641,12 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
 
     CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
     bool found = false;
-    if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0)))
+    if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0)->IgnoreImplicit())) {
         found = true;
-    else {
+    } else {
         // check also Field<double> or some other non-class var
         BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
-        if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS()))
+        if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS()->IgnoreImplicit()))
             found = true;
     }
 
@@ -1741,7 +1741,7 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
     // assigment through operator=()
 
     CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
-    if (OP && OP->isAssignmentOp() && is_field_with_coordinate(OP->getArg(0))) {
+    if (OP && OP->isAssignmentOp() && is_field_with_coordinate(OP->getArg(0)->IgnoreImplicit())) {
         const char *sp = getOperatorSpelling(OP->getOperator());
         if (sp[0] != '=') {
             // it's a compound assignment, not allowed
@@ -1751,7 +1751,7 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
             return false;
         }
 
-        field_with_coordinate_assign(OP->getArg(0), OP->getArg(1),
+        field_with_coordinate_assign(OP->getArg(0)->IgnoreImplicit(), OP->getArg(1)->IgnoreImplicit(),
                                      OP->getOperatorLoc());
         was_previously_assigned = true;
 
@@ -1760,14 +1760,14 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
 
     // check also Field<double> or some other non-class assign
     BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
-    if (BO && BO->isAssignmentOp() && is_field_with_coordinate(BO->getLHS())) {
+    if (BO && BO->isAssignmentOp() && is_field_with_coordinate(BO->getLHS()->IgnoreImplicit())) {
         if (BO->isCompoundAssignmentOp()) {
             reportDiag(
                 DiagnosticsEngine::Level::Error, BO->getOperatorLoc(),
                 "Only direct assignment '=' allowed for Field[CoordinateVector]");
             return false;
         }
-        field_with_coordinate_assign(BO->getLHS(), BO->getRHS(), BO->getOperatorLoc());
+        field_with_coordinate_assign(BO->getLHS()->IgnoreImplicit(), BO->getRHS()->IgnoreImplicit(), BO->getOperatorLoc());
         was_previously_assigned = true;
 
         return true;

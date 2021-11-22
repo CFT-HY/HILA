@@ -288,7 +288,8 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
 
                             reason.push_back("type of variables '" + vi.name + "' is " +
                                              vi.vecinfo.basetype_str + " and '" +
-                                             vector_var_name + "' is " + vector_var_type);
+                                             vector_var_name + "' is " +
+                                             vector_var_type);
                         }
                     } else {
                         is_vectorizable = false;
@@ -475,7 +476,8 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
                  << looping_var << ");\n";
 
             if (loop_info.has_conditional && !l.is_read_atX) {
-                code << "// Value of var " << l.loop_ref_name << " read in because loop has conditional\n";
+                code << "// Value of var " << l.loop_ref_name
+                     << " read in because loop has conditional\n";
                 code << "// TODO: MAY BE UNNECESSARY, write more careful analysis\n";
             }
 
@@ -519,11 +521,15 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
         loopBuf.replace(sfc.replace_range, repl);
     }
 
-    // Vector reductions must be in the sames scope as the loop body. Otherwise the index
-    // may be undefined. Therefore add it before the closing }
+    // Vector reductions must be in the sames scope as the loop body. Otherwise the
+    // index may be undefined. Therefore add it before the closing }
     if (!semicolon_at_end) {
         // Remove the last }
-        loopBuf.remove(loopBuf.size() - 2, loopBuf.size() - 1);
+        if (loopBuf.get(loopBuf.size() - 1, loopBuf.size() - 1) != "}") {
+            llvm::errs() << "Internal loopBuf error in AVX codegen\n";
+            exit(0);
+        }
+        loopBuf.remove(loopBuf.size() - 1, loopBuf.size() - 1);
     }
 
     // Dump the main loop code here

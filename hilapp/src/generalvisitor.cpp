@@ -108,7 +108,7 @@ bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr,
                 *opcodestr = getOperatorSpelling(OP->getOperator());
 
             if (assignee) {
-                *assignee = OP->getArg(0);
+                *assignee = OP->getArg(0)->IgnoreImplicit();
             }
 
             return true;
@@ -123,7 +123,7 @@ bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr,
                 *opcodestr = B->getOpcodeStr().str();
 
             if (assignee) {
-                *assignee = B->getLHS();
+                *assignee = B->getLHS()->IgnoreImplicit();
             }
 
             return true;
