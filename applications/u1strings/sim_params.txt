@@ -7,7 +7,7 @@ sigma               1.0
 dx                  0.5
 era                 1.0
 tStart              50.0
-tEnd                200.0
+tEnd                300.0
 lambda              2.0
 tdif                70.0
 difFac              3.0
@@ -15,8 +15,9 @@ tcg                 70.0
 s1                  0.0
 s2                  0.0
 smooth              0
-initialCondition    0
+initialCondition    3
+PhiLength           5.0
 tStats              50.0
-numberStatsOutputs  130
+numberStatsOutputs  125
 dtdxRatio           0.2
-output_file         output
+output_file         stats/1ks0lp5-1.dat
