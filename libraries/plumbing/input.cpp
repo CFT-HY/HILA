@@ -19,7 +19,21 @@ namespace hila {
 
 static std::string empty_key("");
 
-bool input::open(const std::string &fname, bool exit_on_error) {
+bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_error) {
+    extern const char * input_file;
+
+    std::string fname;
+
+    if (use_cmdline && input_file != nullptr) {
+        fname = input_file;
+        if (hila::myrank() == 0) {
+            hila::output << "Using input file '" << fname << "' from command line\n";
+        }
+        input_file = nullptr;   // set this null, so that it is not used again
+    } else {
+        fname = file_name;
+    }
+
     bool got_error = false;
     if (hila::myrank() == 0) {
         if (is_initialized) {

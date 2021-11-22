@@ -216,7 +216,7 @@ class input {
     ~input() { close(); }
     input(const std::string &fname) { open(fname); }
 
-    bool open(const std::string &fname, bool exit_on_error = true);
+    bool open(const std::string &fname, bool use_cmdline = true, bool exit_on_error = true);
     void close();
 
     // make class quiet (no printouts), quiet(false) returns to normal

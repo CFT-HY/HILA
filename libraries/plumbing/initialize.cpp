@@ -8,6 +8,7 @@ std::ofstream hila::output_file;
 bool hila::about_to_finish = false;
 bool hila::check_input = false;
 int hila::check_with_nodes;
+const char *hila::input_file;
 logger_class hila::log;
 
 // let us house the sublattices-struct here
@@ -41,7 +42,9 @@ class cmdlineargs {
             argv[i] = argv0[i];
     }
 
-    ~cmdlineargs() { free(argv); }
+    ~cmdlineargs() {
+        free(argv);
+    }
 
     const char *get_cstring(const char *flag) {
         int flaglen = strlen(flag);
@@ -107,19 +110,23 @@ class cmdlineargs {
     void error_if_args_remain() {
         if (argc < 2)
             return;
-        output0 << "Unknown command line arguments:\n";
-        for (int i = 1; i < argc; i++) {
-            output0 << "    " << argv[i] << '\n';
+        if (hila::myrank() == 0) {
+            hila::output << "Unknown command line arguments:\n";
+            for (int i = 1; i < argc; i++) {
+                hila::output << "    " << argv[i] << '\n';
+            }
+            // clang-format off
+            hila::output
+                << "Recognized:\n"
+                << "  timelimit=<seconds> : cpu time limit\n"
+                << "  output=<name>       : output filename (default: stdout)\n"
+                << "  input=<name>        : input filename (overrides the 1st hila::input() name)\n"
+                << "  check\n"
+                << "  check=<nodes>       : check input & layout with <nodes>-nodes & exit\n"
+                << "  sublattices=<n>     : number of sublattices\n"
+                << "  sync=yes/no         : synchronize sublattice runs (default=no)\n";
+            // clang-format on
         }
-        output0 << "Recognized:\n";
-        output0 << "  timelimit=<seconds> : cpu time limit\n";
-        output0 << "  check\n";
-        output0 << "  check=<nodes>       : check input & layout with <nodes>-nodes & "
-                   "exit\n";
-        output0 << "  output=<name>       : name of output file (default: stdout)\n";
-        output0 << "  sublattices=<n>     : number of sublattices\n";
-        output0 << "  sync=yes/no         : synchronize sublattice runs (default=no)\n";
-
         hila::terminate(0);
     }
 };
@@ -166,7 +173,8 @@ void hila::initialize(int argc, char **argv) {
         }
         if (nodes != LONG_MAX) {
             hila::check_input = true;
-            if (nodes <= 0) nodes = 1;
+            if (nodes <= 0)
+                nodes = 1;
             hila::check_with_nodes = nodes;
             hila::output << "****** INPUT AND LAYOUT CHECK ******\n";
         }
@@ -235,7 +243,7 @@ void hila::initialize(int argc, char **argv) {
         hila::output << "with options:";
 #ifdef EVEN_SITES_FIRST
         hila::output << " EVEN_SITES_FIRST";
-#endif  
+#endif
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         hila::output << " SPECIAL_BOUNDARY_CONDITIONS";
 #endif
@@ -255,6 +263,16 @@ void hila::initialize(int argc, char **argv) {
     // re-read the check= -option, to clean up
     commandline.get_int("check=");
     commandline.get_cstring("check");
+
+    if ((hila::input_file = commandline.get_cstring("input="))) {
+        if (std::strlen(hila::input_file) == 0) {
+            output0
+                << "Filename must be given with input=<name>  (no spaces allowed)\n";
+            hila::finishrun();
+        }
+
+        output0 << "Input filename from command line: " << hila::input_file << '\n';
+    }
 
     // error out if there are more cmdline options
     commandline.error_if_args_remain();
@@ -316,7 +334,7 @@ void hila::seed_random(unsigned long seed) {
     hila::seed_device_rng(seed);
 #endif
 
-        // taus_initialize();
+    // taus_initialize();
 
 #else
     // Now SITERAND is defined
@@ -366,7 +384,9 @@ void hila::error(const char *msg) {
     hila::terminate(0);
 }
 
-void hila::error(const std::string &msg) { hila::error(msg.c_str()); }
+void hila::error(const std::string &msg) {
+    hila::error(msg.c_str());
+}
 
 ////////////////////////////////////////////////////////////////
 /// Normal, controlled exit - all nodes must call this.
@@ -383,8 +403,9 @@ void hila::finishrun() {
         int64_t avoided = lattice->n_gather_avoided;
         if (lattice->node_rank() == 0) {
             if (gathers + avoided > 0) {
-                output0 << " COMMS from node 0: " << gathers << " done, " << avoided << "("
-                        << 100.0 * avoided / (avoided + gathers) << "%) optimized away\n";
+                output0 << " COMMS from node 0: " << gathers << " done, " << avoided
+                        << "(" << 100.0 * avoided / (avoided + gathers)
+                        << "%) optimized away\n";
             } else {
                 output0 << " No communications done from node 0\n";
             }
@@ -583,7 +604,6 @@ void vector_type_info() {
     output0 << '\n';
     if (INSTRSET < 8)
         output0 << " (You probably should use options '-mavx2 -fmad' in compilation)\n";
-
 }
 
 

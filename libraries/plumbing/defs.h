@@ -47,18 +47,18 @@
 
 // This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!
 #define output_only
-// output_only for methods tells hilapp that the base variable original value is not needed:
-// class C { 
-//    int set() output_only { .. } 
+// output_only for methods tells hilapp that the base variable original value is not
+// needed: class C {
+//    int set() output_only { .. }
 // };
 // indicates that a.set(); does not need original value of a.
 // Can also be used in function arguments:
-//    int func( output_only double & p, ..);  
+//    int func( output_only double & p, ..);
 
 // Defined empty on purpose, same as above!
 #define const_function
-// const_function does not change the base variable, but can return a (non-const) reference.
-// Needed typically for access operators for loop extern variables:
+// const_function does not change the base variable, but can return a (non-const)
+// reference. Needed typically for access operators for loop extern variables:
 //     class v {
 //         double c[N];
 //         double & e(const int i) const_function { return c[i]; }
@@ -68,9 +68,9 @@
 //     Field<v>  f;
 //     onsites(ALL) { f[X].e(0) += vv.e(0); }
 // This would not work without const_function, because vv.e(1) might modify loop
-// extern variable vv, which is not allowed.  If method is marked "const", 
+// extern variable vv, which is not allowed.  If method is marked "const",
 // then the assignment would not work.
-// 
+//
 // const_function is weaker than const.
 
 
@@ -96,6 +96,9 @@ extern bool about_to_finish;
 // input values and will exit before fields are allocated.
 extern bool check_input;
 extern int check_with_nodes;
+
+// optional input filename
+extern const char *input_file;
 
 void initialize(int argc, char **argv);
 void finishrun();
@@ -134,7 +137,6 @@ extern logger_class log;
 enum class fft_direction { forward, back };
 
 
-
 // Backend defs-headers
 
 #if defined(CUDA) || defined(HIP)
@@ -162,12 +164,13 @@ enum class fft_direction { forward, back };
 #ifndef USE_MPI
 
 // broadcast does nothing if not MPI
-template <typename T> void broadcast(T &v) {}
+template <typename T>
+void broadcast(T &v) {}
 
-template <typename T> void broadcast_array(T *var, int n) {}
+template <typename T>
+void broadcast_array(T *var, int n) {}
 
 #endif
-
 
 
 int numnodes();
