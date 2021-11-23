@@ -250,30 +250,32 @@ class Algebra<SUmatrix<N, T>> {
     //  ..
     //  \lambda_N-1 = diag(1,.. ,1,-(N-1))/sqrt(N(N-1)/2)/2
     //
-    // Normalize so that off-diag element
-    //   <|od|^2> = 1 = <od.re^2> + <od.im^2> = 1/2 + 1/2
-    // Thus, matrix is
-    //   ah = i h = i sqrt(2) \lambda_i \xi_i
-    // and from distribution
-    //   p(ah) = exp(-Tr h^2 / 2) = exp(-\xi_i^2/2)
+    // Normalize so that the coefficients of \lambda_i are
+    // set by gaussrand(), i.e. their <> = 1.  Then
+    //     ah = i h = i \lambda_i \xi_i,
+    // and 
+    //     p = exp(-Tr h^2 ) = exp(-1/2 \xi_i^2)
+    //
+    //   <|od|^2> = 1/2 = <od.re^2> + <od.im^2> = 1/4 + 1/4
     //
 
     Algebra &gaussian_random() output_only {
 
-        const double invsqrt2 = 1.0 / sqrt(2.0);
+        const T inv2 = 1.0 / 2.0;
 
         // off-diag elements, easy
         for (int i = 0; i < n_offdiag; i++) {
-            double r;
-            offdiag[i].re = invsqrt2 * hila::gaussrand2(r);
-            offdiag[i].im = invsqrt2 * r;
+            T r;
+            offdiag[i].re = inv2 * hila::gaussrand2(r);
+            offdiag[i].im = inv2 * r;
         }
 
         // then, diagonal elements - sum over generators i
 
         diag[0] = 0;
         for (int i = 1; i < N; i++) {
-            T r = hila::gaussrand() * sqrt(0.5 / (i * (i + 1) / 2));
+            // sqrt(0.125) = sqrt(1/2)/2 
+            T r = hila::gaussrand() * sqrt(0.125 / (i * (i + 1)));
             // add the normalized 'ones' in generators
             for (int j = 0; j < i; j++)
                 diag[j] += r;
@@ -285,19 +287,21 @@ class Algebra<SUmatrix<N, T>> {
         return *this;
     }
 
-    /// calculate the norm as sum of squares of elements of the matrix
-    /// If ah = i h, this is
-    /// Tr h^2 = 1/2 h_a^2 = |h_ij|^2
+    /// calculate the norm as sum of squares of elements of the coeffs of
+    /// the generators:  if h = a_i \lambda_i, gives a_i^2
+    /// Thus, 2 Tr h^2 = a_i^2
+    /// Or, sum |h_ij|^2 = sum h_ji^* h_ij = Tr h^2 = 1/2 a_i^2
+
     T squarenorm() const {
         T res = 0;
         T rem = 0;
         for (int i = 0; i < n_diag; i++) {
             rem += diag[i];
-            res += diag[i] * diag[i];
+            res += 2.0 * diag[i] * diag[i];
         }
-        res += rem * rem;
+        res += 2.0 * rem * rem;
         for (int i = 0; i < n_offdiag; i++) {
-            res += 2.0 * offdiag[i].squarenorm();
+            res += 4.0 * offdiag[i].squarenorm();
         }
         return res;
     }

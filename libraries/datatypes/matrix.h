@@ -105,12 +105,14 @@ class Matrix_t {
     }
 
     // cast to curious type
+#pragma hila loop_function
     template <typename Tm = Mtype,
               std::enable_if_t<!std::is_same<Tm, Matrix<n, m, T>>::value, int> = 0>
     inline operator Mtype &() {
         return *reinterpret_cast<Mtype *>(this);
     }
 
+#pragma hila loop_function
     template <typename Tm = Mtype,
               std::enable_if_t<!std::is_same<Tm, Matrix<n, m, T>>::value, int> = 0>
     inline operator const Mtype &() const {
@@ -118,9 +120,11 @@ class Matrix_t {
     }
 
     /// automatically cast to generic matrix
+#pragma hila loop_function
     inline operator Matrix<n, m, T> &() {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
     }
+#pragma hila loop_function
     inline operator const Matrix<n, m, T> &() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
@@ -150,11 +154,13 @@ class Matrix_t {
     }
 
     /// standard access ops m.e(i,j) - assume T is small, as it should
+#pragma hila loop_function
     inline const T &e(const int i, const int j) const {
         // return elem[i][j];
         return c[i * m + j];
     }
     /// standard access ops m.e(i,j) - assume T is small, as it should
+#pragma hila loop_function
     inline T &e(const int i, const int j) const_function {
         // return elem[i][j];
         return c[i * m + j];
@@ -162,11 +168,13 @@ class Matrix_t {
 
     /// declare single e here too in case we have a vector
     /// (one size == 1)
+#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
     }
 
+#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T &e(const int i) const_function {
         return c[i];
@@ -174,11 +182,13 @@ class Matrix_t {
 
     /// And also [] for vectors (not matrices!)
     /// (one size == 1)
+#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T operator[](const int i) const {
         return c[i];
     }
 
+#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T &operator[](const int i) const_function {
         return c[i];
@@ -249,6 +259,7 @@ class Matrix_t {
     }
 
     /// Assign from different type matrix
+#pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) output_only {
@@ -259,6 +270,7 @@ class Matrix_t {
     }
 
     /// Assign from "scalar" for square matrix
+#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
     inline Mtype &operator=(const S rhs) output_only {
@@ -396,7 +408,7 @@ class Matrix_t {
     /// Transpose of a vector: just return a ref
     template <int mm = m, std::enable_if_t<mm == 1, int> = 0>
     inline const HorizontalVector<n, T> &transpose() const {
-        return *static_cast<HorizontalVector<n, T> *>(this);
+        return *reinterpret_cast<const HorizontalVector<n, T> *>(this);
     }
 
     ////////////////////////////////////////////////////////////////////
