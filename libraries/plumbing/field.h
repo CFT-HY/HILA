@@ -27,8 +27,6 @@ class Field;
 template <typename T>
 void ensure_field_operators_exist(Field<T> &f);
 
-template <typename T>
-using element = T;
 
 /// Field class
 /// This implements the standard methods for accessing fields

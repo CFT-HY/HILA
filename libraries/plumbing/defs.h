@@ -136,6 +136,9 @@ extern logger_class log;
 /// define a class for FFT direction
 enum class fft_direction { forward, back };
 
+// trivial template for helping vectorization
+template <typename T>
+using element = T;
 
 // Backend defs-headers
 

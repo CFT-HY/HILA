@@ -154,13 +154,11 @@ class Matrix_t {
     }
 
     /// standard access ops m.e(i,j) - assume T is small, as it should
-#pragma hila loop_function
     inline const T &e(const int i, const int j) const {
         // return elem[i][j];
         return c[i * m + j];
     }
     /// standard access ops m.e(i,j) - assume T is small, as it should
-#pragma hila loop_function
     inline T &e(const int i, const int j) const_function {
         // return elem[i][j];
         return c[i * m + j];
@@ -168,13 +166,11 @@ class Matrix_t {
 
     /// declare single e here too in case we have a vector
     /// (one size == 1)
-#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T e(const int i) const {
         return c[i];
     }
 
-#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T &e(const int i) const_function {
         return c[i];
@@ -182,13 +178,11 @@ class Matrix_t {
 
     /// And also [] for vectors (not matrices!)
     /// (one size == 1)
-#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T operator[](const int i) const {
         return c[i];
     }
 
-#pragma hila loop_function
     template <int q = n, int p = m, std::enable_if_t<(q == 1 || p == 1), int> = 0>
     inline T &operator[](const int i) const_function {
         return c[i];
@@ -310,6 +304,7 @@ class Matrix_t {
     }
 
     /// subtract assign a Matrix_t
+#pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator-=(const Matrix_t<n, m, S, MT> &rhs) {
@@ -320,6 +315,7 @@ class Matrix_t {
     }
 
     /// add assign type T and convertible
+#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value,
                                int> = 0>
@@ -336,6 +332,7 @@ class Matrix_t {
     }
 
     /// subtract assign type T and convertible
+#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value,
                                int> = 0>
@@ -350,6 +347,7 @@ class Matrix_t {
     }
 
     /// multiply assign with matrix
+#pragma hila loop_function
     template <int p, typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value,
                                int> = 0>
@@ -362,6 +360,7 @@ class Matrix_t {
     }
 
     /// multiply assign with scalar
+#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value,
                                int> = 0>
@@ -373,6 +372,7 @@ class Matrix_t {
     }
 
     /// divide assign with scalar
+#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value,
                                int> = 0>
