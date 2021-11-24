@@ -141,8 +141,10 @@ struct Complex {
         return *this;
     }
 
-    inline Complex<T> &gaussian_random() output_only {
-        re = hila::gaussrand2(im);
+    inline Complex<T> &gaussian_random(hila::number_type<T> width = 1.0) output_only {
+        double d;
+        re = hila::gaussrand2(d) * width;
+        im = d*width;
         return *this;
     }
 
@@ -434,9 +436,9 @@ inline void random(Complex<T> &c) {
 }
 
 template <typename T>
-inline void gaussian_random(Complex<T> &c) {
-    gaussian_random(c.re);
-    gaussian_random(c.im);
+inline void gaussian_random(Complex<T> &c, hila::number_type<T> width = 1.0) {
+    gaussian_random(c.re, width);
+    gaussian_random(c.im, width);
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -461,23 +463,6 @@ constexpr Complex<double> operator""_i(unsigned long long a) {
     return Complex<double>(0.0, static_cast<double>(a));
 }
 
-//////////////////////////////////////////////////////////////////////////
-
-// define also real(), imag(), conj() -functions for basic arithmetic types
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
-inline T real(T val) {
-    return val;
-}
-
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
-inline T imag(T val) {
-    return (T)0;
-}
-
-template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
-inline T conj(T val) {
-    return val;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Set of complex functions

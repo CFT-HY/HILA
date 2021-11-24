@@ -14,7 +14,6 @@
 #include "plumbing/field.h"
 #include "plumbing/reduction.h"
 #include "plumbing/vectorreduction.h"
-#include "plumbing/input.h"
 #include "plumbing/vector_field.h"
 
 #if defined(CUDA) || defined(HIP)
@@ -22,5 +21,6 @@
 #endif
 
 #include "plumbing/fft.h"
+#include "plumbing/input.h"
 
 #endif

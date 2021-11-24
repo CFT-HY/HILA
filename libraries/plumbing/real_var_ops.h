@@ -37,8 +37,8 @@ inline T norm(T val) {
 
 // this defines gaussian_random(T & arg) for all double -> T convertible types
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
-inline void gaussian_random(T &d) {
-    d = static_cast<T>(hila::gaussrand());
+inline void gaussian_random(T &d, T width = 1.0) {
+    d = static_cast<T>(hila::gaussrand()) * width;
 }
 
 // this does the same for std. random
