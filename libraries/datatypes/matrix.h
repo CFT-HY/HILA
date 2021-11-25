@@ -524,9 +524,9 @@ class Matrix_t {
     }
 
     /// Generate gaussian random elements
-    inline Mtype &gaussian_random() output_only {
+    inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) output_only {
         for (int i = 0; i < n * m; i++) {
-            ::gaussian_random(c[i]);
+            ::gaussian_random(c[i],width);
         }
         return *this;
     }
@@ -1016,8 +1016,8 @@ inline void random(output_only Mt &mat) {
 
 /// Function that calls the gaussian_random()-method
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
-inline void gaussian_random(output_only Mt &mat) {
-    mat.gaussian_random();
+inline void gaussian_random(output_only Mt &mat, hila::number_type<Mt> width = 1.0) {
+    mat.gaussian_random(width);
 }
 
 /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed.
@@ -1212,10 +1212,10 @@ Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
 ///  Do it backwards in order to reduce accumulation of errors
 
 template <int n, int m, typename T, typename MT>
-inline Matrix<n, m, T> exp(const Matrix_t<n, m, T, MT> &mat, const int order = 20) {
+inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int order = 20) {
     static_assert(n == m, "exp() only for square matrices");
 
-    Matrix<n, m, T> r;
+    Matrix_t<n, m, T, MT> r;
     constexpr hila::number_type<T> one = 1.0;
 
     r = mat * (one / order) + one;
