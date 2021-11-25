@@ -773,6 +773,14 @@ class Field {
         return f;
     }
 
+    hila::number_type<T> squarenorm() const {
+        hila::number_type<T> n = 0;
+        onsites(ALL) {
+            n += ::squarenorm( (*this)[X] );
+        }
+        return n;
+    }
+
     ///////////////////////////////////////////////////////////////////////
 
     // Communication routines
