@@ -160,6 +160,9 @@ using element = T;
 #include "plumbing/backend_cuda/cuda_templated_ops.h"
 #endif
 
+// Include some basic functions for real (non-class) vars,
+// to help with generic code
+#include "plumbing/real_var_ops.h"
 
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000

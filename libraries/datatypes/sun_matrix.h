@@ -76,7 +76,7 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
     }
 
     /// Make the matrix special unitary
-    inline SUmatrix &make_group_element() {
+    inline SUmatrix &reunitarize() {
         make_unitary();
         fix_det();
         return *this;
@@ -214,23 +214,29 @@ class Algebra<SUmatrix<N, T>> : public Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix
         return m;
     }
 
+
     /// Produce gaussian random distributed algebra
     /// element.
-    /// Normalisation is so that the coefficients of \lambda_i are
-    /// set by gaussrand(), i.e. their <> = 1.  Then
-    //     ah = i h = i \lambda_i \xi_i,
-    // and
-    //     p = exp(-Tr h^2 ) = exp(-1/2 \xi_i^2)
-    //
-    //   <|od|^2> = 1/2 = <od.re^2> + <od.im^2> = 1/4 + 1/4
-    
+    /// Set default normalisation so that the algebra matrix 
+    ///    ah = i h = i xi_i \lambda_i
+    /// is from distribution
+    ///   exp(-Tr h^2 ) = exp(- xi_i^2 / 2 )
+    /// I.E. the coefficients of the generators have 
+    ///   < xi_i^2 > = 1
+    /// 
+    /// Now the off-diag elements have
+    ///   <|od|^2> = 1/2 = <od.re^2> + <od.im^2> = 1/4 + 1/4
+    ///   1/4 (<xi_a^2> + <xi_b^2>)
+    ///
+    /// With this convention the inherited method from Vector
+    /// is fine and the code below is not needed
 
     // Algebra &gaussian_random() output_only {
-
+    //
     //     for (int i=0; i<N_a; i++) {
     //         a.e(i) = hila::gaussrand();
     //     }
-
+    //
     //     return *this;
     // }
 

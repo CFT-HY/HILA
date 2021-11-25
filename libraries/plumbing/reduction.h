@@ -174,6 +174,7 @@ class Reduction<T, typename std::enable_if<!std::is_arithmetic<T>::value>::type>
 
     /// Return value of the reduction variable.  Wait for the comms if needed.
     T &value() {
+        reduce();
         return (T) * this;
     }
 
