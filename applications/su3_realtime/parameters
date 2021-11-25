@@ -1,0 +1,7 @@
+# This is a parameter file for hila_example
+
+lattice size       32, 32, 32
+updates            100
+
+random seed        3324565456
+
