@@ -30,7 +30,12 @@
 /// open(): open file for reading
 ///
 ///       bool hila::input::open(std::string filename,
+///                              bool use_cmdline,
 ///                              bool exit_on_error=true)
+///
+///    If use_cmdline == true (default), use command line -i -argument
+///    to get the input file name.  Then the "filename" is the default name
+///    used if there is no command line filename.
 ///
 ///    If exit_on_error == true, quit the
 ///    program on error.  The return value is passed to all MPI nodes.
@@ -205,6 +210,7 @@ class input {
     std::ifstream inputfile;
     bool is_initialized = false;
     std::string filename;
+    bool use_cin;
 
     std::string linebuffer;
     size_t lb_start = 0; // linebuffer start index

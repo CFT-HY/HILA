@@ -20,16 +20,14 @@ namespace hila {
 static std::string empty_key("");
 
 bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_error) {
-    extern const char * input_file;
+    extern const char *input_file;
 
     std::string fname;
 
     if (use_cmdline && input_file != nullptr) {
+
         fname = input_file;
-        if (hila::myrank() == 0) {
-            hila::output << "Using input file '" << fname << "' from command line\n";
-        }
-        input_file = nullptr;   // set this null, so that it is not used again
+        input_file = nullptr; // set this null, so that it is not used again
     } else {
         fname = file_name;
     }
@@ -45,20 +43,27 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
             got_error = true;
         } else {
             filename = fname;
-            inputfile.open(fname);
-            if (inputfile.is_open()) {
-                is_initialized = true;
-
+            if (fname == "-") {
+                use_cin = true;
                 if (speaking)
-                    print_dashed_line("Reading file " + filename);
-
+                    print_dashed_line("Reading from standard input");
             } else {
+                use_cin = false;
+                inputfile.open(fname);
+                if (inputfile.is_open()) {
+                    is_initialized = true;
 
-                if (speaking)
-                    hila::output << "Error: input file '" << fname
-                                 << "' could not be opened\n";
+                    if (speaking)
+                        print_dashed_line("Reading file " + filename);
 
-                got_error = true;
+                } else {
+
+                    if (speaking)
+                        hila::output << "Error: input file '" << fname
+                                     << "' could not be opened\n";
+
+                    got_error = true;
+                }
             }
         }
     }
@@ -71,12 +76,13 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
 }
 
 void input::close() {
-    if (is_initialized) {
+    if (is_initialized && !use_cin) {
         inputfile.close();
         is_initialized = false;
-        if (speaking)
-            print_dashed_line();
     }
+    if (speaking)
+        print_dashed_line();
+
     // automatic cleaning of other vars
 }
 
@@ -84,8 +90,15 @@ void input::close() {
 bool input::get_line() {
     if (hila::myrank() == 0) {
         do {
-            inputfile >> std::ws; // remove initial whitespace
-            if (!std::getline(inputfile, linebuffer)) {
+            std::istream *inptr;
+
+            if (use_cin)
+                inptr = &std::cin;
+            else
+                inptr = &inputfile;
+
+            *inptr >> std::ws; // remove initial whitespace
+            if (!std::getline(*inptr, linebuffer)) {
                 linebuffer.clear();
                 lb_start = 0;
                 return false;

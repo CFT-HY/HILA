@@ -22,12 +22,14 @@ void vector_type_info();
 
 ///////////////////////////////////////////////////////////////////////////////
 /// very simple cmdline arg interpreter
-/// p = cmdline.get_cstring("par=");
-/// returns a string of the stuff following "par="
-/// n = cmdline.get_int("par=");
-/// returns (long) int containing the value following "par="
+///   bool          cmdline.get_option("-opt");   - true if '-opt' is present
+///   const char *  cmdline.get_cstring("-flag"); - returns char * to string
+///                                                 following -flag
+///   int           cmdline.get_int("-I");        - returns (long) int after -I
+///   int           cmdline.get_onoff("-t");      - returns 1 for '-t on',
+///                                                 -1 if off and 0 if does not appear
+/// Args are removed after reading them
 ///
-/// NO SPACES are allowed between par and = and the value
 ///////////////////////////////////////////////////////////////////////////////
 class cmdlineargs {
   private:
@@ -46,6 +48,24 @@ class cmdlineargs {
         free(argv);
     }
 
+    bool get_option(const char *flag) {
+        int flaglen = strlen(flag);
+        assert(flaglen > 0);
+
+        for (int i = 1; i < argc; i++) {
+            const char *p = argv[i];
+
+            if (std::strcmp(p, flag) == 0) {
+                argc--;
+                for (; i < argc; i++)
+                    argv[i] = argv[i + 1];
+                return (true);
+            }
+        }
+
+        return false;
+    }
+
     const char *get_cstring(const char *flag) {
         int flaglen = strlen(flag);
         assert(flaglen > 0);
@@ -53,13 +73,17 @@ class cmdlineargs {
         for (int i = 1; i < argc; i++) {
             const char *p = argv[i];
 
-            // OK if p starts with flag, last char is = or next is 0
-            if (strncmp(p, flag, flaglen) == 0 &&
-                (*(p + flaglen - 1) == '=' || *(p + flaglen) == 0)) {
-                p += flaglen;
-                argc--;
+            // OK if p starts with flag
+            if (std::strcmp(p, flag) == 0) {
+                if (i > argc - 2) {
+                    output0 << "Expecting an argument after command line parameter '"
+                            << flag << "'\n";
+                    hila::terminate(0);
+                }
+                p = argv[i + 1];
+                argc -= 2;
                 for (; i < argc; i++)
-                    argv[i] = argv[i + 1];
+                    argv[i] = argv[i + 2];
                 return (p);
             }
         }
@@ -69,8 +93,9 @@ class cmdlineargs {
     long get_int(const char *flag) {
         const char *p = get_cstring(flag);
         char *end;
-        if (!p)
-            return LONG_MAX; // use LONG_MAX to denote no value
+
+        if (p == nullptr)
+            return LONG_MAX; // not found
 
         long val = strtol(p, &end, 10);
         if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) ||
@@ -82,16 +107,16 @@ class cmdlineargs {
         return val;
     }
 
-    /// returns 1=yes, -1=no, 0=not found
-    int get_yesno(const char *flag) {
+    /// returns 1=on, -1=off, 0 not found
+    int get_onoff(const char *flag) {
         const char *p = get_cstring(flag);
-        if (!p)
+        if (p == nullptr)
             return 0;
-        if (std::strcmp(p, "yes") == 0)
+        if (std::strcmp(p, "on") == 0)
             return 1;
-        if (std::strcmp(p, "no") == 0)
+        if (std::strcmp(p, "off") == 0)
             return -1;
-        output0 << "Command line argument " << flag << " requires value yes/no\n";
+        output0 << "Command line argument " << flag << " requires value on/off\n";
         hila::terminate(0);
         return 0; // gets rid of a warning of no return value
     }
@@ -100,31 +125,25 @@ class cmdlineargs {
         return argc - 1; // don't count argv[0]
     }
 
-    const char *get_item(int i) {
-        if (i >= 0 && i < argc - 1)
-            return argv[i + 1];
-        else
-            return nullptr;
-    }
-
     void error_if_args_remain() {
         if (argc < 2)
             return;
         if (hila::myrank() == 0) {
-            hila::output << "Unknown command line arguments:\n";
+            hila::output << "Unknown command line argument:\n";
             for (int i = 1; i < argc; i++) {
                 hila::output << "    " << argv[i] << '\n';
             }
             // clang-format off
             hila::output
                 << "Recognized:\n"
-                << "  timelimit=<seconds> : cpu time limit\n"
-                << "  output=<name>       : output filename (default: stdout)\n"
-                << "  input=<name>        : input filename (overrides the 1st hila::input() name)\n"
-                << "  check\n"
-                << "  check=<nodes>       : check input & layout with <nodes>-nodes & exit\n"
-                << "  sublattices=<n>     : number of sublattices\n"
-                << "  sync=yes/no         : synchronize sublattice runs (default=no)\n";
+                << "  -t <seconds>    : cpu time limit\n"
+                << "  -o <name>       : output filename (default: stdout)\n"
+                << "  -i <name>       : input filename (overrides the 1st hila::input() name)\n"
+                << "                    use '-i -' for standard input\n"
+                << "  -check          : check input & layout with <nodes>-nodes & exit\n"
+                << "  -n nodes        : number of nodes, only relevant with -check\n"
+                << "  -sublattices n  : number of sublattices\n"
+                << "  -sync on/off    : synchronize sublattice runs (default=no)\n";
             // clang-format on
         }
         hila::terminate(0);
@@ -162,16 +181,16 @@ void hila::initialize(int argc, char **argv) {
     // set the timing so that gettime() returns time from this point
     hila::inittime();
 
-    // check the "check=<nodes>" -input early, to avoid starting MPI
+    // check the "-check" -input early, to avoid starting MPI
     // put in braces to have auto cleanup
     {
         cmdlineargs commandline(argc, argv);
-        long nodes = commandline.get_int("check=");
-        if (nodes == LONG_MAX && commandline.get_cstring("check") != nullptr) {
-            // here check without arg
-            nodes = 1;
-        }
-        if (nodes != LONG_MAX) {
+
+        if (commandline.get_option("-check")) {
+            long nodes = commandline.get_int("-n");
+            if (nodes == LONG_MAX)
+                nodes = 1;
+
             hila::check_input = true;
             if (nodes <= 0)
                 nodes = 1;
@@ -199,10 +218,10 @@ void hila::initialize(int argc, char **argv) {
     if (sublattices.number == 1) {
         int do_exit = 0;
         if (hila::myrank() == 0) {
-            if (const char *name = commandline.get_cstring("output=")) {
+            if (const char *name = commandline.get_cstring("-o")) {
                 // Open file for append
                 if (std::strlen(name) == 0) {
-                    hila::output << "Filename must be given with output=<name>\n";
+                    hila::output << "Filename must be given with option '-o'\n";
                     do_exit = 1;
                 } else if (!hila::check_input) {
                     hila::output_file.open(name, std::ios::out | std::ios::app);
@@ -224,8 +243,8 @@ void hila::initialize(int argc, char **argv) {
     }
 
     if (hila::myrank() == 0) {
-        hila::output << "------------- Hila lattice program --------------\n";
-        hila::output << "Running target " << argv[0] << "\n";
+        print_dashed_line("HILA lattice framework");
+        hila::output << "Running program " << argv[0] << "\n";
         hila::output << "with command line arguments '";
         for (int i = 1; i < argc; i++)
             hila::output << argv[i] << ' ';
@@ -252,7 +271,7 @@ void hila::initialize(int argc, char **argv) {
         hila::timestamp("Starting");
     }
 
-    long cputime = commandline.get_int("timelimit=");
+    long cputime = commandline.get_int("-t");
     if (cputime != LONG_MAX) {
         output0 << "CPU time limit " << cputime << " seconds\n";
         hila::setup_timelimit(cputime);
@@ -261,17 +280,17 @@ void hila::initialize(int argc, char **argv) {
     }
 
     // re-read the check= -option, to clean up
-    commandline.get_int("check=");
-    commandline.get_cstring("check");
+    commandline.get_option("-check");
+    commandline.get_cstring("-n");
 
-    if ((hila::input_file = commandline.get_cstring("input="))) {
+    if ((hila::input_file = commandline.get_cstring("-i"))) {
         if (std::strlen(hila::input_file) == 0) {
-            output0
-                << "Filename must be given with input=<name>  (no spaces allowed)\n";
+            output0 << "Filename must be given with '-i <name>'\n"
+                    << "Or use '-i stdin' to use standard input\n";
             hila::finishrun();
         }
 
-        output0 << "Input filename from command line: " << hila::input_file << '\n';
+        output0 << "Input file from command line: " << hila::input_file << '\n';
     }
 
     // error out if there are more cmdline options
@@ -481,7 +500,7 @@ FILE *open_parameter_file()
 void setup_sublattices(cmdlineargs &commandline) {
 
     // get sublattices cmdlinearg first
-    long lnum = commandline.get_int("sublattices=");
+    long lnum = commandline.get_int("-sublattices");
     if (lnum <= 0) {
         output0 << "sublattices=<number> command line argument value must be positive "
                    "integer (or argument omitted)\n";
@@ -513,7 +532,7 @@ void setup_sublattices(cmdlineargs &commandline) {
         split_into_sublattices(sublattices.mylattice);
 #endif
 
-    const char *p = commandline.get_cstring("output=");
+    const char *p = commandline.get_cstring("-o");
     std::string fname;
     if (p != nullptr)
         fname = p + std::to_string(sublattices.mylattice);
@@ -551,13 +570,13 @@ void setup_sublattices(cmdlineargs &commandline) {
     }
 
     /* Default sync is no */
-    if (commandline.get_yesno("sync=") == 1) {
+    if (commandline.get_onoff("-sync") == 1) {
         sublattices.sync = true;
         output0 << "Synchronising sublattice trajectories\n";
     } else {
         sublattices.sync = false;
         output0 << "Not synchronising the sublattice trajectories\n"
-                << "Use sync=yes command line argument to override\n";
+                << "Use '-sync on' command line argument to override\n";
     }
 }
 
