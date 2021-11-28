@@ -62,6 +62,8 @@ DisableFormat:   false
 ExperimentalAutoDetectBinPacking: false
 FixNamespaceComments: true
 ForEachMacros:
+  - onsites
+  - foralldir
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
