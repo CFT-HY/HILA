@@ -1,7 +1,14 @@
-# This is a parameter file for hila_example
+# This is a parameter file for su3_realtime
 
-lattice size       32, 32, 32
-updates            100
+lattice size           16, 16, 16
+# should be effective 6/beta
+g^2 Ta                 0.25      
+dt                     0.01
+trajectory length      4000
+number of trajectories 2
+measurement interval   10
+thermalisation         5
+thermalisation start   100
 
-random seed        3324565456
+random seed            0
 
