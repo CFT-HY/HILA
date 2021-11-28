@@ -527,10 +527,10 @@ var_info *GeneralVisitor::new_var_info(VarDecl *decl) {
 
     vi.is_special_reduction_type = (vi.type.find("Reduction<") == 0);
     if (vi.is_special_reduction_type) {
-        // The signature of the type is Reduction< ... , void>.
-        // Remove until last ,
+        // The signature of the type is Reduction< ... >.
+        // Remove until last '>'
 
-        vi.type = vi.type.substr(10, vi.type.rfind(',') - 10);
+        vi.type = vi.type.substr(10, vi.type.rfind('>') - 10);
     }
 
     vi.dependent_vars.clear();
