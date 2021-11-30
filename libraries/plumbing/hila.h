@@ -14,12 +14,12 @@
 #include "plumbing/field.h"
 #include "plumbing/reduction.h"
 #include "plumbing/vectorreduction.h"
-#include "plumbing/vector_field.h"
 
 #if defined(CUDA) || defined(HIP)
 #include "plumbing/backend_cuda/gpu_reduction.h"
 #endif
 
+#include "plumbing/vector_field.h"
 #include "plumbing/fft.h"
 #include "plumbing/input.h"
 

@@ -136,7 +136,8 @@ __global__ void reduce0(T *g_idata, T *g_odata, unsigned int n) {
     }
 
     // write result for this block to global mem
-    if (tid == 0) g_odata[blockIdx.x] = sdata[0];
+    if (tid == 0)
+        g_odata[blockIdx.x] = sdata[0];
 }
 
 /* This version uses contiguous threads, but its interleaved
@@ -168,7 +169,8 @@ __global__ void reduce1(T *g_idata, T *g_odata, unsigned int n) {
     }
 
     // write result for this block to global mem
-    if (tid == 0) g_odata[blockIdx.x] = sdata[0];
+    if (tid == 0)
+        g_odata[blockIdx.x] = sdata[0];
 }
 
 /*
@@ -198,7 +200,8 @@ __global__ void reduce2(T *g_idata, T *g_odata, unsigned int n) {
     }
 
     // write result for this block to global mem
-    if (tid == 0) g_odata[blockIdx.x] = sdata[0];
+    if (tid == 0)
+        g_odata[blockIdx.x] = sdata[0];
 }
 
 /*
@@ -218,7 +221,8 @@ __global__ void reduce3(T *g_idata, T *g_odata, unsigned int n) {
 
     T mySum = (i < n) ? g_idata[i] : 0;
 
-    if (i + blockDim.x < n) mySum += g_idata[i + blockDim.x];
+    if (i + blockDim.x < n)
+        mySum += g_idata[i + blockDim.x];
 
     sdata[tid] = mySum;
     cooperative_groups::sync(cta);
@@ -233,7 +237,8 @@ __global__ void reduce3(T *g_idata, T *g_odata, unsigned int n) {
     }
 
     // write result for this block to global mem
-    if (tid == 0) g_odata[blockIdx.x] = mySum;
+    if (tid == 0)
+        g_odata[blockIdx.x] = mySum;
 }
 
 /*
@@ -263,7 +268,8 @@ __global__ void reduce4(T *g_idata, T *g_odata, unsigned int n) {
 
     T mySum = (i < n) ? g_idata[i] : 0;
 
-    if (i + blockSize < n) mySum += g_idata[i + blockSize];
+    if (i + blockSize < n)
+        mySum += g_idata[i + blockSize];
 
     sdata[tid] = mySum;
     cooperative_groups::sync(cta);
@@ -282,7 +288,8 @@ __global__ void reduce4(T *g_idata, T *g_odata, unsigned int n) {
 
     if (cta.thread_rank() < 32) {
         // Fetch final intermediate sum from 2nd warp
-        if (blockSize >= 64) mySum += sdata[tid + 32];
+        if (blockSize >= 64)
+            mySum += sdata[tid + 32];
         // Reduce final warp using shuffle
         for (int offset = tile32.size() / 2; offset > 0; offset /= 2) {
             mySum += tile32.shfl_down(mySum, offset);
@@ -290,7 +297,8 @@ __global__ void reduce4(T *g_idata, T *g_odata, unsigned int n) {
     }
 
     // write result for this block to global mem
-    if (cta.thread_rank() == 0) g_odata[blockIdx.x] = mySum;
+    if (cta.thread_rank() == 0)
+        g_odata[blockIdx.x] = mySum;
 }
 
 /*
@@ -318,7 +326,8 @@ __global__ void reduce5(T *g_idata, T *g_odata, unsigned int n) {
 
     T mySum = (i < n) ? g_idata[i] : 0;
 
-    if (i + blockSize < n) mySum += g_idata[i + blockSize];
+    if (i + blockSize < n)
+        mySum += g_idata[i + blockSize];
 
     sdata[tid] = mySum;
     cooperative_groups::sync(cta);
@@ -347,7 +356,8 @@ __global__ void reduce5(T *g_idata, T *g_odata, unsigned int n) {
 
     if (cta.thread_rank() < 32) {
         // Fetch final intermediate sum from 2nd warp
-        if (blockSize >= 64) mySum += sdata[tid + 32];
+        if (blockSize >= 64)
+            mySum += sdata[tid + 32];
         // Reduce final warp using shuffle
         for (int offset = tile32.size() / 2; offset > 0; offset /= 2) {
             mySum += tile32.shfl_down(mySum, offset);
@@ -355,7 +365,8 @@ __global__ void reduce5(T *g_idata, T *g_odata, unsigned int n) {
     }
 
     // write result for this block to global mem
-    if (cta.thread_rank() == 0) g_odata[blockIdx.x] = mySum;
+    if (cta.thread_rank() == 0)
+        g_odata[blockIdx.x] = mySum;
 }
 
 /*
@@ -432,7 +443,8 @@ __global__ void reduce6(T *g_idata, T *g_odata, unsigned int n) {
 
     if (cta.thread_rank() < 32) {
         // Fetch final intermediate sum from 2nd warp
-        if (blockSize >= 64) mySum += sdata[tid + 32];
+        if (blockSize >= 64)
+            mySum += sdata[tid + 32];
         // Reduce final warp using shuffle
         for (int offset = tile32.size() / 2; offset > 0; offset /= 2) {
             mySum += tile32.shfl_down(mySum, offset);
@@ -440,7 +452,8 @@ __global__ void reduce6(T *g_idata, T *g_odata, unsigned int n) {
     }
 
     // write result for this block to global mem
-    if (cta.thread_rank() == 0) g_odata[blockIdx.x] = mySum;
+    if (cta.thread_rank() == 0)
+        g_odata[blockIdx.x] = mySum;
 }
 
 /*
@@ -572,7 +585,8 @@ __global__ void cg_reduce(T *g_idata, T *g_odata, unsigned int n) {
         }
     }
 
-    if (threadRank == 0) g_odata[blockIdx.x] = threadVal;
+    if (threadRank == 0)
+        g_odata[blockIdx.x] = threadVal;
 }
 
 /*
@@ -749,7 +763,8 @@ T gpu_reduce(int size, T *d_idata, bool keep_buffers) {
     } else {
         numBlocks = (size + (numThreads * 2 - 1)) / (numThreads * 2);
         if (whichKernel >= 6) {
-            if (numBlocks < maxBlocks) numBlocks = maxBlocks;
+            if (numBlocks < maxBlocks)
+                numBlocks = maxBlocks;
         }
     }
 
@@ -798,7 +813,6 @@ T gpu_reduce(int size, T *d_idata, bool keep_buffers);
 #endif // ifndef HILAPP
 
 #ifdef USE_MPI
-#include <mpi.h>
 #include "com_mpi.h"
 #endif
 
@@ -806,10 +820,11 @@ T gpu_reduce(int size, T *d_idata, bool keep_buffers);
 // Reduce field var over the lattice
 
 template <typename T>
-T gpu_reduce_field(const Field<T> &f, bool allreduce = true, Parity par = Parity::all, bool do_mpi = true) {
+T Field<T>::gpu_reduce_sum(bool allreduce, Parity par, bool do_mpi) const {
 
 #ifndef EVEN_SITES_FIRST
-    assert(par == Parity::all && "EVEN_SITES_FIRST neede for gpu reduction with parity");
+    assert(par == Parity::all &&
+           "EVEN_SITES_FIRST neede for gpu reduction with parity");
 #endif
 
     using base_t = hila::number_type<T>;
@@ -817,10 +832,10 @@ T gpu_reduce_field(const Field<T> &f, bool allreduce = true, Parity par = Parity
 
     // fields are stored 1 after another on gpu fields
     // -- this really relies on the data layout!
-    T *fb = f.field_buffer();
+    T *fb = this->field_buffer();
     // address data with bptr
     base_t *bptr = (base_t *)(fb);
-    const lattice_struct * lat = f.fs->lattice;
+    const lattice_struct *lat = this->fs->lattice;
 
     // use this union to set the value element by element
     union {
@@ -851,14 +866,14 @@ T gpu_reduce_field(const Field<T> &f, bool allreduce = true, Parity par = Parity
         int s;
 
         dtype = get_MPI_number_type<T>(s);
-        assert(dtype != MPI_BYTE && "Unknown number_type in gpu_reduce_field");
+        assert(dtype != MPI_BYTE && "Unknown number_type in gpu_reduce_sum");
 
         if (allreduce) {
             MPI_Allreduce(MPI_IN_PLACE, &result.value, size, dtype, MPI_SUM,
-                          f.fs->lattice->mpi_comm_lat);
+                          this->fs->lattice->mpi_comm_lat);
         } else {
             MPI_Reduce(MPI_IN_PLACE, &result.value, size, dtype, MPI_SUM, 0,
-                       f.fs->lattice->mpi_comm_lat);
+                       this->fs->lattice->mpi_comm_lat);
         }
     }
 #endif

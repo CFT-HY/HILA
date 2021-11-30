@@ -426,7 +426,7 @@ class Field {
         }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir(dir) {
+        foralldir (dir) {
             fs->boundary_condition[dir] = BoundaryCondition::PERIODIC;
             fs->boundary_condition[-dir] = BoundaryCondition::PERIODIC;
         }
@@ -588,7 +588,7 @@ class Field {
 
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir(dir) {
+        foralldir (dir) {
             set_boundary_condition(dir, rhs.get_boundary_condition(dir));
         }
     }
@@ -775,9 +775,7 @@ class Field {
 
     hila::number_type<T> squarenorm() const {
         hila::number_type<T> n = 0;
-        onsites(ALL) {
-            n += ::squarenorm( (*this)[X] );
-        }
+        onsites (ALL) { n += ::squarenorm((*this)[X]); }
         return n;
     }
 
@@ -827,6 +825,11 @@ class Field {
 
     // and sum reduction
     T reduce_sum(bool allreduce = true) const;
+
+    /// Declare gpu_reduce here, defined only for GPU targets
+    /// For internal use only, preferably
+    T gpu_reduce_sum(bool allreduce = true, Parity par = Parity::all,
+                     bool do_mpi = true) const;
 
 }; // End of class Field<>
 
@@ -923,6 +926,7 @@ auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>>
     return tmp;
 }
 
+
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
 
@@ -940,7 +944,8 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Parity par_s;
 
     int len = 0;
-    foralldir(d) len += abs(rem[d]);
+    foralldir (d)
+        len += abs(rem[d]);
 
     if (len == 0)
         return *this;
@@ -954,7 +959,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     // is this already fetched from one of the dirs in v?
     bool found_dir = false;
     Direction mdir;
-    foralldir(d) {
+    foralldir (d) {
         if (rem[d] > 0 && move_status(par_s, d) == fetch_status::DONE) {
             mdir = d;
             found_dir = true;
@@ -968,7 +973,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
 
     if (!found_dir) {
         // now did not find a 'ready' dir. Take the 1st available
-        foralldir(d) {
+        foralldir (d) {
             if (rem[d] > 0) {
                 mdir = d;
                 break;
@@ -995,7 +1000,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     from = &r1;
     to = &r2;
 
-    foralldir(d) {
+    foralldir (d) {
         if (rem[d] != 0) {
             mdir = (rem[d] > 0) ? d : -d;
 
@@ -1020,11 +1025,9 @@ template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> result;
 
-    onsites(par) {
-        if
-    }
+    onsites (par) { if }
     r2 = *this;
-    foralldir(d) {
+    foralldir (d) {
         if (abs(v[d]) > 0) {
             Direction dir;
             if (v[d] > 0)
@@ -1563,7 +1566,7 @@ void Field<T>::write_to_stream(std::ofstream &outputfile) {
     for (; i < lattice->volume(); i++) {
         CoordinateVector site;
         size_t ii = i;
-        foralldir(dir) {
+        foralldir (dir) {
             site[dir] = ii % size[dir];
             ii = ii / size[dir];
         }
@@ -1636,7 +1639,7 @@ void Field<T>::read_from_stream(std::ifstream &inputfile) {
     for (; i < lattice->volume(); i++) {
         CoordinateVector site;
         size_t ii = i;
-        foralldir(dir) {
+        foralldir (dir) {
             site[dir] = ii % size[dir];
             ii = ii / size[dir];
         }
@@ -1712,7 +1715,7 @@ static void read_fields(std::string filename, fieldtypes &... fields) {
 inline void dummy_X_f() {
     Direction d1 = e_x;
     CoordinateVector v1(0);
-    onsites(ALL) {
+    onsites (ALL) {
         Direction d;
         d = +d1;
         d = -d1; // unaryops
@@ -1746,7 +1749,7 @@ inline void ensure_field_operators_exist(Field<T> &f) {
 
     f[ALL] = -f[X];
     // same for non-vectorized loop
-    onsites(ALL) {
+    onsites (ALL) {
         if (X.coordinate(e_x) < X.coordinate(e_y))
             f[X] = -f[X];
     }
