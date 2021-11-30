@@ -6,11 +6,6 @@
 #include "plumbing/fft.h"
 
 
-#ifdef USE_MPI
-#include <mpi.h>
-#endif
-
-
 hila::timer fft_timer("FFT total time");
 hila::timer fft_plan_timer("  FFT plan");
 hila::timer fft_MPI_timer("  MPI in FFT");

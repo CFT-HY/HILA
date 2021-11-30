@@ -1044,11 +1044,6 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
 #endif
 
 #if defined(USE_MPI)
-/* MPI implementations
- * For simplicity, these functions do not use field expressions and
- * can be ignored by the hilapp. Since the hilapp does not
- * have access to mpi.h, it cannot process this branch.
- */
 
 /// start_fetch(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.

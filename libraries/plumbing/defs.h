@@ -17,7 +17,11 @@
 
 
 #ifdef USE_MPI
+#ifdef HILAPP
+#include "hilapp_mpi.h"
+#else
 #include <mpi.h>
+#endif
 #endif
 
 #ifdef HILAPP

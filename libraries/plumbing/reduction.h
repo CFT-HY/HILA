@@ -5,8 +5,6 @@
 
 //#define USE_MPI
 #ifdef USE_MPI
-#include <mpi.h>
-#include "com_mpi.h"
 
 
 
