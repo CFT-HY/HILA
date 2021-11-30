@@ -55,6 +55,10 @@ void lattice_struct::setup(const CoordinateVector &siz) {
     init_special_boundaries();
 #endif
 
+    // Alignment: set field_alloc_size to be divisible by 256
+    if (mynode.field_alloc_size % 256 > 0) 
+        mynode.field_alloc_size += 256 - mynode.field_alloc_size % 256;
+
 #ifndef VANILLA
     /* Setup backend-specific lattice info if necessary */
     backend_lattice = new backend_lattice_struct;
