@@ -1216,7 +1216,7 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
     static_assert(n == m, "exp() only for square matrices");
 
     Matrix_t<n, m, T, MT> r;
-    constexpr hila::number_type<T> one = 1.0;
+    hila::number_type<T> one = 1.0;
 
     r = mat * (one / order) + one;
 
