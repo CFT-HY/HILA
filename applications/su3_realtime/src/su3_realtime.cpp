@@ -44,7 +44,6 @@ double measure_plaq(const GaugeField<group> &U) {
     Reduction<double> plaq;
     plaq.allreduce(false).delayed(true);
 
-
     foralldir (dir1)
         foralldir (dir2)
             if (dir1 < dir2) {
@@ -145,14 +144,6 @@ void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
 
 /////////////////////////////////////////////////////////////////
 
-   #pragma hila ast_dump
-    template <typename T>
-    class testc {
-        using base_type = hila::number_type<T>;
-        using argument_type = T;
-        double v;
-    };
-
 
 
 int main(int argc, char **argv) {
@@ -203,12 +194,6 @@ int main(int argc, char **argv) {
         onsites (ALL)
             U[d][X].gaussian_random(0.3).reunitarize();
     }
-
-    testc<double> td;
-
-    Field<Complex<double>> cd(1);
-    Complex<double> sum(0);
-    onsites(ALL) sum += cd[X];
      
 
     thermalize(U, E, g2Ta, n_thermal_start, dt);
