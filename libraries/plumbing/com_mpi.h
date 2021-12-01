@@ -17,7 +17,8 @@ extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
 ///
 
 /// Broadcast template for standard type
-template <typename T> void broadcast(T &var) {
+template <typename T>
+void broadcast(T &var) {
     static_assert(std::is_trivial<T>::value, "broadcast(var) must use trivial type");
     if (hila::check_input)
         return;
@@ -28,7 +29,8 @@ template <typename T> void broadcast(T &var) {
 }
 
 /// Broadcast for std::vector
-template <typename T> void broadcast(std::vector<T> &list) {
+template <typename T>
+void broadcast(std::vector<T> &list) {
 
     static_assert(std::is_trivial<T>::value,
                   "broadcast(vector<T>) must have trivial T");
@@ -51,12 +53,14 @@ template <typename T> void broadcast(std::vector<T> &list) {
     broadcast_timer.stop();
 }
 
-template <typename T> void broadcast(T *var) {
+template <typename T>
+void broadcast(T *var) {
     static_assert(sizeof(T) > 0 && "Do not use pointers to broadcast()-function");
 }
 
 /// Broadcast for arrays where size must be known and same for all nodes
-template <typename T> void broadcast_array(T *var, int n) {
+template <typename T>
+void broadcast_array(T *var, int n) {
 
     if (hila::check_input)
         return;
@@ -71,7 +75,8 @@ void broadcast(std::string &r);
 void broadcast(std::vector<std::string> &l);
 
 /// and broadcast with two values
-template <typename T, typename U> void broadcast(T &t, U &u) {
+template <typename T, typename U>
+void broadcast(T &t, U &u) {
 
     if (hila::check_input)
         return;
@@ -88,7 +93,8 @@ template <typename T, typename U> void broadcast(T &t, U &u) {
 
 // try to get the basic data type of the message
 // this is just to enable a bit larger messages
-template <typename T> MPI_Datatype get_MPI_number_type(int &size) {
+template <typename T>
+MPI_Datatype get_MPI_number_type(int &size) {
 
     if (std::is_same<hila::number_type<T>, int>::value) {
         size = sizeof(int);
@@ -118,7 +124,6 @@ template <typename T> MPI_Datatype get_MPI_number_type(int &size) {
 }
 
 // Reduction templates
-// TODO: implement using custom MPI Ops!  Then no ambiguity
 
 template <typename T>
 void lattice_struct::reduce_node_sum(T *value, int N, bool distribute) {
@@ -136,8 +141,9 @@ void lattice_struct::reduce_node_sum(T *value, int N, bool distribute) {
         for (int i = 0; i < N; i++)
             value[i] = work[i];
     } else {
-        MPI_Reduce((void *)value, (void *)work, N * sizeof(T) / sizeof(hila::number_type<T>),
-                   dtype, MPI_SUM, 0, lattice->mpi_comm_lat);
+        MPI_Reduce((void *)value, (void *)work,
+                   N * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM, 0,
+                   lattice->mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < N; i++)
                 value[i] = work[i];
@@ -177,6 +183,29 @@ void lattice_struct::reduce_node_product(T *value, int N, bool distribute) {
     }
     reduction_timer.stop();
 }
+
+void hila_reduce_double_setup(double *d, int n);
+void hila_reduce_float_setup(float *d, int n);
+void hila_reduce_sums();
+
+namespace hila {
+void set_allreduce(bool on = true);
+bool get_allreduce();
+} // namespace hila
+
+template <typename T>
+void lattice_struct::reduce_sum_setup(T *value) {
+
+    using b_t = hila::number_type<T>;
+    if (std::is_same<b_t, double>::value) {
+        hila_reduce_double_setup((double *)value, sizeof(T) / sizeof(double));
+    } else if (std::is_same<b_t, float>::value) {
+        hila_reduce_float_setup((float *)value, sizeof(T) / sizeof(float));
+    } else {
+        reduce_node_sum(value, 1, hila::get_allreduce());
+    }
+}
+
 
 #endif // USE_MPI
 

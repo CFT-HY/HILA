@@ -69,7 +69,7 @@ class lattice_struct {
 #ifdef EVEN_SITES_FIRST
         std::vector<CoordinateVector> coordinates;
 #else
-        unsigned size_factor[NDIM];   // components: 1, size[0], size[0]*size[1], ...
+        unsigned size_factor[NDIM]; // components: 1, size[0], size[0]*size[1], ...
 #endif
         void setup(node_info &ni, lattice_struct &lattice);
 
@@ -322,15 +322,15 @@ class lattice_struct {
 
     inline const CoordinateVector coordinates(unsigned idx) const {
         CoordinateVector c;
-        unsigned vdiv,ndiv;
+        unsigned vdiv, ndiv;
 
         vdiv = idx;
-        for (int d = 0; d < NDIM-1; ++d) {
+        for (int d = 0; d < NDIM - 1; ++d) {
             ndiv = vdiv / mynode.size[d];
             c[d] = vdiv - ndiv * mynode.size[d] + mynode.min[d];
             vdiv = ndiv;
         }
-        c[NDIM-1] = vdiv + mynode.min[NDIM-1];
+        c[NDIM - 1] = vdiv + mynode.min[NDIM - 1];
 
         return c;
     }
@@ -368,6 +368,9 @@ class lattice_struct {
     template <typename T>
     void reduce_node_product(T *value, int N, bool distribute = true);
 
+    template <typename T>
+    void reduce_sum_setup(T *value);
+
 #else
 
     // define to nothing
@@ -381,7 +384,8 @@ class lattice_struct {
     // simple reduce_node_sum for single variable
     template <typename T>
     T reduce_node_sum(T &value, bool distribute = true) {
-        if (!hila::check_input) reduce_node_sum(&value, 1, distribute);
+        if (!hila::check_input)
+            reduce_node_sum(&value, 1, distribute);
         return value;
     }
 };

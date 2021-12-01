@@ -20,4 +20,4 @@ PhiLength           5.0
 tStats              50.0
 numberStatsOutputs  125
 dtdxRatio           0.2
-output_file         stats/1ks0lp5-1.dat
+output_file         output

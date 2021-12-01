@@ -44,7 +44,6 @@ double measure_plaq(const GaugeField<group> &U) {
     Reduction<double> plaq;
     plaq.allreduce(false).delayed(true);
 
-
     foralldir (dir1)
         foralldir (dir2)
             if (dir1 < dir2) {
@@ -75,10 +74,10 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     get_gauss_violation(U, E, g);
     auto viol = g.squarenorm();
 
-    output0 << "Measure_start " << n << "\n";
+    //output0 << "Measure_start " << n << "\n";
     output0 << "MEAS " << trajectory << ' ' << n << ' ' << plaq << ' ' << e2 << ' '
             << viol << '\n';
-    output0 << "Measure_end " << n << "\n";
+    //output0 << "Measure_end " << n << "\n";
 }
 
 
@@ -145,6 +144,8 @@ void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
 
 /////////////////////////////////////////////////////////////////
 
+
+
 int main(int argc, char **argv) {
 
     // hila::initialize should be called as early as possible
@@ -193,6 +194,7 @@ int main(int argc, char **argv) {
         onsites (ALL)
             U[d][X].gaussian_random(0.3).reunitarize();
     }
+     
 
     thermalize(U, E, g2Ta, n_thermal_start, dt);
 
