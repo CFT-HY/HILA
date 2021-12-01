@@ -21,7 +21,13 @@ hila::timer start_send_timer("MPI start send"), wait_send_timer("MPI wait send")
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
 
-// Reduction buffer variables defined here
+////////////////////////////////////////////////////////////
+/// Reductions: do automatic coalescing of reductions 
+/// if the type is float or double
+/// These functions should not be called "by hand"
+
+// buffers - first vector holds the reduction buffer,
+// second the pointers to where distribute results
 static std::vector<double>  double_reduction_buffer;
 static std::vector<double *>  double_reduction_ptrs;
 static int n_double = 0;
@@ -29,6 +35,9 @@ static int n_double = 0;
 static std::vector<float>  float_reduction_buffer;
 static std::vector<float *>  float_reduction_ptrs;
 static int n_float = 0;
+
+// static var holding the allreduce state
+static bool allreduce_on = true;
 
 void hila_reduce_double_setup( double *d, int n) {
 
@@ -62,14 +71,14 @@ void hila_reduce_float_setup( float *d, int n) {
     n_float += n;
 }
 
-void hila_reduce_sums(bool distribute) {
-
-    reduction_timer.start();
+void hila_reduce_sums() {
 
     if (n_double > 0) {
         double work[n_double];
 
-        if (distribute) {
+        reduction_timer.start();
+
+        if (allreduce_on) {
             MPI_Allreduce((void *)double_reduction_buffer.data(), work,
                           n_double, MPI_DOUBLE, MPI_SUM,
                           lattice->mpi_comm_lat);
@@ -86,12 +95,16 @@ void hila_reduce_sums(bool distribute) {
         }
 
         n_double = 0;
+
+        reduction_timer.stop();
     }
 
     if (n_float > 0) {
         float work[n_float];
 
-        if (distribute) {
+        reduction_timer.start();
+
+        if (allreduce_on) {
             MPI_Allreduce((void *)float_reduction_buffer.data(), work,
                           n_float, MPI_FLOAT, MPI_SUM,
                           lattice->mpi_comm_lat);
@@ -108,13 +121,22 @@ void hila_reduce_sums(bool distribute) {
         }
 
         n_float = 0;
+
+        reduction_timer.stop();
     }
 
-
-    reduction_timer.stop();
 }
 
+/// set allreduce on (default) or off on the next reduction
+void hila::set_allreduce(bool on) {
+    allreduce_on = on;
+}
 
+bool hila::get_allreduce() {
+    return allreduce_on;
+}
+
+////////////////////////////////////////////////////////////////////////
 
 
 /* Machine initialization */

@@ -288,7 +288,7 @@ void scaling_sim::write_energies() {
     double w_sumPhiDiPhi = 0.0;
     double w_sumPhiPi = 0.0;
 
-
+    hila::set_allreduce(false);
     onsites (ALL) {
         double phinorm = phi[X].squarenorm();
         double v = 0.25 * lambda * a * a * pow((phinorm - ss), 2.0);
@@ -306,7 +306,7 @@ void scaling_sim::write_energies() {
     }
 
 
-
+    hila::set_allreduce(false);
     onsites (ALL) {
             auto norm = phi[X].squarenorm();
             real_t v = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
