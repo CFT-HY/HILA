@@ -24,6 +24,7 @@ class scaling_sim {
     void initialize();
     void write_moduli();
     void write_energies();
+    void write_windings();
     void next();
     void updateCosmology(); 
     inline real_t scaleFactor(real_t t);
@@ -332,8 +333,31 @@ void scaling_sim::write_energies() {
         config.stream << sumDiPhi / vol << " " << w_sumDiPhi / vol << " ";
         config.stream << sumPhiPi / vol << " " << w_sumPhiPi / vol << " ";
         config.stream << sumPhiDiPhi / vol << " " << w_sumPhiDiPhi / vol << " ";
-        config.stream << sumV / vol << " " << w_sumV / vol << "\n";
+        config.stream << sumV / vol << " " << w_sumV / vol << " ";
     }
+}
+
+void scaling_sim::write_windings()
+{
+    real_t length = 0.0;
+    
+    foralldir(d1) foralldir(d2) if (d1 < d2) {
+   	onsites(ALL) {
+       		float plaq = (phi[X] * phi [X+d1].conj()).arg()  
+            	+ (phi[X+d1] * phi[X+d1+d2].conj()).arg()
+            	+ (phi[X+d1+d2] * phi[X+d2].conj()).arg()
+            	+ (phi[X+d2] * phi[X].conj()).arg();
+
+		length += abs(plaq) * config.dx /(2.0 * M_PI);
+	}
+    }
+
+
+    if (hila::myrank() == 0) 
+    {
+	config.stream << 0.0 << " " << length << "\n";
+    }
+
 }
 
 void scaling_sim::next() {
