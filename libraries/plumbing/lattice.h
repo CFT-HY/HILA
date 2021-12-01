@@ -368,6 +368,9 @@ class lattice_struct {
     template <typename T>
     void reduce_node_product(T *value, int N, bool distribute = true);
 
+    template <typename T>
+    void reduce_sum_setup(T *value, bool distribute);
+
 #else
 
     // define to nothing

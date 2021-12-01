@@ -221,6 +221,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);
 
     // Check reduction variables
+    bool sum_reductions = false;
     for (var_info &v : var_info_list) {
 
         if (v.is_special_reduction_type) {
@@ -238,7 +239,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
                 code << "if (hila::myrank() == 0) { " << v.name
                      << " += " << v.reduction_name << "; }\n";
                 code << "else { " << v.name << " = " << v.reduction_name << "; }\n";
-                code << "lattice->reduce_node_sum( &" << v.name << ", 1, true);\n";
+                code << "lattice->reduce_sum_setup( &" << v.name << ", true);\n";
+
+                sum_reductions = true;
 
             } else if (v.reduction_type == reduction::PRODUCT) {
 
@@ -249,6 +252,10 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             }
         }
     }
+
+    if (sum_reductions) 
+        code << "hila_reduce_sums(true);\n";
+
 
     // and vector reductions
     for (array_ref &ar : array_ref_list) {

@@ -118,7 +118,6 @@ template <typename T> MPI_Datatype get_MPI_number_type(int &size) {
 }
 
 // Reduction templates
-// TODO: implement using custom MPI Ops!  Then no ambiguity
 
 template <typename T>
 void lattice_struct::reduce_node_sum(T *value, int N, bool distribute) {
@@ -177,6 +176,25 @@ void lattice_struct::reduce_node_product(T *value, int N, bool distribute) {
     }
     reduction_timer.stop();
 }
+
+void hila_reduce_double_setup(double *d, int n);
+void hila_reduce_float_setup(float *d, int n);
+void hila_reduce_sums(bool distribute);
+
+template <typename T>
+void lattice_struct::reduce_sum_setup(T *value, bool distribute) {
+
+    using b_t = hila::number_type<T>;
+    if (std::is_same<b_t,double>::value) {
+        hila_reduce_double_setup((double *)value, sizeof(T)/sizeof(double));
+    } else if (std::is_same<b_t,float>::value) {
+        hila_reduce_float_setup((float *)value, sizeof(T)/sizeof(float));
+    } else {
+        reduce_node_sum(value, 1, distribute);
+    }
+}
+
+
 
 #endif // USE_MPI
 

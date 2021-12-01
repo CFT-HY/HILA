@@ -21,6 +21,102 @@ hila::timer start_send_timer("MPI start send"), wait_send_timer("MPI wait send")
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
 
+// Reduction buffer variables defined here
+static std::vector<double>  double_reduction_buffer;
+static std::vector<double *>  double_reduction_ptrs;
+static int n_double = 0;
+
+static std::vector<float>  float_reduction_buffer;
+static std::vector<float *>  float_reduction_ptrs;
+static int n_float = 0;
+
+void hila_reduce_double_setup( double *d, int n) {
+
+    // ensure there's enough space
+    if (n + n_double > double_reduction_buffer.size()) {
+        double_reduction_buffer.resize(n + n_double + 2);
+        double_reduction_ptrs.resize(n + n_double + 2);
+    }
+
+    for (int i=0; i<n; i++) {
+        double_reduction_buffer[n_double + i] = d[i];
+        double_reduction_ptrs[n_double + i] = d + i;
+    }
+
+    n_double += n;
+}
+
+void hila_reduce_float_setup( float *d, int n) {
+
+    // ensure there's enough space
+    if (n + n_float > float_reduction_buffer.size()) {
+        float_reduction_buffer.resize(n + n_float + 2);
+        float_reduction_ptrs.resize(n + n_float + 2);
+    }
+
+    for (int i=0; i<n; i++) {
+        float_reduction_buffer[n_float + i] = d[i];
+        float_reduction_ptrs[n_float + i] = d + i;
+    }
+
+    n_float += n;
+}
+
+void hila_reduce_sums(bool distribute) {
+
+    reduction_timer.start();
+
+    if (n_double > 0) {
+        double work[n_double];
+
+        if (distribute) {
+            MPI_Allreduce((void *)double_reduction_buffer.data(), work,
+                          n_double, MPI_DOUBLE, MPI_SUM,
+                          lattice->mpi_comm_lat);
+            for (int i = 0; i < n_double; i++)
+                *(double_reduction_ptrs[i]) = work[i];
+
+        } else {
+            MPI_Reduce((void *)double_reduction_buffer.data(), work, 
+            n_double, MPI_DOUBLE, MPI_SUM, 0, lattice->mpi_comm_lat);
+            if (hila::myrank() == 0)
+                for (int i = 0; i < n_double; i++)
+                    *(double_reduction_ptrs[i]) = work[i];
+
+        }
+
+        n_double = 0;
+    }
+
+    if (n_float > 0) {
+        float work[n_float];
+
+        if (distribute) {
+            MPI_Allreduce((void *)float_reduction_buffer.data(), work,
+                          n_float, MPI_FLOAT, MPI_SUM,
+                          lattice->mpi_comm_lat);
+            for (int i = 0; i < n_float; i++)
+                *(float_reduction_ptrs[i]) = work[i];
+
+        } else {
+            MPI_Reduce((void *)float_reduction_buffer.data(), work, 
+            n_float, MPI_FLOAT, MPI_SUM, 0, lattice->mpi_comm_lat);
+            if (hila::myrank() == 0)
+                for (int i = 0; i < n_float; i++)
+                    *(float_reduction_ptrs[i]) = work[i];
+
+        }
+
+        n_float = 0;
+    }
+
+
+    reduction_timer.stop();
+}
+
+
+
+
 /* Machine initialization */
 #include <sys/types.h>
 void initialize_communications(int &argc, char ***argv) {
