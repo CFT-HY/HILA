@@ -335,7 +335,7 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code,
                     // get new name
                     std::string offset_field_name = it->new_name + "_offset";
                     if (i_offset > 0)
-                        offset_field_name += i_offset;
+                        offset_field_name += std::to_string(i_offset);
                     i_offset++;
 
                     // make new field info for new variable
