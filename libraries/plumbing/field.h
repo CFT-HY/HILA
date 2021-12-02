@@ -965,11 +965,11 @@ Field<T> & Field<T>::shift(const CoordinateVector &v, Field<T> & res, const Pari
     bool found_dir = false;
     Direction mdir;
     foralldir (d) {
-        if (rem[d] > 0 && move_status(par_s, d) == fetch_status::DONE) {
+        if (rem[d] > 0 && move_status(par_s, d) != fetch_status::NOT_DONE) {
             mdir = d;
             found_dir = true;
             break;
-        } else if (rem[d] < 0 && move_status(par_s, -d) == fetch_status::DONE) {
+        } else if (rem[d] < 0 && move_status(par_s, -d) != fetch_status::NOT_DONE) {
             mdir = -d;
             found_dir = true;
             break;
