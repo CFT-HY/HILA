@@ -240,7 +240,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     }
 
     // handle separately sum reductions, by far most common case
-    // a bit convoluted way to go through the list, done so to get 
+    // a bit convoluted way to go through the list, done so to get
     // a bit tidier output than the easiest case
 
     bool sum_reductions = false;
@@ -250,7 +250,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             if (!sum_reductions) {
                 code << "if (hila::myrank() == 0) {\n";
                 sum_reductions = true;
-            } 
+            }
             // on node 0 add the old value to reduction
             code << v.name << " += " << v.reduction_name << ";\n";
         }
@@ -353,9 +353,10 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code,
                     field_info_list.push_back(new_fi);
 
                     // copy the shifted var
-                    code << "const Field" + it->type_template + " " +
-                                offset_field_name + " = " + it->new_name + ".shift(" +
-                                d.ref_list.at(0)->direxpr_s + ", " + paritystr + ");\n";
+                    code << "Field" + it->type_template + " " + offset_field_name +
+                                ";\n";
+                    code << it->new_name + ".shift(" + d.ref_list.at(0)->direxpr_s +
+                                ", " + offset_field_name + ", " + paritystr + ");\n";
 
                     // and rewrite references to the offset field
                     for (field_ref *fr : new_fi.ref_list) {

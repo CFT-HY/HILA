@@ -693,6 +693,7 @@ class Field {
             free();
             fs = rhs.fs;
             rhs.fs = nullptr;
+            output0 << "Did move assign!\n";
         }
         return *this;
     }
@@ -789,10 +790,11 @@ class Field {
     void cancel_comm(Direction d, Parity p) const;
 
     // Declaration of shift methods
-    Field<T> shift(const CoordinateVector &v, Parity par) const;
-    Field<T> shift(const CoordinateVector &v) const {
-        return shift(v, ALL);
+    Field<T> & shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
+    Field<T> & shift(const CoordinateVector &v, Field<T> &r) const {
+        return shift(v,r,ALL);
     }
+    Field<T> shift(const CoordinateVector &v, Parity par) const;
 
     // General getters and setters
     void set_elements(T *elements, const std::vector<CoordinateVector> &coord_list);
@@ -933,9 +935,10 @@ auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>>
 /// Definition of shift - this is currently OK only for short moves,
 /// very inefficient for longer moves
 /// TODO: make more advanced, switching to "global" move for long shifts
+/// Returns a reference to parameter "res"
 
 template <typename T>
-Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
+Field<T> & Field<T>::shift(const CoordinateVector &v, Field<T> & res, const Parity par) const {
 
     // use this to store remaining moves
     CoordinateVector rem = v;
@@ -947,8 +950,11 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     foralldir (d)
         len += abs(rem[d]);
 
-    if (len == 0)
-        return *this;
+    // no move, just copy field
+    if (len == 0) {
+        res = *this;
+        return res;
+    }
 
     // opp_parity(ALL) == ALL
     if (len % 2 == 0)
@@ -984,21 +990,30 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
         }
     }
 
-    // Now do the 1st move
-    Field<T> r1;
-    r1[par_s] = (*this)[X + mdir];
+    // Len 1, copy directly
+    if (len == 1) {
+        res[par_s] = (*this)[X + mdir];
+        return res;
+    }
 
-    if (len == 1)
-        return r1;
+    // now longer - need buffer
+    Field<T> r1;
+    Field<T> *from, *to;
+
+    // this ensures that the final move lands on res
+    if (len % 2 == 0) {
+        from = &r1;
+        to = &res;
+    } else {
+        from = &res;
+        to = &r1;
+    }
+    // and copy initially to "from"
+    (*from)[par_s] = (*this)[X + mdir];
 
     // and subtract remaining moves from rem
     rem = rem - mdir;
     par_s = opp_parity(par_s);
-
-    Field<T> r2, *from, *to;
-
-    from = &r1;
-    to = &r2;
 
     foralldir (d) {
         if (rem[d] != 0) {
@@ -1015,15 +1030,20 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
         }
     }
 
-    // need to return *from because std::swap
-    return *from;
+    return res;
 }
-
-#elif !defined(USE_MPI)
 
 template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
-    Field<T> result;
+    Field<T> res;
+    shift(v,res,par);
+    return res;
+}
+#elif !defined(USE_MPI)
+
+// this is junk at the moment
+template <typename T>
+Field<T> &  Field<T>::shift(const CoordinateVector &v, Field<T> & res, const Parity par) const {
 
     onsites (par) { if }
     r2 = *this;
