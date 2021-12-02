@@ -264,7 +264,7 @@ void scaling_sim::write_moduli() {
     }
 
     if (hila::myrank() == 0) {
-        config.stream << t << " " << a << " " << lambda << " "
+        config.stream << t << " " << a << " " << sqrt(lambda/2.0) << " "
                       << phimod / lattice->volume() << " " << pimod / lattice->volume()
                       << " ";
     }
@@ -444,7 +444,8 @@ int main(int argc, char **argv) {
                 meas_timer.start();
                 sim.write_moduli();
                 sim.write_energies();
-                meas_timer.stop();
+                sim.write_windings();
+		meas_timer.stop();
             }
             stat_counter++;
         }
