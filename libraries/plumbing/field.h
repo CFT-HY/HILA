@@ -693,7 +693,6 @@ class Field {
             free();
             fs = rhs.fs;
             rhs.fs = nullptr;
-            output0 << "Did move assign!\n";
         }
         return *this;
     }
