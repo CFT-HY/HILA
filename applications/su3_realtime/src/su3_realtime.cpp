@@ -57,6 +57,78 @@ double measure_plaq(const GaugeField<group> &U) {
 }
 
 
+/* Calculate the lattice counterpart of B_i(x) = -1/2 eps_{ijk} F_jk(x) everywhere. */
+/* We extract the lattice field strength tensor from minimal clover terms:
+* Q_{jk} = P_{jk} + P_{k,-j} + P_{-j,-k} + P_{-k,j}, then
+* i g F_{jk} = (Q_{jk} - Q_{kj}) / (8a^2). 
+* Because of antisymmetry we only need Q_{jk} for j<k. 
+* Here I do NOT project the result to algebra, so B here is of the GaugeField type. 
+* Note that I do not subtract the trace from F_{jk}, so it's not necessarily traceless. 
+* But the trace part drops out from the topological charge anyway since Tr E_i = 0. */
+template <typename group>
+void get_magnetic_field(const GaugeField<group> &U, GaugeField<group> &B) {
+
+    foralldir(d1) onsites(ALL) B[d1][X] = 0;
+
+    foralldir(d1) foralldir(d2) foralldir(d3) if (d1 != d2 && d1 != d3 && d2 < d3) {
+       
+        /* Get clovers in the plane orthogonal to 'd1': */
+        Field<group> Q;
+        onsites(ALL) {
+            group P1, P2, P3, P4;
+            P1 = U[d2][X] * U[d3][X + d2] * U[d2][X + d3].dagger() * U[d3][X].dagger();
+            P2 = U[d3][X] * U[d2][X + d3 - d2].dagger() * U[d3][X - d2].dagger() * U[d2][X - d2];
+            P3 = U[d2][X - d2].dagger() * U[d3][X - d2 - d3].dagger() * U[d2][X - d3 - d2] * U[d3][X - d3]; 
+            P4 = U[d3][X - d3].dagger() * U[d2][X - d3] * U[d3][X + d2 - d3] * U[d2][X].dagger();
+
+            Q[X] = P1 + P2 + P3 + P4;
+        }
+
+        /* B_i lives on the links, so improve the definition by calculating F_{jk} at the midpoint:
+        * F_{jk}(x + 0.5i) = 1/2 (F_{jk}(x) + U_i(x) F_{jk}(x+i) U_i(x).dagger() ),
+        * where the second term is a parallel transport to the next lattice site. 
+        * Then i g a^2 B_i(x + 0.5i) = -1/8 Sum_{j<k} e_{ijk} ( Q_{jk}(x) + U_i(x) Q_{jk}(x+i)U_i(x).dagger() ).
+        * The code uses anti-Hermitian generators for the algebra, so we actually compute g a^2 B_i. */
+        
+        int sign; // now always j<k, but i can be anything
+        if (d2 > d1) {
+            sign = 1;
+        } else if (d3 > d1) {
+            sign = -1;
+        } else {
+            sign = 1;
+        }
+
+        onsites(ALL) {
+            B[d1][X] += -(1.0/8.0) * sign * (Q[X] + U[d1][X] * Q[X+d1] * U[d1][X].dagger());
+            // Without averaging over the two clovers:
+            // B[d1][X] += (-2 * (1.0/8.0) * sign * (Q[X]));
+        }
+    } // end foralldir d1 d2 d3
+ 
+}
+
+
+/* Measure classical topological charge density chi everywhere according to Mikko's notes */ 
+template <typename group>
+void calc_topoCharge(const GaugeField<group> &U, const VectorField<Algebra<group>> &E, Field<double> &result) {
+
+    double c_chi = 1.0 / (64.0 * M_PI*M_PI);
+    result[ALL] = 0;
+
+    // Magnetic field, but not projected to algebra for better performance:
+    GaugeField<group> B;
+    get_magnetic_field(U, B);
+
+    /* Now a^4 chi = -16 c_chi a^4 g^2 Tr (E_i B_i),
+    * and the lattice fields are actually g a^2 E_i and g a^2 B_i. */
+    foralldir(d1) onsites(ALL) {
+        result[X] -= 16.0 * c_chi * real( trace(E[d1][X].expand() * B[d1][X]) );
+    }
+
+}
+
+
 static double degauss_quality = 1e-12;
 
 template <typename group>
@@ -74,9 +146,17 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     get_gauss_violation(U, E, g);
     auto viol = g.squarenorm();
 
+    Field<double> chi;
+    calc_topoCharge(U, E, chi);
+    double chi_avg = 0;
+    onsites(ALL) 
+         chi_avg += chi[X];
+
+    chi_avg /= lattice->volume();
+
     //output0 << "Measure_start " << n << "\n";
     output0 << "MEAS " << trajectory << ' ' << n << ' ' << plaq << ' ' << e2 << ' '
-            << viol << '\n';
+            << viol << ' ' << chi_avg << '\n';
     //output0 << "Measure_end " << n << "\n";
 }
 
@@ -191,8 +271,10 @@ int main(int argc, char **argv) {
 
     // some initial noise for gauge field
     foralldir (d) {
-        onsites (ALL)
+        onsites (ALL) {
             U[d][X].gaussian_random(0.3).reunitarize();
+            E[d][X] = 0;
+        }
     }
      
 
