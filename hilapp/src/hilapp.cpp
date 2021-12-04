@@ -154,7 +154,8 @@ llvm::cl::opt<bool> cmdline::openacc("target:openacc",
 //       llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::slow_gpu_reduce(
-    "gpu-slow-reduce", llvm::cl::desc("Use slow (but memory economical) reduction on gpus"),
+    "gpu-slow-reduce",
+    llvm::cl::desc("Use slow (but memory economical) reduction on gpus"),
     llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<int>
@@ -702,6 +703,42 @@ struct file_buffer {
     srcBuf sbuf;
     FileID fid;
 };
+
+
+/////////////////////////////////////////////////////////////////////////////
+/// Interface to inquire if macro name (literal, not function) is defined
+/////////////////////////////////////////////////////////////////////////////
+
+bool is_macro_defined(const char *name, std::string *arg) {
+
+    Preprocessor &pp = myCompilerInstance->getPreprocessor();
+
+    if (pp.isMacroDefined(name)) {
+        if (arg) {
+            arg->clear();
+
+            auto *MI = pp.getMacroInfo(pp.getIdentifierInfo(name));
+            if (MI) {
+                bool first = true;
+                for (auto tok : MI->tokens()) {
+                    if (tok.getLiteralData()) {
+                        if (!first)
+                            arg->push_back(' ');
+                        first = false;
+
+                        int length = tok.getLength();
+                        const char *p = tok.getLiteralData();
+                        for (int i = 0; i < length; i++)
+                            arg->push_back(*(p++));
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    return false;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////
 /// Global variable where the file buffers are hanging

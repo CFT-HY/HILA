@@ -98,7 +98,6 @@ extern llvm::cl::OptionCategory HilappCategory;
 
 /// class storing global state variables used in parsing
 struct global_state {
-    int NDIM = 0;
     std::string main_file_name = "";
     bool assert_loop_parity = false;
     std::string full_loop_text = "";
@@ -476,6 +475,10 @@ void reset_vectorizable_types();
 
 /// and clear loop function info
 void clear_loop_functions_in_compilation_unit();
+
+/// check if macro "name" is defined (non-function macros only)
+bool is_macro_defined(const char *name, std::string * arg = nullptr);
+
 
 /// take global CI just in case
 extern CompilerInstance *myCompilerInstance;

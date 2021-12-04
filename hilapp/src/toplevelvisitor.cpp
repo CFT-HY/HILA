@@ -1498,22 +1498,6 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
         second_def = true;
     }
 
-    // this is to capture NDIM for hilapp
-    if (var->getNameAsString() == "_hilapp_number_of_dimensions_") {
-        APValue * val = var->evaluateValue();
-        if (val && val->isInt()) {
-            auto ival = val->getInt();
-            global.NDIM = ival.getExtValue();
-            if (global.NDIM < 2 || global.NDIM > 4) {
-                llvm::errs() << "NDIM must be 2 <= NDIM <= 4\n";
-                exit(1);
-            }
-        } else {
-            llvm::errs() << "Wrong type of NDIM?\n";
-            exit(1);
-        }
-
-    }
 
     // and then loop body statements
     if (parsing_state.in_loop_body) {
