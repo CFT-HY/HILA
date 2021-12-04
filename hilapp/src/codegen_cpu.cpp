@@ -86,51 +86,92 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
         // First check for Direction references. If any found, create list of temp
         // variables
         if (l.is_read_nb) {
-            for (dir_ptr &d : l.dir_list) {
-                std::string dirname;
-                if (d.is_constant_direction)
-                    dirname = d.direxpr_s; // orig. string
-                else
-                    dirname = remove_X(loopBuf.get(
-                        d.parityExpr
-                            ->getSourceRange())); // mapped name was get_stmt_str(d.e);
+            if (!l.is_loop_local_dir) {
+                // "standard" loop extern neighb direction
+                for (dir_ptr &d : l.dir_list) {
+                    std::string dirname;
+                    if (d.is_constant_direction)
+                        dirname = d.direxpr_s; // orig. string
+                    else
+                        dirname = remove_X(loopBuf.get(
+                            d.parityExpr->getSourceRange())); // mapped name was
+                                                              // get_stmt_str(d.e);
 
-                // generate access stmt
-                code << l.element_type << " " << d.name_with_dir << " = " << l.new_name;
+                    // generate access stmt
+                    code << l.element_type << " " << d.name_with_dir << " = "
+                         << l.new_name;
+
+                    if (target.vectorize && l.vecinfo.is_vectorizable) {
+                        // now l is vectorizable, but accessed sequentially -- this inly
+                        // happens in vectorized targets
+                        code << ".get_value_at_nb_site(" << dirname << ", "
+                             << looping_var << ");\n";
+                    } else {
+                        // std neighbour accessor for scalars
+                        code << ".get_value_at(" << l.new_name << ".fs->neighbours["
+                             << dirname << "][" << looping_var << "]);\n";
+                    }
+
+                    // and replace references in loop body
+                    for (field_ref *ref : d.ref_list) {
+                        loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                    }
+                }
+
+            } else {
+                // now loop local dir - access all neighbours
+                std::string loop_array_name = l.new_name + "_dirs";
+                code << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) \n"
+                     << "  " << loop_array_name << "[_HILAdir_] = " << l.new_name;
 
                 if (target.vectorize && l.vecinfo.is_vectorizable) {
                     // now l is vectorizable, but accessed sequentially -- this inly
                     // happens in vectorized targets
-                    code << ".get_value_at_nb_site(" << dirname << ", " << looping_var
+                    code << ".get_value_at_nb_site(_HILAdir_, " << looping_var
                          << ");\n";
                 } else {
-                    // std neighbour accessor for scalars
-                    code << ".get_value_at(" << l.new_name << ".fs->neighbours["
-                         << dirname << "][" << looping_var << "]);\n";
+                    // std access
+                    code << ".get_value_at(" << l.new_name
+                         << ".fs->neighbours[_HILAdir_][" << looping_var << "]);\n";
                 }
 
                 // and replace references in loop body
-                for (field_ref *ref : d.ref_list) {
-                    loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                for (dir_ptr &d : l.dir_list) {
+                    std::string dirname;
+                    if (d.is_constant_direction)
+                        dirname = d.direxpr_s; // orig. string
+                    else
+                        dirname = remove_X(loopBuf.get(
+                            d.parityExpr->getSourceRange())); // mapped name was
+
+                    for (field_ref *ref : d.ref_list) {
+                        loopBuf.replace(ref->fullExpr,
+                                        loop_array_name + "[" + dirname + "]");
+                    }
                 }
             }
         }
 
+
         // and then get (possible) local refs
         // TODO:
-        if (l.is_read_atX || loop_info.has_conditional) {
+        if (l.is_read_atX || (l.is_written && loop_info.has_conditional)) {
             // now reading var without nb. reference
             code << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
                  << ".get_value_at(" << looping_var << ");\n";
 
-            if (loop_info.has_conditional && !l.is_read_atX) {
-                code << "// Value of var " << l.loop_ref_name << " read in because loop has conditional\n";
+            if (!l.is_read_atX) {
+                code << "// Value of var " << l.loop_ref_name
+                     << " read in because loop has conditional\n";
                 code << "// TODO: MAY BE UNNECESSARY, write more careful analysis\n";
             }
 
         } else if (l.is_written) {
             code << l.element_type << " " << l.loop_ref_name << ";\n";
-            code << "// Initial value of variable " << l.loop_ref_name << " not needed\n";
+            code << "// Initial value of variable " << l.loop_ref_name
+                 << " not needed\n";
         }
 
         // and finally replace references in body
@@ -182,11 +223,18 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
 
         for (field_info &l : field_info_list) {
             // If neighbour references exist, communicate them
-            for (dir_ptr &d : l.dir_list)
-                if (d.count > 0) {
-                    code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
-                         << loop_info.parity_str << ");\n";
-                }
+            if (!l.is_loop_local_dir) {
+                for (dir_ptr &d : l.dir_list)
+                    if (d.count > 0) {
+                        code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
+                             << loop_info.parity_str << ");\n";
+                    }
+            } else {
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) {\n"
+                     << "  " << l.new_name << ".wait_fetch(_HILAdir_, "
+                     << loop_info.parity_str << ");\n}\n";
+            }
         }
         code << "}\n";
     }

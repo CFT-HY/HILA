@@ -104,11 +104,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     for (field_info &l : field_info_list) {
         // Generate new variable name, may be needed -- use here simple receipe
-        l.new_name = "F" + clean_name(l.old_name);
+        l.new_name = field_name_prefix + clean_name(l.old_name);
         // Perhaps simpler FA, FB, FC. ?  The following helps avoid collisions
-        while (t.find(l.new_name, 0) != std::string::npos)
-            l.new_name += "_";
-        l.loop_ref_name = l.new_name + "_index";
+        l.loop_ref_name = l.new_name + "_at_X";
 
         // Create neighbour ref names
         int i = 0;
@@ -174,20 +172,40 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     for (field_info &l : field_info_list) {
         // If neighbour references exist, communicate them
-        for (dir_ptr &d : l.dir_list)
-            if (d.count > 0) {
-                if (!generate_wait_loops) {
-                    code << l.new_name << ".fetch(" << d.direxpr_s << ", "
-                         << loop_info.parity_str << ");\n";
-                } else {
-                    if (first)
-                        code << "dir_mask_t  _dir_mask_ = 0;\n";
-                    first = false;
+        if (!l.is_loop_local_dir) {
+            // "normal" dir references only here
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+                    if (!generate_wait_loops) {
+                        code << l.new_name << ".fetch(" << d.direxpr_s << ", "
+                             << loop_info.parity_str << ");\n";
+                    } else {
+                        if (first)
+                            code << "dir_mask_t  _dir_mask_ = 0;\n";
+                        first = false;
 
-                    code << "_dir_mask_ |= " << l.new_name << ".start_fetch("
-                         << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
+                        code << "_dir_mask_ |= " << l.new_name << ".start_fetch("
+                             << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
+                    }
                 }
+        } else {
+            // now loop local dirs - fetch all neighbours!
+            // TODO: restrict dirs
+            if (!generate_wait_loops) {
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) {\n"
+                     << l.new_name << ".fetch(_HILAdir_," << loop_info.parity_str
+                     << ");\n}\n";
+            } else {
+                if (first)
+                    code << "dir_mask_t  _dir_mask_ = 0;\n";
+                first = false;
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) {\n"
+                     << "_dir_mask_ |= " << l.new_name << ".start_fetch(_HILAdir_,"
+                     << loop_info.parity_str << ");\n}\n";
             }
+        }
     }
 
     if (first)

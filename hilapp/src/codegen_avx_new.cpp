@@ -410,7 +410,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
         }
     }
 
-    // Set loop lattice for neibhbour arrays
+    // Set loop lattice for neighbour arrays
     if (field_info_list.size() > 0) {
         std::string fieldname = field_info_list.front().new_name;
         code << "const auto * RESTRICT loop_lattice = " << fieldname
@@ -448,29 +448,61 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
         // First check for Direction references. If any found, create list of temp
         // variables
         if (l.is_read_nb) {
-            for (dir_ptr &d : l.dir_list)
-                if (d.count > 0) {
+            if (!l.is_loop_local_dir) {
+                for (dir_ptr &d : l.dir_list)
+                    if (d.count > 0) {
+                        std::string dirname;
+                        if (d.is_constant_direction)
+                            dirname = d.direxpr_s; // orig. string
+                        else
+                            dirname = remove_X(loopBuf.get(
+                                d.parityExpr->getSourceRange())); // mapped name was
+                                                                  // get_stmt_str(d.e);
+
+                        code << l.vecinfo.vectorized_type << " " << d.name_with_dir
+                             << " = " << l.new_name << ".get_vector_at<"
+                             << l.vecinfo.vectorized_type
+                             << ">(loop_lattice->neighbours[" << dirname << "]["
+                             << looping_var << "]);\n";
+
+                        // and replace references in loop body
+                        for (field_ref *ref : d.ref_list) {
+                            loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        }
+                    }
+            } else {
+                // now loop local direction -- get in all dirs
+
+                std::string loop_array_name = l.new_name + "_dirs";
+                code << l.vecinfo.vectorized_type << ' ' << loop_array_name
+                     << "[NDIRS];\n";
+
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) {\n"
+                     << loop_array_name << "[_HILAdir_] = " << l.new_name
+                     << ".get_vector_at<" << l.vecinfo.vectorized_type
+                     << ">(loop_lattice->neighbours[_HILAdir_][" << looping_var
+                     << "]);\n}\n";
+
+
+                // and replace references in loop body
+                for (dir_ptr &d : l.dir_list) {
                     std::string dirname;
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
                         dirname = remove_X(loopBuf.get(
                             d.parityExpr->getSourceRange())); // mapped name was
-                                                              // get_stmt_str(d.e);
 
-                    code << l.vecinfo.vectorized_type << " " << d.name_with_dir << " = "
-                         << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type
-                         << ">(loop_lattice->neighbours[" << dirname << "]["
-                         << looping_var << "]);\n";
-
-                    // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                        loopBuf.replace(ref->fullExpr,
+                                        loop_array_name + "[" + dirname + "]");
                     }
                 }
+            }
         }
 
-        if (l.is_read_atX || loop_info.has_conditional) {
+        if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
             code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << " = "
                  << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type << ">("
                  << looping_var << ");\n";
@@ -560,11 +592,20 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
 
         for (field_info &l : field_info_list) {
             // If neighbour references exist, communicate them
+            if (!l.is_loop_local_dir) {
             for (dir_ptr &d : l.dir_list)
                 if (d.count > 0) {
                     code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
                          << loop_info.parity_str << ");\n";
                 }
+
+            } else {
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) {\n"
+                     << "  " << l.new_name << ".wait_fetch(_HILAdir_, "
+                     << loop_info.parity_str << ");\n}\n";
+            }
+
         }
         code << "}\n";
     }
