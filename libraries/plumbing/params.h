@@ -41,6 +41,10 @@
 #undef GPU_MEMORY_POOL
 #endif
 
+// If SLOW_GPU_REDUCTION is defined, use slow but memory stingy
+// reduction.  Probably should not be used.
+// #define SLOW_GPU_REDUCTION
+
 #endif  // CUDA || HIP
 
 ///////////////////////////////////////////////////////////////////////////

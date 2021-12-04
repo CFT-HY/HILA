@@ -32,8 +32,6 @@
 #define __device__
 #define __host__
 #define __global__
-// helper def for hilapp
-static int _hilapp_number_of_dimensions_ = NDIM;
 #endif
 
 #include "plumbing/mersenne.h"
