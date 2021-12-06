@@ -473,19 +473,34 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
             } else {
                 // now loop local direction -- get in all dirs
 
-                std::string loop_array_name = l.new_name + "_dirs";
-                code << l.vecinfo.vectorized_type << ' ' << loop_array_name
-                     << "[NDIRS];\n";
+                // std::string loop_array_name = l.new_name + "_dirs";
+                // code << l.vecinfo.vectorized_type << ' ' << loop_array_name
+                //      << "[NDIRS];\n";
 
-                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
-                        "++_HILAdir_) {\n"
-                     << loop_array_name << "[_HILAdir_] = " << l.new_name
-                     << ".get_vector_at<" << l.vecinfo.vectorized_type
-                     << ">(loop_lattice->neighbours[_HILAdir_][" << looping_var
-                     << "]);\n}\n";
+                // code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                //         "++_HILAdir_) {\n"
+                //      << loop_array_name << "[_HILAdir_] = " << l.new_name
+                //      << ".get_vector_at<" << l.vecinfo.vectorized_type
+                //      << ">(loop_lattice->neighbours[_HILAdir_][" << looping_var
+                //      << "]);\n}\n";
 
 
-                // and replace references in loop body
+                // // and replace references in loop body
+                // for (dir_ptr &d : l.dir_list) {
+                //     std::string dirname;
+                //     if (d.is_constant_direction)
+                //         dirname = d.direxpr_s; // orig. string
+                //     else
+                //         dirname = remove_X(loopBuf.get(
+                //             d.parityExpr->getSourceRange())); // mapped name was
+
+                //     for (field_ref *ref : d.ref_list) {
+                //         loopBuf.replace(ref->fullExpr,
+                //                         loop_array_name + "[" + dirname + "]");
+                //     }
+                // }
+
+
                 for (dir_ptr &d : l.dir_list) {
                     std::string dirname;
                     if (d.is_constant_direction)
@@ -496,7 +511,10 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
 
                     for (field_ref *ref : d.ref_list) {
                         loopBuf.replace(ref->fullExpr,
-                                        loop_array_name + "[" + dirname + "]");
+                                        l.new_name + ".get_vector_at<" +
+                                            l.vecinfo.vectorized_type +
+                                            ">(loop_lattice->neighbours[" + dirname +
+                                            "][" + looping_var + "])");
                     }
                 }
             }
@@ -593,11 +611,11 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
         for (field_info &l : field_info_list) {
             // If neighbour references exist, communicate them
             if (!l.is_loop_local_dir) {
-            for (dir_ptr &d : l.dir_list)
-                if (d.count > 0) {
-                    code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
-                         << loop_info.parity_str << ");\n";
-                }
+                for (dir_ptr &d : l.dir_list)
+                    if (d.count > 0) {
+                        code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
+                             << loop_info.parity_str << ");\n";
+                    }
 
             } else {
                 code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
@@ -605,7 +623,6 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
                      << "  " << l.new_name << ".wait_fetch(_HILAdir_, "
                      << loop_info.parity_str << ");\n}\n";
             }
-
         }
         code << "}\n";
     }

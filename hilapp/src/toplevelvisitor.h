@@ -181,6 +181,8 @@ class TopLevelVisitor : public GeneralVisitor,
 
     /// Does ; follow the statement?
     SourceRange getRangeWithSemicolon(Stmt *S, bool flag_error = true);
+    SourceRange getRangeWithSemicolon(SourceRange sr, bool flag_error = true);
+    bool hasSemicolonAfter(SourceLocation sl);
 
     void requireGloballyDefined(Expr *e);
 
@@ -252,13 +254,20 @@ class FieldRefChecker : public GeneralVisitor,
                         public RecursiveASTVisitor<FieldRefChecker> {
   private:
     bool found_loop_local_var = false;
+    var_info *vip;
 
   public:
     using GeneralVisitor::GeneralVisitor;
 
     bool TraverseStmt(Stmt *s);
     bool VisitDeclRefExpr(DeclRefExpr *e);
-    bool isLoopLocal() { return found_loop_local_var; }
+    bool isLoopLocal() {
+        return found_loop_local_var;
+    }
+    var_info * getLocalVarInfo() {
+        if (found_loop_local_var) return vip;
+        else return nullptr;
+    }
 };
 
 /// An AST Visitor for checking constraints for assigments

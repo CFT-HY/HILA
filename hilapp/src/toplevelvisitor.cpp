@@ -40,6 +40,7 @@ bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
         if (vi.is_loop_local && vi.decl == dyn_cast<VarDecl>(e->getDecl())) {
             // It is local! set status
             found_loop_local_var = true;
+            vip = &vi;
             break;
         }
 
@@ -200,6 +201,16 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
             // It's an offset, no checking here to be done
             lfe.is_offset = true;
 
+            FieldRefChecker frc(*this);
+            frc.TraverseStmt(lfe.parityExpr);
+            if (frc.isLoopLocal()) {
+                reportDiag(DiagnosticsEngine::Level::Error,
+                           lfe.parityExpr->getSourceRange().getBegin(),
+                           "Non-nearest neighbour reference cannot depend on variable "
+                           "'%0' defined inside site loop",
+                           frc.getLocalVarInfo()->name.c_str());
+            }
+
         } else {
 
             // Now make a check if the reference is just constant (e_x etc.)
@@ -273,9 +284,9 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
                 is_assign = false;
                 TraverseStmt(lfe.parityExpr);
 
-                // do it again with fieldrefchecker to see if the dir depends on internal var
+                // do it again with fieldrefchecker to see if the dir depends on
+                // internal var
                 FieldRefChecker frc(*this);
-                is_assign = false;
                 frc.TraverseStmt(lfe.parityExpr);
                 if (frc.isLoopLocal()) {
                     lfe.is_loop_local_dir = true;
@@ -290,15 +301,17 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
 
     // Check that there are no local variable references up the AST of the name
     FieldRefChecker frc(*this);
-    is_assign = false;
     frc.TraverseStmt(lfe.nameExpr);
     if (frc.isLoopLocal()) {
-        reportDiag(DiagnosticsEngine::Level::Error, lfe.nameExpr->getSourceRange().getBegin(),
-                   "Field reference depends on loop-local variable");
+        reportDiag(DiagnosticsEngine::Level::Error,
+                   lfe.nameExpr->getSourceRange().getBegin(),
+                   "Field reference cannot depend on loop-local variable '%0'",
+                   frc.getLocalVarInfo()->name.c_str());
     }
 
     if (contains_random(lfe.fullExpr)) {
-        reportDiag(DiagnosticsEngine::Level::Error, lfe.fullExpr->getSourceRange().getBegin(),
+        reportDiag(DiagnosticsEngine::Level::Error,
+                   lfe.fullExpr->getSourceRange().getBegin(),
                    "Field reference cannot contain random number generator");
     }
 
@@ -803,6 +816,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     // dep!\n";
 
     // and now generate the appropriate code
+
     generate_code(ls);
 
     // Buf.clear();
@@ -1127,7 +1141,7 @@ int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
         }
         if (TemplateArgument::ArgKind::Type != args.get(0).getKind()) {
             reportDiag(DiagnosticsEngine::Level::Error, D->getSourceRange().getBegin(),
-                       "Expect type argument in \'Field\' template");
+                       "Expecting type argument in \'Field\' template");
             return (0);
         }
 
@@ -1285,7 +1299,7 @@ bool TopLevelVisitor::check_field_ref_list() {
 
         if (p.is_direction) {
 
-            if (p.is_loop_local_dir) 
+            if (p.is_loop_local_dir)
                 fip->is_loop_local_dir = true;
 
             // does this dir with this field name exist before?
@@ -1321,8 +1335,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                 dp.ref_list.push_back(&p);
 
                 fip->dir_list.push_back(dp);
-
-           }
+            }
         } // Direction
     }     // p-loop
 
@@ -1465,22 +1478,34 @@ void TopLevelVisitor::check_var_info_list() {
 /// flag_error = true by default in toplevelvisitor.h
 
 SourceRange TopLevelVisitor::getRangeWithSemicolon(Stmt *S, bool flag_error) {
-    SourceRange range(S->getBeginLoc(),
-                      Lexer::findLocationAfterToken(S->getEndLoc(), tok::semi,
+    return getRangeWithSemicolon(S->getSourceRange(), flag_error);
+}
+
+SourceRange TopLevelVisitor::getRangeWithSemicolon(SourceRange SR, bool flag_error) {
+    SourceRange range(SR.getBegin(),
+                      Lexer::findLocationAfterToken(SR.getEnd(), tok::semi,
                                                     TheRewriter.getSourceMgr(),
                                                     Context->getLangOpts(), false));
     if (!range.isValid()) {
         if (flag_error) {
-            reportDiag(DiagnosticsEngine::Level::Fatal, S->getEndLoc(),
+            reportDiag(DiagnosticsEngine::Level::Fatal, SR.getEnd(),
                        "Expecting ';' after expression");
         }
         // put a valid value in any case
-        range = S->getSourceRange();
+        range = SR;
     }
 
     // llvm::errs() << "Range w semi: " << TheRewriter.getRewrittenText(range) << '\n';
     return range;
 }
+
+bool TopLevelVisitor::hasSemicolonAfter(SourceLocation s) {
+    do {
+        s = s.getLocWithOffset(1);
+    } while (std::isspace(getChar(s)));
+    return getChar(s) == ';';
+}
+
 
 /////////////////////////////////////////////////////////////////////////////
 /// Variable decls inside site loops, but also some outside

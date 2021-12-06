@@ -499,15 +499,31 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             } else {
                 // now local var dependent neighbour
 
-                std::string loop_array_name = l.new_name + "_dirs";
-                kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
-                kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
-                          "++_HILAdir_) {\n"
-                       << loop_array_name << "[_HILAdir_] = " << l.new_name << ".get("
-                       << l.new_name << ".neighbours[_HILAdir_][" << looping_var
-                       << "], d_lattice.field_alloc_size);\n}\n";
+                // std::string loop_array_name = l.new_name + "_dirs";
+                // kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
+                // kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
+                //           "++_HILAdir_) {\n"
+                //        << loop_array_name << "[_HILAdir_] = " << l.new_name <<
+                //        ".get("
+                //        << l.new_name << ".neighbours[_HILAdir_][" << looping_var
+                //        << "], d_lattice.field_alloc_size);\n}\n";
 
-                // and replace references in loop body
+                // // and replace references in loop body
+                // for (dir_ptr &d : l.dir_list) {
+                //     std::string dirname;
+                //     if (d.is_constant_direction)
+                //         dirname = d.direxpr_s; // orig. string
+                //     else
+                //         dirname = remove_X(loopBuf.get(
+                //             d.parityExpr->getSourceRange())); // mapped name was
+
+                //     for (field_ref *ref : d.ref_list) {
+                //         loopBuf.replace(ref->fullExpr,
+                //                         loop_array_name + "[" + dirname + "]");
+                //     }
+                // }
+
+                // and variable direction refs - use accessor directly
                 for (dir_ptr &d : l.dir_list) {
                     std::string dirname;
                     if (d.is_constant_direction)
@@ -517,8 +533,10 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                             d.parityExpr->getSourceRange())); // mapped name was
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr,
-                                        loop_array_name + "[" + dirname + "]");
+                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" +
+                                                           l.new_name + ".neighbours[" +
+                                                           dirname + "][" +
+                                                           looping_var + "])");
                     }
                 }
             }

@@ -119,25 +119,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
                 }
 
             } else {
-                // now loop local dir - access all neighbours
-                std::string loop_array_name = l.new_name + "_dirs";
-                code << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
-                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
-                        "++_HILAdir_) \n"
-                     << "  " << loop_array_name << "[_HILAdir_] = " << l.new_name;
 
-                if (target.vectorize && l.vecinfo.is_vectorizable) {
-                    // now l is vectorizable, but accessed sequentially -- this inly
-                    // happens in vectorized targets
-                    code << ".get_value_at_nb_site(_HILAdir_, " << looping_var
-                         << ");\n";
-                } else {
-                    // std access
-                    code << ".get_value_at(" << l.new_name
-                         << ".fs->neighbours[_HILAdir_][" << looping_var << "]);\n";
-                }
-
-                // and replace references in loop body
+                // and variable direction refs - use accessor directly
                 for (dir_ptr &d : l.dir_list) {
                     std::string dirname;
                     if (d.is_constant_direction)
@@ -147,8 +130,16 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
                             d.parityExpr->getSourceRange())); // mapped name was
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr,
-                                        loop_array_name + "[" + dirname + "]");
+                        if (target.vectorize && l.vecinfo.is_vectorizable) {
+                            loopBuf.replace(ref->fullExpr,
+                                            l.new_name + ".get_value_at_nb_site(" +
+                                                dirname + ", " + looping_var + ")");
+                        } else {
+                            loopBuf.replace(ref->fullExpr,
+                                            l.new_name + ".get_value_at(" + l.new_name +
+                                                ".fs->neighbours[" + dirname + "][" +
+                                                looping_var + "])");
+                        }
                     }
                 }
             }

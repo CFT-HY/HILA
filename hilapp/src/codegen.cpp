@@ -55,7 +55,17 @@ inline std::string unique_name(const std::string t, std::string n) {
 /// The main entry point for code generation
 void TopLevelVisitor::generate_code(Stmt *S) {
     srcBuf loopBuf; // (&TheRewriter,S);
-    loopBuf.copy_from_range(writeBuf, S->getSourceRange());
+
+    // check if the range starts with a macro (e.g. onsites(ALL) foralldir(d) ...)
+
+    SourceRange Srange = S->getSourceRange();
+    if (Srange.getBegin().isMacroID()) {
+        CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange(Srange.getBegin());
+
+        Srange = SourceRange(CSR.getAsRange().getBegin(),Srange.getEnd());
+    }
+
+    loopBuf.copy_from_range(writeBuf, Srange);
 
     //   llvm::errs() << "\nOriginal range: +++++++++++++++\n\""
     //                << TheRewriter.getRewrittenText(S->getSourceRange())
@@ -65,8 +75,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     //                << loopBuf.dump() << "\"\n";
 
     // is it compound stmt: { } -no ; needed
-    bool semicolon_at_end = !(isa<CompoundStmt>(S));
-
+    bool semicolon_at_end = hasSemicolonAfter(Srange.getEnd());
+    
     // Build replacement in variable "code"
     // Encapsulate everything within {}
     std::stringstream code;
@@ -323,12 +333,12 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     // Remove old code + replace
     if (semicolon_at_end) {
-        writeBuf->remove(getRangeWithSemicolon(S));
+        writeBuf->remove(getRangeWithSemicolon(Srange));
     } else {
-        writeBuf->remove(S->getSourceRange());
+        writeBuf->remove(Srange);
     }
 
-    writeBuf->insert(S->getBeginLoc(), indent_string(code.str()), true, true);
+    writeBuf->insert(Srange.getBegin(), indent_string(code.str()), true, true);
 }
 
 // Handle field+offset expressions -- these are copied, ref removed
