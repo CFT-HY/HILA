@@ -822,7 +822,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     // Buf.clear();
 
     // Emit the original command as a commented line
-    writeBuf->insert(ls->getSourceRange().getBegin(),
+    writeBuf->insert(get_real_range(ls->getSourceRange()).getBegin(),
                      comment_string(global.full_loop_text) + "\n", true, true);
 
     global.full_loop_text = "";

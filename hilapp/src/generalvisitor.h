@@ -91,8 +91,12 @@ class GeneralVisitor {
         : TheRewriter(R), Context(C), srcMgr(R.getSourceMgr()), PP(C->getLangOpts()),
           var_info_list(_var_info_list), var_decl_list(_var_decl_list) {}
 
-    Rewriter &getRewriter() { return TheRewriter; }
-    ASTContext *getASTContext() { return Context; }
+    Rewriter &getRewriter() {
+        return TheRewriter;
+    }
+    ASTContext *getASTContext() {
+        return Context;
+    }
 
     /// Report diagnostic info
     template <unsigned N>
@@ -111,9 +115,20 @@ class GeneralVisitor {
             DB.AddString(s3);
     }
 
+    /// Return the unexpanded range (without macro expansion) from the source
+    SourceRange get_real_range(SourceRange r) {
+        if (r.getBegin().isMacroID()) {
+            CharSourceRange CSR =
+                TheRewriter.getSourceMgr().getImmediateExpansionRange(r.getBegin());
+            r = SourceRange(CSR.getAsRange().getBegin(), r.getEnd());
+        }
+        return r;
+    }
+
+
     /// Get the written expression of a C++ statement
     std::string get_stmt_str(const Stmt *s) {
-        return TheRewriter.getRewrittenText(s->getSourceRange());
+        return TheRewriter.getRewrittenText(get_real_range(s->getSourceRange()));
     }
 
     /// Get the type of an expression (i.e. int, double...) as a string
@@ -132,36 +147,43 @@ class GeneralVisitor {
     }
 
     /// Get FileID for SourceLocation
-    FileID get_FileId(SourceLocation sl) { return TheRewriter.getSourceMgr().getFileID(sl); }
+    FileID get_FileId(SourceLocation sl) {
+        return TheRewriter.getSourceMgr().getFileID(sl);
+    }
 
     /// a list of utility inspection functions
-    /// getCanonicalType takes away typedefs, getUnqualifiedType() qualifiers, pp just in
-    /// case the type string needs to begin with the string
+    /// getCanonicalType takes away typedefs, getUnqualifiedType() qualifiers, pp just
+    /// in case the type string needs to begin with the string
     bool is_field_storage_expr(Expr *E) {
-        return (E &&
-                E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
-                    field_storage_type) == 0);
+        return (
+            E &&
+            E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
+                field_storage_type) == 0);
     }
 
     /// Check the expression of a field expression
     bool is_field_expr(Expr *E) {
-        return (E &&
-                E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
-                    field_type) == 0);
+        return (
+            E &&
+            E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
+                field_type) == 0);
     }
 
     /// Check if declaration declate a field
     bool is_field_decl(ValueDecl *D) {
-        return (D &&
-                D->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
-                    field_type) == 0);
+        return (
+            D &&
+            D->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
+                field_type) == 0);
     }
 
     /// try to figure out whether expressions are duplicates
     bool is_duplicate_expr(const Expr *a, const Expr *b);
 
     /// Just check that the expression is of type Parity
-    bool is_parity_index_type(Expr *E) { return (get_expr_type(E) == "Parity"); }
+    bool is_parity_index_type(Expr *E) {
+        return (get_expr_type(E) == "Parity");
+    }
 
     /// Checks if E is of type Field[Parity]  Parity=EVEN,ODD,ALL
     bool is_field_parity_expr(Expr *E);
@@ -196,7 +218,8 @@ class GeneralVisitor {
 
     bool is_field_with_coordinate(Expr *E);
 
-    bool is_assignment_expr(Stmt *s, std::string *opcodestr, bool &iscompound, Expr **assignee = nullptr);
+    bool is_assignment_expr(Stmt *s, std::string *opcodestr, bool &iscompound,
+                            Expr **assignee = nullptr);
 
     bool is_site_dependent(Expr *e, std::vector<var_info *> *dependent_var);
 
@@ -269,7 +292,8 @@ class GeneralVisitor {
 
     bool handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep,
                               std::vector<var_info *> *out_variables,
-                              std::vector<var_info *> *dep_variables, argument_info &ai);
+                              std::vector<var_info *> *dep_variables,
+                              argument_info &ai);
 
     bool attach_dependent_vars(std::vector<var_info *> &variables, bool sitedep,
                                std::vector<var_info *> &dep_variables);

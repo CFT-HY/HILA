@@ -52,18 +52,17 @@ inline std::string unique_name(const std::string t, std::string n) {
     return n;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 /// The main entry point for code generation
+///////////////////////////////////////////////////////////////////////////////
+
 void TopLevelVisitor::generate_code(Stmt *S) {
     srcBuf loopBuf; // (&TheRewriter,S);
 
     // check if the range starts with a macro (e.g. onsites(ALL) foralldir(d) ...)
+    // Std sourcerange fails here!
 
-    SourceRange Srange = S->getSourceRange();
-    if (Srange.getBegin().isMacroID()) {
-        CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange(Srange.getBegin());
-
-        Srange = SourceRange(CSR.getAsRange().getBegin(),Srange.getEnd());
-    }
+    SourceRange Srange = get_real_range(S->getSourceRange());
 
     loopBuf.copy_from_range(writeBuf, Srange);
 
@@ -74,9 +73,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     //                << "\"\nCopied range: ================\n\""
     //                << loopBuf.dump() << "\"\n";
 
-    // is it compound stmt: { } -no ; needed
+    // is there semicolon at the end? Keep track of it (not visible in AST)
     bool semicolon_at_end = hasSemicolonAfter(Srange.getEnd());
-    
+
     // Build replacement in variable "code"
     // Encapsulate everything within {}
     std::stringstream code;
@@ -159,10 +158,12 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             if (cmdline::check_initialization) {
 
                 std::string fname =
-                    srcMgr.getFilename(S->getSourceRange().getBegin()).str();
+                    srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin())
+                        .str();
                 code << "if (!" << l.new_name << ".is_initialized(" << init_par
                      << ")){\noutput0 << \"File " << fname << " on line "
-                     << srcMgr.getSpellingLineNumber(S->getSourceRange().getBegin())
+                     << srcMgr.getSpellingLineNumber(
+                            get_real_range(S->getSourceRange()).getBegin())
                      << ":\\n Value of variable " << l.old_name
                      << " is used but it is not properly initialized\\n\";\n";
                 code << "hila::terminate(1);\n}\n";
