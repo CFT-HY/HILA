@@ -289,6 +289,8 @@ void scaling_sim::write_energies() {
     double w_sumPhiDiPhi = 0.0;
     double w_sumPhiPi = 0.0;
 
+    double phi2 = 0.0;
+
     hila::set_allreduce(false);
     onsites (ALL) {
         double phinorm = phi[X].squarenorm();
@@ -304,6 +306,8 @@ void scaling_sim::write_energies() {
 
         sumPhiPi += 0.5 * pPi * pPi;
         w_sumPhiPi += 0.5 * pPi * pPi * v;
+
+	phi2 += phinorm;
     }
 
 
@@ -334,6 +338,7 @@ void scaling_sim::write_energies() {
         config.stream << sumPhiPi / vol << " " << w_sumPhiPi / vol << " ";
         config.stream << sumPhiDiPhi / vol << " " << w_sumPhiDiPhi / vol << " ";
         config.stream << sumV / vol << " " << w_sumV / vol << " ";
+	config.stream << phi2 / vol << " "; 
     }
 }
 
@@ -355,7 +360,7 @@ void scaling_sim::write_windings()
 
     if (hila::myrank() == 0) 
     {
-	config.stream << 0.0 << " " << length << "\n";
+	config.stream << length << "\n";
     }
 
 }
