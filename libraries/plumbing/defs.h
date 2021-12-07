@@ -24,15 +24,15 @@
 #endif
 #endif
 
+// Read in Makefile tunable parameters first
+#include "params.h"
+
 #ifdef HILAPP
 // The compiler is hilapp
 #define __device__
 #define __host__
 #define __global__
 #endif
-
-// Read in Makefile tunable parameters first
-#include "params.h"
 
 #include "plumbing/mersenne.h"
 #include "plumbing/memalloc.h" // memory allocator

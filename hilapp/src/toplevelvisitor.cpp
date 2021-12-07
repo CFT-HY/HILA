@@ -37,16 +37,13 @@ bool FieldRefChecker::VisitDeclRefExpr(DeclRefExpr *e) {
     // the variable list. (If it's not in the list, it's not local)
     // llvm::errs() << "LPC variable reference: " <<  get_stmt_str(e) << "\n" ;
     for (var_info &vi : var_info_list)
-        if (vi.is_loop_local) {
-            // Checks that an expression is does not refer to loop local variables
-            if (vi.decl == dyn_cast<VarDecl>(e->getDecl())) {
-                // It is local! Generate a warning
-                reportDiag(DiagnosticsEngine::Level::Error,
-                           e->getSourceRange().getBegin(),
-                           "Field reference depends on loop-local variable");
-                break;
-            }
+        if (vi.is_loop_local && vi.decl == dyn_cast<VarDecl>(e->getDecl())) {
+            // It is local! set status
+            found_loop_local_var = true;
+            vip = &vi;
+            break;
         }
+
     return true;
 }
 
@@ -204,6 +201,16 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
             // It's an offset, no checking here to be done
             lfe.is_offset = true;
 
+            FieldRefChecker frc(*this);
+            frc.TraverseStmt(lfe.parityExpr);
+            if (frc.isLoopLocal()) {
+                reportDiag(DiagnosticsEngine::Level::Error,
+                           lfe.parityExpr->getSourceRange().getBegin(),
+                           "Non-nearest neighbour reference cannot depend on variable "
+                           "'%0' defined inside site loop",
+                           frc.getLocalVarInfo()->name.c_str());
+            }
+
         } else {
 
             // Now make a check if the reference is just constant (e_x etc.)
@@ -242,18 +249,20 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
 #endif
 
                 // Op must be + or - --get the sign
-                const char * ops = getOperatorSpelling(Op->getOperator());
+                const char *ops = getOperatorSpelling(Op->getOperator());
 
                 int offset = 0;
-                if (strcmp(ops,"+") == 0) offset = 0;
-                else if (strcmp(ops,"-") == 0) offset = 50;
+                if (strcmp(ops, "+") == 0)
+                    offset = 0;
+                else if (strcmp(ops, "-") == 0)
+                    offset = 50;
                 else {
                     llvm::errs() << "This cannot happen, direction op " << ops << '\n';
-                    exit(0);
+                    exit(1);
                 }
 
                 lfe.is_constant_direction = true;
-                // constant_value is used to uniquely label directions.  
+                // constant_value is used to uniquely label directions.
                 // Give negative dirs an offset of 50.
                 lfe.constant_value = result.getExtValue() + offset;
 
@@ -274,6 +283,14 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
                 // traverse the dir-expression to find var-references etc.
                 is_assign = false;
                 TraverseStmt(lfe.parityExpr);
+
+                // do it again with fieldrefchecker to see if the dir depends on
+                // internal var
+                FieldRefChecker frc(*this);
+                frc.TraverseStmt(lfe.parityExpr);
+                if (frc.isLoopLocal()) {
+                    lfe.is_loop_local_dir = true;
+                }
             }
         }
     } // end of "Direction"-branch
@@ -282,10 +299,21 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     //              << " Parity " << get_stmt_str(lfe.parityExpr)
     //              << "\n";
 
-    // Check that there are no local variable references up the AST
+    // Check that there are no local variable references up the AST of the name
     FieldRefChecker frc(*this);
-    is_assign = false;
-    frc.TraverseStmt(lfe.fullExpr);
+    frc.TraverseStmt(lfe.nameExpr);
+    if (frc.isLoopLocal()) {
+        reportDiag(DiagnosticsEngine::Level::Error,
+                   lfe.nameExpr->getSourceRange().getBegin(),
+                   "Field reference cannot depend on loop-local variable '%0'",
+                   frc.getLocalVarInfo()->name.c_str());
+    }
+
+    if (contains_random(lfe.fullExpr)) {
+        reportDiag(DiagnosticsEngine::Level::Error,
+                   lfe.fullExpr->getSourceRange().getBegin(),
+                   "Field reference cannot contain random number generator");
+    }
 
     field_ref_list.push_back(lfe);
 
@@ -299,8 +327,10 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
 reduction get_reduction_type(bool is_assign, const std::string &assignop,
                              var_info &vi) {
     if (is_assign && (!vi.is_loop_local)) {
-        if (assignop == "+=") return reduction::SUM;
-        if (assignop == "*=") return reduction::PRODUCT;
+        if (assignop == "+=")
+            return reduction::SUM;
+        if (assignop == "*=")
+            return reduction::PRODUCT;
     }
     return reduction::NONE;
 }
@@ -425,7 +455,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     bool site_dep = is_site_dependent(ref.Idx, &loop_info.conditional_vars);
 
     // if it is assignment = reduction, don't vectorize
-    if (site_dep || is_assign) loop_info.has_site_dependent_cond_or_index = true;
+    if (site_dep || is_assign)
+        loop_info.has_site_dependent_cond_or_index = true;
 
     reduction reduction_type;
     if (is_assign) {
@@ -557,7 +588,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             ar.size_expr = ar.name + ".size()";
             ar.data_ptr = ar.name + ".data()";
 
-            if (type == array_ref::REDUCTION) ar.reduction_type = reduction_type;
+            if (type == array_ref::REDUCTION)
+                ar.reduction_type = reduction_type;
         }
     }
 
@@ -620,7 +652,8 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
     br.DRE = find_base_variable(br.E);
     br.Idx = OC->getArg(1)->IgnoreImplicit();
 
-    if (is_assign) br.assign_stmt = assign_stmt;
+    if (is_assign)
+        br.assign_stmt = assign_stmt;
 
     std::string type = OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
 
@@ -657,12 +690,14 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
 bool TopLevelVisitor::handle_constant_ref(Expr *E) {
 
     APValue val;
-    if (!E->isCXX11ConstantExpr(*Context, &val, nullptr)) return false; // nothing
+    if (!E->isCXX11ConstantExpr(*Context, &val, nullptr))
+        return false; // nothing
 
     E = E->IgnoreImplicit();
     // If it is not a declrefexpr continue to next node in ast
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
-    if (DRE == nullptr) return true;
+    if (DRE == nullptr)
+        return true;
 
     SourceLocation sl = DRE->getDecl()->getSourceRange().getBegin();
     if (sl.isValid()) {
@@ -727,7 +762,6 @@ void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
     eref.type = typ.getAsString(PP);
 
     loop_const_expr_ref_list.push_back(eref);
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -774,19 +808,21 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     // because var_info_list was checked above, once is enough
     if (loop_info.has_site_dependent_cond_or_index == false) {
         for (auto *n : loop_info.conditional_vars)
-            if (n->is_site_dependent) loop_info.has_site_dependent_cond_or_index = true;
+            if (n->is_site_dependent)
+                loop_info.has_site_dependent_cond_or_index = true;
     }
 
     // if (loop_info.has_site_dependent_conditional) llvm::errs() << "Cond is site
     // dep!\n";
 
     // and now generate the appropriate code
+
     generate_code(ls);
 
     // Buf.clear();
 
     // Emit the original command as a commented line
-    writeBuf->insert(ls->getSourceRange().getBegin(),
+    writeBuf->insert(get_real_range(ls->getSourceRange()).getBegin(),
                      comment_string(global.full_loop_text) + "\n", true, true);
 
     global.full_loop_text = "";
@@ -815,7 +851,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // depth = 1 is the "top level" statement, should give fully formed
     // c++ statements separated by ';'.  These act as sequencing points
     // This is used to obtain assignment and read ordering
-    if (parsing_state.ast_depth == 1) parsing_state.stmt_sequence++;
+    if (parsing_state.ast_depth == 1)
+        parsing_state.stmt_sequence++;
 
     // Need to recognize assignments lf[X] =  or lf[X] += etc.
     // And also assignments to other vars: t += norm2(lf[X]) etc.
@@ -836,7 +873,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         // next visit here will be to the assigned to variable
         // Check type, if it is f[X] or f[parity] - then we do not (necessarily)
         // need to read in the variable
-        is_field_assign = (is_field_parity_expr(assignee) || is_field_with_X_expr(assignee));
+        is_field_assign =
+            (is_field_parity_expr(assignee) || is_field_with_X_expr(assignee));
 
         return true;
     }
@@ -891,7 +929,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         if (is_field_with_X_expr(E)) {
             // It is Field[X] reference
             // get the expression for field name
-            handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign, true);
+            handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign,
+                                true);
             is_assignment = false; // next will not be assignment
             // (unless it is a[] = b[] = c[], which is OK)
 
@@ -903,7 +942,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // Now we know it is a field parity reference
             // get the expression for field name
 
-            handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign, false);
+            handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign,
+                                false);
             is_assignment = false; // next will not be assignment
             // (unless it is a[] = b[] = c[], which is OK)
 
@@ -1033,7 +1073,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         passthrough = true; // next visit will be to the same node, skip
 
         // Reset ast_depth, so that depth == 0 again for the block.
-        if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1;
+        if (isa<CompoundStmt>(s))
+            parsing_state.ast_depth = -1;
 
         TraverseStmt(s);
 
@@ -1100,7 +1141,7 @@ int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
         }
         if (TemplateArgument::ArgKind::Type != args.get(0).getKind()) {
             reportDiag(DiagnosticsEngine::Level::Error, D->getSourceRange().getBegin(),
-                       "Expect type argument in \'Field\' template");
+                       "Expecting type argument in \'Field\' template");
             return (0);
         }
 
@@ -1129,16 +1170,19 @@ int TopLevelVisitor::handle_field_specializations(ClassTemplateDecl *D) {
 bool TopLevelVisitor::TraverseStmt(Stmt *S) {
 
     // if state::skip_children > 0 we'll skip all until return to level up
-    if (parsing_state.skip_children > 0) parsing_state.skip_children++;
+    if (parsing_state.skip_children > 0)
+        parsing_state.skip_children++;
 
     // go via the original routine...
     if (!parsing_state.skip_children) {
         parsing_state.ast_depth++;
         RecursiveASTVisitor<TopLevelVisitor>::TraverseStmt(S);
-        if (parsing_state.ast_depth > 0) parsing_state.ast_depth--;
+        if (parsing_state.ast_depth > 0)
+            parsing_state.ast_depth--;
     }
 
-    if (parsing_state.skip_children > 0) parsing_state.skip_children--;
+    if (parsing_state.skip_children > 0)
+        parsing_state.skip_children--;
 
     return true;
 }
@@ -1146,16 +1190,19 @@ bool TopLevelVisitor::TraverseStmt(Stmt *S) {
 bool TopLevelVisitor::TraverseDecl(Decl *D) {
 
     // if state::skip_children > 0 we'll skip all until return to level up
-    if (parsing_state.skip_children > 0) parsing_state.skip_children++;
+    if (parsing_state.skip_children > 0)
+        parsing_state.skip_children++;
 
     // go via the original routine...
     if (!parsing_state.skip_children) {
         parsing_state.ast_depth++;
         RecursiveASTVisitor<TopLevelVisitor>::TraverseDecl(D);
-        if (parsing_state.ast_depth > 0) parsing_state.ast_depth--;
+        if (parsing_state.ast_depth > 0)
+            parsing_state.ast_depth--;
     }
 
-    if (parsing_state.skip_children > 0) parsing_state.skip_children--;
+    if (parsing_state.skip_children > 0)
+        parsing_state.skip_children--;
 
     return true;
 }
@@ -1244,19 +1291,16 @@ bool TopLevelVisitor::check_field_ref_list() {
             }
         }
 
-        if (p.is_offset) fip->is_read_offset = true;
+        if (p.is_offset)
+            fip->is_read_offset = true;
 
         // save expr record
         fip->ref_list.push_back(&p);
 
         if (p.is_direction) {
 
-            // if (p.is_written) {
-            //   reportDiag(DiagnosticsEngine::Level::Error,
-            //              p.parityExpr->getSourceRange().getBegin(),
-            //              "Neighbour offset not allowed on the LHS of an assignment");
-            //   no_errors = false;
-            // }
+            if (p.is_loop_local_dir)
+                fip->is_loop_local_dir = true;
 
             // does this dir with this field name exist before?
             // Use is_duplicate_expr() to resolve the ptr, it has (some) intelligence to
@@ -1285,6 +1329,7 @@ bool TopLevelVisitor::check_field_ref_list() {
                 dp.is_offset = p.is_offset;
                 dp.is_constant_direction = p.is_constant_direction;
                 dp.constant_value = p.constant_value;
+                dp.is_loop_local_dir = p.is_loop_local_dir;
                 dp.direxpr_s = p.direxpr_s; // copy the string expr of Direction
 
                 dp.ref_list.push_back(&p);
@@ -1433,25 +1478,37 @@ void TopLevelVisitor::check_var_info_list() {
 /// flag_error = true by default in toplevelvisitor.h
 
 SourceRange TopLevelVisitor::getRangeWithSemicolon(Stmt *S, bool flag_error) {
-    SourceRange range(S->getBeginLoc(),
-                      Lexer::findLocationAfterToken(S->getEndLoc(), tok::semi,
+    return getRangeWithSemicolon(S->getSourceRange(), flag_error);
+}
+
+SourceRange TopLevelVisitor::getRangeWithSemicolon(SourceRange SR, bool flag_error) {
+    SourceRange range(SR.getBegin(),
+                      Lexer::findLocationAfterToken(SR.getEnd(), tok::semi,
                                                     TheRewriter.getSourceMgr(),
                                                     Context->getLangOpts(), false));
     if (!range.isValid()) {
         if (flag_error) {
-            reportDiag(DiagnosticsEngine::Level::Fatal, S->getEndLoc(),
+            reportDiag(DiagnosticsEngine::Level::Fatal, SR.getEnd(),
                        "Expecting ';' after expression");
         }
         // put a valid value in any case
-        range = S->getSourceRange();
+        range = SR;
     }
 
     // llvm::errs() << "Range w semi: " << TheRewriter.getRewrittenText(range) << '\n';
     return range;
 }
 
+bool TopLevelVisitor::hasSemicolonAfter(SourceLocation s) {
+    do {
+        s = s.getLocWithOffset(1);
+    } while (std::isspace(getChar(s)));
+    return getChar(s) == ';';
+}
+
+
 /////////////////////////////////////////////////////////////////////////////
-/// Variable decl inside site loops
+/// Variable decls inside site loops, but also some outside
 /////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
@@ -1466,6 +1523,8 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
         second_def = true;
     }
 
+
+    // and then loop body statements
     if (parsing_state.in_loop_body) {
         // for now care only loop body variable declarations
 
@@ -1641,12 +1700,14 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
 
     CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
     bool found = false;
-    if (OP && OP->isAssignmentOp() && is_field_parity_expr(OP->getArg(0)->IgnoreImplicit())) {
+    if (OP && OP->isAssignmentOp() &&
+        is_field_parity_expr(OP->getArg(0)->IgnoreImplicit())) {
         found = true;
     } else {
         // check also Field<double> or some other non-class var
         BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
-        if (BO && BO->isAssignmentOp() && is_field_parity_expr(BO->getLHS()->IgnoreImplicit()))
+        if (BO && BO->isAssignmentOp() &&
+            is_field_parity_expr(BO->getLHS()->IgnoreImplicit()))
             found = true;
     }
 
@@ -1664,14 +1725,16 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
     }
 
     // And, for correct level for pragma handling - turns to 0 for stmts inside
-    if (isa<CompoundStmt>(s)) parsing_state.ast_depth = -1;
+    if (isa<CompoundStmt>(s))
+        parsing_state.ast_depth = -1;
 
     Expr *E = dyn_cast<Expr>(s);
 
     // new stuff: if there is field[coordinate], modify these to appropriate
     // functions
 
-    if (is_field_with_coordinate_stmt(s)) return true;
+    if (is_field_with_coordinate_stmt(s))
+        return true;
 
     //  Finally, if we get to a Field[Parity] -expression without a loop or assignment
     //  flag error
@@ -1741,7 +1804,8 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
     // assigment through operator=()
 
     CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s);
-    if (OP && OP->isAssignmentOp() && is_field_with_coordinate(OP->getArg(0)->IgnoreImplicit())) {
+    if (OP && OP->isAssignmentOp() &&
+        is_field_with_coordinate(OP->getArg(0)->IgnoreImplicit())) {
         const char *sp = getOperatorSpelling(OP->getOperator());
         if (sp[0] != '=') {
             // it's a compound assignment, not allowed
@@ -1751,7 +1815,8 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
             return false;
         }
 
-        field_with_coordinate_assign(OP->getArg(0)->IgnoreImplicit(), OP->getArg(1)->IgnoreImplicit(),
+        field_with_coordinate_assign(OP->getArg(0)->IgnoreImplicit(),
+                                     OP->getArg(1)->IgnoreImplicit(),
                                      OP->getOperatorLoc());
         was_previously_assigned = true;
 
@@ -1760,14 +1825,17 @@ bool TopLevelVisitor::is_field_with_coordinate_stmt(Stmt *s) {
 
     // check also Field<double> or some other non-class assign
     BinaryOperator *BO = dyn_cast<BinaryOperator>(s);
-    if (BO && BO->isAssignmentOp() && is_field_with_coordinate(BO->getLHS()->IgnoreImplicit())) {
+    if (BO && BO->isAssignmentOp() &&
+        is_field_with_coordinate(BO->getLHS()->IgnoreImplicit())) {
         if (BO->isCompoundAssignmentOp()) {
             reportDiag(
                 DiagnosticsEngine::Level::Error, BO->getOperatorLoc(),
                 "Only direct assignment '=' allowed for Field[CoordinateVector]");
             return false;
         }
-        field_with_coordinate_assign(BO->getLHS()->IgnoreImplicit(), BO->getRHS()->IgnoreImplicit(), BO->getOperatorLoc());
+        field_with_coordinate_assign(BO->getLHS()->IgnoreImplicit(),
+                                     BO->getRHS()->IgnoreImplicit(),
+                                     BO->getOperatorLoc());
         was_previously_assigned = true;
 
         return true;
@@ -1796,7 +1864,8 @@ void TopLevelVisitor::field_with_coordinate_assign(Expr *lhs, Expr *rhs,
     // right type, so this succeeds
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(lhs);
 
-    if (writeBuf->get(oploc, 1) == ",") return; // this has already been changed
+    if (writeBuf->get(oploc, 1) == ",")
+        return; // this has already been changed
 
     // now change = -> ,
     writeBuf->replace(SourceRange(oploc, oploc), ",");
@@ -1804,7 +1873,8 @@ void TopLevelVisitor::field_with_coordinate_assign(Expr *lhs, Expr *rhs,
     writeBuf->remove(SourceRange(OC->getRParenLoc(), OC->getRParenLoc()));
     // find [ and insert method call
     SourceLocation sl = OC->getArg(1)->getBeginLoc();
-    while (sl.isValid() && getChar(sl) != '[') sl = sl.getLocWithOffset(-1);
+    while (sl.isValid() && getChar(sl) != '[')
+        sl = sl.getLocWithOffset(-1);
     writeBuf->replace(SourceRange(sl, sl), ".set_element_at(");
     // and insert closing )
     sl = getSourceLocationAtEndOfRange(rhs->getSourceRange());
@@ -1822,7 +1892,8 @@ void TopLevelVisitor::field_with_coordinate_read(Expr *E) {
     writeBuf->replace(SourceRange(OC->getRParenLoc(), OC->getRParenLoc()), ")");
     // find [ and insert method call
     SourceLocation sl = OC->getArg(1)->getBeginLoc();
-    while (sl.isValid() && getChar(sl) != '[') sl = sl.getLocWithOffset(-1);
+    while (sl.isValid() && getChar(sl) != '[')
+        sl = sl.getLocWithOffset(-1);
     writeBuf->replace(SourceRange(sl, sl), ".get_element(");
 }
 
@@ -1835,7 +1906,8 @@ void TopLevelVisitor::field_with_coordinate_read(Expr *E) {
 bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
     // operate (usually) only non-templated functions and template specializations
-    if (has_pragma(f, pragma_hila::AST_DUMP)) ast_dump(f);
+    if (has_pragma(f, pragma_hila::AST_DUMP))
+        ast_dump(f);
 
     // For the pragmas, we need to check the "previousdecl" -- prototype, if there is a
     // pragma there Automatic now in has_pragma
@@ -2002,7 +2074,8 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
 
     // Get template mapping for classes
     // parent is from: CXXRecordDecl * parent = method->getParent();
-    if (parent) ntemplates += get_param_substitution_list(parent, par, arg, typeargs);
+    if (parent)
+        ntemplates += get_param_substitution_list(parent, par, arg, typeargs);
 
     // llvm::errs() << "Num nesting templates " << ntemplates << '\n';
     // llvm::errs() << "Specializing function " << f->getQualifiedNameAsString()
@@ -2011,20 +2084,21 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     funcBuf.replace_tokens(f->getSourceRange(), par, arg);
 
     // Check real parameters: default values must be removed, i.e. remove "= value"
-    for (unsigned i=0; i<f->getNumParams(); i++) {
-        ParmVarDecl * pvd = f->getParamDecl(i);
+    for (unsigned i = 0; i < f->getNumParams(); i++) {
+        ParmVarDecl *pvd = f->getParamDecl(i);
         if (pvd->hasDefaultArg() && !pvd->hasInheritedDefaultArg()) {
-            // llvm::errs() << "Default arg! " << get_stmt_str(pvd->getDefaultArg()) << '\n';
-            
+            // llvm::errs() << "Default arg! " << get_stmt_str(pvd->getDefaultArg()) <<
+            // '\n';
+
             SourceRange sr = pvd->getDefaultArgRange();
             SourceLocation b = sr.getBegin();
-            SourceLocation m = pvd->getSourceRange().getBegin(); 
-        
-            while (funcBuf.get(b,1) != "=" && b > m) b = b.getLocWithOffset(-1);
+            SourceLocation m = pvd->getSourceRange().getBegin();
+
+            while (funcBuf.get(b, 1) != "=" && b > m)
+                b = b.getLocWithOffset(-1);
 
             sr.setBegin(b);
             funcBuf.remove(sr);
-
         }
     }
 
@@ -2061,7 +2135,8 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
         if (l > 0) {
             // llvm::errs() << "Searching name " << f->getNameAsString() << '\n';
             int j = funcBuf.find_original_word(0, f->getNameAsString());
-            if (j < 0 || j > l) l = -1; // name not found
+            if (j < 0 || j > l)
+                l = -1; // name not found
         }
         if (l < 0) {
             reportDiag(DiagnosticsEngine::Level::Fatal, f->getSourceRange().getBegin(),
@@ -2096,7 +2171,8 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     //                         "static","");
     // }
 
-    if (!f->isInlineSpecified() && !no_inline) funcBuf.insert(0, "inline ", true, true);
+    if (!f->isInlineSpecified() && !no_inline)
+        funcBuf.insert(0, "inline ", true, true);
 
     for (int i = 0; i < ntemplates; i++) {
         funcBuf.insert(0, "template <>\n", true, true);
@@ -2156,7 +2232,8 @@ SourceRange TopLevelVisitor::get_func_decl_range(FunctionDecl *f) {
         while (srcMgr.getFileOffset(b) >= srcMgr.getFileOffset(a)) {
             b = b.getLocWithOffset(-1);
             const char *p = srcMgr.getCharacterData(b);
-            if (!std::isspace(*p)) break;
+            if (!std::isspace(*p))
+                break;
         }
         SourceRange r(a, b);
         return r;
@@ -2395,7 +2472,8 @@ int TopLevelVisitor::get_param_substitution_list(
     CXXRecordDecl *r, std::vector<std::string> &par, std::vector<std::string> &arg,
     std::vector<const TemplateArgument *> &typeargs) {
 
-    if (r == nullptr) return 0;
+    if (r == nullptr)
+        return 0;
 
     int level = 0;
     if (r->getTemplateSpecializationKind() ==
@@ -2440,24 +2518,28 @@ void TopLevelVisitor::make_mapping_lists(
     std::vector<std::string> &par, std::vector<std::string> &arg,
     std::vector<const TemplateArgument *> &typeargs, std::string *argset) {
 
-    if (argset) *argset = "< ";
+    if (argset)
+        *argset = "< ";
 
     // Get argument strings without class, struct... qualifiers
 
     for (int i = 0; i < tal.size(); i++) {
-        if (argset && i > 0) *argset += ", ";
+        if (argset && i > 0)
+            *argset += ", ";
         switch (tal.get(i).getKind()) {
         case TemplateArgument::ArgKind::Type:
             arg.push_back(tal.get(i).getAsType().getAsString(PP));
             par.push_back(tpl->getParam(i)->getNameAsString());
-            if (argset) *argset += arg.back(); // write just added arg
-            typeargs.push_back(&tal.get(i));   // save type-type arguments
+            if (argset)
+                *argset += arg.back();       // write just added arg
+            typeargs.push_back(&tal.get(i)); // save type-type arguments
             break;
 
         case TemplateArgument::ArgKind::Integral:
             arg.push_back(tal.get(i).getAsIntegral().toString(10));
             par.push_back(tpl->getParam(i)->getNameAsString());
-            if (argset) *argset += arg.back();
+            if (argset)
+                *argset += arg.back();
             break;
 
         default:
@@ -2467,7 +2549,8 @@ void TopLevelVisitor::make_mapping_lists(
             exit(1); // Don't know what to do
         }
     }
-    if (argset) *argset += " >";
+    if (argset)
+        *argset += " >";
 
     return;
 }
