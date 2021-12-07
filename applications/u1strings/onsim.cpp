@@ -140,7 +140,7 @@ void scaling_sim::updateCosmology() {
     {
 	a = acg * pow(t/config.tcg, config.era);
     	aHalfPlus = acg * pow((t+0.5*config.dt)/config.tcg, config.era);
-    	aHalfMinus = acg * pow((t+0.5*config.dt)/config.tcg, config.era);
+    	aHalfMinus = acg * pow((t-0.5*config.dt)/config.tcg, config.era);
 	lambda = lambdacg * pow (a/acg, -2.0*(1.0-config.s1));
     }    
     else
