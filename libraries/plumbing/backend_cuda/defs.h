@@ -95,11 +95,14 @@ using gpuError = hipError_t;
 #define gpuMalloc(a,b) gpu_memory_pool_alloc(a,b)
 #define gpuFree(a) gpu_memory_pool_free(a)
 #define gpuMemPoolPurge() gpu_memory_pool_purge()
+#define gpuMemPoolReport() gpu_memory_pool_report()
+
 
 #else
 // here std interfaces
 
 #define gpuMemPoolPurge() do {} while(0)
+#define gpuMemPoolReport() do {} while(0)
 
 #define gpuMalloc(a, b) GPU_CHECK(hipMalloc(a, b))
 #define gpuFree(a) GPU_CHECK(hipFree(a))

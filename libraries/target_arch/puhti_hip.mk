@@ -54,7 +54,7 @@ HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(H
 LDLIBS += -L$(HIP_PATH)/../rocfft/lib -lrocfft
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
 
 ################
 
