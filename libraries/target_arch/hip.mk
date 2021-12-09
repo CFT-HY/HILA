@@ -13,8 +13,9 @@ LD := $(CC) --std=c++17
 #-gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
-CXXFLAGS := -O3 --std=c++17 -x cu -dc 
-CXXFLAGS += -gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52 
+CXXFLAGS := -O3 --std=c++17 -x cu -dc --offload-arch=gfx1012
+#--no-cuda-version-check -nocudalib 
+# CXXFLAGS += -gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52 
 #
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
 # definitions as per c++ standard!
@@ -40,7 +41,7 @@ HILA_OBJECTS += build/hila_gpu.o
 
 # These variables must be defined here
 #
-HILAPP_OPTS := -target:HIP -D__HIP_PLATFORM_NVCC__
+HILAPP_OPTS := -target:HIP -D__HIP_PLATFORM_AMD__
 HILA_OPTS := -DHIP -DUSE_MPI $(MPI_INCLUDE_DIRS) $(HIP_INCLUDE_DIRS)
 
 
