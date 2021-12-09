@@ -140,7 +140,7 @@ void gpu_memory_pool_init() {
     cudaGetDevice(&my_device);
     cudaGetDeviceProperties(&props, my_device);
 #elif defined(HIP)
-    hipDeviceProp props;
+    hipDeviceProp_t props;
     int my_device;
     hipGetDevice(&my_device);
     hipGetDeviceProperties(&props, my_device);
