@@ -29,7 +29,7 @@ void field_storage<T>::free_field() {
 
 // These are used in device code. Can be called directly in a kernel.
 template <typename T>
-__device__ auto field_storage<T>::get(const unsigned i,
+__device__ inline auto field_storage<T>::get(const unsigned i,
                                       const unsigned field_alloc_size) const {
     assert(i < field_alloc_size);
     using base_t = hila::number_type<T>;

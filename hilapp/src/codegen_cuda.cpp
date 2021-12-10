@@ -154,7 +154,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                  << ") * lattice->mynode.volume() );\n";
 
             if (ar.reduction_type == reduction::SUM) {
-                code << "cuda_set_zero(" << ar.new_name << ", " << ar.size_expr
+                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr
                      << " * lattice->mynode.volume());\n";
             }
 
@@ -172,7 +172,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                  << " * sizeof(" << ar.element_type << "));\n";
 
             if (ar.reduction_type == reduction::SUM) {
-                code << "cuda_set_zero(" << ar.new_name << ", " << ar.size_expr
+                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr
                      << ");\n";
             }
 
@@ -211,7 +211,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 code << "gpuMalloc( (void **)& dev_" << v.reduction_name << ","
                      << "sizeof(" << v.type << ") * N_blocks );\n";
                 if (v.reduction_type == reduction::SUM) {
-                    code << "cuda_set_zero(dev_" << v.reduction_name
+                    code << "gpu_set_zero(dev_" << v.reduction_name
                          << ", N_blocks);\n";
                 }
                 if (v.reduction_type == reduction::PRODUCT) {
@@ -692,11 +692,11 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         // Run reduction
         if (v.reduction_type != reduction::SUM || use_slow_reduce) {
             if (v.reduction_type == reduction::SUM) {
-                code << v.reduction_name << " = cuda_reduce_sum( dev_"
+                code << v.reduction_name << " = gpu_reduce_sum( dev_"
                      << v.reduction_name << ", N_blocks"
                      << ");\n";
             } else if (v.reduction_type == reduction::PRODUCT) {
-                code << v.reduction_name << " = cuda_reduce_product( dev_"
+                code << v.reduction_name << " = gpu_reduce_product( dev_"
                      << v.reduction_name << ", N_blocks"
                      << ");\n";
             }
