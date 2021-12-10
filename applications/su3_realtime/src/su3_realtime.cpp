@@ -109,7 +109,7 @@ void get_magnetic_field(const GaugeField<group> &U, GaugeField<group> &B) {
 }
 
 
-/* Measure classical topological charge density chi everywhere according to Mikko's notes */ 
+/* Measure classical topological charge density chi everywhere */ 
 template <typename group>
 void calc_topoCharge(const GaugeField<group> &U, const VectorField<Algebra<group>> &E, Field<double> &result) {
 
@@ -273,7 +273,6 @@ int main(int argc, char **argv) {
     foralldir (d) {
         onsites (ALL) {
             U[d][X].gaussian_random(0.3).reunitarize();
-            E[d][X] = 0;
         }
     }
      
