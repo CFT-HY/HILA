@@ -344,6 +344,8 @@ void scaling_sim::write_energies() {
 
 void scaling_sim::write_windings()
 {
+#ifdef OLD_WINDING
+
     real_t length = 0.0;
     
     foralldir(d1) foralldir(d2) if (d1 < d2) {
@@ -357,11 +359,37 @@ void scaling_sim::write_windings()
 	}
     }
 
+    if (hila::myrank() == 0) 
+    {
+        config.stream << length * config.dx/(2.0 * M_PI) << "\n";
+    }
+
+#else
+
+    Reduction<real_t> length(0);
+    length.allreduce(false).delayed(true);
+
+    VectorField<real_t> twist;
+    foralldir(d) 
+        twist[d][ALL] = (phi[X] * phi[X+d].conj()).arg();
+
+    foralldir(d1) foralldir(d2) if (d1 < d2) {
+        onsites(ALL) {
+            real_t plaq = twist[d1][X] + twist[d2][X+d1] - twist[d1][X+d2] - twist[d2][X];
+
+            length += abs(plaq);            
+        }
+    }
+
+    auto v = length.value() * config.dx/(2.0 * M_PI);
 
     if (hila::myrank() == 0) 
     {
-	config.stream << length << "\n";
+        config.stream << v << "\n";
     }
+
+
+#endif
 
 }
 
