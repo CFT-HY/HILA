@@ -258,6 +258,7 @@ void scaling_sim::write_moduli() {
     double phimod = 0.0;
     double pimod = 0.0;
 
+    hila::set_allreduce(false);
     onsites (ALL) {
         phimod += phi[X].abs();
         pimod += pi[X].abs();
@@ -369,7 +370,7 @@ void scaling_sim::write_windings()
     Reduction<real_t> length(0);
     length.allreduce(false).delayed(true);
 
-    VectorField<real_t> twist;
+    Field<real_t> twist[NDIM];
     foralldir(d) 
         twist[d][ALL] = (phi[X] * phi[X+d].conj()).arg();
 
@@ -457,6 +458,9 @@ int main(int argc, char **argv) {
     int steps =
         (sim.config.tEnd - sim.config.tStats) /
         (sim.config.dt * sim.config.nOutputs); // number of steps between printing stats
+    if (steps == 0)
+        steps = 1;
+        
     int stat_counter = 0;
 
     if (hila::myrank() == 0) {
