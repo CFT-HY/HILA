@@ -6,7 +6,7 @@
 
 $(info ########################################################################)
 $(info Target lumi: remember to )
-$(info   module load cray-fftw craype-hugepages2M )
+$(info   module load PrgEnv-gnu cray-mpich cray-fftw )
 $(info ########################################################################)
 
 
