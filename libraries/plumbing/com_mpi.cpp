@@ -143,7 +143,7 @@ bool hila::get_allreduce() {
 #include <sys/types.h>
 void initialize_communications(int &argc, char ***argv) {
     /* Init MPI */
-    if (!mpi_initialized && !hila::check_input) {
+    if (!mpi_initialized) {
         MPI_Init(&argc, argv);
         mpi_initialized = true;
 
@@ -152,10 +152,6 @@ void initialize_communications(int &argc, char ***argv) {
 
         MPI_Comm_rank(lattice->mpi_comm_lat, &lattice->mynode.rank);
         MPI_Comm_size(lattice->mpi_comm_lat, &lattice->nodes.number);
-    }
-    if (hila::check_input) {
-        lattice->mynode.rank = 0;
-        lattice->nodes.number = hila::check_with_nodes;
     }
 }
 

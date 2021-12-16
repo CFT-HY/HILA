@@ -141,7 +141,8 @@ class cmdlineargs {
                 << "  -i <name>       : input filename (overrides the 1st hila::input() name)\n"
                 << "                    use '-i -' for standard input\n"
                 << "  -check          : check input & layout with <nodes>-nodes & exit\n"
-                << "  -n nodes        : number of nodes, only relevant with -check\n"
+                << "                    only with 1 real MPI node (without mpirun)\n"
+                << "  -n nodes        : number of nodes used in layout check, only relevant with -check\n"
                 << "  -sublattices n  : number of sublattices\n"
                 << "  -sync on/off    : synchronize sublattice runs (default=no)\n";
             // clang-format on
@@ -181,10 +182,16 @@ void hila::initialize(int argc, char **argv) {
     // set the timing so that gettime() returns time from this point
     hila::inittime();
 
-    // check the "-check" -input early, to avoid starting MPI
-    // put in braces to have auto cleanup
-    {
-        cmdlineargs commandline(argc, argv);
+    // initialize MPI so that hila::myrank() etc. works
+    initialize_communications(argc, &argv);
+
+    // Init command line - after MPI has been started, so
+    // that all nodes do this
+    cmdlineargs commandline(argc, argv);
+
+    // check the "-check" -input early
+    // do it only with 1 node
+    if (lattice->nodes.number == 1) {
 
         if (commandline.get_option("-check")) {
             long nodes = commandline.get_int("-n");
@@ -195,22 +202,19 @@ void hila::initialize(int argc, char **argv) {
             if (nodes <= 0)
                 nodes = 1;
             hila::check_with_nodes = nodes;
-            hila::output << "****** INPUT AND LAYOUT CHECK ******\n";
+            hila::output << "****** INPUT AND LAYOUT CHECK ******" << std::endl;
+
+            // reset node variables
+            lattice->mynode.rank = 0;
+            lattice->nodes.number = hila::check_with_nodes;
         }
     }
 
-    // initialize MPI (if needed) so that hila::myrank() etc. works
-    if (!hila::check_input) {
-        initialize_communications(argc, &argv);
-
 #if defined(CUDA) || defined(HIP)
+    if (!hila::check_input) {
         initialize_cuda(lattice->mynode.rank);
-#endif
     }
-
-    // Init command line again - after MPI has been started, so
-    // that all nodes do this
-    cmdlineargs commandline(argc, argv);
+#endif
 
     setup_sublattices(commandline);
 
@@ -279,9 +283,6 @@ void hila::initialize(int argc, char **argv) {
         output0 << "No runtime limit given\n";
     }
 
-    // re-read the check= -option, to clean up
-    commandline.get_option("-check");
-    commandline.get_cstring("-n");
 
     if ((hila::input_file = commandline.get_cstring("-i"))) {
         if (std::strlen(hila::input_file) == 0) {
@@ -438,15 +439,12 @@ void hila::finishrun() {
     gpuMemPoolReport();
 #endif
 
-    if (!hila::check_input) {
+    synchronize();
+    hila::timestamp("Finishing");
 
-        synchronize();
-        hila::timestamp("Finishing");
+    hila::about_to_finish = true;
 
-        hila::about_to_finish = true;
-
-        finish_communications();
-    }
+    finish_communications();
 
     print_dashed_line();
     exit(0);
