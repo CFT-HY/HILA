@@ -15,6 +15,7 @@
  * Kari Rummukainen 8/2014
  */
 
+#include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 
 void map_node_layout() {
@@ -22,7 +23,7 @@ void map_node_layout() {
     int blocksize, a, b, j;
     int order[NDIM], di;
 
-    nodes = numnodes();
+    nodes = hila::number_of_nodes();
 
     foralldir(d) order[d] = d;
 

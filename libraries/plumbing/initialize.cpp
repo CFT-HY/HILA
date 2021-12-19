@@ -328,7 +328,7 @@ void hila::seed_random(unsigned long seed) {
 
     int n = hila::myrank();
     if (sublattices.number > 1)
-        n += sublattices.mylattice * numnodes();
+        n += sublattices.mylattice * hila::number_of_nodes();
 
     if (seed == 0) {
         if (hila::myrank() == 0) {
@@ -439,7 +439,7 @@ void hila::finishrun() {
     gpuMemPoolReport();
 #endif
 
-    synchronize();
+    hila::synchronize();
     hila::timestamp("Finishing");
 
     hila::about_to_finish = true;
@@ -515,8 +515,8 @@ void setup_sublattices(cmdlineargs &commandline) {
 
     output0 << " Dividing nodes into " << sublattices.number << " sublattices\n";
 
-    if (numnodes() % sublattices.number) {
-        output0 << "** " << numnodes() << " nodes not evenly divisible into "
+    if (hila::number_of_nodes() % sublattices.number) {
+        output0 << "** " << hila::number_of_nodes() << " nodes not evenly divisible into "
                 << sublattices.number << " sublattices\n";
         hila::finishrun();
     }
@@ -524,7 +524,7 @@ void setup_sublattices(cmdlineargs &commandline) {
 #if defined(BLUEGENE_LAYOUT)
     sublattices.mylattice = bg_layout_sublattices(sublattices.number);
 #else // generic
-    sublattices.mylattice = (hila::myrank() * sublattices.number) / numnodes();
+    sublattices.mylattice = (hila::myrank() * sublattices.number) / hila::number_of_nodes();
     /* and divide system into sublattices */
     if (!hila::check_input)
         split_into_sublattices(sublattices.mylattice);
@@ -562,7 +562,7 @@ void setup_sublattices(cmdlineargs &commandline) {
             hila::output.rdbuf(hila::output_file.rdbuf());
             // output now points to output_redirect
         }
-        hila::output << " ---- SPLIT " << numnodes() << " nodes into "
+        hila::output << " ---- SPLIT " << hila::number_of_nodes() << " nodes into "
                      << sublattices.number << " sublattices, this "
                      << sublattices.mylattice << " ----\n";
     }

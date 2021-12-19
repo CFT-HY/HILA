@@ -86,9 +86,6 @@ extern std::ostream output;
 /// this is just a hook to store output file, if it is in use
 extern std::ofstream output_file;
 
-///  rank of this node
-int myrank();
-
 /// Seed random generators
 void seed_random(unsigned long seed);
 
@@ -109,6 +106,15 @@ void finishrun();
 void terminate(int status);
 void error(const std::string &msg);
 void error(const char *msg);
+
+
+/// rank of this node
+int myrank();
+/// how many nodes there are
+int number_of_nodes();
+/// synchronize mpi
+void synchronize();
+
 
 } // namespace hila
 
@@ -182,11 +188,8 @@ void broadcast_array(T *var, int n) {}
 
 #endif
 
-
-int numnodes();
 void initialize_communications(int &argc, char ***argv);
 void split_into_sublattices(int rank);
-void synchronize();
 bool is_comm_initialized(void);
 void finish_communications();
 void abort_communications(int status);

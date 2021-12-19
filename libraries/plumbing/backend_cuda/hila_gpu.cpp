@@ -219,8 +219,8 @@ void initialize_cuda(int rank) {
         hila::output << "Cuda: rank " << rank << " choosing device " << my_device
                      << '\n';
     }
-    if (numnodes() > 6) {
-        output0 << "  + " << numnodes() - 6 << " more nodes\n";
+    if (hila::number_of_nodes() > 6) {
+        output0 << "  + " << hila::number_of_nodes() - 6 << " more nodes\n";
     }
 
     gpuSetDevice(my_device);

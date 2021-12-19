@@ -290,7 +290,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc,
 
 void lattice_struct::setup_nodes() {
 
-    nodes.number = numnodes();
+    nodes.number = hila::number_of_nodes();
     // Loop over all node "origins"
     nodes.nodelist.resize(nodes.number);
 

@@ -7,9 +7,9 @@
 #include <sstream>
 #include <iostream>
 
-// Prototypes for memory pool ops 
+// Prototypes for memory pool ops
 void gpu_memory_pool_alloc(void **p, size_t req_size);
-void gpu_memory_pool_free(void * ptr);
+void gpu_memory_pool_free(void *ptr);
 void gpu_memory_pool_purge();
 void gpu_memory_pool_report();
 
@@ -36,16 +36,20 @@ using gpuError = cudaError;
 /////////////////////////////////////////////
 // If gpu memory pool in use, the interface to memory
 #ifdef GPU_MEMORY_POOL
-#define gpuMalloc(a,b) gpu_memory_pool_alloc(a,b)
+#define gpuMalloc(a, b) gpu_memory_pool_alloc(a, b)
 #define gpuFree(a) gpu_memory_pool_free(a)
 #define gpuMemPoolPurge() gpu_memory_pool_purge()
 #define gpuMemPoolReport() gpu_memory_pool_report()
 
-#else 
+#else
 // here std interfaces
 
-#define gpuMemPoolPurge() do {} while(0)
-#define gpuMemPoolReport() do {} while(0)
+#define gpuMemPoolPurge()                                                              \
+    do {                                                                               \
+    } while (0)
+#define gpuMemPoolReport()                                                             \
+    do {                                                                               \
+    } while (0)
 
 #ifdef CUDA_MALLOC_ASYNC
 #define gpuMalloc(a, b) GPU_CHECK(cudaMallocAsync(a, b, 0))
@@ -57,7 +61,7 @@ using gpuError = cudaError;
 
 #endif
 
-#endif  // gpu memory pool
+#endif // gpu memory pool
 /////////////////////////////////////////////
 
 
@@ -92,7 +96,7 @@ using gpuError = hipError_t;
 /////////////////////////////////////////////
 // If gpu memory pool in use, the interface to memory
 #ifdef GPU_MEMORY_POOL
-#define gpuMalloc(a,b) gpu_memory_pool_alloc(a,b)
+#define gpuMalloc(a, b) gpu_memory_pool_alloc(a, b)
 #define gpuFree(a) gpu_memory_pool_free(a)
 #define gpuMemPoolPurge() gpu_memory_pool_purge()
 #define gpuMemPoolReport() gpu_memory_pool_report()
@@ -101,8 +105,12 @@ using gpuError = hipError_t;
 #else
 // here std interfaces
 
-#define gpuMemPoolPurge() do {} while(0)
-#define gpuMemPoolReport() do {} while(0)
+#define gpuMemPoolPurge()                                                              \
+    do {                                                                               \
+    } while (0)
+#define gpuMemPoolReport()                                                             \
+    do {                                                                               \
+    } while (0)
 
 #define gpuMalloc(a, b) GPU_CHECK(hipMalloc(a, b))
 #define gpuFree(a) GPU_CHECK(hipFree(a))
@@ -131,7 +139,7 @@ __device__ __host__ double random();
 void seed_device_rng(unsigned long seed);
 } // namespace hila
 
-#define GPU_CHECK(cmd)                                                           \
+#define GPU_CHECK(cmd)                                                                 \
     do {                                                                               \
         auto code = cmd;                                                               \
         gpu_exit_on_error(code, #cmd, __FILE__, __LINE__);                             \
@@ -143,12 +151,13 @@ void seed_device_rng(unsigned long seed);
 void gpu_exit_on_error(const char *msg, const char *file, int line);
 void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int line);
 
+namespace hila {
 inline void synchronize_threads() {
     gpuDeviceSynchronize();
- } 
- 
+}
+} // namespace hila
 
-#else  // NOW HILAPP
+#else // NOW HILAPP
 
 ////////////////////////////////////////////////////////////////////////////////////
 // Now not cuda or hip - hilapp stage scans this section
@@ -162,6 +171,7 @@ void seed_device_rng(unsigned long seed);
 using gpuError = int;
 
 // Define empty stubs - return 1 (true)
+// clang-format off
 #define gpuMalloc(a, b) do {} while(0)
 #define gpuFree(a) do {} while(0)
 #define gpuMemcpy(a, b, siz, d) do {} while(0)
@@ -170,10 +180,13 @@ using gpuError = int;
 
 #define check_device_error(msg) do {} while(0)
 #define check_device_error_code(code, msg) do {} while(0)
+// clang-format on
 
 #define GPUTYPESTR "NONE"
 
+namespace hila {
 inline void synchronize_threads() {}
+} // namespace hila
 
 #endif
 ////////////////////////////////////////////////////////////////////////////////////

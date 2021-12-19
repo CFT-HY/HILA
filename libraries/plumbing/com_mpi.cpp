@@ -228,7 +228,7 @@ int hila::myrank() {
 }
 
 /// Return number of nodes or "pseudo-nodes"
-int numnodes() {
+int hila::number_of_nodes() {
     if (hila::check_input)
         return hila::check_with_nodes;
 
@@ -237,9 +237,9 @@ int numnodes() {
     return (nodes);
 }
 
-void synchronize() {
+void hila::synchronize() {
     synchronize_timer.start();
-    synchronize_threads();
+    hila::synchronize_threads();
     MPI_Barrier(lattice->mpi_comm_lat);
     synchronize_timer.stop();
 }

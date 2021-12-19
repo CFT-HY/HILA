@@ -26,8 +26,8 @@ void lattice_struct::setup_layout() {
 
     /* Figure out dimensions of hyperrectangle - this version ensures all are same size */
 
-    if (l_volume % numnodes()) {
-        output0 << " No hope of laying out the lattice using " << numnodes()
+    if (l_volume % hila::number_of_nodes()) {
+        output0 << " No hope of laying out the lattice using " << hila::number_of_nodes()
                 << " nodes\n";
         hila::finishrun();
     }
@@ -35,7 +35,7 @@ void lattice_struct::setup_layout() {
     /* Factorize the node number in primes
      * These factors must be used in slicing the lattice!
      */
-    i = numnodes();
+    i = hila::number_of_nodes();
     for (int n = 0; n < NPRIMES; n++) {
         nfactors[n] = 0;
         while (i % prime[n] == 0) {
@@ -44,7 +44,7 @@ void lattice_struct::setup_layout() {
         }
     }
     if (i != 1) {
-        output0 << " Cannot factorize " << numnodes() << " nodes with primes up to "
+        output0 << " Cannot factorize " << hila::number_of_nodes() << " nodes with primes up to "
                 << prime[NPRIMES - 1] << '\n';
         hila::finishrun();
     }
@@ -99,7 +99,7 @@ void lattice_struct::setup_layout() {
         }
 
     // set up struct nodes variables
-    nodes.number = numnodes();
+    nodes.number = hila::number_of_nodes();
     foralldir(dir) {
         nodes.divisors[dir].resize(nodes.n_divisions[dir] + 1);
         // trivial, evenly spaced divisors -- note: last element == size(dir)

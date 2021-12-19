@@ -7,8 +7,8 @@
 
 // Define random number generator
 namespace hila {
-    inline double random() { return mersenne(); }
-} // namespace hila
+
+inline double random() { return mersenne(); }
 
 // Trivial synchronization
 inline void synchronize_threads() {}
@@ -16,8 +16,6 @@ inline void synchronize_threads() {}
 /// Implements test for basic in types, similar to
 /// std::is_arithmetic, but allows the backend to add
 /// it's own basic tyes (such as AVX vectors)
-namespace hila {
-
 template <class T>
 struct is_arithmetic : std::integral_constant<bool, std::is_arithmetic<T>::value> {};
 
