@@ -10,13 +10,18 @@
 
 // declare MPI timers here too - these were externs
 
-hila::timer start_send_timer("MPI start send"), wait_send_timer("MPI wait send"),
-    post_receive_timer("MPI post receive"), wait_receive_timer("MPI wait receive"),
-    synchronize_timer("MPI synchronize"), reduction_timer("MPI reduction"),
-    reduction_wait_timer("MPI reduction wait"), broadcast_timer("MPI broadcast"),
-    send_timer("MPI send field"), cancel_send_timer("MPI cancel send"),
-    cancel_receive_timer("MPI cancel receive"),
-    sublattice_sync_timer("sublattice sync");
+hila::timer start_send_timer("MPI start send");
+hila::timer wait_send_timer("MPI wait send");
+hila::timer post_receive_timer("MPI post receive");
+hila::timer wait_receive_timer("MPI wait receive");
+hila::timer synchronize_timer("MPI synchronize");
+hila::timer reduction_timer("MPI reduction");
+hila::timer reduction_wait_timer("MPI reduction wait");
+hila::timer broadcast_timer("MPI broadcast");
+hila::timer send_timer("MPI send field");
+hila::timer cancel_send_timer("MPI cancel send");
+hila::timer cancel_receive_timer("MPI cancel receive");
+hila::timer sublattice_sync_timer("sublattice sync");
 
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;

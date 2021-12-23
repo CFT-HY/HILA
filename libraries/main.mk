@@ -36,7 +36,7 @@ HILA_OBJECTS = \
 	build/mersenne_inline.o \
 	build/gaussian_random.o \
 	build/lattice.o \
-	build/map_node_layout_trivial.o \
+	build/map_node_layout.o \
 	build/memalloc.o \
 	build/timing.o \
 	build/test_gathers.o \

@@ -26,6 +26,17 @@
 #undef EVEN_SITES_FIRST
 #endif
 
+// NODE_LAYOUT_TRIVIAL or NODE_LAYOUT_BLOCK must be defined
+// Define NODE_LAYOUT_BLOCK to be the number of 
+// MPI processes within a compute node - tries to maximize
+// locality
+#ifndef NODE_LAYOUT_TRIVIAL
+#ifndef NODE_LAYOUT_BLOCK
+#define NODE_LAYOUT_BLOCK 4
+#endif
+#endif
+
+
 // boundary conditions are "off" by default -- no need to do anything here
 // #ifndef SPECIAL_BOUNDARY_CONDITIONS
 
