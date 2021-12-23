@@ -31,7 +31,6 @@ class scaling_sim {
 
     Field<Complex<real_t>> phi;
     Field<Complex<real_t>> pi;
-    Field<Complex<real_t>> deltaPi;
 
     real_t t;
     real_t a;
@@ -215,7 +214,7 @@ void scaling_sim::initialize() {
 
       FFT_field(kphi, phi, fft_direction::back);
 
-      onsites (ALL) {pi[X] = 0;}
+      pi[ALL] = 0;
 
       output0 << "k space generation \n";    
 
@@ -308,27 +307,22 @@ void scaling_sim::write_energies() {
         sumPhiPi += 0.5 * pPi * pPi;
         w_sumPhiPi += 0.5 * pPi * pPi * v;
 
-	phi2 += phinorm;
-    }
+        phi2 += phinorm;
 
+        // Join previously separate reduction loops into 1 - 
+        // reduce the number of reductions
 
-    hila::set_allreduce(false);
-    onsites (ALL) {
-            auto norm = phi[X].squarenorm();
-            real_t v = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
-            auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
-                             phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
-            real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
-            real_t diff_phi_norm2 = diff_phi.squarenorm();
+        auto norm = phi[X].squarenorm();
+        real_t v2 = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
+        auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
+                         phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
+        real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
+        real_t diff_phi_norm2 = diff_phi.squarenorm();
 
-            sumDiPhi += 0.5 * diff_phi_norm2; 
-            // red[0] += 0.5 * diff_phi_norm2;
-            sumPhiDiPhi += pDphi * pDphi / norm;
-            // red[1] += pDphi * pDphi / norm;
-            w_sumDiPhi += 0.5 * diff_phi_norm2 * v; 
-            // red[2] += 0.5 * diff_phi_norm2 * v;
-            w_sumPhiDiPhi += pDphi * pDphi / norm * v;
-            // red[3] += pDphi * pDphi / norm * v;
+        sumDiPhi += 0.5 * diff_phi_norm2; 
+        sumPhiDiPhi += pDphi * pDphi / norm;
+        w_sumDiPhi += 0.5 * diff_phi_norm2 * v2; 
+        w_sumPhiDiPhi += pDphi * pDphi / norm * v2;
     }
     
 
@@ -407,6 +401,8 @@ void scaling_sim::next() {
     real_t ss = config.sigma * config.sigma;
 
     static hila::timer next_timer("timestep");
+
+    Field<Complex<real_t>> deltaPi;
 
     next_timer.start();
 
