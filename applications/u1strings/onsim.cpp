@@ -308,10 +308,11 @@ void scaling_sim::write_energies() {
         w_sumPhiPi += 0.5 * pPi * pPi * v;
 
         phi2 += phinorm;
+    }
 
-        // Join previously separate reduction loops into 1 - 
-        // reduce the number of reductions
 
+    hila::set_allreduce(false);
+    onsites (ALL) {
         auto norm = phi[X].squarenorm();
         real_t v2 = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
         auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
