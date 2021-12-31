@@ -291,6 +291,8 @@ void scaling_sim::write_energies() {
 
     double phi2 = 0.0;
 
+    hila::synchronize();
+
     hila::set_allreduce(false);
     onsites (ALL) {
         double phinorm = phi[X].squarenorm();
@@ -412,22 +414,22 @@ void scaling_sim::next() {
         deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx);
     }
 
-    // foralldir(d) {
-    //     phi.start_fetch(d); 
-    //     phi.start_fetch(-d);
-    // }
-
-    // foralldir (d) {
-    //      onsites (ALL) {
-    //          deltaPi[X] += aadt_aadxdx * (phi[X + d] + phi[X - d]);
-    //      }
-    // }
-
-    onsites (ALL) {
-        deltaPi[X] += aadt_aadxdx * (phi[X + e_x] + phi[X - e_x] + 
-                                     phi[X + e_y] + phi[X - e_y] + 
-                                     phi[X + e_z] + phi[X - e_z]);
+    foralldir(d) {
+         phi.start_fetch(d); 
+         phi.start_fetch(-d);
     }
+
+    foralldir (d) {
+          onsites (ALL) {
+              deltaPi[X] += aadt_aadxdx * (phi[X + d] + phi[X - d]);
+          }
+    }
+
+    // onsites (ALL) {
+    //     deltaPi[X] += aadt_aadxdx * (phi[X + e_x] + phi[X - e_x] + 
+    //                                  phi[X + e_y] + phi[X - e_y] + 
+    //                                  phi[X + e_z] + phi[X - e_z]);
+    // }
 
     //pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
 

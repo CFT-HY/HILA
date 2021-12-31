@@ -81,7 +81,7 @@ void lattice_struct::allnodes::create_remap() {
         }
     }
 
-    output0 << "Node block size " << blocksize << '\n';
+    output0 << "Node block size " << blocksize << "  block division " << blockdivs << '\n';
 
     // now blocksize tells us how many nodes to each direction in block
     // these are taken in order
