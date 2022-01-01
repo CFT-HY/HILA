@@ -370,7 +370,6 @@ void scaling_sim::write_windings()
         twist[d][ALL] = (phi[X] * phi[X+d].conj()).arg();
         foralldir(d2) if (d2 != d) {
             twist[d].start_fetch(d2);
-            twist[d].start_fetch(-d2);
         }
     }
 
