@@ -366,8 +366,13 @@ void scaling_sim::write_windings()
     length.allreduce(false).delayed(true);
 
     Field<real_t> twist[NDIM];
-    foralldir(d) 
+    foralldir(d) {
         twist[d][ALL] = (phi[X] * phi[X+d].conj()).arg();
+        foralldir(d2) if (d2 != d) {
+            twist[d].start_fetch(d2);
+            twist[d].start_fetch(-d2);
+        }
+    }
 
     foralldir(d1) foralldir(d2) if (d1 < d2) {
         onsites(ALL) {
