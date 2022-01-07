@@ -182,7 +182,7 @@ class TopLevelVisitor : public GeneralVisitor,
     /// Does ; follow the statement?
     SourceRange getRangeWithSemicolon(Stmt *S, bool flag_error = true);
     SourceRange getRangeWithSemicolon(SourceRange sr, bool flag_error = true);
-    bool hasSemicolonAfter(SourceLocation sl);
+    bool hasSemicolonAfter(SourceRange sr);
 
     void requireGloballyDefined(Expr *e);
 

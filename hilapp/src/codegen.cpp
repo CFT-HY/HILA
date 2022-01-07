@@ -74,7 +74,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     //                << loopBuf.dump() << "\"\n";
 
     // is there semicolon at the end? Keep track of it (not visible in AST)
-    bool semicolon_at_end = hasSemicolonAfter(Srange.getEnd());
+    bool semicolon_at_end = hasSemicolonAfter(Srange);
+
 
     // Build replacement in variable "code"
     // Encapsulate everything within {}

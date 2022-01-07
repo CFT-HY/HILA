@@ -1499,7 +1499,9 @@ SourceRange TopLevelVisitor::getRangeWithSemicolon(SourceRange SR, bool flag_err
     return range;
 }
 
-bool TopLevelVisitor::hasSemicolonAfter(SourceLocation s) {
+bool TopLevelVisitor::hasSemicolonAfter(SourceRange sr) {
+
+    SourceLocation s = getSourceLocationAtEndOfRange(sr);
     do {
         s = s.getLocWithOffset(1);
     } while (std::isspace(getChar(s)));
