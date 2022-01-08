@@ -211,8 +211,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 code << "gpuMalloc( (void **)& dev_" << v.reduction_name << ","
                      << "sizeof(" << v.type << ") * N_blocks );\n";
                 if (v.reduction_type == reduction::SUM) {
-                    code << "gpu_set_zero(dev_" << v.reduction_name
-                         << ", N_blocks);\n";
+                    code << "gpu_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
                 }
                 if (v.reduction_type == reduction::PRODUCT) {
                     code << "cuda_set_one(dev_" << v.reduction_name << ", N_blocks);\n";
@@ -533,10 +532,11 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                             d.parityExpr->getSourceRange())); // mapped name was
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" +
-                                                           l.new_name + ".neighbours[" +
-                                                           dirname + "][" +
-                                                           looping_var + "])");
+                        loopBuf.replace(ref->fullExpr,
+                                        l.new_name + ".get(" + l.new_name +
+                                            ".neighbours[" + dirname + "][" +
+                                            looping_var +
+                                            "], d_lattice.field_alloc_size)");
                     }
                 }
             }
