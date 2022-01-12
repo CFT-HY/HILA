@@ -127,9 +127,9 @@ You can compile this at `hila/applications/hila_example/` with `make simple` and
 
 - Standard types: `int`, `int64_t`, `float`, `double` (`long double`?)
 
-- Hila provided basic types: `Complex<S>`, `Vector<n,T>`, `Matrix<n,m,T>`, `SquareMatrix<n,T>`, `Array<n,m,T>`, `Array1d<n,T>`
+- Hila provided basic types: `Complex\<S\>`, `Vector\<n,T\>`, `Matrix\<n,m,T\>`, `SquareMatrix\<n,T\>`, `Array\<n,m,T\>`
 
-  Here S is any standard type, and T includes S and Complex<S>.  C++ or C standard complex types should not be used (not
+  Here S is any standard type, and T includes S and Complex\<S\>.  C++ or C standard complex types should not be used (not
   AVX vectorizable).   See docs for functions/methods (TODO Doxygen docs)
 
 - Special types: 
@@ -350,7 +350,7 @@ the command `build/hila_example check=32` checks the input file and the layout t
 
 
 
-# Instructions
+# Stale Instructions
 
 ## Generating documentation
 
@@ -383,27 +383,3 @@ Check the example programs in the programs folder. You can use almost any standa
 In order to use the additional features for field type variables, you should inlude `plumbing/field.h` in you program. You can also include one or more of the files in the `datatypes` folder, which contains predefined datatypes that can be used to construct a field.
 
 
-
-
-## Using the Makefile system
-
-
-
-## Syntax - What works
-
-### Single line statements
-
-# Goals
-
- 1. Write tests for existing and new features
-     * Test also things that fail. The test basically defines how things should work.
- 2. Extend both to support:
-     * Fourier transform of field variable
-     * If (or where) statements in a loop
-     * Reduction on dimension (so f(t) = sum_x g(x,t))
-     * Array-of-Struct-of-Arrays layout
-     * MPI
- 3. Implement OpenACC once the compiler version is updated
- 4. Get rid of NDIM
- 5. Extend field to allow lattice as input
- 6. Document the library
