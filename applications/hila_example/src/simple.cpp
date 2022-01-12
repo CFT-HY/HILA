@@ -2,6 +2,8 @@
 
 static_assert(NDIM == 3, "NDIM must be 3 here");
 
+using MyType = Complex<double>;
+
 int main(int argc, char *argv[]) {
 
     // initialize system
@@ -13,26 +15,26 @@ int main(int argc, char *argv[]) {
     // Random numbers are used here
     hila::seed_random(32345);
 
-    // two lattice fields, set g=0
-    Field<Complex<double>> f;
-    Field<double> g = 0;
+    // lattice field
+    Field<MyType> f;
 
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian_random();
 
-    // calculate sum of 2nd derivatives of f to g
-    foralldir(d) {
-        g[ALL] += abs(f[X + d] - 2 * f[X] + f[X - d]);
-    }
+    // Measure hopping term and f^2
+    Complex<double> hopping = 0;
+    double fsqr = 0;
 
-    // get average value of g
-    double ave = 0;
     onsites(ALL) {
-        ave += g[X];
+        foralldir(d) {
+            hopping += f[X] * f[X + d].conj();
+        }
+        fsqr += f[X].squarenorm();
     }
 
-    output0 << "Average of g is " << ave / lattice->volume() << '\n';
+    output0 << "Average f^2 : " << fsqr / lattice->volume() << '\n';
+    output0 << "Average hopping term " << hopping / (NDIM*lattice->volume()) << '\n';
 
-    // make a clean exit
     hila::finishrun();
+    return 0;
 }
