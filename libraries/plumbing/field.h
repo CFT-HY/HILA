@@ -1763,14 +1763,18 @@ inline void dummy_X_f() {
 template <typename T>
 inline void ensure_field_operators_exist(Field<T> &f) {
 
-    // unary -
-    // It is needed in antiperiodic boundary conditions
-
-    f[ALL] = -f[X];
-    // same for non-vectorized loop
+    onsites(ALL) {
+        T t = 0;
+        f[X] = 0;      // set to zero
+        f[X] = -f[X];  // unary -  -- needed for antiperiodic b.c.
+    }
+        // same for non-vectorized loop
     onsites (ALL) {
-        if (X.coordinate(e_x) < X.coordinate(e_y))
+        if (X.coordinate(e_x) < X.coordinate(e_y)) {
+            T t = 0;
+            f[X] = 0;
             f[X] = -f[X];
+        }
     }
 
     // make shift also explicit
