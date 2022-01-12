@@ -1758,20 +1758,19 @@ inline void dummy_X_f() {
 }
 
 /// Dummy function including Field<T> functions and methods which
-/// need to be explicitly seen by hilapp during 1st pass
+/// need to be explicitly seen by hilapp during 1st pass in order to generater
+/// necessary functions.  Add here ops as needed
 
 template <typename T>
 inline void ensure_field_operators_exist(Field<T> &f) {
 
     onsites(ALL) {
-        T t = 0;
         f[X] = 0;      // set to zero
         f[X] = -f[X];  // unary -  -- needed for antiperiodic b.c.
     }
         // same for non-vectorized loop
     onsites (ALL) {
         if (X.coordinate(e_x) < X.coordinate(e_y)) {
-            T t = 0;
             f[X] = 0;
             f[X] = -f[X];
         }
