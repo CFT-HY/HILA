@@ -1,10 +1,4 @@
-#include <sstream>
-#include <iostream>
-#include <string>
-#include <math.h>
-
-// Include the lattice field definition
-#include "plumbing/field.h"
+#include "hila.h"
 
 // Define some parameters for the simulation
 double beta = 0.01;
