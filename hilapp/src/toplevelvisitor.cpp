@@ -1368,8 +1368,8 @@ bool TopLevelVisitor::check_field_ref_list() {
                         reportDiag(
                             DiagnosticsEngine::Level::Remark,
                             p->parityExpr->getSourceRange().getBegin(),
-                            "Simultaneous access '%0' and assignment '%1' is allowed "
-                            "only with parity %2 is EVEN or ODD.  Inserting assertion",
+                            "Simultaneous access '%0' and assignment to '%1' is allowed "
+                            "only when parity %2 is EVEN or ODD.  Inserting assertion to ensure that",
                             get_stmt_str(p->fullExpr).c_str(), l.old_name.c_str(),
                             loop_info.parity_text.c_str());
                         found_error = true;
@@ -1379,8 +1379,8 @@ bool TopLevelVisitor::check_field_ref_list() {
 
             if (found_error) {
                 for (field_ref *p : l.ref_list) {
-                    if (p->is_written && p->is_direction) {
-                        reportDiag(DiagnosticsEngine::Level::Remark,
+                    if (p->is_written) {
+                        reportDiag(DiagnosticsEngine::Level::Note,
                                    p->fullExpr->getSourceRange().getBegin(),
                                    "Location of assignment");
                     }
