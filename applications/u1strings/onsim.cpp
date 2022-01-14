@@ -55,14 +55,17 @@ class scaling_sim {
         real_t sigma;
         real_t dx;
         real_t dt;
-	real_t era;
+	    real_t era;
         real_t tStart;
         real_t tdif;
         real_t difFac;
         real_t tcg;
-	real_t s1;
-	real_t s2;
-   	real_t tStats;
+	    real_t s1;
+	    real_t s2;
+        real_t tdis;
+        real_t dampHg;
+        real_t dampAx;
+   	    real_t tStats;
         real_t nOutputs;
         real_t tEnd;
         real_t lambda0;
@@ -92,6 +95,9 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
     config.s1 = parameters.get("s1");
     config.s2 = parameters.get("s2");
     config.smoothing = parameters.get("smooth");
+    config.tdis = parameters.get("tdis");
+    config.dampAx = parameters.get("dampAx");
+    config.dampHg = parameters.get("dampHg");
     config.initalCondition = parameters.get("initialCondition");
     config.PhiLength = parameters.get("PhiLength");
     config.tStats = parameters.get("tStats");
@@ -435,6 +441,29 @@ void scaling_sim::next() {
     {
         pi[ALL] = deltaPi[X]/(config.difFac*config.dt);
         t += config.dt/config.difFac;
+    }
+    else if (t < config.tdis && (config.dampAx > 0 || config.dampHg > 0))
+    {
+        real_t RHg = exp(-0.5*config.dampHg*config.dt);
+        real_t RAx = exp(-0.5*config.dampAx*config.dt);
+        real_t daa_aaHg = daa_aa + (pow(aHalfMinus/aHalfPlus,2.0)
+                                     *(1-exp(-config.dampHg*config.dt))); 
+        real_t daa_aaAx = daa_aa + (pow(aHalfMinus/aHalfPlus,2.0)
+                                     *(1-exp(-config.dampAx*config.dt)));
+        onsites (ALL) {
+            Complex<real_t> phiHat; 
+            Complex<real_t> piPHC;
+            Complex<real_t> deltaPiPHC;
+
+            phiHat = phi[X]/phi[X].abs();
+            deltaPiPHC = deltaPi[X]*phiHat.conj();
+            piPHC = pi[X]*phiHat.conj();
+            pi[X] += - (daa_aaHg*real(piPHC) 
+                        + daa_aaAx*imag(piPHC))*phiHat;
+            pi[X] += Complex<real_t>(RHg*real(deltaPiPHC),
+                                     RAx*imag(deltaPiPHC))*phiHat;
+            t += config.dt;
+        }
     }
     else
     {
