@@ -5,8 +5,6 @@
 // Uses Clang RecursiveASTVisitor and Rewriter
 // interfaces
 //
-// Kari Rummukainen 2017-18
-//
 //------------------------------------------------------------------------------
 #include <sstream>
 #include <string>
@@ -57,8 +55,34 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
     }
 
     // and the openacc loop header
-    if (target.openacc)
+    if (target.openacc) {
         generate_openacc_loop_header(code);
+    } else if (target.openmp) {
+        int sums = 0;
+        for (var_info &vi : var_info_list) {
+            if (vi.reduction_type != reduction::NONE &&
+                get_number_type(vi.type) == number_type::UNKNOWN) {
+                code << "#pragma omp declare reduction(_hila_reduction_sum" << sums
+                     << ":" << vi.type << ":omp_out += omp_in)\n";
+                sums++;
+            }
+        }
+        code << "#pragma omp parallel for";
+        sums = 0;
+        for (var_info &vi : var_info_list) {
+            if (vi.reduction_type != reduction::NONE) {
+                code << " reduction(";
+                if (get_number_type(vi.type) == number_type::UNKNOWN) {
+                    code << "_hila_reduction_sum" << sums;
+                } else {
+                    code << '+';
+                }   
+                code << ": " << vi.reduction_name << ")";
+            }
+        }
+        code << '\n';
+    }
+
 
     // Start the loop
     code << "for(int " << looping_var << " = loop_begin; " << looping_var

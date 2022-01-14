@@ -147,6 +147,11 @@ llvm::cl::opt<bool> cmdline::openacc("target:openacc",
                                      llvm::cl::desc("Offload to GPU using openACC"),
                                      llvm::cl::cat(HilappCategory));
 
+llvm::cl::opt<bool> cmdline::c_openmp("target:openmp",
+                                      llvm::cl::desc("Hybrid OpenMP - MPI"),
+                                      llvm::cl::cat(HilappCategory));
+
+
 // Debug and Utility arguments
 
 // llvm::cl::opt<bool> cmdline::func_attribute("function-attributes",
@@ -212,6 +217,8 @@ void handle_cmdline_arguments(codetype &target) {
     } else if (cmdline::vectorize) {
         target.vectorize = true;
         target.vector_size = cmdline::vectorize;
+    } else if (cmdline::c_openmp) {
+        target.openmp = true;
     }
 
     if (cmdline::CUDA || cmdline::HIP)

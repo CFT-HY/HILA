@@ -47,6 +47,7 @@ struct codetype {
     bool vectorize = false;
     int vector_size = 1;
     bool openacc = false;
+    bool openmp = false;
     bool kernelize = false;
     bool GPU = false;
 };
@@ -73,6 +74,7 @@ extern llvm::cl::opt<bool> AVX512;
 extern llvm::cl::opt<bool> AVX;
 extern llvm::cl::opt<bool> SSE;
 extern llvm::cl::opt<bool> openacc;
+extern llvm::cl::opt<bool> c_openmp;
 // extern llvm::cl::opt<bool> func_attribute;
 extern llvm::cl::opt<int> vectorize;
 extern llvm::cl::opt<bool> no_interleaved_comm;
@@ -479,6 +481,8 @@ void clear_loop_functions_in_compilation_unit();
 /// check if macro "name" is defined (non-function macros only)
 bool is_macro_defined(const char *name, std::string * arg = nullptr);
 
+/// Utility to check if typename is native number
+number_type get_number_type(const std::string &s);
 
 /// take global CI just in case
 extern CompilerInstance *myCompilerInstance;
