@@ -2538,7 +2538,13 @@ void TopLevelVisitor::make_mapping_lists(
             break;
 
         case TemplateArgument::ArgKind::Integral:
+
+#if LLVM_VERSION_MAJOR < 13
             arg.push_back(tal.get(i).getAsIntegral().toString(10));
+#else
+            arg.push_back(llvm::toString(tal.get(i).getAsIntegral(),10));
+#endif
+
             par.push_back(tpl->getParam(i)->getNameAsString());
             if (argset)
                 *argset += arg.back();
