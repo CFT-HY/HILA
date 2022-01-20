@@ -15,7 +15,7 @@
 #include <fftw3.h>
 #endif
 
-// just some values here
+// just some values here, make less than 100 just in case
 #define WRK_GATHER_TAG 42
 #define WRK_SCATTER_TAG 43
 
