@@ -462,8 +462,9 @@ void scaling_sim::next() {
                         + daa_aaAx*imag(piPHC))*phiHat;
             pi[X] += Complex<real_t>(RHg*real(deltaPiPHC),
                                      RAx*imag(deltaPiPHC))*phiHat;
-            t += config.dt;
         }
+        t += config.dt;
+
     }
     else
     {
