@@ -9,7 +9,7 @@
 
 $(info ########################################################################)
 $(info Target puhti_cuda:  remember to )
-$(info   module load gcc/9.1.0 cuda/11.1.0 openmpi/4.0.5-cuda )
+$(info   module load gcc/9.1.0 cuda/11.1.0 openmpi/4.1.1-cuda )
 $(info ########################################################################)
 
 # Define compiler
@@ -37,8 +37,6 @@ $(shell mkdir -p build)
 $(shell echo "$(STD_HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 STD_HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
-# No need to give include directory to mpi for hilapp - here 2 common ones
-MPI_INCLUDE_DIRS = 
 
 MPI_LIBS =  -lmpi
 
@@ -51,7 +49,7 @@ HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 
 # These variables must be defined here
 #
-HILAPP_OPTS = -target:CUDA $(STD_HILAPP_INCLUDES) $(MPI_INCLUDE_DIRS)
+HILAPP_OPTS = -target:CUDA $(STD_HILAPP_INCLUDES) 
 HILA_OPTS = -DUSE_MPI -DCUDA -DPUHTI
 
 
