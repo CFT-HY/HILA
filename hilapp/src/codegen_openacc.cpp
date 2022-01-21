@@ -2,11 +2,6 @@
 // Generate transformed
 // hardware-dependent "kernels".
 //
-// Uses Clang RecursiveASTVisitor and Rewriter
-// interfaces
-//
-// Kari Rummukainen 2017-18
-//
 //------------------------------------------------------------------------------
 #include <sstream>
 #include <string>

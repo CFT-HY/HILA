@@ -1,15 +1,19 @@
-#-------------------------------------------------------------------------------
-# Makefile for building the "hilapp" hila lattice preprocessor.
-#
-# This version builds hilapp from "system level" distribution
-#
-# Use:
-# >  make [-j N]      - build hilapp to directory hilapp/build
-# >  make install     - build and move hilapp to hilapp/bin
-# >  make static      - build a statically compiled hilapp.  This can
-#                       be copied to systems without llvm/clang libraries
-#                       (assuming architectures are binary compatible)
-#-------------------------------------------------------------------------------
+#%-----------------------------------------------------------------------------
+#% Makefile for building the "hilapp" hila lattice preprocessor.
+#%
+#% This version builds hilapp from "system level" distribution
+#%
+#% Use:
+#%    make help        - print this help text
+#%    make [-j N]      - build hilapp to directory hilapp/build
+#%    make install     - build and move hilapp to hilapp/bin
+#%    make static      - build a statically compiled hilapp.  This can
+#%                       be copied to systems without llvm/clang libraries
+#%                       (assuming architectures are binary compatible)
+#%    make clean       - clean up
+#%    make [..] LLVM_VERSION=N   - build using llvm version 
+#%                       (assumes llvm-config-N exists)
+#%-----------------------------------------------------------------------------
 #
 # The Makefile variables may be customized, depending on where
 # and how you built LLVM & Clang. They can be overridden by setting them on the
@@ -23,18 +27,17 @@
 
 # If it is a system distribution (linux), then llvm-config should be installed:
 
-LLVM_SRC_PATH := $(shell llvm-config --prefix)
+ifdef LLVM_VERSION 
+	LLVM_PATH := $(shell llvm-config-$(LLVM_VERSION) --prefix)
+else
+	LLVM_PATH := $(shell llvm-config --prefix)
+endif
 
-# If you built llvm/clang yourself, LLVM_BUILD_PATH is the directory 
-# in which you built LLVM - where you ran configure or cmake.
-
-LLVM_BUILD_PATH := $(LLVM_SRC_PATH)
-
-LLVM_BIN_PATH 	:= $(LLVM_BUILD_PATH)/bin
+LLVM_BIN_PATH := $(LLVM_PATH)/bin
 
 $(info --------------------------------------------------------------)
-$(info Using LLVM_SRC_PATH = $(LLVM_SRC_PATH))
-$(info Using LLVM_BUILD_PATH = $(LLVM_BUILD_PATH))
+$(info Type "make help" for help on options)
+$(info Using LLVM_PATH = $(LLVM_PATH))
 $(info Using LLVM_BIN_PATH = $(LLVM_BIN_PATH))
 $(info --------------------------------------------------------------)
 
@@ -210,6 +213,8 @@ $(BUILDDIR)/stringops.o : $(SRCDIR)/stringops.cpp $(HEADERS) Makefile $(GIT_SHA_
 endif
 
 
+help:
+	@sed -ne '/@sed/!s/#%//p' $(MAKEFILE_LIST)
 
 
 .PHONY: clean

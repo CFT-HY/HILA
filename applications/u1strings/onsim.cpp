@@ -31,7 +31,6 @@ class scaling_sim {
 
     Field<Complex<real_t>> phi;
     Field<Complex<real_t>> pi;
-    Field<Complex<real_t>> deltaPi;
 
     real_t t;
     real_t a;
@@ -56,14 +55,17 @@ class scaling_sim {
         real_t sigma;
         real_t dx;
         real_t dt;
-	real_t era;
+	    real_t era;
         real_t tStart;
         real_t tdif;
         real_t difFac;
         real_t tcg;
-	real_t s1;
-	real_t s2;
-   	real_t tStats;
+	    real_t s1;
+	    real_t s2;
+        real_t tdis;
+        real_t dampHg;
+        real_t dampAx;
+   	    real_t tStats;
         real_t nOutputs;
         real_t tEnd;
         real_t lambda0;
@@ -93,6 +95,9 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
     config.s1 = parameters.get("s1");
     config.s2 = parameters.get("s2");
     config.smoothing = parameters.get("smooth");
+    config.tdis = parameters.get("tdis");
+    config.dampAx = parameters.get("dampAx");
+    config.dampHg = parameters.get("dampHg");
     config.initalCondition = parameters.get("initialCondition");
     config.PhiLength = parameters.get("PhiLength");
     config.tStats = parameters.get("tStats");
@@ -140,7 +145,7 @@ void scaling_sim::updateCosmology() {
     {
 	a = acg * pow(t/config.tcg, config.era);
     	aHalfPlus = acg * pow((t+0.5*config.dt)/config.tcg, config.era);
-    	aHalfMinus = acg * pow((t+0.5*config.dt)/config.tcg, config.era);
+    	aHalfMinus = acg * pow((t-0.5*config.dt)/config.tcg, config.era);
 	lambda = lambdacg * pow (a/acg, -2.0*(1.0-config.s1));
     }    
     else
@@ -215,7 +220,7 @@ void scaling_sim::initialize() {
 
       FFT_field(kphi, phi, fft_direction::back);
 
-      onsites (ALL) {pi[X] = 0;}
+      pi[ALL] = 0;
 
       output0 << "k space generation \n";    
 
@@ -258,6 +263,7 @@ void scaling_sim::write_moduli() {
     double phimod = 0.0;
     double pimod = 0.0;
 
+    hila::set_allreduce(false);
     onsites (ALL) {
         phimod += phi[X].abs();
         pimod += pi[X].abs();
@@ -289,6 +295,8 @@ void scaling_sim::write_energies() {
     double w_sumPhiDiPhi = 0.0;
     double w_sumPhiPi = 0.0;
 
+    double phi2 = 0.0;
+
     hila::set_allreduce(false);
     onsites (ALL) {
         double phinorm = phi[X].squarenorm();
@@ -304,26 +312,24 @@ void scaling_sim::write_energies() {
 
         sumPhiPi += 0.5 * pPi * pPi;
         w_sumPhiPi += 0.5 * pPi * pPi * v;
+
+        phi2 += phinorm;
     }
 
 
     hila::set_allreduce(false);
     onsites (ALL) {
-            auto norm = phi[X].squarenorm();
-            real_t v = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
-            auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
-                             phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
-            real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
-            real_t diff_phi_norm2 = diff_phi.squarenorm();
+        auto norm = phi[X].squarenorm();
+        real_t v2 = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
+        auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
+                         phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
+        real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
+        real_t diff_phi_norm2 = diff_phi.squarenorm();
 
-            sumDiPhi += 0.5 * diff_phi_norm2; 
-            // red[0] += 0.5 * diff_phi_norm2;
-            sumPhiDiPhi += pDphi * pDphi / norm;
-            // red[1] += pDphi * pDphi / norm;
-            w_sumDiPhi += 0.5 * diff_phi_norm2 * v; 
-            // red[2] += 0.5 * diff_phi_norm2 * v;
-            w_sumPhiDiPhi += pDphi * pDphi / norm * v;
-            // red[3] += pDphi * pDphi / norm * v;
+        sumDiPhi += 0.5 * diff_phi_norm2; 
+        sumPhiDiPhi += pDphi * pDphi / norm;
+        w_sumDiPhi += 0.5 * diff_phi_norm2 * v2; 
+        w_sumPhiDiPhi += pDphi * pDphi / norm * v2;
     }
     
 
@@ -334,11 +340,14 @@ void scaling_sim::write_energies() {
         config.stream << sumPhiPi / vol << " " << w_sumPhiPi / vol << " ";
         config.stream << sumPhiDiPhi / vol << " " << w_sumPhiDiPhi / vol << " ";
         config.stream << sumV / vol << " " << w_sumV / vol << " ";
+	config.stream << phi2 / vol << " "; 
     }
 }
 
 void scaling_sim::write_windings()
 {
+#ifdef OLD_WINDING
+
     real_t length = 0.0;
     
     foralldir(d1) foralldir(d2) if (d1 < d2) {
@@ -352,11 +361,37 @@ void scaling_sim::write_windings()
 	}
     }
 
+    if (hila::myrank() == 0) 
+    {
+        config.stream << length * config.dx/(2.0 * M_PI) << "\n";
+    }
+
+#else
+
+    Reduction<real_t> length(0);
+    length.allreduce(false).delayed(true);
+
+    Field<real_t> twist[NDIM];
+    foralldir(d) 
+        twist[d][ALL] = (phi[X] * phi[X+d].conj()).arg();
+
+    foralldir(d1) foralldir(d2) if (d1 < d2) {
+        onsites(ALL) {
+            real_t plaq = twist[d1][X] + twist[d2][X+d1] - twist[d1][X+d2] - twist[d2][X];
+
+            length += abs(plaq);            
+        }
+    }
+
+    auto v = length.value() * config.dx/(2.0 * M_PI);
 
     if (hila::myrank() == 0) 
     {
-	config.stream << 0.0 << " " << length << "\n";
+        config.stream << v << "\n";
     }
+
+
+#endif
 
 }
 
@@ -373,6 +408,8 @@ void scaling_sim::next() {
     real_t ss = config.sigma * config.sigma;
 
     static hila::timer next_timer("timestep");
+
+    Field<Complex<real_t>> deltaPi;
 
     next_timer.start();
 
@@ -405,6 +442,30 @@ void scaling_sim::next() {
         pi[ALL] = deltaPi[X]/(config.difFac*config.dt);
         t += config.dt/config.difFac;
     }
+    else if (t < config.tdis && (config.dampAx > 0 || config.dampHg > 0))
+    {
+        real_t RHg = exp(-0.5*config.dampHg*config.dt);
+        real_t RAx = exp(-0.5*config.dampAx*config.dt);
+        real_t daa_aaHg = daa_aa + (pow(aHalfMinus/aHalfPlus,2.0)
+                                     *(1-exp(-config.dampHg*config.dt))); 
+        real_t daa_aaAx = daa_aa + (pow(aHalfMinus/aHalfPlus,2.0)
+                                     *(1-exp(-config.dampAx*config.dt)));
+        onsites (ALL) {
+            Complex<real_t> phiHat; 
+            Complex<real_t> piPHC;
+            Complex<real_t> deltaPiPHC;
+
+            phiHat = phi[X]/phi[X].abs();
+            deltaPiPHC = deltaPi[X]*phiHat.conj();
+            piPHC = pi[X]*phiHat.conj();
+            pi[X] += - (daa_aaHg*real(piPHC) 
+                        + daa_aaAx*imag(piPHC))*phiHat;
+            pi[X] += Complex<real_t>(RHg*real(deltaPiPHC),
+                                     RAx*imag(deltaPiPHC))*phiHat;
+        }
+        t += config.dt;
+
+    }
     else
     {
         pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
@@ -424,6 +485,9 @@ int main(int argc, char **argv) {
     int steps =
         (sim.config.tEnd - sim.config.tStats) /
         (sim.config.dt * sim.config.nOutputs); // number of steps between printing stats
+    if (steps == 0)
+        steps = 1;
+        
     int stat_counter = 0;
 
     if (hila::myrank() == 0) {

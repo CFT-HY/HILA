@@ -47,6 +47,7 @@ struct codetype {
     bool vectorize = false;
     int vector_size = 1;
     bool openacc = false;
+    bool openmp = false;
     bool kernelize = false;
     bool GPU = false;
 };
@@ -73,6 +74,7 @@ extern llvm::cl::opt<bool> AVX512;
 extern llvm::cl::opt<bool> AVX;
 extern llvm::cl::opt<bool> SSE;
 extern llvm::cl::opt<bool> openacc;
+extern llvm::cl::opt<bool> c_openmp;
 // extern llvm::cl::opt<bool> func_attribute;
 extern llvm::cl::opt<int> vectorize;
 extern llvm::cl::opt<bool> no_interleaved_comm;
@@ -119,31 +121,32 @@ struct global_state {
 
 /// field_ref contains info about references to field vars within loops
 struct field_ref {
-    Expr *fullExpr;   // full expression a[X+d]
-    Expr *nameExpr;   // name "a"
-    Expr *parityExpr; // expr within [], here "X+d" or "X+e_x+e_y"
-    // Expr * dirExpr;               // expr of the directon -- non-null only for
-    // nn-dirs! NOT VERY USEFUL
+    Expr *fullExpr;          // full expression a[X+d]
+    Expr *nameExpr;          // name "a"
+    Expr *parityExpr;        // expr within [], here "X+d" or "X+e_x+e_y"
     std::string direxpr_s;   // original dir expr: "d" or "e_x+e_y" etc.
     struct field_info *info; // ptr to field info struct
-    // unsigned nameInd, parityInd;
-    int sequence; // sequence of the full stmt where ref appears
+    int sequence;            // sequence of the full stmt where ref appears
     bool is_written, is_read;
     bool is_direction; // true if ref contains nn OR offset Direction - used as a
                        // general flag
     bool is_constant_direction; // true if dir is const. e_x etc.
     bool is_offset;             // true if dir is for offset instead of simple Direction
+    bool is_loop_local_dir; // if dir depends on loop local var - not known outside loop
     unsigned constant_value;
 
     field_ref() {
         fullExpr = nameExpr = parityExpr = nullptr;
         direxpr_s.clear();
         info = nullptr;
-        is_written = is_read = is_offset = is_direction = is_constant_direction = false;
+        is_written = is_read = is_offset = is_direction = is_constant_direction =
+            is_loop_local_dir = false;
         sequence = 0;
     }
 
-    ~field_ref() { direxpr_s.clear(); }
+    ~field_ref() {
+        direxpr_s.clear();
+    }
 };
 
 /// dir_ptr is a "subfield" of field_info, storing Direction/offset of field ref
@@ -157,6 +160,7 @@ struct dir_ptr {
         ref_list;   // pointers references equivalent to this Field[dir]
     unsigned count; // how many genuine Direction refs?  if count==0 this is offset
     bool is_offset; // is this dir offset?
+    bool is_loop_local_dir;     // is direction expr loop local?
     bool is_constant_direction; // if constant nn
     unsigned constant_value;    // value of it
     std::string name_with_dir;  // new name for this Field[X+dir] -variable
@@ -165,7 +169,7 @@ struct dir_ptr {
         ref_list = {};
         parityExpr = nullptr;
         count = 0;
-        is_offset = is_constant_direction = false;
+        is_offset = is_constant_direction = is_loop_local_dir = false;
         name_with_dir.clear();
         direxpr_s.clear();
     }
@@ -217,15 +221,17 @@ struct field_info {
     Expr *nameExpr;                    // first of the name exprs to this Field
     vectorization_info vecinfo;        // info of the type in Field<type>
 
-    bool is_written;      // is the Field written to in this loop
-    bool is_read_atX;     // local read, i.e. Field[X]
-    bool is_read_nb;      // read using nn-neighbours
-    bool is_read_offset;  // read with an offset (non-nn) index
-    int first_assign_seq; // the sequence of the first assignment
+    bool is_written;        // is the Field written to in this loop
+    bool is_read_atX;       // local read, i.e. Field[X]
+    bool is_read_nb;        // read using nn-neighbours
+    bool is_read_offset;    // read with an offset (non-nn) index
+    bool is_loop_local_dir; // is read with loop local direction?
+    int first_assign_seq;   // the sequence of the first assignment
 
     field_info() {
         type_template = old_name = new_name = loop_ref_name = "";
-        is_written = is_read_nb = is_read_atX = is_read_offset = false;
+        is_written = is_read_nb = is_read_atX = is_read_offset = is_loop_local_dir =
+            false;
         first_assign_seq = 0;
         dir_list = {};
         ref_list = {};
@@ -284,11 +290,10 @@ struct var_info {
 /// Store reference to constant expression (field of a struct, array element)
 
 struct loop_const_expr_ref {
-    std::vector<Expr *> refs;   // references of this expression in loop
-    std::string type;           // type as string
-    std::string exprstring;     // expression as a string (with compressed whitespace)
-    std::string new_name;       // name to be used in loop
-
+    std::vector<Expr *> refs; // references of this expression in loop
+    std::string type;         // type as string
+    std::string exprstring;   // expression as a string (with compressed whitespace)
+    std::string new_name;     // name to be used in loop
 };
 
 
@@ -358,8 +363,8 @@ struct special_function_call {
 /// Stores the parity of the current loop: Expr, value (if known), Expr as string
 struct loop_info_struct {
     const Expr *parity_expr;
-    std::string parity_text;  // parity text in source
-    std::string parity_str;   // what string to use
+    std::string parity_text; // parity text in source
+    std::string parity_str;  // what string to use
     Parity parity_value;
 
     bool has_pragma_novector;
@@ -367,7 +372,7 @@ struct loop_info_struct {
     const char *pragma_access_args;
     bool has_site_dependent_cond_or_index; // if, for, while w. site dep. cond?
     bool contains_random; // does it contain rng (also in loop functions)?
-    bool has_conditional;  // if, for, while, switch, ternary in loop 
+    bool has_conditional; // if, for, while, switch, ternary in loop
     std::vector<var_info *> conditional_vars; // may depend on variables
     Expr *condExpr;
 
@@ -393,7 +398,8 @@ struct argument_info {
     bool is_const_function;
 
     argument_info() {
-        is_lvalue = is_site_dependent = is_output_only = is_const = is_const_function = false;
+        is_lvalue = is_site_dependent = is_output_only = is_const = is_const_function =
+            false;
         E = nullptr;
         PV = nullptr;
         dependent_vars = {};
@@ -471,6 +477,12 @@ void reset_vectorizable_types();
 
 /// and clear loop function info
 void clear_loop_functions_in_compilation_unit();
+
+/// check if macro "name" is defined (non-function macros only)
+bool is_macro_defined(const char *name, std::string * arg = nullptr);
+
+/// Utility to check if typename is native number
+number_type get_number_type(const std::string &s);
 
 /// take global CI just in case
 extern CompilerInstance *myCompilerInstance;

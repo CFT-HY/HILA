@@ -94,8 +94,8 @@ class lattice_struct {
 
     /// information about all nodes
     struct allnodes {
-        int number;                 // number of nodes
-        unsigned n_divisions[NDIM]; // number of node divisions to dir
+        int number;                   // number of nodes
+        CoordinateVector n_divisions; // number of node divisions to dir
         // lattice division: div[d] will have num_dir[d]+1 elements, last size
         // TODO: is this needed at all?
         std::vector<unsigned> divisors[NDIM];

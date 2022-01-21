@@ -50,7 +50,7 @@ LDFLAGS :=
 # These variables must be defined here
 #
 HILAPP_OPTS := $(HILAPP_INCLUDES)
-HILA_OPTS := -DUSE_MPI
+HILA_OPTS := -DUSE_MPI -DNODE_LAYOUT_BLOCK=128
 
 
 

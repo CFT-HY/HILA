@@ -72,17 +72,27 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     std::stringstream code, kernel;
     // const std::string t = loopBuf.dump();
 
+    bool use_slow_reduce =
+        (is_macro_defined("SLOW_GPU_REDUCTION") || cmdline::slow_gpu_reduce);
+
     // Get kernel name - use line number or file offset (must be deterministic)
     std::string kernel_name = TopLevelVisitor::make_kernel_name();
 
     // Wait for the communication to finish
     for (field_info &l : field_info_list) {
         // If neighbour references exist, communicate them
-        for (dir_ptr &d : l.dir_list)
-            if (d.count > 0) {
-                code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
-                     << loop_info.parity_str << ");\n";
-            }
+        if (!l.is_loop_local_dir) {
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+                    code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
+                         << loop_info.parity_str << ");\n";
+                }
+        } else {
+            code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                    "++_HILAdir_) {\n"
+                 << l.new_name << ".wait_fetch(_HILAdir_," << loop_info.parity_str
+                 << ");\n}\n";
+        }
     }
 
     // Set loop lattice
@@ -144,7 +154,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                  << ") * lattice->mynode.volume() );\n";
 
             if (ar.reduction_type == reduction::SUM) {
-                code << "cuda_set_zero(" << ar.new_name << ", " << ar.size_expr
+                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr
                      << " * lattice->mynode.volume());\n";
             }
 
@@ -162,7 +172,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                  << " * sizeof(" << ar.element_type << "));\n";
 
             if (ar.reduction_type == reduction::SUM) {
-                code << "cuda_set_zero(" << ar.new_name << ", " << ar.size_expr
+                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr
                      << ");\n";
             }
 
@@ -195,14 +205,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // Check for reductions and allocate device memory
     for (var_info &v : var_info_list) {
         if (v.reduction_type != reduction::NONE) {
-            if (v.reduction_type != reduction::SUM || cmdline::slow_gpu_reduce) {
+            if (v.reduction_type != reduction::SUM || use_slow_reduce) {
                 // Allocate memory for a reduction. This will be filled in the kernel
                 code << v.type << " * dev_" << v.reduction_name << ";\n";
                 code << "gpuMalloc( (void **)& dev_" << v.reduction_name << ","
                      << "sizeof(" << v.type << ") * N_blocks );\n";
                 if (v.reduction_type == reduction::SUM) {
-                    code << "cuda_set_zero(dev_" << v.reduction_name
-                         << ", N_blocks);\n";
+                    code << "gpu_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
                 }
                 if (v.reduction_type == reduction::PRODUCT) {
                     code << "cuda_set_one(dev_" << v.reduction_name << ", N_blocks);\n";
@@ -253,7 +262,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
         } else if (!vi.is_loop_local) {
 
-            if (vi.reduction_type == reduction::SUM && !cmdline::slow_gpu_reduce) {
+            if (vi.reduction_type == reduction::SUM && !use_slow_reduce) {
                 // fast reduction, subs with a new field
                 vi.new_name = "kernel_reduction_" + std::to_string(i) + '_';
                 i++;
@@ -424,7 +433,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (var_info &vi : var_info_list)
         if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE &&
-                (vi.reduction_type != reduction::SUM || cmdline::slow_gpu_reduce)) {
+                (vi.reduction_type != reduction::SUM || use_slow_reduce)) {
                 // Generate a temporary array for the reduction
                 kernel << "__shared__ " << vi.type << " " << vi.new_name
                        << "_sh[N_threads];\n";
@@ -458,36 +467,83 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (field_info &l : field_info_list) {
         if (l.is_read_nb) {
             // this field is nn-read
-            for (dir_ptr &d : l.dir_list) {
-                std::string dirname;
-                if (d.is_constant_direction)
-                    dirname = d.direxpr_s; // orig. string
-                else
-                    dirname = remove_X(loopBuf.get(
-                        d.parityExpr->getSourceRange())); // mapped name was
-                                                          // get_stmt_str(d.e);
+            if (!l.is_loop_local_dir) {
+                // "standard" loop extern neighb direction
+                for (dir_ptr &d : l.dir_list) {
+                    std::string dirname;
+                    if (d.is_constant_direction)
+                        dirname = d.direxpr_s; // orig. string
+                    else
+                        dirname = remove_X(loopBuf.get(
+                            d.parityExpr->getSourceRange())); // mapped name was
+                                                              // get_stmt_str(d.e);
 
-                // Check if the Direction is a variable. These have been renamed.
-                // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs
-                // )
-                //   if( vr.ref == d.e )
-                //     dirname = vi.new_name;
+                    // Check if the Direction is a variable. These have been renamed.
+                    // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs
+                    // )
+                    //   if( vr.ref == d.e )
+                    //     dirname = vi.new_name;
 
-                // Create the temp variable and call the getter
-                kernel << l.element_type << " " << d.name_with_dir << " = "
-                       << l.new_name << ".get(" << l.new_name << ".neighbours["
-                       << dirname << "][" << looping_var
-                       << "], d_lattice.field_alloc_size);\n";
+                    // Create the temp variable and call the getter
+                    kernel << l.element_type << " " << d.name_with_dir << " = "
+                           << l.new_name << ".get(" << l.new_name << ".neighbours["
+                           << dirname << "][" << looping_var
+                           << "], d_lattice.field_alloc_size);\n";
 
-                // and replace references in loop body
-                for (field_ref *ref : d.ref_list) {
-                    loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                    // and replace references in loop body
+                    for (field_ref *ref : d.ref_list) {
+                        loopBuf.replace(ref->fullExpr, d.name_with_dir);
+                    }
+                }
+            } else {
+                // now local var dependent neighbour
+
+                // std::string loop_array_name = l.new_name + "_dirs";
+                // kernel << l.element_type << ' ' << loop_array_name << "[NDIRS];\n";
+                // kernel << "for (int _HILAdir_ = 0; _HILAdir_ < NDIRS; "
+                //           "++_HILAdir_) {\n"
+                //        << loop_array_name << "[_HILAdir_] = " << l.new_name <<
+                //        ".get("
+                //        << l.new_name << ".neighbours[_HILAdir_][" << looping_var
+                //        << "], d_lattice.field_alloc_size);\n}\n";
+
+                // // and replace references in loop body
+                // for (dir_ptr &d : l.dir_list) {
+                //     std::string dirname;
+                //     if (d.is_constant_direction)
+                //         dirname = d.direxpr_s; // orig. string
+                //     else
+                //         dirname = remove_X(loopBuf.get(
+                //             d.parityExpr->getSourceRange())); // mapped name was
+
+                //     for (field_ref *ref : d.ref_list) {
+                //         loopBuf.replace(ref->fullExpr,
+                //                         loop_array_name + "[" + dirname + "]");
+                //     }
+                // }
+
+                // and variable direction refs - use accessor directly
+                for (dir_ptr &d : l.dir_list) {
+                    std::string dirname;
+                    if (d.is_constant_direction)
+                        dirname = d.direxpr_s; // orig. string
+                    else
+                        dirname = remove_X(loopBuf.get(
+                            d.parityExpr->getSourceRange())); // mapped name was
+
+                    for (field_ref *ref : d.ref_list) {
+                        loopBuf.replace(ref->fullExpr,
+                                        l.new_name + ".get(" + l.new_name +
+                                            ".neighbours[" + dirname + "][" +
+                                            looping_var +
+                                            "], d_lattice.field_alloc_size)");
+                    }
                 }
             }
         }
 
         // TODO:
-        if (l.is_read_atX || loop_info.has_conditional) {
+        if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
             // local read
             kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
                    << ".get(" << looping_var
@@ -560,7 +616,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (var_info &vi : var_info_list)
         if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE &&
-                (vi.reduction_type != reduction::SUM || cmdline::slow_gpu_reduce)) {
+                (vi.reduction_type != reduction::SUM || use_slow_reduce)) {
                 // Do sync (only if there is a reduction)
                 if (!sync_done) {
                     kernel << "__syncthreads();\n";
@@ -634,13 +690,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // Check reduction variables
     for (var_info &v : var_info_list) {
         // Run reduction
-        if (v.reduction_type != reduction::SUM || cmdline::slow_gpu_reduce) {
+        if (v.reduction_type != reduction::SUM || use_slow_reduce) {
             if (v.reduction_type == reduction::SUM) {
-                code << v.reduction_name << " = cuda_reduce_sum( dev_"
+                code << v.reduction_name << " = gpu_reduce_sum( dev_"
                      << v.reduction_name << ", N_blocks"
                      << ");\n";
             } else if (v.reduction_type == reduction::PRODUCT) {
-                code << v.reduction_name << " = cuda_reduce_product( dev_"
+                code << v.reduction_name << " = gpu_reduce_product( dev_"
                      << v.reduction_name << ", N_blocks"
                      << ");\n";
             }

@@ -39,7 +39,7 @@
 
 //#include "hila.h"
 
-#ifndef HILAPP
+#if !defined(HILAPP) && !defined(SLOW_GPU_REDUCTION)
 
 #define _CG_ABI_EXPERIMENTAL
 #include <cooperative_groups.h>
@@ -804,7 +804,8 @@ T gpu_reduce(int size, T *d_idata, bool keep_buffers) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
-#else // ifndef HILAPP
+
+#else // if !defined(HILAPP) && !defined(SLOW_GPU_REDUCTION)
 
 // just declare the name
 template <class T>

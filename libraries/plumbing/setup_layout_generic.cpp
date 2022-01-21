@@ -28,7 +28,7 @@ void lattice_struct::setup_layout() {
         output0 << size(d);
     }
     output0 << "  =  " << l_volume << " sites\n";
-    output0 << "Dividing to " << numnodes() << " nodes\n";
+    output0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
 
     foralldir(d) if (size(d) % 2 != 0) {
         output0 << "Lattice must be even to all directions (odd size:TODO)\n";
@@ -37,7 +37,7 @@ void lattice_struct::setup_layout() {
 
     // Factorize the node number in primes
     // These factors must be used in slicing the lattice!
-    int nn = numnodes();
+    int nn = hila::number_of_nodes();
 
     int i = nn;
     for (int n = 0; n < NPRIMES; n++) {
@@ -140,7 +140,7 @@ void lattice_struct::setup_layout() {
             ghosts[mdir] =
                 (1ULL << 62); // this short-circuits direction mdir, some other taken next
         } else if (fail) {
-            output0 << "Could not successfully lay out the lattice with " << numnodes()
+            output0 << "Could not successfully lay out the lattice with " << hila::number_of_nodes()
                     << " nodes\n";
             hila::finishrun();
         }
@@ -148,7 +148,7 @@ void lattice_struct::setup_layout() {
     } while (secondtime);
 
     // set up struct nodes variables
-    nodes.number = numnodes();
+    nodes.number = hila::number_of_nodes();
     foralldir(dir) {
         nodes.divisors[dir].resize(nodes.n_divisions[dir] + 1);
         // Node divisors: note, this MUST BE compatible with
@@ -186,7 +186,7 @@ void lattice_struct::setup_layout() {
             output0 << "NOTE: number of smaller nodes > large nodes \n";
     }
 
-    // this was numnodes() > 1
+    // this was hila::number_of_nodes() > 1
     if (1) {
         output0 << "\nSites on node: ";
         foralldir(dir) {
@@ -212,7 +212,7 @@ void lattice_struct::setup_layout() {
                 output0 << " x ";
             output0 << nodes.n_divisions[dir];
         }
-        output0 << "  =  " << numnodes() << " nodes\n";
+        output0 << "  =  " << hila::number_of_nodes() << " nodes\n";
     }
 
 #ifdef USE_MPI

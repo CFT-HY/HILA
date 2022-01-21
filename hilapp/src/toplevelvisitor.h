@@ -65,7 +65,9 @@ class TopLevelVisitor : public GeneralVisitor,
         parsing_state.loop_function_next = false;
     }
 
-    bool shouldVisitTemplateInstantiations() const { return true; }
+    bool shouldVisitTemplateInstantiations() const {
+        return true;
+    }
     // is false by default, but still goes?
 
     /// TraverseStmt is called recursively for each level in the AST
@@ -179,6 +181,8 @@ class TopLevelVisitor : public GeneralVisitor,
 
     /// Does ; follow the statement?
     SourceRange getRangeWithSemicolon(Stmt *S, bool flag_error = true);
+    SourceRange getRangeWithSemicolon(SourceRange sr, bool flag_error = true);
+    bool hasSemicolonAfter(SourceRange sr);
 
     void requireGloballyDefined(Expr *e);
 
@@ -191,7 +195,9 @@ class TopLevelVisitor : public GeneralVisitor,
     void remove_vars_out_of_scope(unsigned level);
 
     // add handle to get rewriter too - for source control
-    Rewriter &getRewriter() { return TheRewriter; }
+    Rewriter &getRewriter() {
+        return TheRewriter;
+    }
 
     /// Code generation headers start here
     /// Starting point for new code
@@ -246,11 +252,22 @@ class TopLevelVisitor : public GeneralVisitor,
 /// variable reference
 class FieldRefChecker : public GeneralVisitor,
                         public RecursiveASTVisitor<FieldRefChecker> {
+  private:
+    bool found_loop_local_var = false;
+    var_info *vip;
+
   public:
     using GeneralVisitor::GeneralVisitor;
 
     bool TraverseStmt(Stmt *s);
     bool VisitDeclRefExpr(DeclRefExpr *e);
+    bool isLoopLocal() {
+        return found_loop_local_var;
+    }
+    var_info * getLocalVarInfo() {
+        if (found_loop_local_var) return vip;
+        else return nullptr;
+    }
 };
 
 /// An AST Visitor for checking constraints for assigments

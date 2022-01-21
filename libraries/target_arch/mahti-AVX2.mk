@@ -48,5 +48,5 @@ LDFLAGS :=
 # These variables must be defined here
 #
 HILAPP_OPTS := -target:AVX $(HILAPP_INCLUDES)
-HILA_OPTS := -DAVX -DUSE_MPI
+HILA_OPTS := -DAVX -DUSE_MPI -DNODE_LAYOUT_BLOCK=128
 

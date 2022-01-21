@@ -32,7 +32,7 @@ void lattice_struct::setup_layout() {
         output0 << size(d);
     }
     output0 << "  =  " << l_volume << " sites\n";
-    output0 << "Dividing to " << numnodes() << " nodes\n";
+    output0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
     output0 << "Layout using vector of " << number_of_subnodes << " elements\n";
 
     foralldir(d) if (size(d) % 2 != 0) {
@@ -41,11 +41,11 @@ void lattice_struct::setup_layout() {
     }
 
     // we want to divide up to numnode * vector_size virtual nodes
-    // use the float vector size to divide to numnodes() * vector_size nodes, this is the
+    // use the float vector size to divide to hila::number_of_nodes() * vector_size nodes, this is the
     // most demanding. The directions where the extra divisions have been done the node
     // size must be even, so that these can be handled by vectors
 
-    int nn = numnodes();
+    int nn = hila::number_of_nodes();
 
     // Factorize the node number in primes
     // These factors must be used in slicing the lattice!
@@ -63,7 +63,7 @@ void lattice_struct::setup_layout() {
         }
     }
     if (i != 1) {
-        output0 << "Cannot factorize " << numnodes() << " nodes with primes up to "
+        output0 << "Cannot factorize " << hila::number_of_nodes() << " nodes with primes up to "
                 << prime[NPRIMES - 1] << '\n';
         hila::finishrun();
     }
@@ -202,7 +202,7 @@ void lattice_struct::setup_layout() {
             ghosts[gdir] =
                 (1ULL << 62); // this short-circuits direction gdir, some other taken next
         } else if (fail) {
-            output0 << "Could not successfully lay out the lattice with " << numnodes()
+            output0 << "Could not successfully lay out the lattice with " << hila::number_of_nodes()
                     << " nodes\n";
             hila::finishrun();
         }
@@ -210,7 +210,7 @@ void lattice_struct::setup_layout() {
     } while (secondtime);
 
     // set up struct nodes variables
-    nodes.number = numnodes();
+    nodes.number = hila::number_of_nodes();
     foralldir(dir) {
         nodesiz[dir] *= subdiv[dir];
         nodes.n_divisions[dir] = divisions[dir] / subdiv[dir];
@@ -254,7 +254,7 @@ void lattice_struct::setup_layout() {
             output0 << "NOTE: number of smaller nodes > large nodes \n";
     }
 
-    // this was numnodes() > 1
+    // this was hila::number_of_nodes() > 1
     if (1) {
         output0 << "\nSites on node: ";
         foralldir(dir) {
@@ -280,7 +280,7 @@ void lattice_struct::setup_layout() {
                 output0 << " x ";
             output0 << nodes.n_divisions[dir];
         }
-        output0 << "  =  " << numnodes() << " nodes\n";
+        output0 << "  =  " << hila::number_of_nodes() << " nodes\n";
 
 #ifdef VECTORIZED
 

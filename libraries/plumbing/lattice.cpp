@@ -290,7 +290,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc,
 
 void lattice_struct::setup_nodes() {
 
-    nodes.number = numnodes();
+    nodes.number = hila::number_of_nodes();
     // Loop over all node "origins"
     nodes.nodelist.resize(nodes.number);
 
@@ -582,8 +582,8 @@ void lattice_struct::create_std_gathers() {
 ///  Get message tags cyclically -- defined outside classes, so that it is global and
 ///  unique
 
-#define MSG_TAG_MIN 10000
-#define MSG_TAG_MAX (1 << 28) // a big int number
+#define MSG_TAG_MIN 101
+#define MSG_TAG_MAX (32767-1)    // standard says that at least this many tags available
 
 int get_next_msg_tag() {
     static int tag = MSG_TAG_MIN;

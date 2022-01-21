@@ -6,7 +6,7 @@
 
 $(info ########################################################################)
 $(info Target lumi: remember to )
-$(info   module load cray-fftw craype-hugepages2M )
+$(info   module load PrgEnv-gnu cray-mpich cray-fftw )
 $(info ########################################################################)
 
 
@@ -53,7 +53,7 @@ LDFLAGS := $(CXXFLAGS)
 # These variables must be defined here
 #
 HILAPP_OPTS := $(HILAPP_INCLUDES)
-HILA_OPTS := -DUSE_MPI
+HILA_OPTS := -DUSE_MPI -DNODE_LAYOUT_BLOCK=128
 
 
 

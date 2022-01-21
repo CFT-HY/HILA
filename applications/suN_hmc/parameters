@@ -1,6 +1,6 @@
 # This is a parameter file for su3_realtime
 
-lattice size           16, 16, 16
+lattice size           8,8,8,8
 # should be effective 6/beta
 g^2 Ta                 2     
 dt                     0.02

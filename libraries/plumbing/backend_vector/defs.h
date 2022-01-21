@@ -36,14 +36,12 @@ static_assert( 0 && "EVEN_SITES_FIRST must be defined for vectorized code");
 
 // Define random number generator
 namespace hila {
-    inline double random() { return mersenne(); }
-} // namespace hila
 
+inline double random() { return mersenne(); }
 
 // Trivial synchronization
 inline void synchronize_threads() {}
 
-namespace hila {
 
 /// Implements test for basic in types, similar to
 /// std::is_arithmetic, but allows the backend to add

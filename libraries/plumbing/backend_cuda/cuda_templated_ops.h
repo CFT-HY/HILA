@@ -9,7 +9,7 @@
 
 #include "plumbing/type_tools.h"
 
-#ifdef __CUDACC__
+#if defined(__CUDACC__) || defined(__HIPCC__)
 
 /* Reduction */
 /*
@@ -44,7 +44,7 @@ T cuda_reduce_sum(  T * vector, int N ){
 
 // A simple hand-written reduction that does not require a library
 template <typename T>
-__global__ void cuda_reduce_sum_kernel(T *vector, int vector_size, int new_size,
+__global__ void gpu_reduce_sum_kernel(T *vector, int vector_size, int new_size,
                                        int elems) {
     int Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < new_size) {
@@ -55,7 +55,7 @@ __global__ void cuda_reduce_sum_kernel(T *vector, int vector_size, int new_size,
     }
 }
 
-template <typename T> T cuda_reduce_sum(T *vector, int N) {
+template <typename T> T gpu_reduce_sum(T *vector, int N) {
     const int reduce_step = 32;
     T sum = 0;
     T *host_vector = (T *)malloc(N * sizeof(T));
@@ -68,9 +68,9 @@ template <typename T> T cuda_reduce_sum(T *vector, int N) {
         int new_size = (vector_size - first) / reduce_step;
         // Find number of blocks and launch the kernel
         int blocks = (new_size - 1) / N_threads + 1;
-        cuda_reduce_sum_kernel<<<blocks, N_threads>>>(vector + first, vector_size,
+        gpu_reduce_sum_kernel<<<blocks, N_threads>>>(vector + first, vector_size,
                                                       new_size, reduce_step);
-        check_device_error("cuda_reduce_sum kernel");
+        check_device_error("gpu_reduce_sum kernel");
         // Find the full size of the resulting array
         vector_size = new_size + first;
         gpuDeviceSynchronize();
@@ -88,7 +88,7 @@ template <typename T> T cuda_reduce_sum(T *vector, int N) {
 }
 
 template <typename T>
-__global__ void cuda_reduce_prod_kernel(T *vector, int vector_size, int new_size,
+__global__ void gpu_reduce_prod_kernel(T *vector, int vector_size, int new_size,
                                         int elems) {
     int Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < new_size) {
@@ -99,7 +99,7 @@ __global__ void cuda_reduce_prod_kernel(T *vector, int vector_size, int new_size
     }
 }
 
-template <typename T> T cuda_reduce_prod(T *vector, int N) {
+template <typename T> T gpu_reduce_prod(T *vector, int N) {
     const int reduce_step = 32;
     T prod = 1;
     T *host_vector = (T *)malloc(N * sizeof(T));
@@ -112,16 +112,16 @@ template <typename T> T cuda_reduce_prod(T *vector, int N) {
         int new_size = (vector_size - first) / reduce_step;
         // Find number of blocks and launch the kernel
         int blocks = new_size / N_threads + 1;
-        cuda_reduce_prod_kernel<<<blocks, N_threads>>>(vector + first, vector_size,
+        gpu_reduce_prod_kernel<<<blocks, N_threads>>>(vector + first, vector_size,
                                                        new_size, reduce_step);
         // Find the full size of the resulting array
         vector_size = new_size + first;
         gpuDeviceSynchronize();
     }
 
-    check_device_error("cuda_reduce_prod kernel");
+    check_device_error("gpu_reduce_prod kernel");
 
-    gpuMemcpy(host_vector, vector, vector_size * sizeof(T), cudaMemcpyDeviceToHost);
+    gpuMemcpy(host_vector, vector, vector_size * sizeof(T), gpuMemcpyDeviceToHost);
 
     for (int i = 0; i < vector_size; i++) {
         prod *= host_vector[i];
@@ -135,22 +135,22 @@ template <typename T> T cuda_reduce_prod(T *vector, int N) {
 #if 0
 
 template <typename T>
-void cuda_multireduce_sum(std::vector<T> &vector, T *d_array, int N) {
+void gpu_multireduce_sum(std::vector<T> &vector, T *d_array, int N) {
     for (int v = 0; v < vector.size(); v++) {
-        vector[v] += cuda_reduce_sum(d_array + v * N, N);
+        vector[v] += gpu_reduce_sum(d_array + v * N, N);
     }
 }
 
 template <typename T>
-void cuda_multireduce_product(std::vector<T> vector, T *d_array, int N) {
+void gpu_multireduce_product(std::vector<T> vector, T *d_array, int N) {
     for (int v = 0; v < vector.size(); v++) {
-        vector[v] += cuda_reduce_product(d_array + v * N, N);
+        vector[v] += gpu_reduce_product(d_array + v * N, N);
     }
 }
 
 #endif
 
-template <typename T> __global__ void cuda_set_zero_kernel(T *vector, int elems) {
+template <typename T> __global__ void gpu_set_zero_kernel(T *vector, int elems) {
     int Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < elems) {
         vector[Index] = 0;
@@ -276,9 +276,9 @@ void cuda_set_one_kernel( T * vec, size_t N ){
 
 #endif // 0
 
-template <typename T> void cuda_set_zero(T *vec, size_t N) {
+template <typename T> void gpu_set_zero(T *vec, size_t N) {
     int blocks = N / N_threads + 1;
-    cuda_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
+    gpu_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
 }
 
 #endif // __CUDACC__

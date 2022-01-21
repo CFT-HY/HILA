@@ -52,10 +52,19 @@ inline std::string unique_name(const std::string t, std::string n) {
     return n;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 /// The main entry point for code generation
+///////////////////////////////////////////////////////////////////////////////
+
 void TopLevelVisitor::generate_code(Stmt *S) {
     srcBuf loopBuf; // (&TheRewriter,S);
-    loopBuf.copy_from_range(writeBuf, S->getSourceRange());
+
+    // check if the range starts with a macro (e.g. onsites(ALL) foralldir(d) ...)
+    // Std sourcerange fails here!
+
+    SourceRange Srange = get_real_range(S->getSourceRange());
+
+    loopBuf.copy_from_range(writeBuf, Srange);
 
     //   llvm::errs() << "\nOriginal range: +++++++++++++++\n\""
     //                << TheRewriter.getRewrittenText(S->getSourceRange())
@@ -64,8 +73,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     //                << "\"\nCopied range: ================\n\""
     //                << loopBuf.dump() << "\"\n";
 
-    // is it compound stmt: { } -no ; needed
-    bool semicolon_at_end = !(isa<CompoundStmt>(S));
+    // is there semicolon at the end? Keep track of it (not visible in AST)
+    bool semicolon_at_end = hasSemicolonAfter(Srange);
+
 
     // Build replacement in variable "code"
     // Encapsulate everything within {}
@@ -104,11 +114,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     for (field_info &l : field_info_list) {
         // Generate new variable name, may be needed -- use here simple receipe
-        l.new_name = "F" + clean_name(l.old_name);
+        l.new_name = field_name_prefix + clean_name(l.old_name);
         // Perhaps simpler FA, FB, FC. ?  The following helps avoid collisions
-        while (t.find(l.new_name, 0) != std::string::npos)
-            l.new_name += "_";
-        l.loop_ref_name = l.new_name + "_index";
+        l.loop_ref_name = l.new_name + "_at_X";
 
         // Create neighbour ref names
         int i = 0;
@@ -151,10 +159,12 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             if (cmdline::check_initialization) {
 
                 std::string fname =
-                    srcMgr.getFilename(S->getSourceRange().getBegin()).str();
+                    srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin())
+                        .str();
                 code << "if (!" << l.new_name << ".is_initialized(" << init_par
                      << ")){\noutput0 << \"File " << fname << " on line "
-                     << srcMgr.getSpellingLineNumber(S->getSourceRange().getBegin())
+                     << srcMgr.getSpellingLineNumber(
+                            get_real_range(S->getSourceRange()).getBegin())
                      << ":\\n Value of variable " << l.old_name
                      << " is used but it is not properly initialized\\n\";\n";
                 code << "hila::terminate(1);\n}\n";
@@ -174,20 +184,40 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     for (field_info &l : field_info_list) {
         // If neighbour references exist, communicate them
-        for (dir_ptr &d : l.dir_list)
-            if (d.count > 0) {
-                if (!generate_wait_loops) {
-                    code << l.new_name << ".fetch(" << d.direxpr_s << ", "
-                         << loop_info.parity_str << ");\n";
-                } else {
-                    if (first)
-                        code << "dir_mask_t  _dir_mask_ = 0;\n";
-                    first = false;
+        if (!l.is_loop_local_dir) {
+            // "normal" dir references only here
+            for (dir_ptr &d : l.dir_list)
+                if (d.count > 0) {
+                    if (!generate_wait_loops) {
+                        code << l.new_name << ".fetch(" << d.direxpr_s << ", "
+                             << loop_info.parity_str << ");\n";
+                    } else {
+                        if (first)
+                            code << "dir_mask_t  _dir_mask_ = 0;\n";
+                        first = false;
 
-                    code << "_dir_mask_ |= " << l.new_name << ".start_fetch("
-                         << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
+                        code << "_dir_mask_ |= " << l.new_name << ".start_fetch("
+                             << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
+                    }
                 }
+        } else {
+            // now loop local dirs - fetch all neighbours!
+            // TODO: restrict dirs
+            if (!generate_wait_loops) {
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) {\n"
+                     << l.new_name << ".fetch(_HILAdir_," << loop_info.parity_str
+                     << ");\n}\n";
+            } else {
+                if (first)
+                    code << "dir_mask_t  _dir_mask_ = 0;\n";
+                first = false;
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) {\n"
+                     << "_dir_mask_ |= " << l.new_name << ".start_fetch(_HILAdir_,"
+                     << loop_info.parity_str << ");\n}\n";
             }
+        }
     }
 
     if (first)
@@ -305,12 +335,12 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     // Remove old code + replace
     if (semicolon_at_end) {
-        writeBuf->remove(getRangeWithSemicolon(S));
+        writeBuf->remove(getRangeWithSemicolon(Srange));
     } else {
-        writeBuf->remove(S->getSourceRange());
+        writeBuf->remove(Srange);
     }
 
-    writeBuf->insert(S->getBeginLoc(), indent_string(code.str()), true, true);
+    writeBuf->insert(Srange.getBegin(), indent_string(code.str()), true, true);
 }
 
 // Handle field+offset expressions -- these are copied, ref removed

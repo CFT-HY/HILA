@@ -10,13 +10,18 @@
 
 // declare MPI timers here too - these were externs
 
-hila::timer start_send_timer("MPI start send"), wait_send_timer("MPI wait send"),
-    post_receive_timer("MPI post receive"), wait_receive_timer("MPI wait receive"),
-    synchronize_timer("MPI synchronize"), reduction_timer("MPI reduction"),
-    reduction_wait_timer("MPI reduction wait"), broadcast_timer("MPI broadcast"),
-    send_timer("MPI send field"), cancel_send_timer("MPI cancel send"),
-    cancel_receive_timer("MPI cancel receive"),
-    sublattice_sync_timer("sublattice sync");
+hila::timer start_send_timer("MPI start send");
+hila::timer wait_send_timer("MPI wait send");
+hila::timer post_receive_timer("MPI post receive");
+hila::timer wait_receive_timer("MPI wait receive");
+hila::timer synchronize_timer("MPI synchronize");
+hila::timer reduction_timer("MPI reduction");
+hila::timer reduction_wait_timer("MPI reduction wait");
+hila::timer broadcast_timer("MPI broadcast");
+hila::timer send_timer("MPI send field");
+hila::timer cancel_send_timer("MPI cancel send");
+hila::timer cancel_receive_timer("MPI cancel receive");
+hila::timer sublattice_sync_timer("sublattice sync");
 
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
@@ -143,7 +148,7 @@ bool hila::get_allreduce() {
 #include <sys/types.h>
 void initialize_communications(int &argc, char ***argv) {
     /* Init MPI */
-    if (!mpi_initialized && !hila::check_input) {
+    if (!mpi_initialized) {
         MPI_Init(&argc, argv);
         mpi_initialized = true;
 
@@ -152,10 +157,6 @@ void initialize_communications(int &argc, char ***argv) {
 
         MPI_Comm_rank(lattice->mpi_comm_lat, &lattice->mynode.rank);
         MPI_Comm_size(lattice->mpi_comm_lat, &lattice->nodes.number);
-    }
-    if (hila::check_input) {
-        lattice->mynode.rank = 0;
-        lattice->nodes.number = hila::check_with_nodes;
     }
 }
 
@@ -232,7 +233,7 @@ int hila::myrank() {
 }
 
 /// Return number of nodes or "pseudo-nodes"
-int numnodes() {
+int hila::number_of_nodes() {
     if (hila::check_input)
         return hila::check_with_nodes;
 
@@ -241,9 +242,9 @@ int numnodes() {
     return (nodes);
 }
 
-void synchronize() {
+void hila::synchronize() {
     synchronize_timer.start();
-    synchronize_threads();
+    hila::synchronize_threads();
     MPI_Barrier(lattice->mpi_comm_lat);
     synchronize_timer.stop();
 }

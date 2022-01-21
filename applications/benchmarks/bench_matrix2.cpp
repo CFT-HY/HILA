@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
                         matd[X].e(a, b) = a + b;
             }
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n_runs; i++) {
             matrix1[ALL] = matrix1[X].dagger() * matrix1[X] * matrix1[X].dagger();
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n_runs; i++) {
             matrix2[ALL] = matrix2[X].dagger() * matrix2[X] * matrix2[X].dagger();
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n_runs; i++) {
             matrix3[ALL] = matrix3[X].dagger() * matrix3[X] * matrix3[X].dagger();
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n_runs; i++) {
             matrix4[ALL] = matrix4[X].dagger() * matrix4[X] * matrix4[X].dagger();
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }
@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n_runs; i++) {
             matrix1[ALL] = matrix1[X].adjoint() * matrix1[X] * matrix1[X].adjoint();
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }
@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n_runs; i++) {
             matrix2[ALL] = matrix2[X].adjoint() * matrix2[X] * matrix2[X].adjoint();
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n_runs; i++) {
             matrix3[ALL] = matrix3[X].adjoint() * matrix3[X] * matrix3[X].adjoint();
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }
@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n_runs; i++) {
             matrix4[ALL] = matrix4[X].adjoint() * matrix4[X] * matrix4[X].adjoint();
         }
-        synchronize();
+        hila::synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
     }

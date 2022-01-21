@@ -45,9 +45,9 @@ char *machine_type() {
 int hila::myrank() { return 0; }
 
 /* Return number of nodes */
-int numnodes() { return 1; }
+int hila::number_of_nodes() { return 1; }
 
-void synchronize() { synchronize_threads(); }
+void hila::synchronize() { hila::synchronize_threads(); }
 
 // Split the communicator to subvolumes, using MPI_Comm_split
 // New MPI_Comm is the global mpi_comm_lat
