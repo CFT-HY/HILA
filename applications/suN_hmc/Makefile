@@ -1,4 +1,7 @@
 
+# Following line(s) are printed with "make help".  Use columns 8 and 30
+#%     make [suN_hmc]        - build suN_hmc program
+
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative
 HILA_DIR := ../..

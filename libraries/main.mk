@@ -3,6 +3,16 @@
 #  - calls platform specific makefiles in directory "platforms" 
 #
 
+# -----------------------------------------------------------------------------
+# options (added to the app makefile options):
+# Use columns 8 and 30 (for -)
+#%     make [..] ARCH=<arch> - compile to architecture 'arch'
+#%     make list-archs       - list machine architectures
+#%     make help             - print this help message
+#%     make clean            - remove .o and .cpt -files
+#%     make cleanall         - clean build directory
+
+
 # If "make clean", don't worry about targets, platforms and options
 ifneq ($(MAKECMDGOALS),clean)
 ifneq ($(MAKECMDGOALS),cleanall)
@@ -17,6 +27,23 @@ HILAPP := $(HILAPP_DIR)/bin/hilapp
 LIBRARIES_DIR := $(HILA_DIR)/libraries
 ARCH_DIR := $(LIBRARIES_DIR)/target_arch
 HILA_INCLUDE_DIR := $(HILA_DIR)/libraries
+
+
+help:
+	@echo "-----------------------------------------------------------------------------"
+	@echo "make options"
+	@sed -ne '/@sed/!s/#%//p' $(MAKEFILE_LIST)
+	@echo "-----------------------------------------------------------------------------"
+
+
+list-archs:
+	@echo "-----------------------------------------------------------------------------"
+	@echo "Machine architecture options - for use in 'make ARCH=<arch>' command"
+	@echo
+	@cd $(ARCH_DIR); ls -x *.mk | sed s/.mk/'   '/g
+	@echo
+	@echo "For details, see contents of $(ARCH_DIR)"
+	@echo "-----------------------------------------------------------------------------"
 
 # ARCH needs to be defined. Check.
 ifndef ARCH
