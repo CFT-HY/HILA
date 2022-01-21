@@ -249,6 +249,22 @@ void hila::synchronize() {
     synchronize_timer.stop();
 }
 
+
+///  Get message tags cyclically -- defined outside classes, so that it is global and
+///  unique
+
+#define MSG_TAG_MIN 100
+#define MSG_TAG_MAX (500)    // standard says that at least 32767 tags available
+
+int get_next_msg_tag() {
+    static int tag = MSG_TAG_MIN;
+    ++tag;
+    if (tag > MSG_TAG_MAX)
+        tag = MSG_TAG_MIN;
+    return tag;
+}
+
+
 // Split the communicator to subvolumes, using MPI_Comm_split
 // New MPI_Comm is the global mpi_comm_lat
 // NOTE: no attempt made here to reorder the nodes

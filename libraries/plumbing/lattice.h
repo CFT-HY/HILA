@@ -396,9 +396,6 @@ extern lattice_struct *lattice;
 // Keep track of defined lattices
 extern std::vector<lattice_struct *> lattices;
 
-// and the MPI tag generator
-int get_next_msg_tag();
-
 /// let us house the sublattices-struct here
 struct sublattices_struct {
     unsigned number, mylattice;

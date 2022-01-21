@@ -16,6 +16,10 @@ extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
 /// Implementations of communication routines.
 ///
 
+// and the MPI tag generator
+int get_next_msg_tag();
+
+
 /// Broadcast template for standard type
 template <typename T>
 void broadcast(T &var) {
