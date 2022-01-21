@@ -5,6 +5,10 @@
 using SU3 = SUmatrix<3, double>;
 
 
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/* Hamiltonian time evolution for gauge and electric fields. 'delta' is the time difference. */
 template <typename group>
 void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E,
               double delta) {
@@ -30,6 +34,8 @@ void update_U(GaugeField<group> &U, const VectorField<Algebra<group>> &E,
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+
 template <typename group>
 void regroup_gauge(GaugeField<group> &U) {
     foralldir (d) {
@@ -38,6 +44,7 @@ void regroup_gauge(GaugeField<group> &U) {
     }
 }
 
+// Total plaquette action (without beta prefactor)
 template <typename group>
 double measure_plaq(const GaugeField<group> &U) {
 
@@ -62,7 +69,8 @@ double measure_plaq(const GaugeField<group> &U) {
 * Q_{jk} = P_{jk} + P_{k,-j} + P_{-j,-k} + P_{-k,j}, then
 * i g F_{jk} = (Q_{jk} - Q_{kj}) / (8a^2). 
 * Because of antisymmetry we only need Q_{jk} for j<k. 
-* Here I do NOT project the result to algebra, so B here is of the GaugeField type. 
+* Here I do NOT project the result to algebra in order to avoid unnecessary operations
+* => B here is of the GaugeField type. 
 * Note that I do not subtract the trace from F_{jk}, so it's not necessarily traceless. 
 * But the trace part drops out from the topological charge anyway since Tr E_i = 0. */
 template <typename group>
@@ -70,6 +78,7 @@ void get_magnetic_field(const GaugeField<group> &U, GaugeField<group> &B) {
 
     foralldir(d1) onsites(ALL) B[d1][X] = 0;
 
+    // "i,j,k"
     foralldir(d1) foralldir(d2) foralldir(d3) if (d1 != d2 && d1 != d3 && d2 < d3) {
        
         /* Get clovers in the plane orthogonal to 'd1': */
@@ -87,10 +96,12 @@ void get_magnetic_field(const GaugeField<group> &U, GaugeField<group> &B) {
         /* B_i lives on the links, so improve the definition by calculating F_{jk} at the midpoint:
         * F_{jk}(x + 0.5i) = 1/2 (F_{jk}(x) + U_i(x) F_{jk}(x+i) U_i(x).dagger() ),
         * where the second term is a parallel transport to the next lattice site. 
-        * Then i g a^2 B_i(x + 0.5i) = -1/8 Sum_{j<k} e_{ijk} ( Q_{jk}(x) + U_i(x) Q_{jk}(x+i)U_i(x).dagger() ).
+        * Then i g a^2 B_i(x + 0.5i) = -1/8 Sum_{j<k} e_{ijk} ( Q_{jk}(x) + U_i(x) Q_{jk}(x+i) U_i(x).dagger() ).
         * The code uses anti-Hermitian generators for the algebra, so we actually compute g a^2 B_i. */
         
-        int sign; // now always j<k, but i can be anything
+        // int sign = (d1-d2)*(d2-d3)*(d3-d1)/2; // epsilon tensor in 3 dimensions
+        int sign;
+        // Here d2 < d3 always
         if (d2 > d1) {
             sign = 1;
         } else if (d3 > d1) {
@@ -131,6 +142,7 @@ void calc_topoCharge(const GaugeField<group> &U, const VectorField<Algebra<group
 
 static double degauss_quality = 1e-12;
 
+// Do the measurements. Here 'n' just labels the time step, so the actual time is n*dt. 
 template <typename group>
 void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory,
                    int n, double dt) {
@@ -148,19 +160,25 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
 
     Field<double> chi;
     calc_topoCharge(U, E, chi);
-    double chi_avg = 0;
-    onsites(ALL) 
-         chi_avg += chi[X];
 
-    chi_avg /= lattice->volume();
+    Reduction<double> chi_total;
+    chi_total.allreduce(true).delayed(true);
+    onsites(ALL) 
+         chi_total += chi[X];
+
+    double chi_avg = chi_total.value() / lattice->volume();
 
     //output0 << "Measure_start " << n << "\n";
-    output0 << "MEAS " << trajectory << ' ' << n << ' ' << plaq << ' ' << e2 << ' '
+    // Print the actual time (in lattice units) instead of just 'n'
+    output0 << "MEAS " << trajectory << ' ' << n*dt << ' ' << plaq << ' ' << e2 << ' '
             << viol << ' ' << chi_avg << '\n';
     //output0 << "Measure_end " << n << "\n";
 }
 
 
+/* Thermalization according to ref. hep-ph/9603384 (see Appendix A).
+* Gauss constraint is enforced by degauss() routine 
+* that operates as described around eq. (38) in the reference. */
 template <typename group>
 void thermalize(GaugeField<group> &U, VectorField<Algebra<group>> &E, double g2Ta,
                 int iterations, double dt) {
