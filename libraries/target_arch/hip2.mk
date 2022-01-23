@@ -28,7 +28,7 @@ STD_HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 #LDLIBS := -L/usr/local/cuda-11.2/targets/x86_64-linux/lib/ -lcufft -lm 
 LDLIBS := -lm
 
-# Need to give include directory to mpi for hilapp and nvcc - here 2 common ones
+# Need to give include directory to mpi for hipcc - here 2 common ones
 # This in general works with OpenMPI: --showme:incdirs gives the include path of the mpic++
 MPI_INCLUDE_DIRS := -I/opt/hpcx/hpcx-v2.6.0-gcc-MLNX_OFED_LINUX-5.0-1.0.0.0-ubuntu18.04-x86_64/ompi/include
 # MPI_INCLUDE_DIRS := -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openmpi/include

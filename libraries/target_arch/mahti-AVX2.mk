@@ -28,14 +28,7 @@ LAYOUT_VECTOR := 1
 
 HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
 
-### Need to give include directory to mpi for hilapp - here 2 common ones
-# MPI_INCLUDE_DIRS = -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openmpi/include
-#
-# This in general works with OpenMPI: --showme:incdirs gives the include path of the mpic++
-MPI_INCLUDE_DIRS := $(addprefix -I, $(shell  $(CC) --showme:incdirs) )
-
 # Write hilapp inlcudes to a file 0hilapp_incl_dirs
-HILAPP_INCLUDE_LIST += $(MPI_INCLUDE_DIRS)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
