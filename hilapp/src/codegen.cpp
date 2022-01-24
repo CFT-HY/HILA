@@ -177,7 +177,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     bool first = true;
     bool generate_wait_loops;
-    if (cmdline::no_interleaved_comm || cmdline::no_mpi)
+    if (cmdline::no_interleaved_comm)
         generate_wait_loops = false;
     else
         generate_wait_loops = true;

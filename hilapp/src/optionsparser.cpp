@@ -39,9 +39,9 @@ llvm::Error OptionsParser::init(int &argc, const char **argv,
     static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden,
                               cl::sub(*cl::AllSubCommands));
 
-    static cl::opt<std::string> BuildPath("p", cl::desc("Build path"), cl::Optional,
-                                          cl::cat(Category),
-                                          cl::sub(*cl::AllSubCommands));
+    // static cl::opt<std::string> BuildPath("p", cl::desc("Build path"), cl::Optional,
+    //                                       cl::cat(Category),
+    //                                       cl::sub(*cl::AllSubCommands));
 
     static cl::list<std::string> SourcePaths(cl::Positional, cl::desc("<source files>"),
                                              OccurrencesFlag, cl::cat(Category),

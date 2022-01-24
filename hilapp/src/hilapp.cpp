@@ -94,12 +94,12 @@ llvm::cl::opt<bool> cmdline::syntax_only("syntax-only",
 
 llvm::cl::opt<std::string> cmdline::output_filename(
     "o", llvm::cl::desc("Output file (default: <file>.cpt, write to stdout: -o - "),
-    llvm::cl::value_desc("filename"), llvm::cl::cat(HilappCategory), llvm::cl::Prefix);
+    llvm::cl::value_desc("filename"), llvm::cl::Prefix, llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool>
-    cmdline::no_mpi("no-mpi",
-                    llvm::cl::desc("Do not generate MPI specific code (single node)"),
-                    llvm::cl::cat(HilappCategory));
+// llvm::cl::opt<bool>
+//     cmdline::no_mpi("no-mpi",
+//                     llvm::cl::desc("Do not generate MPI specific code (single node)"),
+//                     llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<bool> cmdline::no_interleaved_comm(
     "no-interleave",
@@ -133,9 +133,9 @@ llvm::cl::opt<bool> cmdline::AVX("target:AVX",
                                  llvm::cl::desc("Generate AVX vectorized loops"),
                                  llvm::cl::cat(HilappCategory));
 
-llvm::cl::opt<bool> cmdline::SSE("target:SSE",
-                                 llvm::cl::desc("Generate SSE vectorized loops"),
-                                 llvm::cl::cat(HilappCategory));
+// llvm::cl::opt<bool> cmdline::SSE("target:SSE",
+//                                  llvm::cl::desc("Generate SSE vectorized loops"),
+//                                  llvm::cl::cat(HilappCategory));
 
 llvm::cl::opt<int> cmdline::vectorize(
     "target:vectorize",
@@ -211,9 +211,9 @@ void handle_cmdline_arguments(codetype &target) {
     } else if (cmdline::AVX512) {
         target.vectorize = true;
         target.vector_size = 64;
-    } else if (cmdline::SSE) {
-        target.vectorize = true;
-        target.vector_size = 16;
+    // } else if (cmdline::SSE) {
+    //     target.vectorize = true;
+    //     target.vector_size = 16;
     } else if (cmdline::vectorize) {
         target.vectorize = true;
         target.vector_size = cmdline::vectorize;

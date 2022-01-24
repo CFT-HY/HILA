@@ -78,7 +78,7 @@ extern llvm::cl::opt<bool> c_openmp;
 // extern llvm::cl::opt<bool> func_attribute;
 extern llvm::cl::opt<int> vectorize;
 extern llvm::cl::opt<bool> no_interleaved_comm;
-extern llvm::cl::opt<bool> no_mpi;
+// extern llvm::cl::opt<bool> no_mpi;
 extern llvm::cl::opt<int> verbosity;
 extern llvm::cl::opt<int> avx_info;
 extern llvm::cl::opt<bool> comment_pragmas;
