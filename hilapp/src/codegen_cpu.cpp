@@ -57,7 +57,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
     // and the openacc loop header
     if (target.openacc) {
         generate_openacc_loop_header(code);
-    } else if (target.openmp) {
+    } else if (target.openmp && !loop_info.contains_random) {
         int sums = 0;
         for (var_info &vi : var_info_list) {
             if (vi.reduction_type != reduction::NONE &&
