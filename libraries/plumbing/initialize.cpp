@@ -297,6 +297,11 @@ void hila::initialize(int argc, char **argv) {
     // error out if there are more cmdline options
     commandline.error_if_args_remain();
 
+#if defined(OPENMP) 
+    output0 << "Using option OPENMP - with " << omp_get_max_threads() << " threads\n";
+#endif
+
+
 #if defined(CUDA) || defined(HIP)
     if (!hila::check_input)
         gpu_device_info();

@@ -37,8 +37,17 @@ typedef void *MPI_Comm;
 #define MPI_COMM_WORLD nullptr
 #define MPI_SUCCESS 1
 
+enum MPI_thread_level : int {
+    MPI_THREAD_SINGLE,
+    MPI_THREAD_FUNNELED,
+    MPI_THREAD_SERIALIZED,
+    MPI_THREAD_MULTIPLE
+};
+
 
 int MPI_Init(int *argc, char ***argv);
+
+int MPI_Init_thread(int *argc, char ***argv, int threadlevel, int *provided);
 
 int MPI_Comm_rank(MPI_Comm comm, int *rank);
 

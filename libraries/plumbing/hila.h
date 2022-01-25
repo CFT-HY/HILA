@@ -23,4 +23,9 @@
 #include "plumbing/fft.h"
 #include "plumbing/input.h"
 
+#if defined(OPENMP)
+#include <omp.h>
+#endif
+
+
 #endif

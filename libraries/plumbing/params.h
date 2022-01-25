@@ -9,12 +9,12 @@
 ///////////////////////////////////////////////////////////////////////////
 
 
-// Dimensionality
+/// Dimensionality
 #ifndef NDIM
 #define NDIM 4
 #endif
 
-// output file name
+/// output file name
 #ifndef DEFAULT_OUTPUT_NAME
 #define DEFAULT_OUTPUT_NAME "output"
 #endif

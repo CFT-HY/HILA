@@ -27,24 +27,24 @@ hila::timer sublattice_sync_timer("sublattice sync");
 static bool mpi_initialized = false;
 
 ////////////////////////////////////////////////////////////
-/// Reductions: do automatic coalescing of reductions 
+/// Reductions: do automatic coalescing of reductions
 /// if the type is float or double
 /// These functions should not be called "by hand"
 
 // buffers - first vector holds the reduction buffer,
 // second the pointers to where distribute results
-static std::vector<double>  double_reduction_buffer;
-static std::vector<double *>  double_reduction_ptrs;
+static std::vector<double> double_reduction_buffer;
+static std::vector<double *> double_reduction_ptrs;
 static int n_double = 0;
 
-static std::vector<float>  float_reduction_buffer;
-static std::vector<float *>  float_reduction_ptrs;
+static std::vector<float> float_reduction_buffer;
+static std::vector<float *> float_reduction_ptrs;
 static int n_float = 0;
 
 // static var holding the allreduce state
 static bool allreduce_on = true;
 
-void hila_reduce_double_setup( double *d, int n) {
+void hila_reduce_double_setup(double *d, int n) {
 
     // ensure there's enough space
     if (n + n_double > double_reduction_buffer.size()) {
@@ -52,7 +52,7 @@ void hila_reduce_double_setup( double *d, int n) {
         double_reduction_ptrs.resize(n + n_double + 2);
     }
 
-    for (int i=0; i<n; i++) {
+    for (int i = 0; i < n; i++) {
         double_reduction_buffer[n_double + i] = d[i];
         double_reduction_ptrs[n_double + i] = d + i;
     }
@@ -60,7 +60,7 @@ void hila_reduce_double_setup( double *d, int n) {
     n_double += n;
 }
 
-void hila_reduce_float_setup( float *d, int n) {
+void hila_reduce_float_setup(float *d, int n) {
 
     // ensure there's enough space
     if (n + n_float > float_reduction_buffer.size()) {
@@ -68,7 +68,7 @@ void hila_reduce_float_setup( float *d, int n) {
         float_reduction_ptrs.resize(n + n_float + 2);
     }
 
-    for (int i=0; i<n; i++) {
+    for (int i = 0; i < n; i++) {
         float_reduction_buffer[n_float + i] = d[i];
         float_reduction_ptrs[n_float + i] = d + i;
     }
@@ -84,19 +84,17 @@ void hila_reduce_sums() {
         reduction_timer.start();
 
         if (allreduce_on) {
-            MPI_Allreduce((void *)double_reduction_buffer.data(), work,
-                          n_double, MPI_DOUBLE, MPI_SUM,
-                          lattice->mpi_comm_lat);
+            MPI_Allreduce((void *)double_reduction_buffer.data(), work, n_double,
+                          MPI_DOUBLE, MPI_SUM, lattice->mpi_comm_lat);
             for (int i = 0; i < n_double; i++)
                 *(double_reduction_ptrs[i]) = work[i];
 
         } else {
-            MPI_Reduce((void *)double_reduction_buffer.data(), work, 
-            n_double, MPI_DOUBLE, MPI_SUM, 0, lattice->mpi_comm_lat);
+            MPI_Reduce((void *)double_reduction_buffer.data(), work, n_double,
+                       MPI_DOUBLE, MPI_SUM, 0, lattice->mpi_comm_lat);
             if (hila::myrank() == 0)
                 for (int i = 0; i < n_double; i++)
                     *(double_reduction_ptrs[i]) = work[i];
-
         }
 
         n_double = 0;
@@ -110,26 +108,23 @@ void hila_reduce_sums() {
         reduction_timer.start();
 
         if (allreduce_on) {
-            MPI_Allreduce((void *)float_reduction_buffer.data(), work,
-                          n_float, MPI_FLOAT, MPI_SUM,
-                          lattice->mpi_comm_lat);
+            MPI_Allreduce((void *)float_reduction_buffer.data(), work, n_float,
+                          MPI_FLOAT, MPI_SUM, lattice->mpi_comm_lat);
             for (int i = 0; i < n_float; i++)
                 *(float_reduction_ptrs[i]) = work[i];
 
         } else {
-            MPI_Reduce((void *)float_reduction_buffer.data(), work, 
-            n_float, MPI_FLOAT, MPI_SUM, 0, lattice->mpi_comm_lat);
+            MPI_Reduce((void *)float_reduction_buffer.data(), work, n_float, MPI_FLOAT,
+                       MPI_SUM, 0, lattice->mpi_comm_lat);
             if (hila::myrank() == 0)
                 for (int i = 0; i < n_float; i++)
                     *(float_reduction_ptrs[i]) = work[i];
-
         }
 
         n_float = 0;
 
         reduction_timer.stop();
     }
-
 }
 
 /// set allreduce on (default) or off on the next reduction
@@ -149,7 +144,22 @@ bool hila::get_allreduce() {
 void initialize_communications(int &argc, char ***argv) {
     /* Init MPI */
     if (!mpi_initialized) {
+
+#ifndef OPENMP
         MPI_Init(&argc, argv);
+
+#else
+
+        int provided;
+        MPI_Init_thread(&argc, argv, MPI_THREAD_FUNNELED, &provided);
+        if (provided < MPI_THREAD_FUNNELED) {
+            output0 << "MPI could not provide MPI_THREAD_FUNNELED, exiting\n";
+            MPI_Finalize();
+            exit(1);
+        }
+
+#endif
+
         mpi_initialized = true;
 
         // global var lattice exists, assign the mpi comms there
@@ -161,7 +171,9 @@ void initialize_communications(int &argc, char ***argv) {
 }
 
 // check if MPI is on
-bool is_comm_initialized(void) { return mpi_initialized; }
+bool is_comm_initialized(void) {
+    return mpi_initialized;
+}
 
 /* version of exit for multinode processes -- kill all nodes */
 void abort_communications(int status) {
@@ -216,7 +228,9 @@ void broadcast(std::vector<std::string> &list) {
 
 /* Tell what kind of machine we are on */
 static char name[] = "MPI (portable)";
-char *machine_type() { return (name); }
+char *machine_type() {
+    return (name);
+}
 
 /// Return my node number - take care to return
 /// the previous node number if mpi is being
@@ -254,7 +268,7 @@ void hila::synchronize() {
 ///  unique
 
 #define MSG_TAG_MIN 100
-#define MSG_TAG_MAX (500)    // standard says that at least 32767 tags available
+#define MSG_TAG_MAX (500) // standard says that at least 32767 tags available
 
 int get_next_msg_tag() {
     static int tag = MSG_TAG_MIN;
