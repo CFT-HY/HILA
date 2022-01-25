@@ -48,7 +48,7 @@ class scaling_sim {
         int m;
         int seed;
         int smoothing;
-        int initalCondition;
+        int initialCondition;
         real_t initialModulus;
         real_t PhiLength;
         real_t epsilon;
@@ -98,7 +98,7 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
     config.tdis = parameters.get("tdis");
     config.dampAx = parameters.get("dampAx");
     config.dampHg = parameters.get("dampHg");
-    config.initalCondition = parameters.get("initialCondition");
+    config.initialCondition = parameters.get("initialCondition");
     config.PhiLength = parameters.get("PhiLength");
     config.tStats = parameters.get("tStats");
     config.nOutputs = parameters.get("numberStatsOutputs");
@@ -164,19 +164,9 @@ void scaling_sim::initialize() {
     real_t s = config.sigma;
     int N = config.l;
     real_t dx = config.dx;
+
+    switch (config.initialCondition) {
     
-    switch (config.initalCondition) {
-
-    case 2: {
-        pi = 0;
-        phi = Complex<real_t>(config.sigma, config.sigma);
-
-        output0 << "Field real and imaginary components set to sigma = " << config.sigma
-                << '\n';
-
-        break;
-    }
-
     case 1: {
         pi = 0;
         onsites (ALL) {
@@ -192,42 +182,66 @@ void scaling_sim::initialize() {
         break;
     }
 
-    case 3: {
-      auto kphi = phi;
-      
-      onsites (ALL) {
-	real_t constant = pow(config.initialModulus,2.0)*pow(2.0*M_PI,1.5)*pow(config.PhiLength,3.0)/(2.0*N*N*N*dx*dx*dx);
-	real_t kSqu;
-	real_t std;
-	kSqu = 0.0;
-	auto k = X.coordinates();
+    case 2: {
+        pi = 0;
+        phi = Complex<real_t>(config.sigma, config.sigma);
 
-	foralldir (d) {
-	  kSqu += pow( sin(M_PI*k.e(d)/N), 2.0);
-	}
-	kSqu *= pow(2.0/dx, 2.0);
+        output0 << "Field real and imaginary components set to sigma = " << config.sigma
+                << '\n';
 
-	if (kSqu > 0.0) {
-	  std = sqrt(0.5*constant*exp(-0.5*kSqu*config.PhiLength*config.PhiLength));
-	  kphi[X].re = hila::gaussrand()*std;
-	  kphi[X].im = hila::gaussrand()*std;
-	}
-	else {
-	  kphi[X].re = 0.0;
-          kphi[X].im = 0.0;
-	}	
-      }
-
-      FFT_field(kphi, phi, fft_direction::back);
-
-      pi[ALL] = 0;
-
-      output0 << "k space generation \n";    
-
-      break;
-
+        break;
     }
-      
+
+    case 3: {
+        auto kphi = phi;
+
+        onsites (ALL) {
+            real_t constant = pow(config.initialModulus, 2.0) * pow(2.0 * M_PI, 1.5) *
+                              pow(config.PhiLength, 3.0) /
+                              (2.0 * N * N * N * dx * dx * dx);
+            real_t kSqu;
+            real_t std;
+            kSqu = 0.0;
+            auto k = X.coordinates();
+
+            foralldir (d) { kSqu += pow(sin(M_PI * k.e(d) / N), 2.0); }
+            kSqu *= pow(2.0 / dx, 2.0);
+
+            if (kSqu > 0.0) {
+                std = sqrt(0.5 * constant *
+                           exp(-0.5 * kSqu * config.PhiLength * config.PhiLength));
+                kphi[X].re = hila::gaussrand() * std;
+                kphi[X].im = hila::gaussrand() * std;
+            } else {
+                kphi[X].re = 0.0;
+                kphi[X].im = 0.0;
+            }
+        }
+
+        FFT_field(kphi, phi, fft_direction::back);
+
+        pi[ALL] = 0;
+
+        output0 << "k space generation \n";
+
+        break;
+    }
+
+
+    case 4: {
+        pi = 0;
+        onsites (ALL) {
+            auto xcoord = X.coordinate(e_x);
+            phi[X].re = s + epsilon * sin(2.0 * M_PI * xcoord * m / N) / sqrt(2.0);
+            phi[X].im = s + epsilon * sin(2.0 * M_PI * xcoord * m / N) / sqrt(2.0);
+        }
+
+        output0 << "Higgs wave generated with amplitude: " << config.epsilon << '\n';
+
+        break;
+    }
+
+
     default: {
 
         // #pragma hila ast_dump
