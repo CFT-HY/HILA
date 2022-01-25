@@ -87,12 +87,12 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     const std::string t = loopBuf.dump();
 
-    looping_var = "Index";
+    looping_var = "_HILA_index";
     while (t.find(looping_var, 0) != std::string::npos)
         looping_var += "_";
 
     // Ensure that the name is not reserved by scanning the source
-    parity_name = "Parity";
+    parity_name = "_HILA_parity";
     while (t.find(parity_name, 0) != std::string::npos)
         parity_name += "_";
 
