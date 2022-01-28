@@ -789,9 +789,9 @@ class Field {
     void cancel_comm(Direction d, Parity p) const;
 
     // Declaration of shift methods
-    Field<T> & shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
-    Field<T> & shift(const CoordinateVector &v, Field<T> &r) const {
-        return shift(v,r,ALL);
+    Field<T> &shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
+    Field<T> &shift(const CoordinateVector &v, Field<T> &r) const {
+        return shift(v, r, ALL);
     }
     Field<T> shift(const CoordinateVector &v, Parity par) const;
 
@@ -937,7 +937,8 @@ auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>>
 /// Returns a reference to parameter "res"
 
 template <typename T>
-Field<T> & Field<T>::shift(const CoordinateVector &v, Field<T> & res, const Parity par) const {
+Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
+                          const Parity par) const {
 
     // use this to store remaining moves
     CoordinateVector rem = v;
@@ -1035,14 +1036,15 @@ Field<T> & Field<T>::shift(const CoordinateVector &v, Field<T> & res, const Pari
 template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> res;
-    shift(v,res,par);
+    shift(v, res, par);
     return res;
 }
 #elif !defined(USE_MPI)
 
 // this is junk at the moment
 template <typename T>
-Field<T> &  Field<T>::shift(const CoordinateVector &v, Field<T> & res, const Parity par) const {
+Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
+                          const Parity par) const {
 
     onsites (par) { if }
     r2 = *this;
@@ -1725,8 +1727,8 @@ static void read_fields(std::string filename, fieldtypes &... fields) {
 // A couple of placeholder functions, not included in produced code.
 // These are here in order for hilapp to generate explicitly
 // some Direction and CoordinateVector operations, which may not exist in
-// original code as such.  It is simplest to let the general hilapp
-// code generation to do it using this, instead of hard-coding these to hilapp.
+// original code as such.  It is easiest to let the general hilapp
+// code generation to do it using this hack, instead of hard-coding these to hilapp.
 //
 // These are needed because hilapp changes X+d-d -> +d-d, which may involve an operator
 // not met before
@@ -1764,11 +1766,11 @@ inline void dummy_X_f() {
 template <typename T>
 inline void ensure_field_operators_exist(Field<T> &f) {
 
-    onsites(ALL) {
-        f[X] = 0;      // set to zero
-        f[X] = -f[X];  // unary -  -- needed for antiperiodic b.c.
+    onsites (ALL) {
+        f[X] = 0;     // set to zero
+        f[X] = -f[X]; // unary -  -- needed for antiperiodic b.c.
     }
-        // same for non-vectorized loop
+    // same for non-vectorized loop
     onsites (ALL) {
         if (X.coordinate(e_x) < X.coordinate(e_y)) {
             f[X] = 0;
