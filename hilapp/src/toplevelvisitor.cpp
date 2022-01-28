@@ -1365,13 +1365,14 @@ bool TopLevelVisitor::check_field_ref_list() {
                         found_error = true;
 
                     } else if (loop_info.parity_value == Parity::none) {
-                        reportDiag(
-                            DiagnosticsEngine::Level::Remark,
-                            p->parityExpr->getSourceRange().getBegin(),
-                            "Simultaneous access '%0' and assignment to '%1' is allowed "
-                            "only when parity %2 is EVEN or ODD.  Inserting assertion to ensure that",
-                            get_stmt_str(p->fullExpr).c_str(), l.old_name.c_str(),
-                            loop_info.parity_text.c_str());
+                        reportDiag(DiagnosticsEngine::Level::Remark,
+                                   p->parityExpr->getSourceRange().getBegin(),
+                                   "Simultaneous access '%0' and assignment to '%1' is "
+                                   "allowed "
+                                   "only when parity %2 is EVEN or ODD.  Inserting "
+                                   "assertion to ensure that",
+                                   get_stmt_str(p->fullExpr).c_str(),
+                                   l.old_name.c_str(), loop_info.parity_text.c_str());
                         found_error = true;
                     }
                 }
@@ -2055,7 +2056,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     // cannot rely on getReturnTypeSourceRange() for methods.  Let us not even try,
     // change the whole method here
 
-    bool is_templated =
+    bool is_templated_func =
         (f->getTemplatedKind() ==
          FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization);
 
@@ -2063,7 +2064,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     std::string template_args = "";
     std::vector<const TemplateArgument *> typeargs = {};
 
-    if (is_templated) {
+    if (is_templated_func) {
         // Get here the template param->arg mapping for func template
         auto tal = f->getTemplateSpecializationArgs();
         auto tpl = f->getPrimaryTemplate()->getTemplateParameters();
@@ -2072,6 +2073,11 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
 
         make_mapping_lists(tpl, *tal, par, arg, typeargs, &template_args);
         ntemplates = 1;
+
+        // SourceLocation sl = f->getPointOfInstantiation();
+        // llvm::errs() << "Function " << f->getNameAsString() << " instantiated line "
+        //              << srcMgr.getSpellingLineNumber(sl) << " file "
+        //              << srcMgr.getFilename(f->getBeginLoc()) << '\n';
     }
 
     // Get template mapping for classes
@@ -2459,6 +2465,9 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
                            "might not compile",
                            f->getQualifiedNameAsString().c_str(),
                            tap->getAsType().getAsString().c_str());
+
+                // try to move the insertion point - fails, TODO: more carefully!
+                // ip = getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
             }
         }
     }
@@ -2542,7 +2551,7 @@ void TopLevelVisitor::make_mapping_lists(
 #if LLVM_VERSION_MAJOR < 13
             arg.push_back(tal.get(i).getAsIntegral().toString(10));
 #else
-            arg.push_back(llvm::toString(tal.get(i).getAsIntegral(),10));
+            arg.push_back(llvm::toString(tal.get(i).getAsIntegral(), 10));
 #endif
 
             par.push_back(tpl->getParam(i)->getNameAsString());
