@@ -46,7 +46,7 @@ T cuda_reduce_sum(  T * vector, int N ){
 template <typename T>
 __global__ void gpu_reduce_sum_kernel(T *vector, int vector_size, int new_size,
                                        int elems) {
-    int Index = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < new_size) {
         for (int i = 1; i < elems; i++) {
             int ind = Index + i * new_size;
@@ -90,7 +90,7 @@ template <typename T> T gpu_reduce_sum(T *vector, int N) {
 template <typename T>
 __global__ void gpu_reduce_prod_kernel(T *vector, int vector_size, int new_size,
                                         int elems) {
-    int Index = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < new_size) {
         for (int i = 1; i < elems; i++) {
             int ind = Index + i * new_size;
@@ -151,7 +151,7 @@ void gpu_multireduce_product(std::vector<T> vector, T *d_array, int N) {
 #endif
 
 template <typename T> __global__ void gpu_set_zero_kernel(T *vector, int elems) {
-    int Index = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < elems) {
         vector[Index] = 0;
     }
@@ -262,7 +262,7 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 template<typename T>
 __global__ void cuda_set_one_kernel( T * vector, int elems)
 {
-  int Index = threadIdx.x + blockIdx.x * blockDim.x;
+  unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < elems ){
     vector[Index] = 0;
   }

@@ -72,6 +72,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     std::stringstream code, kernel;
     // const std::string t = loopBuf.dump();
 
+    // indexing variable
+    extern std::string looping_var;
+
     bool use_slow_reduce =
         (is_macro_defined("SLOW_GPU_REDUCTION") || cmdline::slow_gpu_reduce);
 
@@ -424,10 +427,10 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
     // kernel << "backend_lattice_struct *loop_lattice = &d_lattice; \n";
     /* Standard boilerplate in CUDA kernels: calculate site index */
-    kernel << "int Index = threadIdx.x + blockIdx.x * blockDim.x "
+    kernel << "unsigned " << looping_var << " = threadIdx.x + blockIdx.x * blockDim.x "
            << " + d_lattice.loop_begin; \n";
     /* The last block may exceed the lattice size. Do nothing in that case. */
-    kernel << "if(Index < d_lattice.loop_end) { \n";
+    kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
 
     // Declare the shared reduction variable
     for (var_info &vi : var_info_list)
