@@ -85,10 +85,10 @@ void hila::seed_device_rng(unsigned long seed) {
 /* Generate random numbers on device or host */
 __device__ __host__ double hila::random() {
 #ifdef __GPU_DEVICE_COMPILE__
-    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
     return gpurand_uniform(&d_gpurandstate[x]);
 #else
-    return mersenne();
+    return hila::host_random();
 #endif
 }
 

@@ -8,8 +8,6 @@
 // Define random number generator
 namespace hila {
 
-inline double random() { return mersenne(); }
-
 // Trivial synchronization
 inline void synchronize_threads() {}
 

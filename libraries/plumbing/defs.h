@@ -86,9 +86,6 @@ extern std::ostream output;
 /// this is just a hook to store output file, if it is in use
 extern std::ofstream output_file;
 
-/// Seed random generators
-void seed_random(unsigned long seed);
-
 // about_to_finish becomes true at the end.  Signals that
 // better not rely on MPI or existence of objects any more.
 extern bool about_to_finish;

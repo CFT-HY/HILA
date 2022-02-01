@@ -1,14 +1,20 @@
 #ifndef RANDOM_H_
 #define RANDOM_H_
 
-#include <cmath>
-#include "plumbing/mersenne.h"
+namespace hila {
 
-/// It is important that the random number generators hila::gaussrand() and gaussrand2()
+/// Seed random generators with 64-bit unsigned
+void seed_random(uint64_t seed);
+
+/// It is important that the random number generators random(), gaussrand() and gaussrand2()
 /// are marked as "loop function" and "contains rng", because hilapp does not have a view
 /// inside them from all compilation units
 
-namespace hila {
+#pragma hila contains_rng loop_function
+double random();
+
+// alias for host (non-loop) random number, used in GPU code
+double host_random();
 
 #pragma hila contains_rng loop_function
 double gaussrand();
