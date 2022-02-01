@@ -54,9 +54,9 @@ gpurandState *gpurandstate;
 __device__ gpurandState *d_gpurandstate;
 
 /* Set seed on device */
-__global__ void seed_random_kernel(gpurandState *state, unsigned long seed,
+__global__ void seed_random_kernel(gpurandState *state, unsigned long long seed,
                                    unsigned int iters_per_kernel, unsigned int stride) {
-    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
     d_gpurandstate = state;
     for (int i = 0; i < iters_per_kernel; i++) {
         gpurand_init(seed + i * stride + x, i * stride + x, 0,
@@ -65,12 +65,12 @@ __global__ void seed_random_kernel(gpurandState *state, unsigned long seed,
 }
 
 /* Set seed on device and host */
-void hila::seed_device_rng(unsigned long seed) {
+void hila::seed_device_rng(unsigned long long seed) {
     unsigned int iters_per_kernel = 16;
     unsigned long n_blocks =
         lattice->mynode.volume() / (N_threads * iters_per_kernel) + 1;
     unsigned long n_sites = N_threads * n_blocks * iters_per_kernel;
-    unsigned long myseed = seed + hila::myrank() * n_sites;
+    unsigned long long myseed = seed + hila::myrank() * n_sites;
     gpuMalloc((void **)&gpurandstate, n_sites * sizeof(gpurandState));
 #ifdef CUDA
     seed_random_kernel<<<n_blocks, N_threads>>>(gpurandstate, myseed, iters_per_kernel,
@@ -175,7 +175,7 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
               lattice->mynode.volume() * sizeof(CoordinateVector));
     tmp = (CoordinateVector *)memalloc(lattice->mynode.volume() *
                                        sizeof(CoordinateVector));
-    for (int i = 0; i < lattice->mynode.volume(); i++) tmp[i] = lattice->coordinates(i);
+    for (unsigned i = 0; i < lattice->mynode.volume(); i++) tmp[i] = lattice->coordinates(i);
 
     gpuMemcpy(d_coordinates, tmp, lattice->mynode.volume() * sizeof(CoordinateVector),
               gpuMemcpyHostToDevice);
