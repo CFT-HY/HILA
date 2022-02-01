@@ -396,13 +396,6 @@ extern lattice_struct *lattice;
 // Keep track of defined lattices
 extern std::vector<lattice_struct *> lattices;
 
-/// let us house the sublattices-struct here
-struct sublattices_struct {
-    unsigned number, mylattice;
-    bool sync;
-};
-
-extern sublattices_struct sublattices;
 
 #ifdef VANILLA
 #include "plumbing/backend_cpu/lattice.h"

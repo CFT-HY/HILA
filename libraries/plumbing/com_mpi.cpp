@@ -23,6 +23,10 @@ hila::timer cancel_send_timer("MPI cancel send");
 hila::timer cancel_receive_timer("MPI cancel receive");
 hila::timer sublattice_sync_timer("sublattice sync");
 
+// let us house the sublattices-struct here
+
+sublattices_struct sublattices;
+
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
 
