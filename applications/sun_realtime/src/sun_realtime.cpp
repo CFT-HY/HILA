@@ -2,9 +2,11 @@
 #include "gauge/staples.h"
 #include "gauge/degauss.h"
 
-using SU3 = SUmatrix<3, double>;
+#ifndef NSU
+    #error "!!! Specify which SU(N) in Makefile: eg. -DNSU=3"
+#endif
 
-
+using SUN = SUmatrix<NSU, double>;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -249,6 +251,8 @@ int main(int argc, char **argv) {
     // hila::initialize should be called as early as possible
     hila::initialize(argc, argv);
 
+    output0 << "---- Hamiltonian time evolution for SU(N) theory, using N=" << NSU <<  " ----\n";
+
     // hila provides an input class hila::input, which is
     // a convenient way to read in parameters from input files.
     // parameters are presented as key - value pairs, as an example
@@ -284,8 +288,8 @@ int main(int argc, char **argv) {
     hila::seed_random(seed);
 
     // Alloc gauge field and momenta (E)
-    GaugeField<SU3> U;
-    VectorField<Algebra<SU3>> E;
+    GaugeField<SUN> U;
+    VectorField<Algebra<SUN>> E;
 
     // some initial noise for gauge field
     foralldir (d) {
