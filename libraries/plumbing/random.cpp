@@ -2,10 +2,11 @@
 #include "hila.h"
 #include "plumbing/random.h"
 
+/////////////////////////////////////////////////////////////////////////
+
 #include <random>
 
-
-#ifndef OPENMP
+//#ifndef OPENMP
 
 // static variable which holds the random state
 // Use 64-bit mersenne twister
@@ -14,7 +15,7 @@ static std::mt19937_64 mersenne_twister_gen;
 // random numbers are in interval [0,1)
 static std::uniform_real_distribution<double> real_rnd_dist(0.0,1.0);
 
-#endif
+//#endif
 
 
 // In GPU code hila::random() defined in hila_gpu.cpp
@@ -26,10 +27,13 @@ double hila::random() {
 
 #endif
 
+// Generate random number in non-kernel (non-loop) code.  Not meant to
+// be used in "user code"
 double hila::host_random() {
     return real_rnd_dist( mersenne_twister_gen );
 }
 
+/////////////////////////////////////////////////////////////////////////
 
 /// Seed random number generators
 /// Seed is shuffled so that different nodes
@@ -65,12 +69,13 @@ void hila::seed_random(uint64_t seed) {
 
     output0 << "Using node random numbers, seed for node 0: " << seed << '\n';
 
-#if !defined(OPENMP)
+// #if !defined(OPENMP)
     mersenne_twister_gen.seed( seed );
     // warm it up
     for (int i = 0; i < 9000; i++)
         mersenne_twister_gen();
-#endif
+// #endif
+
 
 #if defined(CUDA) || defined(HIP)
     // we can use the same seed, the generator is different

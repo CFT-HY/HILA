@@ -8,7 +8,8 @@ void seed_random(uint64_t seed);
 
 /// It is important that the random number generators random(), gaussrand() and gaussrand2()
 /// are marked as "loop function" and "contains rng", because hilapp does not have a view
-/// inside them from all compilation units
+/// inside them from all compilation units - although hila::random() has special treatment
+
 
 #pragma hila contains_rng loop_function
 double random();
