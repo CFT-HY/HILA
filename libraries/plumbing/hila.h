@@ -29,5 +29,6 @@
 #include <omp.h>
 #endif
 
+#include "plumbing/random.h"
 
 #endif

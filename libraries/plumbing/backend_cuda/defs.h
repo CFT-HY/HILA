@@ -136,7 +136,7 @@ using gpuError = hipError_t;
 
 namespace hila {
 __device__ __host__ double random();
-void seed_device_rng(unsigned long seed);
+void seed_device_rng(unsigned long long seed);
 } // namespace hila
 
 #define GPU_CHECK(cmd)                                                                 \
@@ -165,7 +165,7 @@ inline void synchronize_threads() {
 
 namespace hila {
 double random();
-void seed_device_rng(unsigned long seed);
+void seed_device_rng(unsigned long long seed);
 } // namespace hila
 
 using gpuError = int;
