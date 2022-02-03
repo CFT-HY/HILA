@@ -269,35 +269,6 @@ bool input::handle_key(const std::string &key) {
 
 // is the input string int/double/string and return it
 
-bool input::is_value(const std::string &str, long &val) {
-    char *lp;
-    val = std::strtol(str.c_str(), &lp, 10);
-    if (str.c_str() == lp || *lp)
-        return false;
-    return true;
-}
-
-bool input::is_value(const std::string &str, int &val) {
-    long lval;
-    bool b = this->is_value(str, lval);
-    val = lval;
-    return b;
-}
-
-bool input::is_value(const std::string &str, double &val) {
-    char *lp;
-    val = std::strtod(str.c_str(), &lp);
-    if (str.c_str() == lp || *lp)
-        return false;
-    return true;
-}
-
-bool input::is_value(const std::string &str, float &val) {
-    double dval;
-    bool b = this->is_value(str, dval);
-    val = dval;
-    return b;
-}
 
 // a trivial function, useful for template
 bool input::is_value(const std::string &str, std::string &val) {
