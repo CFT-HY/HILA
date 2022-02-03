@@ -171,9 +171,11 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     double chi_avg = chi_total.value() / lattice->volume();
 
     //output0 << "Measure_start " << n << "\n";
-    // Print the actual time (in lattice units) instead of just 'n'
-    output0 << "MEAS " << trajectory << ' ' << n*dt << ' ' << plaq << ' ' << e2 << ' '
-            << viol << ' ' << chi_avg << '\n';
+    // Print the actual time (in lattice units) instead of just 'n'. Also more precision, needed for long trajectories
+    char buf[1024]; sprintf(buf, "MEAS %d %.10g %.8g %.8g %.8g %.8g", trajectory, n*dt, plaq, e2, viol, chi_avg);
+    output0 << std::string(buf) << "\n";
+
+    // output0 << "MEAS " << trajectory << ' ' << n*dt << ' ' << plaq << ' ' << e2 << ' ' << viol << ' ' << chi_avg << '\n';
     //output0 << "Measure_end " << n << "\n";
 }
 
