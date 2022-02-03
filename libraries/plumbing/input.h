@@ -61,7 +61,7 @@
 ///    whitespace.
 ///
 ///    Recognized types:
-///        int, long, float, double, Complex<float>, Complex<double>,
+///        Any arithmetic type, Complex<float>, Complex<double>,
 ///        std::string, CoordinateVector,
 ///        Vector<n,T>, std::vector<T>     where T is one of the above types
 ///
@@ -86,7 +86,7 @@
 ///
 ///    matches "vec  3,4, 5.5, 7.8, 4"  and returns a vector of double values.
 ///    The numbers are read until they are not followed by a comma.  If comma is
-///    the last caracter on a line, reading continues to the next line.
+///    the last character on the line, reading continues to the next line.
 ///
 ///        Complex<double> phase = f.get("complex phase");
 ///
@@ -269,7 +269,7 @@ class input {
             if (!(get_token(tok) && is_value(tok, val))) {
 
                 if (speaking)
-                    hila::output << "Error: expecting " << type_id<T>() << " after '"
+                    hila::output << "Error: expecting a value of type '" << type_id<T>() << "' after '"
                                  << label << "'\n";
 
                 no_error = false;
