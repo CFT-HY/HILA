@@ -1,4 +1,3 @@
-#include "bench.h"
 #include "plumbing/coordinates.h"
 #include "dirac/conjugate_gradient.h"
 
