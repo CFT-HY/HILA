@@ -11,7 +11,7 @@ Complex<double> e(Complex<double> x) { return d(x); }
 // #pragma hila ast dump
 Complex<double> f(const Complex<double> &x) { return e(x); }
 
-template <typename T> T xyz(output_only T &v) {
+template <typename T> T xyz(out_only T &v) {
     v = 1.3;
     return sin(v);
 }
@@ -23,7 +23,7 @@ template <typename T> class v2 {
     using base_type = hila::number_type<T>;
     Complex<T> a[2];
 
-    void setter() output_only { a[0] = 1; }
+    void setter() out_only { a[0] = 1; }
 };
 
 // template <typename g>

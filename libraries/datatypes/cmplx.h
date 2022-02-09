@@ -129,19 +129,19 @@ struct Complex {
         return Complex<T>(re, -im);
     }
 
-    inline Complex<T> polar(const T r, const T theta) output_only {
+    inline Complex<T> polar(const T r, const T theta) out_only {
         re = r * cos(theta);
         im = r * sin(theta);
         return *this;
     }
 
-    inline Complex<T> &random() output_only {
+    inline Complex<T> &random() out_only {
         re = hila::random();
         im = hila::random();
         return *this;
     }
 
-    inline Complex<T> &gaussian_random(hila::number_type<T> width = 1.0) output_only {
+    inline Complex<T> &gaussian_random(hila::number_type<T> width = 1.0) out_only {
         double d;
         re = hila::gaussrand2(d) * width;
         im = d*width;

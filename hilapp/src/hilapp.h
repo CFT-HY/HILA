@@ -24,7 +24,7 @@ using namespace clang::tooling;
 const std::string program_name("hilapp");
 const std::string specialization_db_filename("specialization_db.txt");
 const std::string default_output_suffix("cpt");
-const std::string output_only_keyword("output_only");
+const std::string out_only_keyword("out_only");
 const std::string const_function_keyword("const_function");
 
 
@@ -394,11 +394,11 @@ struct argument_info {
     bool is_lvalue;
     bool is_site_dependent;
     bool is_const;
-    bool is_output_only;
+    bool is_out_only;
     bool is_const_function;
 
     argument_info() {
-        is_lvalue = is_site_dependent = is_output_only = is_const = is_const_function =
+        is_lvalue = is_site_dependent = is_out_only = is_const = is_const_function =
             false;
         E = nullptr;
         PV = nullptr;

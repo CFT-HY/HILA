@@ -59,13 +59,13 @@ class U1 {
     }
 
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    const U1 &set_phase(const S val) output_only {
+    const U1 &set_phase(const S val) out_only {
         phase = val;
         return *this;
     }
 
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    const U1 &set_phase(const Complex<S> val) output_only {
+    const U1 &set_phase(const Complex<S> val) out_only {
         phase = val.arg();
         return *this;
     }
@@ -90,7 +90,7 @@ class U1 {
 
 
     /// Generate random elements
-    const U1 &random() output_only {
+    const U1 &random() out_only {
         phase = M_PI * (2.0 * hila::random() - 1.0);
     }
 };
@@ -121,7 +121,7 @@ inline U1<T> operator*(U1<T> a, const U1<T> b) {
 
 /// Function that calls random()-method
 template <typename T>
-inline void random(output_only U1<T> &p) {
+inline void random(out_only U1<T> &p) {
     p.random();
 }
 

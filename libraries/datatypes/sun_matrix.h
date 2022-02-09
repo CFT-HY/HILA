@@ -82,6 +82,22 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
         return *this;
     }
 
+    /// multiply matrix row/col i,j by SU2 "subgroup" from left
+    void mult_by_SU2_left(int r, int q, const SUmatrix<2,T> & m) {
+        // copy 2xN matrix
+        Vector<2,Complex<T>> a;
+        for (int i=0; i<N; i++) {
+            a.e(0) = this->e(r,i);
+            a.e(1) = this->e(q,i);
+
+            a = m * a;
+
+            this->e(r,i) = a.e(0);
+            this->e(q,i) = a.e(1);
+        }
+    }
+
+
 
     /// Project matrix to antihermitean and traceless algebra
     /// of the group.
@@ -231,7 +247,7 @@ class Algebra<SUmatrix<N, T>> : public Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix
     /// With this convention the inherited method from Vector
     /// is fine and the code below is not needed
 
-    // Algebra &gaussian_random() output_only {
+    // Algebra &gaussian_random() out_only {
     //
     //     for (int i=0; i<N_a; i++) {
     //         a.e(i) = hila::gaussrand();

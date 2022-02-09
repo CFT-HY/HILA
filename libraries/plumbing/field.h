@@ -1646,7 +1646,7 @@ static void write_fields(std::string filename, fieldtypes &... fields) {
 // Read the Field from a stream
 template <typename T>
 void Field<T>::read_from_stream(std::ifstream &inputfile) {
-    constexpr size_t target_read_size = 1000000;
+    constexpr size_t target_read_size = 5000000;   // Read 5 MB at a go
     constexpr size_t sites_per_read = target_read_size / sizeof(T);
     constexpr size_t read_size = sites_per_read * sizeof(T);
 
@@ -1716,10 +1716,6 @@ static void read_fields(std::string filename, fieldtypes &... fields) {
     inputfile.close();
 }
 
-// HACK: force disable vectorization in a loop using
-// if(disable_avx[X]==0){};
-// TODO: remove all of these!
-// extern Field<double> disable_avx;
 
 #ifdef HILAPP
 

@@ -68,7 +68,9 @@ void broadcast(std::vector<T> &list) {
 
 template <typename T>
 void broadcast(T *var) {
-    static_assert(sizeof(T) > 0 && "Do not use pointers to broadcast()-function");
+    static_assert(sizeof(T) > 0 &&
+                  "Do not use pointers to broadcast()-function. Use 'broadcast(T* arr, "
+                  "int size)' to broadcast an array");
 }
 
 /// Broadcast for arrays where size must be known and same for all nodes

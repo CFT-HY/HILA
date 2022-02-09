@@ -245,7 +245,7 @@ class Matrix_t {
 
     /// assign from 0
 #pragma hila loop_function
-    inline Mtype &operator=(const std::nullptr_t &z) output_only {
+    inline Mtype &operator=(const std::nullptr_t &z) out_only {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
         }
@@ -256,7 +256,7 @@ class Matrix_t {
 #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) output_only {
+    inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) out_only {
         for (int i = 0; i < n * m; i++) {
             c[i] = rhs.c[i];
         }
@@ -267,7 +267,7 @@ class Matrix_t {
 #pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
-    inline Mtype &operator=(const S rhs) output_only {
+    inline Mtype &operator=(const S rhs) out_only {
 
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
@@ -282,7 +282,7 @@ class Matrix_t {
     /// Assign from initializer list
 #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline Mtype &operator=(std::initializer_list<S> rhs) output_only {
+    inline Mtype &operator=(std::initializer_list<S> rhs) out_only {
         assert(rhs.size() == n * m &&
                "Initializer list has a wrong size in assignment");
         int i = 0;
@@ -385,7 +385,7 @@ class Matrix_t {
 
     /// numpy style matrix fill
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    Mtype &fill(const S rhs) output_only {
+    Mtype &fill(const S rhs) out_only {
         for (int i = 0; i < n * m; i++)
             c[i] = rhs;
         return *this;
@@ -516,7 +516,7 @@ class Matrix_t {
     // }
 
     /// Generate random elements
-    Mtype &random() output_only {
+    Mtype &random() out_only {
         for (int i = 0; i < n * m; i++) {
             ::random(c[i]);
         }
@@ -524,7 +524,7 @@ class Matrix_t {
     }
 
     /// Generate gaussian random elements
-    inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) output_only {
+    inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
             ::gaussian_random(c[i],width);
         }
@@ -1010,13 +1010,13 @@ inline hila::number_type<Mt> norm(const Mt &rhs) {
 
 /// Function that calls random()-method
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
-inline void random(output_only Mt &mat) {
+inline void random(out_only Mt &mat) {
     mat.random();
 }
 
 /// Function that calls the gaussian_random()-method
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
-inline void gaussian_random(output_only Mt &mat, hila::number_type<Mt> width = 1.0) {
+inline void gaussian_random(out_only Mt &mat, hila::number_type<Mt> width = 1.0) {
     mat.gaussian_random(width);
 }
 

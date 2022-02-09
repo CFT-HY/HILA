@@ -49,15 +49,15 @@
 // #endif
 
 
-// This below declares "output_only" -qualifier.  It is empty on purpose. Do not remove!
-#define output_only
-// output_only for methods tells hilapp that the base variable original value is not
+// This below declares "out_only" -qualifier.  It is empty on purpose. Do not remove!
+#define out_only
+// out_only for methods tells hilapp that the base variable original value is not
 // needed: class C {
-//    int set() output_only { .. }
+//    int set() out_only { .. }
 // };
 // indicates that a.set(); does not need original value of a.
 // Can also be used in function arguments:
-//    int func( output_only double & p, ..);
+//    int func( out_only double & p, ..);
 
 // Defined empty on purpose, same as above!
 #define const_function

@@ -171,7 +171,7 @@ class addrOfAndRefChecker : public GeneralVisitor,
 
                 bool pure_out_ref = false;
                 if (loopBuf->get_previous_original_word(V->getSourceRange().getBegin()) ==
-                    output_only_keyword) {
+                    out_only_keyword) {
                     pure_out_ref = true;
                 }
 
