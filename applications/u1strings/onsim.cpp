@@ -472,10 +472,12 @@ void scaling_sim::next() {
             phiHat = phi[X]/phi[X].abs();
             deltaPiPHC = deltaPi[X]*phiHat.conj();
             piPHC = pi[X]*phiHat.conj();
-            pi[X] += - (daa_aaHg*real(piPHC) 
-                        + daa_aaAx*imag(piPHC))*phiHat;
-            pi[X] += Complex<real_t>(RHg*real(deltaPiPHC),
-                                     RAx*imag(deltaPiPHC))*phiHat;
+            pi[X] = pi[X] -
+                    Complex<real_t>(daa_aaHg * real(piPHC), daa_aaAx * imag(piPHC)) *
+                        phiHat;
+            pi[X] = pi[X] +
+                    Complex<real_t>(RHg * real(deltaPiPHC), RAx * imag(deltaPiPHC)) *
+                        phiHat;
         }
         t += config.dt;
 
