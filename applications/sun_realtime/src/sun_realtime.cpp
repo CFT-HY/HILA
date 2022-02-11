@@ -8,6 +8,8 @@
 
 using SUN = SUmatrix<NSU, double>;
 
+// Output stream for results
+std::ofstream measureFile;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /* Hamiltonian time evolution for gauge and electric fields. 'delta' is the time difference. */
@@ -151,7 +153,7 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
 
     auto plaq = measure_plaq(U);
 
-    double e2;
+    double e2 = 0.0;
     foralldir (d)
         e2 += E[d].squarenorm();
     e2 /= 2;
@@ -172,8 +174,9 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
 
     //output0 << "Measure_start " << n << "\n";
     // Print the actual time (in lattice units) instead of just 'n'. Also more precision, needed for long trajectories
-    char buf[1024]; sprintf(buf, "MEAS %d %.10g %.8g %.8g %.8g %.8g", trajectory, n*dt, plaq, e2, viol, chi_avg);
-    output0 << std::string(buf) << "\n";
+    char buf[1024]; 
+    sprintf(buf, "%d %.10g %.8g %.8g %.8g %.8g", trajectory, n*dt, plaq, e2, viol, chi_avg);
+    if (hila::myrank() == 0) measureFile << std::string(buf) << "\n";
 
     // output0 << "MEAS " << trajectory << ' ' << n*dt << ' ' << plaq << ' ' << e2 << ' ' << viol << ' ' << chi_avg << '\n';
     //output0 << "Measure_end " << n << "\n";
@@ -279,6 +282,7 @@ int main(int argc, char **argv) {
     int n_thermal = par.get("thermalisation");
     int n_thermal_start = par.get("thermalisation start");
     long seed = par.get("random seed");
+    std::string meas_fname = par.get("measurement file");
 
     par.close(); // file is closed also when par goes out of scope
 
@@ -289,9 +293,22 @@ int main(int argc, char **argv) {
     // We need random number here
     hila::seed_random(seed);
 
+
+    if (hila::myrank() == 0) {
+        measureFile.open(meas_fname, std::ios_base::app);
+        if (!measureFile) {
+            output0 << "!!! Error opening measurement file\n";
+            hila::finishrun();
+        }
+    }
+
     // Alloc gauge field and momenta (E)
     GaugeField<SUN> U;
     VectorField<Algebra<SUN>> E;
+    foralldir(d) onsites(ALL) {
+        U[d][X] = 0;
+        E[d][X] = 0;
+    }
 
     // some initial noise for gauge field
     foralldir (d) {
