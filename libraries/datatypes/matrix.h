@@ -476,6 +476,21 @@ class Matrix_t {
         return result;
     }
 
+    /// Multiply this (nxm) matrix with mxn matrix and return trace
+    /// Cheaper than explicit (a*b).trace()
+    template <int p, int q, typename S, typename MT>
+    hila::type_mul<T, S> mul_trace(const Matrix_t<p, q, S, MT> &rm) const {
+
+        static_assert(p == m && q == n, "mul_trace(): argument matrix size mismatch");
+
+        hila::type_mul<T, S> res = 0;
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++) {
+                res += e(i, j) * rm.e(j, i);
+            }
+        return res;
+    }
+
     /// calculate square norm - sum of squared elements
     hila::number_type<T> squarenorm() const {
         hila::number_type<T> result(0);
@@ -526,7 +541,7 @@ class Matrix_t {
     /// Generate gaussian random elements
     inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
-            ::gaussian_random(c[i],width);
+            ::gaussian_random(c[i], width);
         }
         return *this;
     }
@@ -954,6 +969,21 @@ inline Rt operator/(const Mt &mat, const S &rhs) {
     return mat * (static_cast<hila::number_type<S>>(1) / rhs);
 }
 
+
+/// mul_trace(a,b) - multiply matrices a and b and take trace
+template <typename Mtype1, typename Mtype2,
+          std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0>
+inline auto mul_trace(const Mtype1 &a, const Mtype2 &b) {
+
+    static_assert(Mtype1::columns() == Mtype2::rows() &&
+                      Mtype1::rows() == Mtype2::columns(),
+                  "mul_trace(a,b): matrix sizes are not compatible");
+    return a.mul_trace(b);
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+
+
 /// Stream operator
 template <int n, int m, typename T, typename MT>
 std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
@@ -1212,7 +1242,8 @@ Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
 ///  Do it backwards in order to reduce accumulation of errors
 
 template <int n, int m, typename T, typename MT>
-inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int order = 20) {
+inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat,
+                                 const int order = 20) {
     static_assert(n == m, "exp() only for square matrices");
 
     Matrix_t<n, m, T, MT> r;
