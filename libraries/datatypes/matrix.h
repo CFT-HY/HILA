@@ -584,7 +584,7 @@ namespace hila {
 
 //////////////////////////////////////////////////////////////////////////
 // Tool to get "right" result type for matrix (T1) + (T2) -op, where
-// T1 and T2 are either complex or arithmetic marrices
+// T1 and T2 are either complex or arithmetic matrices
 // Use: hila::mat_x_mat_type<T1,T2>
 //   - T1 == T2 returns T1
 //   - If T1 or T2 contains complex, returns Matrix<rows,cols,Complex<typeof T1+T2>>
@@ -625,11 +625,16 @@ struct matrix_scalar_op_s<Mt, S,
                           typename std::enable_if_t<std::is_convertible<
                               hila::type_plus<hila::underlying_type<Mt>, S>,
                               hila::underlying_type<Mt>>::value>> {
-    using type = Mt;
+    // using type = Mt;
+    using type = typename std::conditional<
+        std::is_floating_point<hila::number_type<Mt>>::value, Mt,
+        Matrix<Mt::rows(), Mt::columns(),
+               hila::type_plus<hila::number_type<Mt>, hila::number_type<S>>>>::type;
 };
 
 template <typename Mt, typename S>
 using mat_scalar_type = typename matrix_scalar_op_s<Mt, S>::type;
+
 
 } // namespace hila
 
@@ -966,7 +971,11 @@ template <typename Mt, typename S,
               (Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
 inline Rt operator/(const Mt &mat, const S &rhs) {
-    return mat * (static_cast<hila::number_type<S>>(1) / rhs);
+    Rt res;
+    for (int i = 0; i < Rt::rows() * Rt::columns(); i++) {
+        res.c[i] = mat.c[i] / rhs;
+    }
+    return res;
 }
 
 
