@@ -222,7 +222,6 @@ struct Complex {
         return *this;
     }
 
-    // TODO: for vector too
     template <typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
     inline Complex<T> &operator/=(const A &a) {
         re /= a;
@@ -673,28 +672,36 @@ using ntype_op = typename ntype_op_s<T1,T2>::type;
 /// assuming var contains complex type.  This enables access
 /// of complex elements as
 ///  as_complex_array(var)[i]
+/// comment out as hilapp gets confused at the moment
 ////////////////////////////////////////////////////////////////////////
 
-#pragma hila loop_function
-template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline const Complex<hila::number_type<T>> * as_complex_array(const T &var) {
-    return (const Complex<hila::number_type<T>> *)(void *)&var;
-}
+// #pragma hila loop_function
+// template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
+// inline const Complex<hila::number_type<T>> * as_complex_array(const T &var) {
+//     return (const Complex<hila::number_type<T>> *)(void *)&var;
+// }
 
-#pragma hila loop_function
-template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline Complex<hila::number_type<T>> * as_complex_array(T &var) {
-    return (Complex<hila::number_type<T>> *)(void *)&var;
-}
+// #pragma hila loop_function
+// template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
+// inline Complex<hila::number_type<T>> * as_complex_array(T &var) {
+//     return (Complex<hila::number_type<T>> *)(void *)&var;
+// }
 
 ////////////////////////////////////////////////////////////////////////
 /// get_complex_element(var,i) 
-/// returns the i'th complex number embedded in variable v
+///    returns the i:th complex number embedded in variable v
+/// set_complex_element(var,i,value) 
+///    sets the i:th element in var
 ////////////////////////////////////////////////////////////////////////
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 inline Complex<hila::number_type<T>> get_complex_element(const T &var, int i) {
     return *(reinterpret_cast<const Complex<hila::number_type<T>> *>(&var) + i);
+}
+
+template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
+inline void set_complex_element(T &var, int i, const Complex<hila::number_type<T>> & val ) {
+    *(reinterpret_cast<const Complex<hila::number_type<T>> *>(&var) + i) = val;
 }
 
 
