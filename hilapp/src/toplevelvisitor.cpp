@@ -390,8 +390,13 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
                                             bool &is_assign, std::string &assignop) {
 
     if (ref.DRE == nullptr) {
-        llvm::errs()
-            << "hilapp internal error: bracket_var_ref type unknown, ignoring...\n";
+
+        reportDiag(DiagnosticsEngine::Level::Warning,
+                   ref.E->getSourceRange().getBegin(),
+                   "array brackets '[]' applied to a non-variable, and hilapp does not "
+                   "(yet) have logic to analyse this."
+                   " Fingers crossed ...");
+
         return 0;
     }
 
@@ -408,9 +413,10 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     VarDecl *vd;
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ref.DRE);
     if (DRE == nullptr) {
-        llvm::errs()
-            << "hilapp error: array refs to member variables not yet implemented\n";
+        llvm::errs() << "hilapp error: array refs to member variables not yet "
+                        "implemented - probably does not work\n";
         llvm::errs() << "Expression: " << get_stmt_str(ref.E) << '\n';
+        return 0;
     }
     vd = dyn_cast<VarDecl>(DRE->getDecl());
 
@@ -2099,11 +2105,20 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
             // '\n';
 
             SourceRange sr = pvd->getDefaultArgRange();
+            // if default arg is macro, need to read the immediate range
+            if (sr.getBegin().isMacroID()) {
+                CharSourceRange CSR =
+                    TheRewriter.getSourceMgr().getImmediateExpansionRange(
+                        sr.getBegin());
+                sr = CSR.getAsRange();
+            }
+
             SourceLocation b = sr.getBegin();
             SourceLocation m = pvd->getSourceRange().getBegin();
 
-            while (funcBuf.get(b, 1) != "=" && b > m)
+            while (funcBuf.get(b, 1) != "=" && b > m) {
                 b = b.getLocWithOffset(-1);
+            }
 
             sr.setBegin(b);
             funcBuf.remove(sr);
@@ -2467,7 +2482,8 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
                            tap->getAsType().getAsString().c_str());
 
                 // try to move the insertion point - fails, TODO: more carefully!
-                // ip = getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
+                // ip =
+                // getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
             }
         }
     }
