@@ -820,9 +820,21 @@ class Field {
 
     // Writes the Field to disk
     void write_to_stream(std::ofstream &outputfile);
-    void write_to_file(std::string filename);
+    void write_to_file(const std::string &filename);
     void read_from_stream(std::ifstream &inputfile);
-    void read_from_file(std::string filename);
+    void read_from_file(const std::string &filename);
+
+    void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
+                         const CoordinateVector &cmax,
+                         const std::string &separator = "\n");
+    void write_subvolume(const std::string &filenname, const CoordinateVector &cmin,
+                         const CoordinateVector &cmax,
+                         const std::string &separator = "\n");
+
+    template <typename F>
+    void write_slice(F &outputfile, const CoordinateVector &slice,
+                     const std::string &separator = "\n");
+
 
     // and sum reduction
     T reduce_sum(bool allreduce = true) const;
@@ -1571,150 +1583,6 @@ void Field<T>::get_elements(T *elements,
     }
 }
 #endif
-
-// Write the field to an file stream
-template <typename T>
-void Field<T>::write_to_stream(std::ofstream &outputfile) {
-    constexpr size_t target_write_size = 1000000;
-    constexpr size_t sites_per_write = target_write_size / sizeof(T);
-    constexpr size_t write_size = sites_per_write * sizeof(T);
-
-    std::vector<CoordinateVector> coord_list(sites_per_write);
-    T *buffer = (T *)malloc(write_size);
-    CoordinateVector size = lattice->size();
-
-    size_t i = 0;
-    for (; i < lattice->volume(); i++) {
-        CoordinateVector site;
-        size_t ii = i;
-        foralldir (dir) {
-            site[dir] = ii % size[dir];
-            ii = ii / size[dir];
-        }
-
-        coord_list[i % sites_per_write] = site;
-
-        // Write the buffer when full
-        if ((i + 1) % sites_per_write == 0) {
-            fs->gather_elements(buffer, coord_list);
-            if (hila::myrank() == 0)
-                outputfile.write((char *)buffer, write_size);
-        }
-    }
-
-    // Write the rest
-    coord_list.resize(i % sites_per_write);
-    fs->gather_elements(buffer, coord_list);
-    double *v = (double *)buffer;
-    if (hila::myrank() == 0)
-        outputfile.write((char *)buffer, sizeof(T) * (i % sites_per_write));
-
-    std::free(buffer);
-}
-
-// Write the Field to a file replacing the file
-template <typename T>
-void Field<T>::write_to_file(std::string filename) {
-    std::ofstream outputfile;
-    outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-    write_to_stream(outputfile);
-    outputfile.close();
-}
-
-// Write a list of fields into an output stream
-template <typename T>
-static void write_fields(std::ofstream &outputfile, Field<T> &last) {
-    last.write_to_stream(outputfile);
-}
-
-template <typename T, typename... fieldtypes>
-static void write_fields(std::ofstream &outputfile, Field<T> &next,
-                         fieldtypes &... fields) {
-    next.write_to_stream(outputfile);
-    write_fields(outputfile, fields...);
-}
-
-// Write a list of fields to a file
-template <typename... fieldtypes>
-static void write_fields(std::string filename, fieldtypes &... fields) {
-    std::ofstream outputfile;
-    outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-    write_fields(outputfile, fields...);
-    outputfile.close();
-}
-
-// Read the Field from a stream
-template <typename T>
-void Field<T>::read_from_stream(std::ifstream &inputfile) {
-    constexpr size_t target_read_size = 5000000;   // Read 5 MB at a go
-    constexpr size_t sites_per_read = target_read_size / sizeof(T);
-    constexpr size_t read_size = sites_per_read * sizeof(T);
-
-    mark_changed(ALL);
-
-    std::vector<CoordinateVector> coord_list(sites_per_read);
-    T *buffer = (T *)malloc(read_size);
-    CoordinateVector size = lattice->size();
-
-    size_t i = 0;
-    for (; i < lattice->volume(); i++) {
-        CoordinateVector site;
-        size_t ii = i;
-        foralldir (dir) {
-            site[dir] = ii % size[dir];
-            ii = ii / size[dir];
-        }
-
-        coord_list[i % sites_per_read] = site;
-
-        // Read the buffer when full
-        if ((i + 1) % sites_per_read == 0) {
-            if (hila::myrank() == 0)
-                inputfile.read((char *)buffer, read_size);
-            fs->send_elements(buffer, coord_list);
-        }
-    }
-
-    // Read the rest
-    coord_list.resize(i % sites_per_read);
-    if (hila::myrank() == 0)
-        inputfile.read((char *)buffer, sizeof(T) * (i % sites_per_read));
-    double *v = (double *)buffer;
-    fs->send_elements(buffer, coord_list);
-
-    std::free(buffer);
-}
-
-// Read Field contennts from the beginning of a file
-template <typename T>
-void Field<T>::read_from_file(std::string filename) {
-    std::ifstream inputfile;
-    inputfile.open(filename, std::ios::in | std::ios::binary);
-    read_from_stream(inputfile);
-    inputfile.close();
-}
-
-// Read a list of fields from an input stream
-template <typename T>
-static void read_fields(std::ifstream &inputfile, Field<T> &last) {
-    last.read_from_stream(inputfile);
-}
-
-template <typename T, typename... fieldtypes>
-static void read_fields(std::ifstream &inputfile, Field<T> &next,
-                        fieldtypes &... fields) {
-    next.read_from_stream(inputfile);
-    read_fields(inputfile, fields...);
-}
-
-// Read a list of fields from a file
-template <typename... fieldtypes>
-static void read_fields(std::string filename, fieldtypes &... fields) {
-    std::ifstream inputfile;
-    inputfile.open(filename, std::ios::in | std::ios::binary);
-    read_fields(inputfile, fields...);
-    inputfile.close();
-}
 
 
 #ifdef HILAPP

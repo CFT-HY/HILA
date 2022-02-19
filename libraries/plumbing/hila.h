@@ -14,6 +14,7 @@
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
+#include "plumbing/field_io.h"
 #include "plumbing/reduction.h"
 #include "plumbing/vectorreduction.h"
 

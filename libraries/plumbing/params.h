@@ -36,6 +36,12 @@
 #endif
 #endif
 
+// Size of the write buffer in field writes, in bytes
+// Larger buffer -> less MPI calls in writing, but more memory
+#ifndef WRITE_BUFFER_SIZE
+#define WRITE_BUFFER_SIZE 2000000
+#endif
+
 
 // boundary conditions are "off" by default -- no need to do anything here
 // #ifndef SPECIAL_BOUNDARY_CONDITIONS
