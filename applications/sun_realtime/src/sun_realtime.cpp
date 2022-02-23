@@ -68,11 +68,11 @@ double measure_plaq(const GaugeField<group> &U) {
 }
 
 
-/* Calculate the lattice counterpart of B_i(x) = -1/2 eps_{ijk} F_jk(x) everywhere. */
+/* Calculate the lattice counterpart of B_i(x) = -1/2 eps_{ijk} F_jk(x) = -sum_{j<k} F_jk(x) everywhere. */
 /* We extract the lattice field strength tensor from minimal clover terms:
 * Q_{jk} = P_{jk} + P_{k,-j} + P_{-j,-k} + P_{-k,j}, then
 * i g F_{jk} = (Q_{jk} - Q_{kj}) / (8a^2). 
-* Because of antisymmetry we only need Q_{jk} for j<k. 
+* Because Q_{kj} = Q^+_{jk}, we only need Q_{jk} for j<k. 
 * Here I do NOT project the result to algebra in order to avoid unnecessary operations
 * => B here is of the GaugeField type. 
 * Note that I do not subtract the trace from F_{jk}, so it's not necessarily traceless. 
@@ -80,46 +80,54 @@ double measure_plaq(const GaugeField<group> &U) {
 template <typename group>
 void get_magnetic_field(const GaugeField<group> &U, GaugeField<group> &B) {
 
-    foralldir(d1) onsites(ALL) B[d1][X] = 0;
 
-    // "i,j,k"
-    foralldir(d1) foralldir(d2) foralldir(d3) if (d1 != d2 && d1 != d3 && d2 < d3) {
+    GaugeField<group> B_naive; 
+    foralldir(d1) onsites(ALL) B_naive[d1][X] = 0;
+
+    // "i,j,k" with j<k only
+    foralldir(d1) {
+
+        foralldir(d2) foralldir(d3) if (d1 != d2 && d1 != d3 && d2 < d3) {
        
-        /* Get clovers in the plane orthogonal to 'd1': */
-        Field<group> Q;
+            /* Get clovers in the plane orthogonal to 'd1': */
+            Field<group> Q;
+            onsites(ALL) {
+                group P1, P2, P3, P4;
+                P1 = U[d2][X] * U[d3][X + d2] * U[d2][X + d3].dagger() * U[d3][X].dagger();
+                P2 = U[d3][X] * U[d2][X + d3 - d2].dagger() * U[d3][X - d2].dagger() * U[d2][X - d2];
+                P3 = U[d2][X - d2].dagger() * U[d3][X - d2 - d3].dagger() * U[d2][X - d3 - d2] * U[d3][X - d3]; 
+                P4 = U[d3][X - d3].dagger() * U[d2][X - d3] * U[d3][X + d2 - d3] * U[d2][X].dagger();
+
+                Q[X] = P1 + P2 + P3 + P4;
+            }
+
+            // int sign = (d1-d2)*(d2-d3)*(d3-d1)/2; // epsilon tensor in 3 dimensions
+            int sign;
+            // Here d2 < d3 always
+            if (d2 > d1) {
+                sign = 1;
+            } else if (d3 > d1) {
+                sign = -1;
+            } else {
+                sign = 1;
+            }
+
+            // Get "naive" iga^2 B_i(x).
+            // The code uses anti-Hermitian generators for the algebra, so I actually compute g a^2 B_i.
+            onsites(ALL) {
+                B_naive[d1][X] += -(1.0/ 8.0) * sign * (Q[X] - Q[X].dagger());
+            }
+            
+        } // end foralldir d2 d3
+
+        /* B_i lives on the links => reduce discretization errors by using improved B_i(x) = B_i(x + 0.5i), with
+        * B_i(x + 0.5i) = 1/2 (B_i(x) + U_i(x) B_i(x+i) U_i(x).dagger() ),
+        * where the second term is a parallel transport to the next lattice site. */
         onsites(ALL) {
-            group P1, P2, P3, P4;
-            P1 = U[d2][X] * U[d3][X + d2] * U[d2][X + d3].dagger() * U[d3][X].dagger();
-            P2 = U[d3][X] * U[d2][X + d3 - d2].dagger() * U[d3][X - d2].dagger() * U[d2][X - d2];
-            P3 = U[d2][X - d2].dagger() * U[d3][X - d2 - d3].dagger() * U[d2][X - d3 - d2] * U[d3][X - d3]; 
-            P4 = U[d3][X - d3].dagger() * U[d2][X - d3] * U[d3][X + d2 - d3] * U[d2][X].dagger();
-
-            Q[X] = P1 + P2 + P3 + P4;
+            B[d1][X] = 0.5 * (B_naive[d1][X] + U[d1][X] * B_naive[d1][X+d1] * U[d1][X].dagger());
         }
-
-        /* B_i lives on the links, so improve the definition by calculating F_{jk} at the midpoint:
-        * F_{jk}(x + 0.5i) = 1/2 (F_{jk}(x) + U_i(x) F_{jk}(x+i) U_i(x).dagger() ),
-        * where the second term is a parallel transport to the next lattice site. 
-        * Then i g a^2 B_i(x + 0.5i) = -1/8 Sum_{j<k} e_{ijk} ( Q_{jk}(x) + U_i(x) Q_{jk}(x+i) U_i(x).dagger() ).
-        * The code uses anti-Hermitian generators for the algebra, so we actually compute g a^2 B_i. */
         
-        // int sign = (d1-d2)*(d2-d3)*(d3-d1)/2; // epsilon tensor in 3 dimensions
-        int sign;
-        // Here d2 < d3 always
-        if (d2 > d1) {
-            sign = 1;
-        } else if (d3 > d1) {
-            sign = -1;
-        } else {
-            sign = 1;
-        }
-
-        onsites(ALL) {
-            B[d1][X] += -(1.0/8.0) * sign * (Q[X] + U[d1][X] * Q[X+d1] * U[d1][X].dagger());
-            // Without averaging over the two clovers:
-            // B[d1][X] += (-2 * (1.0/8.0) * sign * (Q[X]));
-        }
-    } // end foralldir d1 d2 d3
+    } // end d1; mag. field done
  
 }
 
@@ -151,12 +159,15 @@ template <typename group>
 void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory,
                    int n, double dt) {
 
-    auto plaq = measure_plaq(U);
+    auto plaq = measure_plaq(U); // N - Tr Re P_ij
 
     double e2 = 0.0;
     foralldir (d)
         e2 += E[d].squarenorm();
-    e2 /= 2;
+    e2 /= 2; // now e2 = Tr E_i^2
+
+    // total energy ("action") times g^2 a T
+    double energy = e2 + 2.0 * plaq;
 
     Field<Algebra<group>> g;
     get_gauss_violation(U, E, g);
@@ -165,17 +176,16 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     Field<double> chi;
     calc_topoCharge(U, E, chi);
 
-    Reduction<double> chi_total;
-    chi_total.allreduce(true).delayed(true);
+    double chi_avg = 0.0;
     onsites(ALL) 
-         chi_total += chi[X];
+         chi_avg += chi[X];
 
-    double chi_avg = chi_total.value() / lattice->volume();
+    chi_avg /= lattice->volume();
 
     //output0 << "Measure_start " << n << "\n";
     // Print the actual time (in lattice units) instead of just 'n'. Also more precision, needed for long trajectories
     char buf[1024]; 
-    sprintf(buf, "%d %.10g %.8g %.8g %.8g %.8g", trajectory, n*dt, plaq, e2, viol, chi_avg);
+    sprintf(buf, "%d %.10g %.8g %.8g %.8g %.8g %.8g", trajectory, n*dt, plaq, e2, viol, chi_avg, energy);
     if (hila::myrank() == 0) measureFile << std::string(buf) << "\n";
 
     // output0 << "MEAS " << trajectory << ' ' << n*dt << ' ' << plaq << ' ' << e2 << ' ' << viol << ' ' << chi_avg << '\n';
