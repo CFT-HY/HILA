@@ -9,9 +9,12 @@
 #include "datatypes/cmplx.h"
 #include "datatypes/matrix.h"
 #include "datatypes/sun_matrix.h"
+#include "datatypes/u1.h"
+
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
+#include "plumbing/field_io.h"
 #include "plumbing/reduction.h"
 #include "plumbing/vectorreduction.h"
 
@@ -27,5 +30,6 @@
 #include <omp.h>
 #endif
 
+#include "plumbing/random.h"
 
 #endif

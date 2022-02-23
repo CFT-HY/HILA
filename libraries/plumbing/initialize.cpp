@@ -11,9 +11,6 @@ int hila::check_with_nodes;
 const char *hila::input_file;
 logger_class hila::log;
 
-// let us house the sublattices-struct here
-
-sublattices_struct sublattices;
 
 void vector_type_info();
 
@@ -322,69 +319,7 @@ void hila::initialize(int argc, char **argv) {
 #endif
 }
 
-/// Seed random number generators
-/// Seed is shuffled so that different nodes
-/// get different rng seeds.  If seed == 0,
-/// generate seed using the time() -function.
 
-void hila::seed_random(unsigned long seed) {
-
-#ifndef SITERAND
-
-    int n = hila::myrank();
-    if (sublattices.number > 1)
-        n += sublattices.mylattice * hila::number_of_nodes();
-
-    if (seed == 0) {
-        if (hila::myrank() == 0) {
-            seed = time(NULL);
-            seed = seed ^ (seed << 26) ^ (seed << 9);
-            output0 << "Random seed from time " << seed << '\n';
-        }
-        broadcast(seed);
-    }
-    seed += 1121 * n;
-    seed = seed ^ ((511 * n) << 18);
-
-    output0 << "Using node random numbers, seed for node 0: " << seed << '\n';
-
-    seed_mersenne(seed);
-    // warm it up
-    for (int i = 0; i < 90000; i++)
-        mersenne();
-
-#if defined(CUDA) || defined(HIP)
-    double d = mersenne();
-    seed = seed ^ (*(unsigned long *)(void *)&d);
-    hila::seed_device_rng(seed);
-#endif
-
-    // taus_initialize();
-
-#else
-    // Now SITERAND is defined
-    // This is usually used only for occasional benchmarking, where identical output
-    // independent of the node number is desired
-
-    output0 << "*** SITERAND is in use!\n";
-
-    random_seed_arr =
-        (unsigned short(*)[3])memalloc(3 * node.sites * sizeof(unsigned short));
-    forallsites(i) {
-        random_seed_arr[i][0] = (unsigned short)(seed + site[i].index);
-        random_seed_arr[i][1] = (unsigned short)(seed + 2 * site[i].index);
-        random_seed_arr[i][2] = (unsigned short)(seed + 3 * site[i].index);
-    }
-
-    random_seed_ptr = random_seed_arr[0];
-
-#endif
-}
-
-// void deinit_rndgen (void)
-// {
-//     taus_deinit();
-// }
 
 ///////////////////////////////////////////////////////////////
 /// Force quit for multinode processes -- kill all nodes

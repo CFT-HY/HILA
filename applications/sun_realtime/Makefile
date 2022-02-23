@@ -4,7 +4,7 @@
 HILA_DIR := ../..
 
 # Set default goal and arch
-.DEFAULT_GOAL := su3_realtime
+.DEFAULT_GOAL := sun_realtime
 
 ifndef ARCH
 ARCH := vanilla
@@ -17,16 +17,17 @@ include $(HILA_DIR)/libraries/main.mk
 #HILAPP_OPTS += -comment-pragmas
 HILAPP_OPTS += -check-init
 
-APP_OPTS += -DNDIM=3
+## Dimensions and group choice SU(N)
+APP_OPTS += -DNDIM=3 -DNSU=2
 
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
-su3_realtime: build/su3_realtime ; @:
+sun_realtime: build/sun_realtime ; @:
 
 # Now the linking step for each target executable
-build/su3_realtime: Makefile build/su3_realtime.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) -o $@ build/su3_realtime.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
+build/sun_realtime: Makefile build/sun_realtime.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/sun_realtime.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 
 

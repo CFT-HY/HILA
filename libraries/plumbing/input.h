@@ -61,7 +61,7 @@
 ///    whitespace.
 ///
 ///    Recognized types:
-///        int, long, float, double, Complex<float>, Complex<double>,
+///        Any arithmetic type, Complex<float>, Complex<double>,
 ///        std::string, CoordinateVector,
 ///        Vector<n,T>, std::vector<T>     where T is one of the above types
 ///
@@ -86,7 +86,7 @@
 ///
 ///    matches "vec  3,4, 5.5, 7.8, 4"  and returns a vector of double values.
 ///    The numbers are read until they are not followed by a comma.  If comma is
-///    the last caracter on a line, reading continues to the next line.
+///    the last character on the line, reading continues to the next line.
 ///
 ///        Complex<double> phase = f.get("complex phase");
 ///
@@ -269,7 +269,7 @@ class input {
             if (!(get_token(tok) && is_value(tok, val))) {
 
                 if (speaking)
-                    hila::output << "Error: expecting " << type_id<T>() << " after '"
+                    hila::output << "Error: expecting a value of type '" << type_id<T>() << "' after '"
                                  << label << "'\n";
 
                 no_error = false;
@@ -397,11 +397,17 @@ class input {
 
     bool scan_string(std::string &val);
 
-    bool is_value(const std::string &s, int &val);
-    bool is_value(const std::string &s, long &val);
+    template <typename T, std::enable_if_t<std::is_arithmetic<T>::value,int> = 0>
+    bool is_value(const std::string &s, T &val) {
+        std::istringstream ss(s);
+        ss >> val;
+        if (ss.fail() || ss.bad()) 
+            return false;
+        else 
+            return true;
+    }
+
     bool is_value(const std::string &s, std::string &val);
-    bool is_value(const std::string &s, double &val);
-    bool is_value(const std::string &s, float &val);
 
     bool contains_word_list(const std::string &list, int &end_of_key);
 
@@ -419,6 +425,11 @@ class input {
 
 template <> inline const char *input::type_id<int>() { return "int"; }
 template <> inline const char *input::type_id<long>() { return "long"; }
+template <> inline const char *input::type_id<long long>() { return "long long"; }
+template <> inline const char *input::type_id<unsigned int>() { return "unsigned int"; }
+template <> inline const char *input::type_id<unsigned long>() { return "unsigned long"; }
+template <> inline const char *input::type_id<unsigned long long>() { return "unsigned long long"; }
+
 template <> inline const char *input::type_id<float>() { return "float"; }
 template <> inline const char *input::type_id<double>() { return "double"; }
 template <> inline const char *input::type_id<std::string>() { return "string"; }

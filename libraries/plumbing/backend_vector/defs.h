@@ -34,10 +34,7 @@ static_assert( 0 && "EVEN_SITES_FIRST must be defined for vectorized code");
 #define VECTOR_SIZE 32
 #endif
 
-// Define random number generator
 namespace hila {
-
-inline double random() { return mersenne(); }
 
 // Trivial synchronization
 inline void synchronize_threads() {}

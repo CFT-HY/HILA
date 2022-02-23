@@ -154,7 +154,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             // TAKE THIS AWAY FOR NOW -- WE DON'T HAVE A GOOD METHOD TO CHECK "pure
             // output" FUNCTIONS E.g. method   U[X].random(), where U does not have to
             // be initialized
-            // actually, we do now -- the "output_only" keyword
+            // actually, we do now -- the "out_only" keyword
 
             if (cmdline::check_initialization) {
 

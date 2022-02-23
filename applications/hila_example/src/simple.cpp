@@ -1,6 +1,9 @@
 #include "hila.h"
 
+#include <random>
+
 static_assert(NDIM == 3, "NDIM must be 3 here");
+
 
 using MyType = Complex<double>;
 
@@ -12,8 +15,8 @@ int main(int argc, char *argv[]) {
     // set up 32^3 lattice
     lattice->setup({32, 32, 32});
 
-    // Random numbers are used here
-    hila::seed_random(32345);
+    // Random numbers are used here - use time to seed
+    hila::seed_random(0);
 
     // lattice field
     Field<MyType> f;
@@ -21,9 +24,11 @@ int main(int argc, char *argv[]) {
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian_random();
 
+
     // Measure hopping term and f^2
     Complex<double> hopping = 0;
     double fsqr = 0;
+    Field<U1<double>> fu1;
 
     onsites(ALL) {
         foralldir(d) {

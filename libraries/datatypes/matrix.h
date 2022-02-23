@@ -245,7 +245,7 @@ class Matrix_t {
 
     /// assign from 0
 #pragma hila loop_function
-    inline Mtype &operator=(const std::nullptr_t &z) output_only {
+    inline Mtype &operator=(const std::nullptr_t &z) out_only {
         for (int i = 0; i < n * m; i++) {
             c[i] = 0;
         }
@@ -256,7 +256,7 @@ class Matrix_t {
 #pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) output_only {
+    inline Mtype &operator=(const Matrix_t<n, m, S, MT> &rhs) out_only {
         for (int i = 0; i < n * m; i++) {
             c[i] = rhs.c[i];
         }
@@ -267,7 +267,7 @@ class Matrix_t {
 #pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, S>::value && n == m, int> = 0>
-    inline Mtype &operator=(const S rhs) output_only {
+    inline Mtype &operator=(const S rhs) out_only {
 
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
@@ -282,7 +282,7 @@ class Matrix_t {
     /// Assign from initializer list
 #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    inline Mtype &operator=(std::initializer_list<S> rhs) output_only {
+    inline Mtype &operator=(std::initializer_list<S> rhs) out_only {
         assert(rhs.size() == n * m &&
                "Initializer list has a wrong size in assignment");
         int i = 0;
@@ -385,7 +385,7 @@ class Matrix_t {
 
     /// numpy style matrix fill
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    Mtype &fill(const S rhs) output_only {
+    Mtype &fill(const S rhs) out_only {
         for (int i = 0; i < n * m; i++)
             c[i] = rhs;
         return *this;
@@ -476,6 +476,21 @@ class Matrix_t {
         return result;
     }
 
+    /// Multiply this (nxm) matrix with mxn matrix and return trace
+    /// Cheaper than explicit (a*b).trace()
+    template <int p, int q, typename S, typename MT>
+    hila::type_mul<T, S> mul_trace(const Matrix_t<p, q, S, MT> &rm) const {
+
+        static_assert(p == m && q == n, "mul_trace(): argument matrix size mismatch");
+
+        hila::type_mul<T, S> res = 0;
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++) {
+                res += e(i, j) * rm.e(j, i);
+            }
+        return res;
+    }
+
     /// calculate square norm - sum of squared elements
     hila::number_type<T> squarenorm() const {
         hila::number_type<T> result(0);
@@ -516,7 +531,7 @@ class Matrix_t {
     // }
 
     /// Generate random elements
-    Mtype &random() output_only {
+    Mtype &random() out_only {
         for (int i = 0; i < n * m; i++) {
             ::random(c[i]);
         }
@@ -524,9 +539,9 @@ class Matrix_t {
     }
 
     /// Generate gaussian random elements
-    inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) output_only {
+    inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
-            ::gaussian_random(c[i],width);
+            ::gaussian_random(c[i], width);
         }
         return *this;
     }
@@ -569,7 +584,7 @@ namespace hila {
 
 //////////////////////////////////////////////////////////////////////////
 // Tool to get "right" result type for matrix (T1) + (T2) -op, where
-// T1 and T2 are either complex or arithmetic marrices
+// T1 and T2 are either complex or arithmetic matrices
 // Use: hila::mat_x_mat_type<T1,T2>
 //   - T1 == T2 returns T1
 //   - If T1 or T2 contains complex, returns Matrix<rows,cols,Complex<typeof T1+T2>>
@@ -610,11 +625,16 @@ struct matrix_scalar_op_s<Mt, S,
                           typename std::enable_if_t<std::is_convertible<
                               hila::type_plus<hila::underlying_type<Mt>, S>,
                               hila::underlying_type<Mt>>::value>> {
-    using type = Mt;
+    // using type = Mt;
+    using type = typename std::conditional<
+        std::is_floating_point<hila::number_type<Mt>>::value, Mt,
+        Matrix<Mt::rows(), Mt::columns(),
+               hila::type_plus<hila::number_type<Mt>, hila::number_type<S>>>>::type;
 };
 
 template <typename Mt, typename S>
 using mat_scalar_type = typename matrix_scalar_op_s<Mt, S>::type;
+
 
 } // namespace hila
 
@@ -951,8 +971,27 @@ template <typename Mt, typename S,
               (Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
 inline Rt operator/(const Mt &mat, const S &rhs) {
-    return mat * (static_cast<hila::number_type<S>>(1) / rhs);
+    Rt res;
+    for (int i = 0; i < Rt::rows() * Rt::columns(); i++) {
+        res.c[i] = mat.c[i] / rhs;
+    }
+    return res;
 }
+
+
+/// mul_trace(a,b) - multiply matrices a and b and take trace
+template <typename Mtype1, typename Mtype2,
+          std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0>
+inline auto mul_trace(const Mtype1 &a, const Mtype2 &b) {
+
+    static_assert(Mtype1::columns() == Mtype2::rows() &&
+                      Mtype1::rows() == Mtype2::columns(),
+                  "mul_trace(a,b): matrix sizes are not compatible");
+    return a.mul_trace(b);
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+
 
 /// Stream operator
 template <int n, int m, typename T, typename MT>
@@ -1010,13 +1049,13 @@ inline hila::number_type<Mt> norm(const Mt &rhs) {
 
 /// Function that calls random()-method
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
-inline void random(output_only Mt &mat) {
+inline void random(out_only Mt &mat) {
     mat.random();
 }
 
 /// Function that calls the gaussian_random()-method
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
-inline void gaussian_random(output_only Mt &mat, hila::number_type<Mt> width = 1.0) {
+inline void gaussian_random(out_only Mt &mat, hila::number_type<Mt> width = 1.0) {
     mat.gaussian_random(width);
 }
 
@@ -1212,7 +1251,8 @@ Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
 ///  Do it backwards in order to reduce accumulation of errors
 
 template <int n, int m, typename T, typename MT>
-inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int order = 20) {
+inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat,
+                                 const int order = 20) {
     static_assert(n == m, "exp() only for square matrices");
 
     Matrix_t<n, m, T, MT> r;

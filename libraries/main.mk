@@ -61,7 +61,7 @@ HILA_OBJECTS = \
 	build/initialize.o \
 	build/input.o \
 	build/mersenne_inline.o \
-	build/gaussian_random.o \
+	build/random.o \
 	build/lattice.o \
 	build/map_node_layout.o \
 	build/memalloc.o \

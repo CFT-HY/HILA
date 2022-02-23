@@ -176,7 +176,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 ///  - are args site dependent -> function site dependent
 ///  - lvalue args inherit site dependence
 ///  - lvalue field element args are assumed changed
-///  - output_only flagged field elements need not be input
+///  - out_only flagged field elements need not be input
 ///
 /// main_level == true if this is called from "level of the site loop",
 /// if inside functions, false.
@@ -276,21 +276,21 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
             // try this method...
             SourceLocation sl = MD->getNameInfo().getEndLoc();
             // scan parens after name
-            bool output_only = false;
+            bool out_only = false;
             bool const_function = false;
             // llvm::errs() << "METHOD WORD AFTER PARENS " <<
             // getNextWord(skipParens(sl))
             //              << " is const? " << is_const << '\n';
             std::string modifier = getNextWord(skipParens(sl));
-            if (modifier == output_only_keyword) {
-                output_only = true;
+            if (modifier == out_only_keyword) {
+                out_only = true;
             } else if (modifier == const_function_keyword) {
                 const_function = true;
             }
 
-            if (output_only && is_const) {
+            if (out_only && is_const) {
                 reportDiag(DiagnosticsEngine::Level::Error, sl,
-                           "'output_only' cannot be used with 'const'");
+                           "'out_only' cannot be used with 'const'");
                 reportDiag(DiagnosticsEngine::Level::Note,
                            Call->getSourceRange().getBegin(), "Called from here");
             }
@@ -301,7 +301,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
 
             cinfo.is_method = true;
             cinfo.object.E = E;
-            cinfo.object.is_output_only = output_only;
+            cinfo.object.is_out_only = out_only;
             cinfo.object.is_const_function = const_function;
 
             if (is_top_level && is_field_with_X_expr(E)) {
@@ -310,7 +310,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
                 // it compile
                 bool is_assign = !is_const;
                 g_TopLevelVisitor->handle_field_X_expr(
-                    E, is_assign, (!is_const && !output_only), true);
+                    E, is_assign, (!is_const && !out_only), true);
 
                 sitedep = true;
 
@@ -379,14 +379,14 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
 
     // check parameter type
 
-    // check if we have output_only qualifier
+    // check if we have out_only qualifier
     bool out_only = false;
 
     if (pv != nullptr) {
         QualType q = pv->getOriginalType();
 
         if (getPreviousWord(pv->getSourceRange().getBegin().getLocWithOffset(-1)) ==
-            output_only_keyword) {
+            out_only_keyword) {
             out_only = true;
         }
     }
@@ -396,7 +396,7 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
 
     if (!is_lvalue && out_only) {
         reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                   "'output_only' can be used only with lvalue reference");
+                   "'out_only' can be used only with lvalue reference");
     }
 
     if (is_lvalue) {

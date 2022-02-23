@@ -1,0 +1,16 @@
+# This is a parameter file for sun_realtime
+
+lattice size           10, 10, 10
+
+# should be effective 2N/beta
+g^2 Ta                 1    
+dt                     0.02
+trajectory length      750
+number of trajectories 5000
+measurement interval   10
+thermalisation         5
+thermalisation start   500
+
+random seed            0
+
+measurement file	   measure

@@ -768,9 +768,10 @@ srcBuf *get_file_buffer(Rewriter &R, const FileID fid) {
     // System files should not be buffered!  FIle is OK if its name contains /hila/
     // if not found, return nullptr
     // TODO: this sounds pretty fragile!!
-    std::string path = SM.getFileEntryForID(fid)->tryGetRealPathName().str();
-    if (path.find("/hila/") == std::string::npos)
-        return nullptr;
+    // IT IS TOO FRAGILE; COMMENT OUT
+    //std::string path = SM.getFileEntryForID(fid)->tryGetRealPathName().str();
+    //if (path.find("/hila/") == std::string::npos)
+    //    return nullptr;
 
     file_buffer fb;
     fb.fid = fid;

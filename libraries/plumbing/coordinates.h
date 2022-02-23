@@ -210,7 +210,8 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         assert(rhs.size() == NDIM &&
                "CoordinateVector initializer list size does not match");
         int i = 0;
-        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) this->e(i) = *it;
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++)
+            this->e(i) = *it;
     }
 
     /// Construct from 0, using nullptr_t autocast
@@ -283,13 +284,14 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     //   return a;
     // }
 
-    // cast to Vector - make this only explicit.  
+    // cast to Vector - make this only explicit.
     // S can be any type, because int is convertible to it
 
     template <typename S>
     explicit operator Vector<NDIM, S>() {
         Vector<NDIM, S> a;
-        for (int d = 0; d < NDIM; d++) a[d] = this->e(d);
+        for (int d = 0; d < NDIM; d++)
+            a[d] = this->e(d);
         return a;
     }
 
@@ -356,7 +358,8 @@ using CoordinateVector = CoordinateVector_t<int>;
 
 static inline int mod(const int a, const int b) {
     int r = a % b;
-    if (r < 0) r += b;
+    if (r < 0)
+        r += b;
     return r;
 }
 
@@ -374,19 +377,15 @@ inline CoordinateVector_t<T> mod(const CoordinateVector_t<T> &a,
 template <typename T>
 inline CoordinateVector_t<T> operator+(CoordinateVector_t<T> cv1,
                                        const CoordinateVector_t<T> &cv2) {
-    CoordinateVector_t<T> res;
-    foralldir (d)
-        res.c[d] = cv1.c[d] + cv2.c[d];
-    return res;
+    cv1 += cv2;
+    return cv1;
 }
 
 template <typename T>
 inline CoordinateVector_t<T> operator-(CoordinateVector_t<T> cv1,
                                        const CoordinateVector_t<T> &cv2) {
-    CoordinateVector_t<T> res;
-    foralldir (d)
-        res.c[d] = cv1.c[d] - cv2.c[d];
-    return res;
+    cv1 -= cv2;
+    return cv1;
 }
 
 /// Special Direction operators: dir + dir -> CoordinateVector

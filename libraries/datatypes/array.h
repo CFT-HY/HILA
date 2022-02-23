@@ -264,7 +264,7 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// Generate random elements
-    Array<n, m, T> &random() output_only {
+    Array<n, m, T> &random() out_only {
         for (int i = 0; i < n * m; i++) {
             ::random(c[i]);
         }
@@ -272,7 +272,7 @@ template <const int n, const int m, typename T> class Array {
     }
 
     /// Generate gaussian random elements
-    inline Array<n, m, T> &gaussian_random(hila::number_type<T> width = 1.0) output_only {
+    inline Array<n, m, T> &gaussian_random(hila::number_type<T> width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
             ::gaussian_random(c[i], width);
         }
@@ -425,13 +425,13 @@ inline hila::number_type<T> squarenorm(const Array<n, m, T> &rhs) {
 
 /// Function that calls random()-method
 template <int n, int m, typename T>
-inline void random(output_only Array<n, m, T> &mat) {
+inline void random(out_only Array<n, m, T> &mat) {
     mat.random();
 }
 
 /// Function that calls the gaussian_random()-method
 template <int n, int m, typename T>
-inline void gaussian_random(output_only Array<n, m, T> &mat, hila::number_type<T> width = 1.0) {
+inline void gaussian_random(out_only Array<n, m, T> &mat, hila::number_type<T> width = 1.0) {
     mat.gaussian_random(width);
 }
 

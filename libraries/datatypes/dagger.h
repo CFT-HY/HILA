@@ -135,7 +135,7 @@ class DaggerMatrix {
 
     /// numpy style fill
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    DaggerMatrix<n, m, T> &fill(const S rhs) output_only {
+    DaggerMatrix<n, m, T> &fill(const S rhs) out_only {
         for (int i = 0; i < n * m; i++) c[i] = rhs;
         return *this;
     }

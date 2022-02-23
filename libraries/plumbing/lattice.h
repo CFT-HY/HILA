@@ -388,6 +388,21 @@ class lattice_struct {
             reduce_node_sum(&value, 1, distribute);
         return value;
     }
+
+    /// Return the coordinates of a site, where 1st dim (x) runs fastest etc.
+    /// Useful in 
+    ///   for (int64_t i=0; i<lattice->volume(); i++) { 
+    ///      auto c = lattice->global_coordinates(i); 
+
+    CoordinateVector global_coordinates(size_t index) {
+        CoordinateVector site;
+        foralldir (dir) {
+            site[dir] = index % size(dir);
+            index /= size(dir);
+        }
+        return site;
+    }
+
 };
 
 /// global handle to lattice
@@ -396,13 +411,6 @@ extern lattice_struct *lattice;
 // Keep track of defined lattices
 extern std::vector<lattice_struct *> lattices;
 
-/// let us house the sublattices-struct here
-struct sublattices_struct {
-    unsigned number, mylattice;
-    bool sync;
-};
-
-extern sublattices_struct sublattices;
 
 #ifdef VANILLA
 #include "plumbing/backend_cpu/lattice.h"
@@ -411,5 +419,59 @@ extern sublattices_struct sublattices;
 #elif defined(VECTORIZED)
 #include "plumbing/backend_vector/lattice_vector.h"
 #endif
+
+
+//////////////////////////////////////////////////////////////////////
+// Define looping utilities 
+// forallcoordinates(cv)  - loops over coordinates in "natural" order
+// forcoordinaterange(cv, min, max) - loops over a box subvolume in natural order
+// Note - not meant for regular lattice traversal.
+
+#if NDIM == 4
+
+#define forallcoordinates(cv) \
+for (cv[3] = 0; cv[3] < lattice->size(3); cv[3]++) \
+for (cv[2] = 0; cv[2] < lattice->size(2); cv[2]++) \
+for (cv[1] = 0; cv[1] < lattice->size(1); cv[1]++) \
+for (cv[0] = 0; cv[0] < lattice->size(0); cv[0]++) 
+
+#define forcoordinaterange(cv,cmin,cmax) \
+for (cv[3] = cmin[3]; cv[3] <= cmax[3]; cv[3]++) \
+for (cv[2] = cmin[2]; cv[2] <= cmax[2]; cv[2]++) \
+for (cv[1] = cmin[1]; cv[1] <= cmax[1]; cv[1]++) \
+for (cv[0] = cmin[0]; cv[0] <= cmax[0]; cv[0]++) 
+
+#elif NDIM == 3
+
+#define forallcoordinates(cv) \
+for (cv[2] = 0; cv[2] < lattice->size(2); cv[2]++) \
+for (cv[1] = 0; cv[1] < lattice->size(1); cv[1]++) \
+for (cv[0] = 0; cv[0] < lattice->size(0); cv[0]++) 
+
+#define forcoordinaterange(cv,cmin,cmax) \
+for (cv[2] = cmin[2]; cv[2] <= cmax[2]; cv[2]++) \
+for (cv[1] = cmin[1]; cv[1] <= cmax[1]; cv[1]++) \
+for (cv[0] = cmin[0]; cv[0] <= cmax[0]; cv[0]++) 
+
+#elif NDIM == 2
+
+#define forallcoordinates(cv) \
+for (cv[1] = 0; cv[1] < lattice->size(1); cv[1]++) \
+for (cv[0] = 0; cv[0] < lattice->size(0); cv[0]++) 
+
+#define forcoordinaterange(cv,cmin,cmax) \
+for (cv[1] = cmin[1]; cv[1] <= cmax[1]; cv[1]++) \
+for (cv[0] = cmin[0]; cv[0] <= cmax[0]; cv[0]++) 
+
+#elif NDIM == 1
+
+#define forallcoordinates(cv) \
+for (cv[0] = 0; cv[0] < lattice->size(0); cv[0]++) 
+
+#define forcoordinaterange(cv,cmin,cmax) \
+for (cv[0] = cmin[0]; cv[0] <= cmax[0]; cv[0]++) 
+
+#endif
+
 
 #endif

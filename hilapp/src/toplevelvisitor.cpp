@@ -390,8 +390,13 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
                                             bool &is_assign, std::string &assignop) {
 
     if (ref.DRE == nullptr) {
-        llvm::errs()
-            << "hilapp internal error: bracket_var_ref type unknown, ignoring...\n";
+
+        reportDiag(DiagnosticsEngine::Level::Warning,
+                   ref.E->getSourceRange().getBegin(),
+                   "array brackets '[]' applied to a non-variable, and hilapp does not "
+                   "(yet) have logic to analyse this."
+                   " Fingers crossed ...");
+
         return 0;
     }
 
@@ -408,9 +413,10 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     VarDecl *vd;
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ref.DRE);
     if (DRE == nullptr) {
-        llvm::errs()
-            << "hilapp error: array refs to member variables not yet implemented\n";
+        llvm::errs() << "hilapp error: array refs to member variables not yet "
+                        "implemented - probably does not work\n";
         llvm::errs() << "Expression: " << get_stmt_str(ref.E) << '\n';
+        return 0;
     }
     vd = dyn_cast<VarDecl>(DRE->getDecl());
 
@@ -1365,13 +1371,14 @@ bool TopLevelVisitor::check_field_ref_list() {
                         found_error = true;
 
                     } else if (loop_info.parity_value == Parity::none) {
-                        reportDiag(
-                            DiagnosticsEngine::Level::Remark,
-                            p->parityExpr->getSourceRange().getBegin(),
-                            "Simultaneous access '%0' and assignment to '%1' is allowed "
-                            "only when parity %2 is EVEN or ODD.  Inserting assertion to ensure that",
-                            get_stmt_str(p->fullExpr).c_str(), l.old_name.c_str(),
-                            loop_info.parity_text.c_str());
+                        reportDiag(DiagnosticsEngine::Level::Remark,
+                                   p->parityExpr->getSourceRange().getBegin(),
+                                   "Simultaneous access '%0' and assignment to '%1' is "
+                                   "allowed "
+                                   "only when parity %2 is EVEN or ODD.  Inserting "
+                                   "assertion to ensure that",
+                                   get_stmt_str(p->fullExpr).c_str(),
+                                   l.old_name.c_str(), loop_info.parity_text.c_str());
                         found_error = true;
                     }
                 }
@@ -2055,7 +2062,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     // cannot rely on getReturnTypeSourceRange() for methods.  Let us not even try,
     // change the whole method here
 
-    bool is_templated =
+    bool is_templated_func =
         (f->getTemplatedKind() ==
          FunctionDecl::TemplatedKind::TK_FunctionTemplateSpecialization);
 
@@ -2063,7 +2070,7 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     std::string template_args = "";
     std::vector<const TemplateArgument *> typeargs = {};
 
-    if (is_templated) {
+    if (is_templated_func) {
         // Get here the template param->arg mapping for func template
         auto tal = f->getTemplateSpecializationArgs();
         auto tpl = f->getPrimaryTemplate()->getTemplateParameters();
@@ -2072,6 +2079,11 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
 
         make_mapping_lists(tpl, *tal, par, arg, typeargs, &template_args);
         ntemplates = 1;
+
+        // SourceLocation sl = f->getPointOfInstantiation();
+        // llvm::errs() << "Function " << f->getNameAsString() << " instantiated line "
+        //              << srcMgr.getSpellingLineNumber(sl) << " file "
+        //              << srcMgr.getFilename(f->getBeginLoc()) << '\n';
     }
 
     // Get template mapping for classes
@@ -2093,11 +2105,20 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
             // '\n';
 
             SourceRange sr = pvd->getDefaultArgRange();
+            // if default arg is macro, need to read the immediate range
+            if (sr.getBegin().isMacroID()) {
+                CharSourceRange CSR =
+                    TheRewriter.getSourceMgr().getImmediateExpansionRange(
+                        sr.getBegin());
+                sr = CSR.getAsRange();
+            }
+
             SourceLocation b = sr.getBegin();
             SourceLocation m = pvd->getSourceRange().getBegin();
 
-            while (funcBuf.get(b, 1) != "=" && b > m)
+            while (funcBuf.get(b, 1) != "=" && b > m) {
                 b = b.getLocWithOffset(-1);
+            }
 
             sr.setBegin(b);
             funcBuf.remove(sr);
@@ -2459,6 +2480,10 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
                            "might not compile",
                            f->getQualifiedNameAsString().c_str(),
                            tap->getAsType().getAsString().c_str());
+
+                // try to move the insertion point - fails, TODO: more carefully!
+                // ip =
+                // getRangeWithSemicolon(rd->getSourceRange()).getEnd().getLocWithOffset(1);
             }
         }
     }
@@ -2542,7 +2567,7 @@ void TopLevelVisitor::make_mapping_lists(
 #if LLVM_VERSION_MAJOR < 13
             arg.push_back(tal.get(i).getAsIntegral().toString(10));
 #else
-            arg.push_back(llvm::toString(tal.get(i).getAsIntegral(),10));
+            arg.push_back(llvm::toString(tal.get(i).getAsIntegral(), 10));
 #endif
 
             par.push_back(tpl->getParam(i)->getNameAsString());

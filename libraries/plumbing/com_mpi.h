@@ -7,6 +7,15 @@
 
 #include "plumbing/lattice.h"
 
+/// let us house the sublattices-struct here
+struct sublattices_struct {
+    unsigned number, mylattice;
+    bool sync;
+};
+
+extern sublattices_struct sublattices;
+
+
 extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
     wait_receive_timer, synchronize_timer, reduction_timer, reduction_wait_timer,
     broadcast_timer, send_timer, cancel_send_timer, cancel_receive_timer,
@@ -16,7 +25,7 @@ extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
 /// Implementations of communication routines.
 ///
 
-// and the MPI tag generator
+// The MPI tag generator
 int get_next_msg_tag();
 
 
@@ -59,7 +68,9 @@ void broadcast(std::vector<T> &list) {
 
 template <typename T>
 void broadcast(T *var) {
-    static_assert(sizeof(T) > 0 && "Do not use pointers to broadcast()-function");
+    static_assert(sizeof(T) > 0 &&
+                  "Do not use pointers to broadcast()-function. Use 'broadcast(T* arr, "
+                  "int size)' to broadcast an array");
 }
 
 /// Broadcast for arrays where size must be known and same for all nodes
