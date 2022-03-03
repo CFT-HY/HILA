@@ -7,7 +7,7 @@
 
 $(info ########################################################################)
 $(info Target mahti-AVX2: remember to )
-$(info   module load cuda gcc/9.3.0 openmpi/4.0.3 amdfftw/2.2-mpi)
+$(info   module load module load gcc/10.3.0 openmpi/4.1.0 fftw)
 $(info ########################################################################)
 
 ### Define compiler and options
