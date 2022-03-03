@@ -82,21 +82,56 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
         return *this;
     }
 
-    /// multiply matrix row/col i,j by SU2 "subgroup" from left
-    void mult_by_SU2_left(int r, int q, const SUmatrix<2,T> & m) {
+    /// multiply matrix rows i,j by SU2 "subgroup" from left
+    void mult_by_SU2_left(int r, int q, const SUmatrix<2, T> &m) {
         // copy 2xN matrix
-        Vector<2,Complex<T>> a;
-        for (int i=0; i<N; i++) {
-            a.e(0) = this->e(r,i);
-            a.e(1) = this->e(q,i);
+        Vector<2, Complex<T>> a;
+        for (int i = 0; i < N; i++) {
+            a.e(0) = this->e(r, i);
+            a.e(1) = this->e(q, i);
 
             a = m * a;
 
-            this->e(r,i) = a.e(0);
-            this->e(q,i) = a.e(1);
+            this->e(r, i) = a.e(0);
+            this->e(q, i) = a.e(1);
         }
     }
 
+    SUmatrix &random(int nhits = 16) out_only {
+
+        // use Pauli matrix representation to generate SU(2) random matrix
+        if constexpr (N == 2) {
+            Vector<4, T> v;
+            v.gaussian_random();
+            v /= v.norm();
+            this->e(0, 0) = Complex<T>(v[0], v[3]);
+            this->e(1, 1) = Complex<T>(v[0], -v[3]);
+            this->e(0, 1) = Complex<T>(v[2], v[1]);
+            this->e(1, 0) = Complex<T>(-v[2], v[1]);
+
+        } else {
+
+            *this = 1;
+            SUmatrix<2, T> m2;
+
+            for (int h = 1; h <= nhits; h++) {
+                for (int r = 0; r < N - 1; r++)
+                    for (int q = r + 1; q < N; q++) {
+                        m2.random();
+                        this->mult_by_SU2_left(r, q, m2);
+                    }
+
+                // keep it SU(N)
+                if (h % 16 == 0) {
+                    this->reunitarize();
+                }
+            }
+            if (nhits % 16 != 0)
+                this->reunitarize();
+        }
+
+        return *this;
+    }
 
 
     /// Project matrix to antihermitean and traceless algebra
@@ -145,9 +180,9 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
         int k = a.n_diag;
         for (int i = 0; i < N - 1; i++) {
             for (int j = i + 1; j < N; j++) {
-                auto od = this->e(i,j) - this->e(j,i).conj();
+                auto od = this->e(i, j) - this->e(j, i).conj();
                 a.e(k) = od.re;
-                a.e(k+1) = od.im;
+                a.e(k + 1) = od.im;
                 k += 2;
             }
         }
@@ -161,7 +196,8 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
 /// Derive from (real) Vector of N*N-1 elements
 
 template <int N, typename T>
-class Algebra<SUmatrix<N, T>> : public Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix<N,T>>> {
+class Algebra<SUmatrix<N, T>>
+    : public Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>> {
   public:
     // std incantation for field types
     using base_type = hila::number_type<T>;
@@ -174,12 +210,12 @@ class Algebra<SUmatrix<N, T>> : public Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix
     static constexpr int N_a = N * N - 1;
 
     /// std constructors and operators derived from vector
-    using Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix<N,T>>>::Matrix_t;
-    using Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix<N,T>>>::operator=;
-    using Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix<N,T>>>::operator+=;
-    using Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix<N,T>>>::operator-=;
-    using Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix<N,T>>>::operator*=;
-    using Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix<N,T>>>::operator/=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::Matrix_t;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator+=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator-=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator*=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator/=;
 
     // suN generators, normalized as
     //  Tr(\lambda_i\lambda_j) = 1/2 \delta_ij
@@ -233,13 +269,13 @@ class Algebra<SUmatrix<N, T>> : public Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix
 
     /// Produce gaussian random distributed algebra
     /// element.
-    /// Set default normalisation so that the algebra matrix 
+    /// Set default normalisation so that the algebra matrix
     ///    ah = i h = i xi_i \lambda_i
     /// is from distribution
     ///   exp(-Tr h^2 ) = exp(- xi_i^2 / 2 )
-    /// I.E. the coefficients of the generators have 
+    /// I.E. the coefficients of the generators have
     ///   < xi_i^2 > = 1
-    /// 
+    ///
     /// Now the off-diag elements have
     ///   <|od|^2> = 1/2 = <od.re^2> + <od.im^2> = 1/4 + 1/4
     ///   1/4 (<xi_a^2> + <xi_b^2>)
@@ -255,7 +291,6 @@ class Algebra<SUmatrix<N, T>> : public Matrix_t<N * N - 1, 1, T,Algebra<SUmatrix
     //
     //     return *this;
     // }
-
 };
 
 template <int N, typename T>

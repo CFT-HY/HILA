@@ -1539,6 +1539,7 @@ void Field<T>::get_elements(T *elements,
         std::vector<int> indexes;
         std::vector<CoordinateVector> coords;
     };
+
     std::vector<node_site_list_struct> nodelist(lattice->n_nodes());
     // Reorganize the list according to nodes
     for (int i = 0; i < coord_list.size(); i++) {
