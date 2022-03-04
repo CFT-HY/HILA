@@ -540,8 +540,21 @@ class Matrix_t {
 
     /// Generate gaussian random elements
     inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) out_only {
-        for (int i = 0; i < n * m; i++) {
-            ::gaussian_random(c[i], width);
+        // for Complex numbers gaussian_random fills re and im efficiently
+        if constexpr (hila::is_complex<T>::value) {
+            for (int i = 0; i < n * m; i++) {
+                c[i].gaussian_random(width);
+            }
+        } else {
+            // now not complex matrix
+            T gr;
+            for (int i = 0; i < n * m; i += 2) {
+                c[i] = hila::gaussrand2(gr) * width;
+                c[i + 1] = gr * width;
+            }
+            if ((n * m) % 2 > 0) {
+                c[n * m - 1] = hila::gaussrand() * width;
+            }
         }
         return *this;
     }

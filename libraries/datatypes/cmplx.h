@@ -429,15 +429,14 @@ inline auto squarenorm(const Complex<T> &val) {
 
 /// random() : set argument to random vals [0,1]
 template <typename T>
-inline void random(Complex<T> &c) {
+inline void random(out_only Complex<T> &c) {
     ::random(c.re);
     ::random(c.im);
 }
 
 template <typename T>
-inline void gaussian_random(Complex<T> &c, hila::number_type<T> width = 1.0) {
-    gaussian_random(c.re, width);
-    gaussian_random(c.im, width);
+inline void gaussian_random(out_only Complex<T> &c, hila::number_type<T> width = 1.0) {
+    c.gaussian_random(width);
 }
 
 //////////////////////////////////////////////////////////////////////////////////
