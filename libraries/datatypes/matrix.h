@@ -188,6 +188,7 @@ class Matrix_t {
         return c[i];
     }
 
+    /// get row of a matrix
     HorizontalVector<m, T> row(int r) const {
         HorizontalVector<m, T> v;
         for (int i = 0; i < m; i++)
@@ -195,11 +196,24 @@ class Matrix_t {
         return v;
     }
 
+    /// get column of a matrix
     Vector<n, T> column(int c) const {
         Vector<n, T> v;
         for (int i = 0; i < n; i++)
             v[i] = e(i, c);
         return v;
+    }
+
+    /// set row of a matrix
+    void set_row(int r, const HorizontalVector<m,T> &v) {
+        for (int i = 0; i < m; i++)
+            e(r,i) = v[i];
+    }
+
+    /// set column of a matrix
+    void set_column(int c, const Vector<n,T> & v) {
+        for (int i = 0; i < n; i++)
+            e(i,c) = v[i];
     }
 
     /// interpret Matrix as Array -  for array ops
