@@ -16,8 +16,8 @@ s1                  0.0
 s2                  0.0
 smooth              0
 tdis                0
-dampHg              0
 dampAx              0
+dampHg              0
 initialCondition    3
 PhiLength           10.0
 tStats              50.0
