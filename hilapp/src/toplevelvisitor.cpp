@@ -1404,7 +1404,7 @@ bool TopLevelVisitor::check_field_ref_list() {
 
 void TopLevelVisitor::check_var_info_list() {
     for (var_info &vi : var_info_list) {
-        if (!vi.is_loop_local) {
+        if (!vi.is_loop_local && !vi.is_raw) {
             if (vi.reduction_type != reduction::NONE) {
                 if (vi.refs.size() > 1) {
                     // reduction only once
@@ -2224,7 +2224,10 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
         sb << "\n\n// ++++++++ hilapp generated function/method specialization\n"
            << funcBuf.dump() << "\n// ++++++++\n\n";
 
-        toplevelBuf->insert(findChar(insertion_point, '\n'), sb.str(), false, true);
+        // buffer is not necessarily in toplevelBuf, so:
+
+        srcBuf *filebuf = get_file_srcBuf(insertion_point);
+        filebuf->insert(findChar(insertion_point, '\n'), sb.str(), false, true);
     } else {
         // Now the function has been written before (and not inline)
         // just insert declaration, defined on another compilation unit
