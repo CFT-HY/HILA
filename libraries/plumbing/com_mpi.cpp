@@ -230,12 +230,6 @@ void broadcast(std::vector<std::string> &list) {
 
 /* BASIC COMMUNICATIONS FUNCTIONS */
 
-/* Tell what kind of machine we are on */
-static char name[] = "MPI (portable)";
-char *machine_type() {
-    return (name);
-}
-
 /// Return my node number - take care to return
 /// the previous node number if mpi is being
 /// torn down (used in destructors)
