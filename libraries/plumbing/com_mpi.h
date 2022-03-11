@@ -109,29 +109,32 @@ void broadcast(T &t, U &u) {
 // try to get the basic data type of the message
 // this is just to enable a bit larger messages
 template <typename T>
-MPI_Datatype get_MPI_number_type(int &size) {
+MPI_Datatype get_MPI_number_type(int &size, bool with_int = false) {
 
     if (std::is_same<hila::number_type<T>, int>::value) {
         size = sizeof(int);
-        return MPI_INT;
+        return with_int ? MPI_2INT : MPI_INT;
     } else if (std::is_same<hila::number_type<T>, unsigned>::value) {
         size = sizeof(unsigned);
-        return MPI_UNSIGNED;
+        return with_int ? MPI_2INT : MPI_UNSIGNED;  // MPI does not contain MPI_UNSIGNED_INT
+    } else if (std::is_same<hila::number_type<T>, long>::value) {
+        size = sizeof(long);
+        return with_int ? MPI_LONG_INT : MPI_LONG;
     } else if (std::is_same<hila::number_type<T>, int64_t>::value) {
         size = sizeof(int64_t);
-        return MPI_INT64_T;
+        return with_int ? MPI_LONG_INT : MPI_INT64_T;   // need to use LONG_INT 
     } else if (std::is_same<hila::number_type<T>, uint64_t>::value) {
         size = sizeof(uint64_t);
-        return MPI_UINT64_T;
+        return with_int ? MPI_LONG_INT : MPI_UINT64_T;  // ditto
     } else if (std::is_same<hila::number_type<T>, float>::value) {
         size = sizeof(float);
-        return MPI_FLOAT;
+        return with_int ? MPI_FLOAT_INT : MPI_FLOAT;
     } else if (std::is_same<hila::number_type<T>, double>::value) {
         size = sizeof(double);
-        return MPI_DOUBLE;
+        return with_int ? MPI_DOUBLE_INT : MPI_DOUBLE;
     } else if (std::is_same<hila::number_type<T>, long double>::value) {
         size = sizeof(long double);
-        return MPI_LONG_DOUBLE;
+        return with_int ? MPI_LONG_DOUBLE_INT : MPI_LONG_DOUBLE;
     }
 
     size = 1;

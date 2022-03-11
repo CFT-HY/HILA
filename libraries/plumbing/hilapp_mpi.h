@@ -24,10 +24,15 @@ enum MPI_Datatype : int {
     MPI_UNSIGNED,
     MPI_UNSIGNED_LONG,
     MPI_INT64_T,
-    MPI_UINT64_T
+    MPI_UINT64_T,
+    MPI_2INT,
+    MPI_LONG_INT,
+    MPI_FLOAT_INT,
+    MPI_DOUBLE_INT,
+    MPI_LONG_DOUBLE_INT
 };
 
-enum MPI_Op : int { MPI_SUM, MPI_PROD, MPI_MAX, MPI_MIN };
+enum MPI_Op : int { MPI_SUM, MPI_PROD, MPI_MAX, MPI_MIN, MPI_MAXLOC, MPI_MINLOC };
 
 typedef void *MPI_Comm;
 typedef void *MPI_Request;
