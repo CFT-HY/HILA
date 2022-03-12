@@ -320,25 +320,26 @@ T Field<T>::reduce_sum(bool allreduce) const {
 // get global minimum/maximums - meant to be used through .min() and .max()
 
 template <typename T>
-T Field<T>::minmax(bool is_min, CoordinateVector &loc) const {
+T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
-    static_assert(std::is_same<T, int>::value || std::is_same<T, long>::value ||
-                      std::is_same<T, float>::value || std::is_same<T, double>::value ||
-                      std::is_same<T, long double>::value,
-                  "In Field .min() and .max() methods the Field element type must be one of "
-                  "(int/long/float/double/long double)");
+    static_assert(
+        std::is_same<T, int>::value || std::is_same<T, long>::value ||
+            std::is_same<T, float>::value || std::is_same<T, double>::value ||
+            std::is_same<T, long double>::value,
+        "In Field .min() and .max() methods the Field element type must be one of "
+        "(int/long/float/double/long double)");
 
     // initialize with the node min coordinate and value
-    loc = lattice->mynode.min;
-    T val = this->get_value_at(lattice->site_index(loc));
-
+    T val;
+    bool first = true;
     int sgn = is_min ? 1 : -1;
 
-#pragma hila novector direct_access(loc, val)
-    onsites (ALL) {
-        if (sgn*(*this)[X] < sgn*val) {
+#pragma hila novector direct_access(loc, val, first)
+    onsites (par) {
+        if (first || sgn * (*this)[X] < sgn * val) {
             val = (*this)[X];
             loc = X.coordinates();
+            first = false;
         }
     }
 
@@ -355,46 +356,61 @@ T Field<T>::minmax(bool is_min, CoordinateVector &loc) const {
 
         // after allreduce rdata contains the min value and rank where it is
         if (is_min) {
-            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MINLOC, lattice->mpi_comm_lat);
+            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MINLOC,
+                          lattice->mpi_comm_lat);
         } else {
-            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MAXLOC, lattice->mpi_comm_lat);
+            MPI_Allreduce(MPI_IN_PLACE, &rdata, 1, dtype, MPI_MAXLOC,
+                          lattice->mpi_comm_lat);
         }
         val = rdata.v;
 
         // send the coordinatevector of the minloc to all nodes
-        MPI_Bcast(&loc,sizeof(CoordinateVector),MPI_BYTE,rdata.rank,lattice->mpi_comm_lat);
-
+        MPI_Bcast(&loc, sizeof(CoordinateVector), MPI_BYTE, rdata.rank,
+                  lattice->mpi_comm_lat);
     }
 
     return val;
 }
 
-/// Find minimum value and location from Field
-template <typename T>
-T Field<T>::min(CoordinateVector &loc) const {
-    return minmax(true,loc);
-}
 
 /// Find minimum value from Field
 template <typename T>
-T Field<T>::min() const {
+T Field<T>::min(Parity par) const {
     CoordinateVector loc;
-    return minmax(true,loc);
+    return minmax(true, par, loc);
+}
+
+/// Find minimum value and location from Field
+template <typename T>
+T Field<T>::min(CoordinateVector &loc) const {
+    return minmax(true, ALL, loc);
+}
+
+/// Find minimum value and location from Field
+template <typename T>
+T Field<T>::min(Parity par, CoordinateVector &loc) const {
+    return minmax(true, par, loc);
+}
+
+
+/// Find maximum value from Field
+template <typename T>
+T Field<T>::max(Parity par) const {
+    CoordinateVector loc;
+    return minmax(false, par, loc);
 }
 
 /// Find maximum value and location from Field
 template <typename T>
 T Field<T>::max(CoordinateVector &loc) const {
-    return minmax(false,loc);
+    return minmax(false, ALL, loc);
 }
 
-/// Find maximum value from Field
+/// Find maximum value and location from Field
 template <typename T>
-T Field<T>::max() const {
-    CoordinateVector loc;
-    return minmax(false,loc);
+T Field<T>::max(Parity par, CoordinateVector &loc) const {
+    return minmax(false, ALL, loc);
 }
-
 
 
 #endif // not gpu

@@ -844,11 +844,13 @@ class Field {
     T gpu_reduce_sum(bool allreduce = true, Parity par = Parity::all,
                      bool do_mpi = true) const;
 
-    T min() const;
+    T min(Parity par = ALL) const;
     T min(CoordinateVector &loc) const;
-    T max() const;
+    T min(Parity par, CoordinateVector &loc) const;
+    T max(Parity par = ALL) const;
     T max(CoordinateVector &loc) const;
-    T minmax(bool is_min, CoordinateVector &loc) const;
+    T max(Parity par, CoordinateVector &loc) const;
+    T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
 
 }; // End of class Field<>
 
