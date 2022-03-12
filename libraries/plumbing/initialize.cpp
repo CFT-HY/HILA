@@ -4,6 +4,7 @@
 
 // define these global var here - somehow NULL needed for ostream
 std::ostream hila::output(NULL);
+std::ostream output0(NULL);
 std::ofstream hila::output_file;
 bool hila::about_to_finish = false;
 bool hila::check_input = false;
@@ -182,6 +183,11 @@ void hila::initialize(int argc, char **argv) {
     // initialize MPI so that hila::myrank() etc. works
     initialize_communications(argc, &argv);
 
+    // open output0 only for node 0
+    if (hila::myrank() == 0)
+        output0.rdbuf(std::cout.rdbuf());
+
+
     // Init command line - after MPI has been started, so
     // that all nodes do this
     cmdlineargs commandline(argc, argv);
@@ -234,6 +240,9 @@ void hila::initialize(int argc, char **argv) {
                         hila::output.rdbuf(
                             hila::output_file
                                 .rdbuf()); // output now points to output_redirect
+
+                        if (hila::myrank() == 0)
+                            output0.rdbuf(hila::output.rdbuf());
                     }
                 }
             }
@@ -294,7 +303,7 @@ void hila::initialize(int argc, char **argv) {
     // error out if there are more cmdline options
     commandline.error_if_args_remain();
 
-#if defined(OPENMP) 
+#if defined(OPENMP)
     output0 << "Using option OPENMP - with " << omp_get_max_threads() << " threads\n";
 #endif
 
@@ -318,7 +327,6 @@ void hila::initialize(int argc, char **argv) {
                "memory\n";
 #endif
 }
-
 
 
 ///////////////////////////////////////////////////////////////
@@ -456,15 +464,17 @@ void setup_sublattices(cmdlineargs &commandline) {
     output0 << " Dividing nodes into " << sublattices.number << " sublattices\n";
 
     if (hila::number_of_nodes() % sublattices.number) {
-        output0 << "** " << hila::number_of_nodes() << " nodes not evenly divisible into "
-                << sublattices.number << " sublattices\n";
+        output0 << "** " << hila::number_of_nodes()
+                << " nodes not evenly divisible into " << sublattices.number
+                << " sublattices\n";
         hila::finishrun();
     }
 
 #if defined(BLUEGENE_LAYOUT)
     sublattices.mylattice = bg_layout_sublattices(sublattices.number);
 #else // generic
-    sublattices.mylattice = (hila::myrank() * sublattices.number) / hila::number_of_nodes();
+    sublattices.mylattice =
+        (hila::myrank() * sublattices.number) / hila::number_of_nodes();
     /* and divide system into sublattices */
     if (!hila::check_input)
         split_into_sublattices(sublattices.mylattice);
@@ -496,16 +506,18 @@ void setup_sublattices(cmdlineargs &commandline) {
     if (do_exit)
         hila::finishrun();
 
-    if (hila::myrank() == 0) {
-        hila::output.flush();
-        if (!hila::check_input) {
-            hila::output.rdbuf(hila::output_file.rdbuf());
-            // output now points to output_redirect
+    hila::output.flush();
+    if (!hila::check_input) {
+        hila::output.rdbuf(hila::output_file.rdbuf());
+        // output now points to output_redirect
+        if (hila::myrank() == 0) {
+            output0.rdbuf(hila::output.rdbuf());
         }
-        hila::output << " ---- SPLIT " << hila::number_of_nodes() << " nodes into "
-                     << sublattices.number << " sublattices, this "
-                     << sublattices.mylattice << " ----\n";
     }
+    output0 << " ---- SPLIT " << hila::number_of_nodes() << " nodes into "
+            << sublattices.number << " sublattices, this " << sublattices.mylattice
+            << " ----\n";
+
 
     /* Default sync is no */
     if (commandline.get_onoff("-sync") == 1) {

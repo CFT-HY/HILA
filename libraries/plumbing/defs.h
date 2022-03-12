@@ -79,10 +79,14 @@
 
 
 // text output section -- defines also output0, which writes from node 0 only
+
+extern std::ostream output0;
 namespace hila {
 
 /// this is our default output file stream
 extern std::ostream output;
+/// output stream only from node 0
+//extern std::ostream output0;
 /// this is just a hook to store output file, if it is in use
 extern std::ofstream output_file;
 
@@ -121,24 +125,6 @@ namespace hila {
 /// Now declare the logger
 extern logger_class log;
 } // namespace hila
-
-/// We want to define ostream
-///     "output0 << stuff;"
-/// which is done only by rank 0.
-/// This is hacky but easy.  Probably should be done without #define.
-/// Do this through else-branch in order to avoid if-statement problems.
-/// #define output0 if (hila::myrank() != 0) {} else hila::output
-///
-/// Above #define can trigger "dangling-else" warning.  Let us
-/// try to avoid it with the following a bit more ugly trick:
-#define output0                                                                        \
-    for (int _dummy_i_ = 1; hila::myrank() == 0 && _dummy_i_; --_dummy_i_)             \
-    hila::output
-
-// The following disables the "dangling-else" warning, but not needed now
-//#if defined(__clang__) || defined(__GNUC__)
-//#pragma GCC diagnostic ignored "-Wdangling-else"
-//#endif
 
 /// define a class for FFT direction
 enum class fft_direction { forward, back };

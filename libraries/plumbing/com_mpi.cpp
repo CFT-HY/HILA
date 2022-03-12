@@ -157,7 +157,8 @@ void initialize_communications(int &argc, char ***argv) {
         int provided;
         MPI_Init_thread(&argc, argv, MPI_THREAD_FUNNELED, &provided);
         if (provided < MPI_THREAD_FUNNELED) {
-            output0 << "MPI could not provide MPI_THREAD_FUNNELED, exiting\n";
+            if (hila::myrank() == 0) 
+                hila::output << "MPI could not provide MPI_THREAD_FUNNELED, exiting\n";
             MPI_Finalize();
             exit(1);
         }
