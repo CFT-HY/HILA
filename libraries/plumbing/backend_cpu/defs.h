@@ -20,6 +20,9 @@ struct is_arithmetic : std::integral_constant<bool, std::is_arithmetic<T>::value
 template <class T, class U>
 struct is_assignable : std::integral_constant<bool, std::is_assignable<T, U>::value> {};
 
+template <class T>
+struct is_floating_point : std::integral_constant<bool, std::is_floating_point<T>::value> {};
+
 } // namespace hila
 
 #endif

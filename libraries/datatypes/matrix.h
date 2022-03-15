@@ -656,7 +656,7 @@ struct matrix_scalar_op_s<Mt, S,
                               hila::underlying_type<Mt>>::value>> {
     // using type = Mt;
     using type = typename std::conditional<
-        std::is_floating_point<hila::number_type<Mt>>::value, Mt,
+        hila::is_floating_point<hila::number_type<Mt>>::value, Mt,
         Matrix<Mt::rows(), Mt::columns(),
                hila::type_plus<hila::number_type<Mt>, hila::number_type<S>>>>::type;
 };

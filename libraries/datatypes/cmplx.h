@@ -9,17 +9,17 @@
 
 /// TEMPORARY location for vector intrinsic analogues -- result obvious
 
-template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T mul_add(T a, T b, T c) {
     return a * b + c;
 }
 
-template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T mul_sub(T a, T b, T c) {
     return a * b - c;
 }
 
-template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T nmul_add(T a, T b, T c) {
     return c - a * b;
 }
@@ -107,7 +107,7 @@ struct Complex {
         return *this;
     }
 
-    template <typename S, std::enable_if_t<std::is_arithmetic<S>::value, int> = 0>
+    template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     inline Complex<T> &operator=(S s) {
         re = s;
         im = 0;
@@ -229,6 +229,7 @@ struct Complex {
         return *this;
     }
 
+    
     template <typename A = T, std::enable_if_t<!std::is_arithmetic<A>::value, int> = 0>
     std::string str() const {
         std::string text = "(" + re.str() + "," + im.str() + ")";
@@ -342,8 +343,8 @@ inline Complex<T> operator*(const Complex<T> &c, const A &a) {
 
 template <typename T, typename A,
           std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
-inline Complex<T> operator*(const A &a, const Complex<T> &c) {
-    return Complex<T>(a * c.re, a * c.im);
+inline Complex<hila::type_mul<A,T>> operator*(const A &a, const Complex<T> &c) {
+    return Complex<hila::type_mul<A,T>>(a * c.re, a * c.im);
 }
 
 // /   a/b = ab*/|b|^2

@@ -26,7 +26,7 @@ template <class C, class A = void> class has_unary_minus {
 /// specialize to elementary arithmetic types
 
 template <typename T>
-class has_unary_minus<T, typename std::enable_if_t<std::is_arithmetic<T>::value>> {
+class has_unary_minus<T, typename std::enable_if_t<hila::is_arithmetic<T>::value>> {
   public:
     static const bool value = true;
 };
