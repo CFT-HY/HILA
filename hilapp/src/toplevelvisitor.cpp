@@ -2101,27 +2101,35 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
     for (unsigned i = 0; i < f->getNumParams(); i++) {
         ParmVarDecl *pvd = f->getParamDecl(i);
         if (pvd->hasDefaultArg() && !pvd->hasInheritedDefaultArg()) {
-            // llvm::errs() << "Default arg! " << get_stmt_str(pvd->getDefaultArg()) <<
-            // '\n';
+            // llvm::errs() << "Default arg! " << get_stmt_str(pvd->getDefaultArg())
+            //              << " func " << f->getNameAsString() << '\n';
 
             SourceRange sr = pvd->getDefaultArgRange();
-            // if default arg is macro, need to read the immediate range
-            if (sr.getBegin().isMacroID()) {
-                CharSourceRange CSR =
-                    TheRewriter.getSourceMgr().getImmediateExpansionRange(
-                        sr.getBegin());
-                sr = CSR.getAsRange();
+
+            // If there is a prototype, and the def. parameter is there, it is before in
+            // translationunit and nothing needs to be done
+            if (srcMgr.isBeforeInTranslationUnit(f->getSourceRange().getBegin(), sr.getBegin())) {
+
+                // funcBuf.dump();
+
+                // if default arg is macro, need to read the immediate range
+                if (sr.getBegin().isMacroID()) {
+                    CharSourceRange CSR =
+                        TheRewriter.getSourceMgr().getImmediateExpansionRange(
+                            sr.getBegin());
+                    sr = CSR.getAsRange();
+                }
+
+                SourceLocation b = sr.getBegin();
+                SourceLocation m = pvd->getSourceRange().getBegin();
+
+                while (funcBuf.get(b, 1) != "=" && b > m) {
+                    b = b.getLocWithOffset(-1);
+                }
+
+                sr.setBegin(b);
+                funcBuf.remove(sr);
             }
-
-            SourceLocation b = sr.getBegin();
-            SourceLocation m = pvd->getSourceRange().getBegin();
-
-            while (funcBuf.get(b, 1) != "=" && b > m) {
-                b = b.getLocWithOffset(-1);
-            }
-
-            sr.setBegin(b);
-            funcBuf.remove(sr);
         }
     }
 
