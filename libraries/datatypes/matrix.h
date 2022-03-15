@@ -561,8 +561,10 @@ class Matrix_t {
             }
         } else {
             // now not complex matrix
+            // if n*m even, max i in loop below is n*m-2.
+            // if n*m odd, max i is n*m-3
             T gr;
-            for (int i = 0; i < n * m; i += 2) {
+            for (int i = 0; i < n * m - 1; i += 2) {
                 c[i] = hila::gaussrand2(gr) * width;
                 c[i + 1] = gr * width;
             }
