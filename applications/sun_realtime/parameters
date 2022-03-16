@@ -1,6 +1,6 @@
 # This is a parameter file for sun_realtime
 
-lattice size           10, 10, 10
+lattice size           12, 12, 12
 
 # should be effective 2N/beta
 g^2 Ta                 1    
