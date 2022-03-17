@@ -22,10 +22,10 @@
 /// Class provides user functions
 ///    open(), close(), get(), get_item(), get_value(), quiet()
 ///
-///
 ///    hila::input f("filename");   - initialization with filename opens
 ///                                   the file for input
 ///    hila::input f;
+///----------------------------------------------------------------------------
 ///
 /// open(): open file for reading
 ///
@@ -43,6 +43,7 @@
 ///      f.open("filename");
 ///      bool success = f.open("filename",false);
 ///
+///----------------------------------------------------------------------------
 ///
 /// get(std::string key) - read input values
 ///
@@ -61,7 +62,7 @@
 ///    whitespace.
 ///
 ///    Recognized types:
-///        Any arithmetic type, Complex<float>, Complex<double>,
+///        Any arithmetic type (ints/floats), Complex<float>, Complex<double>,
 ///        std::string, CoordinateVector,
 ///        Vector<n,T>, std::vector<T>     where T is one of the above types
 ///
@@ -85,8 +86,9 @@
 ///        std::vector<double> dvec = f.get("vec");
 ///
 ///    matches "vec  3,4, 5.5, 7.8, 4"  and returns a vector of double values.
-///    The numbers are read until they are not followed by a comma.  If comma is
-///    the last character on the line, reading continues to the next line.
+///    The numbers are read until they are not followed by a comma.  If comma
+///    is the last non-whitespace character on the line, reading continues to
+///    the next line.
 ///
 ///        Complex<double> phase = f.get("complex phase");
 ///
@@ -95,7 +97,7 @@
 ///
 ///        std::string s = f.get("key");
 ///
-///    matches "key3 <string value>" where string value is either
+///    matches "key <string value>" where string value is either
 ///     a) sequence of non-whitespace chars, delimited by whitespace, eol, ','
 ///        or '#'.
 ///     b) characters enclosed by quotes "..".  These have to pair
@@ -105,25 +107,7 @@
 ///
 ///         int i = f.get();    // read an int
 ///
-/// get_value(): read input (alternative to get())
-///
-///        template <typename T>
-///        bool hila::input::get_value(T & val,std::string key, 
-///                                    bool broadcast=true);
-///
-///    Val can be any value used in get()-method above.  If broadcast==false,
-///    the value is not broadcast to other nodes.  The return value is false if
-///    the value could not be read successfully, true otherwise.
-///    This method does not exit on error (but an error message may be printed)
-///    Example:
-///          int i,j;
-///          bool success;
-///          success = get_value(i, "key", false);   // only node 0 gets i
-///          success = get_value(j,"key2");          // all nodes get j
-///
-///    NOTE: if broadcast == false the return value is correct only on node 0.
-///
-///
+///----------------------------------------------------------------------------
 ///
 /// get_item(): select one item from a "menu":
 ///
@@ -169,6 +153,28 @@
 ///    NOTE: "%s" matches anything. It should be the last item in the list.
 ///         (The items are tested in order and first to match is returned.)
 ///
+///----------------------------------------------------------------------------
+///
+/// get_value(): read input (alternative to get())
+///
+///        template <typename T>
+///        bool hila::input::get_value(T & val,std::string key, 
+///                                    bool broadcast=true);
+///
+///    Val can be any value used in get()-method above.  If broadcast==false,
+///    the value is not broadcast to other nodes.  The return value is false if
+///    the value could not be read successfully, true otherwise.
+///    This method does not exit on error (but an error message may be printed)
+///    Example:
+///          int i,j;
+///          bool success;
+///          success = get_value(i, "key", false);   // only node 0 gets i
+///          success = get_value(j,"key2");          // all nodes get j
+///
+///    NOTE: if broadcast == false the return value is correct only on node 0.
+///
+///
+///----------------------------------------------------------------------------
 ///
 /// close():    hila::input::close()
 ///
@@ -176,15 +182,17 @@
 ///    closes the input f.  Now "f.open("file")" can be used again.
 ///    File is also closed when variable "f" goes out of scope.
 ///
+///----------------------------------------------------------------------------
 ///
 /// quiet():    hila::input::quiet(bool be_silent=true)
 ///
 ///         f.quiet();      // don't print read items to hila::output
 ///         f.quiet(false); // re-enable printing
 ///
-///    By default hila::input methods print everything read to hila::output, 
-///    for logging.  f.quiet()  disables this.
+///    By default hila::input methods print everything read to hila::output
+///    for logging.  f.quiet(); disables this.
 ///
+///------------------------------------------------------------------
 ///
 /// NOTE: methods which broadcast to all nodes (default) must be called
 ///       from all nodes synchronously. These include open(), get(), 
@@ -196,7 +204,7 @@
 ///              ...
 ///          }
 ///
-///       fails. Method
+///       deadlocks (if there are more than 1 rank). Method
 ///          f.get_value(v,"a value",false);
 ///       can be used in this context.
 ///
