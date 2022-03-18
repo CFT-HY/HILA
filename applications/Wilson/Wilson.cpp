@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     O2_integrator integrator_level_3(fa2, integrator_level_2);
 
     int config_found = (bool)std::ifstream(configfile);
-    broadcast(config_found);
+    hila::broadcast(config_found);
     if (config_found) {
         output0 << "Found configuration file, reading\n";
         gauge.read_file(configfile);

@@ -67,7 +67,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
             }
         }
     }
-    broadcast(got_error);
+    hila::broadcast(got_error);
     if (got_error && exit_on_error) {
         hila::finishrun();
     }
@@ -338,7 +338,7 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
     }
 
     if (bcast) {
-        broadcast(item, no_error);
+        hila::broadcast(item, no_error);
 
         // with broadcast exit on error
         if (!no_error)

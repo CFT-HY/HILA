@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Dirac staggered: " << timing << "ms \n";
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
 
     timing = timing / (double)n_runs;
@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Dirac Wilson: " << timing << "ms \n";
@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
 
     timing = timing / (double)n_runs;

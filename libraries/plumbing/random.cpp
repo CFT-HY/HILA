@@ -58,7 +58,7 @@ void hila::seed_random(uint64_t seed) {
             seed = (seed << 30) ^ tp.tv_nsec;
             output0 << "Random seed from time: " << seed << '\n';
         }
-        broadcast(seed);
+        hila::broadcast(seed);
     }
     // do node shuffling for seed
     // do it in a manner makes it difficult to give the same seed by mistake

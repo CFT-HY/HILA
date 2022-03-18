@@ -199,7 +199,7 @@ bool time_to_exit() {
                      << timelimit - this_time << "s remaining\n";
         if (finish) hila::output << "CPU TIME LIMIT, EXITING THE PROGRAM\n";
     }
-    broadcast(finish);
+    hila::broadcast(finish);
     return finish;
 }
 

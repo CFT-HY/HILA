@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
         // // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "FFT double precision : " << timing << " ms \n";
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
         // // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "FFT single precision : " << timing << " ms \n";

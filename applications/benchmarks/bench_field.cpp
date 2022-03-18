@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
         // // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Double multiply : " << timing << " ms \n";
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
         // // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Double add : " << timing << " ms \n";
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Float multiply : " << timing << " ms \n";
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Float add : " << timing << " ms \n";
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Matrix1 = Matrix1 * Matrix1 : " << timing << " ms \n";
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Matrix * Matrix: " << timing << "ms \n";
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Single Precision Matrix * Matrix: " << timing << "ms \n";
@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Vector * Matrix: " << timing << " ms \n";
@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
         // output0 << "timing " << timing << '\n';
     }
     timing = timing / (double)n_runs;
@@ -223,7 +223,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Vector square sum: " << timing << " ms \n";
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
     output0 << "Single Precision vector square sum: " << timing << " ms \n";
@@ -261,7 +261,7 @@ int main(int argc, char **argv) {
         // synchronize();
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
-        broadcast(timing);
+        hila::broadcast(timing);
     }
     timing = timing / 2 / NDIRS / (double)n_runs;
     output0 << "Matrix nearest neighbour communication: " << timing << " ms \n";

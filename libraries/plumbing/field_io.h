@@ -211,7 +211,7 @@ void Field<T>::write_subvolume(const std::string &filename,
         }
     }
 
-    broadcast(fail);
+    hila::broadcast(fail);
     if (fail)
         hila::terminate(1);
 }

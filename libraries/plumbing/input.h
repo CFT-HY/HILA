@@ -287,10 +287,10 @@ class input {
         if (bcast) {
             // string has to be treated separately
             if constexpr (std::is_same<T, std::string>::value) {
-                broadcast(val);
-                broadcast(no_error);
+                hila::broadcast(val);
+                hila::broadcast(no_error);
             } else {
-                broadcast(val, no_error);
+                hila::broadcast(val, no_error);
             }
         }
 
@@ -320,7 +320,7 @@ class input {
         }
 
         if (bcast) {
-            broadcast(val, no_error);
+            hila::broadcast(val, no_error);
         }
         return no_error;
     }
@@ -345,7 +345,7 @@ class input {
         }
 
         if (bcast) {
-            broadcast(val, no_error);
+            hila::broadcast(val, no_error);
         }
         return no_error;
     }
@@ -383,8 +383,8 @@ class input {
         }
 
         if (bcast) {
-            broadcast(no_error);
-            broadcast(val);
+            hila::broadcast(no_error);
+            hila::broadcast(val);
         }
 
         return no_error;

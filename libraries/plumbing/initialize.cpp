@@ -247,7 +247,7 @@ void hila::initialize(int argc, char **argv) {
                 }
             }
         }
-        broadcast(do_exit);
+        hila::broadcast(do_exit);
         if (do_exit)
             hila::finishrun();
     }
@@ -501,7 +501,7 @@ void setup_sublattices(cmdlineargs &commandline) {
         }
     }
 
-    broadcast(do_exit);
+    hila::broadcast(do_exit);
 
     if (do_exit)
         hila::finishrun();

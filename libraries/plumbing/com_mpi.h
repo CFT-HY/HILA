@@ -28,6 +28,7 @@ extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
 // The MPI tag generator
 int get_next_msg_tag();
 
+namespace hila {
 
 /// Broadcast template for standard type
 template <typename T>
@@ -103,10 +104,12 @@ void broadcast(T &t, U &u, int rank = 0) {
         U uv;
     } s = {t, u};
 
-    broadcast(s,rank);
+    hila::broadcast(s,rank);
     t = s.tv;
     u = s.uv;
 }
+
+} // namespace hila
 
 // try to get the basic data type of the message
 // this is just to enable a bit larger messages

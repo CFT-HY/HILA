@@ -43,7 +43,7 @@ void update_hmc(integrator_type &integrator, int steps, double traj_length) {
 
     // Accept or reject
     bool accept = hila::random() < edS;
-    broadcast(accept);
+    hila::broadcast(accept);
     if (accept) {
         output0 << "Accepted!\n";
         accepted++;

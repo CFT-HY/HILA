@@ -198,13 +198,13 @@ void finish_communications() {
 }
 
 // broadcast specialization
-void broadcast(std::string &var, int rank) {
+void hila::broadcast(std::string &var, int rank) {
 
     if (hila::check_input)
         return;
 
     int size = var.size();
-    broadcast(size,rank);
+    hila::broadcast(size,rank);
 
     if (hila::myrank() != rank) {
         var.resize(size, ' ');
@@ -215,17 +215,17 @@ void broadcast(std::string &var, int rank) {
     broadcast_timer.stop();
 }
 
-void broadcast(std::vector<std::string> &list, int rank) {
+void hila::broadcast(std::vector<std::string> &list, int rank) {
 
     if (hila::check_input)
         return;
 
     int size = list.size();
-    broadcast(size,rank);
+    hila::broadcast(size,rank);
     list.resize(size);
 
     for (auto &s : list) {
-        broadcast(s,rank);
+        hila::broadcast(s,rank);
     }
 }
 
