@@ -31,10 +31,12 @@ int get_next_msg_tag();
 
 /// Broadcast template for standard type
 template <typename T>
-void broadcast(T &var) {
+void broadcast(T &var, int rank = 0) {
     static_assert(std::is_trivial<T>::value, "broadcast(var) must use trivial type");
     if (hila::check_input)
         return;
+
+    assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
 
     broadcast_timer.start();
     MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
@@ -43,7 +45,7 @@ void broadcast(T &var) {
 
 /// Broadcast for std::vector
 template <typename T>
-void broadcast(std::vector<T> &list) {
+void broadcast(std::vector<T> &list, int rank = 0) {
 
     static_assert(std::is_trivial<T>::value,
                   "broadcast(vector<T>) must have trivial T");
@@ -54,13 +56,13 @@ void broadcast(std::vector<T> &list) {
     broadcast_timer.start();
 
     int size = list.size();
-    MPI_Bcast(&size, sizeof(int), MPI_BYTE, 0, lattice->mpi_comm_lat);
-    if (hila::myrank() != 0) {
+    MPI_Bcast(&size, sizeof(int), MPI_BYTE, rank, lattice->mpi_comm_lat);
+    if (hila::myrank() != rank) {
         list.resize(size);
     }
 
     // move vectors directly to the storage
-    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, 0,
+    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank,
               lattice->mpi_comm_lat);
 
     broadcast_timer.stop();
@@ -75,23 +77,23 @@ void broadcast(T *var) {
 
 /// Broadcast for arrays where size must be known and same for all nodes
 template <typename T>
-void broadcast_array(T *var, int n) {
+void broadcast_array(T *var, int n, int rank = 0) {
 
     if (hila::check_input)
         return;
 
     broadcast_timer.start();
-    MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, 0, lattice->mpi_comm_lat);
+    MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
 }
 
 // DO string bcasts separately
-void broadcast(std::string &r);
-void broadcast(std::vector<std::string> &l);
+void broadcast(std::string &r,int rank = 0);
+void broadcast(std::vector<std::string> &l, int rank = 0);
 
 /// and broadcast with two values
 template <typename T, typename U>
-void broadcast(T &t, U &u) {
+void broadcast(T &t, U &u, int rank = 0) {
 
     if (hila::check_input)
         return;
@@ -101,7 +103,7 @@ void broadcast(T &t, U &u) {
         U uv;
     } s = {t, u};
 
-    broadcast(s);
+    broadcast(s,rank);
     t = s.tv;
     u = s.uv;
 }

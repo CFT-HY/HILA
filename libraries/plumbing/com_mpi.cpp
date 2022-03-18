@@ -198,34 +198,34 @@ void finish_communications() {
 }
 
 // broadcast specialization
-void broadcast(std::string &var) {
+void broadcast(std::string &var, int rank) {
 
     if (hila::check_input)
         return;
 
     int size = var.size();
-    broadcast(size);
+    broadcast(size,rank);
 
-    if (hila::myrank() != 0) {
+    if (hila::myrank() != rank) {
         var.resize(size, ' ');
     }
     // copy directy to data() buffer
     broadcast_timer.start();
-    MPI_Bcast((void *)var.data(), size, MPI_BYTE, 0, lattice->mpi_comm_lat);
+    MPI_Bcast((void *)var.data(), size, MPI_BYTE, rank, lattice->mpi_comm_lat);
     broadcast_timer.stop();
 }
 
-void broadcast(std::vector<std::string> &list) {
+void broadcast(std::vector<std::string> &list, int rank) {
 
     if (hila::check_input)
         return;
 
     int size = list.size();
-    broadcast(size);
+    broadcast(size,rank);
     list.resize(size);
 
     for (auto &s : list) {
-        broadcast(s);
+        broadcast(s,rank);
     }
 }
 
