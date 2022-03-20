@@ -428,16 +428,6 @@ SUBNODE_LAYOUT needs to be defined to use this
         }
     }
 
-    /// A reduction over the vectorized lattice
-    template <typename T> void reduce_node_sum(T *value, int N, bool distribute) const {
-        lattice->reduce_node_sum(value, N, distribute);
-    };
-
-    /// A reduction over the vectorized lattice
-    template <typename T>
-    void reduce_node_product(T *value, int N, bool distribute) const {
-        lattice->reduce_node_product(value, N, distribute);
-    };
 };
 
 ///////////////////////////////////////////////////////////////////////////////

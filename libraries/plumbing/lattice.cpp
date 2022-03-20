@@ -574,7 +574,7 @@ void lattice_struct::create_std_gathers() {
     /* Finally, set the site to the final offset (better be right!) */
     mynode.field_alloc_size = c_offset;
 
-    if (reduce_node_sum(too_large_node) > 0) {
+    if (hila::reduce_node_sum(too_large_node) > 0) {
         report_too_large_node();
     }
 }
@@ -678,7 +678,7 @@ void lattice_struct::init_special_boundaries() {
     int toolarge = 0;
     if (mynode.field_alloc_size >= (1ULL << 32))
         toolarge = 1;
-    if (reduce_node_sum(toolarge) > 0) {
+    if (hila::reduce_node_sum(toolarge) > 0) {
         report_too_large_node();
     }
 }

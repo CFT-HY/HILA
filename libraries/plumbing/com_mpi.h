@@ -28,16 +28,58 @@ extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
 // The MPI tag generator
 int get_next_msg_tag();
 
+// Obtain the MPI data type (MPI_XXX) for a particular type of native numbers.
+// Boolean flag "with_int" is used to return "type + int" - types of MPI, used
+// in maxloc/minloc reductions
+
+template <typename T>
+MPI_Datatype get_MPI_number_type(int &size, bool with_int = false) {
+
+    if (std::is_same<hila::number_type<T>, int>::value) {
+        size = sizeof(int);
+        return with_int ? MPI_2INT : MPI_INT;
+    } else if (std::is_same<hila::number_type<T>, unsigned>::value) {
+        size = sizeof(unsigned);
+        return with_int ? MPI_2INT
+                        : MPI_UNSIGNED; // MPI does not contain MPI_UNSIGNED_INT
+    } else if (std::is_same<hila::number_type<T>, long>::value) {
+        size = sizeof(long);
+        return with_int ? MPI_LONG_INT : MPI_LONG;
+    } else if (std::is_same<hila::number_type<T>, int64_t>::value) {
+        size = sizeof(int64_t);
+        return with_int ? MPI_LONG_INT : MPI_INT64_T; // need to use LONG_INT
+    } else if (std::is_same<hila::number_type<T>, uint64_t>::value) {
+        size = sizeof(uint64_t);
+        return with_int ? MPI_LONG_INT : MPI_UINT64_T; // ditto
+    } else if (std::is_same<hila::number_type<T>, float>::value) {
+        size = sizeof(float);
+        return with_int ? MPI_FLOAT_INT : MPI_FLOAT;
+    } else if (std::is_same<hila::number_type<T>, double>::value) {
+        size = sizeof(double);
+        return with_int ? MPI_DOUBLE_INT : MPI_DOUBLE;
+    } else if (std::is_same<hila::number_type<T>, long double>::value) {
+        size = sizeof(long double);
+        return with_int ? MPI_LONG_DOUBLE_INT : MPI_LONG_DOUBLE;
+    }
+
+    size = 1;
+    return MPI_BYTE;
+}
+
+
 namespace hila {
 
-/// Broadcast template for standard type
+///
+/// Broadcast variable to all nodes from node "rank" (default=0)
+
 template <typename T>
 void broadcast(T &var, int rank = 0) {
     static_assert(std::is_trivial<T>::value, "broadcast(var) must use trivial type");
     if (hila::check_input)
         return;
 
-    assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
+    assert(0 <= rank && rank < hila::number_of_nodes() &&
+           "Invalid sender rank in broadcast()");
 
     broadcast_timer.start();
     MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
@@ -89,7 +131,7 @@ void broadcast_array(T *var, int n, int rank = 0) {
 }
 
 // DO string bcasts separately
-void broadcast(std::string &r,int rank = 0);
+void broadcast(std::string &r, int rank = 0);
 void broadcast(std::vector<std::string> &l, int rank = 0);
 
 /// and broadcast with two values
@@ -104,60 +146,28 @@ void broadcast(T &t, U &u, int rank = 0) {
         U uv;
     } s = {t, u};
 
-    hila::broadcast(s,rank);
+    hila::broadcast(s, rank);
     t = s.tv;
     u = s.uv;
 }
 
-} // namespace hila
 
-// try to get the basic data type of the message
-// this is just to enable a bit larger messages
-template <typename T>
-MPI_Datatype get_MPI_number_type(int &size, bool with_int = false) {
-
-    if (std::is_same<hila::number_type<T>, int>::value) {
-        size = sizeof(int);
-        return with_int ? MPI_2INT : MPI_INT;
-    } else if (std::is_same<hila::number_type<T>, unsigned>::value) {
-        size = sizeof(unsigned);
-        return with_int ? MPI_2INT : MPI_UNSIGNED;  // MPI does not contain MPI_UNSIGNED_INT
-    } else if (std::is_same<hila::number_type<T>, long>::value) {
-        size = sizeof(long);
-        return with_int ? MPI_LONG_INT : MPI_LONG;
-    } else if (std::is_same<hila::number_type<T>, int64_t>::value) {
-        size = sizeof(int64_t);
-        return with_int ? MPI_LONG_INT : MPI_INT64_T;   // need to use LONG_INT 
-    } else if (std::is_same<hila::number_type<T>, uint64_t>::value) {
-        size = sizeof(uint64_t);
-        return with_int ? MPI_LONG_INT : MPI_UINT64_T;  // ditto
-    } else if (std::is_same<hila::number_type<T>, float>::value) {
-        size = sizeof(float);
-        return with_int ? MPI_FLOAT_INT : MPI_FLOAT;
-    } else if (std::is_same<hila::number_type<T>, double>::value) {
-        size = sizeof(double);
-        return with_int ? MPI_DOUBLE_INT : MPI_DOUBLE;
-    } else if (std::is_same<hila::number_type<T>, long double>::value) {
-        size = sizeof(long double);
-        return with_int ? MPI_LONG_DOUBLE_INT : MPI_LONG_DOUBLE;
-    }
-
-    size = 1;
-    return MPI_BYTE;
-}
-
-// Reduction templates
+///
+/// Reduce an array across nodes
 
 template <typename T>
-void lattice_struct::reduce_node_sum(T *value, int N, bool distribute) {
+void reduce_node_sum(T *value, int N, bool allreduce = true) {
     T work[N];
     MPI_Datatype dtype;
     int size;
 
+    if (hila::check_input)
+        return;
+
     dtype = get_MPI_number_type<T>(size);
 
     reduction_timer.start();
-    if (distribute) {
+    if (allreduce) {
         MPI_Allreduce((void *)value, (void *)work,
                       N * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM,
                       lattice->mpi_comm_lat);
@@ -174,12 +184,24 @@ void lattice_struct::reduce_node_sum(T *value, int N, bool distribute) {
     reduction_timer.stop();
 }
 
+///
+/// Reduce single variable across nodes.
+
+template <typename T>
+T reduce_node_sum(T &var, bool allreduce = true) {
+    hila::reduce_node_sum(&var, 1, allreduce);
+    return var;
+}
+
 // Product reduction template - so far only for int, float, dbl
 
 template <typename T>
-void lattice_struct::reduce_node_product(T *value, int N, bool distribute) {
+void reduce_node_product(T *value, int N, bool allreduce = true) {
     T work[N];
     MPI_Datatype dtype;
+
+    if (hila::check_input)
+        return;
 
     if (std::is_same<T, int>::value) {
         dtype = MPI_INT;
@@ -192,7 +214,7 @@ void lattice_struct::reduce_node_product(T *value, int N, bool distribute) {
     }
 
     reduction_timer.start();
-    if (distribute) {
+    if (allreduce) {
         MPI_Allreduce((void *)value, (void *)work, N, dtype, MPI_PROD,
                       lattice->mpi_comm_lat);
         for (int i = 0; i < N; i++)
@@ -207,17 +229,27 @@ void lattice_struct::reduce_node_product(T *value, int N, bool distribute) {
     reduction_timer.stop();
 }
 
+template <typename T>
+T reduce_node_product(T &var, bool allreduce = true) {
+    reduce_node_product(&var, 1, allreduce);
+    return var;
+}
+
+void set_allreduce(bool on = true);
+bool get_allreduce();
+
+
+
+} // namespace hila
+
+
 void hila_reduce_double_setup(double *d, int n);
 void hila_reduce_float_setup(float *d, int n);
 void hila_reduce_sums();
 
-namespace hila {
-void set_allreduce(bool on = true);
-bool get_allreduce();
-} // namespace hila
 
 template <typename T>
-void lattice_struct::reduce_sum_setup(T *value) {
+void hila_reduce_sum_setup(T *value) {
 
     using b_t = hila::number_type<T>;
     if (std::is_same<b_t, double>::value) {
@@ -225,9 +257,11 @@ void lattice_struct::reduce_sum_setup(T *value) {
     } else if (std::is_same<b_t, float>::value) {
         hila_reduce_float_setup((float *)value, sizeof(T) / sizeof(float));
     } else {
-        reduce_node_sum(value, 1, hila::get_allreduce());
+        hila::reduce_node_sum(value, 1, hila::get_allreduce());
     }
 }
+
+
 
 
 #endif // USE_MPI

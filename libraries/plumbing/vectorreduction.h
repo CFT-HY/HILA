@@ -75,7 +75,7 @@ template <typename T> class VectorReduction {
         dtype = get_MPI_number_type<T>(size);
 
         if (dtype == MPI_BYTE) {
-            assert(sizeof(T) < 0 && "Unknown number_type in reduce_node_sum");
+            assert(sizeof(T) < 0 && "Unknown number_type in vector reduction");
         }
 
         reduction_timer.start();
