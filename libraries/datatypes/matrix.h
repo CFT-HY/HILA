@@ -188,13 +188,30 @@ class Matrix_t {
         return c[i];
     }
 
-    /// get row of a matrix
-    HorizontalVector<m, T> row(int r) const {
-        HorizontalVector<m, T> v;
-        for (int i = 0; i < m; i++)
-            v[i] = e(r, i);
-        return v;
+    // /// get row of a matrix
+    // HorizontalVector<m, T> row(int r) const {
+    //     HorizontalVector<m, T> v;
+    //     for (int i = 0; i < m; i++)
+    //         v[i] = e(r, i);
+    //     return v;
+    // }
+
+    /// return reference to row in a matrix
+    const HorizontalVector<m,T> & row(int r) const {
+        return *(reinterpret_cast<const HorizontalVector<m,T> *>(this) + r);
     }
+
+    /// return reference to row in a matrix
+    HorizontalVector<m,T> & row(int r) {
+        return *(reinterpret_cast<HorizontalVector<m,T> *>(this) + r);
+    }
+
+    /// return reference to row in a matrix
+    void set_row(int r, const HorizontalVector<n,T> & v) {
+        for (int i=0; i<n; i++)
+            e(r,i) = v[i];
+    }
+
 
     /// get column of a matrix
     Vector<n, T> column(int c) const {
@@ -204,11 +221,6 @@ class Matrix_t {
         return v;
     }
 
-    /// set row of a matrix
-    void set_row(int r, const HorizontalVector<m, T> &v) {
-        for (int i = 0; i < m; i++)
-            e(r, i) = v[i];
-    }
 
     /// set column of a matrix
     void set_column(int c, const Vector<n, T> &v) {
