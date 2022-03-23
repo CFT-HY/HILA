@@ -205,15 +205,15 @@ class Matrix_t {
     }
 
     /// set row of a matrix
-    void set_row(int r, const HorizontalVector<m,T> &v) {
+    void set_row(int r, const HorizontalVector<m, T> &v) {
         for (int i = 0; i < m; i++)
-            e(r,i) = v[i];
+            e(r, i) = v[i];
     }
 
     /// set column of a matrix
-    void set_column(int c, const Vector<n,T> & v) {
+    void set_column(int c, const Vector<n, T> &v) {
         for (int i = 0; i < n; i++)
-            e(i,c) = v[i];
+            e(i, c) = v[i];
     }
 
     /// interpret Matrix as Array -  for array ops
@@ -515,7 +515,7 @@ class Matrix_t {
     }
 
     /// calculate vector norm - sqrt of squarenorm
-    hila::number_type<T> norm() const {
+    auto norm() const {
         return sqrt(squarenorm());
     }
 
@@ -546,6 +546,10 @@ class Matrix_t {
 
     /// Generate random elements
     Mtype &random() out_only {
+
+        static_assert(hila::is_floating_point<hila::number_type<T>>::value,
+                      "Matrix/Vector random() requires non-integral type elements");
+
         for (int i = 0; i < n * m; i++) {
             ::random(c[i]);
         }
@@ -554,6 +558,10 @@ class Matrix_t {
 
     /// Generate gaussian random elements
     inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) out_only {
+
+        static_assert(hila::is_floating_point<hila::number_type<T>>::value,
+                      "Matrix/Vector gaussian_random() requires non-integral type elements");
+
         // for Complex numbers gaussian_random fills re and im efficiently
         if constexpr (hila::is_complex<T>::value) {
             for (int i = 0; i < n * m; i++) {
@@ -1066,24 +1074,30 @@ std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
 
 /// Norm squared function
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
-inline hila::number_type<Mt> squarenorm(const Mt &rhs) {
+inline auto squarenorm(const Mt &rhs) {
     return rhs.squarenorm();
 }
 
 /// Vector norm - sqrt of squarenorm()
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
-inline hila::number_type<Mt> norm(const Mt &rhs) {
+inline auto norm(const Mt &rhs) {
     return rhs.norm();
 }
 
 /// Function that calls random()-method
-template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
+template <typename Mt,
+          std::enable_if_t<Mt::is_matrix() &&
+                               hila::is_floating_point<hila::number_type<Mt>>::value,
+                           int> = 0>
 inline void random(out_only Mt &mat) {
     mat.random();
 }
 
 /// Function that calls the gaussian_random()-method
-template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>
+template <typename Mt,
+          std::enable_if_t<Mt::is_matrix() &&
+                               hila::is_floating_point<hila::number_type<Mt>>::value,
+                           int> = 0>
 inline void gaussian_random(out_only Mt &mat, hila::number_type<Mt> width = 1.0) {
     mat.gaussian_random(width);
 }

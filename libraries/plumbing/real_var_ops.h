@@ -5,7 +5,6 @@
 #include "plumbing/random.h"
 
 
-
 //////////////////////////////////////////////////////////////////////////
 
 // define real(), imag(), conj() -functions for basic arithmetic types
@@ -30,20 +29,27 @@ inline T squarenorm(T val) {
     return val * val;
 }
 
+// for integral types, sqrt -> double, so auto here makes sens
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
-inline T norm(T val) {
+inline auto norm(T val) {
     return sqrt(val * val);
 }
 
 // this defines gaussian_random(T & arg) for all double -> T convertible types
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline void gaussian_random(T &d, T width = 1.0) {
+    static_assert(hila::is_floating_point<T>::value,
+                  "gaussian_random() requires floating point type argument");
+
     d = static_cast<T>(hila::gaussrand()) * width;
 }
 
 // this does the same for std. random
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline void random(T &d) {
+    static_assert(hila::is_floating_point<T>::value,
+                  "random() requires floating point type argument");
+
     d = static_cast<T>(hila::random());
 }
 
