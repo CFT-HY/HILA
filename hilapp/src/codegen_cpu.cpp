@@ -67,7 +67,11 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
                 sums++;
             }
         }
-        code << "#pragma omp parallel for";
+        if (loop_info.has_pragma_omp_parallel_region) 
+            code << "#pragma omp for";
+        else 
+            code << "#pragma omp parallel for";
+    
         sums = 0;
         for (var_info &vi : var_info_list) {
             if (vi.reduction_type != reduction::NONE) {

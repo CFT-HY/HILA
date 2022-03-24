@@ -1666,6 +1666,8 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
                 loop_info.has_pragma_novector = has_pragma(s, pragma_hila::NOVECTOR);
                 loop_info.has_pragma_access =
                     has_pragma(s, pragma_hila::ACCESS, &loop_info.pragma_access_args);
+                loop_info.has_pragma_omp_parallel_region =
+                    has_pragma(s, pragma_hila::IN_OMP_PARALLEL_REGION);
 
                 DeclStmt *init = dyn_cast<DeclStmt>(f->getInit());
                 if (init && init->isSingleDecl()) {
@@ -2108,7 +2110,8 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
 
             // If there is a prototype, and the def. parameter is there, it is before in
             // translationunit and nothing needs to be done
-            if (srcMgr.isBeforeInTranslationUnit(f->getSourceRange().getBegin(), sr.getBegin())) {
+            if (srcMgr.isBeforeInTranslationUnit(f->getSourceRange().getBegin(),
+                                                 sr.getBegin())) {
 
                 // funcBuf.dump();
 
