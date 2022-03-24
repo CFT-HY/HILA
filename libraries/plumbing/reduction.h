@@ -318,6 +318,7 @@ T Field<T>::reduce_sum(bool allreduce) const {
 
 
 // get global minimum/maximums - meant to be used through .min() and .max()
+#include <omp.h>
 
 template <typename T>
 T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
@@ -329,19 +330,35 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
         "In Field .min() and .max() methods the Field element type must be one of "
         "(int/long/float/double/long double)");
 
-    // initialize with the node min coordinate and value
-    T val;
-    bool first = true;
     int sgn = is_min ? 1 : -1;
 
-#pragma hila novector direct_access(loc, val, first)
-    onsites (par) {
-        if (first || sgn * (*this)[X] < sgn * val) {
-            val = (*this)[X];
-            loc = X.coordinates();
-            first = false;
+    // get suitable initial value
+    T val = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
+
+    // write the loop with explicit OpenMP parallel region.  It has negligible effect
+    // on non-OpenMP code, and the pragmas are ignored.
+
+#pragma omp parallel shared(val, loc, sgn, is_min)
+    {
+        CoordinateVector loc_th(0);
+        T val_th =
+            is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
+
+#pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
+        onsites (par) {
+            if (sgn * (*this)[X] < sgn * val_th) {
+                val_th = (*this)[X];
+                loc_th = X.coordinates();
+            }
+        }
+
+#pragma omp critical
+        if (sgn * val_th < sgn * val) {
+            val = val_th;
+            loc = loc_th;
         }
     }
+
 
     if (hila::number_of_nodes() > 1) {
         int size;
