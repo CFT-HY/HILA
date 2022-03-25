@@ -88,7 +88,7 @@ template <typename T> T gpu_reduce_sum(T *vector, int N) {
 }
 
 template <typename T>
-__global__ void gpu_reduce_prod_kernel(T *vector, int vector_size, int new_size,
+__global__ void gpu_reduce_product_kernel(T *vector, int vector_size, int new_size,
                                         int elems) {
     unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
     if (Index < new_size) {
@@ -99,9 +99,10 @@ __global__ void gpu_reduce_prod_kernel(T *vector, int vector_size, int new_size,
     }
 }
 
-template <typename T> T gpu_reduce_prod(T *vector, int N) {
+template <typename T> T gpu_reduce_product(T *vector, int N) {
     const int reduce_step = 32;
-    T prod = 1;
+    T prod;
+    prod=1;
     T *host_vector = (T *)malloc(N * sizeof(T));
     int vector_size = N;
 
@@ -112,14 +113,14 @@ template <typename T> T gpu_reduce_prod(T *vector, int N) {
         int new_size = (vector_size - first) / reduce_step;
         // Find number of blocks and launch the kernel
         int blocks = new_size / N_threads + 1;
-        gpu_reduce_prod_kernel<<<blocks, N_threads>>>(vector + first, vector_size,
+        gpu_reduce_product_kernel<<<blocks, N_threads>>>(vector + first, vector_size,
                                                        new_size, reduce_step);
         // Find the full size of the resulting array
         vector_size = new_size + first;
         gpuDeviceSynchronize();
     }
 
-    check_device_error("gpu_reduce_prod kernel");
+    check_device_error("gpu_reduce_product kernel");
 
     gpuMemcpy(host_vector, vector, vector_size * sizeof(T), gpuMemcpyDeviceToHost);
 
@@ -149,13 +150,6 @@ void gpu_multireduce_product(std::vector<T> vector, T *d_array, int N) {
 }
 
 #endif
-
-template <typename T> __global__ void gpu_set_zero_kernel(T *vector, int elems) {
-    unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
-    if (Index < elems) {
-        vector[Index] = 0;
-    }
-}
 
 /// Implement here atomicAdd for double precision for less than 6.0 capability
 /// motivated by the cuda toolkit documentation.
@@ -258,25 +252,31 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 
 ///////////////////////
 
-#if 0
 template<typename T>
-__global__ void cuda_set_one_kernel( T * vector, int elems)
+__global__ void gpu_set_one_kernel( T * vector, int elems)
 {
   unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
   if( Index < elems ){
-    vector[Index] = 0;
+    vector[Index] = 1;
   }
 }
 
-template<typename T>
-void cuda_set_one_kernel( T * vec, size_t N ){
-  int blocks = N/N_threads + 1;
-  cuda_set_one_kernel<<<blocks, N_threads>>>(vec, N);
+template <typename T> 
+__global__ void gpu_set_zero_kernel(T *vector, int elems) {
+    unsigned Index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (Index < elems) {
+        vector[Index] = 0;
+    }
 }
 
-#endif // 0
+template<typename T> 
+void gpu_set_one( T * vec, size_t N ){
+  int blocks = N/N_threads + 1;
+  gpu_set_one_kernel<<<blocks, N_threads>>>(vec, N);
+}
 
-template <typename T> void gpu_set_zero(T *vec, size_t N) {
+template <typename T> 
+void gpu_set_zero(T *vec, size_t N) {
     int blocks = N / N_threads + 1;
     gpu_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
 }

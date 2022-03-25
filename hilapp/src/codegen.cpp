@@ -229,9 +229,11 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             v.reduction_name = "r" + var_name_prefix + clean_name(v.name);
             // Create a temporary variable and initialize
             if (v.reduction_type == reduction::SUM) {
-                code << v.type << " " << v.reduction_name << " = 0;\n";
+                code << v.type << " " << v.reduction_name << ";\n";
+                code << v.reduction_name << " = 0;\n";
             } else if (v.reduction_type == reduction::PRODUCT) {
-                code << v.type << " " << v.reduction_name << " = 1;\n";
+                code << v.type << " " << v.reduction_name << ";\n";
+                code << v.reduction_name << " = 1;\n";
             }
         }
     }

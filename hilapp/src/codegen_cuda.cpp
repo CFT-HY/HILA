@@ -75,8 +75,6 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // indexing variable
     extern std::string looping_var;
 
-    bool use_slow_reduce =
-        (is_macro_defined("SLOW_GPU_REDUCTION") || cmdline::slow_gpu_reduce);
 
     // Get kernel name - use line number or file offset (must be deterministic)
     std::string kernel_name = TopLevelVisitor::make_kernel_name();
@@ -149,26 +147,6 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
             ar.new_name = "r_" + var_name_prefix + clean_name(ar.name);
 
-#ifdef OLD_STYLE
-            code << "// Create reduction array\n";
-            code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << "gpuMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
-                 << " * sizeof(" << ar.element_type
-                 << ") * lattice->mynode.volume() );\n";
-
-            if (ar.reduction_type == reduction::SUM) {
-                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr
-                     << " * lattice->mynode.volume());\n";
-            }
-
-            if (ar.reduction_type == reduction::PRODUCT) {
-                code << "cuda_set_one(" << ar.new_name << ", " << ar.size_expr
-                     << " * lattice->mynode.volume());\n";
-            }
-
-            code << "check_device_error(\"allocate_reduction\");\n";
-
-#else
             code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
             code << "gpuMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
@@ -180,13 +158,11 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             }
 
             if (ar.reduction_type == reduction::PRODUCT) {
-                code << "cuda_set_one(" << ar.new_name << ", " << ar.size_expr
+                code << "gpu_set_one(" << ar.new_name << ", " << ar.size_expr
                      << ");\n";
             }
 
             code << "check_device_error(\"allocate_reduction\");\n";
-
-#endif
         }
     }
 
@@ -205,26 +181,18 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
             "N_threads - 1)/N_threads;\n";
 
-    // Check for reductions and allocate device memory
+    // Check for reductions and allocate device memory for each field
     for (var_info &v : var_info_list) {
         if (v.reduction_type != reduction::NONE) {
-            if (v.reduction_type != reduction::SUM || use_slow_reduce) {
-                // Allocate memory for a reduction. This will be filled in the kernel
-                code << v.type << " * dev_" << v.reduction_name << ";\n";
-                code << "gpuMalloc( (void **)& dev_" << v.reduction_name << ","
-                     << "sizeof(" << v.type << ") * N_blocks );\n";
-                if (v.reduction_type == reduction::SUM) {
-                    code << "gpu_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
-                }
-                if (v.reduction_type == reduction::PRODUCT) {
-                    code << "cuda_set_one(dev_" << v.reduction_name << ", N_blocks);\n";
-                }
-
-            } else {
-                // Now faster reduction -- alloc new fields
-                code << "Field<" << v.type << "> reduction_field_" << v.reduction_name
-                     << ";\n";
-                code << "reduction_field_" << v.reduction_name << ".allocate();\n";
+            // Allocate memory for a reduction. This will be filled in the kernel
+            code << v.type << " * dev_" << v.reduction_name << ";\n";
+            code << "gpuMalloc( (void **)& dev_" << v.reduction_name << ","
+                    << "sizeof(" << v.type << ") * N_blocks );\n";
+            if (v.reduction_type == reduction::SUM) {
+                code << "gpu_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
+            }
+            if (v.reduction_type == reduction::PRODUCT) {
+                code << "gpu_set_one(dev_" << v.reduction_name << ", N_blocks);\n";
             }
         }
     }
@@ -265,33 +233,19 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
         } else if (!vi.is_loop_local) {
 
-            if (vi.reduction_type == reduction::SUM && !use_slow_reduce) {
-                // fast reduction, subs with a new field
-                vi.new_name = "kernel_reduction_" + std::to_string(i) + '_';
-                i++;
+            vi.new_name = "kernel_par_" + std::to_string(i) + "_";
+            i++;
 
-                kernel << ", "
-                       << "field_storage<" << vi.type << "> " << vi.new_name
-                       << "_field";
-                code << ", "
-                     << "reduction_field_" << vi.reduction_name << ".fs->payload";
-
+            if (vi.reduction_type != reduction::NONE) {
+                // Generate a temporary array for the reduction
+                kernel << ", " << vi.type << " * " << vi.new_name;
+                code << ", dev_" << vi.reduction_name;
             } else {
-                // Rename the variable
-                vi.new_name = "kernel_par_" + std::to_string(i) + "_";
-                i++;
-
-                if (vi.reduction_type != reduction::NONE) {
-                    // Generate a temporary array for the reduction
-                    kernel << ", " << vi.type << " * " << vi.new_name;
-                    code << ", dev_" << vi.reduction_name;
-                } else {
-                    kernel << ", const " << vi.type << " " << vi.new_name;
-                    code << ", " << vi.name;
-                    // Replace references in the loop body
-                    for (var_ref &vr : vi.refs) {
-                        loopBuf.replace(vr.ref, vi.new_name);
-                    }
+                kernel << ", const " << vi.type << " " << vi.new_name;
+                code << ", " << vi.name;
+                // Replace references in the loop body
+                for (var_ref &vr : vi.refs) {
+                    loopBuf.replace(vr.ref, vi.new_name);
                 }
             }
         }
@@ -435,35 +389,25 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // Declare the shared reduction variable
     for (var_info &vi : var_info_list)
         if (!vi.is_loop_local) {
-            if (vi.reduction_type != reduction::NONE &&
-                (vi.reduction_type != reduction::SUM || use_slow_reduce)) {
+            if (vi.reduction_type != reduction::NONE ) {
                 // Generate a temporary array for the reduction
                 kernel << "__shared__ " << vi.type << " " << vi.new_name
-                       << "_sh[N_threads];\n";
+                       << "sh[N_threads];\n";
 
+                kernel << vi.type << " " << vi.new_name << "sum; \n";
+                kernel << vi.new_name << "sum = 0; \n";
                 // Initialize only the local element
                 if (vi.reduction_type == reduction::SUM) {
-                    kernel << vi.new_name << "_sh[threadIdx.x] = 0;\n";
+                    kernel << vi.new_name << "sh[threadIdx.x] = 0;\n";
                 } else if (vi.reduction_type == reduction::PRODUCT) {
-                    kernel << vi.new_name << "_sh[threadIdx.x] = 1;\n";
+                    kernel << vi.new_name << "sh[threadIdx.x] = 1;\n";
                 }
 
                 // Replace references in the loop body
                 for (var_ref &vr : vi.refs) {
-                    loopBuf.replace(vr.ref, vi.new_name + "_sh[threadIdx.x]");
+                    loopBuf.replace(vr.ref, vi.new_name + "sum");
                 }
-            } else if (vi.reduction_type == reduction::SUM) {
-                // Now it is "fast sum reduce"
-                // temporary local var
-                kernel << vi.type << " " << vi.new_name << ";\n";
-                kernel << vi.new_name << " = 0;\n";
-                kernel << "// Generated reduction variable\n";
-
-                // replace refs
-                for (var_ref &vr : vi.refs) {
-                    loopBuf.replace(vr.ref, vi.new_name);
-                }
-            }
+            } 
         }
 
     // Create temporary field element variables
@@ -613,13 +557,20 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                    << ", d_lattice.field_alloc_size );\n";
         }
 
+    // Assing reductions to shared memory
+    for (var_info &vi : var_info_list) {
+        if(!vi.is_loop_local) {
+            if (vi.reduction_type != reduction::NONE) {
+                kernel << vi.new_name << "sh[threadIdx.x] = " << vi.new_name << "sum;\n";
+            }
+        }
+    }
     // Handle reductions: Need to sync threads once, then do reduction
     // locally once per block
     bool sync_done = false;
     for (var_info &vi : var_info_list)
         if (!vi.is_loop_local) {
-            if (vi.reduction_type != reduction::NONE &&
-                (vi.reduction_type != reduction::SUM || use_slow_reduce)) {
+            if (vi.reduction_type != reduction::NONE) {
                 // Do sync (only if there is a reduction)
                 if (!sync_done) {
                     kernel << "__syncthreads();\n";
@@ -627,28 +578,32 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 }
 
                 // Now run the thread level reduction
-                kernel << "if( threadIdx.x == 0 ){\n";
+                //kernel << "if( threadIdx.x == 0 ){\n";
+                // if (vi.reduction_type == reduction::SUM) {
+                //     kernel << vi.new_name << "[blockIdx.x] = 0;\n";
+                // } else if (vi.reduction_type == reduction::PRODUCT) {
+                //     kernel << vi.new_name << "[blockIdx.x] = 1;\n";
+                // }
+                kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
                 if (vi.reduction_type == reduction::SUM) {
-                    kernel << vi.new_name << "[blockIdx.x] = 0;\n";
+                    kernel << "if(threadIdx.x < _H_i) {\n";
+                    kernel << vi.new_name << "sh[threadIdx.x] += " << vi.new_name
+                           << "sh[threadIdx.x+_H_i];\n";
+                    kernel << "__syncthreads();\n";
+                    kernel << "}\n";
                 } else if (vi.reduction_type == reduction::PRODUCT) {
-                    kernel << vi.new_name << "[blockIdx.x] = 1;\n";
-                }
-                kernel << "for( int _H_i=0; _H_i<N_threads; _H_i++ ){\n";
-                if (vi.reduction_type == reduction::SUM) {
-                    kernel << vi.new_name << "[blockIdx.x] += " << vi.new_name
-                           << "_sh[_H_i];\n";
-                } else if (vi.reduction_type == reduction::PRODUCT) {
-                    kernel << vi.new_name << "[blockIdx.x] *= " << vi.new_name
-                           << "_sh[_H_i];\n";
+                    kernel << "if(threadIdx.x < _H_i) {\n";
+                    kernel << vi.new_name << "sh[threadIdx.x] *= " << vi.new_name
+                           << "sh[threadIdx.x+_H_i];\n";
+                    kernel << "__syncthreads();\n";
+                    kernel << "}\n";
                 }
                 kernel << "}\n";
-                kernel << "}\n";
+                //kernel << "}\n";
 
-            } else if (vi.reduction_type == reduction::SUM) {
-                // Now fast reduce
-                // call setter for field
-                kernel << vi.new_name << "_field.set(" << vi.new_name << ", "
-                       << looping_var << ", d_lattice.field_alloc_size );\n";
+                kernel << "if(threadIdx.x == 0) {\n"
+                       << vi.new_name << "[blockIdx.x] = " << vi.new_name << "sh[0];\n";
+                kernel << "}\n";
             }
         }
 
@@ -691,27 +646,22 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     }
 
     // Check reduction variables
-    for (var_info &v : var_info_list) {
-        // Run reduction
-        if (v.reduction_type != reduction::SUM || use_slow_reduce) {
-            if (v.reduction_type == reduction::SUM) {
-                code << v.reduction_name << " = gpu_reduce_sum( dev_"
-                     << v.reduction_name << ", N_blocks"
-                     << ");\n";
-            } else if (v.reduction_type == reduction::PRODUCT) {
-                code << v.reduction_name << " = gpu_reduce_product( dev_"
-                     << v.reduction_name << ", N_blocks"
-                     << ");\n";
+    for (var_info &vi : var_info_list) {
+        if (vi.reduction_type != reduction::NONE) {
+            // Run reduction
+            if (vi.reduction_type == reduction::SUM) {
+                code << vi.reduction_name << " = gpu_reduce_sum( dev_"
+                        << vi.reduction_name << ", N_blocks"
+                        << ");\n";
+            } else if (vi.reduction_type == reduction::PRODUCT) {
+                code << vi.reduction_name << " = gpu_reduce_product( dev_"
+                        << vi.reduction_name << ", N_blocks"
+                        << ");\n";
             }
             // Free memory allocated for the reduction
-            if (v.reduction_type != reduction::NONE) {
-                code << "gpuFree(dev_" << v.reduction_name << ");\n";
+            if (vi.reduction_type != reduction::NONE) {
+                code << "gpuFree(dev_" << vi.reduction_name << ");\n";
             }
-
-        } else {
-            // Now fast reduce  -- skip MPI at this stage
-            code << v.reduction_name << " = reduction_field_" << v.reduction_name
-                 << ".gpu_reduce_sum(true, " << loop_info.parity_str << ", false);\n";
         }
     }
 
