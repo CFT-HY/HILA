@@ -1,7 +1,9 @@
 hilapp/build/*
+hilapp/bin/*
 settings.json
 .vscode/
 applications/*/build/*
 *.cpt
+*.o
 *~
 #*#
