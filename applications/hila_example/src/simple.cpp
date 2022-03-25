@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     hila::initialize(argc, argv);
 
     // set up 32^3 lattice
-    lattice->setup({32, 32, 32});
+    lattice->setup({256, 256, 256});
 
     // Random numbers are used here - use time to seed
     hila::seed_random(0);
