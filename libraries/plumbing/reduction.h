@@ -299,19 +299,19 @@ class Reduction {
 #include "backend_cuda/gpu_reduction.h"
 
 template <typename T>
-T Field<T>::reduce_sum(bool allreduce) const {
-    return gpu_reduce_field(*this, allreduce);
+T Field<T>::reduce_sum(Parity par, bool allreduce) const {
+    return gpu_reduce_sum(allreduce, par, false);
 }
 
 #else
 // This for not-gpu branch
 
 template <typename T>
-T Field<T>::reduce_sum(bool allreduce) const {
+T Field<T>::reduce_sum(Parity par, bool allreduce) const {
 
     Reduction<T> result;
     result.allreduce(allreduce);
-    onsites (ALL)
+    onsites (par)
         result += (*this)[X];
     return result.value();
 }
@@ -344,6 +344,8 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
         T val_th =
             is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
+        // Pragma "hila omp_parallel_region" is necessary here, because this is within
+        // omp parallel
 #pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
         onsites (par) {
             if (sgn * (*this)[X] < sgn * val_th) {

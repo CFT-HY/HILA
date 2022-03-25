@@ -837,7 +837,7 @@ class Field {
 
 
     // and sum reduction
-    T reduce_sum(bool allreduce = true) const;
+    T reduce_sum(Parity par = Parity::all, bool allreduce = true) const;
 
     /// Declare gpu_reduce here, defined only for GPU targets
     /// For internal use only, preferably
