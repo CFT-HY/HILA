@@ -299,7 +299,7 @@ class Reduction {
 #include "backend_cuda/gpu_reduction.h"
 
 template <typename T>
-T Field<T>::reduce_sum(Parity par, bool allreduce) const {
+T Field<T>::sum(Parity par, bool allreduce) const {
     return gpu_reduce_sum(allreduce, par, false);
 }
 
@@ -307,7 +307,7 @@ T Field<T>::reduce_sum(Parity par, bool allreduce) const {
 // This for not-gpu branch
 
 template <typename T>
-T Field<T>::reduce_sum(Parity par, bool allreduce) const {
+T Field<T>::sum(Parity par, bool allreduce) const {
 
     Reduction<T> result;
     result.allreduce(allreduce);
