@@ -197,19 +197,19 @@ class Matrix_t {
     // }
 
     /// return reference to row in a matrix
-    const HorizontalVector<m,T> & row(int r) const {
-        return *(reinterpret_cast<const HorizontalVector<m,T> *>(this) + r);
+    const HorizontalVector<m, T> &row(int r) const {
+        return *(reinterpret_cast<const HorizontalVector<m, T> *>(this) + r);
     }
 
     /// return reference to row in a matrix
-    HorizontalVector<m,T> & row(int r) {
-        return *(reinterpret_cast<HorizontalVector<m,T> *>(this) + r);
+    HorizontalVector<m, T> &row(int r) {
+        return *(reinterpret_cast<HorizontalVector<m, T> *>(this) + r);
     }
 
     /// return reference to row in a matrix
-    void set_row(int r, const HorizontalVector<n,T> & v) {
-        for (int i=0; i<n; i++)
-            e(r,i) = v[i];
+    void set_row(int r, const HorizontalVector<n, T> &v) {
+        for (int i = 0; i < n; i++)
+            e(r, i) = v[i];
     }
 
 
@@ -527,9 +527,19 @@ class Matrix_t {
     }
 
     /// calculate vector norm - sqrt of squarenorm
-    auto norm() const {
+    template <
+        typename S = T,
+        std::enable_if_t<hila::is_floating_point<hila::number_type<S>>::value, int> = 0>
+    hila::number_type<T> norm() const {
         return sqrt(squarenorm());
     }
+
+    template <typename S = T, 
+        std::enable_if_t<!hila::is_floating_point<hila::number_type<S>>::value, int> = 0>
+    double norm() const {
+        return sqrt(static_cast<double>(squarenorm()));
+    }
+
 
     /// dot product - vector . vector
     template <int p, int q, typename S, typename R = hila::type_mul<T, S>>
@@ -571,8 +581,9 @@ class Matrix_t {
     /// Generate gaussian random elements
     inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) out_only {
 
-        static_assert(hila::is_floating_point<hila::number_type<T>>::value,
-                      "Matrix/Vector gaussian_random() requires non-integral type elements");
+        static_assert(
+            hila::is_floating_point<hila::number_type<T>>::value,
+            "Matrix/Vector gaussian_random() requires non-integral type elements");
 
         // for Complex numbers gaussian_random fills re and im efficiently
         if constexpr (hila::is_complex<T>::value) {
