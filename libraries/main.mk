@@ -50,7 +50,7 @@ ifndef ARCH
   $(info ########################################################################)
   $(info Target architecture (ARCH) is not defined.)
   $(info Use "make ARCH=<target-arch>" or define ARCH in application Makefile)
-  $(info For available target architectures, see the directory $(ARCH_DIR) )
+  $(info For available target architectures, use "make list-archs" (or "make help")
   $(info ########################################################################)
   $(error )
 endif
@@ -101,10 +101,10 @@ HILA_HEADERS := $(wildcard $(HILA_DIR)/libraries/*/*.h) $(wildcard $(HILA_DIR)/l
 
 ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 
-HILA_OPTS += -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing
+HILA_OPTS += -I. -I./src -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing
 
 # Add the (possible) std. includes for hilapp
-HILAPP_OPTS += -I$(HILAPP_DIR)/clang_include $(CUSTOM_HILAPP_OPTS)
+HILAPP_OPTS += $(CUSTOM_HILAPP_OPTS)
 
 #
 #  GIT VERSION: tricks to get correct git version and build date
@@ -155,6 +155,7 @@ build/%.cpt: $(LIBRARIES_DIR)/plumbing/backend_cuda/%.cpp $(ALL_DEPEND) $(HILA_H
 	$(HILAPP) $(HILAPP_OPTS) $(APP_OPTS) $(HILA_OPTS) $< -o $@ $(HILAPP_TRAILING_OPTS)
 
 
+build/_include_paths : 
 
 endif
 endif   # close the "clean" bracket

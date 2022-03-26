@@ -975,8 +975,9 @@ class MyFrontendAction : public ASTFrontendAction {
         if (buf == nullptr)
             return; // system file, nothing to do
 
-        // change filenames to be included
-        change_include_names(myFID);
+        // change filenames to be included 
+        //   -- DON'T CHANGE NOW
+        // change_include_names(myFID);
 
         // find files to be included
         SourceManager &SM = TheRewriter.getSourceMgr();
