@@ -295,6 +295,9 @@ class Reduction {
     }
 };
 
+
+////////////////////////////////////////////////////////////////////////////////////
+
 #if defined(CUDA) || defined(HIP)
 #include "backend_cuda/gpu_reduction.h"
 
@@ -313,6 +316,18 @@ T Field<T>::sum(Parity par, bool allreduce) const {
     result.allreduce(allreduce);
     onsites (par)
         result += (*this)[X];
+    return result.value();
+}
+
+template <typename T>
+T Field<T>::product(Parity par, bool allreduce) const {
+    static_assert(std::is_arithmetic<T>::value,
+                  ".product() reduction only for integer or floating point types");
+    Reduction<T> result;
+    result = 1;
+    result.allreduce(allreduce);
+    onsites(par)
+        result *= (*this)[X];
     return result.value();
 }
 

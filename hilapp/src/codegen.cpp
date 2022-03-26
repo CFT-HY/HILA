@@ -260,7 +260,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             if (v.reduction_type == reduction::SUM)
                 code << v.name << ".reduce_sum_node(" << v.reduction_name << ");\n";
             else if (v.reduction_type == reduction::PRODUCT)
-                code << v.name << ".reduce_prod_node(" << v.reduction_name << ");\n";
+                code << v.name << ".reduce_product_node(" << v.reduction_name << ");\n";
 
         } else if (v.reduction_type == reduction::PRODUCT) {
 
