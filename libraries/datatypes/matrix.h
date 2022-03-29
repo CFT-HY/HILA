@@ -4,7 +4,6 @@
 #include <type_traits>
 #include <sstream>
 #include "plumbing/defs.h"
-#include "operations.h"
 #include "datatypes/cmplx.h"
 
 template <const int n, const int m, typename T, typename Mtype>
