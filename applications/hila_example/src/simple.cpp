@@ -32,9 +32,9 @@ int main(int argc, char *argv[]) {
 
     onsites(ALL) {
         foralldir(d) {
-            hopping += f[X] * f[X + d].conj();
+            hopping *= f[X] * f[X + d].conj();
         }
-        fsqr += f[X].squarenorm();
+        fsqr *= f[X].squarenorm();
     }
 
     output0 << "Average f^2 : " << fsqr / lattice->volume() << '\n';

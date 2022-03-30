@@ -353,7 +353,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
     // write the loop with explicit OpenMP parallel region.  It has negligible effect
     // on non-OpenMP code, and the pragmas are ignored.
 
-#pragma omp parallel shared(val, loc, sgn, is_min)
+    #pragma omp parallel shared(val, loc, sgn, is_min)
     {
         CoordinateVector loc_th(0);
         T val_th =
@@ -361,7 +361,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
         // Pragma "hila omp_parallel_region" is necessary here, because this is within
         // omp parallel
-#pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
+        #pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
         onsites (par) {
             if (sgn * (*this)[X] < sgn * val_th) {
                 val_th = (*this)[X];
@@ -369,7 +369,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
             }
         }
 
-#pragma omp critical
+        #pragma omp critical
         if (sgn * val_th < sgn * val) {
             val = val_th;
             loc = loc_th;

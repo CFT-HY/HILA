@@ -156,8 +156,8 @@ void broadcast(T &t, U &u, int rank = 0) {
 /// Reduce an array across nodes
 
 template <typename T>
-void reduce_node_sum(T *value, int N, bool allreduce = true) {
-    T work[N];
+void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
+    T work[send_count];
     MPI_Datatype dtype;
     int size;
 
@@ -169,16 +169,16 @@ void reduce_node_sum(T *value, int N, bool allreduce = true) {
     reduction_timer.start();
     if (allreduce) {
         MPI_Allreduce((void *)value, (void *)work,
-                      N * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM,
+                      send_count * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM,
                       lattice->mpi_comm_lat);
-        for (int i = 0; i < N; i++)
+        for (int i = 0; i < send_count; i++)
             value[i] = work[i];
     } else {
         MPI_Reduce((void *)value, (void *)work,
-                   N * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM, 0,
+                   send_count * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM, 0,
                    lattice->mpi_comm_lat);
         if (hila::myrank() == 0)
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < send_count; i++)
                 value[i] = work[i];
     }
     reduction_timer.stop();
@@ -196,34 +196,40 @@ T reduce_node_sum(T &var, bool allreduce = true) {
 // Product reduction template - so far only for int, float, dbl
 
 template <typename T>
-void reduce_node_product(T *value, int N, bool allreduce = true) {
-    T work[N];
+void reduce_node_product(T *value, int send_count, bool allreduce = true) {
+    T work[send_count];
     MPI_Datatype dtype;
+    int size;
 
     if (hila::check_input)
         return;
 
-    if (std::is_same<T, int>::value) {
-        dtype = MPI_INT;
-    } else if (std::is_same<T, float>::value) {
-        dtype = MPI_FLOAT;
-    } else if (std::is_same<T, double>::value) {
-        dtype = MPI_DOUBLE;
-    } else {
-        static_assert(sizeof(T) > 0, "Unknown number_type in reduce_node_product");
-    }
+    dtype = get_MPI_number_type<T>(size);
+
+    // if (hila::check_input)
+    //     return;
+
+    // if (std::is_same<T, int>::value) {
+    //     dtype = MPI_INT;
+    // } else if (std::is_same<T, float>::value) {
+    //     dtype = MPI_FLOAT;
+    // } else if (std::is_same<T, double>::value) {
+    //     dtype = MPI_DOUBLE;
+    // } else {
+    //     static_assert(sizeof(T) > 0, "Unknown number_type in reduce_node_product");
+    // }
 
     reduction_timer.start();
     if (allreduce) {
-        MPI_Allreduce((void *)value, (void *)work, N, dtype, MPI_PROD,
+        MPI_Allreduce((void *)value, (void *)work, send_count, dtype, MPI_PROD,
                       lattice->mpi_comm_lat);
-        for (int i = 0; i < N; i++)
+        for (int i = 0; i < send_count; i++)
             value[i] = work[i];
     } else {
-        MPI_Reduce((void *)value, (void *)work, N, dtype, MPI_PROD, 0,
+        MPI_Reduce((void *)value, (void *)work, send_count, dtype, MPI_PROD, 0,
                    lattice->mpi_comm_lat);
         if (hila::myrank() == 0)
-            for (int i = 0; i < N; i++)
+            for (int i = 0; i < send_count; i++)
                 value[i] = work[i];
     }
     reduction_timer.stop();
