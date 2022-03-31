@@ -7,19 +7,33 @@
 
 #include "plumbing/lattice.h"
 
-/// let us house the sublattices-struct here
-struct sublattices_struct {
-    unsigned number, mylattice;
-    bool sync;
+/// let us house the partitions-struct here
+namespace hila {
+class partitions_struct {
+  public:
+    unsigned _number, _mylattice;
+    bool _sync;
+
+    unsigned number() {
+        return _number;
+    }
+    unsigned mylattice() {
+        return _mylattice;
+    }
+    bool sync() {
+        return _sync;
+    }
 };
 
-extern sublattices_struct sublattices;
+extern partitions_struct partitions;
+
+} // namespace hila
 
 
 extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
     wait_receive_timer, synchronize_timer, reduction_timer, reduction_wait_timer,
     broadcast_timer, send_timer, cancel_send_timer, cancel_receive_timer,
-    sublattice_sync_timer;
+    partition_sync_timer;
 
 ///***********************************************************
 /// Implementations of communication routines.
@@ -239,7 +253,6 @@ void set_allreduce(bool on = true);
 bool get_allreduce();
 
 
-
 } // namespace hila
 
 
@@ -260,8 +273,6 @@ void hila_reduce_sum_setup(T *value) {
         hila::reduce_node_sum(value, 1, hila::get_allreduce());
     }
 }
-
-
 
 
 #endif // USE_MPI

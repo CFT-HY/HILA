@@ -53,7 +53,7 @@ void hila::synchronize() { hila::synchronize_threads(); }
 // New MPI_Comm is the global mpi_comm_lat
 // NOTE: no attempt made here to reorder the nodes
 
-void split_into_sublattices(int this_lattice) {}
+void split_into_partitions(int this_lattice) {}
 
 #if 0
 
@@ -65,7 +65,7 @@ void reset_comm(bool global)
   static MPI_Comm mpi_comm_saved;
   static int set = 0;
 
-  g_sync_sublattices();
+  g_sync_partitions();
   if (global) {
     mpi_comm_saved = lattice->mpi_comm_lat;
     lattice->mpi_comm_lat = MPI_COMM_WORLD;

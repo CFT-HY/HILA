@@ -45,8 +45,8 @@ void hila::seed_random(uint64_t seed) {
 #ifndef SITERAND
 
     uint64_t n = hila::myrank();
-    if (sublattices.number > 1)
-        n += sublattices.mylattice * hila::number_of_nodes();
+    if (hila::partitions.number() > 1)
+        n += hila::partitions.mylattice() * hila::number_of_nodes();
 
     if (seed == 0) {
         // get seed from time

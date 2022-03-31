@@ -21,11 +21,11 @@ hila::timer broadcast_timer("MPI broadcast");
 hila::timer send_timer("MPI send field");
 hila::timer cancel_send_timer("MPI cancel send");
 hila::timer cancel_receive_timer("MPI cancel receive");
-hila::timer sublattice_sync_timer("sublattice sync");
+hila::timer partition_sync_timer("partition sync");
 
-// let us house the sublattices-struct here
+// let us house the partitions-struct here
 
-sublattices_struct sublattices;
+hila::partitions_struct hila::partitions;
 
 /* Keep track of whether MPI has been initialized */
 static bool mpi_initialized = false;
@@ -282,7 +282,7 @@ int get_next_msg_tag() {
 // New MPI_Comm is the global mpi_comm_lat
 // NOTE: no attempt made here to reorder the nodes
 
-void split_into_sublattices(int this_lattice) {
+void split_into_partitions(int this_lattice) {
 
     if (hila::check_input)
         return;
@@ -307,7 +307,7 @@ void reset_comm(bool global)
   static MPI_Comm mpi_comm_saved;
   static int set = 0;
 
-  g_sync_sublattices();
+  g_sync_partitions();
   if (global) {
     mpi_comm_saved = lattice->mpi_comm_lat;
     lattice->mpi_comm_lat = MPI_COMM_WORLD;

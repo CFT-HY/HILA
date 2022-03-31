@@ -172,7 +172,7 @@ void broadcast_array(T *var, int n) {}
 #endif
 
 void initialize_communications(int &argc, char ***argv);
-void split_into_sublattices(int rank);
+void split_into_partitions(int rank);
 bool is_comm_initialized(void);
 void finish_communications();
 void abort_communications(int status);

@@ -141,8 +141,8 @@ class cmdlineargs {
                 << "  -check          : check input & layout with <nodes>-nodes & exit\n"
                 << "                    only with 1 real MPI node (without mpirun)\n"
                 << "  -n nodes        : number of nodes used in layout check, only relevant with -check\n"
-                << "  -sublattices n  : number of sublattices\n"
-                << "  -sync on/off    : synchronize sublattice runs (default=no)\n";
+                << "  -partitions n   : number of partitioned lattice streams\n"
+                << "  -sync on/off    : synchronize partition runs (default=no)\n";
             // clang-format on
         }
         hila::terminate(0);
@@ -157,7 +157,7 @@ class cmdlineargs {
 #include <malloc.h>
 #endif
 
-void setup_sublattices(cmdlineargs &cl);
+void setup_partitions(cmdlineargs &cl);
 
 void hila::initialize(int argc, char **argv) {
 
@@ -172,7 +172,7 @@ void hila::initialize(int argc, char **argv) {
     mallopt(M_TRIM_THRESHOLD, -1);
 #endif
 
-    // Default output file - we're happy with this unless sublattices
+    // Default output file - we're happy with this unless partitions
     // or otherwise indicated
     // This channels outf to std::cout
     hila::output.rdbuf(std::cout.rdbuf());
@@ -219,10 +219,10 @@ void hila::initialize(int argc, char **argv) {
     }
 #endif
 
-    setup_sublattices(commandline);
+    setup_partitions(commandline);
 
-    // check the output file if sublattices not used
-    if (sublattices.number == 1) {
+    // check the output file if partitions not used
+    if (hila::partitions.number() == 1) {
         int do_exit = 0;
         if (hila::myrank() == 0) {
             if (const char *name = commandline.get_cstring("-o")) {
@@ -379,8 +379,8 @@ void hila::finishrun() {
             }
         }
     }
-    if (sublattices.number > 1) {
-        hila::timestamp("Waiting to sync sublattices...");
+    if (hila::partitions.number() > 1) {
+        hila::timestamp("Waiting to sync partitions");
     }
 
 #if defined(CUDA) || defined(HIP)
@@ -400,7 +400,7 @@ void hila::finishrun() {
 
 /******************************************************
  * Open parameter file - moved here in order to
- * enable sublattice division if requested
+ * enable partition division if requested
  */
 #if 0
 
@@ -411,10 +411,10 @@ FILE *open_parameter_file()
 
   if (mynode == 0) {
 #ifdef SUBLATTICES
-    if (n_sublattices > 1) {
+    if (n_partitions > 1) {
       char parameter_name[50];
       /* First, try opening parameter99 etc. */
-      sprintf(parameter_name,"%s%d",parameter,this_sublattice);
+      sprintf(parameter_name,"%s%d",parameter,this_partition);
       fil = fopen(parameter_name,"r");
 
       if (fil != NULL) {
@@ -437,55 +437,55 @@ FILE *open_parameter_file()
 /******************************************************
  * Sublattice division
  * Handle command line arguments
- *   sublattices=nn
+ *   partitions=nn
  *   sync=yes / sync=no
  *   out=name
  * here
  */
 
-void setup_sublattices(cmdlineargs &commandline) {
+void setup_partitions(cmdlineargs &commandline) {
 
-    // get sublattices cmdlinearg first
-    long lnum = commandline.get_int("-sublattices");
+    // get partitions cmdlinearg first
+    long lnum = commandline.get_int("-partitions");
     if (lnum <= 0) {
-        output0 << "sublattices=<number> command line argument value must be positive "
+        output0 << "partitions=<number> command line argument value must be positive "
                    "integer (or argument omitted)\n";
         hila::finishrun();
     }
     if (lnum == LONG_MAX) {
-        sublattices.number = 1;
+        hila::partitions._number = 1;
     } else {
-        sublattices.number = lnum;
+        hila::partitions._number = lnum;
     }
 
-    if (sublattices.number == 1)
+    if (hila::partitions.number() == 1)
         return;
 
-    output0 << " Dividing nodes into " << sublattices.number << " sublattices\n";
+    output0 << " Dividing nodes into " << hila::partitions.number() << " partitions\n";
 
-    if (hila::number_of_nodes() % sublattices.number) {
+    if (hila::number_of_nodes() % hila::partitions.number()) {
         output0 << "** " << hila::number_of_nodes()
-                << " nodes not evenly divisible into " << sublattices.number
-                << " sublattices\n";
+                << " nodes not evenly divisible into " << hila::partitions.number()
+                << " partitions\n";
         hila::finishrun();
     }
 
 #if defined(BLUEGENE_LAYOUT)
-    sublattices.mylattice = bg_layout_sublattices(sublattices.number);
+    hila::partitions._mylattice = bg_layout_partitions(hila::partitions.number());
 #else // generic
-    sublattices.mylattice =
-        (hila::myrank() * sublattices.number) / hila::number_of_nodes();
-    /* and divide system into sublattices */
+    hila::partitions._mylattice =
+        (hila::myrank() * hila::partitions.number()) / hila::number_of_nodes();
+    /* and divide system into partitions */
     if (!hila::check_input)
-        split_into_sublattices(sublattices.mylattice);
+        split_into_partitions(hila::partitions.mylattice());
 #endif
 
     const char *p = commandline.get_cstring("-o");
     std::string fname;
     if (p != nullptr)
-        fname = p + std::to_string(sublattices.mylattice);
+        fname = p + std::to_string(hila::partitions.mylattice());
     else
-        fname = DEFAULT_OUTPUT_NAME + std::to_string(sublattices.mylattice);
+        fname = DEFAULT_OUTPUT_NAME + std::to_string(hila::partitions.mylattice());
 
     // now need to open output file
 
@@ -515,17 +515,17 @@ void setup_sublattices(cmdlineargs &commandline) {
         }
     }
     output0 << " ---- SPLIT " << hila::number_of_nodes() << " nodes into "
-            << sublattices.number << " sublattices, this " << sublattices.mylattice
+            << hila::partitions.number() << " partitions, this " << hila::partitions.mylattice()
             << " ----\n";
 
 
     /* Default sync is no */
     if (commandline.get_onoff("-sync") == 1) {
-        sublattices.sync = true;
-        output0 << "Synchronising sublattice trajectories\n";
+        hila::partitions._sync = true;
+        output0 << "Synchronising partition trajectories\n";
     } else {
-        sublattices.sync = false;
-        output0 << "Not synchronising the sublattice trajectories\n"
+        hila::partitions._sync = false;
+        output0 << "Not synchronising the partition trajectories\n"
                 << "Use '-sync on' command line argument to override\n";
     }
 }

@@ -237,7 +237,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc,
     assert(nodeid < nodes.number);
     const node_info &ni = nodes.nodelist[nodeid];
 
-    // let's mod the coordinate to sublattice
+    // let's mod the coordinate to partition
     // get subnode size - divisons are the same in all nodes
 
     // foralldir(d) assert( ni.size[d] % mynode.subnodes.divisions[d] == 0);
