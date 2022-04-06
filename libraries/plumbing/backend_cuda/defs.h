@@ -105,12 +105,10 @@ using gpuError = hipError_t;
 #else
 // here std interfaces
 
-#define gpuMemPoolPurge()                                                              \
-    do {                                                                               \
-    } while (0)
-#define gpuMemPoolReport()                                                             \
-    do {                                                                               \
-    } while (0)
+// clang-format off
+#define gpuMemPoolPurge() do {} while (0)
+#define gpuMemPoolReport() do {} while (0)
+// clang-format on
 
 #define gpuMalloc(a, b) GPU_CHECK(hipMalloc(a, b))
 #define gpuFree(a) GPU_CHECK(hipFree(a))
@@ -135,7 +133,7 @@ using gpuError = hipError_t;
 ////////////////////////////////////////////////////////////////////////////////////
 
 namespace hila {
-__device__ __host__ double random();
+// __device__ __host__ double random(); // defined in random.h
 void seed_device_rng(unsigned long long seed);
 } // namespace hila
 
@@ -164,7 +162,7 @@ inline void synchronize_threads() {
 ///////////////////////////////////////////////////////////////////////////////////
 
 namespace hila {
-double random();
+// double random();  // defined in random.h
 void seed_device_rng(unsigned long long seed);
 } // namespace hila
 
