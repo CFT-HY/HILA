@@ -105,7 +105,6 @@ template <typename T> T gpu_reduce_product(T *vector, int N) {
     prod=1;
     T *host_vector = (T *)malloc(N * sizeof(T));
     int vector_size = N;
-
     while (vector_size > reduce_step) {
         // Take the last n elements that are divisible by reduce_step
         int first = vector_size % reduce_step;
@@ -129,7 +128,6 @@ template <typename T> T gpu_reduce_product(T *vector, int N) {
     }
 
     free(host_vector);
-
     return prod;
 }
 
