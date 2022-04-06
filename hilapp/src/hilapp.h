@@ -211,10 +211,10 @@ struct legal_types {
         "double",  
         "long double"
     };
-    std::set<std::string> set{std::begin((*this).vector),std::end((*this).vector)};
+    std::set<std::string> set{std::begin(this->vector),std::end(this->vector)};
 
     bool check_if_legal(std::string is_legal_type) {
-        return (*this).set.find(is_legal_type) != (*this).set.end();
+        return this->set.find(is_legal_type) != this->set.end();
     }
 
     std::string as_string() {
