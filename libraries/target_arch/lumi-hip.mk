@@ -46,7 +46,7 @@ HILA_INCLUDES += -I/appl/eap/opt/rocm-4.3.1/hipfft/include/
 # Linker libraries and possible options
 
 # LDLIBS  := -lfftw3 -lfftw3f -lm
-LDFLAGS := $(CXXFLAGS) --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64
+LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64 -L/appl/eap/opt/rocm-4.3.1/hipfft/lib/ -lhipfft
 
 # These variables must be defined here
 #
