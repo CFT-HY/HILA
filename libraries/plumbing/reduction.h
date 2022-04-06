@@ -298,16 +298,16 @@ class Reduction {
 
 ////////////////////////////////////////////////////////////////////////////////////
 
-#if defined(CUDA) || defined(HIP)
-#include "backend_cuda/gpu_reduction.h"
+// #if defined(CUDA) || defined(HIP)
+// #include "backend_cuda/gpu_reduction.h"
 
-template <typename T>
-T Field<T>::sum(Parity par, bool allreduce) const {
-    return gpu_reduce_sum(allreduce, par, false);
-}
+// template <typename T>
+// T Field<T>::sum(Parity par, bool allreduce) const {
+//     return gpu_reduce_sum(allreduce, par, false);
+// }
 
-#else
-// This for not-gpu branch
+// #else
+// // This for not-gpu branch
 
 template <typename T>
 T Field<T>::sum(Parity par, bool allreduce) const {
@@ -332,8 +332,13 @@ T Field<T>::product(Parity par, bool allreduce) const {
 }
 
 
+#if !defined(CUDA) && !defined(HIP)
+
 // get global minimum/maximums - meant to be used through .min() and .max()
+
+#ifdef OPENMP
 #include <omp.h>
+#endif
 
 template <typename T>
 T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
