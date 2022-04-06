@@ -393,13 +393,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 // Generate a temporary array for the reduction
                 kernel << "__shared__ " << vi.type << " " << vi.new_name
                        << "sh[N_threads];\n";
-
                 kernel << vi.type << " " << vi.new_name << "sum; \n";
-                kernel << vi.new_name << "sum = 0; \n";
                 // Initialize only the local element
                 if (vi.reduction_type == reduction::SUM) {
+                    kernel << vi.new_name << "sum = 0; \n";
                     kernel << vi.new_name << "sh[threadIdx.x] = 0;\n";
                 } else if (vi.reduction_type == reduction::PRODUCT) {
+                    kernel << vi.new_name << "sum = 1; \n";
                     kernel << vi.new_name << "sh[threadIdx.x] = 1;\n";
                 }
 
@@ -606,10 +606,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 kernel << "}\n";
             }
         }
-
     kernel << "}\n}\n//----------\n\n";
     code << ");\n\n";
-
     code << "check_device_error(\"" << kernel_name << "\");\n";
 
     // Finally, emit the kernel
