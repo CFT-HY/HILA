@@ -1403,6 +1403,7 @@ bool TopLevelVisitor::check_field_ref_list() {
 /////////////////////////////////////////////////////////////////////////////
 
 void TopLevelVisitor::check_var_info_list() {
+
     for (var_info &vi : var_info_list) {
         if (!vi.is_loop_local && !vi.is_raw) {
             if (vi.reduction_type != reduction::NONE) {
@@ -1448,6 +1449,23 @@ void TopLevelVisitor::check_var_info_list() {
                             vr.ref->getSourceRange().getBegin(),
                             "Cannot assign to variable defined outside site loop "
                             "(unless reduction \'+=\' or \'*=\')");
+                }
+
+            }
+            
+            //Check if product reduction is done for legal variables
+            if (vi.reduction_type == reduction::PRODUCT) {
+                legal_types default_legal_types;
+                std::string var_type = vi.decl->getType().getAsString();
+                const bool allowed_reduction_type = default_legal_types.check_if_legal(var_type);
+                if (!allowed_reduction_type) {
+                    for (auto &vr : vi.refs) {
+                        reportDiag(
+                            DiagnosticsEngine::Level::Error,
+                            vr.ref->getSourceRange().getBegin(),
+                            "\nProduct reduction variable of type \'%0\' not allowed. \nMust be of type: \'%1\'",
+                            var_type.c_str(),default_legal_types.as_string().c_str());
+                    }
                 }
             }
         }
