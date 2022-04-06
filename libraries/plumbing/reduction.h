@@ -258,8 +258,6 @@ class Reduction {
     /// TODO: Array or std::array ?
     /// TODO: implement using custom MPI ops (if needed)
     void reduce_product_node(const T &v) {
-        static_assert(std::is_arithmetic<T>::value,
-                      "Type not implemented for product reduction");
 
         wait();
 
