@@ -13,8 +13,8 @@ $(info ########################################################################)
 ### Define compiler and options
 
 # Define compiler - use cray CC wrapper
-CC := CC
-LD := CC
+CC := hipcc
+LD := hipcc
 
 # Define compilation flags
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
@@ -40,13 +40,18 @@ HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
 HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
 
+# Currently LUMI EAP things require explicit setting of many include paths -- NOTE: MPI may be bad
 HILA_INCLUDES := -I/appl/eap/opt/rocm-4.3.1/rocrand/include/ -I/appl/eap/opt/rocm-4.3.1/hiprand/include/ 
 HILA_INCLUDES += -I/appl/eap/opt/rocm-4.3.1/hipfft/include/
+HILA_INCLUDES += -I${MPICH_DIR}/include
+
 
 # Linker libraries and possible options
 
 # LDLIBS  := -lfftw3 -lfftw3f -lm
-LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64 -L/appl/eap/opt/rocm-4.3.1/hipfft/lib/ -lhipfft
+LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64 
+LDFLAGS += -L/appl/eap/opt/rocm-4.3.1/hipfft/lib/ -lhipfft
+LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
 
 # These variables must be defined here
 #
