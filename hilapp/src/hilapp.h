@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 #include <list>
-#include <boost/algorithm/string/join.hpp>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -201,28 +200,28 @@ enum class number_type {
 // Collection of legal number types
 // Included is a set for O(1) lookup
 struct legal_types {
-    std::vector<std::string> vector = {
-        "int", 
-        "unsigned", 
-        "long", 
-        "int64_t",
-        "uint64_t", 
-        "float", 
-        "double",  
-        "long double"
-    };
-    std::set<std::string> set{std::begin(this->vector),std::end(this->vector)};
+    std::vector<std::string> vector = {"int",      "unsigned", "long",   "int64_t",
+                                       "uint64_t", "float",    "double", "long double"};
+    std::set<std::string> set{std::begin(this->vector), std::end(this->vector)};
 
     bool check_if_legal(std::string is_legal_type) {
         return this->set.find(is_legal_type) != this->set.end();
     }
 
     std::string as_string() {
-        //std::string vector_as_string
-        // for (const auto &vector_element : this->vector) vector_as_string += vector_element + delimiter;
+        std::string vector_as_string;
+        // for (const auto &vector_element : this->vector)
+        //     vector_as_string += vector_element + delimiter;
+        //return boost::algorithm::join(this->vector, delimiter);
+    
         const std::string delimiter = ", ";
-        return boost::algorithm::join(this->vector, delimiter);
+        for (int i = 0; i < this->vector.size() - 1; i++)
+            vector_as_string += this->vector[i] + delimiter;
+        vector_as_string += this->vector.back();
+
+        return vector_as_string;
     }
+        
 };
 
 /// Stores information about how a field is vectorized
@@ -509,7 +508,7 @@ void reset_vectorizable_types();
 void clear_loop_functions_in_compilation_unit();
 
 /// check if macro "name" is defined (non-function macros only)
-bool is_macro_defined(const char *name, std::string * arg = nullptr);
+bool is_macro_defined(const char *name, std::string *arg = nullptr);
 
 /// Utility to check if typename is native number
 number_type get_number_type(const std::string &s);
