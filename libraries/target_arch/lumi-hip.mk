@@ -13,8 +13,8 @@ $(info ########################################################################)
 ### Define compiler and options
 
 # Define compiler - use cray CC wrapper
-CC := hipcc
-LD := hipcc
+CC := CC
+LD := CC
 
 # Define compilation flags
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
@@ -49,9 +49,9 @@ HILA_INCLUDES += -I${MPICH_DIR}/include
 # Linker libraries and possible options
 
 # LDLIBS  := -lfftw3 -lfftw3f -lm
-LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64 
+LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link -fno-cray --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64 
 LDFLAGS += -L/appl/eap/opt/rocm-4.3.1/hipfft/lib/ -lhipfft
-LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
+# LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
 
 # These variables must be defined here
 #
