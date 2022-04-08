@@ -883,3 +883,10 @@ T Field<T>::gpu_reduce_sum(bool allreduce, Parity par, bool do_mpi) const {
 }
 
 #endif
+
+
+template <typename T>
+T Field<T>::gpu_minmax(bool min_or_max) const {
+    output0 << "test" << min_or_max << '\n';
+    return 0;
+}

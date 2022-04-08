@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 #include <list>
-#include <boost/algorithm/string/join.hpp>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -199,29 +198,31 @@ enum class number_type {
 };
 
 // Collection of legal number types
-// Included is a set for O(1) lookup
 struct legal_types {
     std::vector<std::string> vector = {
         "int", 
         "unsigned", 
         "long", 
         "int64_t",
-        "uint64_t", 
+        "uint64_t",
+        "unsigned long",
         "float", 
         "double",  
         "long double"
     };
-    std::set<std::string> set{std::begin(this->vector),std::end(this->vector)};
 
     bool check_if_legal(std::string is_legal_type) {
-        return this->set.find(is_legal_type) != this->set.end();
+        for (const auto &vector_element : this->vector) {
+            if (is_legal_type == vector_element) return true;
+        }
+        return false;
     }
 
     std::string as_string() {
-        //std::string vector_as_string
-        // for (const auto &vector_element : this->vector) vector_as_string += vector_element + delimiter;
         const std::string delimiter = ", ";
-        return boost::algorithm::join(this->vector, delimiter);
+        std::string vector_as_str;
+        for (const auto &vector_element : this->vector) vector_as_str += vector_element + delimiter;
+        return vector_as_str.erase(vector_as_str.size()-delimiter.size(),delimiter.size());
     }
 };
 

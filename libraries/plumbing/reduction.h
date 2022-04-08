@@ -330,12 +330,15 @@ T Field<T>::product(Parity par, bool allreduce) const {
 }
 
 
-#if !defined(CUDA) && !defined(HIP)
 
 // get global minimum/maximums - meant to be used through .min() and .max()
 
 #ifdef OPENMP
 #include <omp.h>
+#endif
+
+#if defined(CUDA) || defined(HIP)
+#include "backend_cuda/gpu_reduction.h"
 #endif
 
 template <typename T>
@@ -350,12 +353,16 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     int sgn = is_min ? 1 : -1;
 
+#if defined(CUDA) || defined(HIP)
+    T val = 0;
+    val = gpu_minmax(is_min);
+
+#else
     // get suitable initial value
     T val = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
     // write the loop with explicit OpenMP parallel region.  It has negligible effect
     // on non-OpenMP code, and the pragmas are ignored.
-
     #pragma omp parallel shared(val, loc, sgn, is_min)
     {
         CoordinateVector loc_th(0);
@@ -378,7 +385,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
             loc = loc_th;
         }
     }
-
+#endif
 
     if (hila::number_of_nodes() > 1) {
         int size;
@@ -450,10 +457,9 @@ T Field<T>::max(Parity par, CoordinateVector &loc) const {
 }
 
 
-#endif // not gpu
-
 #endif // USE_MPI
 
 // TODO - define for !USE_MPI
 
 #endif
+

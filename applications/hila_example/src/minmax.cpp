@@ -20,25 +20,20 @@ int main(int argc, char *argv[]) {
 
     // lattice field
     Field<MyType> f;
+    Field<double> g = 0;
 
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian_random();
 
-
-    // Measure hopping term and f^2
-    Complex<double> hopping;
-    hopping = 1;
-    double fsqr = 0;
-    
-    onsites(ALL) {
-        foralldir(d) {
-            hopping += f[X] * f[X + d].conj();
-        }
-        fsqr += f[X].squarenorm();
+    foralldir(d) {
+        g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
     }
 
-    output0 << "Average f^2 : " << fsqr / lattice->volume() << '\n';
-    output0 << "Average hopping term " << hopping / (NDIM*lattice->volume()) << '\n';
+    double val;
+    CoordinateVector loc;
+    val = g.max(loc);
+    output0 << "Max value " << val << '\n';
+    output0 << "Location:" << loc << '\n';
 
     hila::finishrun();
     return 0;
