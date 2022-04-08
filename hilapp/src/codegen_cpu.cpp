@@ -245,13 +245,13 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
             if (!l.is_loop_local_dir) {
                 for (dir_ptr &d : l.dir_list)
                     if (d.count > 0) {
-                        code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
+                        code << l.new_name << ".wait_gather(" << d.direxpr_s << ", "
                              << loop_info.parity_str << ");\n";
                     }
             } else {
                 code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                         "++_HILAdir_) {\n"
-                     << "  " << l.new_name << ".wait_fetch(_HILAdir_, "
+                     << "  " << l.new_name << ".wait_gather(_HILAdir_, "
                      << loop_info.parity_str << ");\n}\n";
             }
         }

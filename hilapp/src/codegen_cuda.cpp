@@ -85,13 +85,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         if (!l.is_loop_local_dir) {
             for (dir_ptr &d : l.dir_list)
                 if (d.count > 0) {
-                    code << l.new_name << ".wait_fetch(" << d.direxpr_s << ", "
+                    code << l.new_name << ".wait_gather(" << d.direxpr_s << ", "
                          << loop_info.parity_str << ");\n";
                 }
         } else {
             code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                     "++_HILAdir_) {\n"
-                 << l.new_name << ".wait_fetch(_HILAdir_," << loop_info.parity_str
+                 << l.new_name << ".wait_gather(_HILAdir_," << loop_info.parity_str
                  << ");\n}\n";
         }
     }
@@ -517,7 +517,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 loopBuf.replace(ref->fullExpr, l.loop_ref_name);
             }
 
-        // // First create temp variables fields fetched from a Direction
+        // // First create temp variables fields gathered from a Direction
         // for( field_ref *r : l.ref_list ) if( r->dirExpr ) {
         //   std::string dirname = get_stmt_str(r->dirExpr);
 

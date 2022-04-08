@@ -83,9 +83,9 @@ int main(int argc, char **argv) {
 
     // Check initial state of communication functions
     foralldir(d) {
-        assert(!s1.is_fetched(d, EVEN));
-        assert(!s1.is_fetched(d, ODD));
-        assert(!s1.is_fetched(d, ALL));
+        assert(!s1.is_gathered(d, EVEN));
+        assert(!s1.is_gathered(d, ODD));
+        assert(!s1.is_gathered(d, ALL));
         assert(!s1.is_move_started(d, EVEN));
         assert(!s1.is_move_started(d, ODD));
         assert(!s1.is_move_started(d, ALL));
@@ -94,21 +94,21 @@ int main(int argc, char **argv) {
         assert(s1.move_not_done(d, ALL) && "move not done initially");
     }
 
-    // Test marking move started and fetched
+    // Test marking move started and gathered
     foralldir(d) {
         s1.mark_move_started(d, EVEN);
         assert(s1.is_move_started(d, EVEN));
-        assert(!s1.is_fetched(d, EVEN));
+        assert(!s1.is_gathered(d, EVEN));
         assert(!s1.move_not_done(d, EVEN) && "move not done after starting");
-        assert(!s1.is_fetched(d, ODD));
-        assert(!s1.is_fetched(d, ALL));
+        assert(!s1.is_gathered(d, ODD));
+        assert(!s1.is_gathered(d, ALL));
         assert(!s1.is_move_started(d, ODD));
         assert(!s1.is_move_started(d, ALL));
         assert(s1.move_not_done(d, ODD));
         assert(s1.move_not_done(d, ALL));
 
-        s1.mark_fetched(d, EVEN);
-        assert(s1.is_fetched(d, EVEN));
+        s1.mark_gathered(d, EVEN);
+        assert(s1.is_gathered(d, EVEN));
         assert(!s1.is_move_started(d, EVEN));
         assert(!s1.move_not_done(d, EVEN));
 
@@ -116,11 +116,11 @@ int main(int argc, char **argv) {
 
         s1.mark_move_started(d, ODD);
         assert(s1.is_move_started(d, ODD));
-        assert(!s1.is_fetched(d, ODD));
+        assert(!s1.is_gathered(d, ODD));
         assert(!s1.move_not_done(d, ODD) && "move not done after starting");
 
-        s1.mark_fetched(d, ODD);
-        assert(s1.is_fetched(d, ODD));
+        s1.mark_gathered(d, ODD);
+        assert(s1.is_gathered(d, ODD));
         assert(!s1.is_move_started(d, ODD));
         assert(!s1.move_not_done(d, ODD));
 
@@ -128,11 +128,11 @@ int main(int argc, char **argv) {
 
         s1.mark_move_started(d, ALL);
         assert(s1.is_move_started(d, ALL));
-        assert(!s1.is_fetched(d, ALL));
+        assert(!s1.is_gathered(d, ALL));
         assert(!s1.move_not_done(d, ALL) && "move not done after starting");
 
-        s1.mark_fetched(d, ALL);
-        assert(s1.is_fetched(d, ALL));
+        s1.mark_gathered(d, ALL);
+        assert(s1.is_gathered(d, ALL));
         assert(!s1.is_move_started(d, ALL));
         assert(!s1.move_not_done(d, ALL));
 
@@ -291,7 +291,7 @@ int main(int argc, char **argv) {
     s1[EVEN] = 1.0;
     s2[EVEN] = 1.0;
     s2[ODD] = -s1[X + e_x];
-    s2.start_fetch(e_x, ODD);
+    s2.start_gather(e_x, ODD);
 
     sum = 0;
     onsites(ALL) { sum += s2[X].re; }

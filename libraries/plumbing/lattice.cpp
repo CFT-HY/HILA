@@ -476,7 +476,7 @@ void lattice_struct::create_std_gathers() {
                 // reset neighb array temporarily, as a flag
                 neighb[d][i] = mynode.sites;
 
-                // Now site is off-node, this leads to fetching
+                // Now site is off-node, this leads to gathering
                 // check that there's really only 1 node to talk with
                 unsigned rank = node_rank(ln);
                 if (from_node.rank == mynode.rank) {
@@ -715,7 +715,7 @@ void lattice_struct::setup_special_boundary_array(Direction d) {
         special_boundaries[d].neighbours != nullptr)
         return;
 
-    // now allocate neighbour array and the fetching array
+    // now allocate neighbour array and the gathering array
     special_boundaries[d].neighbours =
         (unsigned *)memalloc(sizeof(unsigned) * mynode.sites);
     special_boundaries[d].move_index =
@@ -782,7 +782,7 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
             if (receive)
                 index[i] = site_index(ln);
         } else {
-            // Now site is off-node, this will leads to fetching
+            // Now site is off-node, this will leads to gathering
             // use ci.index to store the node rank
             unsigned r = node_rank(ln);
 

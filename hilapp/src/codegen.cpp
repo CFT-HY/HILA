@@ -189,24 +189,24 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             for (dir_ptr &d : l.dir_list)
                 if (d.count > 0) {
                     if (!generate_wait_loops) {
-                        code << l.new_name << ".fetch(" << d.direxpr_s << ", "
+                        code << l.new_name << ".gather(" << d.direxpr_s << ", "
                              << loop_info.parity_str << ");\n";
                     } else {
                         if (first)
                             code << "dir_mask_t  _dir_mask_ = 0;\n";
                         first = false;
 
-                        code << "_dir_mask_ |= " << l.new_name << ".start_fetch("
+                        code << "_dir_mask_ |= " << l.new_name << ".start_gather("
                              << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
                     }
                 }
         } else {
-            // now loop local dirs - fetch all neighbours!
+            // now loop local dirs - gather all neighbours!
             // TODO: restrict dirs
             if (!generate_wait_loops) {
                 code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                         "++_HILAdir_) {\n"
-                     << l.new_name << ".fetch(_HILAdir_," << loop_info.parity_str
+                     << l.new_name << ".gather(_HILAdir_," << loop_info.parity_str
                      << ");\n}\n";
             } else {
                 if (first)
@@ -214,7 +214,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
                 first = false;
                 code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                         "++_HILAdir_) {\n"
-                     << "_dir_mask_ |= " << l.new_name << ".start_fetch(_HILAdir_,"
+                     << "_dir_mask_ |= " << l.new_name << ".start_gather(_HILAdir_,"
                      << loop_info.parity_str << ");\n}\n";
             }
         }
@@ -502,7 +502,7 @@ loopBuf.copy_from_range(writeBuf,S->getSourceRange()); std::vector<std::string> 
 vb = {}; int i=0;
 
   // Replace loop references with temporary variables
-  // and add calls to mark_changed() and start_fetch()
+  // and add calls to mark_changed() and start_gather()
   for ( field_info & fi : field_info_list ) {
     std::string type_name = fi.type_template;
     type_name.erase(0,1).erase(type_name.end()-1, type_name.end());

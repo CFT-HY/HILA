@@ -49,16 +49,16 @@ void dirac_staggered_hop(const Field<mtype> *gauge, const Field<vtype> &v_in,
     Field<vtype>(&vtemp)[NDIM] = staggered_dirac_temp<vtype>;
     foralldir(dir) {
         vtemp[dir].copy_boundary_condition(v_in);
-        v_in.start_fetch(dir, par);
+        v_in.start_gather(dir, par);
     }
 
     // First multiply the by conjugate before communicating the vector
     foralldir(dir) {
         vtemp[dir][opp_parity(par)] = gauge[dir][X].adjoint() * v_in[X];
-        vtemp[dir].start_fetch(-dir, par);
+        vtemp[dir].start_gather(-dir, par);
     }
 
-    // Run neighbour fetches and multiplications
+    // Run neighbour gathers and multiplications
     foralldir(dir) {
         v_out[par] = v_out[X] + 0.5 * sign * staggered_eta[dir][X] *
                                     (gauge[dir][X] * v_in[X + dir] - vtemp[dir][X - dir]);

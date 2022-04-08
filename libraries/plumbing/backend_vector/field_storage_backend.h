@@ -147,7 +147,7 @@ inline void field_storage<T>::set_element(const T &value, const unsigned idx) {
     }
 }
 
-/// get_element fetches one T-element from vectorized store
+/// get_element gathers one T-element from vectorized store
 /// again, idx is the "site" index
 
 template <typename T>

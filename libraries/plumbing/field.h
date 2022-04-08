@@ -55,9 +55,9 @@ void ensure_field_operators_exist(Field<T> &f);
 /// Field.check_alloc() const: assert that the Field is allocated
 ///
 /// MPI related (automatically done by hilapp, but may be useful in apps):
-/// Field.move_status(): returns current fetch_status
+/// Field.move_status(): returns current gather_status
 /// Field.mark_changed(): make sure the Field gets communicated
-/// Field.mark_fetched(): mark the Field already fetched, no need to
+/// Field.mark_gathered(): mark the Field already gathered, no need to
 ///        communicate.
 ///
 /// Field.shift(): create a periodically shifted copy of the field
@@ -77,7 +77,7 @@ template <typename T>
 class Field {
 
   public:
-    enum class fetch_status : unsigned { NOT_DONE, STARTED, DONE };
+    enum class gather_status : unsigned { NOT_DONE, STARTED, DONE };
 
   private:
     /// The following struct holds the data + information about the field
@@ -92,7 +92,7 @@ class Field {
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
 #endif
         unsigned assigned_to; // keeps track of first assignment to parities
-        fetch_status move_status[3][NDIRS]; // is communication done
+        gather_status move_status[3][NDIRS]; // is communication done
 
         // neighbour pointers - because of boundary conditions, can be different for
         // diff. fields
@@ -111,7 +111,7 @@ class Field {
         void initialize_communication() {
             for (int d = 0; d < NDIRS; d++) {
                 for (int p = 0; p < 3; p++)
-                    move_status[p][d] = fetch_status::NOT_DONE;
+                    move_status[p][d] = gather_status::NOT_DONE;
                 send_buffer[d] = nullptr;
 #ifndef VANILLA
                 receive_buffer[d] = nullptr;
@@ -191,7 +191,7 @@ class Field {
 #ifndef VECTORIZED
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
             // note: -d in is_on_edge, because we're about to send stuff to that
-            // Direction (fetching from Direction +d)
+            // Direction (gathering from Direction +d)
             if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
                 lattice->special_boundaries[-d].is_on_edge) {
                 payload.gather_comm_elements(buffer, to_node, par, lattice, true);
@@ -215,7 +215,7 @@ class Field {
             if constexpr (hila::is_vectorizable_type<T>::value) {
                 // now vectorized layout
                 if (vector_lattice->is_boundary_permutation[abs(d)]) {
-                    // with boundary permutation need to fetch elems 1-by-1
+                    // with boundary permutation need to gather elems 1-by-1
                     int n;
                     const unsigned *index_list = to_node.get_sitelist(par, n);
                     if (!antiperiodic) {
@@ -460,11 +460,11 @@ class Field {
         return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
     }
 
-    fetch_status move_status(Parity p, int d) const {
+    gather_status move_status(Parity p, int d) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
         return fs->move_status[(int)p - 1][d];
     }
-    void set_move_status(Parity p, int d, fetch_status stat) const {
+    void set_move_status(Parity p, int d, gather_status stat) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
         fs->move_status[(int)p - 1][d] = stat;
     }
@@ -490,56 +490,56 @@ class Field {
             // check if there's ongoing comms, invalidate it!
             drop_comms(i, opp_parity(p));
 
-            set_move_status(opp_parity(p), i, fetch_status::NOT_DONE);
+            set_move_status(opp_parity(p), i, gather_status::NOT_DONE);
             if (p != ALL) {
-                set_move_status(ALL, i, fetch_status::NOT_DONE);
+                set_move_status(ALL, i, gather_status::NOT_DONE);
             } else {
-                set_move_status(EVEN, i, fetch_status::NOT_DONE);
-                set_move_status(ODD, i, fetch_status::NOT_DONE);
+                set_move_status(EVEN, i, gather_status::NOT_DONE);
+                set_move_status(ODD, i, gather_status::NOT_DONE);
             }
         }
         fs->assigned_to |= parity_bits(p);
     }
 
-    /// Mark the field parity fetched from Direction
-    // In case p=ALL we could mark everything fetched, but we'll be conservative here
+    /// Mark the field parity gathered from Direction
+    // In case p=ALL we could mark everything gathered, but we'll be conservative here
     // and mark only this parity, because there might be other parities on the fly and
     // corresponding waits should be done,  This should never happen in automatically
-    // generated loops. In any case start_fetch, is_fetched, get_move_parity has
+    // generated loops. In any case start_gather, is_gathered, get_move_parity has
     // intelligence to figure out the right thing to do
     //
 
-    void mark_fetched(int dir, const Parity p) const {
-        set_move_status(p, dir, fetch_status::DONE);
+    void mark_gathered(int dir, const Parity p) const {
+        set_move_status(p, dir, gather_status::DONE);
     }
 
-    // Check if the field has been fetched since the previous communication
+    // Check if the field has been gathered since the previous communication
     // par = ALL:   ALL or (EVEN+ODD) are OK
     // par != ALL:  ALL or par are OK
-    bool is_fetched(int dir, Parity par) const {
+    bool is_gathered(int dir, Parity par) const {
         if (par != ALL) {
-            return move_status(par, dir) == fetch_status::DONE ||
-                   move_status(ALL, dir) == fetch_status::DONE;
+            return move_status(par, dir) == gather_status::DONE ||
+                   move_status(ALL, dir) == gather_status::DONE;
         } else {
-            return move_status(ALL, dir) == fetch_status::DONE ||
-                   (move_status(EVEN, dir) == fetch_status::DONE &&
-                    move_status(ODD, dir) == fetch_status::DONE);
+            return move_status(ALL, dir) == gather_status::DONE ||
+                   (move_status(EVEN, dir) == gather_status::DONE &&
+                    move_status(ODD, dir) == gather_status::DONE);
         }
     }
 
     // Mark communication started -- this must be just the one
     // going on with MPI
     void mark_move_started(int dir, Parity p) const {
-        set_move_status(p, dir, fetch_status::STARTED);
+        set_move_status(p, dir, gather_status::STARTED);
     }
 
     /// Check if communication has started.  This is strict, checks exactly this parity
     bool is_move_started(int dir, Parity par) const {
-        return move_status(par, dir) == fetch_status::STARTED;
+        return move_status(par, dir) == gather_status::STARTED;
     }
 
     bool move_not_done(int dir, Parity par) const {
-        return move_status(par, dir) == fetch_status::NOT_DONE;
+        return move_status(par, dir) == gather_status::NOT_DONE;
     }
 
     void set_boundary_condition(Direction dir, BoundaryCondition bc) {
@@ -782,9 +782,9 @@ class Field {
     ///////////////////////////////////////////////////////////////////////
 
     // Communication routines
-    dir_mask_t start_fetch(Direction d, Parity p = ALL) const;
-    void wait_fetch(Direction d, Parity p) const;
-    void fetch(Direction d, Parity p = ALL) const;
+    dir_mask_t start_gather(Direction d, Parity p = ALL) const;
+    void wait_gather(Direction d, Parity p) const;
+    void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;
     void cancel_comm(Direction d, Parity p) const;
 
@@ -984,15 +984,15 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
     else
         par_s = par;
 
-    // is this already fetched from one of the dirs in v?
+    // is this already gathered from one of the dirs in v?
     bool found_dir = false;
     Direction mdir;
     foralldir (d) {
-        if (rem[d] > 0 && move_status(par_s, d) != fetch_status::NOT_DONE) {
+        if (rem[d] > 0 && move_status(par_s, d) != gather_status::NOT_DONE) {
             mdir = d;
             found_dir = true;
             break;
-        } else if (rem[d] < 0 && move_status(par_s, -d) != fetch_status::NOT_DONE) {
+        } else if (rem[d] < 0 && move_status(par_s, -d) != gather_status::NOT_DONE) {
             mdir = -d;
             found_dir = true;
             break;
@@ -1091,11 +1091,11 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
 
 #if defined(USE_MPI)
 
-/// start_fetch(): Communicate the field at Parity par from Direction
+/// start_gather(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
 /// return the Direction mask bits where something is happening
 template <typename T>
-dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
+dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
     // get the mpi message tag right away, to ensure that we are always synchronized
     // with the mpi calls -- some nodes might not need comms, but the tags must be in
@@ -1107,23 +1107,23 @@ dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
     lattice_struct::comm_node_struct &from_node = ci.from_node;
     lattice_struct::comm_node_struct &to_node = ci.to_node;
 
-    // check if this is done - either fetched or no comm to be done in the 1st place
+    // check if this is done - either gathered or no comm to be done in the 1st place
 
-    if (is_fetched(d, p)) {
+    if (is_gathered(d, p)) {
         lattice->n_gather_avoided++;
         return 0; // nothing to wait for
     }
 
-    // No comms to do, nothing to wait for -- we'll use the is_fetched
+    // No comms to do, nothing to wait for -- we'll use the is_gathered
     // status to keep track of vector boundary shuffle anyway
 
     if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank()) {
         fs->set_local_boundary_elements(d, p);
-        mark_fetched(d, p);
+        mark_gathered(d, p);
         return 0;
     }
 
-    // if this parity or ALL-type fetch is going on nothing to be done
+    // if this parity or ALL-type gather is going on nothing to be done
     if (!move_not_done(d, p) || !move_not_done(d, ALL)) {
         lattice->n_gather_avoided++;
         return get_dir_mask(d); // nothing to do, but still need to wait
@@ -1209,38 +1209,38 @@ dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
     return get_dir_mask(d);
 }
 
-///  wait_fetch(): Wait for communication at parity par from
+///  wait_gather(): Wait for communication at parity par from
 ///  Direction d completes the communication in the function.
 ///  If the communication has not started yet, also calls
-///  start_fetch()
+///  start_gather()
 ///
 ///  NOTE: This will be called even if the field is marked const.
 ///  Therefore this function is const, even though it does change
 ///  the internal content of the field, the halo. From the point
 ///  of view of the user, the value of the field does not change.
 template <typename T>
-void Field<T>::wait_fetch(Direction d, Parity p) const {
+void Field<T>::wait_gather(Direction d, Parity p) const {
 
     lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
     lattice_struct::comm_node_struct &from_node = ci.from_node;
     lattice_struct::comm_node_struct &to_node = ci.to_node;
 
-    // check if this is done - either fetched or no comm to be done in the 1st place
-    if (is_fetched(d, p))
+    // check if this is done - either gathered or no comm to be done in the 1st place
+    if (is_gathered(d, p))
         return;
 
-    // this is the branch if no comms -- shuffle was done in start_fetch
+    // this is the branch if no comms -- shuffle was done in start_gather
     if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank())
         return;
 
     // if (!is_move_started(d,p)) {
-    //   output0 << "Wait move error - wait_fetch without corresponding start_fetch\n";
+    //   output0 << "Wait move error - wait_gather without corresponding start_gather\n";
     //   exit(1);
     // }
 
     // Note: the move can be Parity p OR ALL -- need to wait for it in any case
     // set par to be the "sum" over both parities
-    // There never should be ongoing ALL and other parity fetch -- start_fetch takes
+    // There never should be ongoing ALL and other parity gather -- start_gather takes
     // care
 
     // check here consistency, this should never happen
@@ -1261,9 +1261,9 @@ void Field<T>::wait_fetch(Direction d, Parity p) const {
         }
     } else {
         // now p == ALL and ALL is not running
-        if (is_fetched(d, EVEN) && is_move_started(d, ODD))
+        if (is_gathered(d, EVEN) && is_move_started(d, ODD))
             par = ODD;
-        else if (is_fetched(d, ODD) && is_move_started(d, EVEN))
+        else if (is_gathered(d, ODD) && is_move_started(d, EVEN))
             par = EVEN;
         else if (is_move_started(d, EVEN) && is_move_started(d, ODD)) {
             n_wait = 2; // need to wait for both!
@@ -1302,8 +1302,8 @@ void Field<T>::wait_fetch(Direction d, Parity p) const {
             wait_send_timer.stop();
         }
 
-        // Mark the parity fetched from Direction dir
-        mark_fetched(d, par);
+        // Mark the parity gathered from Direction dir
+        mark_gathered(d, par);
 
         // Keep count of communications
         lattice->n_gather_done += 1;
@@ -1314,7 +1314,7 @@ void Field<T>::wait_fetch(Direction d, Parity p) const {
 
 ///  drop_comms():  if field is changed or deleted,
 ///  cancel ongoing communications.  This should happen very seldom,
-///  only if there are "by-hand" start_fetch operations and these are not needed
+///  only if there are "by-hand" start_gather operations and these are not needed
 template <typename T>
 void Field<T>::drop_comms(Direction d, Parity p) const {
 
@@ -1354,18 +1354,18 @@ void Field<T>::cancel_comm(Direction d, Parity p) const {
 ///* Trivial implementation when no MPI is used
 
 template <typename T>
-dir_mask_t Field<T>::start_fetch(Direction d, Parity p) const {
+dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     // Update local elements in the halo (necessary for vectorized version)
     // We use here simpler tracking than in MPI, may lead to slight extra work
-    if (!is_fetched(d, p)) {
+    if (!is_gathered(d, p)) {
         fs->set_local_boundary_elements(d, p);
-        mark_fetched(d, p);
+        mark_gathered(d, p);
     }
     return 0;
 }
 
 template <typename T>
-void Field<T>::wait_fetch(Direction d, Parity p) const {}
+void Field<T>::wait_gather(Direction d, Parity p) const {}
 
 template <typename T>
 void Field<T>::drop_comms(Direction d, Parity p) const {}
@@ -1374,9 +1374,9 @@ void Field<T>::drop_comms(Direction d, Parity p) const {}
 
 /// And a convenience combi function
 template <typename T>
-void Field<T>::fetch(Direction d, Parity p) const {
-    start_fetch(d, p);
-    wait_fetch(d, p);
+void Field<T>::gather(Direction d, Parity p) const {
+    start_gather(d, p);
+    wait_gather(d, p);
 }
 
 #if defined(USE_MPI)
