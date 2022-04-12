@@ -19,19 +19,14 @@ int main(int argc, char *argv[]) {
     hila::seed_random(0);
 
     // lattice field
-    Field<MyType> f;
-    Field<double> g = 0;
+    Field<double> g = 2.0;
 
     // make f Gaussian random distributed
-    onsites(ALL) f[X].gaussian_random();
-
-    foralldir(d) {
-        g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
-    }
+    g[{2,3,4}] = 1.0;
 
     double val;
     CoordinateVector loc;
-    val = g.max(loc);
+    val = g.min(loc);
     output0 << "Max value " << val << '\n';
     output0 << "Location:" << loc << '\n';
 
