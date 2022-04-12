@@ -44,13 +44,12 @@
 #define _CG_ABI_EXPERIMENTAL
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
+static constexpr int whichKernel = GPU_REDUCE_KERNEL;
+static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 
 // Define what reduction kernel to use - a local variable
 // Number from 0 to 9, can benchmark ...
 // TODO: make this makefile-define!
-
-static constexpr int whichKernel = GPU_REDUCE_KERNEL;
-static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 
 // Utility class used to avoid linker errors with extern
 // unsized shared memory arrays with templated type
@@ -882,11 +881,32 @@ T Field<T>::gpu_reduce_sum(bool allreduce, Parity par, bool do_mpi) const {
     return result.value;
 }
 
-#endif
-
+template <class T>
+__global__ T minmax_kernel(T *i_data, T min_or_max_out, bool min_or_max) {
+    int thIdx = threadIdx.x;
+    int gthIdx = thIdx + blockIdx.x*N_threads;
+    const int gridSize = N_threads*gridDim.x;
+    min_or_max_out = 1;
+}
 
 template <typename T>
 T Field<T>::gpu_minmax(bool min_or_max) const {
-    output0 << "test" << min_or_max << '\n';
+
+    T *field_data = this->field_buffer();
+    T *return_value_d;
+    T return_value_h;
+    cudaMalloc(&return_value_d, sizeof(T));
+
+    const lattice_struct *lat = this->fs->lattice;
+    unsigned const node_system_size = lat->mynode.volume();
+    int const gridSize = (node_system_size + N_threads - 1) / N_threads;
+    int const blockSize = N_threads;
+
+    minmax_kernel<<<gridSize, blockSize>>>(field_data, return_value_d, min_or_max);
+    cudaMemcpy(&return_value_h, return_value_d, sizeof(T), cudaMemcpyDeviceToHost);\
+    cudaFree(return_value_d);
+    output0 << "test " << return_value_h << '\n';
     return 0;
 }
+
+#endif

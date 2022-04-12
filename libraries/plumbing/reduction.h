@@ -324,11 +324,10 @@ T Field<T>::product(Parity par, bool allreduce) const {
     Reduction<T> result;
     result = 1;
     result.allreduce(allreduce);
-    onsites(par)
+    onsites (par)
         result *= (*this)[X];
     return result.value();
 }
-
 
 
 // get global minimum/maximums - meant to be used through .min() and .max()
@@ -361,17 +360,17 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
     // get suitable initial value
     T val = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
-    // write the loop with explicit OpenMP parallel region.  It has negligible effect
-    // on non-OpenMP code, and the pragmas are ignored.
-    #pragma omp parallel shared(val, loc, sgn, is_min)
+// write the loop with explicit OpenMP parallel region.  It has negligible effect
+// on non-OpenMP code, and the pragmas are ignored.
+#pragma omp parallel shared(val, loc, sgn, is_min)
     {
         CoordinateVector loc_th(0);
         T val_th =
             is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
-        // Pragma "hila omp_parallel_region" is necessary here, because this is within
-        // omp parallel
-        #pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
+// Pragma "hila omp_parallel_region" is necessary here, because this is within
+// omp parallel
+#pragma hila novector omp_parallel_region direct_access(loc_th, val_th)
         onsites (par) {
             if (sgn * (*this)[X] < sgn * val_th) {
                 val_th = (*this)[X];
@@ -379,7 +378,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
             }
         }
 
-        #pragma omp critical
+#pragma omp critical
         if (sgn * val_th < sgn * val) {
             val = val_th;
             loc = loc_th;
@@ -462,4 +461,3 @@ T Field<T>::max(Parity par, CoordinateVector &loc) const {
 // TODO - define for !USE_MPI
 
 #endif
-

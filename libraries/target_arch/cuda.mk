@@ -6,7 +6,7 @@
 #
 
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
-CUDA_VERSION = 11.4
+CUDA_VERSION = 11.6
 CC := /usr/local/cuda-${CUDA_VERSION}/bin/nvcc
 # CC = /usr/bin/nvcc
 LD := $(CC) -std c++17

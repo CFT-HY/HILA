@@ -279,6 +279,33 @@ void gpu_set_zero(T *vec, size_t N) {
     gpu_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
 }
 
+template <class T>
+__global__ T minmax_kernel(T *i_data, T min_or_max_out, bool min_or_max) {
+    int thIdx = threadIdx.x;
+    int gthIdx = thIdx + blockIdx.x*N_Threads;
+    const int gridSize = N_Threads*gridDim.x;
+    min_or_max_out = 1;
+}
+
+template <typename T>
+T Field<T>::gpu_minmax(bool min_or_max) const {
+
+    T *field_data = this->field_buffer();
+    T *return_value_d;
+    T return_value_h;
+    cudaMalloc(&return_value, sizeof(T));
+
+    const lattice_struct *lat = this->fs->lattice;
+    unsigned const node_system_size = lat->mynode.volume();
+    int const gridSize = (node_system_size + N_Threads - 1) / numThreads;
+    int const blockSize = numThreads;
+
+    minmax_kernel<<<gridSize, blockSize>>>(field_data, return_value, min_or_max);
+    cudaMemcpy(&return_value_h, return_value_d, sizeof(T), cudaMemcpyDeviceToHost);\
+    cudaFree(return_value_d);
+    output0 << "test " << return_value_h << '\n';
+    return 0;
+}
 #endif // __CUDACC__
 
 #endif
