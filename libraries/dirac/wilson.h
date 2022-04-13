@@ -23,7 +23,7 @@ inline void Dirac_Wilson_hop(const Field<matrix> *gauge, const double kappa,
         vtemp[dir].copy_boundary_condition(v_in);
     }
 
-    // Run neighbour fetches and multiplications
+    // Run neighbour gathers and multiplications
     foralldir(dir) {
         // First multiply the by conjugate before communicating
         onsites(opp_parity(par)) {
@@ -35,8 +35,8 @@ inline void Dirac_Wilson_hop(const Field<matrix> *gauge, const double kappa,
             vtemp[dir][X] = h;
         }
 
-        vtemp[dir].start_fetch(dir, par);
-        vtemp[-dir].start_fetch(-dir, par);
+        vtemp[dir].start_gather(dir, par);
+        vtemp[-dir].start_gather(-dir, par);
     }
 
     // Calculate the derivatives. This
@@ -61,7 +61,7 @@ inline void Dirac_Wilson_hop_set(const Field<matrix> *gauge, const double kappa,
         vtemp[dir].copy_boundary_condition(v_in);
     }
 
-    // Run neighbour fetches and multiplications
+    // Run neighbour gathers and multiplications
     foralldir(dir) {
         // First multiply the by conjugate before communicating
         onsites(opp_parity(par)) {
@@ -73,8 +73,8 @@ inline void Dirac_Wilson_hop_set(const Field<matrix> *gauge, const double kappa,
             vtemp[dir][X] = h;
         }
 
-        vtemp[dir].start_fetch(dir, par);
-        vtemp[-dir].start_fetch(-dir, par);
+        vtemp[dir].start_gather(dir, par);
+        vtemp[-dir].start_gather(-dir, par);
     }
     // Set on first Direction
     Direction dir = Direction(0);

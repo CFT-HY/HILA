@@ -112,7 +112,7 @@ inline void field_storage<T>::set(const A &value, const int i,
     }
 }
 
-/// Vectorized implementation of fetching elements
+/// Vectorized implementation of gathering elements
 template <typename T>
 void field_storage<T>::gather_elements(char *RESTRICT buffer,
                                        const unsigned *RESTRICT index_list, int n,

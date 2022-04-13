@@ -434,8 +434,8 @@ void scaling_sim::next() {
     }
 
     // foralldir(d) {
-    //     phi.start_fetch(d); 
-    //     phi.start_fetch(-d);
+    //     phi.start_gather(d); 
+    //     phi.start_gather(-d);
     // }
 
     // foralldir (d) {

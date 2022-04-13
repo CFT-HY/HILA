@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     // check that fieldstruct allocated only after assignment
     assert(matrices.fs == nullptr);
 
-    // Test that neighbours are fetched correctly
+    // Test that neighbours are gathered correctly
     foralldir(dir) {
         onsites(ALL) {
             element<CoordinateVector> l = X.coordinates();
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
             element<int> diff = nb_coordinate1[X] - nb_coordinate2[X];
             isum += diff * diff;
         }
-        assert(isum == 0 && "Value fetched from neighbour is correct");
+        assert(isum == 0 && "Value gathered from neighbour is correct");
     }
 
 // If MPI is defined, check that gathers are counted correctly
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     assert(lattices[0]->n_gather_avoided == 1);
 #endif
 
-    // Test matrix multiplication and neighbour fetches
+    // Test matrix multiplication and neighbour gathers
     // Calculates M(X) * M.congugate(X+dir)
     onsites(ALL) {
         element<Matrix<2, 2, double>> a;
