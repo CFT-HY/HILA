@@ -353,7 +353,7 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
     int sgn = is_min ? 1 : -1;
 
 #if defined(CUDA) || defined(HIP)
-    T val = 0;
+    T val;
     val = gpu_minmax(is_min);
 
 #else
