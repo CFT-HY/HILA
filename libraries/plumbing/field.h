@@ -845,7 +845,7 @@ class Field {
     /// For internal use only, preferably
     T gpu_reduce_sum(bool allreduce = true, Parity par = Parity::all,
                      bool do_mpi = true) const;
-    T gpu_minmax(bool min_or_max) const;
+    T gpu_minmax(bool min_or_max, Parity par, CoordinateVector &loc) const;
 
     T min(Parity par = ALL) const;
     T min(CoordinateVector &loc) const;

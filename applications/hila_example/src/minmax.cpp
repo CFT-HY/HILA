@@ -22,12 +22,13 @@ int main(int argc, char *argv[]) {
     Field<double> g = 2.0;
 
     // make f Gaussian random distributed
-    g[{2,3,4}] = 1.0;
+    g[{0,0,0}] = 1.0;
+    g[{31,7,0}] = 0.5;
 
     double val;
     CoordinateVector loc;
     val = g.min(loc);
-    output0 << "Max value " << val << '\n';
+    output0 << "Min value " << val << '\n';
     output0 << "Location:" << loc << '\n';
 
     hila::finishrun();

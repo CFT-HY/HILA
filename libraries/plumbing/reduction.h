@@ -352,11 +352,6 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 
     int sgn = is_min ? 1 : -1;
 
-#if defined(CUDA) || defined(HIP)
-    T val;
-    val = gpu_minmax(is_min);
-
-#else
     // get suitable initial value
     T val = is_min ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
@@ -384,7 +379,6 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
             loc = loc_th;
         }
     }
-#endif
 
     if (hila::number_of_nodes() > 1) {
         int size;
@@ -420,19 +414,31 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 template <typename T>
 T Field<T>::min(Parity par) const {
     CoordinateVector loc;
+#if defined(CUDA) || defined(HIP)
+    return gpu_minmax(true, par, loc);
+#else
     return minmax(true, par, loc);
+#endif
 }
 
 /// Find minimum value and location from Field
 template <typename T>
 T Field<T>::min(CoordinateVector &loc) const {
+#if defined(CUDA) || defined(HIP)
+    return gpu_minmax(true, ALL, loc);
+#else
     return minmax(true, ALL, loc);
+#endif
 }
 
 /// Find minimum value and location from Field
 template <typename T>
 T Field<T>::min(Parity par, CoordinateVector &loc) const {
+#if defined(CUDA) || defined(HIP)
+    return gpu_minmax(true, par, loc);
+#else
     return minmax(true, par, loc);
+#endif
 }
 
 
@@ -440,19 +446,31 @@ T Field<T>::min(Parity par, CoordinateVector &loc) const {
 template <typename T>
 T Field<T>::max(Parity par) const {
     CoordinateVector loc;
-    return minmax(false, par, loc);
+#if defined(CUDA) || defined(HIP)
+    return gpu_minmax(true, par, loc);
+#else
+    return minmax(true, par, loc);
+#endif
 }
 
 /// Find maximum value and location from Field
 template <typename T>
 T Field<T>::max(CoordinateVector &loc) const {
+#if defined(CUDA) || defined(HIP)
+    return gpu_minmax(false, ALL, loc);
+#else
     return minmax(false, ALL, loc);
+#endif
 }
 
 /// Find maximum value and location from Field
 template <typename T>
 T Field<T>::max(Parity par, CoordinateVector &loc) const {
-    return minmax(false, ALL, loc);
+#if defined(CUDA) || defined(HIP)
+    return gpu_minmax(false, par, loc);
+#else
+    return minmax(false, par, loc);
+#endif
 }
 
 
