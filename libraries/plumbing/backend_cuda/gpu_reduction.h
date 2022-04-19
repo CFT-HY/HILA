@@ -736,7 +736,7 @@ void reduce_kernel(int size, int blocks, T *d_idata, T *d_odata) {
 }
 
 template <class T>
-__global__ void minmax_kernel_final(const T *i_data, T *minmax_array_out, unsigned *coordinate_index_array, unsigned *coordinate_index_array_out,
+__global__ void minmax_kernel_final(const T *i_data, T *minmax_array_out, unsigned long *coordinate_index_array, unsigned long *coordinate_index_array_out,
                             const int sign_min_or_max) {
     int thIdx = threadIdx.x;
     __shared__ T minmax_values[N_threads];
@@ -762,22 +762,22 @@ __global__ void minmax_kernel_final(const T *i_data, T *minmax_array_out, unsign
 }
 
 template <class T>
-__global__ void minmax_kernel(const T *i_data, T *minmax_array_out, unsigned *coordinate_index_array_out,
+__global__ void minmax_kernel(const T *i_data, T *minmax_array_out, unsigned long *coordinate_index_array_out,
                               const int array_size, const int sign_min_or_max, T const initial_value) {
     int thIdx = threadIdx.x;
     int gthIdx = thIdx + blockIdx.x * N_threads;
     const int grid_size = N_threads * gridDim.x;
     T minmax_value = i_data[gthIdx];
-    unsigned coordinate_idx = gthIdx;
+    unsigned long coordinate_idx = gthIdx;
     T buffer_value;
 
     __shared__ T minmax_values[N_threads];
-    __shared__ unsigned int coordinates[N_threads];
+    __shared__ unsigned long int coordinates[N_threads];
 
     minmax_values[thIdx] = initial_value;
     __syncthreads();
     //something might be wrong here
-    for (int i = gthIdx; i < array_size; i += grid_size) {
+    for (unsigned long i = gthIdx; i < array_size; i += grid_size) {
         buffer_value = i_data[i];
         if (buffer_value * sign_min_or_max > minmax_value * sign_min_or_max) {
             minmax_value = buffer_value;
@@ -881,32 +881,28 @@ T gpu_launch_minmax_kernel(T *field_data, int node_system_size, bool min_or_max)
     T const initial_value = min_or_max ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
 
     T *minmax_array;
-    unsigned *coordinate_index_array;
+    unsigned long *coordinate_index_array;
     T *return_value_h = new T[block_size];
-    unsigned *coordinate_index = new unsigned[block_size];
-
+    unsigned long *coordinate_index = new unsigned long[block_size];
 
     cudaMalloc((void**)&minmax_array, sizeof(T) * block_size);
-    cudaMalloc((void**)&coordinate_index_array, sizeof(unsigned) * block_size);
+    cudaMalloc((void**)&coordinate_index_array, sizeof(unsigned long) * block_size);
     //something might be wrong here
     minmax_kernel<<<num_blocks, block_size>>>(field_data, minmax_array, coordinate_index_array,
                                            node_system_size, sign_min_or_max, initial_value);
-    //something might be wrong here
+    
     minmax_kernel_final<<<1, block_size>>>(minmax_array, minmax_array, coordinate_index_array, coordinate_index_array,
                                            sign_min_or_max);
-    // If min_or_max is True we want the min value else we want the max value
-        // minmax_kernel<<<1, num_blocks>>>(min_array, min_array, max_array, num_blocks);
-        // cudaMemcpy(&return_value_h, min_array, sizeof(T), cudaMemcpyDeviceToHost);
 
     cudaMemcpy(return_value_h, minmax_array, sizeof(T)*block_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(coordinate_index, coordinate_index_array, sizeof(unsigned)*block_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(coordinate_index, coordinate_index_array, sizeof(unsigned long)*block_size, cudaMemcpyDeviceToHost);
     cudaFree(minmax_array);
     cudaFree(coordinate_index_array);
-    std::cout << "test\n";
+    std::cout << initial_value << "test\n";
 
     for (auto i = 0; i < block_size; i++)
         std::cout << return_value_h[i] << " " << coordinate_index[i] << " " << num_blocks << "\n";
-        //std::cout << return_value_h[i]  << "\n";
+    //    std::cout << return_value_h[i]  << "\n";
 
     return 0.0;
 }
