@@ -35,7 +35,7 @@ LDLIBS = -lm -lmpi -lcuda -lcudart -lcufft -lstdc++ ${CUDAVER} # $(MPI_LIBS)
 
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_cuda.o
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
 
 ################
 
