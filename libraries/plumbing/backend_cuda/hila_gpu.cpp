@@ -16,10 +16,10 @@
 using gpurandState = curandState_t;
 #define gpurand_init curand_init
 #define gpurand_uniform curand_uniform
-#define gpuMemcpyToSymbol(a, b, size, c, dir) \
-    GPU_CHECK( cudaMemcpyToSymbol(a, b, size, c, dir) )
-#define gpuGetDeviceCount(a) GPU_CHECK( cudaGetDeviceCount(a) )
-#define gpuSetDevice(dev) GPU_CHECK( cudaSetDevice(dev) )
+#define gpuMemcpyToSymbol(a, b, size, c, dir)                                          \
+    GPU_CHECK(cudaMemcpyToSymbol(a, b, size, c, dir))
+#define gpuGetDeviceCount(a) GPU_CHECK(cudaGetDeviceCount(a))
+#define gpuSetDevice(dev) GPU_CHECK(cudaSetDevice(dev))
 #define gpuGetLastError cudaGetLastError
 #define gpuGetErrorString cudaGetErrorString
 
@@ -32,9 +32,9 @@ using gpurandState = hiprandState_t;
 #define gpurand_init hiprand_init
 #define gpurand_uniform hiprand_uniform
 #define gpuMemcpyToSymbol(a, b, size, c, dir)                                          \
-    GPU_CHECK( hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir) )
-#define gpuGetDeviceCount(a) GPU_CHECK( hipGetDeviceCount(a) )
-#define gpuSetDevice(dev) GPU_CHECK( hipSetDevice(dev) )
+    GPU_CHECK(hipMemcpyToSymbol(HIP_SYMBOL(a), b, size, c, dir))
+#define gpuGetDeviceCount(a) GPU_CHECK(hipGetDeviceCount(a))
+#define gpuSetDevice(dev) GPU_CHECK(hipSetDevice(dev))
 #define gpuGetLastError hipGetLastError
 #define gpuGetErrorString hipGetErrorString
 
@@ -120,23 +120,24 @@ __device__ __host__ int64_t loop_lattice_volume(void) {
 
 #ifndef EVEN_SITES_FIRST
 
-__device__ const CoordinateVector backend_lattice_struct::coordinates(unsigned idx) const {
+__device__ const CoordinateVector
+backend_lattice_struct::coordinates(unsigned idx) const {
     CoordinateVector c;
-    unsigned vdiv,ndiv;
+    unsigned vdiv, ndiv;
 
     vdiv = idx;
-    for (int d = 0; d < NDIM-1; ++d) {
+    for (int d = 0; d < NDIM - 1; ++d) {
         ndiv = vdiv / _d_nodesize[d];
         c[d] = vdiv - ndiv * _d_nodesize[d] + _d_nodemin[d];
         vdiv = ndiv;
     }
-    c[NDIM-1] = vdiv + _d_nodemin[NDIM-1];
+    c[NDIM - 1] = vdiv + _d_nodemin[NDIM - 1];
 
     return c;
 }
 
 __device__ int backend_lattice_struct::coordinate(unsigned idx, Direction dir) const {
-    return ( idx / _d_nodefactor[dir] ) % _d_nodesize[dir] + _d_nodemin[dir];
+    return (idx / _d_nodefactor[dir]) % _d_nodesize[dir] + _d_nodemin[dir];
 }
 
 #endif
@@ -162,7 +163,8 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
             gpuMalloc((void **)&(d_neighb_special[d]),
                       lattice->mynode.volume() * sizeof(unsigned));
             gpuMemcpy(d_neighb_special[d], special_neighb,
-                      lattice->mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
+                      lattice->mynode.volume() * sizeof(unsigned),
+                      gpuMemcpyHostToDevice);
         } else {
             d_neighb_special[d] = d_neighb[d];
         }
@@ -175,7 +177,8 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
               lattice->mynode.volume() * sizeof(CoordinateVector));
     tmp = (CoordinateVector *)memalloc(lattice->mynode.volume() *
                                        sizeof(CoordinateVector));
-    for (unsigned i = 0; i < lattice->mynode.volume(); i++) tmp[i] = lattice->coordinates(i);
+    for (unsigned i = 0; i < lattice->mynode.volume(); i++)
+        tmp[i] = lattice->coordinates(i);
 
     gpuMemcpy(d_coordinates, tmp, lattice->mynode.volume() * sizeof(CoordinateVector),
               gpuMemcpyHostToDevice);
@@ -193,16 +196,19 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
     gpuMemcpyToSymbol(_d_size, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
 #ifndef EVEN_SITES_FIRST
-    foralldir(d) s[d] = lattice->mynode.size[d];
+    foralldir (d)
+        s[d] = lattice->mynode.size[d];
     gpuMemcpyToSymbol(_d_nodesize, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
-    foralldir(d) s[d] = lattice->mynode.min[d];
+    foralldir (d)
+        s[d] = lattice->mynode.min[d];
     gpuMemcpyToSymbol(_d_nodemin, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
-    foralldir(d) s[d] = lattice->mynode.size_factor[d];
+    foralldir (d)
+        s[d] = lattice->mynode.size_factor[d];
     gpuMemcpyToSymbol(_d_nodefactor, s, sizeof(int) * NDIM, 0, gpuMemcpyHostToDevice);
 
-#endif    
+#endif
 }
 
 void initialize_cuda(int rank) {
@@ -233,7 +239,6 @@ void initialize_cuda(int rank) {
     cudaMemPoolSetAttribute(mempool, cudaMemPoolAttrReleaseThreshold, &threshold);
 
 #endif
-
 }
 
 #ifdef CUDA
@@ -249,8 +254,8 @@ void gpu_device_info() {
         const int mb = kb * kb;
 
         int driverVersion, rtVersion;
-        cudaDriverGetVersion(&driverVersion);
-        cudaRuntimeGetVersion(&rtVersion);
+        GPU_CHECK(cudaDriverGetVersion(&driverVersion));
+        GPU_CHECK(cudaRuntimeGetVersion(&rtVersion));
         hila::output << "CUDA driver version: " << driverVersion << ", runtime "
                      << rtVersion << '\n';
         hila::output << "CUDART_VERSION " << CUDART_VERSION << '\n';
@@ -262,8 +267,8 @@ void gpu_device_info() {
 
         cudaDeviceProp props;
         int my_device;
-        cudaGetDevice(&my_device);
-        cudaGetDeviceProperties(&props, my_device);
+        GPU_CHECK(cudaGetDevice(&my_device));
+        GPU_CHECK(cudaGetDeviceProperties(&props, my_device));
         hila::output << "Device on node rank 0 device " << my_device << ":\n";
         hila::output << "  " << props.name << "  capability: " << props.major << "."
                      << props.minor << '\n';
@@ -305,8 +310,6 @@ void gpu_device_info() {
 #endif
 #endif // MPIX
 #endif // OPEN_MPI
-
-
     }
 }
 #endif
@@ -319,15 +322,15 @@ void gpu_device_info() {
         const int mb = kb * kb;
 
         int driverVersion, rtVersion;
-        hipDriverGetVersion(&driverVersion);
-        hipRuntimeGetVersion(&rtVersion);
+        GPU_CHECK(hipDriverGetVersion(&driverVersion));
+        GPU_CHECK(hipRuntimeGetVersion(&rtVersion));
         hila::output << "HIP driver version: " << driverVersion << ", runtime "
                      << rtVersion << '\n';
 
         hipDeviceProp_t props;
         int my_device;
-        hipGetDevice(&my_device);
-        hipGetDeviceProperties(&props, my_device);
+        GPU_CHECK(hipGetDevice(&my_device));
+        GPU_CHECK(hipGetDeviceProperties(&props, my_device));
         hila::output << "Device on node rank 0 device " << my_device << ":\n";
         hila::output << "  " << props.name << "  capability: " << props.major << "."
                      << props.minor << '\n';
