@@ -44,12 +44,10 @@ using gpuError = cudaError;
 #else
 // here std interfaces
 
-#define gpuMemPoolPurge()                                                              \
-    do {                                                                               \
-    } while (0)
-#define gpuMemPoolReport()                                                             \
-    do {                                                                               \
-    } while (0)
+// clang-format off
+#define gpuMemPoolPurge()  do { } while (0)
+#define gpuMemPoolReport() do { } while (0)
+// clang-format on
 
 #ifdef CUDA_MALLOC_ASYNC
 #define gpuMalloc(a, b) GPU_CHECK(cudaMallocAsync(a, b, 0))
