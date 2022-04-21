@@ -841,10 +841,10 @@ class Field {
 
     T product(Parity par = Parity::all, bool allreduce = true) const;
 
-    /// Declare gpu_reduce here, defined only for GPU targets
-    /// For internal use only, preferably
-    T gpu_reduce_sum(bool allreduce = true, Parity par = Parity::all,
-                     bool do_mpi = true) const;
+    // Declare gpu_reduce here, defined only for GPU targets
+    // For internal use only, preferably
+    // T gpu_reduce_sum(bool allreduce = true, Parity par = Parity::all,
+    //              bool do_mpi = true) const;
 
     T min(Parity par = ALL) const;
     T min(CoordinateVector &loc) const;
