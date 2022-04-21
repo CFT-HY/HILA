@@ -101,7 +101,7 @@ HILA_HEADERS := $(wildcard $(HILA_DIR)/libraries/*/*.h) $(wildcard $(HILA_DIR)/l
 
 ALL_DEPEND := $(LASTMAKE) $(HILA_HEADERS)
 
-HILA_OPTS += -I. -I./src -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing
+HILA_OPTS += -I. -I./src -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing -I$(HILA_INCLUDE_DIR)/datatypes
 
 # Add the (possible) std. includes for hilapp
 HILAPP_OPTS += $(CUSTOM_HILAPP_OPTS)
