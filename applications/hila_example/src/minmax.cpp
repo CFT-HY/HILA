@@ -22,16 +22,20 @@ int main(int argc, char *argv[]) {
     Field<double> g = 2.0;
 
     // make f Gaussian random distributed
-    g[{70,23,0}] = 2.5;
-    g[{94,6,1}] = 1.0;
+    g[{1, 1, 1}] = 2.5;
+    g[{1, 0, 1}] = 1.0;
 
     double val1;
     double val2;
     CoordinateVector loc1;
     CoordinateVector loc2;
-    val1 = g.min(loc1);
-    val2 = g.max(loc2);
-    //val = g.max(loc);
+    for (auto i = 0; i < 1000; i++)
+    {
+        val1 = g.min(loc1);
+        val2 = g.max(loc2);
+    }
+    
+    // val = g.max(loc);
     output0 << "Min value " << val1 << " at location: " << loc1 << '\n';
     output0 << "Max value " << val2 << " at location: " << loc2 << '\n';
 
