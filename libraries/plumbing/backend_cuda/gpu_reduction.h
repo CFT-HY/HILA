@@ -44,13 +44,12 @@
 #define _CG_ABI_EXPERIMENTAL
 #include <cooperative_groups.h>
 #include <cooperative_groups/reduce.h>
+static constexpr int whichKernel = GPU_REDUCE_KERNEL;
+static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 
 // Define what reduction kernel to use - a local variable
 // Number from 0 to 9, can benchmark ...
 // TODO: make this makefile-define!
-
-static constexpr int whichKernel = GPU_REDUCE_KERNEL;
-static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 
 // Utility class used to avoid linker errors with extern
 // unsized shared memory arrays with templated type
@@ -736,6 +735,88 @@ void reduce_kernel(int size, int blocks, T *d_idata, T *d_odata) {
     }
 }
 
+template <class T, typename index_type>
+__global__ void minmax_kernel_final(const T *i_data, T *minmax_array_out,
+                                    index_type *coordinate_index_array,
+                                    index_type *coordinate_index_array_out,
+                                    int array_size, const int sign_min_or_max) {
+    int thIdx = threadIdx.x;
+    T buffer_value, minmax_value = i_data[thIdx];
+    index_type coordinate_idx = coordinate_index_array[thIdx];
+    __shared__ T minmax_values[N_threads];
+    __shared__ index_type coordinates[N_threads];
+
+    for (index_type i = thIdx; i < array_size; i += N_threads) {
+        buffer_value = i_data[i];
+        if (minmax_value * sign_min_or_max > buffer_value * sign_min_or_max) {
+            minmax_value = buffer_value;
+            coordinate_idx = coordinate_index_array[i];
+        }
+    }
+
+    minmax_values[thIdx] = minmax_value;
+    coordinates[thIdx] = coordinate_idx;
+    __syncthreads();
+
+    for (int size = N_threads / 2; size > 0; size /= 2) {
+        if (thIdx < size) {
+            if (minmax_values[thIdx] * sign_min_or_max >
+                minmax_values[thIdx + size] * sign_min_or_max) {
+                minmax_values[thIdx] = minmax_values[thIdx + size];
+                coordinates[thIdx] = coordinates[thIdx + size];
+            }
+            __syncthreads();
+        }
+    }
+    if (thIdx == 0) {
+        minmax_array_out[blockIdx.x] = minmax_values[0];
+        coordinate_index_array_out[blockIdx.x] = coordinates[0];
+    }
+}
+
+template <class T, typename index_type>
+__global__ void minmax_kernel(const T *i_data, T *minmax_array_out,
+                              index_type *coordinate_index_array_out,
+                              const int array_size, const int sign_min_or_max,
+                              T const initial_value) {
+    index_type thIdx = threadIdx.x;
+    index_type gthIdx = thIdx + blockIdx.x * N_threads;
+    const index_type grid_size = N_threads * gridDim.x;
+    T minmax_value = initial_value;
+    index_type coordinate_idx = gthIdx;
+    T buffer_value;
+
+    __shared__ T minmax_values[N_threads];
+    __shared__ index_type coordinates[N_threads];
+
+    for (index_type i = gthIdx; i < array_size; i += grid_size) {
+        buffer_value = i_data[i];
+        if (minmax_value * sign_min_or_max > buffer_value * sign_min_or_max) {
+            minmax_value = buffer_value;
+            coordinate_idx = i;
+        }
+    }
+
+    minmax_values[thIdx] = minmax_value;
+    coordinates[thIdx] = coordinate_idx;
+    __syncthreads();
+
+    for (index_type size = N_threads / 2; size > 0; size /= 2) {
+        if (thIdx < size) {
+            if (minmax_values[thIdx] * sign_min_or_max >
+                minmax_values[thIdx + size] * sign_min_or_max) {
+                minmax_values[thIdx] = minmax_values[thIdx + size];
+                coordinates[thIdx] = coordinates[thIdx + size];
+            }
+            __syncthreads();
+        }
+    }
+    if (thIdx == 0) {
+        minmax_array_out[blockIdx.x] = minmax_values[0];
+        coordinate_index_array_out[blockIdx.x] = coordinates[0];
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -803,6 +884,67 @@ T gpu_reduce(int size, T *d_idata, bool keep_buffers) {
     return gpu_result;
 }
 
+// All the for testing parts allow to see what happens in the return arrays between the singular block reduction
+template <class T>
+std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_size,
+                                                bool min_or_max) {
+
+    using index_type = unsigned long;
+    int num_blocks = (node_system_size + N_threads - 1) / N_threads;
+    //CUDA will take a performance hit if num_blocks is too large at very large system sizes
+    if (num_blocks > 2048) num_blocks = 2048;
+    int block_size = N_threads;
+    int const sign_min_or_max = min_or_max ? 1 : -1;
+    T const initial_value =
+        min_or_max ? std::numeric_limits<T>::max() : std::numeric_limits<T>::min();
+
+    T *minmax_array;
+    index_type *coordinate_index_array;
+    T return_value_host;
+    index_type coordinate_index;
+
+    // for testing
+    // T *return_value_list = new T[num_blocks];
+    // index_type *coordinate_list = new index_type[num_blocks];
+
+    cudaMalloc((void **)&minmax_array, sizeof(T) * num_blocks);
+    cudaMalloc((void **)&coordinate_index_array, sizeof(index_type) * num_blocks);
+
+    // Find num_blocks amount of max or min values
+    minmax_kernel<<<num_blocks, block_size>>>(field_data, minmax_array,
+                                              coordinate_index_array, node_system_size,
+                                              sign_min_or_max, initial_value);
+
+    // For testing
+    // cudaMemcpy(return_value_list, minmax_array, sizeof(T) * num_blocks,
+    //            cudaMemcpyDeviceToHost);
+    // cudaMemcpy(coordinate_list, coordinate_index_array, sizeof(index_type) * num_blocks,
+    //            cudaMemcpyDeviceToHost);
+
+    // If we happen to have less than N_threads worth of blocks, then the final kernel will be launched with num_blocks worth of threads
+    if (num_blocks < block_size) block_size = num_blocks;
+
+    // Find global max or min from num_blocks amount of values
+    minmax_kernel_final<<<1, block_size>>>(
+        minmax_array, minmax_array, coordinate_index_array, coordinate_index_array,
+        num_blocks, sign_min_or_max);
+
+    // Location and value of max or min will be the first element of return arrays
+    cudaMemcpy(&return_value_host, minmax_array, sizeof(T), cudaMemcpyDeviceToHost);
+    cudaMemcpy(&coordinate_index, coordinate_index_array, sizeof(index_type),
+               cudaMemcpyDeviceToHost);
+
+    // for testin
+    cudaFree(minmax_array);
+    cudaFree(coordinate_index_array);
+    // for testing
+    // for (auto i = 0; i < num_blocks; i++) {
+    //     std::cout << return_value_list[i] << ": value, " << coordinate_list[i]
+    //               << ": num iterations, \n";
+    // }
+    return std::make_pair(return_value_host, coordinate_index);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////
 
 #else // if !defined(HILAPP) && !defined(SLOW_GPU_REDUCTION)
@@ -810,6 +952,10 @@ T gpu_reduce(int size, T *d_idata, bool keep_buffers) {
 // just declare the name
 template <class T>
 T gpu_reduce(int size, T *d_idata, bool keep_buffers);
+
+template <class T>
+std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_size,
+                                                bool min_or_max);
 
 #endif // ifndef HILAPP
 
@@ -880,6 +1026,15 @@ T Field<T>::gpu_reduce_sum(bool allreduce, Parity par, bool do_mpi) const {
 #endif
 
     return result.value;
+}
+
+template <typename T>
+T Field<T>::gpu_minmax(bool min_or_max, Parity par, CoordinateVector &loc) const {
+    unsigned const node_system_size = this->fs->lattice->mynode.volume();
+    std::pair<T, unsigned> value_and_coordinate =
+        gpu_launch_minmax_kernel(this->field_buffer(), node_system_size, min_or_max);
+    loc = this->fs->lattice->coordinates(value_and_coordinate.second);
+    return value_and_coordinate.first;
 }
 
 #endif

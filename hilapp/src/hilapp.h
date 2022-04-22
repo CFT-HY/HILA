@@ -198,28 +198,57 @@ enum class number_type {
 };
 
 // Collection of legal number types
-// Included is a set for O(1) lookup
 struct legal_types {
+<<<<<<< HEAD
     std::vector<std::string> vector = {"int",      "unsigned", "long",   "int64_t",
                                        "uint64_t", "float",    "double", "long double"};
     std::set<std::string> set{std::begin(this->vector), std::end(this->vector)};
+||||||| 1e1dd6e0
+    std::vector<std::string> vector = {
+        "int", 
+        "unsigned", 
+        "long", 
+        "int64_t",
+        "uint64_t", 
+        "float", 
+        "double",  
+        "long double"
+    };
+    std::set<std::string> set{std::begin(this->vector),std::end(this->vector)};
+=======
+    std::vector<std::string> vector = {
+        "int", 
+        "unsigned", 
+        "long", 
+        "int64_t",
+        "uint64_t",
+        "unsigned long",
+        "float", 
+        "double",  
+        "long double"
+    };
+>>>>>>> minmax
 
     bool check_if_legal(std::string is_legal_type) {
         return this->set.find(is_legal_type) != this->set.end();
     }
 
     std::string as_string() {
+<<<<<<< HEAD
         std::string vector_as_string;
         // for (const auto &vector_element : this->vector)
         //     vector_as_string += vector_element + delimiter;
         //return boost::algorithm::join(this->vector, delimiter);
     
+||||||| 1e1dd6e0
+        //std::string vector_as_string
+        // for (const auto &vector_element : this->vector) vector_as_string += vector_element + delimiter;
+=======
+>>>>>>> minmax
         const std::string delimiter = ", ";
-        for (int i = 0; i < this->vector.size() - 1; i++)
-            vector_as_string += this->vector[i] + delimiter;
-        vector_as_string += this->vector.back();
-
-        return vector_as_string;
+        std::string vector_as_str;
+        for (const auto &vector_element : this->vector) vector_as_str += vector_element + delimiter;
+        return vector_as_str.erase(vector_as_str.size()-delimiter.size(),delimiter.size());
     }
         
 };
