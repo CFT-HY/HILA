@@ -8,11 +8,13 @@
 /// fft.h .
 
 /// transform does the actual fft.
-template <typename cmplx_t> void hila_fft<cmplx_t>::transform() {
+template <typename cmplx_t>
+void hila_fft<cmplx_t>::transform() {
     assert(0 && "Don't call this!");
 }
 
-template <> inline void hila_fft<Complex<double>>::transform() {
+template <>
+inline void hila_fft<Complex<double>>::transform() {
     extern unsigned hila_fft_my_columns[NDIM];
     extern hila::timer fft_plan_timer, fft_buffer_timer, fft_execute_timer;
 
@@ -68,7 +70,8 @@ template <> inline void hila_fft<Complex<double>>::transform() {
     fftw_free(fftwbuf);
 }
 
-template <> inline void hila_fft<Complex<float>>::transform() {
+template <>
+inline void hila_fft<Complex<float>>::transform() {
 
     extern hila::timer fft_plan_timer, fft_buffer_timer, fft_execute_timer;
     extern unsigned hila_fft_my_columns[NDIM];
@@ -128,7 +131,8 @@ template <> inline void hila_fft<Complex<float>>::transform() {
 ////////////////////////////////////////////////////////////////////
 /// send column data to nodes
 
-template <typename cmplx_t> void hila_fft<cmplx_t>::gather_data() {
+template <typename cmplx_t>
+void hila_fft<cmplx_t>::gather_data() {
 
 #ifdef USE_MPI
 
@@ -188,7 +192,8 @@ template <typename cmplx_t> void hila_fft<cmplx_t>::gather_data() {
 //////////////////////////////////////////////////////////////////////////////////////
 /// inverse of gather_data
 
-template <typename cmplx_t> void hila_fft<cmplx_t>::scatter_data() {
+template <typename cmplx_t>
+void hila_fft<cmplx_t>::scatter_data() {
 
 #ifdef USE_MPI
 
