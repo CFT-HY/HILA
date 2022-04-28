@@ -199,23 +199,6 @@ enum class number_type {
 
 // Collection of legal number types
 struct legal_types {
-<<<<<<< HEAD
-    std::vector<std::string> vector = {"int",      "unsigned", "long",   "int64_t",
-                                       "uint64_t", "float",    "double", "long double"};
-    std::set<std::string> set{std::begin(this->vector), std::end(this->vector)};
-||||||| 1e1dd6e0
-    std::vector<std::string> vector = {
-        "int", 
-        "unsigned", 
-        "long", 
-        "int64_t",
-        "uint64_t", 
-        "float", 
-        "double",  
-        "long double"
-    };
-    std::set<std::string> set{std::begin(this->vector),std::end(this->vector)};
-=======
     std::vector<std::string> vector = {
         "int", 
         "unsigned", 
@@ -227,24 +210,13 @@ struct legal_types {
         "double",  
         "long double"
     };
->>>>>>> minmax
 
     bool check_if_legal(std::string is_legal_type) {
-        return this->set.find(is_legal_type) != this->set.end();
+        if (std::binary_search(this->vector.begin(), this->vector.end(), is_legal_type)) return true;
+        return false;
     }
 
     std::string as_string() {
-<<<<<<< HEAD
-        std::string vector_as_string;
-        // for (const auto &vector_element : this->vector)
-        //     vector_as_string += vector_element + delimiter;
-        //return boost::algorithm::join(this->vector, delimiter);
-    
-||||||| 1e1dd6e0
-        //std::string vector_as_string
-        // for (const auto &vector_element : this->vector) vector_as_string += vector_element + delimiter;
-=======
->>>>>>> minmax
         const std::string delimiter = ", ";
         std::string vector_as_str;
         for (const auto &vector_element : this->vector) vector_as_str += vector_element + delimiter;
