@@ -739,7 +739,7 @@ template <class T, typename index_type>
 __global__ void minmax_kernel_final(const T *i_data, T *minmax_array_out,
                                     index_type *coordinate_index_array,
                                     index_type *coordinate_index_array_out,
-                                    int num_blocks, const int sign_min_or_max, T initial_value) {
+                                    int num_blocks, const int sign_min_or_max) {
     int thIdx = threadIdx.x;
     T buffer_value, minmax_value = i_data[thIdx];
     index_type coordinate_idx = coordinate_index_array[thIdx];
@@ -929,7 +929,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
     // Find global max or min from num_blocks amount of values
     minmax_kernel_final<<<1, block_size>>>(
         minmax_array, minmax_array, coordinate_index_array, coordinate_index_array,
-        num_blocks, sign_min_or_max, initial_value);
+        num_blocks, sign_min_or_max);
     check_device_error("minmax_kernel_final");
 
     // Location and value of max or minP will be the first element of return arrays
@@ -1025,8 +1025,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 
 //         if (allreduce) {
 //             MPI_Allreduce(MPI_IN_PLACE, &result.value, size, dtype, MPI_SUM,
-//                           this->fs->la
-Max value of ODD sites 2.1 at location: [ 1 1 31 ]ttice->mpi_comm_lat);
+//                           this->fs->lattice->mpi_comm_lat);
 //         } else {
 //             MPI_Reduce(MPI_IN_PLACE, &result.value, size, dtype, MPI_SUM, 0,
 //                        this->fs->lattice->mpi_comm_lat);
