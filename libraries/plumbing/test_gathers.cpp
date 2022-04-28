@@ -15,6 +15,16 @@ template <typename T> void gather_test() {
             f2[X] = mod(X.coordinate(d) + 1, lattice->size(d));
         }
 
+        int64_t s = 0;
+        onsites(ALL) {
+            s += 1;
+        }
+
+        if (s != lattice->volume()) {
+            output0 << " Reduction test error!  Sum " << s << " should be " << lattice->volume() << '\n';
+            hila::terminate(1);
+        }
+
         onsites(ALL) {
             dif1 += f1[X + d] - f2[X];
             dif2 += f1[X] - f2[X - d];
@@ -22,13 +32,13 @@ template <typename T> void gather_test() {
 
         if (dif1 != 0) {
             output0 << " Std up-gather test error! Node " << hila::myrank()
-                    << " direction " << (unsigned)d << '\n';
-            exit(1);
+                    << " direction " << (unsigned)d << " dif1 " << dif1 << '\n';
+            hila::terminate(1);
         }
         if (dif2 != 0) {
             output0 << " Std down-gather test error! Node " << hila::myrank()
-                    << " direction " << (unsigned)d << '\n';
-            exit(1);
+                    << " direction " << (unsigned)d << " dif2 " << dif2 << '\n';
+            hila::terminate(1);
         }
 
 #if 0 && defined(SPECIAL_BOUNDARY_CONDITIONS)
@@ -49,7 +59,7 @@ template <typename T> void gather_test() {
             if (dif1 != 0) {
                 output0 << " Antiperiodic up-gather test error! Node " << hila::myrank()
                         << " direction " << (unsigned)d << '\n';
-                exit(1);
+                hila::terminate(1);
             }
         }
 #endif
