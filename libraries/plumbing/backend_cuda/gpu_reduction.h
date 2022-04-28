@@ -1025,7 +1025,8 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 
 //         if (allreduce) {
 //             MPI_Allreduce(MPI_IN_PLACE, &result.value, size, dtype, MPI_SUM,
-//                           this->fs->lattice->mpi_comm_lat);
+//                           this->fs->la
+Max value of ODD sites 2.1 at location: [ 1 1 31 ]ttice->mpi_comm_lat);
 //         } else {
 //             MPI_Reduce(MPI_IN_PLACE, &result.value, size, dtype, MPI_SUM, 0,
 //                        this->fs->lattice->mpi_comm_lat);
