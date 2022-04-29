@@ -67,7 +67,7 @@ void hila::seed_random(uint64_t seed) {
 
     seed = seed ^ (n ^ ((7*n) << 25));
 
-    output0 << "Using node random numbers, seed for node 0: " << seed << '\n';
+    output0 << "Using node random numbers, seed for node 0: " << seed << std::endl;
 
 // #if !defined(OPENMP)
     mersenne_twister_gen.seed( seed );

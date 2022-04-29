@@ -109,7 +109,7 @@ void *gpu_memory_allocate(size_t m_alloc) {
     if (m_alloc % ALLOC_ALIGNMENT != 0)
         m_alloc = m_alloc - m_alloc % ALLOC_ALIGNMENT + ALLOC_ALIGNMENT;
 
-    double fraction = (double)m_alloc/gpu_total_memory;
+    double fraction = (double)m_alloc / gpu_total_memory;
 
     output0 << "GPU memory: allocating " << m_alloc / mb << " MB out of total "
             << gpu_total_memory / mb << "(" << (int)(fraction * 100) << "%)\n";
@@ -137,13 +137,13 @@ void gpu_memory_pool_init() {
 #if defined(CUDA)
     cudaDeviceProp props;
     int my_device;
-    cudaGetDevice(&my_device);
-    cudaGetDeviceProperties(&props, my_device);
+    GPU_CHECK(cudaGetDevice(&my_device));
+    GPU_CHECK(cudaGetDeviceProperties(&props, my_device));
 #elif defined(HIP)
     hipDeviceProp_t props;
     int my_device;
-    hipGetDevice(&my_device);
-    hipGetDeviceProperties(&props, my_device);
+    GPU_CHECK(hipGetDevice(&my_device));
+    GPU_CHECK(hipGetDeviceProperties(&props, my_device));
 #endif
 
     gpu_total_memory = props.totalGlobalMem;
@@ -176,7 +176,8 @@ void gpu_memory_pool_init() {
 // reuse soon
 
 void remove_from_list(block *p, block **head) {
-    if (p->next != nullptr) p->next->prev = p->prev;
+    if (p->next != nullptr)
+        p->next->prev = p->prev;
     if (p->prev != nullptr)
         p->prev->next = p->next;
     else
@@ -184,7 +185,8 @@ void remove_from_list(block *p, block **head) {
 }
 
 void insert_to_list_head(block *p, block **head) {
-    if (*head != nullptr) (*head)->prev = p;
+    if (*head != nullptr)
+        (*head)->prev = p;
     p->next = *head;
     p->prev = nullptr;
     *head = p;
@@ -199,7 +201,8 @@ void merge_block_down_free(block *p) {
     block *pdown = p->down;
     pdown->size += p->size;
     pdown->up = p->up;
-    if (p->up != nullptr) p->up->down = pdown;
+    if (p->up != nullptr)
+        p->up->down = pdown;
 
     if (p->is_free) {
         // remove from free list
@@ -236,7 +239,8 @@ block *split_free_block(block *p, size_t req_size) {
     b->up = p->up;
     b->down = p;
     p->up = b;
-    if (b->up != nullptr) b->up->down = b;
+    if (b->up != nullptr)
+        b->up->down = b;
 
     // set data pointer as appropriate
     b->ptr = static_cast<char *>(p->ptr) + p->size - req_size;
@@ -286,7 +290,8 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
 
     // make req_size to be multiple of alignment
     size_t align_mod = req_size % ALLOC_ALIGNMENT;
-    if (align_mod > 0) req_size = req_size - align_mod + ALLOC_ALIGNMENT;
+    if (align_mod > 0)
+        req_size = req_size - align_mod + ALLOC_ALIGNMENT;
 
     // output0 << "REQ SIZE " << req_size << '\n';
 
@@ -332,7 +337,8 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
         insert_to_list_head(ptr, &in_use_blocks);
 
         current_used_size += req_size;
-        if (current_used_size > max_used_size) max_used_size = current_used_size;
+        if (current_used_size > max_used_size)
+            max_used_size = current_used_size;
 
         *ret = ptr->ptr;
         return;

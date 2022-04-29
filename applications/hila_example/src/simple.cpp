@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     hila::initialize(argc, argv);
 
     // set up 32^3 lattice
-    lattice->setup({32, 32, 32});
+    lattice->setup({128, 128, 128});
 
     // Random numbers are used here - use time to seed
     hila::seed_random(0);
@@ -28,13 +28,13 @@ int main(int argc, char *argv[]) {
     // Measure hopping term and f^2
     Complex<double> hopping;
     hopping = 1;
-    Complex<double> fsqr = 0;
+    double fsqr = 0;
     
     onsites(ALL) {
         foralldir(d) {
             hopping += f[X] * f[X + d].conj();
         }
-        fsqr *= f[X].squarenorm();
+        fsqr += f[X].squarenorm();
     }
 
     output0 << "Average f^2 : " << fsqr / lattice->volume() << '\n';

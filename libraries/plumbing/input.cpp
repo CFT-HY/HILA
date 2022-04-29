@@ -139,7 +139,7 @@ void input::print_linebuf(int end_of_key) {
         if (i < linebuffer.size()) {
             hila::output << linebuffer.substr(i);
         }
-        hila::output << '\n';
+        hila::output << std::endl; // use endl to show output here
     }
 }
 

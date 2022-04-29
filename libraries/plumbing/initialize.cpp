@@ -253,7 +253,7 @@ void hila::initialize(int argc, char **argv) {
     }
 
     if (hila::myrank() == 0) {
-        print_dashed_line("HILA lattice framework");
+        print_dashed_line("HILA ⩩ lattice framework");
         hila::output << "Running program " << argv[0] << "\n";
         hila::output << "with command line arguments '";
         for (int i = 1; i < argc; i++)
