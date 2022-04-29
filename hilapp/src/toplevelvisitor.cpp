@@ -1968,7 +1968,7 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
 
         // llvm::errs() << " - Function "<< FuncName << "\n";
 
-        // if (does_function_contain_loop(f)) {
+        // if (does_function_contain_field_access(f)) {
         //   loop_callable = false;
         // }
 
@@ -1980,7 +1980,7 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
                 CXXMethodDecl *method = dyn_cast<CXXMethodDecl>(f);
                 CXXRecordDecl *parent = method->getParent();
                 if (parent->isTemplated()) {
-                    if (does_function_contain_loop(f)) {
+                    if (does_function_contain_field_access(f)) {
                         // Skip children here. Loops in the template may be
                         // incorrect before they are specialized
                         parsing_state.skip_children = 1;
@@ -2002,7 +2002,7 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
         case FunctionDecl::TemplatedKind::TK_MemberSpecialization:
         case FunctionDecl::TemplatedKind::TK_DependentFunctionTemplateSpecialization:
 
-            if (does_function_contain_loop(f)) {
+            if (does_function_contain_field_access(f)) {
                 specialize_function_or_method(f);
             } else {
                 parsing_state.skip_children = 1; // no reason to look at it further

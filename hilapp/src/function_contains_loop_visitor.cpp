@@ -23,11 +23,12 @@ class containsSiteLoopChecker : public GeneralVisitor,
     bool found_X;
     bool found_field_parity;
     bool found_field;
+    bool found_field_coordinate;
     bool searching_for_field;
 
     template <typename visitortype>
     containsSiteLoopChecker(visitortype &v, bool fieldsearch) : GeneralVisitor(v) {
-        found_field = found_X = found_field_parity = false;
+        found_field = found_X = found_field_parity = found_field_coordinate = false;
         searching_for_field = fieldsearch;
     }
 
@@ -54,6 +55,11 @@ class containsSiteLoopChecker : public GeneralVisitor,
             found_field_parity = true;
             return false;
         }
+
+        if (is_field_with_coordinate(OC)) {
+            found_field_coordinate = true;
+            return false;
+        }
         return true;
     }
 };
@@ -62,12 +68,12 @@ class containsSiteLoopChecker : public GeneralVisitor,
 /// And loop checker interface here
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::does_function_contain_loop(FunctionDecl *f) {
+bool TopLevelVisitor::does_function_contain_field_access(FunctionDecl *f) {
 
     if (f->hasBody()) {
         containsSiteLoopChecker flc(*this, false);
         flc.TraverseStmt(f->getBody());
-        return (flc.found_X || flc.found_field_parity);
+        return (flc.found_X || flc.found_field_parity || flc.found_field_coordinate);
     }
     return false;
 }
