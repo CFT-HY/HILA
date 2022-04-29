@@ -11,6 +11,7 @@ ARCH := vanilla
 endif
 
 # Read in the main makefile contents, incl. platforms
+CUDA_VERSION=11.4
 include $(HILA_DIR)/libraries/main.mk
 
 #HILAPP_OPTS += -insert-includes
@@ -24,7 +25,7 @@ APP_OPTS += -DNDIM=3
 
 hila_example: build/hila_example ; @:
 simple: build/simple ; @:
-
+minmax: build/minmax; @:
 # Now the linking step for each target executable
 build/hila_example: Makefile build/hila_example.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/hila_example.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
@@ -32,6 +33,9 @@ build/hila_example: Makefile build/hila_example.o $(HILA_OBJECTS) $(HEADERS)
 # Now the linking step for each target executable
 build/simple: Makefile build/simple.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/simple.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
+
+build/minmax: Makefile build/minmax.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/minmax.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 
 
