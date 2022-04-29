@@ -37,14 +37,11 @@
     Parallel reduction kernels
 */
 
-//#include "hila.h"
+#include "hila.h"
 
-#if !defined(HILAPP) && !defined(SLOW_GPU_REDUCTION)
+#if !defined(HILAPP)
 
-#define _CG_ABI_EXPERIMENTAL
-#include <cooperative_groups.h>
-#include <cooperative_groups/reduce.h>
-static constexpr int whichKernel = GPU_REDUCE_KERNEL;
+// static constexpr int whichKernel = GPU_REDUCE_KERNEL;
 static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 
 // Define what reduction kernel to use - a local variable
@@ -632,7 +629,6 @@ static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 //             i += gridSize;
 //         }
 //     }
-
 //     threadVal = cg_reduce_n(threadVal, multiWarpTile);
 
 //     if (multiWarpTile.thread_rank() == 0) {
@@ -908,8 +904,8 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
     // T *return_value_list = new T[num_blocks];
     // index_type *coordinate_list = new index_type[num_blocks];
 
-    cudaMalloc((void **)&minmax_array, sizeof(T) * num_blocks);
-    cudaMalloc((void **)&coordinate_index_array, sizeof(index_type) * num_blocks);
+    gpuMalloc((void **)&minmax_array, sizeof(T) * num_blocks);
+    gpuMalloc((void **)&coordinate_index_array, sizeof(index_type) * num_blocks);
 
     // Find num_blocks amount of max or min values
     //implement loop
@@ -933,9 +929,9 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
     check_device_error("minmax_kernel_final");
 
     // Location and value of max or minP will be the first element of return arrays
-    cudaMemcpy(&return_value_host, minmax_array, sizeof(T), cudaMemcpyDeviceToHost);
-    cudaMemcpy(&coordinate_index, coordinate_index_array, sizeof(index_type),
-               cudaMemcpyDeviceToHost);
+    gpuMemcpy(&return_value_host, minmax_array, sizeof(T), gpuMemcpyDeviceToHost);
+    gpuMemcpy(&coordinate_index, coordinate_index_array, sizeof(index_type),
+               gpuMemcpyDeviceToHost);
 
     // for testin
     // cudaMemcpy(return_value_list, minmax_array, sizeof(T) * num_blocks,
@@ -943,8 +939,8 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
     // cudaMemcpy(coordinate_list, coordinate_index_array, sizeof(index_type) * num_blocks,
     // cudaMemcpyDeviceToHost);
 
-    cudaFree(minmax_array);
-    cudaFree(coordinate_index_array);
+    gpuFree(minmax_array);
+    gpuFree(coordinate_index_array);
     // for testing
     // for (auto i = 0; i < 1; i++) {
     //     std::cout << return_value_list[0] << ": value, " << coordinate_list[0]
@@ -1042,6 +1038,7 @@ T Field<T>::gpu_minmax(bool min_or_max, Parity par, CoordinateVector &loc) const
     lattice_info.loop_begin = this->fs->lattice->loop_begin(par);
     lattice_info.loop_end = this->fs->lattice->loop_end(par);
     unsigned const node_system_size = lattice_info.loop_end - lattice_info.loop_begin;
+
     std::pair<T, unsigned> value_and_coordinate =
         gpu_launch_minmax_kernel(this->field_buffer(), node_system_size, min_or_max, lattice_info);
     loc = this->fs->lattice->coordinates(value_and_coordinate.second);
