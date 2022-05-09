@@ -1,22 +1,60 @@
-#ifndef POWERSPECTRUM_H
-#define POWERSPECTRUM_H
+#ifndef SPECTRALDENSITY_H
+#define SPECTRALDENSITY_H
 
 #include "hila.h"
 #include "fft.h"
 
-//////////////////////////////////////////////////////////////////////////////////
-/// Spectral density
-/// This version takes in complex field
+
+// mod the k-space around origin, -L/2 -> L/2
+inline Vector<NDIM, double> k_vector(const CoordinateVector &loc) {
+
+    Vector<NDIM, double> k;
+    foralldir (d) {
+        int n = loc[d];
+        if (n > lattice->size(d) / 2)
+            n -= lattice->size(d);
+
+        k[d] = n * 2.0 * M_PI / lattice->size(d);
+    }
+    return k;
+}
+
+
+/// Generic k-space field binner routine - returns field element type vector
+
+template <typename T>
+std::vector<T> bin_k_field(const Field<T> &f, int bins, double max_k = M_PI) {
+
+    double mult = bins / max_k;
+
+    VectorReduction<T> s(bins);
+    s.allreduce(false);
+    s = 0;
+
+    onsites (ALL) {
+
+        double kr = k_vector(X.coordinates()).norm();
+
+        int b = kr * mult;
+        if (b >= 0 && b < bins) {
+            s[b] += f[X];
+        }
+    }
+
+    std::vector<T> res(bins);
+
+    for (int i = 0; i < bins; i++)
+        res[i] = s[i];
+    return res;
+}
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-std::vector<double> powerspectrum(const Field<T> &f, int bins, double max_k = M_PI) {
+std::vector<double> bin_k_field_squarenorm(const Field<T> &f, int bins,
+                                           double max_k = M_PI) {
 
     // This is for complex type
     using cmplx_t = Complex<hila::number_type<T>>;
     constexpr int n_cmplx = sizeof(T) / sizeof(cmplx_t);
-
-    Field<T> ftrans;
-    FFT_field(f, ftrans);
 
     double mult = bins / max_k;
 
@@ -26,25 +64,15 @@ std::vector<double> powerspectrum(const Field<T> &f, int bins, double max_k = M_
 
     onsites (ALL) {
 
-        // mod the k-space around origin, -L/2 -> L/2
-        CoordinateVector n;
         Vector<NDIM, double> k;
-
-        foralldir (d) {
-            int n = X.coordinate(d);
-            if (n > lattice->size(d) / 2)
-                n -= lattice->size(d);
-
-            k[d] = n * 2.0 * M_PI / lattice->size(d);
-        }
-
+        k = k_vector(X.coordinates());
         double kr = k.norm();
 
         int b = kr * mult;
         if (b >= 0 && b < bins) {
             double ps = 0;
             for (int i = 0; i < n_cmplx; i++) {
-                ps += hila::get_complex_element(ftrans[X], i).squarenorm();
+                ps += hila::get_complex_element(f[X], i).squarenorm();
                 // ps += c.squarenorm();
             }
             s[b] += ps;
@@ -52,15 +80,29 @@ std::vector<double> powerspectrum(const Field<T> &f, int bins, double max_k = M_
     }
 
     std::vector<double> res(bins);
+
     for (int i = 0; i < bins; i++)
         res[i] = s[i];
     return res;
 }
 
 
+//////////////////////////////////////////////////////////////////////////////////
+/// Spectral density
+/// This version takes in complex field
+
+template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
+std::vector<double> spectraldensity(const Field<T> &f, int bins, double max_k = M_PI) {
+
+    Field<T> ftrans;
+    FFT_field(f, ftrans);
+
+    return bin_k_field_squarenorm(ftrans, bins, max_k);
+}
+
 /// interface for real fields - an extra copy which could be avoided
 template <typename T, std::enable_if_t<!hila::contains_complex<T>::value, int> = 0>
-std::vector<double> powerspectrum(const Field<T> &f, int bins, double max_k = M_PI) {
+std::vector<double> spectraldensity(const Field<T> &f, int bins, double max_k = M_PI) {
 
     using cmplx_t = Complex<hila::number_type<T>>;
 
@@ -70,7 +112,7 @@ std::vector<double> powerspectrum(const Field<T> &f, int bins, double max_k = M_
         // need copy
         constexpr int nc = sizeof(T) / sizeof(cmplx_t);
 
-        return powerspectrum(*reinterpret_cast<const Field<Vector<nc, cmplx_t>> *>(&f),
+        return spectraldensity(*reinterpret_cast<const Field<Vector<nc, cmplx_t>> *>(&f),
                              bins, max_k);
     } else {
         // now the size of input is not evenly divisible by sizeof complex.
@@ -88,20 +130,31 @@ std::vector<double> powerspectrum(const Field<T> &f, int bins, double max_k = M_
             cfield[X] = u.cvec;
         }
 
-        return powerspectrum(cfield, bins, max_k);
+        return spectraldensity(cfield, bins, max_k);
     }
 }
 
 
-inline std::vector<double>
-powerspectrum_k_info(int bins, double max_k,
-                    std::vector<int> *countp = nullptr) {
-    // This is for complex type
+/// Data structure to hold the binning info - two vectors,
+/// holding average k value in a bin and count of lattice points
+struct binning_info {
+    std::vector<double> k;
+    std::vector<long> count;
+
+    binning_info(int bins) : k(bins), count(bins) {}
+};
+
+
+/// Return the information about the binning  in binning_info 
+
+inline binning_info bin_k_info(int bins, double max_k = M_PI) {
 
     double mult = bins / max_k;
 
+    binning_info res(bins);
+
     VectorReduction<double> s(bins);
-    VectorReduction<int> count(bins);
+    VectorReduction<long> count(bins);
     s.allreduce(false);
     count.allreduce(false);
     s = 0;
@@ -109,19 +162,7 @@ powerspectrum_k_info(int bins, double max_k,
 
     onsites (ALL) {
 
-        // mod the k-space around origin, -L/2 -> L/2
-        CoordinateVector n;
-        Vector<NDIM, double> k;
-
-        foralldir (d) {
-            int n = X.coordinate(d);
-            if (n > lattice->size(d) / 2)
-                n -= lattice->size(d);
-
-            k[d] = n * 2.0 * M_PI / lattice->size(d);
-        }
-
-        double kr = k.norm();
+        double kr = k_vector(X.coordinates()).norm();
 
         int b = kr * mult;
         if (b >= 0 && b < bins) {
@@ -130,16 +171,9 @@ powerspectrum_k_info(int bins, double max_k,
         }
     }
 
-    if (countp != nullptr) {
-        countp->resize(bins);
-        for (int i=0; i<bins; i++) (*countp)[i] = count[i];
-    }
-
-    std::vector<double>res(bins);
     for (int i = 0; i < bins; i++) {
-        if (count[i] > 0)
-            s[i] /= count[i];
-        res[i] = s[i];        
+        res.count[i] = count[i];
+        res.k[i] = s[i]/count[i];
     }
 
     return res;
