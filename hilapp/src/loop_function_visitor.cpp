@@ -79,6 +79,7 @@ class loopFunctionVisitor : public GeneralVisitor,
 
     std::string assignment_op;
     bool is_assignment, is_compound_assign;
+    bool got_lattice;
     Stmt *assign_stmt;
 
     // use the constructor which does not inherit var_info_list and var_decl_list
@@ -91,6 +92,8 @@ class loopFunctionVisitor : public GeneralVisitor,
         special_call_list = {};
         loop_function_calls = {};
         conditional_vars = {};
+        got_lattice =
+            false; // if function "lattice->size()" etc. do not trap on "lattice"
     }
 
     bool VisitStmt(Stmt *s) {
@@ -164,9 +167,9 @@ class loopFunctionVisitor : public GeneralVisitor,
         /// there are of course many others, I/O, Vectors, memory allocation...
         ///
         if (is_X_index_type(e) || is_field_expr(e)) {
-            reportDiag(
-                DiagnosticsEngine::Level::Error, e->getSourceRange().getBegin(),
-                "Field references are not allowed in functions called from site loops.");
+            reportDiag(DiagnosticsEngine::Level::Error, e->getSourceRange().getBegin(),
+                       "Field references are not allowed in functions called from site "
+                       "loops.");
             return false; // stop here for this function
         }
 
@@ -184,28 +187,40 @@ class loopFunctionVisitor : public GeneralVisitor,
                 return true;
 
             if (vdecl->hasExternalStorage() || vdecl->hasGlobalStorage()) {
-                if (!cmdline::allow_func_globals) {
-                    reportDiag(DiagnosticsEngine::Level::Error,
-                               e->getSourceRange().getBegin(),
-                               "global or extern variable references in functions called "
-                               "from site loops are not allowed."
-                               "\nThis can be enabled in non-kernelized code with option "
-                               "'-allow-func-globals'");
-                    return false;
+
+                if (got_lattice && vdecl->getNameAsString() == "lattice") {
+                    // now found the "lattice" in "lattice->size( .. )", clear
+                    got_lattice = false;
+
                 } else {
-                    if (e->isLValue()) {
-                        reportDiag(DiagnosticsEngine::Level::Error,
-                                   e->getSourceRange().getBegin(),
-                                   "modification of global or extern variables in "
-                                   "functions called from site loops is not allowed.");
+
+                    if (!cmdline::allow_func_globals) {
+                        llvm::errs() << "NAME IS " << vdecl->getNameAsString() << '\n';
+                        reportDiag(
+                            DiagnosticsEngine::Level::Error,
+                            e->getSourceRange().getBegin(),
+                            "global or extern variable references in functions called "
+                            "from site loops are not allowed."
+                            "\nThis can be enabled in non-kernelized code with option "
+                            "'-allow-func-globals'");
                         return false;
+                    } else {
+                        if (e->isLValue()) {
+                            reportDiag(
+                                DiagnosticsEngine::Level::Error,
+                                e->getSourceRange().getBegin(),
+                                "modification of global or extern variables in "
+                                "functions called from site loops is not allowed.");
+                            return false;
+                        }
+                        reportDiag(
+                            DiagnosticsEngine::Level::Warning,
+                            e->getSourceRange().getBegin(),
+                            "global or extern variable references in site loop "
+                            "functions make "
+                            "code non-portable to kernelized code (e.g. GPU code).");
+                        // just continue after this warning
                     }
-                    reportDiag(DiagnosticsEngine::Level::Warning,
-                               e->getSourceRange().getBegin(),
-                               "global or extern variable references in site loop "
-                               "functions make "
-                               "code non-portable to kernelized code (e.g. GPU code).");
-                    // just continue after this warning
                 }
             }
 
@@ -273,8 +288,8 @@ class loopFunctionVisitor : public GeneralVisitor,
             // TODO - these functions are at least not vectorizable ...
 
             // llvm::errs() << "FUNC DECL WITHOUT BODY IN LOOP FUNC - " <<
-            // D->getNameAsString() << '\n'; llvm::errs() << "  Call appears on line " <<
-            // srcMgr.getSpellingLineNumber(Call->getBeginLoc())
+            // D->getNameAsString() << '\n'; llvm::errs() << "  Call appears on line "
+            // << srcMgr.getSpellingLineNumber(Call->getBeginLoc())
             //      << " in file " << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
         }
 
@@ -307,7 +322,7 @@ class loopFunctionVisitor : public GeneralVisitor,
             std::string objtype = get_expr_type(MCall->getImplicitObjectArgument());
             if (objtype.find("lattice_struct *") != std::string::npos) {
 
-                llvm::errs() << "CALL in LOOP FUNC: " << get_stmt_str(Call) << '\n';
+                // llvm::errs() << "CALL in LOOP FUNC: " << get_stmt_str(Call) << '\n';
                 special_function_call sfc;
                 sfc.fullExpr = Call;
                 sfc.name = name;
@@ -340,8 +355,20 @@ class loopFunctionVisitor : public GeneralVisitor,
                                name.c_str());
                 }
 
-                if (replace_this)
+                if (replace_this) {
+
+                    // TODO: the modification to source is now here instead of codegen!! Change at some point ?
+                    srcBuf *sb = get_file_srcBuf(Call->getSourceRange().getBegin() );
+                    sb->replace(sfc.replace_range,sfc.replace_expression);
+
+                    // special_call_list does not do anything at the moment either.
+                    // the variable is not used
                     special_call_list.push_back(sfc);
+
+                }
+
+                // Now will meet the variable "lattice" in traversal, do not throw error 
+                got_lattice = true;
 
                 return true;
 
@@ -378,8 +405,8 @@ class loopFunctionVisitor : public GeneralVisitor,
 
     void check_var_info() {
 
-        // iterate through var_info_list until no more is_site_dependent -relations found
-        // this should not leave any corner cases behind
+        // iterate through var_info_list until no more is_site_dependent -relations
+        // found this should not leave any corner cases behind
 
         int found;
         do {
@@ -498,8 +525,8 @@ class loopFunctionVisitor : public GeneralVisitor,
 
             llvm::errs() << ")\nDefined in line "
                          << srcMgr.getSpellingLineNumber(ci.funcdecl->getBeginLoc())
-                         << " in file " << srcMgr.getFilename(ci.funcdecl->getBeginLoc())
-                         << '\n';
+                         << " in file "
+                         << srcMgr.getFilename(ci.funcdecl->getBeginLoc()) << '\n';
 
         } else if (ci.ctordecl) {
 
@@ -510,8 +537,8 @@ class loopFunctionVisitor : public GeneralVisitor,
             }
             llvm::errs() << ")\nDefined in line "
                          << srcMgr.getSpellingLineNumber(ci.ctordecl->getBeginLoc())
-                         << " in file " << srcMgr.getFilename(ci.ctordecl->getBeginLoc())
-                         << '\n';
+                         << " in file "
+                         << srcMgr.getFilename(ci.ctordecl->getBeginLoc()) << '\n';
         }
 
         llvm::errs() << " called " << loop_function_calls.size() << " functions:\n";
@@ -652,7 +679,8 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
             //     " parameters ";
             //     for (int i=0; i<ci.ctordecl->getNumParams(); i++)
             //     llvm::errs() <<
-            //     ci.ctordecl->getParamDecl(i)->getOriginalType().getAsString() << '\n';
+            //     ci.ctordecl->getParamDecl(i)->getOriginalType().getAsString() <<
+            //     '\n';
 
             backend_handle_loop_constructor(ci);
         }
