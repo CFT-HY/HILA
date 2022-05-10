@@ -6,8 +6,9 @@
 //#include <math.h>
 #include <assert.h>
 
-#include "plumbing/hila.h"
-#include "plumbing/fft.h"
+#include "hila.h"
+
+#include "spectraldensity.h"
 
 using real_t = float;
 
@@ -26,11 +27,19 @@ class scaling_sim {
     void write_energies();
     void write_windings();
     void next();
-    void updateCosmology(); 
+    void updateCosmology();
     inline real_t scaleFactor(real_t t);
+
+    void initialize_uetc();
+    void measure_uetc();
+    void get_Jk(Direction d, Field<Complex<real_t>> &ft);
 
     Field<Complex<real_t>> phi;
     Field<Complex<real_t>> pi;
+
+    // stored fields for UETCs - take space only if used
+    Field<Complex<real_t>> Js;
+    std::fstream uetc_out;
 
     real_t t;
     real_t a;
@@ -55,20 +64,24 @@ class scaling_sim {
         real_t sigma;
         real_t dx;
         real_t dt;
-	    real_t era;
+        real_t era;
         real_t tStart;
         real_t tdif;
         real_t difFac;
         real_t tcg;
-	    real_t s1;
-	    real_t s2;
+        real_t s1;
+        real_t s2;
         real_t tdis;
         real_t dampHg;
         real_t dampAx;
-   	    real_t tStats;
+        real_t tStats;
         real_t nOutputs;
         real_t tEnd;
         real_t lambda0;
+        real_t uetc_start_time;
+        real_t uetc_meas_interval;
+        int uetc_bins;
+        std::string uetc_filename;
         std::fstream stream;
     } config;
 };
@@ -103,23 +116,34 @@ const std::string scaling_sim::allocate(const std::string &fname, int argc,
     config.tStats = parameters.get("tStats");
     config.nOutputs = parameters.get("numberStatsOutputs");
     real_t ratio = parameters.get("dtdxRatio");
+
     const std::string output_file = parameters.get("output_file");
     config.dt = config.dx * ratio;
     t = config.tStart;
 
-    if (config.tcg<config.tdif)
-    {
-	output0 << "Core growth time has to be bigger or equal to Diffusion time"<< '\n';
-	output0 << "Setting Core growth time equal to Diffusion time"<< '\n';
-	config.tcg=config.tdif;		
+    if (parameters.get_item("UETC", {"on", "off"}) == 0) {
+        config.uetc_start_time = parameters.get("UETC start time");
+        config.uetc_meas_interval = parameters.get("UETC measurement interval");
+        config.uetc_bins = parameters.get("UETC bins");
+        config.uetc_filename = parameters.get("UETC file");
+    } else {
+        output0 << "UETC correlation function measurement off\n";
+        config.uetc_start_time = -1; // flag uetc off with this
     }
- 
-    acg = pow(config.tcg/config.tEnd, config.era);
-    adif = acg * pow (config.tdif/config.tcg, config.era);
 
-    lambdacg = config.lambda0 * pow(acg, -2.0*(1.0-config.s2));
-    lambdadif = lambdacg * pow( adif/acg, -2.0*(1.0-config.s1));
-     
+
+    if (config.tcg < config.tdif) {
+        output0 << "Core growth time has to be bigger or equal to Diffusion time\n";
+        output0 << "Setting Core growth time equal to Diffusion time\n";
+        config.tcg = config.tdif;
+    }
+
+    acg = pow(config.tcg / config.tEnd, config.era);
+    adif = acg * pow(config.tdif / config.tcg, config.era);
+
+    lambdacg = config.lambda0 * pow(acg, -2.0 * (1.0 - config.s2));
+    lambdadif = lambdacg * pow(adif / acg, -2.0 * (1.0 - config.s1));
+
     CoordinateVector box_dimensions = {config.l, config.l, config.l};
     lattice->setup(box_dimensions);
     hila::seed_random(config.seed);
@@ -131,29 +155,24 @@ inline real_t scaling_sim::scaleFactor(real_t t) {
     return pow(t / config.tEnd, config.era);
 }
 
-void scaling_sim::updateCosmology() { 
+void scaling_sim::updateCosmology() {
 
 
-    if (t <= config.tdif)
-    {
+    if (t <= config.tdif) {
         a = adif;
         aHalfPlus = adif;
         aHalfMinus = adif;
-    	lambda = lambdadif;
-    }
-    else if (t > config.tdif && t<= config.tcg)
-    {
-	a = acg * pow(t/config.tcg, config.era);
-    	aHalfPlus = acg * pow((t+0.5*config.dt)/config.tcg, config.era);
-    	aHalfMinus = acg * pow((t-0.5*config.dt)/config.tcg, config.era);
-	lambda = lambdacg * pow (a/acg, -2.0*(1.0-config.s1));
-    }    
-    else
-    {
-	a = scaleFactor(t);
-	aHalfPlus = scaleFactor(t+0.5*config.dt);
-	aHalfMinus = scaleFactor(t-0.5*config.dt);
-	lambda = lambdacg * pow(a/acg, -2.0*(1.0-config.s2));	
+        lambda = lambdadif;
+    } else if (t > config.tdif && t <= config.tcg) {
+        a = acg * pow(t / config.tcg, config.era);
+        aHalfPlus = acg * pow((t + 0.5 * config.dt) / config.tcg, config.era);
+        aHalfMinus = acg * pow((t - 0.5 * config.dt) / config.tcg, config.era);
+        lambda = lambdacg * pow(a / acg, -2.0 * (1.0 - config.s1));
+    } else {
+        a = scaleFactor(t);
+        aHalfPlus = scaleFactor(t + 0.5 * config.dt);
+        aHalfMinus = scaleFactor(t - 0.5 * config.dt);
+        lambda = lambdacg * pow(a / acg, -2.0 * (1.0 - config.s2));
     }
 }
 
@@ -166,10 +185,10 @@ void scaling_sim::initialize() {
     real_t dx = config.dx;
 
     switch (config.initialCondition) {
-    
+
     case 1: {
         pi = 0;
-        onsites (ALL) {
+        onsites(ALL) {
             auto xcoord = X.coordinate(e_x);
             phi[X].re =
                 s * sqrt(1 - epsilon * epsilon * sin(2.0 * M_PI * xcoord * m / N) *
@@ -195,7 +214,7 @@ void scaling_sim::initialize() {
     case 3: {
         auto kphi = phi;
 
-        onsites (ALL) {
+        onsites(ALL) {
             real_t constant = pow(config.initialModulus, 2.0) * pow(2.0 * M_PI, 1.5) *
                               pow(config.PhiLength, 3.0) /
                               (2.0 * N * N * N * dx * dx * dx);
@@ -204,7 +223,9 @@ void scaling_sim::initialize() {
             kSqu = 0.0;
             auto k = X.coordinates();
 
-            foralldir (d) { kSqu += pow(sin(M_PI * k.e(d) / N), 2.0); }
+            foralldir(d) {
+                kSqu += pow(sin(M_PI * k.e(d) / N), 2.0);
+            }
             kSqu *= pow(2.0 / dx, 2.0);
 
             if (kSqu > 0.0) {
@@ -230,7 +251,7 @@ void scaling_sim::initialize() {
 
     case 4: {
         pi = 0;
-        onsites (ALL) {
+        onsites(ALL) {
             auto xcoord = X.coordinate(e_x);
             phi[X].re = (s + epsilon * sin(2.0 * M_PI * m / N)) / sqrt(2.0);
             phi[X].im = (s + epsilon * sin(2.0 * M_PI * m / N)) / sqrt(2.0);
@@ -245,7 +266,7 @@ void scaling_sim::initialize() {
     default: {
 
         // #pragma hila ast_dump
-        onsites (ALL) {
+        onsites(ALL) {
             real_t theta, r;
             r = config.initialModulus * s;
             theta = hila::random() * 2 * M_PI;
@@ -256,8 +277,10 @@ void scaling_sim::initialize() {
         // smoothing iterations
         for (int iter = 0; iter < config.smoothing; iter++) {
             pi[ALL] = 6.0 * phi[X];
-            foralldir (d) { pi[ALL] += phi[X + d] + phi[X - d]; }
-            onsites (ALL) {
+            foralldir(d) {
+                pi[ALL] += phi[X + d] + phi[X - d];
+            }
+            onsites(ALL) {
                 phi[X] = pi[X] / pi[X].abs();
                 pi[X] = 0;
             }
@@ -272,19 +295,19 @@ void scaling_sim::initialize() {
 
 void scaling_sim::write_moduli() {
 
-   // real_t a = scaleFactor(t);
+    // real_t a = scaleFactor(t);
 
     double phimod = 0.0;
     double pimod = 0.0;
 
     hila::set_allreduce(false);
-    onsites (ALL) {
+    onsites(ALL) {
         phimod += phi[X].abs();
         pimod += pi[X].abs();
     }
 
     if (hila::myrank() == 0) {
-        config.stream << t << " " << a << " " << sqrt(lambda/2.0) << " "
+        config.stream << t << " " << a << " " << sqrt(lambda / 2.0) << " "
                       << phimod / lattice->volume() << " " << pimod / lattice->volume()
                       << " ";
     }
@@ -292,7 +315,7 @@ void scaling_sim::write_moduli() {
 
 void scaling_sim::write_energies() {
 
-   // double a = scaleFactor(t);
+    // double a = scaleFactor(t);
     double ss = config.sigma * config.sigma;
 
     // non-weighted energies
@@ -312,12 +335,12 @@ void scaling_sim::write_energies() {
     double phi2 = 0.0;
 
     hila::set_allreduce(false);
-    onsites (ALL) {
+    onsites(ALL) {
         double phinorm = phi[X].squarenorm();
         double v = 0.25 * lambda * a * a * pow((phinorm - ss), 2.0);
         double vw = 0.25 * lambda * a * a * pow((phinorm - ss), 2.0);
-	double pinorm = pi[X].squarenorm();
-        double pPi = (phi[X].conj()*pi[X]).re;
+        double pinorm = pi[X].squarenorm();
+        double pPi = (phi[X].conj() * pi[X]).re;
 
         sumV += v;
         w_sumV += v * vw;
@@ -333,20 +356,21 @@ void scaling_sim::write_energies() {
 
 
     hila::set_allreduce(false);
-    onsites (ALL) {
+    onsites(ALL) {
         auto norm = phi[X].squarenorm();
-        real_t vw2 =0.25 * lambda * a * a * pow((norm - ss), 2.0);
-        auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] + 
-                         phi[X + e_z] - phi[X - e_z]) / (2 * config.dx);
+        real_t vw2 = 0.25 * lambda * a * a * pow((norm - ss), 2.0);
+        auto diff_phi = (phi[X + e_x] - phi[X - e_x] + phi[X + e_y] - phi[X - e_y] +
+                         phi[X + e_z] - phi[X - e_z]) /
+                        (2 * config.dx);
         real_t pDphi = 0.5 * (diff_phi.conj() * phi[X]).re;
         real_t diff_phi_norm2 = diff_phi.squarenorm();
 
-        sumDiPhi += 0.5 * diff_phi_norm2; 
+        sumDiPhi += 0.5 * diff_phi_norm2;
         sumPhiDiPhi += pDphi * pDphi / norm;
-        w_sumDiPhi += 0.5 * diff_phi_norm2 * vw2; 
+        w_sumDiPhi += 0.5 * diff_phi_norm2 * vw2;
         w_sumPhiDiPhi += pDphi * pDphi / norm * vw2;
     }
-    
+
 
     if (hila::myrank() == 0) {
         double vol = (double)config.l * config.l * config.l;
@@ -355,30 +379,28 @@ void scaling_sim::write_energies() {
         config.stream << sumPhiPi / vol << " " << w_sumPhiPi / vol << " ";
         config.stream << sumPhiDiPhi / vol << " " << w_sumPhiDiPhi / vol << " ";
         config.stream << sumV / vol << " " << w_sumV / vol << " ";
-	config.stream << phi2 / vol << " "; 
+        config.stream << phi2 / vol << " ";
     }
 }
 
-void scaling_sim::write_windings()
-{
+void scaling_sim::write_windings() {
 #ifdef OLD_WINDING
 
     real_t length = 0.0;
-    
-    foralldir(d1) foralldir(d2) if (d1 < d2) {
-   	onsites(ALL) {
-       		float plaq = (phi[X] * phi [X+d1].conj()).arg()  
-            	+ (phi[X+d1] * phi[X+d1+d2].conj()).arg()
-            	+ (phi[X+d1+d2] * phi[X+d2].conj()).arg()
-            	+ (phi[X+d2] * phi[X].conj()).arg();
 
-		length += abs(plaq) * config.dx /(2.0 * M_PI);
-	}
+    foralldir(d1) foralldir(d2) if (d1 < d2) {
+        onsites(ALL) {
+            float plaq = (phi[X] * phi[X + d1].conj()).arg() +
+                         (phi[X + d1] * phi[X + d1 + d2].conj()).arg() +
+                         (phi[X + d1 + d2] * phi[X + d2].conj()).arg() +
+                         (phi[X + d2] * phi[X].conj()).arg();
+
+            length += abs(plaq) * config.dx / (2.0 * M_PI);
+        }
     }
 
-    if (hila::myrank() == 0) 
-    {
-        config.stream << length * config.dx/(2.0 * M_PI) << "\n";
+    if (hila::myrank() == 0) {
+        config.stream << length * config.dx / (2.0 * M_PI) << "\n";
     }
 
 #else
@@ -387,34 +409,94 @@ void scaling_sim::write_windings()
     length.allreduce(false).delayed(true);
 
     Field<real_t> twist[NDIM];
-    foralldir(d) 
-        twist[d][ALL] = (phi[X] * phi[X+d].conj()).arg();
+    foralldir(d) twist[d][ALL] = (phi[X] * phi[X + d].conj()).arg();
 
     foralldir(d1) foralldir(d2) if (d1 < d2) {
         onsites(ALL) {
-            real_t plaq = twist[d1][X] + twist[d2][X+d1] - twist[d1][X+d2] - twist[d2][X];
+            real_t plaq =
+                twist[d1][X] + twist[d2][X + d1] - twist[d1][X + d2] - twist[d2][X];
 
-            length += abs(plaq);            
+            length += abs(plaq);
         }
     }
 
-    auto v = length.value() * config.dx/(2.0 * M_PI);
+    auto v = length.value() * config.dx / (2.0 * M_PI);
 
-    if (hila::myrank() == 0) 
-    {
+    if (hila::myrank() == 0) {
         config.stream << v << "\n";
     }
 
 
 #endif
-
 }
+
+void scaling_sim::get_Jk(Direction d, Field<Complex<real_t>> &ft) {
+
+    Field<Complex<real_t>> j;
+    onsites(ALL) {
+        j[X] = imag(phi[X] * (phi[X + d] - phi[X - d])) / (2 * config.dx);
+    }
+    FFT_field(j, ft);
+}
+
+
+// Init uetcs here
+
+void scaling_sim::initialize_uetc() {
+
+    Field<Complex<real_t>> jk[NDIM];
+    foralldir(d) get_Jk(d, jk[d]);
+
+    onsites(ALL) {
+        auto k = k_vector(X.coordinates());
+        auto absk = k.norm();
+
+        if (absk > 0)
+            Js[X] = (k[e_x] * jk[e_x][X] + k[e_y] * jk[e_y][X] + k[e_z] * jk[e_z][X]) /
+                    absk;
+        else
+            Js[X] = 0;
+    }
+
+    uetc_out.open(config.uetc_filename, std::ios::out);
+}
+
+void scaling_sim::measure_uetc() {
+
+    static int bins = 0;
+    static binning_info b;
+
+    if (bins == 0) {
+        bins = config.uetc_bins;
+        b = bin_k_info(bins);
+    }
+
+    // measure the 1st uetc
+    Field<Complex<real_t>> J0;
+    J0[ALL] = imag(phi[X] * pi[X]);
+
+    FFT_field(J0, J0);
+
+    // calculate correlator
+    J0[ALL] *= Js[X].conj();
+
+    auto uetc = bin_k_field(J0, bins);
+
+    if (hila::myrank() == 0) {
+        for (int i = 0; i < bins; i++) {
+            if (b.count[i] > 0)
+                uetc_out << i << ' ' << b.k[i] << ' ' << uetc[i].real() / b.count[i]
+                         << '\n';
+        }
+    }
+}
+
 
 void scaling_sim::next() {
 
-    //real_t a = scaleFactor(t);
-    //real_t aHalfPlus = scaleFactor(t + config.dt / 2.0);
-    //real_t aHalfMinus = scaleFactor(t - config.dt / 2.0);
+    // real_t a = scaleFactor(t);
+    // real_t aHalfPlus = scaleFactor(t + config.dt / 2.0);
+    // real_t aHalfMinus = scaleFactor(t - config.dt / 2.0);
 
     real_t aadt_aadxdx = pow(a / aHalfPlus, 2.0) * config.dt / (config.dx * config.dx);
     real_t aadt2D_aadxdx = aadt_aadxdx * 2.0 * 3.0;
@@ -428,13 +510,13 @@ void scaling_sim::next() {
 
     next_timer.start();
 
-    onsites (ALL) {
+    onsites(ALL) {
         phi[X] += config.dt * pi[X];
         deltaPi[X] = phi[X] * (aaaaldt_aa * (ss - phi[X].squarenorm()) - aadt2D_aadxdx);
     }
 
     // foralldir(d) {
-    //     phi.start_gather(d); 
+    //     phi.start_gather(d);
     //     phi.start_gather(-d);
     // }
 
@@ -444,37 +526,33 @@ void scaling_sim::next() {
     //      }
     // }
 
-    onsites (ALL) {
-        deltaPi[X] += aadt_aadxdx * (phi[X + e_x] + phi[X - e_x] + 
-                                     phi[X + e_y] + phi[X - e_y] + 
-                                     phi[X + e_z] + phi[X - e_z]);
+    onsites(ALL) {
+        deltaPi[X] += aadt_aadxdx * (phi[X + e_x] + phi[X - e_x] + phi[X + e_y] +
+                                     phi[X - e_y] + phi[X + e_z] + phi[X - e_z]);
     }
 
-    //pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
+    // pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
 
-    if (t < config.tdif)
-    {
-        pi[ALL] = deltaPi[X]/(config.difFac*config.dt);
-        t += config.dt/config.difFac;
-    }
-    else if (t < config.tdis && (config.dampAx > 0 || config.dampHg > 0))
-    {
-        real_t RHg = exp(-0.5*config.dampHg*config.dt);
-        real_t RAx = exp(-0.5*config.dampAx*config.dt);
-        real_t daa_aaHg = daa_aa + (pow(aHalfMinus/aHalfPlus,2.0)
-                                     *(1-exp(-config.dampHg*config.dt))); 
-        real_t daa_aaAx = daa_aa + (pow(aHalfMinus/aHalfPlus,2.0)
-                                     *(1-exp(-config.dampAx*config.dt)));
-        onsites (ALL) {
-            Complex<real_t> phiHat; 
+    if (t < config.tdif) {
+        pi[ALL] = deltaPi[X] / (config.difFac * config.dt);
+        t += config.dt / config.difFac;
+    } else if (t < config.tdis && (config.dampAx > 0 || config.dampHg > 0)) {
+        real_t RHg = exp(-0.5 * config.dampHg * config.dt);
+        real_t RAx = exp(-0.5 * config.dampAx * config.dt);
+        real_t daa_aaHg = daa_aa + (pow(aHalfMinus / aHalfPlus, 2.0) *
+                                    (1 - exp(-config.dampHg * config.dt)));
+        real_t daa_aaAx = daa_aa + (pow(aHalfMinus / aHalfPlus, 2.0) *
+                                    (1 - exp(-config.dampAx * config.dt)));
+        onsites(ALL) {
+            Complex<real_t> phiHat;
             Complex<real_t> piPHC;
             Complex<real_t> deltaPiPHC;
 
-            phiHat = phi[X]/phi[X].abs();
-	    deltaPiPHC = deltaPi[X]*phiHat.conj();
-            piPHC = pi[X]*phiHat.conj();
-            
-	    pi[X] = pi[X] -
+            phiHat = phi[X] / phi[X].abs();
+            deltaPiPHC = deltaPi[X] * phiHat.conj();
+            piPHC = pi[X] * phiHat.conj();
+
+            pi[X] = pi[X] -
                     Complex<real_t>(daa_aaHg * real(piPHC), daa_aaAx * imag(piPHC)) *
                         phiHat;
             pi[X] = pi[X] +
@@ -483,16 +561,14 @@ void scaling_sim::next() {
         }
         t += config.dt;
 
-    }
-    else
-    {
+    } else {
         pi[ALL] = pi[X] - daa_aa * pi[X] + deltaPi[X];
         t += config.dt;
     }
 
     next_timer.stop();
 
-    //t += config.dt;
+    // t += config.dt;
 }
 
 int main(int argc, char **argv) {
@@ -505,32 +581,51 @@ int main(int argc, char **argv) {
         (sim.config.dt * sim.config.nOutputs); // number of steps between printing stats
     if (steps == 0)
         steps = 1;
-        
+
     int stat_counter = 0;
 
     if (hila::myrank() == 0) {
         sim.config.stream.open(output_fname, std::ios::out);
     }
 
+    bool uetc_on = false;
+    int uetc_steps, uetc_counter;
+    if (sim.config.uetc_start_time >= 0) {
+        uetc_steps = sim.config.uetc_meas_interval / sim.config.dt;
+        uetc_on = true;
+        uetc_counter = 0;
+    }
 
-    // on gpu the simulation timer is fake, because there's no sync here.  
+
+    // on gpu the simulation timer is fake, because there's no sync here.
     // BUt we want to avoid unnecessary sync anyway.
     static hila::timer run_timer("Simulation time"), meas_timer("Measurements");
     run_timer.start();
-    
-    //auto tildephi = sim.phi;
+
+    // auto tildephi = sim.phi;
     while (sim.t < sim.config.tEnd) {
-	sim.updateCosmology();
+        sim.updateCosmology();
         if (sim.t >= sim.config.tStats) {
             if (stat_counter % steps == 0) {
                 meas_timer.start();
                 sim.write_moduli();
                 sim.write_energies();
                 sim.write_windings();
-		meas_timer.stop();
+                meas_timer.stop();
             }
+
             stat_counter++;
         }
+
+        if (uetc_on && sim.config.uetc_start_time <= sim.t) {
+            if (uetc_counter == 0)
+                sim.initialize_uetc();
+
+            if (uetc_counter % uetc_steps == 0)
+                sim.measure_uetc();
+            uetc_counter++;
+        }
+
         sim.next();
     }
     run_timer.stop();

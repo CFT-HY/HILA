@@ -9,7 +9,7 @@
 inline Vector<NDIM, double> k_vector(const CoordinateVector &loc) {
 
     Vector<NDIM, double> k;
-    foralldir (d) {
+    foralldir(d) {
         int n = loc[d];
         if (n > lattice->size(d) / 2)
             n -= lattice->size(d);
@@ -31,7 +31,7 @@ std::vector<T> bin_k_field(const Field<T> &f, int bins, double max_k = M_PI) {
     s.allreduce(false);
     s = 0;
 
-    onsites (ALL) {
+    onsites(ALL) {
 
         double kr = k_vector(X.coordinates()).norm();
 
@@ -62,7 +62,7 @@ std::vector<double> bin_k_field_squarenorm(const Field<T> &f, int bins,
     s.allreduce(false);
     s = 0;
 
-    onsites (ALL) {
+    onsites(ALL) {
 
         Vector<NDIM, double> k;
         k = k_vector(X.coordinates());
@@ -112,15 +112,15 @@ std::vector<double> spectraldensity(const Field<T> &f, int bins, double max_k = 
         // need copy
         constexpr int nc = sizeof(T) / sizeof(cmplx_t);
 
-        return spectraldensity(*reinterpret_cast<const Field<Vector<nc, cmplx_t>> *>(&f),
-                             bins, max_k);
+        return spectraldensity(
+            *reinterpret_cast<const Field<Vector<nc, cmplx_t>> *>(&f), bins, max_k);
     } else {
         // now the size of input is not evenly divisible by sizeof complex.
         // new complex field
         constexpr int nc = sizeof(T) / sizeof(cmplx_t) + 1;
 
         Field<Vector<nc, cmplx_t>> cfield;
-        onsites (ALL) {
+        onsites(ALL) {
             union {
                 T tval;
                 Vector<nc, cmplx_t> cvec;
@@ -141,11 +141,25 @@ struct binning_info {
     std::vector<double> k;
     std::vector<long> count;
 
+    binning_info() {
+        k.clear();
+        count.clear();
+    }
     binning_info(int bins) : k(bins), count(bins) {}
+
+    ~binning_info() {
+        k.clear();
+        count.clear();
+    }
+
+    void resize(int bins) {
+        k.resize(bins);
+        count.resize(bins);
+    }
 };
 
 
-/// Return the information about the binning  in binning_info 
+/// Return the information about the binning  in binning_info
 
 inline binning_info bin_k_info(int bins, double max_k = M_PI) {
 
@@ -160,7 +174,7 @@ inline binning_info bin_k_info(int bins, double max_k = M_PI) {
     s = 0;
     count = 0;
 
-    onsites (ALL) {
+    onsites(ALL) {
 
         double kr = k_vector(X.coordinates()).norm();
 
@@ -173,7 +187,7 @@ inline binning_info bin_k_info(int bins, double max_k = M_PI) {
 
     for (int i = 0; i < bins; i++) {
         res.count[i] = count[i];
-        res.k[i] = s[i]/count[i];
+        res.k[i] = s[i] / count[i];
     }
 
     return res;
