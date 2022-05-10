@@ -111,7 +111,7 @@
 ///
 /// get_item(): select one item from a "menu":
 ///
-///        int hila::input::get_item(std::string key, 
+///        int hila::input::get_item(std::string key,
 ///                        std::vector<std::string> items,
 ///                        bool broadcast = true);
 ///
@@ -158,7 +158,7 @@
 /// get_value(): read input (alternative to get())
 ///
 ///        template <typename T>
-///        bool hila::input::get_value(T & val,std::string key, 
+///        bool hila::input::get_value(T & val,std::string key,
 ///                                    bool broadcast=true);
 ///
 ///    Val can be any value used in get()-method above.  If broadcast==false,
@@ -195,7 +195,7 @@
 ///------------------------------------------------------------------
 ///
 /// NOTE: methods which broadcast to all nodes (default) must be called
-///       from all nodes synchronously. These include open(), get(), 
+///       from all nodes synchronously. These include open(), get(),
 ///       get_value() with bcast=true, get_item with bcast=true.
 ///
 ///       Thus;
@@ -227,16 +227,23 @@ class input {
 
   public:
     input() {}
-    ~input() { close(); }
-    input(const std::string &fname) { open(fname); }
+    ~input() {
+        close();
+    }
+    input(const std::string &fname) {
+        open(fname);
+    }
 
-    bool open(const std::string &fname, bool use_cmdline = true, bool exit_on_error = true);
+    bool open(const std::string &fname, bool use_cmdline = true,
+              bool exit_on_error = true);
     void close();
 
     // make class quiet (no printouts), quiet(false) returns to normal
-    void quiet(bool really = true) { speaking = !really; }
+    void quiet(bool really = true) {
+        speaking = !really;
+    }
 
-    /// returntyhpe is a special class for resolving get("label") return type 
+    /// returntyhpe is a special class for resolving get("label") return type
     class returntype {
       public:
         const std::string &label;
@@ -246,8 +253,12 @@ class input {
 
         /// cast operator does the conversion - disable nullptr_t cast used
         /// in hila types
+        /// disable type "char" because then c++ does not know how to initialize strings
         template <typename T,
-                 std::enable_if_t<!std::is_same<T,std::nullptr_t>::value, int> = 0> 
+                  std::enable_if_t<(hila::is_complex_or_arithmetic<T>::value &&
+                                    !std::is_same<T, char>::value) ||
+                                       std::is_same<T, std::string>::value,
+                                   int> = 0>
         operator T() {
             T val;
             if (!parent->get_value(val, label, true))
@@ -255,13 +266,35 @@ class input {
             return val;
         }
 
+        template <typename T, int n>
+        operator Vector<n, T>() {
+            Vector<n, T> val;
+            if (!parent->get_value(val, label, true))
+                hila::finishrun();
+            return val;
+        }
+
+        template <typename T,
+                  std::enable_if_t<hila::is_complex_or_arithmetic<T>::value ||
+                                       std::is_same<T, std::string>::value,
+                                   int> = 0>
+        operator std::vector<T>() {
+            std::vector<T> val;
+            if (!parent->get_value(val, label, true))
+                hila::finishrun();
+            return val;
+        }
     };
 
     // The main get() method is simply constructor for returntype
 
-    inline returntype get(const std::string &key) { return returntype(key, this); }
+    inline returntype get(const std::string &key) {
+        return returntype(key, this);
+    }
 
-    inline returntype get() { return returntype("", this); }
+    inline returntype get() {
+        return returntype("", this);
+    }
 
     /// General single-value input method, can be called with
     /// <input>.get_value<type>("key");
@@ -277,8 +310,8 @@ class input {
             if (!(get_token(tok) && is_value(tok, val))) {
 
                 if (speaking)
-                    hila::output << "Error: expecting a value of type '" << type_id<T>() << "' after '"
-                                 << label << "'\n";
+                    hila::output << "Error: expecting a value of type '" << type_id<T>()
+                                 << "' after '" << label << "'\n";
 
                 no_error = false;
             }
@@ -397,7 +430,10 @@ class input {
 
   private:
     /// a helper method to give type name
-    template <typename T> inline const char *type_id() { return nullptr; }
+    template <typename T>
+    inline const char *type_id() {
+        return nullptr;
+    }
 
     bool peek_token(std::string &tok);
     bool get_token(std::string &tok);
@@ -405,13 +441,13 @@ class input {
 
     bool scan_string(std::string &val);
 
-    template <typename T, std::enable_if_t<std::is_arithmetic<T>::value,int> = 0>
+    template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
     bool is_value(const std::string &s, T &val) {
         std::istringstream ss(s);
         ss >> val;
-        if (ss.fail() || ss.bad()) 
+        if (ss.fail() || ss.bad())
             return false;
-        else 
+        else
             return true;
     }
 
@@ -431,20 +467,49 @@ class input {
 
 /// give here specializations of the type_id helper
 
-template <> inline const char *input::type_id<int>() { return "int"; }
-template <> inline const char *input::type_id<long>() { return "long"; }
-template <> inline const char *input::type_id<long long>() { return "long long"; }
-template <> inline const char *input::type_id<unsigned int>() { return "unsigned int"; }
-template <> inline const char *input::type_id<unsigned long>() { return "unsigned long"; }
-template <> inline const char *input::type_id<unsigned long long>() { return "unsigned long long"; }
+template <>
+inline const char *input::type_id<int>() {
+    return "int";
+}
+template <>
+inline const char *input::type_id<long>() {
+    return "long";
+}
+template <>
+inline const char *input::type_id<long long>() {
+    return "long long";
+}
+template <>
+inline const char *input::type_id<unsigned int>() {
+    return "unsigned int";
+}
+template <>
+inline const char *input::type_id<unsigned long>() {
+    return "unsigned long";
+}
+template <>
+inline const char *input::type_id<unsigned long long>() {
+    return "unsigned long long";
+}
 
-template <> inline const char *input::type_id<float>() { return "float"; }
-template <> inline const char *input::type_id<double>() { return "double"; }
-template <> inline const char *input::type_id<std::string>() { return "string"; }
-template <> inline const char *input::type_id<Complex<float>>() {
+template <>
+inline const char *input::type_id<float>() {
+    return "float";
+}
+template <>
+inline const char *input::type_id<double>() {
+    return "double";
+}
+template <>
+inline const char *input::type_id<std::string>() {
+    return "string";
+}
+template <>
+inline const char *input::type_id<Complex<float>>() {
     return "complex value";
 }
-template <> inline const char *input::type_id<Complex<double>>() {
+template <>
+inline const char *input::type_id<Complex<double>>() {
     return "complex value";
 }
 
