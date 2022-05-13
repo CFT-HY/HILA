@@ -274,6 +274,14 @@ class input {
             return val;
         }
 
+        template <typename T>
+        operator CoordinateVector_t<T>() {
+            CoordinateVector_t<T> val;
+            if (!parent->get_value(val, label, true))
+                hila::finishrun();
+            return val;
+        }
+
         template <typename T,
                   std::enable_if_t<hila::is_complex_or_arithmetic<T>::value ||
                                        std::is_same<T, std::string>::value,
