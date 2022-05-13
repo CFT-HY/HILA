@@ -132,6 +132,8 @@ class srcBuf {
                bool indent = false);
     int insert(Expr *e, const std::string &s, bool incl_before = false,
                bool indent = false);
+    int insert_after(SourceLocation sl, const std::string &s, bool incl_before = false,
+                     bool indent = false);
     int insert_above(int i, const std::string &s, bool incl_before, bool do_indent);
     int insert_above(SourceLocation sl, const std::string &s, bool incl_before,
                      bool do_indent);

@@ -350,7 +350,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     loopBuf.insert(beginloc, "atomicMultiply(&", true);
                 }
 
-                loopBuf.insert(endloc.getLocWithOffset(1), ")", false);
+                loopBuf.insert_after(endloc, ")", false);
             }
         }
     }

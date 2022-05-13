@@ -44,11 +44,17 @@ void srcBuf::create(Rewriter *R, const SourceRange &sr) {
     // tokens.clear();
 }
 
-void srcBuf::create(Rewriter *R, Expr *e) { create(R, e->getSourceRange()); }
+void srcBuf::create(Rewriter *R, Expr *e) {
+    create(R, e->getSourceRange());
+}
 
-void srcBuf::create(Rewriter *R, Stmt *s) { create(R, s->getSourceRange()); }
+void srcBuf::create(Rewriter *R, Stmt *s) {
+    create(R, s->getSourceRange());
+}
 
-void srcBuf::create(Rewriter *R, Decl *d) { create(R, d->getSourceRange()); }
+void srcBuf::create(Rewriter *R, Decl *d) {
+    create(R, d->getSourceRange());
+}
 
 void srcBuf::clear() {
     buf.clear();
@@ -102,8 +108,8 @@ bool srcBuf::is_in_range(const SourceRange &sr) {
     l += myRewriter->getRangeSize(sr) - 1;
     // if (l >= true_size) {
     //   llvm::errs() << "IN_RANGE ERROR, index " << l << " true_size " << true_size <<
-    //   '\n'; llvm::errs() << "BUFFER IS " << dump() << '\n'; llvm::errs() << "AND SOURCE
-    //   " << myRewriter->getRewrittenText(sr) << '\n';
+    //   '\n'; llvm::errs() << "BUFFER IS " << dump() << '\n'; llvm::errs() << "AND
+    //   SOURCE " << myRewriter->getRewrittenText(sr) << '\n';
     // }
     return (l < true_size);
 }
@@ -164,7 +170,9 @@ std::string srcBuf::dump() {
         return get_mapped(0, full_length);
 }
 
-bool srcBuf::isOn() { return buf.size() > 0; }
+bool srcBuf::isOn() {
+    return buf.size() > 0;
+}
 
 char srcBuf::get_original(int i) {
     assert(i >= 0 && i < original_size && "srcBuf::get_original error");
@@ -200,7 +208,8 @@ std::string srcBuf::get_next_original_word(int idx, int *idxp) {
             // it's a word, go ahead
             do {
                 idx++;
-            } while (idx < original_size && (std::isalnum(buf[idx]) || buf[idx] == '_'));
+            } while (idx < original_size &&
+                     (std::isalnum(buf[idx]) || buf[idx] == '_'));
         } else
             idx++; // else just 1 char
     }
@@ -429,7 +438,8 @@ int srcBuf::insert(int i, const std::string &s_in, bool incl_before, bool do_ind
 
 int srcBuf::insert(SourceLocation sl, const std::string &s, bool incl_before,
                    bool do_indent) {
-    assert(is_in_range(sl));
+    assert(is_in_range(sl) &&
+           "srcBuf::insert range error with SourceLocation argument");
     return insert(get_index(sl), s, incl_before, do_indent);
 }
 
@@ -438,8 +448,16 @@ int srcBuf::insert(Expr *e, const std::string &s, bool incl_before, bool do_inde
     return insert(e->getSourceRange().getBegin(), s, incl_before, do_indent);
 }
 
+int srcBuf::insert_after(SourceLocation sl, const std::string &s, bool incl_before,
+                         bool do_indent) {
+    assert(is_in_range(sl) &&
+           "srcBuf::insert range error with SourceLocation argument");
+    return insert(get_index(sl) + 1, s, incl_before, do_indent);
+}
+
 // Insert a new line above the location i
-int srcBuf::insert_above(int i, const std::string &s, bool incl_before, bool do_indent) {
+int srcBuf::insert_above(int i, const std::string &s, bool incl_before,
+                         bool do_indent) {
     assert(i >= 0 && i < original_size);
     while (i > 0 && buf[i] != '\n')
         i--;
@@ -477,8 +495,8 @@ int srcBuf::insert_before_stmt(int i, const std::string &s, bool incl_before,
     return insert(i, new_line, incl_before, do_indent);
 }
 
-int srcBuf::insert_before_stmt(SourceLocation sl, const std::string &s, bool incl_before,
-                               bool do_indent) {
+int srcBuf::insert_before_stmt(SourceLocation sl, const std::string &s,
+                               bool incl_before, bool do_indent) {
     assert(is_in_range(sl));
     return insert_before_stmt(get_index(sl), s, incl_before, do_indent);
 }
@@ -486,7 +504,8 @@ int srcBuf::insert_before_stmt(SourceLocation sl, const std::string &s, bool inc
 int srcBuf::insert_before_stmt(Expr *e, const std::string &s, bool incl_before,
                                bool do_indent) {
     assert(is_in_range(e->getSourceRange()));
-    return insert_before_stmt(e->getSourceRange().getBegin(), s, incl_before, do_indent);
+    return insert_before_stmt(e->getSourceRange().getBegin(), s, incl_before,
+                              do_indent);
 }
 
 int srcBuf::comment_line(int i) {
@@ -501,7 +520,9 @@ int srcBuf::comment_line(SourceLocation sl) {
     return comment_line(get_index(sl));
 }
 
-int srcBuf::comment_line(Expr *e) { return comment_line(e->getSourceRange().getBegin()); }
+int srcBuf::comment_line(Expr *e) {
+    return comment_line(e->getSourceRange().getBegin());
+}
 
 // replace is a remove + insert pair, should write with a single operation
 // return the index after
