@@ -129,6 +129,11 @@ struct Complex {
         return Complex<T>(re, -im);
     }
 
+    // alias dagger to conjugate
+    inline Complex<T> dagger() const {
+        return Complex<T>(re, -im);
+    }
+
     inline Complex<T> polar(const T r, const T theta) out_only {
         re = r * cos(theta);
         im = r * sin(theta);
@@ -419,6 +424,12 @@ inline T arg(const Complex<T> &a) {
 /// Conjugate
 template <typename T>
 inline Complex<T> conj(const Complex<T> &val) {
+    return val.conj();
+}
+
+/// Alias dagger to conjugate 
+template <typename T>
+inline Complex<T> dagger(const Complex<T> &val) {
     return val.conj();
 }
 
