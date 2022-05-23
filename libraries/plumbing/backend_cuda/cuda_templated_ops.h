@@ -215,7 +215,7 @@ __device__ inline void atomicAdd(T *d, const B &bv) {
     dv = (hila::number_type<T> *)(void *)&v;
 
     for (int i = 0; i < N; ++i) {
-        atomicAdd(dp + i, dv[i]);
+        atomic_Add(dp + i, dv[i]);
     }
 }
 
