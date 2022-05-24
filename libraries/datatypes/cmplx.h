@@ -706,12 +706,12 @@ using ntype_op = typename ntype_op_s<T1,T2>::type;
 ////////////////////////////////////////////////////////////////////////
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline Complex<hila::number_type<T>> get_complex_element(const T &var, int i) {
+inline Complex<hila::number_type<T>> get_complex_in_var(const T &var, int i) {
     return *(reinterpret_cast<const Complex<hila::number_type<T>> *>(&var) + i);
 }
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline void set_complex_element(T &var, int i, const Complex<hila::number_type<T>> & val ) {
+inline void set_complex_in_var(T &var, int i, const Complex<hila::number_type<T>> & val ) {
     *(reinterpret_cast<const Complex<hila::number_type<T>> *>(&var) + i) = val;
 }
 
