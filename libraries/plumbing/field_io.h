@@ -129,19 +129,18 @@ static void read_fields(const std::string &filename, fieldtypes &... fields) {
 ///////////////////////////////////////////////////////////////////////////////
 
 /// Write a "subspace" of the original lattice
-/// With separator defined to other string than '\n' the lowest (non-unity) dimension is
-/// written on a single line (TODO: more formatting?)
+/// Each element is written on a single line
+/// TODO: more formatting?
 
 template <typename T>
 void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
-                               const CoordinateVector &cmax,
-                               const std::string &separator) {
+                               const CoordinateVector &cmax, int precision) {
 
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
 
     size_t sites = 1;
     int line_len = 1; // number of elements on 1st non-trivial dimension
-    foralldir (d) {
+    foralldir(d) {
         assert(cmin[d] >= 0 && cmax[d] >= cmin[d] && cmax[d] < lattice->size(d) &&
                "subvolume size mismatch");
         sites *= cmax[d] - cmin[d] + 1;
@@ -158,7 +157,6 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
     CoordinateVector c;
 
     size_t i = 0, j = 0;
-    int line_pos = 0;
 
     forcoordinaterange(c, cmin, cmax) {
         coord_list[i] = c;
@@ -171,17 +169,12 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
             fs->gather_elements(buffer, coord_list);
 
             if (hila::myrank() == 0) {
+                outputfile.precision(precision);
                 for (size_t k = 0; k < i; k++) {
-                    outputfile << buffer[k];
-
-                    // write separator if not at line end
-                    line_pos++;
-                    if (line_pos < line_len)
-                        outputfile << separator;
-                    else {
-                        outputfile << '\n';
-                        line_pos = 0;
+                    for (int l = 0; l < sizeof(T) / sizeof(hila::number_type<T>); l++) {
+                        outputfile << hila::get_number_in_var(buffer[k], l) << ' ';
                     }
+                    outputfile << '\n';
                 }
             }
             i = 0;
@@ -194,14 +187,14 @@ template <typename T>
 void Field<T>::write_subvolume(const std::string &filename,
                                const CoordinateVector &cmin,
                                const CoordinateVector &cmax,
-                               const std::string &separator) {
+                               int precision) {
 
     std::ofstream out;
     if (hila::myrank() == 0) {
         out.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
     }
 
-    write_subvolume(out, cmin, cmax, separator);
+    write_subvolume(out, cmin, cmax, precision);
     int fail = 0;
     if (hila::myrank() == 0) {
         out.close();
@@ -222,15 +215,11 @@ void Field<T>::write_subvolume(const std::string &filename,
 // Outf is either filename or ofstream
 
 template <typename T>
-template <typename F>
-void Field<T>::write_slice(F &outf, const CoordinateVector &slice,
-                           const std::string &separator) {
-    static_assert(std::is_same<F, std::ofstream>::value ||
-                      std::is_same<F, std::string>::value,
-                  "First argument must be std::ofstream or std::string");
+void Field<T>::write_slice(std::ofstream &outf, const CoordinateVector &slice,
+                           int precision) {
 
     CoordinateVector cmin, cmax;
-    foralldir (d) {
+    foralldir(d) {
         if (slice[d] < 0) {
             cmin[d] = 0;
             cmax[d] = lattice->size(d) - 1;
@@ -238,7 +227,23 @@ void Field<T>::write_slice(F &outf, const CoordinateVector &slice,
             cmin[d] = cmax[d] = slice[d];
         }
     }
-    write_subvolume(outf, cmin, cmax, separator);
+    write_subvolume(outf, cmin, cmax, precision);
+}
+
+template <typename T>
+void Field<T>::write_slice(const std::string &outf, const CoordinateVector &slice,
+                           int precision) {
+
+    CoordinateVector cmin, cmax;
+    foralldir(d) {
+        if (slice[d] < 0) {
+            cmin[d] = 0;
+            cmax[d] = lattice->size(d) - 1;
+        } else {
+            cmin[d] = cmax[d] = slice[d];
+        }
+    }
+    write_subvolume(outf, cmin, cmax, precision);
 }
 
 

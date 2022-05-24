@@ -826,15 +826,15 @@ class Field {
 
     void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
                          const CoordinateVector &cmax,
-                         const std::string &separator = "\n");
+                         int precision = 6);
     void write_subvolume(const std::string &filenname, const CoordinateVector &cmin,
                          const CoordinateVector &cmax,
-                         const std::string &separator = "\n");
+                         int precision = 6);
 
-    template <typename F>
-    void write_slice(F &outputfile, const CoordinateVector &slice,
-                     const std::string &separator = "\n");
-
+    void write_slice(std::ofstream &outputfile, const CoordinateVector &slice,
+                     int precision = 6);
+    void write_slice(const std::string &outputfile, const CoordinateVector &slice,
+                     int precision = 6);
 
     // and sum reduction
     T sum(Parity par = Parity::all, bool allreduce = true) const;
@@ -1387,41 +1387,63 @@ void Field<T>::gather(Direction d, Parity p) const {
 
 /// Gather a list of elements to a single node
 template <typename T>
-void Field<T>::field_struct::gather_elements(T *buffer,
+void Field<T>::field_struct::gather_elements(T * RESTRICT buffer,
                                              std::vector<CoordinateVector> coord_list,
                                              int root) const {
     std::vector<unsigned> index_list;
-    std::vector<unsigned> node_list(lattice->n_nodes());
-    std::fill(node_list.begin(), node_list.end(), 0);
+    std::vector<int> sites_on_rank(lattice->n_nodes());
+    std::vector<int> reshuffle_list(coord_list.size());
 
-    for (CoordinateVector c : coord_list) {
-        if (lattice->is_on_mynode(c)) {
+    std::fill(sites_on_rank.begin(), sites_on_rank.end(), 0);
+
+    int i = 0;
+    for (const CoordinateVector & c : coord_list) {
+        int rank = lattice->node_rank(c);
+        if (hila::myrank() == rank) {
             index_list.push_back(lattice->site_index(c));
         }
-
-        node_list[lattice->node_rank(c)]++;
+        sites_on_rank[rank]++;
+        reshuffle_list[i++] = rank;
     }
 
     std::vector<T> send_buffer(index_list.size());
     payload.gather_elements((T *)send_buffer.data(), index_list.data(),
                             send_buffer.size(), lattice);
-    if (hila::myrank() != root && node_list[hila::myrank()] > 0) {
-        MPI_Send((char *)send_buffer.data(), node_list[hila::myrank()] * sizeof(T),
+    if (hila::myrank() != root && sites_on_rank[hila::myrank()] > 0) {
+        MPI_Send((char *)send_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T),
                  MPI_BYTE, root, hila::myrank(), lattice->mpi_comm_lat);
     }
     if (hila::myrank() == root) {
-        for (int n = 0; n < node_list.size(); n++)
-            if (node_list[n] > 0) {
+
+        // allocate buffer for receiving data
+        T * b;
+        std::vector<T> pb(coord_list.size() - sites_on_rank[root]);
+        b = pb.data();
+        // vector for node ptrs -- point to stuff from nodes
+        std::vector<T *> nptr(lattice->n_nodes());
+
+        for (int n = 0; n < sites_on_rank.size(); n++) {
+            if (sites_on_rank[n] > 0) {
                 if (n != root) {
                     MPI_Status status;
-                    MPI_Recv(buffer, node_list[n] * sizeof(T), MPI_BYTE, n, n,
+                    MPI_Recv(b, sites_on_rank[n] * sizeof(T), MPI_BYTE, n, n,
                              lattice->mpi_comm_lat, &status);
+
+                    nptr[n] = b;
+                    b += sites_on_rank[n];
+
                 } else {
-                    std::memcpy(buffer, (char *)send_buffer.data(),
-                                node_list[n] * sizeof(T));
+
+                    nptr[n] = send_buffer.data();
                 }
-                buffer += node_list[n];
             }
+        }
+
+        // collect the data from buffer
+        for (int i=0; i<coord_list.size(); i++) {
+            buffer[i] = *nptr[reshuffle_list[i]];
+            nptr[reshuffle_list[i]]++;
+        }
     }
 }
 
