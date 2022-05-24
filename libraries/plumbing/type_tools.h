@@ -92,6 +92,23 @@ using type_mul = decltype(std::declval<A>() * std::declval<B>());
 template <typename A, typename B>
 using type_div = decltype(std::declval<A>() / std::declval<B>());
 
+
+//////////////////////////////////////////////////////////////////////////////
+/// Access variables as if arrays of number_type numbers
+//////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+inline hila::number_type<T> get_number_in_var(const T &var, int i) {
+    return *(reinterpret_cast<const hila::number_type<T> *>(&var) + i);
+}
+template <typename T>
+inline void set_number_in_var(T &var, int i, const hila::number_type<T> val ) {
+    *(reinterpret_cast<const hila::number_type<T> *>(&var) + i) = val;
+}
+
+
+
+
 } // namespace hila
 
 #endif
