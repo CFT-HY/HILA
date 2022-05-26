@@ -277,9 +277,9 @@ class Field {
         }
 
         /// Gather a list of elements to a single node
-        void gather_elements(T *buffer, std::vector<CoordinateVector> coord_list,
+        void gather_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                              int root = 0) const;
-        void send_elements(T *buffer, std::vector<CoordinateVector> coord_list,
+        void send_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                            int root = 0);
 
 #if defined(USE_MPI)
@@ -426,7 +426,7 @@ class Field {
         }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir (dir) {
+        foralldir(dir) {
             fs->boundary_condition[dir] = BoundaryCondition::PERIODIC;
             fs->boundary_condition[-dir] = BoundaryCondition::PERIODIC;
         }
@@ -588,7 +588,7 @@ class Field {
 
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir (dir) {
+        foralldir(dir) {
             set_boundary_condition(dir, rhs.get_boundary_condition(dir));
         }
     }
@@ -596,13 +596,13 @@ class Field {
     // Overloading []
     // declarations -- WILL BE implemented by hilapp, not written here
     // let there be const and non-const protos
-    element<T> operator[](const Parity p) const;           // f[EVEN]
-    element<T> operator[](const X_index_type) const;       // f[X]
-    element<T> operator[](const X_plus_direction p) const; // f[X+dir]
-    element<T> operator[](const X_plus_offset p) const;    // f[X+dir1+dir2] and others
+    T operator[](const Parity p) const;           // f[EVEN]
+    T operator[](const X_index_type) const;       // f[X]
+    T operator[](const X_plus_direction p) const; // f[X+dir]
+    T operator[](const X_plus_offset p) const;    // f[X+dir1+dir2] and others
 
-    element<T> &operator[](const Parity p);     // f[EVEN]
-    element<T> &operator[](const X_index_type); // f[X]
+    T &operator[](const Parity p);     // f[EVEN]
+    T &operator[](const X_index_type); // f[X]
 
     T &operator[](const CoordinateVector &v);       // f[CoordinateVector]
     T &operator[](const CoordinateVector &v) const; // f[CoordinateVector]
@@ -615,18 +615,18 @@ class Field {
 #ifndef VECTORIZED
     /// Get an individual element outside a loop. This is also used as a getter in the
     /// vanilla code.
-    inline auto get_value_at(int i) const {
+    inline auto get_value_at(const unsigned i) const {
         return fs->get_element(i);
     }
 #else
-    inline auto get_value_at(int i) const {
+    inline auto get_value_at(const unsigned i) const {
         return fs->get_element(i);
     }
     template <typename vecT>
-    inline auto get_vector_at(int i) const {
+    inline auto get_vector_at(unsigned i) const {
         return fs->template get_vector<vecT>(i);
     }
-    inline auto get_value_at_nb_site(Direction d, int i) const {
+    inline auto get_value_at_nb_site(Direction d, unsigned i) const {
         return fs->get_element(fs->vector_lattice->site_neighbour(d, i));
     }
 #endif
@@ -635,18 +635,18 @@ class Field {
     /// Set an individual element outside a loop. This is also used as a setter in the
     /// vanilla code.
     template <typename A>
-    inline void set_value_at(const A &value, int i) {
+    inline void set_value_at(const A &value, unsigned i) {
         fs->set_element(value, i);
     }
 
 #else
     template <typename vecT>
-    inline void set_vector_at(const vecT &value, int i) {
+    inline void set_vector_at(const vecT &value, unsigned i) {
         fs->set_vector(value, i);
     }
 
     template <typename A>
-    inline void set_value_at(const A &value, int i) {
+    inline void set_value_at(const A &value, unsigned i) {
         fs->set_element(value, i);
     }
 #endif
@@ -775,7 +775,9 @@ class Field {
 
     hila::number_type<T> squarenorm() const {
         hila::number_type<T> n = 0;
-        onsites (ALL) { n += ::squarenorm((*this)[X]); }
+        onsites(ALL) {
+            n += ::squarenorm((*this)[X]);
+        }
         return n;
     }
 
@@ -825,11 +827,9 @@ class Field {
     void read_from_file(const std::string &filename);
 
     void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
-                         const CoordinateVector &cmax,
-                         int precision = 6);
+                         const CoordinateVector &cmax, int precision = 6);
     void write_subvolume(const std::string &filenname, const CoordinateVector &cmin,
-                         const CoordinateVector &cmax,
-                         int precision = 6);
+                         const CoordinateVector &cmax, int precision = 6);
 
     void write_slice(std::ofstream &outputfile, const CoordinateVector &slice,
                      int precision = 6);
@@ -973,8 +973,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
     Parity par_s;
 
     int len = 0;
-    foralldir (d)
-        len += abs(rem[d]);
+    foralldir(d) len += abs(rem[d]);
 
     // no move, just copy field
     if (len == 0) {
@@ -991,7 +990,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
     // is this already gathered from one of the dirs in v?
     bool found_dir = false;
     Direction mdir;
-    foralldir (d) {
+    foralldir(d) {
         if (rem[d] > 0 && move_status(par_s, d) != gather_status::NOT_DONE) {
             mdir = d;
             found_dir = true;
@@ -1005,7 +1004,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
 
     if (!found_dir) {
         // now did not find a 'ready' dir. Take the 1st available
-        foralldir (d) {
+        foralldir(d) {
             if (rem[d] > 0) {
                 mdir = d;
                 break;
@@ -1041,7 +1040,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
     rem = rem - mdir;
     par_s = opp_parity(par_s);
 
-    foralldir (d) {
+    foralldir(d) {
         if (rem[d] != 0) {
             mdir = (rem[d] > 0) ? d : -d;
 
@@ -1072,9 +1071,11 @@ template <typename T>
 Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
                           const Parity par) const {
 
-    onsites (par) { if }
+    onsites(par) {
+        if
+    }
     r2 = *this;
-    foralldir (d) {
+    foralldir(d) {
         if (abs(v[d]) > 0) {
             Direction dir;
             if (v[d] > 0)
@@ -1238,8 +1239,8 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
         return;
 
     // if (!is_move_started(d,p)) {
-    //   output0 << "Wait move error - wait_gather without corresponding start_gather\n";
-    //   exit(1);
+    //   output0 << "Wait move error - wait_gather without corresponding
+    //   start_gather\n"; exit(1);
     // }
 
     // Note: the move can be Parity p OR ALL -- need to wait for it in any case
@@ -1386,22 +1387,29 @@ void Field<T>::gather(Direction d, Parity p) const {
 #if defined(USE_MPI)
 
 /// Gather a list of elements to a single node
+/// coord_list must be same on all nodes, buffer is needed only on "root"
 template <typename T>
-void Field<T>::field_struct::gather_elements(T * RESTRICT buffer,
-                                             std::vector<CoordinateVector> coord_list,
-                                             int root) const {
+void Field<T>::field_struct::gather_elements(
+    T *RESTRICT buffer, const std::vector<CoordinateVector> &coord_list,
+    int root) const {
+
     std::vector<unsigned> index_list;
     std::vector<int> sites_on_rank(lattice->n_nodes());
     std::vector<int> reshuffle_list(coord_list.size());
 
     std::fill(sites_on_rank.begin(), sites_on_rank.end(), 0);
 
+    int nranks = 0;
+
     int i = 0;
-    for (const CoordinateVector & c : coord_list) {
+    for (const CoordinateVector &c : coord_list) {
         int rank = lattice->node_rank(c);
         if (hila::myrank() == rank) {
             index_list.push_back(lattice->site_index(c));
         }
+
+        if (sites_on_rank[rank] == 0 && rank != root)
+            nranks++;
         sites_on_rank[rank]++;
         reshuffle_list[i++] = rank;
     }
@@ -1416,18 +1424,20 @@ void Field<T>::field_struct::gather_elements(T * RESTRICT buffer,
     if (hila::myrank() == root) {
 
         // allocate buffer for receiving data
-        T * b;
+        T *b;
         std::vector<T> pb(coord_list.size() - sites_on_rank[root]);
         b = pb.data();
         // vector for node ptrs -- point to stuff from nodes
         std::vector<T *> nptr(lattice->n_nodes());
 
+        std::vector<MPI_Request> mpi_req(nranks);
+        int nreqs = 0;
         for (int n = 0; n < sites_on_rank.size(); n++) {
             if (sites_on_rank[n] > 0) {
                 if (n != root) {
                     MPI_Status status;
-                    MPI_Recv(b, sites_on_rank[n] * sizeof(T), MPI_BYTE, n, n,
-                             lattice->mpi_comm_lat, &status);
+                    MPI_Irecv(b, sites_on_rank[n] * sizeof(T), MPI_BYTE, n, n,
+                              lattice->mpi_comm_lat, &mpi_req[nreqs++]);
 
                     nptr[n] = b;
                     b += sites_on_rank[n];
@@ -1439,8 +1449,13 @@ void Field<T>::field_struct::gather_elements(T * RESTRICT buffer,
             }
         }
 
-        // collect the data from buffer
-        for (int i=0; i<coord_list.size(); i++) {
+        if (nreqs > 0) {
+            std::vector<MPI_Status> stat_arr(nreqs);
+            MPI_Waitall(nreqs, mpi_req.data(), stat_arr.data());
+        }
+
+        // copy the data from bp to buffer, reordering
+        for (int i = 0; i < coord_list.size(); i++) {
             buffer[i] = *nptr[reshuffle_list[i]];
             nptr[reshuffle_list[i]]++;
         }
@@ -1448,54 +1463,89 @@ void Field<T>::field_struct::gather_elements(T * RESTRICT buffer,
 }
 
 /// Send elements from a single node to a list of coordinates
-template <typename T>
-void Field<T>::field_struct::send_elements(T *buffer,
-                                           std::vector<CoordinateVector> coord_list,
-                                           int root) {
-    std::vector<unsigned> index_list;
-    std::vector<unsigned> node_list(lattice->n_nodes());
-    std::fill(node_list.begin(), node_list.end(), 0);
+/// coord_list must be the same on all nodes, but buffer is needed only on "root"!
 
+template <typename T>
+void Field<T>::field_struct::send_elements(
+    T *RESTRICT buffer, const std::vector<CoordinateVector> &coord_list, int root) {
+
+    std::vector<unsigned> index_list;
+    std::vector<int> sites_on_rank(lattice->n_nodes());
+    std::vector<int> reshuffle_list(coord_list.size());
+    std::fill(sites_on_rank.begin(), sites_on_rank.end(), 0);
+
+    int nranks = 0;
+    int i = 0;
     for (CoordinateVector c : coord_list) {
-        if (lattice->is_on_mynode(c)) {
+        int rank = lattice->node_rank(c);
+        if (hila::myrank() == rank) {
             index_list.push_back(lattice->site_index(c));
         }
 
-        node_list[lattice->node_rank(c)]++;
+        if (sites_on_rank[rank] == 0 && rank != root)
+            nranks++;
+        sites_on_rank[rank]++;
+        reshuffle_list[i++] = rank;
     }
 
-    std::vector<T> recv_buffer(index_list.size());
-    payload.gather_elements((T *)recv_buffer.data(), index_list.data(),
-                            recv_buffer.size(), lattice);
-    if (hila::myrank() != root && node_list[hila::myrank()] > 0) {
+    // payload.gather_elements((T *)recv_buffer.data(), index_list.data(),
+    //                         recv_buffer.size(), lattice);
+
+    if (hila::myrank() != root && sites_on_rank[hila::myrank()] > 0) {
+        std::vector<T> recv_buffer(index_list.size());
         MPI_Status status;
-        MPI_Recv((char *)recv_buffer.data(), node_list[hila::myrank()] * sizeof(T),
+
+        MPI_Recv((char *)recv_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T),
                  MPI_BYTE, root, hila::myrank(), lattice->mpi_comm_lat, &status);
+
+        payload.place_elements((T *)recv_buffer.data(), index_list.data(),
+                               recv_buffer.size(), lattice);
     }
     if (hila::myrank() == root) {
-        for (int n = 0; n < node_list.size(); n++)
-            if (node_list[n] > 0) {
+        // reordering buffers
+        std::vector<T> pb(coord_list.size());
+        // vector for node counters -- point to stuff from nodes
+        std::vector<unsigned> nloc(lattice->n_nodes());
+        std::vector<unsigned> ncount(lattice->n_nodes());
+        nloc[0] = ncount[0] = 0;
+
+        for (int n = 1; n < lattice->n_nodes(); n++) {
+            nloc[n] = nloc[n - 1] + sites_on_rank[n - 1];
+            ncount[n] = 0;
+        }
+        for (int i = 0; i < coord_list.size(); i++) {
+            int node = reshuffle_list[i];
+            pb[nloc[node] + ncount[node]] = buffer[i];
+            ncount[node]++;
+        }
+
+        std::vector<MPI_Request> mpi_req(nranks);
+        int nreqs = 0;
+        for (int n = 0; n < sites_on_rank.size(); n++) {
+            if (sites_on_rank[n] > 0) {
                 if (n != root) {
-                    MPI_Send(buffer, node_list[n] * sizeof(T), MPI_BYTE, n, n,
-                             lattice->mpi_comm_lat);
-                } else {
-                    std::memcpy((char *)recv_buffer.data(), buffer,
-                                node_list[n] * sizeof(T));
+                    MPI_Isend(pb.data() + nloc[n], sites_on_rank[n] * sizeof(T),
+                              MPI_BYTE, n, n, lattice->mpi_comm_lat, &mpi_req[nreqs++]);
                 }
-                buffer += node_list[n];
             }
+        }
+
+        payload.place_elements(pb.data() + nloc[root], index_list.data(),
+                               index_list.size(), lattice);
+
+        if (nreqs > 0) {
+            std::vector<MPI_Status> stat_arr(nreqs);
+            MPI_Waitall(nreqs, mpi_req.data(), stat_arr.data());
+        }
     }
-    payload.place_elements((T *)recv_buffer.data(), index_list.data(),
-                           recv_buffer.size(), lattice);
 }
 
 #else // Now not USE_MPI
 
 /// Gather a list of elements to a single node
 template <typename T>
-void Field<T>::field_struct::gather_elements(T *buffer,
-                                             std::vector<CoordinateVector> coord_list,
-                                             int root) const {
+void Field<T>::field_struct::gather_elements(
+    T *buffer, const std::vector<CoordinateVector> &coord_list, int root) const {
     std::vector<unsigned> index_list;
     for (CoordinateVector c : coord_list) {
         index_list.push_back(lattice->site_index(c));
@@ -1506,9 +1556,8 @@ void Field<T>::field_struct::gather_elements(T *buffer,
 
 /// Send elements from a single node to a list of coordinates
 template <typename T>
-void Field<T>::field_struct::send_elements(T *buffer,
-                                           std::vector<CoordinateVector> coord_list,
-                                           int root) {
+void Field<T>::field_struct::send_elements(
+    T *buffer, const std::vector<CoordinateVector> &coord_list, int root) {
     std::vector<unsigned> index_list;
     for (CoordinateVector c : coord_list) {
         index_list.push_back(lattice->site_index(c));
@@ -1540,7 +1589,8 @@ void Field<T>::set_elements(T *elements,
     mark_changed(ALL);
 }
 
-// Set a single element. Assuming that each node calls this with the same value, it is
+// Set a single element. Assuming that each node calls this with the same value, it
+// is
 /// sufficient to set the element locally
 template <typename T>
 void Field<T>::set_element(const T &element, const CoordinateVector &coord) {
@@ -1631,13 +1681,13 @@ void Field<T>::get_elements(T *elements,
 // original code as such.  It is easiest to let the general hilapp
 // code generation to do it using this hack, instead of hard-coding these to hilapp.
 //
-// These are needed because hilapp changes X+d-d -> +d-d, which may involve an operator
-// not met before
+// These are needed because hilapp changes X+d-d -> +d-d, which may involve an
+// operator not met before
 
 inline void dummy_X_f() {
     Direction d1 = e_x;
     CoordinateVector v1(0);
-    onsites (ALL) {
+    onsites(ALL) {
         Direction d;
         d = +d1;
         d = -d1; // unaryops
@@ -1667,12 +1717,12 @@ inline void dummy_X_f() {
 template <typename T>
 inline void ensure_field_operators_exist(Field<T> &f) {
 
-    onsites (ALL) {
+    onsites(ALL) {
         f[X] = 0;     // set to zero
         f[X] = -f[X]; // unary -  -- needed for antiperiodic b.c.
     }
     // same for non-vectorized loop
-    onsites (ALL) {
+    onsites(ALL) {
         if (X.coordinate(e_x) < X.coordinate(e_y)) {
             f[X] = 0;
             f[X] = -f[X];
