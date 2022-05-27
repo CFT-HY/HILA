@@ -384,7 +384,6 @@ class Field {
 
     // move constructor - steal the content
     Field(Field &&rhs) {
-        // std::cout << "in move constructor\n";
         fs = rhs.fs;
         rhs.fs = nullptr;
     }
