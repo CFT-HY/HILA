@@ -138,6 +138,12 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     lfe.is_read = (is_also_read || !is_assign);
     lfe.sequence = parsing_state.stmt_sequence;
 
+    if (is_assign && !lfe.nameExpr->isLValue()) {
+        reportDiag(DiagnosticsEngine::Level::Error,
+                   lfe.nameExpr->getSourceRange().getBegin(),
+                   "Cannot assign to non-lvalue Field expression");
+    }
+
     std::string parity_expr_type = get_expr_type(lfe.parityExpr);
 
     if (parity_expr_type == "Parity") {
@@ -1245,7 +1251,8 @@ bool TopLevelVisitor::check_field_ref_list() {
         // search for duplicates: if found, lfip is non-null
 
         for (field_info &li : field_info_list) {
-            if (name.compare(li.old_name) == 0) {
+            if (is_duplicate_expr(li.nameExpr, p.nameExpr)) {
+                //  if (name.compare(li.old_name) == 0) {
                 fip = &li;
                 break;
             }
@@ -1450,21 +1457,23 @@ void TopLevelVisitor::check_var_info_list() {
                             "Cannot assign to variable defined outside site loop "
                             "(unless reduction \'+=\' or \'*=\')");
                 }
-
             }
-            
-            //Check if product reduction is done for legal variables
+
+            // Check if product reduction is done for legal variables
             if (vi.reduction_type == reduction::PRODUCT) {
                 legal_types default_legal_types;
-                std::string var_type = vi.decl->getType().getCanonicalType().getAsString();
-                const bool allowed_reduction_type = default_legal_types.check_if_legal(var_type);
+                std::string var_type =
+                    vi.decl->getType().getCanonicalType().getAsString();
+                const bool allowed_reduction_type =
+                    default_legal_types.check_if_legal(var_type);
                 if (!allowed_reduction_type) {
                     for (auto &vr : vi.refs) {
-                        reportDiag(
-                            DiagnosticsEngine::Level::Error,
-                            vr.ref->getSourceRange().getBegin(),
-                            "\nProduct reduction variable of type \'%0\' not allowed. \nMust be of type: \'%1\'",
-                            var_type.c_str(), default_legal_types.as_string().c_str());
+                        reportDiag(DiagnosticsEngine::Level::Error,
+                                   vr.ref->getSourceRange().getBegin(),
+                                   "\nProduct reduction variable of type \'%0\' not "
+                                   "allowed. \nMust be of type: \'%1\'",
+                                   var_type.c_str(),
+                                   default_legal_types.as_string().c_str());
                     }
                 }
             }
