@@ -18,8 +18,7 @@ CXXFLAGS  := -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma -fopenmp
 
 ## The following incantation gives the include paths of the $(CC) compiler (if it is gcc or clang)
 # It may be that this path is not necessary at all, usually not for "system installed" clang
-# STD_INCLUDE_DIRS := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ /"))
-STD_INCLUDE_DIRS :=
+STD_INCLUDE_DIRS := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ /"))
 
 
 # Linker libraries and possible options

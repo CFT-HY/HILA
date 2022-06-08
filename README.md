@@ -4,8 +4,8 @@
 Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
 
 Purpose: make writing applications straightforward and intuitive, while producing optimized executables for 
-different (super)computing platforms (parallelisation with MPI, GPU computing with Cuda or HIP, AVX vectorization, 
-etc.).  Details of the parallelisation and computing architecture are hidden from the user's view, and 
+different (super)computing platforms (parallelization with MPI, GPU computing with Cuda or HIP, AVX vectorization, 
+etc.).  Details of the parallelization and computing architecture are hidden from the user's view, and 
 all applications automatically run on present or future platform.
 Write once -- run anywhere.
 
@@ -17,65 +17,129 @@ which is passed to appropriate compilers for the platforms.
 
 Behind the scenes hila takes care of MPI layout and communications.  It lays out the 
 lattice fields differently for different computing platforms: 'array of structures' (standard),
-'array of strucures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).
+'array of structures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).
 
+## Dependencies
 
+### Hilapp
 
+| Dependencies | Minimum Version   | Required  |
+|--------------|-------------------|-----------|
+| Clang        | 8 -               | Yes       |
+
+### HILA applications
+
+| Dependencies | Minimum Version   | Required  |
+|--------------|-------------------|-----------|
+| Clang / GCC  | 8 -    /  x       | Yes       |
+| FFTW3        | x                 | Yes       |
+| MPI          | x                 | Yes       |
+| OpenMP       | x                 | No        |
+| CUDA         | x                 | No        |
+| HIP          | x                 | No        |
+
+**Installing dependencies**
+
+Installing all dependencies on ubuntu:
+```bash
+apt install build-essential \
+            libopenmpi-dev \
+            libfftw3-dev \
+            libomp-dev
+```
+
+**CUDA:**
+
+See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
+
+**HIP:**
+
+See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
 ## Quick start
 
-- Clone hila repository (TODO: new repo address?)
+Begin by cloning HILA repository:
+
+``` bash
+git clone https://haaaaron@bitbucket.org/Kari_Rummukainen/hila.git
+```
+
+The HILA working method is split into two parts. The first part is getting access to the hilapp preprocessor. And the second part is building simulations for targeted architectures and technologies using the hilapp preprocessor.
+
+## 1. HILA preprocessor
+The preprocessor can either be compiled from source using the clang libtooling toolbox or by using the offered [singularity container](https://bitbucket.org/haaaaron/hila-singularity/src/main/). (Future support for packaged .rpm and .deb? Maybe docker aswell for MACOSX and windows support RPM is supported by macosx)
+
+#### **Compiling from source**
+For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 20.04:
 
 ~~~ bash
-       git clone git@bitbucket.org:Kari_Rummukainen/hila.git
+export LLVM_VERSION=12
+apt install clang-$LLVM_VERSION \
+            llvm-$LLVM_VERSION \
+            clang-tools-$LLVM_VERSION \
+            libclang-common-$LLVM_VERSION-dev \
+            libclang-cpp$LLVM_VERSION-dev \
+            libclang-$LLVM_VERSION-dev \
+            clang-format-$LLVM_VERSION
 ~~~
 
-- For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include
-  files).
-  These can be found in most Linux distribution repos, e.g. in Ubuntu 20.04:
+Compile *hilapp*:
 
 ~~~ bash
-       apt install clang-11 llvm-11 clang-tools-11 libclang-common-11-dev libclang-cpp11-dev libclang-11-dev clang-format-11
+cd hila/hilapp
+make [-j4]
+make install
 ~~~
 
-    Change version number as needed; at least 8 required.  (TODO: what is needed for Macs?)
+This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the default location for the program.  Build takes 1-2 min. 
 
-- Compile *hilapp*:
-
-~~~ bash
-        cd hila/hilapp
-        make [-j4]
-        make install
-~~~
-
-   This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/hilapp/bin, which is the
-   default location for the program.  Build takes 1-2 min.
-   By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`. 
+("By default, hilapp Makefile uses clang++ installed in stage 1. You can also use g++ with `make CXX=g++`." Is this detail too complicated? Should just stick to clang in this part.) 
 
 - *NOTE: clang dev libraries are not installed in most supercomputer systems.  However, if the system has x86_64 
   processors (by far most common), you can use `make static` -command to build statically linked hilapp. 
-  Copy `hila/hilapp/build/hilapp` to directory `hila/hilapp/bin` on the target machine.*
+  Copy `hila/hilapp/build/hilapp` to directory `hila/hilapp/bin` on the target machine. Simpler approach for HPC platforms is use of singularity containers*
   
+Test that hilapp works
 
-- Test `bin/hilapp -help`
+    ./bin/hilapp --help
 
-- Build an application:
-~~~ bash
-       cd ../applications/hila_example
-       make
-       build/hila_example  or  mpirun -np 4 build/hila_example
-~~~
+#### **Singularity container**
 
-- Computing platform is chosen by `make ARCH=<platform>`:
-    - `make [ ARCH=vanilla ]` (often default) builds a standard MPI-parallelized program.
-    - `make ARCH=AVX2` builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass) 
-       library.
-    - `make ARCH=cuda` builds parallel Cuda-program.  Requires nvcc compiler.
+The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container. 
 
-   Typically these need to be customized for supercomputing platforms.  See directory 
-   hila/libraries/target_arch
+Since the HILA preprocessor doesn't require optimized performance any overhead is irrelevant. In theory there should be none.
 
+See separate [repository](https://bitbucket.org/haaaaron/hila-singularity/src/main/) for use of singularity container.
 
+(Add downloadable .sif file to git page?)
 
+## 2. Building HILA applications
+
+The second part is building HILA applications. Here we will go over a test example. All applications should lie in the applications folder.
+
+- *NOTE: that at this point one will need to install the FFTW3 and OpenMPI development libraries, see dependencies section* 
+
+Build an application:
+``` bash
+cd hila/applications/hila_example
+make [-j4]
+./build/hila_example
+```
+By default all HILA applications are built using MPI so one can run directly:
+
+    mpirun -n 4 ./build/hila_example
+
+ 
+Computing platform is chosen by 
+
+    make ARCH=<platform>
+
+- `[ ARCH=vanilla ]` (often default) builds a standard MPI-parallelized program
+- `ARCH=AVX2` builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass)
+- `ARCH=openmp` builds OpenMP parallelized program
+- `ARCH=cuda` builds parallel CUDA-program
+- `ARCH=hip` builds parallel HIP-program
+
+Typically these need to be customized for supercomputing platforms due to stack limitations of said platforms. ~~See directory hila/libraries/target_arch~~ -> TODO: should have a list of all system specific target architectures
 
 # Overview
 
