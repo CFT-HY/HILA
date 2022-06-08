@@ -66,7 +66,7 @@ git clone https://haaaaron@bitbucket.org/Kari_Rummukainen/hila.git
 The HILA working method is split into two parts. The first part is getting access to the hilapp preprocessor. And the second part is building simulations for targeted architectures and technologies using the hilapp preprocessor.
 
 ## 1. HILA preprocessor
-The preprocessor can either be compiled from source using the clang libtooling toolbox or by using the offered [singularity container](https://bitbucket.org/haaaaron/hila-singularity/src/main/). (Future support for packaged .rpm and .deb? Maybe docker aswell for MACOSX and windows support RPM is supported by macosx)
+The preprocessor can be accessed either by compiled from source using the clang libtooling toolbox or by using the offered [singularity container](https://bitbucket.org/haaaaron/hila-singularity/src/main/). (Future support for packaged .rpm and .deb? Maybe docker aswell for MACOSX and windows support RPM is supported by macosx)
 
 #### **Compiling from source**
 For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 20.04:
