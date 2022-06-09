@@ -43,7 +43,8 @@
 /// The same reduction variable can be used again
 ///
 
-template <typename T> class VectorReduction {
+template <typename T>
+class VectorReduction {
 
   private:
     std::vector<T> val;
@@ -120,10 +121,18 @@ template <typename T> class VectorReduction {
     using iterator = typename std::vector<T>::iterator;
     using const_iterator = typename std::vector<T>::const_iterator;
 
-    iterator begin() { return val.begin(); }
-    iterator end() { return val.end(); }
-    const_iterator begin() const { return val.begin(); }
-    const_iterator end() const { return val.end(); }
+    iterator begin() {
+        return val.begin();
+    }
+    iterator end() {
+        return val.end();
+    }
+    const_iterator begin() const {
+        return val.begin();
+    }
+    const_iterator end() const {
+        return val.end();
+    }
 
     /// Initialize to zero by default (? exception to other variables)
     /// allreduce = true by default
@@ -139,30 +148,40 @@ template <typename T> class VectorReduction {
     }
 
     /// And access operators - these do in practice everything already!
-    T &operator[](const int i) { return val[i]; }
+    T &operator[](const int i) {
+        return val[i];
+    }
 
-    T operator[](const int i) const { return val[i]; }
+    T operator[](const int i) const {
+        return val[i];
+    }
 
     /// allreduce(bool) turns allreduce on or off.  By default on.
     VectorReduction &allreduce(bool b = true) {
         is_allreduce_ = b;
         return *this;
     }
-    bool is_allreduce() { return is_allreduce_; }
+    bool is_allreduce() {
+        return is_allreduce_;
+    }
 
     /// nonblocking(bool) turns allreduce on or off.  By default on.
     VectorReduction &nonblocking(bool b = true) {
         is_nonblocking_ = b;
         return *this;
     }
-    bool is_nonblocking() { return is_nonblocking_; }
+    bool is_nonblocking() {
+        return is_nonblocking_;
+    }
 
     /// deferred(bool) turns deferred on or off.  By default turns on.
     VectorReduction &delayed(bool b = true) {
         is_delayed_ = b;
         return *this;
     }
-    bool is_delayed() { return is_delayed_; }
+    bool is_delayed() {
+        return is_delayed_;
+    }
 
     /// Assignment is used only outside site loops - wait for comms if needed
     /// Make this return void, hard to imagine it is used for anything useful
@@ -259,22 +278,44 @@ template <typename T> class VectorReduction {
     }
 
     /// data() returns ptr to the raw storage
-    T *data() { return val.data(); }
+    T *data() {
+        return val.data();
+    }
+
+    std::vector<T> vector() {
+        return val;
+    }
 
     /// methods from std::vector:
 
-    size_t size() const { return val.size(); }
+    size_t size() const {
+        return val.size();
+    }
 
-    void resize(size_t count) { val.resize(count); }
-    void resize(size_t count, const T &v) { val.resize(count, v); }
+    void resize(size_t count) {
+        val.resize(count);
+    }
+    void resize(size_t count, const T &v) {
+        val.resize(count, v);
+    }
 
-    void clear() { val.clear(); }
+    void clear() {
+        val.clear();
+    }
 
-    void push_back(const T &v) { val.push_back(v); }
-    void pop_back() { val.pop_back(); }
+    void push_back(const T &v) {
+        val.push_back(v);
+    }
+    void pop_back() {
+        val.pop_back();
+    }
 
-    T &front() { return val.front(); }
-    T &back() { return val.back(); }
+    T &front() {
+        return val.front();
+    }
+    T &back() {
+        return val.back();
+    }
 };
 
 #endif // USE_MPI
