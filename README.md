@@ -27,6 +27,10 @@ lattice fields differently for different computing platforms: 'array of structur
 |--------------|-------------------|-----------|
 | Clang        | 8 -               | Yes       |
 
+#### **Installing dependencies for HILA preprocessor**:
+
+See quickstart guide, since may not be necessary.
+
 ### HILA applications
 
 | Dependencies | Minimum Version   | Required  |
@@ -38,9 +42,9 @@ lattice fields differently for different computing platforms: 'array of structur
 | CUDA         | x                 | No        |
 | HIP          | x                 | No        |
 
-**Installing dependencies**
+#### **Installing dependencies for HILA applications**:
 
-Installing all dependencies on ubuntu:
+Installing all non GPU dependencies on ubuntu:
 ```bash
 apt install build-essential \
             libopenmpi-dev \
@@ -137,6 +141,7 @@ Computing platform is chosen by
 - `ARCH=AVX2` builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass)
 - `ARCH=openmp` builds OpenMP parallelized program
 - `ARCH=cuda` builds parallel CUDA-program
+    - For cuda one needs to export their cuda version
 - `ARCH=hip` builds parallel HIP-program
 
 Typically these need to be customized for supercomputing platforms due to stack limitations of said platforms. ~~See directory hila/libraries/target_arch~~ -> TODO: should have a list of all system specific target architectures
