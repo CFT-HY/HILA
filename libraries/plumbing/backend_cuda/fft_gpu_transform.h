@@ -1,5 +1,5 @@
-#ifndef FFT_HIP_TRANSFORM_H
-#define FFT_HIP_TRANSFORM_H
+#ifndef FFT_GPU_TRANSFORM_H
+#define FFT_GPU_TRANSFORM_H
 
 #ifndef HILAPP
 
@@ -311,8 +311,8 @@ void hila_fft<cmplx_t>::gather_data() {
 
 #ifdef USE_MPI
 
-    extern hila::timer fft_MPI_timer;
-    fft_MPI_timer.start();
+    extern hila::timer pencil_MPI_timer;
+    pencil_MPI_timer.start();
 
     // post receive and send
     int n_comms = hila_pencil_comms[dir].size() - 1;
@@ -330,20 +330,20 @@ void hila_fft<cmplx_t>::gather_data() {
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            size_t siz = fn.recv_buf_size * elements;
+            size_t siz = fn.recv_buf_size * elements * sizeof(cmplx_t);
             if (siz >= (1ULL << 30)) {
-                hila::output << "Too large MPI message in FFT! Size " << siz
-                             << " complex numbers\n";
+                hila::output << "Too large MPI message in pencils! Size " << siz
+                             << " bytes\n";
                 hila::terminate(1);
             }
 
 #ifndef CUDA_AWARE_MPI
-            cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(sizeof(cmplx_t) * siz);
+            cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(siz);
 #else
             cmplx_t *p = rec_p[j];
 #endif
 
-            MPI_Irecv(p, (int)siz, mpi_cmplx_t, fn.node, WRK_GATHER_TAG,
+            MPI_Irecv(p, (int)siz, MPI_BYTE, fn.node, WRK_GATHER_TAG,
                       lattice->mpi_comm_lat, &recreq[i]);
 
             i++;
@@ -356,15 +356,16 @@ void hila_fft<cmplx_t>::gather_data() {
         if (fn.node != hila::myrank()) {
 
             cmplx_t *p = send_buf + fn.column_offset * elements;
-            int n = fn.column_number * elements * lattice->mynode.size[dir];
+            int n = fn.column_number * elements * lattice->mynode.size[dir] *
+                    sizeof(cmplx_t);
 
 #ifndef CUDA_AWARE_MPI
-            send_p[i] = (cmplx_t *)memalloc(sizeof(cmplx_t) * n);
-            gpuMemcpy(send_p[i], p, sizeof(cmplx_t) * n, gpuMemcpyDeviceToHost);
+            send_p[i] = (cmplx_t *)memalloc(n);
+            gpuMemcpy(send_p[i], p, n, gpuMemcpyDeviceToHost);
             p = send_p[i];
 #endif
 
-            MPI_Isend(p, n, mpi_cmplx_t, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat,
+            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat,
                       &sendreq[i]);
             i++;
         }
@@ -397,7 +398,7 @@ void hila_fft<cmplx_t>::gather_data() {
 #endif
     }
 
-    fft_MPI_timer.stop();
+    pencil_MPI_timer.stop();
 
 #endif
 }
@@ -410,8 +411,8 @@ void hila_fft<cmplx_t>::scatter_data() {
 
 #ifdef USE_MPI
 
-    extern hila::timer fft_MPI_timer;
-    fft_MPI_timer.start();
+    extern hila::timer pencil_MPI_timer;
+    pencil_MPI_timer.start();
 
     int n_comms = hila_pencil_comms[dir].size() - 1;
 
@@ -428,15 +429,16 @@ void hila_fft<cmplx_t>::scatter_data() {
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            int n = fn.column_number * elements * lattice->mynode.size[dir];
+            int n = fn.column_number * elements * lattice->mynode.size[dir] *
+                    sizeof(cmplx_t);
 #ifdef CUDA_AWARE_MPI
             cmplx_t *p = send_buf + fn.column_offset * elements;
 #else
-            cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(sizeof(cmplx_t) * n);
+            cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(n);
 #endif
 
-            MPI_Irecv(p, n, mpi_cmplx_t, fn.node, WRK_SCATTER_TAG,
-                      lattice->mpi_comm_lat, &recreq[i]);
+            MPI_Irecv(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat,
+                      &recreq[i]);
 
             i++;
         }
@@ -447,15 +449,15 @@ void hila_fft<cmplx_t>::scatter_data() {
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            int n = fn.recv_buf_size * elements;
+            int n = fn.recv_buf_size * elements * sizeof(cmplx_t);
 #ifndef CUDA_AWARE_MPI
-            cmplx_t *p = send_p[i] = (cmplx_t *)memalloc(sizeof(cmplx_t) * n);
-            gpuMemcpy(p, rec_p[j], sizeof(cmplx_t) * n, gpuMemcpyDeviceToHost);
+            cmplx_t *p = send_p[i] = (cmplx_t *)memalloc(n);
+            gpuMemcpy(p, rec_p[j], n, gpuMemcpyDeviceToHost);
 #else
             cmplx_t *p = rec_p[j];
 #endif
-            MPI_Isend(p, n, mpi_cmplx_t, fn.node, WRK_SCATTER_TAG,
-                      lattice->mpi_comm_lat, &sendreq[i]);
+            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat,
+                      &sendreq[i]);
 
             i++;
         }
@@ -472,10 +474,11 @@ void hila_fft<cmplx_t>::scatter_data() {
         for (auto &fn : hila_pencil_comms[dir]) {
             if (fn.node != hila::myrank()) {
 
-                int n = fn.column_number * elements * lattice->mynode.size[dir];
+                int n = fn.column_number * elements * lattice->mynode.size[dir] *
+                        sizeof(cmplx_t);
                 cmplx_t *p = send_buf + fn.column_offset * elements;
 
-                gpuMemcpy(p, receive_p[i], n * sizeof(cmplx_t), gpuMemcpyHostToDevice);
+                gpuMemcpy(p, receive_p[i], n, gpuMemcpyHostToDevice);
                 i++;
             }
         }
@@ -487,7 +490,7 @@ void hila_fft<cmplx_t>::scatter_data() {
 #endif
     }
 
-    fft_MPI_timer.stop();
+    pencil_MPI_timer.stop();
 #endif
 }
 
@@ -557,8 +560,8 @@ void hila_fft<cmplx_t>::reflect() {
     hila_reflect_dir_kernel<cmplx_t>
         <<<N_blocks, N_threads>>>(fft_wrk, lattice->size(dir), n_columns);
 #else
-    hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_reflect_dir_kernel<cmplx_t>), dim3(N_blocks),
-                       dim3(N_threads), 0, 0, fft_wrk,
+    hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_reflect_dir_kernel<cmplx_t>),
+                       dim3(N_blocks), dim3(N_threads), 0, 0, fft_wrk,
                        lattice->size(dir), n_columns);
 #endif
 

@@ -819,6 +819,11 @@ class Field {
     // Fourier transform declarations
     void FFT(fft_direction fdir = fft_direction::forward);
 
+    // Reflect the field along all or 1 coordinate
+    Field<T> reflect();
+    Field<T> reflect(Direction dir);
+    Field<T> reflect(const CoordinateVector & dirs);
+
     // Writes the Field to disk
     void write_to_stream(std::ofstream &outputfile);
     void write_to_file(const std::string &filename);

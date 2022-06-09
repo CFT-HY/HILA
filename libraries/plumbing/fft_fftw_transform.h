@@ -136,28 +136,28 @@ void hila_fft<cmplx_t>::gather_data() {
 
 #ifdef USE_MPI
 
-    extern hila::timer fft_MPI_timer;
-    fft_MPI_timer.start();
+    extern hila::timer pencil_MPI_timer;
+    pencil_MPI_timer.start();
 
     // post receive and send
-    int n_comms = hila_fft_comms[dir].size() - 1;
+    int n_comms = hila_pencil_comms[dir].size() - 1;
 
     MPI_Request sendreq[n_comms], recreq[n_comms];
     MPI_Status stat[n_comms];
 
     int i = 0;
     int j = 0;
-    for (auto &fn : hila_fft_comms[dir]) {
+    for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            size_t siz = fn.recv_buf_size * elements;
+            size_t siz = fn.recv_buf_size * elements * sizeof(cmplx_t);
             if (siz >= (1ULL << 30)) {
-                hila::output << "Too large MPI message in FFT! Size " << siz
-                             << " complex numbers\n";
+                hila::output << "Too large MPI message in pencils! Size " << siz
+                             << " bytes\n";
                 hila::terminate(1);
             }
 
-            MPI_Irecv(rec_p[j], (int)siz, mpi_cmplx_t, fn.node, WRK_GATHER_TAG,
+            MPI_Irecv(rec_p[j], (int)siz, MPI_BYTE, fn.node, WRK_GATHER_TAG,
                       lattice->mpi_comm_lat, &recreq[i]);
 
             i++;
@@ -166,13 +166,14 @@ void hila_fft<cmplx_t>::gather_data() {
     }
 
     i = 0;
-    for (auto &fn : hila_fft_comms[dir]) {
+    for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
             cmplx_t *p = send_buf + fn.column_offset * elements;
-            int n = fn.column_number * elements * lattice->mynode.size[dir];
+            int n = fn.column_number * elements * lattice->mynode.size[dir] *
+                    sizeof(cmplx_t);
 
-            MPI_Isend(p, n, mpi_cmplx_t, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat,
+            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat,
                       &sendreq[i]);
             i++;
         }
@@ -184,7 +185,7 @@ void hila_fft<cmplx_t>::gather_data() {
         MPI_Waitall(n_comms, sendreq, stat);
     }
 
-    fft_MPI_timer.stop();
+    pencil_MPI_timer.stop();
 
 #endif
 }
@@ -197,22 +198,22 @@ void hila_fft<cmplx_t>::scatter_data() {
 
 #ifdef USE_MPI
 
-    extern hila::timer fft_MPI_timer;
-    fft_MPI_timer.start();
+    extern hila::timer pencil_MPI_timer;
+    pencil_MPI_timer.start();
 
-    int n_comms = hila_fft_comms[dir].size() - 1;
+    int n_comms = hila_pencil_comms[dir].size() - 1;
 
     MPI_Request sendreq[n_comms], recreq[n_comms];
     MPI_Status stat[n_comms];
 
     int i = 0;
 
-    for (auto &fn : hila_fft_comms[dir]) {
+    for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
             cmplx_t *p = send_buf + fn.column_offset * elements;
-            int n = fn.column_number * elements * lattice->mynode.size[dir];
+            int n = fn.column_number * elements * lattice->mynode.size[dir] * sizeof(cmplx_t);
 
-            MPI_Irecv(p, n, mpi_cmplx_t, fn.node, WRK_SCATTER_TAG,
+            MPI_Irecv(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG,
                       lattice->mpi_comm_lat, &recreq[i]);
 
             i++;
@@ -221,10 +222,10 @@ void hila_fft<cmplx_t>::scatter_data() {
 
     i = 0;
     int j = 0;
-    for (auto &fn : hila_fft_comms[dir]) {
+    for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            MPI_Isend(rec_p[j], fn.recv_buf_size * elements, mpi_cmplx_t, fn.node,
+            MPI_Isend(rec_p[j], fn.recv_buf_size * elements * sizeof(cmplx_t), MPI_BYTE, fn.node,
                       WRK_SCATTER_TAG, lattice->mpi_comm_lat, &sendreq[i]);
 
             i++;
@@ -238,8 +239,48 @@ void hila_fft<cmplx_t>::scatter_data() {
         MPI_Waitall(n_comms, sendreq, stat);
     }
 
-    fft_MPI_timer.stop();
+    pencil_MPI_timer.stop();
 #endif
 }
+
+///////////////////////////////////////////////////////////////////////////////////
+/// Separate reflect operation
+///////////////////////////////////////////////////////////////////////////////////
+
+template <typename cmplx_t>
+inline void hila_fft<cmplx_t>::reflect() {
+    extern unsigned hila_fft_my_columns[NDIM];
+    extern hila::timer fft_plan_timer, fft_buffer_timer, fft_execute_timer;
+
+    const int ncols = hila_fft_my_columns[dir] * elements;
+
+    const int length = lattice->size(dir);
+
+    cmplx_t *buf = (cmplx_t *)memalloc(sizeof(cmplx_t) * length);
+
+    for (int i = 0; i < ncols; i++) {
+        // collect stuff from buffers
+
+        cmplx_t *cp = buf;
+        for (int j = 0; j < rec_p.size(); j++) {
+            memcpy(cp, rec_p[j] + i * rec_size[j], sizeof(cmplx_t) * rec_size[j]);
+            cp += rec_size[j];
+        }
+
+        // reflect
+        for (int j = 0; j < length / 2; j++) {
+            std::swap(buf[j], buf[length - 1 - j]);
+        }
+
+        cp = buf;
+        for (int j = 0; j < rec_p.size(); j++) {
+            memcpy(rec_p[j] + i * rec_size[j], cp, sizeof(cmplx_t) * rec_size[j]);
+            cp += rec_size[j];
+        }
+    }
+
+    free(buf);
+}
+
 
 #endif
