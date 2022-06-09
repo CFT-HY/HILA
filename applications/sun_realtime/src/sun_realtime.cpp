@@ -68,7 +68,7 @@ double measure_plaq(const GaugeField<group> &U) {
 }
 
 
-/* Calculate the lattice counterpart of B_i(x) = -1/2 eps_{ijk} F_jk(x) = -sum_{j<k} F_jk(x) everywhere. */
+/* Calculate the lattice counterpart of B_i(x) = -1/2 eps_{ijk} F_jk(x) = -sum_{j<k} eps_{ijk} F_jk(x) everywhere. */
 /* We extract the lattice field strength tensor from minimal clover terms:
 * Q_{jk} = P_{jk} + P_{k,-j} + P_{-j,-k} + P_{-k,j}, then
 * i g F_{jk} = (Q_{jk} - Q_{kj}) / (8a^2). 
@@ -80,9 +80,7 @@ double measure_plaq(const GaugeField<group> &U) {
 template <typename group>
 void get_magnetic_field(const GaugeField<group> &U, GaugeField<group> &B) {
 
-
-    GaugeField<group> B_naive; 
-    foralldir(d1) onsites(ALL) B_naive[d1][X] = 0;
+    foralldir(d1) onsites(ALL) B[d1][X] = 0;
 
     // "i,j,k" with j<k only
     foralldir(d1) {
@@ -111,21 +109,13 @@ void get_magnetic_field(const GaugeField<group> &U, GaugeField<group> &B) {
             } else {
                 sign = 1;
             }
-
-            // Get "naive" iga^2 B_i(x).
-            // The code uses anti-Hermitian generators for the algebra, so I actually compute g a^2 B_i.
+            
+            // Get local magnetic field (actually g a^2 B_i, anti-Hermitian algebra)
             onsites(ALL) {
-                B_naive[d1][X] += -(1.0/ 8.0) * sign * (Q[X] - Q[X].dagger());
+                B[d1][X] += -(1.0/ 8.0) * sign * (Q[X] - Q[X].dagger());
             }
             
         } // end foralldir d2 d3
-
-        /* B_i lives on the links => reduce discretization errors by using improved B_i(x) = B_i(x + 0.5i), with
-        * B_i(x + 0.5i) = 1/2 (B_i(x) + U_i(x) B_i(x+i) U_i(x).dagger() ),
-        * where the second term is a parallel transport to the next lattice site. */
-        onsites(ALL) {
-            B[d1][X] = 0.5 * (B_naive[d1][X] + U[d1][X] * B_naive[d1][X+d1] * U[d1][X].dagger());
-        }
         
     } // end d1; mag. field done
  
@@ -137,27 +127,27 @@ template <typename group>
 void calc_topoCharge(const GaugeField<group> &U, const VectorField<Algebra<group>> &E, Field<double> &result) {
 
     double c_chi = 1.0 / (64.0 * M_PI*M_PI);
-    result[ALL] = 0;
+    onsites(ALL) result[X] = 0;
 
     // Magnetic field, but not projected to algebra for better performance:
     GaugeField<group> B;
     get_magnetic_field(U, B);
 
-    /* Now a^4 chi = -16 c_chi a^4 g^2 Tr (E_i B_i),
+    /* Now a^4 chi = 16 c_chi a^4 g^2 Tr (E_i B_i) with antiHermitian E_i, B_i, 
     * and the lattice fields are actually g a^2 E_i and g a^2 B_i. */
     foralldir(d1) onsites(ALL) {
-        result[X] -= 16.0 * c_chi * real( trace(E[d1][X].expand() * B[d1][X]) );
-    }
+        result[X] += 16.0 * c_chi * real( trace(E[d1][X].expand() * B[d1][X]) );
+        // this trace is automatically real
+    } 
 
 }
 
 
 static double degauss_quality = 1e-12;
 
-// Do the measurements. Here 'n' just labels the time step, so the actual time is n*dt. 
+// Do the measurements. Here 't' labels the Hamiltonian time 
 template <typename group>
-void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory,
-                   int n, double dt) {
+void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory, double t) {
 
     auto plaq = measure_plaq(U); // N - Tr Re P_ij
 
@@ -173,8 +163,16 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     get_gauss_violation(U, E, g);
     auto viol = g.squarenorm();
 
+    /* Measure 'improved' or 'symmetrized' charge density: The way E_i appears in the EOM suggests
+    * that we should identify E_i(x) as living at link midpoint, while the mag. field B_i(x) is local to x.
+    * To measure E.B at x, we take covariant average of E: E^{imp}_i(x) = 0.5 * (E_i(x) + U^+_i(x-i)E_i(x-i)U_i(x-i)) */
     Field<double> chi;
-    calc_topoCharge(U, E, chi);
+    VectorField<Algebra<group>> E_imp;
+    foralldir(d1) onsites(ALL) { 
+        E_imp[d1][X] = 0.5 * (E[d1][X] + 
+            (U[d1][X-d1].dagger() * E[d1][X-d1].expand() * U[d1][X-d1]).project_to_algebra() );
+    }
+    calc_topoCharge(U, E_imp, chi);
 
     double chi_avg = 0.0;
     onsites(ALL) 
@@ -182,14 +180,10 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
 
     chi_avg /= lattice->volume();
 
-    //output0 << "Measure_start " << n << "\n";
-    // Print the actual time (in lattice units) instead of just 'n'. Also more precision, needed for long trajectories
-    char buf[1024]; 
-    sprintf(buf, "%d %.10g %.8g %.8g %.8g %.8g %.8g", trajectory, n*dt, plaq, e2, viol, chi_avg, energy);
-    if (hila::myrank() == 0) measureFile << std::string(buf) << "\n";
 
-    // output0 << "MEAS " << trajectory << ' ' << n*dt << ' ' << plaq << ' ' << e2 << ' ' << viol << ' ' << chi_avg << '\n';
-    //output0 << "Measure_end " << n << "\n";
+    char buf[1024]; 
+    sprintf(buf, "%d %.10g %.8g %.8g %.8g %.8g %.8g", trajectory, t, plaq, e2, viol, energy, chi_avg);
+    if (hila::myrank() == 0) measureFile << std::string(buf) << "\n";
 }
 
 
@@ -223,12 +217,14 @@ void thermalize(GaugeField<group> &U, VectorField<Algebra<group>> &E, double g2T
         update_E(U, E, dt);
         update_U(U, E, dt / 2);
 
+        /*
         double pl = measure_plaq(U);
         double e2 = 0;
         foralldir (d) { e2 += E[d].squarenorm(); }
 
         output0 << "THERM: Plaq: " << pl << " E^2 " << e2 << " action "
                 << e2 / 2 + 2 * pl << '\n';
+        */
 
         regroup_gauge(U);
     }
@@ -241,7 +237,11 @@ template <typename group>
 void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory,
                    int trajlen, int measure_interval, double dt) {
 
+    // Measure first at time t=0:
+    double t = 0.0;
+    measure_stuff(U, E, trajectory, t);
 
+    // Then evolve until we reach t = trajlen*dt
     for (int n = 0; n < trajlen; n += measure_interval) {
         update_U(U, E, dt / 2);
         // do 2 time units of evolution with leapfrog
@@ -252,8 +252,9 @@ void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
         // and bring U and E to the same time value
         update_E(U, E, dt);
         update_U(U, E, dt / 2);
-
-        measure_stuff(U, E, trajectory, n, dt);
+        
+        t += dt * measure_interval;
+        measure_stuff(U, E, trajectory, t);
     }
 }
 
@@ -312,6 +313,22 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Print measurement labels
+    if (hila::myrank() == 0) {
+        std::ofstream labelFile;
+        std::string labelFileName = "labels_" + meas_fname;
+        labelFile.open(labelFileName);
+        if (!labelFile) {
+            output0 << "!!! Error opening file " << labelFileName << "\n";
+            hila::finishrun();
+        }
+        labelFile << "1 trajectory\n" << "2 time (lattice units)\n" << "3 plaq avg: sum_i<j (N - Tr Re P_ij)\n" 
+            << "4 Tr E_i^2\n" << "5 Gauss violation (G^a G^a over the whole system)\n" << "6 total energy\n"
+            << "7 average chi\n";
+
+        labelFile.close();
+    }
+
     // Alloc gauge field and momenta (E)
     GaugeField<SUN> U;
     VectorField<Algebra<SUN>> E;
@@ -332,9 +349,17 @@ int main(int argc, char **argv) {
 
     for (int trajectory = 0; trajectory < n_traj; trajectory++) {
         thermalize(U, E, g2Ta, n_thermal, dt);
+        if (trajectory % 500 == 0) {
+            output0 << "Trajectory " << trajectory << "\n";
+        }
         do_trajectory(U, E, trajectory, trajlen, measure_interval, dt);
     }
 
+
+    // done
+    if (hila::myrank() == 0) {
+        measureFile.close();
+    }
 
     hila::finishrun();
 }
