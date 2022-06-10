@@ -35,6 +35,7 @@ template <typename T> void gather_test() {
                     << " direction " << (unsigned)d << " dif1 " << dif1 << '\n';
             hila::terminate(1);
         }
+
         if (dif2 != 0) {
             output0 << " Std down-gather test error! Node " << hila::myrank()
                     << " direction " << (unsigned)d << " dif2 " << dif2 << '\n';

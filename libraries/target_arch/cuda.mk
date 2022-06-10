@@ -6,14 +6,19 @@
 #
 
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
-CUDA_VERSION = 11.6
+ifndef CUDA_VERSION
+	CUDA_VERSION = 11.6
+endif
 CC := /usr/local/cuda-${CUDA_VERSION}/bin/nvcc
 # CC = /usr/bin/nvcc
 LD := $(CC) -std c++17
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
+ifndef CUDA_ARCH
+	CUDA_ARCH = 61
+endif
 CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
-CXXFLAGS += -gencode arch=compute_87,code=sm_87 -gencode arch=compute_61,code=sm_61 --use_fast_math --restrict
+CXXFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} -gencode arch=compute_52,code=sm_52 --use_fast_math --restrict
 
 #
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
@@ -28,7 +33,7 @@ MPI_INCLUDE_DIRS := -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openm
 MPI_LIBS := -L/usr/lib/openmpi/lib -lmpi
 
 LDLIBS += $(MPI_LIBS)
-LDFLAGS += -gencode arch=compute_87,code=sm_87 -gencode arch=compute_61,code=sm_61
+LDFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
 
 # extra cuda objects here
 HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o

@@ -70,7 +70,7 @@ void lattice_struct::setup(const CoordinateVector &siz) {
         hila::finishrun();
     }
 
-    test_std_gathers();
+    //test_std_gathers();
 
     // disable_avx = 0;
 }
