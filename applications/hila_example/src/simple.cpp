@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     hila::initialize(argc, argv);
 
     // set up 32^3 lattice
-    lattice->setup({64, 64, 64});
+    lattice->setup({128, 128, 128});
 
     // Random numbers are used here - use time to seed
     hila::seed_random(0);
@@ -34,10 +34,9 @@ int main(int argc, char *argv[]) {
         foralldir(d) {
             hopping += f[X] * f[X + d].conj();
         }
-    }
-    onsites(ALL) {
         fsqr += f[X].squarenorm();
     }
+    
     output0 << "Average f^2 : " << fsqr / lattice->volume() << '\n';
     output0 << "Average hopping term " << hopping / (NDIM*lattice->volume()) << '\n';
 
