@@ -88,7 +88,7 @@ void Field<T>::read_from_stream(std::ifstream &inputfile) {
         if (hila::myrank() == 0)
             inputfile.read((char *)buffer, sites * sizeof(T));
 
-        fs->send_elements(buffer, coord_list);
+        fs->scatter_elements(buffer, coord_list);
     }
 
     std::free(buffer);

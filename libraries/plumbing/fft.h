@@ -20,18 +20,17 @@
 #define WRK_SCATTER_TAG 43
 
 // hold static fft node data structures
-struct fftnode_struct {
+struct pencil_struct {
     int node;               // node rank to send stuff for fft:ing
     unsigned size_to_dir;   // size of "node" to fft-dir
     unsigned column_offset; // first perp-plane column to be handled by "node"
     unsigned column_number; // and number of columns to be sent
-    size_t recv_buf_size;   // size of my fft collect buffer (in units of
-                          // elements*cmplx_size) for stuff received from / returned to
-                          // "node"
+    size_t recv_buf_size;   // size of my fft collect buffer (in units of sizeof(T)
+                            // for stuff received from / returned to "node"
 };
 
 //
-extern std::vector<fftnode_struct> hila_fft_comms[NDIM];
+extern std::vector<pencil_struct> hila_pencil_comms[NDIM];
 
 /// Build offsets to buffer arrays:
 ///   Fastest Direction = dir, offset 1
@@ -39,11 +38,11 @@ extern std::vector<fftnode_struct> hila_fft_comms[NDIM];
 ///   and then other directions, in order
 /// Returns element_offset and sets offset and nmin vectors
 
-size_t fft_get_buffer_offsets(const Direction dir, const size_t elements,
+size_t pencil_get_buffer_offsets(const Direction dir, const size_t elements,
                               CoordinateVector &offset, CoordinateVector &nmin);
 
 /// Initialize fft direction - defined in fft.cpp
-void init_fft_direction(Direction d);
+void init_pencil_direction(Direction d);
 
 // Helper class to transform data
 template <typename T, typename cmplx_t>
@@ -60,10 +59,11 @@ class hila_fft {
   public:
     Direction dir;
     int elements;
-    int cmplx_size;
     fft_direction fftdir;
     size_t buf_size;
     size_t local_volume;
+
+    bool only_reflect;
 
     cmplx_t *RESTRICT send_buf;
     cmplx_t *RESTRICT receive_buf;
@@ -72,29 +72,26 @@ class hila_fft {
     std::vector<cmplx_t *> rec_p;
     std::vector<int> rec_size;
 
-#ifdef USE_MPI
-    MPI_Datatype mpi_cmplx_t;
-#endif
-
     // initialize fft, allocate buffers
-    hila_fft(int _elements, fft_direction _fftdir) {
-        extern size_t fft_recv_buf_size[NDIM];
+    hila_fft(int _elements, fft_direction _fftdir, bool _reflect = false) {
+        extern size_t pencil_recv_buf_size[NDIM];
 
         elements = _elements;
         fftdir = _fftdir;
-        cmplx_size = sizeof(cmplx_t);
+        only_reflect = _reflect;
 
         local_volume = lattice->mynode.volume();
 
         // init dirs here at one go
-        foralldir (d)
-            init_fft_direction(d);
+        foralldir(d) init_pencil_direction(d);
 
         buf_size = 1;
-        foralldir (d) {
-            if (fft_recv_buf_size[d] > buf_size) buf_size = fft_recv_buf_size[d];
+        foralldir(d) {
+            if (pencil_recv_buf_size[d] > buf_size)
+                buf_size = pencil_recv_buf_size[d];
         }
-        if (buf_size < local_volume) buf_size = local_volume;
+        if (buf_size < local_volume)
+            buf_size = local_volume;
 
         // get fully aligned buffer space
         send_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
@@ -103,12 +100,6 @@ class hila_fft {
         //            fft_wrk_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) *
         //            elements);
 
-#ifdef USE_MPI
-        mpi_cmplx_t = (sizeof(cmplx_t) == sizeof(Complex<double>))
-                          ? MPI_C_DOUBLE_COMPLEX
-                          : MPI_C_FLOAT_COMPLEX;
-
-#endif
     }
 
     ~hila_fft() {
@@ -123,6 +114,9 @@ class hila_fft {
     // the actual transform is done here.  Custom for fftw and others
     void transform();
 
+    // reflection using special call
+    void reflect();
+
     /////////////////////////////////////////////////////////////////////////
     /// Initialize fft to Direction dir.
 
@@ -133,12 +127,12 @@ class hila_fft {
         // now in transform itself
         // make_fft_plan();
 
-        rec_p.resize(hila_fft_comms[dir].size());
-        rec_size.resize(hila_fft_comms[dir].size());
+        rec_p.resize(hila_pencil_comms[dir].size());
+        rec_size.resize(hila_pencil_comms[dir].size());
 
         cmplx_t *p = receive_buf;
         int i = 0;
-        for (fftnode_struct &fn : hila_fft_comms[dir]) {
+        for (pencil_struct &fn : hila_pencil_comms[dir]) {
 
             if (fn.node != hila::myrank()) {
 
@@ -165,8 +159,8 @@ class hila_fft {
     template <typename T>
     void collect_data(const Field<T> &f) {
 
-        extern hila::timer fft_collect_timer;
-        fft_collect_timer.start();
+        extern hila::timer pencil_collect_timer;
+        pencil_collect_timer.start();
 
         constexpr int elements = sizeof(T) / sizeof(cmplx_t);
 
@@ -175,13 +169,13 @@ class hila_fft {
         CoordinateVector offset, nmin;
 
         const size_t elem_offset =
-            fft_get_buffer_offsets(dir, sizeof(T) / sizeof(cmplx_t), offset, nmin);
+            pencil_get_buffer_offsets(dir, sizeof(T) / sizeof(cmplx_t), offset, nmin);
 
         cmplx_t *sb = send_buf;
 
         // and collect the data
 #pragma hila novector direct_access(sb)
-        onsites (ALL) {
+        onsites(ALL) {
 
             T_union<T, cmplx_t> v;
             v.val = f[X];
@@ -191,7 +185,7 @@ class hila_fft {
             }
         }
 
-        fft_collect_timer.stop();
+        pencil_collect_timer.stop();
     }
 
     /// Inverse of the fft_collect_data: write fft'd data from receive_buf to field.
@@ -201,19 +195,19 @@ class hila_fft {
 
         constexpr int elements = sizeof(T) / sizeof(cmplx_t);
 
-        extern hila::timer fft_save_timer;
-        fft_save_timer.start();
+        extern hila::timer pencil_save_timer;
+        pencil_save_timer.start();
 
         // Build vector offset, which encodes where the data should be written
         CoordinateVector offset, nmin;
 
-        const size_t elem_offset = fft_get_buffer_offsets(dir, elements, offset, nmin);
+        const size_t elem_offset = pencil_get_buffer_offsets(dir, elements, offset, nmin);
 
         cmplx_t *rb = receive_buf;
 
 // and collect the data from buffers
 #pragma hila novector direct_access(rb)
-        onsites (ALL) {
+        onsites(ALL) {
 
             T_union<T, cmplx_t> v;
 
@@ -224,7 +218,7 @@ class hila_fft {
             f[X] = v.val;
         }
 
-        fft_save_timer.stop();
+        pencil_save_timer.stop();
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -234,23 +228,23 @@ class hila_fft {
 
     void reshuffle_data(Direction prev_dir) {
 
-        extern hila::timer fft_reshuffle_timer;
-        fft_reshuffle_timer.start();
+        extern hila::timer pencil_reshuffle_timer;
+        pencil_reshuffle_timer.start();
 
         int elem = elements;
 
         CoordinateVector offset_in, offset_out, nmin;
 
         const size_t e_offset_in =
-            fft_get_buffer_offsets(prev_dir, elements, offset_in, nmin);
+            pencil_get_buffer_offsets(prev_dir, elements, offset_in, nmin);
         const size_t e_offset_out =
-            fft_get_buffer_offsets(dir, elements, offset_out, nmin);
+            pencil_get_buffer_offsets(dir, elements, offset_out, nmin);
 
         cmplx_t *sb = send_buf;
         cmplx_t *rb = receive_buf;
 
 #pragma hila novector direct_access(sb, rb)
-        onsites (ALL) {
+        onsites(ALL) {
             CoordinateVector v = X.coordinates() - nmin;
             size_t off_in = offset_in.dot(v);
             size_t off_out = offset_out.dot(v);
@@ -259,7 +253,7 @@ class hila_fft {
             }
         }
 
-        fft_reshuffle_timer.stop();
+        pencil_reshuffle_timer.stop();
     }
 
     // free the work buffers
@@ -274,6 +268,56 @@ class hila_fft {
     void scatter_data();
     void gather_data();
 
+    ////////////////////////////////////////////////////////////////////////
+    /// Do the transform itself (fft or reflect only)
+
+    template <typename T>
+    void full_transform(const Field<T> &input, Field<T> &result,
+                        const CoordinateVector &directions) {
+
+        assert(lattice == input.fs->lattice && "Default lattice mismatch in fft");
+
+        // Make sure the result is allocated and mark it changed
+        result.check_alloc();
+
+        bool first_dir = true;
+        Direction prev_dir;
+
+        foralldir(dir) if (directions[dir]) {
+
+            setup_direction(dir);
+
+            if (first_dir) {
+                collect_data(input);
+                // in_p = &result;
+            } else {
+                reshuffle_data(prev_dir);
+            }
+
+            gather_data();
+
+            if (!only_reflect)
+                transform();
+            else
+                reflect();
+
+            scatter_data();
+
+            cleanup();
+
+            // fft_save_result( result, dir, receive_buf );
+
+            prev_dir = dir;
+            first_dir = false;
+
+            // swap the pointers
+            swap_buffers();
+        }
+
+        save_result(result);
+
+        result.mark_changed(ALL);
+    }
 };
 
 // Implementation dependent core fft collect and transforms are defined here
@@ -284,7 +328,7 @@ class hila_fft {
 
 #elif defined(CUDA) || defined(HIP)
 
-#include "plumbing/backend_cuda/fft_hip_transform.h"
+#include "plumbing/backend_cuda/fft_gpu_transform.h"
 
 #endif
 
@@ -314,53 +358,14 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
     using cmplx_t = Complex<hila::number_type<T>>;
     constexpr size_t elements = sizeof(T) / sizeof(cmplx_t);
 
-    assert(lattice == input.fs->lattice && "Default lattice mismatch in fft");
-
     extern hila::timer fft_timer;
     fft_timer.start();
 
-    // Make sure the result is allocated and mark it changed
-    result.check_alloc();
-
     hila_fft<cmplx_t> fft(elements, fftdir);
 
-    bool first_dir = true;
-    Direction prev_dir;
-
-    foralldir (dir)
-        if (directions[dir]) {
-
-            fft.setup_direction(dir);
-
-            if (first_dir) {
-                fft.collect_data(input);
-                // in_p = &result;
-            } else {
-                fft.reshuffle_data(prev_dir);
-            }
-
-            fft.gather_data();
-
-            fft.transform();
-
-            fft.scatter_data();
-
-            fft.cleanup();
-
-            // fft_save_result( result, dir, receive_buf );
-
-            prev_dir = dir;
-            first_dir = false;
-
-            // swap the pointers
-            fft.swap_buffers();
-        }
-
-    fft.save_result(result);
+    fft.full_transform(input, result, directions);
 
     fft_timer.stop();
-
-    result.mark_changed(ALL);
 }
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -376,7 +381,7 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
                       fft_direction fftdir = fft_direction::forward) {
 
     CoordinateVector dirs;
-    dirs.asArray() = true; // set all directions OK
+    dirs.fill(true); // set all directions OK
 
     FFT_field(input, result, dirs, fftdir);
 }
@@ -395,5 +400,51 @@ void Field<T>::FFT(fft_direction fftdir) {
 
 // prototype for plan deletion
 void FFT_delete_plans();
+
+//////////////////////////////////////////////////////////////////////////////////
+///
+/// FFT_complex_to_real
+//////////////////////////////////////////////////////////////////////////////////
+
+template <typename T>
+void FFT_complex_to_real(Field<T> &cf) {}
+
+
+//////////////////////////////////////////////////////////////////////////////////
+/// Field<T>::reflect() reflects the field around the desired axis
+/// This is here because it uses similar communications as fft
+/// TODO: refactorise so that there is separate "make columns" class!
+
+template <typename T>
+Field<T> Field<T>::reflect(const CoordinateVector &dirs) {
+
+    constexpr int elements = 1;
+
+    Field<T> result;
+
+    hila_fft<T> refl(elements, fft_direction::forward, true);
+    refl.full_transform(*this, result, dirs);
+
+    return result;
+}
+
+template <typename T>
+Field<T> Field<T>::reflect() {
+
+    CoordinateVector c;
+    c.fill(true);
+    return reflect(c);
+}
+
+template <typename T>
+Field<T> Field<T>::reflect(Direction dir) {
+
+    CoordinateVector c;
+    c.fill(false);
+    c[dir] = true;
+    return reflect(c);
+}
+
+
 
 #endif

@@ -55,7 +55,7 @@ void ensure_field_operators_exist(Field<T> &f);
 /// Field.check_alloc() const: assert that the Field is allocated
 ///
 /// MPI related (automatically done by hilapp, but may be useful in apps):
-/// Field.move_status(): returns current gather_status
+/// Field.gather_status(): returns current gather_status_t
 /// Field.mark_changed(): make sure the Field gets communicated
 /// Field.mark_gathered(): mark the Field already gathered, no need to
 ///        communicate.
@@ -77,7 +77,7 @@ template <typename T>
 class Field {
 
   public:
-    enum class gather_status : unsigned { NOT_DONE, STARTED, DONE };
+    enum class gather_status_t : unsigned { NOT_DONE, STARTED, DONE };
 
   private:
     /// The following struct holds the data + information about the field
@@ -92,7 +92,7 @@ class Field {
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
 #endif
         unsigned assigned_to; // keeps track of first assignment to parities
-        gather_status move_status[3][NDIRS]; // is communication done
+        gather_status_t gather_status_arr[3][NDIRS]; // is communication done
 
         // neighbour pointers - because of boundary conditions, can be different for
         // diff. fields
@@ -111,7 +111,7 @@ class Field {
         void initialize_communication() {
             for (int d = 0; d < NDIRS; d++) {
                 for (int p = 0; p < 3; p++)
-                    move_status[p][d] = gather_status::NOT_DONE;
+                    gather_status_arr[p][d] = gather_status_t::NOT_DONE;
                 send_buffer[d] = nullptr;
 #ifndef VANILLA
                 receive_buffer[d] = nullptr;
@@ -279,7 +279,7 @@ class Field {
         /// Gather a list of elements to a single node
         void gather_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                              int root = 0) const;
-        void send_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
+        void scatter_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                            int root = 0);
 
 #if defined(USE_MPI)
@@ -353,18 +353,18 @@ class Field {
     // Straightforward copy constructor seems to be necessary
     Field(const Field &other) {
         fs = nullptr; // this is probably unnecessary
-        if (other.fs != nullptr) {
-            (*this)[ALL] = other[X];
-        }
+        assert(other.is_initialized(ALL) && "Initializer Field value not set");
+
+        (*this)[ALL] = other[X];
     }
 
     // copy constructor - from fields which can be assigned
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
     Field(const Field<A> &other) {
         fs = nullptr; // this is probably unnecessary
-        if (other.fs != nullptr) {
-            (*this)[ALL] = other[X];
-        }
+        assert(other.is_initialized(ALL) && "Initializer Field value not set");
+        
+        (*this)[ALL] = other[X];
     }
 
     // constructor with compatible scalar
@@ -459,13 +459,13 @@ class Field {
         return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
     }
 
-    gather_status move_status(Parity p, int d) const {
+    gather_status_t gather_status(Parity p, int d) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
-        return fs->move_status[(int)p - 1][d];
+        return fs->gather_status_arr[(int)p - 1][d];
     }
-    void set_move_status(Parity p, int d, gather_status stat) const {
+    void set_gather_status(Parity p, int d, gather_status_t stat) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
-        fs->move_status[(int)p - 1][d] = stat;
+        fs->gather_status_arr[(int)p - 1][d] = stat;
     }
 
     /// check that Field is allocated, and if not do it (if not const)
@@ -489,12 +489,12 @@ class Field {
             // check if there's ongoing comms, invalidate it!
             drop_comms(i, opp_parity(p));
 
-            set_move_status(opp_parity(p), i, gather_status::NOT_DONE);
+            set_gather_status(opp_parity(p), i, gather_status_t::NOT_DONE);
             if (p != ALL) {
-                set_move_status(ALL, i, gather_status::NOT_DONE);
+                set_gather_status(ALL, i, gather_status_t::NOT_DONE);
             } else {
-                set_move_status(EVEN, i, gather_status::NOT_DONE);
-                set_move_status(ODD, i, gather_status::NOT_DONE);
+                set_gather_status(EVEN, i, gather_status_t::NOT_DONE);
+                set_gather_status(ODD, i, gather_status_t::NOT_DONE);
             }
         }
         fs->assigned_to |= parity_bits(p);
@@ -504,12 +504,12 @@ class Field {
     // In case p=ALL we could mark everything gathered, but we'll be conservative here
     // and mark only this parity, because there might be other parities on the fly and
     // corresponding waits should be done,  This should never happen in automatically
-    // generated loops. In any case start_gather, is_gathered, get_move_parity has
+    // generated loops. In any case start_gather, is_gathered, get_gather_parity has
     // intelligence to figure out the right thing to do
     //
 
     void mark_gathered(int dir, const Parity p) const {
-        set_move_status(p, dir, gather_status::DONE);
+        set_gather_status(p, dir, gather_status_t::DONE);
     }
 
     // Check if the field has been gathered since the previous communication
@@ -517,28 +517,28 @@ class Field {
     // par != ALL:  ALL or par are OK
     bool is_gathered(int dir, Parity par) const {
         if (par != ALL) {
-            return move_status(par, dir) == gather_status::DONE ||
-                   move_status(ALL, dir) == gather_status::DONE;
+            return gather_status(par, dir) == gather_status_t::DONE ||
+                   gather_status(ALL, dir) == gather_status_t::DONE;
         } else {
-            return move_status(ALL, dir) == gather_status::DONE ||
-                   (move_status(EVEN, dir) == gather_status::DONE &&
-                    move_status(ODD, dir) == gather_status::DONE);
+            return gather_status(ALL, dir) == gather_status_t::DONE ||
+                   (gather_status(EVEN, dir) == gather_status_t::DONE &&
+                    gather_status(ODD, dir) == gather_status_t::DONE);
         }
     }
 
     // Mark communication started -- this must be just the one
     // going on with MPI
-    void mark_move_started(int dir, Parity p) const {
-        set_move_status(p, dir, gather_status::STARTED);
+    void mark_gather_started(int dir, Parity p) const {
+        set_gather_status(p, dir, gather_status_t::STARTED);
     }
 
     /// Check if communication has started.  This is strict, checks exactly this parity
-    bool is_move_started(int dir, Parity par) const {
-        return move_status(par, dir) == gather_status::STARTED;
+    bool is_gather_started(int dir, Parity par) const {
+        return gather_status(par, dir) == gather_status_t::STARTED;
     }
 
-    bool move_not_done(int dir, Parity par) const {
-        return move_status(par, dir) == gather_status::NOT_DONE;
+    bool gather_not_done(int dir, Parity par) const {
+        return gather_status(par, dir) == gather_status_t::NOT_DONE;
     }
 
     void set_boundary_condition(Direction dir, BoundaryCondition bc) {
@@ -819,6 +819,11 @@ class Field {
     // Fourier transform declarations
     void FFT(fft_direction fdir = fft_direction::forward);
 
+    // Reflect the field along all or 1 coordinate
+    Field<T> reflect();
+    Field<T> reflect(Direction dir);
+    Field<T> reflect(const CoordinateVector & dirs);
+
     // Writes the Field to disk
     void write_to_stream(std::ofstream &outputfile);
     void write_to_file(const std::string &filename);
@@ -990,11 +995,11 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
     bool found_dir = false;
     Direction mdir;
     foralldir(d) {
-        if (rem[d] > 0 && move_status(par_s, d) != gather_status::NOT_DONE) {
+        if (rem[d] > 0 && gather_status(par_s, d) != gather_status_t::NOT_DONE) {
             mdir = d;
             found_dir = true;
             break;
-        } else if (rem[d] < 0 && move_status(par_s, -d) != gather_status::NOT_DONE) {
+        } else if (rem[d] < 0 && gather_status(par_s, -d) != gather_status_t::NOT_DONE) {
             mdir = -d;
             found_dir = true;
             break;
@@ -1128,7 +1133,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     }
 
     // if this parity or ALL-type gather is going on nothing to be done
-    if (!move_not_done(d, p) || !move_not_done(d, ALL)) {
+    if (!gather_not_done(d, p) || !gather_not_done(d, ALL)) {
         lattice->n_gather_avoided++;
         return get_dir_mask(d); // nothing to do, but still need to wait
     }
@@ -1137,19 +1142,19 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     // if p is ALL but ODD or EVEN is going on/done, turn off parity which is not needed
     // corresponding wait must do the same thing
     if (p == ALL) {
-        if (!move_not_done(d, EVEN) && !move_not_done(d, ODD)) {
+        if (!gather_not_done(d, EVEN) && !gather_not_done(d, ODD)) {
             // even and odd are going on or ready, nothing to be done
             lattice->n_gather_avoided++;
             return get_dir_mask(d);
         }
-        if (!move_not_done(d, EVEN))
+        if (!gather_not_done(d, EVEN))
             par = ODD;
-        else if (!move_not_done(d, ODD))
+        else if (!gather_not_done(d, ODD))
             par = EVEN;
         // if neither is the case par = ALL
     }
 
-    mark_move_started(d, par);
+    mark_gather_started(d, par);
 
     // Communication hasn't been started yet, do it now
 
@@ -1237,8 +1242,8 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
     if (from_node.rank == hila::myrank() && to_node.rank == hila::myrank())
         return;
 
-    // if (!is_move_started(d,p)) {
-    //   output0 << "Wait move error - wait_gather without corresponding
+    // if (!is_gather_started(d,p)) {
+    //   output0 << "Wait gather error - wait_gather without corresponding
     //   start_gather\n"; exit(1);
     // }
 
@@ -1248,28 +1253,28 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
     // care
 
     // check here consistency, this should never happen
-    if (p != ALL && is_move_started(d, p) && is_move_started(d, ALL)) {
+    if (p != ALL && is_gather_started(d, p) && is_gather_started(d, ALL)) {
         exit(1);
     }
 
     Parity par;
     int n_wait = 1;
     // what par to wait for?
-    if (is_move_started(d, p))
+    if (is_gather_started(d, p))
         par = p; // standard match
     else if (p != ALL) {
-        if (is_move_started(d, ALL))
+        if (is_gather_started(d, ALL))
             par = ALL; // if all is running wait for it
         else {
             exit(1);
         }
     } else {
         // now p == ALL and ALL is not running
-        if (is_gathered(d, EVEN) && is_move_started(d, ODD))
+        if (is_gathered(d, EVEN) && is_gather_started(d, ODD))
             par = ODD;
-        else if (is_gathered(d, ODD) && is_move_started(d, EVEN))
+        else if (is_gathered(d, ODD) && is_gather_started(d, EVEN))
             par = EVEN;
-        else if (is_move_started(d, EVEN) && is_move_started(d, ODD)) {
+        else if (is_gather_started(d, EVEN) && is_gather_started(d, ODD)) {
             n_wait = 2; // need to wait for both!
             par = ALL;
         } else {
@@ -1323,15 +1328,15 @@ template <typename T>
 void Field<T>::drop_comms(Direction d, Parity p) const {
 
     if (is_comm_initialized()) {
-        if (is_move_started(d, ALL))
+        if (is_gather_started(d, ALL))
             cancel_comm(d, ALL);
         if (p != ALL) {
-            if (is_move_started(d, p))
+            if (is_gather_started(d, p))
                 cancel_comm(d, p);
         } else {
-            if (is_move_started(d, EVEN))
+            if (is_gather_started(d, EVEN))
                 cancel_comm(d, EVEN);
-            if (is_move_started(d, ODD))
+            if (is_gather_started(d, ODD))
                 cancel_comm(d, ODD);
         }
     }
@@ -1465,7 +1470,7 @@ void Field<T>::field_struct::gather_elements(
 /// coord_list must be the same on all nodes, but buffer is needed only on "root"!
 
 template <typename T>
-void Field<T>::field_struct::send_elements(
+void Field<T>::field_struct::scatter_elements(
     T *RESTRICT buffer, const std::vector<CoordinateVector> &coord_list, int root) {
 
     std::vector<unsigned> index_list;
@@ -1555,7 +1560,7 @@ void Field<T>::field_struct::gather_elements(
 
 /// Send elements from a single node to a list of coordinates
 template <typename T>
-void Field<T>::field_struct::send_elements(
+void Field<T>::field_struct::scatter_elements(
     T *buffer, const std::vector<CoordinateVector> &coord_list, int root) {
     std::vector<unsigned> index_list;
     for (CoordinateVector c : coord_list) {
