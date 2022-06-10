@@ -59,7 +59,7 @@ See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-ins
 **HIP:**
 
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
-## Quick start
+# Quick start
 
 Begin by cloning HILA repository:
 
@@ -137,14 +137,29 @@ Computing platform is chosen by
 
     make ARCH=<platform>
 
-- `[ ARCH=vanilla ]` (often default) builds a standard MPI-parallelized program
-- `ARCH=AVX2` builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass)
-- `ARCH=openmp` builds OpenMP parallelized program
-- `ARCH=cuda` builds parallel CUDA-program
-    - For cuda one needs to export their cuda version
-- `ARCH=hip` builds parallel HIP-program
+**`[ ARCH=vanilla ]` (often default) builds a standard MPI-parallelized program**
+
+**`ARCH=AVX2` builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass)**
+
+**`ARCH=openmp` builds OpenMP parallelized program**
+
+**`ARCH=cuda` builds parallel CUDA-program**
+
+For cuda compilation one needs to define their CUDA version and architercure either as environment variables or during the make process:
+
+```bash
+export CUDA_VERSION=11.6
+export CUDA_ARCH=62
+```
+
+    make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=62
+
+- *NOTE: Default cuda version is 11.6 and compute architecture is sm_62*
+
+**`ARCH=hip` builds parallel HIP-program**
 
 Typically these need to be customized for supercomputing platforms due to stack limitations of said platforms. ~~See directory hila/libraries/target_arch~~ -> TODO: should have a list of all system specific target architectures
+
 
 # Overview
 

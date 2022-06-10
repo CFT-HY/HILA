@@ -589,14 +589,14 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     kernel << "if(threadIdx.x < _H_i) {\n";
                     kernel << vi.new_name << "sh[threadIdx.x] += " << vi.new_name
                            << "sh[threadIdx.x+_H_i];\n";
-                    kernel << "__syncthreads();\n";
                     kernel << "}\n";
+                    kernel << "__syncthreads();\n";
                 } else if (vi.reduction_type == reduction::PRODUCT) {
                     kernel << "if(threadIdx.x < _H_i) {\n";
                     kernel << vi.new_name << "sh[threadIdx.x] *= " << vi.new_name
                            << "sh[threadIdx.x+_H_i];\n";
-                    kernel << "__syncthreads();\n";
                     kernel << "}\n";
+                    kernel << "__syncthreads();\n";
                 }
                 kernel << "}\n";
                 //kernel << "}\n";
