@@ -11,7 +11,6 @@ ARCH := vanilla
 endif
 
 # Read in the main makefile contents, incl. platforms
-CUDA_VERSION=11.4
 include $(HILA_DIR)/libraries/main.mk
 
 #HILAPP_OPTS += -insert-includes
