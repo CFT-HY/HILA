@@ -59,7 +59,7 @@ See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-ins
 **HIP:**
 
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
-# Quick start
+## Quick start
 
 Begin by cloning HILA repository:
 
