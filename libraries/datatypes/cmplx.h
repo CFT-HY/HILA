@@ -89,6 +89,13 @@ struct Complex {
         return im;
     }
 
+    inline T & real() {
+        return re;
+    }
+
+    inline T & imag() {
+        return im;
+    }
     // automatic casting from Complex<T> -> Complex<A>
     // TODO: ensure this works if A is vector type!
     template <typename A>
