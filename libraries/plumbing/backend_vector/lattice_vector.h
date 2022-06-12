@@ -64,7 +64,7 @@ SUBNODE_LAYOUT needs to be defined to use this
 
     /// Check if this is the first subnode
     bool is_on_first_subnode(CoordinateVector v) {
-        v = mod(v, lattice->size());
+        v = v.mod(lattice->size());
         foralldir(d) {
             if (v[d] < subnode_origin[d] || v[d] >= subnode_origin[d] + subnode_size[d])
                 return false;
@@ -156,7 +156,7 @@ SUBNODE_LAYOUT needs to be defined to use this
                 CoordinateVector h = lattice->coordinates(idx + i) + d;
 
                 // remember to mod the coordinate on lattice
-                h = mod(h, lattice->size());
+                h = h.mod(lattice->size());
                 int rank = lattice->node_rank(h);
                 unsigned nn = lattice->site_index(h, rank);
                 boundary_permutation[d][i] = nn % vector_size;
