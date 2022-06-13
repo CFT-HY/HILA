@@ -361,10 +361,6 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return res;
     }
 
-    /// convert k-space coordinate to modded the k-vector, -L/2 -> L/2
-    /// Defined in lattice.h because this needs lattice->size()
-
-    inline Vector<NDIM, double> k_vector() const;
 
     /// Positive mod for coordinate vector, see  int mod(int a, int b).  If
     /// 2nd argument m is lattice.size(), this mods the vector a to periodic lattice.
@@ -376,9 +372,6 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     }
 
 
-    /// mod coordinateVector to lattice so that all components 0 ...
-    /// (lattice->size(d)-1) Defined in lattice.h
-    inline CoordinateVector_t mod_to_lattice() const;
 };
 
 /// Define the std CoordinateVector type here

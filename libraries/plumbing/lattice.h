@@ -392,25 +392,6 @@ extern std::vector<lattice_struct *> lattices;
 #endif
 
 
-/// convert k-space coordinate to modded the k-vector, -L/2 -> L/2
-template <typename T>
-inline Vector<NDIM, double> CoordinateVector_t<T>::k_vector() const {
-
-    Vector<NDIM, double> k;
-    foralldir (d) {
-        int n = this->e(d);
-        if (n > lattice->size(d) / 2)
-            n -= lattice->size(d);
-
-        k[d] = n * 2.0 * M_PI / lattice->size(d);
-    }
-    return k;
-}
-
-template <typename T>
-inline CoordinateVector_t<T> CoordinateVector_t<T>::mod_to_lattice() const {
-    return (*this).mod(lattice->size());
-}
 
 
 //////////////////////////////////////////////////////////////////////

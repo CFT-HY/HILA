@@ -19,6 +19,7 @@
 #define WRK_GATHER_TAG 42
 #define WRK_SCATTER_TAG 43
 
+
 // hold static fft node data structures
 struct pencil_struct {
     int node;               // node rank to send stuff for fft:ing
@@ -320,6 +321,10 @@ class hila_fft {
     }
 };
 
+// prototype for plan deletion
+void FFT_delete_plans();
+
+
 // Implementation dependent core fft collect and transforms are defined here
 
 #if defined(USE_FFTW)
@@ -398,8 +403,6 @@ void Field<T>::FFT(fft_direction fftdir) {
     FFT_field(*this, *this, fftdir);
 }
 
-// prototype for plan deletion
-void FFT_delete_plans();
 
 //////////////////////////////////////////////////////////////////////////////////
 ///
