@@ -206,7 +206,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             if (!generate_wait_loops) {
                 code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                         "++_HILAdir_) {\n"
-                     << l.new_name << ".gather(_HILAdir_," << loop_info.parity_str
+                     << l.new_name << ".start_gather(_HILAdir_," << loop_info.parity_str
                      << ");\n}\n";
             } else {
                 if (first)
@@ -219,6 +219,16 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             }
         }
     }
+
+    // write wait gathers here also
+    if (!generate_wait_loops)
+        for (field_info &l : field_info_list) 
+            if (l.is_loop_local_dir ) {
+                code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
+                        "++_HILAdir_) {\n"
+                     << l.new_name << ".wait_gather(_HILAdir_," << loop_info.parity_str
+                     << ");\n}\n";
+            }
 
     if (first)
         generate_wait_loops = false; // no communication needed in the 1st place
