@@ -12,7 +12,7 @@ template <typename T> void gather_test() {
         Field<T> f1, f2;
         onsites(ALL) {
             f1[X] = X.coordinate(d);
-            f2[X] = mod(X.coordinate(d) + 1, lattice->size(d));
+            f2[X] = pmod(X.coordinate(d) + 1, lattice->size(d));
         }
 
         int64_t s = 0;

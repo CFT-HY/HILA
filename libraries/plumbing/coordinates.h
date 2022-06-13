@@ -173,12 +173,12 @@ static std::vector<Parity> loop_parities(Parity par) {
 }
 
 
-/// Positive mod(): we define here the positive mod utility function mod(a,b).
+/// Positive mod(): we define here the positive mod utility function pmod(a,b).
 /// It mods the arguments 0 <= a < m.  This is not the standard
 /// for integer operator% in c++, which gives negative results if a<0.  This is useful
 /// in calculating lattice vector additions on a periodic box
 
-inline int mod(const int a, const int b) {
+inline int pmod(const int a, const int b) {
     int r = a % b;
     if (r < 0)
         r += b;
@@ -362,27 +362,23 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     }
 
     /// convert k-space coordinate to modded the k-vector, -L/2 -> L/2
-    inline Vector<NDIM, double> get_k_vector() const {
+    /// Defined in lattice.h because this needs lattice->size()
 
-        Vector<NDIM, double> k;
-        foralldir (d) {
-            int n = this->e(d);
-            if (n > lattice->size(d) / 2)
-                n -= lattice->size(d);
-
-            k[d] = n * 2.0 * M_PI / lattice->size(d);
-        }
-        return k;
-    }
+    inline Vector<NDIM, double> k_vector() const;
 
     /// Positive mod for coordinate vector, see  int mod(int a, int b).  If
     /// 2nd argument m is lattice.size(), this mods the vector a to periodic lattice.
 
     inline CoordinateVector_t mod(const CoordinateVector_t &m) const {
         CoordinateVector_t<T> r;
-        foralldir (d) { r.e(d) = mod(a[d], m[d]); }
+        foralldir (d) { r.e(d) = pmod((*this)[d], m[d]); }
         return r;
     }
+
+
+    /// mod coordinateVector to lattice so that all components 0 ...
+    /// (lattice->size(d)-1) Defined in lattice.h
+    inline CoordinateVector_t mod_to_lattice() const;
 };
 
 /// Define the std CoordinateVector type here
