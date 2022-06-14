@@ -11,6 +11,7 @@
 #%     make help             - print this help message
 #%     make clean            - remove .o and .cpt -files
 #%     make cleanall         - clean build directory
+#%     make list             - list available make targets
 
 
 # If "make clean", don't worry about targets, platforms and options
@@ -28,6 +29,11 @@ LIBRARIES_DIR := $(HILA_DIR)/libraries
 ARCH_DIR := $(LIBRARIES_DIR)/target_arch
 HILA_INCLUDE_DIR := $(HILA_DIR)/libraries
 
+ifneq ($(MAKECMDGOALS),help)
+ifneq ($(MAKECMDGOALS),list-archs)
+  $(info -------------- HILA make system -- for help, type "make help" --------------)
+endif
+endif
 
 help:
 	@echo "-----------------------------------------------------------------------------"
@@ -44,6 +50,13 @@ list-archs:
 	@echo
 	@echo "For details, see contents of $(ARCH_DIR)"
 	@echo "-----------------------------------------------------------------------------"
+
+
+.PHONY: list no_targets__
+no_targets__:
+list:
+	@sh -c "$(MAKE) -p no_targets__ | awk -F':' '/^[a-zA-Z0-9][^\$$#\/\\t=]*:([^=]|$$)/ {split(\$$1,A,/ /);for(i in A) if (A[i]!=\"Makefile\" && A[i]!=\"make[1]\") print A[i]}' | grep -v '__\$$' | sort"
+
 
 # ARCH needs to be defined. Check.
 ifndef ARCH
