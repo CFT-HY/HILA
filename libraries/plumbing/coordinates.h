@@ -371,6 +371,8 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return r;
     }
 
+    /// convert lattice vector to to k-vector (needs lattice->size() so defined in fft.h)
+    inline Vector<NDIM,double> convert_to_k() const;
 
 };
 
