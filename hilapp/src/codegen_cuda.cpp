@@ -26,7 +26,8 @@ void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
     if (ci.is_defaulted)
         return; // cuda can take care of these
 
-    SourceLocation sl = ci.funcdecl->getSourceRange().getBegin();
+    // SourceLocation sl = ci.funcdecl->getSourceRange().getBegin();
+    SourceLocation sl = ci.funcdecl->getInnerLocStart();
     srcBuf *sb = get_file_srcBuf(sl);
     if (sb == nullptr) {
         // it's a system file -- should we do something?
