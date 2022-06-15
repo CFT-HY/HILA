@@ -19,6 +19,23 @@
 #define WRK_GATHER_TAG 42
 #define WRK_SCATTER_TAG 43
 
+/// convert lattice vector to to k-vector (needs lattice->size() so defined in fft.h)
+/// Note: mods the CoordinateVector to lattice
+template <>
+inline Vector<NDIM,double> CoordinateVector::convert_to_k() const {
+    Vector<NDIM, double> k;
+    CoordinateVector mv = (*this).mod(lattice->size());
+    foralldir(d) {
+        int n = mv.e(d);
+        if (n > lattice->size(d) / 2)
+            n -= lattice->size(d);
+
+        k[d] = n * 2.0 * M_PI / lattice->size(d);
+    }
+    return k;
+}
+
+
 // hold static fft node data structures
 struct pencil_struct {
     int node;               // node rank to send stuff for fft:ing
@@ -320,6 +337,10 @@ class hila_fft {
     }
 };
 
+// prototype for plan deletion
+void FFT_delete_plans();
+
+
 // Implementation dependent core fft collect and transforms are defined here
 
 #if defined(USE_FFTW)
@@ -398,8 +419,6 @@ void Field<T>::FFT(fft_direction fftdir) {
     FFT_field(*this, *this, fftdir);
 }
 
-// prototype for plan deletion
-void FFT_delete_plans();
 
 //////////////////////////////////////////////////////////////////////////////////
 ///
