@@ -3,6 +3,7 @@ hilapp/bin/*
 settings.json
 .vscode/
 applications/*/build/*
+unit_test/build/*
 *.cpt
 *.o
 *~
