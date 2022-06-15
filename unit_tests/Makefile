@@ -8,8 +8,13 @@ endif
 
 include $(HILA_DIR)/libraries/main.mk
 
-LDLIBS += -lgtest_main  -lgtest -lpthread
+LDLIBS += -lgtest_main -lgtest -lpthread
 APP_OPTS += -DNDIM=3
+
+TEST_OBJECTS = \
+	build/test1.o
+
+HILA_OBJECTS += $(TEST_OBJECTS)
 
 tests: build/tests ; @:
 example_test: build/example_test ; @:
