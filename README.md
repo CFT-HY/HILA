@@ -160,6 +160,9 @@ export CUDA_ARCH=62
 
 Typically these need to be customized for supercomputing platforms due to stack limitations of said platforms. ~~See directory hila/libraries/target_arch~~ -> TODO: should have a list of all system specific target architectures
 
+## Unit tests
+
+See `hila/unit_tests` folder
 
 # Overview
 
