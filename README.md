@@ -149,12 +149,12 @@ For cuda compilation one needs to define their CUDA version and architercure eit
 
 ```bash
 export CUDA_VERSION=11.6
-export CUDA_ARCH=62
+export CUDA_ARCH=61
 ```
 
-    make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=62
+    make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=61
 
-- *NOTE: Default cuda version is 11.6 and compute architecture is sm_62*
+- *NOTE: Default cuda version is 11.6 and compute architecture is sm_61*
 
 **`ARCH=hip` builds parallel HIP-program**
 
