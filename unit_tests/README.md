@@ -39,8 +39,8 @@ libgtest.so (libc6,x86-64) => /lib/x86_64-linux-gnu/libgtest.so
 Simply compile and run
 
 ```bash
-make example_test
-./build/tests
+make -j4 example_test
+./build/example_test
 ```
 
 Example output:
