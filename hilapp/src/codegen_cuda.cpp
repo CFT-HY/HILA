@@ -26,7 +26,8 @@ void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
     if (ci.is_defaulted)
         return; // cuda can take care of these
 
-    SourceLocation sl = ci.funcdecl->getSourceRange().getBegin();
+    // SourceLocation sl = ci.funcdecl->getSourceRange().getBegin();
+    SourceLocation sl = ci.funcdecl->getInnerLocStart();
     srcBuf *sb = get_file_srcBuf(sl);
     if (sb == nullptr) {
         // it's a system file -- should we do something?
@@ -589,14 +590,14 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     kernel << "if(threadIdx.x < _H_i) {\n";
                     kernel << vi.new_name << "sh[threadIdx.x] += " << vi.new_name
                            << "sh[threadIdx.x+_H_i];\n";
-                    kernel << "__syncthreads();\n";
                     kernel << "}\n";
+                    kernel << "__syncthreads();\n";
                 } else if (vi.reduction_type == reduction::PRODUCT) {
                     kernel << "if(threadIdx.x < _H_i) {\n";
                     kernel << vi.new_name << "sh[threadIdx.x] *= " << vi.new_name
                            << "sh[threadIdx.x+_H_i];\n";
-                    kernel << "__syncthreads();\n";
                     kernel << "}\n";
+                    kernel << "__syncthreads();\n";
                 }
                 kernel << "}\n";
                 //kernel << "}\n";

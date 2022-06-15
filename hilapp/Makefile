@@ -164,7 +164,7 @@ OBJECTS = \
   $(BUILDDIR)/srcbuf.o \
   $(BUILDDIR)/generalvisitor.o \
   $(BUILDDIR)/toplevelvisitor.o \
-  $(BUILDDIR)/loop_function_new.o \
+  $(BUILDDIR)/loop_function.o \
   $(BUILDDIR)/loop_function_visitor.o \
   $(BUILDDIR)/vectorization_info.o \
   $(BUILDDIR)/depends_on_site_visitor.o \

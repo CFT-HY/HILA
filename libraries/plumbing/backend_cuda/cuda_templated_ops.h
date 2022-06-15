@@ -74,9 +74,8 @@ T gpu_reduce_sum(T *vector, int N) {
         check_device_error("gpu_reduce_sum kernel");
         // Find the full size of the resulting array
         vector_size = new_size + first;
-        gpuDeviceSynchronize();
+        gpuDeviceSynchronize();     
     }
-
     gpuMemcpy(host_vector, vector, vector_size * sizeof(T), gpuMemcpyDeviceToHost);
 
     for (int i = 0; i < vector_size; i++) {
@@ -116,9 +115,12 @@ T gpu_reduce_product(T *vector, int N) {
         int blocks = new_size / N_threads + 1;
         gpu_reduce_product_kernel<<<blocks, N_threads>>>(vector + first, vector_size,
                                                          new_size, reduce_step);
+
         // Find the full size of the resulting array
         vector_size = new_size + first;
+
         gpuDeviceSynchronize();
+
     }
 
     check_device_error("gpu_reduce_product kernel");

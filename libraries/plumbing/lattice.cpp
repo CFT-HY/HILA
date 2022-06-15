@@ -70,7 +70,7 @@ void lattice_struct::setup(const CoordinateVector &siz) {
         hila::finishrun();
     }
 
-    test_std_gathers();
+    //test_std_gathers();
 
     // disable_avx = 0;
 }
@@ -465,7 +465,7 @@ void lattice_struct::create_std_gathers() {
             l = coordinates(i);
             // set ln to be the neighbour of the site
             // TODO: FIXED BOUNDARY CONDITIONS DO NOT WRAP
-            ln = mod(l + d, size());
+            ln = (l + d).mod(size());
             // ln = l;
             // if (is_up_dir(d)) ln[d] = (l[d] + 1) % size(d);
             // else ln[d] = (l[d] + size(-d) - 1) % size(-d);
@@ -776,7 +776,7 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
     for (unsigned i = 0; i < mynode.sites; i++) {
         CoordinateVector ln, l;
         l = coordinates(i);
-        ln = mod(l + offset, size());
+        ln = (l + offset).mod(size());
 
         if (is_on_mynode(ln)) {
             if (receive)
@@ -851,7 +851,7 @@ lattice_struct::create_comm_node_vector(CoordinateVector offset, unsigned *index
         for (unsigned i = 0; i < mynode.sites; i++) {
             CoordinateVector ln, l;
             l = coordinates(i);
-            ln = mod(l + offset, size());
+            ln = (l + offset).mod(size());
 
             if (!is_on_mynode(ln)) {
                 unsigned r = node_rank(ln);

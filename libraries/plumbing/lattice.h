@@ -230,10 +230,6 @@ class lattice_struct {
         return l_size;
     }
 
-    CoordinateVector mod_size(const CoordinateVector &v) const {
-        return mod(v, l_size);
-    }
-
     int node_rank() const {
         return mynode.rank;
     }
@@ -366,9 +362,9 @@ class lattice_struct {
 
 
     /// Return the coordinates of a site, where 1st dim (x) runs fastest etc.
-    /// Useful in 
-    ///   for (int64_t i=0; i<lattice->volume(); i++) { 
-    ///      auto c = lattice->global_coordinates(i); 
+    /// Useful in
+    ///   for (int64_t i=0; i<lattice->volume(); i++) {
+    ///      auto c = lattice->global_coordinates(i);
 
     CoordinateVector global_coordinates(size_t index) {
         CoordinateVector site;
@@ -378,7 +374,6 @@ class lattice_struct {
         }
         return site;
     }
-
 };
 
 /// global handle to lattice
@@ -397,12 +392,15 @@ extern std::vector<lattice_struct *> lattices;
 #endif
 
 
+
+
 //////////////////////////////////////////////////////////////////////
-// Define looping utilities 
+// Define looping utilities
 // forallcoordinates(cv)  - loops over coordinates in "natural" order
 // forcoordinaterange(cv, min, max) - loops over a box subvolume in natural order
 // Note - not meant for regular lattice traversal.
 
+// clang-format off
 #if NDIM == 4
 
 #define forallcoordinates(cv) \
@@ -448,6 +446,6 @@ for (cv[0] = 0; cv[0] < lattice->size(0); cv[0]++)
 for (cv[0] = cmin[0]; cv[0] <= cmax[0]; cv[0]++) 
 
 #endif
-
+// clang-format on
 
 #endif

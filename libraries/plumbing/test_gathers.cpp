@@ -12,7 +12,7 @@ template <typename T> void gather_test() {
         Field<T> f1, f2;
         onsites(ALL) {
             f1[X] = X.coordinate(d);
-            f2[X] = mod(X.coordinate(d) + 1, lattice->size(d));
+            f2[X] = pmod(X.coordinate(d) + 1, lattice->size(d));
         }
 
         int64_t s = 0;
@@ -35,6 +35,7 @@ template <typename T> void gather_test() {
                     << " direction " << (unsigned)d << " dif1 " << dif1 << '\n';
             hila::terminate(1);
         }
+
         if (dif2 != 0) {
             output0 << " Std down-gather test error! Node " << hila::myrank()
                     << " direction " << (unsigned)d << " dif2 " << dif2 << '\n';

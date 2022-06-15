@@ -357,17 +357,17 @@ class loopFunctionVisitor : public GeneralVisitor,
 
                 if (replace_this) {
 
-                    // TODO: the modification to source is now here instead of codegen!! Change at some point ?
-                    srcBuf *sb = get_file_srcBuf(Call->getSourceRange().getBegin() );
-                    sb->replace(sfc.replace_range,sfc.replace_expression);
+                    // TODO: the modification to source is now here instead of codegen!!
+                    // Change at some point ?
+                    srcBuf *sb = get_file_srcBuf(Call->getSourceRange().getBegin());
+                    sb->replace(sfc.replace_range, sfc.replace_expression);
 
                     // special_call_list does not do anything at the moment either.
                     // the variable is not used
                     special_call_list.push_back(sfc);
-
                 }
 
-                // Now will meet the variable "lattice" in traversal, do not throw error 
+                // Now will meet the variable "lattice" in traversal, do not throw error
                 got_lattice = true;
 
                 return true;
@@ -647,16 +647,24 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
         for (int i = 0; handle_decl && i < loop_functions.size(); i++) {
             if (ci.funcdecl == loop_functions[i] ||
                 ci.funcdecl->getSourceRange().getBegin() ==
-                    loop_functions[i]->getSourceRange().getBegin())
+                    loop_functions[i]->getSourceRange().getBegin() ||
+                (ci.funcdecl->getInnerLocStart().isValid() &&
+                 ci.funcdecl->getInnerLocStart() ==
+                     loop_functions[i]->getInnerLocStart()))
                 handle_decl = false;
         }
         if (handle_decl) {
+
             loop_functions.push_back(ci.funcdecl);
-            // llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString() <<
-            //   " parameters ";
-            // for (int i=0; i<fd->getNumParams(); i++)
-            //   llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString() <<
-            //   '\n';
+
+            // auto fd = ci.funcdecl;
+            // llvm::errs() << "NEW LOOP FUNCTION " << fd->getNameAsString()
+            //              << " parameters: ";
+            // for (int i = 0; i < fd->getNumParams(); i++)
+            //     llvm::errs() << fd->getParamDecl(i)->getOriginalType().getAsString()
+            //                  << ' ';
+
+            // llvm::errs() << '\n';
 
             backend_handle_loop_function(ci);
         }
@@ -690,7 +698,7 @@ bool GeneralVisitor::handle_loop_function_if_needed(call_info_struct &ci) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////
-/// This is used for "#pramga hila loop function"  -calls
+/// This is used for "#pragma hila loop function"  -calls
 ///////////////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::loop_function_check(Decl *d) {

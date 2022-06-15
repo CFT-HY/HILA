@@ -12,8 +12,8 @@ bool GeneralVisitor::is_duplicate_expr(const Expr *a, const Expr *b) {
     // Use the Profile function in clang, which "fingerprints"
     // statements
     llvm::FoldingSetNodeID IDa, IDb;
-    a->Profile(IDa, *Context, true);
-    b->Profile(IDb, *Context, true);
+    a->IgnoreParens()->Profile(IDa, *Context, true);
+    b->IgnoreParens()->Profile(IDb, *Context, true);
     return (IDa == IDb);
 }
 

@@ -82,11 +82,6 @@ void get_magnetic_field(const GaugeField<group> &U, GaugeField<group> &B) {
 
     foralldir(d1) onsites(ALL) B[d1][X] = 0;
 
-    /*
-    GaugeField<group> B_naive; 
-    foralldir(d1) onsites(ALL) B_naive[d1][X] = 0;
-    */
-
     // "i,j,k" with j<k only
     foralldir(d1) {
 
@@ -150,10 +145,9 @@ void calc_topoCharge(const GaugeField<group> &U, const VectorField<Algebra<group
 
 static double degauss_quality = 1e-12;
 
-// Do the measurements. Here 'n' just labels the time step, so the actual time is n*dt. 
+// Do the measurements. Here 't' labels the Hamiltonian time 
 template <typename group>
-void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory,
-                   int n, double dt) {
+void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory, double t) {
 
     auto plaq = measure_plaq(U); // N - Tr Re P_ij
 
@@ -169,8 +163,16 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     get_gauss_violation(U, E, g);
     auto viol = g.squarenorm();
 
+    /* Measure 'improved' or 'symmetrized' charge density: The way E_i appears in the EOM suggests
+    * that we should identify E_i(x) as living at link midpoint, while the mag. field B_i(x) is local to x.
+    * To measure E.B at x, we take covariant average of E: E^{imp}_i(x) = 0.5 * (E_i(x) + U^+_i(x-i)E_i(x-i)U_i(x-i)) */
     Field<double> chi;
-    calc_topoCharge(U, E, chi);
+    VectorField<Algebra<group>> E_imp;
+    foralldir(d1) onsites(ALL) { 
+        E_imp[d1][X] = 0.5 * (E[d1][X] + 
+            (U[d1][X-d1].dagger() * E[d1][X-d1].expand() * U[d1][X-d1]).project_to_algebra() );
+    }
+    calc_topoCharge(U, E_imp, chi);
 
     double chi_avg = 0.0;
     onsites(ALL) 
@@ -179,29 +181,8 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     chi_avg /= lattice->volume();
 
 
-    /* Measure 'improved' or 'symmetrized' charge density: The way E_i appears in the EOM suggests
-    * that we should identify E_i(x) as living at link midpoint, while the mag. field B_i(x) is local to x.
-    * To measure E.B at x, we can take covariant average of E: E^{imp}_i(x) = 0.5 * (E_i(x) + U^+_i(x-i)E_i(x-i)U_i(x-i)) 
-    */
-    VectorField<Algebra<group>> E_imp;
-    foralldir(d1) onsites(ALL) { 
-        E_imp[d1][X] = 0.5 * (E[d1][X] + 
-            (U[d1][X-d1].dagger() * E[d1][X-d1].expand() * U[d1][X-d1]).project_to_algebra() );
-    }
-
-    calc_topoCharge(U, E_imp, chi);
-    double chi_avg_imp = 0.0;
-
-    onsites(ALL) 
-         chi_avg_imp += chi[X];
-
-    chi_avg_imp /= lattice->volume();
-
-
-    //output0 << "Measure_start " << n << "\n";
-    // Print the actual time (in lattice units) instead of just 'n'. Also more precision, needed for long trajectories
     char buf[1024]; 
-    sprintf(buf, "%d %.10g %.8g %.8g %.8g %.8g %.8g %.8g", trajectory, n*dt, plaq, e2, viol, energy, chi_avg, chi_avg_imp);
+    sprintf(buf, "%d %.10g %.8g %.8g %.8g %.8g %.8g", trajectory, t, plaq, e2, viol, energy, chi_avg);
     if (hila::myrank() == 0) measureFile << std::string(buf) << "\n";
 }
 
@@ -236,12 +217,14 @@ void thermalize(GaugeField<group> &U, VectorField<Algebra<group>> &E, double g2T
         update_E(U, E, dt);
         update_U(U, E, dt / 2);
 
+        /*
         double pl = measure_plaq(U);
         double e2 = 0;
         foralldir (d) { e2 += E[d].squarenorm(); }
 
         output0 << "THERM: Plaq: " << pl << " E^2 " << e2 << " action "
                 << e2 / 2 + 2 * pl << '\n';
+        */
 
         regroup_gauge(U);
     }
@@ -254,7 +237,11 @@ template <typename group>
 void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory,
                    int trajlen, int measure_interval, double dt) {
 
+    // Measure first at time t=0:
+    double t = 0.0;
+    measure_stuff(U, E, trajectory, t);
 
+    // Then evolve until we reach t = trajlen*dt
     for (int n = 0; n < trajlen; n += measure_interval) {
         update_U(U, E, dt / 2);
         // do 2 time units of evolution with leapfrog
@@ -265,8 +252,9 @@ void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
         // and bring U and E to the same time value
         update_E(U, E, dt);
         update_U(U, E, dt / 2);
-
-        measure_stuff(U, E, trajectory, n, dt);
+        
+        t += dt * measure_interval;
+        measure_stuff(U, E, trajectory, t);
     }
 }
 
@@ -334,9 +322,9 @@ int main(int argc, char **argv) {
             output0 << "!!! Error opening file " << labelFileName << "\n";
             hila::finishrun();
         }
-        labelFile << "trajectory\n" << "time (lattice units)\n" << "plaq avg: sum_i<j (N - Tr Re P_ij)\n" << "Tr E_i^2\n"
-            << "Gauss violation (G^a G^a over the whole system)\n" << "total energy\n"
-            << "average chi\n" << "average chi ('symmetrized' or 'improved')\n";
+        labelFile << "1 trajectory\n" << "2 time (lattice units)\n" << "3 plaq avg: sum_i<j (N - Tr Re P_ij)\n" 
+            << "4 Tr E_i^2\n" << "5 Gauss violation (G^a G^a over the whole system)\n" << "6 total energy\n"
+            << "7 average chi\n";
 
         labelFile.close();
     }
@@ -361,6 +349,9 @@ int main(int argc, char **argv) {
 
     for (int trajectory = 0; trajectory < n_traj; trajectory++) {
         thermalize(U, E, g2Ta, n_thermal, dt);
+        if (trajectory % 500 == 0) {
+            output0 << "Trajectory " << trajectory << "\n";
+        }
         do_trajectory(U, E, trajectory, trajlen, measure_interval, dt);
     }
 

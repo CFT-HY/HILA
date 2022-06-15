@@ -29,14 +29,14 @@ int main(int argc, char *argv[]) {
     Complex<double> hopping;
     hopping = 1;
     double fsqr = 0;
-    
+
     onsites(ALL) {
         foralldir(d) {
             hopping += f[X] * f[X + d].conj();
         }
         fsqr += f[X].squarenorm();
     }
-
+    
     output0 << "Average f^2 : " << fsqr / lattice->volume() << '\n';
     output0 << "Average hopping term " << hopping / (NDIM*lattice->volume()) << '\n';
 
