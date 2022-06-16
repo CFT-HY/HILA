@@ -12,12 +12,13 @@ LDLIBS += -lgtest_main -lgtest -lpthread
 APP_OPTS += -DNDIM=3
 
 TEST_OBJECTS = \
-	build/test1.o
+	build/test_lattice.o \
+	build/test_field.o
 
 HILA_OBJECTS += $(TEST_OBJECTS)
 
 tests: build/tests ; @:
-example_test: build/example_test ; @:
 
 build/%: build/%.o Makefile $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ $< $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
+
