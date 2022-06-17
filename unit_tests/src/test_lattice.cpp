@@ -2,5 +2,5 @@
 #include "hila.h"
 
 TEST(LatticeTest, Size) {
-    ASSERT_EQ(lattice->volume(), 128*128*128);
+    ASSERT_EQ(lattice->volume(), 32*32*32);
 }

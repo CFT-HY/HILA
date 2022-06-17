@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
 
     testing::InitGoogleTest(&argc, argv);
     hila::initialize(argc, argv);
-    lattice->setup({128,128,128});
+    lattice->setup({32,32,32});
     result = RUN_ALL_TESTS();
     hila::finishrun();
     return result;

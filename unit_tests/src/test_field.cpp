@@ -8,9 +8,13 @@ public:
     template <typename T>
     Field<float> temporary_field(T assign_val) {
         Field<float> temporary_field = assign_val;
-        std::cout << &temporary_field << '\n';
         return temporary_field;
     }
+
+    void fill_dummy_field() {
+        onsites(ALL) this->dummy_field[X] = hila::random();
+    }
+
 };
 
 TEST_F(FieldTest, NullptrConstructor) {
@@ -28,28 +32,14 @@ TEST_F(FieldTest, Destructor) {
 }
 
 TEST_F(FieldTest, ScalarConstructor) {
-    Field<float> temp = temporary_field(1);
-    std::cout << &temp << '\n';
-    onsites(ALL) {
-        EXPECT_EQ(temporary_field(1)[X],1.0);
-    }
+    EXPECT_EQ(temporary_field(1),1);
 }
 
 TEST_F(FieldTest, ZeroConstructor) {
-    Field<float> temp = temporary_field(0);
-    std::cout << &temp << '\n';
-    onsites(ALL) {
-        EXPECT_EQ(temp[X],0);
-    }
+    EXPECT_EQ(temporary_field(0),0);
 }
 
 TEST_F(FieldTest, CopyConstructor) {
-    dummy_field = 1;
-    onsites(ALL) dummy_field = 1;
-    EXPECT_TRUE(dummy_field.is_allocated());
-    Field<float> temp = dummy_field;
-    std::cout << &temp << '\n';
-    onsites(ALL) {
-        EXPECT_EQ(temp[X],dummy_field[X]);
-    }
+    fill_dummy_field();
+    EXPECT_EQ(temporary_field(dummy_field),dummy_field);
 }
