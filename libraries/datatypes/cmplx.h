@@ -399,6 +399,22 @@ inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b,
     return r;
 }
 
+template <typename A, typename B>
+inline bool operator==(const Complex<A> &a, const Complex<B> &b) {
+    return (a.re == b.re && a.im == b.im)
+}
+
+template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
+inline bool operator==(const Complex<A> &a, const B b) {
+    return (a.re == b && a.im == 0)
+}
+
+template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+inline bool operator==(const A a, const Complex<B> & b) {
+    return b == a;
+}
+
+
 // Cast operators to different number or Complex type
 // cast_to<double>(a);
 // cast_to<Complex<float>>(b);
