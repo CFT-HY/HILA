@@ -817,28 +817,33 @@ class Field {
     }
 
     // Fourier transform declarations
-    void FFT(fft_direction fdir = fft_direction::forward);
+    Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
+    Field<T> FFT(const CoordinateVector & dirs, fft_direction fdir = fft_direction::forward) const;
+
+    Field<Complex<hila::number_type<T>>> FFT_real_to_complex(fft_direction fdir = fft_direction::forward) const;
+    Field<hila::number_type<T>> FFT_complex_to_real(fft_direction fdir = fft_direction::forward) const;
+    
 
     // Reflect the field along all or 1 coordinate
-    Field<T> reflect();
-    Field<T> reflect(Direction dir);
-    Field<T> reflect(const CoordinateVector & dirs);
+    Field<T> reflect() const;
+    Field<T> reflect(Direction dir) const;
+    Field<T> reflect(const CoordinateVector & dirs) const;
 
     // Writes the Field to disk
-    void write_to_stream(std::ofstream &outputfile);
-    void write_to_file(const std::string &filename);
+    void write_to_stream(std::ofstream &outputfile) const;
+    void write_to_file(const std::string &filename) const;
     void read_from_stream(std::ifstream &inputfile);
     void read_from_file(const std::string &filename);
 
     void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
-                         const CoordinateVector &cmax, int precision = 6);
+                         const CoordinateVector &cmax, int precision = 6) const;
     void write_subvolume(const std::string &filenname, const CoordinateVector &cmin,
-                         const CoordinateVector &cmax, int precision = 6);
+                         const CoordinateVector &cmax, int precision = 6) const;
 
     void write_slice(std::ofstream &outputfile, const CoordinateVector &slice,
-                     int precision = 6);
+                     int precision = 6) const;
     void write_slice(const std::string &outputfile, const CoordinateVector &slice,
-                     int precision = 6);
+                     int precision = 6) const;
 
     // and sum reduction
     T sum(Parity par = Parity::all, bool allreduce = true) const;

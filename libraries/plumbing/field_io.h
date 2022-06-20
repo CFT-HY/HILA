@@ -8,7 +8,7 @@
 
 /// Write the field to a file stream
 template <typename T>
-void Field<T>::write_to_stream(std::ofstream &outputfile) {
+void Field<T>::write_to_stream(std::ofstream &outputfile) const {
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t write_size = sites_per_write * sizeof(T);
 
@@ -34,7 +34,7 @@ void Field<T>::write_to_stream(std::ofstream &outputfile) {
 
 /// Write the Field to a named file replacing the file
 template <typename T>
-void Field<T>::write_to_file(const std::string &filename) {
+void Field<T>::write_to_file(const std::string &filename) const {
     std::ofstream outputfile;
     outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
     write_to_stream(outputfile);
@@ -134,7 +134,7 @@ static void read_fields(const std::string &filename, fieldtypes &... fields) {
 
 template <typename T>
 void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
-                               const CoordinateVector &cmax, int precision) {
+                               const CoordinateVector &cmax, int precision) const {
 
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
 
@@ -187,7 +187,7 @@ template <typename T>
 void Field<T>::write_subvolume(const std::string &filename,
                                const CoordinateVector &cmin,
                                const CoordinateVector &cmax,
-                               int precision) {
+                               int precision) const {
 
     std::ofstream out;
     if (hila::myrank() == 0) {
@@ -216,7 +216,7 @@ void Field<T>::write_subvolume(const std::string &filename,
 
 template <typename T>
 void Field<T>::write_slice(std::ofstream &outf, const CoordinateVector &slice,
-                           int precision) {
+                           int precision) const {
 
     CoordinateVector cmin, cmax;
     foralldir(d) {
@@ -232,7 +232,7 @@ void Field<T>::write_slice(std::ofstream &outf, const CoordinateVector &slice,
 
 template <typename T>
 void Field<T>::write_slice(const std::string &outf, const CoordinateVector &slice,
-                           int precision) {
+                           int precision) const {
 
     CoordinateVector cmin, cmax;
     foralldir(d) {
