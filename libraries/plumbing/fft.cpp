@@ -7,13 +7,13 @@
 
 
 hila::timer fft_timer("FFT total time");
-hila::timer fft_plan_timer("  FFT plan");
-hila::timer pencil_MPI_timer("  MPI in FFT");
-hila::timer fft_execute_timer("  FFT execute");
-hila::timer pencil_reshuffle_timer("  data reshuffle");
-hila::timer fft_buffer_timer("  copy fft buffers");
-hila::timer pencil_collect_timer("  copy payload");
-hila::timer pencil_save_timer("  save result");
+hila::timer fft_plan_timer("FFT plan");
+hila::timer pencil_MPI_timer("MPI for pencils");
+hila::timer fft_execute_timer("FFT execute");
+hila::timer pencil_reshuffle_timer("pencil reshuffle");
+hila::timer fft_buffer_timer("copy fft buffers");
+hila::timer pencil_collect_timer("copy pencils");
+hila::timer pencil_save_timer("save pencils");
 
 // a couple of global fft variables - easiest this way
 std::vector<pencil_struct> hila_pencil_comms[NDIM];
