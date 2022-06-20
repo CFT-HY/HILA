@@ -773,21 +773,8 @@ class Field {
     }
 
     bool operator==(const Field<T> &rhs) const {
-        for (int i = 0; i < lattice->volume(); i++) {
-            if ((*this).field_buffer()[i] != rhs.field_buffer()[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    bool operator==(const T rhs) const {
-        for (int i = 0; i < lattice->volume(); i++) {
-            if ((*this).field_buffer()[i] != rhs) {
-                return false;
-            }
-        }
-        return true;
+        T epsilon = 0;
+        return ((*this)-rhs).squarenorm() <= epsilon;
     }
 
     hila::number_type<T> squarenorm() const {
