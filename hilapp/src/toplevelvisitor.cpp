@@ -698,8 +698,7 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
 ///  Handle constant expressions referred to in loops
 ///  Const reference is left as is, EXCEPT if:
 ///   - target is kernelized
-///   - const is defined outside loop body but after the point where
-///     kernels are included
+///   - const is defined outside loop body
 ///  If this is true, const ref is substituted with the const value
 ///  This may cause problems if types are different: e.g. const is enum value,
 ///  and it is substituted with an int literal.  Try to help with type casting!
@@ -711,6 +710,10 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
     if (!E->isCXX11ConstantExpr(*Context, &val, nullptr))
         return false; // nothing
 
+    // no need to do anything if not kernelized
+    if (!target.kernelize)
+        return true;
+
     E = E->IgnoreImplicit();
     // If it is not a declrefexpr continue to next node in ast
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
@@ -718,34 +721,37 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
         return true;
 
     SourceLocation sl = DRE->getDecl()->getSourceRange().getBegin();
-    if (sl.isValid()) {
-        if (get_FileId(sl) == get_FileId(global.location.loop)) {
+    if (sl.isValid() && get_FileId(sl) == get_FileId(global.location.loop)) {
 
-            if (sl < global.location.loop && sl > global.location.kernels) {
+        // if const is defined on file scope earlier or
+        // const defined within the loop
+        if (sl > global.location.top ||
+            (sl < global.location.loop && sl > E->getBeginLoc()))
+            // leave as is
+            parsing_state.skip_children = 1;
+        return true;
 
-                // what is the type of the const?
-                QualType ty = DRE->getType().getCanonicalType();
-                std::string typestr = ty.getAsString();
+        // what is the type of the const?
+        QualType ty = DRE->getType().getCanonicalType();
+        std::string typestr = ty.getAsString();
 
-                // replace int const expr by the value
-                if (val.isInt()) {
-                    writeBuf->replace(DRE->getSourceRange(),
-                                      std::to_string(val.getInt().getExtValue()));
+        // replace int const expr by the value
+        srcBuf *buf = get_file_srcBuf(DRE->getBeginLoc());
+        if (val.isInt()) {
+            std::string repl = std::to_string(val.getInt().getExtValue());
+            if (typestr != "int")
+                repl = "(" + typestr + ")" + repl;
+            buf->replace(DRE->getSourceRange(), repl);
 
-                } else if (val.isFloat()) {
-                    writeBuf->replace(DRE->getSourceRange(),
-                                      std::to_string(val.getFloat().convertToDouble()));
-                } else {
-                    // Not int or float, retunr
-                    return true;
-                }
-
-                parsing_state.skip_children = 1;
-                return true;
-            }
+        } else if (val.isFloat()) {
+            buf->replace(DRE->getSourceRange(),
+                         std::to_string(val.getFloat().convertToDouble()));
+        } else {
+            // Not int or float, treat as var?
+            return false;
         }
     }
-
+    parsing_state.skip_children = 1;
     return true;
 }
 
