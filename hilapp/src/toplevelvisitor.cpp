@@ -125,6 +125,12 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
         exit(1);
     }
 
+    if (is_assign && lfe.nameExpr->getType().isConstQualified()) {
+        // llvm::errs() << " ******** CANNOT ASSIGN TO A CONST QUAL VAR, NAME " <<
+        // get_stmt_str(lfe.nameExpr) << '\n';
+        is_assign = false;
+    }
+
     // Check if the expression is already handled
     for (field_ref r : field_ref_list)
         if (r.fullExpr == lfe.fullExpr) {
@@ -2528,6 +2534,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             }
         }
     }
+    global.location.kernels = ip;
     return ip;
 }
 

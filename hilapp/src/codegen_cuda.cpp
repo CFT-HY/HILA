@@ -614,8 +614,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // Finally, emit the kernel
     // TheRewriter.InsertText(global.location.function,
     // indent_string(kernel),true,true);
-    toplevelBuf->insert(global.location.kernels.getLocWithOffset(-1),
-                        indent_string(kernel.str()), true, false);
+    srcBuf *filebuf = get_file_srcBuf(global.location.kernels);
+    filebuf->insert(findChar(global.location.kernels, '\n'),                     // .getLocWithOffset(-1),
+                        indent_string(kernel.str()), false, false);
 
     // If arrays were copied free memory
 

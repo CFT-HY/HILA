@@ -9,8 +9,9 @@
 /// An AST Visitor for checking address of operators and references inside site loops
 ///   - Flag "& f[X]""  -type operations as errors
 ///   - Taking a reference to field:
-///        "const auto & ref = f[X]"  : field is read (has already been flagged, nothing
-///        here) "auto & ref = f[X]" : field is read and written, disallow [X+..]
+///        "const auto & ref = f[X]" : field is read (has already been flagged, nothing
+///        here)
+///        "auto & ref = f[X]" : field is read and written, disallow [X+..]
 ///   - If "var" is an loop extern variable:
 ///       - Do not allow  "& var" (could allow const pointers?)
 ///       - Do not allow "auto & r = var", but allow "const auto & r = var"
