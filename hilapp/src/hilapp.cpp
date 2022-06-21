@@ -866,7 +866,12 @@ class MyASTConsumer : public ASTConsumer {
                     Visitor.getSourceLocationAtEndOfRange(d->getSourceRange());
 
                 // set the default insertion point for possibly generated kernels
-                global.location.kernels = global.location.top;
+                // go to the beginning of line
+                SourceLocation sl = global.location.top;
+                while (sl.isValid() && getChar(SM,sl) != '\n')
+                    sl = sl.getLocWithOffset(-1);
+                global.location.kernels = sl;
+
 
                 // Traverse the declaration using our AST visitor.
                 // if theres "#pragma skip" don't do it

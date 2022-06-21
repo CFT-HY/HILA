@@ -720,34 +720,52 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
     if (DRE == nullptr)
         return true;
 
+    // what is the type of the const?
+    QualType ty = DRE->getType().getCanonicalType();
+    std::string typestr = ty.getAsString();
+    // if (ty.getTypePtr()->isIntegerType()) 
+    // llvm::errs() << "GOT CONST, type " << typestr << "  expr " << get_stmt_str(E) << '\n';
+    // if (ty.getTypePtr()->isEnumeralType())
+    //     llvm::errs() << "   IS ENUMERATED\n";
+    // if (ty.getTypePtr()->isIntegerType() && !ty.getTypePtr()->isEnumeralType()) 
+    //     llvm::errs() << "   IS IntegerType(), VAL " << val.getInt() << '\n';
+    // if (val.isInt()) 
+    //     llvm::errs() << "   VAL IS INT, value " << val.getInt() << '\n';
+
+
+
+    // remove const from type if there
+    if (typestr.compare(0,5,"const") == 0) 
+        typestr = typestr.substr(6,std::string::npos);
+
     SourceLocation sl = DRE->getDecl()->getSourceRange().getBegin();
+
     if (sl.isValid() && get_FileId(sl) == get_FileId(global.location.loop)) {
 
         // if const is defined on file scope earlier or
         // const defined within the loop
-        if (sl > global.location.top ||
-            (sl < global.location.loop && sl > E->getBeginLoc()))
+        // if (sl > global.location.top ||
+        if (sl < global.location.loop && sl > E->getBeginLoc()) {
             // leave as is
-            parsing_state.skip_children = 1;
-        return true;
 
-        // what is the type of the const?
-        QualType ty = DRE->getType().getCanonicalType();
-        std::string typestr = ty.getAsString();
+            parsing_state.skip_children = 1;
+            return true;
+        }
 
         // replace int const expr by the value
-        srcBuf *buf = get_file_srcBuf(DRE->getBeginLoc());
+        // srcBuf *buf = get_file_srcBuf(DRE->getBeginLoc());
         if (val.isInt()) {
             std::string repl = std::to_string(val.getInt().getExtValue());
             if (typestr != "int")
                 repl = "(" + typestr + ")" + repl;
-            buf->replace(DRE->getSourceRange(), repl);
+            writeBuf->replace(DRE->getSourceRange(), repl);
 
         } else if (val.isFloat()) {
-            buf->replace(DRE->getSourceRange(),
-                         std::to_string(val.getFloat().convertToDouble()));
+            writeBuf->replace(DRE->getSourceRange(),
+                              std::to_string(val.getFloat().convertToDouble()));
         } else {
             // Not int or float, treat as var?
+            // llvm::errs() << " CONTINUE ... \n";
             return false;
         }
     }
@@ -2265,6 +2283,9 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
 
         // llvm::errs() << "new func:\n" << funcBuf.dump() <<'\n';
         // visit the body
+        SourceLocation save_kernel = global.location.kernels;
+        global.location.kernels = insertion_point;
+
         TraverseStmt(f->getBody());
 
         // llvm::errs() << "new func again:\n" << funcBuf.dump() <<'\n';
@@ -2277,7 +2298,9 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
         // buffer is not necessarily in toplevelBuf, so:
 
         srcBuf *filebuf = get_file_srcBuf(insertion_point);
-        filebuf->insert(findChar(insertion_point, '\n'), sb.str(), false, true);
+        filebuf->insert(insertion_point, sb.str(), false, true);
+
+        global.location.kernels = save_kernel;
     } else {
         // Now the function has been written before (and not inline)
         // just insert declaration, defined on another compilation unit
@@ -2477,7 +2500,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             }
 
             // set also the kernel insertion point (if needed at all)
-            global.location.kernels = getSourceLocationAtStartOfDecl(parent);
+            // global.location.kernels = getSourceLocationAtStartOfDecl(parent);
 
             // It is still possible that the function is defined further down.
             // If that is the case, we insert the
@@ -2498,7 +2521,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             sl = getNextLoc(sl); // skip }
 
             // and the kernel loc too
-            global.location.kernels = getSourceLocationAtStartOfDecl(f);
+            // global.location.kernels = getSourceLocationAtStartOfDecl(f);
         }
 
         if (sl.isInvalid() || srcMgr.isBeforeInTranslationUnit(
@@ -2540,7 +2563,8 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             }
         }
     }
-    global.location.kernels = ip;
+    // skip to end of line -- is fine here
+    ip = findChar(ip, '\n');
     return ip;
 }
 

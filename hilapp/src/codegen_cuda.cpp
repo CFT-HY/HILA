@@ -159,8 +159,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             }
 
             if (ar.reduction_type == reduction::PRODUCT) {
-                code << "gpu_set_one(" << ar.new_name << ", " << ar.size_expr
-                     << ");\n";
+                code << "gpu_set_one(" << ar.new_name << ", " << ar.size_expr << ");\n";
             }
 
             code << "check_device_error(\"allocate_reduction\");\n";
@@ -188,7 +187,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             // Allocate memory for a reduction. This will be filled in the kernel
             code << v.type << " * dev_" << v.reduction_name << ";\n";
             code << "gpuMalloc( (void **)& dev_" << v.reduction_name << ","
-                    << "sizeof(" << v.type << ") * N_blocks );\n";
+                 << "sizeof(" << v.type << ") * N_blocks );\n";
             if (v.reduction_type == reduction::SUM) {
                 code << "gpu_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
             }
@@ -390,7 +389,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // Declare the shared reduction variable
     for (var_info &vi : var_info_list)
         if (!vi.is_loop_local) {
-            if (vi.reduction_type != reduction::NONE ) {
+            if (vi.reduction_type != reduction::NONE) {
                 // Generate a temporary array for the reduction
                 kernel << "__shared__ " << vi.type << " " << vi.new_name
                        << "sh[N_threads];\n";
@@ -408,7 +407,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 for (var_ref &vr : vi.refs) {
                     loopBuf.replace(vr.ref, vi.new_name + "sum");
                 }
-            } 
+            }
         }
 
     // Create temporary field element variables
@@ -560,9 +559,10 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
     // Assing reductions to shared memory
     for (var_info &vi : var_info_list) {
-        if(!vi.is_loop_local) {
+        if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE) {
-                kernel << vi.new_name << "sh[threadIdx.x] = " << vi.new_name << "sum;\n";
+                kernel << vi.new_name << "sh[threadIdx.x] = " << vi.new_name
+                       << "sum;\n";
             }
         }
     }
@@ -579,7 +579,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 }
 
                 // Now run the thread level reduction
-                //kernel << "if( threadIdx.x == 0 ){\n";
+                // kernel << "if( threadIdx.x == 0 ){\n";
                 // if (vi.reduction_type == reduction::SUM) {
                 //     kernel << vi.new_name << "[blockIdx.x] = 0;\n";
                 // } else if (vi.reduction_type == reduction::PRODUCT) {
@@ -600,7 +600,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     kernel << "__syncthreads();\n";
                 }
                 kernel << "}\n";
-                //kernel << "}\n";
+                // kernel << "}\n";
 
                 kernel << "if(threadIdx.x == 0) {\n"
                        << vi.new_name << "[blockIdx.x] = " << vi.new_name << "sh[0];\n";
@@ -615,8 +615,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // TheRewriter.InsertText(global.location.function,
     // indent_string(kernel),true,true);
     srcBuf *filebuf = get_file_srcBuf(global.location.kernels);
-    filebuf->insert(findChar(global.location.kernels, '\n'),                     // .getLocWithOffset(-1),
-                        indent_string(kernel.str()), false, false);
+    filebuf->insert(global.location.kernels, // .getLocWithOffset(-1),
+                    indent_string(kernel.str()), false, false);
 
     // If arrays were copied free memory
 
@@ -651,12 +651,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             // Run reduction
             if (vi.reduction_type == reduction::SUM) {
                 code << vi.reduction_name << " = gpu_reduce_sum( dev_"
-                        << vi.reduction_name << ", N_blocks"
-                        << ");\n";
+                     << vi.reduction_name << ", N_blocks"
+                     << ");\n";
             } else if (vi.reduction_type == reduction::PRODUCT) {
                 code << vi.reduction_name << " = gpu_reduce_product( dev_"
-                        << vi.reduction_name << ", N_blocks"
-                        << ");\n";
+                     << vi.reduction_name << ", N_blocks"
+                     << ");\n";
             }
             // Free memory allocated for the reduction
             if (vi.reduction_type != reduction::NONE) {
