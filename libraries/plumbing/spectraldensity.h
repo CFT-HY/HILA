@@ -4,21 +4,6 @@
 #include "hila.h"
 
 
-/// convert k-space coordinate to modded the k-vector, -L/2 -> L/2
-inline Vector<NDIM, double> sd_get_k_vector(const CoordinateVector &loc) {
-
-    Vector<NDIM, double> k;
-    foralldir(d) {
-        int n = loc[d];
-        if (n > lattice->size(d) / 2)
-            n -= lattice->size(d);
-
-        k[d] = n * 2.0 * M_PI / lattice->size(d);
-    }
-    return k;
-}
-
-
 /// sd_k_bin_parameters holds the parameters to define binning.
 
 struct sd_k_bin_parameters {
@@ -31,12 +16,12 @@ struct sd_k_bin_parameters {
 
 
 /// get bin
-/// TODO: this should be insider k_bins class but hilapp is not yet able to handle
+/// TODO: this should be insider k_binning class but hilapp is not yet able to handle
 /// it!
 
 inline int sd_get_k_bin(const CoordinateVector &cv, const sd_k_bin_parameters &p) {
 
-    double kr = sd_get_k_vector(cv).norm();
+    double kr = cv.convert_to_k().norm();
 
     kr = kr / p.max;
     int b = pow(kr, p.power) * p.bins;
@@ -46,24 +31,24 @@ inline int sd_get_k_bin(const CoordinateVector &cv, const sd_k_bin_parameters &p
 
 namespace hila {
 
-/// class hila::k_bins is used to bin "k-space" fields (typically fourier transformed
+/// class hila::k_binning is used to bin "k-space" fields (typically fourier transformed
 /// from real space).  Vector k is normalized so that -pi/2 < k_i <= pi/2, i.e.
 //  k_i = pi*x_i/L_i, where L_i = lattice->size(i) and x_i is the L_i/2 modded
 /// coordinate.
 /// Bin is determined by formula
 ///   b = (int) ( pow(k/k_max)^p * n_bins )
 ///
-///   hila::k_bins kb;
+///   hila::k_binning kb;
 ///   kb.bins(80).k_max(M_PI);
 ///   auto sd = kb.spectraldensity(f);  // get the spectral density of field f
 ///
 /// methods:  (use as kb.xxx)
-///   hila::k_bins & bins(int n)       set number of bins
-///   int bins()                       get number of bins
-///   hila::k_bins & k_max(double m)   set max value of k in binning
-///   double k_max()                   get max value of k
-///   hila::k_bins & power(double p)   set the "power" in binning
-///   double power()                   get power
+///   hila::k_binning & bins(int n)       set number of bins
+///   int bins()                          get number of bins
+///   hila::k_binning & k_max(double m)   set max value of k in binning
+///   double k_max()                      get max value of k
+///   hila::k_binning & power(double p)   set the "power" in binning
+///   double power()                      get power
 ///
 ///   std::vector<T>      bin_k_field(const Field<T> &f)       bin the k-space field f
 ///   std::vector<double> bin_k_field_squarenorm(const Field<T & f)
@@ -75,15 +60,15 @@ namespace hila {
 ///   long count(int b)                return the number of points within bin b
 ///   double bin_min(int b)            return the minimum k of bin b
 ///   double bin_max(int b)            maximum k in bin b
-class k_bins {
+class k_binning {
   private:
     sd_k_bin_parameters par;
     std::vector<double> k_avg;
     std::vector<size_t> bin_count;
 
   public:
-    k_bins() {
-        par.max = M_PI * sqrt((double)NDIM);
+    k_binning() {
+        par.max = M_PI;
         par.power = 1;
         par.exact = 0;
         par.bins = 1;
@@ -91,11 +76,10 @@ class k_bins {
             if (lattice->size(d) > 2 * par.bins)
                 par.bins = lattice->size(d) / 2;
         }
-        par.bins = par.bins * sqrt(double(NDIM));
     }
 
     /// Set number of bins in histogram
-    k_bins &bins(int n) {
+    k_binning &bins(int n) {
         assert(n > 0);
         par.bins = n;
         return *this;
@@ -106,7 +90,7 @@ class k_bins {
     }
 
     /// Max value of k
-    k_bins &k_max(double km) {
+    k_binning &k_max(double km) {
         assert(km > 0);
         par.max = km;
         return *this;
@@ -117,7 +101,7 @@ class k_bins {
     }
 
     /// Bin quantity k^p
-    k_bins &power(double p) {
+    k_binning &power(double p) {
         assert(p > 0);
         par.power = p;
         return *this;
@@ -128,7 +112,7 @@ class k_bins {
     }
 
     /// Bin exactly this many bins
-    k_bins &exact_bins(int e) {
+    k_binning &exact_bins(int e) {
         assert(e >= 0);
         par.exact = e;
         return *this;
@@ -143,6 +127,9 @@ class k_bins {
     template <typename T>
     std::vector<T> bin_k_field(const Field<T> &f) {
 
+        if (k_avg.size() != par.bins) 
+            sd_calculate_bin_info();
+
         VectorReduction<T> s(par.bins);
         s.allreduce(false);
         s = 0;
@@ -155,6 +142,8 @@ class k_bins {
             }
         }
 
+        hila::output << "bin reduction done, node " << hila::myrank() << '\n';
+
         return s.vector();
     }
 
@@ -165,6 +154,9 @@ class k_bins {
 
         using float_t = hila::number_type<T>;
         constexpr int n_float = sizeof(T) / sizeof(float_t);
+
+        if (k_avg.size() != par.bins) 
+            sd_calculate_bin_info();
 
         VectorReduction<double> s(par.bins);
         s.allreduce(false);
@@ -251,7 +243,7 @@ class k_bins {
 
         onsites(ALL) {
 
-            double kr = sd_get_k_vector(X.coordinates()).norm();
+            double kr = X.coordinates().convert_to_k().norm();
             int b = sd_get_k_bin(X.coordinates(), par);
 
             if (b >= 0 && b < par.bins) {
@@ -284,7 +276,7 @@ class k_bins {
 
     long count(int i) {
 
-        if (k_avg.size() == 0) {
+        if (bin_count.size() == 0) {
             sd_calculate_bin_info();
         }
 

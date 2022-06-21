@@ -494,9 +494,13 @@ void hila_fft<cmplx_t>::scatter_data() {
 #endif
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////
-/// Put in reflect here too
-/////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////
+/// Separate reflect operation
+/// Reflect flips the coordinates so that negative direction becomes positive,
+/// and x=0 plane remains,
+/// r(x) <- f(L - x)  -  note that x == 0 layer is as before
+/// r(0) = f(0), r(1) = f(L-1), r(2) = f(L-2)  ...
+///////////////////////////////////////////////////////////////////////////////////
 
 /// Reflect data in the array
 template <typename cmplx_t>
@@ -507,9 +511,9 @@ __global__ void hila_reflect_dir_kernel(cmplx_t *RESTRICT data, const int colsiz
     if (ind < columns) {
         const int s = colsize * ind;
 
-        for (int i = 0; i < colsize / 2; i++) {
+        for (int i = 1; i < colsize / 2; i++) {
             int i1 = s + i;
-            int i2 = s + colsize - 1 - i;
+            int i2 = s + colsize - i;
             cmplx_t tmp = data[i1];
             data[i1] = data[i2];
             data[i2] = tmp;
