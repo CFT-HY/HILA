@@ -1,4 +1,4 @@
-N                   128
+N                   64
 m                   3
 epsilon             1.0
 seed                1010
@@ -28,5 +28,5 @@ output_file         output
 UETC on
 UETC start time     100
 UETC measurement interval 2
-UETC bins           64
+UETC bins           32
 UETC file           uetc_output

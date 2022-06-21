@@ -212,6 +212,7 @@ void scaling_sim::initialize() {
     }
 
     case 3: {
+        phi = 0;
         auto kphi = phi;
 
         onsites(ALL) {
@@ -439,16 +440,17 @@ void scaling_sim::get_Jk(Direction d, Field<Complex<real_t>> &ft) {
     FFT_field(j, ft);
 }
 
-
+////////////////////////////////////////////////////////////////////////////////
 // Init uetcs here
 
 void scaling_sim::initialize_uetc() {
 
     Field<Complex<real_t>> jk[NDIM];
-    foralldir(d) get_Jk(d, jk[d]);
+    foralldir(d) 
+        get_Jk(d, jk[d]);
 
     onsites(ALL) {
-        auto k = k_vector(X.coordinates());
+        auto k = X.coordinates().convert_to_k();
         auto absk = k.norm();
 
         if (absk > 0)
@@ -458,17 +460,18 @@ void scaling_sim::initialize_uetc() {
             Js[X] = 0;
     }
 
-    uetc_out.open(config.uetc_filename, std::ios::out);
+    if (hila::myrank() == 0) 
+        uetc_out.open(config.uetc_filename, std::ios::out);
 }
 
 void scaling_sim::measure_uetc() {
 
     static int bins = 0;
-    static binning_info b;
+    static hila::k_binning b;
 
     if (bins == 0) {
         bins = config.uetc_bins;
-        b = bin_k_info(bins);
+        b.bins(bins);
     }
 
     // measure the 1st uetc
@@ -480,12 +483,12 @@ void scaling_sim::measure_uetc() {
     // calculate correlator
     J0[ALL] *= Js[X].conj();
 
-    auto uetc = bin_k_field(J0, bins);
+    auto uetc = b.bin_k_field(J0);
 
     if (hila::myrank() == 0) {
         for (int i = 0; i < bins; i++) {
-            if (b.count[i] > 0)
-                uetc_out << i << ' ' << b.k[i] << ' ' << uetc[i].real() / b.count[i]
+            if (b.count(i) > 0)
+                uetc_out << i << ' ' << b.k(i) << ' ' << uetc[i].real()/b.count(i) 
                          << '\n';
         }
     }
@@ -632,6 +635,7 @@ int main(int argc, char **argv) {
 
     if (hila::myrank() == 0) {
         sim.config.stream.close();
+        sim.uetc_out.close();
     }
 
     hila::finishrun();
