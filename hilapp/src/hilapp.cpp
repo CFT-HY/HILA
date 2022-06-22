@@ -371,18 +371,18 @@ void check_pragmas(std::string &arg, SourceLocation prloc, SourceLocation refloc
 /////////////////////////////////////////////////////////////////////////////
 /// Preprocessor callbacks are used to find include locs
 
-struct includeloc_struct {
-    SourceLocation HashLoc;
-    StringRef FileName;
-    const FileEntry *File;
-    FileID fid;
-    FileID fid_included;
-    CharSourceRange FilenameRange;
-    std::string newName;
-};
+// struct includeloc_struct {
+//     SourceLocation HashLoc;
+//     StringRef FileName;
+//     const FileEntry *File;
+//     FileID fid;
+//     FileID fid_included;
+//     CharSourceRange FilenameRange;
+//     std::string newName;
+// };
 
-// block of static vars, easiest to move information
-static std::list<includeloc_struct> includelocs;
+// block of static vars, easiest to move information - not needed
+// static std::list<includeloc_struct> includelocs;
 
 struct HILAPP_loc_struct {
     FileID fid;
@@ -401,32 +401,30 @@ class MyPPCallbacks : public PPCallbacks {
     /// This hook is called when #include (or #import) is processed.
     /// It adds the file to includelocs, a list of candidates that may need to be
     /// modified and inserted into the file buffer
-    void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
-                            StringRef FileName, bool IsAngled,
-                            CharSourceRange FilenameRange, const FileEntry *File,
-                            StringRef SearchPath, StringRef RelativePath,
-                            const Module *Imported,
-                            SrcMgr::CharacteristicKind FileType) {
 
-        SourceManager &SM = myCompilerInstance->getSourceManager();
+    // void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+    //                         StringRef FileName, bool IsAngled,
+    //                         CharSourceRange FilenameRange, const FileEntry *File,
+    //                         StringRef SearchPath, StringRef RelativePath,
+    //                         const Module *Imported,
+    //                         SrcMgr::CharacteristicKind FileType) {
 
-        if (IsAngled == false && FileType == SrcMgr::CharacteristicKind::C_User) {
-            // normal user file included, add to a candidate
-            includeloc_struct ci;
-            ci.HashLoc = HashLoc;
-            ci.FileName = FileName;
-            ci.File = File;
-            ci.fid = SM.getFileID(HashLoc); // FileID of the include-stmt file
+    //     SourceManager &SM = myCompilerInstance->getSourceManager();
 
-            ci.FilenameRange = FilenameRange;
-            ci.newName = File->tryGetRealPathName().str();
+    //     if (IsAngled == false && FileType == SrcMgr::CharacteristicKind::C_User) {
+    //         // normal user file included, add to a candidate
+    //         includeloc_struct ci;
+    //         ci.HashLoc = HashLoc;
+    //         ci.FileName = FileName;
+    //         ci.File = File;
+    //         ci.fid = SM.getFileID(HashLoc); // FileID of the include-stmt file
 
-            // consider only files whose path contains "/hila/"
-            if (ci.newName.find("/hila/") != std::string::npos) {
-                includelocs.push_back(ci);
-            }
-        }
-    }
+    //         ci.FilenameRange = FilenameRange;
+    //         ci.newName = File->tryGetRealPathName().str();
+
+    //         includelocs.push_back(ci);
+    //     }
+    // }
 
     /// This is triggered when a pragma directive is encountered. It checks for the
     /// "#pragma hilapp" and stores the location, file and the command
@@ -936,7 +934,7 @@ class MyFrontendAction : public ASTFrontendAction {
         pp.addPPCallbacks(std::move(callbacks));
 
         // init global variables PP callbacks use
-        includelocs.clear();
+        // includelocs.clear();  - not used
         // clear also pragma locs and #ifdef HILAPP-locs
         pragmalocs.clear();
         HILAPP_locs.clear();
@@ -955,23 +953,23 @@ class MyFrontendAction : public ASTFrontendAction {
 
     //////////////////////////
 
-    int change_include_names(FileID fid) {
+    // int change_include_names(FileID fid) {
 
-        int n = 0;
-        srcBuf *buf = get_file_buffer(TheRewriter, fid);
-        if (buf == nullptr)
-            return 0;
+    //     int n = 0;
+    //     srcBuf *buf = get_file_buffer(TheRewriter, fid);
+    //     if (buf == nullptr)
+    //         return 0;
 
-        for (auto &inc : includelocs) {
-            if (inc.fid == fid) {
-                buf->replace(SourceRange(inc.FilenameRange.getBegin(),
-                                         inc.FilenameRange.getEnd()),
-                             std::string("\"") + inc.newName + "\"");
-                n++;
-            }
-        }
-        return n;
-    }
+    //     for (auto &inc : includelocs) {
+    //         if (inc.fid == fid) {
+    //             buf->replace(SourceRange(inc.FilenameRange.getBegin(),
+    //                                      inc.FilenameRange.getEnd()),
+    //                          std::string("\"") + inc.newName + "\"");
+    //             n++;
+    //         }
+    //     }
+    //     return n;
+    // }
 
     void insert_includes_to_file_buffer(FileID myFID) {
         // this is where to write
