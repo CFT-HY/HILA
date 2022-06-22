@@ -715,60 +715,46 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
         return true;
 
     E = E->IgnoreImplicit();
-    // If it is not a declrefexpr continue to next node in ast
+    // If it is not a declrefexpr it is probably a literal number.
+    // Continue to next node in ast
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
     if (DRE == nullptr)
         return true;
 
     // what is the type of the const?
     QualType ty = DRE->getType().getCanonicalType();
-    std::string typestr = ty.getAsString();
-    // if (ty.getTypePtr()->isIntegerType()) 
-    // llvm::errs() << "GOT CONST, type " << typestr << "  expr " << get_stmt_str(E) << '\n';
-    // if (ty.getTypePtr()->isEnumeralType())
-    //     llvm::errs() << "   IS ENUMERATED\n";
-    // if (ty.getTypePtr()->isIntegerType() && !ty.getTypePtr()->isEnumeralType()) 
-    //     llvm::errs() << "   IS IntegerType(), VAL " << val.getInt() << '\n';
-    // if (val.isInt()) 
-    //     llvm::errs() << "   VAL IS INT, value " << val.getInt() << '\n';
+    const Type *typtr = ty.getTypePtr();
 
+    // llvm::errs() << "GOT CONST, type " << ty.getAsString() << "  expr " << get_stmt_str(E)
+    //              << "  VALUEKIND " << val.getKind() << '\n';
 
+    // leave enums as they are -- assume that defined elsewhere!
+    if (typtr->isEnumeralType())
+        return true;
 
-    // remove const from type if there
-    if (typestr.compare(0,5,"const") == 0) 
-        typestr = typestr.substr(6,std::string::npos);
+    
+    if (typtr->isIntegerType()) {
+        // replace ints by numbers - don't trust APValue val above, there seems to be a
+        // bug
 
-    SourceLocation sl = DRE->getDecl()->getSourceRange().getBegin();
+        llvm::Optional<llvm::APSInt> ival = DRE->getIntegerConstantExpr(*Context);
+        if (ival) {
+            // Value is fine
+            std::string value = std::to_string(ival.getValue().getExtValue());
+            writeBuf->replace(DRE->getSourceRange(), value);
 
-    if (sl.isValid() && get_FileId(sl) == get_FileId(global.location.loop)) {
-
-        // if const is defined on file scope earlier or
-        // const defined within the loop
-        // if (sl > global.location.top ||
-        if (sl < global.location.loop && sl > E->getBeginLoc()) {
-            // leave as is
-
-            parsing_state.skip_children = 1;
-            return true;
+            // llvm::errs() << "   INT CONST VALUE IS " << value << '\n';
         }
 
-        // replace int const expr by the value
-        // srcBuf *buf = get_file_srcBuf(DRE->getBeginLoc());
-        if (val.isInt()) {
-            std::string repl = std::to_string(val.getInt().getExtValue());
-            if (typestr != "int")
-                repl = "(" + typestr + ")" + repl;
-            writeBuf->replace(DRE->getSourceRange(), repl);
+    } else if (typtr->isFloatingType()) {
+        char buf[200];
+        std::snprintf(buf,199,"%.18g",val.getFloat().convertToDouble());
+        writeBuf->replace(DRE->getSourceRange(),buf);
 
-        } else if (val.isFloat()) {
-            writeBuf->replace(DRE->getSourceRange(),
-                              std::to_string(val.getFloat().convertToDouble()));
-        } else {
-            // Not int or float, treat as var?
-            // llvm::errs() << " CONTINUE ... \n";
-            return false;
-        }
-    }
+        // llvm::errs() << "   FLOAT CONST VALUE " << buf << '\n';
+    } else 
+        return true;
+
     parsing_state.skip_children = 1;
     return true;
 }
