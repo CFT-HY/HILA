@@ -1,4 +1,4 @@
-N                   64
+N                   128
 m                   3
 epsilon             1.0
 seed                1010

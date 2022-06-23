@@ -13,6 +13,7 @@ struct timer_value {
     int64_t count; // how many times this timer has been used (start - stop interval)
 };
 
+// clang-format off
 ////////////////////////////////////////////////////////////////
 ///
 /// Timers are used to time recurring events.  Usage:
@@ -36,17 +37,18 @@ struct timer_value {
 ///
 /// Other time related functions:
 ///       double gettime();                    - returns the time in seconds from program
-///       start void timestamp("message");           - prints msg + current date+time +
-///       time from start
+///       start void timestamp("message");     - prints msg + current date+time +
+///                                              time from start
 ///
 ///       void setup_timelimit(long seconds);  - sets the cpu time limit (see
-///       time_to_exit()) bool time_to_exit();                 - to be called periodically
-///       at a suitable spot in
+///                                              time_to_exit()) 
+///       bool time_to_exit();                 - to be called periodically
+///                                              at a suitable spot in
 ///                                              the program; returns true if the program
 ///                                              should exit now.
 ///
 ////////////////////////////////////////////////////////////////
-
+// clang-format on
 
 
 class timer {

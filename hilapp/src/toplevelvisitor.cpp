@@ -725,34 +725,41 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
     QualType ty = DRE->getType().getCanonicalType();
     const Type *typtr = ty.getTypePtr();
 
-    // llvm::errs() << "GOT CONST, type " << ty.getAsString() << "  expr " << get_stmt_str(E)
+    // llvm::errs() << "GOT CONST, type " << ty.getAsString() << "  expr " <<
+    // get_stmt_str(E)
     //              << "  VALUEKIND " << val.getKind() << '\n';
 
     // leave enums as they are -- assume that defined elsewhere!
     if (typtr->isEnumeralType())
         return true;
 
-    
+
     if (typtr->isIntegerType()) {
         // replace ints by numbers - don't trust APValue val above, there seems to be a
         // bug
 
-        llvm::Optional<llvm::APSInt> ival = DRE->getIntegerConstantExpr(*Context);
-        if (ival) {
-            // Value is fine
-            std::string value = std::to_string(ival.getValue().getExtValue());
-            writeBuf->replace(DRE->getSourceRange(), value);
+        llvm::APSInt result;
+#if defined(__clang_major__) && (__clang_major__ <= 11)
+        DRE->isIntegerConstantExpr(result, *Context);
+#else
+        auto res = DRE->getIntegerConstantExpr(*Context);
+        result = res.getValue();
+#endif
 
-            // llvm::errs() << "   INT CONST VALUE IS " << value << '\n';
-        }
+        // Value is fine
+        std::string value = std::to_string(result.getExtValue());
+        writeBuf->replace(DRE->getSourceRange(), value);
+
+        // llvm::errs() << "   INT CONST VALUE IS " << value << '\n';
+
 
     } else if (typtr->isFloatingType()) {
         char buf[200];
-        std::snprintf(buf,199,"%.18g",val.getFloat().convertToDouble());
-        writeBuf->replace(DRE->getSourceRange(),buf);
+        std::snprintf(buf, 199, "%.18g", val.getFloat().convertToDouble());
+        writeBuf->replace(DRE->getSourceRange(), buf);
 
         // llvm::errs() << "   FLOAT CONST VALUE " << buf << '\n';
-    } else 
+    } else
         return true;
 
     parsing_state.skip_children = 1;

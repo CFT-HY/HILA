@@ -435,19 +435,22 @@ void scaling_sim::get_Jk(Direction d, Field<Complex<real_t>> &ft) {
 
     Field<Complex<real_t>> j;
     onsites(ALL) {
-        j[X] = imag(phi[X] * (phi[X + d] - phi[X - d])) / (2 * config.dx);
     }
-    FFT_field(j, ft);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Init uetcs here
+// 
 
 void scaling_sim::initialize_uetc() {
 
+    // Calculate initial state of UETC correlators
+    //  Js = \hat k J,  where J_i = Im(phi * d_i phi)
+    //  
+
     Field<Complex<real_t>> jk[NDIM];
     foralldir(d) 
-        get_Jk(d, jk[d]);
+        jk[d][ALL] = imag(phi[X].dagger() * (phi[X + d] - phi[X - d])) / (2 * config.dx);
 
     onsites(ALL) {
         auto k = X.coordinates().convert_to_k();
@@ -459,6 +462,8 @@ void scaling_sim::initialize_uetc() {
         else
             Js[X] = 0;
     }
+
+    Js = Js.FFT();
 
     if (hila::myrank() == 0) 
         uetc_out.open(config.uetc_filename, std::ios::out);
@@ -483,12 +488,12 @@ void scaling_sim::measure_uetc() {
     // calculate correlator
     J0[ALL] *= Js[X].conj();
 
-    auto uetc = b.bin_k_field(J0);
+    auto uetc = b.bin_k_field_squarenorm(J0);
 
     if (hila::myrank() == 0) {
         for (int i = 0; i < bins; i++) {
             if (b.count(i) > 0)
-                uetc_out << i << ' ' << b.k(i) << ' ' << uetc[i].real()/b.count(i) 
+                uetc_out << i << ' ' << b.k(i) << ' ' << uetc[i] << ' ' << b.count(i) 
                          << '\n';
         }
     }
