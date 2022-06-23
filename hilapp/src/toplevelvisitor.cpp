@@ -324,7 +324,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     if (contains_random(lfe.fullExpr)) {
         reportDiag(DiagnosticsEngine::Level::Error,
                    lfe.fullExpr->getSourceRange().getBegin(),
-                   "Field reference cannot contain random number generator");
+                   "Field reference cannot call a random number generator");
     }
 
     field_ref_list.push_back(lfe);
@@ -838,6 +838,9 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     check_addrofops_and_refs(ls); // scan through the full loop again
     check_field_ref_list();
     process_loop_functions(); // revisit functions when vars are fully resolved
+
+    if (!loop_info.contains_random) 
+        loop_info.contains_random = contains_random(ls);
 
     // check here also if conditionals are site dependent through var dependence
     // because var_info_list was checked above, once is enough
