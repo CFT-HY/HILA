@@ -26,11 +26,35 @@
 # LLVM_SRC_PATH := /usr/lib/llvm-8
 
 # If it is a system distribution (linux), then llvm-config should be installed:
+# if LLVM_VERSION not given, try first llvm-config and 
+# then llvm-config-$(LLVM_DEFAULT_VERSION)
+
+LLVM_DEFAULT_VERSION := 14
 
 ifdef LLVM_VERSION 
-	LLVM_PATH := $(shell llvm-config-$(LLVM_VERSION) --prefix)
+
+ifeq (, $(shell which llvm-config-$(LLVM_VERSION)))
+$(error llvm-config-$(LLVM_VERSION) not found along PATH!)
 else
-	LLVM_PATH := $(shell llvm-config --prefix)
+LLVM_PATH := $(shell llvm-config-$(LLVM_VERSION) --prefix)
+endif
+
+else   
+# Now LLVM_VERSION not set
+# Try plain llvm-config
+ifneq (, $(shell which llvm-config))
+LLVM_PATH := $(shell llvm-config --prefix)
+else
+
+# llvm-config not found, next step...
+$(info "llvm-config" not found along PATH, trying llvm-config-$(LLVM_DEFAULT_VERSION) )
+ifeq (, $(shell which llvm-config-$(LLVM_DEFAULT_VERSION)))
+$(error llvm-config or llvm-config-$(LLVM_DEFAULT_VERSION) not found along PATH!)
+else
+LLVM_PATH := $(shell llvm-config-$(LLVM_DEFAULT_VERSION) --prefix)
+endif
+
+endif
 endif
 
 LLVM_BIN_PATH := $(LLVM_PATH)/bin
