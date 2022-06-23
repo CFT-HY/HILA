@@ -5,6 +5,7 @@ settings.json
 applications/*/build/*
 unit_test/build/*
 unit_test/build/tests
+unit_test/build/catch_main
 *.cpt
 *.o
 *~

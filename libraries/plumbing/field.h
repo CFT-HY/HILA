@@ -873,7 +873,7 @@ class Field {
 // OK
 /// operator +
 template <typename A, typename B>
-auto operator+(Field<A> &lhs, Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
+auto operator+(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
     Field<hila::type_plus<A, B>> tmp;
     tmp[ALL] = lhs[X] + rhs[X];
     return tmp;
