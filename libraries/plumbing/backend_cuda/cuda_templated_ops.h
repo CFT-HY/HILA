@@ -160,6 +160,7 @@ void gpu_multireduce_product(std::vector<T> vector, T *d_array, int N) {
 /// atomically.  Returns *a.
 
 #if __CUDA_ARCH__ < 600
+
 __device__ inline double atomic_Add(double *dp, double v) {
 
     unsigned long long int *dp_ull = (unsigned long long int *)dp;
@@ -182,6 +183,13 @@ __device__ inline double atomic_Add(double *dp, double v) {
 }
 
 #endif
+
+/// Float atomicAdd should exist
+
+__device__ inline float atomic_Add(float *dp, float v) {
+    return atomicAdd(dp, v);
+}
+
 
 /// Do addition for "long long" -sized int type, which in cuda is 64 bits
 /// Cuda includes a ULL atomicAdd, which is used here.  Signed

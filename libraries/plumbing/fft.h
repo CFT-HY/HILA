@@ -22,10 +22,10 @@
 /// convert lattice vector to to k-vector (needs lattice->size() so defined in fft.h)
 /// Note: mods the CoordinateVector to lattice
 template <>
-inline Vector<NDIM,double> CoordinateVector::convert_to_k() const {
+inline Vector<NDIM, double> CoordinateVector::convert_to_k() const {
     Vector<NDIM, double> k;
     CoordinateVector mv = (*this).mod(lattice->size());
-    foralldir(d) {
+    foralldir (d) {
         int n = mv.e(d);
         if (n > lattice->size(d) / 2)
             n -= lattice->size(d);
@@ -56,7 +56,7 @@ extern std::vector<pencil_struct> hila_pencil_comms[NDIM];
 /// Returns element_offset and sets offset and nmin vectors
 
 size_t pencil_get_buffer_offsets(const Direction dir, const size_t elements,
-                              CoordinateVector &offset, CoordinateVector &nmin);
+                                 CoordinateVector &offset, CoordinateVector &nmin);
 
 /// Initialize fft direction - defined in fft.cpp
 void init_pencil_direction(Direction d);
@@ -100,10 +100,11 @@ class hila_fft {
         local_volume = lattice->mynode.volume();
 
         // init dirs here at one go
-        foralldir(d) init_pencil_direction(d);
+        foralldir (d)
+            init_pencil_direction(d);
 
         buf_size = 1;
-        foralldir(d) {
+        foralldir (d) {
             if (pencil_recv_buf_size[d] > buf_size)
                 buf_size = pencil_recv_buf_size[d];
         }
@@ -116,7 +117,6 @@ class hila_fft {
         //        if (buf_size > 0)
         //            fft_wrk_buf = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) *
         //            elements);
-
     }
 
     ~hila_fft() {
@@ -218,7 +218,8 @@ class hila_fft {
         // Build vector offset, which encodes where the data should be written
         CoordinateVector offset, nmin;
 
-        const size_t elem_offset = pencil_get_buffer_offsets(dir, elements, offset, nmin);
+        const size_t elem_offset =
+            pencil_get_buffer_offsets(dir, elements, offset, nmin);
 
         cmplx_t *rb = receive_buf;
 
@@ -300,36 +301,37 @@ class hila_fft {
         bool first_dir = true;
         Direction prev_dir;
 
-        foralldir(dir) if (directions[dir]) {
+        foralldir (dir)
+            if (directions[dir]) {
 
-            setup_direction(dir);
+                setup_direction(dir);
 
-            if (first_dir) {
-                collect_data(input);
-                // in_p = &result;
-            } else {
-                reshuffle_data(prev_dir);
+                if (first_dir) {
+                    collect_data(input);
+                    // in_p = &result;
+                } else {
+                    reshuffle_data(prev_dir);
+                }
+
+                gather_data();
+
+                if (!only_reflect)
+                    transform();
+                else
+                    reflect();
+
+                scatter_data();
+
+                cleanup();
+
+                // fft_save_result( result, dir, receive_buf );
+
+                prev_dir = dir;
+                first_dir = false;
+
+                // swap the pointers
+                swap_buffers();
             }
-
-            gather_data();
-
-            if (!only_reflect)
-                transform();
-            else
-                reflect();
-
-            scatter_data();
-
-            cleanup();
-
-            // fft_save_result( result, dir, receive_buf );
-
-            prev_dir = dir;
-            first_dir = false;
-
-            // swap the pointers
-            swap_buffers();
-        }
 
         save_result(result);
 
@@ -410,23 +412,125 @@ inline void FFT_field(const Field<T> &input, Field<T> &result,
 //////////////////////////////////////////////////////////////////////////////////
 ///
 /// Field method for performing FFT
-///   a.FFT();   does in-place transform of field a
+///   res = a.FFT();
 /// fftdir:  fft_direction::forward (default)  or fft_direction::back
 //////////////////////////////////////////////////////////////////////////////////
 
+
 template <typename T>
-void Field<T>::FFT(fft_direction fftdir) {
-    FFT_field(*this, *this, fftdir);
+Field<T> Field<T>::FFT(const CoordinateVector &dirs, fft_direction fftdir) const {
+    Field<T> res;
+    FFT_field(*this, res, dirs, fftdir);
+    return res;
+}
+
+template <typename T>
+Field<T> Field<T>::FFT(fft_direction fftdir) const {
+    CoordinateVector cv;
+    cv.fill(true);
+    return FFT(cv, fftdir);
 }
 
 
 //////////////////////////////////////////////////////////////////////////////////
-///
-/// FFT_complex_to_real
+/// FFT_real_to_complex:
+/// Field must be a real-valued field, result is a complex-valued field of the same type
+/// Implemented just by doing a FFT with a complex field with im=0;
+/// fft_direction::back gives a complex conjugate of the forward transform
+/// Result is  f(-x) = f(L - x) = f(x)^*
 //////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-void FFT_complex_to_real(Field<T> &cf) {}
+Field<Complex<hila::number_type<T>>>
+Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
+
+    static_assert(
+        hila::is_arithmetic<T>::value,
+        "FFT_real_to_complex can be applied only to Field<real-type> variable");
+
+    Field<Complex<T>> cf;
+    cf[ALL] = Complex((*this)[X], 0.0);
+    return cf.FFT(fftdir);
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+/// FFT_complex_to_real;
+/// Field must be a complex-valued field, result is a real field of the same number type
+/// Not optimized, should not be used on a hot path
+///
+/// Because the complex field must have the property f(-x) = f(L-x) = f(x)^*, only
+/// half of the values in input field are significant, the routine does the appropriate
+/// symmetrization.
+///
+/// Routine FFT_complex_to_real_loc(CoordinateVector cv) gives the significant values at
+/// location cv:
+///   = +1  significant complex value,
+///   =  0  significant real part, imag ignored
+///   = -1  value ignored here
+/// Example: in 2d 8x8 lattice the sites are:  (* = (0,0), value 0)
+///
+///   - + + + - - - -                          - - - 0 + + + 0
+///   - + + + - - - -                          - - - + + + + +
+///   - + + + - - - -    after centering       - - - + + + + +
+///   0 + + + 0 - - -    (0,0) to center       - - - + + + + +
+///   + + + + + - - -    ----------------->    - - - * + + + 0
+///   + + + + + - - -                          - - - - + + + -
+///   + + + + + - - -                          - - - - + + + -
+///   * + + + 0 - - -                          - - - - + + + -
+///
+//////////////////////////////////////////////////////////////////////////////////
+
+inline int FFT_complex_to_real_loc(const CoordinateVector &cv) {
+
+    // foralldir continues only if cv[d] == 0 or cv[d] == size(d)/2
+    foralldir (d) {
+        if (cv[d] > 0 && cv[d] < lattice->size(d) / 2)
+            return 1;
+        if (cv[d] > lattice->size(d) / 2)
+            return -1;
+    }
+    // we get here only if all coords are 0 or size(d)/2
+    return 0;
+}
+
+
+template <typename T>
+Field<hila::number_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) const {
+
+    static_assert(
+        hila::is_complex<T>::value,
+        "FFT_complex_to_real can be applied only to Field<Complex<>> type variable");
+
+    // first, do a full reflection of the field, giving rf(x) = f(L-x) = "f(-x)"
+    auto rf = this->reflect();
+    // And symmetrize the field appropriately - can use rf
+    onsites(ALL) {
+        int type = FFT_complex_to_real_loc(X.coordinates());
+        if (type == 1) {
+            rf[X] = (*this)[X];
+        } else if (type == -1) {
+            rf[X] = rf[X].conj();
+        } else {
+            rf[X].real() = (*this)[X].real();
+            rf[X].imag() = 0;
+        }
+    }
+
+    FFT_field(rf, rf, fftdir);
+    
+    double ims = 0;
+    double rss = 0;
+    onsites(ALL) {
+        ims += ::squarenorm(rf[X].imag());
+        rss += ::squarenorm(rf[X].real());
+    }
+
+    output0 << "RES IS " << rss << "   IMS IS " << ims << '\n';
+
+    Field<hila::number_type<T>> res;
+    onsites(ALL) res[X] = rf[X].real();
+    return res;
+}
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -435,7 +539,7 @@ void FFT_complex_to_real(Field<T> &cf) {}
 /// TODO: refactorise so that there is separate "make columns" class!
 
 template <typename T>
-Field<T> Field<T>::reflect(const CoordinateVector &dirs) {
+Field<T> Field<T>::reflect(const CoordinateVector &dirs) const {
 
     constexpr int elements = 1;
 
@@ -448,7 +552,7 @@ Field<T> Field<T>::reflect(const CoordinateVector &dirs) {
 }
 
 template <typename T>
-Field<T> Field<T>::reflect() {
+Field<T> Field<T>::reflect() const {
 
     CoordinateVector c;
     c.fill(true);
@@ -456,14 +560,13 @@ Field<T> Field<T>::reflect() {
 }
 
 template <typename T>
-Field<T> Field<T>::reflect(Direction dir) {
+Field<T> Field<T>::reflect(Direction dir) const {
 
     CoordinateVector c;
     c.fill(false);
     c[dir] = true;
     return reflect(c);
 }
-
 
 
 #endif

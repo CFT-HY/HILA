@@ -245,6 +245,10 @@ void hila_fft<cmplx_t>::scatter_data() {
 
 ///////////////////////////////////////////////////////////////////////////////////
 /// Separate reflect operation
+/// Reflect flips the coordinates so that negative direction becomes positive,
+/// and x=0 plane remains,
+/// r(x) <- f(L - x)  -  note that x == 0 layer is as before
+/// r(0) = f(0), r(1) = f(L-1), r(2) = f(L-2)  ...
 ///////////////////////////////////////////////////////////////////////////////////
 
 template <typename cmplx_t>
@@ -268,8 +272,8 @@ inline void hila_fft<cmplx_t>::reflect() {
         }
 
         // reflect
-        for (int j = 0; j < length / 2; j++) {
-            std::swap(buf[j], buf[length - 1 - j]);
+        for (int j = 1; j < length / 2; j++) {
+            std::swap(buf[j], buf[length - j]);
         }
 
         cp = buf;

@@ -52,6 +52,8 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s) {
     ci.call = Call;
     ci.funcdecl = D;
     ci.contains_random = contains_rng;
+    if (contains_rng)
+        loop_info.contains_random = true;
 
     /// add to function calls to be checked ...
     loop_function_calls.push_back(ci);
@@ -309,8 +311,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
                 // following is called only if this==g_TopLevelVisitor, this just makes
                 // it compile
                 bool is_assign = !is_const;
-                g_TopLevelVisitor->handle_field_X_expr(
-                    E, is_assign, (!is_const && !out_only), true);
+                g_TopLevelVisitor->handle_field_X_expr(E, is_assign,
+                                                       (!is_const && !out_only), true);
 
                 sitedep = true;
 
@@ -322,7 +324,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
 
                 // some other variable reference
                 DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
-                var_info *vip = handle_var_ref(DRE, !(is_const || const_function), "method", nullptr);
+                var_info *vip = handle_var_ref(DRE, !(is_const || const_function),
+                                               "method", nullptr);
 
                 if (vip != nullptr) {
                     // site dep is additive
@@ -550,7 +553,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             bool replace_this = true;
 
             std::string l_lattice;
-            
+
             if (target.kernelize)
                 l_lattice = "d_lattice.";
             else

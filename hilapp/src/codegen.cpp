@@ -82,8 +82,10 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     std::stringstream code;
     code << "{\n";
 
-    // basic set up: 1st loop_info, if it is known const set it up,
-    // else copy it to a variable name
+
+    if (loop_info.contains_random) {
+        code << "hila::check_that_rng_is_initialized();\n";
+    }
 
     const std::string t = loopBuf.dump();
 

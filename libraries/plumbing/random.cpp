@@ -35,12 +35,16 @@ double hila::host_random() {
 
 /////////////////////////////////////////////////////////////////////////
 
+static bool rng_is_intialized = false;
+
 /// Seed random number generators
 /// Seed is shuffled so that different nodes
 /// get different rng seeds.  If seed == 0,
 /// generate seed using the time() -function.
 
 void hila::seed_random(uint64_t seed) {
+
+    rng_is_intialized = true;
 
 #ifndef SITERAND
 
@@ -107,8 +111,6 @@ void hila::seed_random(uint64_t seed) {
 }
 
 
-
-
 ///////////////////////////////////////////////////////////////////
 /// gaussian rng generation routines
 /// By default these give random numbers with variance 1.0, i.e.
@@ -161,3 +163,15 @@ double hila::gaussrand() {
 }
 
 #endif
+
+
+///////////////////////////////////////////////////////////////
+/// RNG initialization check - emitted on loops
+///////////////////////////////////////////////////////////////
+
+void hila::check_that_rng_is_initialized() {
+    if (!rng_is_intialized) {
+        output0 << "Error: trying to use random numbers without initializing the generator\n";
+        hila::terminate(1);
+    }
+}

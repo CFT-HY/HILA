@@ -279,8 +279,9 @@ class Field {
         /// Gather a list of elements to a single node
         void gather_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                              int root = 0) const;
-        void scatter_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
-                           int root = 0);
+        void scatter_elements(T *buffer,
+                              const std::vector<CoordinateVector> &coord_list,
+                              int root = 0);
 
 #if defined(USE_MPI)
 
@@ -363,7 +364,7 @@ class Field {
     Field(const Field<A> &other) {
         fs = nullptr; // this is probably unnecessary
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
-        
+
         (*this)[ALL] = other[X];
     }
 
@@ -425,7 +426,7 @@ class Field {
         }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir(dir) {
+        foralldir (dir) {
             fs->boundary_condition[dir] = BoundaryCondition::PERIODIC;
             fs->boundary_condition[-dir] = BoundaryCondition::PERIODIC;
         }
@@ -587,7 +588,7 @@ class Field {
 
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir(dir) {
+        foralldir (dir) {
             set_boundary_condition(dir, rhs.get_boundary_condition(dir));
         }
     }
@@ -817,28 +818,36 @@ class Field {
     }
 
     // Fourier transform declarations
-    void FFT(fft_direction fdir = fft_direction::forward);
+    Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
+    Field<T> FFT(const CoordinateVector &dirs,
+                 fft_direction fdir = fft_direction::forward) const;
+
+    Field<Complex<hila::number_type<T>>>
+    FFT_real_to_complex(fft_direction fdir = fft_direction::forward) const;
+    Field<hila::number_type<T>>
+    FFT_complex_to_real(fft_direction fdir = fft_direction::forward) const;
+
 
     // Reflect the field along all or 1 coordinate
-    Field<T> reflect();
-    Field<T> reflect(Direction dir);
-    Field<T> reflect(const CoordinateVector & dirs);
+    Field<T> reflect() const;
+    Field<T> reflect(Direction dir) const;
+    Field<T> reflect(const CoordinateVector &dirs) const;
 
     // Writes the Field to disk
-    void write_to_stream(std::ofstream &outputfile);
-    void write_to_file(const std::string &filename);
+    void write_to_stream(std::ofstream &outputfile) const;
+    void write_to_file(const std::string &filename) const;
     void read_from_stream(std::ifstream &inputfile);
     void read_from_file(const std::string &filename);
 
     void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
-                         const CoordinateVector &cmax, int precision = 6);
+                         const CoordinateVector &cmax, int precision = 6) const;
     void write_subvolume(const std::string &filenname, const CoordinateVector &cmin,
-                         const CoordinateVector &cmax, int precision = 6);
+                         const CoordinateVector &cmax, int precision = 6) const;
 
     void write_slice(std::ofstream &outputfile, const CoordinateVector &slice,
-                     int precision = 6);
+                     int precision = 6) const;
     void write_slice(const std::string &outputfile, const CoordinateVector &slice,
-                     int precision = 6);
+                     int precision = 6) const;
 
     // and sum reduction
     T sum(Parity par = Parity::all, bool allreduce = true) const;
@@ -868,9 +877,9 @@ class Field {
 // OK
 /// operator +
 template <typename A, typename B>
-auto operator+(Field<A> &lhs, Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
+auto operator+(const Field<A> &l, const Field<B> &r) -> Field<hila::type_plus<A, B>> {
     Field<hila::type_plus<A, B>> tmp;
-    tmp[ALL] = lhs[X] + rhs[X];
+    tmp[ALL] = l[X] + r[X];
     return tmp;
 }
 
@@ -890,10 +899,9 @@ auto operator+(const Field<A> &lhs, const B &rhs) -> Field<hila::type_plus<A, B>
 
 /// operator -
 template <typename A, typename B>
-auto operator-(const Field<A> &lhs, const Field<B> &rhs)
-    -> Field<hila::type_minus<A, B>> {
+auto operator-(const Field<A> &l, const Field<B> &r) -> Field<hila::type_minus<A, B>> {
     Field<hila::type_minus<A, B>> tmp;
-    tmp[ALL] = lhs[X] - rhs[X];
+    tmp[ALL] = l[X] - r[X];
     return tmp;
 }
 
@@ -913,10 +921,9 @@ auto operator-(const Field<A> &lhs, const B &rhs) -> Field<hila::type_minus<A, B
 
 /// operator *
 template <typename A, typename B>
-auto operator*(const Field<A> &lhs, const Field<B> &rhs)
-    -> Field<hila::type_mul<A, B>> {
+auto operator*(const Field<A> &l, const Field<B> &r) -> Field<hila::type_mul<A, B>> {
     Field<hila::type_mul<A, B>> tmp;
-    tmp[ALL] = lhs[X] * rhs[X];
+    tmp[ALL] = l[X] * r[X];
     return tmp;
 }
 
@@ -936,10 +943,9 @@ auto operator*(const Field<A> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>>
 
 /// operator /
 template <typename A, typename B>
-auto operator/(const Field<A> &lhs, const Field<B> &rhs)
-    -> Field<hila::type_div<A, B>> {
+auto operator/(const Field<A> &l, const Field<B> &r) -> Field<hila::type_div<A, B>> {
     Field<hila::type_div<A, B>> tmp;
-    tmp[ALL] = lhs[X] / rhs[X];
+    tmp[ALL] = l[X] / r[X];
     return tmp;
 }
 
@@ -977,7 +983,8 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
     Parity par_s;
 
     int len = 0;
-    foralldir(d) len += abs(rem[d]);
+    foralldir (d)
+        len += abs(rem[d]);
 
     // no move, just copy field
     if (len == 0) {
@@ -994,12 +1001,13 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
     // is this already gathered from one of the dirs in v?
     bool found_dir = false;
     Direction mdir;
-    foralldir(d) {
+    foralldir (d) {
         if (rem[d] > 0 && gather_status(par_s, d) != gather_status_t::NOT_DONE) {
             mdir = d;
             found_dir = true;
             break;
-        } else if (rem[d] < 0 && gather_status(par_s, -d) != gather_status_t::NOT_DONE) {
+        } else if (rem[d] < 0 &&
+                   gather_status(par_s, -d) != gather_status_t::NOT_DONE) {
             mdir = -d;
             found_dir = true;
             break;
@@ -1008,7 +1016,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
 
     if (!found_dir) {
         // now did not find a 'ready' dir. Take the 1st available
-        foralldir(d) {
+        foralldir (d) {
             if (rem[d] > 0) {
                 mdir = d;
                 break;
@@ -1044,7 +1052,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
     rem = rem - mdir;
     par_s = opp_parity(par_s);
 
-    foralldir(d) {
+    foralldir (d) {
         if (rem[d] != 0) {
             mdir = (rem[d] > 0) ? d : -d;
 
@@ -1079,7 +1087,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
         if
     }
     r2 = *this;
-    foralldir(d) {
+    foralldir (d) {
         if (abs(v[d]) > 0) {
             Direction dir;
             if (v[d] > 0)

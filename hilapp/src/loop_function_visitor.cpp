@@ -298,6 +298,7 @@ class loopFunctionVisitor : public GeneralVisitor,
         ci.call = Call;
         ci.funcdecl = D;
         ci.contains_random = contains_rng;
+        if (contains_rng) loop_info.contains_random = true;
 
         /// add to function calls to be checked ...
         loop_function_calls.push_back(ci);

@@ -23,6 +23,9 @@ double gaussrand();
 #pragma hila contains_rng loop_function
 double gaussrand2(double &out2);
 
+// do what the name says
+void check_that_rng_is_initialized();
+
 } // namespace hila
 
 

@@ -125,6 +125,12 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
         exit(1);
     }
 
+    if (is_assign && lfe.nameExpr->getType().isConstQualified()) {
+        // llvm::errs() << " ******** CANNOT ASSIGN TO A CONST QUAL VAR, NAME " <<
+        // get_stmt_str(lfe.nameExpr) << '\n';
+        is_assign = false;
+    }
+
     // Check if the expression is already handled
     for (field_ref r : field_ref_list)
         if (r.fullExpr == lfe.fullExpr) {
@@ -318,7 +324,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     if (contains_random(lfe.fullExpr)) {
         reportDiag(DiagnosticsEngine::Level::Error,
                    lfe.fullExpr->getSourceRange().getBegin(),
-                   "Field reference cannot contain random number generator");
+                   "Field reference cannot call a random number generator");
     }
 
     field_ref_list.push_back(lfe);
@@ -692,8 +698,7 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign,
 ///  Handle constant expressions referred to in loops
 ///  Const reference is left as is, EXCEPT if:
 ///   - target is kernelized
-///   - const is defined outside loop body but after the point where
-///     kernels are included
+///   - const is defined outside loop body
 ///  If this is true, const ref is substituted with the const value
 ///  This may cause problems if types are different: e.g. const is enum value,
 ///  and it is substituted with an int literal.  Try to help with type casting!
@@ -705,41 +710,59 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
     if (!E->isCXX11ConstantExpr(*Context, &val, nullptr))
         return false; // nothing
 
+    // no need to do anything if not kernelized
+    if (!target.kernelize)
+        return true;
+
     E = E->IgnoreImplicit();
-    // If it is not a declrefexpr continue to next node in ast
+    // If it is not a declrefexpr it is probably a literal number.
+    // Continue to next node in ast
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
     if (DRE == nullptr)
         return true;
 
-    SourceLocation sl = DRE->getDecl()->getSourceRange().getBegin();
-    if (sl.isValid()) {
-        if (get_FileId(sl) == get_FileId(global.location.loop)) {
+    // what is the type of the const?
+    QualType ty = DRE->getType().getCanonicalType();
+    const Type *typtr = ty.getTypePtr();
 
-            if (sl < global.location.loop && sl > global.location.kernels) {
+    // llvm::errs() << "GOT CONST, type " << ty.getAsString() << "  expr " <<
+    // get_stmt_str(E)
+    //              << "  VALUEKIND " << val.getKind() << '\n';
 
-                // what is the type of the const?
-                QualType ty = DRE->getType().getCanonicalType();
-                std::string typestr = ty.getAsString();
+    // leave enums as they are -- assume that defined elsewhere!
+    if (typtr->isEnumeralType())
+        return true;
 
-                // replace int const expr by the value
-                if (val.isInt()) {
-                    writeBuf->replace(DRE->getSourceRange(),
-                                      std::to_string(val.getInt().getExtValue()));
 
-                } else if (val.isFloat()) {
-                    writeBuf->replace(DRE->getSourceRange(),
-                                      std::to_string(val.getFloat().convertToDouble()));
-                } else {
-                    // Not int or float, retunr
-                    return true;
-                }
+    if (typtr->isIntegerType()) {
+        // replace ints by numbers - don't trust APValue val above, there seems to be a
+        // bug
 
-                parsing_state.skip_children = 1;
-                return true;
-            }
-        }
-    }
+        llvm::APSInt result;
+#if defined(__clang_major__) && (__clang_major__ <= 11)
+        DRE->isIntegerConstantExpr(result, *Context);
+#else
+        auto res = DRE->getIntegerConstantExpr(*Context);
+        result = res.getValue();
+#endif
 
+        // Value is fine
+        std::string value = std::to_string(result.getExtValue());
+        writeBuf->replace(DRE->getSourceRange(), value);
+
+        // llvm::errs() << "   INT CONST VALUE IS " << value << '\n';
+
+
+    } else if (typtr->isFloatingType()) {
+        char buf[200];
+        std::snprintf(buf, 199, "%.18g", val.getFloat().convertToDouble());
+        writeBuf->replace(DRE->getSourceRange(), buf);
+
+        // llvm::errs() << "   FLOAT CONST VALUE " << buf << '\n';
+    } else
+        return true;
+
+    parsing_state.skip_children = 1;
     return true;
 }
 
@@ -815,6 +838,9 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     check_addrofops_and_refs(ls); // scan through the full loop again
     check_field_ref_list();
     process_loop_functions(); // revisit functions when vars are fully resolved
+
+    if (!loop_info.contains_random) 
+        loop_info.contains_random = contains_random(ls);
 
     // check here also if conditionals are site dependent through var dependence
     // because var_info_list was checked above, once is enough
@@ -2253,6 +2279,9 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
 
         // llvm::errs() << "new func:\n" << funcBuf.dump() <<'\n';
         // visit the body
+        SourceLocation save_kernel = global.location.kernels;
+        global.location.kernels = insertion_point;
+
         TraverseStmt(f->getBody());
 
         // llvm::errs() << "new func again:\n" << funcBuf.dump() <<'\n';
@@ -2265,7 +2294,9 @@ void TopLevelVisitor::specialize_function_or_method(FunctionDecl *f) {
         // buffer is not necessarily in toplevelBuf, so:
 
         srcBuf *filebuf = get_file_srcBuf(insertion_point);
-        filebuf->insert(findChar(insertion_point, '\n'), sb.str(), false, true);
+        filebuf->insert(insertion_point, sb.str(), false, true);
+
+        global.location.kernels = save_kernel;
     } else {
         // Now the function has been written before (and not inline)
         // just insert declaration, defined on another compilation unit
@@ -2465,7 +2496,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             }
 
             // set also the kernel insertion point (if needed at all)
-            global.location.kernels = getSourceLocationAtStartOfDecl(parent);
+            // global.location.kernels = getSourceLocationAtStartOfDecl(parent);
 
             // It is still possible that the function is defined further down.
             // If that is the case, we insert the
@@ -2486,7 +2517,7 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             sl = getNextLoc(sl); // skip }
 
             // and the kernel loc too
-            global.location.kernels = getSourceLocationAtStartOfDecl(f);
+            // global.location.kernels = getSourceLocationAtStartOfDecl(f);
         }
 
         if (sl.isInvalid() || srcMgr.isBeforeInTranslationUnit(
@@ -2528,6 +2559,8 @@ TopLevelVisitor::spec_insertion_point(std::vector<const TemplateArgument *> &typ
             }
         }
     }
+    // skip to end of line -- is fine here
+    ip = findChar(ip, '\n');
     return ip;
 }
 
