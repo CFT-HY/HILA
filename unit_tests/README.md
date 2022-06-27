@@ -2,72 +2,97 @@
 
 This is a unit test sweet for HILA software meant to test full functionalities of HILA applications.
 
-The test sweet is built using [GoogleTest](https://google.github.io/googletest/) a c++ unit testing framework. 
-
-## Installing GoogleTest
-
-Building GoogleTest requires cmake:
-
-    sudo apt-get install cmake
-
-Installing GoogleTest from source:
-```bash
-git clone https://github.com/google/googletest.git
-cd googletest
-mkdir build && cd build
-cmake .. -DBUILD_SHARED_LIBS=ON -DINSTALL_GTEST=ON -DCMAKE_INSTALL_PREFIX:PATH=/usr
-make -j8
-sudo make install
-sudo ldconfig
-```
-
-Test that the linker can find gtest libraries:
-
-    ldconfig -p | grep gtest
-
-Output should be:
-
-```bash
-libgtest_main.so.1.11.0 (libc6,x86-64) => /lib/x86_64-linux-gnu/libgtest_main.so.1.11.0
-libgtest_main.so (libc6,x86-64) => /lib/x86_64-linux-gnu/libgtest_main.so
-libgtest.so.1.11.0 (libc6,x86-64) => /lib/x86_64-linux-gnu/libgtest.so.1.11.0
-libgtest.so (libc6,x86-64) => /lib/x86_64-linux-gnu/libgtest.so
-```
+The test sweet is built using [Catch2](https://github.com/catchorg/Catch2/tree/v2.x) a c++ unit testing framework. Catch2 v2.x works by simply adding a header to the c++ project which is in the path `./unit_tests/src/catch.hpp`. This is a very light weight approach and requires zero installation from user.
 
 ## Running tests
 
 Simply compile and run
 
 ```bash
-make -j4 example_test
-./build/example_test
+make -j4
+./build/catch_main
 ```
 
-Example output:
+Example output with all tests passing:
 
-Note that the test is designed to fail for example purposes
+```
+===============================================================================
+All tests passed (36 assertions in 17 test cases)
+```
 
-```bash
-[==========] Running 2 tests from 1 test suite.
-[----------] Global test environment set-up.
-[----------] 2 tests from LatticeTest
-[ RUN      ] LatticeTest.Size
-[       OK ] LatticeTest.Size (0 ms)
-[ RUN      ] LatticeTest.SizeFail
-build/tests.cpt:1912: Failure
-Expected equality of these values:
-  lattice->volume()
-    Which is: 16777216
-  255*256*256
-    Which is: 16711680
-[  FAILED  ] LatticeTest.SizeFail (0 ms)
-[----------] 2 tests from LatticeTest (0 ms total)
+For more verbose output run
 
-[----------] Global test environment tear-down
-[==========] 2 tests from 1 test suite ran. (0 ms total)
-[  PASSED  ] 1 test.
-[  FAILED  ] 1 test, listed below:
-[  FAILED  ] LatticeTest.SizeFail
+    ./build/catch_main --success
 
- 1 FAILED TEST
+## Selecting specific tests
+
+To list all tests run:
+
+    ./build/catch_main -l
+
+To list all tags run:
+
+    ./biuld/catch_main -t
+
+If you want to select a specific test, for example testing field assignment from another field (./unit_tests/src/test_field.cpp):
+
+```c++
+...
+  void fill_dummy_field() {
+        onsites(ALL) this->dummy_field[X] = hila::random();
+    }
+...
+TEST_CASE_METHOD(FieldTest, "Assignment from field", "[Assignment]") {
+    Field<MyType> temporary_field;
+    fill_dummy_field();
+    temporary_field = dummy_field;
+    REQUIRE(temporary_field == dummy_field);
+}
+```
+
+One can run:
+
+    ./build/catch_main "Assignment from field" --success
+
+
+```
+-------------------------------------------------------------------------------
+Assignment from field
+-------------------------------------------------------------------------------
+build/test_field.cpt:7050
+...............................................................................
+
+build/test_field.cpt:7054: PASSED:
+  REQUIRE( temporary_field == dummy_field )
+with expansion:
+  {?} == {?}
+```
+
+If you want to select all tests under the tag `[Assignment]` then run:
+
+    ./build/catch_main [Assignment]
+
+```
+Filters: [Assignment]
+===============================================================================
+All tests passed (5 assertions in 5 test cases)
+```
+
+To list all tests under the `[Assignment]` tag run:
+
+    ./build/catch_main [Assignment] -l
+
+```
+Matching test cases:
+  Assignment from field
+      [Assignment]
+  Assignment from value
+      [Assignment]
+  Assignment from zero
+      [Assignment]
+  Get element
+      [Assignment]
+  Set element
+      [Assignment]
+5 matching test cases
 ```
