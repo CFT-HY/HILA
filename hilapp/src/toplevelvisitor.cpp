@@ -1488,6 +1488,7 @@ void TopLevelVisitor::check_var_info_list() {
             // Check if product reduction is done for legal variables
             if (vi.reduction_type == reduction::PRODUCT) {
                 legal_types default_legal_types;
+                default_legal_types.add_type("class Reduction"); 
                 std::string var_type =
                     vi.decl->getType().getCanonicalType().getAsString();
                 const bool allowed_reduction_type =

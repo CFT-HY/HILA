@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <iostream>
 
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
@@ -212,7 +213,9 @@ struct legal_types {
     };
 
     bool check_if_legal(std::string is_legal_type) {
-        if (std::binary_search(this->vector.begin(), this->vector.end(), is_legal_type)) return true;
+        for (const auto &vector_element : this->vector){
+            if (is_legal_type == vector_element) return true;
+        }
         return false;
     }
 
@@ -221,6 +224,13 @@ struct legal_types {
         std::string vector_as_str;
         for (const auto &vector_element : this->vector) vector_as_str += vector_element + delimiter;
         return vector_as_str.erase(vector_as_str.size()-delimiter.size(),delimiter.size());
+    }
+
+    void add_type(std::string type) {
+        auto temporary(this->vector);
+        for (auto &element : temporary) {
+            this->vector.push_back(type + "<" + element + ">");
+        }
     }
         
 };

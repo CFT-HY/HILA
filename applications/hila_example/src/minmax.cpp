@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
 
     // set up 32^3 lattice
 
-    lattice->setup({128, 256, 256});
+    lattice->setup({128, 128, 128});
 
     // Random numbers are used here - use time to seed
     hila::seed_random(0);
@@ -26,10 +26,11 @@ int main(int argc, char *argv[]) {
     g[{4, 0, 0}] = 1.0;
     g[{1, 1, 31}] = 2.1;
     g[{24,0, 2}] = 2.3;
+    g.set_element(4,{2,2,1});
 
     double val1, val2, val3, val4, val5, val6;
     CoordinateVector loc1, loc2, loc3, loc4, loc5, loc6;
-    for (auto i = 0; i < 1000; i++)
+    for (auto i = 0; i < 1; i++)
     {
         val1 = g.min(ODD, loc1);
         val2 = g.min(EVEN,loc2);
