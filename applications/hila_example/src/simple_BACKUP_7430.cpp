@@ -1,5 +1,9 @@
 #include "hila.h"
+<<<<<<< HEAD
+#include "spectraldensity.h"
+=======
 #include <random>
+>>>>>>> unit_tests_catch2
 
 static_assert(NDIM == 3, "NDIM must be 3 here");
 
@@ -21,6 +25,11 @@ int main(int argc, char *argv[]) {
 
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian_random();
+<<<<<<< HEAD
+    
+=======
+
+>>>>>>> unit_tests_catch2
     // Measure hopping term and f^2
     MyType hopping = 0;
     hopping = 0;

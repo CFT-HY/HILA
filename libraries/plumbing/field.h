@@ -773,6 +773,11 @@ class Field {
         return f;
     }
 
+    bool operator==(const Field<T> &rhs) const {
+        T epsilon = 0;
+        return ((*this)-rhs).squarenorm() <= epsilon;
+    }
+
     hila::number_type<T> squarenorm() const {
         hila::number_type<T> n = 0;
         onsites(ALL) {
@@ -877,7 +882,7 @@ class Field {
 // OK
 /// operator +
 template <typename A, typename B>
-auto operator+(const Field<A> &l, const Field<B> &r) -> Field<hila::type_plus<A, B>> {
+auto operator+(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
     Field<hila::type_plus<A, B>> tmp;
     tmp[ALL] = l[X] + r[X];
     return tmp;
