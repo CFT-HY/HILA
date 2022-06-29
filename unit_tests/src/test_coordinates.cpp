@@ -1,8 +1,6 @@
 #include "hila.h"
 #include "catch.hpp"
 
-using MyType = float;
-
 struct TestCoordinateVector {
     CoordinateVector dummy_vector = {0,0,0};
     Vector<3,int> vector = {0,0,0};
