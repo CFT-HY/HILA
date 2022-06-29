@@ -25,7 +25,7 @@ public:
 
 };
 
-TEST_CASE_METHOD(FieldTest, "Nullptr", "[Create]") {
+TEST_CASE_METHOD(FieldTest, "Field nullptr", "[FieldCreation]") {
     GIVEN("A defined field without constructor") {
         THEN("Field will be unallocated as nullptr") {
             REQUIRE_FALSE(dummy_field.is_allocated());
@@ -34,53 +34,53 @@ TEST_CASE_METHOD(FieldTest, "Nullptr", "[Create]") {
     }
 }
 
-TEST_CASE_METHOD(FieldTest, "Allocation", "[Create]") {
+TEST_CASE_METHOD(FieldTest, "Field allocation", "[FieldCreation]") {
     dummy_field.allocate();
     REQUIRE(dummy_field.is_allocated());
 }
 
-TEST_CASE_METHOD(FieldTest, "Destructor", "[Create]") {
+TEST_CASE_METHOD(FieldTest, "Field destructor", "[FieldCreation]") {
     dummy_field.~Field();
     REQUIRE_FALSE(dummy_field.is_allocated());
 }
 
-TEST_CASE_METHOD(FieldTest, "Scalar constructor", "[Create]") {
+TEST_CASE_METHOD(FieldTest, "Field scalar constructor", "[FieldCreation]") {
     fill_dummy_field(1);
     REQUIRE(temporary_field(1) == dummy_field);
 }
 
-TEST_CASE_METHOD(FieldTest, "Zero constructor", "[Create]") {
+TEST_CASE_METHOD(FieldTest, "Field zero constructor", "[FieldCreation]") {
     fill_dummy_field(0);
     REQUIRE(temporary_field(0) == dummy_field);
 }
 
-TEST_CASE_METHOD(FieldTest, "Copy constructor", "[Create]") {
+TEST_CASE_METHOD(FieldTest, "Field copy constructor", "[FieldCreation]") {
     fill_dummy_field();
     REQUIRE(temporary_field(dummy_field) == dummy_field);
 }
 
-TEST_CASE_METHOD(FieldTest, "Assignment from field", "[Assignment]") {
+TEST_CASE_METHOD(FieldTest, "Field assignment from field", "[FieldAssignment]") {
     Field<MyType> temporary_field;
     fill_dummy_field();
     temporary_field = dummy_field;
     REQUIRE(temporary_field == dummy_field);
 }
 
-TEST_CASE_METHOD(FieldTest, "Assignment from value", "[Assignment]") {
+TEST_CASE_METHOD(FieldTest, "Field assignment from value", "[FieldAssignment]") {
     Field<MyType> temporary_field;
     fill_dummy_field(1);
     temporary_field = 1;
     REQUIRE(temporary_field == dummy_field);
 }
 
-TEST_CASE_METHOD(FieldTest, "Assignment from zero", "[Assignment]") {
+TEST_CASE_METHOD(FieldTest, "Field assignment from zero", "[FieldAssignment]") {
     Field<MyType> temporary_field;
     fill_dummy_field(0);
     temporary_field = 0;
     REQUIRE(temporary_field == dummy_field);
 }
 
-TEST_CASE_METHOD(FieldTest, "Get element", "[Assignment]") {
+TEST_CASE_METHOD(FieldTest, "Field get element", "[FieldAssignment]") {
     Field<MyType> temporary_field;
     fill_dummy_field();
     temporary_field = dummy_field;
@@ -89,7 +89,7 @@ TEST_CASE_METHOD(FieldTest, "Get element", "[Assignment]") {
     REQUIRE(temporary_field_element == dummy_field_element);
 }
 
-TEST_CASE_METHOD(FieldTest, "Set element", "[Assignment]") {
+TEST_CASE_METHOD(FieldTest, "Field set element", "[FieldAssignment]") {
     Field<MyType> temporary_field;
     fill_dummy_field();
     temporary_field = dummy_field;
@@ -98,7 +98,7 @@ TEST_CASE_METHOD(FieldTest, "Set element", "[Assignment]") {
     REQUIRE(temporary_field == dummy_field);
 }
 
-TEST_CASE_METHOD(FieldTest, "Arithmetic with constant", "[Mathematical methods]") {
+TEST_CASE_METHOD(FieldTest, "Field arithmetic with constant", "[FieldMathematicalOperations]") {
     fill_dummy_field(2);
     CHECK((temporary_field(1)+=1) == dummy_field);
     CHECK((temporary_field(3)-=1) == dummy_field);
@@ -110,7 +110,7 @@ TEST_CASE_METHOD(FieldTest, "Arithmetic with constant", "[Mathematical methods]"
     REQUIRE((temporary_field(4)/ 2) == dummy_field);
 }
 
-TEST_CASE_METHOD(FieldTest, "Arithmetic with field", "[Mathematical methods]") {
+TEST_CASE_METHOD(FieldTest, "Field arithmetic with field", "[FieldMathematicalOperations]") {
     fill_dummy_field(2);
     REQUIRE((temporary_field(1) += temporary_field(1)) == dummy_field);
     REQUIRE((temporary_field(3) -= temporary_field(1)) == dummy_field);
@@ -124,22 +124,22 @@ TEST_CASE_METHOD(FieldTest, "Arithmetic with field", "[Mathematical methods]") {
 
 //UNARY OPERATOR?
 
-TEST_CASE_METHOD(FieldTest, "Squarenorm", "[Mathematical methods]") {
+TEST_CASE_METHOD(FieldTest, "Field squarenorm", "[FieldMathematicalOperations]") {
     fill_dummy_field(1);
     REQUIRE(dummy_field.squarenorm()/lattice->volume() == 1);
 }
 
-TEST_CASE_METHOD(FieldTest, "Sum reduction", "[Mathematical methods]") {
+TEST_CASE_METHOD(FieldTest, "Field sum reduction", "[FieldMathematicalOperations]") {
     fill_dummy_field(1);
     REQUIRE(dummy_field.sum() == lattice->volume());
 }
 
-TEST_CASE_METHOD(FieldTest, "Product reduction", "[Mathematical methods]") {
+TEST_CASE_METHOD(FieldTest, "Field product reduction", "[FieldMathematicalOperations]") {
     fill_dummy_field(1);
     REQUIRE(dummy_field.product() == 1);
 }
 
-TEST_CASE_METHOD(FieldTest, "MinMax", "[Mathematical methods]") {
+TEST_CASE_METHOD(FieldTest, "Field MinMax", "[FieldMathematicalOperations]") {
     fill_dummy_field(2);
     dummy_field.set_element(1.0,{2,2,1});
     dummy_field.set_element(3.0,{2,2,2});

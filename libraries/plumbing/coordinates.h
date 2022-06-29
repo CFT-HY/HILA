@@ -262,6 +262,13 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     // Assign
 
+    bool operator==(const CoordinateVector_t<T> &rhs) const {
+        foralldir(d) {
+            if (this->e(d) != rhs.e(d)) return false;
+        }
+        return true;
+    }
+
     //#pragma hila loop function
     T &operator[](const int i) {
         return this->e(i);

@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
 #include "hila.h"
+#include "catch.hpp"
 
-TEST(LatticeTest, Size) {
-    ASSERT_EQ(lattice->volume(), 32*32*32);
+TEST_CASE("Size", "[default]") {
+    REQUIRE(lattice->volume() == 32*32*32);
 }

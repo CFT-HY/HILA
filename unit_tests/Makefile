@@ -11,10 +11,11 @@ include $(HILA_DIR)/libraries/main.mk
 APP_OPTS += -DNDIM=3
 
 TEST_OBJECTS = \
+	build/test_coordinates.o \
 	build/test_field.o
 
 HILA_OBJECTS += $(TEST_OBJECTS)
-#CXXFLAGS += -g -G
+CXXFLAGS += -g
 
 catch_main: build/catch_main ; @:
 
