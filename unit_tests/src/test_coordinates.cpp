@@ -52,9 +52,9 @@ TEST_CASE_METHOD(TestCoordinateVector, "CoordinateVector assignment", "[coordina
 TEST_CASE_METHOD(TestCoordinateVector, "CoordinateVector indexing", "[CoordinateVector]") {
     CoordinateVector temporary_vector({0,1,2});
     SECTION("Indexing with int") {
-        for (int i = 0; i < NDIM; i++) {
-            REQUIRE(temporary_vector[i] == i);
-        }
+        REQUIRE(temporary_vector[0] == 0);
+        REQUIRE(temporary_vector[1] == 1);
+        REQUIRE(temporary_vector[2] == 2);
     }
     SECTION("Indexing with direction") {
         CHECK(temporary_vector[e_x] == 0);
@@ -112,8 +112,12 @@ TEST_CASE_METHOD(TestCoordinateVector, "CoordinateVector translation", "[Coordin
 }
 
 TEST_CASE_METHOD(TestCoordinateVector, "CoordinateVector mathematical methods", "[CoordinateVector]") {
-    SECTION("Coordinate_vector dot product") {
+    SECTION("CoordinateVector dot product") {
         REQUIRE((x.dot(x)) == 1);
         REQUIRE((x.dot(y)) == 0);
     }
+    // SECTION("CoordinateVector mod") {
+    //     CoordinateVector scaled_vector = 2*x;
+    //     std::cout << scaled_vector.mod(x) << '\n';
+    // }
 }
