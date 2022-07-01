@@ -12,8 +12,9 @@ APP_OPTS += -DNDIM=3
 
 TEST_OBJECTS = \
 	build/test_field.o \
-	#build/test_coordinates.o\
-	#build/test_real_var_ops.o
+	build/test_coordinates.o\
+	build/test_real_var_ops.o\
+	build/test_array.o
 
 HILA_OBJECTS += $(TEST_OBJECTS)
 CXXFLAGS += -g
