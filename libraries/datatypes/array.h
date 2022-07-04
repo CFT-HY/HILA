@@ -142,6 +142,11 @@ template <const int n, const int m, typename T> class Array {
         return *this;
     }
 
+    bool operator==(const Array<n, m, T> &rhs) const {
+        T epsilon = 0;
+        return ((*this)-rhs).squarenorm() <= epsilon;
+    }    
+
     /// add assign an Array
 #pragma hila loop_function
     template <typename S, std::enable_if_t<std::is_convertible<S, T>::value, int> = 0>
