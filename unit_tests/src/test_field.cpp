@@ -25,7 +25,7 @@ public:
 
 };
 
-TEST_CASE_METHOD(FieldTest, "Field nullptr, allocation and destructor", "[FieldCreation]") {
+TEST_CASE_METHOD(FieldTest, "Field nullptr, allocation and destructor", "[Field]") {
     SECTION("Test field nullptr"){
         REQUIRE_FALSE(dummy_field.is_allocated());
     }
@@ -40,7 +40,7 @@ TEST_CASE_METHOD(FieldTest, "Field nullptr, allocation and destructor", "[FieldC
 
 }
 
-TEST_CASE_METHOD(FieldTest, "Field constructors", "[FieldCreation]") {
+TEST_CASE_METHOD(FieldTest, "Field constructors", "[Field]") {
     SECTION("Test field allocation") {
         dummy_field.allocate();
         REQUIRE(dummy_field.is_allocated());
@@ -63,7 +63,7 @@ TEST_CASE_METHOD(FieldTest, "Field constructors", "[FieldCreation]") {
     }
 }
 
-TEST_CASE_METHOD(FieldTest, "Field assignment", "[FieldAssignment]") {
+TEST_CASE_METHOD(FieldTest, "Field assignment", "[Field]") {
     Field<MyType> temporary_field;
     SECTION("Assignment from field") {
         fill_dummy_field();
@@ -98,7 +98,7 @@ TEST_CASE_METHOD(FieldTest, "Field get and set element", "[FieldAssignment]") {
     }
 }
 
-TEST_CASE_METHOD(FieldTest, "Field arithmetic", "[FieldMathematicalOperations]") {
+TEST_CASE_METHOD(FieldTest, "Field arithmetic", "[Field]") {
     fill_dummy_field(2);
     SECTION("Arithmetic with constant") {
         REQUIRE((temporary_field(1)+=1) == dummy_field);
@@ -124,7 +124,7 @@ TEST_CASE_METHOD(FieldTest, "Field arithmetic", "[FieldMathematicalOperations]")
 
 //UNARY OPERATOR?
 
-TEST_CASE_METHOD(FieldTest, "Field mathematical operations", "[FieldMathematicalOperations]") {
+TEST_CASE_METHOD(FieldTest, "Field mathematical operations", "[Field]") {
     fill_dummy_field(1);
     SECTION("Squarenorm") {
         REQUIRE(dummy_field.squarenorm()/lattice->volume() == 1);
