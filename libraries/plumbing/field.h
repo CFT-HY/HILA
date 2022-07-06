@@ -185,9 +185,8 @@ class Field {
 #endif
 
         /// Gather boundary elements for communication
-        void
-        gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
-                             const lattice_struct::comm_node_struct &to_node) const {
+        void gather_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
+                                  const lattice_struct::comm_node_struct &to_node) const {
 #ifndef VECTORIZED
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
             // note: -d in is_on_edge, because we're about to send stuff to that
@@ -279,8 +278,7 @@ class Field {
         /// Gather a list of elements to a single node
         void gather_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                              int root = 0) const;
-        void scatter_elements(T *buffer,
-                              const std::vector<CoordinateVector> &coord_list,
+        void scatter_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                               int root = 0);
 
 #if defined(USE_MPI)
@@ -315,8 +313,7 @@ class Field {
                 if (vector_lattice->is_boundary_permutation[abs(d)]) {
                     // extra copy operation needed
                     if (receive_buffer[d] == nullptr) {
-                        receive_buffer[d] =
-                            payload.allocate_mpi_buffer(from_node.sites);
+                        receive_buffer[d] = payload.allocate_mpi_buffer(from_node.sites);
                     }
                     return receive_buffer[d] + offs;
                 } else {
@@ -557,8 +554,7 @@ class Field {
             fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb[dir];
             fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb[-dir];
         } else {
-            fs->payload.neighbours[dir] =
-                lattice->backend_lattice->d_neighb_special[dir];
+            fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb_special[dir];
             fs->payload.neighbours[-dir] =
                 lattice->backend_lattice->d_neighb_special[-dir];
         }
@@ -706,9 +702,9 @@ class Field {
         return *this;
     }
 
-    template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value,
-                               int> = 0>
+    template <
+        typename A,
+        std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const Field<A> &rhs) {
         (*this)[ALL] -= rhs[X];
         return *this;
@@ -738,9 +734,9 @@ class Field {
         return *this;
     }
 
-    template <typename A,
-              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value,
-                               int> = 0>
+    template <
+        typename A,
+        std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const A &rhs) {
         (*this)[ALL] -= rhs;
         return *this;
@@ -800,8 +796,7 @@ class Field {
     // General getters and setters
     void set_elements(T *elements, const std::vector<CoordinateVector> &coord_list);
     void set_element(const T &element, const CoordinateVector &coord);
-    void get_elements(T *elements,
-                      const std::vector<CoordinateVector> &coord_list) const;
+    void get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const;
     T get_element(const CoordinateVector &coord) const;
 
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
@@ -873,96 +868,279 @@ class Field {
 
 }; // End of class Field<>
 
+///////////////////////////////
+// operators +-*/
 // these operators rely on SFINAE, OK if field_hila::type_plus<A,B> exists i.e. A+B is
 // OK
-/// operator +
-template <typename A, typename B>
-auto operator+(const Field<A> &l, const Field<B> &r) -> Field<hila::type_plus<A, B>> {
+// There are several versions of the operators, depending if one of the arguments is
+// Field or scalar, and if the return type is the same as the Field argument.  This can
+// enable the compiler to avoid extra copies of the args
+
+///////////////////////////////
+/// operator +  (Field + Field) -generic
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_plus<A, B>, A>::value &&
+                               !std::is_same<hila::type_plus<A, B>, B>::value,
+                           int> = 0>
+auto operator+(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
     Field<hila::type_plus<A, B>> tmp;
-    tmp[ALL] = l[X] + r[X];
+    tmp[ALL] = lhs[X] + rhs[X];
     return tmp;
 }
 
-template <typename A, typename B>
-auto operator+(const A &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
-    Field<hila::type_plus<A, B>> tmp;
-    tmp[ALL] = lhs + rhs[X];
-    return tmp;
+// (Possibly) optimzed version where the 1st argument can be reused
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_plus<A, B>, A>::value, int> = 0>
+auto operator+(Field<A> lhs, const Field<B> &rhs) {
+    lhs[ALL] += rhs[X];
+    return lhs;
 }
 
-template <typename A, typename B>
+// Optimzed version where the 2nd argument can be reused
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_plus<A, B>, A>::value &&
+                               std::is_same<hila::type_plus<A, B>, B>::value,
+                           int> = 0>
+auto operator+(const Field<A> &lhs, Field<B> rhs) {
+    rhs[ALL] += lhs[X];
+    return rhs;
+}
+
+//////////////////////////////
+/// operator + (Field + scalar)
+
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_plus<A, B>, A>::value, int> = 0>
 auto operator+(const Field<A> &lhs, const B &rhs) -> Field<hila::type_plus<A, B>> {
     Field<hila::type_plus<A, B>> tmp;
     tmp[ALL] = lhs[X] + rhs;
     return tmp;
 }
 
-/// operator -
-template <typename A, typename B>
-auto operator-(const Field<A> &l, const Field<B> &r) -> Field<hila::type_minus<A, B>> {
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_plus<A, B>, A>::value, int> = 0>
+Field<A> operator+(Field<A> lhs, const B &rhs) {
+    lhs[ALL] += rhs;
+    return lhs;
+}
+
+
+//////////////////////////////
+/// operator + (scalar + Field)
+
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_plus<A, B>, B>::value, int> = 0>
+auto operator+(const A &lhs, const Field<B> &rhs) -> Field<hila::type_plus<A, B>> {
+    return rhs + lhs;
+}
+
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_plus<A, B>, B>::value, int> = 0>
+Field<B> operator+(const A &lhs, Field<B> rhs) {
+    return rhs + lhs;
+}
+
+
+//////////////////////////////
+/// operator - Field - Field -generic
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_minus<A, B>, A>::value &&
+                               !std::is_same<hila::type_minus<A, B>, B>::value,
+                           int> = 0>
+auto operator-(const Field<A> &lhs, const Field<B> &rhs)
+    -> Field<hila::type_minus<A, B>> {
     Field<hila::type_minus<A, B>> tmp;
-    tmp[ALL] = l[X] - r[X];
+    tmp[ALL] = lhs[X] - rhs[X];
     return tmp;
 }
 
-template <typename A, typename B>
-auto operator-(const A &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
-    Field<hila::type_minus<A, B>> tmp;
-    tmp[ALL] = lhs - rhs[X];
-    return tmp;
+// Optimzed version where the 1st argument can be reused
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_minus<A, B>, A>::value, int> = 0>
+auto operator-(Field<A> lhs, const Field<B> &rhs) {
+    lhs[ALL] -= rhs[X];
+    return lhs;
 }
 
-template <typename A, typename B>
+// Optimzed version where the 2nd argument can be reused
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_minus<A, B>, A>::value &&
+                               std::is_same<hila::type_minus<A, B>, B>::value,
+                           int> = 0>
+auto operator-(const Field<A> &lhs, Field<B> rhs) {
+    rhs[ALL] = lhs[X] - rhs[X];
+    return rhs;
+}
+
+//////////////////////////////
+/// operator - (Field - scalar)
+
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_minus<A, B>, A>::value, int> = 0>
 auto operator-(const Field<A> &lhs, const B &rhs) -> Field<hila::type_minus<A, B>> {
     Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs[X] - rhs;
     return tmp;
 }
 
-/// operator *
-template <typename A, typename B>
-auto operator*(const Field<A> &l, const Field<B> &r) -> Field<hila::type_mul<A, B>> {
-    Field<hila::type_mul<A, B>> tmp;
-    tmp[ALL] = l[X] * r[X];
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_minus<A, B>, A>::value, int> = 0>
+Field<A> operator-(Field<A> lhs, const B &rhs) {
+    lhs[ALL] -= rhs;
+    return lhs;
+}
+
+//////////////////////////////
+/// operator - (scalar - Field)
+
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_minus<A, B>, B>::value, int> = 0>
+auto operator-(const A &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
+    Field<hila::type_minus<A, B>> tmp;
+    tmp[ALL] = lhs - rhs[X];
     return tmp;
 }
 
-template <typename A, typename B>
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_minus<A, B>, B>::value, int> = 0>
+Field<B> operator-(const A &lhs, Field<B> rhs) {
+    rhs[ALL] = lhs - rhs[X];
+    return rhs;
+}
+
+///////////////////////////////
+/// operator * (Field * Field)
+/// generic
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value &&
+                               !std::is_same<hila::type_mul<A, B>, B>::value,
+                           int> = 0>
+auto operator*(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
+    Field<hila::type_mul<A, B>> tmp;
+    tmp[ALL] = lhs[X] * rhs[X];
+    return tmp;
+}
+
+/// reuse 1st
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_mul<A, B>, A>::value, int> = 0>
+Field<A> operator*(Field<A> lhs, const Field<B> &rhs) {
+    lhs[ALL] = lhs[X] * rhs[X];
+    return lhs;
+}
+
+/// reuse 2nd
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value &&
+                               std::is_same<hila::type_mul<A, B>, B>::value,
+                           int> = 0>
+Field<B> operator*(const Field<A> &lhs, Field<B> rhs) {
+    rhs[ALL] = lhs[X] * rhs[X];
+    return rhs;
+}
+
+/////////////////////////////////
+/// operator * (scalar * field)
+
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_mul<A, B>, B>::value, int> = 0>
 auto operator*(const A &lhs, const Field<B> &rhs) -> Field<hila::type_mul<A, B>> {
     Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs * rhs[X];
     return tmp;
 }
 
-template <typename A, typename B>
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_mul<A, B>, B>::value, int> = 0>
+Field<B> operator*(const A &lhs, Field<B> rhs) {
+    rhs[ALL] = lhs * rhs[X];
+    return rhs;
+}
+
+/////////////////////////////////
+/// operator * (field * scalar)
+
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_mul<A, B>, A>::value, int> = 0>
 auto operator*(const Field<A> &lhs, const B &rhs) -> Field<hila::type_mul<A, B>> {
     Field<hila::type_mul<A, B>> tmp;
     tmp[ALL] = lhs[X] * rhs;
     return tmp;
 }
 
-/// operator /
-template <typename A, typename B>
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_mul<A, B>, A>::value, int> = 0>
+Field<A> operator*(Field<A> lhs, const B &rhs) {
+    lhs[ALL] = lhs[X] * rhs;
+    return lhs;
+}
+
+///////////////////////////////
+/// operator / (Field / Field)
+/// generic
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value &&
+                               !std::is_same<hila::type_div<A, B>, B>::value,
+                           int> = 0>
 auto operator/(const Field<A> &l, const Field<B> &r) -> Field<hila::type_div<A, B>> {
     Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = l[X] / r[X];
     return tmp;
 }
 
-template <typename A, typename B>
+/// reuse 1st
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_div<A, B>, A>::value, int> = 0>
+Field<A> operator/(Field<A> l, const Field<B> &r) {
+    l[ALL] = l[X] / r[X];
+    return l;
+}
+
+/// reuse 2nd
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value &&
+                               std::is_same<hila::type_div<A, B>, B>::value,
+                           int> = 0>
+Field<B> operator/(const Field<A> &l, Field<B> r) {
+    r[ALL] = l[X] / r[X];
+    return r;
+}
+
+//////////////////////////////////
+/// operator /  (scalar/Field)
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_div<A, B>, B>::value, int> = 0>
 auto operator/(const A &lhs, const Field<B> &rhs) -> Field<hila::type_div<A, B>> {
     Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = lhs / rhs[X];
     return tmp;
 }
 
-template <typename A, typename B>
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_div<A, B>, B>::value, int> = 0>
+Field<B> operator/(const A &lhs, Field<B> rhs) {
+    rhs[ALL] = lhs / rhs[X];
+    return rhs;
+}
+
+//////////////////////////////////
+/// operator /  (Field/scalar)
+template <typename A, typename B,
+          std::enable_if_t<!std::is_same<hila::type_div<A, B>, A>::value, int> = 0>
 auto operator/(const Field<A> &lhs, const B &rhs) -> Field<hila::type_div<A, B>> {
     Field<hila::type_div<A, B>> tmp;
     tmp[ALL] = lhs[X] / rhs;
     return tmp;
 }
 
+template <typename A, typename B,
+          std::enable_if_t<std::is_same<hila::type_div<A, B>, A>::value, int> = 0>
+auto operator/(Field<A> lhs, const B &rhs) {
+    lhs[ALL] = lhs[X] / rhs;
+    return lhs;
+}
+
+/////////////////////////////////////////////////////////////////
 
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
@@ -1006,8 +1184,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
             mdir = d;
             found_dir = true;
             break;
-        } else if (rem[d] < 0 &&
-                   gather_status(par_s, -d) != gather_status_t::NOT_DONE) {
+        } else if (rem[d] < 0 && gather_status(par_s, -d) != gather_status_t::NOT_DONE) {
             mdir = -d;
             found_dir = true;
             break;
@@ -1192,8 +1369,8 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         }
 
         // c++ version does not return errors
-        MPI_Irecv(receive_buffer, n, mpi_type, from_node.rank, tag,
-                  lattice->mpi_comm_lat, &fs->receive_request[par_i][d]);
+        MPI_Irecv(receive_buffer, n, mpi_type, from_node.rank, tag, lattice->mpi_comm_lat,
+                  &fs->receive_request[par_i][d]);
 
         post_receive_timer.stop();
     }
@@ -1402,8 +1579,7 @@ void Field<T>::gather(Direction d, Parity p) const {
 /// coord_list must be same on all nodes, buffer is needed only on "root"
 template <typename T>
 void Field<T>::field_struct::gather_elements(
-    T *RESTRICT buffer, const std::vector<CoordinateVector> &coord_list,
-    int root) const {
+    T *RESTRICT buffer, const std::vector<CoordinateVector> &coord_list, int root) const {
 
     std::vector<unsigned> index_list;
     std::vector<int> sites_on_rank(lattice->n_nodes());
@@ -1536,8 +1712,8 @@ void Field<T>::field_struct::scatter_elements(
         for (int n = 0; n < sites_on_rank.size(); n++) {
             if (sites_on_rank[n] > 0) {
                 if (n != root) {
-                    MPI_Isend(pb.data() + nloc[n], sites_on_rank[n] * sizeof(T),
-                              MPI_BYTE, n, n, lattice->mpi_comm_lat, &mpi_req[nreqs++]);
+                    MPI_Isend(pb.data() + nloc[n], sites_on_rank[n] * sizeof(T), MPI_BYTE,
+                              n, n, lattice->mpi_comm_lat, &mpi_req[nreqs++]);
                 }
             }
         }
