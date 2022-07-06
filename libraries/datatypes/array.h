@@ -2,6 +2,7 @@
 #define ARRAY_H_
 
 #include "datatypes/matrix.h"
+#include "datatypes/cmplx.h"
 
 ////////////////////////////////////////////////////////////////
 /// nxm Array type
@@ -240,12 +241,11 @@ template <const int n, const int m, typename T> class Array {
         }
         return res;
     }
-
     /// return real part
     inline Array<n, m, hila::number_type<T>> real() const {
         Array<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
-            res.c[i] = real(c[i]);
+            res.c[i] = ::real(c[i]);
         }
         return res;
     }
@@ -254,7 +254,7 @@ template <const int n, const int m, typename T> class Array {
     inline Array<n, m, hila::number_type<T>> imag() const {
         Array<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
-            res.c[i] = imag(c[i]);
+            res.c[i] = ::imag(c[i]);
         }
         return res;
     }

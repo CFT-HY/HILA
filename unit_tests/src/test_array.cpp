@@ -12,8 +12,8 @@ public:
 
     template<typename T>
     void fill_dummy_array(T assign_value) {
-        for (int i = 0; i < 10; i++){
-            for (int j = 0; j < 10; j++){
+        for (int i = 0; i < N; i++){
+            for (int j = 0; j < M; j++){
                 dummy_array.e(i,j) = assign_value;
             }
         }  
@@ -130,13 +130,53 @@ TEST_CASE_METHOD(ArrayTest, "Array mathematical operations", "[Array]") {
         fill_dummy_array(-1);
         REQUIRE((+-temporary_array)==dummy_array);
     }
-    SECTION("Operators"){
+    SECTION("Complex operators"){
+        INFO("Testing Array:: imag, real, conj functions")
+        fill_dummy_array(0);
         Array<N,M,Complex<MyType>> temporary_complex_array;
-        Matrix<N,M,Complex<MyType>> temporary_complex_matrix;
         temporary_complex_array.gaussian_random();
-        temporary_complex_matrix.gaussian_random();
-        std::cout << temporary_complex_matrix.real();
-        Array<N,M,Complex<MyType>> temp = temporary_complex_array.conj()+temporary_complex_array;
-        std::cout << temp.real();
+        GIVEN("A complex array") {
+            WHEN("Conjugate is take") {
+                THEN("Sum with original will have 0 imaginary part") {
+                    Array<N,M,Complex<MyType>> temp = temporary_complex_array.conj()+temporary_complex_array;
+                    REQUIRE(temp.imag() == dummy_array);
+                }
+                THEN("Subracted with original will have 0 real part") {
+                    Array<N,M,Complex<MyType>> temp = temporary_complex_array.conj()-temporary_complex_array;
+                    REQUIRE(temp.real() == dummy_array);
+                }
+            }
+        }
+    
+    }
+    SECTION("Squarenorm") {
+        fill_dummy_array(1);
+        REQUIRE((dummy_array.squarenorm()/(N*M)) == 1);
+    }
+
+    SECTION("Arithmetic function") {
+        fill_dummy_array(0);
+        REQUIRE(sin(  generate_temporary_array(0))==dummy_array);
+        REQUIRE(log(  generate_temporary_array(1))==dummy_array);
+        REQUIRE(tan(  generate_temporary_array(0))==dummy_array);
+        REQUIRE(asin( generate_temporary_array(0))==dummy_array);
+        REQUIRE(sinh( generate_temporary_array(0))==dummy_array);
+        REQUIRE(acos( generate_temporary_array(1))==dummy_array);
+        REQUIRE(atan( generate_temporary_array(0))==dummy_array);
+        REQUIRE(tanh( generate_temporary_array(0))==dummy_array);
+        REQUIRE(asinh(generate_temporary_array(0))==dummy_array);
+        REQUIRE(acosh(generate_temporary_array(1))==dummy_array);
+        REQUIRE(atanh(generate_temporary_array(0))==dummy_array);
+
+        fill_dummy_array(1);
+        REQUIRE(cos(  generate_temporary_array(0))==dummy_array);
+        REQUIRE(cosh( generate_temporary_array(0))==dummy_array);
+        REQUIRE(exp(  generate_temporary_array(0))==dummy_array);
+        REQUIRE(pow(  generate_temporary_array(1),0)==dummy_array);
+        REQUIRE(pow(  generate_temporary_array(1),generate_temporary_array(0))==dummy_array);
+
+        fill_dummy_array(2);
+        REQUIRE(sqrt( generate_temporary_array(4))==dummy_array);
+        REQUIRE(cbrt( generate_temporary_array(8))==dummy_array);
     }
  }
