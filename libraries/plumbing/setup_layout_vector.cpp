@@ -46,14 +46,11 @@ void lattice_struct::setup_layout() {
     // nodes, this is the most demanding. The directions where the extra divisions have
     // been done the node size must be even, so that these can be handled by vectors
 
-    int nn = hila::number_of_nodes();
-
     // Factorize the node number in primes
     // These factors must be used in slicing the lattice!
 
-    // try divisions:
     // number of virtual nodes
-    nn *= number_of_subnodes;
+    int nn = hila::number_of_nodes() * number_of_subnodes;
 
     int i = nn;
     for (int n = 0; n < NPRIMES; n++) {
