@@ -121,6 +121,11 @@ struct Complex {
         return *this;
     }
 
+    bool operator==(const Complex<T> &rhs) const {
+        T epsilon = 0;
+        return ((*this)-rhs).squarenorm() <= epsilon;
+    }  
+
     inline T squarenorm() const {
         return re * re + im * im;
     }
@@ -280,6 +285,7 @@ template <typename T>
 inline T real(const Complex<T> a) {
     return a.re;
 }
+
 
 template <typename T>
 inline T imag(const Complex<T> a) {
