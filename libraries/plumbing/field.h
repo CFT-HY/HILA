@@ -769,6 +769,11 @@ class Field {
         return f;
     }
 
+    bool operator==(const Field<T> &rhs) const {
+        T epsilon = 0;
+        return ((*this)-rhs).squarenorm() <= epsilon;
+    }
+
     hila::number_type<T> squarenorm() const {
         hila::number_type<T> n = 0;
         onsites(ALL) {

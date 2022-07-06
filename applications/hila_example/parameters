@@ -1,7 +1,7 @@
 # This is a parameter file for hila_example
 
 lattice size       96, 96, 96
-smear loops        50
+smear loops        10000000
 smear coefficient  0.1
 expansion order    12
 

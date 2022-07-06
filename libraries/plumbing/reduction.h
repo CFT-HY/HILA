@@ -437,7 +437,7 @@ T Field<T>::min(Parity par, CoordinateVector &loc) const {
 template <typename T>
 T Field<T>::max(Parity par) const {
     CoordinateVector loc;
-    return minmax(true, par, loc);
+    return minmax(false, par, loc);
 }
 
 /// Find maximum value and location from Field

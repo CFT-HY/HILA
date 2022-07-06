@@ -1,5 +1,5 @@
 #include "hila.h"
-#include "spectraldensity.h"
+#include <random>
 
 static_assert(NDIM == 3, "NDIM must be 3 here");
 
@@ -18,10 +18,11 @@ int main(int argc, char *argv[]) {
 
     // lattice field
     Field<MyType> f;
-
+    Field<float> g;
+    g = 0;
+    g.product();
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian_random();
-    
     // Measure hopping term and f^2
     MyType hopping = 0;
     hopping = 0;
@@ -33,7 +34,6 @@ int main(int argc, char *argv[]) {
         }
         fsqr += f[X].squarenorm();
     }
-    
     output0 << "Average f^2 : " << fsqr / lattice->volume() << '\n';
     output0 << "Average hopping term " << hopping / (NDIM*lattice->volume()) << '\n';
 
