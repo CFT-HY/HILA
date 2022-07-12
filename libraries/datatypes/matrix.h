@@ -40,8 +40,19 @@ using SquareMatrix = Matrix<n, n, T>;
 // class DaggerMatrix;
 
 ////////////////////////////////////////////////////////////////
-/// The main nxm matrix type template
-////////////////////////////////////////////////////////////////
+/// The main nxm matrix type template Matrix_t
+/// This is a root type, and "useful" types are derived from this type
+///
+/// Uses curiously recurring template pattern (CRTP), where
+/// the last template parameter is the template itself
+/// Example: the matrix type below is defined as
+///   template <int n, int m, typename T>
+///   class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> { .. }
+///
+/// Used because stupid c++ makes it complicated to write
+/// generic code, in this case derived functions to return derived type
+///////////////////////////////////////////////////////////////
+
 template <const int n, const int m, typename T, typename Mtype>
 class Matrix_t {
   public:
@@ -813,7 +824,8 @@ auto det(const Mtype &mat) {
 
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
-          typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>>
+          typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>,
+          std::enable_if_t<!std::is_same<Mtype1,Rtype>::value, int> = 0>
 inline Rtype operator+(const Mtype1 &a, const Mtype2 &b) {
 
     constexpr int n = Mtype1::rows();
@@ -828,6 +840,27 @@ inline Rtype operator+(const Mtype1 &a, const Mtype2 &b) {
             r.e(i, j) = a.e(i, j) + b.e(i, j);
     return r;
 }
+
+// Real micro-optimization wrt. above - no extra creation of variable and copy.
+
+template <typename Mtype1, typename Mtype2,
+          std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
+          typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>,
+          std::enable_if_t<std::is_same<Mtype1,Rtype>::value, int> = 0>
+inline Rtype operator+(Mtype1 a, const Mtype2 &b) {
+
+    constexpr int n = Mtype1::rows();
+    constexpr int m = Mtype1::columns();
+
+    static_assert(n == Mtype2::rows() && m == Mtype2::columns(),
+                  "Matrix sizes do not match");
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++)
+            a.e(i, j) += b.e(i, j);
+    return a;
+}
+
 
 /// Matrix - matrix
 template <typename Mtype1, typename Mtype2,
