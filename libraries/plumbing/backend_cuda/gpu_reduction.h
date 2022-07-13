@@ -775,7 +775,7 @@ template <class T, typename index_type>
 __global__ void minmax_kernel(const T *i_data, T *minmax_array_out,
                               index_type *coordinate_index_array_out,
                               backend_lattice_struct loop_info,
-                              const int sign_min_or_max, T const initial_value) {
+                              const int sign_min_or_max, T const initial_value, const int system_size) {
     index_type thIdx = threadIdx.x;
     index_type gthIdx = thIdx + blockIdx.x * N_threads + loop_info.loop_begin;
     const index_type grid_size = N_threads * gridDim.x;
@@ -799,7 +799,7 @@ __global__ void minmax_kernel(const T *i_data, T *minmax_array_out,
     __syncthreads();
 
     for (index_type size = N_threads / 2; size > 0; size /= 2) {
-        if (thIdx < size) {
+        if (thIdx < size && size + gthIdx < system_size) {
             if (minmax_values[thIdx] * sign_min_or_max >
                 minmax_values[thIdx + size] * sign_min_or_max) {
                 minmax_values[thIdx] = minmax_values[thIdx + size];
@@ -925,7 +925,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
     // Find global max or min from num_blocks amount of values
     minmax_kernel_final<<<1, block_size>>>(
         minmax_array, minmax_array, coordinate_index_array, coordinate_index_array,
-        num_blocks, sign_min_or_max);
+        num_blocks, sign_min_or_max, node_system_size);
     check_device_error("minmax_kernel_final");
 
     // Location and value of max or minP will be the first element of return arrays

@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
 
     // set up 32^3 lattice
 
-    lattice->setup({128, 128, 128});
+    lattice->setup({100, 100, 100});
 
     // Random numbers are used here - use time to seed
     hila::seed_random(0);
@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 
     g[{1, 1, 1}] = 0.9;
     g[{4, 0, 0}] = 1.0;
-    g[{1, 1, 31}] = 2.1;
+    g[{99,99, 99}] = 5;
     g[{24,0, 2}] = 2.3;
     g.set_element(4,{2,2,1});
 

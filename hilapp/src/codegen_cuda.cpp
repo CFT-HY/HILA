@@ -587,15 +587,15 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 // }
                 kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
                 if (vi.reduction_type == reduction::SUM) {
-                    kernel << "if(threadIdx.x < _H_i) {\n";
+                    kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var << " < d_lattice.loop_end) {\n";
                     kernel << vi.new_name << "sh[threadIdx.x] += " << vi.new_name
-                           << "sh[threadIdx.x+_H_i];\n";
+                        << "sh[threadIdx.x+_H_i];\n";
                     kernel << "}\n";
                     kernel << "__syncthreads();\n";
                 } else if (vi.reduction_type == reduction::PRODUCT) {
-                    kernel << "if(threadIdx.x < _H_i) {\n";
+                    kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var << " < d_lattice.loop_end) {\n";
                     kernel << vi.new_name << "sh[threadIdx.x] *= " << vi.new_name
-                           << "sh[threadIdx.x+_H_i];\n";
+                        << "sh[threadIdx.x+_H_i];\n";
                     kernel << "}\n";
                     kernel << "__syncthreads();\n";
                 }
@@ -603,8 +603,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 // kernel << "}\n";
 
                 kernel << "if(threadIdx.x == 0) {\n"
-                       << vi.new_name << "[blockIdx.x] = " << vi.new_name << "sh[0];\n";
+                    << vi.new_name << "[blockIdx.x] = " << vi.new_name << "sh[0];\n";
                 kernel << "}\n";
+
             }
         }
     kernel << "}\n}\n//----------\n\n";
