@@ -13,19 +13,18 @@ class MatrixTest {
 
     template <typename T>
     void fill_dummy_matrix(T assign_value) {
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < M; j++) {
-                dummy_matrix.c[i * M + j] = assign_value;
-            }
-        }
+        for (int i = 0; i < N * M; i++)
+            dummy_matrix.c[i] = assign_value;
     };
 
     template <typename T>
     void diag_dummy_matrix(T assign_value) {
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < M; j++) {
-                if (i==j) dummy_matrix.c[i * M + j] = assign_value;
-                else dummy_matrix.c[i * M + j] = 0;
+                if (i == j)
+                    dummy_matrix.c[i * M + j] = assign_value;
+                else
+                    dummy_matrix.c[i * M + j] = 0;
             }
         }
     };
@@ -85,11 +84,16 @@ TEST_CASE_METHOD(MatrixTest, "Matrix assignment", "[Matrix]") {
     }
     SECTION("Assignment from initializer list") {
         fill_dummy_matrix(1);
-        temporary_matrix = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        temporary_matrix = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                            1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
         REQUIRE(temporary_matrix == dummy_matrix);
     }
 }
@@ -117,8 +121,10 @@ TEST_CASE_METHOD(MatrixTest, "Indexing", "[Matrix]") {
         fill_dummy_vector(1);
         temporary_vector.c[3] = 1;
         for (int i = 0; i < N; i++) {
-            if (temporary_vector.e(i) == dummy_vector.e(i)) index_e = i;
-            if (temporary_vector[i] == dummy_vector[i]) index_normal = i;
+            if (temporary_vector.e(i) == dummy_vector.e(i))
+                index_e = i;
+            if (temporary_vector[i] == dummy_vector[i])
+                index_normal = i;
         }
         REQUIRE(index_e == 3);
         REQUIRE(index_normal == 3);
@@ -163,7 +169,7 @@ TEST_CASE_METHOD(MatrixTest, "Matrix mathematical operations", "[Matrix]") {
         Matrix<N, M, Complex<MyType>> temporary_complex_matrix;
         temporary_complex_matrix.gaussian_random();
         GIVEN("A complex matrix") {
-            WHEN("Conjugate is take") {
+            WHEN("Conjugate is taken") {
                 THEN("Sum with original will have 0 imaginary part") {
                     Matrix<N, M, Complex<MyType>> temp =
                         temporary_complex_matrix.conj() + temporary_complex_matrix;
@@ -177,8 +183,47 @@ TEST_CASE_METHOD(MatrixTest, "Matrix mathematical operations", "[Matrix]") {
             }
         }
     }
-    SECTION("Squarenorm") {
+
+    SECTION("Matrix operators") {
+        INFO("Testing Matrix:: trace, mul_trace, dot, transpose") 
+        dummy_matrix = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                        10,11,12,13,14,15,16,17,18,19,
+                        20,21,22,23,24,25,26,27,28,29,
+                        30,31,32,33,34,35,36,37,38,39,
+                        40,41,42,43,44,45,46,47,48,49,
+                        50,51,52,53,54,55,56,57,58,59,
+                        60,61,62,63,64,65,66,67,68,69,
+                        70,71,72,73,74,75,76,77,78,79,
+                        80,81,82,83,84,85,86,87,88,89,
+                        90,91,92,93,94,95,96,97,98,99};
+            
+        Matrix<N,M,double> temporary_matrix = { 0,10,20,30,40,50,60,70,80,90,
+                                                1,11,21,31,41,51,61,71,81,91,
+                                                2,12,22,32,42,52,62,72,82,92,
+                                                3,13,23,33,43,53,63,73,83,93,
+                                                4,14,24,34,44,54,64,74,84,94,
+                                                5,15,25,35,45,55,65,75,85,95,
+                                                6,16,26,36,46,56,66,76,86,96,
+                                                7,17,27,37,47,57,67,77,87,97,
+                                                8,18,28,38,48,58,68,78,88,98,
+                                                9,19,29,39,49,59,69,79,89,99};
+
+        REQUIRE(temporary_matrix.transpose() == dummy_matrix);
+
+        double trace_sum = 495;
+        double mul_trace_sum = 261525;
+        REQUIRE(temporary_matrix.trace() == trace_sum);
+        REQUIRE(dummy_matrix.mul_trace(dummy_matrix) == mul_trace_sum);
+
+        dummy_vector = {1,1,1,1,1,1,1,1,1,1};
+        Vector<N,double> temporary_vector = {1,1,1,1,1,1,1,1,1,1};
+        REQUIRE(dummy_vector.dot(temporary_vector)==10);
+    }
+    
+    SECTION("Squarenorm and norm") {
         fill_dummy_matrix(1);
         REQUIRE((dummy_matrix.squarenorm() / (N * M)) == 1);
+        REQUIRE(dummy_matrix.norm() == 10);
     }
+
 }

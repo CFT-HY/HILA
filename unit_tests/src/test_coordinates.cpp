@@ -60,8 +60,8 @@ TEST_CASE_METHOD(TestCoordinateVector, "CoordinateVector indexing",
         REQUIRE(temporary_vector[2] == 2);
     }
     SECTION("Indexing with direction") {
-        CHECK(temporary_vector[e_x] == 0);
-        CHECK(temporary_vector[e_y] == 1);
+        REQUIRE(temporary_vector[e_x] == 0);
+        REQUIRE(temporary_vector[e_y] == 1);
         REQUIRE(temporary_vector[e_z] == 2);
     }
 }

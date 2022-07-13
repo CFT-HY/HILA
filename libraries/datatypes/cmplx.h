@@ -400,7 +400,7 @@ inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b,
     Complex<T> r;
     T t1 = mul_add(a.re, b.re, c.re);
     T t2 = mul_add(a.re, b.im, c.im);
-    r.re = nmul_add(a.im, b.im, t1); // -a.im*b.im + a.re*b.re + c.re
+    r.re = mul_add(a.im, b.im, t1); // -a.im*b.im + a.re*b.re + c.re
     r.im = mul_add(a.im, b.re, t2);  // a.im*b.re + a.re*b.im + c.im
     return r;
 }

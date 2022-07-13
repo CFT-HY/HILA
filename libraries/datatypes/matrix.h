@@ -288,6 +288,11 @@ class Matrix_t {
         return *this;
     }
 
+    bool operator==(const Matrix<n, m, T> &rhs) const {
+        T epsilon = 0;
+        return ((*this)-rhs).squarenorm() <= epsilon;
+    }    
+
     /// Assign from different type matrix
 #pragma hila loop_function
     template <typename S, typename MT,
@@ -488,7 +493,7 @@ class Matrix_t {
     inline Matrix<n, m, hila::number_type<T>> real() const {
         Matrix<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
-            res.c[i] = real(c[i]);
+            res.c[i] = ::real(c[i]);
         }
         return res;
     }
@@ -497,7 +502,7 @@ class Matrix_t {
     inline Matrix<n, m, hila::number_type<T>> imag() const {
         Matrix<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
-            res.c[i] = imag(c[i]);
+            res.c[i] = ::imag(c[i]);
         }
         return res;
     }
