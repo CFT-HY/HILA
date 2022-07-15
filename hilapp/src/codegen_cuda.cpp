@@ -384,7 +384,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     kernel << "unsigned " << looping_var << " = threadIdx.x + blockIdx.x * blockDim.x "
            << " + d_lattice.loop_begin; \n";
     /* The last block may exceed the lattice size. Do nothing in that case. */
-    kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
+    // move after reduction var setup
+    // kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
 
     // Declare the shared reduction variable
     for (var_info &vi : var_info_list)
@@ -409,6 +410,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 }
             }
         }
+
+    /* The last block may exceed the lattice size. Do nothing in that case. */
+    kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
 
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
@@ -557,7 +561,10 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                    << ", d_lattice.field_alloc_size );\n";
         }
 
-    // Assing reductions to shared memory
+    // end the if ( looping_var < d_lattice.loop_end)
+    kernel << "}\n";    
+
+    // Assign reductions to shared memory
     for (var_info &vi : var_info_list) {
         if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE) {
@@ -608,7 +615,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
             }
         }
-    kernel << "}\n}\n//----------\n\n";
+    kernel << "}\n//----------\n\n";
     code << ");\n\n";
     code << "check_device_error(\"" << kernel_name << "\");\n";
 
