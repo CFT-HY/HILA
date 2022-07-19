@@ -10,3 +10,4 @@ unit_test/build/catch_main
 *.o
 *~
 #*#
+.VSCodeCounter/*
