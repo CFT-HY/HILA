@@ -2,7 +2,6 @@
 #define ARRAY_H_
 
 #include "datatypes/matrix.h"
-#include "datatypes/cmplx.h"
 
 ////////////////////////////////////////////////////////////////
 /// nxm Array type
@@ -144,7 +143,7 @@ template <const int n, const int m, typename T> class Array {
     }
 
     bool operator==(const Array<n, m, T> &rhs) const {
-        T epsilon = 0;
+        hila::number_type<T> epsilon = 0;
         return ((*this)-rhs).squarenorm() <= epsilon;
     }    
 

@@ -1,0 +1,216 @@
+"filename", "language", "CUDA C++", "C++", "Makefile", "Markdown", "Shell Script", "comment", "blank", "total"
+"/home/main/Documents/hila/README.md", "Markdown", 0, 0, 0, 317, 0, 0, 156, 473
+"/home/main/Documents/hila/applications/SUN/KennedyPendleton.cpp", "C++", 0, 40, 0, 0, 0, 23, 12, 75
+"/home/main/Documents/hila/applications/SUN/Makefile", "Makefile", 0, 0, 6, 0, 0, 6, 8, 20
+"/home/main/Documents/hila/applications/SUN/SUN.cpp", "C++", 0, 64, 0, 0, 0, 16, 14, 94
+"/home/main/Documents/hila/applications/SUN/SUN.h", "CUDA C++", 23, 0, 0, 0, 0, 2, 8, 33
+"/home/main/Documents/hila/applications/SUN/monte.cpp", "C++", 0, 122, 0, 0, 0, 80, 46, 248
+"/home/main/Documents/hila/applications/SUN/submit_puhti.sh", "Shell Script", 0, 0, 0, 0, 3, 7, 4, 14
+"/home/main/Documents/hila/applications/Staggered/Makefile", "Makefile", 0, 0, 6, 0, 0, 6, 9, 21
+"/home/main/Documents/hila/applications/Staggered/staggered.cpp", "C++", 0, 58, 0, 0, 0, 13, 22, 93
+"/home/main/Documents/hila/applications/Staggered/staggered.h", "CUDA C++", 26, 0, 0, 0, 0, 2, 9, 37
+"/home/main/Documents/hila/applications/Wilson/Makefile", "Makefile", 0, 0, 6, 0, 0, 6, 10, 22
+"/home/main/Documents/hila/applications/Wilson/Wilson.cpp", "C++", 0, 46, 0, 0, 0, 11, 16, 73
+"/home/main/Documents/hila/applications/Wilson/Wilson.h", "CUDA C++", 27, 0, 0, 0, 0, 2, 9, 38
+"/home/main/Documents/hila/applications/benchmarks/Makefile", "Makefile", 0, 0, 19, 0, 0, 6, 15, 40
+"/home/main/Documents/hila/applications/benchmarks/bench.h", "CUDA C++", 17, 0, 0, 0, 0, 8, 5, 30
+"/home/main/Documents/hila/applications/benchmarks/bench_FFT.cpp", "C++", 0, 49, 0, 0, 0, 7, 16, 72
+"/home/main/Documents/hila/applications/benchmarks/bench_fermion.cpp", "C++", 0, 104, 0, 0, 0, 12, 25, 141
+"/home/main/Documents/hila/applications/benchmarks/bench_field.cpp", "C++", 0, 219, 0, 0, 0, 23, 29, 271
+"/home/main/Documents/hila/applications/benchmarks/bench_matrix2.cpp", "C++", 0, 177, 0, 0, 0, 20, 33, 230
+"/home/main/Documents/hila/applications/benchmarks/benchmark.sh", "Shell Script", 0, 0, 0, 0, 38, 2, 7, 47
+"/home/main/Documents/hila/applications/benchmarks/submit_gpu_puhti.sh", "Shell Script", 0, 0, 0, 0, 4, 13, 5, 22
+"/home/main/Documents/hila/applications/hila_example/Makefile", "Makefile", 0, 0, 17, 0, 0, 10, 17, 44
+"/home/main/Documents/hila/applications/hila_example/src/hila_example.cpp", "C++", 0, 56, 0, 0, 0, 21, 32, 109
+"/home/main/Documents/hila/applications/hila_example/src/minmax.cpp", "C++", 0, 34, 0, 0, 0, 6, 16, 56
+"/home/main/Documents/hila/applications/hila_example/src/simple.cpp", "C++", 0, 23, 0, 0, 0, 8, 10, 41
+"/home/main/Documents/hila/applications/ising/Makefile", "Makefile", 0, 0, 6, 0, 0, 6, 10, 22
+"/home/main/Documents/hila/applications/ising/ising.cpp", "C++", 0, 41, 0, 0, 0, 10, 13, 64
+"/home/main/Documents/hila/applications/suN_hmc/Makefile", "Makefile", 0, 0, 11, 0, 0, 11, 18, 40
+"/home/main/Documents/hila/applications/suN_hmc/src/suN_hmc.cpp", "C++", 0, 173, 0, 0, 0, 45, 72, 290
+"/home/main/Documents/hila/applications/sun_realtime/Makefile", "Makefile", 0, 0, 11, 0, 0, 10, 17, 38
+"/home/main/Documents/hila/applications/sun_realtime/src/sun_realtime.cpp", "C++", 0, 215, 0, 0, 0, 67, 84, 366
+"/home/main/Documents/hila/applications/test_FFT/Makefile", "Makefile", 0, 0, 7, 0, 0, 8, 14, 29
+"/home/main/Documents/hila/applications/test_FFT/test_FFT.cpp", "C++", 0, 29, 0, 0, 0, 10, 17, 56
+"/home/main/Documents/hila/applications/test_cases/Makefile", "Makefile", 0, 0, 19, 0, 0, 6, 15, 40
+"/home/main/Documents/hila/applications/test_cases/test.h", "CUDA C++", 30, 0, 0, 0, 0, 4, 8, 42
+"/home/main/Documents/hila/applications/test_cases/test.sh", "Shell Script", 0, 0, 0, 0, 65, 10, 14, 89
+"/home/main/Documents/hila/applications/test_cases/test_CG.cpp", "C++", 0, 282, 0, 0, 0, 17, 58, 357
+"/home/main/Documents/hila/applications/test_cases/test_FFT.cpp", "C++", 0, 43, 0, 0, 0, 13, 28, 84
+"/home/main/Documents/hila/applications/test_cases/test_conjReduce.cpp", "C++", 0, 64, 0, 0, 0, 18, 19, 101
+"/home/main/Documents/hila/applications/test_cases/test_fields.cpp", "C++", 0, 252, 0, 0, 0, 40, 65, 357
+"/home/main/Documents/hila/applications/test_cases/test_forces.cpp", "C++", 0, 250, 0, 0, 0, 34, 59, 343
+"/home/main/Documents/hila/applications/u1strings/Makefile", "Makefile", 0, 0, 10, 0, 0, 8, 10, 28
+"/home/main/Documents/hila/applications/u1strings/onsim.cpp", "C++", 0, 474, 0, 0, 0, 37, 138, 649
+"/home/main/Documents/hila/applications/xy/Makefile", "Makefile", 0, 0, 6, 0, 0, 6, 10, 22
+"/home/main/Documents/hila/applications/xy/xy.cpp", "C++", 0, 49, 0, 0, 0, 9, 13, 71
+"/home/main/Documents/hila/docs/mainpage.md", "Markdown", 0, 0, 0, 264, 0, 0, 102, 366
+"/home/main/Documents/hila/hilapp/Makefile", "Makefile", 0, 0, 119, 0, 0, 72, 56, 247
+"/home/main/Documents/hila/hilapp/src/addrof_and_ref_visitor.cpp", "C++", 0, 159, 0, 0, 0, 55, 33, 247
+"/home/main/Documents/hila/hilapp/src/codegen.cpp", "C++", 0, 336, 0, 0, 0, 154, 85, 575
+"/home/main/Documents/hila/hilapp/src/codegen_avx_new.cpp", "C++", 0, 440, 0, 0, 0, 103, 104, 647
+"/home/main/Documents/hila/hilapp/src/codegen_cpu.cpp", "C++", 0, 182, 0, 0, 0, 45, 36, 263
+"/home/main/Documents/hila/hilapp/src/codegen_cuda.cpp", "C++", 0, 401, 0, 0, 0, 162, 115, 678
+"/home/main/Documents/hila/hilapp/src/codegen_openacc.cpp", "C++", 0, 39, 0, 0, 0, 10, 9, 58
+"/home/main/Documents/hila/hilapp/src/contains_loop_local_var_visitor.cpp", "C++", 0, 42, 0, 0, 0, 16, 18, 76
+"/home/main/Documents/hila/hilapp/src/contains_random_visitor.cpp", "C++", 0, 54, 0, 0, 0, 21, 17, 92
+"/home/main/Documents/hila/hilapp/src/depends_on_site_visitor.cpp", "C++", 0, 74, 0, 0, 0, 33, 31, 138
+"/home/main/Documents/hila/hilapp/src/function_contains_loop_visitor.cpp", "C++", 0, 56, 0, 0, 0, 15, 14, 85
+"/home/main/Documents/hila/hilapp/src/generalvisitor.cpp", "C++", 0, 403, 0, 0, 0, 117, 140, 660
+"/home/main/Documents/hila/hilapp/src/generalvisitor.h", "CUDA C++", 169, 0, 0, 0, 0, 82, 71, 322
+"/home/main/Documents/hila/hilapp/src/hilapp.cpp", "C++", 0, 754, 0, 0, 0, 326, 285, 1365
+"/home/main/Documents/hila/hilapp/src/hilapp.h", "CUDA C++", 408, 0, 0, 0, 0, 72, 69, 549
+"/home/main/Documents/hila/hilapp/src/loop_function.cpp", "C++", 0, 381, 0, 0, 0, 115, 143, 639
+"/home/main/Documents/hila/hilapp/src/loop_function_visitor.cpp", "C++", 0, 424, 0, 0, 0, 158, 157, 739
+"/home/main/Documents/hila/hilapp/src/optionsparser.cpp", "C++", 0, 49, 0, 0, 0, 29, 15, 93
+"/home/main/Documents/hila/hilapp/src/optionsparser.h", "CUDA C++", 27, 0, 0, 0, 0, 36, 13, 76
+"/home/main/Documents/hila/hilapp/src/specialization_db.cpp", "C++", 0, 107, 0, 0, 0, 24, 23, 154
+"/home/main/Documents/hila/hilapp/src/specialization_db.h", "CUDA C++", 13, 0, 0, 0, 0, 1, 5, 19
+"/home/main/Documents/hila/hilapp/src/srcbuf.cpp", "C++", 0, 512, 0, 0, 0, 52, 95, 659
+"/home/main/Documents/hila/hilapp/src/srcbuf.h", "CUDA C++", 106, 0, 0, 0, 0, 34, 35, 175
+"/home/main/Documents/hila/hilapp/src/stringops.cpp", "C++", 0, 233, 0, 0, 0, 28, 32, 293
+"/home/main/Documents/hila/hilapp/src/stringops.h", "CUDA C++", 18, 0, 0, 0, 0, 16, 15, 49
+"/home/main/Documents/hila/hilapp/src/toplevelvisitor.cpp", "C++", 0, 1545, 0, 0, 0, 598, 530, 2673
+"/home/main/Documents/hila/hilapp/src/toplevelvisitor.h", "CUDA C++", 155, 0, 0, 0, 0, 55, 75, 285
+"/home/main/Documents/hila/hilapp/src/vectorization_info.cpp", "C++", 0, 143, 0, 0, 0, 46, 51, 240
+"/home/main/Documents/hila/hilapp/src/write_output.cpp", "C++", 0, 51, 0, 0, 0, 2, 9, 62
+"/home/main/Documents/hila/libraries/datatypes/array.h", "CUDA C++", 437, 0, 0, 0, 0, 66, 84, 587
+"/home/main/Documents/hila/libraries/datatypes/cmplx.h", "CUDA C++", 457, 0, 0, 0, 0, 161, 134, 752
+"/home/main/Documents/hila/libraries/datatypes/dagger.h", "CUDA C++", 290, 0, 0, 0, 0, 126, 58, 474
+"/home/main/Documents/hila/libraries/datatypes/dtype_tests.cpp", "C++", 0, 14, 0, 0, 0, 3, 2, 19
+"/home/main/Documents/hila/libraries/datatypes/matrix.h", "CUDA C++", 963, 0, 0, 0, 0, 213, 207, 1383
+"/home/main/Documents/hila/libraries/datatypes/representations.h", "CUDA C++", 246, 0, 0, 0, 0, 97, 38, 381
+"/home/main/Documents/hila/libraries/datatypes/scalar.h", "CUDA C++", 111, 0, 0, 0, 0, 29, 36, 176
+"/home/main/Documents/hila/libraries/datatypes/sun.h", "CUDA C++", 581, 0, 0, 0, 0, 64, 96, 741
+"/home/main/Documents/hila/libraries/datatypes/sun_matrix.h", "CUDA C++", 152, 0, 0, 0, 0, 103, 48, 303
+"/home/main/Documents/hila/libraries/datatypes/u1.h", "CUDA C++", 110, 0, 0, 0, 0, 23, 30, 163
+"/home/main/Documents/hila/libraries/datatypes/wilson_vector.h", "CUDA C++", 493, 0, 0, 0, 0, 88, 56, 637
+"/home/main/Documents/hila/libraries/dirac/Hasenbusch.h", "CUDA C++", 39, 0, 0, 0, 0, 7, 9, 55
+"/home/main/Documents/hila/libraries/dirac/conjugate_gradient.h", "CUDA C++", 70, 0, 0, 0, 0, 19, 19, 108
+"/home/main/Documents/hila/libraries/dirac/staggered.h", "CUDA C++", 174, 0, 0, 0, 0, 71, 36, 281
+"/home/main/Documents/hila/libraries/dirac/wilson.h", "CUDA C++", 206, 0, 0, 0, 0, 67, 41, 314
+"/home/main/Documents/hila/libraries/gauge/degauss.h", "CUDA C++", 60, 0, 0, 0, 0, 27, 29, 116
+"/home/main/Documents/hila/libraries/gauge/staples.h", "CUDA C++", 21, 0, 0, 0, 0, 14, 9, 44
+"/home/main/Documents/hila/libraries/hmc/MRE_guess.h", "CUDA C++", 70, 0, 0, 0, 0, 12, 7, 89
+"/home/main/Documents/hila/libraries/hmc/fermion_field.h", "CUDA C++", 268, 0, 0, 0, 0, 54, 56, 378
+"/home/main/Documents/hila/libraries/hmc/gauge_field.h", "CUDA C++", 279, 0, 0, 0, 0, 148, 61, 488
+"/home/main/Documents/hila/libraries/hmc/hmc.h", "CUDA C++", 39, 0, 0, 0, 0, 13, 15, 67
+"/home/main/Documents/hila/libraries/hmc/integrator.h", "CUDA C++", 109, 0, 0, 0, 0, 56, 36, 201
+"/home/main/Documents/hila/libraries/hmc/smearing.h", "CUDA C++", 340, 0, 0, 0, 0, 54, 72, 466
+"/home/main/Documents/hila/libraries/main.mk", "Makefile", 0, 0, 100, 0, 0, 34, 49, 183
+"/home/main/Documents/hila/libraries/plumbing/backend_cpu/defs.h", "CUDA C++", 15, 0, 0, 0, 0, 5, 10, 30
+"/home/main/Documents/hila/libraries/plumbing/backend_cpu/field_storage_backend.h", "CUDA C++", 124, 0, 0, 0, 0, 7, 23, 154
+"/home/main/Documents/hila/libraries/plumbing/backend_cpu/lattice.h", "CUDA C++", 6, 0, 0, 0, 0, 6, 2, 14
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/cuda_templated_ops.h", "CUDA C++", 179, 0, 0, 0, 0, 59, 60, 298
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/defs.h", "CUDA C++", 112, 0, 0, 0, 0, 44, 58, 214
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/fft_gpu_transform.h", "CUDA C++", 404, 0, 0, 0, 0, 46, 141, 591
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/field_storage_backend.h", "CUDA C++", 345, 0, 0, 0, 0, 47, 66, 458
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/gpu_reduction.h", "CUDA C++", 130, 0, 0, 0, 0, 731, 189, 1050
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/hila_gpu.cpp", "C++", 0, 301, 0, 0, 0, 19, 61, 381
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/lattice.h", "CUDA C++", 31, 0, 0, 0, 0, 14, 16, 61
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/memory_pool.cpp", "C++", 0, 97, 0, 0, 0, 13, 30, 140
+"/home/main/Documents/hila/libraries/plumbing/backend_cuda/memory_pool2.cpp", "C++", 0, 282, 0, 0, 0, 73, 78, 433
+"/home/main/Documents/hila/libraries/plumbing/backend_vector/defs.h", "CUDA C++", 345, 0, 0, 0, 0, 28, 61, 434
+"/home/main/Documents/hila/libraries/plumbing/backend_vector/field_storage_backend.h", "CUDA C++", 295, 0, 0, 0, 0, 59, 66, 420
+"/home/main/Documents/hila/libraries/plumbing/backend_vector/field_storage_backend_old.h", "CUDA C++", 150, 0, 0, 0, 0, 17, 29, 196
+"/home/main/Documents/hila/libraries/plumbing/backend_vector/hilapp_vector.h", "CUDA C++", 79, 0, 0, 0, 0, 5, 22, 106
+"/home/main/Documents/hila/libraries/plumbing/backend_vector/lattice_vector.h", "CUDA C++", 253, 0, 0, 0, 0, 131, 75, 459
+"/home/main/Documents/hila/libraries/plumbing/backend_vector/vector_types.h", "CUDA C++", 46, 0, 0, 0, 0, 25, 23, 94
+"/home/main/Documents/hila/libraries/plumbing/com_mpi.cpp", "C++", 0, 209, 0, 0, 0, 37, 80, 326
+"/home/main/Documents/hila/libraries/plumbing/com_mpi.h", "CUDA C++", 191, 0, 0, 0, 0, 20, 63, 274
+"/home/main/Documents/hila/libraries/plumbing/com_single.cpp", "C++", 0, 47, 0, 0, 0, 15, 22, 84
+"/home/main/Documents/hila/libraries/plumbing/coordinates.h", "CUDA C++", 322, 0, 0, 0, 0, 93, 82, 497
+"/home/main/Documents/hila/libraries/plumbing/defs.h", "CUDA C++", 80, 0, 0, 0, 0, 61, 44, 185
+"/home/main/Documents/hila/libraries/plumbing/fft.cpp", "C++", 0, 77, 0, 0, 0, 11, 31, 119
+"/home/main/Documents/hila/libraries/plumbing/fft.h", "CUDA C++", 306, 0, 0, 0, 0, 125, 142, 573
+"/home/main/Documents/hila/libraries/plumbing/fft_fftw_transform.h", "CUDA C++", 178, 0, 0, 0, 0, 30, 82, 290
+"/home/main/Documents/hila/libraries/plumbing/field.h", "CUDA C++", 1314, 0, 0, 0, 0, 309, 310, 1933
+"/home/main/Documents/hila/libraries/plumbing/field_io.h", "CUDA C++", 180, 0, 0, 0, 0, 19, 52, 251
+"/home/main/Documents/hila/libraries/plumbing/field_storage.h", "CUDA C++", 71, 0, 0, 0, 0, 18, 31, 120
+"/home/main/Documents/hila/libraries/plumbing/has_unary_minus.h", "CUDA C++", 17, 0, 0, 0, 0, 8, 9, 34
+"/home/main/Documents/hila/libraries/plumbing/hila.h", "CUDA C++", 21, 0, 0, 0, 0, 5, 9, 35
+"/home/main/Documents/hila/libraries/plumbing/hilapp_mpi.h", "CUDA C++", 68, 0, 0, 0, 0, 6, 30, 104
+"/home/main/Documents/hila/libraries/plumbing/initialize.cpp", "C++", 0, 424, 0, 0, 0, 74, 101, 599
+"/home/main/Documents/hila/libraries/plumbing/input.cpp", "C++", 0, 264, 0, 0, 0, 29, 59, 352
+"/home/main/Documents/hila/libraries/plumbing/input.h", "CUDA C++", 247, 0, 0, 0, 0, 218, 63, 528
+"/home/main/Documents/hila/libraries/plumbing/interface.md", "Markdown", 0, 0, 0, 15, 0, 0, 23, 38
+"/home/main/Documents/hila/libraries/plumbing/lattice.cpp", "C++", 0, 518, 0, 0, 0, 219, 185, 922
+"/home/main/Documents/hila/libraries/plumbing/lattice.h", "CUDA C++", 303, 0, 0, 0, 0, 62, 87, 452
+"/home/main/Documents/hila/libraries/plumbing/logger.h", "CUDA C++", 52, 0, 0, 0, 0, 19, 16, 87
+"/home/main/Documents/hila/libraries/plumbing/map_node_layout.cpp", "C++", 0, 78, 0, 0, 0, 42, 35, 155
+"/home/main/Documents/hila/libraries/plumbing/memalloc.cpp", "C++", 0, 51, 0, 0, 0, 7, 29, 87
+"/home/main/Documents/hila/libraries/plumbing/memalloc.h", "CUDA C++", 8, 0, 0, 0, 0, 5, 6, 19
+"/home/main/Documents/hila/libraries/plumbing/mersenne.h", "CUDA C++", 6, 0, 0, 0, 0, 4, 5, 15
+"/home/main/Documents/hila/libraries/plumbing/mersenne_inline.cpp", "C++", 0, 58, 0, 0, 0, 40, 16, 114
+"/home/main/Documents/hila/libraries/plumbing/mersenne_inline_new.cpp", "C++", 0, 58, 0, 0, 0, 40, 16, 114
+"/home/main/Documents/hila/libraries/plumbing/mersenne_newtry.h", "CUDA C++", 5, 0, 0, 0, 0, 4, 3, 12
+"/home/main/Documents/hila/libraries/plumbing/params.h", "CUDA C++", 71, 0, 0, 0, 0, 41, 36, 148
+"/home/main/Documents/hila/libraries/plumbing/random.cpp", "C++", 0, 85, 0, 0, 0, 44, 48, 177
+"/home/main/Documents/hila/libraries/plumbing/random.h", "CUDA C++", 14, 0, 0, 0, 0, 6, 12, 32
+"/home/main/Documents/hila/libraries/plumbing/real_var_ops.h", "CUDA C++", 37, 0, 0, 0, 0, 6, 13, 56
+"/home/main/Documents/hila/libraries/plumbing/reduction.h", "CUDA C++", 289, 0, 0, 0, 0, 89, 83, 461
+"/home/main/Documents/hila/libraries/plumbing/setup_layout_generic.cpp", "C++", 0, 146, 0, 0, 0, 49, 36, 231
+"/home/main/Documents/hila/libraries/plumbing/setup_layout_simple.cpp", "C++", 0, 76, 0, 0, 0, 39, 23, 138
+"/home/main/Documents/hila/libraries/plumbing/setup_layout_vector.cpp", "C++", 0, 249, 0, 0, 0, 57, 58, 364
+"/home/main/Documents/hila/libraries/plumbing/spectraldensity.h", "CUDA C++", 177, 0, 0, 0, 0, 57, 70, 304
+"/home/main/Documents/hila/libraries/plumbing/test_gathers.cpp", "C++", 0, 61, 0, 0, 0, 5, 18, 84
+"/home/main/Documents/hila/libraries/plumbing/timing.cpp", "C++", 0, 151, 0, 0, 0, 30, 40, 221
+"/home/main/Documents/hila/libraries/plumbing/timing.h", "CUDA C++", 35, 0, 0, 0, 0, 42, 20, 97
+"/home/main/Documents/hila/libraries/plumbing/type_tools.h", "CUDA C++", 53, 0, 0, 0, 0, 30, 24, 107
+"/home/main/Documents/hila/libraries/plumbing/vector_field.h", "CUDA C++", 42, 0, 0, 0, 0, 15, 22, 79
+"/home/main/Documents/hila/libraries/plumbing/vectorreduction.h", "CUDA C++", 210, 0, 0, 0, 0, 64, 50, 324
+"/home/main/Documents/hila/libraries/target_arch/AVX2.mk", "Makefile", 0, 0, 9, 0, 0, 20, 13, 42
+"/home/main/Documents/hila/libraries/target_arch/cuda.mk", "Makefile", 0, 0, 19, 0, 0, 18, 12, 49
+"/home/main/Documents/hila/libraries/target_arch/gcc-8.mk", "Makefile", 0, 0, 8, 0, 0, 21, 14, 43
+"/home/main/Documents/hila/libraries/target_arch/hip.mk", "Makefile", 0, 0, 11, 0, 0, 23, 14, 48
+"/home/main/Documents/hila/libraries/target_arch/hip2.mk", "Makefile", 0, 0, 15, 0, 0, 23, 15, 53
+"/home/main/Documents/hila/libraries/target_arch/kale_cuda.mk", "Makefile", 0, 0, 11, 0, 0, 18, 19, 48
+"/home/main/Documents/hila/libraries/target_arch/lumi-AVX2.mk", "Makefile", 0, 0, 17, 0, 0, 20, 18, 55
+"/home/main/Documents/hila/libraries/target_arch/lumi-hip.mk", "Makefile", 0, 0, 20, 0, 0, 25, 19, 64
+"/home/main/Documents/hila/libraries/target_arch/lumi.mk", "Makefile", 0, 0, 16, 0, 0, 19, 18, 53
+"/home/main/Documents/hila/libraries/target_arch/mahti-AVX2.mk", "Makefile", 0, 0, 15, 0, 0, 21, 15, 51
+"/home/main/Documents/hila/libraries/target_arch/mahti.mk", "Makefile", 0, 0, 15, 0, 0, 19, 17, 51
+"/home/main/Documents/hila/libraries/target_arch/mahti_cuda.mk", "Makefile", 0, 0, 18, 0, 0, 29, 17, 64
+"/home/main/Documents/hila/libraries/target_arch/openmp.mk", "Makefile", 0, 0, 8, 0, 0, 15, 13, 36
+"/home/main/Documents/hila/libraries/target_arch/puhti.mk", "Makefile", 0, 0, 14, 0, 0, 19, 18, 51
+"/home/main/Documents/hila/libraries/target_arch/puhti_cuda.mk", "Makefile", 0, 0, 17, 0, 0, 24, 15, 56
+"/home/main/Documents/hila/libraries/target_arch/puhti_hip.mk", "Makefile", 0, 0, 21, 0, 0, 25, 20, 66
+"/home/main/Documents/hila/libraries/target_arch/tufts.mk", "Makefile", 0, 0, 16, 0, 0, 25, 20, 61
+"/home/main/Documents/hila/libraries/target_arch/vanilla-noMPI.mk", "Makefile", 0, 0, 7, 0, 0, 15, 10, 32
+"/home/main/Documents/hila/libraries/target_arch/vanilla.mk", "Makefile", 0, 0, 8, 0, 0, 16, 13, 37
+"/home/main/Documents/hila/libraries/vectorclass/README.md", "Markdown", 0, 0, 0, 7, 0, 0, 6, 13
+"/home/main/Documents/hila/libraries/vectorclass/dispatch_example.cpp", "C++", 0, 45, 0, 0, 0, 44, 20, 109
+"/home/main/Documents/hila/libraries/vectorclass/instrset.h", "CUDA C++", 1106, 0, 0, 0, 0, 257, 111, 1474
+"/home/main/Documents/hila/libraries/vectorclass/instrset_detect.cpp", "C++", 0, 113, 0, 0, 0, 35, 20, 168
+"/home/main/Documents/hila/libraries/vectorclass/vector_convert.h", "CUDA C++", 375, 0, 0, 0, 0, 94, 106, 575
+"/home/main/Documents/hila/libraries/vectorclass/vectorclass.h", "CUDA C++", 44, 0, 0, 0, 0, 30, 13, 87
+"/home/main/Documents/hila/libraries/vectorclass/vectorf128.h", "CUDA C++", 2024, 0, 0, 0, 0, 618, 323, 2965
+"/home/main/Documents/hila/libraries/vectorclass/vectorf256.h", "CUDA C++", 2119, 0, 0, 0, 0, 569, 343, 3031
+"/home/main/Documents/hila/libraries/vectorclass/vectorf256e.h", "CUDA C++", 1181, 0, 0, 0, 0, 480, 279, 1940
+"/home/main/Documents/hila/libraries/vectorclass/vectorf512.h", "CUDA C++", 1358, 0, 0, 0, 0, 431, 263, 2052
+"/home/main/Documents/hila/libraries/vectorclass/vectorf512e.h", "CUDA C++", 1227, 0, 0, 0, 0, 444, 262, 1933
+"/home/main/Documents/hila/libraries/vectorclass/vectori128.h", "CUDA C++", 5044, 0, 0, 0, 0, 1304, 678, 7026
+"/home/main/Documents/hila/libraries/vectorclass/vectori256.h", "CUDA C++", 4167, 0, 0, 0, 0, 1016, 556, 5739
+"/home/main/Documents/hila/libraries/vectorclass/vectori256e.h", "CUDA C++", 2564, 0, 0, 0, 0, 882, 501, 3947
+"/home/main/Documents/hila/libraries/vectorclass/vectori512.h", "CUDA C++", 1440, 0, 0, 0, 0, 437, 236, 2113
+"/home/main/Documents/hila/libraries/vectorclass/vectori512e.h", "CUDA C++", 1469, 0, 0, 0, 0, 565, 301, 2335
+"/home/main/Documents/hila/libraries/vectorclass/vectori512s.h", "CUDA C++", 1540, 0, 0, 0, 0, 487, 268, 2295
+"/home/main/Documents/hila/libraries/vectorclass/vectori512se.h", "CUDA C++", 1318, 0, 0, 0, 0, 469, 284, 2071
+"/home/main/Documents/hila/libraries/vectorclass/vectormath_common.h", "CUDA C++", 161, 0, 0, 0, 0, 70, 40, 271
+"/home/main/Documents/hila/libraries/vectorclass/vectormath_exp.h", "CUDA C++", 1515, 0, 0, 0, 0, 350, 361, 2226
+"/home/main/Documents/hila/libraries/vectorclass/vectormath_hyp.h", "CUDA C++", 447, 0, 0, 0, 0, 154, 117, 718
+"/home/main/Documents/hila/libraries/vectorclass/vectormath_lib.h", "CUDA C++", 1760, 0, 0, 0, 0, 138, 129, 2027
+"/home/main/Documents/hila/libraries/vectorclass/vectormath_trig.h", "CUDA C++", 520, 0, 0, 0, 0, 209, 165, 894
+"/home/main/Documents/hila/submit_scripts/submit_lumi.sh", "Shell Script", 0, 0, 0, 0, 3, 9, 7, 19
+"/home/main/Documents/hila/unit_tests/Makefile", "Makefile", 0, 0, 19, 0, 0, 1, 10, 30
+"/home/main/Documents/hila/unit_tests/README.md", "Markdown", 0, 0, 0, 71, 0, 0, 27, 98
+"/home/main/Documents/hila/unit_tests/src/catch.hpp", "C++", 0, 13708, 0, 0, 0, 1117, 3146, 17971
+"/home/main/Documents/hila/unit_tests/src/catch_main.cpp", "C++", 0, 13, 0, 0, 0, 2, 3, 18
+"/home/main/Documents/hila/unit_tests/src/test_array.cpp", "C++", 0, 170, 0, 0, 0, 0, 12, 182
+"/home/main/Documents/hila/unit_tests/src/test_cmplx.cpp", "C++", 0, 189, 0, 0, 0, 0, 12, 201
+"/home/main/Documents/hila/unit_tests/src/test_coordinates.cpp", "C++", 0, 118, 0, 0, 0, 4, 7, 129
+"/home/main/Documents/hila/unit_tests/src/test_field.cpp", "C++", 0, 132, 0, 0, 0, 1, 16, 149
+"/home/main/Documents/hila/unit_tests/src/test_lattice.cpp", "C++", 0, 5, 0, 0, 0, 0, 1, 6
+"/home/main/Documents/hila/unit_tests/src/test_matrix.cpp", "C++", 0, 229, 0, 0, 0, 0, 18, 247
+"/home/main/Documents/hila/unit_tests/src/test_real_var_ops.cpp", "C++", 0, 38, 0, 0, 0, 0, 3, 41
+"Total", "-", 44724, 27255, 627, 674, 113, 18740, 16964, 109097

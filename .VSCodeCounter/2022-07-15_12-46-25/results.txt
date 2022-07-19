@@ -1,0 +1,275 @@
+Date : 2022-07-15 12:46:25
+Directory : /home/main/Documents/hila
+Total : 214 files,  73393 codes, 18740 comments, 16964 blanks, all 109097 lines
+
+Languages
++--------------+------------+------------+------------+------------+------------+
+| language     | files      | code       | comment    | blank      | total      |
++--------------+------------+------------+------------+------------+------------+
+| CUDA C++     |         95 |     44,724 |     13,410 |      9,040 |     67,174 |
+| C++          |         75 |     27,255 |      4,698 |      7,005 |     38,958 |
+| Markdown     |          5 |        674 |          0 |        314 |        988 |
+| Makefile     |         34 |        627 |        591 |        568 |      1,786 |
+| Shell Script |          5 |        113 |         41 |         37 |        191 |
++--------------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                    | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                       |        214 |     73,393 |     18,740 |     16,964 |    109,097 |
+| applications                                                                            |         44 |      3,221 |        679 |      1,059 |      4,959 |
+| applications/SUN                                                                        |          6 |        258 |        134 |         92 |        484 |
+| applications/Staggered                                                                  |          3 |         90 |         21 |         40 |        151 |
+| applications/Wilson                                                                     |          3 |         79 |         19 |         35 |        133 |
+| applications/benchmarks                                                                 |          8 |        627 |         91 |        135 |        853 |
+| applications/hila_example                                                               |          4 |        130 |         45 |         75 |        250 |
+| applications/hila_example/src                                                           |          3 |        113 |         35 |         58 |        206 |
+| applications/ising                                                                      |          2 |         47 |         16 |         23 |         86 |
+| applications/suN_hmc                                                                    |          2 |        184 |         56 |         90 |        330 |
+| applications/suN_hmc/src                                                                |          1 |        173 |         45 |         72 |        290 |
+| applications/sun_realtime                                                               |          2 |        226 |         77 |        101 |        404 |
+| applications/sun_realtime/src                                                           |          1 |        215 |         67 |         84 |        366 |
+| applications/test_FFT                                                                   |          2 |         36 |         18 |         31 |         85 |
+| applications/test_cases                                                                 |          8 |      1,005 |        142 |        266 |      1,413 |
+| applications/u1strings                                                                  |          2 |        484 |         45 |        148 |        677 |
+| applications/xy                                                                         |          2 |         55 |         15 |         23 |         93 |
+| docs                                                                                    |          1 |        264 |          0 |        102 |        366 |
+| hilapp                                                                                  |         29 |      7,400 |      2,477 |      2,281 |     12,158 |
+| hilapp/src                                                                              |         28 |      7,281 |      2,405 |      2,225 |     11,911 |
+| libraries                                                                               |        127 |     47,496 |     14,450 |     10,104 |     72,050 |
+| libraries/datatypes                                                                     |         11 |      3,854 |        973 |        789 |      5,616 |
+| libraries/dirac                                                                         |          4 |        489 |        164 |        105 |        758 |
+| libraries/gauge                                                                         |          2 |         81 |         41 |         38 |        160 |
+| libraries/hmc                                                                           |          6 |      1,105 |        337 |        247 |      1,689 |
+| libraries/plumbing                                                                      |         61 |     10,058 |      3,423 |      3,194 |     16,675 |
+| libraries/plumbing/backend_cpu                                                          |          3 |        145 |         18 |         35 |        198 |
+| libraries/plumbing/backend_cuda                                                         |          9 |      1,881 |      1,046 |        699 |      3,626 |
+| libraries/plumbing/backend_vector                                                       |          6 |      1,168 |        265 |        276 |      1,709 |
+| libraries/target_arch                                                                   |         19 |        265 |        395 |        300 |        960 |
+| libraries/vectorclass                                                                   |         23 |     31,544 |      9,083 |      5,382 |     46,009 |
+| submit_scripts                                                                          |          1 |          3 |          9 |          7 |         19 |
+| unit_tests                                                                              |         11 |     14,692 |      1,125 |      3,255 |     19,072 |
+| unit_tests/src                                                                          |          9 |     14,602 |      1,124 |      3,218 |     18,944 |
++-----------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------------------+--------------+------------+------------+------------+------------+
+| filename                                                                                | language     | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------------------+--------------+------------+------------+------------+------------+
+| /home/main/Documents/hila/README.md                                                     | Markdown     |        317 |          0 |        156 |        473 |
+| /home/main/Documents/hila/applications/SUN/KennedyPendleton.cpp                         | C++          |         40 |         23 |         12 |         75 |
+| /home/main/Documents/hila/applications/SUN/Makefile                                     | Makefile     |          6 |          6 |          8 |         20 |
+| /home/main/Documents/hila/applications/SUN/SUN.cpp                                      | C++          |         64 |         16 |         14 |         94 |
+| /home/main/Documents/hila/applications/SUN/SUN.h                                        | CUDA C++     |         23 |          2 |          8 |         33 |
+| /home/main/Documents/hila/applications/SUN/monte.cpp                                    | C++          |        122 |         80 |         46 |        248 |
+| /home/main/Documents/hila/applications/SUN/submit_puhti.sh                              | Shell Script |          3 |          7 |          4 |         14 |
+| /home/main/Documents/hila/applications/Staggered/Makefile                               | Makefile     |          6 |          6 |          9 |         21 |
+| /home/main/Documents/hila/applications/Staggered/staggered.cpp                          | C++          |         58 |         13 |         22 |         93 |
+| /home/main/Documents/hila/applications/Staggered/staggered.h                            | CUDA C++     |         26 |          2 |          9 |         37 |
+| /home/main/Documents/hila/applications/Wilson/Makefile                                  | Makefile     |          6 |          6 |         10 |         22 |
+| /home/main/Documents/hila/applications/Wilson/Wilson.cpp                                | C++          |         46 |         11 |         16 |         73 |
+| /home/main/Documents/hila/applications/Wilson/Wilson.h                                  | CUDA C++     |         27 |          2 |          9 |         38 |
+| /home/main/Documents/hila/applications/benchmarks/Makefile                              | Makefile     |         19 |          6 |         15 |         40 |
+| /home/main/Documents/hila/applications/benchmarks/bench.h                               | CUDA C++     |         17 |          8 |          5 |         30 |
+| /home/main/Documents/hila/applications/benchmarks/bench_FFT.cpp                         | C++          |         49 |          7 |         16 |         72 |
+| /home/main/Documents/hila/applications/benchmarks/bench_fermion.cpp                     | C++          |        104 |         12 |         25 |        141 |
+| /home/main/Documents/hila/applications/benchmarks/bench_field.cpp                       | C++          |        219 |         23 |         29 |        271 |
+| /home/main/Documents/hila/applications/benchmarks/bench_matrix2.cpp                     | C++          |        177 |         20 |         33 |        230 |
+| /home/main/Documents/hila/applications/benchmarks/benchmark.sh                          | Shell Script |         38 |          2 |          7 |         47 |
+| /home/main/Documents/hila/applications/benchmarks/submit_gpu_puhti.sh                   | Shell Script |          4 |         13 |          5 |         22 |
+| /home/main/Documents/hila/applications/hila_example/Makefile                            | Makefile     |         17 |         10 |         17 |         44 |
+| /home/main/Documents/hila/applications/hila_example/src/hila_example.cpp                | C++          |         56 |         21 |         32 |        109 |
+| /home/main/Documents/hila/applications/hila_example/src/minmax.cpp                      | C++          |         34 |          6 |         16 |         56 |
+| /home/main/Documents/hila/applications/hila_example/src/simple.cpp                      | C++          |         23 |          8 |         10 |         41 |
+| /home/main/Documents/hila/applications/ising/Makefile                                   | Makefile     |          6 |          6 |         10 |         22 |
+| /home/main/Documents/hila/applications/ising/ising.cpp                                  | C++          |         41 |         10 |         13 |         64 |
+| /home/main/Documents/hila/applications/suN_hmc/Makefile                                 | Makefile     |         11 |         11 |         18 |         40 |
+| /home/main/Documents/hila/applications/suN_hmc/src/suN_hmc.cpp                          | C++          |        173 |         45 |         72 |        290 |
+| /home/main/Documents/hila/applications/sun_realtime/Makefile                            | Makefile     |         11 |         10 |         17 |         38 |
+| /home/main/Documents/hila/applications/sun_realtime/src/sun_realtime.cpp                | C++          |        215 |         67 |         84 |        366 |
+| /home/main/Documents/hila/applications/test_FFT/Makefile                                | Makefile     |          7 |          8 |         14 |         29 |
+| /home/main/Documents/hila/applications/test_FFT/test_FFT.cpp                            | C++          |         29 |         10 |         17 |         56 |
+| /home/main/Documents/hila/applications/test_cases/Makefile                              | Makefile     |         19 |          6 |         15 |         40 |
+| /home/main/Documents/hila/applications/test_cases/test.h                                | CUDA C++     |         30 |          4 |          8 |         42 |
+| /home/main/Documents/hila/applications/test_cases/test.sh                               | Shell Script |         65 |         10 |         14 |         89 |
+| /home/main/Documents/hila/applications/test_cases/test_CG.cpp                           | C++          |        282 |         17 |         58 |        357 |
+| /home/main/Documents/hila/applications/test_cases/test_FFT.cpp                          | C++          |         43 |         13 |         28 |         84 |
+| /home/main/Documents/hila/applications/test_cases/test_conjReduce.cpp                   | C++          |         64 |         18 |         19 |        101 |
+| /home/main/Documents/hila/applications/test_cases/test_fields.cpp                       | C++          |        252 |         40 |         65 |        357 |
+| /home/main/Documents/hila/applications/test_cases/test_forces.cpp                       | C++          |        250 |         34 |         59 |        343 |
+| /home/main/Documents/hila/applications/u1strings/Makefile                               | Makefile     |         10 |          8 |         10 |         28 |
+| /home/main/Documents/hila/applications/u1strings/onsim.cpp                              | C++          |        474 |         37 |        138 |        649 |
+| /home/main/Documents/hila/applications/xy/Makefile                                      | Makefile     |          6 |          6 |         10 |         22 |
+| /home/main/Documents/hila/applications/xy/xy.cpp                                        | C++          |         49 |          9 |         13 |         71 |
+| /home/main/Documents/hila/docs/mainpage.md                                              | Markdown     |        264 |          0 |        102 |        366 |
+| /home/main/Documents/hila/hilapp/Makefile                                               | Makefile     |        119 |         72 |         56 |        247 |
+| /home/main/Documents/hila/hilapp/src/addrof_and_ref_visitor.cpp                         | C++          |        159 |         55 |         33 |        247 |
+| /home/main/Documents/hila/hilapp/src/codegen.cpp                                        | C++          |        336 |        154 |         85 |        575 |
+| /home/main/Documents/hila/hilapp/src/codegen_avx_new.cpp                                | C++          |        440 |        103 |        104 |        647 |
+| /home/main/Documents/hila/hilapp/src/codegen_cpu.cpp                                    | C++          |        182 |         45 |         36 |        263 |
+| /home/main/Documents/hila/hilapp/src/codegen_cuda.cpp                                   | C++          |        401 |        162 |        115 |        678 |
+| /home/main/Documents/hila/hilapp/src/codegen_openacc.cpp                                | C++          |         39 |         10 |          9 |         58 |
+| /home/main/Documents/hila/hilapp/src/contains_loop_local_var_visitor.cpp                | C++          |         42 |         16 |         18 |         76 |
+| /home/main/Documents/hila/hilapp/src/contains_random_visitor.cpp                        | C++          |         54 |         21 |         17 |         92 |
+| /home/main/Documents/hila/hilapp/src/depends_on_site_visitor.cpp                        | C++          |         74 |         33 |         31 |        138 |
+| /home/main/Documents/hila/hilapp/src/function_contains_loop_visitor.cpp                 | C++          |         56 |         15 |         14 |         85 |
+| /home/main/Documents/hila/hilapp/src/generalvisitor.cpp                                 | C++          |        403 |        117 |        140 |        660 |
+| /home/main/Documents/hila/hilapp/src/generalvisitor.h                                   | CUDA C++     |        169 |         82 |         71 |        322 |
+| /home/main/Documents/hila/hilapp/src/hilapp.cpp                                         | C++          |        754 |        326 |        285 |      1,365 |
+| /home/main/Documents/hila/hilapp/src/hilapp.h                                           | CUDA C++     |        408 |         72 |         69 |        549 |
+| /home/main/Documents/hila/hilapp/src/loop_function.cpp                                  | C++          |        381 |        115 |        143 |        639 |
+| /home/main/Documents/hila/hilapp/src/loop_function_visitor.cpp                          | C++          |        424 |        158 |        157 |        739 |
+| /home/main/Documents/hila/hilapp/src/optionsparser.cpp                                  | C++          |         49 |         29 |         15 |         93 |
+| /home/main/Documents/hila/hilapp/src/optionsparser.h                                    | CUDA C++     |         27 |         36 |         13 |         76 |
+| /home/main/Documents/hila/hilapp/src/specialization_db.cpp                              | C++          |        107 |         24 |         23 |        154 |
+| /home/main/Documents/hila/hilapp/src/specialization_db.h                                | CUDA C++     |         13 |          1 |          5 |         19 |
+| /home/main/Documents/hila/hilapp/src/srcbuf.cpp                                         | C++          |        512 |         52 |         95 |        659 |
+| /home/main/Documents/hila/hilapp/src/srcbuf.h                                           | CUDA C++     |        106 |         34 |         35 |        175 |
+| /home/main/Documents/hila/hilapp/src/stringops.cpp                                      | C++          |        233 |         28 |         32 |        293 |
+| /home/main/Documents/hila/hilapp/src/stringops.h                                        | CUDA C++     |         18 |         16 |         15 |         49 |
+| /home/main/Documents/hila/hilapp/src/toplevelvisitor.cpp                                | C++          |      1,545 |        598 |        530 |      2,673 |
+| /home/main/Documents/hila/hilapp/src/toplevelvisitor.h                                  | CUDA C++     |        155 |         55 |         75 |        285 |
+| /home/main/Documents/hila/hilapp/src/vectorization_info.cpp                             | C++          |        143 |         46 |         51 |        240 |
+| /home/main/Documents/hila/hilapp/src/write_output.cpp                                   | C++          |         51 |          2 |          9 |         62 |
+| /home/main/Documents/hila/libraries/datatypes/array.h                                   | CUDA C++     |        437 |         66 |         84 |        587 |
+| /home/main/Documents/hila/libraries/datatypes/cmplx.h                                   | CUDA C++     |        457 |        161 |        134 |        752 |
+| /home/main/Documents/hila/libraries/datatypes/dagger.h                                  | CUDA C++     |        290 |        126 |         58 |        474 |
+| /home/main/Documents/hila/libraries/datatypes/dtype_tests.cpp                           | C++          |         14 |          3 |          2 |         19 |
+| /home/main/Documents/hila/libraries/datatypes/matrix.h                                  | CUDA C++     |        963 |        213 |        207 |      1,383 |
+| /home/main/Documents/hila/libraries/datatypes/representations.h                         | CUDA C++     |        246 |         97 |         38 |        381 |
+| /home/main/Documents/hila/libraries/datatypes/scalar.h                                  | CUDA C++     |        111 |         29 |         36 |        176 |
+| /home/main/Documents/hila/libraries/datatypes/sun.h                                     | CUDA C++     |        581 |         64 |         96 |        741 |
+| /home/main/Documents/hila/libraries/datatypes/sun_matrix.h                              | CUDA C++     |        152 |        103 |         48 |        303 |
+| /home/main/Documents/hila/libraries/datatypes/u1.h                                      | CUDA C++     |        110 |         23 |         30 |        163 |
+| /home/main/Documents/hila/libraries/datatypes/wilson_vector.h                           | CUDA C++     |        493 |         88 |         56 |        637 |
+| /home/main/Documents/hila/libraries/dirac/Hasenbusch.h                                  | CUDA C++     |         39 |          7 |          9 |         55 |
+| /home/main/Documents/hila/libraries/dirac/conjugate_gradient.h                          | CUDA C++     |         70 |         19 |         19 |        108 |
+| /home/main/Documents/hila/libraries/dirac/staggered.h                                   | CUDA C++     |        174 |         71 |         36 |        281 |
+| /home/main/Documents/hila/libraries/dirac/wilson.h                                      | CUDA C++     |        206 |         67 |         41 |        314 |
+| /home/main/Documents/hila/libraries/gauge/degauss.h                                     | CUDA C++     |         60 |         27 |         29 |        116 |
+| /home/main/Documents/hila/libraries/gauge/staples.h                                     | CUDA C++     |         21 |         14 |          9 |         44 |
+| /home/main/Documents/hila/libraries/hmc/MRE_guess.h                                     | CUDA C++     |         70 |         12 |          7 |         89 |
+| /home/main/Documents/hila/libraries/hmc/fermion_field.h                                 | CUDA C++     |        268 |         54 |         56 |        378 |
+| /home/main/Documents/hila/libraries/hmc/gauge_field.h                                   | CUDA C++     |        279 |        148 |         61 |        488 |
+| /home/main/Documents/hila/libraries/hmc/hmc.h                                           | CUDA C++     |         39 |         13 |         15 |         67 |
+| /home/main/Documents/hila/libraries/hmc/integrator.h                                    | CUDA C++     |        109 |         56 |         36 |        201 |
+| /home/main/Documents/hila/libraries/hmc/smearing.h                                      | CUDA C++     |        340 |         54 |         72 |        466 |
+| /home/main/Documents/hila/libraries/main.mk                                             | Makefile     |        100 |         34 |         49 |        183 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cpu/defs.h                         | CUDA C++     |         15 |          5 |         10 |         30 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cpu/field_storage_backend.h        | CUDA C++     |        124 |          7 |         23 |        154 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cpu/lattice.h                      | CUDA C++     |          6 |          6 |          2 |         14 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/cuda_templated_ops.h          | CUDA C++     |        179 |         59 |         60 |        298 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/defs.h                        | CUDA C++     |        112 |         44 |         58 |        214 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/fft_gpu_transform.h           | CUDA C++     |        404 |         46 |        141 |        591 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/field_storage_backend.h       | CUDA C++     |        345 |         47 |         66 |        458 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/gpu_reduction.h               | CUDA C++     |        130 |        731 |        189 |      1,050 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/hila_gpu.cpp                  | C++          |        301 |         19 |         61 |        381 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/lattice.h                     | CUDA C++     |         31 |         14 |         16 |         61 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/memory_pool.cpp               | C++          |         97 |         13 |         30 |        140 |
+| /home/main/Documents/hila/libraries/plumbing/backend_cuda/memory_pool2.cpp              | C++          |        282 |         73 |         78 |        433 |
+| /home/main/Documents/hila/libraries/plumbing/backend_vector/defs.h                      | CUDA C++     |        345 |         28 |         61 |        434 |
+| /home/main/Documents/hila/libraries/plumbing/backend_vector/field_storage_backend.h     | CUDA C++     |        295 |         59 |         66 |        420 |
+| /home/main/Documents/hila/libraries/plumbing/backend_vector/field_storage_backend_old.h | CUDA C++     |        150 |         17 |         29 |        196 |
+| /home/main/Documents/hila/libraries/plumbing/backend_vector/hilapp_vector.h             | CUDA C++     |         79 |          5 |         22 |        106 |
+| /home/main/Documents/hila/libraries/plumbing/backend_vector/lattice_vector.h            | CUDA C++     |        253 |        131 |         75 |        459 |
+| /home/main/Documents/hila/libraries/plumbing/backend_vector/vector_types.h              | CUDA C++     |         46 |         25 |         23 |         94 |
+| /home/main/Documents/hila/libraries/plumbing/com_mpi.cpp                                | C++          |        209 |         37 |         80 |        326 |
+| /home/main/Documents/hila/libraries/plumbing/com_mpi.h                                  | CUDA C++     |        191 |         20 |         63 |        274 |
+| /home/main/Documents/hila/libraries/plumbing/com_single.cpp                             | C++          |         47 |         15 |         22 |         84 |
+| /home/main/Documents/hila/libraries/plumbing/coordinates.h                              | CUDA C++     |        322 |         93 |         82 |        497 |
+| /home/main/Documents/hila/libraries/plumbing/defs.h                                     | CUDA C++     |         80 |         61 |         44 |        185 |
+| /home/main/Documents/hila/libraries/plumbing/fft.cpp                                    | C++          |         77 |         11 |         31 |        119 |
+| /home/main/Documents/hila/libraries/plumbing/fft.h                                      | CUDA C++     |        306 |        125 |        142 |        573 |
+| /home/main/Documents/hila/libraries/plumbing/fft_fftw_transform.h                       | CUDA C++     |        178 |         30 |         82 |        290 |
+| /home/main/Documents/hila/libraries/plumbing/field.h                                    | CUDA C++     |      1,314 |        309 |        310 |      1,933 |
+| /home/main/Documents/hila/libraries/plumbing/field_io.h                                 | CUDA C++     |        180 |         19 |         52 |        251 |
+| /home/main/Documents/hila/libraries/plumbing/field_storage.h                            | CUDA C++     |         71 |         18 |         31 |        120 |
+| /home/main/Documents/hila/libraries/plumbing/has_unary_minus.h                          | CUDA C++     |         17 |          8 |          9 |         34 |
+| /home/main/Documents/hila/libraries/plumbing/hila.h                                     | CUDA C++     |         21 |          5 |          9 |         35 |
+| /home/main/Documents/hila/libraries/plumbing/hilapp_mpi.h                               | CUDA C++     |         68 |          6 |         30 |        104 |
+| /home/main/Documents/hila/libraries/plumbing/initialize.cpp                             | C++          |        424 |         74 |        101 |        599 |
+| /home/main/Documents/hila/libraries/plumbing/input.cpp                                  | C++          |        264 |         29 |         59 |        352 |
+| /home/main/Documents/hila/libraries/plumbing/input.h                                    | CUDA C++     |        247 |        218 |         63 |        528 |
+| /home/main/Documents/hila/libraries/plumbing/interface.md                               | Markdown     |         15 |          0 |         23 |         38 |
+| /home/main/Documents/hila/libraries/plumbing/lattice.cpp                                | C++          |        518 |        219 |        185 |        922 |
+| /home/main/Documents/hila/libraries/plumbing/lattice.h                                  | CUDA C++     |        303 |         62 |         87 |        452 |
+| /home/main/Documents/hila/libraries/plumbing/logger.h                                   | CUDA C++     |         52 |         19 |         16 |         87 |
+| /home/main/Documents/hila/libraries/plumbing/map_node_layout.cpp                        | C++          |         78 |         42 |         35 |        155 |
+| /home/main/Documents/hila/libraries/plumbing/memalloc.cpp                               | C++          |         51 |          7 |         29 |         87 |
+| /home/main/Documents/hila/libraries/plumbing/memalloc.h                                 | CUDA C++     |          8 |          5 |          6 |         19 |
+| /home/main/Documents/hila/libraries/plumbing/mersenne.h                                 | CUDA C++     |          6 |          4 |          5 |         15 |
+| /home/main/Documents/hila/libraries/plumbing/mersenne_inline.cpp                        | C++          |         58 |         40 |         16 |        114 |
+| /home/main/Documents/hila/libraries/plumbing/mersenne_inline_new.cpp                    | C++          |         58 |         40 |         16 |        114 |
+| /home/main/Documents/hila/libraries/plumbing/mersenne_newtry.h                          | CUDA C++     |          5 |          4 |          3 |         12 |
+| /home/main/Documents/hila/libraries/plumbing/params.h                                   | CUDA C++     |         71 |         41 |         36 |        148 |
+| /home/main/Documents/hila/libraries/plumbing/random.cpp                                 | C++          |         85 |         44 |         48 |        177 |
+| /home/main/Documents/hila/libraries/plumbing/random.h                                   | CUDA C++     |         14 |          6 |         12 |         32 |
+| /home/main/Documents/hila/libraries/plumbing/real_var_ops.h                             | CUDA C++     |         37 |          6 |         13 |         56 |
+| /home/main/Documents/hila/libraries/plumbing/reduction.h                                | CUDA C++     |        289 |         89 |         83 |        461 |
+| /home/main/Documents/hila/libraries/plumbing/setup_layout_generic.cpp                   | C++          |        146 |         49 |         36 |        231 |
+| /home/main/Documents/hila/libraries/plumbing/setup_layout_simple.cpp                    | C++          |         76 |         39 |         23 |        138 |
+| /home/main/Documents/hila/libraries/plumbing/setup_layout_vector.cpp                    | C++          |        249 |         57 |         58 |        364 |
+| /home/main/Documents/hila/libraries/plumbing/spectraldensity.h                          | CUDA C++     |        177 |         57 |         70 |        304 |
+| /home/main/Documents/hila/libraries/plumbing/test_gathers.cpp                           | C++          |         61 |          5 |         18 |         84 |
+| /home/main/Documents/hila/libraries/plumbing/timing.cpp                                 | C++          |        151 |         30 |         40 |        221 |
+| /home/main/Documents/hila/libraries/plumbing/timing.h                                   | CUDA C++     |         35 |         42 |         20 |         97 |
+| /home/main/Documents/hila/libraries/plumbing/type_tools.h                               | CUDA C++     |         53 |         30 |         24 |        107 |
+| /home/main/Documents/hila/libraries/plumbing/vector_field.h                             | CUDA C++     |         42 |         15 |         22 |         79 |
+| /home/main/Documents/hila/libraries/plumbing/vectorreduction.h                          | CUDA C++     |        210 |         64 |         50 |        324 |
+| /home/main/Documents/hila/libraries/target_arch/AVX2.mk                                 | Makefile     |          9 |         20 |         13 |         42 |
+| /home/main/Documents/hila/libraries/target_arch/cuda.mk                                 | Makefile     |         19 |         18 |         12 |         49 |
+| /home/main/Documents/hila/libraries/target_arch/gcc-8.mk                                | Makefile     |          8 |         21 |         14 |         43 |
+| /home/main/Documents/hila/libraries/target_arch/hip.mk                                  | Makefile     |         11 |         23 |         14 |         48 |
+| /home/main/Documents/hila/libraries/target_arch/hip2.mk                                 | Makefile     |         15 |         23 |         15 |         53 |
+| /home/main/Documents/hila/libraries/target_arch/kale_cuda.mk                            | Makefile     |         11 |         18 |         19 |         48 |
+| /home/main/Documents/hila/libraries/target_arch/lumi-AVX2.mk                            | Makefile     |         17 |         20 |         18 |         55 |
+| /home/main/Documents/hila/libraries/target_arch/lumi-hip.mk                             | Makefile     |         20 |         25 |         19 |         64 |
+| /home/main/Documents/hila/libraries/target_arch/lumi.mk                                 | Makefile     |         16 |         19 |         18 |         53 |
+| /home/main/Documents/hila/libraries/target_arch/mahti-AVX2.mk                           | Makefile     |         15 |         21 |         15 |         51 |
+| /home/main/Documents/hila/libraries/target_arch/mahti.mk                                | Makefile     |         15 |         19 |         17 |         51 |
+| /home/main/Documents/hila/libraries/target_arch/mahti_cuda.mk                           | Makefile     |         18 |         29 |         17 |         64 |
+| /home/main/Documents/hila/libraries/target_arch/openmp.mk                               | Makefile     |          8 |         15 |         13 |         36 |
+| /home/main/Documents/hila/libraries/target_arch/puhti.mk                                | Makefile     |         14 |         19 |         18 |         51 |
+| /home/main/Documents/hila/libraries/target_arch/puhti_cuda.mk                           | Makefile     |         17 |         24 |         15 |         56 |
+| /home/main/Documents/hila/libraries/target_arch/puhti_hip.mk                            | Makefile     |         21 |         25 |         20 |         66 |
+| /home/main/Documents/hila/libraries/target_arch/tufts.mk                                | Makefile     |         16 |         25 |         20 |         61 |
+| /home/main/Documents/hila/libraries/target_arch/vanilla-noMPI.mk                        | Makefile     |          7 |         15 |         10 |         32 |
+| /home/main/Documents/hila/libraries/target_arch/vanilla.mk                              | Makefile     |          8 |         16 |         13 |         37 |
+| /home/main/Documents/hila/libraries/vectorclass/README.md                               | Markdown     |          7 |          0 |          6 |         13 |
+| /home/main/Documents/hila/libraries/vectorclass/dispatch_example.cpp                    | C++          |         45 |         44 |         20 |        109 |
+| /home/main/Documents/hila/libraries/vectorclass/instrset.h                              | CUDA C++     |      1,106 |        257 |        111 |      1,474 |
+| /home/main/Documents/hila/libraries/vectorclass/instrset_detect.cpp                     | C++          |        113 |         35 |         20 |        168 |
+| /home/main/Documents/hila/libraries/vectorclass/vector_convert.h                        | CUDA C++     |        375 |         94 |        106 |        575 |
+| /home/main/Documents/hila/libraries/vectorclass/vectorclass.h                           | CUDA C++     |         44 |         30 |         13 |         87 |
+| /home/main/Documents/hila/libraries/vectorclass/vectorf128.h                            | CUDA C++     |      2,024 |        618 |        323 |      2,965 |
+| /home/main/Documents/hila/libraries/vectorclass/vectorf256.h                            | CUDA C++     |      2,119 |        569 |        343 |      3,031 |
+| /home/main/Documents/hila/libraries/vectorclass/vectorf256e.h                           | CUDA C++     |      1,181 |        480 |        279 |      1,940 |
+| /home/main/Documents/hila/libraries/vectorclass/vectorf512.h                            | CUDA C++     |      1,358 |        431 |        263 |      2,052 |
+| /home/main/Documents/hila/libraries/vectorclass/vectorf512e.h                           | CUDA C++     |      1,227 |        444 |        262 |      1,933 |
+| /home/main/Documents/hila/libraries/vectorclass/vectori128.h                            | CUDA C++     |      5,044 |      1,304 |        678 |      7,026 |
+| /home/main/Documents/hila/libraries/vectorclass/vectori256.h                            | CUDA C++     |      4,167 |      1,016 |        556 |      5,739 |
+| /home/main/Documents/hila/libraries/vectorclass/vectori256e.h                           | CUDA C++     |      2,564 |        882 |        501 |      3,947 |
+| /home/main/Documents/hila/libraries/vectorclass/vectori512.h                            | CUDA C++     |      1,440 |        437 |        236 |      2,113 |
+| /home/main/Documents/hila/libraries/vectorclass/vectori512e.h                           | CUDA C++     |      1,469 |        565 |        301 |      2,335 |
+| /home/main/Documents/hila/libraries/vectorclass/vectori512s.h                           | CUDA C++     |      1,540 |        487 |        268 |      2,295 |
+| /home/main/Documents/hila/libraries/vectorclass/vectori512se.h                          | CUDA C++     |      1,318 |        469 |        284 |      2,071 |
+| /home/main/Documents/hila/libraries/vectorclass/vectormath_common.h                     | CUDA C++     |        161 |         70 |         40 |        271 |
+| /home/main/Documents/hila/libraries/vectorclass/vectormath_exp.h                        | CUDA C++     |      1,515 |        350 |        361 |      2,226 |
+| /home/main/Documents/hila/libraries/vectorclass/vectormath_hyp.h                        | CUDA C++     |        447 |        154 |        117 |        718 |
+| /home/main/Documents/hila/libraries/vectorclass/vectormath_lib.h                        | CUDA C++     |      1,760 |        138 |        129 |      2,027 |
+| /home/main/Documents/hila/libraries/vectorclass/vectormath_trig.h                       | CUDA C++     |        520 |        209 |        165 |        894 |
+| /home/main/Documents/hila/submit_scripts/submit_lumi.sh                                 | Shell Script |          3 |          9 |          7 |         19 |
+| /home/main/Documents/hila/unit_tests/Makefile                                           | Makefile     |         19 |          1 |         10 |         30 |
+| /home/main/Documents/hila/unit_tests/README.md                                          | Markdown     |         71 |          0 |         27 |         98 |
+| /home/main/Documents/hila/unit_tests/src/catch.hpp                                      | C++          |     13,708 |      1,117 |      3,146 |     17,971 |
+| /home/main/Documents/hila/unit_tests/src/catch_main.cpp                                 | C++          |         13 |          2 |          3 |         18 |
+| /home/main/Documents/hila/unit_tests/src/test_array.cpp                                 | C++          |        170 |          0 |         12 |        182 |
+| /home/main/Documents/hila/unit_tests/src/test_cmplx.cpp                                 | C++          |        189 |          0 |         12 |        201 |
+| /home/main/Documents/hila/unit_tests/src/test_coordinates.cpp                           | C++          |        118 |          4 |          7 |        129 |
+| /home/main/Documents/hila/unit_tests/src/test_field.cpp                                 | C++          |        132 |          1 |         16 |        149 |
+| /home/main/Documents/hila/unit_tests/src/test_lattice.cpp                               | C++          |          5 |          0 |          1 |          6 |
+| /home/main/Documents/hila/unit_tests/src/test_matrix.cpp                                | C++          |        229 |          0 |         18 |        247 |
+| /home/main/Documents/hila/unit_tests/src/test_real_var_ops.cpp                          | C++          |         38 |          0 |          3 |         41 |
+| Total                                                                                   |              |     73,393 |     18,740 |     16,964 |    109,097 |
++-----------------------------------------------------------------------------------------+--------------+------------+------------+------------+------------+
