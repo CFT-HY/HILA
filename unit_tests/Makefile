@@ -16,7 +16,8 @@ TEST_OBJECTS = \
 	build/test_real_var_ops.o\
 	build/test_array.o\
 	build/test_cmplx.o\
-	build/test_matrix.o
+	build/test_matrix.o\
+	build/test_lattice.o
 #build/test_scalar.o
 
 HILA_OBJECTS += $(TEST_OBJECTS)
