@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     MyType hopping;
     hopping = 0;
     double fsqr = 0;
-
+    
     onsites(ALL) {
         foralldir(d) {
             hopping += f[X] * f[X + d].dagger();
