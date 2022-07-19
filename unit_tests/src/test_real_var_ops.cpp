@@ -1,6 +1,5 @@
 #include "hila.h"
 #include "catch.hpp"
-#include "catch_main.h"
 #include <tuple>
 
 using ArithmeticTypes =
