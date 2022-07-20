@@ -52,6 +52,7 @@ list-archs:
 	@echo "-----------------------------------------------------------------------------"
 
 
+# This defines target "list", which lists all make targets in this Makefile
 .PHONY: list no_targets__
 no_targets__:
 list:
@@ -118,6 +119,8 @@ HILA_OPTS += -I. -I./src -I$(HILA_INCLUDE_DIR) -I$(HILA_INCLUDE_DIR)/plumbing -I
 
 # Add the (possible) std. includes for hilapp
 HILAPP_OPTS += $(CUSTOM_HILAPP_OPTS)
+
+APP_OPTS += $(OPTS)
 
 #
 #  GIT VERSION: tricks to get correct git version and build date
