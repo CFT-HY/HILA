@@ -2,6 +2,7 @@
 #include "catch.hpp"
 #include "catch_main.hpp"
 #include <vector>
+#include <map>
 
 class TestLattice {
   public:
@@ -12,6 +13,10 @@ class TestLattice {
     TestLattice() {
         MPI_Comm_size(lattice->mpi_comm_lat, &num_nodes);
         MPI_Comm_rank(lattice->mpi_comm_lat, &my_rank);
+        if (num_nodes != 2 || num_nodes != 4 || num_nodes != 8) {
+            output0 << "Incorrect number of ranks exiting \n";
+            exit(0);
+        }
     }
     std::vector<int> adjacent_nodes() {
         std::vector<int> nodes_list;
@@ -19,6 +24,7 @@ class TestLattice {
             nodes_list.push_back(lattice->mynode.nn[d]);
         return nodes_list;
     }
+
 };
 
 TEST_CASE("Size", "[MPI][.]") {
@@ -26,17 +32,36 @@ TEST_CASE("Size", "[MPI][.]") {
 }
 
 TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
-    INFO("Test that MPI node recognizes correct rank")
-    REQUIRE(lattice->mynode.rank == my_rank);
-    GIVEN("Total lattice size" << total_lattice_size) {
-        THEN("Each node should have a site total of total_lattice_size/number_of_nodes "
-             "and even/odd site total of total_lattice_size/number_of_nodes/2")
-        REQUIRE(lattice->mynode.sites == total_lattice_size / num_nodes);
-        REQUIRE(lattice->mynode.evensites == total_lattice_size / num_nodes / 2);
-        REQUIRE(lattice->mynode.oddsites == total_lattice_size / num_nodes / 2);
+    SECTION("Node specific information") {
+        INFO("Test that MPI node recognizes correct rank")
+        REQUIRE(lattice->mynode.rank == my_rank);
+        GIVEN("Total lattice size " << total_lattice_size) {
+            THEN("Each node should have a site total of total_lattice_size/number_of_nodes "
+                "and even/odd site total of total_lattice_size/number_of_nodes/2")
+            REQUIRE(lattice->mynode.sites == lattice->mynode.volume());
+            REQUIRE(lattice->mynode.sites == total_lattice_size / num_nodes);
+            REQUIRE(lattice->mynode.evensites == total_lattice_size / num_nodes / 2);
+            REQUIRE(lattice->mynode.oddsites == total_lattice_size / num_nodes / 2);
+        }
     }
-    std::cout << lattice->mynode.min - e_x << lattice->mynode.size << " " << my_rank
-              << '\n';
+    SECTION("Shared node information") {
+        REQUIRE(lattice->nodes.number == num_nodes);
+        std::map<int, CoordinateVector> n_division_for_nodes = {
+            { 1, CoordinateVector({1,1,1}) },
+            { 2, CoordinateVector({1,1,2}) },
+            { 4, CoordinateVector({1,2,2}) },
+            { 8, CoordinateVector({2,2,2}) }
+        };
+        std::map<int, CoordinateVector> max_size_for_node = {
+            { 1, CoordinateVector({128,128,128}) },
+            { 2, CoordinateVector({128,128, 64}) },
+            { 4, CoordinateVector({128, 64, 64}) },
+            { 8, CoordinateVector({ 64, 64, 64}) }
+        };
+        REQUIRE(lattice->nodes.n_divisions == n_division_for_nodes[num_nodes]);
+        REQUIRE(lattice->nodes.max_size == max_size_for_node[num_nodes]);
+
+    }
 }
 
 TEST_CASE_METHOD(TestLattice, "Lattice split", "[MPI][.]") {
