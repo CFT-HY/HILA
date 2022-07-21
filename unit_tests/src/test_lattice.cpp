@@ -13,7 +13,8 @@ class TestLattice {
     TestLattice() {
         MPI_Comm_size(lattice->mpi_comm_lat, &num_nodes);
         MPI_Comm_rank(lattice->mpi_comm_lat, &my_rank);
-        if (num_nodes != 2 || num_nodes != 4 || num_nodes != 8) {
+
+        if (num_nodes != 2 && num_nodes != 4 && num_nodes != 16) {
             output0 << "Incorrect number of ranks exiting \n";
             exit(0);
         }
@@ -23,6 +24,19 @@ class TestLattice {
         foralldir (d)
             nodes_list.push_back(lattice->mynode.nn[d]);
         return nodes_list;
+    }
+
+    void get_nearest_node_each_direction() {
+        if(my_rank==0) {
+            std::cout << lattice->nn_comminfo[0].to_node.rank << '\n';
+            std::cout << lattice->nn_comminfo[1].to_node.rank << '\n';
+            std::cout << lattice->nn_comminfo[2].to_node.rank << '\n';
+            std::cout << lattice->nn_comminfo[3].to_node.rank << '\n';
+            std::cout << lattice->nn_comminfo[4].to_node.rank << '\n';
+            std::cout << lattice->nn_comminfo[5].to_node.rank << '\n';
+            std::cout << lattice->nn_comminfo[6].to_node.rank << '\n';
+
+        };
     }
 
 };
@@ -61,6 +75,16 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
         REQUIRE(lattice->nodes.n_divisions == n_division_for_nodes[num_nodes]);
         REQUIRE(lattice->nodes.max_size == max_size_for_node[num_nodes]);
 
+    }
+    SECTION("Communication node information") {
+
+        // if(num_nodes==4){
+        //     std::vector<std::vector<int>> adjacent_nodes_list = {
+        //             {0, 1, 2}, {1, 0, 3},
+        //             {2, 3, 0}, {3, 2, 1}}; 
+        //     std::vector<int> nn_in_each_dir = get_nearest_node_each_direction();
+        // }
+        get_nearest_node_each_direction();
     }
 }
 
