@@ -478,6 +478,28 @@ class Matrix_t {
         return dagger();
     }
 
+    /// abs() - give absolute value of elements (real/complex)
+    /// With complex type changes!
+    template <typename M=T,std::enable_if_t<!hila::contains_complex<M>::value, int> = 0>
+    Mtype abs() const {
+        Mtype res;
+        for (int i = 0; i < n * m; i++) {
+            // need to use ::abs for generic real vars
+            res.c[i] = ::abs(c[i]);
+        }
+        return res;
+    }
+
+    template <typename M=T,std::enable_if_t<hila::contains_complex<M>::value, int> = 0>
+    auto abs() const {
+        Matrix<n,m,hila::number_type<T>> res;
+        for (int i = 0; i < n * m; i++) {
+            res.c[i] = c[i].abs();
+        }
+        return res;
+    }
+
+
     // It seems that using special "Dagger" type makes the code slower!
     // Disable it now
     // inline const DaggerMatrix<m,n,T> & dagger() const {
@@ -722,16 +744,22 @@ inline auto conj(const Mtype &arg) {
     return arg.conj();
 }
 
-/// adjoint (=conjugate)
+/// adjoint (=dagger)
 template <typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0>
 inline auto adjoint(const Mtype &arg) {
     return arg.adjoint();
 }
 
-/// dagger (=conjugate)
+/// dagger (=adjoint)
 template <typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0>
 inline auto dagger(const Mtype &arg) {
     return arg.adjoint();
+}
+
+/// absolute value
+template <typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0>
+inline auto abs(const Mtype &arg) {
+    return arg.abs();
 }
 
 /// trace
