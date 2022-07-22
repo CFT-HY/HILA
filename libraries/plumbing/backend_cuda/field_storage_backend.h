@@ -5,7 +5,7 @@
 #include "../field_storage.h"
 
 /* CUDA / HIP implementations */
-template <typename T> 
+template <typename T>
 void field_storage<T>::allocate_field(lattice_struct *lattice) {
     // Allocate space for the field of the device
     gpuMalloc((void **)&fieldbuf, sizeof(T) * lattice->field_alloc_size());
@@ -15,7 +15,7 @@ void field_storage<T>::allocate_field(lattice_struct *lattice) {
     assert(fieldbuf != nullptr);
 }
 
-template <typename T> 
+template <typename T>
 void field_storage<T>::free_field() {
     if (fieldbuf != nullptr) {
         gpuFree(fieldbuf);
@@ -30,7 +30,7 @@ void field_storage<T>::free_field() {
 // These are used in device code. Can be called directly in a kernel.
 template <typename T>
 __device__ inline auto field_storage<T>::get(const unsigned i,
-                                      const unsigned field_alloc_size) const {
+                                             const unsigned field_alloc_size) const {
     assert(i < field_alloc_size);
     using base_t = hila::number_type<T>;
     constexpr unsigned n_elements = sizeof(T) / sizeof(base_t);
@@ -44,7 +44,7 @@ __device__ inline auto field_storage<T>::get(const unsigned i,
 }
 
 template <typename T>
-//template <typename A>
+// template <typename A>
 __device__ inline void field_storage<T>::set(const T &value, const unsigned i,
                                              const unsigned field_alloc_size) {
     assert(i < field_alloc_size);
@@ -96,12 +96,12 @@ void field_storage<T>::set_element(A &value, const unsigned i,
     T t_value = value;
 
     // Allocate space and copy the buffer to the device
- //   gpuMalloc((void **)&(d_buffer), sizeof(T));
- //   gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
+    //   gpuMalloc((void **)&(d_buffer), sizeof(T));
+    //   gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
 
     // call the kernel to set correct indexes
- //   set_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->field_alloc_size());
- //   gpuFree(d_buffer);
+    //   set_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice->field_alloc_size());
+    //   gpuFree(d_buffer);
 
     set_element_kernel<<<1, 1>>>(*this, t_value, i, lattice->field_alloc_size());
 }
@@ -241,7 +241,7 @@ inline unsigned *get_site_index(const lattice_struct::comm_node_struct &to_node,
     comm_node.n = n;
     gpuMalloc((void **)&(comm_node.gpu_index), n * sizeof(unsigned));
     gpuMemcpy(comm_node.gpu_index, cpu_index, n * sizeof(unsigned),
-               gpuMemcpyHostToDevice);
+              gpuMemcpyHostToDevice);
     comm_nodes.push_back(comm_node);
     return comm_node.gpu_index;
 }
@@ -250,11 +250,11 @@ inline unsigned *get_site_index(const lattice_struct::comm_node_struct &to_node,
 // kernels to fill the buffer.
 template <typename T>
 void field_storage<T>::gather_comm_elements(
-    T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
+    T *buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
     const lattice_struct *RESTRICT lattice, bool antiperiodic) const {
     int n;
     unsigned *d_site_index = get_site_index(to_node, par, n);
-    static T *d_buffer;
+    T *d_buffer;
 
 #ifdef CUDA_AWARE_MPI
     // The buffer is already on the device
@@ -353,7 +353,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
         check_device_error("earlier");
         gpuMalloc((void **)(&d_site_index), n * sizeof(unsigned));
         gpuMemcpy(d_site_index, lattice->special_boundaries[dir].move_index + start,
-                   n * sizeof(unsigned), gpuMemcpyHostToDevice);
+                  n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
         unsigned N_blocks = n / N_threads + 1;
         set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(
@@ -365,7 +365,6 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
 #else
     assert(!antiperiodic && "antiperiodic only with SPECIAL_BOUNDARY_CONDITIONS defined");
 #endif
-
 }
 
 // Place communicated elements to the field array
@@ -390,9 +389,9 @@ __global__ void place_comm_elements_kernel(field_storage<T> field, T *buffer,
 // Standard MPI, buffer is on the cpu and needs to be copied accross
 template <typename T>
 void field_storage<T>::place_comm_elements(
-    Direction d, Parity par, T *RESTRICT buffer,
-    const lattice_struct::comm_node_struct &from_node,
+    Direction d, Parity par, T *buffer, const lattice_struct::comm_node_struct &from_node,
     const lattice_struct *RESTRICT lattice) {
+
     unsigned n = from_node.n_sites(par);
     T *d_buffer;
 
@@ -416,11 +415,13 @@ void field_storage<T>::place_comm_elements(
 
 #ifdef CUDA_AWARE_MPI
 
-template <typename T> void field_storage<T>::free_mpi_buffer(T *d_buffer) {
+template <typename T>
+void field_storage<T>::free_mpi_buffer(T *d_buffer) {
     gpuFree(d_buffer);
 }
 
-template <typename T> T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
+template <typename T>
+T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
     T *d_buffer;
     gpuMalloc((void **)&(d_buffer), n * sizeof(T));
     return d_buffer;
@@ -428,11 +429,13 @@ template <typename T> T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
 
 #else
 
-template <typename T> void field_storage<T>::free_mpi_buffer(T *buffer) {
+template <typename T>
+void field_storage<T>::free_mpi_buffer(T *buffer) {
     std::free(buffer);
 }
 
-template <typename T> T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
+template <typename T>
+T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
     return (T *)memalloc(n * sizeof(T));
 }
 
