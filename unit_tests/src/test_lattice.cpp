@@ -72,60 +72,33 @@ class TestLattice {
         return nodes_list;
     }
 
-    void test() {
-        std::vector<int> coord_indicies;
-        int lower=0;
-        int upper = lattice->nn_comminfo[3].to_node.sites;
-        // int lower=  2048+1024;
-        // int upper= 2048+1024+32;
-        for (int i = lower; i < upper; i++) {
-            coord_indicies.push_back(lattice->nn_comminfo[2].to_node.site_index(i,ALL));
-        }
-        std::string filename = "/test_nn_comminfo_indicies_z_dir_" + std::to_string(num_nodes) + 
-                               "_nodes_" + std::to_string(lattice_size) + "_size.txt";
-
-        generate_snapshot(coord_indicies,snapshot_dir + filename);
-    }
-
-    std::vector<int> generate_halo_indicies(int dir) {
-        std::vector<int> coord_indicies;
-        int lower=0;
-        int upper = lattice->nn_comminfo[dir].to_node.sites;
-        // int lower=  2048+1024;
-        // int upper= 2048+1024+32;
-        for (int i = lower; i < upper; i++) {
-            coord_indicies.push_back(lattice->nn_comminfo[dir].to_node.site_index(i,ALL));
-        }
-        return coord_indicies;
-    }
-
-    // void print() {
-    //     if(my_rank == 1) {
-    //        // std::cout << lattice->coordinates(lattice->nn_comminfo[0].to_node.site_index(1,ALL)) << '\n';
-    //         std::cout << lattice->nn_comminfo[0].to_node.rank << '\n';
+    void print() {
+        // if(my_rank == 1) {
+        //    // std::cout << lattice->coordinates(lattice->nn_comminfo[0].to_node.site_index(1,ALL)) << '\n';
+        //     std::cout << lattice->nn_comminfo[0].to_node.rank << '\n';
 
     
-    //     }     
-    //     if(my_rank==0) {
-    //         //for (size_t i = 0; i < lattice->nn_comminfo[e_z].from_node.sites; i++)
-    //         int lower=0;
-    //         int upper = lattice->nn_comminfo[3].to_node.sites;
-    //         // int lower=  2048+1024;
-    //         // int upper= 2048+1024+32;
-    //         for (int i = lower; i < upper; i++)
-    //         {
-    //             output0 << i << " " << lattice->nn_comminfo[3].to_node.site_index(i,ALL) << '\n'
-    //                                 << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+0) << "\n"
-    //                                 << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+1) << "\n" 
-    //                                 << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+2) << '\n'
-    //                                 << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+3) << '\n'
-    //                                 << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+4) << '\n'
-    //                                 << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+5) << '\n'
-    //                                 << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+6) << '\n'
-    //                                 << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+7) << '\n';
-    //         }
-    //     }
-    //}
+        // }     
+        // if(my_rank==0) {
+        //     //for (size_t i = 0; i < lattice->nn_comminfo[e_z].from_node.sites; i++)
+        //     int lower=0;
+        //     int upper = lattice->nn_comminfo[3].to_node.sites;
+        //     // int lower=  2048+1024;
+        //     // int upper= 2048+1024+32;
+        //     for (int i = lower; i < upper; i++)
+        //     {
+        //         output0 << i << " " << lattice->nn_comminfo[3].to_node.site_index(i,ALL) << '\n'
+        //                             << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+0) << "\n"
+        //                             << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+1) << "\n" 
+        //                             << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+2) << '\n'
+        //                             << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+3) << '\n'
+        //                             << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+4) << '\n'
+        //                             << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+5) << '\n'
+        //                             << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+6) << '\n'
+        //                             << lattice->coordinates(lattice->nn_comminfo[3].to_node.site_index(i,ALL)+7) << '\n';
+        //     }
+        // }
+    }
 
 };
 
@@ -134,7 +107,7 @@ TEST_CASE("Size", "[MPI][.]") {
 }
 
 TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
-    SECTION("Node specific information") {
+    SECTION("Node specific information: struct node_struct") {
         INFO("Test that MPI node recognizes correct rank")
         REQUIRE(lattice->mynode.rank == my_rank);
         GIVEN("Total lattice size " << total_lattice_size) {
@@ -146,7 +119,7 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
             REQUIRE(lattice->mynode.oddsites == std::round(total_lattice_size / num_nodes / 2));
         }
     }
-    SECTION("Shared node information") {
+    SECTION("Shared node information: struct allnodes") {
         REQUIRE(lattice->nodes.number == num_nodes);
         std::map<int, CoordinateVector> n_division_for_nodes = {
             { 1, CoordinateVector({1,1,1}) },
@@ -164,11 +137,11 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
         REQUIRE(lattice->nodes.max_size == max_size_for_node[num_nodes]);
 
     }
-    SECTION("Communication node information") {
-        INFO("Testing nearest node communication ranks") {  
+    SECTION("Communication node information: struct comm_node_struct") {
+        SECTION("Testing nearest node communication ranks") {  
             REQUIRE(nn_comminfo_rank() == adjacent_nodes_list[num_nodes][my_rank]); 
         }
-        INFO("Testing indicies of halo coordinates. Choosing z direction, since there will always be a z-dir split") {
+        SECTION("Testing indicies of halo coordinates. Choosing z direction, since there will always be a z-dir split") {
             std::vector<int> coord_indicies;
             int lower=0;
             int upper = lattice->nn_comminfo[e_z].to_node.sites;
@@ -179,6 +152,13 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
                                 "_nodes_" + std::to_string(lattice_size) + "_size.txt";
             Snapshot<int> dummy_data_halo_indicies(snapshot_dir + filename);
             REQUIRE(coord_indicies == dummy_data_halo_indicies.read_from_file());
+        }
+        SECTION("Testing sitelist in comm_node_struct") {
+            for (int i = 0; i < lattice->mynode.sites; i++)
+            {
+                //std::cout << lattice->coordinates(i) << '\n';
+            }
+            
         }
     }
 }

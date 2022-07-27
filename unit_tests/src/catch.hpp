@@ -8,6 +8,7 @@
  *  Distributed under the Boost Software License, Version 1.0. (See accompanying
  *  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
  */
+#include "hila.h"
 #ifndef TWOBLUECUBES_SINGLE_INCLUDE_CATCH_HPP_INCLUDED
 #define TWOBLUECUBES_SINGLE_INCLUDE_CATCH_HPP_INCLUDED
 // start catch.hpp
@@ -16468,7 +16469,17 @@ ConsoleReporter::ConsoleReporter(ReporterConfig const& config)
                 { "estimated    high mean  high std dev", 14, ColumnInfo::Right }
             };
         }
-    }())) {}
+    }())) {
+        /* code injection to silence non-root nodes when running Catch2 in
+         * a distributed execution, for distributed QuEST unit-testing.
+         */    
+        int rank;
+        MPI_Comm_rank(lattice->mpi_comm_lat, &rank);
+
+        // put non-root streams in a fail state, so they silently discard output
+        if (rank != 0)
+            stream.setstate(std::ios_base::failbit);  
+    }
 ConsoleReporter::~ConsoleReporter() = default;
 
 std::string ConsoleReporter::getDescription() {
@@ -16570,7 +16581,7 @@ void ConsoleReporter::benchmarkEnded(BenchmarkStats<> const& stats) {
 
 void ConsoleReporter::benchmarkFailed(std::string const& error) {
 	Colour colour(Colour::Red);
-    (*m_tablePrinter)
+    (*m_tablePrinter) 
         << "Benchmark failed (" << error << ')'
         << ColumnBreak() << RowBreak();
 }

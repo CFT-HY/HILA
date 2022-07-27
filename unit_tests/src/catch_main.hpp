@@ -1,1 +1,1 @@
-#define lattice_size 128
+#define lattice_size 16
