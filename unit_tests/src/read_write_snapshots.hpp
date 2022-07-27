@@ -4,15 +4,24 @@
 #include <vector>
 #include <iterator>
 #include <iostream>
-
+/**
+ * @brief Object to handle snapshot data reading and writing. 
+ * A snapshot is static data to compare to during test cases.
+ * Data is always loaded into a std::vector class for ease of use.
+ * 
+ * @tparam T datatype of snapshot data, could be for example int, float, string
+ */
 template<typename T>
-class Snapshots {
+class Snapshot {
 private:
     std::vector<T> data;
     std::string filename;
 public:
-    Snapshots(std::vector<T> data, std::string filename):
+    Snapshot(std::vector<T> data, std::string filename):
         data(data), filename(filename) {}
+
+    Snapshot(std::string filename):
+        filename(filename) {}
 
     void write_to_file() {
         std::ofstream outfile(filename);
@@ -22,7 +31,7 @@ public:
         //std::cout << "here \n";
     };
 
-    std::vector<int> read_from_file() {
+    std::vector<T> read_from_file() {
         std::ifstream fin(filename);
         std::istream_iterator<int> fin_it(fin);
         std::istream_iterator<int> eos;
