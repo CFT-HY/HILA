@@ -432,22 +432,26 @@ inline CoordinateVector operator*(const Direction d, const int i) {
 }
 
 // coordinate vector + Direction -- dir is a unit vector
-inline CoordinateVector operator+(CoordinateVector cv, const Direction dir) {
+template <typename T>
+inline CoordinateVector_t<T> operator+(CoordinateVector_t<T> cv, const Direction dir) {
     cv += dir;
     return cv;
 }
 
-inline CoordinateVector operator-(CoordinateVector cv, const Direction dir) {
+template <typename T>
+inline CoordinateVector_t<T> operator-(CoordinateVector_t<T> cv, const Direction dir) {
     cv -= dir;
     return cv;
 }
 
-inline CoordinateVector operator+(const Direction dir, CoordinateVector cv) {
+template <typename T>
+inline CoordinateVector_t<T> operator+(const Direction dir, CoordinateVector_t<T> cv) {
     cv += dir;
     return cv;
 }
 
-inline CoordinateVector operator-(const Direction dir, CoordinateVector cv) {
+template <typename T>
+inline CoordinateVector_t<T> operator-(const Direction dir, CoordinateVector_t<T> cv) {
     foralldir (d)
         cv.e(d) = dir_dot_product(dir, d) - cv.e(d);
     return cv;
