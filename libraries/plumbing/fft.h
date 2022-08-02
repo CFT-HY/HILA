@@ -21,10 +21,10 @@
 
 /// convert lattice vector to to k-vector (needs lattice->size() so defined in fft.h)
 /// Note: mods the CoordinateVector to lattice
-template <>
-inline Vector<NDIM, double> CoordinateVector::convert_to_k() const {
+
+inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
     Vector<NDIM, double> k;
-    CoordinateVector mv = (*this).mod(lattice->size());
+    CoordinateVector mv = cv.mod(lattice->size());
     foralldir (d) {
         int n = mv.e(d);
         if (n > lattice->size(d) / 2)

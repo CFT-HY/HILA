@@ -21,7 +21,7 @@ struct sd_k_bin_parameters {
 
 inline int sd_get_k_bin(const CoordinateVector &cv, const sd_k_bin_parameters &p) {
 
-    double kr = cv.convert_to_k().norm();
+    double kr = convert_to_k(cv).norm();
 
     kr = kr / p.max;
     int b = pow(kr, p.power) * p.bins;
@@ -243,7 +243,7 @@ class k_binning {
 
         onsites(ALL) {
 
-            double kr = X.coordinates().convert_to_k().norm();
+            double kr = convert_to_k(X.coordinates()).norm();
             int b = sd_get_k_bin(X.coordinates(), par);
 
             if (b >= 0 && b < par.bins) {
