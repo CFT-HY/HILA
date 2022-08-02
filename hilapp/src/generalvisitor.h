@@ -219,7 +219,7 @@ class GeneralVisitor {
     bool is_field_with_coordinate(Expr *E);
 
     bool is_assignment_expr(Stmt *s, std::string *opcodestr, bool &iscompound,
-                            Expr **assignee = nullptr);
+                            Expr **assignee = nullptr, Expr **assigned_expr = nullptr);
 
     bool is_site_dependent(Expr *e, std::vector<var_info *> *dependent_var);
 

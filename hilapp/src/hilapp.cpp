@@ -269,7 +269,7 @@ struct pragma_types {
 
 static std::vector<pragma_types> pragma_hila_types{
     {"skip", false},        {"ast_dump", false},     {"loop_function", false},
-    {"novector", false},    {"vectorizable", false}, {"contains_rng", false},
+    {"novector", false},    {"nonvectorizable", false}, {"contains_rng", false},
     {"direct_access", true},{"omp_parallel_region", false}};
 
 void check_pragmas(std::string &arg, SourceLocation prloc, SourceLocation refloc,

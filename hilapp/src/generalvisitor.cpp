@@ -93,7 +93,7 @@ bool GeneralVisitor::is_field_with_coordinate(Expr *E) {
 /////////////////////////////////////////////////////////////////
 
 bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr,
-                                        bool &iscompound, Expr **assignee) {
+                                        bool &iscompound, Expr **assignee, Expr **assigned_expr) {
     if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
         if (OP->isAssignmentOp()) {
 
@@ -111,6 +111,10 @@ bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr,
                 *assignee = OP->getArg(0)->IgnoreImplicit();
             }
 
+            if (assigned_expr) {
+                *assigned_expr = OP->getArg(1)->IgnoreImplicit();
+            }
+
             return true;
         }
     }
@@ -124,6 +128,10 @@ bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr,
 
             if (assignee) {
                 *assignee = B->getLHS()->IgnoreImplicit();
+            }
+
+            if (assigned_expr) {
+                *assigned_expr = B->getRHS()->IgnoreImplicit();
             }
 
             return true;

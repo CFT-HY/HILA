@@ -46,7 +46,7 @@ void check_site_dependence(call_info_struct &ci) {
 
     // Was it a method?
     if (ci.is_method) {
-        if (ci.object.is_lvalue) {
+        if (ci.object.is_modifiable) {
             ci.object.is_site_dependent |= ci.is_site_dependent;
         } else if (!ci.is_site_dependent) {
             for (auto &dv : ci.object.dependent_vars) {
@@ -195,7 +195,7 @@ class loopFunctionVisitor : public GeneralVisitor,
                 } else {
 
                     if (!cmdline::allow_func_globals) {
-                        llvm::errs() << "NAME IS " << vdecl->getNameAsString() << '\n';
+                        // llvm::errs() << "NAME IS " << vdecl->getNameAsString() << '\n';
                         reportDiag(
                             DiagnosticsEngine::Level::Error,
                             e->getSourceRange().getBegin(),

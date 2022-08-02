@@ -98,11 +98,11 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
     llvm::errs() << "   Constructor args: ";
     for (Expr *E : CtorE->arguments()) {
         llvm::errs() << get_stmt_str(E);
-        if (E->isLValue())
+        if (E->isModifiableLvalue(*Context) == Expr::MLV_Valid)
             llvm::errs() << "-LVALUE";
         llvm::errs() << ", ";
     }
-    llvm::errs() << "\n   Construtor params: ";
+    llvm::errs() << "\n   Constructor params: ";
     for (int i = 0; i < decl->getNumParams(); i++)
         llvm::errs() << decl->getParamDecl(i)->getNameAsString() << ", ";
     llvm::errs() << "\n";
@@ -185,8 +185,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 /////////////////////////////////////////////////////////////////////////////////
 
 call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
-                                                           CallExpr *Call,
-                                                           bool sitedep) {
+                                                           CallExpr *Call, bool sitedep) {
 
     call_info_struct cinfo;
 
@@ -198,16 +197,16 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
                  << srcMgr.getSpellingLineNumber(Call->getBeginLoc()) << " in file "
                  << srcMgr.getFilename(Call->getBeginLoc()) << '\n';
 
-    llvm::errs() << "#parameters: " << D->getNumParams() << " and "
-                 << Call->getNumArgs() << " arguments\n";
+    llvm::errs() << "#parameters: " << D->getNumParams() << " and " << Call->getNumArgs()
+                 << " arguments\n";
 
     llvm::errs() << "Is it a method? " << isa<CXXMemberCallExpr>(Call) << '\n';
 
     llvm::errs() << "   Func args: ";
     for (Expr *E : Call->arguments()) {
         llvm::errs() << get_stmt_str(E);
-        if (E->isLValue())
-            llvm::errs() << "-LVALUE";
+        if (E->isModifiableLvalue(*Context) == Expr::MLV_Valid)
+            llvm::errs() << "-MODIFIABLE LVALUE";
         llvm::errs() << ", ";
     }
     llvm::errs() << "\n   Func params: ";
@@ -306,26 +305,45 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
             cinfo.object.is_out_only = out_only;
             cinfo.object.is_const_function = const_function;
 
+#ifdef LOOP_FUNC_DEBUG
+            llvm::errs() << "  Method object argument: " << get_stmt_str(E);
+            if (E->isModifiableLvalue(*Context) == Expr::MLV_Valid)
+                llvm::errs() << " modifiable lvalue\n";
+            else
+                llvm::errs() << " unmodified\n";
+
+            llvm::errs() << "  keywords: ";
+            if (is_const)
+                llvm::errs() << "const ";
+            if (out_only)
+                llvm::errs() << "out_only ";
+            if (const_function)
+                llvm::errs() << "const_function ";
+            llvm::errs() << '\n';
+#endif
+
             if (is_top_level && is_field_with_X_expr(E)) {
 
                 // following is called only if this==g_TopLevelVisitor, this just makes
                 // it compile
-                bool is_assign = !is_const;
+                bool is_assign =
+                    !(is_const || E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
                 g_TopLevelVisitor->handle_field_X_expr(E, is_assign,
                                                        (!is_const && !out_only), true);
 
                 sitedep = true;
 
                 cinfo.object.is_site_dependent = true;
-                cinfo.object.is_lvalue = !is_const;
+                cinfo.object.is_modifiable = !is_const;
                 cinfo.object.is_const = is_const;
 
             } else if (isa<DeclRefExpr>(E)) {
 
                 // some other variable reference
                 DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
-                var_info *vip = handle_var_ref(DRE, !(is_const || const_function),
-                                               "method", nullptr);
+                bool is_assign = !(is_const || const_function ||
+                                   E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
+                var_info *vip = handle_var_ref(DRE, is_assign, "method", nullptr);
 
                 if (vip != nullptr) {
                     // site dep is additive
@@ -334,7 +352,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
                     if (!is_const)
                         out_variables.push_back(vip);
 
-                    cinfo.object.is_lvalue = !is_const;
+                    cinfo.object.is_modifiable = !is_const;
                     cinfo.object.is_const = is_const;
 
                     if (is_const) {
@@ -346,7 +364,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
             } else {
                 // now some other expression -- is it site dependent
 
-                cinfo.object.is_lvalue = false;
+                cinfo.object.is_modifiable = false;
                 cinfo.object.is_const = true;
 
                 sitedep |= is_site_dependent(E, &dep_variables);
@@ -394,15 +412,15 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
         }
     }
 
-    bool is_lvalue = E->isLValue();
-    ai.is_lvalue = is_lvalue;
+    bool is_modifiable = (E->isModifiableLvalue(*Context) == Expr::MLV_Valid);
+    ai.is_modifiable = is_modifiable;
 
-    if (!is_lvalue && out_only) {
+    if (!is_modifiable && out_only) {
         reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                   "'out_only' can be used only with lvalue reference");
+                   "'out_only' can be used only with modifiable lvalue reference");
     }
 
-    if (is_lvalue) {
+    if (is_modifiable) {
 
         // "output" vars
         if (is_top_level && is_field_with_X_expr(E)) {
@@ -410,9 +428,9 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
             // called always when this == g_TopLevelVisitor
 
             sitedep = true;
-            bool is_assign = is_lvalue;
+            bool is_assign = is_modifiable;
             g_TopLevelVisitor->handle_field_X_expr(
-                E, is_assign, (is_lvalue && !out_only), true, true);
+                E, is_assign, (is_modifiable && !out_only), true, true);
 
             ai.is_site_dependent = true;
 
@@ -589,8 +607,8 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             } else {
                 if (objtype == "const class X_index_type") {
                     reportDiag(DiagnosticsEngine::Level::Error,
-                               Call->getSourceRange().getBegin(),
-                               "Unknown method X.%0()", name.c_str());
+                               Call->getSourceRange().getBegin(), "Unknown method X.%0()",
+                               name.c_str());
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error,
                                Call->getSourceRange().getBegin(),
