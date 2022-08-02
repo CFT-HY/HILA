@@ -940,6 +940,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     if (is_vector_reference(s)) {
         handle_vector_reference(s, is_assignment, assignop, assign_stmt);
         parsing_state.skip_children = 1;
+        is_assignment = false;
         return true;
     }
 
@@ -980,6 +981,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
                                 true);
 
             parsing_state.skip_children = 1;
+            is_assignment = false;
             return true;
         }
 
@@ -990,6 +992,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign,
                                 false);
 
+            is_assignment = false;
             parsing_state.skip_children = 1;
             return true;
         }
@@ -1044,6 +1047,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
                 //              '\n';
 
                 parsing_state.skip_children = 1;
+                is_assignment = false;
                 return true;
             }
             // TODO: function ref?
@@ -1075,6 +1079,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
             // We don't want to handle the array variable or the index separately
             parsing_state.skip_children = is_handled;
+            is_assignment = false;
             return true;
         }
 
