@@ -9,7 +9,9 @@
 
 #include "plumbing/type_tools.h"
 
-#if defined(__CUDACC__) || defined(__HIPCC__)
+//#if defined(__CUDACC__) || defined(__HIPCC__)
+
+#if !defined(HILAPP)
 
 /* Reduction */
 /*

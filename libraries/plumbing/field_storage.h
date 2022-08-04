@@ -11,7 +11,7 @@
 // Forward declare the field struct
 template <typename T> class field_struct;
 
-#if defined(__CUDACC__) || defined(__HIPCC__) 
+#if defined(CUDA) || defined(HIP) 
 #define DEVICE __device__
 #else
 #define DEVICE
