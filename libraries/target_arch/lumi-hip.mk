@@ -20,7 +20,7 @@ LD := hipcc
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
+CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc -Wno-cuda-compat
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
@@ -41,9 +41,11 @@ HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
 HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
 
+ROCM_LIBS := $(shell echo ${ROCM_PATH} | sed s/rocm/rocmlibs/)
+
 # Currently LUMI EAP things require explicit setting of many include paths -- NOTE: MPI may be bad
-HILA_INCLUDES := -I/appl/eap/opt/rocm-4.3.1/rocrand/include/ -I/appl/eap/opt/rocm-4.3.1/hiprand/include/ 
-HILA_INCLUDES += -I/appl/eap/opt/rocm-4.3.1/hipfft/include/
+HILA_INCLUDES := -I${ROCM_LIBS}/rocrand/include/ -I${ROCM_LIBS}/hiprand/include/ 
+HILA_INCLUDES += -I${ROCM_LIBS}/hipfft/include/
 HILA_INCLUDES += -I${MPICH_DIR}/include
 
 
@@ -51,7 +53,7 @@ HILA_INCLUDES += -I${MPICH_DIR}/include
 
 # LDLIBS  := -lfftw3 -lfftw3f -lm
 LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64 
-LDFLAGS += -L/appl/eap/opt/rocm-4.3.1/hipfft/lib/ -lhipfft
+LDFLAGS += -L${ROCM_LIBS}/hipfft/lib/ -lhipfft
 LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
 
 # These variables must be defined here
