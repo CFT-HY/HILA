@@ -1,9 +1,8 @@
 #include "hila.h"
-#include <random>
 
 static_assert(NDIM == 3, "NDIM must be 3 here");
 
-using MyType = SquareMatrix<4,Complex<float>>;
+using MyType = Complex<float>;
 
 int main(int argc, char *argv[]) {
 
@@ -18,16 +17,13 @@ int main(int argc, char *argv[]) {
 
     // lattice field
     Field<MyType> f;
-    Field<float> g;
-    g = 0;
-    g.product();
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian_random();
     // Measure hopping term and f^2
-    MyType hopping = 0;
+    MyType hopping;
     hopping = 0;
     double fsqr = 0;
-
+    
     onsites(ALL) {
         foralldir(d) {
             hopping += f[X] * f[X + d].dagger();

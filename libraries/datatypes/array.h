@@ -2,7 +2,6 @@
 #define ARRAY_H_
 
 #include "datatypes/matrix.h"
-#include "datatypes/cmplx.h"
 
 ////////////////////////////////////////////////////////////////
 /// nxm Array type

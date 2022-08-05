@@ -805,8 +805,9 @@ __global__ void minmax_kernel(const T *i_data, T *minmax_array_out,
                 minmax_values[thIdx] = minmax_values[thIdx + size];
                 coordinates[thIdx] = coordinates[thIdx + size];
             }
-            __syncthreads();
+            
         }
+        __syncthreads();
     }
     if (thIdx == 0) {
         minmax_array_out[blockIdx.x] = minmax_values[0];

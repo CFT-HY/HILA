@@ -287,6 +287,11 @@ class Matrix_t {
         return *this;
     }
 
+    bool operator==(const Matrix<n, m, T> &rhs) const {
+        hila::number_type<T> epsilon = 0;
+        return ((*this)-rhs).squarenorm() <= epsilon;
+    }    
+
     /// Assign from different type matrix
 #pragma hila loop_function
     template <typename S, typename MT,
@@ -413,7 +418,7 @@ class Matrix_t {
             c[i] /= rhs;
         }
         return *this;
-    }
+    }  
 
     /// numpy style matrix fill
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
@@ -426,8 +431,13 @@ class Matrix_t {
     ///////////////////////////////////////////////////////////////////
     /// Transpose of a matrix: For square the return type is the
     /// same as input, for non-square general Matrix<m,n>
+<<<<<<< HEAD
+    template <int mm = m, typename Rtype =
+                  typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type, std::enable_if_t<(mm != 1), int> = 0>
+=======
     template <
         typename Rtype = typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type>
+>>>>>>> remotes/Kari_Rummukainen/hila/master
     inline const Rtype transpose() const {
         Rtype res;
         for (int i = 0; i < n; i++)
@@ -507,7 +517,7 @@ class Matrix_t {
     inline Matrix<n, m, hila::number_type<T>> real() const {
         Matrix<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
-            res.c[i] = real(c[i]);
+            res.c[i] = ::real(c[i]);
         }
         return res;
     }
@@ -516,7 +526,7 @@ class Matrix_t {
     inline Matrix<n, m, hila::number_type<T>> imag() const {
         Matrix<n, m, hila::number_type<T>> res;
         for (int i = 0; i < m * n; i++) {
-            res.c[i] = imag(c[i]);
+            res.c[i] = ::imag(c[i]);
         }
         return res;
     }
@@ -781,7 +791,7 @@ inline auto imag(const Mtype &arg) {
 /// templates needed for naive calculation of determinants
 template <typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0,
           typename Rtype =
-              Matrix<Mtype::rows() - 1, Mtype::cols - 1, hila::underlying_type<Mtype>>>
+              Matrix<Mtype::rows() - 1, Mtype::columns() - 1, hila::underlying_type<Mtype>>>
 Rtype Minor(const Mtype &bigger, int row, int col) {
     constexpr int n = Mtype::rows();
     constexpr int m = Mtype::columns();

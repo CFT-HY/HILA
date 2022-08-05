@@ -96,3 +96,10 @@ Matching test cases:
       [Assignment]
 5 matching test cases
 ```
+
+## NOTES
+
+test_lattice.cpp:
+
+- discuss create_std_gathers() and nn_comminfo_struct
+    - why is nn_comminfo_struct.from_node and nn_comminfo_struct.to_node the same
