@@ -31,6 +31,8 @@ void *memalloc(std::size_t size, const char *filename, const unsigned line) {
 
     void *p;
     // align to 32 bytes (parameter?)
+    // make size multiple of 32 too
+    size = ((size + 31) / 32) * 32;
     int e = posix_memalign(&p, (std::size_t)32, size);
     if (e != 0) {
         if (filename != nullptr) {
