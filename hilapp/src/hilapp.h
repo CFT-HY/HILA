@@ -430,14 +430,14 @@ struct argument_info {
     Expr *E;
     ParmVarDecl *PV;
     std::vector<var_info *> dependent_vars;
-    bool is_lvalue;
+    bool is_modifiable;
     bool is_site_dependent;
     bool is_const;
     bool is_out_only;
     bool is_const_function;
 
     argument_info() {
-        is_lvalue = is_site_dependent = is_out_only = is_const = is_const_function =
+        is_modifiable = is_site_dependent = is_out_only = is_const = is_const_function =
             false;
         E = nullptr;
         PV = nullptr;
@@ -482,7 +482,7 @@ enum class pragma_hila {
     AST_DUMP,
     LOOP_FUNCTION,
     NOVECTOR,
-    VECTORIZABLE,
+    NOT_VECTORIZABLE,
     CONTAINS_RNG,
     ACCESS,
     IN_OMP_PARALLEL_REGION

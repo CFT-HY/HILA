@@ -25,7 +25,8 @@ void field_storage<T>::free_field() {
 
 // Only attempt to compile with CUDA compiler.
 // Hilapp will skip these.
-#if defined(__CUDACC__) || defined(__HIPCC__)
+// #if defined(__CUDACC__) || defined(__HIPCC__)
+#if !defined(HILAPP)
 
 // These are used in device code. Can be called directly in a kernel.
 template <typename T>
@@ -441,7 +442,7 @@ T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
 
 #endif
 
-#elif defined(HILAPP)
+#else // now HILAPP
 
 // Hilapp requires a dummy implementation for functions with auto return type
 template <typename T>
@@ -456,6 +457,6 @@ auto field_storage<T>::get_element(const unsigned i,
     return value;
 }
 
-#endif //__CUDACC__
+#endif // !HILAPP .. HILAPP
 
 #endif

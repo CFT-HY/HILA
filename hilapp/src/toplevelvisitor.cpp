@@ -144,10 +144,10 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     lfe.is_read = (is_also_read || !is_assign);
     lfe.sequence = parsing_state.stmt_sequence;
 
-    if (is_assign && !lfe.nameExpr->isLValue()) {
+    if (is_assign && (lfe.nameExpr->isModifiableLvalue(*Context) != Expr::MLV_Valid)) {
         reportDiag(DiagnosticsEngine::Level::Error,
                    lfe.nameExpr->getSourceRange().getBegin(),
-                   "Cannot assign to non-lvalue Field expression");
+                   "Cannot assign to non-modifiable lvalue Field expression");
     }
 
     std::string parity_expr_type = get_expr_type(lfe.parityExpr);
@@ -894,8 +894,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
     // Need to recognize assignments lf[X] =  or lf[X] += etc.
     // And also assignments to other vars: t += norm2(lf[X]) etc.
-    Expr *assignee;
-    if (is_assignment_expr(s, &assignop, is_compound, &assignee)) {
+    Expr *assignee, *assigned_expr;
+    if (is_assignment_expr(s, &assignop, is_compound, &assignee, &assigned_expr)) {
 
         // check_allowed_assignment(s);
         assign_stmt = s;
@@ -913,6 +913,16 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         // need to read in the variable
         is_field_assign =
             (is_field_parity_expr(assignee) || is_field_with_X_expr(assignee));
+
+        // llvm::errs() << "ASSIGNMENT EXPR " << get_stmt_str(s) << '\n';
+        // llvm::errs() << "  ASSIGNEE " << get_stmt_str(assignee) << '\n';
+        // llvm::errs() << "  ASSIGNED " << get_stmt_str(assigned_expr) << '\n';
+
+        TraverseStmt(assignee);
+        is_assignment = false;
+
+        TraverseStmt(assigned_expr);
+        parsing_state.skip_children = 1;
 
         return true;
     }
@@ -937,7 +947,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // Check c++ methods  -- HMM: it seems above function call stmt catches these first
     if (0 && is_member_call_stmt(s)) {
         handle_member_call_in_loop(s);
-        // let this ripple trough, for now ...
+        // let this fall trough, for now ...
         // return true;
     }
 
@@ -945,14 +955,14 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // function can assign to the a field parameter (is not const).
     if (is_function_call_stmt(s)) {
         handle_function_call_in_loop(s);
-        // let this ripple trough, for - expr f[X] is a function call and is trapped
+        // let this fall trough, for - expr f[X] is a function call and is trapped
         // below too
         // return true;
     }
 
-    if (is_user_cast_stmt(s)) {
-        // llvm::errs() << "GOT USER CAST " << get_stmt_str(s) << '\n';
-    }
+    // if (is_user_cast_stmt(s)) {
+    //     // llvm::errs() << "GOT USER CAST " << get_stmt_str(s) << '\n';
+    // }
 
     // catch then expressions
     if (Expr *E = dyn_cast<Expr>(s)) {
@@ -969,10 +979,9 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // get the expression for field name
             handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign,
                                 true);
-            is_assignment = false; // next will not be assignment
-            // (unless it is a[] = b[] = c[], which is OK)
 
             parsing_state.skip_children = 1;
+            is_assignment = false;
             return true;
         }
 
@@ -982,9 +991,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
 
             handle_field_X_expr(E, is_assignment, is_compound || !is_field_assign,
                                 false);
-            is_assignment = false; // next will not be assignment
-            // (unless it is a[] = b[] = c[], which is OK)
 
+            is_assignment = false;
             parsing_state.skip_children = 1;
             return true;
         }
@@ -1034,13 +1042,12 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
                     handle_var_ref(DRE, is_assignment, assignop, assign_stmt);
                 }
 
-                is_assignment = false;
-
                 // llvm::errs() << "Variable ref: "
                 //              << TheRewriter.getRewrittenText(E->getSourceRange()) <<
                 //              '\n';
 
                 parsing_state.skip_children = 1;
+                is_assignment = false;
                 return true;
             }
             // TODO: function ref?
@@ -1070,9 +1077,9 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // llvm::errs() << " ARRAY EXPRS " << get_stmt_str(E) << '\n';
             int is_handled = handle_array_var_ref(a, is_assignment, assignop);
 
-            is_assignment = false;
             // We don't want to handle the array variable or the index separately
             parsing_state.skip_children = is_handled;
+            is_assignment = false;
             return true;
         }
 

@@ -23,7 +23,8 @@ struct backend_lattice_struct {
     /// Finally a pointer to the list of coordinates, stored on device
     CoordinateVector *d_coordinates;
 
-#if defined(__CUDACC__) || defined(__HIPCC__)
+//#if defined(__CUDACC__) || defined(__HIPCC__)
+#if defined(CUDA) || defined(HIP)
 
     /// get the coordinates at a given site
     __host__ __device__ const CoordinateVector &coordinates(unsigned idx) const {
@@ -49,7 +50,9 @@ struct backend_lattice_struct {
 
 };
 
-#if defined(__CUDACC__) || defined(__HIPCC__)
+//#if defined(__CUDACC__) || defined(__HIPCC__)
+#if defined(CUDA) || defined(HIP)
+
 // define also loop_lattice_size() and _volume() methods for cuda
 
 __host__ __device__ int loop_lattice_size(Direction d);

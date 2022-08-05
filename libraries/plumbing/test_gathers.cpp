@@ -4,39 +4,42 @@
 
 #include "hila.h"
 
-template <typename T> void gather_test() {
+void gather_test() {
 
-    foralldir(d) {
+    int64_t s = 0;
+    onsites(ALL) {
+        s += 1;
+    }
 
-        T dif1 = 0, dif2 = 0;
-        Field<T> f1, f2;
+    if (s != lattice->volume()) {
+        output0 << " Reduction test error!  Sum " << s << " should be "
+                << lattice->volume() << '\n';
+        hila::terminate(1);
+    }
+
+
+    foralldir (d) {
+
+        CoordinateVector dif1 = 0, dif2 = 0;
+        Field<CoordinateVector> f1, f2;
+#pragma hila novector
         onsites(ALL) {
-            f1[X] = X.coordinate(d);
-            f2[X] = pmod(X.coordinate(d) + 1, lattice->size(d));
-        }
-
-        int64_t s = 0;
-        onsites(ALL) {
-            s += 1;
-        }
-
-        if (s != lattice->volume()) {
-            output0 << " Reduction test error!  Sum " << s << " should be " << lattice->volume() << '\n';
-            hila::terminate(1);
+            f1[X] = X.coordinates();
+            f2[X] = (X.coordinates() + d).mod(lattice->size());
         }
 
         onsites(ALL) {
-            dif1 += f1[X + d] - f2[X];
-            dif2 += f1[X] - f2[X - d];
+            dif1 += abs(f1[X + d] - f2[X]);
+            dif2 += abs(f1[X] - f2[X - d]);
         }
 
-        if (dif1 != 0) {
+        if (dif1.squarenorm() != 0) {
             output0 << " Std up-gather test error! Node " << hila::myrank()
                     << " direction " << (unsigned)d << " dif1 " << dif1 << '\n';
             hila::terminate(1);
         }
 
-        if (dif2 != 0) {
+        if (dif2.squarenorm() != 0) {
             output0 << " Std down-gather test error! Node " << hila::myrank()
                     << " direction " << (unsigned)d << " dif2 " << dif2 << '\n';
             hila::terminate(1);
@@ -69,7 +72,7 @@ template <typename T> void gather_test() {
 
 void test_std_gathers() {
     // gather_test<int>();
-    gather_test<double>();
+    gather_test();
 
 #if defined(CUDA) || defined(HIP)
     gpuMemPoolPurge();

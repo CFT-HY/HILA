@@ -453,7 +453,7 @@ void scaling_sim::initialize_uetc() {
         jk[d][ALL] = imag(phi[X].dagger() * (phi[X + d] - phi[X - d])) / (2 * config.dx);
 
     onsites(ALL) {
-        auto k = X.coordinates().convert_to_k();
+        auto k = convert_to_k(X.coordinates());
         auto absk = k.norm();
 
         if (absk > 0)

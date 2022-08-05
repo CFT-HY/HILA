@@ -81,9 +81,8 @@ class Matrix_t {
     Matrix_t(const Matrix_t &v) = default;
 
     /// constructor from scalar -- keep it explicit!  Not good for auto use
-    template <
-        typename S, int nn = n, int mm = m,
-        std::enable_if_t<(hila::is_assignable<T &, S>::value && nn == mm), int> = 0>
+    template <typename S, int nn = n, int mm = m,
+              std::enable_if_t<(hila::is_assignable<T &, S>::value && nn == mm), int> = 0>
     explicit inline Matrix_t(const S rhs) {
         for (int i = 0; i < n; i++)
             for (int j = 0; j < n; j++) {
@@ -164,7 +163,7 @@ class Matrix_t {
     }
 
     /// standard access ops m.e(i,j) - assume T is small, as it should
-    inline const T &e(const int i, const int j) const {
+    inline T e(const int i, const int j) const {
         // return elem[i][j];
         return c[i * m + j];
     }
@@ -324,8 +323,7 @@ class Matrix_t {
 #pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Mtype &operator=(std::initializer_list<S> rhs) out_only {
-        assert(rhs.size() == n * m &&
-               "Initializer list has a wrong size in assignment");
+        assert(rhs.size() == n * m && "Initializer list has a wrong size in assignment");
         int i = 0;
         for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
             c[i] = *it;
@@ -357,14 +355,13 @@ class Matrix_t {
 
     /// add assign type T and convertible
 #pragma hila loop_function
-    template <typename S,
-              std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value,
-                               int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator+=(const S &rhs) {
 
         static_assert(
-            n == m,
-            "rows != columns : scalar addition possible for square matrix only!");
+            n == m, "rows != columns : scalar addition possible for square matrix only!");
 
         for (int i = 0; i < n; i++) {
             e(i, i) += rhs;
@@ -389,22 +386,21 @@ class Matrix_t {
 
     /// multiply assign with matrix
 #pragma hila loop_function
-    template <int p, typename S, typename MT,
-              std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value,
-                               int> = 0>
+    template <
+        int p, typename S, typename MT,
+        std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const Matrix_t<m, p, S, MT> &rhs) {
-        static_assert(m == p,
-                      "can't assign result of *= to lhs Matrix, because doing so "
-                      "would change it's dimensions");
+        static_assert(m == p, "can't assign result of *= to lhs Matrix, because doing so "
+                              "would change it's dimensions");
         *this = *this * rhs;
         return *this;
     }
 
     /// multiply assign with scalar
 #pragma hila loop_function
-    template <typename S,
-              std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value,
-                               int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] *= rhs;
@@ -414,9 +410,9 @@ class Matrix_t {
 
     /// divide assign with scalar
 #pragma hila loop_function
-    template <typename S,
-              std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value,
-                               int> = 0>
+    template <
+        typename S,
+        std::enable_if_t<hila::is_assignable<T &, hila::type_div<T, S>>::value, int> = 0>
     Mtype &operator/=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
             c[i] /= rhs;
@@ -435,8 +431,13 @@ class Matrix_t {
     ///////////////////////////////////////////////////////////////////
     /// Transpose of a matrix: For square the return type is the
     /// same as input, for non-square general Matrix<m,n>
+<<<<<<< HEAD
     template <int mm = m, typename Rtype =
                   typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type, std::enable_if_t<(mm != 1), int> = 0>
+=======
+    template <
+        typename Rtype = typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type>
+>>>>>>> remotes/Kari_Rummukainen/hila/master
     inline const Rtype transpose() const {
         Rtype res;
         for (int i = 0; i < n; i++)
@@ -465,8 +466,8 @@ class Matrix_t {
     ///////////////////////////////////////////////////////////////////
     /// Hermitean conjugate of a matrix: For square the return type is the
     /// same as input, for non-square general Matrix<m,n>
-    template <typename Rtype =
-                  typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type>
+    template <
+        typename Rtype = typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type>
     inline const Rtype dagger() const {
         Rtype res;
         for (int i = 0; i < n; i++)
@@ -477,15 +478,16 @@ class Matrix_t {
     }
 
     /// alias dagger() to adjoint()
-    template <typename Rtype =
-                  typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type>
+    template <
+        typename Rtype = typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type>
     inline Rtype adjoint() const {
         return dagger();
     }
 
     /// abs() - give absolute value of elements (real/complex)
     /// With complex type changes!
-    template <typename M=T,std::enable_if_t<!hila::contains_complex<M>::value, int> = 0>
+    template <typename M = T,
+              std::enable_if_t<!hila::contains_complex<M>::value, int> = 0>
     Mtype abs() const {
         Mtype res;
         for (int i = 0; i < n * m; i++) {
@@ -495,9 +497,9 @@ class Matrix_t {
         return res;
     }
 
-    template <typename M=T,std::enable_if_t<hila::contains_complex<M>::value, int> = 0>
+    template <typename M = T, std::enable_if_t<hila::contains_complex<M>::value, int> = 0>
     auto abs() const {
-        Matrix<n,m,hila::number_type<T>> res;
+        Matrix<n, m, hila::number_type<T>> res;
         for (int i = 0; i < n * m; i++) {
             res.c[i] = c[i].abs();
         }
@@ -571,7 +573,8 @@ class Matrix_t {
         return sqrt(squarenorm());
     }
 
-    template <typename S = T, 
+    template <
+        typename S = T,
         std::enable_if_t<!hila::is_floating_point<hila::number_type<S>>::value, int> = 0>
     double norm() const {
         return sqrt(static_cast<double>(squarenorm()));
@@ -827,25 +830,25 @@ T det(const Mtype &mat) {
 }
 
 /// 1x1 matrix det (trivial)
-template <typename Mtype, std::enable_if_t<Mtype::is_matrix() && Mtype::rows() == 1 &&
-                                               Mtype::columns() == 1,
-                                           int> = 0>
+template <typename Mtype,
+          std::enable_if_t<
+              Mtype::is_matrix() && Mtype::rows() == 1 && Mtype::columns() == 1, int> = 0>
 auto det(const Mtype &mat) {
     return mat.e(0, 0);
 }
 
 /// 2x2 matrix det
-template <typename Mtype, std::enable_if_t<Mtype::is_matrix() && Mtype::rows() == 2 &&
-                                               Mtype::columns() == 2,
-                                           int> = 0>
+template <typename Mtype,
+          std::enable_if_t<
+              Mtype::is_matrix() && Mtype::rows() == 2 && Mtype::columns() == 2, int> = 0>
 auto det(const Mtype &mat) {
     return mat.e(0, 0) * mat.e(1, 1) - mat.e(1, 0) * mat.e(0, 1);
 }
 
 /// 3x3 matrix det
-template <typename Mtype, std::enable_if_t<Mtype::is_matrix() && Mtype::rows() == 3 &&
-                                               Mtype::columns() == 3,
-                                           int> = 0>
+template <typename Mtype,
+          std::enable_if_t<
+              Mtype::is_matrix() && Mtype::rows() == 3 && Mtype::columns() == 3, int> = 0>
 auto det(const Mtype &mat) {
     return mat.e(0, 0) * (mat.e(1, 1) * mat.e(2, 2) - mat.e(2, 1) * mat.e(1, 2)) -
            mat.e(0, 1) * (mat.e(1, 0) * mat.e(2, 2) - mat.e(1, 2) * mat.e(2, 0)) +
@@ -858,7 +861,7 @@ auto det(const Mtype &mat) {
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>,
-          std::enable_if_t<!std::is_same<Mtype1,Rtype>::value, int> = 0>
+          std::enable_if_t<!std::is_same<Mtype1, Rtype>::value, int> = 0>
 inline Rtype operator+(const Mtype1 &a, const Mtype2 &b) {
 
     constexpr int n = Mtype1::rows();
@@ -879,7 +882,7 @@ inline Rtype operator+(const Mtype1 &a, const Mtype2 &b) {
 template <typename Mtype1, typename Mtype2,
           std::enable_if_t<Mtype1::is_matrix() && Mtype2::is_matrix(), int> = 0,
           typename Rtype = hila::mat_x_mat_type<Mtype1, Mtype2>,
-          std::enable_if_t<std::is_same<Mtype1,Rtype>::value, int> = 0>
+          std::enable_if_t<std::is_same<Mtype1, Rtype>::value, int> = 0>
 inline Rtype operator+(Mtype1 a, const Mtype2 &b) {
 
     constexpr int n = Mtype1::rows();
@@ -916,8 +919,8 @@ inline Rtype operator-(const Mtype1 &a, const Mtype2 &b) {
 
 /// Matrix + scalar
 template <typename Mtype, typename S,
-          std::enable_if_t<
-              Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
+          std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value,
+                           int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
 inline Rtype operator+(const Mtype &a, const S &b) {
 
@@ -936,8 +939,8 @@ inline Rtype operator+(const Mtype &a, const S &b) {
 
 /// scalar + matrix
 template <typename Mtype, typename S,
-          std::enable_if_t<
-              Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
+          std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value,
+                           int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
 inline Rtype operator+(const S &b, const Mtype &a) {
 
@@ -948,8 +951,8 @@ inline Rtype operator+(const S &b, const Mtype &a) {
 
 /// matrix - scalar
 template <typename Mtype, typename S,
-          std::enable_if_t<
-              Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
+          std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value,
+                           int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
 inline Rtype operator-(const Mtype &a, const S &b) {
 
@@ -968,8 +971,8 @@ inline Rtype operator-(const Mtype &a, const S &b) {
 
 /// scalar - matrix
 template <typename Mtype, typename S,
-          std::enable_if_t<
-              Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value, int> = 0,
+          std::enable_if_t<Mtype::is_matrix() && hila::is_complex_or_arithmetic<S>::value,
+                           int> = 0,
           typename Rtype = hila::mat_scalar_type<Mtype, S>>
 inline Rtype operator-(const S &b, const Mtype &a) {
 
@@ -1012,8 +1015,7 @@ inline Mt operator*(const Mt &A, const Mt &B) {
 template <
     typename Mt1, typename Mt2,
     std::enable_if_t<
-        Mt1::is_matrix() && Mt2::is_matrix() && !std::is_same<Mt1, Mt2>::value, int> =
-        0,
+        Mt1::is_matrix() && Mt2::is_matrix() && !std::is_same<Mt1, Mt2>::value, int> = 0,
     typename R = hila::ntype_op<hila::underlying_type<Mt1>, hila::underlying_type<Mt2>>,
     int n = Mt1::rows(), int m = Mt2::columns()>
 inline Matrix<n, m, R> operator*(const Mt1 &A, const Mt2 &B) {
@@ -1070,8 +1072,8 @@ Rt operator*(const Matrix<1, m, T1> &A, const Matrix<n, 1, T2> &B) {
 
 /// matrix * scalar
 template <typename Mt, typename S,
-          std::enable_if_t<
-              (Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
+          std::enable_if_t<(Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value),
+                           int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
 inline Rt operator*(const Mt &mat, const S &rhs) {
     Rt res;
@@ -1083,8 +1085,8 @@ inline Rt operator*(const Mt &mat, const S &rhs) {
 
 /// scalar * matrix
 template <typename Mt, typename S,
-          std::enable_if_t<
-              (Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
+          std::enable_if_t<(Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value),
+                           int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
 inline Rt operator*(const S &rhs, const Mt &mat) {
     return mat * rhs; // assume commutes
@@ -1092,8 +1094,8 @@ inline Rt operator*(const S &rhs, const Mt &mat) {
 
 /// matrix / scalar
 template <typename Mt, typename S,
-          std::enable_if_t<
-              (Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value), int> = 0,
+          std::enable_if_t<(Mt::is_matrix() && hila::is_complex_or_arithmetic<S>::value),
+                           int> = 0,
           typename Rt = hila::mat_scalar_type<Mt, S>>
 inline Rt operator/(const Mt &mat, const S &rhs) {
     Rt res;
@@ -1382,8 +1384,7 @@ Matrix<n, m, Complex<Ntype>> cast_to(const Matrix<n, m, T> &mat) {
 ///  Do it backwards in order to reduce accumulation of errors
 
 template <int n, int m, typename T, typename MT>
-inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat,
-                                 const int order = 20) {
+inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int order = 20) {
     static_assert(n == m, "exp() only for square matrices");
 
     Matrix_t<n, m, T, MT> r;

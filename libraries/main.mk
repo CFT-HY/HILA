@@ -11,7 +11,7 @@
 #%     make help             - print this help message
 #%     make clean            - remove .o and .cpt -files
 #%     make cleanall         - clean build directory
-#%     make list             - list available make targets
+#%     make list             - list available make targets/arguments
 
 
 # If "make clean", don't worry about targets, platforms and options

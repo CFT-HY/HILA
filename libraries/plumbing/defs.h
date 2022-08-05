@@ -51,13 +51,19 @@
 
 // This below declares "out_only" -qualifier.  It is empty on purpose. Do not remove!
 #define out_only
-// out_only for methods tells hilapp that the base variable original value is not
-// needed: class C {
+// out_only indicates that the function does not use the original value of the argument:
+//    double func( out_only double & p, ..) { ... }
+//    func(a);
+// This helps hilapp to optimize memory access.  It is not a bug to leave out out_only,
+// but it is a bug to "lie", i.e. use the original value of the variable if out_only is
+// used.
+//
+// out_only for class methods tells hilapp that the base variable original value is not
+// needed:
+// class C {
 //    int set() out_only { .. }
 // };
-// indicates that a.set(); does not need original value of a.
-// Can also be used in function arguments:
-//    int func( out_only double & p, ..);
+// indicates that a.set(); does not need original value of a. e qualifier.
 
 // Defined empty on purpose, same as above!
 #define const_function
@@ -71,7 +77,7 @@
 //     v vv;
 //     Field<v>  f;
 //     onsites(ALL) { f[X].e(0) += vv.e(0); }
-// This would not work without const_function, because vv.e(1) might modify loop
+// This would not work without const_function, because vv.e(0) might modify loop
 // extern variable vv, which is not allowed.  If method is marked "const",
 // then the assignment would not work.
 //
@@ -86,7 +92,7 @@ namespace hila {
 /// this is our default output file stream
 extern std::ostream output;
 /// output stream only from node 0
-//extern std::ostream output0;
+// extern std::ostream output0;
 /// this is just a hook to store output file, if it is in use
 extern std::ofstream output_file;
 

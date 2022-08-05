@@ -263,8 +263,9 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // Assign
 
     bool operator==(const CoordinateVector_t<T> &rhs) const {
-        foralldir(d) {
-            if (this->e(d) != rhs.e(d)) return false;
+        foralldir (d) {
+            if (this->e(d) != rhs.e(d))
+                return false;
         }
         return true;
     }
@@ -374,12 +375,11 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     inline CoordinateVector_t mod(const CoordinateVector_t &m) const {
         CoordinateVector_t<T> r;
-        foralldir (d) { r.e(d) = pmod((*this)[d], m[d]); }
+        foralldir (d) {
+            r.e(d) = pmod((*this)[d], m[d]);
+        }
         return r;
     }
-
-    /// convert lattice vector to to k-vector (needs lattice->size() so defined in fft.h)
-    inline Vector<NDIM,double> convert_to_k() const;
 
 };
 
