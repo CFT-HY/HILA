@@ -5,7 +5,7 @@
 #
 
 $(info ########################################################################)
-$(info Target lumi-hip: remember to )
+$(info Target lumi-hip-CC: remember to )
 $(info module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm/5.1.4 )
 $(info ########################################################################)
 
@@ -13,14 +13,14 @@ $(info ########################################################################)
 ### Define compiler and options
 
 # Define compiler - use cray CC wrapper
-CC := hipcc
-LD := hipcc
+CC := CC
+LD := CC
 
 # Define compilation flags
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -fgpu-rdc -Wno-cuda-compat
+CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -fgpu-rdc
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
