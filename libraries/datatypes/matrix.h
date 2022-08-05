@@ -431,13 +431,8 @@ class Matrix_t {
     ///////////////////////////////////////////////////////////////////
     /// Transpose of a matrix: For square the return type is the
     /// same as input, for non-square general Matrix<m,n>
-<<<<<<< HEAD
     template <int mm = m, typename Rtype =
                   typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type, std::enable_if_t<(mm != 1), int> = 0>
-=======
-    template <
-        typename Rtype = typename std::conditional<n == m, Mtype, Matrix<m, n, T>>::type>
->>>>>>> remotes/Kari_Rummukainen/hila/master
     inline const Rtype transpose() const {
         Rtype res;
         for (int i = 0; i < n; i++)

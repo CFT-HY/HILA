@@ -294,6 +294,6 @@ void gpu_set_zero(T *vec, size_t N) {
     gpu_set_zero_kernel<<<blocks, N_threads>>>(vec, N);
 }
 
-#endif // __CUDACC__
+#endif // !HILAPP
 
 #endif
