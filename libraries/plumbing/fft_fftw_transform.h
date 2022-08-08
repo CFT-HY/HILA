@@ -225,7 +225,7 @@ void hila_fft<cmplx_t>::scatter_data() {
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            MPI_Isend(rec_p[j], fn.recv_buf_size * elements * sizeof(cmplx_t), MPI_BYTE, fn.node,
+            MPI_Isend(rec_p[j], (int)(fn.recv_buf_size * elements * sizeof(cmplx_t)), MPI_BYTE, fn.node,
                       WRK_SCATTER_TAG, lattice->mpi_comm_lat, &sendreq[i]);
 
             i++;

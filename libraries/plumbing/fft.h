@@ -24,9 +24,8 @@
 
 inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
     Vector<NDIM, double> k;
-    CoordinateVector mv = cv.mod(lattice->size());
     foralldir (d) {
-        int n = mv.e(d);
+        int n = pmod(cv.e(d), lattice->size(d));
         if (n > lattice->size(d) / 2)
             n -= lattice->size(d);
 
@@ -82,8 +81,8 @@ class hila_fft {
 
     bool only_reflect;
 
-    cmplx_t *RESTRICT send_buf;
-    cmplx_t *RESTRICT receive_buf;
+    cmplx_t *send_buf;
+    cmplx_t *receive_buf;
 
     // data structures which point to to-be-copied buffers
     std::vector<cmplx_t *> rec_p;
@@ -218,8 +217,7 @@ class hila_fft {
         // Build vector offset, which encodes where the data should be written
         CoordinateVector offset, nmin;
 
-        const size_t elem_offset =
-            pencil_get_buffer_offsets(dir, elements, offset, nmin);
+        const size_t elem_offset = pencil_get_buffer_offsets(dir, elements, offset, nmin);
 
         cmplx_t *rb = receive_buf;
 
@@ -444,9 +442,8 @@ template <typename T>
 Field<Complex<hila::number_type<T>>>
 Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
 
-    static_assert(
-        hila::is_arithmetic<T>::value,
-        "FFT_real_to_complex can be applied only to Field<real-type> variable");
+    static_assert(hila::is_arithmetic<T>::value,
+                  "FFT_real_to_complex can be applied only to Field<real-type> variable");
 
     Field<Complex<T>> cf;
     cf[ALL] = Complex((*this)[X], 0.0);
@@ -517,7 +514,7 @@ Field<hila::number_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) 
     }
 
     FFT_field(rf, rf, fftdir);
-    
+
     double ims = 0;
     double rss = 0;
     onsites(ALL) {

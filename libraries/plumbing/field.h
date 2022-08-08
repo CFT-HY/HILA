@@ -1374,7 +1374,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         }
 
         // c++ version does not return errors
-        MPI_Irecv(receive_buffer, n, mpi_type, from_node.rank, tag, lattice->mpi_comm_lat,
+        MPI_Irecv(receive_buffer, (int)n, mpi_type, from_node.rank, tag, lattice->mpi_comm_lat,
                   &fs->receive_request[par_i][d]);
 
         post_receive_timer.stop();
@@ -1394,7 +1394,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
         size_t n = sites * size / size_type;
 
-        MPI_Isend(send_buffer, n, mpi_type, to_node.rank, tag, lattice->mpi_comm_lat,
+        MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice->mpi_comm_lat,
                   &fs->send_request[par_i][d]);
         start_send_timer.stop();
     }
@@ -1629,7 +1629,7 @@ void Field<T>::field_struct::gather_elements(
             if (sites_on_rank[n] > 0) {
                 if (n != root) {
                     MPI_Status status;
-                    MPI_Irecv(b, sites_on_rank[n] * sizeof(T), MPI_BYTE, n, n,
+                    MPI_Irecv(b, (int)(sites_on_rank[n] * sizeof(T)), MPI_BYTE, n, n,
                               lattice->mpi_comm_lat, &mpi_req[nreqs++]);
 
                     nptr[n] = b;
@@ -1717,7 +1717,7 @@ void Field<T>::field_struct::scatter_elements(
         for (int n = 0; n < sites_on_rank.size(); n++) {
             if (sites_on_rank[n] > 0) {
                 if (n != root) {
-                    MPI_Isend(pb.data() + nloc[n], sites_on_rank[n] * sizeof(T), MPI_BYTE,
+                    MPI_Isend(pb.data() + nloc[n], (int)(sites_on_rank[n] * sizeof(T)), MPI_BYTE,
                               n, n, lattice->mpi_comm_lat, &mpi_req[nreqs++]);
                 }
             }
