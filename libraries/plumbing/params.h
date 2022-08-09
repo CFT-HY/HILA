@@ -58,6 +58,13 @@
 #undef GPU_MEMORY_POOL
 #endif
 
+// Undef cuda/hip -aware mpi at makefile with -DGPU_AWARE_MPI=0
+#ifndef GPU_AWARE_MPI
+#define GPU_AWARE_MPI 1
+#elif GPU_AWARE_MPI == 0
+#undef GPU_AWARE_MPI
+#endif
+
 // If SLOW_GPU_REDUCTION is defined, use slow but memory stingy
 // reduction.  Probably should not be used.
 // #define SLOW_GPU_REDUCTION
@@ -88,13 +95,6 @@
 // How many fft's in parallel - large value faster, small less memory.
 #ifndef GPUFFT_BATCH_SIZE
 #define GPUFFT_BATCH_SIZE 256
-#endif
-
-// Undef cuda-aware mpi at makefile with -DGPU_AWARE_MPI=0
-#ifndef GPU_AWARE_MPI
-#define GPU_AWARE_MPI 1
-#elif GPU_AWARE_MPI == 0
-#undef GPU_AWARE_MPI
 #endif
 
 #ifndef GPU_MEMORY_POOL
