@@ -309,9 +309,15 @@ void hila::initialize(int argc, char **argv) {
 
 
 #if defined(CUDA) || defined(HIP)
+#if defined(GPU_AWARE_MPI)
+    output0 << "Using GPU_AWARE_MPI\n";
+#else
+    output0 << "Not using GPU_AWARE_MPI\n";
+#endif
     if (!hila::check_input)
         gpu_device_info();
 #endif
+
 
 #ifdef AVX
     vector_type_info();
@@ -323,8 +329,7 @@ void hila::initialize(int argc, char **argv) {
 #endif
 
 #if (defined(__GNUC__) && !defined(DARWIN)) // || defined(__bg__)
-    output0 << "GNU c-library performance:\n using sbrk instead of mmap; not returning "
-               "memory\n";
+    output0 << "GNU c-library performance: not returning allocated memory\n";
 #endif
 }
 
