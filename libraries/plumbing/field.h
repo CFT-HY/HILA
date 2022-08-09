@@ -1393,6 +1393,9 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         fs->gather_comm_elements(d, par, send_buffer, to_node);
 
         size_t n = sites * size / size_type;
+#ifdef CUDA_AWARE_MPI
+        gpuStreamSynchronize(0);
+#endif
 
         MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice->mpi_comm_lat,
                   &fs->send_request[par_i][d]);

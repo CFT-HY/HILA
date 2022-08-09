@@ -359,7 +359,10 @@ void hila_fft<cmplx_t>::gather_data() {
             int n = fn.column_number * elements * lattice->mynode.size[dir] *
                     sizeof(cmplx_t);
 
-#ifndef CUDA_AWARE_MPI
+#ifdef CUDA_AWARE_MPI
+            gpuStreamSynchronize(0);
+#else 
+            // now not CUDA_AWARE_MPI
             send_p[i] = (cmplx_t *)memalloc(n);
             gpuMemcpy(send_p[i], p, n, gpuMemcpyDeviceToHost);
             p = send_p[i];
@@ -450,11 +453,12 @@ void hila_fft<cmplx_t>::scatter_data() {
         if (fn.node != hila::myrank()) {
 
             int n = fn.recv_buf_size * elements * sizeof(cmplx_t);
-#ifndef CUDA_AWARE_MPI
+#ifdef CUDA_AWARE_MPI
+            cmplx_t *p = rec_p[j];
+            gpuStreamSynchronize(0);
+#else
             cmplx_t *p = send_p[i] = (cmplx_t *)memalloc(n);
             gpuMemcpy(p, rec_p[j], n, gpuMemcpyDeviceToHost);
-#else
-            cmplx_t *p = rec_p[j];
 #endif
             MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat,
                       &sendreq[i]);

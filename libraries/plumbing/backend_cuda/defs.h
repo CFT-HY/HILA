@@ -68,6 +68,7 @@ using gpuError = cudaError;
 #define gpuMemcpyHostToDevice cudaMemcpyHostToDevice
 #define gpuMemcpyDeviceToHost cudaMemcpyDeviceToHost
 #define gpuDeviceSynchronize() GPU_CHECK(cudaDeviceSynchronize())
+#define gpuStreamSynchronize(a) GPU_CHECK(cudaStreamSynchronize(a))
 
 #define GPUTYPESTR "CUDA"
 
@@ -118,6 +119,7 @@ using gpuError = hipError_t;
 #define gpuMemcpyHostToDevice hipMemcpyHostToDevice
 #define gpuMemcpyDeviceToHost hipMemcpyDeviceToHost
 #define gpuDeviceSynchronize() GPU_CHECK(hipDeviceSynchronize())
+#define gpuStreamSynchronize(a) GPU_CHECK(hipStreamSynchronize(a))
 
 #define GPUTYPESTR "HIP"
 
@@ -176,7 +178,10 @@ using gpuError = int;
 
 #define check_device_error(msg) do {} while(0)
 #define check_device_error_code(code, msg) do {} while(0)
+
+#define gpuStreamSynchronize(a) do {} while(0)
 // clang-format on
+
 
 #define GPUTYPESTR "NONE"
 
