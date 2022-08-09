@@ -96,7 +96,7 @@ class hila_saved_fftplan_t {
         int batch;
         bool is_float;
     };
-    
+
     unsigned long seq;
     std::vector<plan_d> plans;
 
@@ -137,6 +137,8 @@ class hila_saved_fftplan_t {
 
         // not cached, make new if there's room
 
+        fft_plan_timer.start();
+
         plan_d * pp;
         if (plans.size() == N_PLANS) {
             // find and destroy oldest used plan
@@ -153,8 +155,6 @@ class hila_saved_fftplan_t {
         }
 
         // If we got here we need to make a plan
-
-        fft_plan_timer.start();
 
         pp->size = size;
         pp->batch = batch;
