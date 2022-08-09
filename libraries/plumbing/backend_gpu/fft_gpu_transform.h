@@ -85,23 +85,24 @@ __global__ void hila_fft_scatter_column(cmplx_t *RESTRICT data,
 
 // Define datatype for saved plans
 
+#define N_PLANS NDIM    // just for concreteness...
+
 class hila_saved_fftplan_t {
   public:
     struct plan_d {
         gpufftHandle plan;
+        unsigned long seq;   // plan use sequence - for clearing up
         int size;
         int batch;
-        bool is_initialized;
+        bool is_float;
     };
-    std::array<plan_d, NDIM> plans;
-
-    bool is_float;
-    bool is_empty;
+    
+    unsigned long seq;
+    std::vector<plan_d> plans;
 
     hila_saved_fftplan_t() {
-        for (auto &p : plans)
-            p.is_initialized = false;
-        is_empty = true;
+        plans.reserve(N_PLANS);
+        seq = 0;
     }
 
     ~hila_saved_fftplan_t() {
@@ -110,72 +111,63 @@ class hila_saved_fftplan_t {
 
     void delete_plans() {
         for (auto &p : plans) {
-            if (p.is_initialized) {
-                gpufftDestroy(p.plan);
-                p.is_initialized = false;
-            }
+            gpufftDestroy(p.plan);
         }
-        is_empty = true;
+        plans.clear();
+        seq = 0;
     }
 
     // get cached plan or create new.  If the saved plan is incompatible with
     // the one required, destroy plans
-    gpufftHandle get_plan(Direction dir, int size, int batch, bool _is_float) {
+    gpufftHandle get_plan(int size, int batch, bool is_float) {
 
         extern hila::timer fft_plan_timer;
 
         // do we have saved plan of the same type?
 
-        if (!is_empty && is_float == _is_float) {
-            auto &p = plans[dir];
-            if (p.is_initialized && p.size == size && p.batch == batch) {
+        seq++;
+
+        for (auto &p : plans) {
+            if (p.size == size && p.batch == batch && p.is_float == is_float) {
                 // Now we got it!
+                p.seq = seq;
                 return p.plan;
             }
+        }
 
-            // if dir was not initialized then check other dirs, if match copy
-            if (!p.is_initialized) {
-                foralldir(d) if (d != dir) {
-                    auto &pp = plans[d];
-                    if (pp.is_initialized && pp.size == size && pp.batch == batch) {
-                        p = pp;
-                        return p.plan;
-                    }
-                }
-                // Did not find a match from other dirs -- create new
+        // not cached, make new if there's room
 
-            } else {
-                delete_plans();
+        plan_d * pp;
+        if (plans.size() == N_PLANS) {
+            // find and destroy oldest used plan
+            pp = &plans[0];
+            for (int i=1; i<plans.size(); i++) {
+                if (pp->seq > plans[i].seq)
+                    pp = &plans[i];
             }
-
+            gpufftDestroy(pp->plan);
         } else {
-            if (!is_empty)
-                delete_plans();
+            plan_d empty;
+            plans.push_back(empty);
+            pp = &plans.back();
         }
 
         // If we got here we need to make a plan
 
-        if (is_empty) {
-            is_empty = false;
-            is_float = _is_float;
-        }
-
         fft_plan_timer.start();
 
-        gpufftHandle plan;
+        pp->size = size;
+        pp->batch = batch;
+        pp->is_float = is_float;
+        pp->seq = seq;
 
         // HIPFFT_C2C for float transform, Z2Z for double
-        gpufftPlan1d(&plan, size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch);
+        gpufftPlan1d(&(pp->plan), size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch);
         check_device_error("FFT plan");
 
         fft_plan_timer.stop();
 
-        plans[dir].is_initialized = true;
-        plans[dir].plan = plan;
-        plans[dir].size = size;
-        plans[dir].batch = batch;
-
-        return plan;
+        return pp->plan;
     }
 };
 
@@ -237,7 +229,7 @@ void hila_fft<cmplx_t>::transform() {
     }
 
     gpufftHandle plan;
-    plan = hila_saved_fftplan.get_plan(dir, lattice->size(dir), batch, is_float);
+    plan = hila_saved_fftplan.get_plan(lattice->size(dir), batch, is_float);
 
     // output0 << " Batch " << batch << " nfft " << n_fft << '\n';
 
