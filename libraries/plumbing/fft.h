@@ -349,7 +349,7 @@ void FFT_delete_plans();
 
 #elif defined(CUDA) || defined(HIP)
 
-#include "plumbing/backend_cuda/fft_gpu_transform.h"
+#include "plumbing/backend_gpu/fft_gpu_transform.h"
 
 #endif
 

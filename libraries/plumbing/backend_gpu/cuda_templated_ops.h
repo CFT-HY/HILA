@@ -2,7 +2,7 @@
 #define CUDA_TEMPLATED_OPS_H
 
 #include "plumbing/defs.h"
-#include "plumbing/backend_cuda/defs.h"
+#include "plumbing/backend_gpu/defs.h"
 
 // this include has to be after the backend defs, because those define hila::random()
 #include "plumbing/random.h"

@@ -297,7 +297,7 @@ class Reduction {
 ////////////////////////////////////////////////////////////////////////////////////
 
 // #if defined(CUDA) || defined(HIP)
-// #include "backend_cuda/gpu_reduction.h"
+// #include "backend_gpu/gpu_reduction.h"
 
 // template <typename T>
 // T Field<T>::sum(Parity par, bool allreduce) const {
@@ -337,7 +337,7 @@ T Field<T>::product(Parity par, bool allreduce) const {
 #endif
 
 #if defined(CUDA) || defined(HIP)
-#include "backend_cuda/gpu_reduction.h"
+#include "backend_gpu/gpu_reduction.h"
 #endif
 
 template <typename T>

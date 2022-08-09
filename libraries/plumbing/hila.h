@@ -19,7 +19,7 @@
 #include "plumbing/vectorreduction.h"
 
 //#if defined(CUDA) || defined(HIP)
-//#include "plumbing/backend_cuda/gpu_reduction.h"
+//#include "plumbing/backend_gpu/gpu_reduction.h"
 //#endif
 
 #include "plumbing/vector_field.h"

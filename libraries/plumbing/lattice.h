@@ -386,7 +386,7 @@ extern std::vector<lattice_struct *> lattices;
 #ifdef VANILLA
 #include "plumbing/backend_cpu/lattice.h"
 #elif defined(CUDA) || defined(HIP)
-#include "plumbing/backend_cuda/lattice.h"
+#include "plumbing/backend_gpu/lattice.h"
 #elif defined(VECTORIZED)
 #include "plumbing/backend_vector/lattice_vector.h"
 #endif

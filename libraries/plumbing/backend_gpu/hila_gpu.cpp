@@ -2,7 +2,7 @@
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
-#include "plumbing/backend_cuda/defs.h"
+#include "plumbing/backend_gpu/defs.h"
 
 // hilapp needs to transform the include files above, to make them __device__
 // callable...

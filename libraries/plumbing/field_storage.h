@@ -106,7 +106,7 @@ Import backend
 
 #elif defined(CUDA) || defined(HIP)
 
-#include "plumbing/backend_cuda/field_storage_backend.h"
+#include "plumbing/backend_gpu/field_storage_backend.h"
 
 #elif defined(VANILLA)
 
