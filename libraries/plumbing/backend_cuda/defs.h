@@ -2,7 +2,7 @@
 #define CUDA_INCLUDE_H
 
 // On Puhti, use UCX_MEMTYPE_CACHE=n with
-// CUDA_AWARE_MPI
+// GPU_AWARE_MPI
 
 #include <sstream>
 #include <iostream>
@@ -192,7 +192,7 @@ inline void synchronize_threads() {}
 #endif
 ////////////////////////////////////////////////////////////////////////////////////
 
-void initialize_cuda(int rank);
+void initialize_gpu(int rank);
 void gpu_device_info();
 
 // This is not the CUDA compiler

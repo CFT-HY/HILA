@@ -215,7 +215,7 @@ void hila::initialize(int argc, char **argv) {
 
 #if defined(CUDA) || defined(HIP)
     if (!hila::check_input) {
-        initialize_cuda(lattice->mynode.rank);
+        initialize_gpu(lattice->mynode.rank);
     }
 #endif
 

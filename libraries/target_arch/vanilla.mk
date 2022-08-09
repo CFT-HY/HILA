@@ -13,6 +13,7 @@ LD := mpic++
 
 # Define compilation flags
 CXXFLAGS  := -O3 -x c++ --std=c++17 -fno-rtti -mavx2 -mfma
+# -fsanitize=address -fno-omit-frame-pointer
 # CXXFLAGS := -g -x c++ --std=c++17
 
 
@@ -24,8 +25,9 @@ STD_INCLUDE_DIRS :=
 
 # Linker libraries and possible options
 
-LDLIBS  := -lfftw3 -lfftw3f -lm
+LDLIBS  := -lfftw3 -lfftw3f -lm 
 LDFLAGS :=
+# -fsanitize=address
 
 # These variables must be defined here
 #

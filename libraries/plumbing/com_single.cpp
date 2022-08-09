@@ -17,7 +17,7 @@ void initialize_machine(int &argc, char ***argv) {
         lattice->nodes.number = 1;
 
 #if defined(CUDA) || defined(HIP)
-        initialize_cuda(0);
+        initialize_gpu(0);
 #endif
         initialized = true;
     }

@@ -90,11 +90,11 @@
 #define GPUFFT_BATCH_SIZE 256
 #endif
 
-// Undef cuda-aware mpi at makefile with -DCUDA_AWARE_MPI=0
-#ifndef CUDA_AWARE_MPI
-#define CUDA_AWARE_MPI 1
-#elif CUDA_AWARE_MPI == 0
-#undef CUDA_AWARE_MPI
+// Undef cuda-aware mpi at makefile with -DGPU_AWARE_MPI=0
+#ifndef GPU_AWARE_MPI
+#define GPU_AWARE_MPI 1
+#elif GPU_AWARE_MPI == 0
+#undef GPU_AWARE_MPI
 #endif
 
 #ifndef GPU_MEMORY_POOL

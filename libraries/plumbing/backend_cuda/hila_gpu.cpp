@@ -211,7 +211,7 @@ void backend_lattice_struct::setup(lattice_struct *lattice) {
 #endif
 }
 
-void initialize_cuda(int rank) {
+void initialize_gpu(int rank) {
     int n_devices, my_device;
 
     gpuGetDeviceCount(&n_devices);
@@ -299,14 +299,14 @@ void gpu_device_info() {
             hila::output << "  Runtime library supports CUDA-Aware MPI\n";
         else {
             hila::output << "  Runtime library does not support CUDA-Aware MPI!\n";
-#if defined(CUDA_AWARE_MPI)
-            hila::output << "CUDA_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
+#if defined(GPU_AWARE_MPI)
+            hila::output << "GPU_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
 #endif
         }
 #else
         hila::output << "OpenMPI library does not support CUDA-Aware MPI\n";
-#if defined(CUDA_AWARE_MPI)
-        hila::output << "CUDA_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
+#if defined(GPU_AWARE_MPI)
+        hila::output << "GPU_AWARE_MPI is defined -- THIS MAY CRASH IN MPI\n";
 #endif
 #endif // MPIX
 #endif // OPEN_MPI
