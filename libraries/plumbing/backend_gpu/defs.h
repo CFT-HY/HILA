@@ -1,5 +1,5 @@
-#ifndef CUDA_INCLUDE_H
-#define CUDA_INCLUDE_H
+#ifndef GPU_DEFS_H
+#define GPU_DEFS_H
 
 // On Puhti, use UCX_MEMTYPE_CACHE=n with
 // GPU_AWARE_MPI

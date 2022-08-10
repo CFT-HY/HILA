@@ -156,7 +156,7 @@ using element = T;
 #include "plumbing/type_tools.h"
 
 #if defined(CUDA) || defined(HIP)
-#include "plumbing/backend_gpu/cuda_templated_ops.h"
+#include "plumbing/backend_gpu/gpu_templated_ops.h"
 #endif
 
 // Include some basic functions for real (non-class) vars,

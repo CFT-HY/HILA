@@ -1,5 +1,5 @@
-#ifndef CUDA_BACKEND
-#define CUDA_BACKEND
+#ifndef GPU_BACKEND_H
+#define GPU_BACKEND_H
 
 #include "../defs.h"
 #include "../field_storage.h"
