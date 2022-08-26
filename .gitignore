@@ -1,11 +1,7 @@
-hilapp/build/*
+build/
 hilapp/bin/*
 settings.json
 .vscode/
-applications/*/build/*
-unit_tests/build/*
-unit_tests/build/tests
-unit_tests/build/catch_main
 *.cpt
 *.o
 *~
