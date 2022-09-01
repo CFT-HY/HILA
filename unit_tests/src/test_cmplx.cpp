@@ -157,7 +157,7 @@ TEST_CASE_METHOD(ComplexTest, "Complex mathematical methods", "[Complex]") {
 
     SECTION("Complex mathematical functions") {
         fill_dummy_complex(1, 1);
-        REQUIRE(multiply_by_i(dummy_complex) == (-1 + 1_i));
+        REQUIRE(I*(dummy_complex) == (-1 + 1_i));
         REQUIRE_THAT(as_vector(exp(dummy_complex)),
                      Catch::Matchers::Approx(std::vector<MyType>{1.46869, 2.28736}));
         REQUIRE_THAT(as_vector(log(dummy_complex)),
