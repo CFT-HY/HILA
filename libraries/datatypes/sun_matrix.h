@@ -14,8 +14,8 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
 
   public:
     // std incantation for field types
-    using base_type = hila::number_type<T>;
-    using argument_type = T;
+    using base_type = T;
+    using argument_type = Complex<T>;    // constructed from complex
 
     // get all constructors from base
     using Matrix_t<N, N, Complex<T>, SUmatrix<N, T>>::Matrix_t;
