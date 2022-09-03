@@ -1,8 +1,8 @@
 /****************************  vectorf128.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2019-11-23
-* Version:       2.01.00
+* Last modified: 2022-07-20
+* Version:       2.02.00
 * Project:       vector class library
 * Description:
 * Header file defining 128-bit floating point vector classes
@@ -18,7 +18,7 @@
 * Each vector object is represented internally in the CPU as a 128-bit register.
 * This header file defines operators and functions for these vectors.
 *
-* (c) Copyright 2012-2019 Agner Fog.
+* (c) Copyright 2012-2022 Agner Fog.
 * Apache License version 2.0 or later.
 *****************************************************************************/
 
@@ -29,7 +29,7 @@
 #include "vectorclass.h"
 #endif
 
-#if VECTORCLASS_H < 20100
+#if VECTORCLASS_H < 20200
 #error Incompatible versions of vector class library mixed
 #endif
 
@@ -46,10 +46,10 @@ namespace VCL_NAMESPACE {
 // Select between two __m128 sources, element by element, with broad boolean vector.
 // Corresponds to this pseudocode:
 // for (int i = 0; i < 4; i++) result[i] = s[i] ? a[i] : b[i];
-// Each element in s must be either 0 (false) or 0xFFFFFFFF (true). 
-// No other values are allowed for broad boolean vectors. 
-// The implementation depends on the instruction set: 
-// If SSE4.1 is supported then only bit 31 in each dword of s is checked, 
+// Each element in s must be either 0 (false) or 0xFFFFFFFF (true).
+// No other values are allowed for broad boolean vectors.
+// The implementation depends on the instruction set:
+// If SSE4.1 is supported then only bit 31 in each dword of s is checked,
 // otherwise all bits in s are used.
 static inline __m128 selectf(__m128 const s, __m128 const a, __m128 const b) {
 #if INSTRSET >= 5   // SSE4.1 supported
@@ -64,10 +64,10 @@ static inline __m128 selectf(__m128 const s, __m128 const a, __m128 const b) {
 // Same, with two __m128d sources.
 // and operators. Corresponds to this pseudocode:
 // for (int i = 0; i < 2; i++) result[i] = s[i] ? a[i] : b[i];
-// Each element in s must be either 0 (false) or 0xFFFFFFFFFFFFFFFF (true). No other 
-// No other values are allowed for broad boolean vectors. 
-// The implementation depends on the instruction set: 
-// If SSE4.1 is supported then only bit 63 in each dword of s is checked, 
+// Each element in s must be either 0 (false) or 0xFFFFFFFFFFFFFFFF (true). No other
+// No other values are allowed for broad boolean vectors.
+// The implementation depends on the instruction set:
+// If SSE4.1 is supported then only bit 63 in each dword of s is checked,
 // otherwise all bits in s are used.
 static inline __m128d selectd(__m128d const s, __m128d const a, __m128d const b) {
 #if INSTRSET >= 5   // SSE4.1 supported
@@ -93,8 +93,7 @@ protected:
     __m128 xmm; // Float vector
 public:
     // Default constructor:
-    Vec4fb() {
-    }
+    Vec4fb() = default;
     // Constructor to build from all elements:
     Vec4fb(bool b0, bool b1, bool b2, bool b3) {
         xmm = _mm_castsi128_ps(_mm_setr_epi32(-(int)b0, -(int)b1, -(int)b2, -(int)b3));
@@ -143,7 +142,7 @@ public:
     We have to make switches here when - hopefully - the error some day has been fixed.
     We need different version checks with and whithout __apple_build_version__
     */
-#ifndef FIX_CLANG_VECTOR_ALIAS_AMBIGUITY  
+#ifndef FIX_CLANG_VECTOR_ALIAS_AMBIGUITY
     // Type cast operator to convert to type Vec4ib used as Boolean for integer vectors
     operator Vec4ib() const {
         return _mm_castps_si128(xmm);
@@ -297,8 +296,7 @@ protected:
     __m128d xmm; // Double vector
 public:
     // Default constructor:
-    Vec2db() {
-    }
+    Vec2db() = default;
     // Constructor to broadcast scalar value:
     Vec2db(bool b) {
         xmm = _mm_castsi128_pd(_mm_set1_epi32(-int32_t(b)));
@@ -485,8 +483,7 @@ protected:
     __m128 xmm; // Float vector
 public:
     // Default constructor:
-    Vec4f() {
-    }
+    Vec4f() = default;
     // Constructor to broadcast the same value into all elements:
     Vec4f(float f) {
         xmm = _mm_set1_ps(f);
@@ -526,7 +523,7 @@ public:
     void store(float * p) const {
         _mm_storeu_ps(p, xmm);
     }
-    // Member function to store into array, aligned by 16
+    // Member function storing into array, aligned by 16
     // "store_a" is faster than "store" on older Intel processors (Pentium 4, Pentium M, Core 1,
     // Merom, Wolfdale) and Atom, but not on other processors from Intel, AMD or VIA.
     // You may use store_a instead of store if you are certain that p points to an address
@@ -534,25 +531,31 @@ public:
     void store_a(float * p) const {
         _mm_store_ps(p, xmm);
     }
+    // Member function storing to aligned uncached memory (non-temporal store).
+    // This may be more efficient than store_a when storing large blocks of memory if it 
+    // is unlikely that the data will stay in the cache until it is read again.
+    // Note: Will generate runtime error if p is not aligned by 16
+    void store_nt(float * p) const {
+        _mm_stream_ps(p, xmm);
+    }
     // Partial load. Load n elements and set the rest to 0
     Vec4f & load_partial(int n, float const * p) {
 #if INSTRSET >= 10  // AVX512VL
         xmm = _mm_maskz_loadu_ps(__mmask8((1u << n) - 1), p);
-#else 
-        __m128 t1, t2;
+#else
         switch (n) {
+        case 0:
+            *this = 0.f;  break;
         case 1:
             xmm = _mm_load_ss(p); break;
         case 2:
-            xmm = _mm_castpd_ps(_mm_load_sd((double const*)p)); break;
+            xmm = _mm_setr_ps(p[0], p[1], 0.f, 0.f);  break;
         case 3:
-            t1 = _mm_castpd_ps(_mm_load_sd((double const*)p));
-            t2 = _mm_load_ss(p + 2);
-            xmm = _mm_movelh_ps(t1, t2); break;
+            xmm = _mm_setr_ps(p[0], p[1], p[2], 0.f);  break;
         case 4:
-            load(p); break;
+            load(p);  break;
         default:
-            xmm = _mm_setzero_ps();
+            break;
         }
 #endif
         return *this;
@@ -561,40 +564,33 @@ public:
     void store_partial(int n, float * p) const {
 #if INSTRSET >= 10  // AVX512VL
         _mm_mask_storeu_ps(p, __mmask8((1u << n) - 1), xmm);
-#else 
-        __m128 t1;
-        switch (n) {
-        case 1:
-            _mm_store_ss(p, xmm); break;
-        case 2:
-            _mm_store_sd((double*)p, _mm_castps_pd(xmm)); break;
-        case 3:
-            _mm_store_sd((double*)p, _mm_castps_pd(xmm));
-            t1 = _mm_movehl_ps(xmm, xmm);
-            _mm_store_ss(p + 2, t1); break;
-        case 4:
-            store(p); break;
-        default:;
+#else   // storing in bigger blocks may unsafe unless compiler option -fno-strict-aliasing is specified,
+        // therefore we have to rely on the compiler to optimize this
+        float d[4];
+        store(d);
+        if (uint32_t(n) > 4) n = 4;
+        for (int i = 0; i < n; i++) {
+            p[i] = d[i];
         }
 #endif
     }
     // cut off vector to n elements. The last 4-n elements are set to zero
     Vec4f & cutoff(int n) {
-#if INSTRSET >= 10 
+#if INSTRSET >= 10
         xmm = _mm_maskz_mov_ps(__mmask8((1u << n) - 1), xmm);
-#else 
+#else
         if (uint32_t(n) >= 4) return *this;
         const union {
             int32_t i[8];
             float   f[8];
-        } mask = { {1,-1,-1,-1,0,0,0,0} };
+        } mask = { {-1,-1,-1,-1,0,0,0,0} };
         xmm = _mm_and_ps(xmm, Vec4f().load(mask.f + 4 - n));
 #endif
         return *this;
     }
     // Member function to change a single element in vector
     Vec4f const insert(int index, float value) {
-#if INSTRSET >= 10   // AVX512VL         
+#if INSTRSET >= 10   // AVX512VL
         xmm = _mm_mask_broadcastss_ps(xmm, __mmask8(1u << index), _mm_set_ss(value));
 #elif INSTRSET >= 5   // SSE4.1
         switch (index & 3) {
@@ -620,7 +616,7 @@ public:
 #if INSTRSET >= 10
         __m128 x = _mm_maskz_compress_ps(__mmask8(1u << index), xmm);
         return _mm_cvtss_f32(x);
-#else 
+#else
         float x[4];
         store(x);
         return x[index & 3];
@@ -779,7 +775,7 @@ static inline Vec4fb operator < (Vec4f const a, Vec4f const b) {
     return _mm_cmp_ps_mask(a, b, 1);
 #else
     return _mm_cmplt_ps(a, b);
-#endif 
+#endif
 }
 
 // vector operator <= : returns true for elements for which a <= b
@@ -788,25 +784,25 @@ static inline Vec4fb operator <= (Vec4f const a, Vec4f const b) {
     return _mm_cmp_ps_mask(a, b, 2);
 #else
     return _mm_cmple_ps(a, b);
-#endif 
+#endif
 }
 
 // vector operator > : returns true for elements for which a > b
 static inline Vec4fb operator > (Vec4f const a, Vec4f const b) {
 #if INSTRSET >= 10  // compact boolean vectors
-    return _mm_cmp_ps_mask(a, b, 6);
+    return _mm_cmp_ps_mask(a, b, 6+8);
 #else
     return b < a;
-#endif 
+#endif
 }
 
 // vector operator >= : returns true for elements for which a >= b
 static inline Vec4fb operator >= (Vec4f const a, Vec4f const b) {
 #if INSTRSET >= 10  // compact boolean vectors
-    return _mm_cmp_ps_mask(a, b, 5);
+    return _mm_cmp_ps_mask(a, b, 5+8);
 #else
     return b <= a;
-#endif 
+#endif
 }
 
 // Bitwise logical operators
@@ -943,7 +939,7 @@ static inline Vec4f sign_combine(Vec4f const a, Vec4f const b) {
 
 // Categorization functions
 
-// Function is_finite: gives true for elements that are normal, denormal or zero, 
+// Function is_finite: gives true for elements that are normal, subnormal or zero,
 // false for INF and NAN
 // (the underscore in the name avoids a conflict with a macro in Intel's mathimf.h)
 static inline Vec4fb is_finite(Vec4f const a) {
@@ -973,32 +969,35 @@ static inline Vec4fb is_inf(Vec4f const a) {
 // Function is_nan: gives true for elements that are +NAN or -NAN
 // false for finite numbers and +/-INF
 // (the underscore in the name avoids a conflict with a macro in Intel's mathimf.h)
-#if INSTRSET >= 10
 static inline Vec4fb is_nan(Vec4f const a) {
+#if INSTRSET >= 10
     // assume that compiler does not optimize this away with -ffinite-math-only:
     return Vec4fb(_mm_fpclass_ps_mask(a, 0x81));
-}
-//#elif defined(__GNUC__) && !defined(__INTEL_COMPILER) && !defined(__clang__) 
+
+//#elif defined(__GNUC__) && !defined(__INTEL_COMPILER) && !defined(__clang__)
 //__attribute__((optimize("-fno-unsafe-math-optimizations")))
 //static inline Vec4fb is_nan(Vec4f const a) {
 //    return a != a; // not safe with -ffinite-math-only compiler option
 //}
-#elif (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER)
-static inline Vec4fb is_nan(Vec4f const a) {
+
+#elif INSTRSET >= 7
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER)
+    // use assembly to avoid optimizing away with -ffinite-math-only and similar options
     __m128 aa = a;
     __m128i unordered;
     __asm volatile("vcmpps $3,  %1, %1, %0" : "=x" (unordered) :  "x" (aa) );
     return Vec4fb(unordered);
-}
 #else
-static inline Vec4fb is_nan(Vec4f const a) {
-    // assume that compiler does not optimize this away with -ffinite-math-only:
     return _mm_cmp_ps(a, a, 3); // compare unordered
-    // return a != a; // This is not safe with -ffinite-math-only, -ffast-math, or /fp:fast compiler option
-}
 #endif
+#else
+return a != a; // This is not safe with -ffinite-math-only, -ffast-math, or /fp:fast compiler option
+#endif
+}
 
-// Function is_subnormal: gives true for elements that are denormal (subnormal)
+
+// Function is_subnormal: gives true for elements that are subnormal
 // false for finite numbers, zero, NAN and INF
 static inline Vec4fb is_subnormal(Vec4f const a) {
 #if INSTRSET >= 10
@@ -1013,7 +1012,7 @@ static inline Vec4fb is_subnormal(Vec4f const a) {
 #endif
 }
 
-// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal (denormal)
+// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal
 // false for finite numbers, NAN and INF
 static inline Vec4fb is_zero_or_subnormal(Vec4f const a) {
 #if INSTRSET >= 10
@@ -1105,7 +1104,7 @@ static inline VTYPE pow_template_i(VTYPE const x0, int n) {
 }
 
 // The purpose of this template is to prevent implicit conversion of a float
-// exponent to int when calling pow(vector, float) and vectormath_exp.h is not included 
+// exponent to int when calling pow(vector, float) and vectormath_exp.h is not included
 template <typename TT> static Vec4f pow(Vec4f const a, TT const n);  // = delete
 
 // Raise floating point numbers to integer power n
@@ -1180,8 +1179,11 @@ static inline Vec4f pow(Vec4f const a, Const_int_t<n>) {
 }
 
 // implement the same as macro pow_const(vector, int)
-//#define pow_const(x,n) pow_n<n>(x)
+#ifdef VCL_NAMESPACE
+#define pow_const(x,n) pow(x, VCL_NAMESPACE::Const_int_t<n>())
+#else
 #define pow_const(x,n) pow(x,Const_int_t<n>())
+#endif
 
 static inline Vec4f round(Vec4f const a) {
 #if INSTRSET >= 5   // SSE4.1 supported
@@ -1336,9 +1338,9 @@ static inline Vec4f nmul_add(Vec4f const a, Vec4f const b, Vec4f const c) {
 #endif
 }
 
-// Multiply and subtract with extra precision on the intermediate calculations, 
+// Multiply and subtract with extra precision on the intermediate calculations,
 // even if FMA instructions not supported, using Veltkamp-Dekker split.
-// This is used in mathematical functions. Do not use it in general code 
+// This is used in mathematical functions. Do not use it in general code
 // because it is inaccurate in certain cases
 static inline Vec4f mul_sub_x(Vec4f const a, Vec4f const b, Vec4f const c) {
 #ifdef __FMA__
@@ -1390,7 +1392,7 @@ static inline Vec4f fraction(Vec4f const a) {
 // n  =    0 gives 1.0f
 // n >=  128 gives +INF
 // n <= -127 gives 0.0f
-// This function will never produce denormals, and never raise exceptions
+// This function will never produce subnormals, and never raise exceptions
 static inline Vec4f exp2(Vec4i const n) {
     Vec4i t1 = max(n, -0x7F);         // limit to allowed range
     Vec4i t2 = min(t1, 0x80);
@@ -1438,7 +1440,7 @@ static inline void set_control_word(uint32_t w) {
 
 // Function no_subnormals:
 // Set "Denormals Are Zeros" and "Flush to Zero" mode to avoid the extremely
-// time-consuming denormals in case of underflow
+// time-consuming subnormals in case of underflow
 static inline void no_subnormals() {
     uint32_t t1 = get_control_word();
     t1 |= (1 << 6) | (1 << 15);     // set bit 6 and 15 in MXCSR
@@ -1448,7 +1450,7 @@ static inline void no_subnormals() {
 // Function reset_control_word:
 // Set the MXCSR control word to the default value 0x1F80.
 // This will mask floating point exceptions, set rounding mode to nearest (or even),
-// and allow denormals.
+// and allow subnormals.
 static inline void reset_control_word() {
     set_control_word(0x1F80);
 }
@@ -1475,8 +1477,7 @@ protected:
     __m128d xmm; // double vector
 public:
     // Default constructor:
-    Vec2d() {
-    }
+    Vec2d() = default;
     // Constructor to broadcast the same value into all elements:
     Vec2d(double d) {
         xmm = _mm_set1_pd(d);
@@ -1516,7 +1517,7 @@ public:
     void store(double * p) const {
         _mm_storeu_pd(p, xmm);
     }
-    // Member function to store into array, aligned by 16
+    // Member function storing into array, aligned by 16
     // "store_a" is faster than "store" on older Intel processors (Pentium 4, Pentium M, Core 1,
     // Merom, Wolfdale) and Atom, but not on other processors from Intel, AMD or VIA.
     // You may use store_a instead of store if you are certain that p points to an address
@@ -1524,11 +1525,18 @@ public:
     void store_a(double * p) const {
         _mm_store_pd(p, xmm);
     }
+    // Member function storing to aligned uncached memory (non-temporal store).
+    // This may be more efficient than store_a when storing large blocks of memory if it 
+    // is unlikely that the data will stay in the cache until it is read again.
+    // Note: Will generate runtime error if p is not aligned by 16
+    void store_nt(double * p) const {
+        _mm_stream_pd(p, xmm);
+    }
     // Partial load. Load n elements and set the rest to 0
     Vec2d & load_partial(int n, double const * p) {
 #if INSTRSET >= 10   // AVX512VL
         xmm = _mm_maskz_loadu_pd(__mmask8((1u << n) - 1), p);
-#else 
+#else
         if (n == 1) {
             xmm = _mm_load_sd(p);
         }
@@ -1545,20 +1553,20 @@ public:
     void store_partial(int n, double * p) const {
 #if INSTRSET >= 10  // AVX512VL
         _mm_mask_storeu_pd(p, __mmask8((1u << n) - 1), xmm);
-#else 
+#else
         if (n == 1) {
             _mm_store_sd(p, xmm);
         }
-        else if (n == 2) {
+        else if (n > 1) {
             store(p);
         }
 #endif
     }
     // cut off vector to n elements. The last 4-n elements are set to zero
     Vec2d & cutoff(int n) {
-#if INSTRSET >= 10 
+#if INSTRSET >= 10
         xmm = _mm_maskz_mov_pd(__mmask8((1u << n) - 1), xmm);
-#else 
+#else
         xmm = _mm_castps_pd(Vec4f(_mm_castpd_ps(xmm)).cutoff(n * 2));
 #endif
         return *this;
@@ -1566,7 +1574,7 @@ public:
     // Member function to change a single element in vector
     // Note: This function is inefficient. Use load function if changing more than one element
     Vec2d const insert(int index, double value) {
-#if INSTRSET >= 10   // AVX512VL         
+#if INSTRSET >= 10   // AVX512VL
         xmm = _mm_mask_movedup_pd(xmm, __mmask8(1u << index), _mm_set_sd(value));
 #else
         __m128d v2 = _mm_set_sd(value);
@@ -1581,7 +1589,7 @@ public:
     }
     // Member function extract a single element from vector
     double extract(int index) const {
-#if INSTRSET >= 10   // AVX512VL 
+#if INSTRSET >= 10   // AVX512VL
         __m128d x = _mm_mask_unpackhi_pd(xmm, __mmask8(index), xmm, xmm);
         return _mm_cvtsd_f64(x);
 #else
@@ -1758,7 +1766,7 @@ static inline Vec2db operator <= (Vec2d const a, Vec2d const b) {
 // vector operator > : returns true for elements for which a > b
 static inline Vec2db operator > (Vec2d const a, Vec2d const b) {
 #if INSTRSET >= 10  // compact boolean vectors
-    return _mm_cmp_pd_mask(a, b, 6);
+    return _mm_cmp_pd_mask(a, b, 6+8);
 #else
     return b < a;
 #endif
@@ -1767,7 +1775,7 @@ static inline Vec2db operator > (Vec2d const a, Vec2d const b) {
 // vector operator >= : returns true for elements for which a >= b
 static inline Vec2db operator >= (Vec2d const a, Vec2d const b) {
 #if INSTRSET >= 10  // compact boolean vectors
-    return _mm_cmp_pd_mask(a, b, 5);
+    return _mm_cmp_pd_mask(a, b, 5+8);
 #else
     return b <= a;
 #endif
@@ -1834,7 +1842,7 @@ static inline Vec2db operator ! (Vec2d const a) {
 
 // Select between two operands. Corresponds to this pseudocode:
 // for (int i = 0; i < 2; i++) result[i] = s[i] ? a[i] : b[i];
-// Each byte in s must be either 0 (false) or 0xFFFFFFFFFFFFFFFF (true). 
+// Each byte in s must be either 0 (false) or 0xFFFFFFFFFFFFFFFF (true).
 // No other values are allowed.
 static inline Vec2d select(Vec2db const s, Vec2d const a, Vec2d const b) {
 #if INSTRSET >= 10  // compact boolean vectors
@@ -1875,7 +1883,7 @@ static inline Vec2d if_mul(Vec2db const f, Vec2d const a, Vec2d const b) {
 static inline Vec2d if_div(Vec2db const f, Vec2d const a, Vec2d const b) {
 #if INSTRSET >= 10
     return _mm_mask_div_pd (a, f, a, b);
-#else 
+#else
     return a / select(f, b, 1.);
 #endif
 }
@@ -1917,7 +1925,7 @@ static inline Vec2d sign_combine(Vec2d const a, Vec2d const b) {
 
 // Categorization functions
 
-// Function is_finite: gives true for elements that are normal, denormal or zero, 
+// Function is_finite: gives true for elements that are normal, subnormal or zero,
 // false for INF and NAN
 static inline Vec2db is_finite(Vec2d const a) {
 #if INSTRSET >= 10
@@ -1947,33 +1955,35 @@ static inline Vec2db is_inf(Vec2d const a) {
 // Function is_nan: gives true for elements that are +NAN or -NAN
 // false for finite numbers and +/-INF
 // (the underscore in the name avoids a conflict with a macro in Intel's mathimf.h)
-#if INSTRSET >= 10
 static inline Vec2db is_nan(Vec2d const a) {
+#if INSTRSET >= 10
     // assume that compiler does not optimize this away with -ffinite-math-only:
     return Vec2db(_mm_fpclass_pd_mask(a, 0x81));
-}
-//#elif defined(__GNUC__) && !defined(__INTEL_COMPILER) && !defined(__clang__) 
-//__attribute__((optimize("-fno-unsafe-math-optimizations")))
-//static inline Vec2db is_nan(Vec2d const a) {
-//    return a != a; // not safe with -ffinite-math-only compiler option
-//}
-#elif (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER)
-static inline Vec2db is_nan(Vec2d const a) {
+
+    //#elif defined(__GNUC__) && !defined(__INTEL_COMPILER) && !defined(__clang__)
+    //__attribute__((optimize("-fno-unsafe-math-optimizations")))
+    //static inline Vec4fb is_nan(Vec4f const a) {
+    //    return a != a; // not safe with -ffinite-math-only compiler option
+    //}
+
+#elif INSTRSET >= 7
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(__INTEL_COMPILER)
+    // use assembly to avoid optimizing away with -ffinite-math-only and similar options
     __m128d aa = a;
     __m128i unordered;
     __asm volatile("vcmppd $3,  %1, %1, %0" : "=x" (unordered) :  "x" (aa) );
     return Vec2db(unordered);
-}
 #else
-static inline Vec2db is_nan(Vec2d const a) {
-    // assume that compiler does not optimize this away with -ffinite-math-only:
     return _mm_cmp_pd(a, a, 3); // compare unordered
-    // return a != a; // This is not safe with -ffinite-math-only, -ffast-math, or /fp:fast compiler option
-}
 #endif
+#else
+    return a != a; // This is not safe with -ffinite-math-only, -ffast-math, or /fp:fast compiler option
+#endif
+}
 
 
-// Function is_subnormal: gives true for elements that are subnormal (denormal)
+// Function is_subnormal: gives true for elements that are subnormal
 // false for finite numbers, zero, NAN and INF
 static inline Vec2db is_subnormal(Vec2d const a) {
 #if INSTRSET >= 10
@@ -1988,7 +1998,7 @@ static inline Vec2db is_subnormal(Vec2d const a) {
 #endif
 }
 
-// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal (denormal)
+// Function is_zero_or_subnormal: gives true for elements that are zero or subnormal
 // false for finite numbers, NAN and INF
 static inline Vec2db is_zero_or_subnormal(Vec2d const a) {
 #if INSTRSET >= 10
@@ -2005,7 +2015,7 @@ static inline Vec2db is_zero_or_subnormal(Vec2d const a) {
 // Horizontal add: Calculates the sum of all vector elements.
 static inline double horizontal_add(Vec2d const a) {
 
-#if false &&  INSTRSET >= 3  // SSE3     
+#if false &&  INSTRSET >= 3  // SSE3
     // This version causes errors in Clang version 9.0 (https://bugs.llvm.org/show_bug.cgi?id=44111)
     // It is also inefficient on most processors, so we drop it
     __m128d t1 = _mm_hadd_pd(a, a);
@@ -2094,7 +2104,7 @@ static inline Vec2d round(Vec2d const a) __attribute__((optimize("-fno-unsafe-ma
 #elif defined(__clang__) && INSTRSET < 5
 static inline Vec2d round(Vec2d const a) __attribute__((optnone));
 #elif defined (FLOAT_CONTROL_PRECISE_FOR_ROUND)
-#pragma float_control(push) 
+#pragma float_control(push)
 #pragma float_control(precise,on)
 #endif
 // function round: round to nearest integer (even). (result as double vector)
@@ -2299,9 +2309,9 @@ static inline Vec2d nmul_add(Vec2d const a, Vec2d const b, Vec2d const c) {
 }
 
 
-// Multiply and subtract with extra precision on the intermediate calculations, 
+// Multiply and subtract with extra precision on the intermediate calculations,
 // even if FMA instructions not supported, using Veltkamp-Dekker split.
-// This is used in mathematical functions. Do not use it in general code 
+// This is used in mathematical functions. Do not use it in general code
 // because it is inaccurate in certain cases
 static inline Vec2d mul_sub_x(Vec2d const a, Vec2d const b, Vec2d const c) {
 #ifdef __FMA__
@@ -2353,7 +2363,7 @@ static inline Vec2d fraction(Vec2d const a) {
 // n  =     0 gives 1.0
 // n >=  1024 gives +INF
 // n <= -1023 gives 0.0
-// This function will never produce denormals, and never raise exceptions
+// This function will never produce subnormals, and never raise exceptions
 static inline Vec2d exp2(Vec2q const n) {
     Vec2q t1 = max(n, -0x3FF);        // limit to allowed range
     Vec2q t2 = min(t1, 0x400);
@@ -2451,7 +2461,7 @@ static inline Vec2d permute2(Vec2d const a) {
             // pslldq does both permutation and zeroing. if zeroing not needed use punpckl instead
             return _mm_castsi128_pd(_mm_bslli_si128(_mm_castpd_si128(a), 8));
         }
-        if constexpr (fit_shright && fit_zeroing) {       
+        if constexpr (fit_shright && fit_zeroing) {
             // psrldq does both permutation and zeroing. if zeroing not needed use punpckh instead
             return _mm_castsi128_pd(_mm_bsrli_si128(_mm_castpd_si128(a), 8));
         }
@@ -2504,12 +2514,12 @@ static inline Vec4f permute4(Vec4f const a) {
             if (!(flags & perm_addz)) return y;                 // no remaining zeroing
         }
 #if  INSTRSET >= 4 && INSTRSET < 10 // SSSE3, but no compact mask
-        else if constexpr ((flags & perm_zeroing) != 0) {  
+        else if constexpr ((flags & perm_zeroing) != 0) {
             // Do both permutation and zeroing with PSHUFB instruction
-            const EList <int8_t, 16> bm = pshufb_mask<Vec4i>(indexs);
+            constexpr EList <int8_t, 16> bm = pshufb_mask<Vec4i>(indexs);
             return _mm_castsi128_ps(_mm_shuffle_epi8(_mm_castps_si128(a), Vec4i().load(bm.a)));
         }
-#endif 
+#endif
         else if constexpr ((flags & perm_punpckh) != 0) {  // fits punpckhi
             y = _mm_unpackhi_ps(a, a);
         }
@@ -2517,11 +2527,11 @@ static inline Vec4f permute4(Vec4f const a) {
             y = _mm_unpacklo_ps(a, a);
         }
         else if constexpr ((flags & perm_shleft) != 0) {   // fits pslldq
-            y = _mm_castsi128_ps(_mm_bslli_si128(_mm_castps_si128(a), (16-(flags >> perm_rot_count)) & 0xF)); 
+            y = _mm_castsi128_ps(_mm_bslli_si128(_mm_castps_si128(a), (16-(flags >> perm_rot_count)) & 0xF));
             if (!(flags & perm_addz)) return y;            // no remaining zeroing
         }
-        else if constexpr ((flags & perm_shright) != 0) {  // fits psrldq 
-            y = _mm_castsi128_ps(_mm_bsrli_si128(_mm_castps_si128(a), (flags >> perm_rot_count) & 0xF)); 
+        else if constexpr ((flags & perm_shright) != 0) {  // fits psrldq
+            y = _mm_castsi128_ps(_mm_bsrli_si128(_mm_castps_si128(a), (flags >> perm_rot_count) & 0xF));
             if (!(flags & perm_addz)) return y;            // no remaining zeroing
         }
 #if INSTRSET >= 3  // SSE3
@@ -2544,10 +2554,10 @@ static inline Vec4f permute4(Vec4f const a) {
         // I don't want to clutter all the branches above with this
         y = _mm_maskz_mov_ps (zero_mask<4>(indexs), y);
 #else  // use broad mask
-        const EList <int32_t, 4> bm = zero_mask_broad<Vec4i>(indexs);
+        constexpr EList <int32_t, 4> bm = zero_mask_broad<Vec4i>(indexs);
         y = _mm_and_ps(_mm_castsi128_ps(Vec4i().load(bm.a)), y);
 #endif
-    }  
+    }
     return y;
 }
 
@@ -2581,21 +2591,21 @@ static inline Vec2d blend2(Vec2d const a, Vec2d const b) {
 #elif INSTRSET >= 5  // SSE4.1
         y = _mm_blend_pd (a, b, ((i0 & 2) ? 0x01 : 0) | ((i1 & 2) ? 0x02 : 0));
 #else  // SSE2
-        const EList <int64_t, 2> bm = make_broad_mask<Vec2d>(make_bit_mask<2, 0x301>(indexs));
+        constexpr EList <int64_t, 2> bm = make_broad_mask<Vec2d>(make_bit_mask<2, 0x301>(indexs));
         y = selectd(_mm_castsi128_pd(Vec2q().load(bm.a)), b, a);
-#endif        
+#endif
     }
     // check if pattern fits special cases
-    else if constexpr ((flags & blend_punpcklab) != 0) { 
+    else if constexpr ((flags & blend_punpcklab) != 0) {
         y = _mm_unpacklo_pd (a, b);
     }
-    else if constexpr ((flags & blend_punpcklba) != 0) { 
+    else if constexpr ((flags & blend_punpcklba) != 0) {
         y = _mm_unpacklo_pd (b, a);
     }
-    else if constexpr ((flags & blend_punpckhab) != 0) { 
+    else if constexpr ((flags & blend_punpckhab) != 0) {
         y = _mm_unpackhi_pd (a, b);
     }
-    else if constexpr ((flags & blend_punpckhba) != 0) { 
+    else if constexpr ((flags & blend_punpckhba) != 0) {
         y = _mm_unpackhi_pd (b, a);
     }
     else if constexpr ((flags & blend_shufab) != 0) {      // use floating point instruction shufpd
@@ -2626,7 +2636,7 @@ static inline Vec2d blend2(Vec2d const a, Vec2d const b) {
 #if INSTRSET >= 10  // use compact mask
         y = _mm_maskz_mov_pd(zero_mask<2>(indexs), y);
 #else  // use broad mask
-        const EList <int64_t, 2> bm = zero_mask_broad<Vec2q>(indexs);
+        constexpr EList <int64_t, 2> bm = zero_mask_broad<Vec2q>(indexs);
         y = _mm_and_pd(_mm_castsi128_pd(Vec2q().load(bm.a)), y);
 #endif
     }
@@ -2661,16 +2671,16 @@ static inline Vec4f blend4(Vec4f const a, Vec4f const b) {
         }
     }
     // check if pattern fits special cases
-    else if constexpr ((flags & blend_punpcklab) != 0) { 
+    else if constexpr ((flags & blend_punpcklab) != 0) {
         y = _mm_unpacklo_ps (a, b);
     }
-    else if constexpr ((flags & blend_punpcklba) != 0) { 
+    else if constexpr ((flags & blend_punpcklba) != 0) {
         y = _mm_unpacklo_ps (b, a);
     }
-    else if constexpr ((flags & blend_punpckhab) != 0) { 
+    else if constexpr ((flags & blend_punpckhab) != 0) {
         y = _mm_unpackhi_ps (a, b);
     }
-    else if constexpr ((flags & blend_punpckhba) != 0) { 
+    else if constexpr ((flags & blend_punpckhba) != 0) {
         y = _mm_unpackhi_ps (b, a);
     }
     else if constexpr ((flags & blend_shufab) != 0 && !blendonly) { // use floating point instruction shufps
@@ -2680,10 +2690,10 @@ static inline Vec4f blend4(Vec4f const a, Vec4f const b) {
         y = _mm_shuffle_ps(b, a, uint8_t(flags >> blend_shufpattern));
     }
 #if INSTRSET >= 4 // SSSE3
-    else if constexpr ((flags & blend_rotateab) != 0) { 
+    else if constexpr ((flags & blend_rotateab) != 0) {
         y = _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(a), _mm_castps_si128(b), flags >> blend_rotpattern));
     }
-    else if constexpr ((flags & blend_rotateba) != 0) { 
+    else if constexpr ((flags & blend_rotateba) != 0) {
         y = _mm_castsi128_ps(_mm_alignr_epi8(_mm_castps_si128(b), _mm_castps_si128(a), flags >> blend_rotpattern));
     }
 #endif
@@ -2718,7 +2728,7 @@ static inline Vec4f blend4(Vec4f const a, Vec4f const b) {
 #if INSTRSET >= 10  // use compact mask
         y = _mm_maskz_mov_ps(zero_mask<4>(indexs), y);
 #else  // use broad mask
-        const EList <int32_t, 4> bm = zero_mask_broad<Vec4i>(indexs);
+        constexpr EList <int32_t, 4> bm = zero_mask_broad<Vec4i>(indexs);
         y = _mm_and_ps(_mm_castsi128_ps(Vec4i().load(bm.a)), y);
 #endif
     }
@@ -2756,7 +2766,7 @@ static inline Vec4f lookup8(Vec4i const index, Vec4f const table0, Vec4f const t
     __m128 r  = _mm256_castps256_ps128(_mm256_permutevar8x32_ps(tt, _mm256_castsi128_si256(index)));
     return r;
 
-#elif INSTRSET >= 7  // AVX 
+#elif INSTRSET >= 7  // AVX
     __m128  r0 = _mm_permutevar_ps(table0, index);
     __m128  r1 = _mm_permutevar_ps(table1, index);
     __m128i i4 = _mm_slli_epi32(index, 29);
@@ -2778,9 +2788,9 @@ static inline Vec4f lookup8(Vec4i const index, Vec4f const table0, Vec4f const t
 
 template <int n>
 static inline Vec4f lookup(Vec4i const index, float const * table) {
-    if (n <= 0) return 0.0f;
-    if (n <= 4) return lookup4(index, Vec4f().load(table));
-    if (n <= 8) {
+    if constexpr (n <= 0) return 0.0f;
+    if constexpr (n <= 4) return lookup4(index, Vec4f().load(table));
+    if constexpr (n <= 8) {
 #if INSTRSET >= 8  // AVX2
         __m256 tt = _mm256_loadu_ps(table);
         __m128 r  = _mm256_castps256_ps128(_mm256_permutevar8x32_ps(tt, _mm256_castsi128_si256(index)));
@@ -2791,7 +2801,7 @@ static inline Vec4f lookup(Vec4i const index, float const * table) {
     }
     // n > 8. Limit index
     Vec4ui index1;
-    if ((n & (n - 1)) == 0) {
+    if constexpr ((n & (n - 1)) == 0) {
         // n is a power of 2, make index modulo n
         index1 = Vec4ui(index) & (n - 1);
     }
@@ -2836,14 +2846,14 @@ static inline Vec2d lookup4(Vec2q const index, Vec2d const table0, Vec2d const t
 
 template <int n>
 static inline Vec2d lookup(Vec2q const index, double const * table) {
-    if (n <= 0) return 0.0;
-    if (n <= 2) return lookup2(index, Vec2d().load(table));
+    if constexpr (n <= 0) return 0.0;
+    if constexpr (n <= 2) return lookup2(index, Vec2d().load(table));
 #if INSTRSET < 8  // not AVX2
-    if (n <= 4) return lookup4(index, Vec2d().load(table), Vec2d().load(table + 2));
+    if constexpr (n <= 4) return lookup4(index, Vec2d().load(table), Vec2d().load(table + 2));
 #endif
     // Limit index
     Vec2uq index1;
-    if ((n & (n - 1)) == 0) {
+    if constexpr ((n & (n - 1)) == 0) {
         // n is a power of 2, make index modulo n
         index1 = Vec2uq(index) & (n - 1);
     }

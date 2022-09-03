@@ -1,15 +1,15 @@
 /***************************  vectormath_common.h   ****************************
 * Author:        Agner Fog
 * Date created:  2014-04-18
-* Last modified: 2019-08-01
-* Version:       2.00.00
+* Last modified: 2022-07-20
+* Version:       2.02.00
 * Project:       vector classes
 * Description:
 * Header file containing common code for inline version of mathematical functions.
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2014-2019 Agner Fog.
+* (c) Copyright 2014-2022 Agner Fog.
 * Apache License version 2.0 or later.
 ******************************************************************************/
 
@@ -20,12 +20,16 @@
 #error conflicting header files. More than one implementation of mathematical functions included
 #endif
 
-#if VECTORCLASS_H < 20000
+#include <cmath>
+
+#ifndef VECTORCLASS_H
+#include "vectorclass.h"
+#endif
+
+#if VECTORCLASS_H < 20200
 #error Incompatible versions of vector class library mixed
 #endif
 
-#include <cmath>
-#include "vectorclass.h"
 
 /******************************************************************************
                     Define NAN payload values
@@ -58,7 +62,7 @@ namespace VCL_NAMESPACE {
 /******************************************************************************
       templates for producing infinite and nan in desired vector type
 ******************************************************************************/
-template <class VTYPE>
+template <typename VTYPE>
 static inline VTYPE infinite_vec();
 
 template <>
@@ -100,13 +104,66 @@ inline Vec16f infinite_vec<Vec16f>() {
 #endif // MAX_VECTOR_SIZE >= 512
 
 
+
+/******************************************************************************
+*                 Detect NAN codes
+*
+* These functions return the code hidden in a NAN. The sign bit is ignored
+******************************************************************************/
+
+static inline Vec4ui nan_code(Vec4f const x) {
+    Vec4ui a = Vec4ui(reinterpret_i(x));
+    Vec4ui const n = 0x007FFFFF;
+    return select(Vec4ib(is_nan(x)), a & n, 0);
+}
+
+// This function returns the code hidden in a NAN. The sign bit is ignored
+static inline Vec2uq nan_code(Vec2d const x) {
+    Vec2uq a = Vec2uq(reinterpret_i(x));
+    return select(Vec2qb(is_nan(x)), a << 12 >> (12+29), 0);
+}
+
+#if MAX_VECTOR_SIZE >= 256
+
+// This function returns the code hidden in a NAN. The sign bit is ignored
+static inline Vec8ui nan_code(Vec8f const x) {
+    Vec8ui a = Vec8ui(reinterpret_i(x));
+    Vec8ui const n = 0x007FFFFF;
+    return select(Vec8ib(is_nan(x)), a & n, 0);
+}
+
+// This function returns the code hidden in a NAN. The sign bit is ignored
+static inline Vec4uq nan_code(Vec4d const x) {
+    Vec4uq a = Vec4uq(reinterpret_i(x));
+    return select(Vec4qb(is_nan(x)), a << 12 >> (12+29), 0);
+}
+
+#endif // MAX_VECTOR_SIZE >= 256
+#if MAX_VECTOR_SIZE >= 512
+
+// This function returns the code hidden in a NAN. The sign bit is ignored
+static inline Vec16ui nan_code(Vec16f const x) {
+    Vec16ui a = Vec16ui(reinterpret_i(x));
+    Vec16ui const n = 0x007FFFFF;
+    return select(Vec16ib(is_nan(x)), a & n, 0);
+}
+
+// This function returns the code hidden in a NAN. The sign bit is ignored
+static inline Vec8uq nan_code(Vec8d const x) {
+    Vec8uq a = Vec8uq(reinterpret_i(x));
+    return select(Vec8qb(is_nan(x)), a << 12 >> (12+29), 0);
+}
+
+#endif // MAX_VECTOR_SIZE >= 512
+
+
 /******************************************************************************
                   templates for polynomials
 Using Estrin's scheme to make shorter dependency chains and use FMA, starting
 longest dependency chains first.
 ******************************************************************************/
 
-// template <typedef VECTYPE, typedef CTYPE> 
+// template <typedef VECTYPE, typedef CTYPE>
 template <class VTYPE, class CTYPE>
 static inline VTYPE polynomial_2(VTYPE const x, CTYPE c0, CTYPE c1, CTYPE c2) {
     // calculates polynomial c2*x^2 + c1*x + c0

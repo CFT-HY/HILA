@@ -1,8 +1,8 @@
 /****************************  vectorf256e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2019-11-17
-* Version:       2.01.00
+* Last modified: 2022-07-20
+* Version:       2.02.00
 * Project:       vector class library
 * Description:
 * Header file defining 256-bit floating point vector classes
@@ -19,7 +19,7 @@
 * Each vector object is represented internally in the CPU as two 128-bit registers.
 * This header file defines operators and functions for these vectors.
 *
-* (c) Copyright 2012-2019 Agner Fog.
+* (c) Copyright 2012-2022 Agner Fog.
 * Apache License version 2.0 or later.
 *****************************************************************************/
 
@@ -30,7 +30,7 @@
 #include "vectorclass.h"
 #endif
 
-#if VECTORCLASS_H < 20100
+#if VECTORCLASS_H < 20200
 #error Incompatible versions of vector class library mixed
 #endif
 
@@ -55,7 +55,7 @@ protected:
     __m128 y0;                         // low half
     __m128 y1;                         // high half
 public:
-    Vec256fe(void) {};                 // default constructor
+    Vec256fe() = default;              // default constructor
     Vec256fe(__m128 x0, __m128 x1) {   // constructor to build from two __m128
         y0 = x0;  y1 = x1;
     }
@@ -70,7 +70,7 @@ public:
 // base class to replace __m256d when AVX is not supported
 class Vec256de {
 public:
-    Vec256de() {};                     // default constructor
+    Vec256de() = default;              // default constructor
     Vec256de(__m128d x0, __m128d x1) { // constructor to build from two __m128d
         y0 = x0;  y1 = x1;
     }
@@ -102,11 +102,11 @@ static inline Vec256fe selectf (Vec256fe const s, Vec256fe const a, Vec256fe con
 // Same, with two Vec256de sources.
 // and operators. Corresponds to this pseudocode:
 // for (int i = 0; i < 4; i++) result[i] = s[i] ? a[i] : b[i];
-// Each element in s must be either 0 (false) or 0xFFFFFFFFFFFFFFFF (true). No other 
+// Each element in s must be either 0 (false) or 0xFFFFFFFFFFFFFFFF (true). No other
 // values are allowed.
 static inline Vec256de selectd (Vec256de const s, Vec256de const a, Vec256de const b) {
     return Vec256de(selectd(b.get_low(), a.get_low(), s.get_low()), selectd(b.get_high(), a.get_high(), s.get_high()));
-} 
+}
 
 
 /*****************************************************************************
@@ -118,8 +118,7 @@ static inline Vec256de selectd (Vec256de const s, Vec256de const a, Vec256de con
 class Vec8fb : public Vec256fe {
 public:
     // Default constructor:
-    Vec8fb() {
-    }
+    Vec8fb() = default;
     // Constructor to build from all elements:
     Vec8fb(bool b0, bool b1, bool b2, bool b3, bool b4, bool b5, bool b6, bool b7) {
         y0 = Vec4fb(b0, b1, b2, b3);
@@ -198,7 +197,7 @@ public:
         y0 = Vec4fb().load_bits(a);
         y1 = Vec4fb().load_bits(uint8_t(a>>4u));
         return *this;
-    } 
+    }
     static constexpr int size() {
         return 8;
     }
@@ -306,8 +305,7 @@ static inline bool horizontal_or (Vec8fb const a) {
 class Vec4db : public Vec256de {
 public:
     // Default constructor:
-    Vec4db() {
-    }
+    Vec4db() = default;
     // Constructor to build from all elements:
     Vec4db(bool b0, bool b1, bool b2, bool b3) {
         y0 = Vec2db(b0, b1);
@@ -494,8 +492,7 @@ static inline bool horizontal_or (Vec4db const a) {
 class Vec8f : public Vec256fe {
 public:
     // Default constructor:
-    Vec8f() {
-    }
+    Vec8f() = default;
     // Constructor to broadcast the same value into all elements:
     Vec8f(float f) {
         y1 = y0 = _mm_set1_ps(f);
@@ -503,7 +500,7 @@ public:
     // Constructor to build from all elements:
     Vec8f(float f0, float f1, float f2, float f3, float f4, float f5, float f6, float f7) {
         y0 = _mm_setr_ps(f0, f1, f2, f3);
-        y1 = _mm_setr_ps(f4, f5, f6, f7); 
+        y1 = _mm_setr_ps(f4, f5, f6, f7);
     }
     // Constructor to build from two Vec4f:
     Vec8f(Vec4f const a0, Vec4f const a1) {
@@ -536,11 +533,17 @@ public:
         _mm_storeu_ps(p,   y0);
         _mm_storeu_ps(p+4, y1);
     }
-    // Member function to store into array, aligned by 32
+    // Member function storing into array, aligned by 32
     // You may use store_a instead of store if you are certain that p points to an address divisible by 32.
     void store_a(float * p) const {
         _mm_store_ps(p,   y0);
         _mm_store_ps(p+4, y1);
+    }
+    // Member function storing to aligned uncached memory (non-temporal store).
+    // Note: Will generate runtime error if p is not aligned by 32
+    void store_nt(float * p) const {
+        _mm_stream_ps(p,   y0);
+        _mm_stream_ps(p+4, y1);
     }
     // Partial load. Load n elements and set the rest to 0
     Vec8f & load_partial(int n, float const * p) {
@@ -613,7 +616,7 @@ public:
     }
     static constexpr int elementtype() {
         return 16;
-    } 
+    }
 };
 
 
@@ -997,7 +1000,7 @@ static inline Vec8f exp2(Vec8i const a) {
 
 // Extract the fraction part of a floating point number
 // a = 2^exponent(a) * fraction(a), except for a = 0
-// fraction(1.0f) = 1.0f, fraction(5.0f) = 1.25f 
+// fraction(1.0f) = 1.0f, fraction(5.0f) = 1.25f
 static inline Vec8f fraction(Vec8f const a) {
     return Vec8f(fraction(a.get_low()), fraction(a.get_high()));
 }
@@ -1019,7 +1022,7 @@ static inline Vec8f sign_combine(Vec8f const a, Vec8f const b) {
     return Vec8f(sign_combine(a.get_low(), b.get_low()), sign_combine(a.get_high(), b.get_high()));
 }
 
-// Function is_finite: gives true for elements that are normal, denormal or zero, 
+// Function is_finite: gives true for elements that are normal, denormal or zero,
 // false for INF and NAN
 // (the underscore in the name avoids a conflict with a macro in Intel's mathimf.h)
 static inline Vec8fb is_finite(Vec8f const a) {
@@ -1082,16 +1085,15 @@ inline Vec8f change_sign(Vec8f const a) {
 class Vec4d : public Vec256de {
 public:
     // Default constructor:
-    Vec4d() {
-    }
+    Vec4d() = default;
     // Constructor to broadcast the same value into all elements:
     Vec4d(double d) {
         y1 = y0 = _mm_set1_pd(d);
     }
     // Constructor to build from all elements:
     Vec4d(double d0, double d1, double d2, double d3) {
-        y0 = _mm_setr_pd(d0, d1); 
-        y1 = _mm_setr_pd(d2, d3); 
+        y0 = _mm_setr_pd(d0, d1);
+        y1 = _mm_setr_pd(d2, d3);
     }
     // Constructor to build from two Vec4f:
     Vec4d(Vec2d const a0, Vec2d const a1) {
@@ -1127,12 +1129,18 @@ public:
         _mm_storeu_pd(p,   y0);
         _mm_storeu_pd(p+2, y1);
     }
-    // Member function to store into array, aligned by 32
+    // Member function storing into array, aligned by 32
     // You may use store_a instead of store if you are certain that p points to an address
     // divisible by 32
     void store_a(double * p) const {
         _mm_store_pd(p,   y0);
         _mm_store_pd(p+2, y1);
+    }
+    // Member function storing to aligned uncached memory (non-temporal store).
+    // Note: Will generate runtime error if p is not aligned by 32
+    void store_nt(double * p) const {
+        _mm_stream_pd(p,   y0);
+        _mm_stream_pd(p+2, y1);
     }
     // Partial load. Load n elements and set the rest to 0
     Vec4d & load_partial(int n, double const * p) {
@@ -1167,7 +1175,7 @@ public:
             y1 = Vec2d(0.0);
         }
         return *this;
-    }    
+    }
     // Member function to change a single element in vector
     Vec4d const insert(int index, double value) {
         if ((uint32_t)index < 2) {
@@ -1204,7 +1212,7 @@ public:
     }
     static constexpr int elementtype() {
         return 17;
-    } 
+    }
 };
 
 
@@ -1409,7 +1417,7 @@ static inline Vec4db operator ! (Vec4d const a) {
 
 // Select between two operands. Corresponds to this pseudocode:
 // for (int i = 0; i < 2; i++) result[i] = s[i] ? a[i] : b[i];
-// Each byte in s must be either 0 (false) or 0xFFFFFFFFFFFFFFFF (true). 
+// Each byte in s must be either 0 (false) or 0xFFFFFFFFFFFFFFFF (true).
 // No other values are allowed.
 static inline Vec4d select (Vec4db const s, Vec4d const a, Vec4d const b) {
     return Vec4d(select(s.get_low(), a.get_low(), b.get_low()), select(s.get_high(), a.get_high(), b.get_high()));
@@ -1588,7 +1596,7 @@ static inline Vec4d nmul_add(Vec4d const a, Vec4d const b, Vec4d const c) {
     return Vec4d(nmul_add(a.get_low(),b.get_low(),c.get_low()), nmul_add(a.get_high(),b.get_high(),c.get_high()));
 }
 
-// Multiply and subtract with extra precision on the intermediate calculations, 
+// Multiply and subtract with extra precision on the intermediate calculations,
 // even if FMA instructions not supported, using Veltkamp-Dekker split
 static inline Vec4d mul_sub_x(Vec4d const a, Vec4d const b, Vec4d const c) {
     return Vec4d(mul_sub_x(a.get_low(),b.get_low(),c.get_low()), mul_sub_x(a.get_high(),b.get_high(),c.get_high()));
@@ -1605,7 +1613,7 @@ static inline Vec4q exponent(Vec4d const a) {
 
 // Extract the fraction part of a floating point number
 // a = 2^exponent(a) * fraction(a), except for a = 0
-// fraction(1.0) = 1.0, fraction(5.0) = 1.25 
+// fraction(1.0) = 1.0, fraction(5.0) = 1.25
 static inline Vec4d fraction(Vec4d const a) {
     return Vec4d(fraction(a.get_low()), fraction(a.get_high()));
 }
@@ -1636,7 +1644,7 @@ static inline Vec4d sign_combine(Vec4d const a, Vec4d const b) {
     return Vec4d(sign_combine(a.get_low(), b.get_low()), sign_combine(a.get_high(), b.get_high()));
 }
 
-// Function is_finite: gives true for elements that are normal, denormal or zero, 
+// Function is_finite: gives true for elements that are normal, denormal or zero,
 // false for INF and NAN
 static inline Vec4db is_finite(Vec4d const a) {
     return Vec4db(is_finite(a.get_low()), is_finite(a.get_high()));
@@ -1729,6 +1737,21 @@ static inline Vec256de reinterpret_d (Vec256de const x) {
     return x;
 }
 
+// extend vectors to double size by adding zeroes
+static inline Vec8f extend_z(Vec4f a) {
+    return Vec8f(a, _mm_setzero_ps());
+}
+static inline Vec4d extend_z(Vec2d a) {
+    return Vec4d(a, _mm_setzero_pd());
+}
+
+static inline Vec8fb extend_z(Vec4fb a) {
+    return Vec8fb(a, Vec4fb(false));
+}
+static inline Vec4db extend_z(Vec2db a) {
+    return Vec4db(a, Vec2db(false));
+}
+
 
 /*****************************************************************************
 *
@@ -1744,14 +1767,14 @@ static inline Vec256de reinterpret_d (Vec256de const x) {
 // permute vector Vec4d
 template <int i0, int i1, int i2, int i3>
 static inline Vec4d permute4(Vec4d const a) {
-    return Vec4d(blend2<i0,i1> (a.get_low(), a.get_high()), 
+    return Vec4d(blend2<i0,i1> (a.get_low(), a.get_high()),
            blend2<i2,i3> (a.get_low(), a.get_high()));
 }
 
 // permute vector Vec8f
 template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
 static inline Vec8f permute8(Vec8f const a) {
-    return Vec8f(blend4<i0,i1,i2,i3> (a.get_low(), a.get_high()), 
+    return Vec8f(blend4<i0,i1,i2,i3> (a.get_low(), a.get_high()),
         blend4<i4,i5,i6,i7> (a.get_low(), a.get_high()));
 }
 
@@ -1792,19 +1815,19 @@ static inline Vec8f lookup8(Vec8i const index, Vec8f const table) {
 
 template <int n>
 static inline Vec8f lookup(Vec8i const index, float const * table) {
-    if (n <= 0) return 0;
-    if (n <= 4) {
-        Vec4f table1 = Vec4f().load(table);        
-        return Vec8f(       
+    if constexpr (n <= 0) return 0;
+    if constexpr (n <= 4) {
+        Vec4f table1 = Vec4f().load(table);
+        return Vec8f(
             lookup4 (index.get_low(),  table1),
             lookup4 (index.get_high(), table1));
     }
-    if (n <= 8) {
+    if constexpr (n <= 8) {
         return lookup8(index, Vec8f().load(table));
     }
     // Limit index
     Vec8ui index1;
-    if ((n & (n-1)) == 0) {
+    if constexpr ((n & (n-1)) == 0) {
         // n is a power of 2, make index modulo n
         index1 = Vec8ui(index) & (n-1);
     }
@@ -1824,16 +1847,16 @@ static inline Vec4d lookup4(Vec4q const index, Vec4d const table) {
 
 template <int n>
 static inline Vec4d lookup(Vec4q const index, double const * table) {
-    if (n <= 0) return 0;
-    if (n <= 2) {
-        Vec2d table1 = Vec2d().load(table);        
-        return Vec4d(       
+    if constexpr (n <= 0) return 0;
+    if constexpr (n <= 2) {
+        Vec2d table1 = Vec2d().load(table);
+        return Vec4d(
             lookup2 (index.get_low(),  table1),
             lookup2 (index.get_high(), table1));
     }
     // Limit index
     Vec8ui index1;
-    if ((n & (n-1)) == 0) {
+    if constexpr ((n & (n-1)) == 0) {
         // n is a power of 2, make index modulo n
         index1 = Vec8ui(index) & Vec8ui(n-1, 0, n-1, 0, n-1, 0, n-1, 0);
     }
@@ -1871,12 +1894,12 @@ static inline Vec4d gather4d(void const * a) {
 ******************************************************************************
 *
 * These functions write the elements of a vector to arbitrary positions in an
-* array in memory. Each vector element is written to an array position 
+* array in memory. Each vector element is written to an array position
 * determined by an index. An element is not written if the corresponding
 * index is out of range.
 * The indexes can be specified as constant template parameters or as an
 * integer vector.
-* 
+*
 *****************************************************************************/
 
 template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
@@ -1907,13 +1930,13 @@ static inline void scatter(Vec4q const index, uint32_t limit, Vec4d const data, 
     for (int i = 0; i < 4; i++) {
         if (uint64_t(index[i]) < uint64_t(limit)) destination[index[i]] = data[i];
     }
-} 
+}
 
 static inline void scatter(Vec4i const index, uint32_t limit, Vec4d const data, double * destination) {
     for (int i = 0; i < 4; i++) {
         if (uint32_t(index[i]) < limit) destination[index[i]] = data[i];
     }
-} 
+}
 
 
 /*****************************************************************************
