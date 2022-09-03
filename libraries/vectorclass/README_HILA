@@ -1,0 +1,12 @@
+This subdirectory contains Agner Fog's vectorclass2 library
+version 2.02.00 (commit 08959ebe6ea5d8317330b242e28ba0d2938ac52f, Aug 7 2022),
+available at
+
+https://github.com/vectorclass/version2/releases
+
+These are used for the HILA AVX2 and AVX512 targets.
+
+The vectorclass2 library is included here verbatim, all files are
+unmodified (excepting this file, of course).  We are not using git submodule
+in order to simplify distribution.  These files are naturally distributed under
+the original Apache 2.0 licence.
