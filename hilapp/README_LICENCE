@@ -1,0 +1,6 @@
+hilapp is the hila preprocessor.  It is built with Clang libtooling library, see 
+https://clang.llvm.org/docs/LibTooling.html
+
+For compatibility with Clang/LLVM, hilapp source (contents of this directory) is 
+licenced with Apache 2.0 licence with LLVM Exceptions (see LICENCE),
+in addition to the GPLv2 licence.
