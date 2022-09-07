@@ -1145,6 +1145,92 @@ auto operator/(Field<A> lhs, const B &rhs) {
     return lhs;
 }
 
+
+///////////////////////////////////////////////////////////////////////
+/// Allow some arithmetic functions if implemented
+
+template <typename T, typename R = decltype(exp(std::declval<T>()))>
+Field<R> exp(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = exp(arg[X]);
+    }
+    return res;
+}
+
+template <typename T, typename R = decltype(log(std::declval<T>()))>
+Field<R> log(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = log(arg[X]);
+    }
+    return res;
+}
+
+template <typename T, typename R = decltype(sin(std::declval<T>()))>
+Field<R> sin(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = sin(arg[X]);
+    }
+    return res;
+}
+
+template <typename T, typename R = decltype(cos(std::declval<T>()))>
+Field<R> cos(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = cos(arg[X]);
+    }
+    return res;
+}
+
+template <typename T, typename R = decltype(tan(std::declval<T>()))>
+Field<R> tan(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = tan(arg[X]);
+    }
+    return res;
+}
+
+template <typename T, typename R = decltype(asin(std::declval<T>()))>
+Field<R> asin(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = asin(arg[X]);
+    }
+    return res;
+}
+
+template <typename T, typename R = decltype(acos(std::declval<T>()))>
+Field<R> acos(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = acos(arg[X]);
+    }
+    return res;
+}
+
+template <typename T, typename R = decltype(atan(std::declval<T>()))>
+Field<R> atan(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = atan(arg[X]);
+    }
+    return res;
+}
+
+template <typename T, typename R = decltype(abs(std::declval<T>()))>
+Field<R> abs(const Field<T> & arg) {
+    Field <R> res;
+    onsites(ALL) {
+        res[X] = abs(arg[X]);
+    }
+    return res;
+}
+
+
 /////////////////////////////////////////////////////////////////
 
 #define NAIVE_SHIFT
