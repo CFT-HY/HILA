@@ -180,6 +180,7 @@ using gpuError = int;
 #define check_device_error_code(code, msg) do {} while(0)
 
 #define gpuStreamSynchronize(a) do {} while(0)
+#define gpuDeviceSynchronize() do {} while(0)
 // clang-format on
 
 
