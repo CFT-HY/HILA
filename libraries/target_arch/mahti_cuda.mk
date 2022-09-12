@@ -9,7 +9,7 @@
 
 $(info ########################################################################)
 $(info Target mahti_cuda: remember to )
-$(info   module load  gcc/10.3.0 cuda/11.4.2 openmpi/4.0.5-cuda )
+$(info   module load  gcc/10.3.0 cuda/11.5.0 openmpi/4.0.5-cuda )
 $(info   do not use nvhpc for now! )
 $(info ########################################################################)
 
