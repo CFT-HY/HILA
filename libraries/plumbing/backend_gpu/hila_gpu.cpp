@@ -219,14 +219,15 @@ void initialize_gpu(int rank) {
     // This assumes that each node has the same number of mpi ranks and GPUs
     my_device = rank % n_devices;
 
-    output0 << "CUDA/HIP Devices accessible from node 0: " << n_devices << '\n';
+    output0 << "GPU devices accessible from node 0: " << n_devices << '\n';
+
     // TODO: this only for node 0?
-    if (rank < 6) {
-        hila::output << "Cuda: rank " << rank << " choosing device " << my_device
+    if (n_devices > 1 && rank < 6) {
+        hila::output << "GPU: MPI rank " << rank << " choosing device " << my_device
                      << '\n';
-    }
-    if (hila::number_of_nodes() > 6) {
-        output0 << "  + " << hila::number_of_nodes() - 6 << " more nodes\n";
+        if (hila::number_of_nodes() > 6) {
+            output0 << "  + " << hila::number_of_nodes() - 6 << " more nodes\n";
+        }
     }
 
     gpuSetDevice(my_device);

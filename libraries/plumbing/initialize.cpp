@@ -213,11 +213,6 @@ void hila::initialize(int argc, char **argv) {
         }
     }
 
-#if defined(CUDA) || defined(HIP)
-    if (!hila::check_input) {
-        initialize_gpu(lattice->mynode.rank);
-    }
-#endif
 
     setup_partitions(commandline);
 
@@ -280,6 +275,12 @@ void hila::initialize(int argc, char **argv) {
 
         hila::timestamp("Starting");
     }
+
+#if defined(CUDA) || defined(HIP)
+    if (!hila::check_input) {
+        initialize_gpu(lattice->mynode.rank);
+    }
+#endif
 
     long cputime = commandline.get_int("-t");
     if (cputime != LONG_MAX) {
