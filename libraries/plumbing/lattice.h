@@ -211,8 +211,6 @@ class lattice_struct {
     void setup_layout();
     void setup_nodes();
 
-    void teardown();
-
     // Std accessors:
     // volume
     int64_t volume() const {

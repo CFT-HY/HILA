@@ -122,6 +122,11 @@ class GeneralVisitor {
                 TheRewriter.getSourceMgr().getImmediateExpansionRange(r.getBegin());
             r = SourceRange(CSR.getAsRange().getBegin(), r.getEnd());
         }
+        if (r.getEnd().isMacroID()) {
+            CharSourceRange CSR =
+                TheRewriter.getSourceMgr().getImmediateExpansionRange(r.getEnd());
+            r = SourceRange(r.getBegin(), CSR.getAsRange().getEnd());
+        }
         return r;
     }
 

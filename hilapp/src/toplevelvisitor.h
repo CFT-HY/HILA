@@ -176,7 +176,7 @@ class TopLevelVisitor : public GeneralVisitor,
     // bool is_field_parity_assignment(Stmt *s);
 
     bool is_field_with_coordinate_stmt(Stmt *s);
-    void field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceLocation oploc);
+    void field_with_coordinate_assign(Expr *lhs, Expr *rhs, SourceLocation oploc, char optype);
     void field_with_coordinate_read(Expr *E);
 
     /// Does ; follow the statement?

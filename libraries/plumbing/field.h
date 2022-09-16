@@ -84,14 +84,13 @@ class Field {
     /// TODO: field-specific boundary conditions?
     class field_struct {
       public:
-        field_storage<T>
-            payload; // TODO: must be maximally aligned, modifiers - never null
+        field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
         lattice_struct *lattice;
 #ifdef VECTORIZED
         // get a direct ptr from here too, ease access
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
 #endif
-        unsigned assigned_to; // keeps track of first assignment to parities
+        unsigned assigned_to;                        // keeps track of first assignment to parities
         gather_status_t gather_status_arr[3][NDIRS]; // is communication done
 
         // neighbour pointers - because of boundary conditions, can be different for
@@ -224,8 +223,7 @@ class Field {
                     }
                 } else {
                     // without it, can do the full block
-                    payload.gather_comm_vectors(buffer, to_node, par, vector_lattice,
-                                                antiperiodic);
+                    payload.gather_comm_vectors(buffer, to_node, par, vector_lattice, antiperiodic);
                 }
             } else {
                 // not vectoizable, standard methods
@@ -266,9 +264,8 @@ class Field {
         void set_local_boundary_elements(Direction dir, Parity par) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-            bool antiperiodic =
-                (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC &&
-                 lattice->special_boundaries[dir].is_on_edge);
+            bool antiperiodic = (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC &&
+                                 lattice->special_boundaries[dir].is_on_edge);
 #else
             bool antiperiodic = false;
 #endif
@@ -366,9 +363,9 @@ class Field {
     }
 
     // constructor with compatible scalar
-    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value ||
-                                               std::is_convertible<A, T>::value,
-                                           int> = 0>
+    template <typename A,
+              std::enable_if_t<
+                  hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
     Field(const A &val) {
         fs = nullptr;
         (*this)[ALL] = val;
@@ -431,8 +428,7 @@ class Field {
 
 #ifdef VECTORIZED
         fs->vector_lattice =
-            lattice->backend_lattice
-                ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
+            lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
 #endif
     }
 
@@ -555,8 +551,7 @@ class Field {
             fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb[-dir];
         } else {
             fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb_special[dir];
-            fs->payload.neighbours[-dir] =
-                lattice->backend_lattice->d_neighb_special[-dir];
+            fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb_special[-dir];
         }
 #endif
 
@@ -660,18 +655,18 @@ class Field {
     }
 
     // More general = - possible only if T = A is OK
-    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value ||
-                                               std::is_convertible<A, T>::value,
-                                           int> = 0>
+    template <typename A,
+              std::enable_if_t<
+                  hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
     Field<T> &operator=(const Field<A> &rhs) {
         (*this)[ALL] = rhs[X];
         return *this;
     }
 
     // Assign from element
-    template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value ||
-                                               std::is_convertible<A, T>::value,
-                                           int> = 0>
+    template <typename A,
+              std::enable_if_t<
+                  hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
     Field<T> &operator=(const A &d) {
         (*this)[ALL] = d;
         return *this;
@@ -694,65 +689,57 @@ class Field {
     }
 
     // +=, -=  etc operators from compatible types
-    template <
-        typename A,
-        std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
+    template <typename A,
+              std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const Field<A> &rhs) {
         (*this)[ALL] += rhs[X];
         return *this;
     }
 
-    template <
-        typename A,
-        std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
+    template <typename A,
+              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const Field<A> &rhs) {
         (*this)[ALL] -= rhs[X];
         return *this;
     }
 
-    template <
-        typename A,
-        std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
+    template <typename A,
+              std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const Field<A> &rhs) {
         (*this)[ALL] *= rhs[X];
         return *this;
     }
 
-    template <
-        typename A,
-        std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
+    template <typename A,
+              std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const Field<A> &rhs) {
         (*this)[ALL] /= rhs[X];
         return *this;
     }
 
-    template <
-        typename A,
-        std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
+    template <typename A,
+              std::enable_if_t<std::is_convertible<hila::type_plus<T, A>, T>::value, int> = 0>
     Field<T> &operator+=(const A &rhs) {
         (*this)[ALL] += rhs;
         return *this;
     }
 
-    template <
-        typename A,
-        std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
+    template <typename A,
+              std::enable_if_t<std::is_convertible<hila::type_minus<T, A>, T>::value, int> = 0>
     Field<T> &operator-=(const A &rhs) {
         (*this)[ALL] -= rhs;
         return *this;
     }
 
-    template <
-        typename A,
-        std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
+    template <typename A,
+              std::enable_if_t<std::is_convertible<hila::type_mul<T, A>, T>::value, int> = 0>
     Field<T> &operator*=(const A &rhs) {
         (*this)[ALL] *= rhs;
         return *this;
     }
 
-    template <
-        typename A,
-        std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
+    template <typename A,
+              std::enable_if_t<std::is_convertible<hila::type_div<T, A>, T>::value, int> = 0>
     Field<T> &operator/=(const A &rhs) {
         (*this)[ALL] /= rhs;
         return *this;
@@ -771,7 +758,7 @@ class Field {
 
     bool operator==(const Field<T> &rhs) const {
         hila::number_type<T> epsilon = 0;
-        return ((*this)-rhs).squarenorm() <= epsilon;
+        return ((*this) - rhs).squarenorm() <= epsilon;
     }
 
     hila::number_type<T> squarenorm() const {
@@ -799,28 +786,106 @@ class Field {
     Field<T> shift(const CoordinateVector &v, Parity par) const;
 
     // General getters and setters
-    void set_elements(T *elements, const std::vector<CoordinateVector> &coord_list);
-    void set_element(const T &element, const CoordinateVector &coord);
-    void get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const;
-    T get_element(const CoordinateVector &coord) const;
+
+    /// Set a single element. Assuming that each node calls this with the same value, it
+    /// is sufficient to set the element locally
 
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
-    inline void set_element_at(const CoordinateVector coord, const A elem) {
-        T e;
-        e = elem;
-        set_element(e, coord);
+    void set_element(const CoordinateVector &coord, const A &element) {
+        if (lattice->is_on_mynode(coord)) {
+            set_value_at(element, lattice->site_index(coord));
+        }
+        mark_changed(coord.parity());
     }
 
-    inline void set_element_at(const CoordinateVector coord, std::nullptr_t elem) {
-        T e;
-        e = 0;
-        set_element(e, coord);
+
+    /// Get an element and return it on all nodes
+    /// This is not local, the element needs to be communicated to all nodes
+
+    T get_element(const CoordinateVector &coord) const {
+        T element;
+
+        int owner = lattice->node_rank(coord);
+
+        if (hila::myrank() == owner) {
+            element = get_value_at(lattice->site_index(coord));
+        }
+
+#if defined(USE_MPI)
+        MPI_Bcast(&element, sizeof(T), MPI_BYTE, owner, lattice->mpi_comm_lat);
+#endif
+
+        return element;
     }
+
+
+    void set_elements(T *elements, const std::vector<CoordinateVector> &coord_list);
+    void get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const;
+
+    // inline void set_element_at(const CoordinateVector &coord, const A &elem) {
+    //     T e;
+    //     e = elem;
+    //     set_element(e, coord);
+    // }
+
+    // inline void set_element_at(const CoordinateVector &coord, std::nullptr_t elem) {
+    //     T e;
+    //     e = 0;
+    //     set_element(e, coord);
+    // }
+
+    template <typename A,
+              std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
+    inline void compound_add_element(const CoordinateVector &coord, const A &av) {
+        if (lattice->is_on_mynode(coord)) {
+            auto i = lattice->site_index(coord);
+            auto v = get_value_at(i);
+            v += av;
+            set_value_at(v, i);
+        }
+        mark_changed(coord.parity());
+    }
+
+    template <typename A,
+              std::enable_if_t<std::is_assignable<T &, hila::type_minus<T, A>>::value, int> = 0>
+    inline void compound_sub_element(const CoordinateVector &coord, const A &av) {
+        if (lattice->is_on_mynode(coord)) {
+            auto i = lattice->site_index(coord);
+            auto v = get_value_at(i);
+            v -= av;
+            set_value_at(v, i);
+        }
+        mark_changed(coord.parity());
+    }
+
+    template <typename A,
+              std::enable_if_t<std::is_assignable<T &, hila::type_mul<T, A>>::value, int> = 0>
+    inline void compound_mul_element(const CoordinateVector &coord, const A &av) {
+        if (lattice->is_on_mynode(coord)) {
+            auto i = lattice->site_index(coord);
+            auto v = get_value_at(i);
+            v *= av;
+            set_value_at(v, i);
+        }
+        mark_changed(coord.parity());
+    }
+
+    template <typename A,
+              std::enable_if_t<std::is_assignable<T &, hila::type_div<T, A>>::value, int> = 0>
+    inline void compound_div_element(const CoordinateVector &coord, const A &av) {
+        if (lattice->is_on_mynode(coord)) {
+            auto i = lattice->site_index(coord);
+            auto v = get_value_at(i);
+            v /= av;
+            set_value_at(v, i);
+        }
+        mark_changed(coord.parity());
+    }
+
 
     // Fourier transform declarations
     Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
-    Field<T> FFT(const CoordinateVector &dirs,
-                 fft_direction fdir = fft_direction::forward) const;
+    Field<T> FFT(const CoordinateVector &dirs, fft_direction fdir = fft_direction::forward) const;
 
     Field<Complex<hila::number_type<T>>>
     FFT_real_to_complex(fft_direction fdir = fft_direction::forward) const;
@@ -952,8 +1017,7 @@ template <typename A, typename B,
           std::enable_if_t<!std::is_same<hila::type_minus<A, B>, A>::value &&
                                !std::is_same<hila::type_minus<A, B>, B>::value,
                            int> = 0>
-auto operator-(const Field<A> &lhs, const Field<B> &rhs)
-    -> Field<hila::type_minus<A, B>> {
+auto operator-(const Field<A> &lhs, const Field<B> &rhs) -> Field<hila::type_minus<A, B>> {
     Field<hila::type_minus<A, B>> tmp;
     tmp[ALL] = lhs[X] - rhs[X];
     return tmp;
@@ -1150,8 +1214,8 @@ auto operator/(Field<A> lhs, const B &rhs) {
 /// Allow some arithmetic functions if implemented
 
 template <typename T, typename R = decltype(exp(std::declval<T>()))>
-Field<R> exp(const Field<T> & arg) {
-    Field <R> res;
+Field<R> exp(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = exp(arg[X]);
     }
@@ -1159,8 +1223,8 @@ Field<R> exp(const Field<T> & arg) {
 }
 
 template <typename T, typename R = decltype(log(std::declval<T>()))>
-Field<R> log(const Field<T> & arg) {
-    Field <R> res;
+Field<R> log(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = log(arg[X]);
     }
@@ -1168,8 +1232,8 @@ Field<R> log(const Field<T> & arg) {
 }
 
 template <typename T, typename R = decltype(sin(std::declval<T>()))>
-Field<R> sin(const Field<T> & arg) {
-    Field <R> res;
+Field<R> sin(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = sin(arg[X]);
     }
@@ -1177,8 +1241,8 @@ Field<R> sin(const Field<T> & arg) {
 }
 
 template <typename T, typename R = decltype(cos(std::declval<T>()))>
-Field<R> cos(const Field<T> & arg) {
-    Field <R> res;
+Field<R> cos(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = cos(arg[X]);
     }
@@ -1186,8 +1250,8 @@ Field<R> cos(const Field<T> & arg) {
 }
 
 template <typename T, typename R = decltype(tan(std::declval<T>()))>
-Field<R> tan(const Field<T> & arg) {
-    Field <R> res;
+Field<R> tan(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = tan(arg[X]);
     }
@@ -1195,8 +1259,8 @@ Field<R> tan(const Field<T> & arg) {
 }
 
 template <typename T, typename R = decltype(asin(std::declval<T>()))>
-Field<R> asin(const Field<T> & arg) {
-    Field <R> res;
+Field<R> asin(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = asin(arg[X]);
     }
@@ -1204,8 +1268,8 @@ Field<R> asin(const Field<T> & arg) {
 }
 
 template <typename T, typename R = decltype(acos(std::declval<T>()))>
-Field<R> acos(const Field<T> & arg) {
-    Field <R> res;
+Field<R> acos(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = acos(arg[X]);
     }
@@ -1213,8 +1277,8 @@ Field<R> acos(const Field<T> & arg) {
 }
 
 template <typename T, typename R = decltype(atan(std::declval<T>()))>
-Field<R> atan(const Field<T> & arg) {
-    Field <R> res;
+Field<R> atan(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = atan(arg[X]);
     }
@@ -1222,8 +1286,8 @@ Field<R> atan(const Field<T> & arg) {
 }
 
 template <typename T, typename R = decltype(abs(std::declval<T>()))>
-Field<R> abs(const Field<T> & arg) {
-    Field <R> res;
+Field<R> abs(const Field<T> &arg) {
+    Field<R> res;
     onsites(ALL) {
         res[X] = abs(arg[X]);
     }
@@ -1242,8 +1306,7 @@ Field<R> abs(const Field<T> & arg) {
 /// Returns a reference to parameter "res"
 
 template <typename T>
-Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
-                          const Parity par) const {
+Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
 
     // use this to store remaining moves
     CoordinateVector rem = v;
@@ -1348,8 +1411,7 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
 
 // this is junk at the moment
 template <typename T>
-Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res,
-                          const Parity par) const {
+Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
 
     onsites(par) {
         if
@@ -1577,8 +1639,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
             wait_receive_timer.stop();
 
 #ifndef VANILLA
-            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node),
-                                    from_node);
+            fs->place_comm_elements(d, par, fs->get_receive_buffer(d, par, from_node), from_node);
 #endif
         }
 
@@ -1672,8 +1733,9 @@ void Field<T>::gather(Direction d, Parity p) const {
 /// Gather a list of elements to a single node
 /// coord_list must be same on all nodes, buffer is needed only on "root"
 template <typename T>
-void Field<T>::field_struct::gather_elements(
-    T *RESTRICT buffer, const std::vector<CoordinateVector> &coord_list, int root) const {
+void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
+                                             const std::vector<CoordinateVector> &coord_list,
+                                             int root) const {
 
     std::vector<unsigned> index_list;
     std::vector<int> sites_on_rank(lattice->n_nodes());
@@ -1697,11 +1759,11 @@ void Field<T>::field_struct::gather_elements(
     }
 
     std::vector<T> send_buffer(index_list.size());
-    payload.gather_elements((T *)send_buffer.data(), index_list.data(),
-                            send_buffer.size(), lattice);
+    payload.gather_elements((T *)send_buffer.data(), index_list.data(), send_buffer.size(),
+                            lattice);
     if (hila::myrank() != root && sites_on_rank[hila::myrank()] > 0) {
-        MPI_Send((char *)send_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T),
-                 MPI_BYTE, root, hila::myrank(), lattice->mpi_comm_lat);
+        MPI_Send((char *)send_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T), MPI_BYTE,
+                 root, hila::myrank(), lattice->mpi_comm_lat);
     }
     if (hila::myrank() == root) {
 
@@ -1748,8 +1810,9 @@ void Field<T>::field_struct::gather_elements(
 /// coord_list must be the same on all nodes, but buffer is needed only on "root"!
 
 template <typename T>
-void Field<T>::field_struct::scatter_elements(
-    T *RESTRICT buffer, const std::vector<CoordinateVector> &coord_list, int root) {
+void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
+                                              const std::vector<CoordinateVector> &coord_list,
+                                              int root) {
 
     std::vector<unsigned> index_list;
     std::vector<int> sites_on_rank(lattice->n_nodes());
@@ -1777,11 +1840,11 @@ void Field<T>::field_struct::scatter_elements(
         std::vector<T> recv_buffer(index_list.size());
         MPI_Status status;
 
-        MPI_Recv((char *)recv_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T),
-                 MPI_BYTE, root, hila::myrank(), lattice->mpi_comm_lat, &status);
+        MPI_Recv((char *)recv_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T), MPI_BYTE,
+                 root, hila::myrank(), lattice->mpi_comm_lat, &status);
 
-        payload.place_elements((T *)recv_buffer.data(), index_list.data(),
-                               recv_buffer.size(), lattice);
+        payload.place_elements((T *)recv_buffer.data(), index_list.data(), recv_buffer.size(),
+                               lattice);
     }
     if (hila::myrank() == root) {
         // reordering buffers
@@ -1806,14 +1869,14 @@ void Field<T>::field_struct::scatter_elements(
         for (int n = 0; n < sites_on_rank.size(); n++) {
             if (sites_on_rank[n] > 0) {
                 if (n != root) {
-                    MPI_Isend(pb.data() + nloc[n], (int)(sites_on_rank[n] * sizeof(T)), MPI_BYTE,
-                              n, n, lattice->mpi_comm_lat, &mpi_req[nreqs++]);
+                    MPI_Isend(pb.data() + nloc[n], (int)(sites_on_rank[n] * sizeof(T)), MPI_BYTE, n,
+                              n, lattice->mpi_comm_lat, &mpi_req[nreqs++]);
                 }
             }
         }
 
-        payload.place_elements(pb.data() + nloc[root], index_list.data(),
-                               index_list.size(), lattice);
+        payload.place_elements(pb.data() + nloc[root], index_list.data(), index_list.size(),
+                               lattice);
 
         if (nreqs > 0) {
             std::vector<MPI_Status> stat_arr(nreqs);
@@ -1826,8 +1889,9 @@ void Field<T>::field_struct::scatter_elements(
 
 /// Gather a list of elements to a single node
 template <typename T>
-void Field<T>::field_struct::gather_elements(
-    T *buffer, const std::vector<CoordinateVector> &coord_list, int root) const {
+void Field<T>::field_struct::gather_elements(T *buffer,
+                                             const std::vector<CoordinateVector> &coord_list,
+                                             int root) const {
     std::vector<unsigned> index_list;
     for (CoordinateVector c : coord_list) {
         index_list.push_back(lattice->site_index(c));
@@ -1838,8 +1902,9 @@ void Field<T>::field_struct::gather_elements(
 
 /// Send elements from a single node to a list of coordinates
 template <typename T>
-void Field<T>::field_struct::scatter_elements(
-    T *buffer, const std::vector<CoordinateVector> &coord_list, int root) {
+void Field<T>::field_struct::scatter_elements(T *buffer,
+                                              const std::vector<CoordinateVector> &coord_list,
+                                              int root) {
     std::vector<unsigned> index_list;
     for (CoordinateVector c : coord_list) {
         index_list.push_back(lattice->site_index(c));
@@ -1850,13 +1915,11 @@ void Field<T>::field_struct::scatter_elements(
 
 #endif
 
-/// Functions for manipulating individual elements in an array
 
-/// Set an element. Assuming that each node calls this with the same value, it is
+/// Set an array of elements. Assuming that each node calls this with the same value, it is
 /// sufficient to set the elements locally
 template <typename T>
-void Field<T>::set_elements(T *elements,
-                            const std::vector<CoordinateVector> &coord_list) {
+void Field<T>::set_elements(T *elements, const std::vector<CoordinateVector> &coord_list) {
     std::vector<unsigned> my_indexes;
     std::vector<unsigned> my_elements;
     for (int i = 0; i < coord_list.size(); i++) {
@@ -1866,43 +1929,15 @@ void Field<T>::set_elements(T *elements,
             my_elements.push_back(elements[i]);
         }
     }
-    fs->payload.place_elements(my_elements.data(), my_indexes.data(), my_indexes.size(),
-                               lattice);
+    fs->payload.place_elements(my_elements.data(), my_indexes.data(), my_indexes.size(), lattice);
     mark_changed(ALL);
 }
 
-// Set a single element. Assuming that each node calls this with the same value, it
-// is
-/// sufficient to set the element locally
-template <typename T>
-void Field<T>::set_element(const T &element, const CoordinateVector &coord) {
-    if (lattice->is_on_mynode(coord)) {
-        set_value_at(element, lattice->site_index(coord));
-    }
-    mark_changed(ALL);
-}
 
-/// Get an element and return it on all nodes
 #if defined(USE_MPI)
-/// This is not local, the element needs to be communicated to all nodes
-template <typename T>
-T Field<T>::get_element(const CoordinateVector &coord) const {
-    T element;
-
-    int owner = lattice->node_rank(coord);
-
-    if (hila::myrank() == owner) {
-        element = get_value_at(lattice->site_index(coord));
-    }
-
-    MPI_Bcast(&element, sizeof(T), MPI_BYTE, owner, lattice->mpi_comm_lat);
-    return element;
-}
-
 /// Get a list of elements and store them into an array on all nodes
 template <typename T>
-void Field<T>::get_elements(T *elements,
-                            const std::vector<CoordinateVector> &coord_list) const {
+void Field<T>::get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const {
     struct node_site_list_struct {
         std::vector<int> indexes;
         std::vector<CoordinateVector> coords;
@@ -1937,16 +1972,10 @@ void Field<T>::get_elements(T *elements,
 }
 
 #else
-/// Without MPI, we just need to call get
-template <typename T>
-T Field<T>::get_element(const CoordinateVector &coord) const {
-    return get_value_at(lattice->site_index(coord));
-}
 
 /// Without MPI, we just need to call get
 template <typename T>
-void Field<T>::get_elements(T *elements,
-                            const std::vector<CoordinateVector> &coord_list) const {
+void Field<T>::get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const {
     for (int i = 0; i < coord_list.size(); i++) {
         elements[i] = (*this)[coord_list[i]];
     }
