@@ -791,8 +791,10 @@ class Field {
     /// is sufficient to set the element locally
 
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
-    void set_element(const CoordinateVector &coord, const A &element) {
+    void set_element(const CoordinateVector &coord, const A &value) {
         if (lattice->is_on_mynode(coord)) {
+            T element;
+            element = value;
             set_value_at(element, lattice->site_index(coord));
         }
         mark_changed(coord.parity());
@@ -801,8 +803,9 @@ class Field {
 
     /// Get an element and return it on all nodes
     /// This is not local, the element needs to be communicated to all nodes
+    /// return const to prevent incorrect modifications
 
-    T get_element(const CoordinateVector &coord) const {
+    const T get_element(const CoordinateVector &coord) const {
         T element;
 
         int owner = lattice->node_rank(coord);
