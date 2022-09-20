@@ -449,8 +449,10 @@ void scaling_sim::initialize_uetc() {
     //  
 
     Field<Complex<real_t>> jk[NDIM];
-    foralldir(d) 
+    foralldir(d) {
         jk[d][ALL] = imag(phi[X].dagger() * (phi[X + d] - phi[X - d])) / (2 * config.dx);
+        jk[d] = jk[d].FFT();
+    }
 
     onsites(ALL) {
         auto k = convert_to_k(X.coordinates());
@@ -462,8 +464,6 @@ void scaling_sim::initialize_uetc() {
         else
             Js[X] = 0;
     }
-
-    Js = Js.FFT();
 
     if (hila::myrank() == 0) 
         uetc_out.open(config.uetc_filename, std::ios::out);
@@ -488,7 +488,8 @@ void scaling_sim::measure_uetc() {
     // calculate correlator
     J0[ALL] *= Js[X].conj();
 
-    auto uetc = b.bin_k_field_squarenorm(J0);
+
+    auto uetc = b.bin_k_field(J0);
 
     if (hila::myrank() == 0) {
         for (int i = 0; i < bins; i++) {
