@@ -427,8 +427,12 @@ class Field {
 #endif
 
 #ifdef VECTORIZED
-        fs->vector_lattice =
-            lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
+        if constexpr (hila::is_vectorizable_type<T>::value) {
+            fs->vector_lattice = lattice->backend_lattice
+                                     ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
+        } else {
+            fs->vector_lattice = nullptr;
+        }
 #endif
     }
 
@@ -822,8 +826,13 @@ class Field {
     }
 
 
-    void set_elements(T *elements, const std::vector<CoordinateVector> &coord_list);
-    void get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const;
+    void set_elements(const std::vector<T> &elements,
+                      const std::vector<CoordinateVector> &coord_list);
+    std::vector<T> get_elements(const std::vector<CoordinateVector> &coord_list,
+                                bool broadcast = false) const;
+
+    std::vector<T> get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                 bool broadcast = false) const;
 
     // inline void set_element_at(const CoordinateVector &coord, const A &elem) {
     //     T e;
@@ -1922,7 +1931,9 @@ void Field<T>::field_struct::scatter_elements(T *buffer,
 /// Set an array of elements. Assuming that each node calls this with the same value, it is
 /// sufficient to set the elements locally
 template <typename T>
-void Field<T>::set_elements(T *elements, const std::vector<CoordinateVector> &coord_list) {
+void Field<T>::set_elements(const std::vector<T> &elements,
+                            const std::vector<CoordinateVector> &coord_list) {
+    assert(elements.size() == coord_list.size() && "vector size mismatch in set_elments");
     std::vector<unsigned> my_indexes;
     std::vector<unsigned> my_elements;
     for (int i = 0; i < coord_list.size(); i++) {
@@ -1937,53 +1948,41 @@ void Field<T>::set_elements(T *elements, const std::vector<CoordinateVector> &co
 }
 
 
-#if defined(USE_MPI)
-/// Get a list of elements and store them into an array on all nodes
+/// Get a list of elements and store them into a vector
 template <typename T>
-void Field<T>::get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const {
-    struct node_site_list_struct {
-        std::vector<int> indexes;
-        std::vector<CoordinateVector> coords;
-    };
+std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord_list,
+                                      bool bcast) const {
 
-    std::vector<node_site_list_struct> nodelist(lattice->n_nodes());
-    // Reorganize the list according to nodes
-    for (int i = 0; i < coord_list.size(); i++) {
-        CoordinateVector c = coord_list[i];
-        int node = lattice->node_rank(c);
-        nodelist[node].indexes.push_back(i);
-        nodelist[node].coords.push_back(c);
-    }
+    std::vector<T> res;
+    if (hila::myrank() == 0) res.resize(coord_list.size());
 
-    // Fetch on each node found and communicate
-    for (int n = 0; n < nodelist.size(); n++) {
-        node_site_list_struct node = nodelist[n];
-        if (node.indexes.size() > 0) {
-            T *element_buffer = (T *)memalloc(sizeof(T) * node.indexes.size());
-            fs->payload.gather_elements(element_buffer, node.coords);
+    fs->gather_elements(res.data(), coord_list);
+    if (bcast)
+        hila::broadcast(res);
 
-            MPI_Bcast(&element_buffer, sizeof(T), MPI_BYTE, n, lattice->mpi_comm_lat);
-
-            // place in the array in original order
-            for (int i = 0; i < node.indexes.size(); i++) {
-                elements[i] = element_buffer[node.indexes[i]];
-            }
-
-            std::free(element_buffer);
-        }
-    }
+    return res;
 }
 
-#else
 
-/// Without MPI, we just need to call get
+// get a subvolume of the field elements to all nodes
 template <typename T>
-void Field<T>::get_elements(T *elements, const std::vector<CoordinateVector> &coord_list) const {
-    for (int i = 0; i < coord_list.size(); i++) {
-        elements[i] = (*this)[coord_list[i]];
+std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin,
+                                       const CoordinateVector &cmax, bool bcast) const {
+
+    size_t vol = 1;
+    foralldir (d) {
+        vol *= cmax[d] - cmin[d] + 1;
+        assert(cmax[d] >= cmin[d] && cmin[d] >= 0 && cmax[d] < lattice->size(d));
     }
+    std::vector<CoordinateVector> clist(vol);
+    CoordinateVector c;
+
+    size_t i = 0;
+    forcoordinaterange(c, cmin, cmax) {
+        clist[i++] = c;
+    }
+    return get_elements(clist,bcast);
 }
-#endif
 
 
 #ifdef HILAPP
