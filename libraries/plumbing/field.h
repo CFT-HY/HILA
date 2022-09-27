@@ -834,6 +834,10 @@ class Field {
     std::vector<T> get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
                                  bool broadcast = false) const;
 
+    void copy_local_data(T * buffer) const;
+    void set_local_data(T * buffer);
+
+
     // inline void set_element_at(const CoordinateVector &coord, const A &elem) {
     //     T e;
     //     e = elem;
@@ -1983,6 +1987,46 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin,
     }
     return get_elements(clist,bcast);
 }
+
+template <typename T>
+void Field<T>::copy_local_data(T * buffer) const {
+    unsigned *index_list;
+    index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
+
+    CoordinateVector c,cmin,cmax;
+    cmin = lattice->mynode.min;
+    cmax = cmin + lattice->mynode.size;
+    cmax.asArray() -= 1;
+    unsigned i = 0;
+    forcoordinaterange(c,cmin,cmax) {
+        index_list[i++] = lattice->site_index(c);
+    }
+
+    this->fs->payload.gather_elements( buffer, index_list, lattice->mynode.volume(), lattice );
+    std::free(index_list);
+
+}
+
+template <typename T>
+void Field<T>::set_local_data(T * buffer) {
+    unsigned *index_list;
+    index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
+
+    CoordinateVector c,cmin,cmax;
+    cmin = lattice->mynode.min;
+    cmax = cmin + lattice->mynode.size;
+    cmax.asArray() -= 1;
+    unsigned i = 0;
+    forcoordinaterange(c,cmin,cmax) {
+        index_list[i++] = lattice->site_index(c);
+    }
+
+    this->fs->payload.place_elements( buffer, index_list, lattice->mynode.volume(), lattice );
+    std::free(index_list);
+
+    this->mark_changed(ALL);
+}
+
 
 
 #ifdef HILAPP

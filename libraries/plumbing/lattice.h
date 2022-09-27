@@ -145,7 +145,7 @@ class lattice_struct {
         }
 
         // The local index of a site that is sent to neighbour
-        unsigned site_index(int site, Parity par) const {
+        unsigned site_index(unsigned site, Parity par) const {
             if (par == ODD) {
                 return sitelist[evensites + site];
             } else {
