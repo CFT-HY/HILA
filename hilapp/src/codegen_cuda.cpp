@@ -372,6 +372,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             repl += looping_var;
             if (sfc.argsExpr != nullptr)
                 repl += ',';
+            if (sfc.args_string.size() > 0) 
+                repl += ", " + sfc.args_string;
+
         }
         loopBuf.replace(sfc.replace_range, repl);
     }

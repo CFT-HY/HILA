@@ -76,7 +76,7 @@ $(info --------------------------------------------------------------)
 # CXX := clang++
 CXX := $(LLVM_BIN_PATH)/clang++
 
-CXXFLAGS := -fno-rtti -std=c++17 -g 
+CXXFLAGS := -fno-rtti -std=c++17 -g
 
 # Directories where stuff is found and built
 SRCDIR := src

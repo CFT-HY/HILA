@@ -469,6 +469,15 @@ class X_index_type {
 
     int coordinate(Direction d) const;
 
+    int x() const;
+    int y() const;
+#if NDIM > 2
+    int z() const;
+#if NDIM > 3
+    int t() const;
+#endif
+#endif
+
     ::Parity parity() const;
 };
 

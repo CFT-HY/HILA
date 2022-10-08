@@ -392,6 +392,7 @@ struct special_function_call {
     std::string full_expr;
     std::string name;
     std::string replace_expression;
+    std::string args_string;
     Expr *argsExpr;
     SourceRange replace_range;
     bool add_loop_var;

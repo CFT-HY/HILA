@@ -7,9 +7,7 @@
 
 //////////////////////////////////////////////////////////////////////////////
 /// An AST Visitor for checking if a statement (inside site loop)
-/// is dependent on site (X).
-/// Logic: find if it contains X (X_index_type), which takes care of field
-/// and methods of X (check!), or random number generator.
+/// contains a random number generator call.  Goes inside functions as far as it can
 //////////////////////////////////////////////////////////////////////////////
 
 // this vector keeps track of FunctionDecls already checked in this search
