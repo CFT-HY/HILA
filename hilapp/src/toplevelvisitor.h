@@ -184,7 +184,7 @@ class TopLevelVisitor : public GeneralVisitor,
     SourceRange getRangeWithSemicolon(SourceRange sr, bool flag_error = true);
     bool hasSemicolonAfter(SourceRange sr);
 
-    void requireGloballyDefined(Expr *e);
+    //void requireGloballyDefined(Expr *e);
 
     /// Entry point for the full site loop
     bool handle_full_loop_stmt(Stmt *ls, bool field_parity_ok);

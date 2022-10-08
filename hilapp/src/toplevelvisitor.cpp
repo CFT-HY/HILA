@@ -1416,7 +1416,7 @@ void TopLevelVisitor::check_var_info_list() {
     for (var_info &vi : var_info_list) {
         if (!vi.is_loop_local && !vi.is_raw) {
             if (vi.reduction_type != reduction::NONE) {
-                if (vi.refs.size() > 1) {
+                if (false && vi.refs.size() > 1) {
                     // reduction only once
                     int i = 0;
                     for (auto &vr : vi.refs) {
