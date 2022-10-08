@@ -86,14 +86,13 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 
 #ifdef LOOP_FUNC_DEBUG
     llvm::errs() << "FOUND LOOP CONSTRUCTOR " << decl->getQualifiedNameAsString()
-                 << "\n    defined on line "
-                 << srcMgr.getSpellingLineNumber(decl->getBeginLoc()) << " in file "
-                 << srcMgr.getFilename(decl->getBeginLoc()) << "\n    called from line "
-                 << srcMgr.getSpellingLineNumber(CtorE->getBeginLoc()) << " in file "
-                 << srcMgr.getFilename(CtorE->getBeginLoc()) << '\n';
+                 << "\n    defined on line " << srcMgr.getSpellingLineNumber(decl->getBeginLoc())
+                 << " in file " << srcMgr.getFilename(decl->getBeginLoc())
+                 << "\n    called from line " << srcMgr.getSpellingLineNumber(CtorE->getBeginLoc())
+                 << " in file " << srcMgr.getFilename(CtorE->getBeginLoc()) << '\n';
 
-    llvm::errs() << "#parameters: " << decl->getNumParams() << " and "
-                 << CtorE->getNumArgs() << " arguments\n";
+    llvm::errs() << "#parameters: " << decl->getNumParams() << " and " << CtorE->getNumArgs()
+                 << " arguments\n";
 
     llvm::errs() << "   Constructor args: ";
     for (Expr *E : CtorE->arguments()) {
@@ -155,16 +154,15 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
         ParmVarDecl *pv = decl->getParamDecl(i);
 
         argument_info ai;
-        is_site_dependent |= handle_call_argument(E, pv, is_site_dependent,
-                                                  &out_variables, &dep_variables, ai);
+        is_site_dependent |=
+            handle_call_argument(E, pv, is_site_dependent, &out_variables, &dep_variables, ai);
         ci.is_site_dependent |= ai.is_site_dependent;
         ci.arguments.push_back(ai);
 
     } // end of arg loop.
 
     // and check the var dependency
-    is_site_dependent =
-        attach_dependent_vars(out_variables, is_site_dependent, dep_variables);
+    is_site_dependent = attach_dependent_vars(out_variables, is_site_dependent, dep_variables);
     ci.is_site_dependent = is_site_dependent;
 
     // and add the call  to check-up list
@@ -184,14 +182,13 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 /// if inside functions, false.
 /////////////////////////////////////////////////////////////////////////////////
 
-call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
-                                                           CallExpr *Call, bool sitedep) {
+call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
+                                                           bool sitedep) {
 
     call_info_struct cinfo;
 
 #ifdef LOOP_FUNC_DEBUG
-    llvm::errs() << "FOUND LOOP FUNC " << D->getQualifiedNameAsString()
-                 << "\n    defined on line "
+    llvm::errs() << "FOUND LOOP FUNC " << D->getQualifiedNameAsString() << "\n    defined on line "
                  << srcMgr.getSpellingLineNumber(D->getBeginLoc()) << " in file "
                  << srcMgr.getFilename(D->getBeginLoc()) << "\n    called from line "
                  << srcMgr.getSpellingLineNumber(Call->getBeginLoc()) << " in file "
@@ -254,8 +251,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
         ParmVarDecl *pv = D->getParamDecl(i);
 
         argument_info ai;
-        sitedep =
-            handle_call_argument(E, pv, sitedep, &out_variables, &dep_variables, ai);
+        sitedep = handle_call_argument(E, pv, sitedep, &out_variables, &dep_variables, ai);
 
         cinfo.is_site_dependent |= ai.is_site_dependent;
         cinfo.arguments.push_back(ai);
@@ -292,8 +288,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
             if (out_only && is_const) {
                 reportDiag(DiagnosticsEngine::Level::Error, sl,
                            "'out_only' cannot be used with 'const'");
-                reportDiag(DiagnosticsEngine::Level::Note,
-                           Call->getSourceRange().getBegin(), "Called from here");
+                reportDiag(DiagnosticsEngine::Level::Note, Call->getSourceRange().getBegin(),
+                           "Called from here");
             }
 
             Expr *E = MCE->getImplicitObjectArgument();
@@ -326,10 +322,9 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D,
 
                 // following is called only if this==g_TopLevelVisitor, this just makes
                 // it compile
-                bool is_assign =
-                    !(is_const || E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
-                g_TopLevelVisitor->handle_field_X_expr(E, is_assign,
-                                                       (!is_const && !out_only), true);
+                bool is_assign = !(is_const || E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
+                g_TopLevelVisitor->handle_field_X_expr(E, is_assign, (!is_const && !out_only),
+                                                       true);
 
                 sitedep = true;
 
@@ -429,8 +424,8 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
 
             sitedep = true;
             bool is_assign = is_modifiable;
-            g_TopLevelVisitor->handle_field_X_expr(
-                E, is_assign, (is_modifiable && !out_only), true, true);
+            g_TopLevelVisitor->handle_field_X_expr(E, is_assign, (is_modifiable && !out_only), true,
+                                                   true);
 
             ai.is_site_dependent = true;
 
@@ -480,8 +475,7 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
 /// if "sitedep" is true, mark all unconditionally site dep.
 ////////////////////////////////////////////////////////////////////////////////
 
-bool GeneralVisitor::attach_dependent_vars(std::vector<var_info *> &variables,
-                                           bool sitedep,
+bool GeneralVisitor::attach_dependent_vars(std::vector<var_info *> &variables, bool sitedep,
                                            std::vector<var_info *> &dep_variables) {
 
     // if sitedep == true or one of the dep_variables is sitedep, we can mark
@@ -545,8 +539,9 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
         //    MCall->getImplicitObjectArgument()->getType().getAsString();
         std::string objtype = get_expr_type(MCall->getImplicitObjectArgument());
 
-        if (objtype.find("X_index_type") != std::string::npos ||
-            objtype.find("lattice_struct *") != std::string::npos) {
+        bool is_X_index_type = (objtype.find("X_index_type") != std::string::npos);
+
+        if (is_X_index_type || objtype.find("lattice_struct *") != std::string::npos) {
             // now it is a method of X
 
             // llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
@@ -556,16 +551,15 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             sfc.scope = parsing_state.scope_level;
             sfc.name = name;
             sfc.argsExpr = nullptr;
+            sfc.args_string.clear();
 
             SourceLocation sl = findChar(Call->getSourceRange().getBegin(), '(');
             if (sl.isInvalid()) {
-                reportDiag(DiagnosticsEngine::Level::Fatal,
-                           Call->getSourceRange().getBegin(),
+                reportDiag(DiagnosticsEngine::Level::Fatal, Call->getSourceRange().getBegin(),
                            "Open parens '(' not found, internal error");
                 exit(1);
             }
-            sfc.replace_range =
-                SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
+            sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
 
             // for non-cuda code replace only cases which are needed
             bool replace_this = true;
@@ -590,6 +584,21 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 sfc.argsExpr = MCall->getArg(0);
                 sfc.add_loop_var = true;
 
+            } else if (name == "x") {
+                sfc.replace_expression = l_lattice + "coordinate(";
+                sfc.args_string = "e_x";
+                sfc.add_loop_var = true;
+            
+            } else if (name == "y") {
+                sfc.replace_expression = l_lattice + "coordinate(";
+                sfc.args_string = "e_y";
+                sfc.add_loop_var = true;
+
+            } else if (name == "z") {
+                sfc.replace_expression = l_lattice + "coordinate(";
+                sfc.args_string = "e_z";
+                sfc.add_loop_var = true;
+
             } else if (name == "random") {
                 sfc.replace_expression = "hila::random(";
                 sfc.add_loop_var = false;
@@ -605,13 +614,11 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 replace_this = target.kernelize;
 
             } else {
-                if (objtype == "const class X_index_type") {
-                    reportDiag(DiagnosticsEngine::Level::Error,
-                               Call->getSourceRange().getBegin(), "Unknown method X.%0()",
-                               name.c_str());
+                if (is_X_index_type) {
+                    reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
+                               "Unknown method X.%0()", name.c_str());
                 } else {
-                    reportDiag(DiagnosticsEngine::Level::Error,
-                               Call->getSourceRange().getBegin(),
+                    reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
                                "Method 'lattice->.%0()' not allowed inside site loops",
                                name.c_str());
                 }
