@@ -32,8 +32,8 @@ inline int sd_get_k_bin(const CoordinateVector &cv, const sd_k_bin_parameters &p
 namespace hila {
 
 /// class hila::k_binning is used to bin "k-space" fields (typically fourier transformed
-/// from real space).  Vector k is normalized so that -pi/2 < k_i <= pi/2, i.e.
-//  k_i = pi*x_i/L_i, where L_i = lattice->size(i) and x_i is the L_i/2 modded
+/// from real space).  Vector k is normalized so that -pi < k_i <= pi, i.e.
+//  k_i = 2*pi*x_i/L_i, where L_i = lattice->size(i) and x_i is the L_i/2 modded
 /// coordinate.
 /// Bin is determined by formula
 ///   b = (int) ( pow(k/k_max)^p * n_bins )
@@ -76,6 +76,13 @@ class k_binning {
             if (lattice->size(d) > 2 * par.bins)
                 par.bins = lattice->size(d) / 2;
         }
+    }
+
+    k_binning(int b) {
+        par.max = M_PI;
+        par.power = 1;
+        par.exact = 0;
+        par.bins = b;
     }
 
     /// Set number of bins in histogram
@@ -141,8 +148,6 @@ class k_binning {
                 s[b] += f[X];
             }
         }
-
-        hila::output << "bin reduction done, node " << hila::myrank() << '\n';
 
         return s.vector();
     }
