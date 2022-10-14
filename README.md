@@ -111,7 +111,7 @@ The singularity container offers a more packaged approach where one doesn't need
 
 This approach is favorable also to linux users who do not wish to install the clang libtoolbox locally.
 
-For instructions on installing singularity and building containers have a look at the [README.md](singularity/SINGULARTIY.md) in the singularity folder
+For instructions on installing singularity and building containers have a look at the [README.md](singularity/README.md) in the singularity folder
 
 
 ## 2. Building HILA applications
