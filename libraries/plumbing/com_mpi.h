@@ -1,5 +1,5 @@
-#ifndef COMM_MPI_H
-#define COMM_MPI_H
+#ifndef COM_MPI_H
+#define COM_MPI_H
 
 #include "plumbing/defs.h"
 
@@ -29,11 +29,22 @@ extern partitions_struct partitions;
 
 } // namespace hila
 
-
-extern hila::timer start_send_timer, wait_send_timer, post_receive_timer,
-    wait_receive_timer, synchronize_timer, reduction_timer, reduction_wait_timer,
-    broadcast_timer, send_timer, cancel_send_timer, cancel_receive_timer,
-    partition_sync_timer;
+// Pile of timers associated with MPI calls
+// clang-format off
+extern hila::timer 
+        start_send_timer, 
+        wait_send_timer,
+        post_receive_timer,
+        wait_receive_timer,
+        synchronize_timer,
+        reduction_timer,
+        reduction_wait_timer,
+        broadcast_timer,
+        send_timer,
+        cancel_send_timer,
+        cancel_receive_timer,
+        partition_sync_timer;
+// clang-format on
 
 ///***********************************************************
 /// Implementations of communication routines.
@@ -54,8 +65,7 @@ MPI_Datatype get_MPI_number_type(int &size, bool with_int = false) {
         return with_int ? MPI_2INT : MPI_INT;
     } else if (std::is_same<hila::number_type<T>, unsigned>::value) {
         size = sizeof(unsigned);
-        return with_int ? MPI_2INT
-                        : MPI_UNSIGNED; // MPI does not contain MPI_UNSIGNED_INT
+        return with_int ? MPI_2INT : MPI_UNSIGNED; // MPI does not contain MPI_UNSIGNED_INT
     } else if (std::is_same<hila::number_type<T>, long>::value) {
         size = sizeof(long);
         return with_int ? MPI_LONG_INT : MPI_LONG;
@@ -84,28 +94,38 @@ MPI_Datatype get_MPI_number_type(int &size, bool with_int = false) {
 namespace hila {
 
 ///
-/// Broadcast variable to all nodes from node "rank" (default=0)
+/// Broadcast the value of _var_ to all nodes from node _rank_ (default=0).
+/// Var must be trivial, i.e. plain data. 
+/// Returns the broadcast value
+/// If var is modifiable, it is changed to the broadcast value
+///
 
 template <typename T>
-void broadcast(T &var, int rank = 0) {
+T broadcast(T &var, int rank = 0) {
     static_assert(std::is_trivial<T>::value, "broadcast(var) must use trivial type");
     if (hila::check_input)
-        return;
+        return var;
 
-    assert(0 <= rank && rank < hila::number_of_nodes() &&
-           "Invalid sender rank in broadcast()");
+    assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
 
     broadcast_timer.start();
     MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
     broadcast_timer.stop();
+    return var;
+}
+
+/// Version of broadcast with non-modifiable var
+template <typename T>
+T broadcast(const T &var, int rank = 0) {
+    T tmp = var;
+    return broadcast(tmp, rank);
 }
 
 /// Broadcast for std::vector
 template <typename T>
 void broadcast(std::vector<T> &list, int rank = 0) {
 
-    static_assert(std::is_trivial<T>::value,
-                  "broadcast(vector<T>) must have trivial T");
+    static_assert(std::is_trivial<T>::value, "broadcast(vector<T>) must have trivial T");
 
     if (hila::check_input)
         return;
@@ -119,20 +139,24 @@ void broadcast(std::vector<T> &list, int rank = 0) {
     }
 
     // move vectors directly to the storage
-    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank,
-              lattice->mpi_comm_lat);
+    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank, lattice->mpi_comm_lat);
 
     broadcast_timer.stop();
 }
 
+///
+/// Bare pointers cannot be broadcast
+
 template <typename T>
 void broadcast(T *var) {
     static_assert(sizeof(T) > 0 &&
-                  "Do not use pointers to broadcast()-function. Use 'broadcast(T* arr, "
+                  "Do not use pointers to broadcast()-function. Use 'broadcast_array(T* arr, "
                   "int size)' to broadcast an array");
 }
 
+///
 /// Broadcast for arrays where size must be known and same for all nodes
+
 template <typename T>
 void broadcast_array(T *var, int n, int rank = 0) {
 
@@ -150,7 +174,7 @@ void broadcast(std::vector<std::string> &l, int rank = 0);
 
 /// and broadcast with two values
 template <typename T, typename U>
-void broadcast(T &t, U &u, int rank = 0) {
+void broadcast2(T &t, U &u, int rank = 0) {
 
     if (hila::check_input)
         return;

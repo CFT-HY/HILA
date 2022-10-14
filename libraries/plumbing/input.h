@@ -331,7 +331,7 @@ class input {
                 hila::broadcast(val);
                 hila::broadcast(no_error);
             } else {
-                hila::broadcast(val, no_error);
+                hila::broadcast2(val, no_error);
             }
         }
 
@@ -361,7 +361,7 @@ class input {
         }
 
         if (bcast) {
-            hila::broadcast(val, no_error);
+            hila::broadcast2(val, no_error);
         }
         return no_error;
     }
@@ -386,7 +386,7 @@ class input {
         }
 
         if (bcast) {
-            hila::broadcast(val, no_error);
+            hila::broadcast2(val, no_error);
         }
         return no_error;
     }
