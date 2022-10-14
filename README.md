@@ -64,26 +64,25 @@ See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/
 Begin by cloning HILA repository:
 
 ``` bash
-git clone https://haaaaron@bitbucket.org/Kari_Rummukainen/hila.git
+git clone https://github.com/CFT-HY/HILA
 ```
 
 The HILA working method is split into two parts. The first part is getting access to the hilapp preprocessor. And the second part is building simulations for targeted architectures and technologies using the hilapp preprocessor.
 
 ## 1. HILA preprocessor
-The preprocessor can be accessed either by compiled from source using the clang libtooling toolbox or by using the offered [singularity container](https://bitbucket.org/haaaaron/hila-singularity/src/main/). (Future support for packaged .rpm and .deb? Maybe docker aswell for MACOSX and windows support RPM is supported by macosx)
+The preprocessor can be accessed either by compiling from source using the clang libtooling toolbox or by using the offered singularity container. The singularity container is an option for users who do not wish to develop hilapp and worry about clang library dependencies or for building applications on HPC platforms.
 
-#### **Compiling from source**
-For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 20.04:
+### **Compiling from source**
+For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 22.04:
 
 ~~~ bash
-export LLVM_VERSION=12
-apt install clang-$LLVM_VERSION \
-            llvm-$LLVM_VERSION \
-            clang-tools-$LLVM_VERSION \
-            libclang-common-$LLVM_VERSION-dev \
-            libclang-cpp$LLVM_VERSION-dev \
-            libclang-$LLVM_VERSION-dev \
-            clang-format-$LLVM_VERSION
+apt install clang \
+            llvm \
+            clang-tools \
+            libclang-common-dev \
+            libclang-cp-dev \
+            libclang-dev \
+            clang-format
 ~~~
 
 Compile *hilapp*:
@@ -106,15 +105,14 @@ Test that hilapp works
 
     ./bin/hilapp --help
 
-#### **Singularity container**
+### **Singularity container**
 
-The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container. 
+The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container. This approach is mainly meant to be used for running simulations on an HPC platform.
 
-Since the HILA preprocessor doesn't require optimized performance any overhead is irrelevant. In theory there should be none.
+This approach is favorable also to linux users who do not wish to install the clang libtoolbox locally.
 
-See separate [repository](https://bitbucket.org/haaaaron/hila-singularity/src/main/) for use of singularity container.
+For instructions on installing singularity and building containers have a look at the [README.md](singularity/SINGULARTIY.md) in the singularity folder
 
-(Add downloadable .sif file to git page?)
 
 ## 2. Building HILA applications
 
@@ -162,7 +160,7 @@ Typically these need to be customized for supercomputing platforms due to stack 
 
 ## Unit tests
 
-See `hila/unit_tests` folder
+See [unit_tests](unit_tests/README.md) folder
 
 # Overview
 

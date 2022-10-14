@@ -25,6 +25,7 @@ APP_OPTS += -DNDIM=3
 hila_example: build/hila_example ; @:
 simple: build/simple ; @:
 minmax: build/minmax; @:
+simple_gpu: build/simple_gpu; @:
 # Now the linking step for each target executable
 build/hila_example: Makefile build/hila_example.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/hila_example.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
@@ -36,6 +37,8 @@ build/simple: Makefile build/simple.o $(HILA_OBJECTS) $(HEADERS)
 build/minmax: Makefile build/minmax.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/minmax.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
+build/simple_gpu: Makefile build/simple_gpu.o $(HILA_OBJECTS) $(HEADERS)
+	$(LD) -o $@ build/simple_gpu.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 
 
 

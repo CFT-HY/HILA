@@ -1,0 +1,32 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%post
+    apt-get -y update
+    apt-get -y install git make libfftw3-dev
+
+    #installing clang devel tools
+    export LLVM_VERSION=14
+    apt-get -y install clang-$LLVM_VERSION \
+                       llvm-$LLVM_VERSION \
+                       clang-tools-$LLVM_VERSION \
+                       libclang-common-$LLVM_VERSION-dev \
+                       libclang-cpp$LLVM_VERSION-dev \
+                       libclang-$LLVM_VERSION-dev \
+                       clang-format-$LLVM_VERSION
+
+    #Cloning hila and building 
+    git clone https://github.com/CFT-HY/HILA
+    cd /HILA/hilapp
+    make -j4
+    mv build/hilapp /
+    cd /
+    rm -rf HILA
+    apt-get -y remove make git
+    apt-get -y remove llvm-$LLVM_VERSION-dev libclang-$LLVM_VERSION-dev libclang1-$LLVM_VERSION libclang-cpp$LLVM_VERSION
+
+%environment
+    export LLVM_VERSION=14
+
+%runscript
+    /hilapp $@

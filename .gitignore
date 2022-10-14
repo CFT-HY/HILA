@@ -1,5 +1,6 @@
 build/
 hilapp/bin/*
+singularity/hilapp.sif
 settings.json
 .vscode/
 *.cpt
