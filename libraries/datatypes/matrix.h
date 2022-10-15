@@ -39,6 +39,9 @@ using SquareMatrix = Matrix<n, n, T>;
 // template <const int n, const int m, typename T>
 // class DaggerMatrix;
 
+// Special case - m.column(), column of a matrix (not used now)
+// #include "matrix_column.h"
+
 ////////////////////////////////////////////////////////////////
 /// The main nxm matrix type template Matrix_t
 /// This is a root type, and "useful" types are derived from this type
@@ -215,26 +218,49 @@ class Matrix_t {
     }
 
     /// return reference to row in a matrix
-    void set_row(int r, const HorizontalVector<n, T> &v) {
-        for (int i = 0; i < n; i++)
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    void set_row(int r, const HorizontalVector<m, S> &v) {
+        for (int i = 0; i < m; i++)
             e(r, i) = v[i];
     }
 
-
     /// get column of a matrix
-    Vector<n, T> column(int c) const {
+    const Vector<n, T> column(int c) const {
         Vector<n, T> v;
         for (int i = 0; i < n; i++)
             v[i] = e(i, c);
         return v;
     }
 
+    /// get column of a matrix
+    // hila_matrix_column_t<n, T, Mtype> column(int c) {
+    //     return hila_matrix_column_t<n, T, Mtype>(*this, c);
+    // }
 
     /// set column of a matrix
-    void set_column(int c, const Vector<n, T> &v) {
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    void set_column(int c, const Vector<n, S> &v) {
         for (int i = 0; i < n; i++)
             e(i, c) = v[i];
     }
+
+    /// return diagonal of a square matrix as a vector
+    Vector<n, T> diagonal() {
+        static_assert(n == m, "diagonal() method defined only for square matrices");
+        Vector<n, T> res;
+        for (int i = 0; i < n; i++)
+            res.e(i) = (*this).e(i, i);
+        return res;
+    }
+
+    /// return diagonal of a square matrix as a vector
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    void set_diagonal(const Vector<n,S> & v) {
+        static_assert(n == m, "set_diagonal() method defined only for square matrices");
+        for (int i = 0; i < n; i++)
+            (*this).e(i, i) = v.e(i);
+    }
+
 
     /// interpret Matrix as Array -  for array ops
     Array<n, m, T> &asArray() const_function {
@@ -413,7 +439,7 @@ class Matrix_t {
 
     /// numpy style matrix fill
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    Mtype &fill(const S rhs) out_only {
+    const Mtype &fill(const S rhs) out_only {
         for (int i = 0; i < n * m; i++)
             c[i] = rhs;
         return *this;
@@ -619,7 +645,7 @@ class Matrix_t {
     }
 
     /// Generate gaussian random elements
-    inline Mtype &gaussian_random(hila::number_type<T> width = 1.0) out_only {
+    inline Mtype &gaussian_random(double width = 1.0) out_only {
 
         static_assert(hila::is_floating_point<hila::number_type<T>>::value,
                       "Matrix/Vector gaussian_random() requires non-integral type elements");
@@ -633,7 +659,7 @@ class Matrix_t {
             // now not complex matrix
             // if n*m even, max i in loop below is n*m-2.
             // if n*m odd, max i is n*m-3
-            T gr;
+            double gr;
             for (int i = 0; i < n * m - 1; i += 2) {
                 c[i] = hila::gaussrand2(gr) * width;
                 c[i + 1] = gr * width;
@@ -1171,7 +1197,7 @@ inline void random(out_only Mt &mat) {
 template <typename Mt,
           std::enable_if_t<Mt::is_matrix() && hila::is_floating_point<hila::number_type<Mt>>::value,
                            int> = 0>
-inline void gaussian_random(out_only Mt &mat, hila::number_type<Mt> width = 1.0) {
+inline void gaussian_random(out_only Mt &mat, double width = 1.0) {
     mat.gaussian_random(width);
 }
 

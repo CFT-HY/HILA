@@ -152,7 +152,7 @@ class Complex {
         return *this;
     }
 
-    inline Complex<T> &gaussian_random(hila::number_type<T> width = 1.0) out_only {
+    inline Complex<T> &gaussian_random(double width = 1.0) out_only {
         double d;
         re = hila::gaussrand2(d) * width;
         im = d * width;
@@ -600,7 +600,7 @@ inline void random(out_only Complex<T> &c) {
 }
 
 template <typename T>
-inline void gaussian_random(out_only Complex<T> &c, hila::number_type<T> width = 1.0) {
+inline void gaussian_random(out_only Complex<T> &c, double width = 1.0) {
     c.gaussian_random(width);
 }
 
