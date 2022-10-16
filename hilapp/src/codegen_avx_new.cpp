@@ -304,18 +304,22 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
         if (is_vectorizable) {
             for (auto const &sfc : special_function_call_list) {
                 if (sfc.name == "coordinates" || sfc.name == "coordinate") {
-                    // returning int vector
-                    if (vector_size == 0) {
-                        vector_size = target.vector_size / sizeof(int);
-                    } else if (vector_size != target.vector_size / sizeof(int) ||
-                               numtype != number_type::INT) {
-                        is_vectorizable = false;
+                    is_vectorizable = false;
 
-                        reason.push_back("functions 'X.coordinates()' and "
-                                         "'X.coordinate(Direction)' return int, "
-                                         "which is not compatible with " +
-                                         vector_var_type + " vectors");
-                    }
+                    reason.push_back("X.coordinates() and X.coordinate() make expression site dependent");
+
+                    // // returning int vector
+                    // if (vector_size == 0) {
+                    //     vector_size = target.vector_size / sizeof(int);
+                    // } else if (vector_size != target.vector_size / sizeof(int) ||
+                    //            numtype != number_type::INT) {
+                    //     is_vectorizable = false;
+
+                    //     reason.push_back("functions 'X.coordinates()' and "
+                    //                      "'X.coordinate(Direction)' return int, "
+                    //                      "which is not compatible with " +
+                    //                      vector_var_type + " vectors");
+                    // }
 
                 } else if (sfc.name == "parity") {
                     is_vectorizable = false;

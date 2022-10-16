@@ -20,14 +20,14 @@
 /// expressions
 
 number_type get_number_type(const std::string &s) {
-    if (s == "int")
+    if (s == "int" || (sizeof(long) == 4 && s == "long"))
         return number_type::INT;
     else if (s == "unsigned" || s == "unsigned int")
         return number_type::UNSIGNED;
-    else if (s == "int64_t")
-        return number_type::INT64_T;
-    else if (s == "unit64_t")
-        return number_type::UNIT64_T;
+    else if (s == "long")
+        return number_type::LONG;
+    else if (s == "unsigned long")
+        return number_type::UNSIGNED_LONG;
     else if (s == "float")
         return number_type::FLOAT;
     else if (s == "double")
@@ -68,8 +68,20 @@ void reset_vectorizable_types() {
     d.ntype = number_type::INT;
     vectorizable_types.push_back(d);
 
-    d.classname = "int64_t";
-    d.ntype = number_type::INT64_T;
+    d.classname = "unsigned";
+    d.ntype = number_type::UNSIGNED;
+    vectorizable_types.push_back(d);
+
+    d.classname = "unsigned int";
+    d.ntype = number_type::UNSIGNED;
+    vectorizable_types.push_back(d);
+
+    d.classname = "long";
+    d.ntype = number_type::LONG;
+    vectorizable_types.push_back(d);
+
+    d.classname = "unsigned long";
+    d.ntype = number_type::UNSIGNED_LONG;
     vectorizable_types.push_back(d);
 }
 
@@ -129,8 +141,7 @@ bool GeneralVisitor::is_vectorizable_type(const QualType &QT, vectorization_info
     return is_vectorizable_type(tname, vi);
 }
 
-bool GeneralVisitor::is_vectorizable_type(const std::string &type_name,
-                                          vectorization_info &vi) {
+bool GeneralVisitor::is_vectorizable_type(const std::string &type_name, vectorization_info &vi) {
 
     // Note: the std types are included in vectorizable_types
     // vectorizable_type vector filled in by VisitTypeAliasDecl above
@@ -158,16 +169,30 @@ bool GeneralVisitor::is_vectorizable_type(const std::string &type_name,
                     old_t = vi.basetype_str = "int";
                     new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "i";
 
-                } else if (n.ntype == number_type::INT64_T) {
-                    vi.vector_size = target.vector_size / sizeof(int64_t);
-                    old_t = vi.basetype_str = "int64_t";
+                } else if (n.ntype == number_type::UNSIGNED) {
+                    vi.vector_size = target.vector_size / sizeof(unsigned);
+                    old_t = vi.basetype_str = "unsigned int";
+                    new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "ui";
+
+                } else if (n.ntype == number_type::LONG) {
+                    vi.vector_size = target.vector_size / sizeof(long);
+                    old_t = vi.basetype_str = "long";
                     new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "q";
+
+                } else if (n.ntype == number_type::UNSIGNED_LONG) {
+                    vi.vector_size = target.vector_size / sizeof(unsigned long);
+                    old_t = vi.basetype_str = "unsigned long";
+                    new_t = vi.vectortype = "Vec" + std::to_string(vi.vector_size) + "uq";
 
                 } else
                     return vi.is_vectorizable = false; // not vectorizable type
 
                 // replace the old type in the type name
                 vi.vectorized_type = type_name;
+
+                // llvm::errs() << "REPLACING VECTOR TYPE " << vi.vectorized_type
+                //              << " (" << old_t << ") with " << new_t << '\n';
+
                 int i = find_word(vi.vectorized_type, old_t);
                 if (i == std::string::npos) {
                     // Now the type template does not contain the to-be-vectorized type at
@@ -183,9 +208,9 @@ bool GeneralVisitor::is_vectorizable_type(const std::string &type_name,
             } else {
                 // now target.vectorize is false, we don't know the vec length
                 if (n.ntype == number_type::DOUBLE || n.ntype == number_type::FLOAT ||
-                    n.ntype == number_type::INT || n.ntype == number_type::INT64_T) {
-                    vi.vectorized_type =
-                        ""; // in principle vectorizable, don't know the type
+                    n.ntype == number_type::INT || n.ntype == number_type::LONG ||
+                    n.ntype == number_type::UNSIGNED || n.ntype == number_type::UNSIGNED_LONG) {
+                    vi.vectorized_type = ""; // in principle vectorizable, don't know the type
                     vi.vector_size = 0;
 
                     if (target.vectorize)
@@ -219,8 +244,7 @@ vectorization_info TopLevelVisitor::inspect_field_type(Expr *fE) {
     const CXXRecordDecl *rd = tp->getAsCXXRecordDecl();
     assert(rd != nullptr);
 
-    const ClassTemplateSpecializationDecl *fspec =
-        dyn_cast<ClassTemplateSpecializationDecl>(rd);
+    const ClassTemplateSpecializationDecl *fspec = dyn_cast<ClassTemplateSpecializationDecl>(rd);
     assert(fspec != nullptr);
 
     const TemplateArgumentList &tal = fspec->getTemplateArgs();

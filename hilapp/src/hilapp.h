@@ -190,8 +190,8 @@ struct dir_ptr {
 enum class number_type {
     INT,
     UNSIGNED,
-    INT64_T,
-    UNIT64_T,
+    LONG,
+    UNSIGNED_LONG,
     FLOAT,
     DOUBLE,
     LONG_DOUBLE,
