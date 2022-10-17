@@ -342,12 +342,23 @@ class Field {
     /// Field constructors
 
     Field() {
+
+        // put here some implementation checks for field vars
+#ifdef VECTORIZED
+        static_assert(sizeof(hila::number_type<T>) == 4 || sizeof(hila::number_type<T>) == 8,
+                      "In vectorized arch (e.g. AVX2), only 4 or 8 byte (32 or 64 bit) numbers for "
+                      "Field<> implemented, sorry!");
+#endif
+#if defined(CUDA) || defined(HIP)
+        static_assert(!std::is_same<hila::number_type<T>, long double>::value,
+                      "Type 'long double' numbers in Field<> not supported by cuda/hip");
+#endif
+
         fs = nullptr; // lazy allocation on 1st use
     }
 
     // Straightforward copy constructor seems to be necessary
-    Field(const Field &other) {
-        fs = nullptr; // this is probably unnecessary
+    Field(const Field &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
         (*this)[ALL] = other[X];
@@ -355,8 +366,7 @@ class Field {
 
     // copy constructor - from fields which can be assigned
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
-    Field(const Field<A> &other) {
-        fs = nullptr; // this is probably unnecessary
+    Field(const Field<A> &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
         (*this)[ALL] = other[X];
@@ -366,14 +376,12 @@ class Field {
     template <typename A,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
-    Field(const A &val) {
-        fs = nullptr;
+    Field(const A &val) : Field() {
         (*this)[ALL] = val;
     }
 
     // constructor from 0 - nullptr trick in use
-    Field(const std::nullptr_t z) {
-        fs = nullptr;
+    Field(const std::nullptr_t z) : Field() {
         (*this)[ALL] = 0;
     }
 
@@ -834,8 +842,8 @@ class Field {
     std::vector<T> get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
                                  bool broadcast = false) const;
 
-    void copy_local_data(T * buffer) const;
-    void set_local_data(T * buffer);
+    void copy_local_data(T *buffer) const;
+    void set_local_data(T *buffer);
 
 
     // inline void set_element_at(const CoordinateVector &coord, const A &elem) {
@@ -1958,7 +1966,8 @@ std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord
                                       bool bcast) const {
 
     std::vector<T> res;
-    if (hila::myrank() == 0) res.resize(coord_list.size());
+    if (hila::myrank() == 0)
+        res.resize(coord_list.size());
 
     fs->gather_elements(res.data(), coord_list);
     if (bcast)
@@ -1970,8 +1979,8 @@ std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord
 
 // get a subvolume of the field elements to all nodes
 template <typename T>
-std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin,
-                                       const CoordinateVector &cmax, bool bcast) const {
+std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
+                                       bool bcast) const {
 
     size_t vol = 1;
     foralldir (d) {
@@ -1985,48 +1994,46 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin,
     forcoordinaterange(c, cmin, cmax) {
         clist[i++] = c;
     }
-    return get_elements(clist,bcast);
+    return get_elements(clist, bcast);
 }
 
 template <typename T>
-void Field<T>::copy_local_data(T * buffer) const {
+void Field<T>::copy_local_data(T *buffer) const {
     unsigned *index_list;
     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
 
-    CoordinateVector c,cmin,cmax;
+    CoordinateVector c, cmin, cmax;
     cmin = lattice->mynode.min;
     cmax = cmin + lattice->mynode.size;
     cmax.asArray() -= 1;
     unsigned i = 0;
-    forcoordinaterange(c,cmin,cmax) {
+    forcoordinaterange(c, cmin, cmax) {
         index_list[i++] = lattice->site_index(c);
     }
 
-    this->fs->payload.gather_elements( buffer, index_list, lattice->mynode.volume(), lattice );
+    this->fs->payload.gather_elements(buffer, index_list, lattice->mynode.volume(), lattice);
     std::free(index_list);
-
 }
 
 template <typename T>
-void Field<T>::set_local_data(T * buffer) {
+void Field<T>::set_local_data(T *buffer) {
     unsigned *index_list;
     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
 
-    CoordinateVector c,cmin,cmax;
+    CoordinateVector c, cmin, cmax;
     cmin = lattice->mynode.min;
     cmax = cmin + lattice->mynode.size;
     cmax.asArray() -= 1;
     unsigned i = 0;
-    forcoordinaterange(c,cmin,cmax) {
+    forcoordinaterange(c, cmin, cmax) {
         index_list[i++] = lattice->site_index(c);
     }
 
-    this->fs->payload.place_elements( buffer, index_list, lattice->mynode.volume(), lattice );
+    this->fs->payload.place_elements(buffer, index_list, lattice->mynode.volume(), lattice);
     std::free(index_list);
 
     this->mark_changed(ALL);
 }
-
 
 
 #ifdef HILAPP
