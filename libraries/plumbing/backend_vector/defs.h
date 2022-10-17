@@ -379,6 +379,7 @@ inline Vec4i operator%(const Vec4i &lhs, const int &rhs) {
 // Random numbers
 // Since you cannot specialize by return type,
 // it needs to be a struct...
+
 #if VECTOR_SIZE == 32
 template <typename T>
 inline auto hila_random_vector() {

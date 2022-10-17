@@ -248,8 +248,8 @@ class lattice_struct {
 
     void create_std_gathers();
     gen_comminfo_struct create_general_gather(const CoordinateVector &r);
-    std::vector<comm_node_struct>
-    create_comm_node_vector(CoordinateVector offset, unsigned *index, bool receive);
+    std::vector<comm_node_struct> create_comm_node_vector(CoordinateVector offset, unsigned *index,
+                                                          bool receive);
 
     bool first_site_even() {
         return mynode.first_site_even;
@@ -389,6 +389,31 @@ extern std::vector<lattice_struct *> lattices;
 #include "plumbing/backend_vector/lattice_vector.h"
 #endif
 
+
+//////////////////////////////////////////////////////////////////////
+/// SiteIndex operations
+//////////////////////////////////////////////////////////////////////
+
+#pragma hila novector
+template <typename T>
+SiteIndex CoordinateVector_t<T>::site_index() const {
+    SiteIndex s = 0;
+    SiteIndex m = 1;
+    foralldir (d) {
+        s += m * (*this)[d];
+        m *= lattice->size(d);
+    }
+    return s;
+}
+
+/// Construct from site index 
+// template <typename T>
+// CoordinateVector_t<T>::CoordinateVector_t<T>(SiteIndex s) {
+//         foralldir(d) {
+//             this->e(d) = s % lattice->size(d);
+//             s /= lattice->size(d);
+//         }
+//     }
 
 
 

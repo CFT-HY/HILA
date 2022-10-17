@@ -186,6 +186,14 @@ inline int pmod(const int a, const int b) {
 }
 
 
+/////////////////////////////////////////////////////////////////////
+/// SiteIndex type: alternative to CoordinateVector, just unsigned long
+/// "running" index of site, so that lowest dimensions run fastest
+/////////////////////////////////////////////////////////////////////
+
+using SiteIndex = uint64_t;
+
+
 //////////////////////////////////////////////////////////////////////
 /// CoordinateVector type
 //////////////////////////////////////////////////////////////////////
@@ -203,6 +211,9 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     ~CoordinateVector_t() = default;
     CoordinateVector_t(const CoordinateVector_t &v) = default;
+
+    /// Construct from site index 
+    // CoordinateVector_t(SiteIndex s); 
 
     // initialize with Direction -- useful for automatic conversion
     explicit inline CoordinateVector_t(const Direction dir) {
@@ -381,6 +392,10 @@ class CoordinateVector_t : public Vector<NDIM, T> {
         return r;
     }
 
+    /// Return site index of the coordinate vector -- assumes a valid lattice vector
+
+    inline SiteIndex site_index() const;
+
 };
 
 /// Define the std CoordinateVector type here
@@ -456,6 +471,8 @@ inline CoordinateVector_t<T> operator-(const Direction dir, CoordinateVector_t<T
         cv.e(d) = dir_dot_product(dir, d) - cv.e(d);
     return cv;
 }
+
+
 
 /////////////////////////////////////////////////////////////////////
 ///  X-coordinate type - "dummy" class, used only

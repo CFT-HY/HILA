@@ -37,6 +37,15 @@ class Vec4q {
     Vec4q &load(const int64_t *);
 };
 
+class Vec4uq {
+  private:
+    uint64_t v[4];
+
+  public:
+    void store(uint64_t *) const;
+    Vec4uq &load(const uint64_t *);
+};
+
 class Vec8f {
   private:
     float v[8];
@@ -54,6 +63,15 @@ class Vec8i {
     void store(int *) const;
     Vec8i &load(const int *);
     void insert(int, int);
+};
+
+class Vec8ui {
+  private:
+    unsigned int v[8];
+
+  public:
+    void store(unsigned int *) const;
+    Vec8ui &load(const unsigned int *);
 };
 
 class Vec8d {
@@ -74,6 +92,15 @@ class Vec8q {
     Vec8q &load(const int64_t *);
 };
 
+class Vec8uq {
+  private:
+    uint64_t v[8];
+
+  public:
+    void store(uint64_t *) const;
+    Vec8uq &load(const uint64_t *);
+};
+
 class Vec16f {
   private:
     float v[16];
@@ -92,6 +119,16 @@ class Vec16i {
     Vec16i &load(const int *);
     void insert(int, int);
 };
+
+class Vec16ui {
+  private:
+    unsigned int v[16];
+
+  public:
+    void store(unsigned int *) const;
+    Vec16ui &load(const unsigned int *);
+};
+
 
 Vec4i operator*(const Vec4i, const Vec4i);
 Vec4d operator*(const Vec4d, const Vec4d);

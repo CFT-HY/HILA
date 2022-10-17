@@ -4,7 +4,7 @@
 namespace hila {
 
 /// is_vectorizable_type<T>::value  is always false if the target is not vectorizable
-template <typename T, typename A = void> 
+template <typename T, typename A = void>
 struct is_vectorizable_type {
     static constexpr bool value = false;
 };
@@ -19,46 +19,53 @@ struct is_vectorizable_type {
 // };
 
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>,int>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, int>::value>> {
     static constexpr bool value = true;
 };
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>,long>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, unsigned int>::value>> {
     static constexpr bool value = true;
 };
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>,float>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, int64_t>::value>> {
     static constexpr bool value = true;
 };
 template <typename T>
-struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>,double>::value>> {
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, uint64_t>::value>> {
+    static constexpr bool value = true;
+};
+template <typename T>
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, float>::value>> {
+    static constexpr bool value = true;
+};
+template <typename T>
+struct is_vectorizable_type<T, typename std::enable_if_t<std::is_same<hila::number_type<T>, double>::value>> {
     static constexpr bool value = true;
 };
 
 
 /// do forward definition here, enables inclusion
-template <int vector_size> struct vectorized_lattice_struct;
+template <int vector_size>
+struct vectorized_lattice_struct;
 
+// clang-format off
 /// Utility for selecting a vector type by base type and length
 template <typename T, int vector_len> struct vector_base_type {};
 
+template <> struct vector_base_type<int,4>  { using type = Vec4i; };
 template <> struct vector_base_type<double, 4> { using type = Vec4d; };
-
 template <> struct vector_base_type<double, 8> { using type = Vec8d; };
-
 template <> struct vector_base_type<float, 8> { using type = Vec8f; };
-
 template <> struct vector_base_type<float, 16> { using type = Vec16f; };
-
-template <> struct vector_base_type<int, 4> { using type = Vec4i; };
-
 template <> struct vector_base_type<int, 8> { using type = Vec8i; };
-
+template <> struct vector_base_type<unsigned int, 8> { using type = Vec8ui; };
 template <> struct vector_base_type<int, 16> { using type = Vec16i; };
-
+template <> struct vector_base_type<unsigned int, 16> { using type = Vec16ui; };
 template <> struct vector_base_type<int64_t, 4> { using type = Vec4q; };
-
+template <> struct vector_base_type<uint64_t, 4> { using type = Vec4uq; };
 template <> struct vector_base_type<int64_t, 8> { using type = Vec8q; };
+template <> struct vector_base_type<uint64_t, 8> { using type = Vec8uq; };
+// clang-format on
 
 // template<>
 // struct vector_base_type<CoordinateVector, 4> {
@@ -74,7 +81,8 @@ template <> struct vector_base_type<int64_t, 8> { using type = Vec8q; };
 
 /// Construct the vector info for the type.
 /// first, if the type is not vectorizable
-template <typename T, typename A = void> struct vector_info {
+template <typename T, typename A = void>
+struct vector_info {
     static constexpr bool is_vectorizable = false;
     using base_type = T;
     // Find vector length
