@@ -6,7 +6,7 @@
 #include "hilapp.h"
 #include "stringops.h"
 
-// #define LOOP_FUNC_DEBUG
+// #define LOOP_FUNCTION_DEBUG
 
 ////////////////////////////////////////////////////////////////////////////
 /// Entry for function calls inside loops.  The call requires a bit
@@ -31,6 +31,10 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s) {
     FunctionDecl *D = (FunctionDecl *)llvm::dyn_cast<FunctionDecl>(decl);
 
     bool contains_rng = false;
+    bool vectorizable = true;
+    if (has_pragma(D, pragma_hila::NOVECTOR)) {
+        vectorizable = false;
+    }
     if (has_pragma(D, pragma_hila::CONTAINS_RNG)) {
         contains_rng = true;
     } else if (D->hasBody()) {
@@ -54,6 +58,8 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s) {
     ci.contains_random = contains_rng;
     if (contains_rng)
         loop_info.contains_random = true;
+
+    ci.is_vectorizable = ci.is_vectorizable && vectorizable;
 
     /// add to function calls to be checked ...
     loop_function_calls.push_back(ci);
@@ -84,7 +90,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
         // llvm::errs() << " callee:\n";
         // decl->dump();
 
-#ifdef LOOP_FUNC_DEBUG
+#ifdef LOOP_FUNCTION_DEBUG
     llvm::errs() << "FOUND LOOP CONSTRUCTOR " << decl->getQualifiedNameAsString()
                  << "\n    defined on line " << srcMgr.getSpellingLineNumber(decl->getBeginLoc())
                  << " in file " << srcMgr.getFilename(decl->getBeginLoc())
@@ -187,7 +193,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
 
     call_info_struct cinfo;
 
-#ifdef LOOP_FUNC_DEBUG
+#ifdef LOOP_FUNCTION_DEBUG
     llvm::errs() << "FOUND LOOP FUNC " << D->getQualifiedNameAsString() << "\n    defined on line "
                  << srcMgr.getSpellingLineNumber(D->getBeginLoc()) << " in file "
                  << srcMgr.getFilename(D->getBeginLoc()) << "\n    called from line "
@@ -301,7 +307,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
             cinfo.object.is_out_only = out_only;
             cinfo.object.is_const_function = const_function;
 
-#ifdef LOOP_FUNC_DEBUG
+#ifdef LOOP_FUNCTION_DEBUG
             llvm::errs() << "  Method object argument: " << get_stmt_str(E);
             if (E->isModifiableLvalue(*Context) == Expr::MLV_Valid)
                 llvm::errs() << " modifiable lvalue\n";

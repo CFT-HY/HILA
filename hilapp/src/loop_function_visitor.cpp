@@ -444,10 +444,11 @@ class loopFunctionVisitor : public GeneralVisitor,
         this_ci = &ci;
 
         Stmt *decl_body = nullptr;
+        FunctionDecl *fd = nullptr;
         if (ci.funcdecl != nullptr) {
 
             // this decl may not be the definition, find it ..
-            FunctionDecl *fd = ci.funcdecl->getDefinition();
+            fd = ci.funcdecl->getDefinition();
 
             // does it have a body?
             if (fd && fd->hasBody())
@@ -455,7 +456,7 @@ class loopFunctionVisitor : public GeneralVisitor,
 
         } else if (ci.ctordecl != nullptr) {
 
-            FunctionDecl *fd = ci.ctordecl->getDefinition();
+            fd = ci.ctordecl->getDefinition();
 
             // same stuff for constructor
             if (fd && fd->hasBody())
