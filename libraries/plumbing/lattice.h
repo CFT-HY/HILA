@@ -381,6 +381,15 @@ extern lattice_struct *lattice;
 extern std::vector<lattice_struct *> lattices;
 
 
+#if defined(CUDA) || defined(HIP)
+__device__ __host__ int loop_lattice_size(Direction d);
+#else
+inline int loop_lattice_size(Direction d) {
+    return lattice->size(d);
+}
+#endif
+
+
 #ifdef VANILLA
 #include "plumbing/backend_cpu/lattice.h"
 #elif defined(CUDA) || defined(HIP)
@@ -391,29 +400,42 @@ extern std::vector<lattice_struct *> lattices;
 
 
 //////////////////////////////////////////////////////////////////////
-/// SiteIndex operations
+/// SiteIndex type - indexes all sites on the lattice, so that the
+/// first dimension runs fastest.  Equivalent to CoordinateVector
 //////////////////////////////////////////////////////////////////////
 
-#pragma hila novector
-template <typename T>
-SiteIndex CoordinateVector_t<T>::site_index() const {
-    SiteIndex s = 0;
-    SiteIndex m = 1;
-    foralldir (d) {
-        s += m * (*this)[d];
-        m *= lattice->size(d);
-    }
-    return s;
-}
+class SiteIndex {
+  public:
+    uint64_t value;
 
-/// Construct from site index 
-// template <typename T>
-// CoordinateVector_t<T>::CoordinateVector_t<T>(SiteIndex s) {
-//         foralldir(d) {
-//             this->e(d) = s % lattice->size(d);
-//             s /= lattice->size(d);
-//         }
-//     }
+    // std incantation for field types
+    using base_type = uint64_t;
+    using argument_type = uint64_t;
+
+    SiteIndex() = default;
+    SiteIndex(const SiteIndex &s) = default;
+    SiteIndex(uint64_t v) : value(v) {}
+    ~SiteIndex() = default;
+
+    SiteIndex(const CoordinateVector &cv) {
+        value = 0;
+        uint64_t m = 1;
+        foralldir (d) {
+            value += m * cv[d];
+            m *= lattice->size(d);
+       }
+    }
+
+    CoordinateVector coordinates() const {
+        CoordinateVector res;
+        uint64_t v = value;
+        foralldir (d) {
+            res.e(d) = v % lattice->size(d);
+            v /= lattice->size(d);
+        }
+        return res;
+    }
+};
 
 
 

@@ -191,8 +191,7 @@ inline int pmod(const int a, const int b) {
 /// "running" index of site, so that lowest dimensions run fastest
 /////////////////////////////////////////////////////////////////////
 
-using SiteIndex = uint64_t;
-
+// class SiteIndex;
 
 //////////////////////////////////////////////////////////////////////
 /// CoordinateVector type
@@ -394,7 +393,8 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     /// Return site index of the coordinate vector -- assumes a valid lattice vector
 
-    inline SiteIndex site_index() const;
+    // #pragma hila loop_function
+    // inline SiteIndex index() const;
 
 };
 
