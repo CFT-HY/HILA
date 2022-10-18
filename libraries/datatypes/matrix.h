@@ -95,6 +95,15 @@ class Matrix_t {
             }
     }
 
+    /// Construct from a different type matrix
+    template <typename S, typename MT,
+              std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    Matrix_t(const Matrix_t<n, m, S, MT> &rhs) out_only {
+        for (int i = 0; i < n * m; i++) {
+            c[i] = rhs.c[i];
+        }
+    }
+
     /// construct from 0
     inline Matrix_t(const std::nullptr_t &z) {
         for (int i = 0; i < n * m; i++) {
