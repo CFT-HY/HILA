@@ -389,7 +389,7 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
         }
     }
 
-#else 
+#endif
 
     // set up the auxiliary site_factor array
     unsigned v = 1;
@@ -397,8 +397,6 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
         size_factor[d] = v;     // = size[d-1] * size[d-2] * ..
         v *= size[d];
     }
-
-#endif
 
 #ifdef SUBNODE_LAYOUT
 

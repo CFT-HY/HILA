@@ -66,11 +66,13 @@ class lattice_struct {
         CoordinateVector min, size; // node local coordinate ranges
         unsigned nn[NDIRS];         // nn-node of node down/up to dirs
         bool first_site_even;       // is location min even or odd?
+
 #ifdef EVEN_SITES_FIRST
         std::vector<CoordinateVector> coordinates;
-#else
-        unsigned size_factor[NDIM]; // components: 1, size[0], size[0]*size[1], ...
 #endif
+
+        Vector<NDIM,unsigned> size_factor; // components: 1, size[0], size[0]*size[1], ...
+
         void setup(node_info &ni, lattice_struct &lattice);
 
 #ifdef SUBNODE_LAYOUT
