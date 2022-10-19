@@ -1,5 +1,6 @@
 #ifndef FIELD_H
 #define FIELD_H
+
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -1997,43 +1998,113 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
     return get_elements(clist, bcast);
 }
 
+///
+/// Copy the local (mpi process) data to a "logical array"
+/// on gpu code, copies to host
+
 template <typename T>
 void Field<T>::copy_local_data(T *buffer) const {
-    unsigned *index_list;
-    index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
 
-    CoordinateVector c, cmin, cmax;
-    cmin = lattice->mynode.min;
-    cmax = cmin + lattice->mynode.size;
-    cmax.asArray() -= 1;
-    unsigned i = 0;
-    forcoordinaterange(c, cmin, cmax) {
-        index_list[i++] = lattice->site_index(c);
+    // copy to local variables to avoid lattice ptr
+    CoordinateVector nmin = lattice->mynode.min;
+    Vector<NDIM, unsigned> nmul = lattice->mynode.size_factor;
+
+#if defined(CUDA) || defined(HIP)
+    // d_malloc mallocs from device if needed
+    T *data = (T *)d_malloc(sizeof(T) * lattice->mynode.volume());
+#else
+    T *data = buffer;
+#endif
+
+#pragma hila novector direct_access(data)
+    onsites(ALL) {
+        Vector<NDIM, unsigned> nodec;
+        nodec = X.coordinates() - nmin;
+
+        unsigned i = nodec.dot(nmul);
+        data[i] = (*this)[X];
     }
 
-    this->fs->payload.gather_elements(buffer, index_list, lattice->mynode.volume(), lattice);
-    std::free(index_list);
+#if defined(CUDA) || defined(HIP)
+    gpuMemcpy(buffer, data, sizeof(T) * lattice->mynode.volume(), gpuMemcpyDeviceToHost);
+    d_free(data);
+#endif
 }
+
+// template <typename T>
+// void Field<T>::copy_local_data(T *buffer) const {
+
+//     unsigned *index_list;
+//     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
+
+//     CoordinateVector c, cmin, cmax;
+//     cmin = lattice->mynode.min;
+//     cmax = cmin + lattice->mynode.size;
+//     cmax.asArray() -= 1;
+//     unsigned i = 0;
+//     forcoordinaterange(c, cmin, cmax) {
+//         index_list[i++] = lattice->site_index(c);
+//     }
+
+//     this->fs->payload.gather_elements(buffer, index_list, lattice->mynode.volume(), lattice);
+//     std::free(index_list);
+// }
+
+///
+/// Set the local (mpi process) data from a "logical array"
+/// on gpu code, copies from host to device
 
 template <typename T>
 void Field<T>::set_local_data(T *buffer) {
-    unsigned *index_list;
-    index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
 
-    CoordinateVector c, cmin, cmax;
-    cmin = lattice->mynode.min;
-    cmax = cmin + lattice->mynode.size;
-    cmax.asArray() -= 1;
-    unsigned i = 0;
-    forcoordinaterange(c, cmin, cmax) {
-        index_list[i++] = lattice->site_index(c);
+    // copy to local variables to avoid lattice ptr
+    CoordinateVector nmin = lattice->mynode.min;
+    Vector<NDIM, unsigned> nmul = lattice->mynode.size_factor;
+
+#if defined(CUDA) || defined(HIP)
+    // d_malloc mallocs from device if needed
+    T *data = (T *)d_malloc(sizeof(T) * lattice->mynode.volume());
+    gpuMemcpy(data, buffer, sizeof(T) * lattice->mynode.volume(), gpuMemcpyHostToDevice);
+#else
+    T *data = buffer;
+#endif
+
+#pragma hila novector direct_access(data)
+    onsites(ALL) {
+        Vector<NDIM, unsigned> nodec;
+        nodec = X.coordinates() - nmin;
+
+        unsigned i = nodec.dot(nmul);
+        (*this)[X] = data[i];
     }
 
-    this->fs->payload.place_elements(buffer, index_list, lattice->mynode.volume(), lattice);
-    std::free(index_list);
+#if defined(CUDA) || defined(HIP)
+    d_free(data);
+#endif
 
     this->mark_changed(ALL);
 }
+
+
+// template <typename T>
+// void Field<T>::set_local_data(T *buffer) {
+//     unsigned *index_list;
+//     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
+
+//     CoordinateVector c, cmin, cmax;
+//     cmin = lattice->mynode.min;
+//     cmax = cmin + lattice->mynode.size;
+//     cmax.asArray() -= 1;
+//     unsigned i = 0;
+//     forcoordinaterange(c, cmin, cmax) {
+//         index_list[i++] = lattice->site_index(c);
+//     }
+
+//     this->fs->payload.place_elements(buffer, index_list, lattice->mynode.volume(), lattice);
+//     std::free(index_list);
+
+//     this->mark_changed(ALL);
+// }
 
 
 #ifdef HILAPP
