@@ -95,14 +95,14 @@ class Matrix_t {
             }
     }
 
-    /// Construct from a different type matrix
-    template <typename S, typename MT,
-              std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    Matrix_t(const Matrix_t<n, m, S, MT> &rhs) out_only {
-        for (int i = 0; i < n * m; i++) {
-            c[i] = rhs.c[i];
-        }
-    }
+    // /// Construct from a different type matrix
+    // template <typename S, typename MT,
+    //           std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    // Matrix_t(const Matrix_t<n, m, S, MT> &rhs) out_only {
+    //     for (int i = 0; i < n * m; i++) {
+    //         c[i] = rhs.c[i];
+    //     }
+    // }
 
     /// construct from 0
     inline Matrix_t(const std::nullptr_t &z) {
@@ -264,7 +264,7 @@ class Matrix_t {
 
     /// return diagonal of a square matrix as a vector
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    void set_diagonal(const Vector<n,S> & v) {
+    void set_diagonal(const Vector<n, S> &v) {
         static_assert(n == m, "set_diagonal() method defined only for square matrices");
         for (int i = 0; i < n; i++)
             (*this).e(i, i) = v.e(i);
