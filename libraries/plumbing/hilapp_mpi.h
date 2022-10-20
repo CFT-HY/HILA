@@ -38,6 +38,7 @@ typedef void *MPI_Comm;
 typedef void *MPI_Request;
 typedef int MPI_Status;
 typedef void *MPI_Comm;
+typedef int MPI_Fint;
 #define MPI_IN_PLACE nullptr
 #define MPI_COMM_WORLD nullptr
 #define MPI_SUCCESS 1
@@ -98,6 +99,8 @@ int MPI_Ibarrier(MPI_Comm comm, MPI_Request *request);
 int MPI_Cancel(MPI_Request *request);
 
 int MPI_Abort(MPI_Comm comm, int errorcode);
+
+MPI_Fint MPI_Comm_c2f(MPI_Comm comm);
 
 int MPI_Finalize();
 
