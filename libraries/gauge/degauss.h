@@ -2,7 +2,6 @@
 #define DEGAUSS_H_
 
 #include "hila.h"
-#include "vector_field.h"
 
 /////////////////////////////////////////////////////////////////////////////
 /// Remove Gauss' law violation from a gauge field + E-field - assuming no charged

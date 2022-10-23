@@ -13,11 +13,11 @@ public:
     GaugeField() = default;
 
     // Straightforward copy constructor seems to be necessary
-    GaugeField(const VectorField &other) = default;
+    GaugeField(const GaugeField &other) = default;
 
     // copy constructor - from fields which can be assigned
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
-    GaugeField(const VectorField<A> &other) {
+    GaugeField(const GaugeField<A> &other) {
         foralldir(d) fdir[d] = other[d];
     }
 
@@ -33,7 +33,7 @@ public:
     }
 
     // move constructor - steal the content
-    GaugeField(VectorField &&rhs) = default;
+    GaugeField(GaugeField &&rhs) = default;
 
     /////////////////////////////////////////////////
     /// Destructor

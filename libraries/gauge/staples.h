@@ -2,7 +2,6 @@
 #define STAPLESUM_H_
 
 #include "hila.h"
-#include "vector_field.h"
 
 /////////////////////////////////////////////////////////////////////////////
 /// Sum the staples of link matrices to direction dir
