@@ -17,7 +17,7 @@
 #include "plumbing/field.h"
 #include "plumbing/field_io.h"
 #include "plumbing/reduction.h"
-#include "plumbing/vectorreduction.h"
+#include "plumbing/reductionvector.h"
 
 //#if defined(CUDA) || defined(HIP)
 //#include "plumbing/backend_gpu/gpu_reduction.h"

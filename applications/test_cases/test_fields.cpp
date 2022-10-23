@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
     dfield[ALL] = 1;
 
 #if NDIM == 4
-    VectorReduction<double> arraysum(nd[e_t]);
+    ReductionVector<double> arraysum(nd[e_t]);
     arraysum = 0;
 
     onsites(ALL) {

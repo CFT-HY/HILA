@@ -1,5 +1,5 @@
-#ifndef VectorReduction_H_
-#define VectorReduction_H_
+#ifndef ReductionVector_H_
+#define ReductionVector_H_
 
 #include "hila.h"
 
@@ -9,7 +9,7 @@
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Special reduction class for arrays: declare a reduction array as
-/// VectorReduction<T> a(size);
+/// ReductionVector<T> a(size);
 ///
 /// This can be used within site loops as
 ///   onsites(ALL ) {
@@ -44,7 +44,7 @@
 ///
 
 template <typename T>
-class VectorReduction {
+class ReductionVector {
 
   private:
     std::vector<T> val;
@@ -136,12 +136,12 @@ class VectorReduction {
 
     /// Initialize to zero by default (? exception to other variables)
     /// allreduce = true by default
-    explicit VectorReduction() = default;
-    explicit VectorReduction(int size) : val(size, (T)0) {}
-    explicit VectorReduction(int size, const T &v) : val(size, v) {}
+    explicit ReductionVector() = default;
+    explicit ReductionVector(int size) : val(size, (T)0) {}
+    explicit ReductionVector(int size, const T &v) : val(size, v) {}
 
     /// Destructor cleans up communications if they are in progress
-    ~VectorReduction() {
+    ~ReductionVector() {
         if (comm_is_on) {
             MPI_Cancel(&request);
         }
@@ -157,7 +157,7 @@ class VectorReduction {
     }
 
     /// allreduce(bool) turns allreduce on or off.  By default on.
-    VectorReduction &allreduce(bool b = true) {
+    ReductionVector &allreduce(bool b = true) {
         is_allreduce_ = b;
         return *this;
     }
@@ -166,7 +166,7 @@ class VectorReduction {
     }
 
     /// nonblocking(bool) turns allreduce on or off.  By default on.
-    VectorReduction &nonblocking(bool b = true) {
+    ReductionVector &nonblocking(bool b = true) {
         is_nonblocking_ = b;
         return *this;
     }
@@ -175,7 +175,7 @@ class VectorReduction {
     }
 
     /// deferred(bool) turns deferred on or off.  By default turns on.
-    VectorReduction &delayed(bool b = true) {
+    ReductionVector &delayed(bool b = true) {
         is_delayed_ = b;
         return *this;
     }

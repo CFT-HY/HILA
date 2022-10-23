@@ -449,7 +449,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     if (is_assign && type != array_ref::REDUCTION) {
         reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
                    "Cannot assign to an array, std::vector or std::array here.  Use "
-                   "VectorReduction if reduction is needed.");
+                   "ReductionVector if reduction is needed.");
         return 1;
     }
 
@@ -480,7 +480,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
             if ((ar.type == array_ref::REDUCTION) ^ (type == array_ref::REDUCTION)) {
                 reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
-                           "VectorReduction cannot be used on RHS and LHS simultaneously.");
+                           "ReductionVector cannot be used on RHS and LHS simultaneously.");
                 parsing_state.skip_children = 1;
                 return 1;
             }
@@ -581,7 +581,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
         } else {
 
-            // Now it must be std::vector<> or VectorReduction.  Size is dynamic
+            // Now it must be std::vector<> or ReductionVector.  Size is dynamic
 
             ar.size = 0;
             ar.size_expr = ar.name + ".size()";
@@ -627,7 +627,7 @@ bool TopLevelVisitor::is_vector_reference(Stmt *s) {
             std::string type = OC->getArg(0)->getType().getCanonicalType().getAsString(PP);
 
             if (type.find("std::vector<") == 0 || type.find("std::array<") == 0 ||
-                type.find("VectorReduction") == 0)
+                type.find("ReductionVector") == 0)
                 return true;
         }
     }

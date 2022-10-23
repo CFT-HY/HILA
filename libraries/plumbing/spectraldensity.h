@@ -137,7 +137,7 @@ class k_binning {
         if (k_avg.size() != par.bins) 
             sd_calculate_bin_info();
 
-        VectorReduction<T> s(par.bins);
+        ReductionVector<T> s(par.bins);
         s.allreduce(false);
         s = 0;
 
@@ -163,7 +163,7 @@ class k_binning {
         if (k_avg.size() != par.bins) 
             sd_calculate_bin_info();
 
-        VectorReduction<double> s(par.bins);
+        ReductionVector<double> s(par.bins);
         s.allreduce(false);
         s = 0;
 
@@ -241,8 +241,8 @@ class k_binning {
         k_avg.resize(par.bins);
         bin_count.resize(par.bins);
 
-        VectorReduction<double> s(par.bins);
-        VectorReduction<long> count(par.bins);
+        ReductionVector<double> s(par.bins);
+        ReductionVector<long> count(par.bins);
         s = 0;
         count = 0;
 
