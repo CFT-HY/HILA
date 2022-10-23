@@ -1,44 +1,44 @@
-#ifndef VECTORFIELD_H_
-#define VECTORFIELD_H_
+#ifndef GAUGEFIELD_H_
+#define GAUGEFIELD_H_
 
 #include "hila.h"
 
 template <typename T>
-class VectorField {
+class GaugeField {
 private:
     std::array<Field<T>,NDIM> fdir;
 
 public:
     // Default constructor
-    VectorField() = default;
+    GaugeField() = default;
 
     // Straightforward copy constructor seems to be necessary
-    VectorField(const VectorField &other) = default;
+    GaugeField(const VectorField &other) = default;
 
     // copy constructor - from fields which can be assigned
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
-    VectorField(const VectorField<A> &other) {
+    GaugeField(const VectorField<A> &other) {
         foralldir(d) fdir[d] = other[d];
     }
 
     // constructor with compatible scalar
     template <typename A, std::enable_if_t<hila::is_assignable<T &, A>::value, int> = 0>
-    VectorField(const A &val) {
+    GaugeField(const A &val) {
         foralldir(d) fdir[d] = val;
     }
 
     // constructor from 0 - nullptr trick in use
-    VectorField(const std::nullptr_t z) {
+    GaugeField(const std::nullptr_t z) {
         foralldir(d) fdir[d] = 0;
     }
 
     // move constructor - steal the content
-    VectorField(VectorField &&rhs) = default;
+    GaugeField(VectorField &&rhs) = default;
 
     /////////////////////////////////////////////////
     /// Destructor
 
-    ~VectorField() = default;
+    ~GaugeField() = default;
 
     /////////////////////////////////////////////////
     /// Access components with []
@@ -54,13 +54,13 @@ public:
     //////////////////////////////////////////////////
     /// Assign from anything the field allows
     template <typename A>
-    VectorField & operator=(const A &val) {
+    GaugeField & operator=(const A &val) {
         foralldir(d) fdir[d] = val;
         return *this;
     }
 
     /// Separate 0 assignment
-    VectorField & operator=(std::nullptr_t np) {
+    GaugeField & operator=(std::nullptr_t np) {
         foralldir(d) fdir[d] = 0;
         return *this;
     }
@@ -71,9 +71,9 @@ public:
 
 
 ///////////////////////////////////////////////////////
-/// Alias gaugefield to VectorField
+/// Alias VectorField to GaugeField
 template <typename T>
-using GaugeField = VectorField<T>;
+using VectorField = GaugeField<T>;
 
 
 #endif

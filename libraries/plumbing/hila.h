@@ -13,6 +13,7 @@
 
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
+#include "plumbing/site_index.h"
 #include "plumbing/field.h"
 #include "plumbing/field_io.h"
 #include "plumbing/reduction.h"
@@ -22,7 +23,7 @@
 //#include "plumbing/backend_gpu/gpu_reduction.h"
 //#endif
 
-#include "plumbing/vector_field.h"
+#include "plumbing/gaugefield.h"
 #include "plumbing/fft.h"
 #include "plumbing/input.h"
 
