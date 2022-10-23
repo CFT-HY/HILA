@@ -25,7 +25,7 @@ void exp_and_derivative(sun &Q, sun &m0, sun &lambda, sun &eQ, int exp_steps) {
         qn = qn * Q;
         eQ = eQ + n * qn;
         // lambda = 1/(n+1)!*m1
-        // output0 << " * " << 1.0/n << "\n";
+        // hila::out0 << " * " << 1.0/n << "\n";
         lambda = lambda + m1 * n;
     }
 }

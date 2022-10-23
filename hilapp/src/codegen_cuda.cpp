@@ -98,13 +98,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     }
 
     // Set loop lattice
-    if (field_info_list.size() > 0) {
-        std::string fieldname = field_info_list.front().old_name;
-        code << "lattice_struct * loop_lattice = " << fieldname << ".fs->lattice;\n";
-    } else {
+    // if (field_info_list.size() > 0) {
+    //     std::string fieldname = field_info_list.front().old_name;
+    //     code << "const lattice_struct & loop_lattice = " << fieldname << ".fs->lattice;\n";
+    // } else {
         // now no fields in loop - default lattice
-        code << "lattice_struct * loop_lattice = lattice;\n";
-    }
+    code << "const lattice_struct & loop_lattice = lattice;\n";
 
 
     kernel << "\n\n//-------- start kernel " << kernel_name << "---------\n";
@@ -172,10 +171,10 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     // Add __launch_bounds__ directive here
     kernel << "inline __global__ void __launch_bounds__(N_threads) " << kernel_name
            << "( backend_lattice_struct d_lattice";
-    code << "backend_lattice_struct lattice_info = *(lattice->backend_lattice);\n";
-    code << "lattice_info.loop_begin = lattice->loop_begin(" << loop_info.parity_str
+    code << "backend_lattice_struct lattice_info = *(lattice.backend_lattice);\n";
+    code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str
          << ");\n";
-    code << "lattice_info.loop_end = lattice->loop_end(" << loop_info.parity_str
+    code << "lattice_info.loop_end = lattice.loop_end(" << loop_info.parity_str
          << ");\n";
 
     code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "

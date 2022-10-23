@@ -9,9 +9,10 @@
 #include "plumbing/has_unary_minus.h"
 
 // Forward declare the field struct
-template <typename T> class field_struct;
+template <typename T>
+class field_struct;
 
-#if defined(CUDA) || defined(HIP) 
+#if defined(CUDA) || defined(HIP)
 #define DEVICE __device__
 #else
 #define DEVICE
@@ -22,30 +23,28 @@ template <typename T> class field_struct;
 /// the field in a loop. It is communicated to CUDA kernels and other
 /// accelerator functions.
 ////////////////////////////////////////////////////////////////////////
-template <typename T> class field_storage {
+template <typename T>
+class field_storage {
   public:
     // The actual data content of the class: a pointer to the field and a
     // list of neighbour pointers.
     T *RESTRICT fieldbuf = nullptr;
     const unsigned *RESTRICT neighbours[NDIRS];
 
-    void allocate_field(lattice_struct *lattice);
+    void allocate_field(const lattice_struct &lattice);
     void free_field();
 
 #ifndef VECTORIZED
     // Get an element in a loop
     DEVICE inline auto get(const unsigned i, const unsigned field_alloc_size) const;
 
-    //template <typename A>
-    DEVICE inline void set(const T &value, const unsigned i,
-                           const unsigned field_alloc_size);
+    // template <typename A>
+    DEVICE inline void set(const T &value, const unsigned i, const unsigned field_alloc_size);
 
     // Get a single element outside loops
-    auto get_element(const unsigned i,
-                     const lattice_struct *RESTRICT lattice) const;
+    auto get_element(const unsigned i, const lattice_struct &lattice) const;
     template <typename A>
-    void set_element(A &value, const unsigned i,
-                     const lattice_struct *RESTRICT lattice);
+    void set_element(A &value, const unsigned i, const lattice_struct &lattice);
 
 #else
     inline T get_element(const unsigned i) const;
@@ -53,47 +52,49 @@ template <typename T> class field_storage {
     inline void set_element(const T &value, const unsigned i);
 
     // in vector code, write only 1 element to field at site index idx
-    template <typename vecT> inline void set_vector(const vecT &val, const unsigned idx);
+    template <typename vecT>
+    inline void set_vector(const vecT &val, const unsigned idx);
 
-    template <typename vecT> inline vecT get_vector(const unsigned idx) const;
+    template <typename vecT>
+    inline vecT get_vector(const unsigned idx) const;
 
     void gather_comm_vectors(
         T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node, Parity par,
         const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat,
         bool antiperiodic) const;
 
-    void place_recv_elements(const T *RESTRICT buffer, Direction d, Parity par,
-                             const vectorized_lattice_struct<hila::vector_info<T>::vector_size>
-                                 *RESTRICT vlat) const;
+    void place_recv_elements(
+        const T *RESTRICT buffer, Direction d, Parity par,
+        const vectorized_lattice_struct<hila::vector_info<T>::vector_size> *RESTRICT vlat) const;
 
 #endif
 
-    void gather_comm_elements(T *RESTRICT buffer,
-                              const lattice_struct::comm_node_struct &to_node, Parity par,
-                              const lattice_struct *RESTRICT lattice,
-                              bool antiperiodic) const;
-    void gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
-                         const lattice_struct *RESTRICT lattice) const;
+    void gather_comm_elements(T *RESTRICT buffer, const lattice_struct::comm_node_struct &to_node,
+                              Parity par, const lattice_struct &lattice, bool antiperiodic) const;
 
-    void gather_elements_negated(T *RESTRICT buffer, const unsigned *RESTRICT index_list,
-                                 int n, const lattice_struct *RESTRICT lattice) const;
+    void gather_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
+                         const lattice_struct &lattice) const;
+
+    void gather_elements_negated(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
+                                 const lattice_struct &lattice) const;
 
     /// Place boundary elements from neighbour
     void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                              const lattice_struct::comm_node_struct &from_node,
-                             const lattice_struct *RESTRICT lattice);
+                             const lattice_struct &lattice);
     void place_elements(T *RESTRICT buffer, const unsigned *RESTRICT index_list, int n,
-                        const lattice_struct *RESTRICT lattice);
+                        const lattice_struct &lattice);
     /// Place boundary elements from local lattice (used in vectorized version)
-    void set_local_boundary_elements(Direction dir, Parity par,
-                                     const lattice_struct *RESTRICT lattice,
+    void set_local_boundary_elements(Direction dir, Parity par, const lattice_struct &lattice,
                                      bool antiperiodic);
 
     // Allocate buffers for mpi communication
     T *allocate_mpi_buffer(unsigned n);
     void free_mpi_buffer(T *buffer);
 
-    T *RESTRICT get_buffer() { return static_cast<T *>(fieldbuf); }
+    T *RESTRICT get_buffer() {
+        return static_cast<T *>(fieldbuf);
+    }
 };
 
 /*

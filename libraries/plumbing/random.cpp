@@ -60,7 +60,7 @@ void hila::seed_random(uint64_t seed) {
             clock_gettime(CLOCK_MONOTONIC, &tp);
             seed = tp.tv_sec;
             seed = (seed << 30) ^ tp.tv_nsec;
-            output0 << "Random seed from time: " << seed << '\n';
+            hila::out0 << "Random seed from time: " << seed << '\n';
         }
         hila::broadcast(seed);
     }
@@ -71,7 +71,7 @@ void hila::seed_random(uint64_t seed) {
 
     seed = seed ^ (n ^ ((7*n) << 25));
 
-    output0 << "Using node random numbers, seed for node 0: " << seed << std::endl;
+    hila::out0 << "Using node random numbers, seed for node 0: " << seed << std::endl;
 
 // #if !defined(OPENMP)
     mersenne_twister_gen.seed( seed );
@@ -95,7 +95,7 @@ void hila::seed_random(uint64_t seed) {
     // This is usually used only for occasional benchmarking, where identical output
     // independent of the node number is desired
 
-    output0 << "*** SITERAND is in use!\n";
+    hila::out0 << "*** SITERAND is in use!\n";
 
     random_seed_arr =
         (unsigned short(*)[3])memalloc(3 * node.sites * sizeof(unsigned short));
@@ -171,7 +171,7 @@ double hila::gaussrand() {
 
 void hila::check_that_rng_is_initialized() {
     if (!rng_is_intialized) {
-        output0 << "Error: trying to use random numbers without initializing the generator\n";
+        hila::out0 << "Error: trying to use random numbers without initializing the generator\n";
         hila::terminate(1);
     }
 }

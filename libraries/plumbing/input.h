@@ -186,10 +186,10 @@
 ///
 /// quiet():    hila::input::quiet(bool be_silent=true)
 ///
-///         f.quiet();      // don't print read items to hila::output
+///         f.quiet();      // don't print read items to hila::out
 ///         f.quiet(false); // re-enable printing
 ///
-///    By default hila::input methods print everything read to hila::output
+///    By default hila::input methods print everything read to hila::out
 ///    for logging.  f.quiet(); disables this.
 ///
 ///------------------------------------------------------------------
@@ -318,7 +318,7 @@ class input {
             if (!(get_token(tok) && is_value(tok, val))) {
 
                 if (speaking)
-                    hila::output << "Error: expecting a value of type '" << type_id<T>()
+                    hila::out << "Error: expecting a value of type '" << type_id<T>()
                                  << "' after '" << label << "'\n";
 
                 no_error = false;
@@ -353,7 +353,7 @@ class input {
                         match_token(",") && get_token(tok) && is_value(tok, im) &&
                         match_token(")"));
             if (!no_error && speaking) {
-                hila::output << "Error: expecting complex value '(re,im)' after '"
+                hila::out << "Error: expecting complex value '(re,im)' after '"
                              << label << "'\n";
             }
 
@@ -380,7 +380,7 @@ class input {
             }
 
             if (!no_error && speaking) {
-                hila::output << "Error: expecting " << n << " comma-separated "
+                hila::out << "Error: expecting " << n << " comma-separated "
                              << type_id<T>() << "s after '" << label << "'\n";
             }
         }
@@ -418,14 +418,13 @@ class input {
             }
 
             if (!no_error && speaking) {
-                hila::output << "Error: expecting a comma-separated list of "
+                hila::out << "Error: expecting a comma-separated list of "
                              << type_id<T>() << "s after '" << label << "'\n";
             }
         }
 
         if (bcast) {
-            hila::broadcast(no_error);
-            hila::broadcast(val);
+            hila::broadcast2(val,no_error);
         }
 
         return no_error;

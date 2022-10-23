@@ -152,12 +152,12 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     onsites(ALL) 
          chi_avg += chi[X];
 
-    chi_avg /= lattice->volume();
+    chi_avg /= lattice.volume();
 
-    //output0 << "Measure_start " << n << "\n";
-    output0 << "MEAS " << trajectory << ' ' << n << ' ' << plaq << ' ' << e2 << ' '
+    //hila::out0 << "Measure_start " << n << "\n";
+    hila::out0 << "MEAS " << trajectory << ' ' << n << ' ' << plaq << ' ' << e2 << ' '
             << viol << ' ' << chi_avg << '\n';
-    //output0 << "Measure_end " << n << "\n";
+    //hila::out0 << "Measure_end " << n << "\n";
 }
 
 
@@ -192,7 +192,7 @@ void thermalize(GaugeField<group> &U, VectorField<Algebra<group>> &E, double g2T
         double e2 = 0;
         foralldir (d) { e2 += E[d].squarenorm(); }
 
-        output0 << "THERM: Plaq: " << pl << " E^2 " << e2 << " action "
+        hila::out0 << "THERM: Plaq: " << pl << " E^2 " << e2 << " action "
                 << e2 / 2 + 2 * pl << '\n';
 
         regroup_gauge(U);
@@ -260,7 +260,7 @@ int main(int argc, char **argv) {
 
     // setting up the lattice is convenient to do after reading
     // the parameter
-    lattice->setup(lsize);
+    lattice.setup(lsize);
 
     // We need random number here
     hila::seed_random(seed);

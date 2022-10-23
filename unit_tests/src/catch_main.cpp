@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
 
     hila::initialize(1, fake_argv);
     //lattice_size=128 defined in catch_main.hpp 
-    lattice->setup({lattice_size,lattice_size,lattice_size});
+    lattice.setup({lattice_size,lattice_size,lattice_size});
 
     hila::seed_random(0);
 

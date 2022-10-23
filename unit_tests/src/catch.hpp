@@ -16474,7 +16474,7 @@ ConsoleReporter::ConsoleReporter(ReporterConfig const& config)
          * a distributed execution, for distributed QuEST unit-testing.
          */    
         // int rank;
-        // MPI_Comm_rank(lattice->mpi_comm_lat, &rank);
+        // MPI_Comm_rank(lattice.mpi_comm_lat, &rank);
 
         // // put non-root streams in a fail state, so they silently discard output
         // if (rank != 0 && testRunStats.totals.testCases.allPassed())
@@ -16603,7 +16603,7 @@ void ConsoleReporter::testGroupEnded(TestGroupStats const& _testGroupStats) {
 }
 void ConsoleReporter::testRunEnded(TestRunStats const& _testRunStats) {
     int rank;
-    MPI_Comm_rank(lattice->mpi_comm_lat, &rank);
+    MPI_Comm_rank(lattice.mpi_comm_lat, &rank);
     if(rank != 0 && _testRunStats.totals.testCases.allPassed())
         return;
     printTotalsDivider(_testRunStats.totals);

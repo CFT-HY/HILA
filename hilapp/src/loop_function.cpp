@@ -547,7 +547,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
 
         bool is_X_index_type = (objtype.find("X_index_type") != std::string::npos);
 
-        if (is_X_index_type || objtype.find("lattice_struct *") != std::string::npos) {
+        if (is_X_index_type || objtype.find("lattice_struct") != std::string::npos) {
             // now it is a method of X
 
             // llvm::errs() << "CALL: " << get_stmt_str(Call) << '\n';
@@ -575,7 +575,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             if (target.kernelize)
                 l_lattice = "d_lattice.";
             else
-                l_lattice = "loop_lattice->";
+                l_lattice = "loop_lattice.";
 
             if (name == "coordinates") {
                 sfc.replace_expression = l_lattice + "coordinates(";
@@ -625,7 +625,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                                "Unknown method X.%0()", name.c_str());
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
-                               "Method 'lattice->.%0()' not allowed inside site loops",
+                               "Method 'lattice..%0()' not allowed inside site loops",
                                name.c_str());
                 }
             }

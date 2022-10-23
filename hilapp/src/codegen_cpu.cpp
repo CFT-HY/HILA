@@ -33,19 +33,21 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
     std::stringstream code;
 
     // Set loop lattice
-    if (field_info_list.size() > 0) {
-        std::string fieldname = field_info_list.front().new_name;
-        code << "const lattice_struct * RESTRICT loop_lattice = " << fieldname
-             << ".fs->lattice;\n";
-    } else {
-        // if there is no field in loop at all
-        code << "const lattice_struct * RESTRICT loop_lattice = lattice;\n";
-    }
+    // if (field_info_list.size() > 0) {
+    //     std::string fieldname = field_info_list.front().new_name;
+    //     code << "const lattice_struct * RESTRICT loop_lattice = " << fieldname
+    //          << ".fs->lattice;\n";
+    // } else {
+    //     // if there is no field in loop at all
+    //     code << "const lattice_struct * RESTRICT loop_lattice = lattice;\n";
+    // }
+
+    code << "const lattice_struct & loop_lattice = lattice;\n";
 
     // Set the start and end points
-    code << "const int loop_begin = loop_lattice->loop_begin(" << loop_info.parity_str
+    code << "const int loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str
          << ");\n";
-    code << "const int loop_end   = loop_lattice->loop_end(" << loop_info.parity_str
+    code << "const int loop_end   = loop_lattice.loop_end(" << loop_info.parity_str
          << ");\n";
 
     // are there
@@ -93,7 +95,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
          << " < loop_end; ++" << looping_var << ") {\n";
 
     if (generate_wait_loops) {
-        code << "if (((loop_lattice->wait_arr_[" << looping_var
+        code << "if (((loop_lattice.wait_arr_[" << looping_var
              << "] & _dir_mask_) != 0) == _wait_i_) {\n";
     }
 

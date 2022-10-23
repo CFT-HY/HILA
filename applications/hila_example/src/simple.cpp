@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     hila::initialize(argc, argv);
 
     // set up the lattice
-    lattice->setup({128, 128, 128});
+    lattice.setup({128, 128, 128});
 
     // Random numbers are used here - use time to seed
     hila::seed_random(0);
@@ -30,11 +30,11 @@ int main(int argc, char *argv[]) {
         }
         fsqr += f[X].squarenorm();
     }
-    output0 << "Average f^2 : " << fsqr / lattice->volume() << '\n';
-    output0 << "Average hopping term " << hopping / (NDIM*lattice->volume()) << '\n';
+    hila::out0 << "Average f^2 : " << fsqr / lattice.volume() << '\n';
+    hila::out0 << "Average hopping term " << hopping / (NDIM*lattice.volume()) << '\n';
 
     // auto sd = spectraldensity(f,64);
-    // for (int i=0; i<sd.size(); i++) output0 << i << ' ' << sd[i] << '\n';
+    // for (int i=0; i<sd.size(); i++) hila::out0 << i << ' ' << sd[i] << '\n';
     
     hila::finishrun();
     return 0;

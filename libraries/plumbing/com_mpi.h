@@ -109,7 +109,7 @@ T broadcast(T &var, int rank = 0) {
     assert(0 <= rank && rank < hila::number_of_nodes() && "Invalid sender rank in broadcast()");
 
     broadcast_timer.start();
-    MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice->mpi_comm_lat);
+    MPI_Bcast(&var, sizeof(T), MPI_BYTE, 0, lattice.mpi_comm_lat);
     broadcast_timer.stop();
     return var;
 }
@@ -133,13 +133,13 @@ void broadcast(std::vector<T> &list, int rank = 0) {
     broadcast_timer.start();
 
     int size = list.size();
-    MPI_Bcast(&size, sizeof(int), MPI_BYTE, rank, lattice->mpi_comm_lat);
+    MPI_Bcast(&size, sizeof(int), MPI_BYTE, rank, lattice.mpi_comm_lat);
     if (hila::myrank() != rank) {
         list.resize(size);
     }
 
     // move vectors directly to the storage
-    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank, lattice->mpi_comm_lat);
+    MPI_Bcast((void *)list.data(), sizeof(T) * size, MPI_BYTE, rank, lattice.mpi_comm_lat);
 
     broadcast_timer.stop();
 }
@@ -164,7 +164,7 @@ void broadcast_array(T *var, int n, int rank = 0) {
         return;
 
     broadcast_timer.start();
-    MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, rank, lattice->mpi_comm_lat);
+    MPI_Bcast((void *)var, sizeof(T) * n, MPI_BYTE, rank, lattice.mpi_comm_lat);
     broadcast_timer.stop();
 }
 
@@ -208,13 +208,13 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
     if (allreduce) {
         MPI_Allreduce((void *)value, (void *)recv_data,
                       send_count * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM,
-                      lattice->mpi_comm_lat);
+                      lattice.mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             value[i] = recv_data[i];
     } else {
         MPI_Reduce((void *)value, (void *)recv_data,
                    send_count * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM, 0,
-                   lattice->mpi_comm_lat);
+                   lattice.mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
                 value[i] = recv_data[i];
@@ -247,12 +247,12 @@ void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
     reduction_timer.start();
     if (allreduce) {
         MPI_Allreduce((void *)send_data, (void *)recv_data, send_count, dtype, MPI_PROD,
-                      lattice->mpi_comm_lat);
+                      lattice.mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             send_data[i] = recv_data[i];
     } else {
         MPI_Reduce((void *)send_data, (void *)recv_data, send_count, dtype, MPI_PROD, 0,
-                   lattice->mpi_comm_lat);
+                   lattice.mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
                 send_data[i] = recv_data[i];

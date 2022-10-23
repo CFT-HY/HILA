@@ -86,7 +86,7 @@ class Field {
     class field_struct {
       public:
         field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
-        lattice_struct *lattice;
+        int lattice_id;
 #ifdef VECTORIZED
         // get a direct ptr from here too, ease access
         vectorized_lattice_struct<hila::vector_info<T>::vector_size> *vector_lattice;
@@ -148,12 +148,12 @@ class Field {
 #ifndef VECTORIZED
         /// Getter for an individual elements in a loop
         inline auto get(const unsigned i) const {
-            return payload.get(i, lattice->field_alloc_size());
+            return payload.get(i, lattice.field_alloc_size());
         }
 
         template <typename A>
         inline void set(const A &value, const unsigned i) {
-            payload.set(value, i, lattice->field_alloc_size());
+            payload.set(value, i, lattice.field_alloc_size());
         }
 
         /// Getter for an element outside a loop. Used to manipulate the field directly
@@ -192,7 +192,7 @@ class Field {
             // note: -d in is_on_edge, because we're about to send stuff to that
             // Direction (gathering from Direction +d)
             if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
-                lattice->special_boundaries[-d].is_on_edge) {
+                lattice.special_boundaries[-d].is_on_edge) {
                 payload.gather_comm_elements(buffer, to_node, par, lattice, true);
             } else {
                 payload.gather_comm_elements(buffer, to_node, par, lattice, false);
@@ -206,7 +206,7 @@ class Field {
             bool antiperiodic = false;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
             if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
-                lattice->special_boundaries[-d].is_on_edge) {
+                lattice.special_boundaries[-d].is_on_edge) {
                 antiperiodic = true;
             }
 #endif
@@ -266,7 +266,7 @@ class Field {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
             bool antiperiodic = (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC &&
-                                 lattice->special_boundaries[dir].is_on_edge);
+                                 lattice.special_boundaries[dir].is_on_edge);
 #else
             bool antiperiodic = false;
 #endif
@@ -408,12 +408,12 @@ class Field {
 
     void allocate() {
         assert(fs == nullptr);
-        if (lattice == nullptr) {
-            output0 << "Can not allocate Field variables before lattice.setup()\n";
+        if (lattice.volume() == 0) {
+            hila::out0 << "Can not allocate Field variables before lattice.setup()\n";
             hila::terminate(0);
         }
         fs = (field_struct *)memalloc(sizeof(field_struct));
-        fs->lattice = lattice;
+        fs->lattice_id = lattice.id();
         fs->allocate_payload();
         fs->initialize_communication();
         mark_changed(ALL);   // guarantees communications will be done
@@ -422,9 +422,9 @@ class Field {
         for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
 #if !defined(CUDA) && !defined(HIP)
-            fs->neighbours[d] = lattice->neighb[d];
+            fs->neighbours[d] = lattice.neighb[d];
 #else
-            fs->payload.neighbours[d] = lattice->backend_lattice->d_neighb[d];
+            fs->payload.neighbours[d] = lattice.backend_lattice->d_neighb[d];
 #endif
         }
 
@@ -437,7 +437,7 @@ class Field {
 
 #ifdef VECTORIZED
         if constexpr (hila::is_vectorizable_type<T>::value) {
-            fs->vector_lattice = lattice->backend_lattice
+            fs->vector_lattice = lattice.backend_lattice
                                      ->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
         } else {
             fs->vector_lattice = nullptr;
@@ -556,15 +556,15 @@ class Field {
         fs->boundary_condition[dir] = bc;
         fs->boundary_condition[-dir] = bc;
 #if !defined(CUDA) && !defined(HIP)
-        fs->neighbours[dir] = lattice->get_neighbour_array(dir, bc);
-        fs->neighbours[-dir] = lattice->get_neighbour_array(-dir, bc);
+        fs->neighbours[dir] = lattice.get_neighbour_array(dir, bc);
+        fs->neighbours[-dir] = lattice.get_neighbour_array(-dir, bc);
 #else
         if (bc == BoundaryCondition::PERIODIC) {
-            fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb[dir];
-            fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb[-dir];
+            fs->payload.neighbours[dir] = lattice.backend_lattice->d_neighb[dir];
+            fs->payload.neighbours[-dir] = lattice.backend_lattice->d_neighb[-dir];
         } else {
-            fs->payload.neighbours[dir] = lattice->backend_lattice->d_neighb_special[dir];
-            fs->payload.neighbours[-dir] = lattice->backend_lattice->d_neighb_special[-dir];
+            fs->payload.neighbours[dir] = lattice.backend_lattice->d_neighb_special[dir];
+            fs->payload.neighbours[-dir] = lattice.backend_lattice->d_neighb_special[-dir];
         }
 #endif
 
@@ -583,11 +583,11 @@ class Field {
 
     void print_boundary_condition() {
         check_alloc();
-        output0 << " ( ";
+        hila::out0 << " ( ";
         for (int dir = 0; dir < NDIRS; dir++) {
-            output0 << (int)fs->boundary_condition[dir] << " ";
+            hila::out0 << (int)fs->boundary_condition[dir] << " ";
         }
-        output0 << ")\n";
+        hila::out0 << ")\n";
     }
 
     template <typename A>
@@ -805,10 +805,10 @@ class Field {
 
     template <typename A, std::enable_if_t<std::is_assignable<T &, A>::value, int> = 0>
     void set_element(const CoordinateVector &coord, const A &value) {
-        if (lattice->is_on_mynode(coord)) {
+        if (lattice.is_on_mynode(coord)) {
             T element;
             element = value;
-            set_value_at(element, lattice->site_index(coord));
+            set_value_at(element, lattice.site_index(coord));
         }
         mark_changed(coord.parity());
     }
@@ -821,14 +821,14 @@ class Field {
     const T get_element(const CoordinateVector &coord) const {
         T element;
 
-        int owner = lattice->node_rank(coord);
+        int owner = lattice.node_rank(coord);
 
         if (hila::myrank() == owner) {
-            element = get_value_at(lattice->site_index(coord));
+            element = get_value_at(lattice.site_index(coord));
         }
 
 #if defined(USE_MPI)
-        MPI_Bcast(&element, sizeof(T), MPI_BYTE, owner, lattice->mpi_comm_lat);
+        MPI_Bcast(&element, sizeof(T), MPI_BYTE, owner, lattice.mpi_comm_lat);
 #endif
 
         return element;
@@ -862,8 +862,8 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_plus<T, A>>::value, int> = 0>
     inline void compound_add_element(const CoordinateVector &coord, const A &av) {
-        if (lattice->is_on_mynode(coord)) {
-            auto i = lattice->site_index(coord);
+        if (lattice.is_on_mynode(coord)) {
+            auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
             v += av;
             set_value_at(v, i);
@@ -874,8 +874,8 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_minus<T, A>>::value, int> = 0>
     inline void compound_sub_element(const CoordinateVector &coord, const A &av) {
-        if (lattice->is_on_mynode(coord)) {
-            auto i = lattice->site_index(coord);
+        if (lattice.is_on_mynode(coord)) {
+            auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
             v -= av;
             set_value_at(v, i);
@@ -886,8 +886,8 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_mul<T, A>>::value, int> = 0>
     inline void compound_mul_element(const CoordinateVector &coord, const A &av) {
-        if (lattice->is_on_mynode(coord)) {
-            auto i = lattice->site_index(coord);
+        if (lattice.is_on_mynode(coord)) {
+            auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
             v *= av;
             set_value_at(v, i);
@@ -898,8 +898,8 @@ class Field {
     template <typename A,
               std::enable_if_t<std::is_assignable<T &, hila::type_div<T, A>>::value, int> = 0>
     inline void compound_div_element(const CoordinateVector &coord, const A &av) {
-        if (lattice->is_on_mynode(coord)) {
-            auto i = lattice->site_index(coord);
+        if (lattice.is_on_mynode(coord)) {
+            auto i = lattice.site_index(coord);
             auto v = get_value_at(i);
             v /= av;
             set_value_at(v, i);
@@ -1475,14 +1475,14 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
     int tag = get_next_msg_tag();
 
-    lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    lattice_struct::nn_comminfo_struct &ci = lattice.nn_comminfo[d];
     lattice_struct::comm_node_struct &from_node = ci.from_node;
     lattice_struct::comm_node_struct &to_node = ci.to_node;
 
     // check if this is done - either gathered or no comm to be done in the 1st place
 
     if (is_gathered(d, p)) {
-        lattice->n_gather_avoided++;
+        lattice.n_gather_avoided++;
         return 0; // nothing to wait for
     }
 
@@ -1497,7 +1497,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
     // if this parity or ALL-type gather is going on nothing to be done
     if (!gather_not_done(d, p) || !gather_not_done(d, ALL)) {
-        lattice->n_gather_avoided++;
+        lattice.n_gather_avoided++;
         return get_dir_mask(d); // nothing to do, but still need to wait
     }
 
@@ -1507,7 +1507,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     if (p == ALL) {
         if (!gather_not_done(d, EVEN) && !gather_not_done(d, ODD)) {
             // even and odd are going on or ready, nothing to be done
-            lattice->n_gather_avoided++;
+            lattice.n_gather_avoided++;
             return get_dir_mask(d);
         }
         if (!gather_not_done(d, EVEN))
@@ -1542,12 +1542,12 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         size_t n = from_node.n_sites(par) * size / size_type;
 
         if (n >= (1ULL << 31)) {
-            hila::output << "Too large MPI message!  Size " << n << '\n';
+            hila::out << "Too large MPI message!  Size " << n << '\n';
             hila::terminate(1);
         }
 
         // c++ version does not return errors
-        MPI_Irecv(receive_buffer, (int)n, mpi_type, from_node.rank, tag, lattice->mpi_comm_lat,
+        MPI_Irecv(receive_buffer, (int)n, mpi_type, from_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->receive_request[par_i][d]);
 
         post_receive_timer.stop();
@@ -1570,7 +1570,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         gpuStreamSynchronize(0);
 #endif
 
-        MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice->mpi_comm_lat,
+        MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->send_request[par_i][d]);
         start_send_timer.stop();
     }
@@ -1596,7 +1596,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 template <typename T>
 void Field<T>::wait_gather(Direction d, Parity p) const {
 
-    lattice_struct::nn_comminfo_struct &ci = lattice->nn_comminfo[d];
+    lattice_struct::nn_comminfo_struct &ci = lattice.nn_comminfo[d];
     lattice_struct::comm_node_struct &from_node = ci.from_node;
     lattice_struct::comm_node_struct &to_node = ci.to_node;
 
@@ -1609,7 +1609,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
         return;
 
     // if (!is_gather_started(d,p)) {
-    //   output0 << "Wait gather error - wait_gather without corresponding
+    //   hila::out0 << "Wait gather error - wait_gather without corresponding
     //   start_gather\n"; exit(1);
     // }
 
@@ -1680,7 +1680,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
         mark_gathered(d, par);
 
         // Keep count of communications
-        lattice->n_gather_done += 1;
+        lattice.n_gather_done += 1;
 
         par = opp_parity(par); // flip if 2 loops
     }
@@ -1711,12 +1711,12 @@ void Field<T>::drop_comms(Direction d, Parity p) const {
 
 template <typename T>
 void Field<T>::cancel_comm(Direction d, Parity p) const {
-    if (lattice->nn_comminfo[d].from_node.rank != hila::myrank()) {
+    if (lattice.nn_comminfo[d].from_node.rank != hila::myrank()) {
         cancel_receive_timer.start();
         MPI_Cancel(&fs->receive_request[(int)p - 1][d]);
         cancel_receive_timer.stop();
     }
-    if (lattice->nn_comminfo[d].to_node.rank != hila::myrank()) {
+    if (lattice.nn_comminfo[d].to_node.rank != hila::myrank()) {
         cancel_send_timer.start();
         MPI_Cancel(&fs->send_request[(int)p - 1][d]);
         cancel_send_timer.stop();
@@ -1763,7 +1763,7 @@ void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
                                              int root) const {
 
     std::vector<unsigned> index_list;
-    std::vector<int> sites_on_rank(lattice->n_nodes());
+    std::vector<int> sites_on_rank(lattice.n_nodes());
     std::vector<int> reshuffle_list(coord_list.size());
 
     std::fill(sites_on_rank.begin(), sites_on_rank.end(), 0);
@@ -1772,9 +1772,9 @@ void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
 
     int i = 0;
     for (const CoordinateVector &c : coord_list) {
-        int rank = lattice->node_rank(c);
+        int rank = lattice.node_rank(c);
         if (hila::myrank() == rank) {
-            index_list.push_back(lattice->site_index(c));
+            index_list.push_back(lattice.site_index(c));
         }
 
         if (sites_on_rank[rank] == 0 && rank != root)
@@ -1788,7 +1788,7 @@ void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
                             lattice);
     if (hila::myrank() != root && sites_on_rank[hila::myrank()] > 0) {
         MPI_Send((char *)send_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T), MPI_BYTE,
-                 root, hila::myrank(), lattice->mpi_comm_lat);
+                 root, hila::myrank(), lattice.mpi_comm_lat);
     }
     if (hila::myrank() == root) {
 
@@ -1797,7 +1797,7 @@ void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
         std::vector<T> pb(coord_list.size() - sites_on_rank[root]);
         b = pb.data();
         // vector for node ptrs -- point to stuff from nodes
-        std::vector<T *> nptr(lattice->n_nodes());
+        std::vector<T *> nptr(lattice.n_nodes());
 
         std::vector<MPI_Request> mpi_req(nranks);
         int nreqs = 0;
@@ -1806,7 +1806,7 @@ void Field<T>::field_struct::gather_elements(T *RESTRICT buffer,
                 if (n != root) {
                     MPI_Status status;
                     MPI_Irecv(b, (int)(sites_on_rank[n] * sizeof(T)), MPI_BYTE, n, n,
-                              lattice->mpi_comm_lat, &mpi_req[nreqs++]);
+                              lattice.mpi_comm_lat, &mpi_req[nreqs++]);
 
                     nptr[n] = b;
                     b += sites_on_rank[n];
@@ -1840,16 +1840,16 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
                                               int root) {
 
     std::vector<unsigned> index_list;
-    std::vector<int> sites_on_rank(lattice->n_nodes());
+    std::vector<int> sites_on_rank(lattice.n_nodes());
     std::vector<int> reshuffle_list(coord_list.size());
     std::fill(sites_on_rank.begin(), sites_on_rank.end(), 0);
 
     int nranks = 0;
     int i = 0;
     for (CoordinateVector c : coord_list) {
-        int rank = lattice->node_rank(c);
+        int rank = lattice.node_rank(c);
         if (hila::myrank() == rank) {
-            index_list.push_back(lattice->site_index(c));
+            index_list.push_back(lattice.site_index(c));
         }
 
         if (sites_on_rank[rank] == 0 && rank != root)
@@ -1866,7 +1866,7 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
         MPI_Status status;
 
         MPI_Recv((char *)recv_buffer.data(), sites_on_rank[hila::myrank()] * sizeof(T), MPI_BYTE,
-                 root, hila::myrank(), lattice->mpi_comm_lat, &status);
+                 root, hila::myrank(), lattice.mpi_comm_lat, &status);
 
         payload.place_elements((T *)recv_buffer.data(), index_list.data(), recv_buffer.size(),
                                lattice);
@@ -1875,11 +1875,11 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
         // reordering buffers
         std::vector<T> pb(coord_list.size());
         // vector for node counters -- point to stuff from nodes
-        std::vector<unsigned> nloc(lattice->n_nodes());
-        std::vector<unsigned> ncount(lattice->n_nodes());
+        std::vector<unsigned> nloc(lattice.n_nodes());
+        std::vector<unsigned> ncount(lattice.n_nodes());
         nloc[0] = ncount[0] = 0;
 
-        for (int n = 1; n < lattice->n_nodes(); n++) {
+        for (int n = 1; n < lattice.n_nodes(); n++) {
             nloc[n] = nloc[n - 1] + sites_on_rank[n - 1];
             ncount[n] = 0;
         }
@@ -1895,7 +1895,7 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
             if (sites_on_rank[n] > 0) {
                 if (n != root) {
                     MPI_Isend(pb.data() + nloc[n], (int)(sites_on_rank[n] * sizeof(T)), MPI_BYTE, n,
-                              n, lattice->mpi_comm_lat, &mpi_req[nreqs++]);
+                              n, lattice.mpi_comm_lat, &mpi_req[nreqs++]);
                 }
             }
         }
@@ -1919,7 +1919,7 @@ void Field<T>::field_struct::gather_elements(T *buffer,
                                              int root) const {
     std::vector<unsigned> index_list;
     for (CoordinateVector c : coord_list) {
-        index_list.push_back(lattice->site_index(c));
+        index_list.push_back(lattice.site_index(c));
     }
 
     payload.gather_elements(buffer, index_list.data(), index_list.size(), lattice);
@@ -1932,7 +1932,7 @@ void Field<T>::field_struct::scatter_elements(T *buffer,
                                               int root) {
     std::vector<unsigned> index_list;
     for (CoordinateVector c : coord_list) {
-        index_list.push_back(lattice->site_index(c));
+        index_list.push_back(lattice.site_index(c));
     }
 
     payload.place_elements(buffer, index_list.data(), index_list.size(), lattice);
@@ -1951,8 +1951,8 @@ void Field<T>::set_elements(const std::vector<T> &elements,
     std::vector<unsigned> my_elements;
     for (int i = 0; i < coord_list.size(); i++) {
         CoordinateVector c = coord_list[i];
-        if (lattice->is_on_mynode(c)) {
-            my_indexes.push_back(lattice->site_index(c));
+        if (lattice.is_on_mynode(c)) {
+            my_indexes.push_back(lattice.site_index(c));
             my_elements.push_back(elements[i]);
         }
     }
@@ -1986,7 +1986,7 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
     size_t vol = 1;
     foralldir (d) {
         vol *= cmax[d] - cmin[d] + 1;
-        assert(cmax[d] >= cmin[d] && cmin[d] >= 0 && cmax[d] < lattice->size(d));
+        assert(cmax[d] >= cmin[d] && cmin[d] >= 0 && cmax[d] < lattice.size(d));
     }
     std::vector<CoordinateVector> clist(vol);
     CoordinateVector c;
@@ -2006,12 +2006,12 @@ template <typename T>
 void Field<T>::copy_local_data(T *buffer) const {
 
     // copy to local variables to avoid lattice ptr
-    CoordinateVector nmin = lattice->mynode.min;
-    Vector<NDIM, unsigned> nmul = lattice->mynode.size_factor;
+    CoordinateVector nmin = lattice.mynode.min;
+    Vector<NDIM, unsigned> nmul = lattice.mynode.size_factor;
 
 #if defined(CUDA) || defined(HIP)
     // d_malloc mallocs from device if needed
-    T *data = (T *)d_malloc(sizeof(T) * lattice->mynode.volume());
+    T *data = (T *)d_malloc(sizeof(T) * lattice.mynode.volume());
 #else
     T *data = buffer;
 #endif
@@ -2026,7 +2026,7 @@ void Field<T>::copy_local_data(T *buffer) const {
     }
 
 #if defined(CUDA) || defined(HIP)
-    gpuMemcpy(buffer, data, sizeof(T) * lattice->mynode.volume(), gpuMemcpyDeviceToHost);
+    gpuMemcpy(buffer, data, sizeof(T) * lattice.mynode.volume(), gpuMemcpyDeviceToHost);
     d_free(data);
 #endif
 }
@@ -2035,18 +2035,18 @@ void Field<T>::copy_local_data(T *buffer) const {
 // void Field<T>::copy_local_data(T *buffer) const {
 
 //     unsigned *index_list;
-//     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
+//     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice.mynode.volume());
 
 //     CoordinateVector c, cmin, cmax;
-//     cmin = lattice->mynode.min;
-//     cmax = cmin + lattice->mynode.size;
+//     cmin = lattice.mynode.min;
+//     cmax = cmin + lattice.mynode.size;
 //     cmax.asArray() -= 1;
 //     unsigned i = 0;
 //     forcoordinaterange(c, cmin, cmax) {
-//         index_list[i++] = lattice->site_index(c);
+//         index_list[i++] = lattice.site_index(c);
 //     }
 
-//     this->fs->payload.gather_elements(buffer, index_list, lattice->mynode.volume(), lattice);
+//     this->fs->payload.gather_elements(buffer, index_list, lattice.mynode.volume(), lattice);
 //     std::free(index_list);
 // }
 
@@ -2058,13 +2058,13 @@ template <typename T>
 void Field<T>::set_local_data(T *buffer) {
 
     // copy to local variables to avoid lattice ptr
-    CoordinateVector nmin = lattice->mynode.min;
-    Vector<NDIM, unsigned> nmul = lattice->mynode.size_factor;
+    CoordinateVector nmin = lattice.mynode.min;
+    Vector<NDIM, unsigned> nmul = lattice.mynode.size_factor;
 
 #if defined(CUDA) || defined(HIP)
     // d_malloc mallocs from device if needed
-    T *data = (T *)d_malloc(sizeof(T) * lattice->mynode.volume());
-    gpuMemcpy(data, buffer, sizeof(T) * lattice->mynode.volume(), gpuMemcpyHostToDevice);
+    T *data = (T *)d_malloc(sizeof(T) * lattice.mynode.volume());
+    gpuMemcpy(data, buffer, sizeof(T) * lattice.mynode.volume(), gpuMemcpyHostToDevice);
 #else
     T *data = buffer;
 #endif
@@ -2089,18 +2089,18 @@ void Field<T>::set_local_data(T *buffer) {
 // template <typename T>
 // void Field<T>::set_local_data(T *buffer) {
 //     unsigned *index_list;
-//     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice->mynode.volume());
+//     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice.mynode.volume());
 
 //     CoordinateVector c, cmin, cmax;
-//     cmin = lattice->mynode.min;
-//     cmax = cmin + lattice->mynode.size;
+//     cmin = lattice.mynode.min;
+//     cmax = cmin + lattice.mynode.size;
 //     cmax.asArray() -= 1;
 //     unsigned i = 0;
 //     forcoordinaterange(c, cmin, cmax) {
-//         index_list[i++] = lattice->site_index(c);
+//         index_list[i++] = lattice.site_index(c);
 //     }
 
-//     this->fs->payload.place_elements(buffer, index_list, lattice->mynode.volume(), lattice);
+//     this->fs->payload.place_elements(buffer, index_list, lattice.mynode.volume(), lattice);
 //     std::free(index_list);
 
 //     this->mark_changed(ALL);

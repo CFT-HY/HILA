@@ -75,7 +75,7 @@ auto degauss_step(const GaugeField<group> &U, VectorField<Algebra<group>> &E) {
     // we return not the last violation, thus the real violation
     // should be smaller than this
     // Return violation per site
-    return violation.squarenorm() / lattice->volume();
+    return violation.squarenorm() / lattice.volume();
 }
 
 
@@ -103,7 +103,7 @@ int degauss(const GaugeField<group> &U, VectorField<Algebra<group>> &E,
     } while (viol > quality && loop <= loop_max);
 
     if (loop > loop_max && hila::myrank() == 0) {
-        hila::output << " ********** LOOP_MAX " << loop_max
+        hila::out << " ********** LOOP_MAX " << loop_max
                      << " reached in degauss, violation/site " << viol << '\n';
     }
 

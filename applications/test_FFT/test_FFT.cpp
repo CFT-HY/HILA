@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 
     par.close();
 
-    lattice->setup({nx, ny, nz});
+    lattice.setup({nx, ny, nz});
 
     hila::seed_random(seed);
 

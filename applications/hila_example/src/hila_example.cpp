@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 
     // setting up the lattice is convenient to do after reading
     // the parameter
-    lattice->setup(lsize);
+    lattice.setup(lsize);
 
     // We need random number here
     hila::seed_random(seed);
@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     // set g to gaussian rnd matrix
     onsites(ALL) g[X].gaussian_random();
 
-    output0 << "Smearing a Gaussian random "
+    hila::out0 << "Smearing a Gaussian random "
             << Mtype::rows() << "x" << Mtype::columns() 
             << " complex matrix field " << loops << " times\n";
 
@@ -69,11 +69,11 @@ int main(int argc, char **argv) {
         smear_timer.stop();
     }
 
-    output0 << "field g at (0,0,0) after smearing:\n";
-    output0 << g[{0,0,0}] << '\n';
+    hila::out0 << "field g at (0,0,0) after smearing:\n";
+    hila::out0 << g[{0,0,0}] << '\n';
 
 
-    output0 << "Calculating exp(g) using Taylor expansin to order "
+    hila::out0 << "Calculating exp(g) using Taylor expansin to order "
             << taylor_order << '\n';
 
     // another way to time, using gettime
@@ -91,17 +91,17 @@ int main(int argc, char **argv) {
         }
     }
 
-    output0 << "Taylor expansion, time " << hila::gettime() - t << " seconds\n";
+    hila::out0 << "Taylor expansion, time " << hila::gettime() - t << " seconds\n";
 
-    output0 << "Result at (0,0,0):\n";
-    output0 << f[{0,0,0}] << '\n';
+    hila::out0 << "Result at (0,0,0):\n";
+    hila::out0 << f[{0,0,0}] << '\n';
 
 
     t = hila::gettime();
 
     FFT_field(f, g);
 
-    output0 << "FFT time " << hila::gettime() - t << '\n';
+    hila::out0 << "FFT time " << hila::gettime() - t << '\n';
 
 
     hila::finishrun();

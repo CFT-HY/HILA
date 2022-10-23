@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 
     // Basic setup
     hila::initialize(argc, argv);
-    lattice->setup(nd);
+    lattice.setup(nd);
     // Define a field
     Field<double> spin;
 
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
         // Measure magnetisation
         double M = 0;
         onsites(ALL) { M += cos(spin[X]); }
-        output0 << "Magnetisation " << M / VOLUME << "\n";
+        hila::out0 << "Magnetisation " << M / VOLUME << "\n";
     }
 
     hila::finishrun();

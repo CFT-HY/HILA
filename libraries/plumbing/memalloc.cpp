@@ -15,12 +15,12 @@ void *memalloc(std::size_t size, const char *filename, const unsigned line) {
 
     if ((p = std::malloc(size)) == nullptr) {
         if (filename != nullptr) {
-            hila::output << " *** memalloc failure in file " << filename << " at line "
+            hila::out << " *** memalloc failure in file " << filename << " at line "
                          << line << '\n';
         } else {
-            hila::output << " *** memalloc failure\n";
+            hila::out << " *** memalloc failure\n";
         }
-        hila::output << "     requested allocation size " << size << " bytes\n"
+        hila::out << "     requested allocation size " << size << " bytes\n"
                      << " *********************************" << std::endl;
 
         exit(1);
@@ -36,12 +36,12 @@ void *memalloc(std::size_t size, const char *filename, const unsigned line) {
     int e = posix_memalign(&p, (std::size_t)32, size);
     if (e != 0) {
         if (filename != nullptr) {
-            hila::output << " *** memalloc failure in file " << filename << " at line "
+            hila::out << " *** memalloc failure in file " << filename << " at line "
                          << line << '\n';
         } else {
-            hila::output << " *** memalloc failure\n";
+            hila::out << " *** memalloc failure\n";
         }
-        hila::output << "     requested allocation size " << size << " bytes\n"
+        hila::out << "     requested allocation size " << size << " bytes\n"
                      << "     posix_memalign() error code " << e
                      << " *********************************" << std::endl;
         exit(1);

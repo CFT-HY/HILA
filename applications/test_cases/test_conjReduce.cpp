@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
     dsum = 0;
     onsites(ALL) { dsum += matrices[X].trace(); }
 
-    assert(((int)dsum) == lattice->volume() * 2 && "Matrix conjugate multiplication");
+    assert(((int)dsum) == lattice.volume() * 2 && "Matrix conjugate multiplication");
 
     hila::finishrun();
 }

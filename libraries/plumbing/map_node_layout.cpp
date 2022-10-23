@@ -22,9 +22,9 @@
 ////////////////////////////////////////////////////////////////////
 
 void lattice_struct::allnodes::create_remap() {
-    output0 << "Node remapping: NODE_LAYOUT_TRIVIAL (no reordering)\n";
-    lattice->nodes.map_array = nullptr;
-    lattice->nodes.map_inverse = nullptr;
+    hila::out0 << "Node remapping: NODE_LAYOUT_TRIVIAL (no reordering)\n";
+    lattice.nodes.map_array = nullptr;
+    lattice.nodes.map_inverse = nullptr;
 }
 
 unsigned lattice_struct::allnodes::remap(unsigned i) {
@@ -53,12 +53,12 @@ unsigned lattice_struct::allnodes::inverse_remap(unsigned i) {
 
 void lattice_struct::allnodes::create_remap() {
 
-    output0 << "Node remapping: NODE_LAYOUT_BLOCK with blocksize " << NODE_LAYOUT_BLOCK
+    hila::out0 << "Node remapping: NODE_LAYOUT_BLOCK with blocksize " << NODE_LAYOUT_BLOCK
             << '\n';
 
     // let us allow only factors of 5,3 and 2 in NODE_LAYOUT_BLOCK
     CoordinateVector blocksize;
-    CoordinateVector blockdivs = lattice->nodes.n_divisions;
+    CoordinateVector blockdivs = lattice.nodes.n_divisions;
     int nblocks = NODE_LAYOUT_BLOCK;
     blocksize.fill(1);
 
@@ -81,17 +81,17 @@ void lattice_struct::allnodes::create_remap() {
         }
     }
 
-    output0 << "Node block size " << blocksize << "  block division " << blockdivs << '\n';
+    hila::out0 << "Node block size " << blocksize << "  block division " << blockdivs << '\n';
 
     // now blocksize tells us how many nodes to each direction in block
     // these are taken in order
 
-    lattice->nodes.map_array =
-        (unsigned *)memalloc(lattice->nodes.number * sizeof(unsigned));
+    lattice.nodes.map_array =
+        (unsigned *)memalloc(lattice.nodes.number * sizeof(unsigned));
     // we don't need the inverse at the moment?
-    // lattice->nodes.map_inverse = (unsigned *)memalloc(lattice->nodes.number *
+    // lattice.nodes.map_inverse = (unsigned *)memalloc(lattice.nodes.number *
     // sizeof(unsigned));
-    lattice->nodes.map_inverse = nullptr;
+    lattice.nodes.map_inverse = nullptr;
 
     nblocks = 1;
     foralldir (d)
@@ -99,14 +99,14 @@ void lattice_struct::allnodes::create_remap() {
 
     // Loop over the "logical" node indices (i.e.)
 
-    for (int i = 0; i < lattice->nodes.number; i++) {
+    for (int i = 0; i < lattice.nodes.number; i++) {
         // lcoord is the coordinate of the logical node,
         // bcoord the block coord and icoord coord inside block
         CoordinateVector lcoord, bcoord, icoord;
         int idiv = i;
         foralldir (d) {
-            lcoord[d] = idiv % lattice->nodes.n_divisions[d];
-            idiv /= lattice->nodes.n_divisions[d];
+            lcoord[d] = idiv % lattice.nodes.n_divisions[d];
+            idiv /= lattice.nodes.n_divisions[d];
 
             bcoord[d] = lcoord[d] / blocksize[d];
             icoord[d] = lcoord[d] % blocksize[d];
@@ -125,22 +125,22 @@ void lattice_struct::allnodes::create_remap() {
             bm *= blockdivs[d];
         }
 
-        // output0 << lcoord << bcoord << icoord << '\n';
-        // output0 << "ii " << ii << " bi " << bi << '\n';
+        // hila::out0 << lcoord << bcoord << icoord << '\n';
+        // hila::out0 << "ii " << ii << " bi " << bi << '\n';
 
-        lattice->nodes.map_array[i] = bi * nblocks + ii;
+        lattice.nodes.map_array[i] = bi * nblocks + ii;
     }
 }
 
 /// And the call interface for remapping
 
 unsigned lattice_struct::allnodes::remap(unsigned i) {
-    return lattice->nodes.map_array[i];
+    return lattice.nodes.map_array[i];
 }
 
 unsigned lattice_struct::allnodes::inverse_remap(unsigned idx) {
-    for (int i = 0; i < lattice->nodes.number; i++)
-        if (lattice->nodes.map_array[i] == idx)
+    for (int i = 0; i < lattice.nodes.number; i++)
+        if (lattice.nodes.map_array[i] == idx)
             return i;
 
     return 1 << 30; // big number, crash

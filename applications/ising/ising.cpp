@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
     // Basic setup
     const CoordinateVector nd = {NX, NY};
     hila::initialize(argc, argv);
-    lattice->setup(nd);
+    lattice.setup(nd);
 
     // Set verbosity level
     hila::log.set_verbosity(log_level);

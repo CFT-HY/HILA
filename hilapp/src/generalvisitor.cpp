@@ -405,7 +405,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     if (isa<VarDecl>(DRE->getDecl())) {
         auto decl = dyn_cast<VarDecl>(DRE->getDecl());
 
-        /// we don't want "X" -variable or lattice-> as a kernel parameter
+        /// we don't want "X" -variable or lattice. as a kernel parameter
         clang::QualType typ =
             decl->getType().getUnqualifiedType().getNonReferenceType();
         typ.removeLocalConst();
@@ -414,7 +414,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
         // LATTICE_STRUCT PTR!!!\n";
 
         if (typ.getAsString(PP) == "X_index_type" ||
-            typ.getAsString(PP) == "lattice_struct *")
+            typ.getAsString(PP) == "lattice_struct")
             return nullptr;
 
         var_ref vr;

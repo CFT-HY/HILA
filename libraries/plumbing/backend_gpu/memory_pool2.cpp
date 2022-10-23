@@ -111,7 +111,7 @@ void *gpu_memory_allocate(size_t m_alloc) {
 
     double fraction = (double)m_alloc / gpu_total_memory;
 
-    output0 << "GPU memory: allocating " << m_alloc / mb << " MB out of total "
+    hila::out0 << "GPU memory: allocating " << m_alloc / mb << " MB out of total "
             << gpu_total_memory / mb << "(" << (int)(fraction * 100) << "%)\n";
     total_pool_size += m_alloc;
 
@@ -293,7 +293,7 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
     if (align_mod > 0)
         req_size = req_size - align_mod + ALLOC_ALIGNMENT;
 
-    // output0 << "REQ SIZE " << req_size << '\n';
+    // hila::out0 << "REQ SIZE " << req_size << '\n';
 
     n_allocs++;
     free_list_avg_size += free_list_size;
@@ -369,7 +369,7 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
         }
     }
 
-    hila::output << "Out of memory in GPU pool, request size " << req_size << '\n';
+    hila::out << "Out of memory in GPU pool, request size " << req_size << '\n';
     hila::terminate(0);
 }
 
@@ -407,7 +407,7 @@ void gpu_memory_pool_free(void *ptr) {
     }
 
     // did not find!  serious error, quit
-    hila::output << "Memory free error - unknown pointer  " << ptr << '\n';
+    hila::out << "Memory free error - unknown pointer  " << ptr << '\n';
     hila::terminate(1);
 }
 
@@ -416,15 +416,15 @@ void gpu_memory_pool_purge() {}
 
 void gpu_memory_pool_report() {
     if (hila::myrank() == 0) {
-        hila::output << "\nGPU Memory pool statistics from node 0:\n";
-        hila::output << "   Total pool size "
+        hila::out << "\nGPU Memory pool statistics from node 0:\n";
+        hila::out << "   Total pool size "
                      << ((double)total_pool_size) / (1024 * 1024) << " MB\n";
-        hila::output << "   # of allocations " << n_allocs << '\n';
-        hila::output << "   Average free list search "
+        hila::out << "   # of allocations " << n_allocs << '\n';
+        hila::out << "   Average free list search "
                      << free_list_avg_search / n_allocs << " steps\n";
-        hila::output << "   Average free list size " << free_list_avg_size / n_allocs
+        hila::out << "   Average free list size " << free_list_avg_size / n_allocs
                      << " items\n";
-        hila::output << "   Maximum memory use " << max_used_size / (1024 * 1024)
+        hila::out << "   Maximum memory use " << max_used_size / (1024 * 1024)
                      << " MB\n\n";
     }
 }

@@ -93,7 +93,7 @@ class loopFunctionVisitor : public GeneralVisitor,
         loop_function_calls = {};
         conditional_vars = {};
         got_lattice =
-            false; // if function "lattice->size()" etc. do not trap on "lattice"
+            false; // if function "lattice.size()" etc. do not trap on "lattice"
     }
 
     bool VisitStmt(Stmt *s) {
@@ -189,7 +189,7 @@ class loopFunctionVisitor : public GeneralVisitor,
             if (vdecl->hasExternalStorage() || vdecl->hasGlobalStorage()) {
 
                 if (got_lattice && vdecl->getNameAsString() == "lattice") {
-                    // now found the "lattice" in "lattice->size( .. )", clear
+                    // now found the "lattice" in "lattice.size( .. )", clear
                     got_lattice = false;
 
                 } else {
@@ -321,7 +321,7 @@ class loopFunctionVisitor : public GeneralVisitor,
             //    std::string objtype =
             //    MCall->getImplicitObjectArgument()->getType().getAsString();
             std::string objtype = get_expr_type(MCall->getImplicitObjectArgument());
-            if (objtype.find("lattice_struct *") != std::string::npos) {
+            if (objtype.find("lattice_struct") != std::string::npos) {
 
                 // llvm::errs() << "CALL in LOOP FUNC: " << get_stmt_str(Call) << '\n';
                 special_function_call sfc;
@@ -352,7 +352,7 @@ class loopFunctionVisitor : public GeneralVisitor,
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error,
                                Call->getSourceRange().getBegin(),
-                               "Method 'lattice->.%0()' not allowed inside site loops",
+                               "Method 'lattice.%0()' not allowed inside site loops",
                                name.c_str());
                 }
 

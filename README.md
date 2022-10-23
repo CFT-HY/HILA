@@ -175,7 +175,7 @@ int main(int argc, char * argv[]) {
     hila::initialize(argc,argv);
 
     // set up 32^3 lattice
-    lattice->setup({32,32,32});
+    lattice.setup({32,32,32});
 
     // Random numbers are used here
     hila::seed_random(32345);
@@ -197,7 +197,7 @@ int main(int argc, char * argv[]) {
         ave += g[X];
     }
 
-    output0 << "Average of g is " << ave/lattice->volume() << '\n';
+    hila::out0 << "Average of g is " << ave/lattice.volume() << '\n';
 
     // make a clean exit
     hila::finishrun();    
@@ -235,7 +235,7 @@ You can compile this at `hila/applications/hila_example/` with `make simple` and
      v = d;             // v = [1,0,0,0]
      v += e_y - 3*d;    // v = [-2,1,0,0]
      v = {0,1,-1,0};    // v = [0,1,-1,0] equivalent v = e_y - e_z;
-     output0 << v.dot({1,2,3,4});  // dot product of 2 vectors, prints -1
+     hila::out0 << v.dot({1,2,3,4});  // dot product of 2 vectors, prints -1
      int j = d;         // ok
      d = j;             // ERROR: cannot assign int to Direction
      ++d;               // e_x -> e_y
@@ -302,7 +302,7 @@ Reduction:
     mytype d = 0;
     onsites(ALL) d += f[X] - g[X+e_x];
 
-    output0 << "The reduction is << d << std::endl;
+    hila::out0 << "The reduction is << d << std::endl;
 ~~~
 
 Other features:
@@ -398,7 +398,7 @@ int main(int argc, char * argv[]) {
     p.close();   
 
     // lattice setup is convenient to do after parameters have been read
-    lattice->setup(lsize);
+    lattice.setup(lsize);
 
 ~~~
 
@@ -425,7 +425,7 @@ commands (after the application program has been built)
    <hila-program-name> check=<number-of-nodes>        # without spaces
 ~~~
 This runs the program without initializing MPI, Cuda or other hardware features and
-exits at `lattice->setup()` before any large memory allocations are made.  If the 
+exits at `lattice.setup()` before any large memory allocations are made.  If the 
 number-of-nodes argument is given, program reports how the node layout is done.
 
 Example: if you built the `hila_example` program above, in directory `hila/applications/hila_example`

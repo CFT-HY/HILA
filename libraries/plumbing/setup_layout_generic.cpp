@@ -21,17 +21,17 @@ void lattice_struct::setup_layout() {
     CoordinateVector nodesiz;
 
     print_dashed_line();
-    output0 << "LAYOUT: lattice size  ";
+    hila::out0 << "LAYOUT: lattice size  ";
     foralldir(d) {
         if (d != 0)
-            output0 << " x ";
-        output0 << size(d);
+            hila::out0 << " x ";
+        hila::out0 << size(d);
     }
-    output0 << "  =  " << l_volume << " sites\n";
-    output0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
+    hila::out0 << "  =  " << l_volume << " sites\n";
+    hila::out0 << "Dividing to " << hila::number_of_nodes() << " nodes\n";
 
     foralldir(d) if (size(d) % 2 != 0) {
-        output0 << "Lattice must be even to all directions (odd size:TODO)\n";
+        hila::out0 << "Lattice must be even to all directions (odd size:TODO)\n";
         hila::finishrun();
     }
 
@@ -48,7 +48,7 @@ void lattice_struct::setup_layout() {
         }
     }
     if (i != 1) {
-        output0 << "Cannot factorize " << nn << " nodes with primes up to "
+        hila::out0 << "Cannot factorize " << nn << " nodes with primes up to "
                 << prime[NPRIMES - 1] << '\n';
         hila::finishrun();
     }
@@ -79,7 +79,7 @@ void lattice_struct::setup_layout() {
 
         foralldir(j) if (ghosts[mdir] > ghosts[j]) mdir = j;
         // mdir is the direction where we do uneven division (if done)
-        // output0 << "MDIR " << mdir << " ghosts mdir " << ghosts[mdir] << " nsize " <<
+        // hila::out0 << "MDIR " << mdir << " ghosts mdir " << ghosts[mdir] << " nsize " <<
         // nsize[mdir] << '\n';
 
         foralldir(i) {
@@ -122,7 +122,7 @@ void lattice_struct::setup_layout() {
 
                 if (dir < 0) {
                     // This cannot happen
-                    output0 << "CANNOT HAPPEN! in setup_layout_generic.c\n";
+                    hila::out0 << "CANNOT HAPPEN! in setup_layout_generic.c\n";
                     hila::finishrun();
                 }
 
@@ -140,7 +140,7 @@ void lattice_struct::setup_layout() {
             ghosts[mdir] =
                 (1ULL << 62); // this short-circuits direction mdir, some other taken next
         } else if (fail) {
-            output0 << "Could not successfully lay out the lattice with " << hila::number_of_nodes()
+            hila::out0 << "Could not successfully lay out the lattice with " << hila::number_of_nodes()
                     << " nodes\n";
             hila::finishrun();
         }
@@ -161,58 +161,58 @@ void lattice_struct::setup_layout() {
                 ++n;
                 nodes.divisors[dir][n] = i;
             }
-        // output0 << "Divisors ";
-        // for (int i=0;i<nodes.n_divisions[dir]; i++) output0 << nodes.divisors[dir][i]
-        // << " "; output0 << '\n';
+        // hila::out0 << "Divisors ";
+        // for (int i=0;i<nodes.n_divisions[dir]; i++) hila::out0 << nodes.divisors[dir][i]
+        // << " "; hila::out0 << '\n';
     }
 
     // Now division done - check how good it is
     int ghost_slices = nsize[mdir] - size(mdir);
     if (ghost_slices > 0) {
-        output0 << "\nUsing uneven node division to direction " << mdir << ":\n";
-        output0 << "Lengths: " << nodes.n_divisions[mdir] - ghost_slices << " * ("
+        hila::out0 << "\nUsing uneven node division to direction " << mdir << ":\n";
+        hila::out0 << "Lengths: " << nodes.n_divisions[mdir] - ghost_slices << " * ("
                 << nodesiz[mdir] << " sites) + " << ghost_slices << " * ("
                 << nodesiz[mdir] - 1 << " sites)\n";
-        output0 << "Divisions: ";
+        hila::out0 << "Divisions: ";
         for (int i = 0; i < nodes.n_divisions[mdir]; i++) {
             if (i > 0)
-                output0 << " - ";
-            output0 << nodes.divisors[mdir][i + 1] - nodes.divisors[mdir][i];
+                hila::out0 << " - ";
+            hila::out0 << nodes.divisors[mdir][i + 1] - nodes.divisors[mdir][i];
         }
-        output0 << "\nFilling efficiency: " << (100.0 * size(mdir)) / nsize[mdir]
+        hila::out0 << "\nFilling efficiency: " << (100.0 * size(mdir)) / nsize[mdir]
                 << "%\n";
 
         if (ghost_slices > nodes.n_divisions[mdir] / 2)
-            output0 << "NOTE: number of smaller nodes > large nodes \n";
+            hila::out0 << "NOTE: number of smaller nodes > large nodes \n";
     }
 
     // this was hila::number_of_nodes() > 1
     if (1) {
-        output0 << "\nSites on node: ";
+        hila::out0 << "\nSites on node: ";
         foralldir(dir) {
             if (dir > 0)
-                output0 << " x ";
+                hila::out0 << " x ";
             if (dir == mdir && ghost_slices > 0)
-                output0 << '(' << nodesiz[dir] - 1 << '-' << nodesiz[dir] << ')';
+                hila::out0 << '(' << nodesiz[dir] - 1 << '-' << nodesiz[dir] << ')';
             else
-                output0 << nodesiz[dir];
+                hila::out0 << nodesiz[dir];
         }
         int ns = 1;
         foralldir(dir) ns *= nodesiz[dir];
         if (ghost_slices > 0) {
             int ns2 = ns * (nodesiz[mdir] - 1) / nodesiz[mdir];
-            output0 << "  =  " << ns2 << " - " << ns << '\n';
+            hila::out0 << "  =  " << ns2 << " - " << ns << '\n';
         } else {
-            output0 << "  =  " << ns << '\n';
+            hila::out0 << "  =  " << ns << '\n';
         }
 
-        output0 << "Processor layout: ";
+        hila::out0 << "Processor layout: ";
         foralldir(dir) {
             if (dir > 0)
-                output0 << " x ";
-            output0 << nodes.n_divisions[dir];
+                hila::out0 << " x ";
+            hila::out0 << nodes.n_divisions[dir];
         }
-        output0 << "  =  " << hila::number_of_nodes() << " nodes\n";
+        hila::out0 << "  =  " << hila::number_of_nodes() << " nodes\n";
     }
 
 #ifdef USE_MPI

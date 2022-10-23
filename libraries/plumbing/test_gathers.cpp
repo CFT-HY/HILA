@@ -11,9 +11,9 @@ void gather_test() {
         s += 1;
     }
 
-    if (s != lattice->volume()) {
-        output0 << " Reduction test error!  Sum " << s << " should be "
-                << lattice->volume() << '\n';
+    if (s != lattice.volume()) {
+        hila::out0 << " Reduction test error!  Sum " << s << " should be "
+                << lattice.volume() << '\n';
         hila::terminate(1);
     }
 
@@ -25,7 +25,7 @@ void gather_test() {
 #pragma hila novector
         onsites(ALL) {
             f1[X] = X.coordinates();
-            f2[X] = (X.coordinates() + d).mod(lattice->size());
+            f2[X] = (X.coordinates() + d).mod(lattice.size());
         }
 
         onsites(ALL) {
@@ -34,13 +34,13 @@ void gather_test() {
         }
 
         if (dif1.squarenorm() != 0) {
-            output0 << " Std up-gather test error! Node " << hila::myrank()
+            hila::out0 << " Std up-gather test error! Node " << hila::myrank()
                     << " direction " << (unsigned)d << " dif1 " << dif1 << '\n';
             hila::terminate(1);
         }
 
         if (dif2.squarenorm() != 0) {
-            output0 << " Std down-gather test error! Node " << hila::myrank()
+            hila::out0 << " Std down-gather test error! Node " << hila::myrank()
                     << " direction " << (unsigned)d << " dif2 " << dif2 << '\n';
             hila::terminate(1);
         }
@@ -51,7 +51,7 @@ void gather_test() {
             f2.set_boundary_condition(d, BoundaryCondition::ANTIPERIODIC);
 
             onsites(ALL) {
-                if (X.coordinate(d) == lattice->size(d) - 1)
+                if (X.coordinate(d) == lattice.size(d) - 1)
                     f2[X] = -f1[X];
                 else
                     f2[X] = f1[X];
@@ -61,7 +61,7 @@ void gather_test() {
             onsites(ALL) { dif1 += f1[X] - f2[X - d]; }
 
             if (dif1 != 0) {
-                output0 << " Antiperiodic up-gather test error! Node " << hila::myrank()
+                hila::out0 << " Antiperiodic up-gather test error! Node " << hila::myrank()
                         << " direction " << (unsigned)d << '\n';
                 hila::terminate(1);
             }
@@ -82,5 +82,5 @@ void test_std_gathers() {
     print_dashed_line();
 
     if (hila::myrank() == 0)
-        hila::output.flush();
+        hila::out.flush();
 }

@@ -705,8 +705,56 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
     using base_type = hila::number_type<T>;
     using argument_type = T;
 
-    // use the Base::Base -trick to inherit constructors and assignments
-    using Matrix_t<n, m, T, Matrix<n, m, T>>::Matrix_t;
+    /// define default constructors to ensure std::is_trivial
+    Matrix() = default;
+    ~Matrix() = default;
+    Matrix(const Matrix &v) = default;
+
+
+    /// constructor from scalar -- keep it explicit!  Not good for auto use
+    template <typename S, int nn = n, int mm = m,
+              std::enable_if_t<(hila::is_assignable<T &, S>::value && nn == mm), int> = 0>
+    explicit Matrix(const S rhs) out_only {
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++) {
+                if (i == j)
+                    this->e(i, j) = rhs;
+                else
+                    this->e(i, j) = 0;
+            }
+    }
+
+    /// Construct from a different type matrix
+    template <typename S, typename MT,
+              std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    explicit Matrix(const Matrix_t<n, m, S, MT> &rhs) out_only {
+        for (int i = 0; i < n * m; i++) {
+            this->c[i] = rhs.c[i];
+        }
+    }
+
+    /// construct from 0
+    Matrix(const std::nullptr_t &z) out_only {
+        for (int i = 0; i < n * m; i++) {
+            this->c[i] = 0;
+        }
+    }
+
+    /// Construct matrix automatically from right-size initializer list
+    /// This does not seem to be dangerous, so keep non-explicit
+
+    template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
+    Matrix(std::initializer_list<S> rhs) {
+        assert(rhs.size() == n * m &&
+               "Matrix/Vector initializer list size must match variable size");
+        int i = 0;
+        for (auto it = rhs.begin(); it != rhs.end(); it++, i++) {
+            this->c[i] = *it;
+        }
+    }
+
+
+    // use the Base::Base -trick to inherit assignments
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator=;
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator+=;
     using Matrix_t<n, m, T, Matrix<n, m, T>>::operator-=;

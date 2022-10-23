@@ -127,10 +127,10 @@ TEST_CASE_METHOD(FieldTest, "Field arithmetic", "[Field]") {
 TEST_CASE_METHOD(FieldTest, "Field mathematical operations", "[Field]") {
     fill_dummy_field(1);
     SECTION("Squarenorm") {
-        REQUIRE(dummy_field.squarenorm()/lattice->volume() == 1);
+        REQUIRE(dummy_field.squarenorm()/lattice.volume() == 1);
     }
     SECTION("Sum reduction") {
-        REQUIRE(dummy_field.sum() == lattice->volume());
+        REQUIRE(dummy_field.sum() == lattice.volume());
     }
     SECTION("Product reduction") {
         REQUIRE(dummy_field.product() == 1);

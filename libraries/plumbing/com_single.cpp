@@ -13,8 +13,8 @@ static bool initialized = false;
 void initialize_machine(int &argc, char ***argv) {
     /* Init MPI */
     if (!initialized) {
-        lattice->mynode.rank = 0;
-        lattice->nodes.number = 1;
+        lattice.mynode.rank = 0;
+        lattice.nodes.number = 1;
 
 #if defined(CUDA) || defined(HIP)
         initialize_gpu(0);
@@ -67,12 +67,12 @@ void reset_comm(bool global)
 
   g_sync_partitions();
   if (global) {
-    mpi_comm_saved = lattice->mpi_comm_lat;
-    lattice->mpi_comm_lat = MPI_COMM_WORLD;
+    mpi_comm_saved = lattice.mpi_comm_lat;
+    lattice.mpi_comm_lat = MPI_COMM_WORLD;
     set = 1;
   } else {
     if (!set) halt("Comm set error!");
-    lattice->mpi_comm_lat = mpi_comm_saved;
+    lattice.mpi_comm_lat = mpi_comm_saved;
     set = 0;
   }
   mynode = hila::myrank();

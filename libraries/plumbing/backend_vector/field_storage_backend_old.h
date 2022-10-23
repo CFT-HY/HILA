@@ -64,7 +64,7 @@ using vector_type = typename vectorize_struct<T, vector_info<T>::vector_size>::t
 template <typename T> void field_storage<T>::allocate_field(lattice_struct *lattice) {
     constexpr int vector_size = vector_info<T>::vector_size;
     vectorized_lattice_struct<vector_size> *vlat =
-        lattice->backend_lattice->get_vectorized_lattice<vector_size>();
+        lattice.backend_lattice->get_vectorized_lattice<vector_size>();
 
     int size = sizeof(T) * vector_size * vlat->field_alloc_size();
     if (size % VECTOR_SIZE)
@@ -119,7 +119,7 @@ void field_storage<T>::gather_elements(char *RESTRICT buffer,
                                        const lattice_struct *RESTRICT lattice) const {
     constexpr int vector_size = vector_info<T>::vector_size;
     vectorized_lattice_struct<vector_size> *vlat =
-        lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
+        lattice.backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
     for (int j = 0; j < n; j++) {
         int index = index_list[j];
         int v_index = vlat->vector_index[index];
@@ -142,7 +142,7 @@ void field_storage<T>::place_elements(char *RESTRICT buffer,
                                       const lattice_struct *RESTRICT lattice) {
     constexpr int vector_size = vector_info<T>::vector_size;
     const vectorized_lattice_struct<vector_size> *RESTRICT vlat =
-        lattice->backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
+        lattice.backend_lattice->get_vectorized_lattice<hila::vector_info<T>::vector_size>();
     for (int j = 0; j < n; j++) {
         int index = index_list[j];
         int v_index = vlat->vector_index[index];
@@ -167,7 +167,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
     using vectortype = typename vector_info<T>::type;
     using basetype = typename vector_info<T>::base_type;
     const vectorized_lattice_struct<vector_size> *RESTRICT vlat =
-        lattice->backend_lattice->get_vectorized_lattice<vector_size>();
+        lattice.backend_lattice->get_vectorized_lattice<vector_size>();
 
     // The halo copy and permutation is only necessary if vectorization
     // splits the lattice in this direction

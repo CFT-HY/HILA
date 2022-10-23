@@ -31,8 +31,7 @@ extern std::string parity_name;
 
 /// An AST walker for finding and handling variable declarations
 /// in a loop function
-class LoopFunctionHandler : public GeneralVisitor,
-                            public RecursiveASTVisitor<LoopFunctionHandler> {
+class LoopFunctionHandler : public GeneralVisitor, public RecursiveASTVisitor<LoopFunctionHandler> {
   public:
     using GeneralVisitor::GeneralVisitor;
 
@@ -67,11 +66,9 @@ bool LoopFunctionHandler::VisitVarDecl(VarDecl *var) {
         }
 
         if (var->isDirectInit()) {
-            std::string init =
-                TheRewriter.getRewrittenText(var->getInit()->getSourceRange());
-            functionBuffer.replace(var->getSourceRange(), vector_type + " " +
-                                                              var->getNameAsString() +
-                                                              "=" + init);
+            std::string init = TheRewriter.getRewrittenText(var->getInit()->getSourceRange());
+            functionBuffer.replace(var->getSourceRange(),
+                                   vector_type + " " + var->getNameAsString() + "=" + init);
         } else {
             functionBuffer.replace(var->getSourceRange(),
                                    vector_type + " " + var->getNameAsString());
@@ -185,8 +182,8 @@ void GeneralVisitor::handle_loop_function_avx(call_info_struct &ci) {
             // Note: C++ cannot specialize only based on return type. Therefore we
             // only write a new function if the parameters contain elements
             std::string typestring = fd->getReturnType().getAsString(PP);
-            replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, "",
-                                        vector_size, lfh.functionBuffer);
+            replace_element_with_vector(fd->getReturnTypeSourceRange(), typestring, "", vector_size,
+                                        lfh.functionBuffer);
 
             lfh.TraverseStmt(fd->getBody());
 
@@ -214,8 +211,7 @@ void GeneralVisitor::handle_loop_constructor_avx(call_info_struct &ci) {}
 ///  TODO: Rectify this issue!
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
-                                              std::string &diag_str) {
+bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::string &diag_str) {
 
     vector_size = 0;
     number_type numtype;
@@ -241,16 +237,14 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
         }
 
         std::string vector_var_name; // variable which determines the vectorization
-        std::string
-            vector_var_type; // type of variable which determines the vectorization
+        std::string vector_var_type; // type of variable which determines the vectorization
 
         // check if the fields are vectorizable in a compatible manner
         if (field_info_list.size() > 0) {
             for (field_info &fi : field_info_list) {
                 if (!fi.vecinfo.is_vectorizable) {
                     is_vectorizable = false;
-                    reason.push_back("Field variable '" + fi.old_name +
-                                     "' is not vectorizable");
+                    reason.push_back("Field variable '" + fi.old_name + "' is not vectorizable");
                 } else {
                     if (vector_size == 0) {
                         vector_size = fi.vecinfo.vector_size;
@@ -264,8 +258,8 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
                         is_vectorizable = false;
 
                         reason.push_back("type of variable '" + fi.old_name + "' is " +
-                                         fi.vecinfo.basetype_str + " and '" +
-                                         vector_var_name + "' is " + vector_var_type);
+                                         fi.vecinfo.basetype_str + " and '" + vector_var_name +
+                                         "' is " + vector_var_type);
                     }
                 }
             }
@@ -287,15 +281,13 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
                             is_vectorizable = false;
 
                             reason.push_back("type of variables '" + vi.name + "' is " +
-                                             vi.vecinfo.basetype_str + " and '" +
-                                             vector_var_name + "' is " +
-                                             vector_var_type);
+                                             vi.vecinfo.basetype_str + " and '" + vector_var_name +
+                                             "' is " + vector_var_type);
                         }
                     } else {
                         is_vectorizable = false;
 
-                        reason.push_back("variable '" + vi.name +
-                                         "' is not vectorizable");
+                        reason.push_back("variable '" + vi.name + "' is not vectorizable");
                     }
                 }
         }
@@ -306,7 +298,8 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
                 if (sfc.name == "coordinates" || sfc.name == "coordinate") {
                     is_vectorizable = false;
 
-                    reason.push_back("X.coordinates() and X.coordinate() make expression site dependent");
+                    reason.push_back(
+                        "X.coordinates() and X.coordinate() make expression site dependent");
 
                     // // returning int vector
                     // if (vector_size == 0) {
@@ -339,12 +332,10 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
                 is_vectorizable = false;
 
                 if (ci.funcdecl != nullptr) {
-                    reason.push_back("loop contains function " +
-                                     ci.funcdecl->getNameAsString() +
+                    reason.push_back("loop contains function " + ci.funcdecl->getNameAsString() +
                                      " which is not vectorizable");
                 } else if (ci.ctordecl != nullptr) {
-                    reason.push_back("loop contains constructor " +
-                                     ci.ctordecl->getNameAsString() +
+                    reason.push_back("loop contains constructor " + ci.ctordecl->getNameAsString() +
                                      " which is not vectorizable");
                 }
             }
@@ -364,15 +355,15 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
             diag_str += "\n     " + s;
 
         if (cmdline::avx_info > 0 || cmdline::verbosity > 0)
-            reportDiag(DiagnosticsEngine::Level::Remark, S->getSourceRange().getBegin(),
-                       "%0", diag_str.c_str());
+            reportDiag(DiagnosticsEngine::Level::Remark, S->getSourceRange().getBegin(), "%0",
+                       diag_str.c_str());
 
     } else {
         diag_str = "Loop is AVX vectorizable";
 
         if (cmdline::avx_info > 1 || cmdline::verbosity > 1)
-            reportDiag(DiagnosticsEngine::Level::Remark, S->getSourceRange().getBegin(),
-                       "%0", diag_str.c_str());
+            reportDiag(DiagnosticsEngine::Level::Remark, S->getSourceRange().getBegin(), "%0",
+                       diag_str.c_str());
     }
 
     return is_vectorizable;
@@ -382,8 +373,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size,
 ///  Main entry for AVX loop generation
 ///////////////////////////////////////////////////////////////////////////////////////////
 
-std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
-                                               srcBuf &loopBuf,
+std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
                                                bool generate_wait_loops) {
 
     std::stringstream code;
@@ -415,33 +405,31 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
     }
 
     // Set loop lattice for neighbour arrays
-    if (field_info_list.size() > 0) {
-        std::string fieldname = field_info_list.front().new_name;
-        code << "const auto * RESTRICT loop_lattice = " << fieldname
-             << ".fs->vector_lattice;\n";
-    } else {
-        // if no field in loop
-        code << "const auto * RESTRICT loop_lattice = "
-                "lattice->backend_lattice->get_vectorized_lattice<"
-             << vector_size << ">();\n";
-    }
+    // if (field_info_list.size() > 0) {
+    //     std::string fieldname = field_info_list.front().new_name;
+    //     code << "const auto & loop_lattice = " << fieldname
+    //          << ".fs->vector_lattice;\n";
+    // } else {
+    // if no field in loop
+
+    code << "const auto & loop_lattice = "
+            "* lattice.backend_lattice->get_vectorized_lattice<"
+         << vector_size << ">();\n";
 
     // Set the start and end points
-    code << "const int loop_begin = loop_lattice->loop_begin(" << loop_info.parity_str
-         << ");\n";
-    code << "const int loop_end   = loop_lattice->loop_end(" << loop_info.parity_str
-         << ");\n";
+    code << "const int loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "const int loop_end   = loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
 
     if (generate_wait_loops) {
         code << "for (int _wait_i_ = 0; _wait_i_ < 2; ++_wait_i_) {\n";
     }
 
     // Start the loop
-    code << "for(int " << looping_var << " = loop_begin; " << looping_var
-         << " < loop_end; ++" << looping_var << ") {\n";
+    code << "for(int " << looping_var << " = loop_begin; " << looping_var << " < loop_end; ++"
+         << looping_var << ") {\n";
 
     if (generate_wait_loops) {
-        code << "if (((loop_lattice->vec_wait_arr_[" << looping_var
+        code << "if (((loop_lattice.vec_wait_arr_[" << looping_var
              << "] & _dir_mask_) != 0) == _wait_i_) {\n";
     }
 
@@ -459,15 +447,14 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
                         if (d.is_constant_direction)
                             dirname = d.direxpr_s; // orig. string
                         else
-                            dirname = remove_X(loopBuf.get(
-                                d.parityExpr->getSourceRange())); // mapped name was
-                                                                  // get_stmt_str(d.e);
+                            dirname = remove_X(
+                                loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                                                                              // get_stmt_str(d.e);
 
-                        code << l.vecinfo.vectorized_type << " " << d.name_with_dir
-                             << " = " << l.new_name << ".get_vector_at<"
-                             << l.vecinfo.vectorized_type
-                             << ">(loop_lattice->neighbours[" << dirname << "]["
-                             << looping_var << "]);\n";
+                        code << l.vecinfo.vectorized_type << " " << d.name_with_dir << " = "
+                             << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type
+                             << ">(loop_lattice.neighbours[" << dirname << "][" << looping_var
+                             << "]);\n";
 
                         // and replace references in loop body
                         for (field_ref *ref : d.ref_list) {
@@ -510,24 +497,22 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(loopBuf.get(
-                            d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = remove_X(
+                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr,
-                                        l.new_name + ".get_vector_at<" +
-                                            l.vecinfo.vectorized_type +
-                                            ">(loop_lattice->neighbours[" + dirname +
-                                            "][" + looping_var + "])");
+                        loopBuf.replace(ref->fullExpr, l.new_name + ".get_vector_at<" +
+                                                           l.vecinfo.vectorized_type +
+                                                           ">(loop_lattice.neighbours[" + dirname +
+                                                           "][" + looping_var + "])");
                     }
                 }
             }
         }
 
         if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
-            code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << " = "
-                 << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type << ">("
-                 << looping_var << ");\n";
+            code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << " = " << l.new_name
+                 << ".get_vector_at<" << l.vecinfo.vectorized_type << ">(" << looping_var << ");\n";
 
             if (loop_info.has_conditional && !l.is_read_atX) {
                 code << "// Value of var " << l.loop_ref_name
@@ -571,7 +556,7 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
             repl += looping_var;
             if (sfc.argsExpr != nullptr)
                 repl += ',';
-            if (sfc.args_string.size() > 0) 
+            if (sfc.args_string.size() > 0)
                 repl += ", " + sfc.args_string;
         }
         loopBuf.replace(sfc.replace_range, repl);
@@ -626,8 +611,8 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
             } else {
                 code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                         "++_HILAdir_) {\n"
-                     << "  " << l.new_name << ".wait_gather(_HILAdir_, "
-                     << loop_info.parity_str << ");\n}\n";
+                     << "  " << l.new_name << ".wait_gather(_HILAdir_, " << loop_info.parity_str
+                     << ");\n}\n";
             }
         }
         code << "}\n";
@@ -638,10 +623,9 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end,
         if (v.reduction_type == reduction::SUM) {
             // code << v.reduction_name << " = reduce_sum(" << v.new_name << ");\n";
 
-            code << v.reduction_name << " = reduce_sum_in_vector<"
-                 << v.vecinfo.basetype_str << ", " << v.vecinfo.vectortype << ", "
-                 << v.type << ", " << v.vecinfo.vectorized_type << ">(" << v.new_name
-                 << ");\n";
+            code << v.reduction_name << " = reduce_sum_in_vector<" << v.vecinfo.basetype_str << ", "
+                 << v.vecinfo.vectortype << ", " << v.type << ", " << v.vecinfo.vectorized_type
+                 << ">(" << v.new_name << ");\n";
 
         } else if (v.reduction_type == reduction::PRODUCT) {
             code << v.reduction_name << " = reduce_prod(" << v.new_name << ");\n";

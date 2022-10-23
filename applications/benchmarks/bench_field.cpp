@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
 
-    lattice->setup(latsize);
+    lattice.setup(latsize);
 
     hila::seed_random(SEED);
 
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Double multiply : " << timing << " ms \n";
+    hila::out0 << "Double multiply : " << timing << " ms \n";
 
     timing = 0;
     for (n_runs = 1; timing < mintime;) {
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Double add : " << timing << " ms \n";
+    hila::out0 << "Double add : " << timing << " ms \n";
 
     timing = 0;
     for (n_runs = 1; timing < mintime;) {
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Float multiply : " << timing << " ms \n";
+    hila::out0 << "Float multiply : " << timing << " ms \n";
 
     timing = 0;
     for (n_runs = 1; timing < mintime;) {
@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Float add : " << timing << " ms \n";
+    hila::out0 << "Float add : " << timing << " ms \n";
 
     Field<SquareMatrix<N, Complex<double>>> matrix1;
     Field<SquareMatrix<N, Complex<double>>> matrix2;
@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Matrix1 = Matrix1 * Matrix1 : " << timing << " ms \n";
+    hila::out0 << "Matrix1 = Matrix1 * Matrix1 : " << timing << " ms \n";
 
     // Time MATRIX * MATRIX
     timing = 0;
@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Matrix * Matrix: " << timing << "ms \n";
+    hila::out0 << "Matrix * Matrix: " << timing << "ms \n";
 
     // Time MATRIX * MATRIX
     timing = 0;
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Single Precision Matrix * Matrix: " << timing << "ms \n";
+    hila::out0 << "Single Precision Matrix * Matrix: " << timing << "ms \n";
 
     // Time VECTOR * MATRIX
     timing = 0;
@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Vector * Matrix: " << timing << " ms \n";
+    hila::out0 << "Vector * Matrix: " << timing << " ms \n";
 
     // Time VECTOR * MATRIX
     timing = 0;
@@ -202,10 +202,10 @@ int main(int argc, char **argv) {
         gettimeofday(&end, NULL);
         timing = timediff(start, end);
         hila::broadcast(timing);
-        // output0 << "timing " << timing << '\n';
+        // hila::out0 << "timing " << timing << '\n';
     }
     timing = timing / (double)n_runs;
-    output0 << "Single Precision Vector * Matrix: " << timing << " ms \n";
+    hila::out0 << "Single Precision Vector * Matrix: " << timing << " ms \n";
 
     // Time VECTOR NORM
     timing = sum = 0;
@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Vector square sum: " << timing << " ms \n";
+    hila::out0 << "Vector square sum: " << timing << " ms \n";
 
     // Time FLOAT VECTOR NORM
     timing = 0;
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Single Precision vector square sum: " << timing << " ms \n";
+    hila::out0 << "Single Precision vector square sum: " << timing << " ms \n";
 
     // Time COMMUNICATION of a MATRIX
     timing = 0;
@@ -264,7 +264,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / 2 / NDIRS / (double)n_runs;
-    output0 << "Matrix nearest neighbour communication: " << timing << " ms \n";
+    hila::out0 << "Matrix nearest neighbour communication: " << timing << " ms \n";
 
     hila::finishrun();
 }

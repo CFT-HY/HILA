@@ -178,7 +178,7 @@ void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int tra
     onsites(ALL) 
          chi_avg += chi[X];
 
-    chi_avg /= lattice->volume();
+    chi_avg /= lattice.volume();
 
 
     char buf[1024]; 
@@ -222,7 +222,7 @@ void thermalize(GaugeField<group> &U, VectorField<Algebra<group>> &E, double g2T
         double e2 = 0;
         foralldir (d) { e2 += E[d].squarenorm(); }
 
-        output0 << "THERM: Plaq: " << pl << " E^2 " << e2 << " action "
+        hila::out0 << "THERM: Plaq: " << pl << " E^2 " << e2 << " action "
                 << e2 / 2 + 2 * pl << '\n';
         */
 
@@ -267,7 +267,7 @@ int main(int argc, char **argv) {
     // hila::initialize should be called as early as possible
     hila::initialize(argc, argv);
 
-    output0 << "---- Hamiltonian time evolution for SU(N) theory, using N=" << NSU <<  " ----\n";
+    hila::out0 << "---- Hamiltonian time evolution for SU(N) theory, using N=" << NSU <<  " ----\n";
 
     // hila provides an input class hila::input, which is
     // a convenient way to read in parameters from input files.
@@ -299,7 +299,7 @@ int main(int argc, char **argv) {
 
     // setting up the lattice is convenient to do after reading
     // the parameter
-    lattice->setup(lsize);
+    lattice.setup(lsize);
 
     // We need random number here
     hila::seed_random(seed);
@@ -308,7 +308,7 @@ int main(int argc, char **argv) {
     if (hila::myrank() == 0) {
         measureFile.open(meas_fname, std::ios_base::app);
         if (!measureFile) {
-            output0 << "!!! Error opening measurement file\n";
+            hila::out0 << "!!! Error opening measurement file\n";
             hila::finishrun();
         }
     }
@@ -319,7 +319,7 @@ int main(int argc, char **argv) {
         std::string labelFileName = "labels_" + meas_fname;
         labelFile.open(labelFileName);
         if (!labelFile) {
-            output0 << "!!! Error opening file " << labelFileName << "\n";
+            hila::out0 << "!!! Error opening file " << labelFileName << "\n";
             hila::finishrun();
         }
         labelFile << "1 trajectory\n" << "2 time (lattice units)\n" << "3 plaq avg: sum_i<j (N - Tr Re P_ij)\n" 
@@ -350,7 +350,7 @@ int main(int argc, char **argv) {
     for (int trajectory = 0; trajectory < n_traj; trajectory++) {
         thermalize(U, E, g2Ta, n_thermal, dt);
         if (trajectory % 500 == 0) {
-            output0 << "Trajectory " << trajectory << "\n";
+            hila::out0 << "Trajectory " << trajectory << "\n";
         }
         do_trajectory(U, E, trajectory, trajlen, measure_interval, dt);
     }

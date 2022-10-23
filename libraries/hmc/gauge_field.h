@@ -95,7 +95,7 @@ template <int N> double polyakov_loop(Direction dir, Field<SU<N>> (&gauge)[NDIM]
     // This implementation uses the onsites() to cycle through the
     // NDIM-1 dimensional planes. This is probably not the most
     // efficient implementation.
-    CoordinateVector vol = lattice->size();
+    CoordinateVector vol = lattice.size();
     Field<SU<N>> polyakov;
     polyakov[ALL] = 1;
     for (int t = 0; t < vol[dir]; t++) {
@@ -113,7 +113,7 @@ template <int N> double polyakov_loop(Direction dir, Field<SU<N>> (&gauge)[NDIM]
         }
     }
 
-    double v3 = lattice->volume() / vol[dir];
+    double v3 = lattice.volume() / vol[dir];
     return poly / (N * v3);
 }
 
@@ -280,7 +280,7 @@ template <typename matrix> class gauge_field : public gauge_field_base<matrix> {
 
     /// Calculate the plaquette
     double plaquette() {
-        return plaquette_sum(this->gauge) / (lattice->volume() * NDIM * (NDIM - 1) / 2);
+        return plaquette_sum(this->gauge) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
     }
 
     /// Calculate the polyakov loop

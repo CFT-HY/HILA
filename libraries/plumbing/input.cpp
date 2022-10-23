@@ -36,7 +36,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
     if (hila::myrank() == 0) {
         if (is_initialized) {
             if (speaking)
-                hila::output << "Error: file '" << fname
+                hila::out << "Error: file '" << fname
                              << "' cannot be opened because '" << filename
                              << "' is open in this input variable\n";
 
@@ -59,7 +59,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
                 } else {
 
                     if (speaking)
-                        hila::output << "Error: input file '" << fname
+                        hila::out << "Error: input file '" << fname
                                      << "' could not be opened\n";
 
                     got_error = true;
@@ -126,20 +126,20 @@ void input::print_linebuf(int end_of_key) {
         while (std::isspace(linebuffer[i]))
             i++;
         for (; i < linebuffer.size() && i < end_of_key; i++) {
-            hila::output << linebuffer[i];
+            hila::out << linebuffer[i];
         }
-        hila::output << ' ';
+        hila::out << ' ';
         if (end_of_key > 0) {
             for (int j = i; j < 20; j++)
-                hila::output << ' ';
+                hila::out << ' ';
         }
 
         while (i < linebuffer.size() && std::isspace(linebuffer[i]))
             i++;
         if (i < linebuffer.size()) {
-            hila::output << linebuffer.substr(i);
+            hila::out << linebuffer.substr(i);
         }
-        hila::output << std::endl; // use endl to show output here
+        hila::out << std::endl; // use endl to show output here
     }
 }
 
@@ -218,7 +218,7 @@ bool input::peek_token(std::string &tok) {
         i++; // this happens for only ,
 
     if (in_quotes) {
-        hila::output << "Error: unbalanced quotes\n";
+        hila::out << "Error: unbalanced quotes\n";
         exit(1); // unclean exit
     }
     tok = linebuffer.substr(lb_start, i - lb_start);
@@ -257,7 +257,7 @@ bool input::handle_key(const std::string &key) {
         if (key.size() > 0 && !contains_word_list(key, end_of_key)) {
             if (speaking) {
                 print_linebuf(0);
-                hila::output << "Error: expecting key '" << key << "'\n";
+                hila::out << "Error: expecting key '" << key << "'\n";
             }
             return false;
         }
@@ -321,24 +321,24 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
             // error, nothing was found
             no_error = false;
             if (speaking) {
-                hila::output << "Input '" << label << "' must be one of: ";
+                hila::out << "Input '" << label << "' must be one of: ";
                 for (int i = 0; i < items.size(); i++) {
                     if (items[i] == "%s")
-                        hila::output << "<string> ";
+                        hila::out << "<string> ";
                     else if (items[i] == "%f")
-                        hila::output << "<float/double> ";
+                        hila::out << "<float/double> ";
                     else if (items[i] == "%i")
-                        hila::output << "<int/long> ";
+                        hila::out << "<int/long> ";
                     else
-                        hila::output << '\'' << items[i] << "' ";
+                        hila::out << '\'' << items[i] << "' ";
                 }
-                hila::output << '\n';
+                hila::out << '\n';
             }
         }
     }
 
     if (bcast) {
-        hila::broadcast(item, no_error);
+        hila::broadcast2(item, no_error);
 
         // with broadcast exit on error
         if (!no_error)

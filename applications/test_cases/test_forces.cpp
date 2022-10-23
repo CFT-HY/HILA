@@ -67,11 +67,11 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         double diff = f2 - f1;
 
         if (hila::myrank() == 0) {
-            // output0 << "Action 1 " << s1 << "\n";
-            // output0 << "Action 2 " << s2 << "\n";
-            // output0 << "Calculated deriv " << f2 << "\n";
-            // output0 << "Actual deriv " << (s2-s1)/eps << "\n";
-            // output0 << "Fermion deriv " << ng << " diff " << diff << "\n";
+            // hila::out0 << "Action 1 " << s1 << "\n";
+            // hila::out0 << "Action 2 " << s2 << "\n";
+            // hila::out0 << "Calculated deriv " << f2 << "\n";
+            // hila::out0 << "Actual deriv " << (s2-s1)/eps << "\n";
+            // hila::out0 << "Fermion deriv " << ng << " diff " << diff << "\n";
             assert(diff * diff < eps && "Fermion deriv");
         }
 
@@ -103,11 +103,11 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         diff = f2 - f1;
 
         if (hila::myrank() == 0) {
-            // output0 << "Action 1 " << s1 << "\n";
-            // output0 << "Action 2 " << s2 << "\n";
-            // output0 << "Calculated deriv " << f2 << "\n";
-            // output0 << "Actual deriv " << (s2-s1)/eps << "\n";
-            // output0 << "Fermion dg deriv " << ng << " diff " << diff << "\n";
+            // hila::out0 << "Action 1 " << s1 << "\n";
+            // hila::out0 << "Action 2 " << s2 << "\n";
+            // hila::out0 << "Calculated deriv " << f2 << "\n";
+            // hila::out0 << "Actual deriv " << (s2-s1)/eps << "\n";
+            // hila::out0 << "Fermion dg deriv " << ng << " diff " << diff << "\n";
             assert(diff * diff < eps && "Fermion dg deriv");
         }
 
@@ -139,11 +139,11 @@ void check_forces(fermion_action &fa, dirac &D, gauge_field_type &gauge) {
         diff = f2 - f1;
 
         if (hila::myrank() == 0) {
-            // output0 << "Action 1 " << s1 << "\n";
-            // output0 << "Action 2 " << s2 << " " << dS << " " << dS/s2 << "\n";
-            // output0 << "Calculated force " << f2 << "\n";
-            // output0 << "Actual force " << f1 << "\n";
-            // output0 << "Fermion force " << ng << " diff " << diff << "\n";
+            // hila::out0 << "Action 1 " << s1 << "\n";
+            // hila::out0 << "Action 2 " << s2 << " " << dS << " " << dS/s2 << "\n";
+            // hila::out0 << "Calculated force " << f2 << "\n";
+            // hila::out0 << "Actual force " << f1 << "\n";
+            // hila::out0 << "Fermion force " << ng << " diff " << diff << "\n";
             assert(diff * diff < eps && "Fermion force");
         }
     }
@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
     const CoordinateVector nd = {16, 8, 8, 8};
 #endif
     hila::initialize(argc, argv);
-    lattice->setup(nd);
+    lattice.setup(nd);
     hila::seed_random(2);
 
     // Test the force calculation by varying one gauge link
@@ -200,10 +200,10 @@ int main(int argc, char **argv) {
             (f * Complex<double>(0, 1) * SU<N>::generator(ng)).trace().re - (s2 - s1) / eps;
 
         if (hila::myrank() == 0) {
-            // hila::output << "Force " <<
-            // (f*Complex<double>(0,1)*SU<N>::generator(ng)).trace().re << "\n"; hila::output
-            // << "Force " << (f*SU<N>::generator(ng)).trace().re << "\n"; hila::output <<
-            // "Deriv " << (s2-s1)/eps << "\n"; hila::output << "Force " << ng << " diff "
+            // hila::out << "Force " <<
+            // (f*Complex<double>(0,1)*SU<N>::generator(ng)).trace().re << "\n"; hila::out
+            // << "Force " << (f*SU<N>::generator(ng)).trace().re << "\n"; hila::out <<
+            // "Deriv " << (s2-s1)/eps << "\n"; hila::out << "Force " << ng << " diff "
             // << diff << "\n";
             h = Complex<double>(0, 1) * SU<N>::generator(ng);
             assert(diff * diff < eps * 10 && "Gauge force");
@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
     HEX_smeared_field<SUN> hex_gauge(gauge, 10);
 
     // Staggered Forces
-    output0 << "Checking staggered forces:\n";
+    hila::out0 << "Checking staggered forces:\n";
     {
         dirac_staggered D(5.0, gauge);
         fermion_action fa(D, gauge);
@@ -232,42 +232,42 @@ int main(int argc, char **argv) {
     }
 
     {
-        output0 << "Checking evenodd preconditioned staggered forces:\n";
+        hila::out0 << "Checking evenodd preconditioned staggered forces:\n";
         dirac_staggered_evenodd D(5.0, gauge);
         fermion_action fa(D, gauge);
         check_forces(fa, D, gauge);
     }
 
     {
-        output0 << "Checking stout smeared forces:\n";
+        hila::out0 << "Checking stout smeared forces:\n";
         dirac_staggered_evenodd D(5.0, stout_gauge);
         fermion_action fa(D, stout_gauge);
         check_forces(fa, D, stout_gauge);
     }
 
     {
-        output0 << "Checking HEX smeared forces:\n";
+        hila::out0 << "Checking HEX smeared forces:\n";
         dirac_staggered_evenodd D(5.0, hex_gauge);
         fermion_action fa(D, hex_gauge);
         check_forces(fa, D, hex_gauge);
     }
 
     {
-        output0 << "Checking adjoint staggered forces:\n";
+        hila::out0 << "Checking adjoint staggered forces:\n";
         dirac_staggered_evenodd D(5.0, adj_gauge);
         fermion_action fa(D, adj_gauge);
         check_forces(fa, D, adj_gauge);
     }
 
     {
-        output0 << "Checking symmetric staggered forces:\n";
+        hila::out0 << "Checking symmetric staggered forces:\n";
         dirac_staggered_evenodd D(5.0, sym_gauge);
         fermion_action fa(D, sym_gauge);
         check_forces(fa, D, sym_gauge);
     }
 
     {
-        output0 << "Checking antisymmetric staggered forces:\n";
+        hila::out0 << "Checking antisymmetric staggered forces:\n";
         dirac_staggered_evenodd D(5.0, asym_gauge);
         fermion_action fa(D, asym_gauge);
         check_forces(fa, D, asym_gauge);
@@ -275,43 +275,43 @@ int main(int argc, char **argv) {
 
     // Wilson forces
     {
-        output0 << "Checking Wilson forces:\n";
+        hila::out0 << "Checking Wilson forces:\n";
         Dirac_Wilson D(0.05, gauge);
         fermion_action fa(D, gauge);
         check_forces(fa, D, gauge);
     }
 
     {
-        output0 << "Checking evenodd Wilson forces:\n";
+        hila::out0 << "Checking evenodd Wilson forces:\n";
         Dirac_Wilson_evenodd D(0.12, gauge);
         fermion_action fa(D, gauge);
         check_forces(fa, D, gauge);
 
-        output0 << "Checking hasenbusch 1:\n";
+        hila::out0 << "Checking hasenbusch 1:\n";
         Hasenbusch_action_1 fa1(D, gauge, 0);
         check_forces(fa1, D, gauge);
 
-        output0 << "Checking hasenbusch 2:\n";
+        hila::out0 << "Checking hasenbusch 2:\n";
         Hasenbusch_action_2 fa2(D, gauge, 0);
         check_forces(fa2, D, gauge);
     }
 
     {
-        output0 << "Checking adjoint Wilson forces:\n";
+        hila::out0 << "Checking adjoint Wilson forces:\n";
         Dirac_Wilson_evenodd D(0.05, adj_gauge);
         fermion_action fa(D, adj_gauge);
         check_forces(fa, D, adj_gauge);
     }
 
     {
-        output0 << "Checking symmetric Wilson forces:\n";
+        hila::out0 << "Checking symmetric Wilson forces:\n";
         Dirac_Wilson_evenodd D(0.05, sym_gauge);
         fermion_action fa(D, sym_gauge);
         check_forces(fa, D, sym_gauge);
     }
 
     {
-        output0 << "Checking antisymmetric Wilson forces:\n";
+        hila::out0 << "Checking antisymmetric Wilson forces:\n";
         Dirac_Wilson_evenodd D(0.05, asym_gauge);
         fermion_action fa(D, asym_gauge);
         check_forces(fa, D, asym_gauge);
@@ -330,9 +330,9 @@ int main(int argc, char **argv) {
 
         double diff = (h * SU<N>::generator(ng)).trace().re + (s2 - s1) / eps;
         if (hila::myrank() == 0) {
-            // hila::output << "Mom 1 " << (h*SU<N>::generator(ng)).trace().re << "\n";
-            // hila::output << "Mom 2 " << (s2-s1)/eps << "\n";
-            // hila::output << "Mom " << ng << " diff " << diff << "\n";
+            // hila::out << "Mom 1 " << (h*SU<N>::generator(ng)).trace().re << "\n";
+            // hila::out << "Mom 2 " << (s2-s1)/eps << "\n";
+            // hila::out << "Mom " << ng << " diff " << diff << "\n";
             h = Complex<double>(0, 1) * SU<N>::generator(ng);
             assert(diff * diff < eps * 10 && "Momentum derivative");
         }

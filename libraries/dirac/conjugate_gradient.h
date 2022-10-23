@@ -86,7 +86,7 @@ template <typename Op> class CG {
             }
             onsites(M.par) { rrnew += squarenorm(r[X]); }
 #ifdef DEBUG_CG
-            output0 << "CG step " i << ", residue " << sqrt(rrnew / target_rr) << "\n";
+            hila::out0 << "CG step " i << ", residue " << sqrt(rrnew / target_rr) << "\n";
 #endif
             if (rrnew < target_rr)
                 break;
@@ -99,8 +99,8 @@ template <typename Op> class CG {
         double timing =
             1e-3 * (end.tv_usec - start.tv_usec) + 1e3 * (end.tv_sec - start.tv_sec);
 
-        output0 << "Conjugate Gradient: " << i << " steps in " << timing << "ms, ";
-        output0 << "relative residue:" << rrnew / source_norm << "\n";
+        hila::out0 << "Conjugate Gradient: " << i << " steps in " << timing << "ms, ";
+        hila::out0 << "relative residue:" << rrnew / source_norm << "\n";
     }
 };
 

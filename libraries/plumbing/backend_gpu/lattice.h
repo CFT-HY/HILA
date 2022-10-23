@@ -46,7 +46,7 @@ struct backend_lattice_struct {
 #endif
 
     /// setup the backend lattice data
-    void setup(lattice_struct *lattice);
+    void setup(const lattice_struct &lattice);
 
 };
 

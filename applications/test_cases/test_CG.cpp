@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     const CoordinateVector nd = {16, 8, 8, 8};
 #endif
     hila::initialize(argc, argv);
-    lattice->setup(nd);
+    lattice.setup(nd);
 
     hila::seed_random(2);
 
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 
 // Check conjugate of the staggered Dirac operator
 {
-    output0 << "Checking with dirac_staggered\n";
+    hila::out0 << "Checking with dirac_staggered\n";
     using dirac = dirac_staggered<SU<N>>;
     dirac D(0.1, U);
     Field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
 
 // Check conjugate of the wilson Dirac operator
 {
-    output0 << "Checking with Dirac_Wilson\n";
+    hila::out0 << "Checking with Dirac_Wilson\n";
     using dirac = Dirac_Wilson<SU<N, double>>;
     dirac D(0.05, U);
     Field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
@@ -183,7 +183,7 @@ int main(int argc, char **argv) {
 
 // Check conjugate of the even-odd preconditioned staggered Dirac operator
 {
-    output0 << "Checking with dirac_staggered_evenodd\n";
+    hila::out0 << "Checking with dirac_staggered_evenodd\n";
     dirac_staggered_evenodd D(5.0, U);
     Field<SU_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
     onsites(ALL) {
@@ -214,7 +214,7 @@ int main(int argc, char **argv) {
 
 // Check conjugate of the even-odd preconditioned wilson Dirac operator
 {
-    output0 << "Checking with Dirac_Wilson_evenodd\n";
+    hila::out0 << "Checking with Dirac_Wilson_evenodd\n";
     using dirac = Dirac_Wilson_evenodd<SU<N>>;
     dirac D(0.12, U);
     Field<Wilson_vector<N, double>> a, b, Db, Ddaggera, DdaggerDb;
@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
 
     diffre = 0;
     onsites(EVEN) { diffre += squarenorm(a[X] - Db[X]); }
-    output0 << "D inv Dg " << diffre << "\n";
+    hila::out0 << "D inv Dg " << diffre << "\n";
     assert(diffre * diffre < 1e-16 && "test D (DdgD)^-1 Ddg");
 
     // Run CG on a, multiply by DdaggerD and check the same
@@ -289,7 +289,7 @@ int main(int argc, char **argv) {
 
 // The the Hasenbusch operator
 {
-    output0 << "Checking with Hasenbusch_operator\n";
+    hila::out0 << "Checking with Hasenbusch_operator\n";
     using dirac_base = Dirac_Wilson_evenodd<SU<N>>;
     dirac_base Dbase(0.1, U);
     using dirac = Hasenbusch_operator<dirac_base>;

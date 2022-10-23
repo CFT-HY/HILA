@@ -50,7 +50,7 @@ void timer::reset() {
 
 void timer::error() {
     if (!is_error) {
-        output0 << " **** Timer '" << label
+        hila::out0 << " **** Timer '" << label
                 << "' error, unbalanced start/stop.  Removing from statistics\n";
     }
     is_error = true;
@@ -107,14 +107,14 @@ void timer::report(bool print_not_timed) {
                               label.c_str(), t_total, (long)count,
                               1e6 * t_total / count, t_total / ttime);
             }
-            hila::output << line;
+            hila::out << line;
         } else if (!is_error && print_not_timed) {
             std::snprintf(line, 200, "%-20s: no timed calls made\n", label.c_str());
-            hila::output << line;
+            hila::out << line;
         } else if (is_error) {
             std::snprintf(line, 200, "%-20s: error:unbalanced start/stop\n",
                           label.c_str());
-            hila::output << line;
+            hila::out << line;
         }
     }
 }
@@ -122,9 +122,9 @@ void timer::report(bool print_not_timed) {
 void report_timers() {
     if (hila::myrank() == 0) {
         if (timer_list.size() > 0) {
-            hila::output << "TIMER REPORT:             total(sec)          calls     "
+            hila::out << "TIMER REPORT:             total(sec)          calls     "
                             "time/call  fraction\n";
-            hila::output
+            hila::out
                 << "------------------------------------------------------------"
                    "---------------\n";
 
@@ -132,11 +132,11 @@ void report_timers() {
                 tp->report();
             }
 
-            hila::output
+            hila::out
                 << "------------------------------------------------------------"
                    "---------------\n";
         } else {
-            hila::output << "No timers defined\n";
+            hila::out << "No timers defined\n";
         }
     }
 }
@@ -195,9 +195,9 @@ bool time_to_exit() {
         else
             finish = false;
 
-        hila::output << "TIMECHECK: " << this_time << "s used, "
+        hila::out << "TIMECHECK: " << this_time << "s used, "
                      << timelimit - this_time << "s remaining\n";
-        if (finish) hila::output << "CPU TIME LIMIT, EXITING THE PROGRAM\n";
+        if (finish) hila::out << "CPU TIME LIMIT, EXITING THE PROGRAM\n";
     }
     hila::broadcast(finish);
     return finish;
@@ -210,10 +210,10 @@ bool time_to_exit() {
 void timestamp(const char *msg) {
     if (hila::myrank() == 0) {
         std::time_t ct = std::time(NULL);
-        if (msg != NULL) hila::output << msg;
+        if (msg != NULL) hila::out << msg;
         std::string d = ctime(&ct);
         d.resize(d.size() - 1); // take away \n at the end
-        hila::output << " -- date " << d << "  run time " << hila::gettime() << "s\n";
+        hila::out << " -- date " << d << "  run time " << hila::gettime() << "s\n";
     }
 }
 

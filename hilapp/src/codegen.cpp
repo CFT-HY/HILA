@@ -164,7 +164,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
                     srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin())
                         .str();
                 code << "if (!" << l.new_name << ".is_initialized(" << init_par
-                     << ")){\noutput0 << \"File " << fname << " on line "
+                     << ")){\nhila::out0 << \"File " << fname << " on line "
                      << srcMgr.getSpellingLineNumber(
                             get_real_range(S->getSourceRange()).getBegin())
                      << ":\\n Value of variable " << l.old_name

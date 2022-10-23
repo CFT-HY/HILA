@@ -69,7 +69,7 @@ class fermion_action : public action_base {
         }
         // If the gauge type is double precision, solve first in single precision
         if constexpr (std::is_same<double, typename gauge_field::basetype>::value) {
-            output0 << "Starting with single precision inversion\n";
+            hila::out0 << "Starting with single precision inversion\n";
 
             auto single_precision = gauge.get_single_precision();
             typename DIRAC_OP::type_flt D_flt(D, single_precision);
@@ -152,7 +152,7 @@ class fermion_action : public action_base {
         CG<DIRAC_OP> inverse(D);
         gauge.refresh();
 
-        output0 << "base force\n";
+        hila::out0 << "base force\n";
         initial_guess(chi, psi);
         inverse.apply(chi, psi);
         save_new_solution(psi);
@@ -318,7 +318,7 @@ class Hasenbusch_action_2 : public action_base {
         }
         // If the gauge type is double precision, solve first in single precision
         if constexpr (std::is_same<double, typename gauge_field::basetype>::value) {
-            output0 << "Starting with single precision inversion\n";
+            hila::out0 << "Starting with single precision inversion\n";
 
             auto single_precision = gauge.get_single_precision();
             typename DIRAC_OP::type_flt D_flt(D, single_precision);

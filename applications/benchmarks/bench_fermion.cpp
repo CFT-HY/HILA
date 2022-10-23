@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
 
-    lattice->setup(latsize);
+    lattice.setup(latsize);
 
     hila::seed_random(SEED);
 
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Dirac staggered: " << timing << "ms \n";
+    hila::out0 << "Dirac staggered: " << timing << "ms \n";
 
     // Conjugate gradient step
     CG<dirac_stg> stg_inverse(D_staggered, 1e-5, 1);
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
     }
 
     timing = timing / (double)n_runs;
-    output0 << "Staggered CG: " << timing << "ms / iteration\n";
+    hila::out0 << "Staggered CG: " << timing << "ms / iteration\n";
 
     Field<Wilson_vector<N, double>> wvec1, wvec2;
     onsites(ALL) {
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "Dirac Wilson: " << timing << "ms \n";
+    hila::out0 << "Dirac Wilson: " << timing << "ms \n";
 
     // Conjugate gradient step (set accuracy=1 to run only 1 step)
     CG<Dirac_Wilson> w_inverse(D_wilson, 1e-12, 5);
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
     }
 
     timing = timing / (double)n_runs;
-    output0 << "Dirac Wilson CG: " << timing << "ms / iteration\n";
+    hila::out0 << "Dirac Wilson CG: " << timing << "ms / iteration\n";
 
     hila::finishrun();
 }

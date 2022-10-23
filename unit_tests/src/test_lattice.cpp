@@ -68,11 +68,11 @@ class TestLattice : public SnapshotStruct {
     std::string snapshot_dir = "./snapshots/test_lattice";
 
     TestLattice() {
-        MPI_Comm_size(lattice->mpi_comm_lat, &num_nodes);
-        MPI_Comm_rank(lattice->mpi_comm_lat, &my_rank);
+        MPI_Comm_size(lattice.mpi_comm_lat, &num_nodes);
+        MPI_Comm_rank(lattice.mpi_comm_lat, &my_rank);
 
         if (num_nodes != 2 && num_nodes != 4 && num_nodes != 8) {
-            output0 << "Incorrect number of ranks exiting \n";
+            hila::out0 << "Incorrect number of ranks exiting \n";
             exit(0);
         }
     }
@@ -86,36 +86,36 @@ class TestLattice : public SnapshotStruct {
     std::vector<int> adjacent_nodes(int direction=1) {
         std::vector<int> nodes_list;
         foralldir (d)
-            nodes_list.push_back(lattice->mynode.nn[d]);
+            nodes_list.push_back(lattice.mynode.nn[d]);
         foralldir (d)
-            nodes_list.push_back(lattice->mynode.nn[-d]);
+            nodes_list.push_back(lattice.mynode.nn[-d]);
         return nodes_list;
     }
 
     std::vector<int> nn_comminfo_rank() {
         std::vector<int> nodes_list;
         foralldir(d)
-            nodes_list.push_back(lattice->nn_comminfo[ d].to_node.rank);
+            nodes_list.push_back(lattice.nn_comminfo[ d].to_node.rank);
         foralldir(d)
-            nodes_list.push_back(lattice->nn_comminfo[-d].to_node.rank);
+            nodes_list.push_back(lattice.nn_comminfo[-d].to_node.rank);
         return nodes_list;
     }
 
     std::vector<int> nn_comminfo_n_sites(Parity par) {
         std::vector<int> n_sites_list;
         foralldir(d)
-            n_sites_list.push_back(lattice->nn_comminfo[ d].from_node.n_sites(par));
+            n_sites_list.push_back(lattice.nn_comminfo[ d].from_node.n_sites(par));
         foralldir(d)
-            n_sites_list.push_back(lattice->nn_comminfo[-d].from_node.n_sites(par));
+            n_sites_list.push_back(lattice.nn_comminfo[-d].from_node.n_sites(par));
         return n_sites_list;
     }
 
     std::vector<int> nn_comminfo_offset(Parity par) {
         std::vector<int> offset_list;
         foralldir(d)
-            offset_list.push_back(lattice->nn_comminfo[ d].from_node.offset(par));
+            offset_list.push_back(lattice.nn_comminfo[ d].from_node.offset(par));
         foralldir(d)
-            offset_list.push_back(lattice->nn_comminfo[-d].from_node.offset(par));
+            offset_list.push_back(lattice.nn_comminfo[-d].from_node.offset(par));
         return offset_list;
     }
 
@@ -123,14 +123,14 @@ class TestLattice : public SnapshotStruct {
 
 TEST_CASE_METHOD(TestLattice, "Lattice routines", "[MPI][.]") {
     SECTION("Test size routiens") {
-        REQUIRE(lattice->volume() == lattice_size * lattice_size * lattice_size);
-        REQUIRE(lattice->size(e_x) == lattice_size);
-        REQUIRE(lattice->size(e_y) == lattice_size);
-        REQUIRE(lattice->size(e_z) == lattice_size);
-        REQUIRE(lattice->size(0) == lattice_size);
-        REQUIRE(lattice->size(1) == lattice_size);
-        REQUIRE(lattice->size(2) == lattice_size);
-        REQUIRE(lattice->size() == CoordinateVector({lattice_size,lattice_size,lattice_size}));
+        REQUIRE(lattice.volume() == lattice_size * lattice_size * lattice_size);
+        REQUIRE(lattice.size(e_x) == lattice_size);
+        REQUIRE(lattice.size(e_y) == lattice_size);
+        REQUIRE(lattice.size(e_z) == lattice_size);
+        REQUIRE(lattice.size(0) == lattice_size);
+        REQUIRE(lattice.size(1) == lattice_size);
+        REQUIRE(lattice.size(2) == lattice_size);
+        REQUIRE(lattice.size() == CoordinateVector({lattice_size,lattice_size,lattice_size}));
     }
     SECTION("Test coordinate and looping methods") {
         std::map<int,CoordinateVector> local_coordinate_dict = {
@@ -140,20 +140,20 @@ TEST_CASE_METHOD(TestLattice, "Lattice routines", "[MPI][.]") {
             {8,CoordinateVector{ 63, 63, 63}}
         };
         CoordinateVector first_coordinate = node_first_coordinate[num_nodes][my_rank];
-        REQUIRE(lattice->coordinates(0)==first_coordinate);
-        REQUIRE(lattice->coordinate(0,e_x)==first_coordinate[e_x]);
-        REQUIRE(lattice->coordinate(0,e_y)==first_coordinate[e_y]);
-        REQUIRE(lattice->coordinate(0,e_z)==first_coordinate[e_z]);
-        REQUIRE(lattice->site_parity(0) == Parity(EVEN));
-        REQUIRE(lattice->site_parity(lattice->mynode.sites/2) == Parity(ODD));
-        REQUIRE(lattice->loop_begin(ODD) == std::round(total_lattice_size / num_nodes / 2));
-        REQUIRE(lattice->loop_begin(EVEN) == 0);
-        REQUIRE(lattice->loop_end(ODD) == std::round(total_lattice_size / num_nodes));
-        REQUIRE(lattice->loop_end(EVEN) == std::round(total_lattice_size / num_nodes / 2));
-        REQUIRE(lattice->global_coordinates(0) == CoordinateVector({0,0,0}));
-        REQUIRE(lattice->global_coordinates(total_lattice_size-1) == CoordinateVector({ls-1,ls-1,ls-1}));
-        REQUIRE(lattice->local_coordinates(0) == CoordinateVector(0));
-        REQUIRE(lattice->local_coordinates(total_lattice_size/num_nodes-1) == local_coordinate_dict[num_nodes]);
+        REQUIRE(lattice.coordinates(0)==first_coordinate);
+        REQUIRE(lattice.coordinate(0,e_x)==first_coordinate[e_x]);
+        REQUIRE(lattice.coordinate(0,e_y)==first_coordinate[e_y]);
+        REQUIRE(lattice.coordinate(0,e_z)==first_coordinate[e_z]);
+        REQUIRE(lattice.site_parity(0) == Parity(EVEN));
+        REQUIRE(lattice.site_parity(lattice.mynode.sites/2) == Parity(ODD));
+        REQUIRE(lattice.loop_begin(ODD) == std::round(total_lattice_size / num_nodes / 2));
+        REQUIRE(lattice.loop_begin(EVEN) == 0);
+        REQUIRE(lattice.loop_end(ODD) == std::round(total_lattice_size / num_nodes));
+        REQUIRE(lattice.loop_end(EVEN) == std::round(total_lattice_size / num_nodes / 2));
+        REQUIRE(lattice.global_coordinates(0) == CoordinateVector({0,0,0}));
+        REQUIRE(lattice.global_coordinates(total_lattice_size-1) == CoordinateVector({ls-1,ls-1,ls-1}));
+        REQUIRE(lattice.local_coordinates(0) == CoordinateVector(0));
+        REQUIRE(lattice.local_coordinates(total_lattice_size/num_nodes-1) == local_coordinate_dict[num_nodes]);
     }
 }
 
@@ -161,23 +161,23 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
     SECTION("Node specific information: struct node_struct") {
         INFO("Test that MPI node recognizes correct rank")
 
-        REQUIRE(lattice->mynode.rank == my_rank);
-        REQUIRE(lattice->node_rank() == my_rank);
-        REQUIRE(lattice->n_nodes() == num_nodes);
+        REQUIRE(lattice.mynode.rank == my_rank);
+        REQUIRE(lattice.node_rank() == my_rank);
+        REQUIRE(lattice.n_nodes() == num_nodes);
 
         GIVEN("Total lattice size " << total_lattice_size) {
             THEN("Each node should have a site total of total_lattice_size/number_of_nodes "
                 "and even/odd site total of total_lattice_size/number_of_nodes/2")
-            REQUIRE(lattice->mynode.sites == lattice->mynode.volume());
+            REQUIRE(lattice.mynode.sites == lattice.mynode.volume());
 
-            REQUIRE(lattice->mynode.sites == std::round(total_lattice_size / num_nodes));
-            REQUIRE(lattice->mynode.evensites == std::round(total_lattice_size / num_nodes / 2));
-            REQUIRE(lattice->mynode.oddsites == std::round(total_lattice_size / num_nodes / 2));
+            REQUIRE(lattice.mynode.sites == std::round(total_lattice_size / num_nodes));
+            REQUIRE(lattice.mynode.evensites == std::round(total_lattice_size / num_nodes / 2));
+            REQUIRE(lattice.mynode.oddsites == std::round(total_lattice_size / num_nodes / 2));
         }
     }
     SECTION("Shared node information: struct allnodes") {
 
-        REQUIRE(lattice->nodes.number == num_nodes);
+        REQUIRE(lattice.nodes.number == num_nodes);
 
         std::map<int, CoordinateVector> n_division_for_nodes = {
             { 1, CoordinateVector({1,1,1}) },
@@ -192,8 +192,8 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
             { 8, CoordinateVector({ls/2,ls/2,ls/2}) }
         };
 
-        REQUIRE(lattice->nodes.n_divisions == n_division_for_nodes[num_nodes]);
-        REQUIRE(lattice->nodes.max_size == max_size_for_node[num_nodes]);
+        REQUIRE(lattice.nodes.n_divisions == n_division_for_nodes[num_nodes]);
+        REQUIRE(lattice.nodes.max_size == max_size_for_node[num_nodes]);
 
     }
     SECTION("Communication node information: struct comm_node_struct") {
@@ -209,16 +209,16 @@ TEST_CASE_METHOD(TestLattice, "Node information", "[MPI][.]") {
         SECTION("Testing indicies of halo coordinates. Choosing z direction, since there will always be a z-dir split") {
             std::vector<int> coord_indicies;
             int lower=0;
-            int upper = lattice->nn_comminfo[e_z].to_node.sites;
+            int upper = lattice.nn_comminfo[e_z].to_node.sites;
             for (int i = lower; i < upper; i++) {
-                coord_indicies.push_back(lattice->nn_comminfo[e_z].to_node.site_index(i,ALL));
+                coord_indicies.push_back(lattice.nn_comminfo[e_z].to_node.site_index(i,ALL));
             }
 
             REQUIRE(coord_indicies == sitelist_snapshot);
         }
         SECTION("Testing sitelist in comm_node_struct") {
             int size;
-            const unsigned *sitelist = lattice->nn_comminfo[e_z].to_node.get_sitelist(ALL,size);
+            const unsigned *sitelist = lattice.nn_comminfo[e_z].to_node.get_sitelist(ALL,size);
             std::vector<int> sitelist_vector(sitelist, sitelist + size);
             REQUIRE(sitelist_vector == sitelist_snapshot);
         }
@@ -261,8 +261,8 @@ TEST_CASE_METHOD(TestLattice, "Lattice split", "[MPI][.]") {
             THEN("The lattice will be split in the z direction and adjacent node in "
                  "y-x-direction will be itself") {                
                 REQUIRE(adjacent_nodes() == adjacent_nodes_dict[num_nodes][my_rank]);
-                REQUIRE(lattice->mynode.min == node_first_coordinate[num_nodes][my_rank]);           
-                REQUIRE(lattice->mynode.size == CoordinateVector({ls,ls,ls/2}));
+                REQUIRE(lattice.mynode.min == node_first_coordinate[num_nodes][my_rank]);           
+                REQUIRE(lattice.mynode.size == CoordinateVector({ls,ls,ls/2}));
             }
         }
     }
@@ -271,8 +271,8 @@ TEST_CASE_METHOD(TestLattice, "Lattice split", "[MPI][.]") {
             THEN("The lattice will be split in the y-z direction and adjacent node in "
                  "x-direction will be itself") {
                 REQUIRE(adjacent_nodes() == adjacent_nodes_dict[num_nodes][my_rank]);
-                REQUIRE(lattice->mynode.min == node_first_coordinate[num_nodes][my_rank]);
-                REQUIRE(lattice->mynode.size == CoordinateVector({ls,ls/2,ls/2}));
+                REQUIRE(lattice.mynode.min == node_first_coordinate[num_nodes][my_rank]);
+                REQUIRE(lattice.mynode.size == CoordinateVector({ls,ls/2,ls/2}));
             }
         }
     }
@@ -281,8 +281,8 @@ TEST_CASE_METHOD(TestLattice, "Lattice split", "[MPI][.]") {
             THEN("The lattice will be split in all direction evenly") {
 
                 REQUIRE(adjacent_nodes() == adjacent_nodes_dict[num_nodes][my_rank]);
-                REQUIRE(lattice->mynode.min == node_first_coordinate[num_nodes][my_rank]);
-                REQUIRE(lattice->mynode.size == CoordinateVector({ls/2,ls/2,ls/2}));
+                REQUIRE(lattice.mynode.min == node_first_coordinate[num_nodes][my_rank]);
+                REQUIRE(lattice.mynode.size == CoordinateVector({ls/2,ls/2,ls/2}));
             }
         }
     }

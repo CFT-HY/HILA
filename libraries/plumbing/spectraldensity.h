@@ -10,7 +10,7 @@ struct sd_k_bin_parameters {
     double max;   // min and max of k (default: 0 and pi)
     double power; // binned function k^p, default p=1  : note, min and max are "powered"
                   // too
-    int bins;     // how many bins in output (default=max of lattice->size(d)/2)
+    int bins;     // how many bins in output (default=max of lattice.size(d)/2)
     int exact;    // do this many low k-value "bins" exactly
 };
 
@@ -33,7 +33,7 @@ namespace hila {
 
 /// class hila::k_binning is used to bin "k-space" fields (typically fourier transformed
 /// from real space).  Vector k is normalized so that -pi < k_i <= pi, i.e.
-//  k_i = 2*pi*x_i/L_i, where L_i = lattice->size(i) and x_i is the L_i/2 modded
+//  k_i = 2*pi*x_i/L_i, where L_i = lattice.size(i) and x_i is the L_i/2 modded
 /// coordinate.
 /// Bin is determined by formula
 ///   b = (int) ( pow(k/k_max)^p * n_bins )
@@ -73,8 +73,8 @@ class k_binning {
         par.exact = 0;
         par.bins = 1;
         foralldir(d) {
-            if (lattice->size(d) > 2 * par.bins)
-                par.bins = lattice->size(d) / 2;
+            if (lattice.size(d) > 2 * par.bins)
+                par.bins = lattice.size(d) / 2;
         }
     }
 

@@ -22,12 +22,12 @@ static int prime[NPRIMES] = {2, 3, 5, 7, 11, 13, 17, 19, 23};
 void lattice_struct::setup_layout() {
     int i, msize, dir, nfactors[NPRIMES], nodesiz[NDIM];
 
-    output0 << "Standard lattice layout:\n " << NDIM << " dimensions\n";
+    hila::out0 << "Standard lattice layout:\n " << NDIM << " dimensions\n";
 
     /* Figure out dimensions of hyperrectangle - this version ensures all are same size */
 
     if (l_volume % hila::number_of_nodes()) {
-        output0 << " No hope of laying out the lattice using " << hila::number_of_nodes()
+        hila::out0 << " No hope of laying out the lattice using " << hila::number_of_nodes()
                 << " nodes\n";
         hila::finishrun();
     }
@@ -44,7 +44,7 @@ void lattice_struct::setup_layout() {
         }
     }
     if (i != 1) {
-        output0 << " Cannot factorize " << hila::number_of_nodes() << " nodes with primes up to "
+        hila::out0 << " Cannot factorize " << hila::number_of_nodes() << " nodes with primes up to "
                 << prime[NPRIMES - 1] << '\n';
         hila::finishrun();
     }
@@ -89,7 +89,7 @@ void lattice_struct::setup_layout() {
 
             if (dir < 0) {
                 /* This cannot happen */
-                output0 << "CANNOT HAPPEN! in setup_layout_simple\n";
+                hila::out0 << "CANNOT HAPPEN! in setup_layout_simple\n";
                 hila::finishrun();
             }
 
@@ -117,21 +117,21 @@ void lattice_struct::setup_layout() {
     nodes.create_remap();
 
     if (hila::myrank() == 0) {
-        output0 << "\n Sites on node: ";
+        hila::out0 << "\n Sites on node: ";
         foralldir(dir) {
             if (dir > 0) {
-                output0 << " x ";
+                hila::out0 << " x ";
             }
-            output0 << nodesiz[dir];
+            hila::out0 << nodesiz[dir];
         }
-        output0 << "\n Processor layout: ";
+        hila::out0 << "\n Processor layout: ";
         foralldir(dir) {
             if (dir > 0) {
-                output0 << " x ";
+                hila::out0 << " x ";
             }
-            output0 << nodes.n_divisions[dir];
+            hila::out0 << nodes.n_divisions[dir];
         }
-        output0 << '\n';
+        hila::out0 << '\n';
     }
 #endif
 }

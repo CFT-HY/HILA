@@ -105,7 +105,7 @@ void gpu_memory_pool_free(void *ptr) {
     }
 
     // did not find!  serious error, quit
-    hila::output << "Memory free error - unknown pointer  " << ptr << '\n';
+    hila::out << "Memory free error - unknown pointer  " << ptr << '\n';
     hila::terminate(1);
 }
 
@@ -123,15 +123,15 @@ void gpu_memory_pool_purge() {
 
 void gpu_memory_pool_report() {
     if (hila::myrank() == 0) {
-        hila::output << "\nGPU Memory pool statistics from node 0:\n";
-        hila::output << "   Total pool size " << ((double)total_size) / (1024 * 1024)
+        hila::out << "\nGPU Memory pool statistics from node 0:\n";
+        hila::out << "   Total pool size " << ((double)total_size) / (1024 * 1024)
                      << " MB\n";
-        hila::output << "   # of allocations " << n_allocs << "  real allocs "
+        hila::out << "   # of allocations " << n_allocs << "  real allocs "
                      << std::setprecision(2) << ((double)n_true_allocs) / n_allocs * 100
                      << "%\n";
-        hila::output << "   Average free list search "
+        hila::out << "   Average free list search "
                      << free_list_avg_search / n_allocs << " steps\n";
-        hila::output << "   Average free list size " << free_list_avg_size / n_allocs
+        hila::out << "   Average free list size " << free_list_avg_size / n_allocs
                      << " items\n\n";
     }
 }

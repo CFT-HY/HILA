@@ -84,15 +84,16 @@
 // const_function is weaker than const.
 
 
-// text output section -- defines also output0, which writes from node 0 only
+// text output section -- defines also hila::out0, which writes from node 0 only
 
-extern std::ostream output0;
 namespace hila {
 
 /// this is our default output file stream
-extern std::ostream output;
-/// output stream only from node 0
-// extern std::ostream output0;
+extern std::ostream out;
+
+/// This writes output only from main process (node 0)
+extern std::ostream out0;
+
 /// this is just a hook to store output file, if it is in use
 extern std::ofstream output_file;
 

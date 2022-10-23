@@ -15,7 +15,7 @@
 constexpr double mintime = 1000;
 
 // Direct output to stdout
-// std::ostream &hila::output = std::cout;
+// std::ostream &hila::out = std::cout;
 
 // Calculate time difference in milliseconds
 static inline double timediff(timeval start, timeval end) {
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
 
-    lattice->setup(latsize);
+    lattice.setup(latsize);
 
     // test matrix indexing operators
     Field<Matrix<4, 4, Complex<ntype>>> matd;
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "4x4 matrix index .e : " << timing << " ms \n";
+    hila::out0 << "4x4 matrix index .e : " << timing << " ms \n";
 
     hila::seed_random(SEED);
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "matrix size " << (int)MSIZE << "*" << (int)MSIZE << " : " << timing
+    hila::out0 << "matrix size " << (int)MSIZE << "*" << (int)MSIZE << " : " << timing
             << " ms \n";
 
     // timer1.start();
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "matrix size " << (int)MSIZE + 1 << "*" << (int)MSIZE + 1 << " : "
+    hila::out0 << "matrix size " << (int)MSIZE + 1 << "*" << (int)MSIZE + 1 << " : "
             << timing << " ms \n";
 
     // timer1.end();
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "matrix size " << (int)MSIZE + 3 << "*" << (int)MSIZE + 3 << " : "
+    hila::out0 << "matrix size " << (int)MSIZE + 3 << "*" << (int)MSIZE + 3 << " : "
             << timing << " ms \n";
 
     timing = 0;
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "matrix size " << (int)MSIZE + 6 << "*" << (int)MSIZE + 6 << " : "
+    hila::out0 << "matrix size " << (int)MSIZE + 6 << "*" << (int)MSIZE + 6 << " : "
             << timing << " ms \n";
 
     //------------------------------------------------
@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "matrix size " << (int)MSIZE << "*" << (int)MSIZE << " : " << timing
+    hila::out0 << "matrix size " << (int)MSIZE << "*" << (int)MSIZE << " : " << timing
             << " ms \n";
 
     // Time matrix) * .adjoint()atrix * matrix)
@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "matrix size " << (int)MSIZE + 1 << "*" << (int)MSIZE + 1 << " : "
+    hila::out0 << "matrix size " << (int)MSIZE + 1 << "*" << (int)MSIZE + 1 << " : "
             << timing << " ms \n";
 
     // Time matrix) * .adjoint()atrix * matrix)
@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "matrix size " << (int)MSIZE + 3 << "*" << (int)MSIZE + 3 << " : "
+    hila::out0 << "matrix size " << (int)MSIZE + 3 << "*" << (int)MSIZE + 3 << " : "
             << timing << " ms \n";
 
     timing = 0;
@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
         timing = timediff(start, end);
     }
     timing = timing / (double)n_runs;
-    output0 << "matrix size " << (int)MSIZE + 6 << "*" << (int)MSIZE + 6 << " : "
+    hila::out0 << "matrix size " << (int)MSIZE + 6 << "*" << (int)MSIZE + 6 << " : "
             << timing << " ms \n";
 
     hila::finishrun();

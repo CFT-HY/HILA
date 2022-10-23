@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 
     sum = 0;
     onsites(ALL) { sum += s1[X].re; }
-    assert(sum == 2 * (double)lattice->volume() && "onsites reduction");
+    assert(sum == 2 * (double)lattice.volume() && "onsites reduction");
     s1 = 0;
     s2 = 0;
     s3 = 0;
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
     s1[ALL] = s2[X] + s3[X];
 
     onsites(ALL) { sum += s1[X].re; }
-    assert(sum == (double)lattice->volume() && "test setting field with parity");
+    assert(sum == (double)lattice.volume() && "test setting field with parity");
 
     // Test communication functions
     s1[ALL] = 0;
@@ -172,8 +172,8 @@ int main(int argc, char **argv) {
         coord2[d] = (coord[d] - 1 + nd[d]) % nd[d];
         moved = s2.get_element(coord2);
         if (elem.re != 1 || elem.im != 0) {
-            output0 << "Problem in communicating to Direction " << d << "\n";
-            output0 << "Received " << moved << "\n";
+            hila::out0 << "Problem in communicating to Direction " << d << "\n";
+            hila::out0 << "Received " << moved << "\n";
             assert(elem.re == 1 && elem.im == 0);
         }
     }
@@ -252,7 +252,7 @@ int main(int argc, char **argv) {
             s1[X];
         }
 
-        double result = lattice->volume() * (nd[0] - 1) / 2;
+        double result = lattice.volume() * (nd[0] - 1) / 2;
         assert(sum == result && "Reproduce write problem 1");
 
         s1 = 1;

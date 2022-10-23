@@ -8,7 +8,7 @@
 int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
-    lattice->setup(nd);
+    lattice.setup(nd);
 
     hila::input parameters("parameters");
     double beta = parameters.get("beta");
@@ -48,12 +48,12 @@ int main(int argc, char **argv) {
     int config_found = (bool)std::ifstream(configfile);
     hila::broadcast(config_found);
     if (config_found) {
-        output0 << "Found configuration file, reading\n";
+        hila::out0 << "Found configuration file, reading\n";
         gauge.read_file(configfile);
         double plaq = gauge.plaquette();
-        output0 << "Initial plaquette: " << plaq << "\n";
+        hila::out0 << "Initial plaquette: " << plaq << "\n";
     } else {
-        output0 << "No config file " << configfile << ", starting new run\n";
+        hila::out0 << "No config file " << configfile << ", starting new run\n";
         gauge.random();
     }
 
@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     for (int step = 0; step < n_trajectories; step++) {
         update_hmc(integrator_level_3, hmc_steps, traj_length);
         double plaq = gauge.plaquette();
-        output0 << "Plaq: " << plaq << "\n";
+        hila::out0 << "Plaq: " << plaq << "\n";
 
         gauge.write_file(configfile);
     }

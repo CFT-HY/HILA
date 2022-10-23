@@ -19,7 +19,7 @@
 constexpr double mintime = 1000;
 
 // Direct output to stdout
-// std::ostream &hila::output = std::cout;
+// std::ostream &hila::out = std::cout;
 
 // Calculate time difference in milliseconds
 static inline double timediff(timeval start, timeval end) {

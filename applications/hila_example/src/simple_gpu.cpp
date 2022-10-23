@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
     hila::initialize(argc, argv);
 
     // set up the lattice
-    lattice->setup({128, 128, 128});
+    lattice.setup({128, 128, 128});
 
     // Random numbers are used here - use time to seed
     hila::seed_random(0);

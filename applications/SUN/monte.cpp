@@ -163,7 +163,7 @@ double monte(Matrix<N, N, Complex<double>> &U, Matrix<N, N, Complex<double>> &st
                     uhit++;
 #ifndef __CUDA_ARCH__
                     // TODO: Make parallel-warning out of this
-                    // output0 << "site took 20 kp hits\n";
+                    // hila::out0 << "site took 20 kp hits\n";
 #endif
                 } else { /* now al <= 2.0 */
 
@@ -185,7 +185,7 @@ double monte(Matrix<N, N, Complex<double>> &U, Matrix<N, N, Complex<double>> &st
                     utry += k;
                     uhit++;
 #ifndef __CUDA_ARCH__
-                    // output0 << "site  took 20 creutz hits\n";
+                    // hila::out0 << "site  took 20 creutz hits\n";
 #endif
                 } /* endif al */
 

@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
     hila::initialize(argc, argv);
 
-    lattice->setup(latsize);
+    lattice.setup(latsize);
 
     hila::seed_random(SEED);
 
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "FFT double precision : " << timing << " ms \n";
+    hila::out0 << "FFT double precision : " << timing << " ms \n";
 
     // Generate a random field
     Field<Tf> f, f2;
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
         hila::broadcast(timing);
     }
     timing = timing / (double)n_runs;
-    output0 << "FFT single precision : " << timing << " ms \n";
+    hila::out0 << "FFT single precision : " << timing << " ms \n";
 
     hila::finishrun();
 }

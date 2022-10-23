@@ -3,8 +3,8 @@
 #include "hila.h"
 
 // define these global var here - somehow NULL needed for ostream
-std::ostream hila::output(NULL);
-std::ostream output0(NULL);
+std::ostream hila::out(NULL);
+std::ostream hila::out0(NULL);
 std::ofstream hila::output_file;
 bool hila::about_to_finish = false;
 bool hila::check_input = false;
@@ -74,8 +74,8 @@ class cmdlineargs {
             // OK if p starts with flag
             if (std::strcmp(p, flag) == 0) {
                 if (i > argc - 2) {
-                    output0 << "Expecting an argument after command line parameter '"
-                            << flag << "'\n";
+                    hila::out0 << "Expecting an argument after command line parameter '" << flag
+                               << "'\n";
                     hila::terminate(0);
                 }
                 p = argv[i + 1];
@@ -96,10 +96,10 @@ class cmdlineargs {
             return LONG_MAX; // not found
 
         long val = strtol(p, &end, 10);
-        if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) ||
-            (errno != 0 && val == 0) || end == p || *end != 0) {
-            output0 << "Expect a number (integer) after command line parameter '"
-                    << flag << "'\n";
+        if ((errno == ERANGE && (val == LONG_MAX || val == LONG_MIN)) || (errno != 0 && val == 0) ||
+            end == p || *end != 0) {
+            hila::out0 << "Expect a number (integer) after command line parameter '" << flag
+                       << "'\n";
             hila::terminate(0);
         }
         return val;
@@ -114,7 +114,7 @@ class cmdlineargs {
             return 1;
         if (std::strcmp(p, "off") == 0)
             return -1;
-        output0 << "Command line argument " << flag << " requires value on/off\n";
+        hila::out0 << "Command line argument " << flag << " requires value on/off\n";
         hila::terminate(0);
         return 0; // gets rid of a warning of no return value
     }
@@ -127,12 +127,12 @@ class cmdlineargs {
         if (argc < 2)
             return;
         if (hila::myrank() == 0) {
-            hila::output << "Unknown command line argument:\n";
+            hila::out << "Unknown command line argument:\n";
             for (int i = 1; i < argc; i++) {
-                hila::output << "    " << argv[i] << '\n';
+                hila::out << "    " << argv[i] << '\n';
             }
             // clang-format off
-            hila::output
+            hila::out
                 << "Recognized:\n"
                 << "  -t <seconds>    : cpu time limit\n"
                 << "  -o <name>       : output filename (default: stdout)\n"
@@ -175,7 +175,7 @@ void hila::initialize(int argc, char **argv) {
     // Default output file - we're happy with this unless partitions
     // or otherwise indicated
     // This channels outf to std::cout
-    hila::output.rdbuf(std::cout.rdbuf());
+    hila::out.rdbuf(std::cout.rdbuf());
 
     // set the timing so that gettime() returns time from this point
     hila::inittime();
@@ -183,9 +183,9 @@ void hila::initialize(int argc, char **argv) {
     // initialize MPI so that hila::myrank() etc. works
     initialize_communications(argc, &argv);
 
-    // open output0 only for node 0
+    // open hila::out0 only for node 0
     if (hila::myrank() == 0)
-        output0.rdbuf(std::cout.rdbuf());
+        hila::out0.rdbuf(std::cout.rdbuf());
 
 
     // Init command line - after MPI has been started, so
@@ -194,7 +194,7 @@ void hila::initialize(int argc, char **argv) {
 
     // check the "-check" -input early
     // do it only with 1 node
-    if (lattice->nodes.number == 1) {
+    if (lattice.nodes.number == 1) {
 
         if (commandline.get_option("-check")) {
             long nodes = commandline.get_int("-n");
@@ -205,17 +205,17 @@ void hila::initialize(int argc, char **argv) {
             if (nodes <= 0)
                 nodes = 1;
             hila::check_with_nodes = nodes;
-            hila::output << "****** INPUT AND LAYOUT CHECK ******" << std::endl;
+            hila::out << "****** INPUT AND LAYOUT CHECK ******" << std::endl;
 
             // reset node variables
-            lattice->mynode.rank = 0;
-            lattice->nodes.number = hila::check_with_nodes;
+            lattice.mynode.rank = 0;
+            lattice.nodes.number = hila::check_with_nodes;
         }
     }
 
 #if defined(CUDA) || defined(HIP)
     if (!hila::check_input) {
-        initialize_gpu(lattice->mynode.rank);
+        initialize_gpu(lattice.mynode.rank);
     }
 #endif
 
@@ -228,21 +228,20 @@ void hila::initialize(int argc, char **argv) {
             if (const char *name = commandline.get_cstring("-o")) {
                 // Open file for append
                 if (std::strlen(name) == 0) {
-                    hila::output << "Filename must be given with option '-o'\n";
+                    hila::out << "Filename must be given with option '-o'\n";
                     do_exit = 1;
                 } else if (!hila::check_input) {
                     hila::output_file.open(name, std::ios::out | std::ios::app);
                     if (hila::output_file.fail()) {
-                        hila::output << "Cannot open output file " << name << '\n';
+                        hila::out << "Cannot open output file " << name << '\n';
                         do_exit = 1;
                     } else {
-                        hila::output.flush();
-                        hila::output.rdbuf(
-                            hila::output_file
-                                .rdbuf()); // output now points to output_redirect
+                        hila::out.flush();
+                        hila::out.rdbuf(
+                            hila::output_file.rdbuf()); // output now points to output_redirect
 
                         if (hila::myrank() == 0)
-                            output0.rdbuf(hila::output.rdbuf());
+                            hila::out0.rdbuf(hila::out.rdbuf());
                     }
                 }
             }
@@ -254,65 +253,65 @@ void hila::initialize(int argc, char **argv) {
 
     if (hila::myrank() == 0) {
         print_dashed_line("HILA ⩩ lattice framework");
-        hila::output << "Running program " << argv[0] << "\n";
-        hila::output << "with command line arguments '";
+        hila::out << "Running program " << argv[0] << "\n";
+        hila::out << "with command line arguments '";
         for (int i = 1; i < argc; i++)
-            hila::output << argv[i] << ' ';
-        hila::output << "'\n";
-        hila::output << "Code version: ";
+            hila::out << argv[i] << ' ';
+        hila::out << "'\n";
+        hila::out << "Code version: ";
 #if defined(GIT_SHA_VALUE)
 #define xstr(s) makestr(s)
 #define makestr(s) #s
-        hila::output << "git SHA " << xstr(GIT_SHA_VALUE) << '\n';
+        hila::out << "git SHA " << xstr(GIT_SHA_VALUE) << '\n';
 #else
-        hila::output << "no git information available\n";
+        hila::out << "no git information available\n";
 #endif
-        hila::output << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
+        hila::out << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
 
-        hila::output << "with options:";
+        hila::out << "with options:";
 #ifdef EVEN_SITES_FIRST
-        hila::output << " EVEN_SITES_FIRST";
+        hila::out << " EVEN_SITES_FIRST";
 #endif
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        hila::output << " SPECIAL_BOUNDARY_CONDITIONS";
+        hila::out << " SPECIAL_BOUNDARY_CONDITIONS";
 #endif
-        hila::output << '\n';
+        hila::out << '\n';
 
         hila::timestamp("Starting");
     }
 
     long cputime = commandline.get_int("-t");
     if (cputime != LONG_MAX) {
-        output0 << "CPU time limit " << cputime << " seconds\n";
+        hila::out0 << "CPU time limit " << cputime << " seconds\n";
         hila::setup_timelimit(cputime);
     } else {
-        output0 << "No runtime limit given\n";
+        hila::out0 << "No runtime limit given\n";
     }
 
 
     if ((hila::input_file = commandline.get_cstring("-i"))) {
         if (std::strlen(hila::input_file) == 0) {
-            output0 << "Filename must be given with '-i <name>'\n"
-                    << "Or use '-i stdin' to use standard input\n";
+            hila::out0 << "Filename must be given with '-i <name>'\n"
+                       << "Or use '-i stdin' to use standard input\n";
             hila::finishrun();
         }
 
-        output0 << "Input file from command line: " << hila::input_file << '\n';
+        hila::out0 << "Input file from command line: " << hila::input_file << '\n';
     }
 
     // error out if there are more cmdline options
     commandline.error_if_args_remain();
 
 #if defined(OPENMP)
-    output0 << "Using option OPENMP - with " << omp_get_max_threads() << " threads\n";
+    hila::out0 << "Using option OPENMP - with " << omp_get_max_threads() << " threads\n";
 #endif
 
 
 #if defined(CUDA) || defined(HIP)
 #if defined(GPU_AWARE_MPI)
-    output0 << "Using GPU_AWARE_MPI\n";
+    hila::out0 << "Using GPU_AWARE_MPI\n";
 #else
-    output0 << "Not using GPU_AWARE_MPI\n";
+    hila::out0 << "Not using GPU_AWARE_MPI\n";
 #endif
     if (!hila::check_input)
         gpu_device_info();
@@ -329,7 +328,7 @@ void hila::initialize(int argc, char **argv) {
 #endif
 
 #if (defined(__GNUC__) && !defined(DARWIN)) // || defined(__bg__)
-    output0 << "GNU c-library performance: not returning allocated memory\n";
+    hila::out0 << "GNU c-library performance: not returning allocated memory\n";
 #endif
 }
 
@@ -353,7 +352,7 @@ void hila::terminate(int status) {
 ////////////////////////////////////////////////////////////////
 
 void hila::error(const char *msg) {
-    output0 << "Error: " << msg << '\n';
+    hila::out0 << "Error: " << msg << '\n';
     hila::terminate(0);
 }
 
@@ -370,27 +369,31 @@ void hila::error(const std::string &msg) {
 void hila::finishrun() {
     report_timers();
 
-    for (lattice_struct *lattice : lattices) {
+    for (const lattice_struct *latp : lattices) {
 
-        int64_t gathers = lattice->n_gather_done;
-        int64_t avoided = lattice->n_gather_avoided;
-        if (lattice->node_rank() == 0) {
-            if (gathers + avoided > 0) {
-                output0 << " COMMS from node 0: " << gathers << " done, " << avoided
-                        << "(" << 100.0 * avoided / (avoided + gathers)
-                        << "%) optimized away\n";
-            } else {
-                output0 << " No communications done from node 0\n";
-            }
+#ifdef USE_MPI
+        int64_t gathers = latp->n_gather_done;
+        int64_t avoided = latp->n_gather_avoided;
+
+        if (gathers + avoided > 0) {
+            hila::out0 << " COMMS from node 0: " << gathers << " done, " << avoided << "("
+                       << 100.0 * avoided / (avoided + gathers) << "%) optimized away\n";
+        } else {
+            hila::out0 << " No communications done from node 0\n";
         }
+
+#endif
+
     }
-    if (hila::partitions.number() > 1) {
-        hila::timestamp("Waiting to sync partitions");
-    }
+
 
 #if defined(CUDA) || defined(HIP)
     gpuMemPoolReport();
 #endif
+
+    if (hila::partitions.number() > 1) {
+        hila::timestamp("Waiting to sync partitions");
+    }
 
     hila::synchronize();
     hila::timestamp("Finishing");
@@ -453,8 +456,8 @@ void setup_partitions(cmdlineargs &commandline) {
     // get partitions cmdlinearg first
     long lnum = commandline.get_int("-partitions");
     if (lnum <= 0) {
-        output0 << "partitions=<number> command line argument value must be positive "
-                   "integer (or argument omitted)\n";
+        hila::out0 << "partitions=<number> command line argument value must be positive "
+                      "integer (or argument omitted)\n";
         hila::finishrun();
     }
     if (lnum == LONG_MAX) {
@@ -466,12 +469,11 @@ void setup_partitions(cmdlineargs &commandline) {
     if (hila::partitions.number() == 1)
         return;
 
-    output0 << " Dividing nodes into " << hila::partitions.number() << " partitions\n";
+    hila::out0 << " Dividing nodes into " << hila::partitions.number() << " partitions\n";
 
     if (hila::number_of_nodes() % hila::partitions.number()) {
-        output0 << "** " << hila::number_of_nodes()
-                << " nodes not evenly divisible into " << hila::partitions.number()
-                << " partitions\n";
+        hila::out0 << "** " << hila::number_of_nodes() << " nodes not evenly divisible into "
+                   << hila::partitions.number() << " partitions\n";
         hila::finishrun();
     }
 
@@ -494,7 +496,7 @@ void setup_partitions(cmdlineargs &commandline) {
 
     // now need to open output file
 
-    hila::output.flush(); // this should be cout at this stage
+    hila::out.flush(); // this should be cout at this stage
 
     // all nodes open the file -- perhaps not?  Leave only node 0
     int do_exit = 0;
@@ -511,27 +513,27 @@ void setup_partitions(cmdlineargs &commandline) {
     if (do_exit)
         hila::finishrun();
 
-    hila::output.flush();
+    hila::out.flush();
     if (!hila::check_input) {
-        hila::output.rdbuf(hila::output_file.rdbuf());
+        hila::out.rdbuf(hila::output_file.rdbuf());
         // output now points to output_redirect
         if (hila::myrank() == 0) {
-            output0.rdbuf(hila::output.rdbuf());
+            hila::out0.rdbuf(hila::out.rdbuf());
         }
     }
-    output0 << " ---- SPLIT " << hila::number_of_nodes() << " nodes into "
-            << hila::partitions.number() << " partitions, this " << hila::partitions.mylattice()
-            << " ----\n";
+    hila::out0 << " ---- SPLIT " << hila::number_of_nodes() << " nodes into "
+               << hila::partitions.number() << " partitions, this " << hila::partitions.mylattice()
+               << " ----\n";
 
 
     /* Default sync is no */
     if (commandline.get_onoff("-sync") == 1) {
         hila::partitions._sync = true;
-        output0 << "Synchronising partition trajectories\n";
+        hila::out0 << "Synchronising partition trajectories\n";
     } else {
         hila::partitions._sync = false;
-        output0 << "Not synchronising the partition trajectories\n"
-                << "Use '-sync on' command line argument to override\n";
+        hila::out0 << "Not synchronising the partition trajectories\n"
+                   << "Use '-sync on' command line argument to override\n";
     }
 }
 
@@ -540,44 +542,44 @@ void setup_partitions(cmdlineargs &commandline) {
 #ifdef AVX
 void vector_type_info() {
 
-    output0 << "Using VCL vector class with instruction set level INSTRSET=" << INSTRSET
-            << " <=> ";
+    hila::out0 << "Using VCL vector class with instruction set level INSTRSET=" << INSTRSET
+               << " <=> ";
 
     switch (INSTRSET) {
     case 2:
-        output0 << "SSE2";
+        hila::out0 << "SSE2";
         break;
     case 3:
-        output0 << "SSE3";
+        hila::out0 << "SSE3";
         break;
     case 4:
-        output0 << "SSSE3";
+        hila::out0 << "SSSE3";
         break;
     case 5:
-        output0 << "SSE4.1";
+        hila::out0 << "SSE4.1";
         break;
     case 6:
-        output0 << "SSE4.2";
+        hila::out0 << "SSE4.2";
         break;
     case 7:
-        output0 << "AVX";
+        hila::out0 << "AVX";
         break;
     case 8:
-        output0 << "AVX2";
+        hila::out0 << "AVX2";
         break;
     case 9:
-        output0 << "AVX512F";
+        hila::out0 << "AVX512F";
         break;
     case 10:
-        output0 << "AVX512BW/DQ/VL";
+        hila::out0 << "AVX512BW/DQ/VL";
         break;
     default:
-        output0 << "Unknown";
+        hila::out0 << "Unknown";
         break;
     }
-    output0 << '\n';
+    hila::out0 << '\n';
     if (INSTRSET < 8)
-        output0 << " (You probably should use options '-mavx2 -fmad' in compilation)\n";
+        hila::out0 << " (You probably should use options '-mavx2 -fmad' in compilation)\n";
 }
 
 
@@ -590,14 +592,14 @@ void print_dashed_line(const std::string &text) {
 
         if (text.size() == 0) {
             for (int i = 0; i < linelength; i++)
-                hila::output << '-';
+                hila::out << '-';
 
         } else {
 
-            hila::output << "----- " << text << ' ';
+            hila::out << "----- " << text << ' ';
             for (int i = 7 + text.size(); i < linelength; i++)
-                hila::output << '-';
+                hila::out << '-';
         }
-        hila::output << '\n';
+        hila::out << '\n';
     }
 }

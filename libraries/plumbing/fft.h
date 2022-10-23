@@ -19,17 +19,17 @@
 #define WRK_GATHER_TAG 42
 #define WRK_SCATTER_TAG 43
 
-/// convert lattice vector to to k-vector (needs lattice->size() so defined in fft.h)
+/// convert lattice vector to to k-vector (needs lattice.size() so defined in fft.h)
 /// Note: mods the CoordinateVector to lattice
 
 inline Vector<NDIM, double> convert_to_k(const CoordinateVector &cv) {
     Vector<NDIM, double> k;
     foralldir (d) {
-        int n = pmod(cv.e(d), lattice->size(d));
-        if (n > lattice->size(d) / 2)
-            n -= lattice->size(d);
+        int n = pmod(cv.e(d), lattice.size(d));
+        if (n > lattice.size(d) / 2)
+            n -= lattice.size(d);
 
-        k[d] = n * 2.0 * M_PI / lattice->size(d);
+        k[d] = n * 2.0 * M_PI / lattice.size(d);
     }
     return k;
 }
@@ -96,7 +96,7 @@ class hila_fft {
         fftdir = _fftdir;
         only_reflect = _reflect;
 
-        local_volume = lattice->mynode.volume();
+        local_volume = lattice.mynode.volume();
 
         // init dirs here at one go
         foralldir (d)
@@ -291,7 +291,7 @@ class hila_fft {
     void full_transform(const Field<T> &input, Field<T> &result,
                         const CoordinateVector &directions) {
 
-        assert(lattice == input.fs->lattice && "Default lattice mismatch in fft");
+        assert(lattice.id() == input.fs->lattice_id && "Default lattice mismatch in fft");
 
         // Make sure the result is allocated and mark it changed
         result.check_alloc();
@@ -299,7 +299,7 @@ class hila_fft {
         bool first_dir = true;
         Direction prev_dir;
 
-        foralldir (dir)
+        foralldir (dir) {
             if (directions[dir]) {
 
                 setup_direction(dir);
@@ -330,7 +330,8 @@ class hila_fft {
                 // swap the pointers
                 swap_buffers();
             }
-
+        }
+        
         save_result(result);
 
         result.mark_changed(ALL);
@@ -364,7 +365,7 @@ void FFT_delete_plans();
 ///     fft_direction::inverse  k-> x
 /// FFT is unnormalized: transform + inverse transform yields source multiplied
 ///     by the product of the size of the lattice to active directions
-///     If all directions are active, result = source * lattice->volume():
+///     If all directions are active, result = source * lattice.volume():
 /////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
@@ -481,9 +482,9 @@ inline int FFT_complex_to_real_loc(const CoordinateVector &cv) {
 
     // foralldir continues only if cv[d] == 0 or cv[d] == size(d)/2
     foralldir (d) {
-        if (cv[d] > 0 && cv[d] < lattice->size(d) / 2)
+        if (cv[d] > 0 && cv[d] < lattice.size(d) / 2)
             return 1;
-        if (cv[d] > lattice->size(d) / 2)
+        if (cv[d] > lattice.size(d) / 2)
             return -1;
     }
     // we get here only if all coords are 0 or size(d)/2
@@ -522,7 +523,7 @@ Field<hila::number_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) 
         rss += ::squarenorm(rf[X].real());
     }
 
-    output0 << "RES IS " << rss << "   IMS IS " << ims << '\n';
+    hila::out0 << "RES IS " << rss << "   IMS IS " << ims << '\n';
 
     Field<hila::number_type<T>> res;
     onsites(ALL) res[X] = rf[X].real();

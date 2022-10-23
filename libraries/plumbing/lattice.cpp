@@ -8,13 +8,13 @@
 
 void report_too_large_node() {
     if (hila::myrank() == 0) {
-        hila::output << "Node size too large: size = " << lattice->mynode.size[0];
+        hila::out << "Node size too large: size = " << lattice.mynode.size[0];
         for (int d = 1; d < NDIM; d++)
-            hila::output << " x " << lattice->mynode.size[d];
-        hila::output << " + communication buffers = "
-                     << lattice->mynode.field_alloc_size;
-        hila::output << "\nConsider using more nodes (smaller node size).\n";
-        hila::output << "[TODO: allow 64bit index?]\n";
+            hila::out << " x " << lattice.mynode.size[d];
+        hila::out << " + communication buffers = "
+                     << lattice.mynode.field_alloc_size;
+        hila::out << "\nConsider using more nodes (smaller node size).\n";
+        hila::out << "[TODO: allow 64bit index?]\n";
     }
     hila::finishrun();
 }
@@ -23,14 +23,18 @@ void report_too_large_node() {
 // if(disable_avx[X]==0){};
 // Field<double> disable_avx;
 
-// Define the global lattice ptr, and set it to point to "my_lattice"
-lattice_struct my_lattice;
-lattice_struct *lattice = &my_lattice;
+// Define the global lattice var
+lattice_struct lattice;
 /// A list of all defined lattices (for the future expansion)
 std::vector<lattice_struct *> lattices;
 
+static int lattice_count = 0;
+
 /// General lattice setup
 void lattice_struct::setup(const CoordinateVector &siz) {
+
+    l_label = lattice_count++;
+
     // Add this lattice to the list
     lattices.push_back(this);
 
@@ -62,11 +66,11 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 #ifndef VANILLA
     /* Setup backend-specific lattice info if necessary */
     backend_lattice = new backend_lattice_struct;
-    backend_lattice->setup(this);
+    backend_lattice->setup(*this);
 #endif
 
     if (hila::check_input) {
-        hila::output << "***** Input check done *****\n";
+        hila::out << "***** Input check done *****\n";
         hila::finishrun();
     }
 
@@ -344,7 +348,7 @@ void lattice_struct::setup_nodes() {
 
         // use the opportunity to set up mynode when it is met
         if (nn == hila::myrank())
-            mynode.setup(ni, *lattice);
+            mynode.setup(ni, lattice);
     }
 }
 
@@ -480,7 +484,7 @@ void lattice_struct::create_std_gathers() {
                 if (from_node.rank == mynode.rank) {
                     from_node.rank = rank;
                 } else if (from_node.rank != rank) {
-                    hila::output << "Internal error in nn-communication setup\n";
+                    hila::out << "Internal error in nn-communication setup\n";
                     exit(1);
                 }
 
@@ -665,7 +669,7 @@ void lattice_struct::init_special_boundaries() {
             }
         }
 
-        // hila::output << "Node " << hila::myrank() << " dir " << d << " min " <<
+        // hila::out << "Node " << hila::myrank() << " dir " << d << " min " <<
         // mynode.min << " is_on_edge "
         //   << special_boundaries[d].is_on_edge << '\n';
 

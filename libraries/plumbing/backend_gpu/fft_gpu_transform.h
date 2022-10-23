@@ -229,9 +229,9 @@ void hila_fft<cmplx_t>::transform() {
     }
 
     gpufftHandle plan;
-    plan = hila_saved_fftplan.get_plan(lattice->size(dir), batch, is_float);
+    plan = hila_saved_fftplan.get_plan(lattice.size(dir), batch, is_float);
 
-    // output0 << " Batch " << batch << " nfft " << n_fft << '\n';
+    // hila::out0 << " Batch " << batch << " nfft " << n_fft << '\n';
 
     // alloc work array
     cmplx_t *fft_wrk = (cmplx_t *)d_malloc(buf_size * sizeof(cmplx_t) * elements);
@@ -254,11 +254,11 @@ void hila_fft<cmplx_t>::transform() {
 
 #if defined(CUDA)
     hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads>>>(
-        fft_wrk, d_ptr, d_size, rec_p.size(), lattice->size(dir), n_columns);
+        fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
-                       lattice->size(dir), n_columns);
+                       lattice.size(dir), n_columns);
 #endif
 
     fft_buffer_timer.stop();
@@ -268,7 +268,7 @@ void hila_fft<cmplx_t>::transform() {
 
     for (int i = 0; i < n_fft; i++) {
 
-        cmplx_t *cp = fft_wrk + i * (batch * lattice->size(dir));
+        cmplx_t *cp = fft_wrk + i * (batch * lattice.size(dir));
 
         hila_gpufft_execute(plan, cp, direction);
         check_device_error("FFT execute");
@@ -280,11 +280,11 @@ void hila_fft<cmplx_t>::transform() {
 
 #if defined(CUDA)
     hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads>>>(
-        fft_wrk, d_ptr, d_size, rec_p.size(), lattice->size(dir), n_columns);
+        fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>),
                        dim3(N_blocks), dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size,
-                       rec_p.size(), lattice->size(dir), n_columns);
+                       rec_p.size(), lattice.size(dir), n_columns);
 #endif
 
     fft_buffer_timer.stop();
@@ -324,7 +324,7 @@ void hila_fft<cmplx_t>::gather_data() {
 
             size_t siz = fn.recv_buf_size * elements * sizeof(cmplx_t);
             if (siz >= (1ULL << 30)) {
-                hila::output << "Too large MPI message in pencils! Size " << siz
+                hila::out << "Too large MPI message in pencils! Size " << siz
                              << " bytes\n";
                 hila::terminate(1);
             }
@@ -336,7 +336,7 @@ void hila_fft<cmplx_t>::gather_data() {
 #endif
 
             MPI_Irecv(p, (int)siz, MPI_BYTE, fn.node, WRK_GATHER_TAG,
-                      lattice->mpi_comm_lat, &recreq[i]);
+                      lattice.mpi_comm_lat, &recreq[i]);
 
             i++;
         }
@@ -348,7 +348,7 @@ void hila_fft<cmplx_t>::gather_data() {
         if (fn.node != hila::myrank()) {
 
             cmplx_t *p = send_buf + fn.column_offset * elements;
-            int n = fn.column_number * elements * lattice->mynode.size[dir] *
+            int n = fn.column_number * elements * lattice.mynode.size[dir] *
                     sizeof(cmplx_t);
 
 #ifdef GPU_AWARE_MPI
@@ -360,7 +360,7 @@ void hila_fft<cmplx_t>::gather_data() {
             p = send_p[i];
 #endif
 
-            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice->mpi_comm_lat,
+            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_GATHER_TAG, lattice.mpi_comm_lat,
                       &sendreq[i]);
             i++;
         }
@@ -424,7 +424,7 @@ void hila_fft<cmplx_t>::scatter_data() {
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
-            int n = fn.column_number * elements * lattice->mynode.size[dir] *
+            int n = fn.column_number * elements * lattice.mynode.size[dir] *
                     sizeof(cmplx_t);
 #ifdef GPU_AWARE_MPI
             cmplx_t *p = send_buf + fn.column_offset * elements;
@@ -432,7 +432,7 @@ void hila_fft<cmplx_t>::scatter_data() {
             cmplx_t *p = receive_p[i] = (cmplx_t *)memalloc(n);
 #endif
 
-            MPI_Irecv(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat,
+            MPI_Irecv(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice.mpi_comm_lat,
                       &recreq[i]);
 
             i++;
@@ -452,7 +452,7 @@ void hila_fft<cmplx_t>::scatter_data() {
             cmplx_t *p = send_p[i] = (cmplx_t *)memalloc(n);
             gpuMemcpy(p, rec_p[j], n, gpuMemcpyDeviceToHost);
 #endif
-            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice->mpi_comm_lat,
+            MPI_Isend(p, n, MPI_BYTE, fn.node, WRK_SCATTER_TAG, lattice.mpi_comm_lat,
                       &sendreq[i]);
 
             i++;
@@ -470,7 +470,7 @@ void hila_fft<cmplx_t>::scatter_data() {
         for (auto &fn : hila_pencil_comms[dir]) {
             if (fn.node != hila::myrank()) {
 
-                int n = fn.column_number * elements * lattice->mynode.size[dir] *
+                int n = fn.column_number * elements * lattice.mynode.size[dir] *
                         sizeof(cmplx_t);
                 cmplx_t *p = send_buf + fn.column_offset * elements;
 
@@ -549,30 +549,30 @@ void hila_fft<cmplx_t>::reflect() {
 
 #if defined(CUDA)
     hila_fft_gather_column<cmplx_t><<<N_blocks, N_threads>>>(
-        fft_wrk, d_ptr, d_size, rec_p.size(), lattice->size(dir), n_columns);
+        fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_gather_column<cmplx_t>), dim3(N_blocks),
                        dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size, rec_p.size(),
-                       lattice->size(dir), n_columns);
+                       lattice.size(dir), n_columns);
 #endif
 
 #if defined(CUDA)
     hila_reflect_dir_kernel<cmplx_t>
-        <<<N_blocks, N_threads>>>(fft_wrk, lattice->size(dir), n_columns);
+        <<<N_blocks, N_threads>>>(fft_wrk, lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_reflect_dir_kernel<cmplx_t>),
                        dim3(N_blocks), dim3(N_threads), 0, 0, fft_wrk,
-                       lattice->size(dir), n_columns);
+                       lattice.size(dir), n_columns);
 #endif
 
 
 #if defined(CUDA)
     hila_fft_scatter_column<cmplx_t><<<N_blocks, N_threads>>>(
-        fft_wrk, d_ptr, d_size, rec_p.size(), lattice->size(dir), n_columns);
+        fft_wrk, d_ptr, d_size, rec_p.size(), lattice.size(dir), n_columns);
 #else
     hipLaunchKernelGGL(HIP_KERNEL_NAME(hila_fft_scatter_column<cmplx_t>),
                        dim3(N_blocks), dim3(N_threads), 0, 0, fft_wrk, d_ptr, d_size,
-                       rec_p.size(), lattice->size(dir), n_columns);
+                       rec_p.size(), lattice.size(dir), n_columns);
 #endif
 
 

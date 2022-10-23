@@ -40,7 +40,7 @@ void update(Matrix<2, 2, Complex<double>> &U, const Matrix<2, 2, Complex<double>
 int main(int argc, char **argv) {
     hila::initialize(argc, argv);
     const CoordinateVector nd{NX, NY, NZ, NT};
-    lattice->setup(nd);
+    lattice.setup(nd);
 
     // Define a field
     Field<Matrix<N, N, Complex<double>>> U[NDIM];
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
                 Plaq += 1 - temp.trace().re / N;
             }
         }
-        output0 << "Plaquette " << Plaq / (lattice->volume() * NDIM * (NDIM - 1)) << "\n";
+        hila::out0 << "Plaquette " << Plaq / (lattice.volume() * NDIM * (NDIM - 1)) << "\n";
     }
 
     hila::finishrun();

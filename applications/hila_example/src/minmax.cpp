@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
 
     // set up 32^3 lattice
 
-    lattice->setup({100, 100, 100});
+    lattice.setup({100, 100, 100});
 
     // Random numbers are used here - use time to seed
     hila::seed_random(0);
@@ -41,15 +41,15 @@ int main(int argc, char *argv[]) {
     }
     
     // val = g.max(loc);
-    output0 << "Min value of ODD sites " << val1 << " at location: " << loc1 << '\n';
-    output0 << "Min value of EVEN sites  " << val2 << " at location: " << loc2 << '\n';
-    output0 << "Max value of ODD sites " << val3 << " at location: " << loc3 << '\n';
-    output0 << "Max value of EVEN sites  " << val4 << " at location: " << loc4 << '\n';
-    output0 << "Min value of ALL sites  " << val5 << " at location: " << loc5 << '\n';
-    output0 << "Max value of ALL sites  " << val6 << " at location: " << loc6 << '\n';
+    hila::out0 << "Min value of ODD sites " << val1 << " at location: " << loc1 << '\n';
+    hila::out0 << "Min value of EVEN sites  " << val2 << " at location: " << loc2 << '\n';
+    hila::out0 << "Max value of ODD sites " << val3 << " at location: " << loc3 << '\n';
+    hila::out0 << "Max value of EVEN sites  " << val4 << " at location: " << loc4 << '\n';
+    hila::out0 << "Min value of ALL sites  " << val5 << " at location: " << loc5 << '\n';
+    hila::out0 << "Max value of ALL sites  " << val6 << " at location: " << loc6 << '\n';
 
 
-    //output0 << "Reduction test " << reduced << "\n";
+    //hila::out0 << "Reduction test " << reduced << "\n";
     hila::finishrun();
     return 0;
 }
