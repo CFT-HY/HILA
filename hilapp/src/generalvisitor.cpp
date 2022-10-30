@@ -92,9 +92,10 @@ bool GeneralVisitor::is_field_with_coordinate(Expr *E) {
 
 /////////////////////////////////////////////////////////////////
 
-bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr,
-                                        bool &iscompound, Expr **assignee, Expr **assigned_expr) {
+bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr, bool &iscompound,
+                                        Expr **assignee, Expr **assigned_expr) {
     if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
+
         if (OP->isAssignmentOp()) {
 
             // TODO: there should be some more elegant way to do this
@@ -132,6 +133,45 @@ bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr,
 
             if (assigned_expr) {
                 *assigned_expr = B->getRHS()->IgnoreImplicit();
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/////////////////////////////////////////////////////////////////
+
+bool GeneralVisitor::is_increment_expr(Stmt *s, Expr **assignee) {
+    if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
+
+        if (OP->getOperator() == OverloadedOperatorKind::OO_PlusPlus ||
+            OP->getOperator() == OverloadedOperatorKind::OO_MinusMinus) {
+
+            if (assignee) {
+                *assignee = OP->getArg(0)->IgnoreImplicit();
+            }
+
+            return true;
+        }
+    }
+
+    // This is for arithmetic type assignments
+    if (UnaryOperator *U = dyn_cast<UnaryOperator>(s)) {
+        if (U->isIncrementOp() || U->isDecrementOp()) {
+
+            if (assignee) {
+                // the 1st child is the incrementee
+                for (auto &c : U->children()) {
+                    if (Expr *E = dyn_cast<Expr>(c))
+                        *assignee = E->IgnoreImplicit();
+                    else {
+                        llvm::errs() << "Error: could not get incremented/decremented variable\n";
+                        exit(0);
+                    }
+                }
             }
 
             return true;
@@ -189,11 +229,11 @@ bool GeneralVisitor::is_site_dependent_access_op(Expr *e) {
             std::string method = MD->getNameAsString();
             std::string parent = MD->getParent()->getNameAsString();
 
-            if (method == "e" && (parent == "Matrix" || parent == "Array" ||
-                                  parent == "CoordinateVector_t")) {
+            if (method == "e" &&
+                (parent == "Matrix" || parent == "Array" || parent == "CoordinateVector_t")) {
                 bool dep = is_site_dependent(CE->getArg(0), &loop_info.conditional_vars);
                 // For matrix or array e may have 1 or 2 args
-                if (CE->getNumArgs() > 1) 
+                if (CE->getNumArgs() > 1)
                     dep = dep || is_site_dependent(CE->getArg(1), &loop_info.conditional_vars);
                 return dep;
             }
@@ -251,9 +291,8 @@ bool GeneralVisitor::is_user_cast_stmt(Stmt *s) {
 /////////////////////////////////////////////////////////////////
 /// Does the statement end with a semicolon
 bool GeneralVisitor::isStmtWithSemicolon(Stmt *S) {
-    SourceLocation l = Lexer::findLocationAfterToken(S->getEndLoc(), tok::semi,
-                                                     TheRewriter.getSourceMgr(),
-                                                     Context->getLangOpts(), false);
+    SourceLocation l = Lexer::findLocationAfterToken(
+        S->getEndLoc(), tok::semi, TheRewriter.getSourceMgr(), Context->getLangOpts(), false);
     if (l.isValid()) {
         //    llvm::errs() << "; found " << get_stmt_str(S) << '\n';
         return true;
@@ -274,14 +313,12 @@ Parity GeneralVisitor::get_parity_val(const Expr *pExpr) {
         if (0 <= val && val <= (int)Parity::all) {
             p = static_cast<Parity>(val);
         } else {
-            reportDiag(DiagnosticsEngine::Level::Fatal,
-                       pExpr->getSourceRange().getBegin(),
+            reportDiag(DiagnosticsEngine::Level::Fatal, pExpr->getSourceRange().getBegin(),
                        "hilapp internal error, unknown parity");
             exit(1);
         }
         if (p == Parity::none) {
-            reportDiag(DiagnosticsEngine::Level::Error,
-                       pExpr->getSourceRange().getBegin(),
+            reportDiag(DiagnosticsEngine::Level::Error, pExpr->getSourceRange().getBegin(),
                        "Parity::none is reserved for internal use");
         }
 
@@ -406,16 +443,20 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
         auto decl = dyn_cast<VarDecl>(DRE->getDecl());
 
         /// we don't want "X" -variable or lattice. as a kernel parameter
-        clang::QualType typ =
-            decl->getType().getUnqualifiedType().getNonReferenceType();
+        clang::QualType typ = decl->getType().getUnqualifiedType().getNonReferenceType();
         typ.removeLocalConst();
 
         // if (typ.getAsString(PP) == "lattice_struct *") llvm::errs() << "GOT
         // LATTICE_STRUCT PTR!!!\n";
 
-        if (typ.getAsString(PP) == "X_index_type" ||
-            typ.getAsString(PP) == "lattice_struct")
+        if (typ.getAsString(PP) == "X_index_type" || typ.getAsString(PP) == "lattice_struct")
             return nullptr;
+
+        if (typ.getAsString(PP) == "SiteSelection") {
+            reportDiag(DiagnosticsEngine::Level::Error, DRE->getSourceRange().getBegin(),
+                       "SiteSelection must be referred only via .select() -method inside onsites() "
+                       "-loops");
+        }
 
         var_ref vr;
         vr.ref = DRE;
@@ -467,6 +508,10 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
             vip->refs.push_back(vr);
             vip->is_assigned = is_assign;
 
+            // llvm::errs() << "New var info " << vip->name << " assign " << vip->is_assigned << "
+            // loop local " << vip->is_loop_local << " reduction " << (vip->reduction_type !=
+            // reduction::NONE) << '\n';
+
             if (is_raw) {
                 vip->is_raw = true;
                 vip->is_site_dependent = true; // probably does not matter
@@ -480,8 +525,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
         }
 
         if (!is_raw && is_assign && assign_stmt != nullptr && !vip->is_site_dependent) {
-            vip->is_site_dependent =
-                is_rhs_site_dependent(assign_stmt, &vip->dependent_vars);
+            vip->is_site_dependent = is_rhs_site_dependent(assign_stmt, &vip->dependent_vars);
 
             // llvm::errs() << "Var " << vip->name << " depends on site: " <<
             // vip->is_site_dependent <<  "\n";
@@ -600,8 +644,7 @@ bool GeneralVisitor::has_pragma(Stmt *S, const pragma_hila pragma, const char **
 
 /// For functiondecl, go through the previous decls (prototype!) too if needed
 
-bool GeneralVisitor::has_pragma(FunctionDecl *F, const pragma_hila pragma,
-                                const char **arg) {
+bool GeneralVisitor::has_pragma(FunctionDecl *F, const pragma_hila pragma, const char **arg) {
 
     if (F == nullptr)
         return false;
@@ -637,8 +680,7 @@ bool GeneralVisitor::has_pragma(const SourceLocation l, const pragma_hila pragma
         sl = CSR.getBegin();
     }
 
-    if (has_pragma_hila(TheRewriter.getSourceMgr(), sl, pragma, pragmaloc,
-                        pragma_arg)) {
+    if (has_pragma_hila(TheRewriter.getSourceMgr(), sl, pragma, pragmaloc, pragma_arg)) {
 
         // got it, comment out -- check that it has not been commented out before
         // the buffer may not be writeBuf, so be careful

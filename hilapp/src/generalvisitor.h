@@ -12,6 +12,7 @@
 #include "srcbuf.h" //srcbuf class interface
 #include "hilapp.h" //global vars needed
 
+
 /////////////////////////////////////////////////////////////////////////////////////
 /// This implements a "general visitor", a placeholder to many utility functions
 /// which can be used to visit AST
@@ -225,6 +226,8 @@ class GeneralVisitor {
 
     bool is_assignment_expr(Stmt *s, std::string *opcodestr, bool &iscompound,
                             Expr **assignee = nullptr, Expr **assigned_expr = nullptr);
+
+    bool is_increment_expr(Stmt *s, Expr **assignee = nullptr);
 
     bool is_site_dependent(Expr *e, std::vector<var_info *> *dependent_var);
 

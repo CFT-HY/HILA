@@ -674,6 +674,62 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::str
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/// is_select_stmt() true if expression is of type a.select()
+///
+///////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::is_select_stmt(Stmt *s) {
+    CXXMemberCallExpr *E = dyn_cast<CXXMemberCallExpr>(s);
+    if (E) {
+        std::string type = E->getType().getCanonicalType().getAsString(PP);
+        if (type.find("site_select_type_") == 0) {
+            llvm::errs() << "GOT SELECT\n";
+            return true;
+        }
+    }
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// handle_select_stmt() true if expression is of type a.select()
+///
+///////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::handle_select_in_loop(Stmt *s) {
+    CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(s);
+    // E must be valid because it has been checked
+    selection_info sel;
+    sel.MCE = MCE;
+
+    Expr *E = MCE->getImplicitObjectArgument();
+    // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
+    if (E) {
+        llvm::errs() << "GOT SELECTION EXPR " << get_stmt_str(E) << '\n';
+
+        if (!is_loop_constant(E)) {
+            reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
+                       "Selection variable expression must be loop constant");
+            return false;
+        }
+
+        sel.ref = E;
+
+        sel.first = nullptr;
+        for (auto &s : selection_info_list) {
+            if (is_duplicate_expr(E, s.ref)) {
+                sel.first = &s;
+                llvm::errs() << "IS DUPLICATE\n";
+                break;
+            }
+        }
+        selection_info_list.push_back(sel);
+        llvm::errs() << "ADDED SELECTION VAR " << get_stmt_str(E) << '\n';
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 ///  Handle constant expressions referred to in loops
 ///  Const reference is left as is, EXCEPT if:
 ///   - target is kernelized
@@ -794,6 +850,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
     array_ref_list.clear();
     loop_const_expr_ref_list.clear();
     loop_function_calls.clear();
+    selection_info_list.clear();
 
     global.location.loop = ls->getSourceRange().getBegin();
     loop_info.clear_except_external();
@@ -887,7 +944,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             handle_function_call_in_loop(s);
         }
 
-        // next visit here will be to the assigned to variable
         // Check type, if it is f[X] or f[parity] - then we do not (necessarily)
         // need to read in the variable
         is_field_assign = (is_field_parity_expr(assignee) || is_field_with_X_expr(assignee));
@@ -900,6 +956,24 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         is_assignment = false;
 
         TraverseStmt(assigned_expr);
+        parsing_state.skip_children = 1;
+
+        return true;
+    }
+
+    // what about ++ or --?
+    if (is_increment_expr(s, &assignee)) {
+
+        is_assignment = true;
+        is_compound = true;
+        assign_stmt = nullptr;
+        assignop = "++";
+
+        is_field_assign = (is_field_parity_expr(assignee) || is_field_with_X_expr(assignee));
+
+        TraverseStmt(assignee);
+
+        is_assignment = false;
         parsing_state.skip_children = 1;
 
         return true;
@@ -938,6 +1012,13 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         // return true;
     }
 
+    // Site selection operations
+    if (is_select_stmt(s)) {
+        handle_select_in_loop(s);
+        parsing_state.skip_children = 1;
+        return true;
+    }
+
     // if (is_user_cast_stmt(s)) {
     //     // llvm::errs() << "GOT USER CAST " << get_stmt_str(s) << '\n';
     // }
@@ -949,6 +1030,10 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         if (handle_constant_ref(E)) {
             return true;
         }
+
+        // if (UnaryOperator *U = dyn_cast<UnaryOperator>(E)) {
+        //     if ()
+        // }
 
         // if (is_field_element_expr(E)) {
         // run this expr type up until we find field variable refs
@@ -1018,9 +1103,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
                     handle_var_ref(DRE, is_assignment, assignop, assign_stmt);
                 }
 
-                // llvm::errs() << "Variable ref: "
-                //              << TheRewriter.getRewrittenText(E->getSourceRange()) <<
-                //              '\n';
+                // llvm::errs() << "Variable ref: " << get_stmt_str(E) << " Assign " <<
+                // is_assignment << '\n';
 
                 parsing_state.skip_children = 1;
                 is_assignment = false;
