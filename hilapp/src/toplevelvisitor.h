@@ -152,6 +152,10 @@ class TopLevelVisitor : public GeneralVisitor,
     bool handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop,
                                  Stmt *assingstmt);
 
+    bool is_select_stmt(Stmt *s);
+
+    bool handle_select_in_loop(Stmt *s);
+
     bool handle_constant_ref(Expr *E);
 
     /// Check that the addressof-operators and reference vars are OK

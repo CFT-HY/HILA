@@ -708,7 +708,7 @@ bool TopLevelVisitor::handle_select_in_loop(Stmt *s) {
 
         if (!is_loop_constant(E)) {
             reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                       "Selection variable expression must be loop constant");
+                       "Selection expression must be loop constant");
             return false;
         }
 
@@ -1092,16 +1092,12 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
                 // now it should be var ref non-field
 
                 // check if it is raw ptr access, mark if so
-                if (loop_info.has_pragma_access &&
-                    find_word(loop_info.pragma_access_args, DRE->getDecl()->getNameAsString()) !=
-                        std::string::npos) {
+                bool raw = (loop_info.has_pragma_access &&
+                            find_word(loop_info.pragma_access_args,
+                                      DRE->getDecl()->getNameAsString()) != std::string::npos);
 
-                    handle_var_ref(DRE, is_assignment, assignop, assign_stmt, true);
+                handle_var_ref(DRE, is_assignment, assignop, assign_stmt, raw);
 
-                } else {
-
-                    handle_var_ref(DRE, is_assignment, assignop, assign_stmt);
-                }
 
                 // llvm::errs() << "Variable ref: " << get_stmt_str(E) << " Assign " <<
                 // is_assignment << '\n';

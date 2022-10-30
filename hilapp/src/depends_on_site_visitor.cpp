@@ -24,6 +24,7 @@ class isSiteDependentChecker : public GeneralVisitor,
     bool found_X_method;
     bool found_dependent_var;
     bool found_local_var;
+    bool found_assign;
     bool check_local_var;
     std::vector<var_info *> *depends_on_var;
 
@@ -34,12 +35,10 @@ class isSiteDependentChecker : public GeneralVisitor,
         depends_on_var = dep_var; // we do not clear the vector, because it may contain
                                   // earlier dependencies
 
-        check_local_var = check_local;  // Exit if loop local var is found
+        check_local_var = check_local; // Exit if loop local var is found
 
         found_X = found_var_depends_on_site = found_X_method = found_dependent_var =
-            found_local_var = false;
-        
-
+            found_local_var = found_assign = false;
     }
 
     // bool VisitStmt(Stmt *s) { llvm::errs() << "In stmt\n"; return true; }
@@ -55,25 +54,25 @@ class isSiteDependentChecker : public GeneralVisitor,
             if (isa<VarDecl>(e->getDecl())) {
                 VarDecl *decl = dyn_cast<VarDecl>(e->getDecl());
                 // it's a variable and found the decl, check if we have it here
+                bool found = false;
                 for (var_info &v : var_info_list) {
                     if (v.decl == decl && !v.is_raw) {
+                        found = true;
                         if (check_local_var && v.is_loop_local) {
                             found_local_var = true;
-                            return false;  // stop
+                            return false; // stop
                         }
                         if (v.is_site_dependent) {
                             found_var_depends_on_site = true;
                             return false; // again, the inspection can be stopped
+                        }
 
-                        } 
-                        
                         // now it is possible that v later becomes site dependent
                         found_dependent_var = true;
                         if (depends_on_var != nullptr)
                             depends_on_var->push_back(&v);
-                
-                        // continue, may find more
 
+                        // continue, may find more
                     }
                 }
             }
@@ -87,6 +86,36 @@ class isSiteDependentChecker : public GeneralVisitor,
         // matter.
         if (is_X_type(MCall->getImplicitObjectArgument())) {
             found_X_method = true;
+            return false;
+        }
+        return true;
+    }
+
+    // get assignments also
+    bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OpCall) {
+        if (check_local_var) {
+            if (OpCall->isAssignmentOp() ||
+                OpCall->getOperator() == OverloadedOperatorKind::OO_PlusPlus ||
+                OpCall->getOperator() == OverloadedOperatorKind::OO_MinusMinus) {
+
+                found_assign = true;
+                return false; // stop
+            }
+        }
+        return true;
+    }
+
+    bool VisitBinaryOperator(BinaryOperator *O) {
+        if (check_local_var && O->isAssignmentOp()) {
+            found_assign = true;
+            return false;
+        }
+        return true;
+    }
+
+    bool VisitUnaryOperator(UnaryOperator *UO) {
+        if (check_local_var && (UO->isIncrementOp() || UO->isDecrementOp())) {
+            found_assign = true;
             return false;
         }
         return true;
@@ -118,6 +147,7 @@ bool GeneralVisitor::is_site_dependent(Expr *e, std::vector<var_info *> *depende
 /// Check whether the expression is constant within the site loop.  This implies
 /// it is not site dependent and does not depend on loop local variable.
 /// This can be determined on a single pass.
+/// Expr also cannot change the value of any variable.
 ////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -127,8 +157,8 @@ bool GeneralVisitor::is_loop_constant(Expr *e) {
     isSiteDependentChecker checker(*this, nullptr, true);
 
     checker.TraverseStmt(e);
-    if (checker.found_X || checker.found_var_depends_on_site || checker.found_X_method 
-        || checker.found_local_var) {
+    if (checker.found_X || checker.found_var_depends_on_site || checker.found_X_method ||
+        checker.found_local_var || checker.found_assign) {
         return false;
     }
 

@@ -129,11 +129,11 @@ struct field_ref {
     struct field_info *info; // ptr to field info struct
     int sequence;            // sequence of the full stmt where ref appears
     bool is_written, is_read;
-    bool is_direction; // true if ref contains nn OR offset Direction - used as a
-                       // general flag
+    bool is_direction;          // true if ref contains nn OR offset Direction - used as a
+                                // general flag
     bool is_constant_direction; // true if dir is const. e_x etc.
     bool is_offset;             // true if dir is for offset instead of simple Direction
-    bool is_loop_local_dir; // if dir depends on loop local var - not known outside loop
+    bool is_loop_local_dir;     // if dir depends on loop local var - not known outside loop
     unsigned constant_value;
 
     field_ref() {
@@ -156,11 +156,10 @@ struct field_ref {
 struct dir_ptr {
     Expr *parityExpr; // pointer to full parity+dir expression (1st of equivalent ones)
     // Expr *dirExpr;            // non-null only for non-const. nn  NOT USEFUL
-    std::string direxpr_s; // Direction expression string (1st of equivalent ones)
-    std::vector<field_ref *>
-        ref_list;   // pointers references equivalent to this Field[dir]
-    unsigned count; // how many genuine Direction refs?  if count==0 this is offset
-    bool is_offset; // is this dir offset?
+    std::string direxpr_s;             // Direction expression string (1st of equivalent ones)
+    std::vector<field_ref *> ref_list; // pointers references equivalent to this Field[dir]
+    unsigned count;             // how many genuine Direction refs?  if count==0 this is offset
+    bool is_offset;             // is this dir offset?
     bool is_loop_local_dir;     // is direction expr loop local?
     bool is_constant_direction; // if constant nn
     unsigned constant_value;    // value of it
@@ -187,34 +186,18 @@ struct dir_ptr {
 /// a) just float, double, int  or
 /// b) is templated type, with float/double in template and  implements
 ///    the method using base_type = hila::number_type<T>;
-enum class number_type {
-    INT,
-    UNSIGNED,
-    LONG,
-    UNSIGNED_LONG,
-    FLOAT,
-    DOUBLE,
-    LONG_DOUBLE,
-    UNKNOWN
-};
+enum class number_type { INT, UNSIGNED, LONG, UNSIGNED_LONG, FLOAT, DOUBLE, LONG_DOUBLE, UNKNOWN };
 
 // Collection of legal number types
 struct legal_types {
-    std::vector<std::string> vector = {
-        "int", 
-        "unsigned", 
-        "long", 
-        "int64_t",
-        "uint64_t",
-        "unsigned long",
-        "float", 
-        "double",  
-        "long double"
-    };
+    std::vector<std::string> vector = {"int",     "unsigned", "long",
+                                       "int64_t", "uint64_t", "unsigned long",
+                                       "float",   "double",   "long double"};
 
     bool check_if_legal(std::string is_legal_type) {
-        for (const auto &vector_element : this->vector){
-            if (is_legal_type == vector_element) return true;
+        for (const auto &vector_element : this->vector) {
+            if (is_legal_type == vector_element)
+                return true;
         }
         return false;
     }
@@ -222,8 +205,9 @@ struct legal_types {
     std::string as_string() {
         const std::string delimiter = ", ";
         std::string vector_as_str;
-        for (const auto &vector_element : this->vector) vector_as_str += vector_element + delimiter;
-        return vector_as_str.erase(vector_as_str.size()-delimiter.size(),delimiter.size());
+        for (const auto &vector_element : this->vector)
+            vector_as_str += vector_element + delimiter;
+        return vector_as_str.erase(vector_as_str.size() - delimiter.size(), delimiter.size());
     }
 
     void add_type(std::string type) {
@@ -232,7 +216,6 @@ struct legal_types {
             this->vector.push_back(type + "<" + element + ">");
         }
     }
-        
 };
 
 /// Stores information about how a field is vectorized
@@ -268,8 +251,7 @@ struct field_info {
 
     field_info() {
         type_template = old_name = new_name = loop_ref_name = "";
-        is_written = is_read_nb = is_read_atX = is_read_offset = is_loop_local_dir =
-            false;
+        is_written = is_read_nb = is_read_atX = is_read_offset = is_loop_local_dir = false;
         first_assign_seq = 0;
         dir_list = {};
         ref_list = {};
@@ -307,8 +289,8 @@ struct var_info {
     VarDecl *decl;              // declaration of this var
     std::string reduction_name; // name of reduction variable
     std::vector<var_info *>
-        dependent_vars;       // vector of var_infos which may affect is_site_dependent
-    reduction reduction_type; // what type of reduction
+        dependent_vars;             // vector of var_infos which may affect is_site_dependent
+    reduction reduction_type;       // what type of reduction
     vectorization_info vecinfo;     // info about vectorization
     bool is_loop_local;             // true if defined inside loop
     bool is_assigned;               // is the var assigned to
@@ -317,8 +299,8 @@ struct var_info {
     bool is_raw;                    // is it raw access var?
 
     var_info() {
-        is_loop_local = is_assigned = is_site_dependent = is_special_reduction_type =
-            is_raw = false;
+        is_loop_local = is_assigned = is_site_dependent = is_special_reduction_type = is_raw =
+            false;
         decl = nullptr;
         reduction_type = reduction::NONE;
     }
@@ -410,16 +392,15 @@ struct loop_info_struct {
     bool has_pragma_access;
     bool has_pragma_omp_parallel_region;
     const char *pragma_access_args;
-    bool has_site_dependent_cond_or_index; // if, for, while w. site dep. cond?
-    bool contains_random; // does it contain rng (also in loop functions)?
-    bool has_conditional; // if, for, while, switch, ternary in loop
+    bool has_site_dependent_cond_or_index;    // if, for, while w. site dep. cond?
+    bool contains_random;                     // does it contain rng (also in loop functions)?
+    bool has_conditional;                     // if, for, while, switch, ternary in loop
     std::vector<var_info *> conditional_vars; // may depend on variables
     Expr *condExpr;
 
     SourceRange range;
 
-    inline void
-    clear_except_external() { // do not remove parity values, may be set in loop init
+    inline void clear_except_external() { // do not remove parity values, may be set in loop init
         has_site_dependent_cond_or_index = contains_random = has_conditional = false;
         conditional_vars.clear();
         condExpr = nullptr;
@@ -438,8 +419,7 @@ struct argument_info {
     bool is_const_function;
 
     argument_info() {
-        is_modifiable = is_site_dependent = is_out_only = is_const = is_const_function =
-            false;
+        is_modifiable = is_site_dependent = is_out_only = is_const = is_const_function = false;
         E = nullptr;
         PV = nullptr;
         dependent_vars = {};
@@ -478,6 +458,14 @@ struct call_info_struct {
     }
 };
 
+struct selection_info {
+    CXXMemberCallExpr *MCE; // select-expr in loop (a.select())
+    Expr *ref;              // var expression 'a'
+    VarDecl *decl;          // declaration of the selection variable a
+    selection_info *first;  // pointer to first ref to the same variable (otherwise nullptr)
+};
+
+
 enum class pragma_hila {
     SKIP,
     AST_DUMP,
@@ -495,17 +483,13 @@ bool has_pragma_hila(const SourceManager &SM, SourceLocation l0, pragma_hila pra
 
 /// Some sourceloc utilities
 
-SourceLocation getNextLoc(const SourceManager &SM, SourceLocation sl,
-                          bool forward = true);
+SourceLocation getNextLoc(const SourceManager &SM, SourceLocation sl, bool forward = true);
 char getChar(const SourceManager &SM, SourceLocation sl);
 SourceLocation findChar(const SourceManager &SM, SourceLocation sloc, char ct);
-SourceLocation skipParens(const SourceManager &SM, SourceLocation sl,
-                          const char partype = '(');
+SourceLocation skipParens(const SourceManager &SM, SourceLocation sl, const char partype = '(');
 SourceLocation skipString(const SourceManager &SM, SourceLocation sl);
-std::string getNextWord(const SourceManager &SM, SourceLocation sl,
-                        SourceLocation *end = nullptr);
-std::string getRangeText(const SourceManager &SM, SourceLocation begin,
-                         SourceLocation end);
+std::string getNextWord(const SourceManager &SM, SourceLocation sl, SourceLocation *end = nullptr);
+std::string getRangeText(const SourceManager &SM, SourceLocation begin, SourceLocation end);
 
 bool write_output_file(const std::string &name, const std::string &buf);
 reduction get_reduction_type(bool, const std::string &, var_info &);
@@ -545,5 +529,7 @@ extern std::list<field_info> field_info_list;
 extern std::list<array_ref> array_ref_list;
 extern std::list<loop_const_expr_ref> loop_const_expr_ref_list;
 extern std::list<special_function_call> special_function_call_list;
+extern std::list<selection_info> selection_info_list;
+
 
 #endif
