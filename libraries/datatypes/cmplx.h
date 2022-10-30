@@ -243,6 +243,30 @@ class Complex {
         return *this;
     }
 
+    // define also increment and decrement operators (though not so intuitive for complex)
+
+    inline Complex<T> &operator++() {
+        this->re++;
+        return *this;
+    }
+
+    inline Complex<T> &operator--() {
+        this->re--;
+        return *this;
+    }
+
+    inline Complex<T> operator++(int) {
+        Complex<T> a = *this;
+        this->re++;
+        return a;
+    }
+
+    inline Complex<T> operator--(int) {
+        Complex<T> a = *this;
+        this->re--;
+        return a;
+    }
+
     template <typename A = T, std::enable_if_t<!std::is_arithmetic<A>::value, int> = 0>
     std::string str() const {
         std::string text = "(" + re.str() + "," + im.str() + ")";
