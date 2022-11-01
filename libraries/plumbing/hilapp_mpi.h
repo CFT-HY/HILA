@@ -41,6 +41,7 @@ typedef void *MPI_Comm;
 typedef int MPI_Fint;
 #define MPI_IN_PLACE nullptr
 #define MPI_COMM_WORLD nullptr
+#define MPI_STATUS_IGNORE nullptr
 #define MPI_SUCCESS 1
 
 enum MPI_thread_level : int {
