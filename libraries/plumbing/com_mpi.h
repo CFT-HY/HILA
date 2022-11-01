@@ -95,7 +95,7 @@ namespace hila {
 
 ///
 /// Broadcast the value of _var_ to all nodes from node _rank_ (default=0).
-/// Var must be trivial, i.e. plain data. 
+/// Var must be trivial, i.e. plain data.
 /// Returns the broadcast value
 /// If var is modifiable, it is changed to the broadcast value
 ///
@@ -187,6 +187,57 @@ void broadcast2(T &t, U &u, int rank = 0) {
     hila::broadcast(s, rank);
     t = s.tv;
     u = s.uv;
+}
+
+
+template <typename T>
+void send_to(int to_rank, const T &data) {
+    if (hila::check_input)
+        return;
+
+    send_timer.start();
+    MPI_Send(&data, sizeof(T), MPI_BYTE, to_rank, hila::myrank(), lattice.mpi_comm_lat);
+    send_timer.stop();
+}
+
+template <typename T>
+void receive_from(int from_rank, T &data) {
+    if (hila::check_input)
+        return;
+
+    send_timer.start();
+    MPI_Recv(&data, sizeof(T), MPI_BYTE, from_rank, from_rank, lattice.mpi_comm_lat,
+             MPI_STATUS_IGNORE);
+    send_timer.stop();
+}
+
+template <typename T>
+void send_to(int to_rank, const std::vector<T> &data) {
+    if (hila::check_input)
+        return;
+
+    send_timer.start();
+    size_t s = data.size();
+    MPI_Send(&s, sizeof(size_t), MPI_BYTE, to_rank, hila::myrank(), lattice.mpi_comm_lat);
+
+    MPI_Send(data.data(), sizeof(T) * s, MPI_BYTE, to_rank, hila::myrank(), lattice.mpi_comm_lat);
+    send_timer.stop();
+}
+
+template <typename T>
+void receive_from(int from_rank, std::vector<T> &data) {
+    if (hila::check_input)
+        return;
+
+    send_timer.start();
+    size_t s;
+    MPI_Recv(&s, sizeof(size_t), MPI_BYTE, from_rank, from_rank, lattice.mpi_comm_lat,
+             MPI_STATUS_IGNORE);
+    data.resize(s);
+
+    MPI_Recv(data.data(), sizeof(T) * s, MPI_BYTE, from_rank, from_rank, lattice.mpi_comm_lat,
+             MPI_STATUS_IGNORE);
+    send_timer.stop();
 }
 
 
