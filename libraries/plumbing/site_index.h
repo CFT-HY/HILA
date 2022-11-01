@@ -9,20 +9,20 @@
 
 class SiteIndex {
   public:
-    uint64_t value;
+    size_t value;
 
     // std incantation for field types
-    using base_type = uint64_t;
-    using argument_type = uint64_t;
+    using base_type = size_t;
+    using argument_type = size_t;
 
     SiteIndex() = default;
     SiteIndex(const SiteIndex &s) = default;
-    SiteIndex(uint64_t v) : value(v) {}
+    SiteIndex(size_t v) : value(v) {}
     ~SiteIndex() = default;
 
     SiteIndex(const CoordinateVector &cv) {
         value = 0;
-        uint64_t m = 1;
+        size_t m = 1;
         foralldir (d) {
             value += m * cv[d];
             m *= lattice.size(d);
@@ -31,7 +31,7 @@ class SiteIndex {
 
     CoordinateVector coordinates() const {
         CoordinateVector res;
-        uint64_t v = value;
+        size_t v = value;
         foralldir (d) {
             res.e(d) = v % lattice.size(d);
             v /= lattice.size(d);
