@@ -27,8 +27,7 @@
 extern std::string looping_var;
 extern std::string parity_name;
 
-std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
-                                               srcBuf &loopBuf,
+std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
                                                bool generate_wait_loops) {
     std::stringstream code;
 
@@ -45,10 +44,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
     code << "const lattice_struct & loop_lattice = lattice;\n";
 
     // Set the start and end points
-    code << "const int loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str
-         << ");\n";
-    code << "const int loop_end   = loop_lattice.loop_end(" << loop_info.parity_str
-         << ");\n";
+    code << "const int loop_begin = loop_lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "const int loop_end   = loop_lattice.loop_end(" << loop_info.parity_str << ");\n";
 
     // are there
 
@@ -64,16 +61,16 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
         for (var_info &vi : var_info_list) {
             if (vi.reduction_type != reduction::NONE &&
                 get_number_type(vi.type) == number_type::UNKNOWN) {
-                code << "#pragma omp declare reduction(_hila_reduction_sum" << sums
-                     << ":" << vi.type << ":omp_out += omp_in)\n";
+                code << "#pragma omp declare reduction(_hila_reduction_sum" << sums << ":"
+                     << vi.type << ":omp_out += omp_in)\n";
                 sums++;
             }
         }
-        if (loop_info.has_pragma_omp_parallel_region) 
+        if (loop_info.has_pragma_omp_parallel_region)
             code << "#pragma omp for";
-        else 
+        else
             code << "#pragma omp parallel for";
-    
+
         sums = 0;
         for (var_info &vi : var_info_list) {
             if (vi.reduction_type != reduction::NONE) {
@@ -82,7 +79,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
                     code << "_hila_reduction_sum" << sums;
                 } else {
                     code << '+';
-                }   
+                }
                 code << ": " << vi.reduction_name << ")";
             }
         }
@@ -91,8 +88,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
 
 
     // Start the loop
-    code << "for(int " << looping_var << " = loop_begin; " << looping_var
-         << " < loop_end; ++" << looping_var << ") {\n";
+    code << "for(int " << looping_var << " = loop_begin; " << looping_var << " < loop_end; ++"
+         << looping_var << ") {\n";
 
     if (generate_wait_loops) {
         code << "if (((loop_lattice.wait_arr_[" << looping_var
@@ -110,6 +107,21 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
         }
     }
 
+    // replace selection var reference
+    for (selection_info &si : selection_info_list) {
+        if (si.assign_expr == nullptr) {
+            loopBuf.replace(si.MCE, si.new_name +
+                                        ".select_site(SiteIndex(loop_lattice.coordinates(" +
+                                        looping_var + ")))");
+        } else {
+            SourceRange r(si.MCE->getSourceRange().getBegin(),
+                          si.assign_expr->getSourceRange().getBegin().getLocWithOffset(-1));
+            loopBuf.replace(r, si.new_name +
+                                   ".select_site_value(SiteIndex(loop_lattice.coordinates(" +
+                                   looping_var + ")), ");
+        }
+    }
+
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
 
@@ -123,23 +135,22 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(loopBuf.get(
-                            d.parityExpr->getSourceRange())); // mapped name was
-                                                              // get_stmt_str(d.e);
+                        dirname = remove_X(
+                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                                                                          // get_stmt_str(d.e);
 
                     // generate access stmt
-                    code << l.element_type << " " << d.name_with_dir << " = "
-                         << l.new_name;
+                    code << l.element_type << " " << d.name_with_dir << " = " << l.new_name;
 
                     if (target.vectorize && l.vecinfo.is_vectorizable) {
                         // now l is vectorizable, but accessed sequentially -- this inly
                         // happens in vectorized targets
-                        code << ".get_value_at_nb_site(" << dirname << ", "
-                             << looping_var << ");\n";
+                        code << ".get_value_at_nb_site(" << dirname << ", " << looping_var
+                             << ");\n";
                     } else {
                         // std neighbour accessor for scalars
-                        code << ".get_value_at(" << l.new_name << ".fs->neighbours["
-                             << dirname << "][" << looping_var << "]);\n";
+                        code << ".get_value_at(" << l.new_name << ".fs->neighbours[" << dirname
+                             << "][" << looping_var << "]);\n";
                     }
 
                     // and replace references in loop body
@@ -156,19 +167,17 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(loopBuf.get(
-                            d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = remove_X(
+                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
 
                     for (field_ref *ref : d.ref_list) {
                         if (target.vectorize && l.vecinfo.is_vectorizable) {
-                            loopBuf.replace(ref->fullExpr,
-                                            l.new_name + ".get_value_at_nb_site(" +
-                                                dirname + ", " + looping_var + ")");
+                            loopBuf.replace(ref->fullExpr, l.new_name + ".get_value_at_nb_site(" +
+                                                               dirname + ", " + looping_var + ")");
                         } else {
-                            loopBuf.replace(ref->fullExpr,
-                                            l.new_name + ".get_value_at(" + l.new_name +
-                                                ".fs->neighbours[" + dirname + "][" +
-                                                looping_var + "])");
+                            loopBuf.replace(ref->fullExpr, l.new_name + ".get_value_at(" +
+                                                               l.new_name + ".fs->neighbours[" +
+                                                               dirname + "][" + looping_var + "])");
                         }
                     }
                 }
@@ -191,8 +200,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
 
         } else if (l.is_written) {
             code << l.element_type << " " << l.loop_ref_name << ";\n";
-            code << "// Initial value of variable " << l.loop_ref_name
-                 << " not needed\n";
+            code << "// Initial value of variable " << l.loop_ref_name << " not needed\n";
         }
 
         // and finally replace references in body
@@ -219,7 +227,7 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
             repl += looping_var;
             if (sfc.argsExpr != nullptr)
                 repl += ',';
-            if (sfc.args_string.size() > 0) 
+            if (sfc.args_string.size() > 0)
                 repl += ", " + sfc.args_string;
         }
         loopBuf.replace(sfc.replace_range, repl);
@@ -234,8 +242,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
     // Add calls to setters
     for (field_info &l : field_info_list)
         if (l.is_written) {
-            code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", "
-                 << looping_var << ");\n";
+            code << l.new_name << ".set_value_at(" << l.loop_ref_name << ", " << looping_var
+                 << ");\n";
         }
 
     code << "}\n";
@@ -255,8 +263,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end,
             } else {
                 code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                         "++_HILAdir_) {\n"
-                     << "  " << l.new_name << ".wait_gather(_HILAdir_, "
-                     << loop_info.parity_str << ");\n}\n";
+                     << "  " << l.new_name << ".wait_gather(_HILAdir_, " << loop_info.parity_str
+                     << ");\n}\n";
             }
         }
         code << "}\n";

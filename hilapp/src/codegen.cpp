@@ -1,26 +1,12 @@
-//------------------------------------------------------------------------------
-// Generate transformed
-// hardware-dependent "kernels".
-//
-// Uses Clang RecursiveASTVisitor and Rewriter
-// interfaces
-//
-// Kari Rummukainen 2017-18
-//
-//------------------------------------------------------------------------------
+///------------------------------------------------------------------------------
+/// Generate transformed
+/// hardware-dependent "kernels".  Main interface to code generation
+///
+///
+///------------------------------------------------------------------------------
 #include <sstream>
 #include <string>
 
-#include "clang/AST/AST.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Frontend/ASTConsumers.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Tooling.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-//#include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
 #include "toplevelvisitor.h"
@@ -100,8 +86,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     if (loop_info.parity_value == Parity::none) {
         // now unknown
-        code << "const Parity " << parity_name << " = " << loop_info.parity_text
-             << ";\n";
+        code << "const Parity " << parity_name << " = " << loop_info.parity_text << ";\n";
 
         if (global.assert_loop_parity) {
             code << "assert( is_even_odd_parity(" << parity_name
@@ -111,6 +96,15 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     } else
         loop_info.parity_str = parity_str(loop_info.parity_value);
+
+    // any site selections?  reset first
+    for (selection_info &s : selection_info_list) {
+        if (s.first == nullptr) {
+            code << s.ref->getType().getAsString() << " & " << s.new_name << " = "
+                 << get_stmt_str(s.ref) << ";\n";
+            code << s.new_name << ".setup();\n";
+        }
+    }
 
     // then, generate new names for field variables in loop
 
@@ -129,8 +123,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         // make a ref to the field name
         if (!l.is_written)
             code << "const ";
-        code << "Field" << l.type_template << " & " << l.new_name << " = " << l.old_name
-             << ";\n";
+        code << "Field" << l.type_template << " & " << l.new_name << " = " << l.old_name << ";\n";
     }
 
     // check alloc and do it if needed
@@ -143,8 +136,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     for (field_info &l : field_info_list) {
         if (l.is_read_nb || l.is_read_atX) {
             std::string init_par;
-            if (loop_info.parity_value == Parity::all ||
-                (l.is_read_nb && l.is_read_atX)) {
+            if (loop_info.parity_value == Parity::all || (l.is_read_nb && l.is_read_atX)) {
                 init_par = "ALL";
             } else {
                 if (l.is_read_atX)
@@ -161,12 +153,10 @@ void TopLevelVisitor::generate_code(Stmt *S) {
             if (cmdline::check_initialization) {
 
                 std::string fname =
-                    srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin())
-                        .str();
+                    srcMgr.getFilename(get_real_range(S->getSourceRange()).getBegin()).str();
                 code << "if (!" << l.new_name << ".is_initialized(" << init_par
                      << ")){\nhila::out0 << \"File " << fname << " on line "
-                     << srcMgr.getSpellingLineNumber(
-                            get_real_range(S->getSourceRange()).getBegin())
+                     << srcMgr.getSpellingLineNumber(get_real_range(S->getSourceRange()).getBegin())
                      << ":\\n Value of variable " << l.old_name
                      << " is used but it is not properly initialized\\n\";\n";
                 code << "hila::terminate(1);\n}\n";
@@ -198,8 +188,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
                             code << "dir_mask_t  _dir_mask_ = 0;\n";
                         first = false;
 
-                        code << "_dir_mask_ |= " << l.new_name << ".start_gather("
-                             << d.direxpr_s << ", " << loop_info.parity_str << ");\n";
+                        code << "_dir_mask_ |= " << l.new_name << ".start_gather(" << d.direxpr_s
+                             << ", " << loop_info.parity_str << ");\n";
                     }
                 }
         } else {
@@ -224,8 +214,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
     // write wait gathers here also
     if (!generate_wait_loops)
-        for (field_info &l : field_info_list) 
-            if (l.is_loop_local_dir ) {
+        for (field_info &l : field_info_list)
+            if (l.is_loop_local_dir) {
                 code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                         "++_HILAdir_) {\n"
                      << l.new_name << ".wait_gather(_HILAdir_," << loop_info.parity_str
@@ -276,8 +266,8 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
         } else if (v.reduction_type == reduction::PRODUCT) {
 
-            code << "if (hila::myrank() == 0) { " << v.name
-                 << " *= " << v.reduction_name << "; }\n";
+            code << "if (hila::myrank() == 0) { " << v.name << " *= " << v.reduction_name
+                 << "; }\n";
             code << "else { " << v.name << " = " << v.reduction_name << "; }\n";
             code << "hila::reduce_node_product( &" << v.name << ", 1, true);\n";
         }
@@ -337,6 +327,12 @@ void TopLevelVisitor::generate_code(Stmt *S) {
         }
     }
 
+    // Any site selections?
+    for (selection_info &s : selection_info_list) {
+        if (s.first == nullptr) {
+            code << s.new_name << ".endloop_action();\n";
+        }
+    }
 
     // finally mark modified fields
     for (field_info &l : field_info_list)
@@ -360,8 +356,7 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 // Handle field+offset expressions -- these are copied, ref removed
 // Use iterator for looping, because we may want to remove the field_info item.
 
-void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code,
-                                                srcBuf &loopBuf,
+void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code, srcBuf &loopBuf,
                                                 std::string &paritystr) {
 
     for (auto it = field_info_list.begin(); it != field_info_list.end();) {
@@ -397,23 +392,20 @@ void TopLevelVisitor::handle_field_plus_offsets(std::stringstream &code,
                     field_info_list.push_back(new_fi);
 
                     // copy the shifted var
-                    code << "Field" + it->type_template + " " + offset_field_name +
-                                ";\n";
-                    code << it->new_name + ".shift(" + d.ref_list.at(0)->direxpr_s +
-                                ", " + offset_field_name + ", " + paritystr + ");\n";
+                    code << "Field" + it->type_template + " " + offset_field_name + ";\n";
+                    code << it->new_name + ".shift(" + d.ref_list.at(0)->direxpr_s + ", " +
+                                offset_field_name + ", " + paritystr + ");\n";
 
                     // and rewrite references to the offset field
                     for (field_ref *fr : new_fi.ref_list) {
                         loopBuf.replace(fr->nameExpr, offset_field_name);
                         loopBuf.replace(fr->parityExpr, "X");
                         fr->direxpr_s.clear();
-                        fr->is_direction = false; // no Direction
-                        fr->info =
-                            &field_info_list.back(); // info points to new field_info
+                        fr->is_direction = false;           // no Direction
+                        fr->info = &field_info_list.back(); // info points to new field_info
                         fr->is_written = false;
                         fr->is_read = true;
-                        fr->is_offset =
-                            true; // leave this on, as a flag -- turned off below
+                        fr->is_offset = true; // leave this on, as a flag -- turned off below
                     }
 
                 } // loop over dir_ptr w. offset
@@ -487,8 +479,7 @@ void GeneralVisitor::backend_handle_loop_constructor(call_info_struct &ci) {
 }
 
 /// Call the backend function for generating loop code
-std::string TopLevelVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end,
-                                                   srcBuf &loopBuf,
+std::string TopLevelVisitor::backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
                                                    bool generate_wait_loops) {
     std::stringstream code;
     if (target.kernelize) {

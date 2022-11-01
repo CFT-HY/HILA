@@ -461,7 +461,8 @@ struct call_info_struct {
 struct selection_info {
     CXXMemberCallExpr *MCE; // select-expr in loop (a.select())
     Expr *ref;              // var expression 'a'
-    VarDecl *decl;          // declaration of the selection variable a
+    Expr *assign_expr;      // assignment if value select
+    std::string new_name;
     selection_info *first;  // pointer to first ref to the same variable (otherwise nullptr)
 };
 

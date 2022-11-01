@@ -452,9 +452,9 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
         if (typ.getAsString(PP) == "X_index_type" || typ.getAsString(PP) == "lattice_struct")
             return nullptr;
 
-        if (typ.getAsString(PP) == "SiteSelection") {
+        if (typ.getAsString(PP) == "SiteSelect") {
             reportDiag(DiagnosticsEngine::Level::Error, DRE->getSourceRange().getBegin(),
-                       "SiteSelection must be referred only via .select() -method inside onsites() "
+                       "SiteSelect must be referred only via .select() -method inside onsites() "
                        "-loops");
         }
 

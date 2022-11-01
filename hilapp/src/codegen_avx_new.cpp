@@ -209,6 +209,7 @@ void GeneralVisitor::handle_loop_constructor_avx(call_info_struct &ci) {}
 ///  NOW: instead of b) and c) now vectorizeed only if everything has the same
 ///       vector type.  Otherwise leads to missing type conversions
 ///  TODO: Rectify this issue!
+///  d) no site selection operation in the loop
 ///////////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::string &diag_str) {
@@ -234,6 +235,11 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::st
         if (contains_random(S)) {
             is_vectorizable = false;
             reason.push_back("it contains a random number generator");
+        }
+
+        if (selection_info_list.size() > 0) {
+            is_vectorizable = false;
+            reason.push_back("it contains site selection variable");
         }
 
         std::string vector_var_name; // variable which determines the vectorization

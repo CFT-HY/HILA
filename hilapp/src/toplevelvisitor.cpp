@@ -678,41 +678,39 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::str
 ///
 ///////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::is_select_stmt(Stmt *s) {
-    CXXMemberCallExpr *E = dyn_cast<CXXMemberCallExpr>(s);
-    if (E) {
-        std::string type = E->getType().getCanonicalType().getAsString(PP);
-        if (type.find("site_select_type_") == 0) {
-            llvm::errs() << "GOT SELECT\n";
-            return true;
-        }
-    }
-    return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/// handle_select_stmt() true if expression is of type a.select()
-///
-///////////////////////////////////////////////////////////////////////////////
-
-bool TopLevelVisitor::handle_select_in_loop(Stmt *s) {
+bool TopLevelVisitor::is_select_stmt(Stmt *s, Expr **value_expr) {
     CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(s);
-    // E must be valid because it has been checked
+
+    if (!MCE)
+        return false;
+
+    bool is_value;
+
+    std::string type = MCE->getType().getCanonicalType().getAsString(PP);
+    if (type.find("site_select_type_") == 0) {
+        is_value = false;
+    } else if (type.find("site_value_select_type_") == 0) {
+        is_value = true;
+    } else
+        return false;
+
     selection_info sel;
     sel.MCE = MCE;
 
     Expr *E = MCE->getImplicitObjectArgument();
     // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
     if (E) {
+
         llvm::errs() << "GOT SELECTION EXPR " << get_stmt_str(E) << '\n';
 
         if (!is_loop_constant(E)) {
             reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
-                       "Selection expression must be loop constant");
+                       "Selection variable expression must be loop constant");
             return false;
         }
 
         sel.ref = E;
+        sel.new_name = "_HILA_" + clean_name(get_stmt_str(E));
 
         sel.first = nullptr;
         for (auto &s : selection_info_list) {
@@ -722,6 +720,16 @@ bool TopLevelVisitor::handle_select_in_loop(Stmt *s) {
                 break;
             }
         }
+
+        sel.assign_expr = nullptr;
+
+        // was it SiteValueSelect?
+        if (is_value) {
+            sel.assign_expr = MCE->getArg(1);
+        }
+
+        *value_expr = sel.assign_expr;
+
         selection_info_list.push_back(sel);
         llvm::errs() << "ADDED SELECTION VAR " << get_stmt_str(E) << '\n';
     }
@@ -1013,8 +1021,11 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     }
 
     // Site selection operations
-    if (is_select_stmt(s)) {
-        handle_select_in_loop(s);
+    Expr *select_assign;
+    if (is_select_stmt(s, &select_assign)) {
+        if (select_assign)
+            TraverseStmt(select_assign);
+
         parsing_state.skip_children = 1;
         return true;
     }
