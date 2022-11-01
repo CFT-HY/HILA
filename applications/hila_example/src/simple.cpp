@@ -2,7 +2,7 @@
 
 static_assert(NDIM == 3, "NDIM must be 3 here");
 
-using MyType = Complex<float>;
+using MyType = Complex<double>;
 
 int main(int argc, char *argv[]) {
 
@@ -19,9 +19,9 @@ int main(int argc, char *argv[]) {
     Field<MyType> f;
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian_random();
+
     // Measure hopping term and f^2
-    MyType hopping;
-    hopping = 0;
+    MyType hopping = 0;
     double fsqr = 0;
     
     onsites(ALL) {
@@ -33,9 +33,6 @@ int main(int argc, char *argv[]) {
     hila::out0 << "Average f^2 : " << fsqr / lattice.volume() << '\n';
     hila::out0 << "Average hopping term " << hopping / (NDIM*lattice.volume()) << '\n';
 
-    // auto sd = spectraldensity(f,64);
-    // for (int i=0; i<sd.size(); i++) hila::out0 << i << ' ' << sd[i] << '\n';
-    
     hila::finishrun();
     return 0;
 }
