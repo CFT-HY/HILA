@@ -852,7 +852,7 @@ __global__ void minmax_kernel(const T *i_data, T *minmax_array_out,
 
 //     // allocate buffers if not done before
 //     if (d_odata == nullptr) {
-//         gpuMalloc((void **)&d_odata, numBlocks * sizeof(T));
+//         gpuMalloc(&d_odata, numBlocks * sizeof(T));
 //     }
 //     if (h_odata == nullptr) {
 //         h_odata = (T *)memalloc(numBlocks * sizeof(T));
@@ -905,8 +905,8 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
     // T *return_value_list = new T[num_blocks];
     // index_type *coordinate_list = new index_type[num_blocks];
 
-    gpuMalloc((void **)&minmax_array, sizeof(T) * num_blocks);
-    gpuMalloc((void **)&coordinate_index_array, sizeof(index_type) * num_blocks);
+    gpuMalloc(&minmax_array, sizeof(T) * num_blocks);
+    gpuMalloc(&coordinate_index_array, sizeof(index_type) * num_blocks);
 
     // Find num_blocks amount of max or min values
     //implement loop

@@ -4,7 +4,9 @@
 
 //////////////////////////////////////////////////////////////////////
 /// SiteIndex type - indexes all sites on the lattice, so that the
-/// first dimension runs fastest.  Equivalent to CoordinateVector
+/// first dimension runs fastest.  Equivalent to CoordinateVector in use.
+/// Implemented as size_t (unsigned int64).  Can access value directly
+/// by using a.value
 //////////////////////////////////////////////////////////////////////
 
 class SiteIndex {
@@ -18,6 +20,7 @@ class SiteIndex {
     SiteIndex() = default;
     SiteIndex(const SiteIndex &s) = default;
     SiteIndex(size_t v) : value(v) {}
+
     ~SiteIndex() = default;
 
     SiteIndex(const CoordinateVector &cv) {
@@ -26,7 +29,7 @@ class SiteIndex {
         foralldir (d) {
             value += m * cv[d];
             m *= lattice.size(d);
-       }
+        }
     }
 
     CoordinateVector coordinates() const {

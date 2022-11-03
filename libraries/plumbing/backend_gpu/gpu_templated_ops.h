@@ -25,7 +25,7 @@ T cuda_reduce_sum(  T * vector, int N ){
   T sum;
 
   if( !initialized ) {
-    cudaMalloc( (void **)&d_sum, sizeof(T) );
+    cudaMalloc( &d_sum, sizeof(T) );
     d_temp_storage = NULL;
     temp_storage_size = 0;
     cub::DeviceReduce::Sum(d_temp_storage, temp_storage_size, vector, d_sum, N);

@@ -71,7 +71,7 @@ void hila::seed_device_rng(unsigned long long seed) {
         lattice.mynode.volume() / (N_threads * iters_per_kernel) + 1;
     unsigned long n_sites = N_threads * n_blocks * iters_per_kernel;
     unsigned long long myseed = seed + hila::myrank() * n_sites;
-    gpuMalloc((void **)&gpurandstate, n_sites * sizeof(gpurandState));
+    gpuMalloc(&gpurandstate, n_sites * sizeof(gpurandState));
 #ifdef CUDA
     seed_random_kernel<<<n_blocks, N_threads>>>(gpurandstate, myseed, iters_per_kernel,
                                                 n_blocks * N_threads);
@@ -149,7 +149,7 @@ void backend_lattice_struct::setup(const lattice_struct &lattice) {
     /* Setup neighbour fields in all directions */
     for (int d = 0; d < NDIRS; d++) {
         // For normal boundaries
-        gpuMalloc((void **)&(d_neighb[d]), lattice.mynode.volume() * sizeof(unsigned));
+        gpuMalloc(&(d_neighb[d]), lattice.mynode.volume() * sizeof(unsigned));
         gpuMemcpy(d_neighb[d], lattice.neighb[d],
                   lattice.mynode.volume() * sizeof(unsigned), gpuMemcpyHostToDevice);
 
@@ -160,7 +160,7 @@ void backend_lattice_struct::setup(const lattice_struct &lattice) {
             lattice.get_neighbour_array((Direction)d, BoundaryCondition::ANTIPERIODIC);
 
         if (special_neighb != lattice.neighb[d]) {
-            gpuMalloc((void **)&(d_neighb_special[d]),
+            gpuMalloc(&(d_neighb_special[d]),
                       lattice.mynode.volume() * sizeof(unsigned));
             gpuMemcpy(d_neighb_special[d], special_neighb,
                       lattice.mynode.volume() * sizeof(unsigned),
@@ -173,7 +173,7 @@ void backend_lattice_struct::setup(const lattice_struct &lattice) {
 
 #ifdef EVEN_SITES_FIRST
     /* Setup the location field */
-    gpuMalloc((void **)&(d_coordinates),
+    gpuMalloc(&(d_coordinates),
               lattice.mynode.volume() * sizeof(CoordinateVector));
     tmp = (CoordinateVector *)memalloc(lattice.mynode.volume() *
                                        sizeof(CoordinateVector));

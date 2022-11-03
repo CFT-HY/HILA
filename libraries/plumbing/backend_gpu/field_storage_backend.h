@@ -8,7 +8,7 @@
 template <typename T>
 void field_storage<T>::allocate_field(const lattice_struct &lattice) {
     // Allocate space for the field of the device
-    gpuMalloc((void **)&fieldbuf, sizeof(T) * lattice.field_alloc_size());
+    gpuMalloc(&fieldbuf, sizeof(T) * lattice.field_alloc_size());
     if (fieldbuf == nullptr) {
         std::cout << "Failure in field memory allocation\n";
     }
@@ -72,7 +72,7 @@ auto field_storage<T>::get_element(const unsigned i, const lattice_struct & latt
     T value;
 
     // Call the kernel to collect the element
-    gpuMalloc((void **)&(d_buffer), sizeof(T));
+    gpuMalloc(&(d_buffer), sizeof(T));
     get_element_kernel<<<1, 1>>>(*this, d_buffer, i, lattice.field_alloc_size());
 
     // Copy the result to the host
@@ -96,7 +96,7 @@ void field_storage<T>::set_element(A &value, const unsigned i,
     T t_value = value;
 
     // Allocate space and copy the buffer to the device
-    //   gpuMalloc((void **)&(d_buffer), sizeof(T));
+    //   gpuMalloc(&(d_buffer), sizeof(T));
     //   gpuMemcpy(d_buffer, (char *)&t_value, sizeof(T), gpuMemcpyHostToDevice);
 
     // call the kernel to set correct indexes
@@ -124,11 +124,11 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
     T *d_buffer;
 
     // Copy the list of boundary site indexes to the device
-    gpuMalloc((void **)&(d_site_index), n * sizeof(unsigned));
+    gpuMalloc(&(d_site_index), n * sizeof(unsigned));
     gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
     // Call the kernel to build the list of elements
-    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc(&(d_buffer), n * sizeof(T));
     int N_blocks = n / N_threads + 1;
     gather_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
                                                     lattice.field_alloc_size());
@@ -167,11 +167,11 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
     }
 
     // Copy the list of boundary site indexes to the device
-    gpuMalloc((void **)&(d_site_index), n * sizeof(unsigned));
+    gpuMalloc(&(d_site_index), n * sizeof(unsigned));
     gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
     // Call the kernel to build the list of elements
-    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc(&(d_buffer), n * sizeof(T));
     int N_blocks = n / N_threads + 1;
     gather_elements_negated_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
                                                             lattice.field_alloc_size());
@@ -236,7 +236,7 @@ inline unsigned *get_site_index(const lattice_struct::comm_node_struct &to_node,
     struct cuda_comm_node_struct comm_node;
     comm_node.cpu_index = cpu_index;
     comm_node.n = n;
-    gpuMalloc((void **)&(comm_node.gpu_index), n * sizeof(unsigned));
+    gpuMalloc(&(comm_node.gpu_index), n * sizeof(unsigned));
     gpuMemcpy(comm_node.gpu_index, cpu_index, n * sizeof(unsigned), gpuMemcpyHostToDevice);
     comm_nodes.push_back(comm_node);
     return comm_node.gpu_index;
@@ -258,7 +258,7 @@ void field_storage<T>::gather_comm_elements(T *buffer,
     d_buffer = buffer;
 #else
     // Allocate a buffer on the device
-    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc(&(d_buffer), n * sizeof(T));
 #endif
 
     // Call the kernel to build the list of elements
@@ -296,11 +296,11 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
     T *d_buffer;
 
     // Allocate space and copy the buffer to the device
-    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc(&(d_buffer), n * sizeof(T));
     gpuMemcpy(d_buffer, buffer, n * sizeof(T), gpuMemcpyHostToDevice);
 
     // Copy the list of boundary site indexes to the device
-    gpuMalloc((void **)&(d_site_index), n * sizeof(unsigned));
+    gpuMalloc(&(d_site_index), n * sizeof(unsigned));
     gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
     // Call the kernel to place the elements
@@ -345,7 +345,7 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
 
         unsigned *d_site_index;
         check_device_error("earlier");
-        gpuMalloc((void **)(&d_site_index), n * sizeof(unsigned));
+        gpuMalloc(&d_site_index, n * sizeof(unsigned));
         gpuMemcpy(d_site_index, lattice.special_boundaries[dir].move_index + start,
                   n * sizeof(unsigned), gpuMemcpyHostToDevice);
 
@@ -393,7 +393,7 @@ void field_storage<T>::place_comm_elements(Direction d, Parity par, T *buffer,
     d_buffer = buffer;
 #else
     // Allocate space and copy the buffer to the device
-    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc(&(d_buffer), n * sizeof(T));
     gpuMemcpy(d_buffer, buffer, n * sizeof(T), gpuMemcpyHostToDevice);
 #endif
 
@@ -416,7 +416,7 @@ void field_storage<T>::free_mpi_buffer(T *d_buffer) {
 template <typename T>
 T *field_storage<T>::allocate_mpi_buffer(unsigned n) {
     T *d_buffer;
-    gpuMalloc((void **)&(d_buffer), n * sizeof(T));
+    gpuMalloc(&(d_buffer), n * sizeof(T));
     return d_buffer;
 }
 

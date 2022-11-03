@@ -3,7 +3,12 @@
 
 #include "hila.h"
 
-// MPI is needed here
+// We insert the GPU code in the same file too
+// hilapp should not read in .cuh, because it does not understand it
+
+#if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
+#include <cub/cub.cuh>
+#endif
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -44,23 +49,6 @@ class SiteSelect {
     size_t n_overflow = 0;
 
   public:
-    // Define iterators using std::vector iterators
-    using iterator = typename std::vector<SiteIndex>::iterator;
-    using const_iterator = typename std::vector<SiteIndex>::const_iterator;
-
-    iterator begin() {
-        return sites.begin();
-    }
-    iterator end() {
-        return sites.end();
-    }
-    const_iterator begin() const {
-        return sites.begin();
-    }
-    const_iterator end() const {
-        return sites.end();
-    }
-
     /// Initialize to zero by default (? exception to other variables)
     /// allreduce = true by default
     explicit SiteSelect() {
@@ -133,17 +121,6 @@ class SiteSelect {
 
     // Don't even implement assignments
 
-
-    void endloop_action() {
-        if (current_index > nmax) {
-            // too many elements, trunc
-            n_overflow = current_index - nmax;
-            current_index = nmax;
-        }
-        sites.resize(current_index);
-        if (auto_join)
-            join();
-    }
 
     void join() {
         if (!joined) {
@@ -218,6 +195,69 @@ class SiteSelect {
     size_t overflow() {
         return n_overflow;
     }
+
+#if !(defined(CUDA) || defined(HIP)) || defined(HILAPP)
+
+    void endloop_action() {
+        if (current_index > nmax) {
+            // too many elements, trunc
+            n_overflow = current_index - nmax;
+            current_index = nmax;
+        }
+        sites.resize(current_index);
+        if (auto_join)
+            join();
+    }
+
+#else
+
+    // this is GPU version of endloop_action
+    // skip this for hilapp
+    template <typename T>
+    void copy_data_to_host_vector(std::vector<T> &dvec, const char *flag, const T *d_data) {
+        void *d_temp_storage = nullptr;
+        size_t temp_storage_bytes = 0;
+
+        T *out;
+        gpuMalloc(&out, lattice.mynode.volume() * sizeof(T));
+
+        int *num_selected_d;
+        gpuMalloc(&num_selected_d, sizeof(int));
+
+        cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag, out,
+                                   num_selected_d, lattice.mynode.volume());
+
+        gpuMalloc(&d_temp_storage, temp_storage_bytes);
+
+        cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag, out,
+                                   num_selected_d, lattice.mynode.volume());
+
+        gpuFree(d_temp_storage);
+
+        int num_selected;
+        gpuMemcpy(&num_selected, num_selected_d, sizeof(int), gpuMemcpyDeviceToHost);
+        gpuFree(num_selected_d);
+
+        if (num_selected > nmax) {
+            n_overflow = num_selected - nmax;
+            num_selected = nmax;
+        }
+        dvec.resize(num_selected);
+
+        gpuMemcpy(dvec.data(), out, sizeof(T) * num_selected, gpuMemcpyDeviceToHost);
+        gpuFree(out);
+    }
+
+    // endloop action for this
+    void endloop_action(const char *flag, const SiteIndex *d_sites) {
+
+        copy_data_to_host_vector(sites, flag, d_sites);
+
+        if (auto_join)
+            join();
+    }
+
+#endif // GPU
 };
 
 class site_value_select_type_ {};
@@ -258,6 +298,14 @@ class SiteValueSelect : public SiteSelect {
         return values.at(i);
     }
 
+    void join() {
+        if (!joined)
+            join_data_vectors(values);
+        joined = true;
+    }
+
+#if !(defined(CUDA) || defined(HIP)) || defined(HILAPP)
+
     void endloop_action() {
         bool save = auto_join;
         auto_join = false;
@@ -268,12 +316,31 @@ class SiteValueSelect : public SiteSelect {
             join();
     }
 
-    void join() {
-        if (!joined)
-            join_data_vectors(values);
-        joined = true;
+#else
+    // skip this for hilapp
+    void endloop_action(const char *flag, const SiteIndex *d_sites, const T *d_values) {
+        copy_data_to_host_vector(sites, flag, d_sites);
+        copy_data_to_host_vector(values, flag, d_values);
+
+        if (auto_join)
+            join();
     }
+
+#endif // GPU
 };
+
+
+#ifdef HILAPP
+
+// Make hilapp generate __device__ versions of SiteIndex function - this is removed in final program
+
+inline void dummy_func_2() {
+    onsites(ALL) {
+        auto s = SiteIndex(X.coordinates());
+    }
+}
+
+#endif
 
 
 #endif
