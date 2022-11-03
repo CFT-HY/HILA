@@ -124,6 +124,8 @@ class srcBuf {
     // remove including possible comma before or after the range
     // useful for removing arguments
     int remove_with_comma(const SourceRange &s);
+    int remove_semicolon_after(const SourceRange &s);
+    int remove_semicolon_after(const Expr *E);
 
     // insert text - return is just insertion point + 1
     int insert(int i, const std::string &s, bool incl_before = false,

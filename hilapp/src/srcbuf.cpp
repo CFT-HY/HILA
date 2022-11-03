@@ -364,6 +364,27 @@ int srcBuf::remove_with_comma(const SourceRange &s) {
     return after;
 }
 
+// Remove ; after the source range (or Expr)
+
+int srcBuf::remove_semicolon_after(const SourceRange &s) {
+    assert(is_in_range(s));
+    size_t i = myRewriter->getRangeSize(s);
+    SourceLocation e = s.getBegin().getLocWithOffset(i);
+    
+    int loc = find_original(e, ';');
+    if (loc < 0) return -1;
+
+    assert(loc < true_size);
+
+    remove(loc,loc);
+    return loc;
+}
+
+int srcBuf::remove_semicolon_after(const Expr * E) {
+    return remove_semicolon_after(E->getSourceRange());
+}
+
+
 // incl_before = true -> insert include before others at this location
 int srcBuf::insert(int i, const std::string &s_in, bool incl_before, bool do_indent) {
 
