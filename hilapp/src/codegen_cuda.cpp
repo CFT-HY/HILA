@@ -56,16 +56,13 @@ void GeneralVisitor::handle_loop_constructor_cuda(call_info_struct &ci) {
 /// Help routine to write (part of) a name for a kernel
 std::string TopLevelVisitor::make_kernel_name() {
     return kernel_name_prefix +
-           clean_name(
-               global.currentFunctionDecl->getNameInfo().getName().getAsString()) +
-           "_" +
+           clean_name(global.currentFunctionDecl->getNameInfo().getName().getAsString()) + "_" +
            std::to_string(TheRewriter.getSourceMgr().
                           // getSpellingLineNumber(global.location.loop));
                           getFileOffset(global.location.loop));
 }
 
-std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
-                                                srcBuf &loopBuf,
+std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
                                                 bool generate_wait_loops) {
 
     // "Code" is inserted at the location of the loop statement
@@ -92,8 +89,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         } else {
             code << "for (Direction _HILAdir_ = (Direction)0; _HILAdir_ < NDIRS; "
                     "++_HILAdir_) {\n"
-                 << l.new_name << ".wait_gather(_HILAdir_," << loop_info.parity_str
-                 << ");\n}\n";
+                 << l.new_name << ".wait_gather(_HILAdir_," << loop_info.parity_str << ");\n}\n";
         }
     }
 
@@ -102,7 +98,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     //     std::string fieldname = field_info_list.front().old_name;
     //     code << "const lattice_struct & loop_lattice = " << fieldname << ".fs->lattice;\n";
     // } else {
-        // now no fields in loop - default lattice
+    // now no fields in loop - default lattice
     code << "const lattice_struct & loop_lattice = lattice;\n";
 
 
@@ -121,8 +117,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 // use here offset to give unique type
                 ar.wrapper_type =
                     "struct " + type_name_prefix + clean_name(ar.name) +
-                    std::to_string(
-                        TheRewriter.getSourceMgr().getFileOffset(global.location.loop));
+                    std::to_string(TheRewriter.getSourceMgr().getFileOffset(global.location.loop));
                 kernel << ar.wrapper_type << " {\n";
                 kernel << ar.element_type << " c[" << ar.size << "];\n};\n\n";
 
@@ -135,11 +130,11 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 code << "// copy array/vector '" << ar.name << "' to device\n";
 
                 code << ar.element_type << " * " << ar.new_name << ";\n";
-                code << "gpuMalloc( (void **) & " << ar.new_name << ", " << ar.size_expr
-                     << " * sizeof(" << ar.element_type << ") );\n";
+                code << "gpuMalloc( & " << ar.new_name << ", " << ar.size_expr << " * sizeof("
+                     << ar.element_type << ") );\n";
 
-                code << "gpuMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr
-                     << ", " << ar.size_expr << " * sizeof(" << ar.element_type << "), "
+                code << "gpuMemcpy(" << ar.new_name << ", (char *)" << ar.data_ptr << ", "
+                     << ar.size_expr << " * sizeof(" << ar.element_type << "), "
                      << "gpuMemcpyHostToDevice);\n\n";
             }
 
@@ -149,12 +144,11 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
             code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << "gpuMalloc( (void **)& " << ar.new_name << ", " << ar.size_expr
-                 << " * sizeof(" << ar.element_type << "));\n";
+            code << "gpuMalloc( & " << ar.new_name << ", " << ar.size_expr << " * sizeof("
+                 << ar.element_type << "));\n";
 
             if (ar.reduction_type == reduction::SUM) {
-                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr
-                     << ");\n";
+                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr << ");\n";
             }
 
             if (ar.reduction_type == reduction::PRODUCT) {
@@ -172,10 +166,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     kernel << "inline __global__ void __launch_bounds__(N_threads) " << kernel_name
            << "( backend_lattice_struct d_lattice";
     code << "backend_lattice_struct lattice_info = *(lattice.backend_lattice);\n";
-    code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str
-         << ");\n";
-    code << "lattice_info.loop_end = lattice.loop_end(" << loop_info.parity_str
-         << ");\n";
+    code << "lattice_info.loop_begin = lattice.loop_begin(" << loop_info.parity_str << ");\n";
+    code << "lattice_info.loop_end = lattice.loop_end(" << loop_info.parity_str << ");\n";
 
     code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
             "N_threads - 1)/N_threads;\n";
@@ -185,7 +177,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         if (v.reduction_type != reduction::NONE) {
             // Allocate memory for a reduction. This will be filled in the kernel
             code << v.type << " * dev_" << v.reduction_name << ";\n";
-            code << "gpuMalloc( (void **)& dev_" << v.reduction_name << ","
+            code << "gpuMalloc( & dev_" << v.reduction_name << ","
                  << "sizeof(" << v.type << ") * N_blocks );\n";
             if (v.reduction_type == reduction::SUM) {
                 code << "gpu_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
@@ -195,6 +187,31 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             }
         }
     }
+
+    // and for selections
+    for (selection_info &s : selection_info_list) {
+        s.maskname = s.new_name + "_mask";
+        s.sitename = s.new_name + "_sites";
+        s.valname = s.new_name + "_values";
+
+        if (s.previous_selection == nullptr) {
+            // define mask, coord and possible value holder
+            code << "char * " << s.maskname << ";\n";
+            code << "gpuMalloc( & " << s.maskname << ", lattice.mynode.volume() );\n";
+            code << "SiteIndex * " << s.sitename << ";\n";
+            code << "gpuMalloc( & " << s.sitename
+                 << ", lattice.mynode.volume()*sizeof(SiteIndex) );\n";
+            if (s.assign_expr != nullptr) {
+                code << s.val_type << " * " << s.valname << ";\n";
+                code << "gpuMalloc( & " << s.valname << ", lattice.mynode.volume()*sizeof("
+                     << s.val_type << ") );\n";
+            }
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // start kernel building
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     if (target.cuda) {
         code << kernel_name << "<<< N_blocks, N_threads >>>( lattice_info";
@@ -265,6 +282,45 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
     }
 
+    // pass the selection fields to kernel
+    for (selection_info &s : selection_info_list) {
+        std::string looping("[" + looping_var + "]");
+
+        if (s.previous_selection == nullptr) {
+            code << ", " << s.maskname << ", " << s.sitename;
+            kernel << ", char * " << s.maskname << ", SiteIndex * " << s.sitename;
+        }
+
+        loopBuf.remove_semicolon_after(s.MCE);
+
+        std::string repl_string;
+        repl_string = "{\n " + s.maskname + looping + " = 1;\n";
+        repl_string +=
+            s.sitename + looping + " = SiteIndex(d_lattice.coordinates(" + looping_var + "));\n";
+
+        if (s.assign_expr == nullptr) {
+
+            // replace references
+            repl_string += "}\n";
+            loopBuf.replace(s.MCE, repl_string);
+
+        } else {
+            if (s.previous_selection == nullptr) {
+                code << ", " << s.valname;
+                kernel << ", " << s.val_type << " * " << s.valname;
+            }
+
+            repl_string += s.valname + looping + " = (";
+
+            // get range in a.select(X,value)  between beginning of a and value
+            SourceRange r(s.MCE->getSourceRange().getBegin(),
+                          s.assign_expr->getSourceRange().getBegin().getLocWithOffset(-1));
+            loopBuf.replace(r, repl_string);
+            int loc = loopBuf.find_original(r.getEnd(), ')');
+            loopBuf.insert(loc + 1, ";\n}\n");
+        }
+    }
+
 
     // In kernelized code we need to handle array expressions as well
     for (array_ref &ar : array_ref_list) {
@@ -316,8 +372,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
 
                 SourceLocation oploc, beginloc, endloc;
                 beginloc = br.assign_stmt->getSourceRange().getBegin();
-                endloc =
-                    getSourceLocationAtEndOfRange(br.assign_stmt->getSourceRange());
+                endloc = getSourceLocationAtEndOfRange(br.assign_stmt->getSourceRange());
 
                 CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(br.assign_stmt);
                 if (OP && OP->isAssignmentOp()) {
@@ -371,9 +426,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             repl += looping_var;
             if (sfc.argsExpr != nullptr)
                 repl += ',';
-            if (sfc.args_string.size() > 0) 
+            if (sfc.args_string.size() > 0)
                 repl += ", " + sfc.args_string;
-
         }
         loopBuf.replace(sfc.replace_range, repl);
     }
@@ -394,8 +448,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE) {
                 // Generate a temporary array for the reduction
-                kernel << "__shared__ " << vi.type << " " << vi.new_name
-                       << "sh[N_threads];\n";
+                kernel << "__shared__ " << vi.type << " " << vi.new_name << "sh[N_threads];\n";
                 kernel << vi.type << " " << vi.new_name << "sum; \n";
                 // Initialize only the local element
                 if (vi.reduction_type == reduction::SUM) {
@@ -427,9 +480,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(loopBuf.get(
-                            d.parityExpr->getSourceRange())); // mapped name was
-                                                              // get_stmt_str(d.e);
+                        dirname = remove_X(
+                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
+                                                                          // get_stmt_str(d.e);
 
                     // Check if the Direction is a variable. These have been renamed.
                     // for ( var_info & vi : var_info_list) for ( var_ref & vr : vi.refs
@@ -438,10 +491,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     //     dirname = vi.new_name;
 
                     // Create the temp variable and call the getter
-                    kernel << l.element_type << " " << d.name_with_dir << " = "
-                           << l.new_name << ".get(" << l.new_name << ".neighbours["
-                           << dirname << "][" << looping_var
-                           << "], d_lattice.field_alloc_size);\n";
+                    kernel << l.element_type << " " << d.name_with_dir << " = " << l.new_name
+                           << ".get(" << l.new_name << ".neighbours[" << dirname << "]["
+                           << looping_var << "], d_lattice.field_alloc_size);\n";
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
@@ -481,15 +533,14 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                     if (d.is_constant_direction)
                         dirname = d.direxpr_s; // orig. string
                     else
-                        dirname = remove_X(loopBuf.get(
-                            d.parityExpr->getSourceRange())); // mapped name was
+                        dirname = remove_X(
+                            loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
 
                     for (field_ref *ref : d.ref_list) {
-                        loopBuf.replace(ref->fullExpr,
-                                        l.new_name + ".get(" + l.new_name +
-                                            ".neighbours[" + dirname + "][" +
-                                            looping_var +
-                                            "], d_lattice.field_alloc_size)");
+                        loopBuf.replace(ref->fullExpr, l.new_name + ".get(" + l.new_name +
+                                                           ".neighbours[" + dirname + "][" +
+                                                           looping_var +
+                                                           "], d_lattice.field_alloc_size)");
                     }
                 }
             }
@@ -498,9 +549,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         // TODO:
         if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
             // local read
-            kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
-                   << ".get(" << looping_var
-                   << ", d_lattice.field_alloc_size);\n           ";
+            kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name << ".get("
+                   << looping_var << ", d_lattice.field_alloc_size);\n           ";
             // if (l.is_written)
             //    kernel << "// TODO: READ MAY BE UNNECESSARY!  Do more careful
             //    assignment analysis!\n";
@@ -564,14 +614,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         }
 
     // end the if ( looping_var < d_lattice.loop_end)
-    kernel << "}\n";    
+    kernel << "}\n";
 
     // Assign reductions to shared memory
     for (var_info &vi : var_info_list) {
         if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE) {
-                kernel << vi.new_name << "sh[threadIdx.x] = " << vi.new_name
-                       << "sum;\n";
+                kernel << vi.new_name << "sh[threadIdx.x] = " << vi.new_name << "sum;\n";
             }
         }
     }
@@ -596,15 +645,17 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 // }
                 kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
                 if (vi.reduction_type == reduction::SUM) {
-                    kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var << " < d_lattice.loop_end) {\n";
+                    kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
+                           << " < d_lattice.loop_end) {\n";
                     kernel << vi.new_name << "sh[threadIdx.x] += " << vi.new_name
-                        << "sh[threadIdx.x+_H_i];\n";
+                           << "sh[threadIdx.x+_H_i];\n";
                     kernel << "}\n";
                     kernel << "__syncthreads();\n";
                 } else if (vi.reduction_type == reduction::PRODUCT) {
-                    kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var << " < d_lattice.loop_end) {\n";
+                    kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
+                           << " < d_lattice.loop_end) {\n";
                     kernel << vi.new_name << "sh[threadIdx.x] *= " << vi.new_name
-                        << "sh[threadIdx.x+_H_i];\n";
+                           << "sh[threadIdx.x+_H_i];\n";
                     kernel << "}\n";
                     kernel << "__syncthreads();\n";
                 }
@@ -612,9 +663,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
                 // kernel << "}\n";
 
                 kernel << "if(threadIdx.x == 0) {\n"
-                    << vi.new_name << "[blockIdx.x] = " << vi.new_name << "sh[0];\n";
+                       << vi.new_name << "[blockIdx.x] = " << vi.new_name << "sh[0];\n";
                 kernel << "}\n";
-
             }
         }
     kernel << "}\n//----------\n\n";
@@ -633,14 +683,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
     for (array_ref &ar : array_ref_list) {
         if (ar.type == array_ref::REDUCTION) {
 
-            code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp("
-                 << ar.size_expr << ");\n";
+            code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr << ");\n";
             code << "gpuMemcpy(a_v__tmp.data(), " << ar.new_name << ", " << ar.size_expr
                  << " * sizeof(" << ar.element_type << "), "
                  << "gpuMemcpyDeviceToHost);\n\n";
 
-            code << "for (int _H_tmp_idx=0; _H_tmp_idx<" << ar.size_expr
-                 << "; _H_tmp_idx++) " << ar.name << "[_H_tmp_idx]";
+            code << "for (int _H_tmp_idx=0; _H_tmp_idx<" << ar.size_expr << "; _H_tmp_idx++) "
+                 << ar.name << "[_H_tmp_idx]";
             if (ar.reduction_type == reduction::SUM)
                 code << " += a_v__tmp[_H_tmp_idx];\n";
             else
@@ -649,8 +698,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
             code << " }\n";
         }
 
-        if (ar.type != array_ref::REPLACE &&
-            (ar.size == 0 || ar.size > MAX_PARAM_ARRAY_SIZE)) {
+        if (ar.type != array_ref::REPLACE && (ar.size == 0 || ar.size > MAX_PARAM_ARRAY_SIZE)) {
             code << "gpuFree(" << ar.new_name << ");\n";
         }
     }
@@ -660,17 +708,37 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end,
         if (vi.reduction_type != reduction::NONE) {
             // Run reduction
             if (vi.reduction_type == reduction::SUM) {
-                code << vi.reduction_name << " = gpu_reduce_sum( dev_"
-                     << vi.reduction_name << ", N_blocks"
+                code << vi.reduction_name << " = gpu_reduce_sum( dev_" << vi.reduction_name
+                     << ", N_blocks"
                      << ");\n";
             } else if (vi.reduction_type == reduction::PRODUCT) {
-                code << vi.reduction_name << " = gpu_reduce_product( dev_"
-                     << vi.reduction_name << ", N_blocks"
+                code << vi.reduction_name << " = gpu_reduce_product( dev_" << vi.reduction_name
+                     << ", N_blocks"
                      << ");\n";
             }
             // Free memory allocated for the reduction
             if (vi.reduction_type != reduction::NONE) {
                 code << "gpuFree(dev_" << vi.reduction_name << ");\n";
+            }
+        }
+    }
+
+    // and the selection vars
+    bool first = true;
+    for (selection_info &s : selection_info_list) {
+        if (s.previous_selection == nullptr) {
+            // "reduce" the flagged arrays using cub functi
+            if (s.assign_expr == nullptr) {
+                code << s.new_name << ".endloop_action(" << s.maskname << ", " << s.sitename
+                     << ");\n";
+                code << "gpuFree(" << s.sitename << ");\n";
+                code << "gpuFree(" << s.maskname << ");\n";
+            } else {
+                code << s.new_name << ".endloop_action(" << s.maskname << ", " << s.sitename << ", "
+                     << s.valname << ");\n";
+                code << "gpuFree(" << s.valname << ");\n";
+                code << "gpuFree(" << s.sitename << ");\n";
+                code << "gpuFree(" << s.maskname << ");\n";
             }
         }
     }

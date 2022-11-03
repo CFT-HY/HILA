@@ -679,6 +679,7 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::str
 ///////////////////////////////////////////////////////////////////////////////
 
 bool TopLevelVisitor::is_select_stmt(Stmt *s, Expr **value_expr) {
+
     CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(s);
 
     if (!MCE)
@@ -701,8 +702,6 @@ bool TopLevelVisitor::is_select_stmt(Stmt *s, Expr **value_expr) {
     // DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E);
     if (E) {
 
-        llvm::errs() << "GOT SELECTION EXPR " << get_stmt_str(E) << '\n';
-
         if (!is_loop_constant(E)) {
             reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
                        "Selection variable expression must be loop constant");
@@ -712,11 +711,10 @@ bool TopLevelVisitor::is_select_stmt(Stmt *s, Expr **value_expr) {
         sel.ref = E;
         sel.new_name = "_HILA_" + clean_name(get_stmt_str(E));
 
-        sel.first = nullptr;
+        sel.previous_selection = nullptr;
         for (auto &s : selection_info_list) {
             if (is_duplicate_expr(E, s.ref)) {
-                sel.first = &s;
-                llvm::errs() << "IS DUPLICATE\n";
+                sel.previous_selection = &s;
                 break;
             }
         }
@@ -726,12 +724,25 @@ bool TopLevelVisitor::is_select_stmt(Stmt *s, Expr **value_expr) {
         // was it SiteValueSelect?
         if (is_value) {
             sel.assign_expr = MCE->getArg(1);
+
+            std::string t = E->getType().getCanonicalType().getAsString(PP);
+
+            // HACK: extract type from between < >
+            auto a = t.find_first_of('<');
+            auto b = t.find_last_of('>');
+            if (a >= b || b == std::string::npos) {
+                reportDiag(
+                    DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
+                    "hilapp internal error in deducing the type of the SiteValueSelect variable");
+            }
+
+            sel.val_type = t.substr(a + 1, b - a - 1);
+            // llvm::errs() << sel.val_type << '\n';
         }
 
         *value_expr = sel.assign_expr;
 
         selection_info_list.push_back(sel);
-        llvm::errs() << "ADDED SELECTION VAR " << get_stmt_str(E) << '\n';
     }
 
     return true;
@@ -1021,7 +1032,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     }
 
     // Site selection operations
-    Expr *select_assign;
+    Expr *select_assign = nullptr;
     if (is_select_stmt(s, &select_assign)) {
         if (select_assign)
             TraverseStmt(select_assign);
@@ -2445,11 +2456,7 @@ bool TopLevelVisitor::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
         if (D->getNameAsString() == "Field") {
             handle_field_specializations(D);
-        } else if (D->getNameAsString() == "field_storage") {
-            field_storage_decl = D;
-        } else {
         }
-
         // global.in_class_template = false;
 
         // Now do traverse the template naturally

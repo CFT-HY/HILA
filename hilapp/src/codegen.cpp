@@ -97,9 +97,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     } else
         loop_info.parity_str = parity_str(loop_info.parity_value);
 
-    // any site selections?  reset first
+    // any site selections?  reset previous_selection
     for (selection_info &s : selection_info_list) {
-        if (s.first == nullptr) {
+        if (s.previous_selection == nullptr) {
             code << s.ref->getType().getAsString() << " & " << s.new_name << " = "
                  << get_stmt_str(s.ref) << ";\n";
             code << s.new_name << ".setup();\n";
@@ -324,13 +324,6 @@ void TopLevelVisitor::generate_code(Stmt *S) {
                 code << ar.name << ".reduce_sum();\n";
             else if (ar.reduction_type == reduction::PRODUCT)
                 code << ar.name << ".reduce_product();\n";
-        }
-    }
-
-    // Any site selections?
-    for (selection_info &s : selection_info_list) {
-        if (s.first == nullptr) {
-            code << s.new_name << ".endloop_action();\n";
         }
     }
 

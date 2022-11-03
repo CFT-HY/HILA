@@ -32,7 +32,6 @@
 
 // definitions for global variables
 ClassTemplateDecl *field_decl = nullptr;
-ClassTemplateDecl *field_storage_decl = nullptr;
 const std::string field_storage_type = "field_storage<";
 const std::string field_type = "Field<";
 std::list<field_ref> field_ref_list = {};
@@ -944,7 +943,7 @@ class MyFrontendAction : public ASTFrontendAction {
         skip_this_translation_unit = false;
         file_id_list.clear();
         file_buffer_list.clear();
-        field_decl = field_storage_decl = nullptr;
+        field_decl = nullptr;
         reset_vectorizable_types();
         clear_loop_functions_in_compilation_unit();
 

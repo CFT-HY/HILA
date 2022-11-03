@@ -462,8 +462,13 @@ struct selection_info {
     CXXMemberCallExpr *MCE; // select-expr in loop (a.select())
     Expr *ref;              // var expression 'a'
     Expr *assign_expr;      // assignment if value select
-    std::string new_name;
-    selection_info *first;  // pointer to first ref to the same variable (otherwise nullptr)
+    std::string val_type;
+    std::string new_name;   //
+    selection_info
+        *previous_selection; // pointer to first ref to the same variable (otherwise nullptr)
+    std::string valname;    // names of tmp variables - used for GPU code
+    std::string maskname;
+    std::string sitename;
 };
 
 
@@ -519,7 +524,6 @@ extern codetype target;
 /// global variable declarations - definitions on hilapp.cpp
 
 extern ClassTemplateDecl *field_decl;         // Ptr to field primary def in AST
-extern ClassTemplateDecl *field_storage_decl; // Ptr to field primary def in AST
 extern const std::string field_storage_type;
 extern const std::string field_type;
 

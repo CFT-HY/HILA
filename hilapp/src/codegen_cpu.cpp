@@ -270,5 +270,13 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         code << "}\n";
     }
 
+    // Post-process ny site selections?
+    for (selection_info &s : selection_info_list) {
+        if (s.previous_selection == nullptr) {
+            code << s.new_name << ".endloop_action();\n";
+        }
+    }
+
+
     return code.str();
 }
