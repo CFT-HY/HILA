@@ -843,8 +843,10 @@ class Field {
     std::vector<T> get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
                                  bool broadcast = false) const;
 
-    void copy_local_data(T *buffer) const;
-    void set_local_data(T *buffer);
+    void copy_local_data(std::vector<T> &buffer) const;
+    void set_local_data(const std::vector<T> &buffer);
+
+    void copy_local_data_with_halo(std::vector<T> &buffer) const;
 
 
     // inline void set_element_at(const CoordinateVector &coord, const A &elem) {
@@ -1998,22 +2000,23 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
     return get_elements(clist, bcast);
 }
 
-///
+//////////////////////////////////////////////////////////////////////////////////
 /// Copy the local (mpi process) data to a "logical array"
 /// on gpu code, copies to host
 
 template <typename T>
-void Field<T>::copy_local_data(T *buffer) const {
+void Field<T>::copy_local_data(std::vector<T> &buffer) const {
 
     // copy to local variables to avoid lattice ptr
     CoordinateVector nmin = lattice.mynode.min;
     Vector<NDIM, unsigned> nmul = lattice.mynode.size_factor;
 
+    buffer.resize(lattice.mynode.volume());
 #if defined(CUDA) || defined(HIP)
     // d_malloc mallocs from device if needed
     T *data = (T *)d_malloc(sizeof(T) * lattice.mynode.volume());
 #else
-    T *data = buffer;
+    T *data = buffer.data();
 #endif
 
 #pragma hila novector direct_access(data)
@@ -2026,47 +2029,29 @@ void Field<T>::copy_local_data(T *buffer) const {
     }
 
 #if defined(CUDA) || defined(HIP)
-    gpuMemcpy(buffer, data, sizeof(T) * lattice.mynode.volume(), gpuMemcpyDeviceToHost);
+    gpuMemcpy(buffer.data(), data, sizeof(T) * lattice.mynode.volume(), gpuMemcpyDeviceToHost);
     d_free(data);
 #endif
 }
 
-// template <typename T>
-// void Field<T>::copy_local_data(T *buffer) const {
-
-//     unsigned *index_list;
-//     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice.mynode.volume());
-
-//     CoordinateVector c, cmin, cmax;
-//     cmin = lattice.mynode.min;
-//     cmax = cmin + lattice.mynode.size;
-//     cmax.asArray() -= 1;
-//     unsigned i = 0;
-//     forcoordinaterange(c, cmin, cmax) {
-//         index_list[i++] = lattice.site_index(c);
-//     }
-
-//     this->fs->payload.gather_elements(buffer, index_list, lattice.mynode.volume(), lattice);
-//     std::free(index_list);
-// }
-
-///
-/// Set the local (mpi process) data from a "logical array"
-/// on gpu code, copies from host to device
+////////////////////////////////////////////////////////////////////////////////////
+/// set the local data from an array
 
 template <typename T>
-void Field<T>::set_local_data(T *buffer) {
+void Field<T>::set_local_data(const std::vector<T> &buffer) {
 
     // copy to local variables to avoid lattice ptr
     CoordinateVector nmin = lattice.mynode.min;
     Vector<NDIM, unsigned> nmul = lattice.mynode.size_factor;
 
+    assert(buffer.size() >= lattice.mynode.volume());
+
 #if defined(CUDA) || defined(HIP)
     // d_malloc mallocs from device if needed
     T *data = (T *)d_malloc(sizeof(T) * lattice.mynode.volume());
-    gpuMemcpy(data, buffer, sizeof(T) * lattice.mynode.volume(), gpuMemcpyHostToDevice);
+    gpuMemcpy(data, buffer.data(), sizeof(T) * lattice.mynode.volume(), gpuMemcpyHostToDevice);
 #else
-    T *data = buffer;
+    T *data = buffer.data();
 #endif
 
 #pragma hila novector direct_access(data)
@@ -2086,25 +2071,141 @@ void Field<T>::set_local_data(T *buffer) {
 }
 
 
-// template <typename T>
-// void Field<T>::set_local_data(T *buffer) {
-//     unsigned *index_list;
-//     index_list = (unsigned *)memalloc(sizeof(unsigned) * lattice.mynode.volume());
+////////////////////////////////////////////////////////////////////////////////////
+/// Copy local data with halo - useful for visualization
 
-//     CoordinateVector c, cmin, cmax;
-//     cmin = lattice.mynode.min;
-//     cmax = cmin + lattice.mynode.size;
-//     cmax.asArray() -= 1;
-//     unsigned i = 0;
-//     forcoordinaterange(c, cmin, cmax) {
-//         index_list[i++] = lattice.site_index(c);
-//     }
+template <typename T>
+inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &dest,
+                                     const Vector<NDIM, int> &dirs, int ndir) {
 
-//     this->fs->payload.place_elements(buffer, index_list, lattice.mynode.volume(), lattice);
-//     std::free(index_list);
+    // get the coords of the min point of the halo array
+    CoordinateVector nmin = lattice.mynode.min;
+    nmin.asArray() -= 1;
 
-//     this->mark_changed(ALL);
-// }
+    // construct the mult vector to access the data
+    Vector<NDIM, unsigned> nmul;
+    nmul.e(0) = 1;
+    for (int i = 1; i < NDIM; i++)
+        nmul.e(i) = nmul.e(i - 1) * (lattice.mynode.size[i - 1] + 2);
+
+
+    Vector<NDIM, int> node_min;
+    Vector<NDIM, int> node_max;
+    foralldir (d) {
+        node_min[d] = lattice.mynode.min[d];
+        node_max[d] = lattice.mynode.min[d] + lattice.mynode.size[d] - 1;
+    }
+
+#pragma hila novector direct_access(data)
+    onsites(ALL) {
+        Vector<NDIM, unsigned> nodec;
+        CoordinateVector c = X.coordinates();
+        bool gotit = true;
+
+        for (int i = 0; i < ndir; i++) {
+            Direction d = (Direction)dirs[i];
+            if (c.e(d) == node_min[d]) {
+                c.e(d) -= 1;
+            } else if (c.e(d) == node_max[d]) {
+                c.e(d) += 1;
+            } else
+                gotit = false;
+        }
+
+        Direction d = (Direction)dirs[ndir];
+        if (gotit && c.e(d) == node_min[d]) {
+            c.e(d) -= 1;
+            nodec = c - nmin;
+            data[nodec.dot(nmul)] = src[X - d];
+            dest[X] = src[X - d];
+
+        } else if (gotit && c.e(d) == node_max[d]) {
+            c.e(d) += 1;
+            nodec = c - nmin;
+            data[nodec.dot(nmul)] = src[X + d];
+            dest[X] = src[X + d];
+        }
+    }
+}
+
+
+template <typename T>
+void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
+
+    // get the coords of the min point of the halo array
+    CoordinateVector nmin = lattice.mynode.min;
+    nmin.asArray() -= 1;
+
+    // construct the mult vector to access the data
+    Vector<NDIM, unsigned> nmul;
+    nmul.e(0) = 1;
+    for (int i = 1; i < NDIM; i++)
+        nmul.e(i) = nmul.e(i - 1) * (lattice.mynode.size[i - 1] + 2);
+
+    // full size of the buffer
+    size_t siz = 1;
+    foralldir (d)
+        siz *= (lattice.mynode.size[d] + 2);
+
+    buffer.resize(siz);
+#if defined(CUDA) || defined(HIP)
+    // d_malloc mallocs from device if needed
+    T *data = (T *)d_malloc(sizeof(T) * siz);
+#else
+    T *data = buffer.data();
+#endif
+
+    // now collect bulk
+#pragma hila novector direct_access(data)
+    onsites(ALL) {
+        Vector<NDIM, unsigned> nodec;
+        nodec = X.coordinates() - nmin;
+
+        unsigned i = nodec.dot(nmul);
+        data[i] = (*this)[X];
+    }
+
+    // collect nn-halos
+
+    Field<T> corners = 0;
+    Field<T> corner2 = 0;
+#if NDIM > 2
+    Field<T> corner3 = 0;
+#if NDIM > 3
+    Field<T> corner4 = 0;
+#endif
+#endif
+
+    Vector<NDIM, int> dirs;
+    foralldir (d1) {
+        dirs[0] = d1;
+        // gather d1 halo
+        collect_field_halo_data_(data, (*this), corners, dirs, 0);
+
+        for (int d2 = d1 + 1; d2 < NDIM; ++d2) {
+            dirs[1] = d2;
+            collect_field_halo_data_(data, corners, corner2, dirs, 1);
+#if NDIM > 2
+            for (int d3 = d2 + 1; d3 < NDIM; ++d3) {
+                dirs[2] = d3;
+                collect_field_halo_data_(data, corner2, corner3, dirs, 2);
+#if NDIM > 3
+                for (int d4 = d3 + 1; d4 < NDIM; ++d4) {
+                    dirs[3] = d4;
+                    collect_field_halo_data_(data, corner3, corner4, dirs, 3);
+                }
+#endif
+            }
+#endif
+        }
+    }
+
+
+#if defined(CUDA) || defined(HIP)
+    gpuMemcpy(buffer.data(), data, sizeof(T) * siz, gpuMemcpyDeviceToHost);
+    d_free(data);
+#endif
+}
 
 
 #ifdef HILAPP
@@ -2114,10 +2215,11 @@ void Field<T>::set_local_data(T *buffer) {
 // These are here in order for hilapp to generate explicitly
 // some Direction and CoordinateVector operations, which may not exist in
 // original code as such.  It is easiest to let the general hilapp
-// code generation to do it using this hack, instead of hard-coding these to hilapp.
+// code generation to do it using this hack, instead of hard-coding these to
+// hilapp.
 //
-// These are needed because hilapp changes X+d-d -> +d-d, which may involve an
-// operator not met before
+// These are needed because hilapp changes X+d-d -> +d-d, which may involve
+// an operator not met before
 
 inline void dummy_X_f() {
     Direction d1 = e_x;
@@ -2146,8 +2248,8 @@ inline void dummy_X_f() {
 }
 
 /// Dummy function including Field<T> functions and methods which
-/// need to be explicitly seen by hilapp during 1st pass in order to generater
-/// necessary functions.  Add here ops as needed
+/// need to be explicitly seen by hilapp during 1st pass in order to
+/// generater necessary functions.  Add here ops as needed
 
 template <typename T>
 inline void ensure_field_operators_exist(Field<T> &f) {

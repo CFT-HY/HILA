@@ -41,7 +41,6 @@ HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
 ################
 
 # These variables must be defined here
-# NOTE: adding --gpu-slow-reduce below makes one to use slower but memory stingy sum reduction
 HILAPP_OPTS := -target:CUDA 
 HILA_OPTS := -DCUDA -DUSE_MPI $(MPI_INCLUDE_DIRS)
 
