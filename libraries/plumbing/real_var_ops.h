@@ -7,6 +7,12 @@
 
 //////////////////////////////////////////////////////////////////////////
 
+// define abs() -function for floating point
+template <typename T, std::enable_if_t<std::is_floating_point<T>::value, int> = 0>
+inline T abs(T val) {
+    return std::abs(val);
+}
+
 // define real(), imag(), conj() -functions for basic arithmetic types
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T real(T val) {
