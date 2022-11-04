@@ -680,7 +680,183 @@ class Matrix_t {
         return *this;
     }
 
+    /// Multiply (nxm)-matrix from left by a matrix which is 1 except for 4 elements
+    /// on rows/columns p,q.
+
+    template <typename R, typename Mt>
+    void mult_by_2x2_left(int p, int q, const Matrix_t<2, 2, R, Mt> &M) {
+        static_assert(hila::contains_complex<T>::value || !hila::contains_complex<R>::value,
+                      "Cannot multiply real matrix with complex 2x2 block matrix");
+
+        Vector<2, T> a;
+        for (int i = 0; i < m; i++) {
+            a.e(0) = this->e(p, i);
+            a.e(1) = this->e(q, i);
+
+            a = M * a;
+
+            this->e(p, i) = a.e(0);
+            this->e(q, i) = a.e(1);
+        }
+    }
+
+    template <typename R, typename Mt>
+    void mult_by_2x2_right(int p, int q, const Matrix_t<2, 2, R, Mt> &M) {
+        static_assert(hila::contains_complex<T>::value || !hila::contains_complex<R>::value,
+                      "Cannot multiply real matrix with complex 2x2 block matrix");
+
+        HorizontalVector<2, T> a;
+        for (int i = 0; i < n; i++) {
+            a.e(0) = this->e(i, p);
+            a.e(1) = this->e(i, q);
+
+            a = a * M;
+
+            this->e(i, p) = a.e(0);
+            this->e(i, q) = a.e(1);
+        }
+    }
+
+    /// Calculate eigenvalues and -vectors of an hermitean (or symmetric) matrix.
+    /// Returns the number of Jacobi iterations, or -1 if did not converge.
+    /// Arguments will contain eigenvalues and eigenvectors in columns of the "eigenvectors" matrix
+    /// Computation is done in double precision despite the input matrix types
+
+    template <typename Et, typename Mt, typename MT,
+              typename Dtype = typename std::conditional<hila::contains_complex<T>::value,
+                                                         Complex<double>, double>::type>
+    int eigen_jacobi(out_only Vector<n, Et> &eigenvalues,
+                     out_only Matrix_t<n, n, Mt, MT> &eigenvectors) const {
+
+        static_assert(!hila::contains_complex<T>::value || hila::contains_complex<Mt>::value,
+                      "Eigenvector matrix must be complex with complex original matrix");
+
+        static_assert(n == m, "Eigensystem can be solved only for square matrices");
+        int rot;
+        SquareMatrix<n, Dtype> M, V;
+
+        /* Do it in double prec; copy fields */
+        V = 1;
+        M = (*this);
+
+        /* don't need the imag. parts of diag (are zero, really) */
+        eigenvalues = M.diagonal().real();
+
+        for (rot = 0; rot < 300; rot++) {
+
+            /* find the largest element */
+            int p, q;
+            double abs_mpq = 0;
+            for (int i = 0; i < n - 1; i++) {
+                for (int j = i + 1; j < n; j++) {
+                    double t = ::squarenorm(M.e(i, j));
+                    if (abs_mpq < t) {
+                        abs_mpq = t;
+                        p = i;
+                        q = j;
+                    }
+                }
+            }
+
+            abs_mpq = std::sqrt(abs_mpq);
+
+            /* if off-diag elements are tiny return */
+
+            if (abs_mpq < 1e-18 * (std::abs(eigenvalues[p]) + std::abs(eigenvalues[q]))) {
+                eigenvectors = V;
+                return (rot);
+            }
+
+            Dtype mpq = M.e(p, q);
+
+            /* now do the p,q-rotation:
+             * M <- P^+ M P, where
+             *     | c   s    |  p
+             * P = |-s*  c*   |  q  = Ppq
+             *     |        1 |  r
+             *
+             * with P^+ = P^-1 ->  cc* + ss* = 1, det P = 1
+             * Thus, P is SU(2) or O(2) matrix
+             *
+             *     | c*  -s   | | mpp mpq mpr| | c   s   |
+             * M = | s*   c   |	| mqp mqq mqr| |-s*  c*  |
+             *     |         1|	| mrp mrq mrr| |        1|
+             *
+             *   = Pip* Mij Pjq,  mqp = mpq*
+             *
+             * Set now Mpq = (c*mpp - s mqp)s + (c*mpq -smqq)c* = 0
+             *             = c*^2 mpq - s^2 mpq* + c*s (mpp - mqq)
+             *             = |mpq| [ c*^2 e - s^2 e* + c*s (mpp-mqq)/|mpq| ]
+             * where e = exp(i arg(mpq)) = mpq/|mpq|, e* = 1/e
+             *
+             * Now the "rotation angle" (c~cos\phi, s~sin\phi)
+             * a = "cot2\phi" = c*^2 e - s^2 e* / 2c*s = (mqq - mpp) / 2|mpq|
+             * Def t = s/c*e, so that the above is
+             * t^2 + 2ta - 1 = 0 ->
+             * t = -a +- sqrt(a^2+1).  Choose one with smaller |t|!
+             * This is prone to cancellation, ~ a - a, so write it as
+             * t = sgn(a)/(|a| + sqrt(a^2 + 1).
+             * Now can choose real c*
+             * c* = 1/sqrt(t^2+1)
+             * s = t c* e   (and c*c + s*s = 1)
+             */
+
+            double a = (eigenvalues[q] - eigenvalues[p]) / (2 * abs_mpq);
+            double t = 1.0 / (std::abs(a) + std::sqrt(a * a + 1.0));
+            if (a < 0.0)
+                t = -t;
+            double c = 1.0 / std::sqrt(t * t + 1.0);
+
+            Dtype s = mpq * (t * c / abs_mpq);
+            Matrix<2, 2, Dtype> P;
+            P.e(0, 0) = P.e(1, 1) = 1.0 / std::sqrt(t * t + 1.0);
+            P.e(0, 1) = s;
+            P.e(1, 0) = -::conj(s);
+
+            M.mult_by_2x2_left(p, q, P.dagger());
+            M.mult_by_2x2_right(p, q, P);
+
+            eigenvalues[p] = ::real(M.e(p, p));
+            eigenvalues[q] = ::real(M.e(q, q));
+
+            // p,q -elements of m should be 0 - set explictly to avoid rounding erros
+            M.e(p, q) = 0;
+            M.e(q, p) = 0;
+
+            /* Likewise,
+             * Mpp = (c*mpp - s mpq*)c - (c*mpq - smqq)s*
+             *     = (c*mpp - s mpq*)(c + s*s/c*) = mpp - e t mpq*
+             *     = mpp - t |mpq|
+             * Mqq = (s*mpp + c mpq*)s + (s*mpq + cmqq)c*
+             *     = (s^2 mpq* s* / c* - s*c*mpq + s*s mqq
+             *     + cs mpq* + s*c* mpq + c*c mqq
+             *     = mqq + te mpq*
+             *     = mqq + t |mpq|
+             * Mpr = (c*mpr - s mqr) = mpr - s(mqr + tau* mpr)
+             *   where tau = s / (1+c) if c is real!
+             * Mqr = (s*mpr + c mqr) = mqr + s*(mpr - tau mqr)
+             */
+
+            /* mpq = 0*/
+
+            /* Now M done, take care of the ev's too ..
+             * V' = V P = |vpp vpq vpr| | c  s   | = V_ik P_kj
+             *            |vqp vqq vqr| |-s* c   |
+             * 	          |vrp vrq vrr| |       1|
+             * vip <- vip c - viq s*
+             * viq <- vip s + viq c
+             * vir <- vir
+             */
+
+            V.mult_by_2x2_right(p, q, P);
+        }
+
+        return (-1);
+    }
+
+
     /// Convert to string for printing
+    ///
     std::string str() const {
         std::stringstream text;
         for (int i = 0; i < n; i++) {
