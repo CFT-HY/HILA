@@ -2479,12 +2479,6 @@ bool TopLevelVisitor::VisitDecl(Decl *D) {
     }
 
     // THis does nothing here
-
-    // auto t = dyn_cast<TypeAliasTemplateDecl>(D);
-    // if (t && t->getNameAsString() == "element") {
-    //   llvm::errs() << "Got field storage\n";
-    // }
-
     return true;
 }
 

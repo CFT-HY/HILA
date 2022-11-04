@@ -29,8 +29,10 @@
 constexpr unsigned number_of_subnodes = VECTOR_SIZE / sizeof(float);
 #endif
 
+namespace hila {
 /// list boundary conditions - used only if SPECIAL_BOUNDARY_CONDITIONS defined
-enum class BoundaryCondition { PERIODIC, ANTIPERIODIC, FIXED };
+enum class bc { PERIODIC, ANTIPERIODIC, DIRICHLET };
+} // namespace hila
 
 void test_std_gathers();
 void report_too_large_node(); // report on too large node
@@ -263,9 +265,9 @@ class lattice_struct {
     void init_special_boundaries();
     void setup_special_boundary_array(Direction d);
 
-    const unsigned *get_neighbour_array(Direction d, BoundaryCondition bc);
+    const unsigned *get_neighbour_array(Direction d, hila::bc bc);
 #else
-    const unsigned *get_neighbour_array(Direction d, BoundaryCondition bc) {
+    const unsigned *get_neighbour_array(Direction d, hila::bc bc) {
         return neighb[d];
     }
 #endif

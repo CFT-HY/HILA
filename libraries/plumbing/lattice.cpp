@@ -688,15 +688,15 @@ void lattice_struct::init_special_boundaries() {
 /////////////////////////////////////////////////////////////////////
 /// give the neighbour array pointer.  Allocate if needed
 
-const unsigned *lattice_struct::get_neighbour_array(Direction d, BoundaryCondition bc) {
+const unsigned *lattice_struct::get_neighbour_array(Direction d, hila::bc bc) {
 
 #ifndef SPECIAL_BOUNDARY_CONDITIONS
-    assert(bc == BoundaryCondition::PERIODIC && "non-periodic BC only if SPECIAL_BOUNDARY_CONDITIONS defined");
+    assert(bc == hila::bc::PERIODIC && "non-periodic BC only if SPECIAL_BOUNDARY_CONDITIONS defined");
     return neighb[d];
 #else
 
     // regular bc exit, should happen almost always
-    if (special_boundaries[d].is_needed == false || bc == BoundaryCondition::PERIODIC)
+    if (special_boundaries[d].is_needed == false || bc == hila::bc::PERIODIC)
         return neighb[d];
 
     if (special_boundaries[d].neighbours == nullptr) {

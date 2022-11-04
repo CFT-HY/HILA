@@ -48,7 +48,7 @@ void gather_test() {
 #if 0 && defined(SPECIAL_BOUNDARY_CONDITIONS)
         // test antiperiodic b.c. to one direction
         if (next_direction(d) == NDIM) {
-            f2.set_boundary_condition(d, BoundaryCondition::ANTIPERIODIC);
+            f2.set_boundary_condition(d, hila::bc::ANTIPERIODIC);
 
             onsites(ALL) {
                 if (X.coordinate(d) == lattice.size(d) - 1)

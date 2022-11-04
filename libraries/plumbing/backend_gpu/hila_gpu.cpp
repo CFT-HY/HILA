@@ -157,7 +157,7 @@ void backend_lattice_struct::setup(const lattice_struct &lattice) {
         // For special boundaries
         // TODO: check this really works now!
         const unsigned *special_neighb =
-            lattice.get_neighbour_array((Direction)d, BoundaryCondition::ANTIPERIODIC);
+            lattice.get_neighbour_array((Direction)d, hila::bc::ANTIPERIODIC);
 
         if (special_neighb != lattice.neighb[d]) {
             gpuMalloc(&(d_neighb_special[d]),

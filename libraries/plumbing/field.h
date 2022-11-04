@@ -97,7 +97,7 @@ class Field {
         // neighbour pointers - because of boundary conditions, can be different for
         // diff. fields
         const unsigned *RESTRICT neighbours[NDIRS];
-        BoundaryCondition boundary_condition[NDIRS];
+        hila::bc boundary_condition[NDIRS];
 
 #ifdef USE_MPI
         MPI_Request receive_request[3][NDIRS];
@@ -191,7 +191,7 @@ class Field {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
             // note: -d in is_on_edge, because we're about to send stuff to that
             // Direction (gathering from Direction +d)
-            if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
+            if (boundary_condition[d] == hila::bc::ANTIPERIODIC &&
                 lattice.special_boundaries[-d].is_on_edge) {
                 payload.gather_comm_elements(buffer, to_node, par, lattice, true);
             } else {
@@ -205,7 +205,7 @@ class Field {
             // this is vectorized branch
             bool antiperiodic = false;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-            if (boundary_condition[d] == BoundaryCondition::ANTIPERIODIC &&
+            if (boundary_condition[d] == hila::bc::ANTIPERIODIC &&
                 lattice.special_boundaries[-d].is_on_edge) {
                 antiperiodic = true;
             }
@@ -265,7 +265,7 @@ class Field {
         void set_local_boundary_elements(Direction dir, Parity par) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-            bool antiperiodic = (boundary_condition[dir] == BoundaryCondition::ANTIPERIODIC &&
+            bool antiperiodic = (boundary_condition[dir] == hila::bc::ANTIPERIODIC &&
                                  lattice.special_boundaries[dir].is_on_edge);
 #else
             bool antiperiodic = false;
@@ -430,8 +430,8 @@ class Field {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         foralldir (dir) {
-            fs->boundary_condition[dir] = BoundaryCondition::PERIODIC;
-            fs->boundary_condition[-dir] = BoundaryCondition::PERIODIC;
+            fs->boundary_condition[dir] = hila::bc::PERIODIC;
+            fs->boundary_condition[-dir] = hila::bc::PERIODIC;
         }
 #endif
 
@@ -548,7 +548,7 @@ class Field {
         return gather_status(par, dir) == gather_status_t::NOT_DONE;
     }
 
-    void set_boundary_condition(Direction dir, BoundaryCondition bc) {
+    void set_boundary_condition(Direction dir, hila::bc bc) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         // TODO: This works as intended only for periodic/antiperiodic b.c.
@@ -559,7 +559,7 @@ class Field {
         fs->neighbours[dir] = lattice.get_neighbour_array(dir, bc);
         fs->neighbours[-dir] = lattice.get_neighbour_array(-dir, bc);
 #else
-        if (bc == BoundaryCondition::PERIODIC) {
+        if (bc == hila::bc::PERIODIC) {
             fs->payload.neighbours[dir] = lattice.backend_lattice->d_neighb[dir];
             fs->payload.neighbours[-dir] = lattice.backend_lattice->d_neighb[-dir];
         } else {
@@ -573,11 +573,11 @@ class Field {
 #endif
     }
 
-    BoundaryCondition get_boundary_condition(Direction dir) const {
+    hila::bc get_boundary_condition(Direction dir) const {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         return fs->boundary_condition[dir];
 #else
-        return BoundaryCondition::PERIODIC;
+        return hila::bc::PERIODIC;
 #endif
     }
 
