@@ -584,7 +584,6 @@ void lattice_struct::create_std_gathers() {
 
 /************************************************************************/
 
-#ifdef USE_MPI
 /* this formats the wait_array, used by forallsites_waitA()site_neighbour
  * wait_array[i] contains a bit at position 1<<dir if nb(dir,i) is out
  * of lattice.
@@ -616,11 +615,6 @@ void lattice_struct::initialize_wait_arrays() {
     }
 }
 
-#else
-
-void lattice_struct::initialize_wait_arrays() {}
-
-#endif
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
 
@@ -751,7 +745,7 @@ void lattice_struct::setup_special_boundary_array(Direction d) {
 /// TODO: implement some other neighbour schemas!
 /////////////////////////////////////////////////////////////////////
 
-#if 1
+#if 0
 
 /// This is a helper routine, returning a vector of comm_node_structs for all nodes
 /// involved with communication.

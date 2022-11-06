@@ -37,5 +37,5 @@ LDFLAGS :=
 # These variables must be defined here
 #
 HILAPP_OPTS := -target:AVX $(STD_INCLUDE_DIRS)
-HILA_OPTS := -DAVX -DUSE_MPI
+HILA_OPTS := -DAVX
 

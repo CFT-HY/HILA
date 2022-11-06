@@ -43,8 +43,8 @@ LDFLAGS =
 
 # These variables must be defined here
 #
-HILAPP_OPTS = $(HILAPP_INCLUDES) -DUSE_MPI
-HILA_OPTS = -DUSE_MPI
+HILAPP_OPTS = $(HILAPP_INCLUDES)
+HILA_OPTS =
 
 
 

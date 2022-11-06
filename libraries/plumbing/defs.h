@@ -16,12 +16,10 @@
 #include <cmath>
 
 
-#ifdef USE_MPI
 #ifdef HILAPP
 #include "hilapp_mpi.h"
 #else
 #include <mpi.h>
-#endif
 #endif
 
 // Read in Makefile tunable parameters first
@@ -167,16 +165,6 @@ using element = T;
 // MPI Related functions and definitions
 #define MAX_GATHERS 1000
 
-#ifndef USE_MPI
-
-// broadcast does nothing if not MPI
-template <typename T>
-void broadcast(T &v) {}
-
-template <typename T>
-void broadcast_array(T *var, int n) {}
-
-#endif
 
 void initialize_communications(int &argc, char ***argv);
 void split_into_partitions(int rank);

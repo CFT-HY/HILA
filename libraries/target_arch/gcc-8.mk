@@ -36,7 +36,7 @@ LDFLAGS :=
 # These variables must be defined here
 #
 HILAPP_OPTS := $(STD_INCLUDE_DIRS) $(MPI_INCLUDE_DIRS)
-HILA_OPTS := -DUSE_MPI
+HILA_OPTS := 
 
 
 

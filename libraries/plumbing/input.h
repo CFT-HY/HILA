@@ -4,9 +4,7 @@
 #include <string>
 #include "defs.h"
 #include "lattice.h"
-#ifdef USE_MPI
 #include "plumbing/com_mpi.h"
-#endif
 
 ////////////////////////////////////////////////////////////////////////
 /// hila::input - Class for parsing runtime parameter files

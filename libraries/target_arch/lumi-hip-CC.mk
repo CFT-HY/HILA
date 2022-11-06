@@ -60,7 +60,7 @@ LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hs
 # These variables must be defined here
 #
 HILAPP_OPTS := -target:HIP $(HILAPP_INCLUDES)
-HILA_OPTS := -DUSE_MPI -DHIP $(HILA_INCLUDES)
+HILA_OPTS := -DHIP $(HILA_INCLUDES)
 
 
 

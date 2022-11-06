@@ -371,7 +371,7 @@ void hila::finishrun() {
 
     for (const lattice_struct *latp : lattices) {
 
-#ifdef USE_MPI
+
         int64_t gathers = latp->n_gather_done;
         int64_t avoided = latp->n_gather_avoided;
 
@@ -381,8 +381,6 @@ void hila::finishrun() {
         } else {
             hila::out0 << " No communications done from node 0\n";
         }
-
-#endif
 
     }
 

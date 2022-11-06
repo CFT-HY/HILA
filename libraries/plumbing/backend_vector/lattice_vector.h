@@ -118,10 +118,8 @@ struct vectorized_lattice_struct {
 
         get_neighbours_and_local_halo();
 
-#ifdef USE_MPI
         get_receive_lists();
         build_wait_arrays();
-#endif
 
         set_coordinates();
 
@@ -279,7 +277,6 @@ struct vectorized_lattice_struct {
         }
     }
 
-#ifdef USE_MPI
     //////////////////////////////////////////////////////////////////////////////
     /// Get neighbour receive indices for MPI
     //////////////////////////////////////////////////////////////////////////////
@@ -318,7 +315,6 @@ struct vectorized_lattice_struct {
             }
         }
     }
-#endif
 
     /////////////////////////////////////////////////////////////////////////
     /// Build the structs for coordinates
@@ -344,7 +340,6 @@ struct vectorized_lattice_struct {
 /// Finally, initialize wait arrays
 /// it is a bit mask array containing a bit at location dir if the neighbour
 /// at that dir is out of the local volume
-#ifdef USE_MPI
     void build_wait_arrays() {
         vec_wait_arr_ = (dir_mask_t *)memalloc(v_sites * sizeof(dir_mask_t));
 
@@ -361,7 +356,6 @@ struct vectorized_lattice_struct {
             }
         }
     }
-#endif
 
     /////////////////////////////////////////////////////////////////////////
     /// Return the communication info

@@ -3,9 +3,6 @@
 
 #include "hila.h"
 
-//#define USE_MPI
-#ifdef USE_MPI
-
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Special reduction class: declare a reduction variable which
@@ -453,8 +450,5 @@ T Field<T>::max(Parity par, CoordinateVector &loc) const {
 }
 
 
-#endif // USE_MPI
-
-// TODO - define for !USE_MPI
 
 #endif

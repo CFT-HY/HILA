@@ -15,9 +15,7 @@
 
 #include "plumbing/backend_vector/vector_types.h"
 
-#ifdef USE_MPI
 #include "plumbing/com_mpi.h"
-#endif
 
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
@@ -99,7 +97,6 @@ class Field {
         const unsigned *RESTRICT neighbours[NDIRS];
         hila::bc boundary_condition[NDIRS];
 
-#ifdef USE_MPI
         MPI_Request receive_request[3][NDIRS];
         MPI_Request send_request[3][NDIRS];
 #ifndef VANILLA
@@ -129,14 +126,6 @@ class Field {
 #endif
             }
         }
-
-#else // Not MPI
-
-        // empty stubs
-        void initialize_communication() {}
-        void free_communication() {}
-
-#endif
 
         void allocate_payload() {
             payload.allocate_field(lattice);
@@ -242,7 +231,7 @@ class Field {
         /// Place boundary elements from neighbour
         void place_comm_elements(Direction d, Parity par, T *RESTRICT buffer,
                                  const lattice_struct::comm_node_struct &from_node) {
-// #ifdef USE_MPI
+
 #ifdef VECTORIZED
             if constexpr (hila::is_vectorizable_type<T>::value) {
                 // now vectorized layout, act accordingly
@@ -279,7 +268,6 @@ class Field {
         void scatter_elements(T *buffer, const std::vector<CoordinateVector> &coord_list,
                               int root = 0);
 
-#if defined(USE_MPI)
 
         /// get the receive buffer pointer for the communication.
         T *get_receive_buffer(Direction d, Parity par,
@@ -323,7 +311,7 @@ class Field {
             }
 #endif
         } // end of get_receive_buffer
-#endif    // USE_MPI
+
     };
 
     // static_assert( std::is_pod<T>::value, "Field expects only pod-type elements
@@ -827,9 +815,8 @@ class Field {
             element = get_value_at(lattice.site_index(coord));
         }
 
-#if defined(USE_MPI)
+
         MPI_Bcast(&element, sizeof(T), MPI_BYTE, owner, lattice.mpi_comm_lat);
-#endif
 
         return element;
     }
@@ -1434,36 +1421,9 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     shift(v, res, par);
     return res;
 }
-#elif !defined(USE_MPI)
-
-// this is junk at the moment
-template <typename T>
-Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity par) const {
-
-    onsites(par) {
-        if
-    }
-    r2 = *this;
-    foralldir (d) {
-        if (abs(v[d]) > 0) {
-            Direction dir;
-            if (v[d] > 0)
-                dir = d;
-            else
-                dir = -d;
-
-            for (int i = 0; i < abs(v[d]); i++) {
-                r1[ALL] = r2[X + dir];
-                r2 = r1;
-            }
-        }
-    }
-    return r2;
-}
 
 #endif
 
-#if defined(USE_MPI)
 
 /// start_gather(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
@@ -1725,28 +1685,6 @@ void Field<T>::cancel_comm(Direction d, Parity p) const {
     }
 }
 
-#else // No MPI now
-
-///* Trivial implementation when no MPI is used
-
-template <typename T>
-dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
-    // Update local elements in the halo (necessary for vectorized version)
-    // We use here simpler tracking than in MPI, may lead to slight extra work
-    if (!is_gathered(d, p)) {
-        fs->set_local_boundary_elements(d, p);
-        mark_gathered(d, p);
-    }
-    return 0;
-}
-
-template <typename T>
-void Field<T>::wait_gather(Direction d, Parity p) const {}
-
-template <typename T>
-void Field<T>::drop_comms(Direction d, Parity p) const {}
-
-#endif // MPI
 
 /// And a convenience combi function
 template <typename T>
@@ -1755,7 +1693,7 @@ void Field<T>::gather(Direction d, Parity p) const {
     wait_gather(d, p);
 }
 
-#if defined(USE_MPI)
+
 
 /// Gather a list of elements to a single node
 /// coord_list must be same on all nodes, buffer is needed only on "root"
@@ -1912,35 +1850,6 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
     }
 }
 
-#else // Now not USE_MPI
-
-/// Gather a list of elements to a single node
-template <typename T>
-void Field<T>::field_struct::gather_elements(T *buffer,
-                                             const std::vector<CoordinateVector> &coord_list,
-                                             int root) const {
-    std::vector<unsigned> index_list;
-    for (CoordinateVector c : coord_list) {
-        index_list.push_back(lattice.site_index(c));
-    }
-
-    payload.gather_elements(buffer, index_list.data(), index_list.size(), lattice);
-}
-
-/// Send elements from a single node to a list of coordinates
-template <typename T>
-void Field<T>::field_struct::scatter_elements(T *buffer,
-                                              const std::vector<CoordinateVector> &coord_list,
-                                              int root) {
-    std::vector<unsigned> index_list;
-    for (CoordinateVector c : coord_list) {
-        index_list.push_back(lattice.site_index(c));
-    }
-
-    payload.place_elements(buffer, index_list.data(), index_list.size(), lattice);
-}
-
-#endif
 
 
 /// Set an array of elements. Assuming that each node calls this with the same value, it is

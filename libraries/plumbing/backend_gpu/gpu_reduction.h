@@ -964,9 +964,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 
 #endif // ifndef HILAPP
 
-#ifdef USE_MPI
 #include "com_mpi.h"
-#endif
 
 /////////////////////////////////////////////////////////////////////////////////////////
 // Reduce field var over the lattice
@@ -1011,7 +1009,6 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 //         bptr += fsize;
 //     }
 
-// #ifdef USE_MPI
 //     // we don't always do MPI - not in generated loops
 //     if (do_mpi) {
 //         MPI_Datatype dtype;
@@ -1028,7 +1025,6 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 //                        this->fs->lattice.mpi_comm_lat);
 //         }
 //     }
-// #endif
 
 //     return result.value;
 // }

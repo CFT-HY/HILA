@@ -29,7 +29,7 @@ LDFLAGS :=
 # These variables must be defined here
 #
 HILAPP_OPTS := -target:openmp $(STD_INCLUDE_DIRS) -DOPENMP
-HILA_OPTS := -DUSE_MPI -DOPENMP
+HILA_OPTS := -DOPENMP
 
 
 

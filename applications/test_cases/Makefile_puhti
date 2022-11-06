@@ -1,7 +1,7 @@
 OPTS = -DNDIM=4
 
 HILAPP = ../../bin/hilapp -DPUHTI -I../../../llvm/lib/clang/8.0.1/include/ 
-CC = mpic++ -DUSE_MPI
+CC = mpic++ 
 
 CFLAGS = -g $(OPTS)
 CXXFLAGS = -g -x c++ $(OPTS)

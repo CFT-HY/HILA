@@ -3,8 +3,6 @@
 
 #include "plumbing/defs.h"
 
-#ifdef USE_MPI
-
 #include "plumbing/lattice.h"
 
 /// let us house the partitions-struct here
@@ -342,7 +340,5 @@ void hila_reduce_sum_setup(T *value) {
     }
 }
 
-
-#endif // USE_MPI
 
 #endif // COMM_MPI_H

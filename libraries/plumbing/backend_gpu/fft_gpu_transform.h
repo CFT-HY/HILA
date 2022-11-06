@@ -301,7 +301,6 @@ void hila_fft<cmplx_t>::transform() {
 template <typename cmplx_t>
 void hila_fft<cmplx_t>::gather_data() {
 
-#ifdef USE_MPI
 
     extern hila::timer pencil_MPI_timer;
     pencil_MPI_timer.start();
@@ -395,7 +394,6 @@ void hila_fft<cmplx_t>::gather_data() {
 
     pencil_MPI_timer.stop();
 
-#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -404,7 +402,7 @@ void hila_fft<cmplx_t>::gather_data() {
 template <typename cmplx_t>
 void hila_fft<cmplx_t>::scatter_data() {
 
-#ifdef USE_MPI
+
 
     extern hila::timer pencil_MPI_timer;
     pencil_MPI_timer.start();
@@ -487,7 +485,6 @@ void hila_fft<cmplx_t>::scatter_data() {
     }
 
     pencil_MPI_timer.stop();
-#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

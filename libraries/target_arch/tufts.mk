@@ -53,8 +53,8 @@ LDFLAGS =
 
 # These variables must be defined here
 #
-HILAPP_OPTS = $(HILAPP_INCLUDES) -I/opt/shared/fftw/3.3.2/include/  -DUSE_MPI
-HILA_OPTS = -DUSE_MPI -I/opt/shared/fftw/3.3.2/include/
+HILAPP_OPTS = $(HILAPP_INCLUDES) -I/opt/shared/fftw/3.3.2/include/ 
+HILA_OPTS = -I/opt/shared/fftw/3.3.2/include/
 
 
 

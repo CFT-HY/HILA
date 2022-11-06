@@ -9,9 +9,7 @@
 /// Check timing.h for details
 //////////////////////////////////////////////////////////////////
 
-#ifdef USE_MPI
 #include "com_mpi.h"
-#endif
 
 namespace hila {
 

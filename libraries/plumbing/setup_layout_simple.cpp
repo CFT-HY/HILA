@@ -107,7 +107,7 @@ void lattice_struct::setup_layout() {
             nodes.divisors[dir].at(i) = i * nodesiz[dir];
     }
 
-#ifdef USE_MPI
+
     // For MPI, remap the nodes for periodic torus
     // in the desired manner
     // we have at least 2 options:
@@ -133,5 +133,4 @@ void lattice_struct::setup_layout() {
         }
         hila::out0 << '\n';
     }
-#endif
 }

@@ -61,5 +61,5 @@ HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
 # These variables must be defined here
 #
 HILAPP_OPTS = -target:HIP $(STD_HILAPP_INCLUDES) $(MPI_INCLUDE_DIRS) -D__HIP_PLATFORM_NVCC__
-HILA_OPTS = -DUSE_MPI -DHIP -DPUHTI $(HIP_INCLUDE_DIRS)
+HILA_OPTS = -DHIP -DPUHTI $(HIP_INCLUDE_DIRS)
 

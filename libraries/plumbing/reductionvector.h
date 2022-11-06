@@ -3,9 +3,6 @@
 
 #include "hila.h"
 
-// MPI is needed here
-
-#ifdef USE_MPI
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Special reduction class for arrays: declare a reduction array as
@@ -318,6 +315,5 @@ class ReductionVector {
     }
 };
 
-#endif // USE_MPI
 
 #endif

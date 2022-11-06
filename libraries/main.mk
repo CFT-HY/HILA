@@ -82,10 +82,9 @@ HILA_OBJECTS = \
 	build/timing.o \
 	build/test_gathers.o \
 	build/com_mpi.o \
-	build/com_single.o \
 	build/fft.o
 
-# com_mpi / com_single could be moved to platforms, but they're protected by USE_MPI guards
+# Remvoved com_simple.o, require MPI
 
 # Read in the appropriate platform bits and perhaps extra objects
 include $(ARCH_DIR)/$(ARCH).mk

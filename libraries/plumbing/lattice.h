@@ -356,13 +356,12 @@ class lattice_struct {
     /* MPI functions and variables. Define here in lattice? */
     void initialize_wait_arrays();
 
-#ifdef USE_MPI
+
     MPI_Comm mpi_comm_lat;
 
     // Guarantee 64 bits for these - 32 can overflow!
     int64_t n_gather_done = 0, n_gather_avoided = 0;
 
-#endif
 
     /// Return the coordinates of a site, where 1st dim (x) runs fastest etc.
     /// Useful in

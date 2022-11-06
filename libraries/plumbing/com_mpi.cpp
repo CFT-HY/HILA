@@ -1,7 +1,4 @@
 
-#ifdef USE_MPI
-// protect with USE_MPI so can be included even in no-MPI codes
-
 #include "plumbing/defs.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field.h"
@@ -321,5 +318,3 @@ void reset_comm(bool global)
 }
 
 #endif
-
-#endif // USE_MPI
