@@ -1,8 +1,7 @@
 #include "hila.h"
 #include "gauge/staples.h"
-#include "gauge/degauss.h"
 
-using SU3 = SUmatrix<3, double>;
+using mygroup = SUmatrix<5, double>;
 
 
 template <typename group>
@@ -165,8 +164,8 @@ int main(int argc, char **argv) {
     hila::seed_random(seed);
 
     // Alloc gauge field and momenta (E)
-    GaugeField<SU3> U;
-    VectorField<Algebra<SU3>> E;
+    GaugeField<mygroup> U;
+    VectorField<Algebra<mygroup>> E;
 
     // some initial noise for gauge field
     foralldir (d) {
