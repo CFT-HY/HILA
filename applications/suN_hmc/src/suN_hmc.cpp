@@ -1,7 +1,17 @@
 #include "hila.h"
 #include "gauge/staples.h"
+#include "gauge/polyakov.h"
 
-using mygroup = SUmatrix<5, double>;
+using mygroup = SUmatrix<3, double>;
+
+// define a struct to hold the input parameters: this
+// makes it simpler to pass the values around
+struct parameters {
+    double beta;
+    double dt;
+    int trajlen;
+    int n_traj;
+};
 
 
 template <typename group>
@@ -43,85 +53,63 @@ double measure_plaq(const GaugeField<group> &U) {
         foralldir (dir2)
             if (dir1 < dir2) {
                 onsites(ALL) {
-                    plaq += group::size() -
+                    plaq += 1.0 - 
                             real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-                                       U[dir2][X].dagger()));
+                                       U[dir2][X].dagger()))/group::size();
                 }
             }
     return plaq.value();
 }
 
+template <typename group>
+double measure_e2(const VectorField<Algebra<group>> &E) {
+
+    Reduction<double> e2 = 0;
+    e2.allreduce(false).delayed(true);
+
+    foralldir (d) {
+        onsites(ALL) e2 += E[d][X].squarenorm();
+    }
+    return e2.value() / 2;
+}
 
 template <typename group>
-void measure_stuff(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory,
-                   double dt) {
+double measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E, const parameters & p) {
+    auto plaq = measure_plaq(U);
+    auto e2 = measure_e2(E);
+
+    return p.beta * plaq + e2/2;
+}
+
+template <typename group>
+void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
+                   int trajectory) {
 
     auto plaq = measure_plaq(U);
 
-    double e2;
-    foralldir (d)
-        e2 += E[d].squarenorm();
-    e2 /= 2;
+    auto e2 = measure_e2(E);
 
+    auto poly = measure_polyakov(U, e_t);
 
     // hila::out0 << "Measure_start " << n << "\n";
-    hila::out0 << "MEAS " << trajectory << ' ' << plaq << ' ' << e2 << '\n';
+    hila::out0 << "MEAS " << trajectory << ' ' << plaq << ' ' << e2 << ' ' << poly << '\n';
     // hila::out0 << "Measure_end " << n << "\n";
 }
 
 
-template <typename group>
-void thermalize(GaugeField<group> &U, VectorField<Algebra<group>> &E, double g2Ta, int iterations,
-                double dt) {
-
-    regroup_gauge(U);
-
-    static hila::timer therm_timer("Thermalization");
-
-    therm_timer.start();
-    for (int loop = 0; loop < iterations; loop++) {
-        foralldir (d)
-            onsites(ALL) E[d][X].gaussian_random();
-
-        // 1/2 timestep for U first
-        update_U(U, E, dt / 2);
-        // do 1 time unit of evolution with leapfrog
-        for (int steps = 0; steps < 1.0 / dt - 1; steps++) {
-            update_E(U, E, dt);
-            update_U(U, E, dt);
-        }
-        // and bring U and E to the same time value
-        update_E(U, E, dt);
-        update_U(U, E, dt / 2);
-
-        double pl = measure_plaq(U);
-        double e2 = 0;
-        foralldir (d) {
-            e2 += E[d].squarenorm();
-        }
-
-        hila::out0 << "THERM: Plaq: " << pl << " E^2 " << e2 << " action " << e2 / 2 + 2 * pl
-                   << '\n';
-
-        regroup_gauge(U);
-    }
-    therm_timer.stop();
-}
-
 ////////////////////////////////////////////////////////////////
 
 template <typename group>
-void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, int trajectory,
-                   int trajlen, double dt) {
+void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p) {
 
-    update_U(U, E, dt / 2);
-    for (int n = 0; n < trajlen - 1; n++) {
-        update_E(U, E, dt);
-        update_U(U, E, dt);
+    update_U(U, E, p.dt / 2);
+    for (int n = 0; n < p.trajlen - 1; n++) {
+        update_E(U, E, p.dt * p.beta / group::size());
+        update_U(U, E, p.dt);
     }
     // and bring U and E to the same time value
-    update_E(U, E, dt);
-    update_U(U, E, dt / 2);
+    update_E(U, E, p.dt * p.beta / group::size());
+    update_U(U, E, p.dt / 2);
 }
 
 /////////////////////////////////////////////////////////////////
@@ -143,15 +131,17 @@ int main(int argc, char **argv) {
     // .get() -method can read many different input types,
     // see file "input.h" for documentation
 
+    parameters p;
+
     hila::input par("parameters");
 
     CoordinateVector lsize;
     lsize = par.get("lattice size"); // reads NDIM numbers
 
-    double beta = par.get("beta");
-    double dt = par.get("dt");
-    int trajlen = par.get("trajectory length");
-    int n_traj = par.get("number of trajectories");
+    p.beta = par.get("beta");
+    p.dt = par.get("dt");
+    p.trajlen = par.get("trajectory length");
+    p.n_traj = par.get("number of trajectories");
     long seed = par.get("random seed");
 
     par.close(); // file is closed also when par goes out of scope
@@ -167,29 +157,40 @@ int main(int argc, char **argv) {
     GaugeField<mygroup> U;
     VectorField<Algebra<mygroup>> E;
 
-    // some initial noise for gauge field
-    foralldir (d) {
+    foralldir(d) {
         onsites(ALL) {
-            U[d][X].gaussian_random(0.3).reunitarize();
+            mygroup m;
+            m.gaussian_random(0.1);
+            U[d][X] = 1 + m;
+            U[d][X].reunitarize();
         }
     }
 
+    GaugeField<mygroup> U_old;
+    for (int trajectory = 0; trajectory < p.n_traj; trajectory++) {
+        U_old = U;
 
-    for (int trajectory = 0; trajectory < n_traj; trajectory++) {
-        auto U_old = U;
+        double ttime = hila::gettime();
 
         foralldir (d)
             onsites(ALL) E[d][X].gaussian_random();
 
-        // double act_old = measure_action(U,E)
+        double act_old = measure_action(U,E,p);
 
-        do_trajectory(U, E, trajectory, trajlen, dt);
+        do_trajectory(U, E, p);
 
-        // double act = measure_action(U, E);
-        // double polyakov = measure_polyakov(U);
+        double act_new = measure_action(U, E, p);
 
+        bool reject = hila::broadcast(exp(act_old - act_new) < hila::random());
+        if (reject) {
+            U = U_old;
+        }
 
-        measure_stuff(U, E, trajectory, dt);
+        hila::out0 << "HMC traj: " << (reject ? "REJECT" : "ACCEPT") << " start " << act_old
+                   << " end " << act_new << " ds " << act_new - act_old << " time "
+                   << hila::gettime() - ttime << '\n';
+
+        measure_stuff(U, E, trajectory);
     }
 
 

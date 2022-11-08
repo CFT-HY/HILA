@@ -65,7 +65,10 @@ public:
         return *this;
     }
 
-    
+    GaugeField & operator=(const GaugeField & rhs) {
+        foralldir(d) fdir[d] = rhs[d];
+        return *this;
+    }
 
 };
 
