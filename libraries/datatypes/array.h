@@ -289,14 +289,7 @@ class Array {
 
     /// Convert to string for printing
     std::string str() const {
-        std::stringstream text;
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
-                text << e(i, j) << " ";
-            }
-            text << '\n';
-        }
-        return text.str();
+        return this->asMatrix().str();
     }
 };
 
@@ -415,6 +408,21 @@ template <int n, int m, typename T>
 std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
     return operator<<(strm, A.asMatrix());
 }
+
+namespace hila {
+    
+template <int n, int m, typename T>
+std::string to_string(const Array<n, m, T> &A, int prec = 8, char separator = ' ') {
+    return to_string(A.asMatrix(), prec, separator);
+}
+
+template <int n, int m, typename T>
+std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
+    return prettyprint(A.asMatrix(), prec);
+}
+
+}
+
 
 /// Norm squared function
 template <int n, int m, typename T>

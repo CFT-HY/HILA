@@ -59,4 +59,23 @@ inline void random(T &d) {
     d = static_cast<T>(hila::random());
 }
 
+/// convert to string: separator does nothing, but for compatibility w. other to_strings
+
+namespace hila {
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+std::string to_string(const T v, int prec = 8, char separator = ' ') {
+    std::stringstream ss;
+    ss.precision(prec);
+    ss << v;
+    return ss.str();
+}
+
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+std::string prettyprint(const T v, int prec = 8) {
+    return to_string(v,prec);
+}
+
+
+} // namespace hila
+
 #endif

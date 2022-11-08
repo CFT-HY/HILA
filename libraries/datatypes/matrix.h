@@ -735,18 +735,18 @@ class Matrix_t {
         int rot;
         SquareMatrix<n, Dtype> M, V;
 
-        /* Do it in double prec; copy fields */
+        // Do it in double prec; copy fields
         V = 1;
         M = (*this);
 
-        /* don't need the imag. parts of diag (are zero, really) */
+        // don't need the imag. parts of diag (are zero)
         eigenvalues = M.diagonal().real();
 
         for (rot = 0; rot < 300; rot++) {
 
             /* find the largest element */
             int p, q;
-            double abs_mpq = 0;
+            double abs_mpq = -1.0; // this quarantees that even trivial matrix works
             for (int i = 0; i < n - 1; i++) {
                 for (int j = i + 1; j < n; j++) {
                     double t = ::squarenorm(M.e(i, j));
@@ -760,7 +760,7 @@ class Matrix_t {
 
             abs_mpq = std::sqrt(abs_mpq);
 
-            /* if off-diag elements are tiny return */
+            // if off-diag elements are tiny return
 
             if (abs_mpq < 1e-18 * (std::abs(eigenvalues[p]) + std::abs(eigenvalues[q]))) {
                 eigenvectors = V;
@@ -823,22 +823,6 @@ class Matrix_t {
             M.e(p, q) = 0;
             M.e(q, p) = 0;
 
-            /* Likewise,
-             * Mpp = (c*mpp - s mpq*)c - (c*mpq - smqq)s*
-             *     = (c*mpp - s mpq*)(c + s*s/c*) = mpp - e t mpq*
-             *     = mpp - t |mpq|
-             * Mqq = (s*mpp + c mpq*)s + (s*mpq + cmqq)c*
-             *     = (s^2 mpq* s* / c* - s*c*mpq + s*s mqq
-             *     + cs mpq* + s*c* mpq + c*c mqq
-             *     = mqq + te mpq*
-             *     = mqq + t |mpq|
-             * Mpr = (c*mpr - s mqr) = mpr - s(mqr + tau* mpr)
-             *   where tau = s / (1+c) if c is real!
-             * Mqr = (s*mpr + c mqr) = mqr + s*(mpr - tau mqr)
-             */
-
-            /* mpq = 0*/
-
             /* Now M done, take care of the ev's too ..
              * V' = V P = |vpp vpq vpr| | c  s   | = V_ik P_kj
              *            |vqp vqq vqr| |-s* c   |
@@ -857,13 +841,15 @@ class Matrix_t {
 
     /// Convert to string for printing
     ///
-    std::string str() const {
+    std::string str(int prec = 8, char separator = ' ') const {
         std::stringstream text;
+        text.precision(prec);
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < m; j++) {
-                text << e(i, j) << " ";
+                text << e(i, j);
+                if (i < n - 1 || j < m - 1)
+                    text << separator;
             }
-            text << '\n';
         }
         return text.str();
     }
@@ -1367,11 +1353,45 @@ inline auto mul_trace(const Mtype1 &a, const Mtype2 &b) {
 /// Stream operator
 template <int n, int m, typename T, typename MT>
 std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++) {
+            strm << A.e(i, j);
+            if (i < n - 1 || j < m - 1)
+                strm << ' ';
+        }
+    return strm;
+}
+
+/// Convert to string for "pretty" printing
+///
+
+namespace hila {
+
+
+template <int n, int m, typename T, typename MT>
+std::string to_string(const Matrix_t<n, m, T, MT> &A, int prec = 8, char separator = ' ') {
+    std::stringstream strm;
+    strm.precision(prec);
+
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < m; j++) {
+            strm << hila::to_string(A.e(i, j), prec, separator);
+            if (i < n - 1 || j < m - 1)
+                strm << separator;
+        }
+    return strm.str();
+}
+
+template <int n, int m, typename T, typename MT>
+std::string prettyprint(const Matrix_t<n, m, T, MT> &A, int prec = 8) {
+    std::stringstream strm;
+    strm.precision(prec);
+
     if constexpr (n == 1 || m == 1) {
         // print a vector, horizontally
         strm << '[';
         for (int i = 0; i < n * m; i++)
-            strm << ' ' << A.e(i);
+            strm << ' ' << prettyprint(A.e(i), prec);
         strm << " ]";
         // if (n > 1)
         //    strm << "^T";
@@ -1388,7 +1408,7 @@ std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
             int size = 0;
             for (int i = 0; i < n; i++) {
                 std::stringstream item;
-                item << A.e(i, j);
+                item << prettyprint(A.e(i, j), prec);
                 columns[i] = item.str();
                 if (columns[i].size() > size)
                     size = columns[i].size();
@@ -1403,8 +1423,10 @@ std::ostream &operator<<(std::ostream &strm, const Matrix_t<n, m, T, MT> &A) {
             strm << lines[i] << "]\n";
         }
     }
-    return strm;
+    return strm.str();
 }
+
+} // namespace hila
 
 /// Norm squared function
 template <typename Mt, std::enable_if_t<Mt::is_matrix(), int> = 0>

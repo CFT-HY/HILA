@@ -267,17 +267,13 @@ class Complex {
         return a;
     }
 
-    template <typename A = T, std::enable_if_t<!std::is_arithmetic<A>::value, int> = 0>
-    std::string str() const {
-        std::string text = "(" + re.str() + "," + im.str() + ")";
-        return text;
+    std::string str(int prec = 8, char separator = ' ') const {
+        std::stringstream ss;
+        ss.precision(prec);
+        ss << re << separator << im;
+        return ss.str();
     }
 
-    template <typename A = T, std::enable_if_t<std::is_arithmetic<A>::value, int> = 0>
-    std::string str() const {
-        std::string text = "(" + std::to_string(re) + "," + std::to_string(im) + ")";
-        return text;
-    }
 
     // Convenience method a.conj_mul(b) == a^* b
     template <typename A>
@@ -634,8 +630,28 @@ inline void gaussian_random(out_only Complex<T> &c, double width = 1.0) {
 
 template <typename T>
 std::ostream &operator<<(std::ostream &strm, const Complex<T> &A) {
-    return strm << "(" << A.re << ", " << A.im << ")";
+    return strm << A.real() << ' ' << A.imag();
 }
+
+/// //////////////////////////////////////////////////////////////////////////////
+/// Function hila::to_string
+
+namespace hila {
+template <typename T>
+std::string to_string(const Complex<T> &A, int prec = 8, char separator = ' ') {
+    return A.str(prec,separator);
+}
+
+template <typename T>
+std::string prettyprint(const Complex<T> &A, int prec = 8){
+    std::stringstream ss;
+    ss.precision(prec);
+    ss << "( " << A.real() << ", " << A.imag() << " )";
+    return ss.str();
+}
+
+} // namespace hila
+
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
