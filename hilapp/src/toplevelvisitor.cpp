@@ -1470,7 +1470,11 @@ bool TopLevelVisitor::check_field_ref_list() {
             // There may be error, find culprits
             bool found_error = false;
             for (field_ref *p : l.ref_list) {
-                if (p->is_direction && !p->is_written && !p->is_offset) {
+                if (p->is_direction && !p->is_written && !p->is_offset &&
+                    !(loop_info.has_pragma_safe &&
+                      find_word(loop_info.pragma_safe_args, get_stmt_str(p->nameExpr)) !=
+                          std::string::npos)) {
+
                     if (loop_info.parity_value == Parity::all) {
 
                         reportDiag(DiagnosticsEngine::Level::Error,
@@ -1787,6 +1791,8 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
                     has_pragma(s, pragma_hila::ACCESS, &loop_info.pragma_access_args);
                 loop_info.has_pragma_omp_parallel_region =
                     has_pragma(s, pragma_hila::IN_OMP_PARALLEL_REGION);
+                loop_info.has_pragma_safe =
+                    has_pragma(s, pragma_hila::SAFE, &loop_info.pragma_safe_args);
 
                 DeclStmt *init = dyn_cast<DeclStmt>(f->getInit());
                 if (init && init->isSingleDecl()) {
@@ -1841,6 +1847,7 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
         loop_info.has_pragma_novector = has_pragma(s, pragma_hila::NOVECTOR);
         loop_info.has_pragma_access =
             has_pragma(s, pragma_hila::ACCESS, &loop_info.pragma_access_args);
+        loop_info.has_pragma_safe = has_pragma(s, pragma_hila::SAFE, &loop_info.pragma_safe_args);
 
         SourceRange full_range = getRangeWithSemicolon(s, false);
         global.full_loop_text = TheRewriter.getRewrittenText(full_range);

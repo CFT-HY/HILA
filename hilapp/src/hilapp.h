@@ -390,8 +390,10 @@ struct loop_info_struct {
 
     bool has_pragma_novector;
     bool has_pragma_access;
+    bool has_pragma_safe;
     bool has_pragma_omp_parallel_region;
     const char *pragma_access_args;
+    const char *pragma_safe_args;
     bool has_site_dependent_cond_or_index;    // if, for, while w. site dep. cond?
     bool contains_random;                     // does it contain rng (also in loop functions)?
     bool has_conditional;                     // if, for, while, switch, ternary in loop
@@ -480,6 +482,7 @@ enum class pragma_hila {
     NOT_VECTORIZABLE,
     CONTAINS_RNG,
     ACCESS,
+    SAFE,
     IN_OMP_PARALLEL_REGION
 };
 
