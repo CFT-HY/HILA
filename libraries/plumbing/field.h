@@ -796,19 +796,20 @@ class Field {
     Field<T> reflect(const CoordinateVector &dirs) const;
 
     // Writes the Field to disk
-    void write_to_stream(std::ofstream &outputfile) const;
-    void write_to_file(const std::string &filename) const;
-    void read_from_stream(std::ifstream &inputfile);
-    void read_from_file(const std::string &filename);
+    void write(std::ofstream &outputfile, bool binary = true,
+                               int precision = 8) const;
+    void write(const std::string &filename, bool binary = true, int precision = 8) const;
+
+    void read(std::ifstream &inputfile);
+    void read(const std::string &filename);
 
     void write_subvolume(std::ofstream &outputfile, const CoordinateVector &cmin,
                          const CoordinateVector &cmax, int precision = 6) const;
     void write_subvolume(const std::string &filenname, const CoordinateVector &cmin,
                          const CoordinateVector &cmax, int precision = 6) const;
 
-    void write_slice(std::ofstream &outputfile, const CoordinateVector &slice,
-                     int precision = 6) const;
-    void write_slice(const std::string &outputfile, const CoordinateVector &slice,
+    template <typename Out>
+    void write_slice(Out &outputfile, const CoordinateVector &slice,
                      int precision = 6) const;
 
     // and sum reduction

@@ -6,11 +6,82 @@
 
 #include "plumbing/field.h"
 
+namespace hila {
+// Define this as template, in order to avoid code generation if the function is not needed -
+// a bit crazy
+template <typename IS, std::enable_if_t<std::is_same<IS, std::ifstream>::value, int> = 0>
+bool open_input_file(const std::string &filename, IS &inputfile) {
+    bool ok = true;
+    if (hila::myrank() == 0) {
+        inputfile.open(filename, std::ios::in | std::ios::binary);
+        if (inputfile.fail()) {
+            hila::out0 << "ERROR in opening file " << filename << '\n';
+            ok = false;
+        }
+    }
+    hila::broadcast(ok);
+    if (!ok)
+        hila::terminate(5);
+
+    return ok;
+}
+
+template <typename OS, std::enable_if_t<std::is_same<OS, std::ofstream>::value, int> = 0>
+bool open_output_file(const std::string &filename, OS &outputfile, bool binary = true,
+                           int precision = 8) {
+    bool ok = true;
+    if (hila::myrank() == 0) {
+        std::ios::openmode mode = std::ios::out | std::ios::trunc;
+        if (binary)
+            mode |= std::ios::binary;
+
+        outputfile.open(filename, mode);
+        outputfile.precision(precision);
+        if (outputfile.fail()) {
+            hila::out0 << "ERROR in opening file " << filename << '\n';
+            ok = false;
+        }
+    }
+    hila::broadcast(ok);
+    if (!ok)
+        hila::terminate(4);
+
+    return ok;
+}
+
+
+template <typename S, std::enable_if_t<std::is_same<S, std::ofstream>::value ||
+                                           std::is_same<S, std::ifstream>::value,
+                                       int> = 0>
+bool close_file(const std::string &filename, S &fstream) {
+    bool error = false;
+    if (hila::myrank() == 0) {
+        fstream.close();
+        if (fstream.fail()) {
+            hila::out0 << "ERROR in reading/writing file " << filename << '\n';
+            error = true;
+        }
+    }
+    hila::broadcast(error);
+
+    if (error)
+        hila::terminate(3);
+
+    return !error;
+}
+
+} // namespace hila
+
+//////////////////////////////////////////////////////////////////////////////////
+
 /// Write the field to a file stream
 template <typename T>
-void Field<T>::write_to_stream(std::ofstream &outputfile) const {
+void Field<T>::write(std::ofstream &outputfile, bool binary, int precision) const {
     constexpr size_t sites_per_write = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t write_size = sites_per_write * sizeof(T);
+
+    if (!binary)
+        outputfile.precision(precision);
 
     std::vector<CoordinateVector> coord_list(sites_per_write);
     T *buffer = (T *)memalloc(write_size);
@@ -25,8 +96,15 @@ void Field<T>::write_to_stream(std::ofstream &outputfile) const {
             coord_list.resize(sites);
 
         fs->gather_elements(buffer, coord_list);
-        if (hila::myrank() == 0)
-            outputfile.write((char *)buffer, sites * sizeof(T));
+        if (hila::myrank() == 0) {
+            if (binary) {
+                outputfile.write((char *)buffer, sites * sizeof(T));
+            } else {
+                for (size_t j = 0; j < sites; j++) {
+                    outputfile << buffer[j] << '\n';
+                }
+            }
+        }
     }
 
     std::free(buffer);
@@ -34,40 +112,39 @@ void Field<T>::write_to_stream(std::ofstream &outputfile) const {
 
 /// Write the Field to a named file replacing the file
 template <typename T>
-void Field<T>::write_to_file(const std::string &filename) const {
+void Field<T>::write(const std::string &filename, bool binary, int precision) const {
     std::ofstream outputfile;
-    outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-    write_to_stream(outputfile);
-    outputfile.close();
+    hila::open_output_file(filename, outputfile, binary);
+    write(outputfile, binary, precision);
+    hila::close_file(filename, outputfile);
 }
 
 /// Write a list of fields into an output stream
 template <typename T>
 static void write_fields(std::ofstream &outputfile, Field<T> &last) {
-    last.write_to_stream(outputfile);
+    last.write(outputfile);
 }
 
 template <typename T, typename... fieldtypes>
-static void write_fields(std::ofstream &outputfile, Field<T> &next,
-                         fieldtypes &... fields) {
-    next.write_to_stream(outputfile);
+static void write_fields(std::ofstream &outputfile, Field<T> &next, fieldtypes &...fields) {
+    next.write(outputfile);
     write_fields(outputfile, fields...);
 }
 
 /// Write a list of fields to a file
 template <typename... fieldtypes>
-static void write_fields(const std::string &filename, fieldtypes &... fields) {
+static void write_fields(const std::string &filename, fieldtypes &...fields) {
     std::ofstream outputfile;
-    outputfile.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+    hila::open_output_file(filename, outputfile);
     write_fields(outputfile, fields...);
-    outputfile.close();
+    hila::close_file(filename, outputfile);
 }
 
 /////////////////////////////////////////////////////////////////////////////////
 
 /// Read the Field from a stream
 template <typename T>
-void Field<T>::read_from_stream(std::ifstream &inputfile) {
+void Field<T>::read(std::ifstream &inputfile) {
     constexpr size_t sites_per_read = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t read_size = sites_per_read * sizeof(T);
 
@@ -94,13 +171,13 @@ void Field<T>::read_from_stream(std::ifstream &inputfile) {
     std::free(buffer);
 }
 
-// Read Field contennts from the beginning of a file
+// Read Field contents from the beginning of a file
 template <typename T>
-void Field<T>::read_from_file(const std::string &filename) {
+void Field<T>::read(const std::string &filename) {
     std::ifstream inputfile;
-    inputfile.open(filename, std::ios::in | std::ios::binary);
-    read_from_stream(inputfile);
-    inputfile.close();
+    hila::open_input_file(filename, inputfile);
+    read(inputfile);
+    hila::close_file(filename, inputfile);
 }
 
 // Read a list of fields from an input stream
@@ -110,19 +187,18 @@ static void read_fields(std::ifstream &inputfile, Field<T> &last) {
 }
 
 template <typename T, typename... fieldtypes>
-static void read_fields(std::ifstream &inputfile, Field<T> &next,
-                        fieldtypes &... fields) {
+static void read_fields(std::ifstream &inputfile, Field<T> &next, fieldtypes &...fields) {
     next.read_from_stream(inputfile);
     read_fields(inputfile, fields...);
 }
 
 // Read a list of fields from a file
 template <typename... fieldtypes>
-static void read_fields(const std::string &filename, fieldtypes &... fields) {
+static void read_fields(const std::string &filename, fieldtypes &...fields) {
     std::ifstream inputfile;
-    inputfile.open(filename, std::ios::in | std::ios::binary);
+    hila::open_input_file(filename, inputfile);
     read_fields(inputfile, fields...);
-    inputfile.close();
+    hila::close_file(filename, inputfile);
 }
 
 
@@ -158,6 +234,10 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
 
     size_t i = 0, j = 0;
 
+    if (hila::myrank() == 0) {
+        outputfile.precision(precision);
+    }
+
     forcoordinaterange(c, cmin, cmax) {
         coord_list[i] = c;
         i++;
@@ -169,7 +249,6 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
             fs->gather_elements(buffer, coord_list);
 
             if (hila::myrank() == 0) {
-                outputfile.precision(precision);
                 for (size_t k = 0; k < i; k++) {
                     for (int l = 0; l < sizeof(T) / sizeof(hila::number_type<T>); l++) {
                         outputfile << hila::get_number_in_var(buffer[k], l) << ' ';
@@ -184,29 +263,13 @@ void Field<T>::write_subvolume(std::ofstream &outputfile, const CoordinateVector
 
 
 template <typename T>
-void Field<T>::write_subvolume(const std::string &filename,
-                               const CoordinateVector &cmin,
-                               const CoordinateVector &cmax,
-                               int precision) const {
+void Field<T>::write_subvolume(const std::string &filename, const CoordinateVector &cmin,
+                               const CoordinateVector &cmax, int precision) const {
 
     std::ofstream out;
-    if (hila::myrank() == 0) {
-        out.open(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-    }
-
+    hila::open_output_file(filename, out, false);
     write_subvolume(out, cmin, cmax, precision);
-    int fail = 0;
-    if (hila::myrank() == 0) {
-        out.close();
-        if (out.fail()) {
-            hila::out << "Error in writing file " << filename << '\n';
-            fail = 1;
-        }
-    }
-
-    hila::broadcast(fail);
-    if (fail)
-        hila::terminate(1);
+    hila::close_file(filename, out);
 }
 
 // Write a subspace (slice) of the original lattice.  Here
@@ -215,24 +278,12 @@ void Field<T>::write_subvolume(const std::string &filename,
 // Outf is either filename or ofstream
 
 template <typename T>
-void Field<T>::write_slice(std::ofstream &outf, const CoordinateVector &slice,
-                           int precision) const {
+template <typename outf_type>
+void Field<T>::write_slice(outf_type &outf, const CoordinateVector &slice, int precision) const {
 
-    CoordinateVector cmin, cmax;
-    foralldir(d) {
-        if (slice[d] < 0) {
-            cmin[d] = 0;
-            cmax[d] = lattice.size(d) - 1;
-        } else {
-            cmin[d] = cmax[d] = slice[d];
-        }
-    }
-    write_subvolume(outf, cmin, cmax, precision);
-}
-
-template <typename T>
-void Field<T>::write_slice(const std::string &outf, const CoordinateVector &slice,
-                           int precision) const {
+    static_assert(std::is_same<outf_type, std::string>::value ||
+                      std::is_same<outf_type, std::ofstream>::value,
+                  "file name / output stream argument in write_slice()?");
 
     CoordinateVector cmin, cmax;
     foralldir(d) {
