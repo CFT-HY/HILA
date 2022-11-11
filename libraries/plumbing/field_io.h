@@ -28,7 +28,7 @@ bool open_input_file(const std::string &filename, IS &inputfile) {
 
 template <typename OS, std::enable_if_t<std::is_same<OS, std::ofstream>::value, int> = 0>
 bool open_output_file(const std::string &filename, OS &outputfile, bool binary = true,
-                           int precision = 8) {
+                      int precision = 8) {
     bool ok = true;
     if (hila::myrank() == 0) {
         std::ios::openmode mode = std::ios::out | std::ios::trunc;
@@ -147,6 +147,9 @@ template <typename T>
 void Field<T>::read(std::ifstream &inputfile) {
     constexpr size_t sites_per_read = WRITE_BUFFER_SIZE / sizeof(T);
     constexpr size_t read_size = sites_per_read * sizeof(T);
+
+    if (!this->is_allocated())
+        this->allocate();
 
     mark_changed(ALL);
 
