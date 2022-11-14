@@ -217,6 +217,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
         llvm::errs() << D->getParamDecl(i)->getNameAsString() << ", ";
     llvm::errs() << "\n";
 
+    llvm::errs() << "   Site dependent " << sitedep << '\n';
+
 #endif
 
     cinfo.is_site_dependent = sitedep;
@@ -379,6 +381,11 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
 
     sitedep = attach_dependent_vars(out_variables, sitedep, dep_variables);
     cinfo.is_site_dependent |= sitedep;
+
+#ifdef LOOP_FUNCTION_DEBUG
+    llvm::errs() << "  Site dep at the end of analysis: " << cinfo.is_site_dependent << " vectorizable " << 
+        cinfo.is_vectorizable << '\n';
+#endif
 
     return cinfo;
 }

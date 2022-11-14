@@ -563,8 +563,11 @@ class loopFunctionVisitor : public GeneralVisitor,
 
         visit_depth--;
 
-        // post-process vectorization info
-        if (target.vectorize) {
+        /// post-process vectorization info
+        /// TODO: Disable function vectorizability analysis for now!
+        /// this prevents vectorization almost everywhere (site_dependent -> not vectorizable)
+        /// Do more detailed analysis!!! 
+        if (0 && target.vectorize) {
             ci.is_vectorizable = !ci.contains_random;
             if (ci.is_vectorizable) {
                 for (auto &func : loop_function_calls) {

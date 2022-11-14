@@ -334,7 +334,14 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::st
 
         // and check function calls
         for (auto &ci : loop_function_calls) {
-            if (ci.is_site_dependent || !ci.is_vectorizable) {
+
+            ///  NOTE: the "is vectorizable" analysis is incomplete, allow site_dep functions
+            ///        to be vectorized here
+            ///  TODO: make a detailed site dep. check through the functions!
+
+            // This below works but prevents now vectorization in almost everywhere
+            //  if (ci.is_site_dependent || !ci.is_vectorizable) {
+            if (ci.is_site_dependent && !ci.is_vectorizable) {
                 is_vectorizable = false;
 
                 if (ci.funcdecl != nullptr) {

@@ -1761,7 +1761,7 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
         ast_dump(s);
     }
 
-    // Entry point when inside Field[par] = .... body
+    // Entry point when inside onsites() or Field[par] = .... body
     if (parsing_state.in_loop_body) {
         return handle_loop_body_stmt(s);
     }
@@ -1885,39 +1885,6 @@ bool TopLevelVisitor::VisitStmt(Stmt *s) {
         return true;
     }
 
-    //   else if (E && is_X_index_type(E)) {
-    //   reportDiag(DiagnosticsEngine::Level::Error,
-    //               E->getSourceRange().getBegin(),
-    //               "Use of \"X\" is allowed only in site loops");
-    //   parsing_state.skip_children = 1;
-    // }
-
-    // and add special handling for special function calls here
-
-    if (CallExpr *CE = dyn_cast<CallExpr>(s)) {
-        if (FunctionDecl *FD = CE->getDirectCallee()) {
-
-            // THIS DOES NOT WORK BECAUSE REWRITE-BUFFERS ARE NOT CHANGED ANY MORE
-            // is it memalloc(size) -call -> substitute with
-            // memalloc( size, filename, linenumber)
-            // don't know if this is really useful
-
-            // if (FD->getNameAsString() == "memalloc" && CE->getNumArgs() == 1) {
-            //   SourceLocation sl = CE->getRParenLoc();
-
-            //   // generate new args
-            //   std::string name(srcMgr.getFilename(sl));
-            //   std::size_t i = name.rfind('/');
-            //   if (i != std::string::npos) name = name.substr(i);
-
-            //   std::string args(", \"");
-            //   args.append(name).append( "\", " ).append(
-            //       std::to_string( srcMgr.getSpellingLineNumber(sl)));
-
-            // if (!writeBuf->is_edited(sl)) writeBuf->insert(sl,args);
-            // }
-        }
-    }
 
     return true;
 }
