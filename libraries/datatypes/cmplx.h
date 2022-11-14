@@ -389,7 +389,7 @@ struct complex_x_scalar_s<
 };
 
 template <typename A, typename B>
-using complex_x_scalar_type = typename complex_x_scalar_s<A,B>::type;
+using complex_x_scalar_type = typename complex_x_scalar_s<A, B>::type;
 
 ////////////////////////////////////////////////////////////////////////
 /// as_complex_array(T var)
@@ -466,12 +466,12 @@ inline Complex<Tr> operator+(const Complex<T1> &a, const Complex<T2> &b) {
 // TODO: for avx vector too -- #define new template macro
 template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline auto operator+(const Complex<T> &c, const A &a) {
-    return hila::complex_x_scalar_type<T,A>(c.re + a, c.im);
+    return hila::complex_x_scalar_type<T, A>(c.re + a, c.im);
 }
 
 template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline auto operator+(const A &a, const Complex<T> &c) {
-    return hila::complex_x_scalar_type<T,A>(c.re + a, c.im);
+    return hila::complex_x_scalar_type<T, A>(c.re + a, c.im);
 }
 
 // -
@@ -487,13 +487,13 @@ inline Complex<Tr> operator-(const Complex<T1> &a, const Complex<T2> &b) {
 // complex - scalar
 template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline auto operator-(const Complex<T> &c, const A &a) {
-    return hila::complex_x_scalar_type<T,A>(c.re - a, c.im);
+    return hila::complex_x_scalar_type<T, A>(c.re - a, c.im);
 }
 
 // scalar - complex
 template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline auto operator-(const A &a, const Complex<T> &c) {
-    return hila::complex_x_scalar_type<T,A>(a - c.re, -c.im);
+    return hila::complex_x_scalar_type<T, A>(a - c.re, -c.im);
 }
 
 ///
@@ -506,12 +506,12 @@ inline Complex<Tr> operator*(const Complex<T1> &a, const Complex<T2> &b) {
 /// complex * scalar
 template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline auto operator*(const Complex<T> &c, const A &a) {
-    return hila::complex_x_scalar_type<T,A>(c.re * a, c.im * a);
+    return hila::complex_x_scalar_type<T, A>(c.re * a, c.im * a);
 }
 
 template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline auto operator*(const A &a, const Complex<T> &c) {
-    return hila::complex_x_scalar_type<T,A>(a * c.re, a * c.im);
+    return hila::complex_x_scalar_type<T, A>(a * c.re, a * c.im);
 }
 
 // /   a/b = ab*/|b|^2
@@ -528,14 +528,14 @@ inline Complex<Tr> operator/(const Complex<T1> &a, const Complex<T2> &b) {
 
 template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline auto operator/(const Complex<T> &c, const A &a) {
-    return hila::complex_x_scalar_type<T,A>(c.re / a, c.im / a);
+    return hila::complex_x_scalar_type<T, A>(c.re / a, c.im / a);
 }
 
 // a/c = ac*/|c|^2
 template <typename T, typename A, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline auto operator/(const A &a, const Complex<T> &c) {
     T n = c.squarenorm();
-    return hila::complex_x_scalar_type<T,A>((a * c.re) / n, -(a * c.im) / n);
+    return hila::complex_x_scalar_type<T, A>((a * c.re) / n, -(a * c.im) / n);
 }
 
 // write also multiply-add directly with complex numbers
@@ -639,11 +639,11 @@ std::ostream &operator<<(std::ostream &strm, const Complex<T> &A) {
 namespace hila {
 template <typename T>
 std::string to_string(const Complex<T> &A, int prec = 8, char separator = ' ') {
-    return A.str(prec,separator);
+    return A.str(prec, separator);
 }
 
 template <typename T>
-std::string prettyprint(const Complex<T> &A, int prec = 8){
+std::string prettyprint(const Complex<T> &A, int prec = 8) {
     std::stringstream ss;
     ss.precision(prec);
     ss << "( " << A.real() << ", " << A.imag() << " )";
@@ -672,6 +672,7 @@ constexpr Complex<double> operator""_i(unsigned long long a) {
 /// Useful for short-circuiting im * complex -type operations
 /// Derived from complex class, so all complex operations should be valid
 /////////////////////////////////////////////////////////////////////////////
+
 template <typename T>
 class Imaginary_t : public Complex<T> {
   public:
@@ -727,6 +728,7 @@ inline Imaginary_t<A> operator*(const T &c, Imaginary_t<A> iv) {
 /// Define imaginary unit class, for imaginary I
 /// This is a derived special class of Complex<float>.  Define separately
 /// I*cmplx and cmplx*I
+/// Real micro-optimization, could have used Imaginary_t(1)
 ///
 
 class Imaginaryunit_t : public Imaginary_t<double> {
@@ -738,11 +740,16 @@ class Imaginaryunit_t : public Imaginary_t<double> {
     constexpr Imaginary_t<double> operator-() const {
         return Imaginary_t(-1);
     }
+
+    template <typename T>
+    operator Imaginary_t<T>() const {
+        return Imaginary_t<T>(1);
+    }
 };
 
 /// Define constexpr imaginary unit I
-// constexpr Imaginaryunit_t I;
-#define I Imaginaryunit_t()
+constexpr Imaginaryunit_t I;
+// #define I Imaginaryunit_t()
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 inline auto operator*(const Imaginaryunit_t &iv, T c) {
@@ -759,6 +766,27 @@ inline auto operator*(const Imaginaryunit_t &iv, T c) {
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 inline auto operator*(T c, const Imaginaryunit_t &iv) {
     return iv * c;
+}
+
+template <typename T, std::enable_if_t<hila::is_floating_point<T>::value, int> = 0>
+inline auto operator*(const Imaginaryunit_t &iv, T c) {
+    return Imaginary_t<T>(c);
+}
+
+template <typename T, std::enable_if_t<hila::is_floating_point<T>::value, int> = 0>
+inline auto operator*(T c, const Imaginaryunit_t &iv) {
+    return Imaginary_t<T>(c);
+}
+
+// convert ints to double
+template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
+inline auto operator*(T c, const Imaginaryunit_t &iv) {
+    return Imaginary_t<double>(c);
+}
+
+template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
+inline auto operator*(const Imaginaryunit_t &iv, T c) {
+    return c*iv;
 }
 
 

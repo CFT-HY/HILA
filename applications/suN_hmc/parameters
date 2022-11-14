@@ -3,8 +3,9 @@
 lattice size           8,8,8,8
 # should be effective 6/beta
 beta                   5.5
-dt                     0.01
+dt                     0.025
 trajectory length      40
-number of trajectories 200
+number of trajectories 300
 random seed            0
-
+trajs/saved            10
+config name            config

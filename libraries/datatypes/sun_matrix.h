@@ -295,22 +295,22 @@ class Algebra<SUmatrix<N, T>>
 
 template <int N, typename T>
 SUmatrix<N, T> exp(const Algebra<SUmatrix<N, T>> &a) {
-    // SUmatrix<N, T> m = a.expand();
-    // return exp(m);
+    SUmatrix<N, T> m = a.expand();
+    return exp(m);
 
-    SUmatrix<N,T> m = a.expand() * (-I); // make hermitean
-    SquareMatrix<N,Complex<T>> D;
-    Vector<N,T> ev;
-    m.eigen_jacobi(ev,D);
-    Vector<N,Complex<T>> expv;
+    // SUmatrix<N,T> m = a.expand() * (-I); // make hermitean
+    // SquareMatrix<N,Complex<T>> D;
+    // Vector<N,T> ev;
+    // m.eigen_jacobi(ev,D);
+    // Vector<N,Complex<T>> expv;
 
-    for (int i=0; i<N; i++) expv[i] = exp(I*ev[i]);
-    for (int i=0; i<N; i++) for (int j=0; j<N; j++) {
-        m.e(i,j) = D.e(i,0) * expv[0] * D.e(j,0).conj();
-        for (int k=1; k<N; k++) 
-            m.e(i,j) += D.e(i,k) * expv[k] * D.e(j,k).conj();
-    }
-    return m;
+    // for (int i=0; i<N; i++) expv[i] = exp(I*ev[i]);
+    // for (int i=0; i<N; i++) for (int j=0; j<N; j++) {
+    //     m.e(i,j) = D.e(i,0) * expv[0] * D.e(j,0).conj();
+    //     for (int k=1; k<N; k++) 
+    //         m.e(i,j) += D.e(i,k) * expv[k] * D.e(j,k).conj();
+    // }
+    // return m;
 }
 
 
