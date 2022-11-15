@@ -18,7 +18,8 @@ ifndef CUDA_ARCH
 	CUDA_ARCH = 61
 endif
 CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
-CXXFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} -gencode arch=compute_52,code=sm_52 --use_fast_math --restrict
+CXXFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --use_fast_math --restrict
+# -gencode arch=compute_52,code=sm_52
 
 #
 # 20050 is a warning about ignored inline in __global__ functions - it's not ignored though, it allows multiple
