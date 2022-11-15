@@ -12,8 +12,11 @@ struct parameters {
     int trajlen;
     int n_traj;
     int n_save;
-    std::string config_name;
+    std::string measure_file;
+    std::string config_file;
     double time_offset;
+    bool poly_range_on;
+    Vector<2, double> poly_range;
 };
 
 
@@ -86,8 +89,9 @@ double measure_action(const GaugeField<group> &U, const VectorField<Algebra<grou
 }
 
 template <typename group>
-void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
-                   int trajectory) {
+void measure_stuff(std::ofstream &out, const GaugeField<group> &U,
+                   const VectorField<Algebra<group>> &E, int trajectory) {
+
 
     auto plaq = measure_plaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
@@ -95,9 +99,7 @@ void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>>
 
     auto poly = measure_polyakov(U, e_t);
 
-    // hila::out0 << "Measure_start " << n << "\n";
-    hila::out0 << "MEAS " << trajectory << ' ' << plaq << ' ' << e2 << ' ' << poly << '\n';
-    // hila::out0 << "Measure_end " << n << "\n";
+    out << trajectory << ' ' << plaq << ' ' << e2 << ' ' << poly << std::endl;
 }
 
 
@@ -108,7 +110,7 @@ void checkpoint(const GaugeField<group> &U, int trajectory, const parameters &p)
 
     double t = hila::gettime();
     // save config
-    U.config_write(p.config_name);
+    U.config_write(p.config_file);
 
     // write run_status file
     if (hila::myrank() == 0) {
@@ -144,15 +146,30 @@ bool restore_checkpoint(GaugeField<group> &U, int &trajectory, parameters &p) {
         p.time_offset = status.get("time");
         status.close();
 
-        U.config_read(p.config_name);
-
         hila::seed_random(seed);
+
+        U.config_read(p.config_file);
 
         ok = true;
     } else {
-        ok = false;
+
+        std::ifstream in;
+        in.open(p.config_file, std::ios::in | std::ios::binary);
+
+        if (in.is_open()) {
+            in.close();
+
+            hila::out0 << "READING initial config\n";
+
+            U.config_read(p.config_file);
+
+            ok = true;
+        } else {
+
+            ok = false;
+        }
     }
-    
+
     return ok;
 }
 
@@ -204,7 +221,15 @@ int main(int argc, char **argv) {
     p.n_traj = par.get("number of trajectories");
     long seed = par.get("random seed");
     p.n_save = par.get("trajs/saved");
-    p.config_name = par.get("config name");
+    p.measure_file = par.get("meas file");
+    p.config_file = par.get("config name");
+    if (par.get_item("polyakov range", {"off", "%f"}) == 1) {
+        p.poly_range = par.get();
+        p.poly_range_on = true;
+    } else {
+        p.poly_range = 0;
+        p.poly_range_on = false;
+    }
 
     par.close(); // file is closed also when par goes out of scope
 
@@ -224,10 +249,26 @@ int main(int argc, char **argv) {
         U = 1;
     }
 
-    for (int trajectory = start_traj; trajectory < p.n_traj; trajectory++) {
-        GaugeField<mygroup> U_old = U;
+    // open the measure file
+    std::ofstream measfile;
+    std::stringstream b;
+    b << std::setprecision(10) << p.beta;
+    p.measure_file += b.str();
+    b.clear();
 
+    // use append mode
+    measfile.open(p.measure_file, std::ios::out | std::ios::app);
+    measfile.precision(10); // use 10 digits precision by default
+
+    double p_now = measure_polyakov(U, e_t).real();
+
+    GaugeField<mygroup> U_old;
+    for (int trajectory = start_traj; trajectory < p.n_traj; trajectory++) {
+
+        U_old = U;
         double ttime = hila::gettime();
+
+        double p_old = p_now;
 
         foralldir(d) onsites(ALL) E[d][X].gaussian_random(sqrt(2.0));
 
@@ -237,22 +278,43 @@ int main(int argc, char **argv) {
 
         double act_new = measure_action(U, E, p);
 
-        bool reject = hila::broadcast(exp(act_old - act_new) < hila::random());
-        if (reject) {
-            U = U_old;
+        bool poly_ok = true;
+        if (p.poly_range_on) {
+            p_now = measure_polyakov(U, e_t).real();
+
+            if (p_now > p.poly_range[0] && p_now < p.poly_range[1]) {
+                poly_ok = true; // normal, nice branch
+            } else if ((p_old < p.poly_range[0] && p_now > p_old && p_now < p.poly_range[1]) ||
+                       (p_old > p.poly_range[1] && p_now < p_old && p_now > p.poly_range[0])) {
+                poly_ok = true; // this is when we "search" for the range
+            } else {
+                poly_ok = false;
+            }
         }
 
-        hila::out0 << "HMC traj " << trajectory << (reject ? " REJECT" : " ACCEPT") << " start "
-                   << act_old << " end " << act_new << " ds " << act_new - act_old << " time "
-                   << hila::gettime() - ttime << '\n';
+        bool reject = hila::broadcast(!poly_ok || (exp(act_old - act_new) < hila::random()));
 
-        measure_stuff(U, E, trajectory);
+        hila::out0 << std::setprecision(12) << "HMC " << trajectory
+                   << (reject ? " REJECT" : " ACCEPT") << " start " << act_old << " ds "
+                   << std::setprecision(6) << act_new - act_old;
+        if (p.poly_range_on)
+            hila::out0 << " ploop " << p_now;
+
+        hila::out0 << " time " << std::setprecision(3) << hila::gettime() - ttime << '\n';
+
+        if (reject) {
+            U = U_old;
+            p_now = p_old;
+        }
+
+        measure_stuff(measfile, U, E, trajectory);
 
         if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
             checkpoint(U, trajectory, p);
+            measfile.flush();
         }
     }
-
+    measfile.close();
 
     hila::finishrun();
 }
