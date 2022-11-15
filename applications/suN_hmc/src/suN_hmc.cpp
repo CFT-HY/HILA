@@ -2,7 +2,7 @@
 #include "gauge/staples.h"
 #include "gauge/polyakov.h"
 
-using mygroup = SUmatrix<3, double>;
+using mygroup = SU<3, double>;
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around

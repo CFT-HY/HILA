@@ -6,7 +6,7 @@
     #error "!!! Specify which SU(N) in Makefile: eg. -DNSU=3"
 #endif
 
-using SUN = SUmatrix<NSU, double>;
+using SUN = SU<NSU, double>;
 
 // Output stream for results
 std::ofstream measureFile;

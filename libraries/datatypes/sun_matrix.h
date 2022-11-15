@@ -3,14 +3,14 @@
 
 #include "matrix.h"
 
-/// Define type SUmatrix<n,type>
+/// Define type SU<n,type>
 /// Derives from square Matrix<Complex> type
 
 template <typename G>
 class Algebra;
 
 template <int N, typename T>
-class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
+class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
 
   public:
     // std incantation for field types
@@ -18,19 +18,19 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
     using argument_type = Complex<T>;    // constructed from complex
 
     // get all constructors from base
-    using Matrix_t<N, N, Complex<T>, SUmatrix<N, T>>::Matrix_t;
-    using Matrix_t<N, N, Complex<T>, SUmatrix<N, T>>::operator=;
-    using Matrix_t<N, N, Complex<T>, SUmatrix<N, T>>::operator+=;
-    using Matrix_t<N, N, Complex<T>, SUmatrix<N, T>>::operator-=;
-    using Matrix_t<N, N, Complex<T>, SUmatrix<N, T>>::operator*=;
-    using Matrix_t<N, N, Complex<T>, SUmatrix<N, T>>::operator/=;
+    using Matrix_t<N, N, Complex<T>, SU<N, T>>::Matrix_t;
+    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator=;
+    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator+=;
+    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator-=;
+    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator*=;
+    using Matrix_t<N, N, Complex<T>, SU<N, T>>::operator/=;
 
     /// Make the matrix unitary by orthogonalizing the rows
     /// There must be a faster way to do this, but this is simple
     ///  i = 0 ... n-1
     ///     normalize row i
     ///     make rows i+1 .. (n-1) orthogonal to row i
-    SUmatrix &make_unitary() {
+    SU &make_unitary() {
 
         for (int r = 0; r < N; r++) {
 
@@ -63,7 +63,7 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
     }
 
     /// Set the determinant of the SU(N) matrix to 1
-    inline SUmatrix &fix_det() {
+    inline SU &fix_det() {
 
         Complex<T> d, factor;
         T t;
@@ -76,14 +76,14 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
     }
 
     /// Make the matrix special unitary
-    inline SUmatrix &reunitarize() {
+    inline SU &reunitarize() {
         make_unitary();
         fix_det();
         return *this;
     }
 
     /// multiply matrix rows i,j by SU2 "subgroup" from left
-    void mult_by_SU2_left(int r, int q, const SUmatrix<2, T> &m) {
+    void mult_by_SU2_left(int r, int q, const SU<2, T> &m) {
         // copy 2xN matrix
         Vector<2, Complex<T>> a;
         for (int i = 0; i < N; i++) {
@@ -97,7 +97,7 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
         }
     }
 
-    SUmatrix &random(int nhits = 16) out_only {
+    SU &random(int nhits = 16) out_only {
 
         // use Pauli matrix representation to generate SU(2) random matrix
         if constexpr (N == 2) {
@@ -112,7 +112,7 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
         } else {
 
             *this = 1;
-            SUmatrix<2, T> m2;
+            SU<2, T> m2;
 
             for (int h = 1; h <= nhits; h++) {
                 for (int r = 0; r < N - 1; r++)
@@ -166,8 +166,8 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
     // antisymm:  a_i = -i (i u_kj - i u_jk^* - i u_jk + i u_kj^*)/2
     //                = (u_kj.re - u_jk.re)
 
-    Algebra<SUmatrix<N, T>> project_to_algebra() const {
-        Algebra<SUmatrix<N, T>> a;
+    Algebra<SU<N, T>> project_to_algebra() const {
+        Algebra<SU<N, T>> a;
 
         // diagonal generators
         T sum = this->e(0, 0).im;
@@ -196,8 +196,8 @@ class SUmatrix : public Matrix_t<N, N, Complex<T>, SUmatrix<N, T>> {
 /// Derive from (real) Vector of N*N-1 elements
 
 template <int N, typename T>
-class Algebra<SUmatrix<N, T>>
-    : public Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>> {
+class Algebra<SU<N, T>>
+    : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
   public:
     // std incantation for field types
     using base_type = hila::number_type<T>;
@@ -210,12 +210,12 @@ class Algebra<SUmatrix<N, T>>
     static constexpr int N_a = N * N - 1;
 
     /// std constructors and operators derived from vector
-    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::Matrix_t;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator=;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator+=;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator-=;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator*=;
-    using Matrix_t<N * N - 1, 1, T, Algebra<SUmatrix<N, T>>>::operator/=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::Matrix_t;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator+=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator-=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator*=;
+    using Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>>::operator/=;
 
     // suN generators, normalized as
     //  Tr(\lambda_i\lambda_j) = 1/2 \delta_ij
@@ -235,8 +235,8 @@ class Algebra<SUmatrix<N, T>>
     // Define \lambda's so that diagonals come first
 
     /// expand algebra to matrix rep - antihermitean
-    SUmatrix<N, T> expand() const {
-        SUmatrix<N, T> m;
+    SU<N, T> expand() const {
+        SU<N, T> m;
 
         Vector<N, T> d;
 
@@ -294,11 +294,11 @@ class Algebra<SUmatrix<N, T>>
 };
 
 template <int N, typename T>
-SUmatrix<N, T> exp(const Algebra<SUmatrix<N, T>> &a) {
-    SUmatrix<N, T> m = a.expand();
+SU<N, T> exp(const Algebra<SU<N, T>> &a) {
+    SU<N, T> m = a.expand();
     return exp(m);
 
-    // SUmatrix<N,T> m = a.expand() * (-I); // make hermitean
+    // SU<N,T> m = a.expand() * (-I); // make hermitean
     // SquareMatrix<N,Complex<T>> D;
     // Vector<N,T> ev;
     // m.eigen_jacobi(ev,D);
