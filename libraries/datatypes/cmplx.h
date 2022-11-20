@@ -748,7 +748,10 @@ class Imaginaryunit_t : public Imaginary_t<double> {
 };
 
 /// Define constexpr imaginary unit I
-constexpr Imaginaryunit_t I;
+#if defined(CUDA) || defined(HIP)
+__device__
+#endif
+constexpr Imaginaryunit_t I = Imaginaryunit_t();   // this fails on GPUs without additional support
 // #define I Imaginaryunit_t()
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
