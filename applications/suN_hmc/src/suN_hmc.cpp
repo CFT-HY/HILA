@@ -108,9 +108,15 @@ double measure_action(const GaugeField<group> &U, const VectorField<Algebra<grou
 }
 
 template <typename group>
-void measure_stuff(std::ofstream &out, const GaugeField<group> &U,
-                   const VectorField<Algebra<group>> &E, int trajectory) {
+void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
+                   int trajectory) {
 
+    static bool first = true;
+
+    if (first) {
+        hila::out0 << "Legend MEAS: plaq  E^2  P.real  P.imag\n";
+        first = false;
+    }
 
     auto plaq = measure_plaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
@@ -118,7 +124,8 @@ void measure_stuff(std::ofstream &out, const GaugeField<group> &U,
 
     auto poly = measure_polyakov(U, e_t);
 
-    out << trajectory << ' ' << plaq << ' ' << e2 << ' ' << poly << std::endl;
+    hila::out0 << "MEAS " << trajectory << ' ' << std::setprecision(8) << plaq << ' ' << e2 << ' '
+               << poly << '\n';
 }
 
 
@@ -240,7 +247,6 @@ int main(int argc, char **argv) {
     p.n_traj = par.get("number of trajectories");
     long seed = par.get("random seed");
     p.n_save = par.get("trajs/saved");
-    p.measure_file = par.get("meas file");
     p.config_file = par.get("config name");
     if (par.get_item("polyakov range", {"off", "%f"}) == 1) {
         p.poly_range = par.get();
@@ -267,17 +273,6 @@ int main(int argc, char **argv) {
     if (!restore_checkpoint(U, start_traj, p)) {
         U = 1;
     }
-
-    // open the measure file
-    std::ofstream measfile;
-    std::stringstream b;
-    b << std::setprecision(10) << p.beta;
-    p.measure_file += b.str();
-    b.clear();
-
-    // use append mode
-    measfile.open(p.measure_file, std::ios::out | std::ios::app);
-    measfile.precision(10); // use 10 digits precision by default
 
     double p_now = measure_polyakov(U, e_t).real();
 
@@ -326,14 +321,14 @@ int main(int argc, char **argv) {
             p_now = p_old;
         }
 
-        measure_stuff(measfile, U, E, trajectory);
+        hila::out0 << "Measure_start " << trajectory << '\n';
+        measure_stuff(U, E, trajectory);
+        hila::out0 << "Measure_end " << trajectory << '\n';
 
         if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
             checkpoint(U, trajectory, p);
-            measfile.flush();
         }
     }
-    measfile.close();
 
     hila::finishrun();
 }

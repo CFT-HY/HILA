@@ -7,6 +7,5 @@ trajectory length      100
 number of trajectories 50000
 random seed            0
 trajs/saved            100
-meas file              measure
 config name            config
 polyakov range         0.18, 0.22
