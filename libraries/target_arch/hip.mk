@@ -9,7 +9,9 @@
 
 CC := hipcc
 # CC = /usr/bin/nvcc
-LD := $(CC) --std=c++17 --amdgpu-target=gfx1030 -fgpu-rdc --hip-link
+#LD := $(CC) --std=c++17 --amdgpu-target=gfx1030 -fgpu-rdc --hip-link
+LD := $(CC) -g --std=c++17 --amdgpu-target=gfx1030 -fgpu-rdc --hip-link
+
 #-gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52
 
 # Define compilation flags - 61 and 52 work with fairly common geForce cards
@@ -21,7 +23,7 @@ CXXFLAGS := -O3 --std=c++17 -x hip -fgpu-rdc #-nogpulib
 
 
 #LDLIBS := -L/usr/local/cuda-11.2/targets/x86_64-linux/lib/ -lcufft -lm 
-LDLIBS := -lm -L/opt/rocm-5.3.0/hip/lib/ -L/opt/rocm-5.3.0/lib/ -L/opt/rocm-5.3.0/rocfft/lib -L/opt/rocm-5.3.0/rocrand/lib -L/opt/rocm-5.3.0/hiprand/lib -L/opt/rocm-5.3.0/hipfft/lib
+LDLIBS := -lm -L/opt/rocm-5.3.0/hip/lib/ -L/opt/rocm-5.3.0/lib/ -L/opt/rocm-5.3.0/rocfft/lib -L/opt/rocm-5.3.0/rocrand/lib -L/opt/rocm-5.3.0/hiprand/lib -L/opt/rocm-5.3.0/hipfft/lib -L/opt/rocm-5.3.0/hipcub/lib
 
 # Need to give include directory to mpi for hilapp and nvcc - here 2 common ones
 # This in general works with OpenMPI: --showme:incdirs gives the include path of the mpic++
@@ -32,7 +34,7 @@ MPI_LIBS := -L/usr/lib/openmpi/lib -lmpi
 LDLIBS += -lrocrand -lrocfft -lhipfft -lhiprand $(MPI_LIBS)
 
 HIP_PATH ?= $(shell hipconfig --path)
-HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(HIP_PATH)/../hipfft/include -I$(HIP_PATH)/../rocrand/include -I$(HIP_PATH)/../rocfft/include
+HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/../hiprand/include -I$(HIP_PATH)/../hipfft/include -I$(HIP_PATH)/../rocrand/include -I$(HIP_PATH)/../rocfft/include -I$(HIP_PATH)/../hipcub/include
 
 # extra cuda objects here
 HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o

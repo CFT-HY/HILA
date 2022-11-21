@@ -6,8 +6,14 @@
 // We insert the GPU code in the same file too
 // hilapp should not read in .cuh, because it does not understand it
 
-#if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
+//#if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
+#if (defined(CUDA)) && !defined(HILAPP)
 #include <cub/cub.cuh>
+#endif
+
+#if (defined(HIP)) && !defined(HILAPP)
+#include <hipcub/hipcub.hpp>
+#define cub hipcub
 #endif
 
 
@@ -223,6 +229,7 @@ class SiteSelect {
 
         int *num_selected_d;
         gpuMalloc(&num_selected_d, sizeof(int));
+
 
         cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag, out,
                                    num_selected_d, lattice.mynode.volume());
