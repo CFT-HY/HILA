@@ -99,7 +99,6 @@ int main(int argc, char **argv) {
 
     t = hila::gettime();
 
-    FFT_field(f, g);
 
     hila::out0 << "FFT time " << hila::gettime() - t << '\n';
 
