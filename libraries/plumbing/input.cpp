@@ -36,9 +36,8 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
     if (hila::myrank() == 0) {
         if (is_initialized) {
             if (speaking)
-                hila::out << "Error: file '" << fname
-                             << "' cannot be opened because '" << filename
-                             << "' is open in this input variable\n";
+                hila::out << "Error: file '" << fname << "' cannot be opened because '" << filename
+                          << "' is open in this input variable\n";
 
             got_error = true;
         } else {
@@ -58,9 +57,11 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
 
                 } else {
 
-                    if (speaking)
-                        hila::out << "Error: input file '" << fname
-                                     << "' could not be opened\n";
+                    if (speaking) {
+                        if (exit_on_error)
+                            hila::out << "ERROR: ";
+                        hila::out << "Input file '" << fname << "' could not be opened\n";
+                    }
 
                     got_error = true;
                 }
@@ -206,9 +207,8 @@ bool input::peek_token(std::string &tok) {
         return false;
     size_t i;
     bool in_quotes = false;
-    for (i = lb_start;
-         i < linebuffer.size() &&
-         ((!std::isspace(linebuffer[i]) && linebuffer[i] != ',') || in_quotes);
+    for (i = lb_start; i < linebuffer.size() &&
+                       ((!std::isspace(linebuffer[i]) && linebuffer[i] != ',') || in_quotes);
          i++) {
         if (linebuffer[i] == '"') {
             in_quotes = !in_quotes;
@@ -290,8 +290,7 @@ std::string input::remove_quotes(const std::string &val) {
 //  expects "label   <item>"  -line, where <item> matches one of the std::strings in
 //  items. returns the index of the item. If not found, errors out
 
-int input::get_item(const std::string &label, const std::vector<std::string> &items,
-                    bool bcast) {
+int input::get_item(const std::string &label, const std::vector<std::string> &items, bool bcast) {
 
     bool no_error = handle_key(label);
     int item = -1;
