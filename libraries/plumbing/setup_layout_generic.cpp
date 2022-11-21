@@ -48,8 +48,8 @@ void lattice_struct::setup_layout() {
         }
     }
     if (i != 1) {
-        hila::out0 << "Cannot factorize " << nn << " nodes with primes up to "
-                << prime[NPRIMES - 1] << '\n';
+        hila::out0 << "Cannot factorize " << nn << " nodes with primes up to " << prime[NPRIMES - 1]
+                   << '\n';
         hila::finishrun();
     }
 
@@ -83,8 +83,7 @@ void lattice_struct::setup_layout() {
         // nsize[mdir] << '\n';
 
         foralldir(i) {
-            nodesiz[i] =
-                (i == mdir) ? nsize[i] : size(i); // start with ghosted lattice size
+            nodesiz[i] = (i == mdir) ? nsize[i] : size(i); // start with ghosted lattice size
             nodes.n_divisions[i] = 1;
         }
 
@@ -133,15 +132,14 @@ void lattice_struct::setup_layout() {
 
         // now check that the div makes sens
         bool fail = false;
-        foralldir(dir) if (nodesiz[dir] < 3) fail =
-            true; // don't allow nodes of size 1 or 2
+        foralldir(dir) if (nodesiz[dir] < 2) fail = true; // don't allow nodes of size 1
         if (fail && !secondtime) {
             secondtime = true;
             ghosts[mdir] =
                 (1ULL << 62); // this short-circuits direction mdir, some other taken next
         } else if (fail) {
-            hila::out0 << "Could not successfully lay out the lattice with " << hila::number_of_nodes()
-                    << " nodes\n";
+            hila::out0 << "Could not successfully lay out the lattice with "
+                       << hila::number_of_nodes() << " nodes\n";
             hila::finishrun();
         }
 
@@ -171,16 +169,15 @@ void lattice_struct::setup_layout() {
     if (ghost_slices > 0) {
         hila::out0 << "\nUsing uneven node division to direction " << mdir << ":\n";
         hila::out0 << "Lengths: " << nodes.n_divisions[mdir] - ghost_slices << " * ("
-                << nodesiz[mdir] << " sites) + " << ghost_slices << " * ("
-                << nodesiz[mdir] - 1 << " sites)\n";
+                   << nodesiz[mdir] << " sites) + " << ghost_slices << " * (" << nodesiz[mdir] - 1
+                   << " sites)\n";
         hila::out0 << "Divisions: ";
         for (int i = 0; i < nodes.n_divisions[mdir]; i++) {
             if (i > 0)
                 hila::out0 << " - ";
             hila::out0 << nodes.divisors[mdir][i + 1] - nodes.divisors[mdir][i];
         }
-        hila::out0 << "\nFilling efficiency: " << (100.0 * size(mdir)) / nsize[mdir]
-                << "%\n";
+        hila::out0 << "\nFilling efficiency: " << (100.0 * size(mdir)) / nsize[mdir] << "%\n";
 
         if (ghost_slices > nodes.n_divisions[mdir] / 2)
             hila::out0 << "NOTE: number of smaller nodes > large nodes \n";
