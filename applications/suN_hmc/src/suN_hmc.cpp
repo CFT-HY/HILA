@@ -51,6 +51,25 @@ void regroup_gauge(GaugeField<group> &U) {
     }
 }
 
+template <typename T>
+void get_ch_inv(const T& U, T& iU) {
+    T tB[2];
+    Complex< hila::number_type<T> > tc;
+    int k,ip,iip;
+    ip=0;
+    iip=1;
+    tB[ip]=1.;
+    tc=trace(U);
+    for(k=2; k<=T::size(); ++k) {
+        tB[iip]=U*tB[ip];
+        tB[iip]-=tc;
+        tc=trace(U*tB[iip])/k;
+        ip=iip;
+        iip=(iip+1)%2;
+    }
+    Ui=tB[ip]/tc;
+}
+
 template <typename group>
 double measure_plaq(const GaugeField<group> &U) {
 
@@ -200,7 +219,7 @@ int main(int argc, char **argv) {
     // hila provides an input class hila::input, which is
     // a convenient way to read in parameters from input files.
     // parameters are presented as key - value pairs, as an example
-    //  " lattice size  64, 64, 64 "
+    //  " lattice size  64, 64, 64, 64"
     // is read below.
     //
     // Values are broadcast to all MPI nodes.
