@@ -8,7 +8,8 @@ class GaugeField {
   private:
     std::array<Field<T>, NDIM> fdir;
 
-    static constexpr int64_t flag = 394824242;
+    // somewhat arbitrary fingerprint flag for configuration files
+    static constexpr int64_t config_flag = 394824242;
 
   public:
     // Default constructor
@@ -108,7 +109,7 @@ class GaugeField {
 
         // write header
         if (hila::myrank() == 0) {
-            int64_t f = flag;
+            int64_t f = config_flag;
             outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
             f = NDIM;
             outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
@@ -129,14 +130,15 @@ class GaugeField {
         if (hila::myrank() == 0) {
             int64_t f;
             inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            ok = (f == flag);
+            ok = (f == config_flag);
             inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
             ok = ok && (f == NDIM);
             inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
             ok = ok && (f == sizeof(T));
         }
         if (!hila::broadcast(ok)) {
-            hila::out0 << "ERROR: config file " << filename << " does not have legal or matching header\n";
+            hila::out0 << "ERROR: config file " << filename
+                       << " does not have legal or matching header\n";
             hila::terminate(1);
         }
 
@@ -144,6 +146,15 @@ class GaugeField {
         hila::close_file(filename, inputfile);
     }
 };
+
+
+/// Implement std::swap for gauge fields
+namespace std {
+template <typename T>
+void swap(GaugeField<T> &A, GaugeField<T> &B) {
+    foralldir(d) std::swap(A[d], B[d]);
+}
+}
 
 
 ///////////////////////////////////////////////////////
