@@ -13,7 +13,7 @@
 
 #if (defined(HIP)) && !defined(HILAPP)
 #include <hipcub/hipcub.hpp>
-#define cub hipcub
+using cub = hipcub;
 #endif
 
 
