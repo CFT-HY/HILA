@@ -20,7 +20,7 @@ struct parameters {
 };
 
 template <typename T>
-void get_ch_inv(const T& U,T& iU) {
+T get_ch_inv(const T& U) {
     T tB[2];
     Complex< hila::number_type<T> > tc;
     int ip,iip;
@@ -35,7 +35,7 @@ void get_ch_inv(const T& U,T& iU) {
         ip=iip;
         iip=(iip+1)%2;
     }
-    iU=tB[ip]/tc;
+    return tB[ip]/tc;
 }
 
 template <typename T>
@@ -44,7 +44,7 @@ T get_bp_Amat(const T& U) {
     T tA2;
     tA1=0.5*U;
     tA1+=0.5;
-    get_ch_inv(tA1,tA2);
+    tA2=get_ch_inv(tA1);
     tA1=tA2*tA2.dagger();
     return tA1*tA1*tA2;
 }
@@ -56,7 +56,7 @@ T get_bp_iOsqmat(const T& U) {
     tA1=0.5*U;
     tA1+=0.5;
     tA2=tA1.dagger()*tA1;
-    get_ch_inv(tA2,tA1);
+    tA1=get_ch_inv(tA2);
     tA2=tA1*tA1;
     tA2-=1.;
     return tA2;
@@ -95,7 +95,6 @@ void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const
 
     Field<group> plaqp;
     Field<group> plaqm;
-    Field<group> Amat;
     hila::number_type<group> eps=delta*2.0*p.beta/group::size();
 
     foralldir(d1) {
