@@ -713,6 +713,8 @@ class Field {
     std::vector<T> get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
                                  bool broadcast = false) const;
 
+    std::vector<T> get_slice(const CoordinateVector &c, bool broadcast = false) const;
+
     void copy_local_data(std::vector<T> &buffer) const;
     void set_local_data(const std::vector<T> &buffer);
 
