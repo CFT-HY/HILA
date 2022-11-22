@@ -8,4 +8,4 @@ number of trajectories 50000
 random seed            0
 trajs/saved            100
 config name            config
-polyakov range         0.18, 0.22
+polyakov range         -3.18, 3.22
