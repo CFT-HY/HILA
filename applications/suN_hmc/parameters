@@ -1,11 +1,18 @@
 # This is a parameter file for SUN_hmc
 
-lattice size           12,12,48,4
-beta                   5.69
+lattice size           32,32,64,2
+# should be effective 6/beta
+beta                    5.095
 dt                     0.01
-trajectory length      100
-number of trajectories 50000
+trajectory length      50
+number of trajectories 40
 random seed            0
-trajs/saved            100
+trajs/saved            500
+trajs/profile meas     10
 config name            config
-polyakov range         0.18, 0.22
+polyakov range         0.495, 0.505
+smearing steps         7
+smear coefficient      0.75
+z smearing steps       12
+trajs/surface          500
+trajs/polyakov dump    20
