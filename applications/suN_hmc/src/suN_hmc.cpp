@@ -127,10 +127,7 @@ void measure_polyakov_field(const GaugeField<T> &U, Field<float> &pl) {
 
 ////////////////////////////////////////////////////////////////////
 
-template <typename T>
-void get_smeared_polyakov(const GaugeField<T> &U, Field<float> &pl, int nsmear, float smear_coeff) {
-
-    measure_polyakov_field(U,pl);
+void smear_polyakov_field(Field<float> &pl, int nsmear, float smear_coeff) {
 
     if (nsmear > 0) {
         Field<float> pl2 = 0;
@@ -202,7 +199,12 @@ template <typename group>
 void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, int traj) {
 
     Field<float> pl;
-    get_smeared_polyakov(U, pl, p.n_smear, p.smear_coeff);
+    measure_polyakov_field(U, pl);
+
+    std::vector<float> profile, profile_unsmear, prof1;
+    profile_unsmear = measure_polyakov_profile(pl, prof1);
+
+    smear_polyakov_field(pl, p.n_smear, p.smear_coeff);
 
     if (p.z_smear > 0) {
         Field<float> pl2 = 0;
@@ -216,14 +218,14 @@ void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, i
         }
     }
 
-    std::vector<float> profile, prof1;
     profile = measure_polyakov_profile(pl, prof1);
 
     hila::out0 << std::setprecision(5);
     double m = 1.0 / (lattice.size(e_x) * lattice.size(e_y));
     for (int i = 0; i < profile.size(); i++) {
         profile[i] *= m;
-        hila::out0 << "PRO " << i << ' ' << profile[i] << ' ' << prof1[i] << '\n';
+        hila::out0 << "PRO " << i << ' ' << profile[i] << ' ' << prof1[i] << ' '
+                   << profile_unsmear[i] * m << '\n';
     }
 
     float min = 1e8, max = 0;
@@ -264,10 +266,11 @@ void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, i
                 // start search of the surface from the center between min and max
                 int z = startloc;
                 if (line[z] > surface_level) {
-                    while (line[z_ind(z)] > surface_level)
+                    while (line[z_ind(z)] > surface_level && startloc - z < lattice.size(e_z) * 0.8)
                         z--;
                 } else {
-                    while (line[z_ind(z + 1)] <= surface_level)
+                    while (line[z_ind(z + 1)] <= surface_level &&
+                           z - startloc < lattice.size(e_z) * 0.8)
                         z++;
                 }
 
@@ -291,7 +294,7 @@ void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, i
 
         if (first) {
             first = false;
- 
+
             buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
 
             // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be the "fast"
@@ -314,12 +317,12 @@ void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, i
         for (int i = 0; i < area; i++) {
             int x = i % lattice.size(e_x);
             int y = i / lattice.size(e_x);
-            x = (x <= lattice.size(e_x)/2) ? x : (lattice.size(e_x) - x);
-            y = (y <= lattice.size(e_y)/2) ? y : (lattice.size(e_y) - y);
+            x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
+            y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
 
             int k = x * x + y * y;
             if (k < pow_size) {
-                npow[k] += buf[i].squarenorm() / (area*area);
+                npow[k] += buf[i].squarenorm() / (area * area);
                 hits[k]++;
             }
         }
@@ -563,10 +566,10 @@ int main(int argc, char **argv) {
             Field<float> pl;
             std::ofstream poly;
             if (hila::myrank() == 0) {
-                poly.open("polyakov",std::ios::out | std::ios::app);
+                poly.open("polyakov", std::ios::out | std::ios::app);
             }
-            measure_polyakov_field(U,pl);
-            pl.write_slice(poly,{-1,-1,-1,0});
+            measure_polyakov_field(U, pl);
+            pl.write_slice(poly, {-1, -1, -1, 0});
         }
 
 
