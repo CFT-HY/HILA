@@ -69,7 +69,7 @@ class Complex {
     // constructor c(a,b)
     template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0,
               std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
-#pragma hila loop_function
+#pragma hila novector loop_function
     explicit constexpr Complex<T>(const A &a, const B &b) : re(a), im(b) {
     }
 
@@ -429,8 +429,13 @@ inline void set_complex_in_var(T &var, int i, const Complex<hila::number_type<T>
     *(reinterpret_cast<Complex<hila::number_type<T>> *>(&var) + i) = val;
 }
 
-
 } // namespace hila
+
+// generic Complex constructor - type from arguments
+template <typename T,std::enable_if_t<hila::is_floating_point<T>::value, int> = 0>
+Complex<T> complex(const T re, const T im) {
+    return Complex<T>(re,im);
+}
 
 
 // functions real(), imag()

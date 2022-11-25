@@ -1,8 +1,11 @@
 #include "hila.h"
 #include "gauge/staples.h"
 #include "gauge/polyakov.h"
+#include "gauge/stout_smear.h"
 
-using mygroup = SU<3, double>;
+#include <fftw3.h>
+
+using mygroup = SU<3, float>;
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
@@ -12,11 +15,16 @@ struct parameters {
     int trajlen;
     int n_traj;
     int n_save;
-    std::string measure_file;
+    int n_profile;
     std::string config_file;
     double time_offset;
     bool poly_range_on;
     Vector<2, double> poly_range;
+    int n_smear;
+    double smear_coeff;
+    int z_smear;
+    int n_surface;
+    int n_dump_polyakov;
 };
 
 template <typename T>
@@ -192,9 +200,75 @@ double measure_action(const GaugeField<group> &U, const VectorField<Algebra<grou
     return p.beta * plaq + e2 / 2;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+/// Measure polyakov "field"
+///
+
+template <typename T>
+void measure_polyakov_field(const GaugeField<T> &U, Field<float> &pl) {
+    Field<T> polyakov = U[e_t];
+
+    // mult links so that polyakov[X.dir == 0] contains the polyakov loop
+    for (int plane = lattice.size(e_t) - 2; plane >= 0; plane--) {
+
+        // safe_access(polyakov) pragma allows the expression below, otherwise
+        // hilapp would reject it because X and X+dir can refer to the same
+        // site on different "iterations" of the loop.  However, here this
+        // is restricted on single dir-plane so it works but we must tell it to hilapp.
+
+#pragma hila safe_access(polyakov)
+        onsites(ALL) {
+            if (X.coordinate(e_t) == plane) {
+                polyakov[X] = U[e_t][X] * polyakov[X + e_t];
+            }
+        }
+    }
+
+    onsites(ALL) if (X.coordinate(e_t) == 0) {
+        pl[X] = real(trace(polyakov[X]));
+    }
+}
+
+////////////////////////////////////////////////////////////////////
+
+void smear_polyakov_field(Field<float> &pl, int nsmear, float smear_coeff) {
+
+    if (nsmear > 0) {
+        Field<float> pl2 = 0;
+
+        for (int i = 0; i < nsmear; i++) {
+            onsites(ALL) if (X.coordinate(e_t) == 0) {
+                pl2[X] = pl[X] + smear_coeff * (pl[X + e_x] + pl[X - e_x] + pl[X + e_y] +
+                                                pl[X - e_y] + pl[X + e_z] + pl[X - e_z]);
+            }
+
+            onsites(ALL) if (X.coordinate(e_t) == 0) {
+                pl[X] = pl2[X] / (1 + 6 * smear_coeff);
+            }
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+std::vector<float> measure_polyakov_profile(Field<float> &pl, std::vector<float> &pro1) {
+    ReductionVector<float> p(lattice.size(e_z)), p1(lattice.size(e_z));
+    p.allreduce(false);
+    p1.allreduce(false);
+    onsites(ALL) if (X.coordinate(e_t) == 0) {
+        p[X.z()] += pl[X];
+        if (X.x() == 0 && X.y() == 0)
+            p1[X.z()] += pl[X];
+    }
+    pro1 = p1.vector();
+    return p.vector();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////////
+
 template <typename group>
-void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
-                   int trajectory) {
+void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>> &E) {
 
     static bool first = true;
 
@@ -209,9 +283,161 @@ void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>>
 
     auto e2 = measure_e2(E) / (lattice.volume() * NDIM);
 
+
+    std::vector<Complex<double>> profile;
+
     auto poly = measure_polyakov(U, e_t);
 
-    hila::out0<<"MEAS "<<trajectory<<' '<<std::setprecision(8)<<plaqbp<<' '<<plaq<<' '<<e2<<' '<<poly<<'\n';
+    hila::out0<<"MEAS "<<std::setprecision(8)<<plaqbp<<' '<<plaq<<' '<<e2<<' '<<poly<<'\n';
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+
+// helper function to get valid z-coordinate index
+
+int z_ind(int z) {
+    return (z + lattice.size(e_z)) % lattice.size(e_z);
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+
+template <typename group>
+void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, int traj) {
+
+    Field<float> pl;
+    measure_polyakov_field(U, pl);
+
+    std::vector<float> profile, profile_unsmear, prof1;
+    profile_unsmear = measure_polyakov_profile(pl, prof1);
+
+    smear_polyakov_field(pl, p.n_smear, p.smear_coeff);
+
+    if (p.z_smear > 0) {
+        Field<float> pl2 = 0;
+        for (int i = 0; i < p.z_smear; i++) {
+            onsites(ALL) if (X.coordinate(e_t) == 0) {
+                pl2[X] = pl[X] + p.smear_coeff * (pl[X + e_z] + pl[X - e_z]);
+            }
+            onsites(ALL) if (X.coordinate(e_t) == 0) {
+                pl[X] = pl2[X] / (1 + 2 * p.smear_coeff);
+            }
+        }
+    }
+
+    profile = measure_polyakov_profile(pl, prof1);
+
+    hila::out0 << std::setprecision(5);
+    double m = 1.0 / (lattice.size(e_x) * lattice.size(e_y));
+    for (int i = 0; i < profile.size(); i++) {
+        profile[i] *= m;
+        hila::out0 << "PRO " << i << ' ' << profile[i] << ' ' << prof1[i] << ' '
+                   << profile_unsmear[i] * m << '\n';
+    }
+
+    float min = 1e8, max = 0;
+    int minloc, maxloc;
+    for (int i = 0; i < profile.size(); i++) {
+        if (min > profile[i]) {
+            min = profile[i];
+            minloc = i;
+        }
+        if (max < profile[i]) {
+            max = profile[i];
+            maxloc = i;
+        }
+    }
+
+    // find the surface between minloc and maxloc
+    float surface_level = max * 0.5; // assume min is really 0
+    int area = lattice.size(e_x) * lattice.size(e_y);
+
+    hila::out0 << "Surface level " << surface_level << '\n';
+
+    int startloc;
+    if (maxloc > minloc)
+        startloc = (maxloc + minloc) / 2;
+    else
+        startloc = ((maxloc + minloc + lattice.size(e_z)) / 2) % lattice.size(e_z);
+
+    std::vector<float> surf;
+    if (hila::myrank() == 0)
+        surf.resize(area);
+
+    hila::out0 << std::setprecision(6);
+
+    for (int y = 0; y < lattice.size(e_y); y++)
+        for (int x = 0; x < lattice.size(e_x); x++) {
+            auto line = pl.get_slice({x, y, -1, 0});
+            if (hila::myrank() == 0) {
+                // start search of the surface from the center between min and max
+                int z = startloc;
+                if (line[z] > surface_level) {
+                    while (line[z_ind(z)] > surface_level && startloc - z < lattice.size(e_z) * 0.8)
+                        z--;
+                } else {
+                    while (line[z_ind(z + 1)] <= surface_level &&
+                           z - startloc < lattice.size(e_z) * 0.8)
+                        z++;
+                }
+
+
+                // do linear interpolation
+                surf[x + y * lattice.size(e_x)] =
+                    z + (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
+
+                if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
+                    hila::out0 << "SURF " << x << ' ' << y << ' ' << surf[x + y * lattice.size(e_x)]
+                               << '\n';
+                }
+            }
+        }
+
+    if (hila::myrank() == 0) {
+        // do fft for the surface
+        static bool first = true;
+        static Complex<double> *buf;
+        static fftw_plan fftwplan;
+
+        if (first) {
+            first = false;
+
+            buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
+
+            // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be the "fast"
+            // one. thus, first y, then x.
+            fftwplan = fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
+                                        (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
+        }
+
+        for (int i = 0; i < area; i++) {
+            buf[i] = surf[i];
+        }
+
+        fftw_execute(fftwplan);
+
+        constexpr int pow_size = 200;
+
+        std::vector<double> npow(pow_size);
+        std::vector<int> hits(pow_size);
+
+        for (int i = 0; i < area; i++) {
+            int x = i % lattice.size(e_x);
+            int y = i / lattice.size(e_x);
+            x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
+            y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
+
+            int k = x * x + y * y;
+            if (k < pow_size) {
+                npow[k] += buf[i].squarenorm() / (area * area);
+                hits[k]++;
+            }
+        }
+
+        for (int i = 0; i < pow_size; i++) {
+            if (hits[i] > 0)
+                hila::out0 << "POW " << i << ' ' << npow[i] / hits[i] << ' ' << hits[i] << '\n';
+        }
+    }
 }
 
 
@@ -333,6 +559,7 @@ int main(int argc, char **argv) {
     p.n_traj = par.get("number of trajectories");
     long seed = par.get("random seed");
     p.n_save = par.get("trajs/saved");
+    p.n_profile = par.get("trajs/profile meas");
     p.config_file = par.get("config name");
     if (par.get_item("polyakov range", {"off", "%f"}) == 1) {
         p.poly_range = par.get();
@@ -340,6 +567,14 @@ int main(int argc, char **argv) {
     } else {
         p.poly_range = 0;
         p.poly_range_on = false;
+    }
+
+    if (p.poly_range_on) {
+        p.n_smear = par.get("smearing steps");
+        p.smear_coeff = par.get("smear coefficient");
+        p.z_smear = par.get("z smearing steps");
+        p.n_surface = par.get("trajs/surface");
+        p.n_dump_polyakov = par.get("trajs/polyakov dump");
     }
 
     par.close(); // file is closed also when par goes out of scope
@@ -358,9 +593,24 @@ int main(int argc, char **argv) {
     int start_traj = 0;
     if (!restore_checkpoint(U, start_traj, p)) {
         U = 1;
+        if (p.poly_range_on) {
+            foralldir(d) onsites(ALL) {
+                double mag;
+                if (X.z() <= lattice.size(e_z) / 2) {
+                    mag = 1.5;
+                } else {
+                    mag = 0.1;
+                }
+                mygroup u;
+                u.gaussian_random(mag);
+                U[d][X] += u;
+                U[d][X].reunitarize();
+            }
+        }
     }
 
     double p_now = measure_polyakov(U, e_t).real();
+    bool searching = true;
 
     GaugeField<mygroup> U_old;
     for (int trajectory = start_traj; trajectory < p.n_traj; trajectory++) {
@@ -383,7 +633,8 @@ int main(int argc, char **argv) {
             p_now = measure_polyakov(U, e_t).real();
 
             if (p_now > p.poly_range[0] && p_now < p.poly_range[1]) {
-                poly_ok = true; // normal, nice branch
+                poly_ok = true;    // normal, nice branch
+                searching = false; // turn off search
             } else if ((p_old < p.poly_range[0] && p_now > p_old && p_now < p.poly_range[1]) ||
                        (p_old > p.poly_range[1] && p_now < p_old && p_now > p.poly_range[0])) {
                 poly_ok = true; // this is when we "search" for the range
@@ -391,6 +642,8 @@ int main(int argc, char **argv) {
                 poly_ok = false;
             }
         }
+        if (!poly_ok && searching)
+            poly_ok = (hila::random() < 0.50); // allow 50% flexibility
 
         bool reject = hila::broadcast(!poly_ok || (exp(act_old - act_new) < hila::random()));
 
@@ -408,7 +661,24 @@ int main(int argc, char **argv) {
         }
 
         hila::out0 << "Measure_start " << trajectory << '\n';
-        measure_stuff(U, E, trajectory);
+
+        measure_stuff(U, E);
+
+        if (p.n_profile && (trajectory + 1) % p.n_profile == 0) {
+            measure_polyakov_surface(U, p, trajectory);
+        }
+
+        if (p.n_dump_polyakov && (trajectory + 1) % p.n_dump_polyakov == 0) {
+            Field<float> pl;
+            std::ofstream poly;
+            if (hila::myrank() == 0) {
+                poly.open("polyakov", std::ios::out | std::ios::app);
+            }
+            measure_polyakov_field(U, pl);
+            pl.write_slice(poly, {-1, -1, -1, 0});
+        }
+
+
         hila::out0 << "Measure_end " << trajectory << '\n';
 
         if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
