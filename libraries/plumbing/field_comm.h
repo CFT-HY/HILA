@@ -155,10 +155,6 @@ T *Field<T>::field_struct::get_receive_buffer(Direction d, Parity par,
 } // end of get_receive_buffer
 
 
-
-
-
-
 #define NAIVE_SHIFT
 #if defined(NAIVE_SHIFT)
 
@@ -177,8 +173,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
     Parity par_s;
 
     int len = 0;
-    foralldir (d)
-        len += abs(rem[d]);
+    foralldir(d) len += abs(rem[d]);
 
     // no move, just copy field
     if (len == 0) {
@@ -195,7 +190,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
     // is this already gathered from one of the dirs in v?
     bool found_dir = false;
     Direction mdir;
-    foralldir (d) {
+    foralldir(d) {
         if (rem[d] > 0 && gather_status(par_s, d) != gather_status_t::NOT_DONE) {
             mdir = d;
             found_dir = true;
@@ -209,7 +204,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
 
     if (!found_dir) {
         // now did not find a 'ready' dir. Take the 1st available
-        foralldir (d) {
+        foralldir(d) {
             if (rem[d] > 0) {
                 mdir = d;
                 break;
@@ -245,7 +240,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
     rem = rem - mdir;
     par_s = opp_parity(par_s);
 
-    foralldir (d) {
+    foralldir(d) {
         if (rem[d] != 0) {
             mdir = (rem[d] > 0) ? d : -d;
 
@@ -263,7 +258,7 @@ Field<T> &Field<T>::shift(const CoordinateVector &v, Field<T> &res, const Parity
     return res;
 }
 
-#endif  // NAIVE_SHIFT
+#endif // NAIVE_SHIFT
 
 /// start_gather(): Communicate the field at Parity par from Direction
 /// d. Uses accessors to prevent dependency on the layout.
@@ -489,7 +484,6 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 }
 
 
-
 /// Gather a list of elements to a single node
 /// coord_list must be same on all nodes, buffer is needed only on "root"
 template <typename T>
@@ -646,7 +640,6 @@ void Field<T>::field_struct::scatter_elements(T *RESTRICT buffer,
 }
 
 
-
 /// Set an array of elements. Assuming that each node calls this with the same value, it is
 /// sufficient to set the elements locally
 template <typename T>
@@ -684,13 +677,13 @@ std::vector<T> Field<T>::get_elements(const std::vector<CoordinateVector> &coord
 }
 
 
-// get a subvolume of the field elements to all nodes
+/// get a subvolume of the field elements to all nodes
 template <typename T>
 std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const CoordinateVector &cmax,
                                        bool bcast) const {
 
     size_t vol = 1;
-    foralldir (d) {
+    foralldir(d) {
         vol *= cmax[d] - cmin[d] + 1;
         assert(cmax[d] >= cmin[d] && cmin[d] >= 0 && cmax[d] < lattice.size(d));
     }
@@ -703,6 +696,22 @@ std::vector<T> Field<T>::get_subvolume(const CoordinateVector &cmin, const Coord
     }
     return get_elements(clist, bcast);
 }
+
+
+/// and get a slice (subvolume)
+template <typename T>
+std::vector<T> Field<T>::get_slice(const CoordinateVector &c, bool bcast) const {
+    CoordinateVector cmin, cmax;
+    foralldir(d) if (c[d] < 0) {
+        cmin[d] = 0;
+        cmax[d] = lattice.size(d) - 1;
+    }
+    else {
+        cmin[d] = cmax[d] = c[d];
+    }
+    return get_subvolume(cmin, cmax, bcast);
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Copy the local (mpi process) data to a "logical array"
@@ -795,7 +804,7 @@ inline void collect_field_halo_data_(T *data, const Field<T> &src, Field<T> &des
 
     Vector<NDIM, int> node_min;
     Vector<NDIM, int> node_max;
-    foralldir (d) {
+    foralldir(d) {
         node_min[d] = lattice.mynode.min[d];
         node_max[d] = lattice.mynode.min[d] + lattice.mynode.size[d] - 1;
     }
@@ -850,8 +859,7 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 
     // full size of the buffer
     size_t siz = 1;
-    foralldir (d)
-        siz *= (lattice.mynode.size[d] + 2);
+    foralldir(d) siz *= (lattice.mynode.size[d] + 2);
 
     buffer.resize(siz);
 #if defined(CUDA) || defined(HIP)
@@ -883,7 +891,7 @@ void Field<T>::copy_local_data_with_halo(std::vector<T> &buffer) const {
 #endif
 
     Vector<NDIM, int> dirs;
-    foralldir (d1) {
+    foralldir(d1) {
         dirs[0] = d1;
         // gather d1 halo
         collect_field_halo_data_(data, (*this), corners, dirs, 0);
