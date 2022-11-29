@@ -7,14 +7,16 @@
 // hilapp should not read in .cuh, because it does not understand it
 
 //#if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
-#if (defined(CUDA)) && !defined(HILAPP)
+#if !defined(HILAPP)
+#if defined(CUDA)
 #include <cub/cub.cuh>
 #endif
 
-#if (defined(HIP)) && !defined(HILAPP)
+#if defined(HIP)
 #include <hipcub/hipcub.hpp>
 using cub = hipcub;
 #endif
+#endif  // HILAPP
 
 
 //////////////////////////////////////////////////////////////////////////////////
