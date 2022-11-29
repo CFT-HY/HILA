@@ -5,12 +5,13 @@
 
 #include <fftw3.h>
 
-using mygroup = SU<3, float>;
+using mygroup = SU<3, double>;
 
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
 struct parameters {
     double beta;
+    double deltab;
     double dt;
     int trajlen;
     int n_traj;
@@ -19,6 +20,7 @@ struct parameters {
     std::string config_file;
     double time_offset;
     bool poly_range_on;
+    double poly_probability_coeff;
     Vector<2, double> poly_range;
     int n_smear;
     double smear_coeff;
@@ -28,6 +30,46 @@ struct parameters {
 };
 
 
+template <typename T>
+void staplesum_db(const GaugeField<T> &U, Field<T> &staples, Direction d1, double deltab) {
+
+    Field<T> lower;
+
+    // zero staples just inc case
+    staples = 0;
+    foralldir(d2) if (d2 != d1) {
+
+        // anticipate that these are needed
+        // not really necessary, but may be faster
+        U[d2].start_gather(d1, ALL);
+        U[d1].start_gather(d2, ALL);
+
+        // calculate first lower 'U' of the staple sum
+        // do it on opp parity
+        onsites(ALL) {
+            double m;
+            if (2 * X.z() < lattice.size(e_z))
+                m = 1.0 - deltab;
+            else
+                m = 1.0 + deltab;
+
+            lower[X] = m * U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
+        }
+
+        // calculate then the upper 'n', and add the lower
+        // lower could also be added on a separate loop
+        onsites(ALL) {
+            double m;
+            if (2 * X.z() < lattice.size(e_z))
+                m = 1.0 - deltab;
+            else
+                m = 1.0 + deltab;
+
+            staples[X] += m * U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
+        }
+    }
+}
+
 template <typename group>
 void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p,
               double delta) {
@@ -36,13 +78,17 @@ void update_E(const GaugeField<group> &U, VectorField<Algebra<group>> &E, const 
     hila::number_type<group> eps = delta * p.beta / group::size();
 
     foralldir(d) {
-        staplesum(U, staple, d);
+        if (p.deltab != 0)
+            staplesum_db(U, staple, d, p.deltab);
+        else
+            staplesum(U, staple, d);
 
         onsites(ALL) {
             E[d][X] -= eps * (U[d][X] * staple[X].dagger()).project_to_algebra();
         }
     }
 }
+
 
 template <typename group>
 void update_U(GaugeField<group> &U, const VectorField<Algebra<group>> &E, double delta) {
@@ -60,16 +106,30 @@ void regroup_gauge(GaugeField<group> &U) {
 }
 
 template <typename group>
-double measure_plaq(const GaugeField<group> &U) {
+double measure_plaq(const GaugeField<group> &U, double db = 0.0) {
 
     Reduction<double> plaq;
-    plaq.allreduce(false).delayed(true);
+    plaq.allreduce(false);
 
     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
-        onsites(ALL) {
-            plaq += 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] * U[dir1][X + dir2].dagger() *
-                                     U[dir2][X].dagger())) /
-                              group::size();
+        if (db == 0.0) {
+            onsites(ALL) {
+                plaq += 1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
+                                         U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
+                                  group::size();
+            }
+        } else {
+            onsites(ALL) {
+                double c;
+                if (2 * X.z() < lattice.size(e_z))
+                    c = 1 - db;
+                else
+                    c = 1 + db;
+
+                plaq += c * (1.0 - real(trace(U[dir1][X] * U[dir2][X + dir1] *
+                                              U[dir1][X + dir2].dagger() * U[dir2][X].dagger())) /
+                                       group::size());
+            }
         }
     }
     return plaq.value();
@@ -90,7 +150,7 @@ double measure_e2(const VectorField<Algebra<group>> &E) {
 template <typename group>
 double measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
                       const parameters &p) {
-    auto plaq = measure_plaq(U);
+    auto plaq = measure_plaq(U, p.deltab);
     auto e2 = measure_e2(E);
 
     return p.beta * plaq + e2 / 2;
@@ -297,8 +357,8 @@ void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, i
 
             buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
 
-            // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be the "fast"
-            // one. thus, first y, then x.
+            // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be
+            // the "fast" one. thus, first y, then x.
             fftwplan = fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
                                         (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
         }
@@ -448,28 +508,41 @@ int main(int argc, char **argv) {
     lsize = par.get("lattice size"); // reads NDIM numbers
 
     p.beta = par.get("beta");
+    // deltab sets system to different beta on different sides, by beta*(1 +- deltab)
+    // use for initial config generation only
+    p.deltab = par.get("delta beta fraction");
     p.dt = par.get("dt");
+    // trajectory length in steps
     p.trajlen = par.get("trajectory length");
     p.n_traj = par.get("number of trajectories");
+    // random seed = 0 -> get seed from time
     long seed = par.get("random seed");
+    // save config and checkpoint
     p.n_save = par.get("trajs/saved");
-    p.n_profile = par.get("trajs/profile meas");
+    // measure surface properties and print "profile"
     p.config_file = par.get("config name");
+
+    // if polyakov range is off, do nothing with
     if (par.get_item("polyakov range", {"off", "%f"}) == 1) {
         p.poly_range = par.get();
         p.poly_range_on = true;
+        p.poly_probability_coeff = par.get("polyakov probability coeff");
+
     } else {
         p.poly_range = 0;
         p.poly_range_on = false;
     }
 
-    if (p.poly_range_on) {
+    p.n_profile = par.get("trajs/profile meas");
+
+    if (p.n_profile) {
         p.n_smear = par.get("smearing steps");
         p.smear_coeff = par.get("smear coefficient");
         p.z_smear = par.get("z smearing steps");
         p.n_surface = par.get("trajs/surface");
         p.n_dump_polyakov = par.get("trajs/polyakov dump");
     }
+
 
     par.close(); // file is closed also when par goes out of scope
 
@@ -487,14 +560,17 @@ int main(int argc, char **argv) {
     int start_traj = 0;
     if (!restore_checkpoint(U, start_traj, p)) {
         U = 1;
-        if (p.poly_range_on) {
+        if (p.n_profile > 0) {
             foralldir(d) onsites(ALL) {
                 double mag;
-                if (X.z() <= lattice.size(e_z) / 2) {
-                    mag = 1.5;
-                } else {
-                    mag = 0.1;
-                }
+                mag =
+                    0.4 +
+                    0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) / lattice.size(e_z)));
+                // if (X.z() <= lattice.size(e_z) / 2) {
+                //     mag = 1;
+                // } else {
+                //     mag = 0.2;
+                // }
                 mygroup u;
                 u.gaussian_random(mag);
                 U[d][X] += u;
@@ -526,19 +602,35 @@ int main(int argc, char **argv) {
         if (p.poly_range_on) {
             p_now = measure_polyakov(U, e_t).real();
 
-            if (p_now > p.poly_range[0] && p_now < p.poly_range[1]) {
-                poly_ok = true;    // normal, nice branch
-                searching = false; // turn off search
-            } else if ((p_old < p.poly_range[0] && p_now > p_old && p_now < p.poly_range[1]) ||
-                       (p_old > p.poly_range[1] && p_now < p_old && p_now > p.poly_range[0])) {
-                poly_ok = true; // this is when we "search" for the range
-            } else {
-                poly_ok = false;
+            double db = 0;
+            if (p_now > p.poly_range[1]) {
+                if (p_old > p.poly_range[1])
+                    db = p_now - p_old;
+                else
+                    db = p_now - p.poly_range[1];
+            } else if (p_now < p.poly_range[0]) {
+                if (p_old < p.poly_range[0])
+                    db = p_old - p_now;
+                else
+                    db = p.poly_range[0] - p_now;
             }
-        }
-        if (!poly_ok && searching)
-            poly_ok = (hila::random() < 0.50); // allow 50% flexibility
 
+            poly_ok = (hila::random() < exp(-p.poly_probability_coeff * db));
+            //   poly_ok = hila::broadcast(poly_ok);
+
+            // if (p_now > p.poly_range[0] && p_now < p.poly_range[1]) {
+            //     poly_ok = true;    // normal, nice branch
+            //     searching = false; // turn off search
+            // } else if ((p_old < p.poly_range[0] && p_now > p_old && p_now < p.poly_range[1]) ||
+            //            (p_old > p.poly_range[1] && p_now < p_old && p_now > p.poly_range[0])) {
+            //     poly_ok = true; // this is when we "search" for the range
+            // } else {
+            //     poly_ok = false;
+            // }
+        }
+        // if (!poly_ok && searching) {
+        //     poly_ok = (hila::random() < 0.2);
+        // }
         bool reject = hila::broadcast(!poly_ok || (exp(act_old - act_new) < hila::random()));
 
         hila::out0 << std::setprecision(12) << "HMC " << trajectory
