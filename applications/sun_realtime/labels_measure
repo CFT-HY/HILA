@@ -1,7 +1,0 @@
-1 trajectory
-2 time (lattice units)
-3 plaq avg: sum_i<j (N - Tr Re P_ij)
-4 Tr E_i^2
-5 Gauss violation (G^a G^a over the whole system)
-6 total energy
-7 average chi
