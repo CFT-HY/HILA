@@ -112,6 +112,11 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
         llvm::errs() << decl->getParamDecl(i)->getNameAsString() << ", ";
     llvm::errs() << "\n";
 
+    vectorization_info vi;
+    llvm::errs() << "  Constructor call " << get_stmt_str(CtorE) << " type "
+                 << CtorE->getType().getCanonicalType().getAsString(PP) << " is vectorizable "
+                 << is_vectorizable_type(CtorE->getType(), vi) << '\n';
+
 #endif
 
     // Store functions used in loops, recursively...
@@ -383,8 +388,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
     cinfo.is_site_dependent |= sitedep;
 
 #ifdef LOOP_FUNCTION_DEBUG
-    llvm::errs() << "  Site dep at the end of analysis: " << cinfo.is_site_dependent << " vectorizable " << 
-        cinfo.is_vectorizable << '\n';
+    llvm::errs() << "  Site dep at the end of analysis: " << cinfo.is_site_dependent
+                 << " vectorizable " << cinfo.is_vectorizable << '\n';
 #endif
 
     return cinfo;
@@ -601,7 +606,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 sfc.replace_expression = l_lattice + "coordinate(";
                 sfc.args_string = "e_x";
                 sfc.add_loop_var = true;
-            
+
             } else if (name == "y") {
                 sfc.replace_expression = l_lattice + "coordinate(";
                 sfc.args_string = "e_y";
@@ -612,9 +617,14 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 sfc.args_string = "e_z";
                 sfc.add_loop_var = true;
 
-            } else if (name == "random") {
-                sfc.replace_expression = "hila::random(";
-                sfc.add_loop_var = false;
+            } else if (name == "t") {
+                sfc.replace_expression = l_lattice + "coordinate(";
+                sfc.args_string = "e_t";
+                sfc.add_loop_var = true;
+
+                // } else if (name == "random") {
+                //     sfc.replace_expression = "hila::random(";
+                //     sfc.add_loop_var = false;
 
             } else if (name == "size") {
                 sfc.replace_expression = "loop_lattice_size(";

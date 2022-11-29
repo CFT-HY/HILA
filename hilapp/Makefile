@@ -194,6 +194,7 @@ OBJECTS = \
   $(BUILDDIR)/depends_on_site_visitor.o \
   $(BUILDDIR)/contains_random_visitor.o \
   $(BUILDDIR)/contains_loop_local_var_visitor.o \
+  $(BUILDDIR)/contains_reduction_var.o \
   $(BUILDDIR)/function_contains_loop_visitor.o \
   $(BUILDDIR)/addrof_and_ref_visitor.o \
   $(BUILDDIR)/optionsparser.o \

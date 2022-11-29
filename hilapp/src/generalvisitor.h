@@ -227,6 +227,8 @@ class GeneralVisitor {
     bool is_assignment_expr(Stmt *s, std::string *opcodestr, bool &iscompound,
                             Expr **assignee = nullptr, Expr **assigned_expr = nullptr);
 
+    bool is_simple_reduction(const std::string &opcode, Expr *assignee);
+
     bool is_increment_expr(Stmt *s, Expr **assignee = nullptr);
 
     bool is_site_dependent(Expr *e, std::vector<var_info *> *dependent_var);
@@ -240,6 +242,8 @@ class GeneralVisitor {
     bool is_site_dependent_access_op(Expr *e);
 
     bool contains_loop_local_var(Expr *e, std::vector<var_info *> *loop_var = nullptr);
+
+    bool contains_special_reduction_var(Expr *e);
 
     /// is the stmt pointing now to a function call
     bool is_function_call_stmt(Stmt *s);

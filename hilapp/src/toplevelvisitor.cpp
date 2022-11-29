@@ -971,6 +971,11 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         // llvm::errs() << "  ASSIGNEE " << get_stmt_str(assignee) << '\n';
         // llvm::errs() << "  ASSIGNED " << get_stmt_str(assigned_expr) << '\n';
 
+        if (!is_field_assign && is_compound && is_simple_reduction(assignop,assignee)) {
+                        
+                        
+        }
+
         TraverseStmt(assignee);
         is_assignment = false;
 
@@ -1660,6 +1665,15 @@ bool TopLevelVisitor::VisitVarDecl(VarDecl *var) {
         }
         second_def = true;
     }
+
+    // if (var->getName().str() == "I") {
+    //     static bool second_def = false;
+    //     if (second_def) {
+    //         reportDiag(DiagnosticsEngine::Level::Warning, var->getSourceRange().getBegin(),
+    //                    "Declaring variable 'I' may shadow the imaginary unit I");
+    //     }
+    //     second_def = true;
+    // }
 
 
     // and then loop body statements
