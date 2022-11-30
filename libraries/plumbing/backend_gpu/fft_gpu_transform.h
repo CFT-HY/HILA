@@ -162,6 +162,7 @@ class hila_saved_fftplan_t {
         pp->seq = seq;
 
         // HIPFFT_C2C for float transform, Z2Z for double
+        
         gpufftPlan1d(&(pp->plan), size, is_float ? GPUFFT_C2C : GPUFFT_Z2Z, batch);
         check_device_error("FFT plan");
 
@@ -229,8 +230,7 @@ void hila_fft<cmplx_t>::transform() {
     }
 
     gpufftHandle plan;
-    plan = hila_saved_fftplan.get_plan(lattice.size(dir), batch, is_float);
-
+    plan = hila_saved_fftplan.get_plan(lattice.size(dir), batch, is_float); 
     // hila::out0 << " Batch " << batch << " nfft " << n_fft << '\n';
 
     // alloc work array

@@ -25,7 +25,7 @@ void gpu_memory_pool_report();
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-//#include <cub/cub.cuh>
+#include <cub/cub.cuh>
 
 // THis set in params.h now
 // #define N_threads 256 // Threads per block for CUDA   TODO: make configurable?
