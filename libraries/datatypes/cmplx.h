@@ -205,7 +205,7 @@ class Complex {
 
 #pragma hila loop_function
     template <typename A>
-    inline Complex<T> &operator*=(const Complex<A> lhs) {
+    inline Complex<T> &operator*=(const Complex<A> &lhs) {
         T r = mul_sub(re, lhs.re, im * lhs.im); // a*b-c
         im = mul_add(im, lhs.re, re * lhs.im);  // a*b+c
         re = r;
@@ -441,13 +441,13 @@ Complex<T> complex(const T re, const T im) {
 // functions real(), imag()
 
 template <typename T>
-inline T real(const Complex<T> a) {
+inline T real(const Complex<T> &a) {
     return a.re;
 }
 
 
 template <typename T>
-inline T imag(const Complex<T> a) {
+inline T imag(const Complex<T> &a) {
     return a.im;
 }
 

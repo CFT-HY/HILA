@@ -312,14 +312,14 @@ class hila_fft {
                 }
 
                 gather_data();
-
+                
                 if (!only_reflect)
                     transform();
                 else
                     reflect();
 
                 scatter_data();
-
+                
                 cleanup();
 
                 // fft_save_result( result, dir, receive_buf );
@@ -329,6 +329,7 @@ class hila_fft {
 
                 // swap the pointers
                 swap_buffers();
+                
             }
         }
         
