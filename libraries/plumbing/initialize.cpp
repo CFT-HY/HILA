@@ -393,6 +393,9 @@ void hila::finishrun() {
         hila::timestamp("Waiting to sync partitions");
     }
 
+    // hip seems to want this?
+    FFT_delete_plans();
+
     hila::synchronize();
     hila::timestamp("Finishing");
 
