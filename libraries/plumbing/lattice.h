@@ -30,8 +30,18 @@ constexpr unsigned number_of_subnodes = VECTOR_SIZE / sizeof(float);
 #endif
 
 namespace hila {
-/// list boundary conditions - used only if SPECIAL_BOUNDARY_CONDITIONS defined
+/// list of field boundary conditions - used only if SPECIAL_BOUNDARY_CONDITIONS defined
 enum class bc { PERIODIC, ANTIPERIODIC, DIRICHLET };
+
+/// False if we have b.c. which does not require communication
+inline bool bc_need_communication(hila::bc bc) {
+    if (bc == hila::bc::DIRICHLET) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 } // namespace hila
 
 void test_std_gathers();
@@ -54,17 +64,16 @@ struct backend_lattice_struct;
 /// patterns
 class lattice_struct {
   private:
-    // Use ints instead of unsigned, just to avoid surprises in arithmetics
-    // I shall assume here that int is 32 bits, and int64_t 64 bits.
     CoordinateVector l_size;
-    size_t l_volume = 0;  // use this to flag initialization
+    size_t l_volume = 0; // use this to flag initialization
 
-    int l_label;          // running number, identification of the lattice (TODO)
+    int l_label; // running number, identification of the lattice (TODO)
 
   public:
     /// Information about the node stored on this process
     struct node_struct {
-        int rank; // rank of this node
+        lattice_struct *parent = nullptr; // parent lattice, in order to access methods
+        int rank;                         // rank of this node
         size_t sites, evensites, oddsites;
         size_t field_alloc_size;    // how many sites/node in allocations
         CoordinateVector min, size; // node local coordinate ranges
@@ -75,7 +84,7 @@ class lattice_struct {
         std::vector<CoordinateVector> coordinates;
 #endif
 
-        Vector<NDIM,unsigned> size_factor; // components: 1, size[0], size[0]*size[1], ...
+        Vector<NDIM, unsigned> size_factor; // components: 1, size[0], size[0]*size[1], ...
 
         void setup(node_info &ni, lattice_struct &lattice);
 
@@ -96,6 +105,12 @@ class lattice_struct {
             return sites;
         }
 
+        /// true if this node is on the edge of the lattice to dir d
+        bool is_on_edge(Direction d) const {
+            return (is_up_dir(d) && min[d] + size[d] == parent->size(d)) ||
+                   (!is_up_dir(d) && min[-d] == 0);
+        }
+
     } mynode;
 
     /// information about all nodes
@@ -112,9 +127,9 @@ class lattice_struct {
         unsigned *RESTRICT map_array;   // mapping (optional)
         unsigned *RESTRICT map_inverse; // inv of it
 
-        void create_remap();                // create remap_node
-        unsigned remap(unsigned i);         // use remap
-        unsigned inverse_remap(unsigned i); // inverse remap
+        void create_remap();                      // create remap_node
+        unsigned remap(unsigned i) const;         // use remap
+        unsigned inverse_remap(unsigned i) const; // inverse remap
 
     } nodes;
 
@@ -196,14 +211,12 @@ class lattice_struct {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     /// special boundary pointers are needed only in cases neighbour
     /// pointers must be modified (new halo elements). That is known only during
-    /// runtime. is_on_edget is the only "general" info element here, true if the node
-    /// to Direction dir is on lattice edge.
+    /// runtime.
     struct special_boundary_struct {
         unsigned *neighbours;
         unsigned *move_index;
         size_t offset, n_even, n_odd, n_total;
         bool is_needed;
-        bool is_on_edge;
     };
     // holder for nb ptr info
     special_boundary_struct special_boundaries[NDIRS];
@@ -244,10 +257,10 @@ class lattice_struct {
     // CoordinateVector min_coordinate() const { return mynode.min; }
     // int min_coordinate(Direction d) const { return mynode.min[d]; }
 
-    bool is_on_mynode(const CoordinateVector &c);
-    int node_rank(const CoordinateVector &c);
-    unsigned site_index(const CoordinateVector &c);
-    unsigned site_index(const CoordinateVector &c, const unsigned node);
+    bool is_on_mynode(const CoordinateVector &c) const;
+    int node_rank(const CoordinateVector &c) const;
+    unsigned site_index(const CoordinateVector &c) const;
+    unsigned site_index(const CoordinateVector &c, const unsigned node) const;
     unsigned field_alloc_size() const {
         return mynode.field_alloc_size;
     }
@@ -257,7 +270,7 @@ class lattice_struct {
     std::vector<comm_node_struct> create_comm_node_vector(CoordinateVector offset, unsigned *index,
                                                           bool receive);
 
-    bool first_site_even() {
+    bool first_site_even() const {
         return mynode.first_site_even;
     };
 
@@ -368,9 +381,9 @@ class lattice_struct {
     ///   for (int64_t i=0; i<lattice.volume(); i++) {
     ///      auto c = lattice.global_coordinates(i);
 
-    CoordinateVector global_coordinates(size_t index) {
+    CoordinateVector global_coordinates(size_t index) const {
         CoordinateVector site;
-        foralldir (dir) {
+        foralldir(dir) {
             site[dir] = index % size(dir);
             index /= size(dir);
         }
