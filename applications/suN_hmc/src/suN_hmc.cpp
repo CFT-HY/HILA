@@ -194,15 +194,33 @@ void regroup_gauge(GaugeField<group> &U) {
 }
 
 template <typename group>
-double measure_plaq_bp(const GaugeField<group>& U) {
+double measure_plaq_bp(const GaugeField<group>& U, double db = 0.0) {
 
     Reduction<double> plaq;
     plaq.allreduce(false).delayed(true);
 
-    foralldir(dir1) foralldir(dir2) if(dir1<dir2) {
-        onsites(ALL) {
-            plaq+=real(trace(get_bp_iOsqmat(U[dir1][X]*U[dir2][X+dir1]*(U[dir2][X]*U[dir1][X+dir2]).dagger())))/group::size();
+    if (db == 0.0) {
+        foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+            onsites(ALL) {
+                plaq += real(trace(get_bp_iOsqmat(U[dir1][X] * U[dir2][X + dir1] *
+                                                  (U[dir2][X] * U[dir1][X + dir2]).dagger()))) /
+                        group::size();
+            }
         }
+    } else {
+        foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+            onsites(ALL) {
+                double c;
+                if (2 * X.z() < lattice.size(e_z))
+                    c = 1 - db;
+                else
+                    c = 1 + db;
+
+                plaq += c * real(trace(get_bp_iOsqmat(U[dir1][X] * U[dir2][X + dir1] *
+                                                  (U[dir2][X] * U[dir1][X + dir2]).dagger()))) /
+                        group::size();
+            }
+        }  
     }
     return plaq.value();
 }
@@ -213,7 +231,7 @@ template <typename group>
 double measure_plaq(const GaugeField<group> &U, double db = 0.0) {
 
     Reduction<double> plaq;
-    plaq.allreduce(false);
+    plaq.allreduce(false).delayed(true);
 
     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
         if (db == 0.0) {
@@ -256,6 +274,16 @@ double measure_action(const GaugeField<group> &U, const VectorField<Algebra<grou
                       const parameters &p) {
 
     auto plaq = measure_plaq(U, p.deltab);
+    auto e2 = measure_e2(E);
+
+    return p.beta * plaq + e2 / 2;
+}
+
+template <typename group>
+double measure_action_bp(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
+                      const parameters &p) {
+
+    auto plaq = measure_plaq_bp(U);
     auto e2 = measure_e2(E);
 
     return p.beta * plaq + e2 / 2;
@@ -579,6 +607,20 @@ void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, const p
 
     update_U(U, E, p.dt / 2);
     for (int n = 0; n < p.trajlen - 1; n++) {
+        update_E(U, E, p, p.dt);
+        update_U(U, E, p.dt);
+    }
+    // and bring U and E to the same time value
+    update_E(U, E, p, p.dt);
+    update_U(U, E, p.dt / 2);
+    regroup_gauge(U);
+}
+
+template <typename group>
+void do_trajectory_bp(GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p) {
+
+    update_U(U, E, p.dt / 2);
+    for (int n = 0; n < p.trajlen - 1; n++) {
         update_E_bp(U, E, p, p.dt);
         update_U(U, E, p.dt);
     }
@@ -699,11 +741,11 @@ int main(int argc, char **argv) {
 
         foralldir(d) onsites(ALL) E[d][X].gaussian_random(sqrt(2.0));
 
-        double act_old = measure_action(U, E, p);
+        double act_old = measure_action_bp(U, E, p);
 
-        do_trajectory(U, E, p);
+        do_trajectory_bp(U, E, p);
 
-        double act_new = measure_action(U, E, p);
+        double act_new = measure_action_bp(U, E, p);
 
         bool poly_ok = true;
         if (p.poly_range_on) {
