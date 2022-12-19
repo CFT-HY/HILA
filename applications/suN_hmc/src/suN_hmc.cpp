@@ -735,9 +735,9 @@ int main(int argc, char **argv) {
         if (p.n_profile > 0) {
             foralldir(d) onsites(ALL) {
                 double mag;
-                mag =
-                    0.4 +
-                    0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) / lattice.size(e_z)));
+                // mag =
+                //     0.4 +
+                //     0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) / lattice.size(e_z)));
                 // if (X.z() <= lattice.size(e_z) / 2) {
                 //     mag = 1;
                 // } else {
@@ -745,7 +745,7 @@ int main(int argc, char **argv) {
                 // }
                 mygroup u;
                 u.gaussian_random(mag);
-                U[d][X] += u;
+                U[d][X] += u * 0.01;
                 U[d][X].reunitarize();
             }
         }
