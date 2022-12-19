@@ -7,14 +7,17 @@
 // hilapp should not read in .cuh, because it does not understand it
 
 //#if (defined(CUDA) || defined(HIP)) && !defined(HILAPP)
-#if (defined(CUDA)) && !defined(HILAPP)
+#if !defined(HILAPP)
+#if defined(CUDA)
 #include <cub/cub.cuh>
+namespace gpucub = cub;
 #endif
 
-#if (defined(HIP)) && !defined(HILAPP)
+#if defined(HIP)
 #include <hipcub/hipcub.hpp>
-using cub = hipcub;
+namespace gpucub = hipcub;
 #endif
+#endif // HILAPP
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -231,13 +234,13 @@ class SiteSelect {
         gpuMalloc(&num_selected_d, sizeof(int));
 
 
-        cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag, out,
-                                   num_selected_d, lattice.mynode.volume());
+        GPU_CHECK(gpucub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag,
+                                                out, num_selected_d, lattice.mynode.volume()));
 
         gpuMalloc(&d_temp_storage, temp_storage_bytes);
 
-        cub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag, out,
-                                   num_selected_d, lattice.mynode.volume());
+        GPU_CHECK(gpucub::DeviceSelect::Flagged(d_temp_storage, temp_storage_bytes, d_data, flag,
+                                                out, num_selected_d, lattice.mynode.volume()));
 
         gpuFree(d_temp_storage);
 

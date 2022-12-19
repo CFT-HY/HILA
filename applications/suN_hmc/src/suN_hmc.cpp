@@ -30,89 +30,134 @@ struct parameters {
 };
 
 template <typename T>
-T get_ch_inv(const T& U) {
+T get_ch_inv(const T &U) {
     T tB[2];
-    Complex< hila::number_type<T> > tc;
-    int ip,iip;
-    ip=0;
-    iip=1;
-    tB[ip]=1.;
-    tc=trace(U);
-    for(int k=2; k<=T::size(); ++k) {
-        tB[iip]=U*tB[ip];
-        tB[iip]-=tc;
-        tc=trace(U*tB[iip])/k;
-        ip=iip;
-        iip=(iip+1)%2;
+    Complex<hila::number_type<T>> tc;
+    int ip, iip;
+    ip = 0;
+    iip = 1;
+    tB[ip] = 1.;
+    tc = trace(U);
+    for (int k = 2; k <= T::size(); ++k) {
+        tB[iip] = U * tB[ip];
+        tB[iip] -= tc;
+        tc = trace(U * tB[iip]) / k;
+        ip = iip;
+        iip = (iip + 1) % 2;
     }
-    return tB[ip]/tc;
+    return tB[ip] / tc;
 }
 
 template <typename T>
-T get_bp_Amat(const T& U) {
+T get_bp_Amat(const T &U) {
     T tA1;
     T tA2;
-    tA1=0.5*U;
-    tA1+=0.5;
-    tA2=get_ch_inv(tA1);
-    tA1=tA2*tA2.dagger();
-    return tA1*tA1*tA2;
+    tA1 = 0.5 * U;
+    tA1 += 0.5;
+    tA2 = get_ch_inv(tA1);
+    tA1 = tA2 * tA2.dagger();
+    return tA1 * tA1 * tA2;
 }
 
 template <typename T>
-T get_bp_iOsqmat(const T& U) {
+T get_bp_iOsqmat(const T &U) {
     T tA1;
     T tA2;
-    tA1=0.5*U;
-    tA1+=0.5;
-    tA2=tA1.dagger()*tA1;
-    tA1=get_ch_inv(tA2);
-    tA2=tA1*tA1;
-    tA2-=1.;
+    tA1 = 0.5 * U;
+    tA1 += 0.5;
+    tA2 = tA1.dagger() * tA1;
+    tA1 = get_ch_inv(tA2);
+    tA2 = tA1 * tA1;
+    tA2 -= 1.;
     return tA2;
 }
 
 template <typename T>
-void plaqpm(const GaugeField<T>& U,Field<T>& plaqp,Field<T>& plaqm,Direction d1,Direction d2,Parity par=ALL) {
+void plaqpm(const GaugeField<T> &U, Field<T> &plaqp, Direction d1, Direction d2) {
 
     Field<T> lower;
 
-    if(d2!=d1) {
+    if (d2 != d1) {
 
         // anticipate that these are needed
         // not really necessary, but may be faster
-        U[d2].start_gather(d1,ALL);
-        U[d1].start_gather(d2,par);
+        U[d2].start_gather(d1, ALL);
+        U[d1].start_gather(d2, ALL);
 
         // calculate first lower 'U' of the staple sum
         // do it on opp parity
-        onsites(~par) {
-            lower[X]=U[d2][X].dagger()*U[d1][X]*U[d2][X+d1];
+        onsites(ALL) {
+            lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
         }
 
         // calculate then the upper 'n', and add the lower
-        // lower could also be added on a separate loop 
-        onsites(par) {
-            plaqp[X]=U[d1][X]*U[d2][X+d1]*(U[d2][X]*U[d1][X+d2]).dagger();
-            plaqm[X]=U[d1][X]*lower[X-d2].dagger();
+        // lower could also be added on a separate loop
+        onsites(ALL) {
+            auto p1 = U[d1][X] * U[d2][X + d1] * (U[d2][X] * U[d1][X + d2]).dagger();
+            auto p2 = U[d1][X] * lower[X - d2].dagger();
+            plaqp[X] = p1 * get_bp_Amat(p1) + p2 * get_bp_Amat(p2);
         }
     }
 }
 
+template <typename T>
+void plaqpm_db(const GaugeField<T> &U, Field<T> &plaqp, Direction d1, Direction d2, double deltab) {
+
+    Field<T> lower;
+
+    if (d2 != d1) {
+
+        // anticipate that these are needed
+        // not really necessary, but may be faster
+        U[d2].start_gather(d1, ALL);
+        U[d1].start_gather(d2, ALL);
+
+        // calculate first lower 'U' of the staple sum
+        // do it on opp parity
+        onsites(ALL) {
+            double m;
+            if (2 * X.z() < lattice.size(e_z))
+                m = 1.0 - deltab;
+            else
+                m = 1.0 + deltab;
+
+            auto p2 = U[d1][X + d2] * (U[d2][X].dagger() * U[d1][X] * U[d2][X + d1]).dagger();
+            lower[X] = m * p2 * get_bp_Amat(p2);
+        }
+
+        // calculate then the upper 'n', and add the lower
+        // lower could also be added on a separate loop
+        onsites(ALL) {
+            double m;
+            if (2 * X.z() < lattice.size(e_z))
+                m = 1.0 - deltab;
+            else
+                m = 1.0 + deltab;
+
+            auto p1 = U[d1][X] * U[d2][X + d1] * (U[d2][X] * U[d1][X + d2]).dagger();
+            plaqp[X] = m * p1 * get_bp_Amat(p1) + lower[X - d2];
+        }
+    }
+}
+
+
 template <typename group>
-void update_E_bp(const GaugeField<group>& U,VectorField<Algebra<group>>& E,const parameters& p,
-    double delta) {
+void update_E_bp(const GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p,
+                 double delta) {
 
     Field<group> plaqp;
-    Field<group> plaqm;
-    hila::number_type<group> eps=delta*2.0*p.beta/group::size();
+    hila::number_type<group> eps = delta * 2.0 * p.beta / group::size();
 
     foralldir(d1) {
-        foralldir(d2) if(d2!=d1) {
-            plaqpm(U,plaqp,plaqm,d1,d2);
+        foralldir(d2) if (d2 != d1) {
+            if (p.deltab == 0) {
+                plaqpm(U, plaqp, d1, d2);
+            } else {
+                plaqpm_db(U, plaqp, d1, d2, p.deltab);
+            }
 
             onsites(ALL) {
-                E[d1][X]-=eps*(plaqp[X]*get_bp_Amat(plaqp[X])+plaqm[X]*get_bp_Amat(plaqm[X])).project_to_algebra();
+                E[d1][X] -= eps * plaqp[X].project_to_algebra();
             }
         }
     }
@@ -194,44 +239,45 @@ void regroup_gauge(GaugeField<group> &U) {
 }
 
 template <typename group>
-double measure_plaq_bp(const GaugeField<group>& U, double db = 0.0) {
+double measure_plaq_bp(const GaugeField<group> &U, double db = 0.0) {
 
     Reduction<double> plaq;
     plaq.allreduce(false).delayed(true);
 
-    if (db == 0.0) {
-        foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+    foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+        if (db == 0.0) {
+
             onsites(ALL) {
                 plaq += real(trace(get_bp_iOsqmat(U[dir1][X] * U[dir2][X + dir1] *
                                                   (U[dir2][X] * U[dir1][X + dir2]).dagger()))) /
                         group::size();
             }
-        }
-    } else {
-        foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
+        } else {
+
             onsites(ALL) {
+
                 double c;
                 if (2 * X.z() < lattice.size(e_z))
                     c = 1 - db;
                 else
                     c = 1 + db;
 
-                plaq += c * real(trace(get_bp_iOsqmat(U[dir1][X] * U[dir2][X + dir1] *
+                plaq += c *
+                        real(trace(get_bp_iOsqmat(U[dir1][X] * U[dir2][X + dir1] *
                                                   (U[dir2][X] * U[dir1][X + dir2]).dagger()))) /
                         group::size();
             }
-        }  
+        }
     }
     return plaq.value();
 }
-
 
 
 template <typename group>
 double measure_plaq(const GaugeField<group> &U, double db = 0.0) {
 
     Reduction<double> plaq;
-    plaq.allreduce(false).delayed(true);
+    plaq.allreduce(false);
 
     foralldir(dir1) foralldir(dir2) if (dir1 < dir2) {
         if (db == 0.0) {
@@ -274,16 +320,6 @@ double measure_action(const GaugeField<group> &U, const VectorField<Algebra<grou
                       const parameters &p) {
 
     auto plaq = measure_plaq(U, p.deltab);
-    auto e2 = measure_e2(E);
-
-    return p.beta * plaq + e2 / 2;
-}
-
-template <typename group>
-double measure_action_bp(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
-                      const parameters &p) {
-
-    auto plaq = measure_plaq_bp(U);
     auto e2 = measure_e2(E);
 
     return p.beta * plaq + e2 / 2;
@@ -368,7 +404,7 @@ void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>>
 
     auto plaq = measure_plaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
-    auto plaqbp=measure_plaq_bp(U)/(lattice.volume()*NDIM*(NDIM-1)/2);
+    auto plaqbp = measure_plaq_bp(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
 
     auto e2 = measure_e2(E) / (lattice.volume() * NDIM);
 
@@ -377,7 +413,8 @@ void measure_stuff(const GaugeField<group> &U, const VectorField<Algebra<group>>
 
     auto poly = measure_polyakov(U, e_t);
 
-    hila::out0<<"MEAS "<<std::setprecision(8)<<plaqbp<<' '<<plaq<<' '<<e2<<' '<<poly<<'\n';
+    hila::out0 << "MEAS " << std::setprecision(8) << plaqbp << ' ' << plaq << ' ' << e2 << ' '
+               << poly << '\n';
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -607,20 +644,6 @@ void do_trajectory(GaugeField<group> &U, VectorField<Algebra<group>> &E, const p
 
     update_U(U, E, p.dt / 2);
     for (int n = 0; n < p.trajlen - 1; n++) {
-        update_E(U, E, p, p.dt);
-        update_U(U, E, p.dt);
-    }
-    // and bring U and E to the same time value
-    update_E(U, E, p, p.dt);
-    update_U(U, E, p.dt / 2);
-    regroup_gauge(U);
-}
-
-template <typename group>
-void do_trajectory_bp(GaugeField<group> &U, VectorField<Algebra<group>> &E, const parameters &p) {
-
-    update_U(U, E, p.dt / 2);
-    for (int n = 0; n < p.trajlen - 1; n++) {
         update_E_bp(U, E, p, p.dt);
         update_U(U, E, p.dt);
     }
@@ -741,11 +764,11 @@ int main(int argc, char **argv) {
 
         foralldir(d) onsites(ALL) E[d][X].gaussian_random(sqrt(2.0));
 
-        double act_old = measure_action_bp(U, E, p);
+        double act_old = measure_action(U, E, p);
 
-        do_trajectory_bp(U, E, p);
+        do_trajectory(U, E, p);
 
-        double act_new = measure_action_bp(U, E, p);
+        double act_new = measure_action(U, E, p);
 
         bool poly_ok = true;
         if (p.poly_range_on) {
@@ -770,8 +793,12 @@ int main(int argc, char **argv) {
             // if (p_now > p.poly_range[0] && p_now < p.poly_range[1]) {
             //     poly_ok = true;    // normal, nice branch
             //     searching = false; // turn off search
-            // } else if ((p_old < p.poly_range[0] && p_now > p_old && p_now < p.poly_range[1]) ||
-            //            (p_old > p.poly_range[1] && p_now < p_old && p_now > p.poly_range[0])) {
+            // } else if ((p_old < p.poly_range[0] && p_now > p_old && p_now <
+            // p.poly_range[1])
+            // ||
+            //            (p_old > p.poly_range[1] && p_now < p_old && p_now >
+            //            p.poly_range[0]))
+            //            {
             //     poly_ok = true; // this is when we "search" for the range
             // } else {
             //     poly_ok = false;

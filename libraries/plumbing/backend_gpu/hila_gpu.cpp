@@ -143,7 +143,7 @@ __device__ int backend_lattice_struct::coordinate(unsigned idx, Direction dir) c
 #endif
 
 
-void backend_lattice_struct::setup(const lattice_struct &lattice) {
+void backend_lattice_struct::setup(lattice_struct &lattice) {
     CoordinateVector *tmp;
 
     /* Setup neighbour fields in all directions */
@@ -360,9 +360,9 @@ void gpu_device_info() {
 void gpu_exit_on_error(const char *msg, const char *file, int line) {
     gpuError code = gpuGetLastError();
     if (gpuSuccess != code) {
-        hila::out << "CUDA error: " << msg << " in file " << file << " line " << line
+        hila::out << GPUTYPESTR << " error: " << msg << " in file " << file << " line " << line
                      << '\n';
-        hila::out << "CUDA error string: " << gpuGetErrorString(code) << "\n";
+        hila::out << GPUTYPESTR << " error string: " << gpuGetErrorString(code) << "\n";
 
         hila::terminate(0);
     }
@@ -370,9 +370,9 @@ void gpu_exit_on_error(const char *msg, const char *file, int line) {
 
 void gpu_exit_on_error(gpuError code, const char *msg, const char *file, int line) {
     if (gpuSuccess != code) {
-        hila::out << "CUDA error in command: " << msg << " in file " << file
+        hila::out << GPUTYPESTR << " error in command: " << msg << " in file " << file
                      << " line " << line << '\n';
-        hila::out << "CUDA error string: " << gpuGetErrorString(code) << "\n";
+        hila::out << GPUTYPESTR << " error string: " << gpuGetErrorString(code) << "\n";
 
         hila::terminate(0);
     }

@@ -36,7 +36,7 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
     if (hila::myrank() == 0) {
         if (is_initialized) {
             if (speaking)
-                hila::out << "Error: file '" << fname << "' cannot be opened because '" << filename
+                hila::out0 << "Error: file '" << fname << "' cannot be opened because '" << filename
                           << "' is open in this input variable\n";
 
             got_error = true;
@@ -59,8 +59,8 @@ bool input::open(const std::string &file_name, bool use_cmdline, bool exit_on_er
 
                     if (speaking) {
                         if (exit_on_error)
-                            hila::out << "ERROR: ";
-                        hila::out << "Input file '" << fname << "' could not be opened\n";
+                            hila::out0 << "ERROR: ";
+                        hila::out0 << "Input file '" << fname << "' could not be opened\n";
                     }
 
                     got_error = true;
@@ -124,23 +124,23 @@ void input::print_linebuf(int end_of_key) {
         is_line_printed = true;
 
         int i = 0;
-        while (std::isspace(linebuffer[i]))
+        while (i < linebuffer.size() && std::isspace(linebuffer[i]))
             i++;
         for (; i < linebuffer.size() && i < end_of_key; i++) {
-            hila::out << linebuffer[i];
+            hila::out0 << linebuffer[i];
         }
-        hila::out << ' ';
+        hila::out0 << ' ';
         if (end_of_key > 0) {
             for (int j = i; j < 20; j++)
-                hila::out << ' ';
+                hila::out0 << ' ';
         }
 
         while (i < linebuffer.size() && std::isspace(linebuffer[i]))
             i++;
         if (i < linebuffer.size()) {
-            hila::out << linebuffer.substr(i);
+            hila::out0 << linebuffer.substr(i);
         }
-        hila::out << std::endl; // use endl to show output here
+        hila::out0 << std::endl; // use endl to show output here
     }
 }
 
@@ -218,7 +218,7 @@ bool input::peek_token(std::string &tok) {
         i++; // this happens for only ,
 
     if (in_quotes) {
-        hila::out << "Error: unbalanced quotes\n";
+        hila::out0 << "Error: unbalanced quotes\n";
         exit(1); // unclean exit
     }
     tok = linebuffer.substr(lb_start, i - lb_start);
@@ -257,7 +257,7 @@ bool input::handle_key(const std::string &key) {
         if (key.size() > 0 && !contains_word_list(key, end_of_key)) {
             if (speaking) {
                 print_linebuf(0);
-                hila::out << "Error: expecting key '" << key << "'\n";
+                hila::out0 << "Error: expecting key '" << key << "'\n";
             }
             return false;
         }
@@ -320,18 +320,18 @@ int input::get_item(const std::string &label, const std::vector<std::string> &it
             // error, nothing was found
             no_error = false;
             if (speaking) {
-                hila::out << "Input '" << label << "' must be one of: ";
+                hila::out0 << "Input '" << label << "' must be one of: ";
                 for (int i = 0; i < items.size(); i++) {
                     if (items[i] == "%s")
-                        hila::out << "<string> ";
+                        hila::out0 << "<string> ";
                     else if (items[i] == "%f")
-                        hila::out << "<float/double> ";
+                        hila::out0 << "<float/double> ";
                     else if (items[i] == "%i")
-                        hila::out << "<int/long> ";
+                        hila::out0 << "<int/long> ";
                     else
-                        hila::out << '\'' << items[i] << "' ";
+                        hila::out0 << '\'' << items[i] << "' ";
                 }
-                hila::out << '\n';
+                hila::out0 << '\n';
             }
         }
     }

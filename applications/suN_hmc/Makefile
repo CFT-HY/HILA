@@ -29,7 +29,7 @@ suN_hmc: build/suN_hmc ; @:
 
 # Now the linking step for each target executable
 build/suN_hmc: Makefile build/suN_hmc.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) -o $@ build/suN_hmc.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) -lfftw3
+	$(LD) -o $@ build/suN_hmc.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS) $(FFTW_LIB) -lfftw3
 
 
 

@@ -11,8 +11,7 @@ void report_too_large_node() {
         hila::out << "Node size too large: size = " << lattice.mynode.size[0];
         for (int d = 1; d < NDIM; d++)
             hila::out << " x " << lattice.mynode.size[d];
-        hila::out << " + communication buffers = "
-                     << lattice.mynode.field_alloc_size;
+        hila::out << " + communication buffers = " << lattice.mynode.field_alloc_size;
         hila::out << "\nConsider using more nodes (smaller node size).\n";
         hila::out << "[TODO: allow 64bit index?]\n";
     }
@@ -60,7 +59,7 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 #endif
 
     // Alignment: set field_alloc_size to be divisible by 256
-    if (mynode.field_alloc_size % 256 > 0) 
+    if (mynode.field_alloc_size % 256 > 0)
         mynode.field_alloc_size += 256 - mynode.field_alloc_size % 256;
 
 #ifndef VANILLA
@@ -98,14 +97,13 @@ void lattice_struct::setup(const CoordinateVector &siz) {
 ///
 ///////////////////////////////////////////////////////////////////////
 
-int lattice_struct::node_rank(const CoordinateVector &loc) {
+int lattice_struct::node_rank(const CoordinateVector &loc) const {
     int i;
     int dir;
 
     i = (loc[NDIM - 1] * nodes.n_divisions[NDIM - 1]) / l_size[NDIM - 1];
     for (dir = NDIM - 2; dir >= 0; dir--) {
-        i = i * nodes.n_divisions[dir] +
-            ((loc[dir] * nodes.n_divisions[dir]) / l_size[dir]);
+        i = i * nodes.n_divisions[dir] + ((loc[dir] * nodes.n_divisions[dir]) / l_size[dir]);
     }
     /* do we want to remap this?  YES PLEASE */
     i = nodes.remap(i);
@@ -117,7 +115,7 @@ int lattice_struct::node_rank(const CoordinateVector &loc) {
 /// Is the coordinate on THIS node
 ///////////////////////////////////////////////////////////////////////
 
-bool lattice_struct::is_on_mynode(const CoordinateVector &loc) {
+bool lattice_struct::is_on_mynode(const CoordinateVector &loc) const {
     int d;
 
     for (int dir = 0; dir < NDIM; dir++) {
@@ -135,7 +133,7 @@ bool lattice_struct::is_on_mynode(const CoordinateVector &loc) {
 
 #ifndef SUBNODE_LAYOUT
 
-unsigned lattice_struct::site_index(const CoordinateVector &loc) {
+unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
     int dir, l, s;
     unsigned i;
 
@@ -163,8 +161,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) {
 /// compare to above
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const CoordinateVector &loc,
-                                    const unsigned nodeid) {
+unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned nodeid) const {
     int dir, l, s;
     unsigned i;
     const node_info &ni = nodes.nodelist[nodeid];
@@ -224,7 +221,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc,
 ///
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const CoordinateVector &loc) {
+unsigned lattice_struct::site_index(const CoordinateVector &loc) const {
     return site_index(loc, hila::myrank());
 }
 
@@ -233,8 +230,7 @@ unsigned lattice_struct::site_index(const CoordinateVector &loc) {
 /// compare to above
 ///////////////////////////////////////////////////////////////////////
 
-unsigned lattice_struct::site_index(const CoordinateVector &loc,
-                                    const unsigned nodeid) {
+unsigned lattice_struct::site_index(const CoordinateVector &loc, const unsigned nodeid) const {
     int dir, l, s, subl;
     unsigned i;
 
@@ -357,6 +353,8 @@ void lattice_struct::setup_nodes() {
 ////////////////////////////////////////////////////////////////////////
 void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) {
 
+    parent = &lattice;
+
     rank = hila::myrank();
 
     min = ni.min;
@@ -398,7 +396,7 @@ void lattice_struct::node_struct::setup(node_info &ni, lattice_struct &lattice) 
     // set up the auxiliary site_factor array
     unsigned v = 1;
     foralldir(d) {
-        size_factor[d] = v;     // = size[d-1] * size[d-2] * ..
+        size_factor[d] = v; // = size[d-1] * size[d-2] * ..
         v *= size[d];
     }
 
@@ -453,8 +451,7 @@ void lattice_struct::create_std_gathers() {
         // NOTE: this is not the send to Direction d, but to -d!
         comm_node_struct &to_node = nn_comminfo[-d].to_node;
 
-        from_node.rank = to_node.rank =
-            mynode.rank; // invalidate from_node, for time being
+        from_node.rank = to_node.rank = mynode.rank; // invalidate from_node, for time being
         // if there are no communications the rank is left as is
 
         // counters to zero
@@ -513,8 +510,7 @@ void lattice_struct::create_std_gathers() {
 #ifndef VANILLA
             // non-vanilla code MAY want to have receive buffers, so we need mapping to
             // field
-            from_node.sitelist =
-                (unsigned *)memalloc(from_node.sites * sizeof(unsigned));
+            from_node.sitelist = (unsigned *)memalloc(from_node.sites * sizeof(unsigned));
 #endif
         } else {
             to_node.sitelist = nullptr;
@@ -629,10 +625,9 @@ void lattice_struct::init_special_boundaries() {
     for (Direction d = (Direction)0; d < NDIRS; ++d) {
 
         // default values, nothing interesting happens
-        special_boundaries[d].n_even = special_boundaries[d].n_odd =
-            special_boundaries[d].n_total = 0;
+        special_boundaries[d].n_even = special_boundaries[d].n_odd = special_boundaries[d].n_total =
+            0;
         special_boundaries[d].is_needed = false;
-        special_boundaries[d].is_on_edge = false;
 
         Direction od = -d;
         int coord = -1;
@@ -644,7 +639,6 @@ void lattice_struct::init_special_boundaries() {
 
         if (coord >= 0) {
             // now we got it
-            special_boundaries[d].is_on_edge = true;
 
             if (nodes.n_divisions[abs(d)] == 1) {
                 special_boundaries[d].is_needed = true;
@@ -665,7 +659,7 @@ void lattice_struct::init_special_boundaries() {
 
         // hila::out << "Node " << hila::myrank() << " dir " << d << " min " <<
         // mynode.min << " is_on_edge "
-        //   << special_boundaries[d].is_on_edge << '\n';
+        //   << lattice.mynode.is_on_edge(d) << '\n';
 
         // allocate neighbours only on 1st use, otherwise unneeded
         special_boundaries[d].neighbours = nullptr;
@@ -685,7 +679,8 @@ void lattice_struct::init_special_boundaries() {
 const unsigned *lattice_struct::get_neighbour_array(Direction d, hila::bc bc) {
 
 #ifndef SPECIAL_BOUNDARY_CONDITIONS
-    assert(bc == hila::bc::PERIODIC && "non-periodic BC only if SPECIAL_BOUNDARY_CONDITIONS defined");
+    assert(bc == hila::bc::PERIODIC &&
+           "non-periodic BC only if SPECIAL_BOUNDARY_CONDITIONS defined");
     return neighb[d];
 #else
 
@@ -707,13 +702,11 @@ const unsigned *lattice_struct::get_neighbour_array(Direction d, hila::bc bc) {
 
 void lattice_struct::setup_special_boundary_array(Direction d) {
     // if it is not needed or already done...
-    if (special_boundaries[d].is_needed == false ||
-        special_boundaries[d].neighbours != nullptr)
+    if (special_boundaries[d].is_needed == false || special_boundaries[d].neighbours != nullptr)
         return;
 
     // now allocate neighbour array and the gathering array
-    special_boundaries[d].neighbours =
-        (unsigned *)memalloc(sizeof(unsigned) * mynode.sites);
+    special_boundaries[d].neighbours = (unsigned *)memalloc(sizeof(unsigned) * mynode.sites);
     special_boundaries[d].move_index =
         (unsigned *)memalloc(sizeof(unsigned) * special_boundaries[d].n_total);
 
@@ -914,4 +907,3 @@ lattice_struct::create_general_gather(const CoordinateVector &offset) {
 }
 
 #endif
-

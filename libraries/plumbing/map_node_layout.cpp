@@ -27,11 +27,11 @@ void lattice_struct::allnodes::create_remap() {
     lattice.nodes.map_inverse = nullptr;
 }
 
-unsigned lattice_struct::allnodes::remap(unsigned i) {
+unsigned lattice_struct::allnodes::remap(unsigned i) const {
     return i;
 }
 
-unsigned lattice_struct::allnodes::inverse_remap(unsigned i) {
+unsigned lattice_struct::allnodes::inverse_remap(unsigned i) const {
     return i;
 }
 
@@ -134,11 +134,11 @@ void lattice_struct::allnodes::create_remap() {
 
 /// And the call interface for remapping
 
-unsigned lattice_struct::allnodes::remap(unsigned i) {
+unsigned lattice_struct::allnodes::remap(unsigned i) const {
     return lattice.nodes.map_array[i];
 }
 
-unsigned lattice_struct::allnodes::inverse_remap(unsigned idx) {
+unsigned lattice_struct::allnodes::inverse_remap(unsigned idx) const {
     for (int i = 0; i < lattice.nodes.number; i++)
         if (lattice.nodes.map_array[i] == idx)
             return i;

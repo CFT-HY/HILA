@@ -33,6 +33,8 @@ HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -W
 
 # stddef.h again!
 # HILAPP_INCLUDE_LIST += -I/opt/cray/pe/gcc/default/snos/lib/gcc/x86_64-suse-linux/default/include -I/opt/cray/pe/fftw/default/x86_64/include
+HILAPP_INCLUDE_LIST += -I/opt/cray/pe/fftw/default/x86_64/include
+
 
 # Write hilapp inlcudes to a file 0hilapp_incl_dirs
 $(shell mkdir -p build)
@@ -47,8 +49,10 @@ HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
 HILA_INCLUDES := -I${ROCM_PATH}/hip/include
 HILA_INCLUDES += -I${ROCM_PATH}/rocrand/include/ -I${ROCM_PATH}/hiprand/include/ 
 HILA_INCLUDES += -I${ROCM_PATH}/hipfft/include/
-HILA_INCLUDES += -I${MPICH_DIR}/include
+HILA_INCLUDES += -I${MPICH_DIR}/include -I/opt/cray/pe/fftw/default/x86_64/include
 
+# Define FFTW_LIB for use in app Makefiles, if fftw is linked in (add $(FFTW_LIB) to link command
+FFTW_LIB := -L/opt/cray/pe/fftw/default/x86_64/lib/ -lfftw3
 
 # Linker libraries and possible options
 
