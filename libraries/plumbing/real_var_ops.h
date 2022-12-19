@@ -13,6 +13,18 @@ inline T abs(T val) {
     return std::abs(val);
 }
 
+// also def min and max, for all arith types
+template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
+inline T min(T val1, T val2) {
+    return std::min(val1, val2);
+}
+
+// also def min and max
+template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
+inline T max(T val1, T val2) {
+    return std::max(val1, val2);
+}
+
 // define real(), imag(), conj() -functions for basic arithmetic types
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T real(T val) {
@@ -72,7 +84,7 @@ std::string to_string(const T v, int prec = 8, char separator = ' ') {
 
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 std::string prettyprint(const T v, int prec = 8) {
-    return to_string(v,prec);
+    return to_string(v, prec);
 }
 
 
