@@ -612,9 +612,14 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 sfc.args_string = "e_z";
                 sfc.add_loop_var = true;
 
-            } else if (name == "random") {
-                sfc.replace_expression = "hila::random(";
-                sfc.add_loop_var = false;
+            } else if (name == "t") {
+                sfc.replace_expression = l_lattice + "coordinate(";
+                sfc.args_string = "e_t";
+                sfc.add_loop_var = true;
+
+            // } else if (name == "random") {
+            //     sfc.replace_expression = "hila::random(";
+            //     sfc.add_loop_var = false;
 
             } else if (name == "size") {
                 sfc.replace_expression = "loop_lattice_size(";
