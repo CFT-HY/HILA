@@ -194,7 +194,6 @@ class Field {
         /// get the receive buffer pointer for the communication.
         T *get_receive_buffer(Direction d, Parity par,
                               const lattice_struct::comm_node_struct &from_node);
-
     };
 
     // static_assert( std::is_pod<T>::value, "Field expects only pod-type elements
@@ -300,7 +299,7 @@ class Field {
         }
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        foralldir (dir) {
+        foralldir(dir) {
             fs->boundary_condition[dir] = hila::bc::PERIODIC;
             fs->boundary_condition[-dir] = hila::bc::PERIODIC;
         }
@@ -419,6 +418,20 @@ class Field {
         return gather_status(par, dir) == gather_status_t::NOT_DONE;
     }
 
+    /// function boundary_need_to_communicate(dir) returns false if there's special B.C. which
+    /// does not need comms here, otherwise true
+
+    bool boundary_need_to_communicate(const Direction dir) const {
+#ifdef SPECIAL_BOUNDARY_CONDITIONS
+
+        return hila::bc_need_communication(fs->boundary_condition[dir]) ||
+               !lattice.mynode.is_on_edge(dir);
+#else
+        return true;
+#endif
+    }
+
+
     void set_boundary_condition(Direction dir, hila::bc bc) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -441,6 +454,8 @@ class Field {
 
         // Make sure boundaries get refreshed
         mark_changed(ALL);
+#else
+        assert(bc == hila::bc::PERIODIC && "Only periodic bondary conditions when SPECIAL_BOUNDARY_CONDITIONS is undefined");
 #endif
     }
 
@@ -463,7 +478,7 @@ class Field {
 
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
-        foralldir (dir) {
+        foralldir(dir) {
             set_boundary_condition(dir, rhs.get_boundary_condition(dir));
         }
     }
@@ -798,8 +813,7 @@ class Field {
     Field<T> reflect(const CoordinateVector &dirs) const;
 
     // Writes the Field to disk
-    void write(std::ofstream &outputfile, bool binary = true,
-                               int precision = 8) const;
+    void write(std::ofstream &outputfile, bool binary = true, int precision = 8) const;
     void write(const std::string &filename, bool binary = true, int precision = 8) const;
 
     void read(std::ifstream &inputfile);
@@ -811,8 +825,7 @@ class Field {
                          const CoordinateVector &cmax, int precision = 6) const;
 
     template <typename Out>
-    void write_slice(Out &outputfile, const CoordinateVector &slice,
-                     int precision = 6) const;
+    void write_slice(Out &outputfile, const CoordinateVector &slice, int precision = 6) const;
 
     // and sum reduction
     T sum(Parity par = Parity::all, bool allreduce = true) const;
@@ -1202,6 +1215,15 @@ Field<R> abs(const Field<T> &arg) {
     return res;
 }
 
+template <typename T, typename P, typename R = decltype(pow(std::declval<T>()),std::declval<P>())>
+Field<R> pow(const Field<T> &arg, const P p) {
+    Field<R> res;
+    onsites(ALL) {
+        res[X] = pow(arg[X],p);
+    }
+    return res;
+}
+
 
 /////////////////////////////////////////////////////////////////
 
@@ -1212,7 +1234,6 @@ Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     shift(v, res, par);
     return res;
 }
-
 
 
 ///  drop_comms():  if field is changed or deleted,

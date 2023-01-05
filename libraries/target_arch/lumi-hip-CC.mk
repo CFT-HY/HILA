@@ -33,6 +33,7 @@ HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -W
 
 # stddef.h again!
 # HILAPP_INCLUDE_LIST += -I/opt/cray/pe/gcc/default/snos/lib/gcc/x86_64-suse-linux/default/include -I/opt/cray/pe/fftw/default/x86_64/include
+HILAPP_INCLUDE_LIST += -I/opt/cray/pe/fftw/default/x86_64/include
 
 # Write hilapp inlcudes to a file 0hilapp_incl_dirs
 $(shell mkdir -p build)
