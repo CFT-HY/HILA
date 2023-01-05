@@ -838,20 +838,20 @@ inline Complex<T> cbrt(Complex<T> z) {
 }
 
 /// pow(z.p) = z^p = exp(p*log(z))
-template <typename T>
-inline Complex<T> pow(Complex<T> z, Complex<T> p) {
+template <typename A, typename B>
+inline auto pow(Complex<A> z, Complex<B> p) {
     return exp(p * log(z));
 }
 
 /// pow(z.p) with scalar power
-template <typename T>
-inline Complex<T> pow(Complex<T> z, T p) {
+template <typename T, typename S, std::enable_if_t<hila::is_arithmetic<S>::value,int> = 0>
+inline Complex<T> pow(Complex<T> z, S p) {
     return exp(p * log(z));
 }
 
 /// pow(z.p) with scalar base
-template <typename T>
-inline Complex<T> pow(T z, Complex<T> p) {
+template <typename T, typename S, std::enable_if_t<hila::is_arithmetic<S>::value,int> = 0>
+inline Complex<T> pow(S z, Complex<T> p) {
     return exp(p * log(z));
 }
 
