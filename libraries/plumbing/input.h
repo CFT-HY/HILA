@@ -244,7 +244,7 @@ class input {
     /// returntyhpe is a special class for resolving get("label") return type
     class returntype {
       public:
-        const std::string &label;
+        std::string label;
         input *parent;
 
         returntype(const std::string &str, input *a) : label(str), parent(a) {}

@@ -18,8 +18,7 @@ void Field<T>::field_struct::gather_comm_elements(
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     // note: -d in is_on_edge, because we're about to send stuff to that
     // Direction (gathering from Direction +d)
-    if (boundary_condition[d] == hila::bc::ANTIPERIODIC &&
-        lattice.special_boundaries[-d].is_on_edge) {
+    if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice.mynode.is_on_edge(-d)) {
         payload.gather_comm_elements(buffer, to_node, par, lattice, true);
     } else {
         payload.gather_comm_elements(buffer, to_node, par, lattice, false);
@@ -32,8 +31,7 @@ void Field<T>::field_struct::gather_comm_elements(
     // this is vectorized branch
     bool antiperiodic = false;
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-    if (boundary_condition[d] == hila::bc::ANTIPERIODIC &&
-        lattice.special_boundaries[-d].is_on_edge) {
+    if (boundary_condition[d] == hila::bc::ANTIPERIODIC && lattice.mynode.is_on_edge(-d)) {
         antiperiodic = true;
     }
 #endif
@@ -99,8 +97,8 @@ template <typename T>
 void Field<T>::field_struct::set_local_boundary_elements(Direction dir, Parity par) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-    bool antiperiodic = (boundary_condition[dir] == hila::bc::ANTIPERIODIC &&
-                         lattice.special_boundaries[dir].is_on_edge);
+    bool antiperiodic =
+        (boundary_condition[dir] == hila::bc::ANTIPERIODIC && lattice.mynode.is_on_edge(dir));
 #else
     bool antiperiodic = false;
 #endif
@@ -328,7 +326,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     int size_type;
     MPI_Datatype mpi_type = get_MPI_number_type<T>(size_type);
 
-    if (from_node.rank != hila::myrank()) {
+    if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
 
         // HANDLE RECEIVES: get node which will send here
         post_receive_timer.start();
@@ -350,7 +348,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         post_receive_timer.stop();
     }
 
-    if (to_node.rank != hila::myrank()) {
+    if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
         // HANDLE SENDS: Copy Field elements on the boundary to a send buffer and send
         start_send_timer.start();
 
@@ -452,7 +450,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
 
         int par_i = (int)par - 1;
 
-        if (from_node.rank != hila::myrank()) {
+        if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
             wait_receive_timer.start();
 
             MPI_Status status;
@@ -466,7 +464,7 @@ void Field<T>::wait_gather(Direction d, Parity p) const {
         }
 
         // then wait for the sends
-        if (to_node.rank != hila::myrank()) {
+        if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
             wait_send_timer.start();
             MPI_Status status;
             MPI_Wait(&fs->send_request[par_i][d], &status);

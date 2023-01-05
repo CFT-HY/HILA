@@ -3,6 +3,8 @@
 # this is included from main.mk -file, which is in turn included from 
 # application makefile
 #
+# Show option in "make help"
+#%     make [..] CUDA_VERSION=99.9 - set cuda version
 #
 
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
