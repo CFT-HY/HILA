@@ -1215,6 +1215,15 @@ Field<R> abs(const Field<T> &arg) {
     return res;
 }
 
+template <typename T, typename P, typename R = decltype(pow(std::declval<T>()),std::declval<P>())>
+Field<R> pow(const Field<T> &arg, const P p) {
+    Field<R> res;
+    onsites(ALL) {
+        res[X] = pow(arg[X],p);
+    }
+    return res;
+}
+
 
 /////////////////////////////////////////////////////////////////
 
