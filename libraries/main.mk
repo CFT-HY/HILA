@@ -7,11 +7,12 @@
 # options (added to the app makefile options):
 # Use columns 8 and 30 (for -)
 #%     make [..] ARCH=<arch> - compile to architecture 'arch'
+#%     make [..] OPTS=".."   - add to compiler command line, e.g. OPTS="-DGPU_AWARE_MPI"
+#%     make list             - list available make targets/arguments
 #%     make list-archs       - list machine architectures
-#%     make help             - print this help message
 #%     make clean            - remove .o and .cpt -files
 #%     make cleanall         - clean build directory
-#%     make list             - list available make targets/arguments
+#%     make help             - print this help message
 
 
 # If "make clean", don't worry about targets, platforms and options
