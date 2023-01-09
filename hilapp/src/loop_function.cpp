@@ -334,8 +334,10 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
             if (is_top_level && is_field_with_X_expr(E)) {
 
                 // following is called only if this==g_TopLevelVisitor, this just makes
-                // it compile
-                bool is_assign = !(is_const || E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
+                // it compile 
+                // CONST_FUNCTION is dangerous at the moment here!
+                bool is_assign = !(is_const || // const_function ||
+                                   E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
                 g_TopLevelVisitor->handle_field_X_expr(E, is_assign, (!is_const && !out_only),
                                                        true);
 

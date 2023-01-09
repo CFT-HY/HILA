@@ -321,9 +321,19 @@ class Matrix_t {
         return *this;
     }
 
-    bool operator==(const Matrix<n, m, T> &rhs) const {
-        hila::number_type<T> epsilon = 0;
-        return ((*this) - rhs).squarenorm() <= epsilon;
+    template <typename S>
+    bool operator==(const Matrix<n, m, S> &rhs) const {
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++) {
+                if (e(i, j) != rhs.e(i, j))
+                    return false;
+            }
+        return true;
+    }
+
+    template <typename S>
+    bool operator!=(const Matrix<n, m, S> &rhs) const {
+        return !(*this == rhs);
     }
 
     /// Assign from different type matrix
