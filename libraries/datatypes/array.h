@@ -152,9 +152,19 @@ class Array {
         return *this;
     }
 
-    bool operator==(const Array<n, m, T> &rhs) const {
-        T epsilon = 0;
-        return ((*this) - rhs).squarenorm() <= epsilon;
+    template <typename S>
+    bool operator==(const Array<n, m, S> &rhs) const {
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++) {
+                if (e(i, j) != rhs.e(i, j))
+                    return false;
+            }
+        return true;
+    }
+
+    template <typename S>
+    bool operator!=(const Array<n, m, S> &rhs) const {
+        return !(*this == rhs);
     }
 
     /// add assign an Array
@@ -410,7 +420,7 @@ std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
 }
 
 namespace hila {
-    
+
 template <int n, int m, typename T>
 std::string to_string(const Array<n, m, T> &A, int prec = 8, char separator = ' ') {
     return to_string(A.asMatrix(), prec, separator);
@@ -421,7 +431,7 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
     return prettyprint(A.asMatrix(), prec);
 }
 
-}
+} // namespace hila
 
 
 /// Norm squared function
