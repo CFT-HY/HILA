@@ -1,0 +1,17 @@
+version: "3"
+services:
+  hila-applications:
+    image: hila:latest
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    volumes:
+      - ../applications:/HILA/applications
+
+  hila-source:
+    image: hila:latest
+    stdin_open: true
+    tty: true
+    volumes:
+      - ../applications:/HILA/applications
+      - ../libraries:/HILA/libraries
+      - ../hilapp/src:/HILA/hilapp/src
