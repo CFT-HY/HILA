@@ -323,7 +323,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     T *receive_buffer;
     T *send_buffer;
 
-    int size_type;
+    size_t size_type;
     MPI_Datatype mpi_type = get_MPI_number_type<T>(size_type);
 
     if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
@@ -342,7 +342,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         }
 
         // c++ version does not return errors
-        MPI_Irecv(receive_buffer, (int)n*size_type, MPI_BYTE, from_node.rank, tag, lattice.mpi_comm_lat,
+        MPI_Irecv(receive_buffer, (int)n, mpi_type, from_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->receive_request[par_i][d]);
 
         post_receive_timer.stop();
@@ -367,7 +367,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         //gpuDeviceSynchronize();
 #endif
 
-        MPI_Isend(send_buffer, (int)n*size_type, MPI_BYTE, to_node.rank, tag, lattice.mpi_comm_lat,
+        MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->send_request[par_i][d]);
 
         start_send_timer.stop();
