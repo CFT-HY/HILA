@@ -6,7 +6,7 @@
 
 $(info ########################################################################)
 $(info Target lumi-hip-CC: remember to )
-$(info module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm/5.1.4 )
+$(info module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm )
 $(info ########################################################################)
 
 
@@ -20,7 +20,9 @@ LD := CC
 #CXXFLAGS  := -Ofast -flto -x c++ --std=c++17 -fno-rtti
 #CXXFLAGS := -g -x c++ --std=c++17
 # CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx908 -x hip -fgpu-rdc
-CXXFLAGS := -std=c++17 -fno-rtti --rocm-path=${ROCM_PATH} --offload-arch=gfx90a -x hip -fgpu-rdc
+CXXFLAGS := -std=c++17 -fno-rtti -O3 -xhip --offload-arch=gfx90a -fgpu-rdc -D__HIP_PLATFORM_AMD__=1
+CXXFLAGS += -D__HIP_PLATFORM_HCC__=1 
+CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1
 # CXXFLAGS := -std=c++17 --offload-arch=gfx908 -x c++
 
 # hilapp needs to know where c++ system include files are located.  This is not a problem if
@@ -40,27 +42,27 @@ $(shell mkdir -p build)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 
 # ROCM_LIBS := $(shell echo ${ROCM_PATH} | sed s/rocm/rocmlibs/)
 
 # Currently LUMI EAP things require explicit setting of many include paths -- NOTE: MPI may be bad
-HILA_INCLUDES := -I${ROCM_PATH}/hip/include
+HILA_INCLUDES := -I${ROCM_PATH}/hip/include -I${ROCM_PATH}/hip/include/hip
 HILA_INCLUDES += -I${ROCM_PATH}/rocrand/include/ -I${ROCM_PATH}/hiprand/include/ 
-HILA_INCLUDES += -I${ROCM_PATH}/hipfft/include/
-HILA_INCLUDES += -I${MPICH_DIR}/include
+HILA_INCLUDES += -I${ROCM_PATH}/hipfft/include/ -I${ROCM_PATH}/hipcub/include/hipcub
+# HILA_INCLUDES += -I${MPICH_DIR}/include
 
 
 # Linker libraries and possible options
 
 # LDLIBS  := -lfftw3 -lfftw3f -lm
-LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib -lamdhip64 
+LDFLAGS := $(CXXFLAGS) -fgpu-rdc --hip-link --rocm-path=${ROCM_PATH} -L${ROCM_PATH}/lib 
 LDFLAGS += -L${ROCM_PATH}/hipfft/lib/ -lhipfft
-LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hsa
+LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib
 
 # These variables must be defined here
 #
-HILAPP_OPTS := -target:HIP $(HILAPP_INCLUDES)
+HILAPP_OPTS := -target:HIP -DHIP $(HILAPP_INCLUDES)
 HILA_OPTS := -DHIP $(HILA_INCLUDES)
 
 
