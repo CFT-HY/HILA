@@ -68,9 +68,7 @@ class ReductionVector {
             comm_is_on = true;
 
         MPI_Datatype dtype;
-        int size;
-
-        dtype = get_MPI_number_type<T>(size);
+        dtype = get_MPI_number_type<T>();
 
         if (dtype == MPI_BYTE) {
             assert(sizeof(T) < 0 && "Unknown number_type in vector reduction");

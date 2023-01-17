@@ -63,9 +63,8 @@ class Reduction {
             comm_is_on = true;
 
         MPI_Datatype dtype;
-        int size;
 
-        dtype = get_MPI_number_type<T>(size);
+        dtype = get_MPI_number_type<T>();
 
         assert(dtype != MPI_BYTE && "Unknown number_type in reduction");
 
@@ -381,8 +380,9 @@ T Field<T>::minmax(bool is_min, Parity par, CoordinateVector &loc) const {
 #endif
 
     if (hila::number_of_nodes() > 1) {
-        int size;
+        size_t size;
         MPI_Datatype dtype = get_MPI_number_type<T>(size, true);
+
         struct {
             T v;
             int rank;
