@@ -311,6 +311,9 @@ void hila_fft<cmplx_t>::gather_data() {
 
     int i = 0;
     int j = 0;
+
+    gpuStreamSynchronize(0);
+
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
 
@@ -405,6 +408,8 @@ void hila_fft<cmplx_t>::scatter_data() {
 #endif
 
     int i = 0;
+
+    gpuStreamSynchronize(0);
 
     for (auto &fn : hila_pencil_comms[dir]) {
         if (fn.node != hila::myrank()) {
