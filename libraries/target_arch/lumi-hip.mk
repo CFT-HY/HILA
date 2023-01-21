@@ -41,7 +41,8 @@ $(shell mkdir -p build)
 $(shell echo "$(HILAPP_INCLUDE_LIST)" > build/0hilapp_incl_dirs )
 HILAPP_INCLUDES := `cat build/0hilapp_incl_dirs`
 
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
+# use memory_pool.o, not memory_pool2.o - fails in gpu-aware mpi!
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 
 # ROCM_LIBS := $(shell echo ${ROCM_PATH} | sed s/rocm/rocmlibs/)
 
@@ -63,7 +64,7 @@ LDFLAGS += -L${MPICH_DIR}/lib -lmpi -L${CRAY_MPICH_ROOTDIR}/gtl/lib -lmpi_gtl_hs
 
 # These variables must be defined here
 #
-HILAPP_OPTS := -target:HIP $(HILAPP_INCLUDES)
+HILAPP_OPTS := -target:HIP -DHIP $(HILAPP_INCLUDES)
 HILA_OPTS := -DHIP $(HILA_INCLUDES)
 
 
