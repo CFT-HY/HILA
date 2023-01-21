@@ -150,7 +150,7 @@ void hila_fft<cmplx_t>::gather_data() {
         if (fn.node != hila::myrank()) {
 
             size_t siz = fn.recv_buf_size * elements * sizeof(cmplx_t);
-            if (siz >= (1ULL << 30)) {
+            if (siz >= (1ULL << 31)) {
                 hila::out << "Too large MPI message in pencils! Size " << siz
                              << " bytes\n";
                 hila::terminate(1);

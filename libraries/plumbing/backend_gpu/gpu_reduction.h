@@ -1014,7 +1014,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 //         MPI_Datatype dtype;
 //         int s;
 
-//         dtype = get_MPI_number_type<T>(s);
+//         dtype = _type<T>(s);
 //         assert(dtype != MPI_BYTE && "Unknown number_type in gpu_reduce_sum");
 
 //         if (allreduce) {
