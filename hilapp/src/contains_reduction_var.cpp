@@ -28,7 +28,7 @@ class containsReductionChecker : public GeneralVisitor,
 
     bool VisitExpr(Expr *e) {
         std::string typ = e->getType().getUnqualifiedType().getNonReferenceType().getAsString();
-         llvm::errs() << " REDUCTION CANDIDATE TYPE " << typ << '\n';
+        // llvm::errs() << " REDUCTION CANDIDATE TYPE " << typ << '\n';
         if (typ.find("Reduction<") == 0 || typ.find("ReductionVector<") == 0) {
             found_reduction_var = true;
             return false; // can stop now
