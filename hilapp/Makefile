@@ -182,7 +182,7 @@ OBJECTS = \
   $(BUILDDIR)/stringops.o \
   $(BUILDDIR)/codegen.o \
   $(BUILDDIR)/codegen_cpu.o \
-  $(BUILDDIR)/codegen_cuda.o \
+  $(BUILDDIR)/codegen_gpu.o \
   $(BUILDDIR)/codegen_avx_new.o \
   $(BUILDDIR)/codegen_openacc.o \
   $(BUILDDIR)/srcbuf.o \
