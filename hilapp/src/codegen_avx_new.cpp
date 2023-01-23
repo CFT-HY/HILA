@@ -14,7 +14,7 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-//#include "llvm/Support/raw_ostream.h"
+// #include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
 #include "toplevelvisitor.h"
@@ -460,10 +460,10 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                                 loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
                                                                               // get_stmt_str(d.e);
 
-                        code << l.vecinfo.vectorized_type << " " << d.name_with_dir << " = "
-                             << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type
-                             << ">(loop_lattice.neighbours[" << dirname << "][" << looping_var
-                             << "]);\n";
+                        code << "const " << l.vecinfo.vectorized_type << " " << d.name_with_dir
+                             << " = " << l.new_name << ".get_vector_at<"
+                             << l.vecinfo.vectorized_type << ">(loop_lattice.neighbours[" << dirname
+                             << "][" << looping_var << "]);\n";
 
                         // and replace references in loop body
                         for (field_ref *ref : d.ref_list) {
@@ -520,6 +520,8 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
         }
 
         if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
+            if (!l.is_written)
+                code << "const ";
             code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << " = " << l.new_name
                  << ".get_vector_at<" << l.vecinfo.vectorized_type << ">(" << looping_var << ");\n";
 

@@ -491,9 +491,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                     //     dirname = vi.new_name;
 
                     // Create the temp variable and call the getter
-                    kernel << l.element_type << " " << d.name_with_dir << " = " << l.new_name
-                           << ".get(" << l.new_name << ".neighbours[" << dirname << "]["
-                           << looping_var << "], d_lattice.field_alloc_size);\n";
+                    kernel << "const " << l.element_type << " " << d.name_with_dir << " = "
+                           << l.new_name << ".get(" << l.new_name << ".neighbours[" << dirname
+                           << "][" << looping_var << "], d_lattice.field_alloc_size);\n";
 
                     // and replace references in loop body
                     for (field_ref *ref : d.ref_list) {
@@ -549,6 +549,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         // TODO:
         if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
             // local read
+            // if var is not changed mark const
+            if (!l.is_written)
+                kernel << "const ";
             kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name << ".get("
                    << looping_var << ", d_lattice.field_alloc_size);\n           ";
             // if (l.is_written)
