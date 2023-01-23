@@ -83,11 +83,11 @@ class Complex {
         return im;
     }
 
-    inline T &real() {
+    inline T &real() const_function {
         return re;
     }
 
-    inline T &imag() {
+    inline T &imag() const_function {
         return im;
     }
     // automatic casting from Complex<T> -> Complex<A>
