@@ -384,7 +384,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
 
                 } else {
                     llvm::errs() << "hilapp internal error: vector reduction op in "
-                                    "codegen_cuda\n";
+                                    "codegen_gpu\n";
                     exit(1);
                 }
 
