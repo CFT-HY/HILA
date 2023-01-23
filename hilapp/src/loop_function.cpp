@@ -11,9 +11,11 @@
 ////////////////////////////////////////////////////////////////////////////
 /// Entry for function calls inside loops.  The call requires a bit
 /// special treatment, the arguments can be field[X] etc. elements
+/// is_assginment = true if the function call is on the rhs of assignment 
+/// (or result is used as non-const reference)
 ////////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::handle_function_call_in_loop(Stmt *s) {
+void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) {
 
     // Get the call expression
     CallExpr *Call = dyn_cast<CallExpr>(s);
@@ -52,7 +54,7 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s) {
     }
 
     // check the arg list
-    call_info_struct ci = handle_loop_function_args(D, Call, contains_rng);
+    call_info_struct ci = handle_loop_function_args(D, Call, contains_rng, is_assignment);
     ci.call = Call;
     ci.funcdecl = D;
     ci.contains_random = contains_rng;
@@ -194,7 +196,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 /////////////////////////////////////////////////////////////////////////////////
 
 call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
-                                                           bool sitedep) {
+                                                           bool sitedep, bool is_assignment) {
 
     call_info_struct cinfo;
 
@@ -336,8 +338,9 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
                 // following is called only if this==g_TopLevelVisitor, this just makes
                 // it compile 
                 // CONST_FUNCTION is dangerous at the moment here!
-                bool is_assign = !(is_const || // const_function ||
+                bool is_assign = !(is_const || (const_function && !is_assignment) ||
                                    E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
+
                 g_TopLevelVisitor->handle_field_X_expr(E, is_assign, (!is_const && !out_only),
                                                        true);
 
