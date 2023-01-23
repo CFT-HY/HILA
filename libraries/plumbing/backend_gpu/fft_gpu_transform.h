@@ -312,6 +312,7 @@ void hila_fft<cmplx_t>::gather_data() {
     int i = 0;
     int j = 0;
 
+    // this synchronization should be enough for all MPI's in the
     gpuStreamSynchronize(0);
 
     for (auto &fn : hila_pencil_comms[dir]) {
@@ -344,9 +345,7 @@ void hila_fft<cmplx_t>::gather_data() {
             cmplx_t *p = send_buf + fn.column_offset * elements;
             int n = fn.column_number * elements * lattice.mynode.size[dir] * sizeof(cmplx_t);
 
-#ifdef GPU_AWARE_MPI
-            gpuStreamSynchronize(0);
-#else
+#ifndef GPU_AWARE_MPI
             // now not GPU_AWARE_MPI
             send_p[i] = (cmplx_t *)memalloc(n);
             gpuMemcpy(send_p[i], p, n, gpuMemcpyDeviceToHost);
@@ -435,7 +434,7 @@ void hila_fft<cmplx_t>::scatter_data() {
             int n = fn.recv_buf_size * elements * sizeof(cmplx_t);
 #ifdef GPU_AWARE_MPI
             cmplx_t *p = rec_p[j];
-            gpuStreamSynchronize(0);
+//             gpuStreamSynchronize(0);
 #else
             cmplx_t *p = send_p[i] = (cmplx_t *)memalloc(n);
             gpuMemcpy(p, rec_p[j], n, gpuMemcpyDeviceToHost);
