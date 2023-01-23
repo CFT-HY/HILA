@@ -300,7 +300,7 @@ class GeneralVisitor {
     bool handle_loop_function_if_needed(call_info_struct &ci);
 
     call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
-                                               bool sitedep);
+                                               bool sitedep, bool is_assignment = false);
 
     bool handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep,
                               std::vector<var_info *> *out_variables,

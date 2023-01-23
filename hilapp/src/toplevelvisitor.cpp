@@ -1030,7 +1030,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // Check for function calls parameters. We need to determine if the
     // function can assign to the a field parameter (is not const).
     if (is_function_call_stmt(s)) {
-        handle_function_call_in_loop(s);
+        handle_function_call_in_loop(s, is_assignment);
         // let this fall trough, for - expr f[X] is a function call and is trapped
         // below too
         // return true;
