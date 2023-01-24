@@ -550,8 +550,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
             // local read
             // if var is not changed mark const
-            if (!l.is_written)
-                kernel << "const ";
+            // NOTE: const here swaps some methods from non-const
+            // if (!l.is_written)
+            //     kernel << "const ";
             kernel << l.element_type << " " << l.loop_ref_name << " = " << l.new_name << ".get("
                    << looping_var << ", d_lattice.field_alloc_size);\n           ";
             // if (l.is_written)

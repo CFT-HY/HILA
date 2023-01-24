@@ -189,9 +189,10 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         // TODO:
         if (l.is_read_atX || (l.is_written && loop_info.has_conditional)) {
             // now reading var without nb. reference
-            if (!l.is_written) {
-                code << "const ";
-            }
+            // const here may cause problems in loop functions!
+            // if (!l.is_written) {
+            //     code << "const ";
+            // }
             code << l.element_type << " " << l.loop_ref_name << " = " << l.new_name
                  << ".get_value_at(" << looping_var << ");\n";
 
