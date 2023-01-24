@@ -520,8 +520,8 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
         }
 
         if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
-            if (!l.is_written)
-                code << "const ";
+            // if (!l.is_written)
+            //     code << "const ";
             code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << " = " << l.new_name
                  << ".get_vector_at<" << l.vecinfo.vectorized_type << ">(" << looping_var << ");\n";
 
