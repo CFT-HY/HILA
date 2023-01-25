@@ -455,7 +455,8 @@ class Field {
         // Make sure boundaries get refreshed
         mark_changed(ALL);
 #else
-        assert(bc == hila::bc::PERIODIC && "Only periodic bondary conditions when SPECIAL_BOUNDARY_CONDITIONS is undefined");
+        assert(bc == hila::bc::PERIODIC &&
+               "Only periodic bondary conditions when SPECIAL_BOUNDARY_CONDITIONS is undefined");
 #endif
     }
 
@@ -660,13 +661,18 @@ class Field {
         return ((*this) - rhs).squarenorm() <= epsilon;
     }
 
-    hila::number_type<T> squarenorm() const {
-        hila::number_type<T> n = 0;
+    double squarenorm() const {
+        double n = 0;
         onsites(ALL) {
             n += ::squarenorm((*this)[X]);
         }
         return n;
     }
+
+    double norm() {
+        return sqrt(squarenorm());
+    }
+
 
     ///////////////////////////////////////////////////////////////////////
 
@@ -848,6 +854,7 @@ class Field {
     T max(CoordinateVector &loc) const;
     T max(Parity par, CoordinateVector &loc) const;
     T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
+
 
 }; // End of class Field<>
 
@@ -1215,11 +1222,35 @@ Field<R> abs(const Field<T> &arg) {
     return res;
 }
 
-template <typename T, typename P, typename R = decltype(pow(std::declval<T>()),std::declval<P>())>
+template <typename T, typename P, typename R = decltype(pow(std::declval<T>()), std::declval<P>())>
 Field<R> pow(const Field<T> &arg, const P p) {
     Field<R> res;
     onsites(ALL) {
-        res[X] = pow(arg[X],p);
+        res[X] = pow(arg[X], p);
+    }
+    return res;
+}
+
+template <typename T>
+double squarenorm(const Field<T> &arg) {
+    double r = 0;
+    onsites(ALL) {
+        r += squarenorm(arg[X]);
+    }
+    return r;
+}
+
+template <typename T>
+double norm(const Field<T> &arg) {
+    return sqrt(squarenorm(arg));
+}
+
+
+template <typename A, typename B, typename R = decltype(std::declval<A>() - std::declval<B>())>
+double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
+    double res = 0;
+    onsites(ALL) {
+        res += squarenorm(a[X] - b[X]);
     }
     return res;
 }
