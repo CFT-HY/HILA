@@ -10,7 +10,7 @@ APP_HEADERS :=
 
 ARCH := vanilla
 
-APP_OPTS := -DNDIM=3
+APP_OPTS := -DNDIM=3 -DSPECIAL_BOUNDARY_CONDITIONS
 
 # Read in the main makefile contents, incl. platforms
 include $(HILA_DIR)/libraries/main.mk

@@ -91,6 +91,8 @@ void fft_test() {
     report_pass("FFT complex to real", eps, 1e-10);
 }
 
+//---------------------------------------------------------------------------
+
 void spectraldensity_test() {
 
     // test spectral density for single waves
@@ -151,6 +153,17 @@ void spectraldensity_test() {
         report_pass("Spectral density test with above vector ", sum, 1e-10);
     }
 }
+
+//--------------------------------------------------------------------------------
+
+void test_field_slices() {
+
+    Field<SiteIndex> s;
+    onsites(ALL) {
+        s[X] =  SiteIndex(X.coordinates());
+    }
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////
 
