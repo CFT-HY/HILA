@@ -448,7 +448,7 @@ Field<T>::FFT_real_to_complex(fft_direction fftdir) const {
                   "FFT_real_to_complex can be applied only to Field<real-type> variable");
 
     Field<Complex<T>> cf;
-    cf[ALL] = Complex((*this)[X], 0.0);
+    cf[ALL] = Complex<T>((*this)[X], 0.0);
     return cf.FFT(fftdir);
 }
 
@@ -523,8 +523,6 @@ Field<hila::number_type<T>> Field<T>::FFT_complex_to_real(fft_direction fftdir) 
         ims += ::squarenorm(rf[X].imag());
         rss += ::squarenorm(rf[X].real());
     }
-
-    hila::out0 << "RES IS " << rss << "   IMS IS " << ims << '\n';
 
     Field<hila::number_type<T>> res;
     onsites(ALL) res[X] = rf[X].real();
