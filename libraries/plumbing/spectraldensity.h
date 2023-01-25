@@ -4,6 +4,8 @@
 #include "hila.h"
 
 
+extern hila::timer binning_timer;
+
 /// sd_k_bin_parameters holds the parameters to define binning.
 
 struct sd_k_bin_parameters {
@@ -134,6 +136,8 @@ class k_binning {
     template <typename T>
     std::vector<T> bin_k_field(const Field<T> &f) {
 
+        binning_timer.start();
+
         if (k_avg.size() != par.bins)
             sd_calculate_bin_info();
 
@@ -149,6 +153,8 @@ class k_binning {
             }
         }
 
+        binning_timer.stop();
+
         return s.vector();
     }
 
@@ -159,6 +165,8 @@ class k_binning {
 
         using float_t = hila::number_type<T>;
         constexpr int n_float = sizeof(T) / sizeof(float_t);
+
+        binning_timer.start();
 
         if (k_avg.size() != par.bins)
             sd_calculate_bin_info();
@@ -180,6 +188,8 @@ class k_binning {
             }
         }
 
+        binning_timer.stop();
+        
         return s.vector();
     }
 

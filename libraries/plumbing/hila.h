@@ -25,8 +25,10 @@
 //#endif
 
 #include "plumbing/gaugefield.h"
-#include "plumbing/fft.h"
 #include "plumbing/input.h"
+#include "plumbing/fft.h"
+
+#include "plumbing/spectraldensity.h"
 
 #if defined(OPENMP)
 #include <omp.h>
