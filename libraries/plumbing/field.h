@@ -12,10 +12,12 @@
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field_storage.h"
+#include "plumbing/has_unary_minus.h"
 
 #include "plumbing/backend_vector/vector_types.h"
 
 #include "plumbing/com_mpi.h"
+
 
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
@@ -432,9 +434,28 @@ class Field {
     }
 
 
+    ///////////////////////////////////////////////////////////////////////
+    /// Boundary condition methods
+
+    /// Set boundary condition for field
+
     void set_boundary_condition(Direction dir, hila::bc bc) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
+
+
+#ifdef HILAPP
+        // this section is just to generate loop function calls for unary-.  Will removed by hilapp
+        // from final code.  If type T does not have -, give error
+
+        static_assert(has_unary_minus<T>::value,
+                      "BC possible only for types with unary - operator");
+        if constexpr (has_unary_minus<T>::value) {
+            onsites(ALL)(*this)[X] = -(*this)[X];
+            onsites(ALL) if (X.coordinate(e_x) == 0)(*this)[X] = -(*this)[X];
+        }
+#endif
+
         // TODO: This works as intended only for periodic/antiperiodic b.c.
         check_alloc();
         fs->boundary_condition[dir] = bc;
@@ -459,6 +480,8 @@ class Field {
                "Only periodic bondary conditions when SPECIAL_BOUNDARY_CONDITIONS is undefined");
 #endif
     }
+
+    ///////////////////////////////////////////////////////////////////////
 
     hila::bc get_boundary_condition(Direction dir) const {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -1365,14 +1388,14 @@ template <typename T>
 inline void ensure_field_operators_exist(Field<T> &f) {
 
     onsites(ALL) {
-        f[X] = 0;     // set to zero
-        f[X] = -f[X]; // unary -  -- needed for antiperiodic b.c.
+        f[X] = 0; // set to zero
+        // f[X] = -f[X]; // unary -  -- needed for antiperiodic b.c.
     }
     // same for non-vectorized loop
     onsites(ALL) {
         if (X.coordinate(e_x) < X.coordinate(e_y)) {
             f[X] = 0;
-            f[X] = -f[X];
+            // f[X] = -f[X];
         }
     }
 
