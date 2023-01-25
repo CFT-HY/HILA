@@ -11,12 +11,16 @@
 /// slightly modified from Valentin Milea's example in
 /// https://stackoverflow.com/a/31539364
 
-template <class C, class A = void> class has_unary_minus {
-    template <class T> static std::true_type testSignature(T (T::*)(void) const);
+template <class C, class A = void>
+class has_unary_minus {
+    template <class T>
+    static std::true_type testSignature(T (T::*)(void) const);
 
-    template <class T> static decltype(testSignature(&T::operator-)) test(std::nullptr_t);
+    template <class T>
+    static decltype(testSignature(&T::operator-)) test(std::nullptr_t);
 
-    template <class T> static std::false_type test(...);
+    template <class T>
+    static std::false_type test(...);
 
   public:
     using type = decltype(test<C>(nullptr));
@@ -26,9 +30,16 @@ template <class C, class A = void> class has_unary_minus {
 /// specialize to elementary arithmetic types
 
 template <typename T>
-class has_unary_minus<T, typename std::enable_if_t<hila::is_arithmetic<T>::value>> {
+class has_unary_minus<
+    T, typename std::enable_if_t<hila::is_arithmetic<T>::value && !std::is_unsigned<T>::value>> {
   public:
     static const bool value = true;
+};
+
+template <typename T>
+class has_unary_minus<T, typename std::enable_if_t<std::is_unsigned<T>::value>> {
+  public:
+    static const bool value = false;
 };
 
 #endif
