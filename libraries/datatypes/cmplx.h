@@ -169,6 +169,8 @@ class Complex {
     inline Complex<T> operator+() const {
         return *this;
     }
+
+#pragma hila loop_function
     inline Complex<T> operator-() const {
         return Complex<T>(-re, -im);
     }

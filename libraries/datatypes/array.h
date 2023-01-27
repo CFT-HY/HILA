@@ -131,6 +131,7 @@ class Array {
     }
 
     /// unary -
+#pragma hila loop_function
     inline Array<n, m, T> operator-() const {
         Array<n, m, T> res;
         for (int i = 0; i < n * m; i++) {
