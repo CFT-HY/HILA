@@ -299,6 +299,7 @@ class Matrix_t {
     // }
 
     /// unary -
+#pragma hila loop_function
     inline Mtype operator-() const {
         Mtype res;
         for (int i = 0; i < n * m; i++) {
