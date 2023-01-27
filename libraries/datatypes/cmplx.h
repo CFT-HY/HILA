@@ -2,8 +2,8 @@
 #define CMPLX_H_
 
 // let's not include the std::complex
-//#include <complex>
-//#include <cmath>
+// #include <complex>
+// #include <cmath>
 
 #include "plumbing/defs.h"
 
@@ -108,6 +108,7 @@ class Complex {
         return *this;
     }
 
+#pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     inline Complex<T> &operator=(S s) {
         re = s;
