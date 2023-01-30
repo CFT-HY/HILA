@@ -383,7 +383,7 @@ bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
 ///     - if contains loop local var ref or is site dependent:
 ///       whole array is input to loop: need to know array size.
 ///       If size not knowable, flag error
-///     - If index is not site dependent or loop local:
+///     - If index is not loop local:
 ///          -  it is sufficient to read in this array element only,
 ///             and remove var references to variables in index
 ///
@@ -513,7 +513,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     // and save the type of reduction
     ar.reduction_type = reduction_type;
 
-    if (!site_dep && !contains_loop_local_var(ref.Idx, nullptr) && !is_assign) {
+    if (!site_dep && !contains_loop_local_var(ref.Idx, nullptr) /* && !is_assign */) {
 
         // now it is a fixed index - move whole arr ref outside the loop
         // Note: multiple refrences are not checked, thus, same element can be
@@ -971,9 +971,8 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         // llvm::errs() << "  ASSIGNEE " << get_stmt_str(assignee) << '\n';
         // llvm::errs() << "  ASSIGNED " << get_stmt_str(assigned_expr) << '\n';
 
-        if (!is_field_assign && is_compound && is_simple_reduction(assignop,assignee)) {
-                        
-                        
+        if (!is_field_assign && is_compound && is_simple_reduction(assignop, assignee)) {
+            // collect here
         }
 
         TraverseStmt(assignee);
@@ -1007,6 +1006,16 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     //     if (is_assignment) is_member_expr = true;
     // }
 
+    // Site selection operations -
+    Expr *select_assign = nullptr;
+    if (is_select_stmt(s, &select_assign)) {
+        if (select_assign)
+            TraverseStmt(select_assign);
+
+        parsing_state.skip_children = 1;
+        return true;
+    }
+
     if (is_constructor_stmt(s)) {
         handle_constructor_in_loop(s);
         // return true;
@@ -1034,16 +1043,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         // let this fall trough, for - expr f[X] is a function call and is trapped
         // below too
         // return true;
-    }
-
-    // Site selection operations
-    Expr *select_assign = nullptr;
-    if (is_select_stmt(s, &select_assign)) {
-        if (select_assign)
-            TraverseStmt(select_assign);
-
-        parsing_state.skip_children = 1;
-        return true;
     }
 
     // if (is_user_cast_stmt(s)) {
