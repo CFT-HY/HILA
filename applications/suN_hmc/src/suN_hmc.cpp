@@ -319,7 +319,7 @@ template <typename group>
 double measure_action(const GaugeField<group> &U, const VectorField<Algebra<group>> &E,
                       const parameters &p) {
 
-    auto plaq = measure_plaq(U, p.deltab);
+    auto plaq = measure_plaq_bp(U, p.deltab);
     auto e2 = measure_e2(E);
 
     return p.beta * plaq + e2 / 2;
@@ -729,6 +729,8 @@ int main(int argc, char **argv) {
     GaugeField<mygroup> U;
     VectorField<Algebra<mygroup>> E;
 
+    U = 1;
+
     int start_traj = 0;
     if (!restore_checkpoint(U, start_traj, p)) {
         U = 1;
@@ -841,7 +843,7 @@ int main(int argc, char **argv) {
         }
 
 
-        hila::out0 << "Measure_end " << trajectory << '\n';
+        hila::out0 << "Measure_end " << trajectory << std::endl;
 
         if (p.n_save > 0 && (trajectory + 1) % p.n_save == 0) {
             checkpoint(U, trajectory, p);
