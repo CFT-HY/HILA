@@ -12,7 +12,6 @@
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
 #include "plumbing/field_storage.h"
-#include "plumbing/has_unary_minus.h"
 
 #include "plumbing/backend_vector/vector_types.h"
 
@@ -26,8 +25,9 @@ template <typename T>
 class Field;
 
 template <typename T>
-void ensure_field_operators_exist(Field<T> &f);
+void ensure_field_operators_exist();
 
+#include "plumbing/ensure_loop_functions.h"
 
 /// Field class
 /// This implements the standard methods for accessing fields
@@ -274,7 +274,7 @@ class Field {
         // Because destructor is instantiated for all fields,
         // use this to put in a hook for generating call to this function
         // in preprocessing stage
-        ensure_field_operators_exist(*this);
+        ensure_field_operators_exist<T>();
 #endif
     }
 
@@ -448,12 +448,10 @@ class Field {
         // this section is just to generate loop function calls for unary-.  Will removed by hilapp
         // from final code.  If type T does not have -, give error
 
-        static_assert(has_unary_minus<T>::value,
-                      "BC possible only for types with unary - operator");
-        if constexpr (has_unary_minus<T>::value) {
-            onsites(ALL)(*this)[X] = -(*this)[X];
-            onsites(ALL) if (X.coordinate(e_x) == 0)(*this)[X] = -(*this)[X];
-        }
+        static_assert(has_unary_minus<T>::value, "BC possible only for types which implement unary "
+                                                 "minus (-) -operator and are not unsigned");
+
+        ensure_unary_minus_is_loop_function<T>();
 #endif
 
         // TODO: This works as intended only for periodic/antiperiodic b.c.
@@ -1385,22 +1383,14 @@ inline void dummy_X_f() {
 /// generater necessary functions.  Add here ops as needed
 
 template <typename T>
-inline void ensure_field_operators_exist(Field<T> &f) {
+inline void ensure_field_operators_exist() {
 
-    onsites(ALL) {
-        f[X] = 0; // set to zero
-        // f[X] = -f[X]; // unary -  -- needed for antiperiodic b.c.
-    }
-    // same for non-vectorized loop
-    onsites(ALL) {
-        if (X.coordinate(e_x) < X.coordinate(e_y)) {
-            f[X] = 0;
-            // f[X] = -f[X];
-        }
-    }
+    ensure_unary_minus_is_loop_function<T>();
+    ensure_assign_zero_is_loop_function<T>();
 
     // make shift also explicit
     CoordinateVector v = 0;
+    Field<T> f;
     f = f.shift(v, ALL);
 }
 
