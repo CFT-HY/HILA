@@ -299,7 +299,6 @@ class Matrix_t {
     // }
 
     /// unary -
-#pragma hila loop_function
     inline Mtype operator-() const {
         Mtype res;
         for (int i = 0; i < n * m; i++) {
@@ -425,7 +424,7 @@ class Matrix_t {
     }
 
     /// multiply assign with matrix
-#pragma hila loop_function
+// #pragma hila loop_function
     template <int p, typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const Matrix_t<m, p, S, MT> &rhs) {
