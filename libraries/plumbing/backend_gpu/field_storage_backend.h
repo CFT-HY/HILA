@@ -67,7 +67,7 @@ __global__ void get_element_kernel(field_storage<T> field, char *buffer, unsigne
 }
 
 template <typename T>
-auto field_storage<T>::get_element(const unsigned i, const lattice_struct & lattice) const {
+auto field_storage<T>::get_element(const unsigned i, const lattice_struct &lattice) const {
     char *d_buffer;
     T value;
 
@@ -90,8 +90,7 @@ __global__ void set_element_kernel(field_storage<T> field, T value, unsigned i,
 
 template <typename T>
 template <typename A>
-void field_storage<T>::set_element(A &value, const unsigned i,
-                                   const lattice_struct & lattice) {
+void field_storage<T>::set_element(A &value, const unsigned i, const lattice_struct &lattice) {
     char *d_buffer;
     T t_value = value;
 
@@ -142,7 +141,7 @@ void field_storage<T>::gather_elements(T *RESTRICT buffer, const unsigned *RESTR
 
 /// A kernel that gathers elements negated
 // requires unary -
-template <typename T>
+template <typename T, std::enable_if_t<has_unary_minus<T>::value, int> = 0>
 __global__ void gather_elements_negated_kernel(field_storage<T> field, T *buffer,
                                                unsigned *site_index, const int n,
                                                const unsigned field_alloc_size) {
@@ -164,23 +163,24 @@ void field_storage<T>::gather_elements_negated(T *RESTRICT buffer,
     if constexpr (!has_unary_minus<T>::value) {
         assert(sizeof(T) < 0 && "Unary 'operatur- ()' must be defined for Field variable "
                                 "for antiperiodic b.c.");
+    } else {
+
+        // Copy the list of boundary site indexes to the device
+        gpuMalloc(&(d_site_index), n * sizeof(unsigned));
+        gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
+
+        // Call the kernel to build the list of elements
+        gpuMalloc(&(d_buffer), n * sizeof(T));
+        int N_blocks = n / N_threads + 1;
+        gather_elements_negated_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
+                                                                lattice.field_alloc_size());
+
+        // Copy the result to the host
+        gpuMemcpy(buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
+
+        gpuFree(d_site_index);
+        gpuFree(d_buffer);
     }
-
-    // Copy the list of boundary site indexes to the device
-    gpuMalloc(&(d_site_index), n * sizeof(unsigned));
-    gpuMemcpy(d_site_index, index_list, n * sizeof(unsigned), gpuMemcpyHostToDevice);
-
-    // Call the kernel to build the list of elements
-    gpuMalloc(&(d_buffer), n * sizeof(T));
-    int N_blocks = n / N_threads + 1;
-    gather_elements_negated_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
-                                                            lattice.field_alloc_size());
-
-    // Copy the result to the host
-    gpuMemcpy(buffer, d_buffer, n * sizeof(T), gpuMemcpyDeviceToHost);
-
-    gpuFree(d_site_index);
-    gpuFree(d_buffer);
 }
 
 template <typename T>
@@ -199,7 +199,8 @@ __global__ void gather_comm_elements_kernel(field_storage<T> field, T *buffer, u
     }
 }
 
-template <typename T>
+// gather -elements only if unary - exists
+template <typename T, std::enable_if_t<has_unary_minus<T>::value, int> = 0>
 __global__ void gather_comm_elements_negated_kernel(field_storage<T> field, T *buffer,
                                                     unsigned *site_index, const int n,
                                                     const unsigned field_alloc_size) {
@@ -264,8 +265,12 @@ void field_storage<T>::gather_comm_elements(T *buffer,
     // Call the kernel to build the list of elements
     int N_blocks = n / N_threads + 1;
     if (antiperiodic) {
-        gather_comm_elements_negated_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index,
-                                                                     n, lattice.field_alloc_size());
+
+        if constexpr (has_unary_minus<T>::value) {
+            gather_comm_elements_negated_kernel<<<N_blocks, N_threads>>>(
+                *this, d_buffer, d_site_index, n, lattice.field_alloc_size());
+        }
+
     } else {
         gather_comm_elements_kernel<<<N_blocks, N_threads>>>(*this, d_buffer, d_site_index, n,
                                                              lattice.field_alloc_size());

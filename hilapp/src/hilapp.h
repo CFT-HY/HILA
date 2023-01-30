@@ -436,6 +436,7 @@ struct call_info_struct {
     CXXConstructExpr *constructor;
     std::vector<argument_info> arguments;
     Expr *condExpr;
+    number_type vector_type_only;  // This is number_type::UNKNOWN if the type is not restricted
     argument_info object;
     bool decl_only;
     bool is_operator;
@@ -457,6 +458,7 @@ struct call_info_struct {
         has_site_dependent_conditional = is_defaulted = false;
         decl_only = false;
         is_vectorizable = true;
+        vector_type_only = number_type::UNKNOWN;
     }
 };
 

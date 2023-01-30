@@ -323,7 +323,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     T *receive_buffer;
     T *send_buffer;
 
-    int size_type;
+    size_t size_type;
     MPI_Datatype mpi_type = get_MPI_number_type<T>(size_type);
 
     if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
@@ -356,6 +356,7 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
         if (fs->send_buffer[d] == nullptr)
             fs->send_buffer[d] = fs->payload.allocate_mpi_buffer(to_node.sites);
+
         send_buffer = fs->send_buffer[d] + to_node.offset(par);
 
         fs->gather_comm_elements(d, par, send_buffer, to_node);
@@ -363,11 +364,14 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         size_t n = sites * size / size_type;
 #ifdef GPU_AWARE_MPI
         gpuStreamSynchronize(0);
+        //gpuDeviceSynchronize();
 #endif
 
         MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->send_request[par_i][d]);
+
         start_send_timer.stop();
+
     }
 
     // and do the boundary shuffle here, after MPI has started

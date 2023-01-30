@@ -33,6 +33,7 @@ class Array {
     }
 
     // and make non-explicit constructor from 0
+#pragma hila loop_function
     inline Array(const std::nullptr_t &z) {
         for (int i = 0; i < n * m; i++)
             c[i] = static_cast<T>(0);
@@ -144,6 +145,7 @@ class Array {
     }
 
     /// Assign from scalar to array
+#pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline Array<n, m, T> &operator=(const S rhs) {
         for (int i = 0; i < n * m; i++) {
@@ -152,9 +154,19 @@ class Array {
         return *this;
     }
 
-    bool operator==(const Array<n, m, T> &rhs) const {
-        T epsilon = 0;
-        return ((*this) - rhs).squarenorm() <= epsilon;
+    template <typename S>
+    bool operator==(const Array<n, m, S> &rhs) const {
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++) {
+                if (e(i, j) != rhs.e(i, j))
+                    return false;
+            }
+        return true;
+    }
+
+    template <typename S>
+    bool operator!=(const Array<n, m, S> &rhs) const {
+        return !(*this == rhs);
     }
 
     /// add assign an Array
@@ -410,7 +422,7 @@ std::ostream &operator<<(std::ostream &strm, const Array<n, m, T> &A) {
 }
 
 namespace hila {
-    
+
 template <int n, int m, typename T>
 std::string to_string(const Array<n, m, T> &A, int prec = 8, char separator = ' ') {
     return to_string(A.asMatrix(), prec, separator);
@@ -421,7 +433,7 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
     return prettyprint(A.asMatrix(), prec);
 }
 
-}
+} // namespace hila
 
 
 /// Norm squared function

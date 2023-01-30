@@ -123,6 +123,7 @@ class loopFunctionVisitor : public GeneralVisitor,
 
         if (is_constructor_stmt(s)) {
             handle_constructor_in_loop(s);
+            // llvm::errs() << "GOT CONSTRUCTOR " << get_stmt_str(s) << '\n';
             return true;
         }
 

@@ -3,26 +3,25 @@
 # Can be absolute or relative
 HILA_DIR := ../..
 
-.DEFAULT_GOAL := test_FFT
+# Set default goal and arch
+.DEFAULT_GOAL := hila_test
+
+APP_HEADERS := 
+
+ARCH := vanilla
+
+APP_OPTS := -DNDIM=3 -DSPECIAL_BOUNDARY_CONDITIONS
 
 # Read in the main makefile contents, incl. platforms
 include $(HILA_DIR)/libraries/main.mk
 
-#HILAPP_OPTS += -insert-includes
-#HILAPP_OPTS += -comment-pragmas
-
-APP_OPTS += -DNDIM=3
 
 # With multiple targets we want to use "make target", not "make build/target".
 # This is needed to carry the dependencies to build-subdir
 
-test_FFT: build/test_FFT ; @:
+hila_test: build/hila_test ; @:
 
 # Now the linking step for each target executable
-build/test_FFT: Makefile build/test_FFT.o $(HILA_OBJECTS) $(HEADERS)
-	$(LD) -o $@ build/test_FFT.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
-
-
-
-
+build/hila_test: Makefile build/hila_test.o $(HILA_OBJECTS) $(HEADERS) 
+	$(LD) -o $@ build/hila_test.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 

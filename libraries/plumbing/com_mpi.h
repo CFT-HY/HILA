@@ -56,7 +56,7 @@ int get_next_msg_tag();
 // in maxloc/minloc reductions
 
 template <typename T>
-MPI_Datatype get_MPI_number_type(int &size, bool with_int = false) {
+MPI_Datatype get_MPI_number_type(size_t &size, bool with_int = false) {
 
     if (std::is_same<hila::number_type<T>, int>::value) {
         size = sizeof(int);
@@ -86,6 +86,13 @@ MPI_Datatype get_MPI_number_type(int &size, bool with_int = false) {
 
     size = 1;
     return MPI_BYTE;
+}
+
+
+template <typename T>
+MPI_Datatype get_MPI_number_type() {
+    size_t s;
+    return get_MPI_number_type<T>(s);
 }
 
 
@@ -246,12 +253,11 @@ template <typename T>
 void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
     T recv_data[send_count];
     MPI_Datatype dtype;
-    int size;
 
     if (hila::check_input)
         return;
 
-    dtype = get_MPI_number_type<T>(size);
+    dtype = get_MPI_number_type<T>();
 
     reduction_timer.start();
     if (allreduce) {
@@ -286,12 +292,11 @@ template <typename T>
 void reduce_node_product(T *send_data, int send_count, bool allreduce = true) {
     T recv_data[send_count];
     MPI_Datatype dtype;
-    int size;
 
     if (hila::check_input)
         return;
 
-    dtype = get_MPI_number_type<T>(size);
+    dtype = get_MPI_number_type<T>();
 
     reduction_timer.start();
     if (allreduce) {

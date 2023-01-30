@@ -1,11 +1,5 @@
 //------------------------------------------------------------------------------
-// Generate transformed
-// hardware-dependent "kernels".
-//
-// Uses Clang RecursiveASTVisitor and Rewriter
-// interfaces
-//
-// Kari Rummukainen 2017-18
+// Generate code for vectorized (AVX) lattices
 //
 //------------------------------------------------------------------------------
 #include <sstream>
@@ -20,7 +14,7 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-//#include "llvm/Support/raw_ostream.h"
+// #include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
 #include "toplevelvisitor.h"
@@ -159,6 +153,7 @@ void GeneralVisitor::handle_loop_function_avx(call_info_struct &ci) {
         }
 
         // Check if there are elements in the first place
+        // THIS NEVER HAPPENS NOW; TODO: PROPER LOOP FUNCTION "rewrite"
         if (find_word(typestring, "element") != std::string::npos)
             generate_function = true;
     }
@@ -197,7 +192,8 @@ void GeneralVisitor::handle_loop_function_avx(call_info_struct &ci) {
         }
 }
 
-/// Constructors - should something be done here?
+// Constructors - should something be done here?
+// NOTE: this is called per declaration, not by call
 
 void GeneralVisitor::handle_loop_constructor_avx(call_info_struct &ci) {}
 
@@ -464,10 +460,10 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
                                 loopBuf.get(d.parityExpr->getSourceRange())); // mapped name was
                                                                               // get_stmt_str(d.e);
 
-                        code << l.vecinfo.vectorized_type << " " << d.name_with_dir << " = "
-                             << l.new_name << ".get_vector_at<" << l.vecinfo.vectorized_type
-                             << ">(loop_lattice.neighbours[" << dirname << "][" << looping_var
-                             << "]);\n";
+                        code << "const " << l.vecinfo.vectorized_type << " " << d.name_with_dir
+                             << " = " << l.new_name << ".get_vector_at<"
+                             << l.vecinfo.vectorized_type << ">(loop_lattice.neighbours[" << dirname
+                             << "][" << looping_var << "]);\n";
 
                         // and replace references in loop body
                         for (field_ref *ref : d.ref_list) {
@@ -524,6 +520,8 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
         }
 
         if (l.is_read_atX || (loop_info.has_conditional && l.is_written)) {
+            // if (!l.is_written)
+            //     code << "const ";
             code << l.vecinfo.vectorized_type << " " << l.loop_ref_name << " = " << l.new_name
                  << ".get_vector_at<" << l.vecinfo.vectorized_type << ">(" << looping_var << ");\n";
 
@@ -559,6 +557,30 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
             // loopBuf.replace( vi.decl->getSourceRange(), vi.vecinfo.vectorized_type );
             loopBuf.replace(vi.decl->getTypeSourceInfo()->getTypeLoc().getSourceRange(),
                             vi.vecinfo.vectorized_type);
+        }
+    }
+
+    // Check anonymous temporary constructors (e.g.  Complex<float>() -> Complex<Vec8f>() )
+    for (auto &ci : loop_function_calls) {
+        if (ci.is_vectorizable && ci.constructor && ci.is_site_dependent) {
+            // llvm::errs() << "lookign at constructor " << get_stmt_str(ci.constructor) << '\n';
+            if (ci.ctordecl->getTemplatedKind() != FunctionDecl::TemplatedKind::TK_NonTemplate) {
+
+                SourceRange sr = ci.constructor->getParenOrBraceRange();
+                if (sr.isValid() && isa<CXXTemporaryObjectExpr>(ci.constructor)) {
+
+                    SourceRange range(ci.constructor->getBeginLoc(),
+                                      sr.getBegin().getLocWithOffset(-1));
+
+                    vectorization_info vi;
+                    if (is_vectorizable_type(ci.constructor->getType(), vi)) {
+                        llvm::errs() << "Replacing " << loopBuf.get(range) << " with "
+                                     << vi.vectorized_type << '\n';
+
+                        loopBuf.replace(range, vi.vectorized_type);
+                    }
+                }
+            }
         }
     }
 

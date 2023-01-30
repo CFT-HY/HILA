@@ -3,6 +3,8 @@
 # this is included from main.mk -file, which is in turn included from 
 # application makefile
 #
+# Show option in "make help"
+#%     make [..] CUDA_VERSION=99.9 - set cuda version
 #
 
 # Define compiler -- NOTE: NEED AT LEAST CUDA 11 TO COMPILE c++17
@@ -37,7 +39,7 @@ LDLIBS += $(MPI_LIBS)
 LDFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 
 ################
 

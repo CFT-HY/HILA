@@ -144,6 +144,19 @@ bool GeneralVisitor::is_assignment_expr(Stmt *s, std::string *opcodestr, bool &i
 
 /////////////////////////////////////////////////////////////////
 
+bool GeneralVisitor::is_simple_reduction(const std::string &opcode, Expr *assignee) {
+    if (opcode == "+=" || opcode == "*=") {
+        // possibly reduction?
+        // check whether the assignee has loop local vars?  Or special reduction var
+        if (contains_loop_local_var(assignee) || contains_special_reduction_var(assignee))
+            return false;
+
+        // Now it is a simple reduction
+    }
+    return false;
+}
+
+/////////////////////////////////////////////////////////////////
 bool GeneralVisitor::is_increment_expr(Stmt *s, Expr **assignee) {
     if (CXXOperatorCallExpr *OP = dyn_cast<CXXOperatorCallExpr>(s)) {
 

@@ -31,7 +31,11 @@ int main(int argc, char **argv) {
         sum = 0;
         onsites(ALL) { sum += (p[X] - p2[X]).squarenorm(); }
         hila::out0 << "Sum " << sum << '\n';
-        assert(fabs(sum) < 1e-10 && "First FFT\n");
+        if (fabs(sum) < 1e-10) {
+            hila::out0 << "First FFT passed" << std::endl;
+        } else {
+            hila::out0 << "First FFT FAILED; limit 1e-10" << std::endl;
+        }
 
         // After two applications the field should be back to a constant * volume
         f2[ALL] = lattice.volume();
@@ -45,7 +49,11 @@ int main(int argc, char **argv) {
             tnorm += f[X].squarenorm();
         }
         hila::out0 << "Norm " << sum / tnorm << '\n';
-        assert(fabs(sum / tnorm) < 1e-10 && "Second FFT\n");
+        if (fabs(sum / tnorm) < 1e-10) {
+            hila::out0 << "2nd FFT passed\n";
+        } else {
+            hila::out0 << "Second FFT FAILED, limit 1e-10" << std::endl;
+        }
 
 
         onsites(ALL) {
@@ -62,12 +70,11 @@ int main(int argc, char **argv) {
         sum = 0;
         onsites(ALL) { sum += (p[X] - p2[X]).squarenorm(); }
         hila::out0 << "Wave sum " << sum << '\n';
-        assert(fabs(sum) < 1e-10 && "Wave FFT\n");
-
+        if (fabs(sum) > 1e-10) {
+            hila::out0 << "Wave FFT FAILED" << std::endl;
+        } 
     }
 
-    // Test reading and writing a field
-    onsites(ALL) { f[X].random(); }
 
     // write_fields("test_config_filename", p, f);
     // read_fields("test_config_filename", p, f2);

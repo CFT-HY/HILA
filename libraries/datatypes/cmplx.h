@@ -2,8 +2,8 @@
 #define CMPLX_H_
 
 // let's not include the std::complex
-//#include <complex>
-//#include <cmath>
+// #include <complex>
+// #include <cmath>
 
 #include "plumbing/defs.h"
 
@@ -83,11 +83,11 @@ class Complex {
         return im;
     }
 
-    inline T &real() {
+    inline T &real() const_function {
         return re;
     }
 
-    inline T &imag() {
+    inline T &imag() const_function {
         return im;
     }
     // automatic casting from Complex<T> -> Complex<A>
@@ -108,6 +108,7 @@ class Complex {
         return *this;
     }
 
+#pragma hila loop_function
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
     inline Complex<T> &operator=(S s) {
         re = s;
@@ -115,9 +116,14 @@ class Complex {
         return *this;
     }
 
-    bool operator==(const Complex<T> &rhs) const {
-        T epsilon = 0;
-        return ((*this) - rhs).squarenorm() <= epsilon;
+    template <typename S>
+    bool operator==(const Complex<S> &rhs) const {
+        return (re == rhs.re && im == rhs.im);
+    }
+
+    template <typename S>
+    bool operator!=(const Complex<S> &rhs) const {
+        return (re != rhs.re || im != rhs.im);
     }
 
     inline T squarenorm() const {
@@ -163,6 +169,7 @@ class Complex {
     inline Complex<T> operator+() const {
         return *this;
     }
+
     inline Complex<T> operator-() const {
         return Complex<T>(-re, -im);
     }
@@ -432,9 +439,9 @@ inline void set_complex_in_var(T &var, int i, const Complex<hila::number_type<T>
 } // namespace hila
 
 // generic Complex constructor - type from arguments
-template <typename T,std::enable_if_t<hila::is_floating_point<T>::value, int> = 0>
+template <typename T, std::enable_if_t<hila::is_floating_point<T>::value, int> = 0>
 Complex<T> complex(const T re, const T im) {
-    return Complex<T>(re,im);
+    return Complex<T>(re, im);
 }
 
 
@@ -756,7 +763,8 @@ class Imaginaryunit_t : public Imaginary_t<double> {
 #if defined(CUDA) || defined(HIP)
 __device__
 #endif
-constexpr Imaginaryunit_t I = Imaginaryunit_t();   // this fails on GPUs without additional support
+    constexpr Imaginaryunit_t I =
+        Imaginaryunit_t(); // this fails on GPUs without additional support
 // #define I Imaginaryunit_t()
 
 template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
@@ -794,7 +802,7 @@ inline auto operator*(T c, const Imaginaryunit_t &iv) {
 
 template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
 inline auto operator*(const Imaginaryunit_t &iv, T c) {
-    return c*iv;
+    return c * iv;
 }
 
 
@@ -838,20 +846,20 @@ inline Complex<T> cbrt(Complex<T> z) {
 }
 
 /// pow(z.p) = z^p = exp(p*log(z))
-template <typename T>
-inline Complex<T> pow(Complex<T> z, Complex<T> p) {
+template <typename A, typename B>
+inline auto pow(Complex<A> z, Complex<B> p) {
     return exp(p * log(z));
 }
 
 /// pow(z.p) with scalar power
-template <typename T>
-inline Complex<T> pow(Complex<T> z, T p) {
+template <typename T, typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
+inline Complex<T> pow(Complex<T> z, S p) {
     return exp(p * log(z));
 }
 
 /// pow(z.p) with scalar base
-template <typename T>
-inline Complex<T> pow(T z, Complex<T> p) {
+template <typename T, typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
+inline Complex<T> pow(S z, Complex<T> p) {
     return exp(p * log(z));
 }
 

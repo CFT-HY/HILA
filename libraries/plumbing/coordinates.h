@@ -15,6 +15,7 @@
 /// Direction can be used as an array index (interchangably with int)
 ///////////////////////////////////////////////////////////////////////////
 
+// clang-format off
 #if NDIM == 4
 enum Direction : unsigned {
     e_x = 0,
@@ -28,19 +29,29 @@ enum Direction : unsigned {
     NDIRECTIONS
 };
 #elif NDIM == 3
-enum Direction : unsigned {
+enum Direction : unsigned { 
     e_x = 0,
     e_y,
     e_z,
     e_z_down,
     e_y_down,
+    e_x_down, 
+    NDIRECTIONS 
+};
+#elif NDIM == 2
+enum Direction : unsigned { 
+    e_x = 0,
+    e_y,
+    e_y_down,
     e_x_down,
     NDIRECTIONS
 };
-#elif NDIM == 2
-enum Direction : unsigned { e_x = 0, e_y, e_y_down, e_x_down, NDIRECTIONS };
 #elif NDIM == 1
-enum Direction : unsigned { e_x = 0, e_x_down, NDIRECTIONS };
+enum Direction : unsigned { 
+    e_x = 0,
+    e_x_down,
+    NDIRECTIONS
+};
 #endif
 
 constexpr unsigned NDIRS = NDIRECTIONS; //
@@ -211,28 +222,25 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     ~CoordinateVector_t() = default;
     CoordinateVector_t(const CoordinateVector_t &v) = default;
 
-    /// Construct from site index 
-    // CoordinateVector_t(SiteIndex s); 
+    /// Construct from site index
+    // CoordinateVector_t(SiteIndex s);
 
     // initialize with Direction -- useful for automatic conversion
     explicit inline CoordinateVector_t(const Direction dir) {
-        foralldir (d)
-            this->e(d) = dir_dot_product(d, dir);
+        foralldir(d) this->e(d) = dir_dot_product(d, dir);
     }
 
     // construct from vector - make this not explicit so that
     // conversions from Vector methods are automatic
     inline CoordinateVector_t(const Vector<NDIM, T> &v) {
-        foralldir (d)
-            this->e(d) = v.e(d);
+        foralldir(d) this->e(d) = v.e(d);
     }
 
     /// Construct CV automatically from right-size initializer list
     /// This does not seem to be dangerous, so keep non-explicit
     template <typename S, std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     inline CoordinateVector_t(std::initializer_list<S> rhs) {
-        assert(rhs.size() == NDIM &&
-               "CoordinateVector initializer list size does not match");
+        assert(rhs.size() == NDIM && "CoordinateVector initializer list size does not match");
         int i = 0;
         for (auto it = rhs.begin(); it != rhs.end(); it++, i++)
             this->e(i) = *it;
@@ -240,8 +248,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     /// Construct from 0, using nullptr_t autocast
     inline CoordinateVector_t(std::nullptr_t z) {
-        foralldir (d)
-            this->e(d) = 0;
+        foralldir(d) this->e(d) = 0;
     }
 
     // /// cast to vector<NDIM,int> - useful for method inheritance
@@ -253,9 +260,9 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // }
 
     /// Assign from 0
+#pragma hila loop_function
     inline CoordinateVector_t &operator=(std::nullptr_t z) {
-        foralldir (d)
-            this->e(d) = 0;
+        foralldir(d) this->e(d) = 0;
         return *this;
     }
 
@@ -273,26 +280,26 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // Assign
 
     bool operator==(const CoordinateVector_t<T> &rhs) const {
-        foralldir (d) {
+        foralldir(d) {
             if (this->e(d) != rhs.e(d))
                 return false;
         }
         return true;
     }
 
-    //#pragma hila loop function
+    // #pragma hila loop function
     T &operator[](const int i) {
         return this->e(i);
     }
-    //#pragma hila loop function
+    // #pragma hila loop function
     T &operator[](const Direction d) {
         return this->e((int)d);
     }
-    //#pragma hila loop function
+    // #pragma hila loop function
     T operator[](const int i) const {
         return this->e(i);
     }
-    //#pragma hila loop function
+    // #pragma hila loop function
     T operator[](const Direction d) const {
         return this->e((int)d);
     }
@@ -300,8 +307,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // Parity of this coordinate
     ::Parity parity() const {
         int s = 0;
-        foralldir (d)
-            s += this->e(d);
+        foralldir(d) s += this->e(d);
         if (s % 2 == 0)
             return Parity::even;
         else
@@ -330,14 +336,12 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // add coordinate vector -- def explicit as loop_function
     // #pragma hila loop function  //TODO
     CoordinateVector_t &operator+=(const CoordinateVector_t &rhs) {
-        foralldir (d)
-            this->e(d) += rhs.e(d);
+        foralldir(d) this->e(d) += rhs.e(d);
         return *this;
     }
 
     CoordinateVector_t &operator-=(const CoordinateVector_t &rhs) {
-        foralldir (d)
-            this->e(d) -= rhs.e(d);
+        foralldir(d) this->e(d) -= rhs.e(d);
         return *this;
     }
 
@@ -362,8 +366,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
     // unary -   -explicitly loop_function
     inline CoordinateVector_t operator-() const {
         CoordinateVector_t res;
-        foralldir (d)
-            res.e(d) = -this->e(d);
+        foralldir(d) res.e(d) = -this->e(d);
         return res;
     }
 
@@ -374,8 +377,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     inline T dot(const CoordinateVector_t &v) const {
         T res(0);
-        foralldir (d)
-            res += v.e(d) * this->e(d);
+        foralldir(d) res += v.e(d) * this->e(d);
         return res;
     }
 
@@ -385,7 +387,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     inline CoordinateVector_t mod(const CoordinateVector_t &m) const {
         CoordinateVector_t<T> r;
-        foralldir (d) {
+        foralldir(d) {
             r.e(d) = pmod((*this)[d], m[d]);
         }
         return r;
@@ -395,7 +397,6 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
     // #pragma hila loop_function
     // inline SiteIndex index() const;
-
 };
 
 /// Define the std CoordinateVector type here
@@ -418,7 +419,7 @@ inline CoordinateVector_t<T> operator-(CoordinateVector_t<T> cv1,
 /// Special Direction operators: dir + dir -> CoordinateVector
 inline CoordinateVector operator+(const Direction d1, const Direction d2) {
     CoordinateVector r;
-    foralldir (d) {
+    foralldir(d) {
         r.e(d) = dir_dot_product(d1, d);
         r.e(d) += dir_dot_product(d2, d);
     }
@@ -427,7 +428,7 @@ inline CoordinateVector operator+(const Direction d1, const Direction d2) {
 
 inline CoordinateVector operator-(const Direction d1, const Direction d2) {
     CoordinateVector r;
-    foralldir (d) {
+    foralldir(d) {
         r.e(d) = dir_dot_product(d1, d);
         r.e(d) -= dir_dot_product(d2, d);
     }
@@ -437,8 +438,7 @@ inline CoordinateVector operator-(const Direction d1, const Direction d2) {
 /// Special operators: int*Direction -> CoordinateVector (of type int!)
 inline CoordinateVector operator*(const int i, const Direction dir) {
     CoordinateVector r;
-    foralldir (d)
-        r.e(d) = i * dir_dot_product(d, dir);
+    foralldir(d) r.e(d) = i * dir_dot_product(d, dir);
     return r;
 }
 
@@ -467,11 +467,9 @@ inline CoordinateVector_t<T> operator+(const Direction dir, CoordinateVector_t<T
 
 template <typename T>
 inline CoordinateVector_t<T> operator-(const Direction dir, CoordinateVector_t<T> cv) {
-    foralldir (d)
-        cv.e(d) = dir_dot_product(dir, d) - cv.e(d);
+    foralldir(d) cv.e(d) = dir_dot_product(dir, d) - cv.e(d);
     return cv;
 }
-
 
 
 /////////////////////////////////////////////////////////////////////

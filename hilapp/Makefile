@@ -182,7 +182,7 @@ OBJECTS = \
   $(BUILDDIR)/stringops.o \
   $(BUILDDIR)/codegen.o \
   $(BUILDDIR)/codegen_cpu.o \
-  $(BUILDDIR)/codegen_cuda.o \
+  $(BUILDDIR)/codegen_gpu.o \
   $(BUILDDIR)/codegen_avx_new.o \
   $(BUILDDIR)/codegen_openacc.o \
   $(BUILDDIR)/srcbuf.o \
@@ -194,6 +194,7 @@ OBJECTS = \
   $(BUILDDIR)/depends_on_site_visitor.o \
   $(BUILDDIR)/contains_random_visitor.o \
   $(BUILDDIR)/contains_loop_local_var_visitor.o \
+  $(BUILDDIR)/contains_reduction_var.o \
   $(BUILDDIR)/function_contains_loop_visitor.o \
   $(BUILDDIR)/addrof_and_ref_visitor.o \
   $(BUILDDIR)/optionsparser.o \

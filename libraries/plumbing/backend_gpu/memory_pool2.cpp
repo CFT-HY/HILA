@@ -29,7 +29,7 @@
 #if defined(GPU_MEMORY_POOL)
 
 #ifndef GPU_MEMORY_POOL_FRACTION
-#define GPU_MEMORY_POOL_FRACTION 0.5
+#define GPU_MEMORY_POOL_FRACTION 0.2
 #endif
 
 #if !defined(CUDA) && !defined(HIP)
@@ -112,7 +112,7 @@ void *gpu_memory_allocate(size_t m_alloc) {
     double fraction = (double)m_alloc / gpu_total_memory;
 
     hila::out0 << "GPU memory: allocating " << m_alloc / mb << " MB out of total "
-            << gpu_total_memory / mb << "(" << (int)(fraction * 100) << "%)\n";
+               << gpu_total_memory / mb << "(" << (int)(fraction * 100) << "%)\n";
     total_pool_size += m_alloc;
 
     void *b = nullptr;
@@ -288,6 +288,8 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
         gpu_memory_pool_init();
     }
 
+    gpuStreamSynchronize(0);
+
     // make req_size to be multiple of alignment
     size_t align_mod = req_size % ALLOC_ALIGNMENT;
     if (align_mod > 0)
@@ -345,11 +347,11 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
 
     } else {
         // try to allocate more?
-        if (total_pool_size < 0.9 * gpu_total_memory) {
-            size_t m_alloc = 0.5 * (gpu_total_memory - total_pool_size);
+        if (total_pool_size < (1.0 - 1.5 * GPU_MEMORY_POOL_FRACTION) * gpu_total_memory) {
+            size_t m_alloc = GPU_MEMORY_POOL_FRACTION * gpu_total_memory;
             m_alloc = (m_alloc > req_size) ? m_alloc : req_size;
-            // leave 5% of total memory
-            if (m_alloc + total_pool_size < 0.95 * gpu_total_memory) {
+            // leave 10% of total memory
+            if (m_alloc + total_pool_size < 0.9 * gpu_total_memory) {
                 // put an "empty" block as a separator (non-mergeable)
                 block *p = get_block_descriptor();
                 p->size = 0;
@@ -359,6 +361,7 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
                 // and new memory block
                 p = get_block_descriptor();
                 p->ptr = gpu_memory_allocate(m_alloc);
+                total_pool_size += m_alloc;
                 p->size = m_alloc;
                 add_block_to_top(p);
                 mark_block_free(p);
@@ -369,7 +372,8 @@ void gpu_memory_pool_alloc(void **ret, size_t req_size) {
         }
     }
 
-    hila::out << "Out of memory in GPU pool, request size " << req_size << '\n';
+    hila::out << "MPI rank " << hila::myrank() << ": out of memory in GPU pool, request size "
+              << req_size << ", current pool size " << total_pool_size << std::endl;
     hila::terminate(0);
 }
 
@@ -417,15 +421,12 @@ void gpu_memory_pool_purge() {}
 void gpu_memory_pool_report() {
     if (hila::myrank() == 0) {
         hila::out << "\nGPU Memory pool statistics from node 0:\n";
-        hila::out << "   Total pool size "
-                     << ((double)total_pool_size) / (1024 * 1024) << " MB\n";
+        hila::out << "   Total pool size " << ((double)total_pool_size) / (1024 * 1024) << " MB\n";
         hila::out << "   # of allocations " << n_allocs << '\n';
-        hila::out << "   Average free list search "
-                     << free_list_avg_search / n_allocs << " steps\n";
-        hila::out << "   Average free list size " << free_list_avg_size / n_allocs
-                     << " items\n";
-        hila::out << "   Maximum memory use " << max_used_size / (1024 * 1024)
-                     << " MB\n\n";
+        hila::out << "   Average free list search " << free_list_avg_search / n_allocs
+                  << " steps\n";
+        hila::out << "   Average free list size " << free_list_avg_size / n_allocs << " items\n";
+        hila::out << "   Maximum memory use " << max_used_size / (1024 * 1024) << " MB\n\n";
     }
 }
 
