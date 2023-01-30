@@ -11,9 +11,11 @@
 ////////////////////////////////////////////////////////////////////////////
 /// Entry for function calls inside loops.  The call requires a bit
 /// special treatment, the arguments can be field[X] etc. elements
+/// is_assginment = true if the function call is on the rhs of assignment 
+/// (or result is used as non-const reference)
 ////////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::handle_function_call_in_loop(Stmt *s) {
+void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) {
 
     // Get the call expression
     CallExpr *Call = dyn_cast<CallExpr>(s);
@@ -52,7 +54,7 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s) {
     }
 
     // check the arg list
-    call_info_struct ci = handle_loop_function_args(D, Call, contains_rng);
+    call_info_struct ci = handle_loop_function_args(D, Call, contains_rng, is_assignment);
     ci.call = Call;
     ci.funcdecl = D;
     ci.contains_random = contains_rng;
@@ -111,6 +113,11 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
     for (int i = 0; i < decl->getNumParams(); i++)
         llvm::errs() << decl->getParamDecl(i)->getNameAsString() << ", ";
     llvm::errs() << "\n";
+
+    vectorization_info vi;
+    llvm::errs() << "  Constructor call " << get_stmt_str(CtorE) << " type "
+                 << CtorE->getType().getCanonicalType().getAsString(PP) << " is vectorizable "
+                 << is_vectorizable_type(CtorE->getType(), vi) << '\n';
 
 #endif
 
@@ -189,7 +196,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
 /////////////////////////////////////////////////////////////////////////////////
 
 call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
-                                                           bool sitedep) {
+                                                           bool sitedep, bool is_assignment) {
 
     call_info_struct cinfo;
 
@@ -329,8 +336,11 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
             if (is_top_level && is_field_with_X_expr(E)) {
 
                 // following is called only if this==g_TopLevelVisitor, this just makes
-                // it compile
-                bool is_assign = !(is_const || E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
+                // it compile 
+                // CONST_FUNCTION is dangerous at the moment here!
+                bool is_assign = !(is_const || (const_function && !is_assignment) ||
+                                   E->isModifiableLvalue(*Context) != Expr::MLV_Valid);
+
                 g_TopLevelVisitor->handle_field_X_expr(E, is_assign, (!is_const && !out_only),
                                                        true);
 
@@ -383,8 +393,8 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
     cinfo.is_site_dependent |= sitedep;
 
 #ifdef LOOP_FUNCTION_DEBUG
-    llvm::errs() << "  Site dep at the end of analysis: " << cinfo.is_site_dependent << " vectorizable " << 
-        cinfo.is_vectorizable << '\n';
+    llvm::errs() << "  Site dep at the end of analysis: " << cinfo.is_site_dependent
+                 << " vectorizable " << cinfo.is_vectorizable << '\n';
 #endif
 
     return cinfo;
@@ -601,7 +611,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 sfc.replace_expression = l_lattice + "coordinate(";
                 sfc.args_string = "e_x";
                 sfc.add_loop_var = true;
-            
+
             } else if (name == "y") {
                 sfc.replace_expression = l_lattice + "coordinate(";
                 sfc.args_string = "e_y";
@@ -612,9 +622,14 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
                 sfc.args_string = "e_z";
                 sfc.add_loop_var = true;
 
-            } else if (name == "random") {
-                sfc.replace_expression = "hila::random(";
-                sfc.add_loop_var = false;
+            } else if (name == "t") {
+                sfc.replace_expression = l_lattice + "coordinate(";
+                sfc.args_string = "e_t";
+                sfc.add_loop_var = true;
+
+                // } else if (name == "random") {
+                //     sfc.replace_expression = "hila::random(";
+                //     sfc.add_loop_var = false;
 
             } else if (name == "size") {
                 sfc.replace_expression = "loop_lattice_size(";

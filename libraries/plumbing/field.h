@@ -17,6 +17,7 @@
 
 #include "plumbing/com_mpi.h"
 
+
 // This is a marker for hilapp -- will be removed by it
 #define onsites(p) for (Parity par_dummy__(p); par_dummy__ == EVEN; par_dummy__ = ODD)
 
@@ -24,8 +25,9 @@ template <typename T>
 class Field;
 
 template <typename T>
-void ensure_field_operators_exist(Field<T> &f);
+void ensure_field_operators_exist();
 
+#include "plumbing/ensure_loop_functions.h"
 
 /// Field class
 /// This implements the standard methods for accessing fields
@@ -272,7 +274,7 @@ class Field {
         // Because destructor is instantiated for all fields,
         // use this to put in a hook for generating call to this function
         // in preprocessing stage
-        ensure_field_operators_exist(*this);
+        ensure_field_operators_exist<T>();
 #endif
     }
 
@@ -432,9 +434,26 @@ class Field {
     }
 
 
+    ///////////////////////////////////////////////////////////////////////
+    /// Boundary condition methods
+
+    /// Set boundary condition for field
+
     void set_boundary_condition(Direction dir, hila::bc bc) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
+
+
+#ifdef HILAPP
+        // this section is just to generate loop function calls for unary-.  Will removed by hilapp
+        // from final code.  If type T does not have -, give error
+
+        static_assert(has_unary_minus<T>::value, "BC possible only for types which implement unary "
+                                                 "minus (-) -operator and are not unsigned");
+
+        ensure_unary_minus_is_loop_function<T>();
+#endif
+
         // TODO: This works as intended only for periodic/antiperiodic b.c.
         check_alloc();
         fs->boundary_condition[dir] = bc;
@@ -455,9 +474,12 @@ class Field {
         // Make sure boundaries get refreshed
         mark_changed(ALL);
 #else
-        assert(bc == hila::bc::PERIODIC && "Only periodic bondary conditions when SPECIAL_BOUNDARY_CONDITIONS is undefined");
+        assert(bc == hila::bc::PERIODIC &&
+               "Only periodic bondary conditions when SPECIAL_BOUNDARY_CONDITIONS is undefined");
 #endif
     }
+
+    ///////////////////////////////////////////////////////////////////////
 
     hila::bc get_boundary_condition(Direction dir) const {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -660,13 +682,18 @@ class Field {
         return ((*this) - rhs).squarenorm() <= epsilon;
     }
 
-    hila::number_type<T> squarenorm() const {
-        hila::number_type<T> n = 0;
+    double squarenorm() const {
+        double n = 0;
         onsites(ALL) {
             n += ::squarenorm((*this)[X]);
         }
         return n;
     }
+
+    double norm() {
+        return sqrt(squarenorm());
+    }
+
 
     ///////////////////////////////////////////////////////////////////////
 
@@ -848,6 +875,7 @@ class Field {
     T max(CoordinateVector &loc) const;
     T max(Parity par, CoordinateVector &loc) const;
     T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
+
 
 }; // End of class Field<>
 
@@ -1215,6 +1243,39 @@ Field<R> abs(const Field<T> &arg) {
     return res;
 }
 
+template <typename T, typename P, typename R = decltype(pow(std::declval<T>()), std::declval<P>())>
+Field<R> pow(const Field<T> &arg, const P p) {
+    Field<R> res;
+    onsites(ALL) {
+        res[X] = pow(arg[X], p);
+    }
+    return res;
+}
+
+template <typename T>
+double squarenorm(const Field<T> &arg) {
+    double r = 0;
+    onsites(ALL) {
+        r += squarenorm(arg[X]);
+    }
+    return r;
+}
+
+template <typename T>
+double norm(const Field<T> &arg) {
+    return sqrt(squarenorm(arg));
+}
+
+
+template <typename A, typename B, typename R = decltype(std::declval<A>() - std::declval<B>())>
+double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
+    double res = 0;
+    onsites(ALL) {
+        res += squarenorm(a[X] - b[X]);
+    }
+    return res;
+}
+
 
 /////////////////////////////////////////////////////////////////
 
@@ -1322,22 +1383,14 @@ inline void dummy_X_f() {
 /// generater necessary functions.  Add here ops as needed
 
 template <typename T>
-inline void ensure_field_operators_exist(Field<T> &f) {
+inline void ensure_field_operators_exist() {
 
-    onsites(ALL) {
-        f[X] = 0;     // set to zero
-        f[X] = -f[X]; // unary -  -- needed for antiperiodic b.c.
-    }
-    // same for non-vectorized loop
-    onsites(ALL) {
-        if (X.coordinate(e_x) < X.coordinate(e_y)) {
-            f[X] = 0;
-            f[X] = -f[X];
-        }
-    }
+    ensure_unary_minus_is_loop_function<T>();
+    ensure_assign_zero_is_loop_function<T>();
 
     // make shift also explicit
     CoordinateVector v = 0;
+    Field<T> f;
     f = f.shift(v, ALL);
 }
 

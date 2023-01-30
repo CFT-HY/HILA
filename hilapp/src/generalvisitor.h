@@ -101,9 +101,8 @@ class GeneralVisitor {
 
     /// Report diagnostic info
     template <unsigned N>
-    void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation &SL,
-                    const char (&msg)[N], const char *s1 = nullptr,
-                    const char *s2 = nullptr, const char *s3 = nullptr) {
+    void reportDiag(DiagnosticsEngine::Level lev, const SourceLocation &SL, const char (&msg)[N],
+                    const char *s1 = nullptr, const char *s2 = nullptr, const char *s3 = nullptr) {
         // we'll do reporting only when output is on, avoid double reports
         auto &DE = Context->getDiagnostics();
         auto ID = DE.getCustomDiagID(lev, msg);
@@ -124,8 +123,7 @@ class GeneralVisitor {
             r = SourceRange(CSR.getAsRange().getBegin(), r.getEnd());
         }
         if (r.getEnd().isMacroID()) {
-            CharSourceRange CSR =
-                TheRewriter.getSourceMgr().getImmediateExpansionRange(r.getEnd());
+            CharSourceRange CSR = TheRewriter.getSourceMgr().getImmediateExpansionRange(r.getEnd());
             r = SourceRange(r.getBegin(), CSR.getAsRange().getEnd());
         }
         return r;
@@ -161,26 +159,20 @@ class GeneralVisitor {
     /// getCanonicalType takes away typedefs, getUnqualifiedType() qualifiers, pp just
     /// in case the type string needs to begin with the string
     bool is_field_storage_expr(Expr *E) {
-        return (
-            E &&
-            E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
-                field_storage_type) == 0);
+        return (E && E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
+                         field_storage_type) == 0);
     }
 
     /// Check the expression of a field expression
     bool is_field_expr(Expr *E) {
-        return (
-            E &&
-            E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
-                field_type) == 0);
+        return (E && E->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
+                         field_type) == 0);
     }
 
     /// Check if declaration declate a field
     bool is_field_decl(ValueDecl *D) {
-        return (
-            D &&
-            D->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
-                field_type) == 0);
+        return (D && D->getType().getCanonicalType().getUnqualifiedType().getAsString(PP).find(
+                         field_type) == 0);
     }
 
     /// try to figure out whether expressions are duplicates
@@ -227,6 +219,8 @@ class GeneralVisitor {
     bool is_assignment_expr(Stmt *s, std::string *opcodestr, bool &iscompound,
                             Expr **assignee = nullptr, Expr **assigned_expr = nullptr);
 
+    bool is_simple_reduction(const std::string &opcode, Expr *assignee);
+
     bool is_increment_expr(Stmt *s, Expr **assignee = nullptr);
 
     bool is_site_dependent(Expr *e, std::vector<var_info *> *dependent_var);
@@ -240,6 +234,8 @@ class GeneralVisitor {
     bool is_site_dependent_access_op(Expr *e);
 
     bool contains_loop_local_var(Expr *e, std::vector<var_info *> *loop_var = nullptr);
+
+    bool contains_special_reduction_var(Expr *e);
 
     /// is the stmt pointing now to a function call
     bool is_function_call_stmt(Stmt *s);
@@ -295,13 +291,12 @@ class GeneralVisitor {
 
     bool handle_loop_function_if_needed(call_info_struct &ci);
 
-    call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call,
-                                               bool sitedep);
+    call_info_struct handle_loop_function_args(FunctionDecl *D, CallExpr *Call, bool sitedep,
+                                               bool is_assignment = false);
 
     bool handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep,
                               std::vector<var_info *> *out_variables,
-                              std::vector<var_info *> *dep_variables,
-                              argument_info &ai);
+                              std::vector<var_info *> *dep_variables, argument_info &ai);
 
     bool attach_dependent_vars(std::vector<var_info *> &variables, bool sitedep,
                                std::vector<var_info *> &dep_variables);
@@ -323,8 +318,7 @@ class GeneralVisitor {
     bool has_pragma(Decl *d, const pragma_hila p, const char **arg = nullptr);
     bool has_pragma(FunctionDecl *fd, const pragma_hila p, const char **arg = nullptr);
     bool has_pragma(Stmt *S, const pragma_hila p, const char **arg = nullptr);
-    bool has_pragma(const SourceLocation sl, const pragma_hila p,
-                    const char **arg = nullptr);
+    bool has_pragma(const SourceLocation sl, const pragma_hila p, const char **arg = nullptr);
 };
 
 #endif // ifdef GENERALVISITOR_H

@@ -54,7 +54,7 @@ using gpuError = cudaError;
 #define gpuFree(a) GPU_CHECK(cudaFreeAsync(a, 0))
 
 #else
-#define gpuMalloc(a, b) GPU_CHECK(cudaMalloc(a, b))
+#define gpuMalloc(a, b) GPU_CHECK(cudaMalloc((void **)a, b))
 #define gpuFree(a) GPU_CHECK(cudaFree(a))
 
 #endif
@@ -109,7 +109,7 @@ using gpuError = hipError_t;
 #define gpuMemPoolReport() do {} while (0)
 // clang-format on
 
-#define gpuMalloc(a, b) GPU_CHECK(hipMalloc(a, b))
+#define gpuMalloc(a, b) GPU_CHECK(hipMalloc((void **)a, b))
 #define gpuFree(a) GPU_CHECK(hipFree(a))
 
 #endif // ifdef memory pool

@@ -1014,7 +1014,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 //         MPI_Datatype dtype;
 //         int s;
 
-//         dtype = get_MPI_number_type<T>(s);
+//         dtype = _type<T>(s);
 //         assert(dtype != MPI_BYTE && "Unknown number_type in gpu_reduce_sum");
 
 //         if (allreduce) {
@@ -1031,14 +1031,14 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 
 template <typename T>
 T Field<T>::gpu_minmax(bool min_or_max, Parity par, CoordinateVector &loc) const {
-    backend_lattice_struct lattice_info = *(this->fs->lattice.backend_lattice);
-    lattice_info.loop_begin = this->fs->lattice.loop_begin(par);
-    lattice_info.loop_end = this->fs->lattice.loop_end(par);
+    backend_lattice_struct lattice_info = *(lattice.backend_lattice);
+    lattice_info.loop_begin = lattice.loop_begin(par);
+    lattice_info.loop_end = lattice.loop_end(par);
     unsigned const node_system_size = lattice_info.loop_end - lattice_info.loop_begin;
 
     std::pair<T, unsigned> value_and_coordinate =
         gpu_launch_minmax_kernel(this->field_buffer(), node_system_size, min_or_max, lattice_info);
-    loc = this->fs->lattice.coordinates(value_and_coordinate.second);
+    loc = lattice.coordinates(value_and_coordinate.second);
     return value_and_coordinate.first;
 }
 

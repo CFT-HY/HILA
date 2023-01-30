@@ -15,6 +15,8 @@ hila::timer fft_buffer_timer("copy fft buffers");
 hila::timer pencil_collect_timer("copy pencils");
 hila::timer pencil_save_timer("save pencils");
 
+hila::timer binning_timer("bin field time");
+
 // a couple of global fft variables - easiest this way
 std::vector<pencil_struct> hila_pencil_comms[NDIM];
 unsigned hila_fft_my_columns[NDIM]; // how many columns does this node take care of

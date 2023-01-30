@@ -160,7 +160,7 @@ class TopLevelVisitor : public GeneralVisitor,
     void check_addrofops_and_refs(Stmt *S);
 
     // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
-    void handle_function_call_in_loop(Stmt *s);
+    void handle_function_call_in_loop(Stmt *s, bool is_assign = false);
 
     void handle_member_call_in_loop(Stmt *s);
 

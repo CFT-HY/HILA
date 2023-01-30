@@ -4,6 +4,8 @@
 #include "hila.h"
 
 
+extern hila::timer binning_timer;
+
 /// sd_k_bin_parameters holds the parameters to define binning.
 
 struct sd_k_bin_parameters {
@@ -134,7 +136,9 @@ class k_binning {
     template <typename T>
     std::vector<T> bin_k_field(const Field<T> &f) {
 
-        if (k_avg.size() != par.bins) 
+        binning_timer.start();
+
+        if (k_avg.size() != par.bins)
             sd_calculate_bin_info();
 
         ReductionVector<T> s(par.bins);
@@ -149,6 +153,8 @@ class k_binning {
             }
         }
 
+        binning_timer.stop();
+
         return s.vector();
     }
 
@@ -160,7 +166,9 @@ class k_binning {
         using float_t = hila::number_type<T>;
         constexpr int n_float = sizeof(T) / sizeof(float_t);
 
-        if (k_avg.size() != par.bins) 
+        binning_timer.start();
+
+        if (k_avg.size() != par.bins)
             sd_calculate_bin_info();
 
         ReductionVector<double> s(par.bins);
@@ -180,6 +188,8 @@ class k_binning {
             }
         }
 
+        binning_timer.stop();
+        
         return s.vector();
     }
 
@@ -210,22 +220,21 @@ class k_binning {
             // then need copy
             constexpr int nc = sizeof(T) / sizeof(cmplx_t);
 
-            return spectraldensity(
-                *reinterpret_cast<const Field<Vector<nc, cmplx_t>> *>(&f));
+            return spectraldensity(*reinterpret_cast<const Field<Vector<nc, cmplx_t>> *>(&f));
         } else {
             // now the size of input is not evenly divisible by sizeof complex.
             // new complex field
             constexpr int nc = sizeof(T) / sizeof(cmplx_t) + 1;
 
             Field<Vector<nc, cmplx_t>> cfield;
+
             onsites(ALL) {
-                union {
-                    T tval;
-                    Vector<nc, cmplx_t> cvec;
-                } u;
-                u.tval = f[X];
-                u.cvec.e(nc - 1).im = 0;
-                cfield[X] = u.cvec;
+
+                cfield[X] = 0;
+                for (int i = 0; i < sizeof(T) / sizeof(hila::number_type<T>); i++) {
+                    auto a = hila::get_number_in_var(f[X], i);
+                    hila::set_number_in_var(cfield[X], i, a);
+                }
             }
 
             return spectraldensity(cfield);
