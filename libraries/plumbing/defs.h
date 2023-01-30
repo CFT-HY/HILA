@@ -155,6 +155,8 @@ using element = T;
 // This contains useful template tools
 #include "plumbing/type_tools.h"
 
+#include "plumbing/has_unary_minus.h"
+
 #if defined(CUDA) || defined(HIP)
 #include "plumbing/backend_gpu/gpu_templated_ops.h"
 #endif
