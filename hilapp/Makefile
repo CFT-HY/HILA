@@ -55,6 +55,10 @@ LLVM_PATH := $(shell llvm-config-$(LLVM_DEFAULT_VERSION) --prefix)
 endif
 
 endif
+
+# get the llvm version number if not set before
+LLVM_VERSION = $(shell $(LLVM_PATH)/bin/llvm-config --version | cut -d. -f1)
+
 endif
 
 LLVM_BIN_PATH := $(LLVM_PATH)/bin
@@ -131,8 +135,6 @@ endif
 #	-I$(LLVM_BUILD_PATH)/tools/clang/include \
 #	-I$(LLVM_SRC_PATH)/tools/clang/include 
 
-
-
 # List of Clang libraries to link. The proper -L will be provided by the
 # call to llvm-config
 # The whole thing (all -l libs) can be encapslated withing
@@ -141,6 +143,7 @@ endif
 # -Wl,--end-group
 # which makes correct order irrelevant.  However, this does not seem
 # to work on a mac.  The order below hopefully works
+
 
 CLANG_LIBS := \
 	-lclangTooling \
@@ -163,6 +166,13 @@ CLANG_LIBS := \
 	-lclangStaticAnalyzerCheckers \
 	-lclangStaticAnalyzerCore
 
+
+# Add new libs if clang version is > 14
+compare = $(shell if [ $(1) -gt $(2) ] ; then echo gt ; else echo le ; fi)
+
+ifeq ($(call compare,$(LLVM_VERSION),14),gt)
+   CLANG_LIBS += -lclangSupport
+endif
 
 # Sources for this project
 
