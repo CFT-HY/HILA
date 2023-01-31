@@ -172,6 +172,9 @@ void hila::initialize(int argc, char **argv) {
     mallopt(M_TRIM_THRESHOLD, -1);
 #endif
 
+    // initialize MPI so that hila::myrank() etc. works
+    initialize_communications(argc, &argv);
+
     // Default output file - we're happy with this unless partitions
     // or otherwise indicated
     // This channels outf to std::cout
@@ -180,8 +183,6 @@ void hila::initialize(int argc, char **argv) {
     // set the timing so that gettime() returns time from this point
     hila::inittime();
 
-    // initialize MPI so that hila::myrank() etc. works
-    initialize_communications(argc, &argv);
 
     // open hila::out0 only for node 0
     if (hila::myrank() == 0)
@@ -268,9 +269,9 @@ void hila::initialize(int argc, char **argv) {
 #endif
         hila::out << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
 
-        hila::out << "with options:";
-#ifdef EVEN_SITES_FIRST
-        hila::out << " EVEN_SITES_FIRST";
+        hila::out << "with options: EVEN_SITES_FIRST";
+#ifndef EVEN_SITES_FIRST
+        hila::out << "=0";
 #endif
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         hila::out << " SPECIAL_BOUNDARY_CONDITIONS";
