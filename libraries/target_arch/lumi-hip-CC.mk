@@ -31,7 +31,7 @@ CXXFLAGS += -D__HIP_ROCclr__ -D__HIP_ARCH_GFX90A__=1
 # system installed compilers.  g++ should be present almost everywhere.  The strange incantation
 # below makes g++ list the search directories.  The result is written to build/0hilapp_incl_dirs
 
-HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | $(CC) -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
+HILAPP_INCLUDE_LIST := $(addprefix -I, $(shell echo | g++ -xc++ --std=c++17 -Wp,-v - 2>&1 | grep "^ "))
 
 # stddef.h again!
 # HILAPP_INCLUDE_LIST += -I/opt/cray/pe/gcc/default/snos/lib/gcc/x86_64-suse-linux/default/include -I/opt/cray/pe/fftw/default/x86_64/include
