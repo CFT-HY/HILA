@@ -317,7 +317,7 @@ void field_storage<T>::place_elements(T *RESTRICT buffer, const unsigned *RESTRI
     gpuFree(d_site_index);
 }
 
-template <typename T>
+template <typename T, std::enable_if_t<has_unary_minus<T>::value, int> = 0>
 __global__ void set_local_boundary_elements_kernel(field_storage<T> field, unsigned offset,
                                                    unsigned *site_index, const int n,
                                                    const unsigned field_alloc_size) {
@@ -336,29 +336,33 @@ void field_storage<T>::set_local_boundary_elements(Direction dir, Parity par,
     // Only need to do something for antiperiodic boundaries
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
     if (antiperiodic) {
-        unsigned n, start = 0;
-        if (par == ODD) {
-            n = lattice.special_boundaries[dir].n_odd;
-            start = lattice.special_boundaries[dir].n_even;
+        if constexpr (has_unary_minus<T>::value) {
+            unsigned n, start = 0;
+            if (par == ODD) {
+                n = lattice.special_boundaries[dir].n_odd;
+                start = lattice.special_boundaries[dir].n_even;
+            } else {
+                if (par == EVEN)
+                    n = lattice.special_boundaries[dir].n_even;
+                else
+                    n = lattice.special_boundaries[dir].n_total;
+            }
+            unsigned offset = lattice.special_boundaries[dir].offset + start;
+
+            unsigned *d_site_index;
+            check_device_error("earlier");
+            gpuMalloc(&d_site_index, n * sizeof(unsigned));
+            gpuMemcpy(d_site_index, lattice.special_boundaries[dir].move_index + start,
+                      n * sizeof(unsigned), gpuMemcpyHostToDevice);
+
+            unsigned N_blocks = n / N_threads + 1;
+            set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(
+                *this, offset, d_site_index, n, lattice.field_alloc_size());
+
+            gpuFree(d_site_index);
         } else {
-            if (par == EVEN)
-                n = lattice.special_boundaries[dir].n_even;
-            else
-                n = lattice.special_boundaries[dir].n_total;
+            assert("Antiperiodic b.c. cannot be used with unsigned field elements");
         }
-        unsigned offset = lattice.special_boundaries[dir].offset + start;
-
-        unsigned *d_site_index;
-        check_device_error("earlier");
-        gpuMalloc(&d_site_index, n * sizeof(unsigned));
-        gpuMemcpy(d_site_index, lattice.special_boundaries[dir].move_index + start,
-                  n * sizeof(unsigned), gpuMemcpyHostToDevice);
-
-        unsigned N_blocks = n / N_threads + 1;
-        set_local_boundary_elements_kernel<<<N_blocks, N_threads>>>(*this, offset, d_site_index, n,
-                                                                    lattice.field_alloc_size());
-
-        gpuFree(d_site_index);
     }
 
 #else
