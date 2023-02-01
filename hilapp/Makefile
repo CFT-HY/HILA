@@ -163,7 +163,9 @@ CLANG_LIBS := \
 	-lclangStaticAnalyzerCheckers \
 	-lclangStaticAnalyzerCore
 
-
+ifeq ($(LLVM_VERSION),15)
+	CLANG_LIBS += -lclangSupport
+endif
 # Sources for this project
 
 
