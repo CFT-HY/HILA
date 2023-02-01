@@ -1,0 +1,22 @@
+version: "3"
+services:
+  hila-applications:
+    image: hila:latest
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    volumes:
+      - ../applications:/HILA/applications
+    # environment variables for mpi
+    environment:
+      - OMPI_MCA_btl_vader_single_copy_mechanism=none
+      - OMPI_ALLOW_RUN_AS_ROOT=1
+      - OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
+  hila-source:
+    image: hila:latest
+    stdin_open: true
+    tty: true
+    volumes:
+      - ../applications:/HILA/applications
+      - ../libraries:/HILA/libraries
+      - ../hilapp/src:/HILA/hilapp/src
