@@ -173,7 +173,6 @@ compare = $(shell if [ $(1) -gt $(2) ] ; then echo gt ; else echo le ; fi)
 ifeq ($(call compare,$(LLVM_VERSION),14),gt)
    CLANG_LIBS += -lclangSupport
 endif
-
 # Sources for this project
 
 
