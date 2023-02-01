@@ -6,14 +6,9 @@ From: ubuntu:22.04
     apt-get -y install git make libfftw3-dev
 
     #installing clang devel tools
-    export LLVM_VERSION=14
+    export LLVM_VERSION=15
     apt-get -y install clang-$LLVM_VERSION \
-                       llvm-$LLVM_VERSION \
-                       clang-tools-$LLVM_VERSION \
-                       libclang-common-$LLVM_VERSION-dev \
-                       libclang-cpp$LLVM_VERSION-dev \
-                       libclang-$LLVM_VERSION-dev \
-                       clang-format-$LLVM_VERSION
+                       libclang-$LLVM_VERSION-dev
 
     #Cloning hila and building 
     git clone https://github.com/CFT-HY/HILA
