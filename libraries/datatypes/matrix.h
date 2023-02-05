@@ -95,7 +95,7 @@ class Matrix_t {
             }
     }
 
-    // /// Construct from a different type matrix
+    /// Construct from a different type matrix
     // template <typename S, typename MT,
     //           std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     // Matrix_t(const Matrix_t<n, m, S, MT> &rhs) out_only {
@@ -899,7 +899,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
     /// Construct from a different type matrix
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
-    explicit Matrix(const Matrix_t<n, m, S, MT> &rhs) out_only {
+    Matrix(const Matrix_t<n, m, S, MT> &rhs) out_only {
         for (int i = 0; i < n * m; i++) {
             this->c[i] = rhs.c[i];
         }
