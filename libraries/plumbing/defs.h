@@ -135,9 +135,11 @@ extern logger_class log;
 /// define a class for FFT direction
 enum class fft_direction { forward, back };
 
-// trivial template for helping vectorization
+/// Define convenience function sqr(), returning square of argument
 template <typename T>
-using element = T;
+constexpr inline T sqr(const T &arg) {
+    return arg * arg;
+}
 
 // Backend defs-headers
 
