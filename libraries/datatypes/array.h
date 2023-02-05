@@ -96,7 +96,6 @@ class Array {
         return c[i];
     }
 
-#if 1
     // cast from array to matrix
     Matrix<n, m, T> &asMatrix() const_function {
         return *reinterpret_cast<Matrix<n, m, T> *>(this);
@@ -105,18 +104,17 @@ class Array {
     const Matrix<n, m, T> &asMatrix() const {
         return *reinterpret_cast<const Matrix<n, m, T> *>(this);
     }
-#else
-    // cast from array to matrix
-    Matrix<n, T> &asMatrix() const_function {
-        static_assert(n == m, "asMatrix() only for square arrays");
-        return *reinterpret_cast<Matrix<n, T> *>(this);
+
+    // Define also asVector(), although asMatrix() already includes this
+    Vector<n, T> &asVector() const_function {
+        static_assert(1 == m, "asVector() only for column arrays");
+        return *reinterpret_cast<Vector<n, T> *>(this);
     }
 
-    const Matrix<n, T> &asMatrix() const {
-        static_assert(n == m, "asMatrix() only for square arrays");
-        return *reinterpret_cast<const Matrix<n, T> *>(this);
+    const Vector<n, T> &asVector() const {
+        static_assert(1 == m, "asVector() only for column arrays");
+        return *reinterpret_cast<const Vector<n, T> *>(this);
     }
-#endif
 
 
     /// casting from one Array (number) type to another
