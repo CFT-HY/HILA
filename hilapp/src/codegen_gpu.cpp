@@ -14,7 +14,7 @@
 #include "stringops.h"
 
 // define max size of an array passed as a parameter to kernels
-#define MAX_PARAM_ARRAY_SIZE 20
+#define MAX_PARAM_ARRAY_SIZE 40
 
 extern std::string looping_var;
 extern std::string parity_name;
@@ -119,11 +119,32 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                     "struct " + type_name_prefix + clean_name(ar.name) +
                     std::to_string(TheRewriter.getSourceMgr().getFileOffset(global.location.loop));
                 kernel << ar.wrapper_type << " {\n";
-                kernel << ar.element_type << " c[" << ar.size << "];\n};\n\n";
+
+                // give the type the correct dimensions
+                kernel << ar.element_type << " c";
+                for (auto d : ar.dimensions) {
+                    kernel << '[' << d << ']';
+                }
+                kernel << ";\n};\n\n";
+
 
             } else {
 
                 // larger array or vector, copy it directly -- allocate
+
+                if (ar.dimensions.size() > 1) {
+                    if (ar.refs.size() > 0) {
+                        reportDiag(DiagnosticsEngine::Level::Error,
+                                   ar.refs[0].E->getSourceRange().getBegin(),
+                                   "Multidimensional arrays with indices which are not loop "
+                                   "constant and size larger than "
+                                   "'%0' not implemented in GPU code",
+                                   std::to_string(MAX_PARAM_ARRAY_SIZE).c_str());
+                    } else {
+                        llvm::errs() << "Internal bug - multidimensional array in loop\n";
+                        exit(1);
+                    }
+                }
 
                 ar.new_name = var_name_prefix + clean_name(ar.name);
 
