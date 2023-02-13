@@ -61,6 +61,24 @@ See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-ins
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
 # Quick start
 
+## Containers
+
+HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.
+
+### **Docker**
+
+The docker container is meant to develop and produce HILA applications, libraries and hilapp with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
+
+For instructions on using the docker container have a look at the [README.md](docker/README.md) in the docker folder
+
+### **Singularity**
+
+The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of hilapp. This approach is mainly meant to be used for pre processing applications on an HPC platform.
+
+For instructions on installing singularity and building containers have a look at the [README.md](singularity/README.md) in the singularity folder
+
+## From source
+
 Begin by cloning HILA repository:
 
 ``` bash
@@ -69,20 +87,15 @@ git clone https://github.com/CFT-HY/HILA
 
 The HILA working method is split into two parts. The first part is getting access to the hilapp preprocessor. And the second part is building simulations for targeted architectures and technologies using the hilapp preprocessor.
 
-## 1. HILA preprocessor
-The preprocessor can be accessed either by compiling from source using the clang libtooling toolbox or by using the offered singularity container. The singularity container is an option for users who do not wish to develop hilapp and worry about clang library dependencies or for building applications on HPC platforms.
+### 1. HILA preprocessor
+The preprocessor can be accessed either by compiling from source using the clang libtooling toolbox or by using the offered singularity container mentioned above.
 
-### **Compiling from source**
 For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 22.04:
 
 ~~~ bash
-apt install clang \
-            llvm \
-            clang-tools \
-            libclang-common-dev \
-            libclang-cp-dev \
-            libclang-dev \
-            clang-format
+export LLVM_VERSION=15
+apt-get -y install clang-$LLVM_VERSION \
+                   libclang-$LLVM_VERSION-dev
 ~~~
 
 Compile *hilapp*:
@@ -104,14 +117,6 @@ This builds *hilapp* in hila/hilapp/build, and `make install` moves it to hila/h
 Test that hilapp works
 
     ./bin/hilapp --help
-
-### **Singularity container**
-
-The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container. This approach is mainly meant to be used for running simulations on an HPC platform.
-
-This approach is favorable also to linux users who do not wish to install the clang libtoolbox locally.
-
-For instructions on installing singularity and building containers have a look at the [README.md](singularity/README.md) in the singularity folder
 
 
 ## 2. Building HILA applications
