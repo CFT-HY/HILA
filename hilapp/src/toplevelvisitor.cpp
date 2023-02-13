@@ -431,7 +431,9 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
             // and traverse whatever is in the index in normal fashion
             is_assign = false; // we're not assigning to the index
-            TraverseStmt(ref.Idx);
+            for (auto *s : ref.Idx)
+                TraverseStmt(s);
+
             parsing_state.skip_children = 1; // it's handled now
             return 1;
 
@@ -456,7 +458,10 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     // If index is site dep or contains local variables, we need
     // the whole array in the loop
 
-    bool site_dep = is_site_dependent(ref.Idx, &loop_info.conditional_vars);
+    bool site_dep = false;
+    for (auto *ip : ref.Idx)
+        site_dep |= is_site_dependent(ip, &loop_info.conditional_vars);
+
 
     // if it is assignment = reduction, don't vectorize
     if (site_dep || is_assign)
@@ -494,8 +499,9 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
             }
 
             ar.refs.push_back(ref);
-            is_assign = false;     // reset assign for index traversal
-            TraverseStmt(ref.Idx); // need to traverse index normally
+            is_assign = false; // reset assign for index traversal
+            for (auto *ip : ref.Idx)
+                TraverseStmt(ip); // need to traverse index normally
             parsing_state.skip_children = 1;
             return 1;
         }
@@ -513,7 +519,11 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     // and save the type of reduction
     ar.reduction_type = reduction_type;
 
-    if (!site_dep && !contains_loop_local_var(ref.Idx, nullptr) /* && !is_assign */) {
+    bool has_loop_local_var = false;
+    for (auto *ip : ref.Idx)
+        has_loop_local_var |= contains_loop_local_var(ip, nullptr);
+
+    if (!site_dep && !has_loop_local_var /* && !is_assign */) {
 
         // now it is a fixed index - move whole arr ref outside the loop
         // Note: multiple refrences are not checked, thus, same element can be
@@ -536,11 +546,25 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     if (type == array_ref::ARRAY) {
         const ConstantArrayType *cat = Context->getAsConstantArrayType(vd->getType());
         if (cat) {
-            llvm::errs() << " %%% Found constant array type expr, size " << cat->getSize() << "\n";
 
-            ar.size = cat->getSize().getZExtValue(); // get (extended) size value
+            ar.size = 1;
+            ar.dimensions.clear();
+
+            do {
+                size_t d = cat->getSize().getZExtValue(); // get (extended) size value
+                ar.dimensions.push_back(d);
+                ar.size *= d;
+                cat = Context->getAsConstantArrayType(cat->getElementType());
+            } while (cat);
+
+
             ar.size_expr = std::to_string(ar.size);
             ar.data_ptr = ar.name;
+
+            // llvm::errs() << " %%% Found constant array type expr, size ";
+            // for (auto d : ar.dimensions) 
+            //     llvm::errs() << '[' << d << ']';
+            // llvm::errs() << "\n";
 
         } else {
             // Do not accept arrays with variable size!  The size expression does not
@@ -596,7 +620,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 
     // traverse whatever is in the index in normal fashion
     is_assign = false; // not assign to index
-    TraverseStmt(ref.Idx);
+    for (auto *ip : ref.Idx)
+        TraverseStmt(ip);
 
     parsing_state.skip_children = 1;
     return 1;
@@ -607,7 +632,13 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
 int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *ASE, bool &is_assign,
                                           std::string &assignop) {
 
-    bracket_ref_t br = {ASE, find_base_variable(ASE), ASE->getIdx()};
+    bracket_ref_t br;
+    br.E = ASE;
+    br.DRE = find_base_variable(ASE);
+    br.Idx.push_back(ASE->getIdx());
+    while ((ASE = dyn_cast<ArraySubscriptExpr>(ASE->getLHS()->IgnoreImplicit()))) {
+        br.Idx.push_back(ASE->getIdx());
+    }
     return handle_bracket_var_ref(br, array_ref::ARRAY, is_assign, assignop);
 }
 
@@ -647,7 +678,7 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::str
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(br.E);
 
     br.DRE = find_base_variable(br.E);
-    br.Idx = OC->getArg(1)->IgnoreImplicit();
+    br.Idx.push_back(OC->getArg(1)->IgnoreImplicit());
 
     if (is_assign)
         br.assign_stmt = assign_stmt;
@@ -957,6 +988,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
         is_assignment = true;
 
         // Need to mark/handle the assignment method if necessary
+        // Note that the args are not handled here, just the function call
         if (is_constructor_stmt(s)) {
             handle_constructor_in_loop(s);
         } else if (is_function_call_stmt(s)) {
@@ -1164,21 +1196,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             return true;
         }
 
-        if (0) {
-
-            // not field type non-const expr
-            // llvm::errs() << "Non-const other Expr: " << get_stmt_str(E) << '\n';
-            // loop-local variable refs inside? If so, we cannot evaluate this as
-            // "whole"
-
-            // check_local_loop_var_refs = 1;
-
-            // TODO: find really uniq variable references
-            // var_ref_list.push_back( handle_var_ref(E) );
-
-            parsing_state.skip_children = 1;
-            return true;
-        }
     } // Expr checking branch - now others...
 
     // This reached only if s is not Expr

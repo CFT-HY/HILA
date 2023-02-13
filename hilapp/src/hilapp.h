@@ -322,7 +322,7 @@ struct loop_const_expr_ref {
 struct bracket_ref_t {
     Expr *E;           // full bracket expression "a[i]"
     Expr *DRE;         // "a"  - can be DeclRefExpr or MemberExpr
-    Expr *Idx;         // "i"
+    std::vector<Expr *> Idx;  // "i", one element per index - note outermost as first element
     Stmt *assign_stmt; // if it is reduction ref, full assign stmt here
 };
 
@@ -337,6 +337,7 @@ struct array_ref {
     std::string element_type; // type of element
     std::string wrapper_type; // if need to wrap this var
     size_t size;              // size of array (if known)
+    std::vector<size_t> dimensions; // multidimensional array size
     std::string size_expr;    // if only size expression known
     std::string data_ptr;     // == name for array, name.data() for others
     using reftype = enum { REPLACE, ARRAY, STD_VECTOR, STD_ARRAY, REDUCTION };
@@ -346,6 +347,7 @@ struct array_ref {
     array_ref() {
         refs = {};
         size = 0;
+        dimensions.clear();
     }
 };
 
