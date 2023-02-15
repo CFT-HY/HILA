@@ -329,7 +329,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
     if (from_node.rank != hila::myrank() && boundary_need_to_communicate(d)) {
 
         // HANDLE RECEIVES: get node which will send here
-        post_receive_timer.start();
 
         // buffer can be separate or in Field buffer
         receive_buffer = fs->get_receive_buffer(d, par, from_node);
@@ -341,6 +340,8 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
             hila::terminate(1);
         }
 
+        post_receive_timer.start();
+
         // c++ version does not return errors
         MPI_Irecv(receive_buffer, (int)n, mpi_type, from_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->receive_request[par_i][d]);
@@ -350,7 +351,6 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
 
     if (to_node.rank != hila::myrank() && boundary_need_to_communicate(-d)) {
         // HANDLE SENDS: Copy Field elements on the boundary to a send buffer and send
-        start_send_timer.start();
 
         unsigned sites = to_node.n_sites(par);
 
@@ -366,6 +366,8 @@ dir_mask_t Field<T>::start_gather(Direction d, Parity p) const {
         gpuStreamSynchronize(0);
         //gpuDeviceSynchronize();
 #endif
+
+        start_send_timer.start();
 
         MPI_Isend(send_buffer, (int)n, mpi_type, to_node.rank, tag, lattice.mpi_comm_lat,
                   &fs->send_request[par_i][d]);
