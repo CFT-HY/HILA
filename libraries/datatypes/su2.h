@@ -194,13 +194,13 @@ class SU2 {
         d = two * width;
         return this->normalize();
     }
-    /// $\lambda_a = 1/2 \sigma_a$
+    /// project SU2 to generators $\lambda_a = 1/2 \sigma_a$
     inline Algebra<SU2<T>> project_to_algebra() const {
         Algebra<SU2<T>> ret;
         ret.a = a;
         ret.b = b;
         ret.c = c;
-        return 2.0 * ret;
+        return 2.0 * ret; // factor of 2 from normalization, $\lambda_a = 1/2 \sigma_a$
     }
     /// SU2 matrix exp
     inline SU2<T> exp() const {
@@ -483,23 +483,25 @@ class Algebra<SU2<T>> {
         ret.b = b;
         ret.c = c;
         ret.d = 0;
-        return 0.5 * ret;
+        return ret * 0.5; // factor of 1/2 from normalization, $\lambda_a = 1/2 \sigma_a$
     }
     /// SU2 Algebra $exp( E ) = exp( i 1/2 a_n\sigma_n )$ , returns SU2
     inline SU2<T> exp() const {
         // $U = exp(E) = (cos(r) + sin(r)/r *(a i\sigma_1 + b i\sigma_2 + c i\sigma_3))$
         // r = sqrt(a^2+b^2+c^2)
+        Algebra<SU2<T>> tmp =
+            (*this) * 0.5; // factor of 1/2 from normalization, $\lambda_a = 1/2 \sigma_a$
         SU2<T> ret;
-        T r = sqrt(this->squarenorm());
+        T r = sqrt(tmp.squarenorm());
         if (r <= 0) { // TODO: c++20 [[unlikely]] / [[likely]] ?
             ret = 1;
             return ret;
         }
         T sr = sin(r) / r;
         ret.d = cos(r);
-        ret.a = sr * (this->a * 0.5);
-        ret.b = sr * (this->b * 0.5);
-        ret.c = sr * (this->c * 0.5);
+        ret.a = sr * tmp.a;
+        ret.b = sr * tmp.b;
+        ret.c = sr * tmp.c;
         return ret;
     }
     ///
