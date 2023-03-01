@@ -11,6 +11,7 @@
 #include "datatypes/matrix.h"
 #include "datatypes/sun_matrix.h"
 #include "datatypes/u1.h"
+#include "datatypes/su2.h"
 
 #include "plumbing/coordinates.h"
 #include "plumbing/lattice.h"
