@@ -29,8 +29,8 @@ CXXFLAGS += -Xcudafe "--display_error_number --diag_suppress=177 --diag_suppress
 LDLIBS := -L/usr/local/cuda-${CUDA_VERSION}/targets/x86_64-linux/lib/ -lcudart -lcufft -lm 
 
 # Need to give include directory to mpi for hilapp and nvcc - here 2 common ones
-MPI_INCLUDE_DIRS := -I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/openmpi/include
-MPI_LIBS := -L/usr/lib/openmpi/lib -lmpi
+MPI_INCLUDE_DIRS := -I/opt/local/cuda-aware-mpi/include
+MPI_LIBS := -L/opt/local/cuda-aware-mpi/lib -lmpi
 
 LDLIBS += $(MPI_LIBS)
 LDFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
