@@ -438,6 +438,25 @@ bool GeneralVisitor::handle_call_argument(Expr *E, ParmVarDecl *pv, bool sitedep
                    "'out_only' can be used only with modifiable lvalue reference");
     }
 
+#ifdef LOOP_FUNCTION_DEBUG
+    llvm::errs() << " **** CALL ARG " << get_stmt_str(E) << "  modifiable " << is_modifiable << " fieldX " << is_field_with_X_expr(E);
+
+    CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(E->IgnoreParens()->IgnoreImplicit());
+    if (OC) {
+        llvm::errs() << " operator " << getOperatorSpelling(OC->getOperator());
+        bool isbracket = (strcmp(getOperatorSpelling(OC->getOperator()), "[]") == 0);
+        llvm::errs() << " is[] " << isbracket;
+        if (isbracket) {
+            llvm::errs() << " Field " << is_field_expr(OC->getArg(0));
+            llvm::errs() << " with X " << is_X_index_type(OC->getArg(1));
+        }
+    } else {
+        llvm::errs() << " not operator";
+    }
+    llvm::errs() << '\n';
+
+#endif
+
     if (is_modifiable) {
 
         // "output" vars

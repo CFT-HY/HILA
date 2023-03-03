@@ -105,6 +105,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
     e = e->IgnoreParens();
     field_ref lfe;
 
+    e = e->IgnoreImplicit();
     // we know here that Expr is of field-parity type
     if (CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(e)) {
         lfe.fullExpr = OC;
@@ -122,6 +123,7 @@ bool TopLevelVisitor::handle_field_X_expr(Expr *e, bool &is_assign, bool is_also
         // "\n";
     } else {
         llvm::errs() << "Should not happen! Error in Field parity\n";
+        llvm::errs() << "Expression " << get_stmt_str(e) << '\n';
         exit(1);
     }
 
