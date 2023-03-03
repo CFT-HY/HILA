@@ -772,7 +772,7 @@ class Matrix_t {
 
             // if off-diag elements are tiny return
 
-            if (abs_mpq < 1e-18 * (std::abs(eigenvalues[p]) + std::abs(eigenvalues[q]))) {
+            if (abs_mpq <= 1e-18 * (std::abs(eigenvalues[p]) + std::abs(eigenvalues[q]))) {
                 eigenvectors = V;
                 return (rot);
             }
