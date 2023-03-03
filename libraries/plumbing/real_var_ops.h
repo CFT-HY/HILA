@@ -41,6 +41,11 @@ inline T conj(T val) {
     return val;
 }
 
+template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
+inline T dagger(T val) {
+    return val;
+}
+
 // define squarenorm and norm
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline T squarenorm(T val) {
