@@ -359,7 +359,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::st
     }
 
     if (!is_vectorizable) {
-        diag_str = "Loop is not AVX vectorizable because:";
+        diag_str = "loop is not AVX vectorizable because:";
         for (auto &s : reason)
             diag_str += "\n     " + s;
 
@@ -368,7 +368,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::st
                        diag_str.c_str());
 
     } else {
-        diag_str = "Loop is AVX vectorizable";
+        diag_str = "loop is AVX vectorizable";
 
         if (cmdline::avx_info > 1 || cmdline::verbosity > 1)
             reportDiag(DiagnosticsEngine::Level::Remark, S->getSourceRange().getBegin(), "%0",

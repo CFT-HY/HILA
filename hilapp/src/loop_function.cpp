@@ -139,7 +139,7 @@ void GeneralVisitor::handle_constructor_in_loop(Stmt *s) {
     // Handle parameters
     if (decl->getNumParams() != CtorE->getNumArgs()) {
         reportDiag(DiagnosticsEngine::Level::Fatal, CtorE->getSourceRange().getBegin(),
-                   "Internal error: #params %0, #args %1 in constructor",
+                   "internal error: #params %0, #args %1 in constructor",
                    std::to_string(decl->getNumParams()).c_str(),
                    std::to_string(CtorE->getNumArgs()).c_str());
         return;
@@ -304,7 +304,7 @@ call_info_struct GeneralVisitor::handle_loop_function_args(FunctionDecl *D, Call
                 reportDiag(DiagnosticsEngine::Level::Error, sl,
                            "'out_only' cannot be used with 'const'");
                 reportDiag(DiagnosticsEngine::Level::Note, Call->getSourceRange().getBegin(),
-                           "Called from here");
+                           "called from here");
             }
 
             Expr *E = MCE->getImplicitObjectArgument();
@@ -598,7 +598,7 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             SourceLocation sl = findChar(Call->getSourceRange().getBegin(), '(');
             if (sl.isInvalid()) {
                 reportDiag(DiagnosticsEngine::Level::Fatal, Call->getSourceRange().getBegin(),
-                           "Open parens '(' not found, internal error");
+                           "open parens '(' not found, internal error");
                 exit(1);
             }
             sfc.replace_range = SourceRange(sfc.fullExpr->getSourceRange().getBegin(), sl);
@@ -663,10 +663,10 @@ bool TopLevelVisitor::handle_special_loop_function(CallExpr *Call) {
             } else {
                 if (is_X_index_type) {
                     reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
-                               "Unknown method X.%0()", name.c_str());
+                               "unknown method X.%0()", name.c_str());
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error, Call->getSourceRange().getBegin(),
-                               "Method 'lattice..%0()' not allowed inside site loops",
+                               "method 'lattice..%0()' not allowed inside site loops",
                                name.c_str());
                 }
             }

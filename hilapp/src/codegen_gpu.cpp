@@ -136,7 +136,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                     if (ar.refs.size() > 0) {
                         reportDiag(DiagnosticsEngine::Level::Error,
                                    ar.refs[0].E->getSourceRange().getBegin(),
-                                   "Multidimensional arrays with indices which are not loop "
+                                   "multidimensional arrays with indices which are not loop "
                                    "constant and size larger than "
                                    "'%0' not implemented in GPU code",
                                    std::to_string(MAX_PARAM_ARRAY_SIZE).c_str());
