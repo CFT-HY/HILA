@@ -694,6 +694,33 @@ class Field {
         return sqrt(squarenorm());
     }
 
+    Field<T> conj() const {
+        Field<T> f;
+        f[ALL] = ::conj((*this)[X]);
+        return f;
+    }
+
+    template <typename R = T, typename A = decltype(::dagger(std::declval<R>()))>
+    Field<A> dagger() const {
+        Field<A> f;
+        f[ALL] = ::dagger((*this)[X]);
+        return f;
+    }
+
+    template <typename R = T, typename A = decltype(::real(std::declval<R>()))>
+    Field<A> real() const {
+        Field<A> f;
+        f[ALL] = ::real((*this)[X]);
+        return f;
+    }
+
+    template <typename R = T, typename A = decltype(::imag(std::declval<R>()))>
+    Field<A> imag() const {
+        Field<A> f;
+        f[ALL] = ::imag((*this)[X]);
+        return f;
+    }
+
 
     ///////////////////////////////////////////////////////////////////////
 
@@ -1264,6 +1291,26 @@ double squarenorm(const Field<T> &arg) {
 template <typename T>
 double norm(const Field<T> &arg) {
     return sqrt(squarenorm(arg));
+}
+
+template <typename T>
+Field<T> conj(const Field<T> &arg) {
+    return arg.conj();
+}
+
+template <typename T, typename A = decltype(::dagger(std::declval<T>()))>
+Field<A> dagger(const Field<T> &arg) {
+    return arg.dagger();
+}
+
+template <typename T, typename A = decltype(::real(std::declval<T>()))>
+Field<A> real(const Field<T> &arg) {
+    return arg.real();
+}
+
+template <typename T, typename A = decltype(::imag(std::declval<T>()))>
+Field<A> imag(const Field<T> &arg) {
+    return arg.imag();
 }
 
 
