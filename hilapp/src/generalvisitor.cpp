@@ -548,7 +548,7 @@ var_info *GeneralVisitor::handle_var_ref(DeclRefExpr *DRE, bool is_assign,
     } else {
         // end of VarDecl - how about other decls, e.g. functions?
         reportDiag(DiagnosticsEngine::Level::Error, DRE->getSourceRange().getBegin(),
-                   "Reference to unimplemented (non-variable) type");
+                   "reference to unimplemented (non-variable) type");
     }
 
     return nullptr;

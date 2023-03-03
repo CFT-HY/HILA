@@ -334,7 +334,7 @@ class loopFunctionVisitor : public GeneralVisitor,
                 if (sl.isInvalid()) {
                     reportDiag(DiagnosticsEngine::Level::Fatal,
                                Call->getSourceRange().getBegin(),
-                               "Open parens '(' not found, internal error");
+                               "open parens '(' not found, internal error");
                     exit(1);
                 }
                 sfc.replace_range =
@@ -353,7 +353,7 @@ class loopFunctionVisitor : public GeneralVisitor,
                 } else {
                     reportDiag(DiagnosticsEngine::Level::Error,
                                Call->getSourceRange().getBegin(),
-                               "Method 'lattice.%0()' not allowed inside site loops",
+                               "method 'lattice.%0()' not allowed inside site loops",
                                name.c_str());
                 }
 

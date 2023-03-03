@@ -149,6 +149,8 @@ class TopLevelVisitor : public GeneralVisitor,
 
     bool is_vector_reference(Stmt *s);
 
+    bool is_onsites(Stmt *s);
+
     bool handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop,
                                  Stmt *assingstmt);
 
