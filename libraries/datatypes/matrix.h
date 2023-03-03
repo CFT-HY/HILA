@@ -424,7 +424,7 @@ class Matrix_t {
     }
 
     /// multiply assign with matrix
-// #pragma hila loop_function
+    // #pragma hila loop_function
     template <int p, typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, hila::type_mul<T, S>>::value, int> = 0>
     Mtype &operator*=(const Matrix_t<m, p, S, MT> &rhs) {
@@ -1397,7 +1397,7 @@ std::string prettyprint(const Matrix_t<n, m, T, MT> &A, int prec = 8) {
     std::stringstream strm;
     strm.precision(prec);
 
-    if constexpr (n == 1 || m == 1) {
+    if constexpr (n == 1) {
         // print a vector, horizontally
         strm << '[';
         for (int i = 0; i < n * m; i++)
@@ -1429,9 +1429,10 @@ std::string prettyprint(const Matrix_t<n, m, T, MT> &A, int prec = 8) {
                 lines[i].append(1, ' ');
             }
         }
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n - 1; i++) {
             strm << lines[i] << "]\n";
         }
+        strm << lines[n - 1] << "]";
     }
     return strm.str();
 }
