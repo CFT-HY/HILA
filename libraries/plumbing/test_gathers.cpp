@@ -22,7 +22,7 @@ void gather_test() {
 
         CoordinateVector dif1 = 0, dif2 = 0;
         Field<CoordinateVector> f1, f2;
-#pragma hila novector
+        
         onsites(ALL) {
             f1[X] = X.coordinates();
             f2[X] = (X.coordinates() + d).mod(lattice.size());
