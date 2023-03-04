@@ -18,7 +18,8 @@ bool report_pass(std::string message, double eps, double limit) {
 
 void check_reductions() {
 
-    hila::out0 << "Check reductions and gathers:" << std::endl;
+
+    // test reductions
 
     Field<Complex<double>> f;
     f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
@@ -41,37 +42,147 @@ void check_reductions() {
             expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
     }
     report_pass("Vector reduction, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+}
 
-    // write something to a location
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// write something to a location
+
+void test_site_access() {
+
+    Field<Complex<double>> f = 0;
+    Complex<double> sum;
+
     CoordinateVector c;
     for (int i = 0; i < 3; i++) {
         foralldir(d) c[d] = hila::random() * lattice.size(d);
-        hila::broadcast(c);
+        hila::broadcast(c); // need to broadcast!
 
         f[c] = 4;   // write to location c
         sum = f[c]; // read back - does mpi comm
         report_pass("Setting and reading a value at " + hila::prettyprint(c.transpose()),
                     abs(sum - 4), 1e-10);
     }
+}
 
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// test maxloc and minloc operation
+
+void test_minmax() {
+
+    CoordinateVector c, loc;
     Field<double> n;
     n[ALL] = hila::random();
     foralldir(d) c[d] = hila::random() * lattice.size(d);
     hila::broadcast(c);
     n[c] = 2;
 
-    CoordinateVector maxloc;
-    auto v = n.max(maxloc);
-    report_pass("Maxloc is " + hila::prettyprint(maxloc.transpose()), (c - maxloc).norm(), 1e-8);
+    auto v = n.max(loc);
+    report_pass("Maxloc is " + hila::prettyprint(loc.transpose()), (c - loc).norm(), 1e-8);
     report_pass("Max value " + hila::prettyprint(v), v - 2, 1e-9);
 
 
     foralldir(d) c[d] = hila::random() * lattice.size(d);
     hila::broadcast(c);
     n[c] = -1;
-    v = n.min(maxloc);
-    report_pass("Minloc is " + hila::prettyprint(maxloc.transpose()), (c - maxloc).norm(), 1e-8);
+    v = n.min(loc);
+    report_pass("Minloc is " + hila::prettyprint(loc.transpose()), (c - loc).norm(), 1e-8);
     report_pass("Min value " + hila::prettyprint(v), v + 1, 1e-9);
+}
+
+// ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// test access to a list of sites
+
+void test_set_elements_and_select() {
+
+    Field<Complex<double>> f = 0;
+    CoordinateVector c;
+
+    std::vector<CoordinateVector> cvec;
+    std::vector<Complex<double>> vals;
+
+
+    if (hila::myrank() == 0) {
+        int k = 1;
+        for (int i = 0; i <= 50; i++) {
+            foralldir(d) c[d] = hila::random() * lattice.size(d);
+            bool found = false;
+
+            // don't overwrite previous loc
+            for (auto &r : cvec)
+                if (r == c)
+                    found = true;
+            if (!found) {
+                cvec.push_back(c);
+                vals.push_back(Complex<double>(k, k));
+                k++;
+            }
+        }
+    }
+
+    hila::broadcast(vals);
+    hila::broadcast(cvec);
+
+    f.set_elements(vals, cvec);
+
+    vals = f.get_elements(cvec, true);
+
+    Complex<double> sum = 0;
+    for (int i = 0; i < vals.size(); i++) {
+        sum += vals[i] - Complex<double>(i + 1, i + 1);
+    }
+
+    report_pass("Field set_elements and get_elements with " + hila::prettyprint(vals.size()) +
+                    " coordinates",
+                abs(sum), 1e-8);
+
+    // use the same vector for siteselect
+
+    SiteSelect s;
+    SiteValueSelect<Complex<double>> sv;
+
+    onsites(ALL) {
+        if (squarenorm(f[X]) >= 1) {
+            s.select(X);
+            sv.select(X, f[X]);
+        }
+    }
+
+    report_pass("SiteSelect size " + hila::prettyprint(s.size()), s.size() - cvec.size(), 1e-3);
+    report_pass("SiteValueSelect size " + hila::prettyprint(sv.size()), sv.size() - cvec.size(),
+                1e-3);
+
+    int ok = 1;
+
+    for (auto &c : cvec) {
+        bool found = false;
+        for (int i = 0; !found && i < s.size(); i++) {
+            if (s.coordinates(i) == c)
+                found = true;
+        }
+        if (!found)
+            ok = 0;
+    }
+
+    report_pass("SiteSelect content", 1 - ok, 1e-6);
+
+    ok = 1;
+    for (int k = 0; k < cvec.size(); k++) {
+
+        bool found = false;
+        for (int i = 0; !found && i < sv.size(); i++) {
+            if (sv.coordinates(i) == cvec[k] && sv.value(i) == vals[k])
+                found = true;
+        }
+        if (!found)
+            ok = 0;
+    }
+
+    report_pass("SiteValueSelect content", 1 - ok, 1e-6);
+
+
+    onsites(ALL) {}
 }
 
 
@@ -80,7 +191,6 @@ void check_reductions() {
 
 void fft_test() {
 
-    hila::out0 << "Fourier transform checks:\n";
 
     using T = Complex<double>;
 
@@ -191,7 +301,6 @@ void fft_test() {
 
 void spectraldensity_test() {
 
-    hila::out0 << "Spectral density checks:\n";
 
     // test spectral density for single waves
 
@@ -288,6 +397,12 @@ int main(int argc, char **argv) {
     // start tests
 
     check_reductions();
+
+    test_site_access();
+
+    test_minmax();
+
+    test_set_elements_and_select();
 
     fft_test();
 
