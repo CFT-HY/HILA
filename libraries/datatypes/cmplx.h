@@ -116,10 +116,6 @@ class Complex {
         return *this;
     }
 
-    template <typename S>
-    bool operator!=(const Complex<S> &rhs) const {
-        return (re != rhs.re || im != rhs.im);
-    }
 
     inline T squarenorm() const {
         return re * re + im * im;
@@ -570,6 +566,21 @@ inline bool operator==(const Complex<A> &a, const B b) {
 template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
 inline bool operator==(const A a, const Complex<B> &b) {
     return b == a;
+}
+
+template <typename A, typename B>
+inline bool operator!=(const Complex<A> &a, const Complex<B> &b) {
+    return (a.re != b.re || a.im != b.im);
+}
+
+template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<B>::value, int> = 0>
+inline bool operator!=(const Complex<A> &a, const B b) {
+    return (a.re != b || a.im != 0);
+}
+
+template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value, int> = 0>
+inline bool operator!=(const A a, const Complex<B> &b) {
+    return b != a;
 }
 
 
