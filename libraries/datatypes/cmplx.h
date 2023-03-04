@@ -117,11 +117,6 @@ class Complex {
     }
 
     template <typename S>
-    bool operator==(const Complex<S> &rhs) const {
-        return (re == rhs.re && im == rhs.im);
-    }
-
-    template <typename S>
     bool operator!=(const Complex<S> &rhs) const {
         return (re != rhs.re || im != rhs.im);
     }
