@@ -651,7 +651,7 @@ void Field<T>::set_elements(const std::vector<T> &elements,
                             const std::vector<CoordinateVector> &coord_list) {
     assert(elements.size() == coord_list.size() && "vector size mismatch in set_elments");
     std::vector<unsigned> my_indexes;
-    std::vector<unsigned> my_elements;
+    std::vector<T> my_elements;
     for (int i = 0; i < coord_list.size(); i++) {
         CoordinateVector c = coord_list[i];
         if (lattice.is_on_mynode(c)) {
