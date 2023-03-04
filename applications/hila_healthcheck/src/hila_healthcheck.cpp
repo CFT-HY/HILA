@@ -14,8 +14,73 @@ bool report_pass(std::string message, double eps, double limit) {
     }
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+
+void check_reductions() {
+
+    hila::out0 << "Check reductions and gathers:" << std::endl;
+
+    Field<Complex<double>> f;
+    f[ALL] = expi(2 * M_PI * X.coordinate(e_x) / lattice.size(e_x));
+
+    Complex<double> sum = 0;
+    onsites(ALL) sum += f[X];
+
+    sum /= lattice.volume();
+    report_pass("Complex reduction value " + hila::prettyprint(sum), abs(sum), 1e-4);
+
+    ReductionVector<Complex<double>> rv(lattice.size(e_x));
+
+    onsites(ALL) {
+        rv[X.coordinate(e_x)] += f[X];
+    }
+
+    sum = 0;
+    for (int i = 0; i < lattice.size(e_x); i++) {
+        sum +=
+            expi(2 * M_PI * i / lattice.size(e_x)) - rv[i] / (lattice.volume() / lattice.size(e_x));
+    }
+    report_pass("Vector reduction, sum " + hila::prettyprint(sum), abs(sum), 1e-4);
+
+    // write something to a location
+    CoordinateVector c;
+    for (int i = 0; i < 3; i++) {
+        foralldir(d) c[d] = hila::random() * lattice.size(d);
+        hila::broadcast(c);
+
+        f[c] = 4;   // write to location c
+        sum = f[c]; // read back - does mpi comm
+        report_pass("Setting and reading a value at " + hila::prettyprint(c.transpose()),
+                    abs(sum - 4), 1e-10);
+    }
+
+    Field<double> n;
+    n[ALL] = hila::random();
+    foralldir(d) c[d] = hila::random() * lattice.size(d);
+    hila::broadcast(c);
+    n[c] = 2;
+
+    CoordinateVector maxloc;
+    auto v = n.max(maxloc);
+    report_pass("Maxloc is " + hila::prettyprint(maxloc.transpose()), (c - maxloc).norm(), 1e-8);
+    report_pass("Max value " + hila::prettyprint(v), v - 2, 1e-9);
+
+
+    foralldir(d) c[d] = hila::random() * lattice.size(d);
+    hila::broadcast(c);
+    n[c] = -1;
+    v = n.min(maxloc);
+    report_pass("Minloc is " + hila::prettyprint(maxloc.transpose()), (c - maxloc).norm(), 1e-8);
+    report_pass("Min value " + hila::prettyprint(v), v + 1, 1e-9);
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+
 
 void fft_test() {
+
+    hila::out0 << "Fourier transform checks:\n";
 
     using T = Complex<double>;
 
@@ -33,7 +98,7 @@ void fft_test() {
 
     double eps = squarenorm_relative(p, p2);
 
-    report_pass("FFT constant field", eps, 1e-10);
+    report_pass("FFT constant field", eps, 1e-13 * sqrt(lattice.volume()));
 
     //-----------------------------------------------------------------
     // After two applications the field should be back to a constant * volume
@@ -73,27 +138,60 @@ void fft_test() {
 
         eps = squarenorm_relative(p, p2);
 
-        report_pass("FFT of wave vector" + hila::prettyprint(kx), eps, 1e-10);
+        report_pass("FFT of wave vector" + hila::prettyprint(kx.transpose()), eps,
+                    1e-13 * sqrt(lattice.volume()));
     }
 
-    Field<double> r;
-    onsites(ALL) r[X] = hila::gaussrand();
+    //-----------------------------------------------------------------
 
-    f = r.FFT_real_to_complex();
-    p = f.FFT(fft_direction::back) / lattice.volume();
-    eps = squarenorm_relative(r, p);
+    {
+        Field<double> r;
+        onsites(ALL) r[X] = hila::gaussrand();
 
-    report_pass("FFT real to complex", eps, 1e-10);
+        f = r.FFT_real_to_complex();
+        p = f.FFT(fft_direction::back) / lattice.volume();
+        eps = squarenorm_relative(r, p);
 
-    auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
-    eps = squarenorm_relative(r, r2);
+        report_pass("FFT real to complex", eps, 1e-13 * sqrt(lattice.volume()));
 
-    report_pass("FFT complex to real", eps, 1e-10);
+        auto r2 = f.FFT_complex_to_real(fft_direction::back) / lattice.volume();
+        eps = squarenorm_relative(r, r2);
+
+        report_pass("FFT complex to real", eps, 1e-13 * sqrt(lattice.volume()));
+    }
+
+    //-----------------------------------------------------------------
+    // Check fft norm
+
+    onsites(ALL) {
+        p[X] = hila::random() * exp(-convert_to_k(X.coordinates()).squarenorm());
+    }
+    f = p.FFT(fft_direction::back) / sqrt(lattice.volume());
+
+    double nf = f.squarenorm();
+    double np = p.squarenorm();
+    report_pass("Norm of field = " + hila::prettyprint(nf) + " and FFT = " + hila::prettyprint(np),
+                (nf - np) / nf, 1e-10);
+
+    hila::k_binning b;
+    b.k_max(M_PI * sqrt(3.0));
+
+    auto bf = b.bin_k_field(p.conj() * p);
+
+    double s = 0;
+    for (auto b : bf) {
+        s += abs(b);
+    }
+    hila::broadcast(s);
+
+    report_pass("Norm of binned FFT = " + hila::prettyprint(s), (s - np) / np, 1e-10);
 }
 
 //---------------------------------------------------------------------------
 
 void spectraldensity_test() {
+
+    hila::out0 << "Spectral density checks:\n";
 
     // test spectral density for single waves
 
@@ -129,7 +227,7 @@ void spectraldensity_test() {
             }
         }
 
-        report_pass("Binning test at vector " + hila::prettyprint(kx), sum, 1e-10);
+        report_pass("Binning test at vector " + hila::prettyprint(kx.transpose()), sum, 1e-10);
 
         // then test the spectral density extraction
         // set single wave
@@ -160,7 +258,7 @@ void test_field_slices() {
 
     Field<SiteIndex> s;
     onsites(ALL) {
-        s[X] =  SiteIndex(X.coordinates());
+        s[X] = SiteIndex(X.coordinates());
     }
 }
 
@@ -185,8 +283,11 @@ int main(int argc, char **argv) {
     // We need random number here
     hila::seed_random(seed);
 
+
     ///////////////////////////////////////////////////////////////
-    // FFT tests
+    // start tests
+
+    check_reductions();
 
     fft_test();
 
