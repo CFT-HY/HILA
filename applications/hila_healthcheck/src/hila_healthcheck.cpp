@@ -185,6 +185,41 @@ void test_set_elements_and_select() {
     onsites(ALL) {}
 }
 
+/////////////////////////////////////////////////////////////////////////////////////
+
+void test_subvolumes() {
+    Field<SiteIndex> f;
+    f[ALL] = SiteIndex(X.coordinates());
+
+    CoordinateVector c;
+    c.fill(-1);
+    size_t vol = lattice.volume();
+    foralldir(d) if (d < NDIM - 1) {
+        c[d] = hila::random() * lattice.size(d);
+        hila::broadcast(c);
+
+        auto slice = f.get_slice(c);
+
+        vol /= lattice.size(d);
+        if (hila::myrank() == 0) {
+
+            report_pass(hila::prettyprint(NDIM - (int)d - 1) + "-dimensional slice size " +
+                            hila::prettyprint(vol),
+                        slice.size() - vol, 1e-3);
+
+            bool pass = true;
+            for (auto s : slice) {
+                CoordinateVector cv = s.coordinates();
+                foralldir(d2) if (d2 <= d) {
+                    if (cv[d] != c[d])
+                        pass = false;
+                }
+            }
+
+            report_pass("slice content", pass == false, 1e-2);
+        }
+    }
+}
 
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -248,7 +283,7 @@ void fft_test() {
 
         eps = squarenorm_relative(p, p2);
 
-        report_pass("FFT of wave vector" + hila::prettyprint(kx.transpose()), eps,
+        report_pass("FFT of wave vector " + hila::prettyprint(kx.transpose()), eps,
                     1e-13 * sqrt(lattice.volume()));
     }
 
@@ -403,6 +438,8 @@ int main(int argc, char **argv) {
     test_minmax();
 
     test_set_elements_and_select();
+
+    test_subvolumes();
 
     fft_test();
 
