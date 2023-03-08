@@ -635,6 +635,8 @@ int main(int argc, char **argv) {
         p.z_smear = par.get("z smearing steps");
         p.n_surface = par.get("traj/surface");
         p.n_dump_polyakov = par.get("traj/polyakov dump");
+    } else {
+        p.n_dump_polyakov = 0;
     }
 
     par.close(); // file is closed also when par goes out of scope
@@ -674,6 +676,8 @@ int main(int argc, char **argv) {
             do_trajectory(U, p);
         }
 
+        // put sync here in order to get approx gpu timing
+        hila::synchronize_threads();
         update_timer.stop();
 
         // trajectory is negative during thermalization
