@@ -1,8 +1,10 @@
 #ifndef SU2_H_
 #define SU2_H_
 
-// template <typename T>
-// class Algebra;
+#include "matrix.h"
+
+template <typename T>
+class Algebra;
 
 /// This implementation represents the matrices as
 /// $U = d + a i\sigma_1 + b i\sigma_2 + c i\sigma_3$
@@ -42,19 +44,20 @@ class SU2 {
         d = *(it);
     }
     /// Normalize det = 1 to make sure it's an element of SU2
-    inline SU2<T> &normalize() {
+    inline const SU2<T> &normalize() {
         T len = sqrt(this->det());
-        assert(len != 0);
-        if (len <= 0)
-            return *this;
+        // assert(len != 0);
+        // if (len <= 0)
+        //     return *this;
         a /= len;
         b /= len;
         c /= len;
         d /= len;
         return *this;
-    };
+    }
+
     /// Normalize det = 1 to make sure it's an element of SU2
-    inline SU2<T> &reunitarize() {
+    inline const SU2<T> &reunitarize() {
         return this->normalize();
     }
     /// complex conjugate transpose
@@ -65,14 +68,17 @@ class SU2 {
         ret.c = -c;
         ret.d = d;
         return ret;
-    };
+    }
     /// for SU2 same as .dagger()
-    SU2<T> inverse() const {
-        return this->dagger();
-    };
+    // if matrix is not normalized?
+    // SU2<T> inverse() const {
+    //     return this->dagger();
+    // };
+
     inline T trace() const {
         return 2.0 * d;
     }
+
     inline T det() const {
         return a * a + b * b + c * c + d * d;
     }
@@ -236,6 +242,15 @@ class SU2 {
         ret.c = r * this->c;
         return ret;
     }
+
+    SquareMatrix<2, Complex<T>> convert_to_2x2_matrix() const {
+        SquareMatrix<2, Complex<T>> res;
+        res.e(0, 0) = Complex<T>(this->d, this->c);
+        res.e(0, 1) = Complex<T>(this->b, this->a);
+        res.e(1, 0) = Complex<T>(-this->b, this->a);
+        res.e(1, 1) = Complex<T>(this->d, -this->c);
+        return res;
+    }
 };
 
 /// add two SU2's
@@ -362,14 +377,24 @@ inline std::ostream &operator<<(std::ostream &strm, const SU2<T> &U) {
     return strm;
 }
 
+/// extract SU2 from NxN complex matrix from elements (i,i), (i,j), (j,i), (j,j)
+/// i < j should be valid here!  Return matrix is unnormalized
+template <typename T, int N, typename Mtype>
+inline SU2<T> project_from_matrix(const Matrix_t<N, N, Complex<T>, Mtype> &m, int i, int j) {
+    SU2<T> u;
+    u.d = (m.e(i, i).re + m.e(j, j).re) * 0.5;
+    u.c = (m.e(i, i).im - m.e(j, j).im) * 0.5;
+    u.a = (m.e(i, j).im + m.e(j, i).im) * 0.5;
+    u.b = (m.e(i, j).re - m.e(j, i).re) * 0.5;
+    return u;
+}
+
+
 // SU2 * vector
-template <typename A, typename B,
-          std::enable_if_t<hila::is_assignable<B &, hila::type_mul<A, B>>::value, int> = 0>
-inline Vector<2, Complex<B>> operator*(const SU2<A> &lhs, const Vector<2, B> &rhs) {
-    Vector<2, Complex<B>> v;
-    v.e(0) = (rhs.d * rhs.e(0) + lhs.b * rhs.e(1)) + (rhs.c * rhs.e(0) + lhs.a * rhs.e(1)) * I;
-    v.e(1) = (-rhs.b * rhs.e(0) + lhs.d * rhs.e(1)) + (rhs.a * rhs.e(0) - lhs.c * rhs.e(1)) * I;
-    return v;
+template <typename A, typename B>
+inline Vector<2, Complex<B>> operator*(const SU2<A> &lhs, const Vector<2, Complex<B>> &rhs) {
+    auto m = lhs.convert_to_2x2_matrix();
+    return m * rhs;
 }
 
 
