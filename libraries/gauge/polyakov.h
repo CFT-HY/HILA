@@ -9,7 +9,7 @@
 /// Naive implementation, includes extra communications
 
 template <typename T>
-Complex<double> measure_polyakov(const GaugeField<T> &U, Direction dir) {
+Complex<double> measure_polyakov(const GaugeField<T> &U, Direction dir = Direction(NDIM - 1)) {
 
     Field<T> polyakov = U[dir];
 
