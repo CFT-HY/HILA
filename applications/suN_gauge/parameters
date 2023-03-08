@@ -1,0 +1,11 @@
+lattice size                   8,8,8,4
+beta                           5.6
+delta beta fraction            0
+overrelax steps                3
+updates in trajectory          1
+trajectories                   50000
+random seed                    0
+traj/saved                     20
+config name                    config
+polyakov potential             off
+updates/profile meas           off
