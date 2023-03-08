@@ -217,7 +217,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
         hila::out0 << ' ' << polyakov_potential(p, poly.real());
     }
 
-    hila::out0 << std::endl;
+    hila::out0 << '\n';
 
 }
 
