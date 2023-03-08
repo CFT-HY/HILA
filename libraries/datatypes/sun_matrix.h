@@ -2,6 +2,7 @@
 #define SUN_MATRIX_H_
 
 #include "matrix.h"
+#include "su2.h"
 
 /// Define type SU<n,type>
 /// Derives from square Matrix<Complex> type
@@ -82,20 +83,21 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
         return *this;
     }
 
-    /// multiply matrix rows i,j by SU2 "subgroup" from left
-    void mult_by_SU2_left(int r, int q, const SU<2, T> &m) {
-        // copy 2xN matrix
-        Vector<2, Complex<T>> a;
-        for (int i = 0; i < N; i++) {
-            a.e(0) = this->e(r, i);
-            a.e(1) = this->e(q, i);
+    // REPLACED BY GENERIC mult_by_2x2_left
+    // /// multiply matrix rows i,j by SU2 "subgroup" from left
+    // void mult_by_SU2_left(int r, int q, const SU<2, T> &m) {
+    //     // copy 2xN matrix
+    //     Vector<2, Complex<T>> a;
+    //     for (int i = 0; i < N; i++) {
+    //         a.e(0) = this->e(r, i);
+    //         a.e(1) = this->e(q, i);
 
-            a = m * a;
+    //         a = m * a;
 
-            this->e(r, i) = a.e(0);
-            this->e(q, i) = a.e(1);
-        }
-    }
+    //         this->e(r, i) = a.e(0);
+    //         this->e(q, i) = a.e(1);
+    //     }
+    // }
 
     SU &random(int nhits = 16) out_only {
 
@@ -118,7 +120,7 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
                 for (int r = 0; r < N - 1; r++)
                     for (int q = r + 1; q < N; q++) {
                         m2.random();
-                        this->mult_by_SU2_left(r, q, m2);
+                        this->mult_by_2x2_left(r, q, m2);
                     }
 
                 // keep it SU(N)
