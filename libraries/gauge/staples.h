@@ -16,8 +16,7 @@ void staplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity p
 
     Field<T> lower;
 
-    // zero staples just inc case
-    staples = 0;
+    bool first = true;
     foralldir(d2) if (d2 != d1) {
 
         // anticipate that these are needed
@@ -27,15 +26,21 @@ void staplesum(const GaugeField<T> &U, Field<T> &staples, Direction d1, Parity p
 
         // calculate first lower 'U' of the staple sum
         // do it on opp parity
-        onsites(~par) {
+        onsites(opp_parity(par)) {
             lower[X] = U[d2][X].dagger() * U[d1][X] * U[d2][X + d1];
         }
 
         // calculate then the upper 'n', and add the lower
-        // lower could also be added on a separate loop 
-        onsites(par) {
-            staples[X] +=
-                U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
+        // lower could also be added on a separate loop
+        if (first) {
+            onsites(par) {
+                staples[X] = U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
+            }
+            first = false;
+        } else {
+            onsites(par) {
+                staples[X] += U[d2][X] * U[d1][X + d2] * U[d2][X + d1].dagger() + lower[X - d2];
+            }
         }
     }
 }
