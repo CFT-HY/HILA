@@ -115,6 +115,11 @@ class GaugeField {
             outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
             f = sizeof(T);
             outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
+
+            foralldir(d) {
+                f = lattice.size(d);
+                outputfile.write(reinterpret_cast<char *>(&f), sizeof(int64_t));
+            }
         }
 
         write(outputfile);
@@ -142,6 +147,19 @@ class GaugeField {
             hila::terminate(1);
         }
 
+        if (hila::myrank() == 0) {
+            foralldir(d) {
+                int64_t f;
+                inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
+                ok = ok && (f == lattice.size(d));
+            }
+        }
+        if (!hila::broadcast(ok)) {
+            hila::out0 << "ERROR: config file " << filename
+                       << " has wrong lattice size\n";
+            hila::terminate(1);
+        }
+
         read(inputfile);
         hila::close_file(filename, inputfile);
     }
@@ -154,7 +172,7 @@ template <typename T>
 void swap(GaugeField<T> &A, GaugeField<T> &B) {
     foralldir(d) std::swap(A[d], B[d]);
 }
-}
+} // namespace std
 
 
 ///////////////////////////////////////////////////////
