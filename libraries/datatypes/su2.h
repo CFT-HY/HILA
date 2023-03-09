@@ -189,15 +189,16 @@ class SU2 {
         d /= rhs;
         return *this;
     }
-    /// make gaussian random SU2
-    inline SU2<T> &gaussian_random(double width = 1.0) out_only {
+
+    /// make random SU2
+    inline const SU2<T> &random() out_only {
         double one, two;
         one = hila::gaussrand2(two);
-        a = one * width;
-        b = two * width;
+        a = one;
+        b = two;
         one = hila::gaussrand2(two);
-        c = one * width;
-        d = two * width;
+        c = one;
+        d = two;
         return this->normalize();
     }
     /// project SU2 to generators $\lambda_a = 1/2 \sigma_a$
@@ -390,11 +391,16 @@ inline SU2<T> project_from_matrix(const Matrix_t<N, N, Complex<T>, Mtype> &m, in
 }
 
 
-// SU2 * vector
+// SU2 * vector (vec can be complex or real)
 template <typename A, typename B>
-inline Vector<2, Complex<B>> operator*(const SU2<A> &lhs, const Vector<2, Complex<B>> &rhs) {
-    auto m = lhs.convert_to_2x2_matrix();
-    return m * rhs;
+inline auto operator*(const SU2<A> &lhs, const Vector<2,B> &rhs) {
+    return lhs.convert_to_2x2_matrix() * rhs;
+}
+
+// horizontalvector * SU2 (vec can be complex or real)
+template <typename A, typename B>
+inline auto operator*(const HorizontalVector<2,B> &lhs, const SU2<A> &rhs) {
+    return rhs * lhs.convert_to_2x2_matrix();
 }
 
 
@@ -615,8 +621,17 @@ inline std::ostream &operator<<(std::ostream &strm, const Algebra<SU2<T>> &E) {
     return strm;
 }
 
+namespace hila {
+template <typename T>
+std::string prettyprint(const SU2<T> &A, int prec = 8) {
+    std::stringstream strm;
+    strm.precision(prec);
 
-#endif // SU2_H_
+    strm << "[ " << A.d << u8" 𝟙 + " << A.a << u8" iσ₁ + " << A.b << u8" iσ₂ + " << A.c << u8" iσ₃ ]";
+    return strm.str();
+}
+} // namespace hila
+
 
 // SU2 matrix multiplication routines ------------------------
 //#define nn_a(x, y) (x.d * y.a + x.a * y.d - x.b * y.c + x.c * y.b)
@@ -638,3 +653,5 @@ inline std::ostream &operator<<(std::ostream &strm, const Algebra<SU2<T>> &E) {
 //#define aa_b(x, y) (-x.d * y.b - x.b * y.d - x.c * y.a + x.a * y.c)
 //#define aa_c(x, y) (-x.d * y.c - x.c * y.d - x.a * y.b + x.b * y.a)
 //#define aa_d(x, y) (x.d * y.d - x.a * y.a - x.b * y.b - x.c * y.c)
+
+#endif // SU2_H_
