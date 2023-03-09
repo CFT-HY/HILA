@@ -196,29 +196,26 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
     static bool first = true;
 
     if (first) {
-        hila::out0 << "Legend MEAS: plaq  P.real  P.imag";
+        hila::out0 << "Legend:";
         if (p.poly_range_on)
-            hila::out0 << " V(polyakov)";
-        hila::out0 << '\n';
+            hila::out0 << " -V(polyakov)";
+        hila::out0 << " plaq  P.real  P.imag\n";
 
         first = false;
     }
 
+    auto poly = measure_polyakov(U);
+
+    auto plaq = measure_plaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
+
     hila::out0 << "MEAS " << std::setprecision(8);
 
-    hila::out0 << measure_plaq(U) / (lattice.volume() * NDIM * (NDIM - 1) / 2);
-
-    auto poly = measure_polyakov(U);
-    auto poly_x = measure_polyakov(U,e_x);
-
-    hila::out0 << ' ' << poly << ' ' << poly_x;
-
+    // write the -(polyakov potential) first, this is used as a weight factor in aa
     if (p.poly_range_on) {
-        hila::out0 << ' ' << polyakov_potential(p, poly.real());
+        hila::out0 << -polyakov_potential(p, poly.real()) << ' ';
     }
 
-    hila::out0 << '\n';
-
+    hila::out0 << plaq << ' ' << poly << '\n';
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
@@ -446,41 +443,51 @@ bool restore_checkpoint(GaugeField<group> &U, int &trajectory, parameters &p) {
 template <typename group>
 void update(GaugeField<group> &U, const parameters &p, bool relax) {
 
-    Field<group> staples;
+    foralldir(d) {
+        for (Parity par : {EVEN, ODD}) {
+
+            update_parity_dir(U, p, par, d, relax);
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////
+
+template <typename group>
+void update_parity_dir(GaugeField<group> &U, const parameters &p, Parity par, Direction d,
+                       bool relax) {
 
     static hila::timer hb_timer("Heatbath");
     static hila::timer or_timer("Overrelax");
     static hila::timer staples_timer("Staplesum");
 
-    foralldir(d) {
-        for (Parity par : {EVEN, ODD}) {
+    Field<group> staples;
 
-            staples_timer.start();
-            if (p.deltab != 0)
-                staplesum_db(U, staples, d, par, p.deltab);
-            else
-                staplesum(U, staples, d, par);
-            staples_timer.stop();
+    staples_timer.start();
+    if (p.deltab != 0)
+        staplesum_db(U, staples, d, par, p.deltab);
+    else
+        staplesum(U, staples, d, par);
+    staples_timer.stop();
 
-            if (relax) {
+    if (relax) {
 
-                or_timer.start();
-                onsites(par) {
-                    suN_overrelax(U[d][X], staples[X]);
-                }
-                or_timer.stop();
-
-            } else {
-
-                hb_timer.start();
-                onsites(par) {
-                    suN_heatbath(U[d][X], staples[X], p.beta);
-                }
-                hb_timer.stop();
-            }
+        or_timer.start();
+        onsites(par) {
+            suN_overrelax(U[d][X], staples[X]);
         }
+        or_timer.stop();
+
+    } else {
+
+        hb_timer.start();
+        onsites(par) {
+            suN_heatbath(U[d][X], staples[X], p.beta);
+        }
+        hb_timer.stop();
     }
 }
+
 
 ////////////////////////////////////////////////////////////////
 
@@ -507,11 +514,47 @@ double polyakov_potential(const parameters &p, const double poly) {
 
 bool accept_polyakov(const parameters &p, const double p_old, const double p_new) {
 
-    double dpot = polyakov_potential(p, p_old) - polyakov_potential(p, p_new);
+    double dpot = polyakov_potential(p, p_new) - polyakov_potential(p, p_old);
 
     bool accept = hila::broadcast(hila::random() < exp(-dpot));
 
     return accept;
+}
+
+////////////////////////////////////////////////////////////////
+
+template <typename group>
+double update_once_with_range(GaugeField<group> &U, const parameters &p, double &poly, bool relax) {
+
+    Field<group> Ut_old;
+
+    Ut_old = U[e_t];
+
+    // spatial links always updated, t-links are conditional
+    // acc/rej separately for parities
+
+    foralldir(d) if (d < e_t) {
+        for (Parity par : {EVEN, ODD})
+            update_parity_dir(U, p, par, d, relax);
+    }
+
+    // t-links
+    double acc = 0;
+    for (Parity par : {EVEN, ODD}) {
+        update_parity_dir(U, p, par, e_t, relax);
+
+        double p_now = measure_polyakov(U).real();
+
+        bool acc_update = accept_polyakov(p, poly, p_now);
+
+        if (acc_update) {
+            poly = p_now;
+            acc += 0.5;
+        } else {
+            U[e_t][par] = Ut_old[X]; // restore rejected
+        }
+    }
+    return acc;
 }
 
 ////////////////////////////////////////////////////////////////
@@ -522,52 +565,23 @@ double trajectory_with_range(GaugeField<group> &U, const parameters &p, double &
     double acc_or = 0;
     double acc_hb = 0;
 
-    Field<group> Ut_old;
-    Ut_old = U[e_t]; // need to store the t-direction field
-
-    double p_now;
+    double p_now = measure_polyakov(U).real();
 
     for (int n = 0; n < p.n_update; n++) {
         for (int i = 0; i < p.n_overrelax; i++) {
 
-            // spatial links always updated, t-links are conditional
-            // This works only if the t-links are the last to be updated inside update routines!
-
-            update(U, p, true);
-
-            p_now = measure_polyakov(U).real();
-
-            bool acc_update = accept_polyakov(p, poly, p_now);
-
-            if (acc_update) {
-                poly = p_now;
-                acc_or++;
-                Ut_old = U[e_t]; // prepare for next step
-            } else {
-                U[e_t] = Ut_old; // restore rejected
-            }
+            // OR updates
+            acc_or += update_once_with_range(U, p, p_now, true);
         }
 
-        // and then HB -- Ut_old is valid in any case
+        // and then HBs
 
-        update(U, p, false);
+        acc_hb += update_once_with_range(U, p, p_now, false);
 
-        double p_hb = measure_polyakov(U).real();
-        bool acc_update = accept_polyakov(p, poly, p_hb);
-
-        if (acc_update) {
-            poly = p_hb;
-            acc_hb++;
-            Ut_old = U[e_t]; // prepare for next OR
-        } else {
-            U[e_t] = Ut_old;
-        }
+        reunitarize_gauge(U);
     }
-
-    reunitarize_gauge(U);
     return (acc_or + acc_hb) / (p.n_update * (p.n_overrelax + 1));
 }
-
 
 /////////////////////////////////////////////////////////////////
 
@@ -623,7 +637,7 @@ int main(int argc, char **argv) {
         p.poly_range_on = false;
     }
 
-    if (par.get_item("updates/profile meas", {"off", "%f"}) == 1) {
+    if (par.get_item("updates/profile meas", {"off", "%i"}) == 1) {
         p.n_profile = par.get();
     } else {
         p.n_profile = 0;
@@ -700,6 +714,10 @@ int main(int argc, char **argv) {
                 }
                 measure_polyakov_field(U, pl);
                 pl.write_slice(poly, {-1, -1, -1, 0});
+            }
+
+            if (p.poly_range_on) {
+                hila::out0 << "ACCP " << acc << '\n';
             }
 
             hila::out0 << "Measure_end " << trajectory << std::endl;
