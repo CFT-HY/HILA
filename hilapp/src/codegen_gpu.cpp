@@ -623,7 +623,18 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         // }
     }
 
-    // Dump the loop body
+    // if there are site selections, reset the selection flag to 0 at all sites
+
+    for (selection_info &s : selection_info_list) {
+        if (s.previous_selection == nullptr) {
+            kernel << s.maskname + '[' + looping_var + "] = 0;\n";
+        }
+    }
+
+    ////////////////////////////////////////////
+
+    // Finally, dump the loop body
+
     kernel << loopBuf.dump();
     if (semicolon_at_end)
         kernel << ';';
