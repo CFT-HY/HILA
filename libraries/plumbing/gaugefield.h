@@ -129,34 +129,47 @@ class GaugeField {
     void config_read(const std::string &filename) {
         std::ifstream inputfile;
         hila::open_input_file(filename, inputfile);
+        std::string conferr("CONFIG ERROR in file " + filename + ": ");
 
         // read header
         bool ok = true;
+        int64_t f;
         if (hila::myrank() == 0) {
-            int64_t f;
             inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
             ok = (f == config_flag);
-            inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            ok = ok && (f == NDIM);
-            inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
-            ok = ok && (f == sizeof(T));
-        }
-        if (!hila::broadcast(ok)) {
-            hila::out0 << "ERROR: config file " << filename
-                       << " does not have legal or matching header\n";
-            hila::terminate(1);
+            if (!ok)
+                hila::out0 << conferr << "wrong id, should be " << config_flag << " is " << f
+                           << '\n';
         }
 
-        if (hila::myrank() == 0) {
+        if (ok && hila::myrank() == 0) {
+            inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
+            ok = (f == NDIM);
+            if (!ok)
+                hila::out0 << conferr << "wrong dimensionality, should be " << NDIM << " is " << f
+                           << '\n';
+        }
+
+        if (ok && hila::myrank() == 0) {
+            inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
+            ok = (f == sizeof(T));
+            if (!ok)
+                hila::out0 << conferr << "wrong size of field element, should be " << sizeof(T)
+                           << " is " << f << '\n';
+        }
+
+        if (ok && hila::myrank() == 0) {
+
             foralldir(d) {
-                int64_t f;
                 inputfile.read(reinterpret_cast<char *>(&f), sizeof(int64_t));
                 ok = ok && (f == lattice.size(d));
+                if (!ok)
+                    hila::out0 << conferr << "incorrect lattice dimension " << hila::prettyprint(d)
+                               << " is " << f << " should be " << lattice.size(d) << '\n';
             }
         }
+
         if (!hila::broadcast(ok)) {
-            hila::out0 << "ERROR: config file " << filename
-                       << " has wrong lattice size\n";
             hila::terminate(1);
         }
 
