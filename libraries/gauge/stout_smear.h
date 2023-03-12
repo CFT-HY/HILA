@@ -19,9 +19,11 @@ void stout_smear1(const GaugeField<T> &U, Field<T> &s, float coeff, Direction d)
 
 template <typename T>
 void stout_smear1(const GaugeField<T> &U, GaugeField<T> &stout, float coeff) {
-    // foralldir(d) stout_smear1(U,stout[d],coeff,d);
-    stout_smear1(U,stout[e_t],coeff,e_t);
+    foralldir(d) stout_smear1(U,stout[d],coeff,d);
+    // stout_smear1(U,stout[e_t],coeff,e_t);
 }
+
+
 
 template <typename T>
 void stout_smear(const GaugeField<T> &U, GaugeField<T> &stout, float coeff, int iter) {
@@ -29,7 +31,7 @@ void stout_smear(const GaugeField<T> &U, GaugeField<T> &stout, float coeff, int 
     if (iter > 0) {
         stout_smear1(U,stout,coeff);
     
-        GaugeField<T> tmp = U;
+        GaugeField<T> tmp;
         for (int i=1; i<iter; i++) {
             stout_smear1(stout,tmp,coeff);
             stout = tmp;
