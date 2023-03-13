@@ -193,8 +193,8 @@ class SU2 {
         return *this;
     }
 
-    /// make gaussian random SU2
-    inline SU2<T> &gaussian_random(double width = 1.0) out_only {
+    /// make random SU2
+    inline SU2<T> &random(double width = 1.0) out_only {
         double one, two;
         one = hila::gaussrand2(two);
         a = width*one;
@@ -203,6 +203,18 @@ class SU2 {
         c = width*one;
         d = width*two;
         return this->normalize();
+    }
+
+    /// make gaussian random matrix, does not normalize
+    inline SU2<T> &gaussian_random(double width = 1.0) out_only {
+        double one, two;
+        one = hila::gaussrand2(two);
+        a = width*one;
+        b = width*two;
+        one = hila::gaussrand2(two);
+        c = width*one;
+        d = width*two;
+        return this;
     }
     /// project SU2 to generators $\lambda_a = 1/2 \sigma_a$
     inline Algebra<SU2<T>> project_to_algebra() const {
