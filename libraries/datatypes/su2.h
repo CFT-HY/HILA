@@ -44,7 +44,7 @@ class SU2 {
         d = *(it);
     }
     /// Normalize det = 1 to make sure it's an element of SU2
-    inline const SU2<T> &normalize() {
+    inline SU2<T> &normalize() {
         T len = sqrt(this->det());
         // assert(len != 0);
         // if (len <= 0)
@@ -57,7 +57,7 @@ class SU2 {
     }
 
     /// Normalize det = 1 to make sure it's an element of SU2
-    inline const SU2<T> &reunitarize() {
+    inline SU2<T> &reunitarize() {
         return this->normalize();
     }
     /// complex conjugate transpose
@@ -81,6 +81,9 @@ class SU2 {
 
     inline T det() const {
         return a * a + b * b + c * c + d * d;
+    }
+    inline T squarenorm() const {
+        return det();
     }
     static constexpr int size() {
         return 2;
@@ -190,15 +193,15 @@ class SU2 {
         return *this;
     }
 
-    /// make random SU2
-    inline const SU2<T> &random() out_only {
+    /// make gaussian random SU2
+    inline SU2<T> &gaussian_random(double width = 1.0) out_only {
         double one, two;
         one = hila::gaussrand2(two);
-        a = one;
-        b = two;
+        a = width*one;
+        b = width*two;
         one = hila::gaussrand2(two);
-        c = one;
-        d = two;
+        c = width*one;
+        d = width*two;
         return this->normalize();
     }
     /// project SU2 to generators $\lambda_a = 1/2 \sigma_a$
@@ -604,6 +607,32 @@ inline Algebra<SU2<A>> operator/(const Algebra<SU2<A>> &x, const B y) {
     return ret;
 }
 
+/// $U^\dagger E U$ transport down
+template <typename T>
+inline Algebra<SU2<T>> right_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &E) {
+    Algebra<SU2<T>> res;
+    T t1 = 2.0 * U.d;
+    T t3 = t1 * U.d - 1.0;
+    T t2 = 2.0 * (E.a * U.a + E.b * U.b + E.c * U.c);
+    res.a = E.a * t3 + U.a * t2 - t1 * (E.b * U.c - E.c * U.b);
+    res.b = E.b * t3 + U.b * t2 - t1 * (E.c * U.a - E.a * U.c);
+    res.c = E.c * t3 + U.c * t2 - t1 * (E.a * U.b - E.b * U.a);
+    return res;
+}
+
+/// $U E U^\dagger$ transport up
+template <typename T>
+inline Algebra<SU2<T>> left_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &E) {
+    Algebra<SU2<T>> res;
+    T t1 = 2.0 * U.d;
+    T t3 = t1 * U.d - 1.0;
+    T t2 = 2.0 * (E.a * U.a + E.b * U.b + E.c * U.c);
+    res.a = E.a * t3 + U.a * t2 + t1 * (E.b * U.c - E.c * U.b);
+    res.b = E.b * t3 + U.b * t2 + t1 * (E.c * U.a - E.a * U.c);
+    res.c = E.c * t3 + U.c * t2 + t1 * (E.a * U.b - E.b * U.a);
+    return res;
+}
+
 template <typename T>
 inline T squarenorm(const Algebra<SU2<T>> &E) {
     return E.squarenorm();
@@ -628,6 +657,14 @@ std::string prettyprint(const SU2<T> &A, int prec = 8) {
     strm.precision(prec);
 
     strm << "[ " << A.d << u8" 𝟙 + " << A.a << u8" iσ₁ + " << A.b << u8" iσ₂ + " << A.c << u8" iσ₃ ]";
+    return strm.str();
+}
+template <typename T>
+std::string prettyprint(const Algebra<SU2<T>> &A, int prec = 8) {
+    std::stringstream strm;
+    strm.precision(prec);
+
+    strm << "[ " << A.a << u8" ½iσ₁ + " << A.b << u8" ½iσ₂ + " << A.c << u8" ½iσ₃ ]";
     return strm.str();
 }
 } // namespace hila
