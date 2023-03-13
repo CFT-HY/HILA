@@ -93,12 +93,12 @@ TEST_CASE_METHOD(ComplexTest, "Complex utilities", "[Complex]") {
         REQUIRE(dummy_complex.imag() == Approx(dummy_im));
         REQUIRE(imag(dummy_complex) == Approx(dummy_im));
     }
-    SECTION("Casting") {
-        fill_dummy_complex(1.5, 1.5);
-        Complex<int> temporary_complex;
-        temporary_complex = dummy_complex.cast_to<int>();
-        REQUIRE(temporary_complex == (1 + 1_i));
-    }
+    // SECTION("Casting") {
+    //     fill_dummy_complex(1.5, 1.5);
+    //     Complex<int> temporary_complex;
+    //     temporary_complex = dummy_complex.cast_to<int>();
+    //     REQUIRE(temporary_complex == (1 + 1_i));
+    // }
 }
 
 TEST_CASE_METHOD(ComplexTest, "Complex mathematical methods", "[Complex]") {

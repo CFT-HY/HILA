@@ -128,8 +128,8 @@ double measure_action(const GaugeField<group> &U, const VectorField<Algebra<grou
 ///
 
 template <typename T>
-void measure_polyakov_field(const GaugeField<T> &U, Field<float> &pl) {
-    Field<T> polyakov = U[e_t];
+void measure_polyakov_field(const Field<T> &Ut, Field<float> &pl) {
+    Field<T> polyakov = Ut;
 
     // mult links so that polyakov[X.dir == 0] contains the polyakov loop
     for (int plane = lattice.size(e_t) - 2; plane >= 0; plane--) {
@@ -142,7 +142,7 @@ void measure_polyakov_field(const GaugeField<T> &U, Field<float> &pl) {
 #pragma hila safe_access(polyakov)
         onsites(ALL) {
             if (X.coordinate(e_t) == plane) {
-                polyakov[X] = U[e_t][X] * polyakov[X + e_t];
+                polyakov[X] = Ut[X] * polyakov[X + e_t];
             }
         }
     }
@@ -232,7 +232,32 @@ template <typename group>
 void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, int traj) {
 
     Field<float> pl;
-    measure_polyakov_field(U, pl);
+
+
+    if (0) {
+        // this section does local sums of poly lines
+        // does not help!
+        Field<group> staples, sumUt;
+
+        staplesum(U, staples, e_t);
+
+        onsites(ALL) {
+            group ut, usum;
+            usum = 0;
+            ut = U[e_t][X];
+            for (int i = 0; i < 15; i++) {
+                suN_heatbath(ut, staples[X], p.beta);
+                usum += ut;
+            }
+            sumUt[X] = usum;
+        }
+
+        measure_polyakov_field(sumUt, pl);
+
+    } else {
+        // here standard non-link integrated field
+        measure_polyakov_field(U[e_t], pl);
+    }
 
     std::vector<float> profile, profile_unsmear, prof1;
     profile_unsmear = measure_polyakov_profile(pl, prof1);
@@ -309,8 +334,9 @@ void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, i
 
 
                 // do linear interpolation
+                // surf[x + y * lattice.size(e_x)] = z;
                 surf[x + y * lattice.size(e_x)] =
-                    z + (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
+                     z + (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
 
                 if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
                     hila::out0 << "SURF " << x << ' ' << y << ' ' << surf[x + y * lattice.size(e_x)]
@@ -712,7 +738,7 @@ int main(int argc, char **argv) {
                 if (hila::myrank() == 0) {
                     poly.open("polyakov", std::ios::out | std::ios::app);
                 }
-                measure_polyakov_field(U, pl);
+                measure_polyakov_field(U[e_t], pl);
                 pl.write_slice(poly, {-1, -1, -1, 0});
             }
 
