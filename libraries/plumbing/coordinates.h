@@ -53,6 +53,7 @@ enum Direction : unsigned {
     NDIRECTIONS
 };
 #endif
+// clang-format on
 
 constexpr unsigned NDIRS = NDIRECTIONS; //
 
@@ -123,6 +124,38 @@ inline dir_mask_t get_dir_mask(const Direction d) {
     return (dir_mask_t)(1 << d);
 }
 
+/// define hila::direction_name() and hila::prettyprint(Direction)
+namespace hila {
+
+constexpr inline const char *direction_name(Direction d) {
+    const char *dirnames[NDIRS] = {
+        "e_x",
+        "e_y",
+#if NDIM > 2
+        "e_z",
+#if NDIM > 3
+        "e_t",
+        "-e_t",
+#endif
+        "-e_z",
+#endif
+        "-e_y",
+        "-e_x"
+    };
+    return dirnames[d];
+}
+
+inline std::string prettyprint(Direction d) {
+    return direction_name(d);
+}
+} // namespace hila
+
+// This should not be used from loops ...
+inline std::ostream &operator<<(std::ostream &os, const Direction d) {
+    os << hila::direction_name(d);
+    return os;
+}
+
 ////////////////////////////////////////////////////////////////////
 /// enum class Parity type definition - stronger protection than std enum
 ///
@@ -136,14 +169,21 @@ constexpr Parity ODD = Parity::odd;   //               010
 constexpr Parity ALL = Parity::all;   //               011
 
 // this is used in diagnostics - make static inline so can be defd here
+namespace hila {
 inline const char *parity_name(Parity p) {
     const char *parity_name_s[4] = {"Parity::none", "EVEN", "ODD", "ALL"};
     return parity_name_s[(int)p];
 }
 
+inline std::string prettyprint(Parity p) {
+    return hila::parity_name(p);
+}
+
+} // namespace hila
+
 // This should not be used from loops ...
 inline std::ostream &operator<<(std::ostream &os, const Parity p) {
-    os << parity_name(p);
+    os << hila::parity_name(p);
     return os;
 }
 
@@ -168,19 +208,6 @@ static inline Parity operator~(const Parity p) {
 
 static inline bool is_even_odd_parity(Parity p) {
     return (p == EVEN || p == ODD);
-}
-
-/// Return a vector for iterating over  parities included in par
-/// If par is ALL, this returns vector of EVEN and ODD, otherwise
-/// just par
-static std::vector<Parity> loop_parities(Parity par) {
-    std::vector<Parity> parities;
-    if (par == ALL) {
-        parities.insert(parities.end(), {EVEN, ODD});
-    } else {
-        parities.insert(parities.end(), {par});
-    }
-    return parities;
 }
 
 

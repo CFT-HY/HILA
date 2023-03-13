@@ -61,7 +61,7 @@ struct SnapshotStruct {
 
 class TestLattice : public SnapshotStruct {
   public:
-    lattice_struct lat = *lattice;
+    lattice_struct lat = lattice;
     int num_nodes;
     int my_rank;
     int total_lattice_size = lattice_size * lattice_size * lattice_size;
