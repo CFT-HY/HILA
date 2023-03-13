@@ -732,11 +732,13 @@ class Matrix_t {
     /// Arguments will contain eigenvalues and eigenvectors in columns of the "eigenvectors" matrix
     /// Computation is done in double precision despite the input matrix types
 
+#pragma hila novector
     template <typename Et, typename Mt, typename MT,
               typename Dtype = typename std::conditional<hila::contains_complex<T>::value,
                                                          Complex<double>, double>::type>
-    int eigen_jacobi(out_only Vector<n, Et> &eigenvalues,
-                     out_only Matrix_t<n, n, Mt, MT> &eigenvectors) const {
+    int eigen_jacobi(out_only Vector<n, Et> &eigenvaluevec,
+                     out_only Matrix_t<n, n, Mt, MT> &eigenvectors,
+                     enum hila::sort sorted = hila::nonsorted) const {
 
         static_assert(!hila::contains_complex<T>::value || hila::contains_complex<Mt>::value,
                       "Eigenvector matrix must be complex with complex original matrix");
@@ -744,6 +746,7 @@ class Matrix_t {
         static_assert(n == m, "Eigensystem can be solved only for square matrices");
         int rot;
         SquareMatrix<n, Dtype> M, V;
+        Vector<n, double> eigenvalues;
 
         // Do it in double prec; copy fields
         V = 1;
@@ -773,7 +776,32 @@ class Matrix_t {
             // if off-diag elements are tiny return
 
             if (abs_mpq <= 1e-18 * (std::abs(eigenvalues[p]) + std::abs(eigenvalues[q]))) {
-                eigenvectors = V;
+                if (sorted == hila::nonsorted) {
+
+                    // return values and vectors as is
+                    eigenvaluevec = eigenvalues;
+                    eigenvectors = V;
+
+                } else {
+                    // bubble sort eigenvalues to decreasing order
+                    double sgn = (sorted == hila::ascending) ? 1 : -1;
+
+                    int perm[n];
+                    for (int i = 0; i < n; i++)
+                        perm[i] = i;
+                    for (int i = 1; i < n; i++) {
+                        for (int j = i;
+                             j > 0 && sgn * eigenvalues[perm[j - 1]] > sgn * eigenvalues[perm[j]];
+                             j--) {
+                            std::swap(perm[j - 1], perm[j]);
+                        }
+                    }
+
+                    for (int i = 0; i < n; i++) {
+                        eigenvaluevec[i] = eigenvalues[perm[i]];
+                        eigenvectors.set_column(i, V.column(perm[i]));
+                    }
+                }
                 return (rot);
             }
 
