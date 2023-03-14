@@ -771,7 +771,7 @@ class Matrix_t {
                 }
             }
 
-            abs_mpq = std::sqrt(abs_mpq);
+            abs_mpq = ::sqrt(abs_mpq);
 
             // if off-diag elements are tiny return
 
@@ -793,7 +793,9 @@ class Matrix_t {
                         for (int j = i;
                              j > 0 && sgn * eigenvalues[perm[j - 1]] > sgn * eigenvalues[perm[j]];
                              j--) {
-                            std::swap(perm[j - 1], perm[j]);
+                            int k = perm[j];
+                            perm[j] = perm[j - 1];
+                            perm[j - 1] = k;
                         }
                     }
 
