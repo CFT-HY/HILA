@@ -82,6 +82,10 @@ void hila::seed_device_rng(unsigned long long seed) {
     check_device_error("seed_random kernel");
 }
 
+void hila::free_seed(){
+	gpuFree(gpurandstate);
+}
+
 /* Generate random numbers on device or host */
 __device__ __host__ double hila::random() {
 #ifdef __GPU_DEVICE_COMPILE__
