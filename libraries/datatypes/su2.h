@@ -214,7 +214,7 @@ class SU2 {
         one = hila::gaussrand2(two);
         c = width*one;
         d = width*two;
-        return this;
+        return *this;
     }
     /// project SU2 to generators $\lambda_a = 1/2 \sigma_a$
     inline Algebra<SU2<T>> project_to_algebra() const {
@@ -420,7 +420,7 @@ inline auto operator*(const HorizontalVector<2,B> &lhs, const SU2<A> &rhs) {
 
 
 /// This implementation represents algebra as
-/// $ a i\sigma_1 + b i\sigma_2 + c i\sigma_3$
+/// $ a i/2\sigma_1 + b i/2\sigma_2 + c i/2\sigma_3$
 template <typename T>
 class Algebra<SU2<T>> {
   public: // public on purpose
