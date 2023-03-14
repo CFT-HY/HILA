@@ -738,7 +738,7 @@ class Matrix_t {
                                                          Complex<double>, double>::type>
     int eigen_jacobi(out_only Vector<n, Et> &eigenvaluevec,
                      out_only Matrix_t<n, n, Mt, MT> &eigenvectors,
-                     enum hila::sort sorted = hila::nonsorted) const {
+                     enum hila::sort sorted = hila::sort::nonsorted) const {
 
         static_assert(!hila::contains_complex<T>::value || hila::contains_complex<Mt>::value,
                       "Eigenvector matrix must be complex with complex original matrix");
@@ -776,7 +776,7 @@ class Matrix_t {
             // if off-diag elements are tiny return
 
             if (abs_mpq <= 1e-18 * (std::abs(eigenvalues[p]) + std::abs(eigenvalues[q]))) {
-                if (sorted == hila::nonsorted) {
+                if (sorted == hila::sort::nonsorted) {
 
                     // return values and vectors as is
                     eigenvaluevec = eigenvalues;
@@ -784,7 +784,7 @@ class Matrix_t {
 
                 } else {
                     // bubble sort eigenvalues to decreasing order
-                    double sgn = (sorted == hila::ascending) ? 1 : -1;
+                    double sgn = (sorted == hila::sort::ascending) ? 1 : -1;
 
                     int perm[n];
                     for (int i = 0; i < n; i++)
