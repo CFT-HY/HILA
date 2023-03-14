@@ -137,6 +137,11 @@ namespace hila {
 void seed_device_rng(unsigned long long seed);
 } // namespace hila
 
+namespace hila {
+// should this be __device__ __host__ here?
+void free_seed();
+} // namespace hila
+
 #define GPU_CHECK(cmd)                                                                 \
     do {                                                                               \
         auto code = cmd;                                                               \
@@ -164,6 +169,10 @@ inline void synchronize_threads() {
 namespace hila {
 // double random();  // defined in random.h
 void seed_device_rng(unsigned long long seed);
+} // namespace hila
+
+namespace hila {
+void free_seed();
 } // namespace hila
 
 using gpuError = int;
