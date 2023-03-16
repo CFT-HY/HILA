@@ -157,6 +157,12 @@ class cmdlineargs {
 #include <malloc.h>
 #endif
 
+// #define DEBUG_NAN
+
+#ifdef DEBUG_NAN
+#include <fenv.h>
+#endif
+
 void setup_partitions(cmdlineargs &cl);
 
 void hila::initialize(int argc, char **argv) {
@@ -170,6 +176,10 @@ void hila::initialize(int argc, char **argv) {
     // mallopt( M_MMAP_MAX, 0 );  /* don't use mmap */
     /* HACK: don't release memory by calling sbrk */
     mallopt(M_TRIM_THRESHOLD, -1);
+
+#ifdef DEBUG_NAN
+    feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+#endif
 #endif
 
     // initialize MPI so that hila::myrank() etc. works
