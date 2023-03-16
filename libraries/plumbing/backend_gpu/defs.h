@@ -13,6 +13,18 @@ void gpu_memory_pool_free(void *ptr);
 void gpu_memory_pool_purge();
 void gpu_memory_pool_report();
 
+////////////////////////////////////////////////////////////////////////////////////
+// some device rng headers
+////////////////////////////////////////////////////////////////////////////////////
+namespace hila {
+// double random();  // defined in random.h
+void seed_device_rng(unsigned long long seed);
+} // namespace hila
+
+namespace hila {
+void free_device_rng();
+} // namespace hila
+
 
 #ifndef HILAPP
 
@@ -132,15 +144,6 @@ using gpuError = hipError_t;
 // General GPU (cuda/hip) definitions
 ////////////////////////////////////////////////////////////////////////////////////
 
-namespace hila {
-// __device__ __host__ double random(); // defined in random.h
-void seed_device_rng(unsigned long long seed);
-} // namespace hila
-
-namespace hila {
-// should this be __device__ __host__ here?
-void free_seed();
-} // namespace hila
 
 #define GPU_CHECK(cmd)                                                                 \
     do {                                                                               \
@@ -166,14 +169,6 @@ inline void synchronize_threads() {
 // Now not cuda or hip - hilapp stage scans this section
 ///////////////////////////////////////////////////////////////////////////////////
 
-namespace hila {
-// double random();  // defined in random.h
-void seed_device_rng(unsigned long long seed);
-} // namespace hila
-
-namespace hila {
-void free_seed();
-} // namespace hila
 
 using gpuError = int;
 

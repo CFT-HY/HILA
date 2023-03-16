@@ -26,6 +26,9 @@ double gaussrand2(double &out2);
 // do what the name says
 void check_that_rng_is_initialized();
 
+/// free gpu rng generator state, random does not work after this (unless seeded again)
+void free_gpu_rng();
+
 } // namespace hila
 
 

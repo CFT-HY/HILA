@@ -13,7 +13,7 @@
 static std::mt19937_64 mersenne_twister_gen;
 
 // random numbers are in interval [0,1)
-static std::uniform_real_distribution<double> real_rnd_dist(0.0,1.0);
+static std::uniform_real_distribution<double> real_rnd_dist(0.0, 1.0);
 
 //#endif
 
@@ -22,7 +22,7 @@ static std::uniform_real_distribution<double> real_rnd_dist(0.0,1.0);
 #if !defined(CUDA) && !defined(HIP)
 
 double hila::random() {
-    return real_rnd_dist( mersenne_twister_gen );
+    return real_rnd_dist(mersenne_twister_gen);
 }
 
 #endif
@@ -30,7 +30,7 @@ double hila::random() {
 // Generate random number in non-kernel (non-loop) code.  Not meant to
 // be used in "user code"
 double hila::host_random() {
-    return real_rnd_dist( mersenne_twister_gen );
+    return real_rnd_dist(mersenne_twister_gen);
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -69,16 +69,16 @@ void hila::seed_random(uint64_t seed) {
     // and also avoids giving the same seed for 2 nodes
     // n=0 remains unchanged
 
-    seed = seed ^ (n ^ ((7*n) << 25));
+    seed = seed ^ (n ^ ((7 * n) << 25));
 
     hila::out0 << "Using node random numbers, seed for node 0: " << seed << std::endl;
 
-// #if !defined(OPENMP)
-    mersenne_twister_gen.seed( seed );
+    // #if !defined(OPENMP)
+    mersenne_twister_gen.seed(seed);
     // warm it up
     for (int i = 0; i < 9000; i++)
         mersenne_twister_gen();
-// #endif
+        // #endif
 
 
 #if defined(CUDA) || defined(HIP)
@@ -97,8 +97,7 @@ void hila::seed_random(uint64_t seed) {
 
     hila::out0 << "*** SITERAND is in use!\n";
 
-    random_seed_arr =
-        (unsigned short(*)[3])memalloc(3 * node.sites * sizeof(unsigned short));
+    random_seed_arr = (unsigned short(*)[3])memalloc(3 * node.sites * sizeof(unsigned short));
     forallsites(i) {
         random_seed_arr[i][0] = (unsigned short)(seed + site[i].index);
         random_seed_arr[i][1] = (unsigned short)(seed + 2 * site[i].index);
@@ -107,6 +106,17 @@ void hila::seed_random(uint64_t seed) {
 
     random_seed_ptr = random_seed_arr[0];
 
+#endif
+}
+
+////////////////////////////////////////////////////////////////////
+/// Free rng state buffers if on gpu's.  rng's cannot be used any more
+/// unless re-seeded
+////////////////////////////////////////////////////////////////////
+
+void hila::free_gpu_rng() {
+#if defined(CUDA) || defined(HIP)
+    hila::free_device_rng();
 #endif
 }
 
