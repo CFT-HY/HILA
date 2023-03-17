@@ -58,6 +58,11 @@ using SquareMatrix = Matrix<n, n, T>;
 
 template <const int n, const int m, typename T, typename Mtype>
 class Matrix_t {
+
+  public:
+    /// The data as a one dimensional array
+    T c[n * m];
+
   public:
     static_assert(hila::is_complex_or_arithmetic<T>::value,
                   "Matrix requires Complex or arithmetic type");
@@ -67,15 +72,20 @@ class Matrix_t {
     using argument_type = T;
 
     // help for templates, can use T::is_matrix()
+    // Not very useful outside template parameters
     static constexpr bool is_matrix() {
         return true;
     }
 
-    /// The data as a one dimensional array
-    // union {
-    T c[n * m];
-    //    T elem[n][m];
-    //};
+    // is_vector and is_square bools
+    static constexpr bool is_vector() {
+        return (n == 1 || m == 1);
+    }
+
+    static constexpr bool is_square() {
+        return (n == m);
+    }
+
 
     /// define default constructors to ensure std::is_trivial
     Matrix_t() = default;
@@ -690,6 +700,80 @@ class Matrix_t {
         return *this;
     }
 
+    /// Reordering utilities: swap rows or columns by the permutation vector
+    /// Permutation vector must be valid permutation of cols/rows
+    Mtype reorder_columns(const Vector<m, int> &permutation) const {
+        Mtype res;
+        for (int i = 0; i < m; i++)
+            res.set_column(i, this->column(permutation[i]));
+        return res;
+    }
+
+    Mtype reorder_rows(const Vector<n, int> &permutation) const {
+        Mtype res;
+        for (int i = 0; i < n; i++)
+            res.set_row(i, this->row(permutation[i]));
+        return res;
+    }
+
+    /// implement also bare reorder for vectors
+    template <int N>
+    Mtype reorder(const Vector<N, int> &permutation) const {
+        static_assert(
+            n == 1 || m == 1,
+            "reorder() only for vectors, use reorder_rows() or reorder_columns() for matrices");
+        static_assert(N == Mtype::size(), "Incorrect size of permutation vector");
+
+        Mtype res;
+        for (int i = 0; i < N; i++) {
+            res[i] = (*this)[permutation[i]];
+        }
+        return res;
+    }
+
+    /// Sort a real-valued Vector
+    /// Two interfaces: first returns permutation vector, which can be used to reorder other
+    /// vectors/matrices second does only sort
+
+#pragma hila novector
+    template <int N>
+    Mtype sort(Vector<N, int> &permutation, hila::sort order = hila::sort::ascending) const {
+
+        static_assert(n == 1 || m == 1, "Sorting possible only for vectors");
+        static_assert(hila::is_arithmetic<T>::value,
+                      "Sorting possible only for arithmetic vector elements");
+        static_assert(N == Mtype::size(), "Incorrect size of permutation vector");
+
+        for (int i = 0; i < N; i++)
+            permutation[i] = i;
+        if (hila::sort::nonsorted == order) {
+            return *this;
+        }
+
+        if (hila::sort::ascending == order) {
+            for (int i = 1; i < N; i++) {
+                for (int j = i; j > 0 && c[permutation[j - 1]] > c[permutation[j]]; j--)
+                    hila::swap(permutation[j], permutation[j - 1]);
+            }
+        } else {
+            for (int i = 1; i < N; i++) {
+                for (int j = i; j > 0 && c[permutation[j - 1]] < c[permutation[j]]; j--)
+                    hila::swap(permutation[j], permutation[j - 1]);
+            }
+        }
+
+        return this->reorder(permutation);
+    }
+
+#pragma hila novector
+    Mtype sort(hila::sort order = hila::sort::ascending) const {
+        static_assert(n == 1 || m == 1, "Sorting possible only for vectors");
+
+        Vector<Mtype::size(), int> permutation;
+        return sort(permutation, order);
+    }
+
+
     /// Multiply (nxm)-matrix from left by a matrix which is 1 except for 4 elements
     /// on rows/columns p,q.
 
@@ -784,25 +868,9 @@ class Matrix_t {
 
                 } else {
                     // bubble sort eigenvalues to decreasing order
-                    double sgn = (sorted == hila::sort::ascending) ? 1 : -1;
-
-                    int perm[n];
-                    for (int i = 0; i < n; i++)
-                        perm[i] = i;
-                    for (int i = 1; i < n; i++) {
-                        for (int j = i;
-                             j > 0 && sgn * eigenvalues[perm[j - 1]] > sgn * eigenvalues[perm[j]];
-                             j--) {
-                            int k = perm[j];
-                            perm[j] = perm[j - 1];
-                            perm[j - 1] = k;
-                        }
-                    }
-
-                    for (int i = 0; i < n; i++) {
-                        eigenvaluevec[i] = eigenvalues[perm[i]];
-                        eigenvectors.set_column(i, V.column(perm[i]));
-                    }
+                    Vector<n, int> perm;
+                    eigenvaluevec = eigenvalues.sort(perm, sorted);
+                    eigenvectors = V.reorder_columns(perm);
                 }
                 return (rot);
             }

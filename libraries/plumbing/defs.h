@@ -108,7 +108,7 @@ extern int check_with_nodes;
 // optional input filename
 extern const char *input_file;
 
-enum sort {nonsorted, ascending, descending};
+enum sort { nonsorted, ascending, descending };
 
 void initialize(int argc, char **argv);
 void finishrun();
@@ -142,6 +142,18 @@ template <typename T>
 constexpr inline T sqr(const T &arg) {
     return arg * arg;
 }
+
+namespace hila {
+
+// define hila::swap(), because std::swap cannot be used in gpu code
+template <typename T>
+constexpr inline void swap(T &a, T &b) {
+    T c = a;
+    a = b;
+    b = c;
+}
+} // namespace hila
+
 
 // Backend defs-headers
 
