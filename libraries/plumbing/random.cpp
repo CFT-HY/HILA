@@ -81,9 +81,12 @@ void hila::seed_random(uint64_t seed) {
         // #endif
 
 
-#if defined(CUDA) || defined(HIP)
+#if defined(CUDA) || defined(HIP) && !defined(GPU_USE_HOST_RNG)
     // we can use the same seed, the generator is different
     hila::seed_device_rng(seed);
+
+#elif defined(CUDA) || defined(HIP) && defined(GPU_USE_HOST_RNG)
+    hila::free_device_rng();
 #endif
 
     // taus_initialize();
