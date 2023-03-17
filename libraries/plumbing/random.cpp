@@ -42,7 +42,7 @@ static bool rng_is_intialized = false;
 /// get different rng seeds.  If seed == 0,
 /// generate seed using the time() -function.
 
-void hila::seed_random(uint64_t seed) {
+void hila::seed_random(uint64_t seed, bool device_rng) {
 
     rng_is_intialized = true;
 
@@ -81,12 +81,11 @@ void hila::seed_random(uint64_t seed) {
         // #endif
 
 
-#if defined(CUDA) || defined(HIP) && !defined(GPU_USE_HOST_RNG)
+#if defined(CUDA) || defined(HIP)
     // we can use the same seed, the generator is different
-    hila::seed_device_rng(seed);
+    if (device_rng) 
+        hila::seed_device_rng(seed);
 
-#elif defined(CUDA) || defined(HIP) && defined(GPU_USE_HOST_RNG)
-    hila::free_device_rng();
 #endif
 
     // taus_initialize();

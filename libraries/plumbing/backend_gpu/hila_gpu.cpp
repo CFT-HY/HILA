@@ -52,6 +52,11 @@ __constant__ int _d_nodefactor[NDIM];
 static gpurandState *gpurandstateptr;
 __constant__ gpurandState *d_gpurandstateptr;
 
+
+bool hila::is_device_rng_on() {
+    return gpurandstateptr != nullptr;
+}
+
 /* Set seed on device */
 __global__ void seed_random_kernel(unsigned long long seed, unsigned int iters_per_kernel,
                                    unsigned int stride) {
