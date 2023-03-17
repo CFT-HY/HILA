@@ -903,7 +903,16 @@ class Field {
     T max(Parity par, CoordinateVector &loc) const;
     T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
 
+    void generate_random_field() {
 
+#ifdef GPU_USE_HOST_RNG
+        std::vector<T> rng_buffer(lattice.mynode.volume());
+        for (auto &element : rng_buffer) element = hila::random();
+        (*this).set_local_data(rng_buffer);
+#else
+        onsites(ALL) (*this)[X] = hila::random();
+#endif
+    }
 }; // End of class Field<>
 
 ///////////////////////////////
