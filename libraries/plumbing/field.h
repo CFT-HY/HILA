@@ -903,16 +903,9 @@ class Field {
     T max(Parity par, CoordinateVector &loc) const;
     T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
 
-    void generate_random_field() {
+    void generate_random_field();
 
-#ifdef GPU_USE_HOST_RNG
-        std::vector<T> rng_buffer(lattice.mynode.volume());
-        for (auto &element : rng_buffer) element = hila::random();
-        (*this).set_local_data(rng_buffer);
-#else
-        onsites(ALL) (*this)[X] = hila::random();
-#endif
-    }
+
 }; // End of class Field<>
 
 ///////////////////////////////
@@ -1393,6 +1386,30 @@ void Field<T>::gather(Direction d, Parity p) const {
 // Read in the "technical" communication bits
 
 #include "field_comm.h"
+
+
+
+template <typename T>
+void Field<T>::generate_random_field() {
+
+#if defined(CUDA) || defined(HIP)
+
+    if (!hila::is_device_rng_on()) {
+
+        std::vector<T> rng_buffer(lattice.mynode.volume());
+        for (auto &element : rng_buffer)
+            element = hila::random();
+        (*this).set_local_data(rng_buffer);
+
+    } else {
+        onsites(ALL)(*this)[X] = hila::random();
+    }
+#else
+
+    onsites(ALL)(*this)[X] = hila::random();
+
+#endif
+}
 
 
 #ifdef HILAPP
