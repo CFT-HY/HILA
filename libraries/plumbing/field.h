@@ -903,7 +903,8 @@ class Field {
     T max(Parity par, CoordinateVector &loc) const;
     T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
 
-    void generate_random_field();
+    void random();
+    void gaussian_random(double width = 1.0);
 
 
 }; // End of class Field<>
@@ -1388,9 +1389,8 @@ void Field<T>::gather(Direction d, Parity p) const {
 #include "field_comm.h"
 
 
-
 template <typename T>
-void Field<T>::generate_random_field() {
+void Field<T>::random() {
 
 #if defined(CUDA) || defined(HIP)
 
@@ -1398,15 +1398,15 @@ void Field<T>::generate_random_field() {
 
         std::vector<T> rng_buffer(lattice.mynode.volume());
         for (auto &element : rng_buffer)
-            element = hila::random();
+            hila::random(element);
         (*this).set_local_data(rng_buffer);
 
     } else {
-        onsites(ALL)(*this)[X] = hila::random();
+        onsites(ALL) hila::random( (*this)[X] );
     }
 #else
 
-    onsites(ALL)(*this)[X] = hila::random();
+    onsites(ALL) hila::random( (*this)[X] );
 
 #endif
 }
