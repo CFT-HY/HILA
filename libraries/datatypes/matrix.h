@@ -662,19 +662,19 @@ class Matrix_t {
     // }
 
     /// Generate random elements
-    Mtype &random() out_only {
+    const Mtype &random() out_only {
 
         static_assert(hila::is_floating_point<hila::number_type<T>>::value,
                       "Matrix/Vector random() requires non-integral type elements");
 
         for (int i = 0; i < n * m; i++) {
-            ::random(c[i]);
+            hila::random(c[i]);
         }
         return *this;
     }
 
     /// Generate gaussian random elements
-    inline Mtype &gaussian_random(double width = 1.0) out_only {
+    const Mtype &gaussian_random(double width = 1.0) out_only {
 
         static_assert(hila::is_floating_point<hila::number_type<T>>::value,
                       "Matrix/Vector gaussian_random() requires non-integral type elements");
@@ -693,7 +693,7 @@ class Matrix_t {
                 c[i] = hila::gaussrand2(gr) * width;
                 c[i + 1] = gr * width;
             }
-            if ((n * m) % 2 > 0) {
+            if constexpr ((n * m) % 2 > 0) {
                 c[n * m - 1] = hila::gaussrand() * width;
             }
         }
@@ -1549,21 +1549,6 @@ inline auto norm(const Mt &rhs) {
     return rhs.norm();
 }
 
-/// Function that calls random()-method
-template <typename Mt,
-          std::enable_if_t<Mt::is_matrix() && hila::is_floating_point<hila::number_type<Mt>>::value,
-                           int> = 0>
-inline void random(out_only Mt &mat) {
-    mat.random();
-}
-
-/// Function that calls the gaussian_random()-method
-template <typename Mt,
-          std::enable_if_t<Mt::is_matrix() && hila::is_floating_point<hila::number_type<Mt>>::value,
-                           int> = 0>
-inline void gaussian_random(out_only Mt &mat, double width = 1.0) {
-    mat.gaussian_random(width);
-}
 
 /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed.
 /// p. 47 ff

@@ -52,6 +52,7 @@ __constant__ int _d_nodefactor[NDIM];
 static gpurandState *gpurandstateptr;
 __constant__ gpurandState *d_gpurandstateptr;
 
+// check if rng on device is OK
 
 bool hila::is_device_rng_on() {
     return gpurandstateptr != nullptr;
@@ -69,7 +70,7 @@ __global__ void seed_random_kernel(unsigned long long seed, unsigned int iters_p
 }
 
 /* Set seed on device and host */
-void hila::seed_device_rng(unsigned long long seed) {
+void hila::initialize_device_rng(uint64_t seed) {
     unsigned int iters_per_kernel = 16;
     unsigned long n_blocks = lattice.mynode.volume() / (N_threads * iters_per_kernel) + 1;
     unsigned long n_sites = N_threads * n_blocks * iters_per_kernel;
