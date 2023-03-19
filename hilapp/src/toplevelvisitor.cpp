@@ -2088,8 +2088,6 @@ bool TopLevelVisitor::VisitFunctionDecl(FunctionDecl *f) {
     if (has_pragma(f, pragma_hila::AST_DUMP))
         ast_dump(f);
 
-    // For the pragmas, we need to check the "previousdecl" -- prototype, if there is a
-    // pragma there Automatic now in has_pragma
 
     if (has_pragma(f, pragma_hila::LOOP_FUNCTION)) {
         // This function can be called from a loop,
