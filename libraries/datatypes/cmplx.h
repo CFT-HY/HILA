@@ -630,17 +630,6 @@ inline auto squarenorm(const Complex<T> &val) {
     return val.squarenorm();
 }
 
-/// random() : set argument to random vals [0,1]
-template <typename T>
-inline void random(out_only Complex<T> &c) {
-    ::random(c.re);
-    ::random(c.im);
-}
-
-template <typename T>
-inline void gaussian_random(out_only Complex<T> &c, double width = 1.0) {
-    c.gaussian_random(width);
-}
 
 //////////////////////////////////////////////////////////////////////////////////
 /// Print a complex value as (re,im)
