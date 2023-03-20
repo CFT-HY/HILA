@@ -180,6 +180,30 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         }
     }
 
+    // rng thread status needs to be found only once
+    static bool rng_threads_checked = false;
+    static unsigned rng_thread_block_number = 0;
+
+    bool use_rng_threads = false;
+
+    if (loop_info.contains_random) {
+
+        if (!rng_threads_checked) {
+            // now check if the rng thread number is present
+            rng_threads_checked = true;
+            std::string rng_str;
+
+            if (is_macro_defined("GPU_RNG_THREAD_BLOCKS", &rng_str)) {
+                rng_thread_block_number = std::atoi(rng_str.c_str());
+            }
+        }
+
+        if (rng_thread_block_number > 0) {
+            // loop has random and rng thread blocks in use and number known
+            use_rng_threads = true;
+        }
+    }
+
     // Generate the function definition and call
     // "inline" makes cuda complain, but it is needed to avoid multiple definition error
     // use "static" instead??
@@ -192,6 +216,11 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
 
     code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
             "N_threads - 1)/N_threads;\n";
+
+    if (use_rng_threads) {
+        code << "if (N_blocks > " << rng_thread_block_number
+             << ") N_blocks = " << rng_thread_block_number << ";\n";
+    }
 
     // Check for reductions and allocate device memory for each field
     for (var_info &v : var_info_list) {
@@ -457,14 +486,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     kernel << ")\n{\n";
 
     // kernel << "backend_lattice_struct *loop_lattice = &d_lattice; \n";
-    /* Standard boilerplate in CUDA kernels: calculate site index */
-    kernel << "unsigned " << looping_var << " = threadIdx.x + blockIdx.x * blockDim.x "
-           << " + d_lattice.loop_begin; \n";
-    /* The last block may exceed the lattice size. Do nothing in that case. */
-    // move after reduction var setup
-    // kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
 
-    // Declare the shared reduction variable
+    // Declare the shared reduction variable inside loop
     for (var_info &vi : var_info_list)
         if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE) {
@@ -487,8 +510,24 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
             }
         }
 
-    /* The last block may exceed the lattice size. Do nothing in that case. */
-    kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
+    // Standard boilerplate in CUDA kernels: calculate site index
+    kernel << "unsigned " << looping_var << " = threadIdx.x + blockIdx.x * blockDim.x "
+           << " + d_lattice.loop_begin; \n";
+
+    if (!use_rng_threads) {
+
+        // The last block may exceed the lattice size. Do nothing in that case.
+        kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
+
+    } else {
+        // In this case let all threads to iterate over sites
+        // use long long type (64 bits) just in case to avoid wrapping
+        // the iteration will stop on the
+        kernel << "for (long long _HILA_idx_l_ = " << looping_var
+               << "; _HILA_idx_l_ < d_lattice.loop_end; _HILA_idx_l_ += N_threads * "
+               << rng_thread_block_number << ") {\n"
+               << looping_var << " = _HILA_idx_l_;\n";
+    }
 
     // Create temporary field element variables
     for (field_info &l : field_info_list) {

@@ -3,7 +3,7 @@
 
 ///////////////////////////////////////////////////////////////////////////
 ///  This file contains #defined constants
-///  These can be overruled in app Makefile, with 
+///  These can be overruled in app Makefile, with
 ///  APP_OPTS := -DPARAMETER=value
 ///  On switches which are by default on, "-DPARAMETER=0" undefines them
 ///////////////////////////////////////////////////////////////////////////
@@ -27,7 +27,7 @@
 #endif
 
 // NODE_LAYOUT_TRIVIAL or NODE_LAYOUT_BLOCK must be defined
-// Define NODE_LAYOUT_BLOCK to be the number of 
+// Define NODE_LAYOUT_BLOCK to be the number of
 // MPI processes within a compute node - tries to maximize
 // locality
 #ifndef NODE_LAYOUT_TRIVIAL
@@ -50,7 +50,7 @@
 // Special defines for GPU targets
 #if defined(CUDA) || defined(HIP)
 
-// Use gpu memory pool by default 
+// Use gpu memory pool by default
 // set off by using -DGPU_MEMORY_POOL=0 in Makefile
 #ifndef GPU_MEMORY_POOL
 #define GPU_MEMORY_POOL
@@ -69,7 +69,7 @@
 // reduction.  Probably should not be used.
 // #define SLOW_GPU_REDUCTION
 
-#endif  // CUDA || HIP
+#endif // CUDA || HIP
 
 ///////////////////////////////////////////////////////////////////////////
 // Special defines for CUDA target
@@ -87,9 +87,12 @@
 #define N_GPU_REDUCE_THREADS 512
 #endif
 
-// which reduction kernel to use - see gpu_reduction.h
-#ifndef GPU_REDUCE_KERNEL
-#define GPU_REDUCE_KERNEL 6
+// # of thread blocks (of N_threads threads) to use in loops containing random numbers.
+// GPU_RNG_THREAD_BLOCKS == 0 or undefined means use one rng on each lattice site.  This takes about
+// 48 B/site (with XORWOW).  When GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS)
+// generators are in use, which reduces the memory footprint (and bandwidth demand)
+#ifndef GPU_RNG_THREAD_BLOCKS
+#define GPU_RNG_THREAD_BLOCKS 16
 #endif
 
 // How many fft's in parallel - large value faster, small less memory.
@@ -99,7 +102,7 @@
 
 #ifndef GPU_MEMORY_POOL
 
-// CUDA_MALLOC_ASYNC 
+// CUDA_MALLOC_ASYNC
 #ifndef CUDA_MALLOC_ASYNC
 // Use async malloc only if version is large enough
 // NOTE: does not seem to work with OpenMPI, disable
@@ -130,9 +133,12 @@
 #define N_GPU_REDUCE_THREADS 512
 #endif
 
-// which reduction kernel to use - see gpu_reduction.h
-#ifndef GPU_REDUCE_KERNEL
-#define GPU_REDUCE_KERNEL 6
+// # of thread blocks (of N_threads threads) to use in loops containing random numbers.
+// GPU_RNG_THREAD_BLOCKS == 0 or undefined means use one rng on each lattice site.  This takes about
+// 48 B/site (with XORWOW).  When GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS)
+// generators are in use, which reduces the memory footprint (and bandwidth demand)
+#ifndef GPU_RNG_THREAD_BLOCKS
+#define GPU_RNG_THREAD_BLOCKS 16
 #endif
 
 // How many fft's in parallel - large value faster, small less memory.
@@ -142,6 +148,6 @@
 
 
 // End of GPU defines
-#endif   // HIP
+#endif // HIP
 
 #endif

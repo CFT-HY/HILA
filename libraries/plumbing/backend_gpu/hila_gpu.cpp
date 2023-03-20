@@ -59,21 +59,29 @@ bool hila::is_device_rng_on() {
 }
 
 /* Set seed on device */
-__global__ void seed_random_kernel(unsigned long long seed, unsigned int iters_per_kernel,
-                                   unsigned int stride) {
+__global__ void seed_random_kernel(unsigned long long seed) {
     unsigned x = threadIdx.x + blockIdx.x * blockDim.x;
     //  d_gpurandstateptr set now using memcpyToSymbol
     //  d_gpurandstateptr = state;
-    for (int i = 0; i < iters_per_kernel; i++) {
-        gpurand_init(seed + i * stride + x, i * stride + x, 0, &d_gpurandstateptr[i * stride + x]);
-    }
+    gpurand_init(seed + x, 0, 0, &d_gpurandstateptr[x]);
 }
 
 /* Set seed on device and host */
 void hila::initialize_device_rng(uint64_t seed) {
-    unsigned int iters_per_kernel = 16;
-    unsigned long n_blocks = lattice.mynode.volume() / (N_threads * iters_per_kernel) + 1;
-    unsigned long n_sites = N_threads * n_blocks * iters_per_kernel;
+    unsigned long n_blocks = (lattice.mynode.volume() + N_threads - 1)/ N_threads;
+
+#ifdef GPU_RNG_THREAD_BLOCKS
+    // If we have limited rng block number
+    if (GPU_RNG_THREAD_BLOCKS > 0 && GPU_RNG_THREAD_BLOCKS < n_blocks) {
+        n_blocks = GPU_RNG_THREAD_BLOCKS;
+    }
+
+    hila::out0 << "GPU random number thread blocks: " << n_blocks << " of size " << N_threads << " threads\n";
+#else
+    hila::out0 << "GPU_RNG_THREAD_BLOCKS undefined\n";
+#endif
+
+    unsigned long long n_sites = n_blocks * N_threads;
     unsigned long long myseed = seed + hila::myrank() * n_sites;
 
     // allocate random state and copy the ptr to d_gpurandstateptr
@@ -82,10 +90,9 @@ void hila::initialize_device_rng(uint64_t seed) {
                       gpuMemcpyHostToDevice);
 
 #ifdef CUDA
-    seed_random_kernel<<<n_blocks, N_threads>>>(myseed, iters_per_kernel, n_blocks * N_threads);
+    seed_random_kernel<<<n_blocks, N_threads>>>(myseed);
 #else
-    hipLaunchKernelGGL(seed_random_kernel, dim3(n_blocks), dim3(N_threads), 0, 0, myseed,
-                       iters_per_kernel, n_blocks * N_threads);
+    hipLaunchKernelGGL(seed_random_kernel, dim3(n_blocks), dim3(N_threads), 0, 0, myseed);
 #endif
     check_device_error("seed_random kernel");
 }

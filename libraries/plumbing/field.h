@@ -1402,11 +1402,15 @@ void Field<T>::random() {
         (*this).set_local_data(rng_buffer);
 
     } else {
-        onsites(ALL) hila::random( (*this)[X] );
+        onsites(ALL) {
+            hila::random( (*this)[X] );
+        }
     }
 #else
 
-    onsites(ALL) hila::random( (*this)[X] );
+    onsites(ALL) {
+        hila::random( (*this)[X] );
+    }
 
 #endif
 }
