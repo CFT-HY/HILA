@@ -82,17 +82,12 @@
 #define N_threads 256
 #endif
 
-// # of threads in reduction - as large as HW supports
-#ifndef N_GPU_REDUCE_THREADS
-#define N_GPU_REDUCE_THREADS 512
-#endif
-
 // # of thread blocks (of N_threads threads) to use in loops containing random numbers.
 // GPU_RNG_THREAD_BLOCKS == 0 or undefined means use one rng on each lattice site.  This takes about
 // 48 B/site (with XORWOW).  When GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS)
 // generators are in use, which reduces the memory footprint (and bandwidth demand)
 #ifndef GPU_RNG_THREAD_BLOCKS
-#define GPU_RNG_THREAD_BLOCKS 16
+#define GPU_RNG_THREAD_BLOCKS 32
 #endif
 
 // How many fft's in parallel - large value faster, small less memory.
@@ -128,17 +123,13 @@
 #define N_threads 256
 #endif
 
-// # of threads in reduction - as large as HW supports
-#ifndef N_GPU_REDUCE_THREADS
-#define N_GPU_REDUCE_THREADS 512
-#endif
 
 // # of thread blocks (of N_threads threads) to use in loops containing random numbers.
 // GPU_RNG_THREAD_BLOCKS == 0 or undefined means use one rng on each lattice site.  This takes about
 // 48 B/site (with XORWOW).  When GPU_RNG_THREAD_BLOCKS > 0 only (N_threads * GPU_RNG_THREAD_BLOCKS)
 // generators are in use, which reduces the memory footprint (and bandwidth demand)
 #ifndef GPU_RNG_THREAD_BLOCKS
-#define GPU_RNG_THREAD_BLOCKS 16
+#define GPU_RNG_THREAD_BLOCKS 32
 #endif
 
 // How many fft's in parallel - large value faster, small less memory.
