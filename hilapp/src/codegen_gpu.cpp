@@ -182,7 +182,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
 
     // rng thread status needs to be found only once
     static bool rng_threads_checked = false;
-    static unsigned rng_thread_block_number = 0;
+    static int rng_thread_block_number = 0;
 
     bool use_rng_threads = false;
 
@@ -201,6 +201,12 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         if (rng_thread_block_number > 0) {
             // loop has random and rng thread blocks in use and number known
             use_rng_threads = true;
+        }
+
+        if (rng_thread_block_number < 0) {
+            reportDiag(DiagnosticsEngine::Level::Warning, loop_info.range.getBegin(),
+                       "loop contains random number generator calls but GPU random numbers are "
+                       "disabled (GPU_RNG_THREAD_BLOCKS < 0).  This may crash the program.");
         }
     }
 
