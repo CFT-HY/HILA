@@ -76,12 +76,12 @@ void hila::initialize_device_rng(uint64_t seed) {
         n_blocks = GPU_RNG_THREAD_BLOCKS;
     }
 
-    hila::out0 << "GPU random number generator initialized\n"
+    hila::out0 << "GPU random number generator initialized\n";
     hila::out0 << "GPU random number thread blocks: " << n_blocks << " of size " << N_threads << " threads\n";
 #elif defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS < 0
     hila::out0 << "GPU RANDOM NUMBERS DISABLED, GPU_RNG_THREAD_BLOCKS < 0\n";
 #else
-    hila::out0 << "GPU random number generator initialized\n"
+    hila::out0 << "GPU random number generator initialized\n";
     hila::out0 << "GPU random numbers: using on generator/site (GPU_RNG_THREAD_BLOCKS = 0 or undefined)\n";
 #endif
 
