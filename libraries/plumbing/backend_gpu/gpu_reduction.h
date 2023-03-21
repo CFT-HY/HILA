@@ -42,7 +42,7 @@
 #if !defined(HILAPP)
 
 // static constexpr int whichKernel = GPU_REDUCE_KERNEL;
-static constexpr int numThreads = N_GPU_REDUCE_THREADS;
+// static constexpr int numThreads = N_GPU_REDUCE_THREADS;
 
 // Define what reduction kernel to use - a local variable
 // Number from 0 to 9, can benchmark ...

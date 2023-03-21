@@ -70,15 +70,19 @@ __global__ void seed_random_kernel(unsigned long long seed) {
 void hila::initialize_device_rng(uint64_t seed) {
     unsigned long n_blocks = (lattice.mynode.volume() + N_threads - 1)/ N_threads;
 
-#ifdef GPU_RNG_THREAD_BLOCKS
+#if defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS > 0
     // If we have limited rng block number
-    if (GPU_RNG_THREAD_BLOCKS > 0 && GPU_RNG_THREAD_BLOCKS < n_blocks) {
+    if (GPU_RNG_THREAD_BLOCKS < n_blocks) {
         n_blocks = GPU_RNG_THREAD_BLOCKS;
     }
 
+    hila::out0 << "GPU random number generator initialized\n"
     hila::out0 << "GPU random number thread blocks: " << n_blocks << " of size " << N_threads << " threads\n";
+#elif defined(GPU_RNG_THREAD_BLOCKS) && GPU_RNG_THREAD_BLOCKS < 0
+    hila::out0 << "GPU RANDOM NUMBERS DISABLED, GPU_RNG_THREAD_BLOCKS < 0\n";
 #else
-    hila::out0 << "GPU_RNG_THREAD_BLOCKS undefined\n";
+    hila::out0 << "GPU random number generator initialized\n"
+    hila::out0 << "GPU random numbers: using on generator/site (GPU_RNG_THREAD_BLOCKS = 0 or undefined)\n";
 #endif
 
     unsigned long long n_sites = n_blocks * N_threads;
