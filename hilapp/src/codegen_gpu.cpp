@@ -102,10 +102,51 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     code << "const lattice_struct & loop_lattice = lattice;\n";
 
 
-    kernel << "\n\n//-------- start kernel " << kernel_name << "---------\n";
+    kernel << "\n\n//------------------ start kernel " << kernel_name << "--------------------\n";
+
+
+    // Figure out the RNG operation status
+    // For RNG loops we optionally create loop with lower number of active threads
+    // enabling the use of smaller rng generator footprint
+
+    static bool rng_threads_checked = false;
+    static int rng_thread_block_number = 0;
+
+    bool use_thread_blocks = false;
+    int thread_block_number = 0;
+
+    if (loop_info.contains_random) {
+
+        if (!rng_threads_checked) {
+            // now check if the rng thread number is present
+            rng_threads_checked = true;
+            std::string rng_str;
+
+            if (is_macro_defined("GPU_RNG_THREAD_BLOCKS", &rng_str)) {
+                rng_thread_block_number = std::atoi(rng_str.c_str());
+            }
+        }
+
+        if (rng_thread_block_number > 0) {
+            // loop has random and rng thread blocks in use and number known
+            use_thread_blocks = true;
+            thread_block_number = rng_thread_block_number;
+        }
+
+        if (rng_thread_block_number < 0) {
+            reportDiag(DiagnosticsEngine::Level::Warning, loop_info.range.getBegin(),
+                       "loop contains random number generator calls but GPU random numbers are "
+                       "disabled (GPU_RNG_THREAD_BLOCKS < 0).  This may crash the program.");
+        }
+    }
+
 
     // if we have small arrays, encapsulate them in struct
     // struct has to be defined before the kernel call
+
+    // keep track if we have rv here
+    bool loop_has_reductionvector_blocks = false;
+
     for (array_ref &ar : array_ref_list) {
         if (ar.type != array_ref::REPLACE && ar.type != array_ref::REDUCTION) {
 
@@ -161,54 +202,58 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
 
         } else if (ar.type == array_ref::REDUCTION) {
 
+            // Now there is reductionvector - do we have special reduction blocks or use atomic?
+
+            std::string rv_block_str;
+            if (is_macro_defined("GPU_VECTOR_REDUCTION_THREAD_BLOCKS", &rv_block_str)) {
+                int blocks = std::atoi(rv_block_str.c_str());
+                if (blocks > 0) {
+                    loop_has_reductionvector_blocks = true;
+                    use_thread_blocks = true;
+
+                    // we have to take smaller of block numbers - RNG works with smaller number,
+                    // but not larger.
+                    if (thread_block_number > 0) {
+                        thread_block_number = std::min(thread_block_number, blocks);
+                    } else {
+                        thread_block_number = blocks;
+                    }
+                }
+            }
+
             ar.new_name = "r_" + var_name_prefix + clean_name(ar.name);
 
-            code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << "gpuMalloc( & " << ar.new_name << ", " << ar.size_expr << " * sizeof("
+
+            std::stringstream array_size; // keep size expression in string
+
+            if (loop_has_reductionvector_blocks) {
+                code << "// Create reduction array with " << thread_block_number
+                     << " * N_threads parallel reductions\n";
+
+                array_size << ar.size_expr << " * N_threads * " << thread_block_number;
+
+            } else {
+                code << "// Create reduction array - using atomicAdd for accumulation\n";
+
+                array_size << ar.size_expr;
+            }
+
+            code << "gpuMalloc( & " << ar.new_name << ", " << array_size.str() << " * sizeof("
                  << ar.element_type << "));\n";
 
             if (ar.reduction_type == reduction::SUM) {
-                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr << ");\n";
+                code << "gpu_set_zero(" << ar.new_name << ", " << array_size.str() << ");\n";
             }
 
             if (ar.reduction_type == reduction::PRODUCT) {
-                code << "gpu_set_one(" << ar.new_name << ", " << ar.size_expr << ");\n";
+                code << "gpu_set_value(" << ar.new_name << ", 1, " << array_size.str() << ");\n";
             }
 
             code << "check_device_error(\"allocate_reduction\");\n";
         }
     }
 
-    // rng thread status needs to be found only once
-    static bool rng_threads_checked = false;
-    static int rng_thread_block_number = 0;
-
-    bool use_rng_threads = false;
-
-    if (loop_info.contains_random) {
-
-        if (!rng_threads_checked) {
-            // now check if the rng thread number is present
-            rng_threads_checked = true;
-            std::string rng_str;
-
-            if (is_macro_defined("GPU_RNG_THREAD_BLOCKS", &rng_str)) {
-                rng_thread_block_number = std::atoi(rng_str.c_str());
-            }
-        }
-
-        if (rng_thread_block_number > 0) {
-            // loop has random and rng thread blocks in use and number known
-            use_rng_threads = true;
-        }
-
-        if (rng_thread_block_number < 0) {
-            reportDiag(DiagnosticsEngine::Level::Warning, loop_info.range.getBegin(),
-                       "loop contains random number generator calls but GPU random numbers are "
-                       "disabled (GPU_RNG_THREAD_BLOCKS < 0).  This may crash the program.");
-        }
-    }
 
     // Generate the function definition and call
     // "inline" makes cuda complain, but it is needed to avoid multiple definition error
@@ -223,9 +268,9 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
             "N_threads - 1)/N_threads;\n";
 
-    if (use_rng_threads) {
-        code << "if (N_blocks > " << rng_thread_block_number
-             << ") N_blocks = " << rng_thread_block_number << ";\n";
+    if (use_thread_blocks) {
+        code << "if (N_blocks > " << thread_block_number << ") N_blocks = " << thread_block_number
+             << ";\n";
     }
 
     // Check for reductions and allocate device memory for each field
@@ -239,7 +284,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                 code << "gpu_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
             }
             if (v.reduction_type == reduction::PRODUCT) {
-                code << "gpu_set_one(dev_" << v.reduction_name << ", N_blocks);\n";
+                code << "gpu_set_value(dev_" << v.reduction_name << ", 1, N_blocks);\n";
             }
         }
     }
@@ -416,14 +461,18 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
 
         } else {
 
-            // Finally, we have reduction
+            // Finally, we have reductionvector here
             // substute here a[i] += b;
-            // with atomicAdd(&a[i],b);
+            // if not reductionvector blocks, substitute with atomicAdd(&a[i],b);
+            // with blocks, each thread adds to its own subset
 
+            // pass also size here
             code << ", " << ar.new_name;
             kernel << ", " << ar.element_type << " * RESTRICT " << ar.new_name;
 
+
             for (bracket_ref_t &br : ar.refs) {
+                // change the name
                 loopBuf.replace(br.DRE, ar.new_name);
 
                 SourceLocation oploc, beginloc, endloc;
@@ -444,23 +493,63 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                     exit(1);
                 }
 
-                loopBuf.replace(SourceRange(oploc, oploc.getLocWithOffset(1)), ",");
+                if (!loop_has_reductionvector_blocks) {
+                    // in this case do atomic ops
 
-                if (ar.reduction_type == reduction::SUM) {
+                    loopBuf.replace(SourceRange(oploc, oploc.getLocWithOffset(1)), ",");
 
-                    // Cuda has a bug where double atomicAdd is not defined for
-                    // capability < 6.0, but you nevertheless cannot use the name.
-                    // use slightly modified name
-                    if (ar.element_type == "double")
-                        loopBuf.insert(beginloc, "atomic_Add(&", true);
-                    else
-                        loopBuf.insert(beginloc, "atomicAdd(&", true);
+                    if (ar.reduction_type == reduction::SUM) {
+
+                        // Cuda has a bug where double atomicAdd is not defined for
+                        // capability < 6.0, but you nevertheless cannot use the name.
+                        // use slightly modified name
+                        if (ar.element_type == "double")
+                            loopBuf.insert(beginloc, "atomic_Add(&", true);
+                        else
+                            loopBuf.insert(beginloc, "atomicAdd(&", true);
+
+                    } else {
+                        loopBuf.insert(beginloc, "atomicMultiply(&", true);
+                    }
+
+                    loopBuf.insert_after(endloc, ")", false);
 
                 } else {
-                    loopBuf.insert(beginloc, "atomicMultiply(&", true);
-                }
+                    // Now each thread writes to its own array section.
+                    // give thread offset to the index
+                    // Here we change expr of type
+                    //    s[ind] += val
+                    // to
+                    //    new_name[static_cast<int>(ind)*N_threads_total + thread_idx] += val
+                    // static cast is added if the type of the index is not of int type
 
-                loopBuf.insert_after(endloc, ")", false);
+                    // in this case pass the size of the vector (original!) to the kernel
+                    std::string ar_size_varname(ar.new_name + "_size");
+
+                    code << ", " << ar.size_expr;
+                    kernel << ", const int " << ar_size_varname;
+
+                    // Now have to be careful not to insert on the index variable "area",
+                    // go in front of it
+
+                    SourceLocation l = br.Idx.at(0)->getSourceRange().getBegin().getLocWithOffset(-1);
+                    // get the char there, most likely '['
+                    std::string replstr = loopBuf.get(l,1);
+                    
+                    if (br.Idx.at(0)->getType().getTypePtr()->isIntegerType()) {
+                        replstr.append("( ");
+                    } else {
+                        replstr.append("static_cast<int>( ");
+                    }
+                    int idx = loopBuf.get_index(l);
+
+                    loopBuf.replace(idx,idx,replstr);
+
+                    // _HILA_thread_id is defined in kernel start below
+                    l = getSourceLocationAtEndOfRange(br.Idx.at(0)->getSourceRange())
+                                           .getLocWithOffset(1);
+                    loopBuf.insert(l, " ) + _HILA_thread_id * " + ar_size_varname);
+                }
             }
         }
     }
@@ -516,11 +605,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
             }
         }
 
+    /////////////////////////////////////////////////////////////////////////////
     // Standard boilerplate in CUDA kernels: calculate site index
-    kernel << "unsigned " << looping_var << " = threadIdx.x + blockIdx.x * blockDim.x "
-           << " + d_lattice.loop_begin; \n";
 
-    if (!use_rng_threads) {
+    kernel << "int _HILA_thread_id = threadIdx.x + blockIdx.x * blockDim.x;\n";
+    kernel << "int " << looping_var << " = _HILA_thread_id + d_lattice.loop_begin;\n";
+
+    if (!use_thread_blocks) {
 
         // The last block may exceed the lattice size. Do nothing in that case.
         kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
@@ -531,7 +622,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         // the iteration will stop on the
         kernel << "for (long long _HILA_idx_l_ = " << looping_var
                << "; _HILA_idx_l_ < d_lattice.loop_end; _HILA_idx_l_ += N_threads * "
-               << rng_thread_block_number << ") {\n"
+               << thread_block_number << ") {\n"
                << looping_var << " = _HILA_idx_l_;\n";
     }
 
@@ -666,7 +757,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         //          << ", loop_lattice->field_alloc_size)" << ";\n";
         //   break;  // Only one needed
         // }
-    }
+
+    } // ends Field handling
 
     // if there are site selections, reset the selection flag to 0 at all sites
 
@@ -676,7 +768,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         }
     }
 
-    ////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
 
     // Finally, dump the loop body
 
@@ -694,8 +786,10 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                    << ", d_lattice.field_alloc_size );\n";
         }
 
-    // end the if ( looping_var < d_lattice.loop_end)
+    // end the if ( looping_var < d_lattice.loop_end) or for() {
     kernel << "}\n";
+
+    ///////////////////////////////////////////////////////////////////////////
 
     // Assign reductions to shared memory
     for (var_info &vi : var_info_list) {
@@ -708,7 +802,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     // Handle reductions: Need to sync threads once, then do reduction
     // locally once per block
     bool sync_done = false;
-    for (var_info &vi : var_info_list)
+
+    for (var_info &vi : var_info_list) {
         if (!vi.is_loop_local) {
             if (vi.reduction_type != reduction::NONE) {
                 // Do sync (only if there is a reduction)
@@ -720,6 +815,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                 // Now run the thread level reduction
                 // kernel << "if( threadIdx.x == 0 ){\n";
                 // if (vi.reduction_type == reduction::SUM) {
+                // loopBuf.insert(br.Idx.at(0)->getSourceRange().getBegin(), "(");
+
                 //     kernel << vi.new_name << "[blockIdx.x] = 0;\n";
                 // } else if (vi.reduction_type == reduction::PRODUCT) {
                 //     kernel << vi.new_name << "[blockIdx.x] = 1;\n";
@@ -748,21 +845,41 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                 kernel << "}\n";
             }
         }
-    kernel << "}\n//----------\n\n";
-    code << ");\n\n";
-    code << "check_device_error(\"" << kernel_name << "\");\n";
+
+    } // Reduction end handling stops here
+
+
+    kernel << "}\n//------------------- end kernel " << kernel_name << " ---------------------\n\n";
 
     // Finally, emit the kernel
     // TheRewriter.InsertText(global.location.function,
     // indent_string(kernel),true,true);
+
     srcBuf *filebuf = get_file_srcBuf(global.location.kernels);
     filebuf->insert(global.location.kernels, // .getLocWithOffset(-1),
                     indent_string(kernel.str()), false, false);
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    // Kernel is finished.  Write the end handling on call code
+
+    code << ");\n\n"; // finishes kernel call
+    code << "check_device_error(\"" << kernel_name << "\");\n";
+
 
     // If arrays were copied free memory
 
     for (array_ref &ar : array_ref_list) {
         if (ar.type == array_ref::REDUCTION) {
+
+            if (loop_has_reductionvector_blocks) {
+                // there are now N_blocks * loop_blocks -- reduce these
+                // (code in hila_gpu.cpp)
+
+                code << "sum_blocked_vectorreduction(" << ar.new_name << ", " << ar.size_expr
+                     << ", " << thread_block_number << " * N_threads);\n";
+
+                // after this the data can be collected from the array as in non-blocked reduction!
+            }
 
             code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr << ");\n";
             code << "gpuMemcpy(a_v__tmp.data(), " << ar.new_name << ", " << ar.size_expr
