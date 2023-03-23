@@ -148,6 +148,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     bool loop_has_reductionvector_blocks = false;
 
     for (array_ref &ar : array_ref_list) {
+        llvm::errs() << "ARRAY " << ar.name << " REF TYPE IS " << ar.type << '\n';
         if (ar.type != array_ref::REPLACE && ar.type != array_ref::REDUCTION) {
 
             if (ar.size > 0 && ar.size <= MAX_PARAM_ARRAY_SIZE) {
@@ -464,7 +465,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
             // Finally, we have reductionvector here
             // substute here a[i] += b;
             // if not reductionvector blocks, substitute with atomicAdd(&a[i],b);
-            // with blocks, each thread adds to its own subset
+            // with blocks, each thread adds to its own histogram
 
             // pass also size here
             code << ", " << ar.new_name;

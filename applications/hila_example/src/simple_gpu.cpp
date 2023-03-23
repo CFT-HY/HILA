@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     onsites(ALL) reduce += f[X];
     hila::out0 << reduce/lattice.volume()<< '\n';
 
-    f.generate_random_field();
+    f.random();
     onsites(ALL) reduce += f[X];
     hila::out0 << reduce/lattice.volume() << '\n';
 

@@ -392,7 +392,7 @@ bool TopLevelVisitor::is_variable_loop_local(VarDecl *decl) {
 ///          -  it is sufficient to read in this array element only,
 ///             and remove var references to variables in index
 ///
-int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype type,
+int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref::reftype type,
                                             bool &is_assign, std::string &assignop) {
 
     if (ref.DRE == nullptr) {
@@ -528,18 +528,24 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, array_ref::refty
     for (auto *ip : ref.Idx)
         has_loop_local_var |= contains_loop_local_var(ip, nullptr);
 
-    if (!site_dep && !has_loop_local_var /* && !is_assign */) {
+    // let the refs to ReductionVectors be handled further down
+    if (!site_dep && !has_loop_local_var && type != array_ref::REDUCTION) {
 
         // now it is a fixed index - move whole arr ref outside the loop
         // Note: multiple refrences are not checked, thus, same element can be
         // referred more than once.  TODO? (small optimization)
 
-        // use the array_ref_list to note this
-        ar.type = array_ref::REPLACE;
-        array_ref_list.push_back(ar);
+        // currently is_assign == false here alwasy
+        if (!is_assign) {
+            // use the array_ref_list to note this
+            ar.type = array_ref::REPLACE;
+            array_ref_list.push_back(ar);
 
-        parsing_state.skip_children = 1; // no need to look inside the replacement
-                                         // variable refs inside should not be recorded
+            parsing_state.skip_children = 1; // no need to look inside the replacement
+                                             // variable refs inside should not be recorded
+        } else {
+
+        }
         return 1;
     }
 
@@ -672,7 +678,7 @@ bool TopLevelVisitor::is_vector_reference(Stmt *s) {
 
 ///////////////////////////////////////////////////////////////////////////////
 /// handle_vector_reference() processes references like v[index], where
-/// v is std::vector or std::array.  Called only if is_vector_reference() is true
+/// v is std::vector, std::array or ReductionVector. Called only if is_vector_reference() is true
 ///////////////////////////////////////////////////////////////////////////////
 bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop,
                                               Stmt *assign_stmt) {
@@ -696,7 +702,7 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::str
     else if (type.find("std::array<") == 0)
         rt = array_ref::STD_ARRAY;
     else {
-        // now we know it is ArrayReduction.  Treat is as reduction only if it is
+        // now we know it is ReductionVector.  Treat is as reduction only if it is
         // assignment
         if (is_assign)
             rt = array_ref::REDUCTION;
@@ -1178,6 +1184,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // Check also the type: if it is not trivial, don't know what to do here
             if (!is_assignment && is_loop_constant(E) && ME->getType().isTrivialType(*Context)) {
 
+                llvm::errs() << " GOT LOOP CONST " << get_stmt_str(E) << '\n';
                 handle_loop_const_expr_ref(E);
 
                 parsing_state.skip_children = 1;

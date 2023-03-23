@@ -144,7 +144,7 @@ class TopLevelVisitor : public GeneralVisitor,
     bool is_array_expr(Expr *E);
 
     int handle_array_var_ref(ArraySubscriptExpr *E, bool &is_assign, std::string &op);
-    int handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype typ,
+    int handle_bracket_var_ref(bracket_ref_t &ref, const array_ref::reftype typ,
                                bool &is_assign, std::string &assignop);
 
     bool is_vector_reference(Stmt *s);
