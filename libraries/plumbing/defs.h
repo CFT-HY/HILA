@@ -9,7 +9,6 @@
 #include <iostream>
 #include <array>
 #include <vector>
-#include <assert.h>
 #include <sstream>
 // #include <math.h>
 #include <type_traits>
@@ -23,8 +22,12 @@
 #include <mpi.h>
 #endif
 
-// Read in Makefile tunable parameters first
+// Read in Makefile tunable parameters first 
+// NDEBUG is defined (or not) in params, so assert.h comes after
 #include "params.h"
+
+#include <assert.h>
+
 
 #ifdef HILAPP
 // The compiler is hilapp
@@ -33,7 +36,7 @@
 #define __global__
 #endif
 
-#include "plumbing/mersenne.h"
+// #include "plumbing/mersenne.h"
 #include "plumbing/memalloc.h" // memory allocator
 #include "plumbing/timing.h"
 

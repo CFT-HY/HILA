@@ -952,7 +952,7 @@ std::pair<T, unsigned> gpu_launch_minmax_kernel(T *field_data, int node_system_s
 
 /////////////////////////////////////////////////////////////////////////////////////////
 
-#else // if !defined(HILAPP) && !defined(SLOW_GPU_REDUCTION)
+#else // if !defined(HILAPP)
 
 // just declare the name
 // template <class T>
