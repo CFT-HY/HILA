@@ -38,6 +38,60 @@ inline std::string unique_name(const std::string t, std::string n) {
     return n;
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
+// Create the list of reductions from varible list and from const_expr list
+// (leaving Reductionvector alone) 
+// -> global variable reduction_list
+
+void create_reduction_list(std::list<var_info> &vi_list, std::list<loop_const_expr_ref> &ce_list) {
+
+    reduction_list.clear();
+
+    // Find reductions from variables
+    for (var_info &v : vi_list) {
+        if (v.reduction_type != reduction::NONE) {
+
+            reduction_expr re;
+            re.reduction_type = v.reduction_type;
+            re.name = v.name;
+            re.reduction_name = "r" + var_name_prefix + clean_name(v.name);
+            re.type = v.type;
+            // and get the reference exprs here
+            for (auto &vref : v.refs) {
+                if (Expr *E = dyn_cast<Expr>(vref.ref)) {
+                    re.refs.push_back(E);
+                } else {
+                    llvm::errs() << "VREF DYN CAST ERROR!!!\n";
+                }
+            }
+            re.is_special_reduction = v.is_special_reduction_type;
+            re.variable = &v;
+
+            reduction_list.push_back(re);
+        }
+    }
+
+    int cexpr_ind = 0;
+    for (loop_const_expr_ref &r : ce_list) {
+        if (r.reduction_type != reduction::NONE) {
+
+            reduction_expr re;
+            re.reduction_type = r.reduction_type;
+            re.name = r.expression;
+            cexpr_ind++;
+            re.reduction_name = "r" + var_name_prefix + "exp" + std::to_string(cexpr_ind);
+            re.type = r.type;
+            for (auto &eref : r.refs)
+                re.refs.push_back(eref);
+            re.is_special_reduction = false;
+            re.variable = nullptr;
+
+            reduction_list.push_back(re);
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /// The main entry point for code generation
 ///////////////////////////////////////////////////////////////////////////////
@@ -225,18 +279,19 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     if (first)
         generate_wait_loops = false; // no communication needed in the 1st place
 
-    // Create temporary variables for reductions
-    for (var_info &v : var_info_list) {
-        if (v.reduction_type != reduction::NONE) {
-            v.reduction_name = "r" + var_name_prefix + clean_name(v.name);
-            // Create a temporary variable and initialize
-            if (v.reduction_type == reduction::SUM) {
-                code << v.type << " " << v.reduction_name << ";\n";
-                code << v.reduction_name << " = 0;\n";
-            } else if (v.reduction_type == reduction::PRODUCT) {
-                code << v.type << " " << v.reduction_name << ";\n";
-                code << v.reduction_name << " = 1;\n";
-            }
+    /////////////////////////////////////////////////////////////////////
+    // make the reduction expr list from variables and loop const expressions
+
+    create_reduction_list(var_info_list, loop_const_expr_ref_list);
+
+    // Create a temporary reduction variable and initialize
+    for (reduction_expr &v : reduction_list) {
+
+        code << v.type << " " << v.reduction_name << ";\n";
+        if (v.reduction_type == reduction::SUM) {
+            code << v.reduction_name << " = 0;\n";
+        } else if (v.reduction_type == reduction::PRODUCT) {
+            code << v.reduction_name << " = 1;\n";
         }
     }
 
@@ -255,9 +310,9 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);
 
     // Check reduction variables
-    for (var_info &v : var_info_list) {
+    for (reduction_expr &v : reduction_list) {
 
-        if (v.is_special_reduction_type) {
+        if (v.is_special_reduction) {
 
             if (v.reduction_type == reduction::SUM)
                 code << v.name << ".reduce_sum_node(" << v.reduction_name << ");\n";
@@ -266,10 +321,12 @@ void TopLevelVisitor::generate_code(Stmt *S) {
 
         } else if (v.reduction_type == reduction::PRODUCT) {
 
-            code << "if (hila::myrank() == 0) { " << v.name << " *= " << v.reduction_name
+            // The old value at node 0 is used, but not at other nodes!
+
+            code << "if (hila::myrank() == 0) { " << v.reduction_name << " *= " << v.name
                  << "; }\n";
-            code << "else { " << v.name << " = " << v.reduction_name << "; }\n";
-            code << "hila::reduce_node_product( &" << v.name << ", 1, true);\n";
+            code << "hila::reduce_node_product( & " << v.reduction_name << ", 1, true);\n";
+            code << v.name << " = " << v.reduction_name << ";\n";
         }
     }
 
@@ -278,39 +335,36 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     // a bit tidier output than the easiest case
 
     bool sum_reductions = false;
-    for (var_info &v : var_info_list) {
-        if (v.reduction_type == reduction::SUM && !v.is_special_reduction_type) {
+    for (reduction_expr &v : reduction_list) {
+        if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
 
             if (!sum_reductions) {
                 code << "if (hila::myrank() == 0) {\n";
                 sum_reductions = true;
             }
             // on node 0 add the old value to reduction
-            code << v.name << " += " << v.reduction_name << ";\n";
+            // forget it on other nodes
+            code << v.reduction_name << " += " << v.name << ";\n";
         }
     }
 
     if (sum_reductions) {
-        // branch where myrank() != 0
-        code << "} else {\n";
-
-        for (var_info &v : var_info_list) {
-            if (v.reduction_type == reduction::SUM && !v.is_special_reduction_type) {
-
-                // forget the old value on other nodes than 0
-                code << v.name << " = " << v.reduction_name << ";\n";
-            }
-        }
 
         code << "}\n";
 
-        for (var_info &v : var_info_list) {
-            if (v.reduction_type == reduction::SUM && !v.is_special_reduction_type) {
-                code << "hila_reduce_sum_setup( &" << v.name << ");\n";
+        for (reduction_expr &v : reduction_list) {
+            if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
+                code << "hila_reduce_sum_setup( &" << v.reduction_name << ");\n";
             }
         }
 
         code << "hila_reduce_sums();\n";
+
+        for (reduction_expr &v : reduction_list) {
+            if (v.reduction_type == reduction::SUM && !v.is_special_reduction) {
+                code << v.name << " = " << v.reduction_name << ";\n";
+            }
+        }
     }
 
     code << "hila::set_allreduce(true);\n";
