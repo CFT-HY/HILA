@@ -16,6 +16,11 @@
 // define max size of an array passed as a parameter to kernels
 #define MAX_PARAM_ARRAY_SIZE 40
 
+// NOTE: If you define ALT_VECTOR_REDUCTION you need to define
+// it also in gpu_templated_ops.h !
+
+// #define ALT_VECTOR_REDUCTION
+
 extern std::string looping_var;
 extern std::string parity_name;
 
@@ -549,7 +554,16 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                     // _HILA_thread_id is defined in kernel start below
                     l = getSourceLocationAtEndOfRange(br.Idx.at(0)->getSourceRange())
                                            .getLocWithOffset(1);
+
+#ifndef ALT_VECTOR_REDUCTION
                     loopBuf.insert(l, " ) + _HILA_thread_id * " + ar_size_varname);
+
+#else
+                    // ALT of above is below
+                    std::stringstream ss;
+                    ss << " )*(N_threads * " << thread_block_number << ") + _HILA_thread_id";
+                    loopBuf.insert(l, ss.str());
+#endif                  
                 }
             }
         }
