@@ -264,29 +264,29 @@ void hila::initialize(int argc, char **argv) {
 
     if (hila::myrank() == 0) {
         print_dashed_line(u8"HILA ⩩ lattice framework");
-        hila::out << "Running program " << argv[0] << "\n";
-        hila::out << "with command line arguments '";
+        hila::out0 << "Running program " << argv[0] << "\n";
+        hila::out0 << "with command line arguments '";
         for (int i = 1; i < argc; i++)
-            hila::out << argv[i] << ' ';
-        hila::out << "'\n";
-        hila::out << "Code version: ";
+            hila::out0 << argv[i] << ' ';
+        hila::out0 << "'\n";
+        hila::out0 << "Code version: ";
 #if defined(GIT_SHA_VALUE)
 #define xstr(s) makestr(s)
 #define makestr(s) #s
-        hila::out << "git SHA " << xstr(GIT_SHA_VALUE) << '\n';
+        hila::out0 << "git SHA " << xstr(GIT_SHA_VALUE) << '\n';
 #else
-        hila::out << "no git information available\n";
+        hila::out0 << "no git information available\n";
 #endif
-        hila::out << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
+        hila::out0 << "Compiled " << __DATE__ << " at " << __TIME__ << '\n';
 
-        hila::out << "with options: EVEN_SITES_FIRST";
+        hila::out0 << "with options: EVEN_SITES_FIRST";
 #ifndef EVEN_SITES_FIRST
-        hila::out << "=0";
+        hila::out0 << "=0";
 #endif
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
-        hila::out << " SPECIAL_BOUNDARY_CONDITIONS";
+        hila::out0 << " SPECIAL_BOUNDARY_CONDITIONS";
 #endif
-        hila::out << '\n';
+        hila::out0 << '\n';
 
         hila::timestamp("Starting");
     }
@@ -319,11 +319,20 @@ void hila::initialize(int argc, char **argv) {
 
 
 #if defined(CUDA) || defined(HIP)
+    hila::out0 << "Using thread blocks of size " << N_threads << " threads\n";
+
 #if defined(GPU_AWARE_MPI)
     hila::out0 << "Using GPU_AWARE_MPI\n";
 #else
     hila::out0 << "Not using GPU_AWARE_MPI\n";
 #endif
+
+#if !defined(GPU_VECTOR_REDUCTION_THREAD_BLOCKS) || GPU_VECTOR_REDUCTION_THREAD_BLOCKS <= 0
+    hila::out0 << "ReductionVector with atomic operations (GPU_VECTOR_REDUCTION_THREAD_BLOCKS=0)\n";
+#else
+    hila::out0 << "ReductionVector with " << GPU_VECTOR_REDUCTION_THREAD_BLOCKS << " thread blocks\n";
+#endif
+
     if (!hila::check_input)
         gpu_device_info();
 #endif
