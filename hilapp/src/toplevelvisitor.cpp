@@ -453,12 +453,6 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
 
     // Now array is declared outside the loop
 
-    if (is_assign && type != array_ref::REDUCTION) {
-        reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
-                   "cannot assign to an array, std::vector or std::array here.  Use "
-                   "ReductionVector if reduction is needed.");
-        return 1;
-    }
 
     // If index is site dep or contains local variables, we need
     // the whole array in the loop
@@ -525,8 +519,13 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
     ar.reduction_type = reduction_type;
 
     bool has_loop_local_var = false;
-    for (auto *ip : ref.Idx)
+    for (auto *ip : ref.Idx) {
+        llvm::errs() << "LOOKING AT ARRAY " << ar.name << " INDEX " << get_stmt_str(ip);
+    
         has_loop_local_var |= contains_loop_local_var(ip, nullptr);
+
+        llvm::errs() << " IS LOOP LOCAL " << has_loop_local_var << '\n';
+    }
 
     // let the refs to ReductionVectors be handled further down
     if (!site_dep && !has_loop_local_var && type != array_ref::REDUCTION) {
@@ -534,20 +533,34 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
         // now it is a fixed index - move whole arr ref outside the loop
         // Note: multiple refrences are not checked, thus, same element can be
         // referred more than once.  TODO? (small optimization)
+        // instead of array_ref_list use here loop_const_expr_ref
+
+        handle_loop_const_expr_ref(ref.E, is_assign, assignop);
+
+        parsing_state.skip_children = 1; // no need to look inside the replacement
 
         // currently is_assign == false here alwasy
-        if (!is_assign) {
-            // use the array_ref_list to note this
-            ar.type = array_ref::REPLACE;
-            array_ref_list.push_back(ar);
+        // if (!is_assign) {
+        //     ar.type = array_ref::REPLACE;
+        //     array_ref_list.push_back(ar);
 
-            parsing_state.skip_children = 1; // no need to look inside the replacement
-                                             // variable refs inside should not be recorded
-        } else {
+        //     parsing_state.skip_children = 1; // no need to look inside the replacement
+        // }
 
-        }
         return 1;
     }
+
+    // Cannot assign to an non-vector reduction array, vector etc. if there are site
+    // dependent indices or other bits
+
+    if (is_assign && (site_dep || has_loop_local_var) && type != array_ref::REDUCTION) {
+        reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                   "cannot assign to an array, std::vector or std::array where the access depends"
+                   " on a variable which may be changed inside loop execution. Use "
+                   "ReductionVector if this behaviour is needed.");
+        return 1;
+    }
+
 
     // Now there is site dep/loop local stuff in index.  Whole array has to be taken
     // "in".
@@ -867,14 +880,33 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
 /// loop constants.  This includes struct/class members (and array refs?)
 ///////////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
+void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E, bool is_assign, std::string &assignop) {
 
     // First, get the string rep of the expression
-    std::string expstr = remove_all_whitespace(get_stmt_str(E));
+    std::string expression = get_stmt_str(E);
+    std::string expstr = remove_all_whitespace(expression);
+
+    if (is_assign && assignop != "+=") {
+        reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
+                   "expression can be used only on the lhs of a sum reduction (+=)");
+        return;
+    }
 
     // Did we already have it?
     for (loop_const_expr_ref &cer : loop_const_expr_ref_list) {
         if (cer.exprstring == expstr) {
+            if ((is_assign && cer.reduction_type != reduction::NONE) ||
+                !is_assign && cer.reduction_type == reduction::NONE) {
+
+                reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
+                           "expression cannot be used in reduction and on RHS of statement in the "
+                           "same loop");
+
+                reportDiag(DiagnosticsEngine::Level::Note, cer.refs[0]->getSourceRange().getBegin(),
+                           "location of another reference");
+                return;
+            }
+
             cer.refs.push_back(E);
             return;
         }
@@ -884,6 +916,7 @@ void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
     loop_const_expr_ref eref;
 
     eref.refs.push_back(E);
+    eref.expression = expression;
     eref.exprstring = expstr;
 
     // Get the type of the expr
@@ -891,6 +924,11 @@ void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E) {
         E->getType().getUnqualifiedType().getCanonicalType().getNonReferenceType();
     typ.removeLocalConst();
     eref.type = typ.getAsString(PP);
+
+    if (is_assign)
+        eref.reduction_type = reduction::SUM;
+    else
+        eref.reduction_type = reduction::NONE;
 
     loop_const_expr_ref_list.push_back(eref);
 }
@@ -1185,7 +1223,7 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             if (!is_assignment && is_loop_constant(E) && ME->getType().isTrivialType(*Context)) {
 
                 llvm::errs() << " GOT LOOP CONST " << get_stmt_str(E) << '\n';
-                handle_loop_const_expr_ref(E);
+                handle_loop_const_expr_ref(E, is_assignment, assignop);
 
                 parsing_state.skip_children = 1;
                 return true;

@@ -312,18 +312,20 @@ struct var_info {
 struct loop_const_expr_ref {
     std::vector<Expr *> refs; // references of this expression in loop
     std::string type;         // type as string
-    std::string exprstring;   // expression as a string (with compressed whitespace)
+    std::string expression;   // (1st) expression as string verbatim
+    std::string exprstring;   // compressed expression as a string, for comparison
     std::string new_name;     // name to be used in loop
+    reduction reduction_type; // is the expr used in reduction?  allow it
 };
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //  Store "array-type" references inside site loops
 struct bracket_ref_t {
-    Expr *E;           // full bracket expression "a[i]"
-    Expr *DRE;         // "a"  - can be DeclRefExpr or MemberExpr
-    std::vector<Expr *> Idx;  // "i", one element per index - note outermost as first element
-    Stmt *assign_stmt; // if it is reduction ref, full assign stmt here
+    Expr *E;                 // full bracket expression "a[i]"
+    Expr *DRE;               // "a"  - can be DeclRefExpr or MemberExpr
+    std::vector<Expr *> Idx; // "i", one element per index - note outermost as first element
+    Stmt *assign_stmt;       // if it is reduction ref, full assign stmt here
 };
 
 /// Stores information for a single reference to an loop-extern array or related
@@ -334,12 +336,12 @@ struct array_ref {
     VarDecl *vd;                     // declaration of referred to variable
     std::string name;
     std::string new_name;
-    std::string element_type; // type of element
-    std::string wrapper_type; // if need to wrap this var
-    size_t size;              // size of array (if known)
+    std::string element_type;       // type of element
+    std::string wrapper_type;       // if need to wrap this var
+    size_t size;                    // size of array (if known)
     std::vector<size_t> dimensions; // multidimensional array size
-    std::string size_expr;    // if only size expression known
-    std::string data_ptr;     // == name for array, name.data() for others
+    std::string size_expr;          // if only size expression known
+    std::string data_ptr;           // == name for array, name.data() for others
     using reftype = enum { REPLACE, ARRAY, STD_VECTOR, STD_ARRAY, REDUCTION };
     reduction reduction_type;
     reftype type;
@@ -411,7 +413,7 @@ struct loop_info_struct {
     }
 };
 
-/// Stores information about loop function function arguments
+/// Stores information about loop function arguments
 struct argument_info {
     Expr *E;
     ParmVarDecl *PV;
@@ -438,7 +440,7 @@ struct call_info_struct {
     CXXConstructExpr *constructor;
     std::vector<argument_info> arguments;
     Expr *condExpr;
-    number_type vector_type_only;  // This is number_type::UNKNOWN if the type is not restricted
+    number_type vector_type_only; // This is number_type::UNKNOWN if the type is not restricted
     argument_info object;
     bool decl_only;
     bool is_operator;
@@ -464,17 +466,32 @@ struct call_info_struct {
     }
 };
 
+/// store information about SiteSelect and SiteValueSelect operations
 struct selection_info {
     CXXMemberCallExpr *MCE; // select-expr in loop (a.select())
     Expr *ref;              // var expression 'a'
     Expr *assign_expr;      // assignment if value select
     std::string val_type;
-    std::string new_name;   //
+    std::string new_name; //
     selection_info
         *previous_selection; // pointer to first ref to the same variable (otherwise nullptr)
-    std::string valname;    // names of tmp variables - used for GPU code
+    std::string valname;     // names of tmp variables - used for GPU code
     std::string maskname;
     std::string sitename;
+};
+
+
+/// accumulate reductions (except vector reductions).  This is done just before
+/// code generation in codegen
+struct reduction_expr {
+    std::vector<Expr *> refs;   // refrences to this variable / expression
+    std::string name;           // variable name or expression to be assigned
+    std::string reduction_name; // name generated for use in loop
+    std::string type;           // type as string
+    var_info *variable; // if this reduction is a variable in var_info_list, point to it, otherwise
+                        // nullptr
+    reduction reduction_type;  //
+    bool is_special_reduction; // true if special reduction var
 };
 
 
@@ -530,7 +547,7 @@ extern codetype target;
 
 /// global variable declarations - definitions on hilapp.cpp
 
-extern ClassTemplateDecl *field_decl;         // Ptr to field primary def in AST
+extern ClassTemplateDecl *field_decl; // Ptr to field primary def in AST
 extern const std::string field_storage_type;
 extern const std::string field_type;
 
@@ -542,6 +559,7 @@ extern std::list<array_ref> array_ref_list;
 extern std::list<loop_const_expr_ref> loop_const_expr_ref_list;
 extern std::list<special_function_call> special_function_call_list;
 extern std::list<selection_info> selection_info_list;
+extern std::vector<reduction_expr> reduction_list;
 
 
 #endif
