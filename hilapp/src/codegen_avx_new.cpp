@@ -197,6 +197,43 @@ void GeneralVisitor::handle_loop_function_avx(call_info_struct &ci) {
 
 void GeneralVisitor::handle_loop_constructor_avx(call_info_struct &ci) {}
 
+///////////////////////////////////////////////////////////////////////////////
+// Vectorization information routines
+
+// use helper struct to keep loop vectorization variables
+struct vecinfo_struct {
+    int vector_size;
+    number_type numtype;
+    std::string var_name; // variable which determines the vectorization
+    std::string var_type; // type of variable which determines the vectorization
+};
+
+//
+// If current variable/expr. vector is compatible with the vectorization of the loop?
+
+static bool are_vectors_compatible(const vectorization_info &vecinfo, const std::string &name,
+                                   vecinfo_struct &vinfo) {
+
+    if (!vecinfo.is_vectorizable)
+        return false;
+
+    if (vinfo.vector_size == 0) {
+
+        // vector size not yet set
+
+        vinfo.vector_size = vecinfo.vector_size;
+        vinfo.numtype = vecinfo.basetype;
+        vinfo.var_name = name;
+        vinfo.var_type = vecinfo.basetype_str;
+
+    } else if (vecinfo.vector_size != vinfo.vector_size || vecinfo.basetype != vinfo.numtype) {
+        return false;
+    }
+
+    return true;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////
 /// Check that
 ///  a) no site dependent conditional
@@ -208,11 +245,12 @@ void GeneralVisitor::handle_loop_constructor_avx(call_info_struct &ci) {}
 ///  d) no site selection operation in the loop
 ///////////////////////////////////////////////////////////////////////////////////
 
-bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::string &diag_str) {
+bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size_, std::string &diag_str) {
 
-    vector_size = 0;
-    number_type numtype;
     bool is_vectorizable = true;
+
+    vecinfo_struct vinfo; // keep track of vectorization in current loop
+    vinfo.vector_size = 0;
 
     std::vector<std::string> reason = {};
 
@@ -238,60 +276,57 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::st
             reason.push_back("it contains site selection variable");
         }
 
-        std::string vector_var_name; // variable which determines the vectorization
-        std::string vector_var_type; // type of variable which determines the vectorization
-
         // check if the fields are vectorizable in a compatible manner
-        if (field_info_list.size() > 0) {
-            for (field_info &fi : field_info_list) {
-                if (!fi.vecinfo.is_vectorizable) {
-                    is_vectorizable = false;
-                    reason.push_back("Field variable '" + fi.old_name + "' is not vectorizable");
-                } else {
-                    if (vector_size == 0) {
-                        vector_size = fi.vecinfo.vector_size;
-                        numtype = fi.vecinfo.basetype;
-                        vector_var_name = fi.old_name;
-                        vector_var_type = fi.vecinfo.basetype_str;
-                    } else if (fi.vecinfo.vector_size != vector_size ||
-                               fi.vecinfo.basetype != numtype) {
-                        // TODO: let different vector types coexist!
+        for (field_info &fi : field_info_list) {
+            if (!fi.vecinfo.is_vectorizable) {
+                is_vectorizable = false;
+                reason.push_back("Field variable '" + fi.old_name + "' is not vectorizable");
 
-                        is_vectorizable = false;
+            } else if (!are_vectors_compatible(fi.vecinfo, fi.old_name, vinfo)) {
 
-                        reason.push_back("type of variable '" + fi.old_name + "' is " +
-                                         fi.vecinfo.basetype_str + " and '" + vector_var_name +
-                                         "' is " + vector_var_type);
-                    }
-                }
+                is_vectorizable = false;
+                reason.push_back("type of variable '" + fi.old_name + "' is " +
+                                 fi.vecinfo.basetype_str + " and '" + vinfo.var_name + "' is " +
+                                 vinfo.var_type);
             }
         }
 
         // and then if the site dep. variables are vectorizable
-        if (var_info_list.size() > 0) {
-            for (var_info &vi : var_info_list)
-                if (!vi.is_raw && vi.is_site_dependent) {
-                    if (vi.vecinfo.is_vectorizable) {
-                        if (vector_size == 0) {
-                            vector_size = vi.vecinfo.vector_size;
-                            numtype = vi.vecinfo.basetype;
-                            vector_var_name = vi.name;
-                            vector_var_type = vi.vecinfo.basetype_str;
+        for (var_info &vi : var_info_list) {
+            if (!vi.is_raw && vi.is_site_dependent) {
+                if (vi.vecinfo.is_vectorizable) {
+                    if (!are_vectors_compatible(vi.vecinfo, vi.name, vinfo)) {
 
-                        } else if (vector_size != vi.vecinfo.vector_size ||
-                                   numtype != vi.vecinfo.basetype) {
-                            is_vectorizable = false;
-
-                            reason.push_back("type of variables '" + vi.name + "' is " +
-                                             vi.vecinfo.basetype_str + " and '" + vector_var_name +
-                                             "' is " + vector_var_type);
-                        }
-                    } else {
                         is_vectorizable = false;
 
-                        reason.push_back("variable '" + vi.name + "' is not vectorizable");
+                        reason.push_back("type of variables '" + vi.name + "' is " +
+                                         vi.vecinfo.basetype_str + " and '" + vinfo.var_name +
+                                         "' is " + vinfo.var_type);
                     }
+                } else {
+                    is_vectorizable = false;
+
+                    reason.push_back("variable '" + vi.name + "' is not vectorizable");
                 }
+            }
+        }
+
+        // reduction expressions if any
+        for (reduction_expr &r : reduction_list) {
+            if (r.variable == nullptr) {
+                if (r.vecinfo.is_vectorizable) {
+                    if (!are_vectors_compatible(r.vecinfo, r.name, vinfo)) {
+
+                        is_vectorizable = false;
+                        reason.push_back("type of expression '" + r.name + "' is " +
+                                         r.vecinfo.basetype_str + " and '" + vinfo.var_name +
+                                         "' is " + vinfo.var_type);
+                    }
+                } else {
+                    is_vectorizable = false;
+                    reason.push_back("expression '" + r.name + "' is not vectorizable");
+                }
+            }
         }
 
         // and still, check the special functions
@@ -351,7 +386,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::st
         }
     }
 
-    if (vector_size == 0 && is_vectorizable) {
+    if (vinfo.vector_size == 0 && is_vectorizable) {
         // super-special case - loop does not contain fields or anything site dependent.
         // Loop is probably useless.  Let us just not vectorize it.
         is_vectorizable = false;
@@ -375,6 +410,7 @@ bool TopLevelVisitor::check_loop_vectorizable(Stmt *S, int &vector_size, std::st
                        diag_str.c_str());
     }
 
+    vector_size_ = vinfo.vector_size;
     return is_vectorizable;
 }
 
@@ -401,17 +437,22 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
     }
 
     // Create temporary variables for reductions (vector reduction is in the loop)
-    for (var_info &v : var_info_list) {
-        if (v.reduction_type != reduction::NONE) {
-            v.new_name = "v_" + v.reduction_name;
-            // Allocate memory for a reduction. This will be filled in the kernel
-            code << v.vecinfo.vectorized_type << ' ' << v.new_name;
-            if (v.reduction_type == reduction::SUM)
-                code << "(0);\n";
-            else if (v.reduction_type == reduction::PRODUCT)
-                code << "(1);\n";
+    for (reduction_expr &r : reduction_list) {
+
+        // get vector var name and alloc
+        r.loop_name = "v_" + r.reduction_name;
+        code << r.vecinfo.vectorized_type << ' ' << r.loop_name;
+        if (r.reduction_type == reduction::SUM)
+            code << "(0);\n";
+        else if (r.reduction_type == reduction::PRODUCT)
+            code << "(1);\n";
+
+        // also replace refs in loopBuf
+        for (Expr *e : r.refs) {
+            loopBuf.replace(e, r.loop_name);
         }
     }
+
 
     // Set loop lattice for neighbour arrays
     // if (field_info_list.size() > 0) {
@@ -541,20 +582,29 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
             if (!ref->is_direction) {
                 loopBuf.replace(ref->fullExpr, l.loop_ref_name);
             }
-    }
 
-    // other variable refs
+    } // FIeld handling ends here
+
+    ////////////////////////////////////////////////////////////////////////////////////
+
+
+    // other variable refs -- reductions were handled above
+
     for (var_info &vi : var_info_list) {
         // reduction variables
-        if (vi.reduction_type != reduction::NONE) {
-            // Replace references in the loop body
-            for (var_ref &vr : vi.refs) {
-                loopBuf.replace(vr.ref, vi.new_name);
-            }
-        } else if (vi.is_site_dependent) {
+        // if (vi.reduction_type != reduction::NONE) {
+        //     // Replace references in the loop body
+        //     for (var_ref &vr : vi.refs) {
+        //         loopBuf.replace(vr.ref, vi.new_name);
+        //     }
+        // } else
+
+        if (vi.reduction_type == reduction::NONE && vi.is_site_dependent) {
+        
             // now must be loop-local vectorized var
             // change declaration - name need not be changed
             // loopBuf.replace( vi.decl->getSourceRange(), vi.vecinfo.vectorized_type );
+        
             loopBuf.replace(vi.decl->getTypeSourceInfo()->getTypeLoc().getSourceRange(),
                             vi.vecinfo.vectorized_type);
         }
@@ -563,7 +613,8 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
     // Check anonymous temporary constructors (e.g.  Complex<float>() -> Complex<Vec8f>() )
     for (auto &ci : loop_function_calls) {
         if (ci.is_vectorizable && ci.constructor && ci.is_site_dependent) {
-            // llvm::errs() << "lookign at constructor " << get_stmt_str(ci.constructor) << '\n';
+            // llvm::errs() << "lookign at constructor " << get_stmt_str(ci.constructor) <<
+            // '\n';
             if (ci.ctordecl->getTemplatedKind() != FunctionDecl::TemplatedKind::TK_NonTemplate) {
 
                 SourceRange sr = ci.constructor->getParenOrBraceRange();
@@ -574,8 +625,8 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
 
                     vectorization_info vi;
                     if (is_vectorizable_type(ci.constructor->getType(), vi)) {
-                        llvm::errs() << "Replacing " << loopBuf.get(range) << " with "
-                                     << vi.vectorized_type << '\n';
+                        // llvm::errs() << "Replacing " << loopBuf.get(range) << " with "
+                        //              << vi.vectorized_type << '\n';
 
                         loopBuf.replace(range, vi.vectorized_type);
                     }
@@ -654,16 +705,16 @@ std::string TopLevelVisitor::generate_code_avx(Stmt *S, bool semicolon_at_end, s
     }
 
     // Final reduction of the temporary reduction variables
-    for (var_info &v : var_info_list) {
-        if (v.reduction_type == reduction::SUM) {
-            // code << v.reduction_name << " = reduce_sum(" << v.new_name << ");\n";
+    for (reduction_expr &r : reduction_list) {
+        if (r.reduction_type == reduction::SUM) {
+            // code << r.reduction_name << " = reduce_sum(" << r.new_name << ");\n";
 
-            code << v.reduction_name << " = reduce_sum_in_vector<" << v.vecinfo.basetype_str << ", "
-                 << v.vecinfo.vectortype << ", " << v.type << ", " << v.vecinfo.vectorized_type
-                 << ">(" << v.new_name << ");\n";
+            code << r.reduction_name << " = reduce_sum_in_vector<" << r.vecinfo.basetype_str << ", "
+                 << r.vecinfo.vectortype << ", " << r.type << ", " << r.vecinfo.vectorized_type
+                 << ">(" << r.loop_name << ");\n";
 
-        } else if (v.reduction_type == reduction::PRODUCT) {
-            code << v.reduction_name << " = reduce_prod(" << v.new_name << ");\n";
+        } else if (r.reduction_type == reduction::PRODUCT) {
+            code << r.reduction_name << " = reduce_prod(" << r.loop_name << ");\n";
         }
     }
 

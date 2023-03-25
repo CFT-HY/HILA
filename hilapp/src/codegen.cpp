@@ -41,10 +41,11 @@ inline std::string unique_name(const std::string t, std::string n) {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create the list of reductions from varible list and from const_expr list
-// (leaving Reductionvector alone) 
+// (leaving Reductionvector alone)
 // -> global variable reduction_list
 
-void create_reduction_list(std::list<var_info> &vi_list, std::list<loop_const_expr_ref> &ce_list) {
+void TopLevelVisitor::create_reduction_list(std::list<var_info> &vi_list,
+                                            std::list<loop_const_expr_ref> &ce_list) {
 
     reduction_list.clear();
 
@@ -68,6 +69,10 @@ void create_reduction_list(std::list<var_info> &vi_list, std::list<loop_const_ex
             re.is_special_reduction = v.is_special_reduction_type;
             re.variable = &v;
 
+            if (target.vectorize) {
+                re.vecinfo = v.vecinfo;
+            }
+
             reduction_list.push_back(re);
         }
     }
@@ -86,6 +91,10 @@ void create_reduction_list(std::list<var_info> &vi_list, std::list<loop_const_ex
                 re.refs.push_back(eref);
             re.is_special_reduction = false;
             re.variable = nullptr;
+
+            if (target.vectorize) {
+                re.vecinfo.is_vectorizable = is_vectorizable_type(re.type, re.vecinfo);
+            }
 
             reduction_list.push_back(re);
         }
@@ -285,13 +294,13 @@ void TopLevelVisitor::generate_code(Stmt *S) {
     create_reduction_list(var_info_list, loop_const_expr_ref_list);
 
     // Create a temporary reduction variable and initialize
-    for (reduction_expr &v : reduction_list) {
+    for (reduction_expr &r : reduction_list) {
 
-        code << v.type << " " << v.reduction_name << ";\n";
-        if (v.reduction_type == reduction::SUM) {
-            code << v.reduction_name << " = 0;\n";
-        } else if (v.reduction_type == reduction::PRODUCT) {
-            code << v.reduction_name << " = 1;\n";
+        code << r.type << " " << r.reduction_name << ";\n";
+        if (r.reduction_type == reduction::SUM) {
+            code << r.reduction_name << " = 0;\n";
+        } else if (r.reduction_type == reduction::PRODUCT) {
+            code << r.reduction_name << " = 1;\n";
         }
     }
 
@@ -504,7 +513,7 @@ void GeneralVisitor::backend_handle_loop_function(call_info_struct &ci) {
     // we should mark the function, but it is not necessarily in the
     // main file buffer
     if (target.kernelize) {
-        handle_loop_function_cuda(ci);
+        handle_loop_function_gpu(ci);
     } else if (target.openacc) {
         handle_loop_function_openacc(ci.funcdecl);
     } else if (target.vectorize) {
@@ -517,7 +526,7 @@ void GeneralVisitor::backend_handle_loop_constructor(call_info_struct &ci) {
     // we should mark the function, but it is not necessarily in the
     // main file buffer
     if (target.kernelize) {
-        handle_loop_constructor_cuda(ci);
+        handle_loop_constructor_gpu(ci);
     } else if (target.openacc) {
         handle_loop_constructor_openacc(ci.ctordecl);
     } else if (target.vectorize) {
@@ -530,7 +539,7 @@ std::string TopLevelVisitor::backend_generate_code(Stmt *S, bool semicolon_at_en
                                                    bool generate_wait_loops) {
     std::stringstream code;
     if (target.kernelize) {
-        code << generate_code_cuda(S, semicolon_at_end, loopBuf, generate_wait_loops);
+        code << generate_code_gpu(S, semicolon_at_end, loopBuf, generate_wait_loops);
     } else if (target.openacc) {
         code << generate_code_cpu(S, semicolon_at_end, loopBuf,
                                   generate_wait_loops); // use cpu method for acc
