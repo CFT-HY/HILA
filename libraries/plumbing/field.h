@@ -29,8 +29,7 @@ void ensure_field_operators_exist();
 
 #include "plumbing/ensure_loop_functions.h"
 
-/// Field class
-/// This implements the standard methods for accessing fields
+/// The field class implements the standard methods for accessing fields
 /// Hilapp replaces the parity access patterns, Field[par] with a loop over
 /// the appropriate sites.
 ///
@@ -74,6 +73,13 @@ void ensure_field_operators_exist();
 /// Field.set_elements(): set elements in the Field
 /// Field.set_element(): set an element in the Field
 ///
+
+/**
+ * @class Field
+ * @brief something
+ * 
+ * @tparam T double, complex
+ */
 template <typename T>
 class Field {
 
@@ -81,7 +87,7 @@ class Field {
     enum class gather_status_t : unsigned { NOT_DONE, STARTED, DONE };
 
   private:
-    /// The following struct holds the data + information about the field
+    /// @class field_struct
     /// TODO: field-specific boundary conditions?
     class field_struct {
       public:
