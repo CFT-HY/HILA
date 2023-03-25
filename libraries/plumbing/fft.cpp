@@ -7,13 +7,13 @@
 
 
 hila::timer fft_timer("FFT total time");
-hila::timer fft_plan_timer("FFT plan");
-hila::timer pencil_MPI_timer("MPI for pencils");
-hila::timer fft_execute_timer("FFT execute");
-hila::timer pencil_reshuffle_timer("pencil reshuffle");
-hila::timer fft_buffer_timer("copy fft buffers");
-hila::timer pencil_collect_timer("copy pencils");
-hila::timer pencil_save_timer("save pencils");
+hila::timer fft_plan_timer(" FFT plan");
+hila::timer pencil_MPI_timer(" MPI for pencils");
+hila::timer fft_execute_timer(" FFT execute");
+hila::timer pencil_reshuffle_timer(" pencil reshuffle");
+hila::timer fft_buffer_timer(" copy fft buffers");
+hila::timer pencil_collect_timer(" copy pencils");
+hila::timer pencil_save_timer(" save pencils");
 
 hila::timer binning_timer("bin field time");
 
