@@ -520,11 +520,9 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
 
     bool has_loop_local_var = false;
     for (auto *ip : ref.Idx) {
-        llvm::errs() << "LOOKING AT ARRAY " << ar.name << " INDEX " << get_stmt_str(ip);
     
         has_loop_local_var |= contains_loop_local_var(ip, nullptr);
 
-        llvm::errs() << " IS LOOP LOCAL " << has_loop_local_var << '\n';
     }
 
     // let the refs to ReductionVectors be handled further down
@@ -895,8 +893,8 @@ void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E, bool is_assign, std::s
     // Did we already have it?
     for (loop_const_expr_ref &cer : loop_const_expr_ref_list) {
         if (cer.exprstring == expstr) {
-            if ((is_assign && cer.reduction_type != reduction::NONE) ||
-                !is_assign && cer.reduction_type == reduction::NONE) {
+            if ((is_assign && cer.reduction_type == reduction::NONE) ||
+                !is_assign && cer.reduction_type != reduction::NONE) {
 
                 reportDiag(DiagnosticsEngine::Level::Error, E->getSourceRange().getBegin(),
                            "expression cannot be used in reduction and on RHS of statement in the "
@@ -1222,7 +1220,6 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
             // Check also the type: if it is not trivial, don't know what to do here
             if (!is_assignment && is_loop_constant(E) && ME->getType().isTrivialType(*Context)) {
 
-                llvm::errs() << " GOT LOOP CONST " << get_stmt_str(E) << '\n';
                 handle_loop_const_expr_ref(E, is_assignment, assignop);
 
                 parsing_state.skip_children = 1;

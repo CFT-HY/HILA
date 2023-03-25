@@ -486,12 +486,14 @@ struct selection_info {
 struct reduction_expr {
     std::vector<Expr *> refs;   // refrences to this variable / expression
     std::string name;           // variable name or expression to be assigned
-    std::string reduction_name; // name generated for use in loop
+    std::string reduction_name; // name generated for use in loop to collect reduction
+    std::string loop_name;      // name used in loop for avx or gpu targets
     std::string type;           // type as string
     var_info *variable; // if this reduction is a variable in var_info_list, point to it, otherwise
                         // nullptr
-    reduction reduction_type;  //
+    reduction reduction_type;  // NONE or SUM
     bool is_special_reduction; // true if special reduction var
+    vectorization_info vecinfo;  // is type avx vectorizable?
 };
 
 
