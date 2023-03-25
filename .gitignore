@@ -8,3 +8,5 @@ settings.json
 *~
 #*#
 .VSCodeCounter/*
+docs/html/
+docs/latex/
