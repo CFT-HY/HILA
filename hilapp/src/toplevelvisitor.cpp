@@ -1123,10 +1123,12 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     if (is_function_call_stmt(s)) {
         
         // remove loop const functions from loop body
-        if (!is_assignment && loop_constant_function_call(s)) {
-            parsing_state.skip_children = 1;
-            return true;
-        }
+        // TAKE THIS AWAY FOR NOW - IF LOOP CONST FUNCTION DEPENDS ON TEMPLATE PARAMETERS
+        // THINGS CAN GO WRONG!  
+        // if (!is_assignment && loop_constant_function_call(s)) {
+        //     parsing_state.skip_children = 1;
+        //     return true;
+        // }
 
         handle_function_call_in_loop(s, is_assignment);
         // let this fall trough, for - expr f[X] is a function call and is trapped
