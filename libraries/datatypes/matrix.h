@@ -662,7 +662,7 @@ class Matrix_t {
     // }
 
     /// Generate random elements
-    const Mtype &random() out_only {
+    Mtype &random() out_only {
 
         static_assert(hila::is_floating_point<hila::number_type<T>>::value,
                       "Matrix/Vector random() requires non-integral type elements");
@@ -674,7 +674,7 @@ class Matrix_t {
     }
 
     /// Generate gaussian random elements
-    const Mtype &gaussian_random(double width = 1.0) out_only {
+    Mtype &gaussian_random(double width = 1.0) out_only {
 
         static_assert(hila::is_floating_point<hila::number_type<T>>::value,
                       "Matrix/Vector gaussian_random() requires non-integral type elements");

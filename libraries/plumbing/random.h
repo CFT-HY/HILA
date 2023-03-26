@@ -103,20 +103,20 @@ void check_that_rng_is_initialized();
 /// of elementary arithmetic type.
 
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-const T random(out_only T &val) {
+T random(out_only T &val) {
     val = hila::random();
     return val;
 }
 
 template <typename T, std::enable_if_t<!std::is_arithmetic<T>::value, int> = 0>
-const T &random(out_only T &val) {
+T &random(out_only T &val) {
     val.random();
     return val;
 }
 
 /// 
 /// Template function
-///     const T & hila::random<T>();
+///     T hila::random<T>();
 /// without argument.  This is used to generate random value for T without defined variable.
 /// Example:
 ///     auto n = hila::random<Complex<double>>().abs();
@@ -125,7 +125,7 @@ const T &random(out_only T &val) {
 /// hila::random<double>() is functionally equivalent to hila::random()
 
 template <typename T>
-const T random() {
+T random() {
     T val;
     hila::random(val);
     return val;
@@ -149,20 +149,20 @@ const T random() {
 /// of elementary arithmetic type.
 
 template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-const T gaussian_random(out_only T &val, double w = 1.0) {
+T gaussian_random(out_only T &val, double w = 1.0) {
     val = hila::gaussrand() * w;
     return val;
 }
 
 template <typename T, std::enable_if_t<!std::is_arithmetic<T>::value, int> = 0>
-const T &gaussian_random(out_only T &val, double w = 1.0) {
+T &gaussian_random(out_only T &val, double w = 1.0) {
     val.gaussian_random(w);
     return val;
 }
 
 /// 
 /// Template function
-///     const T & hila::gaussian_random<T>();
+///     T hila::gaussian_random<T>();
 /// generates gaussian random value of type T, with variance 1.
 /// Example:
 ///     auto n = hila::gaussian_random<Complex<double>>().abs();
@@ -172,7 +172,7 @@ const T &gaussian_random(out_only T &val, double w = 1.0) {
 /// with above hila::gaussian_random(value)
 
 template <typename T>
-const T gaussian_random() {
+T gaussian_random() {
     T val;
     hila::gaussian_random(val);
     return val;

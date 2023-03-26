@@ -290,7 +290,7 @@ class Array {
     }
 
     /// Generate gaussian random elements
-    const Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
+    Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
             hila::gaussian_random(c[i], width);
         }
