@@ -282,7 +282,7 @@ class Array {
     }
 
     /// Generate random elements
-    const Array<n, m, T> &random() out_only {
+    Array<n, m, T> &random() out_only {
         for (int i = 0; i < n * m; i++) {
             hila::random(c[i]);
         }
