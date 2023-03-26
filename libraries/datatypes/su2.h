@@ -191,7 +191,7 @@ class SU2 {
     }
 
     /// make random SU2
-    const SU2<T> &random() out_only {
+    SU2<T> &random() out_only {
         double one, two;
         one = hila::gaussrand2(two);
         a = one;
@@ -536,7 +536,7 @@ class Algebra<SU2<T>> {
         return ret;
     }
     ///
-    inline const Algebra<SU2<T>> &gaussian_random(double width = 1.0) out_only {
+    inline Algebra<SU2<T>> &gaussian_random(double width = 1.0) out_only {
         T one, two;
         one = hila::gaussrand2(two);
         a = width * one;
