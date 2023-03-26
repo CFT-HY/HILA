@@ -28,11 +28,11 @@ const std::string default_output_suffix("cpt");
 const std::string out_only_keyword("out_only");
 const std::string const_function_keyword("const_function");
 
-
-const std::string var_name_prefix("_HILA_var_");
-const std::string field_name_prefix("_HILA_field_");
-const std::string type_name_prefix("_HILA_type_");
-const std::string kernel_name_prefix("_HILA_kernel_");
+const std::string name_prefix("_HILA_");
+const std::string var_name_prefix(name_prefix + "var_");
+const std::string field_name_prefix(name_prefix + "field_");
+const std::string type_name_prefix(name_prefix + "type_");
+const std::string kernel_name_prefix(name_prefix + "kernel_");
 
 
 enum class reduction { NONE, SUM, PRODUCT }; // TBD:  MIN MAX MINLOC MAXLOC
