@@ -159,9 +159,11 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
     void handle_function_call_in_loop(Stmt *s, bool is_assign = false);
 
+    bool loop_constant_function_call(Stmt *s);
+
     void handle_member_call_in_loop(Stmt *s);
 
-    void handle_loop_const_expr_ref(Expr *E, bool is_assign, std::string &assignop);
+    void handle_loop_const_expr_ref(Expr *E, bool is_assign = false, std::string assignop = "");
 
     bool loop_function_check(Decl *fd);
 

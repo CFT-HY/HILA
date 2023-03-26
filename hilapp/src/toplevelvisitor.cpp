@@ -866,8 +866,10 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
         writeBuf->replace(DRE->getSourceRange(), buf);
 
         // llvm::errs() << "   FLOAT CONST VALUE " << buf << '\n';
-    } else
+    } else {
+        // don't know now what it is, hoping for the best
         return true;
+    }
 
     parsing_state.skip_children = 1;
     return true;
@@ -878,7 +880,7 @@ bool TopLevelVisitor::handle_constant_ref(Expr *E) {
 /// loop constants.  This includes struct/class members (and array refs?)
 ///////////////////////////////////////////////////////////////////////////////
 
-void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E, bool is_assign, std::string &assignop) {
+void TopLevelVisitor::handle_loop_const_expr_ref(Expr *E, bool is_assign, std::string assignop) {
 
     // First, get the string rep of the expression
     std::string expression = get_stmt_str(E);
@@ -1005,6 +1007,7 @@ bool TopLevelVisitor::handle_full_loop_stmt(Stmt *ls, bool field_parity_ok) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+///  MAIN LOOP BODY STATEMENT ANALYSIS HAPPENS HERE
 ///  act on statements within the parity loops.  This is called
 ///  from VisitStmt() if the status state::in_loop_body is true
 ////////////////////////////////////////////////////////////////////////////////
@@ -1118,9 +1121,18 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // Check for function calls parameters. We need to determine if the
     // function can assign to the a field parameter (is not const).
     if (is_function_call_stmt(s)) {
+        
+        // remove loop const functions from loop body
+        if (!is_assignment && loop_constant_function_call(s)) {
+            parsing_state.skip_children = 1;
+            return true;
+        }
+
         handle_function_call_in_loop(s, is_assignment);
         // let this fall trough, for - expr f[X] is a function call and is trapped
         // below too
+        // is_assignment = false;
+        // parsing_state.skip_children = 1;
         // return true;
     }
 

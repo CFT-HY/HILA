@@ -56,7 +56,7 @@ void TopLevelVisitor::create_reduction_list(std::list<var_info> &vi_list,
             reduction_expr re;
             re.reduction_type = v.reduction_type;
             re.name = v.name;
-            re.reduction_name = "r" + var_name_prefix + clean_name(v.name);
+            re.reduction_name = "r" + name_prefix + clean_name(v.name) + "_";
             re.type = v.type;
             // and get the reference exprs here
             for (auto &vref : v.refs) {
@@ -85,7 +85,7 @@ void TopLevelVisitor::create_reduction_list(std::list<var_info> &vi_list,
             re.reduction_type = r.reduction_type;
             re.name = r.expression;
             cexpr_ind++;
-            re.reduction_name = "r" + var_name_prefix + "exp" + std::to_string(cexpr_ind);
+            re.reduction_name = "r" + name_prefix + "e" + std::to_string(cexpr_ind) + "_";
             re.type = r.type;
             for (auto &eref : r.refs)
                 re.refs.push_back(eref);
@@ -314,6 +314,28 @@ void TopLevelVisitor::generate_code(Stmt *S) {
                 code << ".init_product();\n";
         }
     }
+
+    // and create variables for "constant expressions" if not reduction
+    // Also replace the loop expressions already here
+    int i = 0;
+    for (loop_const_expr_ref &lcer : loop_const_expr_ref_list) {
+        if (lcer.reduction_type == reduction::NONE) {
+            lcer.new_name = name_prefix + "lpar_" + std::to_string(i++) + "_";
+
+            if (!target.kernelize) {
+                // define new variables only if not kernelized, with kernels
+                // expressions can be written directly on kernel calls
+                code << "const " << lcer.type << " " << lcer.new_name << " = " << lcer.expression
+                     << ";\n";
+            }
+
+            // Replace references in loop body -- works also with kernels
+            for (Expr *ep : lcer.refs) {
+                loopBuf.replace(ep, lcer.new_name);
+            }
+        }
+    }
+
 
     // Place the content of the loop
     code << backend_generate_code(S, semicolon_at_end, loopBuf, generate_wait_loops);

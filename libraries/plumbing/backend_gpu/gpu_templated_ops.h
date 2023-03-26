@@ -60,7 +60,7 @@ template <typename T>
 T gpu_reduce_sum(T *vector, int N) {
     const int reduce_step = 32;
     T sum = 0;
-    T *host_vector = (T *)malloc(N * sizeof(T));
+    T *host_vector = (T *)memalloc(N * sizeof(T));
     int vector_size = N;
 
     while (vector_size > reduce_step) {

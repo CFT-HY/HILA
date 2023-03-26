@@ -377,7 +377,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // write reduction parameters
     i = 0;
     for (reduction_expr &r : reduction_list) {
-        r.loop_name = "HILA_reduction_" + std::to_string(i++) + "_";
+        r.loop_name = name_prefix + "reduction_" + std::to_string(i++) + "_";
         kernel << ", " << r.type << " * " << r.loop_name;
         code << ", dev_" << r.reduction_name;
     }
@@ -385,14 +385,13 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
     // Then loop constant expressions upgraded
     i = 0;
     for (loop_const_expr_ref lcer : loop_const_expr_ref_list) {
-        lcer.new_name = "HILA_lpar_" + std::to_string(i++) + "_";
+        if (lcer.reduction_type == reduction::NONE) {
+            // reductions handled separately
+            // replacement was done on the general codegen level
+            // loop var is lcer.new_name
 
-        kernel << ", const " << lcer.type << ' ' << lcer.new_name;
-        code << ", " << lcer.exprstring;
-
-        // Replace references in loop body
-        for (Expr *ep : lcer.refs) {
-            loopBuf.replace(ep, lcer.new_name);
+            kernel << ", const " << lcer.type << ' ' << lcer.new_name;
+            code << ", " << lcer.expression;
         }
     }
 
