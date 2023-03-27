@@ -44,7 +44,7 @@ class SU2 {
         d = *(it);
     }
     /// Normalize det = 1 to make sure it's an element of SU2
-    inline const SU2<T> &normalize() {
+    inline SU2<T> &normalize() {
         T len = sqrt(this->det());
         // assert(len != 0);
         // if (len <= 0)
@@ -57,7 +57,7 @@ class SU2 {
     }
 
     /// Normalize det = 1 to make sure it's an element of SU2
-    inline const SU2<T> &reunitarize() {
+    inline SU2<T> &reunitarize() {
         return this->normalize();
     }
     /// complex conjugate transpose
@@ -81,6 +81,9 @@ class SU2 {
 
     inline T det() const {
         return a * a + b * b + c * c + d * d;
+    }
+    inline T squarenorm() const {
+        return det();
     }
     static constexpr int size() {
         return 2;
@@ -191,15 +194,27 @@ class SU2 {
     }
 
     /// make random SU2
-    SU2<T> &random() out_only {
+    inline SU2<T> &random(double width = 1.0) out_only {
         double one, two;
         one = hila::gaussrand2(two);
-        a = one;
-        b = two;
+        a = width*one;
+        b = width*two;
         one = hila::gaussrand2(two);
-        c = one;
-        d = two;
+        c = width*one;
+        d = width*two;
         return this->normalize();
+    }
+
+    /// make gaussian random matrix, does not normalize
+    inline SU2<T> &gaussian_random(double width = 1.0) out_only {
+        double one, two;
+        one = hila::gaussrand2(two);
+        a = width*one;
+        b = width*two;
+        one = hila::gaussrand2(two);
+        c = width*one;
+        d = width*two;
+        return *this;
     }
     /// project SU2 to generators $\lambda_a = 1/2 \sigma_a$
     inline Algebra<SU2<T>> project_to_algebra() const {
@@ -256,54 +271,54 @@ class SU2 {
 
 /// add two SU2's
 template <typename A, typename B, typename R = hila::type_plus<A, B>>
-inline SU2<R> operator+(const SU2<A> &rhs, const SU2<B> &lhs) {
+inline SU2<R> operator+(const SU2<A> &lhs, const SU2<B> &rhs) {
     SU2<R> ret;
-    ret.a = rhs.a + lhs.a;
-    ret.b = rhs.b + lhs.b;
-    ret.c = rhs.c + lhs.c;
-    ret.d = rhs.d + lhs.d;
+    ret.a = lhs.a + rhs.a;
+    ret.b = lhs.b + rhs.b;
+    ret.c = lhs.c + rhs.c;
+    ret.d = lhs.d + rhs.d;
     return ret;
 }
 /// SU2 + ('scalar' * identity matrix)
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<A &, hila::type_plus<A, B>>::value, int> = 0>
-inline SU2<A> operator+(const SU2<A> &rhs, const B lhs) {
-    SU2<A> ret = rhs;
-    ret.d += lhs;
+inline SU2<A> operator+(const SU2<A> &lhs, const B rhs) {
+    SU2<A> ret = lhs;
+    ret.d += rhs;
     return ret;
 }
 /// ('scalar' * identity matrix) + SU2
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<B &, hila::type_plus<A, B>>::value, int> = 0>
-inline SU2<B> operator+(const A rhs, const SU2<B> &lhs) {
-    SU2<B> ret = lhs;
-    ret.d += rhs;
+inline SU2<B> operator+(const A lhs, const SU2<B> &rhs) {
+    SU2<B> ret = rhs;
+    ret.d += lhs;
     return ret;
 }
 /// subtract two SU2's
 template <typename A, typename B, typename R = hila::type_minus<A, B>>
-inline SU2<R> operator-(const SU2<A> &rhs, const SU2<B> &lhs) {
+inline SU2<R> operator-(const SU2<A> &lhs, const SU2<B> &rhs) {
     SU2<R> ret;
-    ret.a = rhs.a - lhs.a;
-    ret.b = rhs.b - lhs.b;
-    ret.c = rhs.c - lhs.c;
-    ret.d = rhs.d - lhs.d;
+    ret.a = lhs.a - rhs.a;
+    ret.b = lhs.b - rhs.b;
+    ret.c = lhs.c - rhs.c;
+    ret.d = lhs.d - rhs.d;
     return ret;
 }
 /// SU2 - ('scalar' * identity matrix)
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<A &, hila::type_minus<A, B>>::value, int> = 0>
-inline SU2<A> operator-(const SU2<A> &rhs, const B lhs) {
-    SU2<A> ret = rhs;
-    ret.d -= lhs;
+inline SU2<A> operator-(const SU2<A> &lhs, const B rhs) {
+    SU2<A> ret = lhs;
+    ret.d -= rhs;
     return ret;
 }
 /// ('scalar' * identity matrix) - SU2
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<B &, hila::type_minus<A, B>>::value, int> = 0>
-inline SU2<B> operator-(const A rhs, const SU2<B> &lhs) {
-    SU2<B> ret = lhs;
-    ret.d -= rhs;
+inline SU2<B> operator-(const A lhs, const SU2<B> &rhs) {
+    SU2<B> ret = -rhs;
+    ret.d += lhs;
     return ret;
 }
 /// multiply two SU2's
@@ -405,7 +420,7 @@ inline auto operator*(const HorizontalVector<2,B> &lhs, const SU2<A> &rhs) {
 
 
 /// This implementation represents algebra as
-/// $ a i\sigma_1 + b i\sigma_2 + c i\sigma_3$
+/// $ a i/2\sigma_1 + b i/2\sigma_2 + c i/2\sigma_3$
 template <typename T>
 class Algebra<SU2<T>> {
   public: // public on purpose
@@ -548,20 +563,20 @@ class Algebra<SU2<T>> {
 
 /// add two Algebra<SU2>'s
 template <typename A, typename B, typename R = hila::type_plus<A, B>>
-inline Algebra<SU2<R>> operator+(const Algebra<SU2<A>> &rhs, const Algebra<SU2<B>> &lhs) {
+inline Algebra<SU2<R>> operator+(const Algebra<SU2<A>> &lhs, const Algebra<SU2<B>> &rhs) {
     Algebra<SU2<R>> ret;
-    ret.a = rhs.a + lhs.a;
-    ret.b = rhs.b + lhs.b;
-    ret.c = rhs.c + lhs.c;
+    ret.a = lhs.a + rhs.a;
+    ret.b = lhs.b + rhs.b;
+    ret.c = lhs.c + rhs.c;
     return ret;
 }
 /// subtract two Algebra<SU2>'s
 template <typename A, typename B, typename R = hila::type_minus<A, B>>
-inline Algebra<SU2<R>> operator-(const Algebra<SU2<A>> &rhs, const Algebra<SU2<B>> &lhs) {
+inline Algebra<SU2<R>> operator-(const Algebra<SU2<A>> &lhs, const Algebra<SU2<B>> &rhs) {
     Algebra<SU2<R>> ret;
-    ret.a = rhs.a - lhs.a;
-    ret.b = rhs.b - lhs.b;
-    ret.c = rhs.c - lhs.c;
+    ret.a = lhs.a - rhs.a;
+    ret.b = lhs.b - rhs.b;
+    ret.c = lhs.c - rhs.c;
     return ret;
 }
 /// multiply two Algebra<SU2>'s
@@ -604,6 +619,32 @@ inline Algebra<SU2<A>> operator/(const Algebra<SU2<A>> &x, const B y) {
     return ret;
 }
 
+/// $U^\dagger E U$ transport up
+template <typename T>
+inline Algebra<SU2<T>> right_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &E) {
+    Algebra<SU2<T>> res;
+    T t1 = 2.0 * U.d;
+    T t3 = t1 * U.d - 1.0;
+    T t2 = 2.0 * (E.a * U.a + E.b * U.b + E.c * U.c);
+    res.a = E.a * t3 + U.a * t2 - t1 * (E.b * U.c - E.c * U.b);
+    res.b = E.b * t3 + U.b * t2 - t1 * (E.c * U.a - E.a * U.c);
+    res.c = E.c * t3 + U.c * t2 - t1 * (E.a * U.b - E.b * U.a);
+    return res;
+}
+
+/// $U E U^\dagger$ transport down
+template <typename T>
+inline Algebra<SU2<T>> left_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &E) {
+    Algebra<SU2<T>> res;
+    T t1 = 2.0 * U.d;
+    T t3 = t1 * U.d - 1.0;
+    T t2 = 2.0 * (E.a * U.a + E.b * U.b + E.c * U.c);
+    res.a = E.a * t3 + U.a * t2 + t1 * (E.b * U.c - E.c * U.b);
+    res.b = E.b * t3 + U.b * t2 + t1 * (E.c * U.a - E.a * U.c);
+    res.c = E.c * t3 + U.c * t2 + t1 * (E.a * U.b - E.b * U.a);
+    return res;
+}
+
 template <typename T>
 inline T squarenorm(const Algebra<SU2<T>> &E) {
     return E.squarenorm();
@@ -628,6 +669,14 @@ std::string prettyprint(const SU2<T> &A, int prec = 8) {
     strm.precision(prec);
 
     strm << "[ " << A.d << u8" 𝟙 + " << A.a << u8" iσ₁ + " << A.b << u8" iσ₂ + " << A.c << u8" iσ₃ ]";
+    return strm.str();
+}
+template <typename T>
+std::string prettyprint(const Algebra<SU2<T>> &A, int prec = 8) {
+    std::stringstream strm;
+    strm.precision(prec);
+
+    strm << "[ " << A.a << u8" ½iσ₁ + " << A.b << u8" ½iσ₂ + " << A.c << u8" ½iσ₃ ]";
     return strm.str();
 }
 } // namespace hila
