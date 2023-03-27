@@ -39,13 +39,13 @@ HIP_INCLUDE_DIRS := -I$(HIP_PATH)/include -I$(HIP_PATH)/hiprand/include -I$(HIP_
 #HIP_INCLUDE_DIRS += -I$(HIP_PATH)/rocrand/include -I$(HIP_PATH)/rocfft/include
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 
 ################
 
 # These variables must be defined here
 #
-HILAPP_OPTS := -target:HIP -D__HIP_PLATFORM_AMD__ -DSLOW_GPU_REDUCTION $(STD_HILAPP_INCLUDES) $(HIP_INCLUDE_DIRS)
-HILA_OPTS := -DHIP -DUSE_MPI -DSLOW_GPU_REDUCTION $(MPI_INCLUDE_DIRS) $(HIP_INCLUDE_DIRS)
+HILAPP_OPTS := -target:HIP -D__HIP_PLATFORM_AMD__  $(STD_HILAPP_INCLUDES) $(HIP_INCLUDE_DIRS)
+HILA_OPTS := -DHIP $(MPI_INCLUDE_DIRS) $(HIP_INCLUDE_DIRS)
 
 

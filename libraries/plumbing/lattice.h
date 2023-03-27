@@ -10,9 +10,6 @@
 // SUBNODE_LAYOUT is now defined in main.mk
 // #define SUBNODE_LAYOUT
 
-// TODO: assertion moved somewhere where basic params
-#undef NDEBUG
-#include <assert.h>
 #include "plumbing/defs.h"
 #include "plumbing/coordinates.h"
 #include "plumbing/timing.h"

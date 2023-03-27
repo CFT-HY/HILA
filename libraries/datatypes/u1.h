@@ -58,13 +58,13 @@ class U1 {
     }
 
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    const U1 &set_phase(const S val) out_only {
+    U1 &set_phase(const S val) out_only {
         phase = val;
         return *this;
     }
 
     template <typename S, std::enable_if_t<hila::is_arithmetic<S>::value, int> = 0>
-    const U1 &set_phase(const Complex<S> val) out_only {
+    U1 &set_phase(const Complex<S> val) out_only {
         phase = val.arg();
         return *this;
     }
@@ -89,8 +89,14 @@ class U1 {
 
 
     /// Generate random elements
-    const U1 &random() out_only {
+    U1 &random() out_only {
         phase = M_PI * (2.0 * hila::random() - 1.0);
+        return *this;
+    }
+
+    U1 &gaussian_random(double width=1.0) out_only {
+        phase = hila::gaussrand() * width;
+        return *this;
     }
 };
 
@@ -117,12 +123,6 @@ inline U1<T> operator*(U1<T> a, const U1<T> b) {
     return a;
 }
 
-
-/// Function that calls random()-method
-template <typename T>
-inline void random(out_only U1<T> &p) {
-    p.random();
-}
 
 /// Multiply complex number
 template <typename T, typename S>

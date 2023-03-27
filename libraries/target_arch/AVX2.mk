@@ -12,7 +12,11 @@ CC := mpic++
 LD := mpic++
 
 # Define compilation flags
-CXXFLAGS  := -O3 -x c++ --std=c++17 -march=native -mavx2 -mfma -fabi-version=0 -fomit-frame-pointer
+ifndef DEBUG
+	CXXFLAGS := -O3 -x c++ --std=c++17 -march=native -mavx2 -mfma -fabi-version=0 -fomit-frame-pointer
+else
+	CXXFLAGS := -g -x c++ --std=c++17 -march=native -mavx2 -mfma -fabi-version=0 -fomit-frame-pointer
+endif
 
 #CXXFLAGS := -g -x c++ --std=c++17
 

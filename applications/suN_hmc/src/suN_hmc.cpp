@@ -740,11 +740,11 @@ int main(int argc, char **argv) {
                 // mag =
                 //     0.4 +
                 //     0.3 * (1 + cos(2 * M_PI * (X.z() - lattice.size(e_z) / 4) / lattice.size(e_z)));
-                // if (X.z() <= lattice.size(e_z) / 2) {
-                //     mag = 1;
-                // } else {
-                //     mag = 0.2;
-                // }
+                if (X.z() <= lattice.size(e_z) / 2) {
+                    mag = 1;
+                } else {
+                    mag = 0.2;
+                }
                 mygroup u;
                 u.gaussian_random(mag);
                 U[d][X] += u * 0.01;

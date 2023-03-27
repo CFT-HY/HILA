@@ -8,7 +8,7 @@
 #include <list>
 #include <iomanip>
 
-// no real need for HILAPP to go through here 
+// no real need for HILAPP to go through here
 #if defined(GPU_MEMORY_POOL) && !defined(HILAPP)
 
 #if defined(HIP)
@@ -21,6 +21,8 @@
 static_assert(0 && "HIP or CUDA must be defined");
 #endif
 
+// Compile with make .. OPTS="-DPOOL_DEBUG"
+// #define POOL_DEBUG
 
 // keep relatively large min allocation
 #define MIN_ALLOC_SIZE 128
@@ -76,6 +78,11 @@ void gpu_memory_pool_alloc(void **p, size_t req_size) {
         *p = ptr->ptr;
         in_use_list.splice(in_use_list.begin(), free_list, ptr);
 
+#ifdef POOL_DEBUG
+        hila::out << "GPU MEMORY: request " << req_size << " gave block " << ptr->size
+                  << " current total " << total_size << '\n';
+#endif
+
     } else {
 
         // did not find free memory - allocate
@@ -88,6 +95,11 @@ void gpu_memory_pool_alloc(void **p, size_t req_size) {
 
         n_true_allocs++;
         total_size += req_size;
+
+#ifdef POOL_DEBUG
+        hila::out << "GPU MEMORY: request " << req_size << " NEW allocation, current total "
+                  << total_size << '\n';
+#endif
     }
 }
 
@@ -99,6 +111,11 @@ void gpu_memory_pool_free(void *ptr) {
             // found the allocation, move to free list to the beginning
 
             free_list.splice(free_list.begin(), in_use_list, it);
+
+#ifdef POOL_DEBUG
+            hila::out << "GPU MEMORY: FREE block of size " << it->size << ", current total "
+                      << total_size << '\n';
+#endif
 
             return;
         }
@@ -116,6 +133,11 @@ void gpu_memory_pool_purge() {
         gpuFreeDirect(it->ptr);
 
         total_size -= it->size;
+
+#ifdef POOL_DEBUG
+        hila::out << "GPU MEMORY: Purging " << it->size << ", bytes, total size " << total_size
+                  << '\n';
+#endif
     }
 
     free_list.clear();
@@ -124,15 +146,12 @@ void gpu_memory_pool_purge() {
 void gpu_memory_pool_report() {
     if (hila::myrank() == 0) {
         hila::out << "\nGPU Memory pool statistics from node 0:\n";
-        hila::out << "   Total pool size " << ((double)total_size) / (1024 * 1024)
-                     << " MB\n";
-        hila::out << "   # of allocations " << n_allocs << "  real allocs "
-                     << std::setprecision(2) << ((double)n_true_allocs) / n_allocs * 100
-                     << "%\n";
-        hila::out << "   Average free list search "
-                     << free_list_avg_search / n_allocs << " steps\n";
-        hila::out << "   Average free list size " << free_list_avg_size / n_allocs
-                     << " items\n\n";
+        hila::out << "   Total pool size " << ((double)total_size) / (1024 * 1024) << " MB\n";
+        hila::out << "   # of allocations " << n_allocs << "  real allocs " << std::setprecision(2)
+                  << ((double)n_true_allocs) / n_allocs * 100 << "%\n";
+        hila::out << "   Average free list search " << free_list_avg_search / n_allocs
+                  << " steps\n";
+        hila::out << "   Average free list size " << free_list_avg_size / n_allocs << " items\n\n";
     }
 }
 

@@ -29,8 +29,7 @@
 class TopLevelVisitor;
 extern TopLevelVisitor *g_TopLevelVisitor;
 
-class TopLevelVisitor : public GeneralVisitor,
-                        public RecursiveASTVisitor<TopLevelVisitor> {
+class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLevelVisitor> {
 
   private:
     srcBuf *writeBuf;
@@ -38,13 +37,13 @@ class TopLevelVisitor : public GeneralVisitor,
 
     // flags used during AST parsing
     struct {
-        unsigned skip_children; // if > 0 skip children of this ast node
-        unsigned scope_level;   // level of variable scoping: {}
-        int ast_depth;     // depth of ast nodes within loop body.  ast_depth = 0 at top
-                           // level
-        int stmt_sequence; // sequence number of full statements in loops.  Full stmts
-                           // separated by ;
-        bool in_loop_body; // true if in site loop
+        unsigned skip_children;   // if > 0 skip children of this ast node
+        unsigned scope_level;     // level of variable scoping: {}
+        int ast_depth;            // depth of ast nodes within loop body.  ast_depth = 0 at top
+                                  // level
+        int stmt_sequence;        // sequence number of full statements in loops.  Full stmts
+                                  // separated by ;
+        bool in_loop_body;        // true if in site loop
         bool accept_field_parity; // if parity of loop not resolved yet
         bool loop_function_next;
     } parsing_state;
@@ -111,12 +110,9 @@ class TopLevelVisitor : public GeneralVisitor,
                                     std::vector<std::string> &arg,
                                     std::vector<const TemplateArgument *> &typeargs);
 
-    void make_mapping_lists(const TemplateParameterList *tpl,
-                            const TemplateArgumentList &tal,
-                            std::vector<std::string> &par,
-                            std::vector<std::string> &arg,
-                            std::vector<const TemplateArgument *> &typeargs,
-                            std::string *al);
+    void make_mapping_lists(const TemplateParameterList *tpl, const TemplateArgumentList &tal,
+                            std::vector<std::string> &par, std::vector<std::string> &arg,
+                            std::vector<const TemplateArgument *> &typeargs, std::string *al);
 
     SourceLocation spec_insertion_point(std::vector<const TemplateArgument *> &typeargs,
                                         SourceLocation ip, FunctionDecl *f);
@@ -144,15 +140,14 @@ class TopLevelVisitor : public GeneralVisitor,
     bool is_array_expr(Expr *E);
 
     int handle_array_var_ref(ArraySubscriptExpr *E, bool &is_assign, std::string &op);
-    int handle_bracket_var_ref(bracket_ref_t &ref, array_ref::reftype typ,
-                               bool &is_assign, std::string &assignop);
+    int handle_bracket_var_ref(bracket_ref_t &ref, const array_ref::reftype typ, bool &is_assign,
+                               std::string &assignop);
 
     bool is_vector_reference(Stmt *s);
 
     bool is_onsites(Stmt *s);
 
-    bool handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop,
-                                 Stmt *assingstmt);
+    bool handle_vector_reference(Stmt *s, bool &is_assign, std::string &assignop, Stmt *assingstmt);
 
     bool is_select_stmt(Stmt *s, Expr **value_expr);
 
@@ -164,9 +159,11 @@ class TopLevelVisitor : public GeneralVisitor,
     // void handle_function_call_in_loop(Stmt * s, bool is_assignment, bool is_compund);
     void handle_function_call_in_loop(Stmt *s, bool is_assign = false);
 
+    bool loop_constant_function_call(Stmt *s);
+
     void handle_member_call_in_loop(Stmt *s);
 
-    void handle_loop_const_expr_ref(Expr *E);
+    void handle_loop_const_expr_ref(Expr *E, bool is_assign = false, std::string assignop = "");
 
     bool loop_function_check(Decl *fd);
 
@@ -188,7 +185,7 @@ class TopLevelVisitor : public GeneralVisitor,
     SourceRange getRangeWithSemicolon(SourceRange sr, bool flag_error = true);
     bool hasSemicolonAfter(SourceRange sr);
 
-    //void requireGloballyDefined(Expr *e);
+    // void requireGloballyDefined(Expr *e);
 
     /// Entry point for the full site loop
     bool handle_full_loop_stmt(Stmt *ls, bool field_parity_ok);
@@ -198,6 +195,9 @@ class TopLevelVisitor : public GeneralVisitor,
 
     void remove_vars_out_of_scope(unsigned level);
 
+    void create_reduction_list(std::list<var_info> &vi_list,
+                               std::list<loop_const_expr_ref> &ce_list);
+
     // add handle to get rewriter too - for source control
     Rewriter &getRewriter() {
         return TheRewriter;
@@ -206,8 +206,7 @@ class TopLevelVisitor : public GeneralVisitor,
     /// Code generation headers start here
     /// Starting point for new code
     void generate_code(Stmt *S);
-    void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf,
-                                   std::string &par);
+    void handle_field_plus_offsets(std::stringstream &code, srcBuf &loopbuf, std::string &par);
 
     std::string backend_generate_code(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
                                       bool generate_wait);
@@ -215,14 +214,11 @@ class TopLevelVisitor : public GeneralVisitor,
     bool check_loop_vectorizable(Stmt *S, int &vector_size, std::string &diag);
 
     /// Generate a header for starting communication and marking fields changed
-    std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb,
-                                  bool generate_wait);
-    std::string generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &sb,
-                                   bool generate_wait);
+    std::string generate_code_cpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
+    std::string generate_code_gpu(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
     void generate_openacc_loop_header(std::stringstream &code);
     //   std::string generate_code_openacc(Stmt *S, bool semicolon_at_end, srcBuf &sb);
-    std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb,
-                                  bool generate_wait);
+    std::string generate_code_avx(Stmt *S, bool semicolon_at_end, srcBuf &sb, bool generate_wait);
 
     /// Check if the field type is vectorizable and how
     vectorization_info inspect_field_type(Expr *fE);
@@ -238,8 +234,7 @@ class TopLevelVisitor : public GeneralVisitor,
     void replace_field_refs_and_funcs(srcBuf &sb);
 
     /// utility used in finding pragmas on the previous line
-    bool is_preceded_by_pragma(SourceLocation l, std::string &args,
-                               SourceLocation &ploc);
+    bool is_preceded_by_pragma(SourceLocation l, std::string &args, SourceLocation &ploc);
 
     void set_writeBuf(const FileID fid);
 
@@ -254,8 +249,7 @@ class TopLevelVisitor : public GeneralVisitor,
 /// An AST Visitor for checking constraints for a field
 /// reference expression. Walks the tree to check each
 /// variable reference
-class FieldRefChecker : public GeneralVisitor,
-                        public RecursiveASTVisitor<FieldRefChecker> {
+class FieldRefChecker : public GeneralVisitor, public RecursiveASTVisitor<FieldRefChecker> {
   private:
     bool found_loop_local_var = false;
     var_info *vip;
@@ -268,16 +262,17 @@ class FieldRefChecker : public GeneralVisitor,
     bool isLoopLocal() {
         return found_loop_local_var;
     }
-    var_info * getLocalVarInfo() {
-        if (found_loop_local_var) return vip;
-        else return nullptr;
+    var_info *getLocalVarInfo() {
+        if (found_loop_local_var)
+            return vip;
+        else
+            return nullptr;
     }
 };
 
 /// An AST Visitor for checking constraints for assigments
 /// in lattice loops
-class LoopAssignChecker : public GeneralVisitor,
-                          public RecursiveASTVisitor<LoopAssignChecker> {
+class LoopAssignChecker : public GeneralVisitor, public RecursiveASTVisitor<LoopAssignChecker> {
   public:
     using GeneralVisitor::GeneralVisitor;
 
