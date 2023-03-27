@@ -317,8 +317,8 @@ inline SU2<A> operator-(const SU2<A> &lhs, const B rhs) {
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<B &, hila::type_minus<A, B>>::value, int> = 0>
 inline SU2<B> operator-(const A lhs, const SU2<B> &rhs) {
-    SU2<B> ret = rhs;
-    ret.d -= lhs;
+    SU2<B> ret = -rhs;
+    ret.d += lhs;
     return ret;
 }
 /// multiply two SU2's
