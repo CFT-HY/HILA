@@ -619,7 +619,7 @@ inline Algebra<SU2<A>> operator/(const Algebra<SU2<A>> &x, const B y) {
     return ret;
 }
 
-/// $U^\dagger E U$ transport down
+/// $U^\dagger E U$ transport up
 template <typename T>
 inline Algebra<SU2<T>> right_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &E) {
     Algebra<SU2<T>> res;
@@ -632,7 +632,7 @@ inline Algebra<SU2<T>> right_conjugation(const SU2<T> &U, const Algebra<SU2<T>> 
     return res;
 }
 
-/// $U E U^\dagger$ transport up
+/// $U E U^\dagger$ transport down
 template <typename T>
 inline Algebra<SU2<T>> left_conjugation(const SU2<T> &U, const Algebra<SU2<T>> &E) {
     Algebra<SU2<T>> res;
