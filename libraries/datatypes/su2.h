@@ -271,54 +271,54 @@ class SU2 {
 
 /// add two SU2's
 template <typename A, typename B, typename R = hila::type_plus<A, B>>
-inline SU2<R> operator+(const SU2<A> &rhs, const SU2<B> &lhs) {
+inline SU2<R> operator+(const SU2<A> &lhs, const SU2<B> &rhs) {
     SU2<R> ret;
-    ret.a = rhs.a + lhs.a;
-    ret.b = rhs.b + lhs.b;
-    ret.c = rhs.c + lhs.c;
-    ret.d = rhs.d + lhs.d;
+    ret.a = lhs.a + rhs.a;
+    ret.b = lhs.b + rhs.b;
+    ret.c = lhs.c + rhs.c;
+    ret.d = lhs.d + rhs.d;
     return ret;
 }
 /// SU2 + ('scalar' * identity matrix)
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<A &, hila::type_plus<A, B>>::value, int> = 0>
-inline SU2<A> operator+(const SU2<A> &rhs, const B lhs) {
-    SU2<A> ret = rhs;
-    ret.d += lhs;
+inline SU2<A> operator+(const SU2<A> &lhs, const B rhs) {
+    SU2<A> ret = lhs;
+    ret.d += rhs;
     return ret;
 }
 /// ('scalar' * identity matrix) + SU2
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<B &, hila::type_plus<A, B>>::value, int> = 0>
-inline SU2<B> operator+(const A rhs, const SU2<B> &lhs) {
-    SU2<B> ret = lhs;
-    ret.d += rhs;
+inline SU2<B> operator+(const A lhs, const SU2<B> &rhs) {
+    SU2<B> ret = rhs;
+    ret.d += lhs;
     return ret;
 }
 /// subtract two SU2's
 template <typename A, typename B, typename R = hila::type_minus<A, B>>
-inline SU2<R> operator-(const SU2<A> &rhs, const SU2<B> &lhs) {
+inline SU2<R> operator-(const SU2<A> &lhs, const SU2<B> &rhs) {
     SU2<R> ret;
-    ret.a = rhs.a - lhs.a;
-    ret.b = rhs.b - lhs.b;
-    ret.c = rhs.c - lhs.c;
-    ret.d = rhs.d - lhs.d;
+    ret.a = lhs.a - rhs.a;
+    ret.b = lhs.b - rhs.b;
+    ret.c = lhs.c - rhs.c;
+    ret.d = lhs.d - rhs.d;
     return ret;
 }
 /// SU2 - ('scalar' * identity matrix)
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<A &, hila::type_minus<A, B>>::value, int> = 0>
-inline SU2<A> operator-(const SU2<A> &rhs, const B lhs) {
-    SU2<A> ret = rhs;
-    ret.d -= lhs;
+inline SU2<A> operator-(const SU2<A> &lhs, const B rhs) {
+    SU2<A> ret = lhs;
+    ret.d -= rhs;
     return ret;
 }
 /// ('scalar' * identity matrix) - SU2
 template <typename A, typename B,
           std::enable_if_t<hila::is_assignable<B &, hila::type_minus<A, B>>::value, int> = 0>
-inline SU2<B> operator-(const A rhs, const SU2<B> &lhs) {
-    SU2<B> ret = lhs;
-    ret.d -= rhs;
+inline SU2<B> operator-(const A lhs, const SU2<B> &rhs) {
+    SU2<B> ret = rhs;
+    ret.d -= lhs;
     return ret;
 }
 /// multiply two SU2's
@@ -563,20 +563,20 @@ class Algebra<SU2<T>> {
 
 /// add two Algebra<SU2>'s
 template <typename A, typename B, typename R = hila::type_plus<A, B>>
-inline Algebra<SU2<R>> operator+(const Algebra<SU2<A>> &rhs, const Algebra<SU2<B>> &lhs) {
+inline Algebra<SU2<R>> operator+(const Algebra<SU2<A>> &lhs, const Algebra<SU2<B>> &rhs) {
     Algebra<SU2<R>> ret;
-    ret.a = rhs.a + lhs.a;
-    ret.b = rhs.b + lhs.b;
-    ret.c = rhs.c + lhs.c;
+    ret.a = lhs.a + rhs.a;
+    ret.b = lhs.b + rhs.b;
+    ret.c = lhs.c + rhs.c;
     return ret;
 }
 /// subtract two Algebra<SU2>'s
 template <typename A, typename B, typename R = hila::type_minus<A, B>>
-inline Algebra<SU2<R>> operator-(const Algebra<SU2<A>> &rhs, const Algebra<SU2<B>> &lhs) {
+inline Algebra<SU2<R>> operator-(const Algebra<SU2<A>> &lhs, const Algebra<SU2<B>> &rhs) {
     Algebra<SU2<R>> ret;
-    ret.a = rhs.a - lhs.a;
-    ret.b = rhs.b - lhs.b;
-    ret.c = rhs.c - lhs.c;
+    ret.a = lhs.a - rhs.a;
+    ret.b = lhs.b - rhs.b;
+    ret.c = lhs.c - rhs.c;
     return ret;
 }
 /// multiply two Algebra<SU2>'s
