@@ -19,8 +19,14 @@ LD := $(CC) -std c++17
 ifndef CUDA_ARCH
 	CUDA_ARCH = 61
 endif
-CXXFLAGS := -O3 -dc -x cu -std c++17 -DCUDA 
-CXXFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --use_fast_math --restrict
+
+CXXFLAGS := -dc -x cu -std c++17 -DCUDA -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH} --restrict
+ifndef DEBUG
+	CXXFLAGS += -O3 --use_fast_math
+else
+	CXXFLAGS += -g
+endif
+
 # -gencode arch=compute_52,code=sm_52
 
 #

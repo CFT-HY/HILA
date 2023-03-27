@@ -16,7 +16,7 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
   public:
     // std incantation for field types
     using base_type = T;
-    using argument_type = Complex<T>;    // constructed from complex
+    using argument_type = Complex<T>; // constructed from complex
 
     // get all constructors from base
     using Matrix_t<N, N, Complex<T>, SU<N, T>>::Matrix_t;
@@ -31,7 +31,7 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
     ///  i = 0 ... n-1
     ///     normalize row i
     ///     make rows i+1 .. (n-1) orthogonal to row i
-    SU &make_unitary() {
+    const SU &make_unitary() {
 
         for (int r = 0; r < N; r++) {
 
@@ -64,7 +64,7 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
     }
 
     /// Set the determinant of the SU(N) matrix to 1
-    inline SU &fix_det() {
+    const SU &fix_det() {
 
         Complex<T> d, factor;
         T t;
@@ -77,29 +77,14 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
     }
 
     /// Make the matrix special unitary
-    inline SU &reunitarize() {
+    const SU &reunitarize() {
         make_unitary();
         fix_det();
         return *this;
     }
 
-    // REPLACED BY GENERIC mult_by_2x2_left
-    // /// multiply matrix rows i,j by SU2 "subgroup" from left
-    // void mult_by_SU2_left(int r, int q, const SU<2, T> &m) {
-    //     // copy 2xN matrix
-    //     Vector<2, Complex<T>> a;
-    //     for (int i = 0; i < N; i++) {
-    //         a.e(0) = this->e(r, i);
-    //         a.e(1) = this->e(q, i);
 
-    //         a = m * a;
-
-    //         this->e(r, i) = a.e(0);
-    //         this->e(q, i) = a.e(1);
-    //     }
-    // }
-
-    SU &random(int nhits = 16) out_only {
+    const SU & random(int nhits = 16) out_only {
 
         // use Pauli matrix representation to generate SU(2) random matrix
         if constexpr (N == 2) {
@@ -131,42 +116,41 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
             if (nhits % 16 != 0)
                 this->reunitarize();
         }
-
         return *this;
     }
 
-
+    ///
     /// Project matrix to antihermitean and traceless algebra
     /// of the group.
-    // suN generators, normalized as
-    //  Tr(\lambda_i\lambda_j) = 1/2 \delta_ij
-    // off-diagonal are just that:
-    //    \lambda^od_ij,r = 1/2 for elements ij and ji
-    //    \lambda^od_ij,i = i/2 for ij; -i for ji
-    //
-    // diagonals: su(N) has N-1 diag generators
-    // parametrize these recursively:
-    //  \lambda_1 = diag(1,-1,0,0,..)/sqrt(1)/2
-    //  \lambda_2 = diag(1,1,-2,0,..)/sqrt(3)/2
-    //  \lambda_3 = diag(1,1,1,-3,..)/sqrt(6)/2
-    //  \lambda_i = diag(1,.. ,-i,..)/sqrt(i(i+1)/2)/2
-    //  ..
-    //  \lambda_N-1 = diag(1,.. ,1,-(N-1))/sqrt(N(N-1)/2)/2
-    //
-    // Define \lambda's so that diagonals come first
-    //
-    // Dividing U = U_ah + U_h, U_ah = 1/2 (U - U^+) = i a_i \lambda_i + tr.im I/N
-    // =>  Tr \lambda_i (U_ah) = 1/2 i a_i = 1/2 (\lambda_i)_jk (u_kj - u_jk^*)
-    // =>  a_i = -i (\lambda_i)_jk (u_kj - u_jk^*)
-    //
-    // Thus, for diags,
-    //     a_i = (u_00 + ..u_(i-1)(i-1) - i*u_ii).im 2/(sqrt(2i(i+1)))
-    //
-    // and off-diags:
-    // symm: a_i = -i (u_kj - u_kj^* + u_jk - u_jk^*)/2 = -i i(u_kj.im + u_jk.im)
-    //           = (u_kj.im + u_jk.im)
-    // antisymm:  a_i = -i (i u_kj - i u_jk^* - i u_jk + i u_kj^*)/2
-    //                = (u_kj.re - u_jk.re)
+    /// suN generators, normalized as
+    ///  Tr(\lambda_i\lambda_j) = 1/2 \delta_ij
+    /// off-diagonal are just that:
+    ///    \lambda^od_ij,r = 1/2 for elements ij and ji
+    ///    \lambda^od_ij,i = i/2 for ij; -i for ji
+    ///
+    /// diagonals: su(N) has N-1 diag generators
+    /// parametrize these recursively:
+    ///  \lambda_1 = diag(1,-1,0,0,..)/sqrt(1)/2
+    ///  \lambda_2 = diag(1,1,-2,0,..)/sqrt(3)/2
+    ///  \lambda_3 = diag(1,1,1,-3,..)/sqrt(6)/2
+    ///  \lambda_i = diag(1,.. ,-i,..)/sqrt(i(i+1)/2)/2
+    ///  ..
+    ///  \lambda_N-1 = diag(1,.. ,1,-(N-1))/sqrt(N(N-1)/2)/2
+    ///
+    /// Define \lambda's so that diagonals come first
+    ///
+    /// Dividing U = U_ah + U_h, U_ah = 1/2 (U - U^+) = i a_i \lambda_i + tr.im I/N
+    /// =>  Tr \lambda_i (U_ah) = 1/2 i a_i = 1/2 (\lambda_i)_jk (u_kj - u_jk^*)
+    /// =>  a_i = -i (\lambda_i)_jk (u_kj - u_jk^*)
+    ///
+    /// Thus, for diags,
+    ///     a_i = (u_00 + ..u_(i-1)(i-1) - i*u_ii).im 2/(sqrt(2i(i+1)))
+    ///
+    /// and off-diags:
+    /// symm: a_i = -i (u_kj - u_kj^* + u_jk - u_jk^*)/2 = -i i(u_kj.im + u_jk.im)
+    ///           = (u_kj.im + u_jk.im)
+    /// antisymm:  a_i = -i (i u_kj - i u_jk^* - i u_jk + i u_kj^*)/2
+    ///                = (u_kj.re - u_jk.re)
 
     Algebra<SU<N, T>> project_to_algebra() const {
         Algebra<SU<N, T>> a;
@@ -198,8 +182,7 @@ class SU : public Matrix_t<N, N, Complex<T>, SU<N, T>> {
 /// Derive from (real) Vector of N*N-1 elements
 
 template <int N, typename T>
-class Algebra<SU<N, T>>
-    : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
+class Algebra<SU<N, T>> : public Matrix_t<N * N - 1, 1, T, Algebra<SU<N, T>>> {
   public:
     // std incantation for field types
     using base_type = hila::number_type<T>;
@@ -309,11 +292,21 @@ SU<N, T> exp(const Algebra<SU<N, T>> &a) {
     // for (int i=0; i<N; i++) expv[i] = exp(I*ev[i]);
     // for (int i=0; i<N; i++) for (int j=0; j<N; j++) {
     //     m.e(i,j) = D.e(i,0) * expv[0] * D.e(j,0).conj();
-    //     for (int k=1; k<N; k++) 
+    //     for (int k=1; k<N; k++)
     //         m.e(i,j) += D.e(i,k) * expv[k] * D.e(j,k).conj();
     // }
     // return m;
 }
 
+namespace hila {
 
+///
+/// Function hila::random(SU<N,T> & m), equivalent to m.random()
+// template <int N, typename T>
+// void random(out_only SU<N, T> &m) {
+//     m.random();
+// }
+
+
+} // namespace hila
 #endif

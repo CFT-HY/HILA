@@ -903,6 +903,9 @@ class Field {
     T max(Parity par, CoordinateVector &loc) const;
     T minmax(bool is_min, Parity par, CoordinateVector &loc) const;
 
+    void random();
+    void gaussian_random(double width = 1.0);
+
 
 }; // End of class Field<>
 
@@ -1384,6 +1387,33 @@ void Field<T>::gather(Direction d, Parity p) const {
 // Read in the "technical" communication bits
 
 #include "field_comm.h"
+
+
+template <typename T>
+void Field<T>::random() {
+
+#if defined(CUDA) || defined(HIP)
+
+    if (!hila::is_device_rng_on()) {
+
+        std::vector<T> rng_buffer(lattice.mynode.volume());
+        for (auto &element : rng_buffer)
+            hila::random(element);
+        (*this).set_local_data(rng_buffer);
+
+    } else {
+        onsites(ALL) {
+            hila::random( (*this)[X] );
+        }
+    }
+#else
+
+    onsites(ALL) {
+        hila::random( (*this)[X] );
+    }
+
+#endif
+}
 
 
 #ifdef HILAPP

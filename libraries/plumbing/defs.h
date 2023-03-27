@@ -9,7 +9,6 @@
 #include <iostream>
 #include <array>
 #include <vector>
-#include <assert.h>
 #include <sstream>
 // #include <math.h>
 #include <type_traits>
@@ -23,8 +22,12 @@
 #include <mpi.h>
 #endif
 
-// Read in Makefile tunable parameters first
+// Read in Makefile tunable parameters first 
+// NDEBUG is defined (or not) in params, so assert.h comes after
 #include "params.h"
+
+#include <assert.h>
+
 
 #ifdef HILAPP
 // The compiler is hilapp
@@ -33,7 +36,7 @@
 #define __global__
 #endif
 
-#include "plumbing/mersenne.h"
+// #include "plumbing/mersenne.h"
 #include "plumbing/memalloc.h" // memory allocator
 #include "plumbing/timing.h"
 
@@ -108,7 +111,7 @@ extern int check_with_nodes;
 // optional input filename
 extern const char *input_file;
 
-enum sort {nonsorted, ascending, descending};
+enum sort { nonsorted, ascending, descending };
 
 void initialize(int argc, char **argv);
 void finishrun();
@@ -142,6 +145,18 @@ template <typename T>
 constexpr inline T sqr(const T &arg) {
     return arg * arg;
 }
+
+namespace hila {
+
+// define hila::swap(), because std::swap cannot be used in gpu code
+template <typename T>
+constexpr inline void swap(T &a, T &b) {
+    T c = a;
+    a = b;
+    b = c;
+}
+} // namespace hila
+
 
 // Backend defs-headers
 

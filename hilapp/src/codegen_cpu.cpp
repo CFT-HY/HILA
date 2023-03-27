@@ -1,24 +1,11 @@
+
 //------------------------------------------------------------------------------
-// Generate transformed
-// hardware-dependent "kernels".
+// Generate code for plain standard platform - should work on any computer
 //
-// Uses Clang RecursiveASTVisitor and Rewriter
-// interfaces
 //
 //------------------------------------------------------------------------------
 #include <sstream>
 #include <string>
-
-#include "clang/AST/AST.h"
-#include "clang/AST/ASTConsumer.h"
-#include "clang/AST/RecursiveASTVisitor.h"
-#include "clang/Frontend/ASTConsumers.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/Tooling.h"
-#include "clang/Rewrite/Core/Rewriter.h"
-//#include "llvm/Support/raw_ostream.h"
 
 #include "hilapp.h"
 #include "toplevelvisitor.h"
@@ -58,11 +45,11 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
         generate_openacc_loop_header(code);
     } else if (target.openmp && !loop_info.contains_random) {
         int sums = 0;
-        for (var_info &vi : var_info_list) {
-            if (vi.reduction_type != reduction::NONE &&
-                get_number_type(vi.type) == number_type::UNKNOWN) {
-                code << "#pragma omp declare reduction(_hila_reduction_sum" << sums << ":"
-                     << vi.type << ":omp_out += omp_in)\n";
+        for (reduction_expr &r : reduction_list) {
+            if (r.reduction_type != reduction::NONE &&
+                get_number_type(r.type) == number_type::UNKNOWN) {
+                code << "#pragma omp declare reduction(_hila_reduction_sum" << sums << ":" << r.type
+                     << ":omp_out += omp_in)\n";
                 sums++;
             }
         }
@@ -72,15 +59,15 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             code << "#pragma omp parallel for";
 
         sums = 0;
-        for (var_info &vi : var_info_list) {
-            if (vi.reduction_type != reduction::NONE) {
+        for (reduction_expr &r : reduction_list) {
+            if (r.reduction_type != reduction::NONE) {
                 code << " reduction(";
-                if (get_number_type(vi.type) == number_type::UNKNOWN) {
+                if (get_number_type(r.type) == number_type::UNKNOWN) {
                     code << "_hila_reduction_sum" << sums;
                 } else {
                     code << '+';
                 }
-                code << ": " << vi.reduction_name << ")";
+                code << ": " << r.reduction_name << ")";
             }
         }
         code << '\n';
@@ -97,13 +84,9 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
     }
 
     // replace reduction variables in the loop
-    for (var_info &vi : var_info_list) {
-        if (!vi.is_loop_local) {
-            if (vi.reduction_type != reduction::NONE) {
-                for (var_ref &vr : vi.refs) {
-                    loopBuf.replace(vr.ref, vi.reduction_name);
-                }
-            }
+    for (reduction_expr &r : reduction_list) {
+        for (Expr *e : r.refs) {
+            loopBuf.replace(e, r.reduction_name);
         }
     }
 
@@ -140,7 +123,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
                                                                           // get_stmt_str(d.e);
 
                     // generate access stmt
-                    code << "const " << l.element_type << " " << d.name_with_dir << " = " << l.new_name;
+                    code << "const " << l.element_type << " " << d.name_with_dir << " = "
+                         << l.new_name;
 
                     if (target.vectorize && l.vecinfo.is_vectorizable) {
                         // now l is vectorizable, but accessed sequentially -- this inly
@@ -212,7 +196,8 @@ std::string TopLevelVisitor::generate_code_cpu(Stmt *S, bool semicolon_at_end, s
             if (!ref->is_direction) {
                 loopBuf.replace(ref->fullExpr, l.loop_ref_name);
             }
-    }
+
+    } // end of field handling
 
     // // Replace field references in loop body
     // for ( field_ref & le : field_ref_list ) {

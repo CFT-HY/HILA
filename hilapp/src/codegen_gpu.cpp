@@ -16,12 +16,17 @@
 // define max size of an array passed as a parameter to kernels
 #define MAX_PARAM_ARRAY_SIZE 40
 
+// NOTE: If you define ALT_VECTOR_REDUCTION you need to define
+// it also in gpu_templated_ops.h !
+
+// #define ALT_VECTOR_REDUCTION
+
 extern std::string looping_var;
 extern std::string parity_name;
 
 
 // Add the __host__ __device__ keywords to functions called a loop
-void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
+void GeneralVisitor::handle_loop_function_gpu(call_info_struct &ci) {
 
     if (ci.is_defaulted)
         return; // cuda can take care of these
@@ -36,7 +41,7 @@ void GeneralVisitor::handle_loop_function_cuda(call_info_struct &ci) {
     sb->insert(sl, "__device__ __host__ ", true, true);
 }
 
-void GeneralVisitor::handle_loop_constructor_cuda(call_info_struct &ci) {
+void GeneralVisitor::handle_loop_constructor_gpu(call_info_struct &ci) {
 
     if (ci.is_defaulted) {
         return;
@@ -62,8 +67,8 @@ std::string TopLevelVisitor::make_kernel_name() {
                           getFileOffset(global.location.loop));
 }
 
-std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
-                                                bool generate_wait_loops) {
+std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, srcBuf &loopBuf,
+                                               bool generate_wait_loops) {
 
     // "Code" is inserted at the location of the loop statement
     // and the kernel is build in "kernel"
@@ -102,11 +107,54 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     code << "const lattice_struct & loop_lattice = lattice;\n";
 
 
-    kernel << "\n\n//-------- start kernel " << kernel_name << "---------\n";
+    kernel << "\n\n//------------------ start kernel " << kernel_name << "--------------------\n";
+
+
+    // Figure out the RNG operation status
+    // For RNG loops we optionally create loop with lower number of active threads
+    // enabling the use of smaller rng generator footprint
+
+    static bool rng_threads_checked = false;
+    static int rng_thread_block_number = 0;
+
+    bool use_thread_blocks = false;
+    int thread_block_number = 0;
+
+    if (loop_info.contains_random) {
+
+        if (!rng_threads_checked) {
+            // now check if the rng thread number is present
+            rng_threads_checked = true;
+            std::string rng_str;
+
+            if (is_macro_defined("GPU_RNG_THREAD_BLOCKS", &rng_str)) {
+                rng_thread_block_number = std::atoi(rng_str.c_str());
+            }
+        }
+
+        if (rng_thread_block_number > 0) {
+            // loop has random and rng thread blocks in use and number known
+            use_thread_blocks = true;
+            thread_block_number = rng_thread_block_number;
+        }
+
+        if (rng_thread_block_number < 0) {
+            reportDiag(DiagnosticsEngine::Level::Warning, loop_info.range.getBegin(),
+                       "loop contains random number generator calls but GPU random numbers are "
+                       "disabled (GPU_RNG_THREAD_BLOCKS < 0).  This may crash the program.");
+        }
+    }
+
 
     // if we have small arrays, encapsulate them in struct
     // struct has to be defined before the kernel call
+
+    // keep track if we have rv here
+    bool loop_has_reductionvector_blocks = false;
+
     for (array_ref &ar : array_ref_list) {
+        // llvm::errs() << "ARRAY " << ar.name << " REF TYPE IS " << ar.type << '\n';
+
         if (ar.type != array_ref::REPLACE && ar.type != array_ref::REDUCTION) {
 
             if (ar.size > 0 && ar.size <= MAX_PARAM_ARRAY_SIZE) {
@@ -161,24 +209,58 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
 
         } else if (ar.type == array_ref::REDUCTION) {
 
+            // Now there is reductionvector - do we have special reduction blocks or use atomic?
+
+            std::string rv_block_str;
+            if (is_macro_defined("GPU_VECTOR_REDUCTION_THREAD_BLOCKS", &rv_block_str)) {
+                int blocks = std::atoi(rv_block_str.c_str());
+                if (blocks > 0) {
+                    loop_has_reductionvector_blocks = true;
+                    use_thread_blocks = true;
+
+                    // we have to take smaller of block numbers - RNG works with smaller number,
+                    // but not larger.
+                    if (thread_block_number > 0) {
+                        thread_block_number = std::min(thread_block_number, blocks);
+                    } else {
+                        thread_block_number = blocks;
+                    }
+                }
+            }
+
             ar.new_name = "r_" + var_name_prefix + clean_name(ar.name);
 
-            code << "// Create reduction array\n";
             code << ar.element_type << " * " << ar.new_name << ";\n";
-            code << "gpuMalloc( & " << ar.new_name << ", " << ar.size_expr << " * sizeof("
+
+            std::stringstream array_size; // keep size expression in string
+
+            if (loop_has_reductionvector_blocks) {
+                code << "// Create reduction array with " << thread_block_number
+                     << " * N_threads parallel reductions\n";
+
+                array_size << ar.size_expr << " * N_threads * " << thread_block_number;
+
+            } else {
+                code << "// Create reduction array - using atomicAdd for accumulation\n";
+
+                array_size << ar.size_expr;
+            }
+
+            code << "gpuMalloc( & " << ar.new_name << ", " << array_size.str() << " * sizeof("
                  << ar.element_type << "));\n";
 
             if (ar.reduction_type == reduction::SUM) {
-                code << "gpu_set_zero(" << ar.new_name << ", " << ar.size_expr << ");\n";
+                code << "gpu_set_zero(" << ar.new_name << ", " << array_size.str() << ");\n";
             }
 
             if (ar.reduction_type == reduction::PRODUCT) {
-                code << "gpu_set_one(" << ar.new_name << ", " << ar.size_expr << ");\n";
+                code << "gpu_set_value(" << ar.new_name << ", 1, " << array_size.str() << ");\n";
             }
 
             code << "check_device_error(\"allocate_reduction\");\n";
         }
     }
+
 
     // Generate the function definition and call
     // "inline" makes cuda complain, but it is needed to avoid multiple definition error
@@ -193,21 +275,25 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     code << "int N_blocks = (lattice_info.loop_end - lattice_info.loop_begin + "
             "N_threads - 1)/N_threads;\n";
 
-    // Check for reductions and allocate device memory for each field
-    for (var_info &v : var_info_list) {
-        if (v.reduction_type != reduction::NONE) {
-            // Allocate memory for a reduction. This will be filled in the kernel
-            code << v.type << " * dev_" << v.reduction_name << ";\n";
-            code << "gpuMalloc( & dev_" << v.reduction_name << ","
-                 << "sizeof(" << v.type << ") * N_blocks );\n";
-            if (v.reduction_type == reduction::SUM) {
-                code << "gpu_set_zero(dev_" << v.reduction_name << ", N_blocks);\n";
-            }
-            if (v.reduction_type == reduction::PRODUCT) {
-                code << "gpu_set_one(dev_" << v.reduction_name << ", N_blocks);\n";
-            }
+    if (use_thread_blocks) {
+        code << "if (N_blocks > " << thread_block_number << ") N_blocks = " << thread_block_number
+             << ";\n";
+    }
+
+    // Check for reductions and allocate device memory for each var
+    for (reduction_expr &r : reduction_list) {
+
+        code << r.type << " * dev_" << r.reduction_name << ";\n";
+        code << "gpuMalloc( & dev_" << r.reduction_name << ","
+             << "sizeof(" << r.type << ") * N_blocks );\n";
+        if (r.reduction_type == reduction::SUM) {
+            code << "gpu_set_zero(dev_" << r.reduction_name << ", N_blocks);\n";
+        }
+        if (r.reduction_type == reduction::PRODUCT) {
+            code << "gpu_set_value(dev_" << r.reduction_name << ", 1, N_blocks);\n";
         }
     }
+
 
     // and for selections
     for (selection_info &s : selection_info_list) {
@@ -270,13 +356,13 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
 
         } else if (!vi.is_loop_local) {
 
-            vi.new_name = "kernel_par_" + std::to_string(i) + "_";
-            i++;
+            vi.new_name = "HILA_var_" + std::to_string(i++) + "_";
+
 
             if (vi.reduction_type != reduction::NONE) {
-                // Generate a temporary array for the reduction
-                kernel << ", " << vi.type << " * " << vi.new_name;
-                code << ", dev_" << vi.reduction_name;
+                // // Generate a temporary array for the reduction
+                // kernel << ", " << vi.type << " * " << vi.new_name;
+                // code << ", dev_" << vi.reduction_name;
             } else {
                 kernel << ", const " << vi.type << " " << vi.new_name;
                 code << ", " << vi.name;
@@ -288,18 +374,24 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         }
     }
 
+    // write reduction parameters
+    i = 0;
+    for (reduction_expr &r : reduction_list) {
+        r.loop_name = name_prefix + "reduction_" + std::to_string(i++) + "_";
+        kernel << ", " << r.type << " * " << r.loop_name;
+        code << ", dev_" << r.reduction_name;
+    }
+
     // Then loop constant expressions upgraded
     i = 0;
     for (loop_const_expr_ref lcer : loop_const_expr_ref_list) {
-        lcer.new_name = "lconst_par_" + std::to_string(i) + "_";
-        i++;
+        if (lcer.reduction_type == reduction::NONE) {
+            // reductions handled separately
+            // replacement was done on the general codegen level
+            // loop var is lcer.new_name
 
-        kernel << ", const " << lcer.type << ' ' << lcer.new_name;
-        code << ", " << lcer.exprstring;
-
-        // Replace references in loop body
-        for (Expr *ep : lcer.refs) {
-            loopBuf.replace(ep, lcer.new_name);
+            kernel << ", const " << lcer.type << ' ' << lcer.new_name;
+            code << ", " << lcer.expression;
         }
     }
 
@@ -381,14 +473,18 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
 
         } else {
 
-            // Finally, we have reduction
+            // Finally, we have reductionvector here
             // substute here a[i] += b;
-            // with atomicAdd(&a[i],b);
+            // if not reductionvector blocks, substitute with atomicAdd(&a[i],b);
+            // with blocks, each thread adds to its own histogram
 
+            // pass also size here
             code << ", " << ar.new_name;
             kernel << ", " << ar.element_type << " * RESTRICT " << ar.new_name;
 
+
             for (bracket_ref_t &br : ar.refs) {
+                // change the name
                 loopBuf.replace(br.DRE, ar.new_name);
 
                 SourceLocation oploc, beginloc, endloc;
@@ -409,23 +505,74 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                     exit(1);
                 }
 
-                loopBuf.replace(SourceRange(oploc, oploc.getLocWithOffset(1)), ",");
+                if (!loop_has_reductionvector_blocks) {
+                    // in this case do atomic ops
 
-                if (ar.reduction_type == reduction::SUM) {
+                    loopBuf.replace(SourceRange(oploc, oploc.getLocWithOffset(1)), ",");
 
-                    // Cuda has a bug where double atomicAdd is not defined for
-                    // capability < 6.0, but you nevertheless cannot use the name.
-                    // use slightly modified name
-                    if (ar.element_type == "double")
-                        loopBuf.insert(beginloc, "atomic_Add(&", true);
-                    else
-                        loopBuf.insert(beginloc, "atomicAdd(&", true);
+                    if (ar.reduction_type == reduction::SUM) {
+
+                        // Cuda has a bug where double atomicAdd is not defined for
+                        // capability < 6.0, but you nevertheless cannot use the name.
+                        // use slightly modified name
+                        if (ar.element_type == "double")
+                            loopBuf.insert(beginloc, "atomic_Add(&", true);
+                        else
+                            loopBuf.insert(beginloc, "atomicAdd(&", true);
+
+                    } else {
+                        loopBuf.insert(beginloc, "atomicMultiply(&", true);
+                    }
+
+                    loopBuf.insert_after(endloc, ")", false);
 
                 } else {
-                    loopBuf.insert(beginloc, "atomicMultiply(&", true);
-                }
+                    // Now each thread writes to its own array section.
+                    // give thread offset to the index
+                    // Here we change expr of type
+                    //    s[ind] += val
+                    // to
+                    //    new_name[static_cast<int>(ind)*N_threads_total + thread_idx] += val
+                    // static cast is added if the type of the index is not of int type
 
-                loopBuf.insert_after(endloc, ")", false);
+                    // in this case pass the size of the vector (original!) to the kernel
+                    std::string ar_size_varname(ar.new_name + "_size");
+
+                    code << ", " << ar.size_expr;
+                    kernel << ", const int " << ar_size_varname;
+
+                    // Now have to be careful not to insert on the index variable "area",
+                    // go in front of it
+
+                    SourceLocation l =
+                        br.Idx.at(0)->getSourceRange().getBegin().getLocWithOffset(-1);
+                    // get the char there, most likely '['
+                    std::string replstr = loopBuf.get(l, 1);
+
+                    if (br.Idx.at(0)->getType().getTypePtr()->isIntegerType()) {
+                        replstr.append("( ");
+                    } else {
+                        replstr.append("static_cast<int>( ");
+                    }
+                    int idx = loopBuf.get_index(l);
+
+                    loopBuf.replace(idx, idx, replstr);
+
+                    // _HILA_thread_id is defined in kernel start below
+                    l = getSourceLocationAtEndOfRange(br.Idx.at(0)->getSourceRange())
+                            .getLocWithOffset(1);
+
+#ifndef ALT_VECTOR_REDUCTION
+                    // Normal simpler way to accumulate vectorreductions
+                    loopBuf.insert(l, " ) + _HILA_thread_id * " + ar_size_varname);
+
+#else
+                    // ALT of above is below
+                    std::stringstream ss;
+                    ss << " )*(N_threads * " << thread_block_number << ") + _HILA_thread_id";
+                    loopBuf.insert(l, ss.str());
+#endif
+                }
             }
         }
     }
@@ -457,38 +604,48 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     kernel << ")\n{\n";
 
     // kernel << "backend_lattice_struct *loop_lattice = &d_lattice; \n";
-    /* Standard boilerplate in CUDA kernels: calculate site index */
-    kernel << "unsigned " << looping_var << " = threadIdx.x + blockIdx.x * blockDim.x "
-           << " + d_lattice.loop_begin; \n";
-    /* The last block may exceed the lattice size. Do nothing in that case. */
-    // move after reduction var setup
-    // kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
 
-    // Declare the shared reduction variable
-    for (var_info &vi : var_info_list)
-        if (!vi.is_loop_local) {
-            if (vi.reduction_type != reduction::NONE) {
-                // Generate a temporary array for the reduction
-                kernel << "__shared__ " << vi.type << " " << vi.new_name << "sh[N_threads];\n";
-                kernel << vi.type << " " << vi.new_name << "sum; \n";
-                // Initialize only the local element
-                if (vi.reduction_type == reduction::SUM) {
-                    kernel << vi.new_name << "sum = 0; \n";
-                    kernel << vi.new_name << "sh[threadIdx.x] = 0;\n";
-                } else if (vi.reduction_type == reduction::PRODUCT) {
-                    kernel << vi.new_name << "sum = 1; \n";
-                    kernel << vi.new_name << "sh[threadIdx.x] = 1;\n";
-                }
-
-                // Replace references in the loop body
-                for (var_ref &vr : vi.refs) {
-                    loopBuf.replace(vr.ref, vi.new_name + "sum");
-                }
-            }
+    // Declare the shared reduction variable inside loop
+    for (reduction_expr &r : reduction_list) {
+        // Generate a temporary array for the reduction
+        kernel << "__shared__ " << r.type << " " << r.loop_name << "sh[N_threads];\n";
+        kernel << r.type << " " << r.loop_name << "sum;\n";
+        // Initialize only the local element
+        if (r.reduction_type == reduction::SUM) {
+            kernel << r.loop_name << "sum = 0; \n";
+            kernel << r.loop_name << "sh[threadIdx.x] = 0;\n";
+        } else if (r.reduction_type == reduction::PRODUCT) {
+            kernel << r.loop_name << "sum = 1; \n";
+            kernel << r.loop_name << "sh[threadIdx.x] = 1;\n";
         }
 
-    /* The last block may exceed the lattice size. Do nothing in that case. */
-    kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
+        // Replace references in the loop body
+        for (Expr *e : r.refs) {
+            loopBuf.replace(e, r.loop_name + "sum");
+        }
+    }
+
+
+    /////////////////////////////////////////////////////////////////////////////
+    // Standard boilerplate in CUDA kernels: calculate site index
+
+    kernel << "int _HILA_thread_id = threadIdx.x + blockIdx.x * blockDim.x;\n";
+    kernel << "unsigned " << looping_var << " = _HILA_thread_id + d_lattice.loop_begin;\n";
+
+    if (!use_thread_blocks) {
+
+        // The last block may exceed the lattice size. Do nothing in that case.
+        kernel << "if(" << looping_var << " < d_lattice.loop_end) { \n";
+
+    } else {
+        // In this case let all threads to iterate over sites
+        // use long long type (64 bits) just in case to avoid wrapping
+        // the iteration will stop on the
+        kernel << "for (long long _HILA_idx_l_ = " << looping_var
+               << "; _HILA_idx_l_ < d_lattice.loop_end; _HILA_idx_l_ += N_threads * "
+               << thread_block_number << ") {\n"
+               << looping_var << " = _HILA_idx_l_;\n";
+    }
 
     // Create temporary field element variables
     for (field_info &l : field_info_list) {
@@ -621,7 +778,8 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         //          << ", loop_lattice->field_alloc_size)" << ";\n";
         //   break;  // Only one needed
         // }
-    }
+
+    } // ends Field handling
 
     // if there are site selections, reset the selection flag to 0 at all sites
 
@@ -631,7 +789,7 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
         }
     }
 
-    ////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////
 
     // Finally, dump the loop body
 
@@ -649,75 +807,93 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
                    << ", d_lattice.field_alloc_size );\n";
         }
 
-    // end the if ( looping_var < d_lattice.loop_end)
+    // end the if ( looping_var < d_lattice.loop_end) or for() {
     kernel << "}\n";
 
+    ///////////////////////////////////////////////////////////////////////////
+
     // Assign reductions to shared memory
-    for (var_info &vi : var_info_list) {
-        if (!vi.is_loop_local) {
-            if (vi.reduction_type != reduction::NONE) {
-                kernel << vi.new_name << "sh[threadIdx.x] = " << vi.new_name << "sum;\n";
-            }
-        }
+    for (reduction_expr &r : reduction_list) {
+        kernel << r.loop_name << "sh[threadIdx.x] = " << r.loop_name << "sum;\n";
     }
+
     // Handle reductions: Need to sync threads once, then do reduction
     // locally once per block
     bool sync_done = false;
-    for (var_info &vi : var_info_list)
-        if (!vi.is_loop_local) {
-            if (vi.reduction_type != reduction::NONE) {
-                // Do sync (only if there is a reduction)
-                if (!sync_done) {
-                    kernel << "__syncthreads();\n";
-                    sync_done = true;
-                }
 
-                // Now run the thread level reduction
-                // kernel << "if( threadIdx.x == 0 ){\n";
-                // if (vi.reduction_type == reduction::SUM) {
-                //     kernel << vi.new_name << "[blockIdx.x] = 0;\n";
-                // } else if (vi.reduction_type == reduction::PRODUCT) {
-                //     kernel << vi.new_name << "[blockIdx.x] = 1;\n";
-                // }
-                kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
-                if (vi.reduction_type == reduction::SUM) {
-                    kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
-                           << " < d_lattice.loop_end) {\n";
-                    kernel << vi.new_name << "sh[threadIdx.x] += " << vi.new_name
-                           << "sh[threadIdx.x+_H_i];\n";
-                    kernel << "}\n";
-                    kernel << "__syncthreads();\n";
-                } else if (vi.reduction_type == reduction::PRODUCT) {
-                    kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
-                           << " < d_lattice.loop_end) {\n";
-                    kernel << vi.new_name << "sh[threadIdx.x] *= " << vi.new_name
-                           << "sh[threadIdx.x+_H_i];\n";
-                    kernel << "}\n";
-                    kernel << "__syncthreads();\n";
-                }
-                kernel << "}\n";
-                // kernel << "}\n";
-
-                kernel << "if(threadIdx.x == 0) {\n"
-                       << vi.new_name << "[blockIdx.x] = " << vi.new_name << "sh[0];\n";
-                kernel << "}\n";
-            }
+    for (reduction_expr &r : reduction_list) {
+        // Do sync (only if there is a reduction)
+        if (!sync_done) {
+            kernel << "__syncthreads();\n";
+            sync_done = true;
         }
-    kernel << "}\n//----------\n\n";
-    code << ");\n\n";
-    code << "check_device_error(\"" << kernel_name << "\");\n";
+
+        // Now run the thread level reduction
+        // kernel << "if( threadIdx.x == 0 ){\n";
+        // if (vi.reduction_type == reduction::SUM) {
+        // loopBuf.insert(br.Idx.at(0)->getSourceRange().getBegin(), "(");
+
+        //     kernel << vi.new_name << "[blockIdx.x] = 0;\n";
+        // } else if (vi.reduction_type == reduction::PRODUCT) {
+        //     kernel << vi.new_name << "[blockIdx.x] = 1;\n";
+        // }
+        kernel << "for( int _H_i=N_threads/2; _H_i>0; _H_i/=2 ){\n";
+        if (r.reduction_type == reduction::SUM) {
+            kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
+                   << " < d_lattice.loop_end) {\n";
+            kernel << r.loop_name << "sh[threadIdx.x] += " << r.loop_name
+                   << "sh[threadIdx.x+_H_i];\n";
+            kernel << "}\n";
+            kernel << "__syncthreads();\n";
+        } else if (r.reduction_type == reduction::PRODUCT) {
+            kernel << "if(threadIdx.x < _H_i && _H_i +" << looping_var
+                   << " < d_lattice.loop_end) {\n";
+            kernel << r.loop_name << "sh[threadIdx.x] *= " << r.loop_name
+                   << "sh[threadIdx.x+_H_i];\n";
+            kernel << "}\n";
+            kernel << "__syncthreads();\n";
+        }
+        kernel << "}\n";
+        // kernel << "}\n";
+
+        kernel << "if(threadIdx.x == 0) {\n"
+               << r.loop_name << "[blockIdx.x] = " << r.loop_name << "sh[0];\n";
+        kernel << "}\n";
+    }
+    // Reduction end handling stops here
+
+
+    kernel << "}\n//------------------- end kernel " << kernel_name << " ---------------------\n\n";
 
     // Finally, emit the kernel
     // TheRewriter.InsertText(global.location.function,
     // indent_string(kernel),true,true);
+
     srcBuf *filebuf = get_file_srcBuf(global.location.kernels);
     filebuf->insert(global.location.kernels, // .getLocWithOffset(-1),
                     indent_string(kernel.str()), false, false);
+
+    ////////////////////////////////////////////////////////////////////////////////////
+    // Kernel is finished.  Write the end handling on call code
+
+    code << ");\n\n"; // finishes kernel call
+    code << "check_device_error(\"" << kernel_name << "\");\n";
+
 
     // If arrays were copied free memory
 
     for (array_ref &ar : array_ref_list) {
         if (ar.type == array_ref::REDUCTION) {
+
+            if (loop_has_reductionvector_blocks) {
+                // there are now N_blocks * loop_blocks -- reduce these
+                // (code in hila_gpu.cpp)
+
+                code << "sum_blocked_vectorreduction(" << ar.new_name << ", " << ar.size_expr
+                     << ", " << thread_block_number << " * N_threads);\n";
+
+                // after this the data can be collected from the array as in non-blocked reduction!
+            }
 
             code << "{\nstd::vector<" << ar.element_type << "> a_v__tmp(" << ar.size_expr << ");\n";
             code << "gpuMemcpy(a_v__tmp.data(), " << ar.new_name << ", " << ar.size_expr
@@ -740,24 +916,21 @@ std::string TopLevelVisitor::generate_code_cuda(Stmt *S, bool semicolon_at_end, 
     }
 
     // Check reduction variables
-    for (var_info &vi : var_info_list) {
-        if (vi.reduction_type != reduction::NONE) {
-            // Run reduction
-            if (vi.reduction_type == reduction::SUM) {
-                code << vi.reduction_name << " = gpu_reduce_sum( dev_" << vi.reduction_name
-                     << ", N_blocks"
-                     << ");\n";
-            } else if (vi.reduction_type == reduction::PRODUCT) {
-                code << vi.reduction_name << " = gpu_reduce_product( dev_" << vi.reduction_name
-                     << ", N_blocks"
-                     << ");\n";
-            }
-            // Free memory allocated for the reduction
-            if (vi.reduction_type != reduction::NONE) {
-                code << "gpuFree(dev_" << vi.reduction_name << ");\n";
-            }
+    for (reduction_expr &r : reduction_list) {
+        // Run reduction
+        if (r.reduction_type == reduction::SUM) {
+            code << r.reduction_name << " = gpu_reduce_sum( dev_" << r.reduction_name
+                 << ", N_blocks"
+                 << ");\n";
+        } else if (r.reduction_type == reduction::PRODUCT) {
+            code << r.reduction_name << " = gpu_reduce_product( dev_" << r.reduction_name
+                 << ", N_blocks"
+                 << ");\n";
         }
+        // Free memory allocated for the reduction
+        code << "gpuFree(dev_" << r.reduction_name << ");\n";
     }
+
 
     // and the selection vars
     bool first = true;

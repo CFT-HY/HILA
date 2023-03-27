@@ -25,9 +25,9 @@ struct parameters {
     double time_offset;
     bool poly_range_on;
     double poly_min, poly_m2;
-    int n_smear;
+    std::vector<int> n_smear;
     double smear_coeff;
-    int z_smear;
+    std::vector<int> z_smear;
     int n_surface;
     int n_dump_polyakov;
 };
@@ -229,166 +229,170 @@ int z_ind(int z) {
 ///////////////////////////////////////////////////////////////////////////////////
 
 template <typename group>
-void measure_polyakov_surface(const GaugeField<group> &U, const parameters &p, int traj) {
+void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int traj) {
 
     Field<float> pl;
 
 
     if (0) {
         // this section does local sums of poly lines
-        // does not help!
-        Field<group> staples, sumUt;
+        Field<group> staples, Ut;
 
-        staplesum(U, staples, e_t);
+        Ut = U[e_t];
 
-        onsites(ALL) {
-            group ut, usum;
-            usum = 0;
-            ut = U[e_t][X];
-            for (int i = 0; i < 15; i++) {
-                suN_heatbath(ut, staples[X], p.beta);
-                usum += ut;
-            }
-            sumUt[X] = usum;
+        for (int s = 0; s < 20; s++) {
+            staplesum(U, staples, e_t);
+            U[e_t][ALL] = (U[e_t][X] + 0.5 * staples[X]) / (1 + 6 * 0.5);
         }
 
-        measure_polyakov_field(sumUt, pl);
+        measure_polyakov_field(U[e_t], pl);
+
+        U[e_t] = Ut;
 
     } else {
         // here standard non-link integrated field
         measure_polyakov_field(U[e_t], pl);
     }
 
-    std::vector<float> profile, profile_unsmear, prof1;
-    profile_unsmear = measure_polyakov_profile(pl, prof1);
-
-    smear_polyakov_field(pl, p.n_smear, p.smear_coeff);
-
-    if (p.z_smear > 0) {
-        Field<float> pl2 = 0;
-        for (int i = 0; i < p.z_smear; i++) {
-            onsites(ALL) if (X.coordinate(e_t) == 0) {
-                pl2[X] = pl[X] + p.smear_coeff * (pl[X + e_z] + pl[X - e_z]);
-            }
-            onsites(ALL) if (X.coordinate(e_t) == 0) {
-                pl[X] = pl2[X] / (1 + 2 * p.smear_coeff);
-            }
-        }
-    }
-
-    profile = measure_polyakov_profile(pl, prof1);
-
     hila::out0 << std::setprecision(5);
-    double m = 1.0 / (lattice.size(e_x) * lattice.size(e_y));
-    for (int i = 0; i < profile.size(); i++) {
-        profile[i] *= m;
-        hila::out0 << "PRO " << i << ' ' << profile[i] << ' ' << prof1[i] << ' '
-                   << profile_unsmear[i] * m << '\n';
-    }
 
-    float min = 1e8, max = 0;
-    int minloc, maxloc;
-    for (int i = 0; i < profile.size(); i++) {
-        if (min > profile[i]) {
-            min = profile[i];
-            minloc = i;
-        }
-        if (max < profile[i]) {
-            max = profile[i];
-            maxloc = i;
-        }
-    }
+    std::vector<float> profile, prof1;
 
-    // find the surface between minloc and maxloc
-    float surface_level = max * 0.5; // assume min is really 0
-    int area = lattice.size(e_x) * lattice.size(e_y);
+    int prev_smear = 0;
+    for (int sl = 0; sl < p.n_smear.size(); sl++) {
 
-    hila::out0 << "Surface level " << surface_level << '\n';
+        int smear = p.n_smear.at(sl);
+        smear_polyakov_field(pl, smear - prev_smear, p.smear_coeff);
+        prev_smear = smear;
 
-    int startloc;
-    if (maxloc > minloc)
-        startloc = (maxloc + minloc) / 2;
-    else
-        startloc = ((maxloc + minloc + lattice.size(e_z)) / 2) % lattice.size(e_z);
-
-    std::vector<float> surf;
-    if (hila::myrank() == 0)
-        surf.resize(area);
-
-    hila::out0 << std::setprecision(6);
-
-    for (int y = 0; y < lattice.size(e_y); y++)
-        for (int x = 0; x < lattice.size(e_x); x++) {
-            auto line = pl.get_slice({x, y, -1, 0});
-            if (hila::myrank() == 0) {
-                // start search of the surface from the center between min and max
-                int z = startloc;
-                if (line[z] > surface_level) {
-                    while (line[z_ind(z)] > surface_level && startloc - z < lattice.size(e_z) * 0.8)
-                        z--;
-                } else {
-                    while (line[z_ind(z + 1)] <= surface_level &&
-                           z - startloc < lattice.size(e_z) * 0.8)
-                        z++;
+        Field<float> plz = pl;
+        if (p.z_smear.at(sl) > 0) {
+            Field<float> pl2;
+            for (int j = 0; j < p.z_smear.at(sl); j++) {
+                onsites(ALL) if (X.coordinate(e_t) == 0) {
+                    pl2[X] = plz[X] + p.smear_coeff * (plz[X + e_z] + plz[X - e_z]);
                 }
-
-
-                // do linear interpolation
-                // surf[x + y * lattice.size(e_x)] = z;
-                surf[x + y * lattice.size(e_x)] =
-                     z + (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
-
-                if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
-                    hila::out0 << "SURF " << x << ' ' << y << ' ' << surf[x + y * lattice.size(e_x)]
-                               << '\n';
+                onsites(ALL) if (X.coordinate(e_t) == 0) {
+                    plz[X] = pl2[X] / (1 + 2 * p.smear_coeff);
                 }
             }
         }
 
-    if (hila::myrank() == 0) {
-        // do fft for the surface
-        static bool first = true;
-        static Complex<double> *buf;
-        static fftw_plan fftwplan;
+        profile = measure_polyakov_profile(plz, prof1);
 
-        if (first) {
-            first = false;
-
-            buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
-
-            // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be
-            // the "fast" one. thus, first y, then x.
-            fftwplan = fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
-                                        (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
+        double m = 1.0 / (lattice.size(e_x) * lattice.size(e_y));
+        for (int i = 0; i < profile.size(); i++) {
+            profile[i] *= m;
+            hila::out0 << "PRO" << sl << ' ' << i << ' ' << profile[i] << ' ' << prof1[i] << '\n';
         }
 
-        for (int i = 0; i < area; i++) {
-            buf[i] = surf[i];
-        }
-
-        fftw_execute(fftwplan);
-
-        constexpr int pow_size = 200;
-
-        std::vector<double> npow(pow_size);
-        std::vector<int> hits(pow_size);
-
-        for (int i = 0; i < area; i++) {
-            int x = i % lattice.size(e_x);
-            int y = i / lattice.size(e_x);
-            x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
-            y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
-
-            int k = x * x + y * y;
-            if (k < pow_size) {
-                npow[k] += buf[i].squarenorm() / (area * area);
-                hits[k]++;
+        float min = 1e8, max = 0;
+        int minloc, maxloc;
+        for (int i = 0; i < profile.size(); i++) {
+            if (min > profile[i]) {
+                min = profile[i];
+                minloc = i;
+            }
+            if (max < profile[i]) {
+                max = profile[i];
+                maxloc = i;
             }
         }
 
-        for (int i = 0; i < pow_size; i++) {
-            if (hits[i] > 0)
-                hila::out0 << "POW " << i << ' ' << npow[i] / hits[i] << ' ' << hits[i] << '\n';
+        // find the surface between minloc and maxloc
+        float surface_level = max * 0.5; // assume min is really 0
+        int area = lattice.size(e_x) * lattice.size(e_y);
+
+        hila::out0 << "Surface_level" << sl << ' ' << surface_level << '\n';
+
+        int startloc;
+        if (maxloc > minloc)
+            startloc = (maxloc + minloc) / 2;
+        else
+            startloc = ((maxloc + minloc + lattice.size(e_z)) / 2) % lattice.size(e_z);
+
+        std::vector<float> surf;
+        if (hila::myrank() == 0)
+            surf.resize(area);
+
+        hila::out0 << std::setprecision(6);
+
+        for (int y = 0; y < lattice.size(e_y); y++)
+            for (int x = 0; x < lattice.size(e_x); x++) {
+                auto line = pl.get_slice({x, y, -1, 0});
+                if (hila::myrank() == 0) {
+                    // start search of the surface from the center between min and max
+                    int z = startloc;
+                    if (line[z] > surface_level) {
+                        while (line[z_ind(z)] > surface_level &&
+                               startloc - z < lattice.size(e_z) * 0.8)
+                            z--;
+                    } else {
+                        while (line[z_ind(z + 1)] <= surface_level &&
+                               z - startloc < lattice.size(e_z) * 0.8)
+                            z++;
+                    }
+
+
+                    // do linear interpolation
+                    // surf[x + y * lattice.size(e_x)] = z;
+                    surf[x + y * lattice.size(e_x)] = z + (surface_level - line[z_ind(z)]) /
+                                                              (line[z_ind(z + 1)] - line[z_ind(z)]);
+
+                    if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
+                        hila::out0 << "SURF" << sl << ' ' << x << ' ' << y << ' '
+                                   << surf[x + y * lattice.size(e_x)] << '\n';
+                    }
+                }
+            }
+
+        if (hila::myrank() == 0) {
+            // do fft for the surface
+            static bool first = true;
+            static Complex<double> *buf;
+            static fftw_plan fftwplan;
+
+            if (first) {
+                first = false;
+
+                buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
+
+                // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be
+                // the "fast" one. thus, first y, then x.
+                fftwplan =
+                    fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
+                                     (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
+            }
+
+            for (int i = 0; i < area; i++) {
+                buf[i] = surf[i];
+            }
+
+            fftw_execute(fftwplan);
+
+            constexpr int pow_size = 200;
+
+            std::vector<double> npow(pow_size);
+            std::vector<int> hits(pow_size);
+
+            for (int i = 0; i < area; i++) {
+                int x = i % lattice.size(e_x);
+                int y = i / lattice.size(e_x);
+                x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
+                y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
+
+                int k = x * x + y * y;
+                if (k < pow_size) {
+                    npow[k] += buf[i].squarenorm() / (area * area);
+                    hits[k]++;
+                }
+            }
+
+            for (int i = 0; i < pow_size; i++) {
+                if (hits[i] > 0)
+                    hila::out0 << "POW" << sl << ' ' << i << ' ' << npow[i] / hits[i] << ' '
+                               << hits[i] << '\n';
+            }
         }
     }
 }

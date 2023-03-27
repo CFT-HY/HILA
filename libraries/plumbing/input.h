@@ -422,7 +422,8 @@ class input {
         }
 
         if (bcast) {
-            hila::broadcast2(val,no_error);
+            hila::broadcast(val);
+            hila::broadcast(no_error);
         }
 
         return no_error;

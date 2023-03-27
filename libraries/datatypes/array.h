@@ -284,15 +284,15 @@ class Array {
     /// Generate random elements
     Array<n, m, T> &random() out_only {
         for (int i = 0; i < n * m; i++) {
-            ::random(c[i]);
+            hila::random(c[i]);
         }
         return *this;
     }
 
     /// Generate gaussian random elements
-    inline Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
+    Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
-            ::gaussian_random(c[i], width);
+            hila::gaussian_random(c[i], width);
         }
         return *this;
     }
@@ -440,17 +440,6 @@ inline hila::number_type<T> squarenorm(const Array<n, m, T> &rhs) {
     return rhs.squarenorm();
 }
 
-/// Function that calls random()-method
-template <int n, int m, typename T>
-inline void random(out_only Array<n, m, T> &mat) {
-    mat.random();
-}
-
-/// Function that calls the gaussian_random()-method
-template <int n, int m, typename T>
-inline void gaussian_random(out_only Array<n, m, T> &mat, double width = 1.0) {
-    mat.gaussian_random(width);
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Standard arithmetic functions - do element by element
