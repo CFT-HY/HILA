@@ -679,6 +679,12 @@ int main(int argc, char **argv) {
         p.z_smear = par.get("z smearing steps");
         p.n_surface = par.get("traj/surface");
         p.n_dump_polyakov = par.get("traj/polyakov dump");
+
+        if (p.n_smear.size() != p.z_smear.size()) {
+            hila::out0 << "Error in input file: number of values in 'smearing steps' != 'z smearing steps'\n";
+            hila::terminate(0);
+        }
+
     } else {
         p.n_dump_polyakov = 0;
     }
