@@ -220,6 +220,50 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
 ///////////////////////////////////////////////////////////////////////////////////
 
+void spectraldensity_surface(std::vector<float> &surf, std::vector<double> &npow,
+                             std::vector<int> &hits) {
+
+    // do fft for the surface
+    static bool first = true;
+    static Complex<double> *buf;
+    static fftw_plan fftwplan;
+
+    int area = lattice.size(e_x) * lattice.size(e_y);
+
+    if (first) {
+        first = false;
+
+        buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
+
+        // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be
+        // the "fast" one. thus, first y, then x.
+        fftwplan = fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
+                                    (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
+    }
+
+    for (int i = 0; i < area; i++) {
+        buf[i] = surf[i];
+    }
+
+    fftw_execute(fftwplan);
+
+    int pow_size = npow.size();
+
+    for (int i = 0; i < area; i++) {
+        int x = i % lattice.size(e_x);
+        int y = i / lattice.size(e_x);
+        x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
+        y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
+
+        int k = x * x + y * y;
+        if (k < pow_size) {
+            npow[k] += buf[i].squarenorm() / (area * area);
+            hits[k]++;
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////
 // helper function to get valid z-coordinate index
 
 int z_ind(int z) {
@@ -311,9 +355,11 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
         else
             startloc = ((maxloc + minloc + lattice.size(e_z)) / 2) % lattice.size(e_z);
 
-        std::vector<float> surf;
-        if (hila::myrank() == 0)
-            surf.resize(area);
+        std::vector<float> surf1,surf2;
+        if (hila::myrank() == 0) {
+            surf1.resize(area);
+            surf2.resize(area);
+        }
 
         hila::out0 << std::setprecision(6);
 
@@ -336,57 +382,41 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 
                     // do linear interpolation
                     // surf[x + y * lattice.size(e_x)] = z;
-                    surf[x + y * lattice.size(e_x)] = z + (surface_level - line[z_ind(z)]) /
+                    surf1[x + y * lattice.size(e_x)] = z + (surface_level - line[z_ind(z)]) /
                                                               (line[z_ind(z + 1)] - line[z_ind(z)]);
 
                     if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
                         hila::out0 << "SURF" << sl << ' ' << x << ' ' << y << ' '
-                                   << surf[x + y * lattice.size(e_x)] << '\n';
+                                   << surf1[x + y * lattice.size(e_x)] << '\n';
                     }
+
+                    // and locate the other surface - start from Lz/2 offset
+                    z = startloc = z_ind(startloc + lattice.size(e_z)/2);
+                    if (line[z] > surface_level) {
+                        while (line[z_ind(z)] <= surface_level &&
+                               startloc - z < lattice.size(e_z) * 0.8)
+                            z--;
+                    } else {
+                        while (line[z_ind(z + 1)] > surface_level &&
+                               z - startloc < lattice.size(e_z) * 0.8)
+                            z++;
+                    }
+
+                    // do linear interpolation
+                    // surf[x + y * lattice.size(e_x)] = z;
+                    surf2[x + y * lattice.size(e_x)] = z + (surface_level - line[z_ind(z)]) /
+                                                              (line[z_ind(z + 1)] - line[z_ind(z)]);
+
                 }
             }
 
         if (hila::myrank() == 0) {
-            // do fft for the surface
-            static bool first = true;
-            static Complex<double> *buf;
-            static fftw_plan fftwplan;
-
-            if (first) {
-                first = false;
-
-                buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
-
-                // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be
-                // the "fast" one. thus, first y, then x.
-                fftwplan =
-                    fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
-                                     (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
-            }
-
-            for (int i = 0; i < area; i++) {
-                buf[i] = surf[i];
-            }
-
-            fftw_execute(fftwplan);
-
             constexpr int pow_size = 200;
-
             std::vector<double> npow(pow_size);
             std::vector<int> hits(pow_size);
 
-            for (int i = 0; i < area; i++) {
-                int x = i % lattice.size(e_x);
-                int y = i / lattice.size(e_x);
-                x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
-                y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
-
-                int k = x * x + y * y;
-                if (k < pow_size) {
-                    npow[k] += buf[i].squarenorm() / (area * area);
-                    hits[k]++;
-                }
-            }
+            spectraldensity_surface(surf1, npow, hits);
+            spectraldensity_surface(surf2, npow, hits);
 
             for (int i = 0; i < pow_size; i++) {
                 if (hits[i] > 0)
@@ -681,7 +711,8 @@ int main(int argc, char **argv) {
         p.n_dump_polyakov = par.get("traj/polyakov dump");
 
         if (p.n_smear.size() != p.z_smear.size()) {
-            hila::out0 << "Error in input file: number of values in 'smearing steps' != 'z smearing steps'\n";
+            hila::out0 << "Error in input file: number of values in 'smearing steps' != 'z "
+                          "smearing steps'\n";
             hila::terminate(0);
         }
 

@@ -68,7 +68,7 @@ class Matrix_t {
                   "Matrix requires Complex or arithmetic type");
 
     /// std incantation for field types
-    using base_type = hila::number_type<T>;
+    using base_type = hila::scalar_type<T>;
     using argument_type = T;
 
     // help for templates, can use T::is_matrix()
@@ -538,7 +538,7 @@ class Matrix_t {
 
     template <typename M = T, std::enable_if_t<hila::contains_complex<M>::value, int> = 0>
     auto abs() const {
-        Matrix<n, m, hila::number_type<T>> res;
+        Matrix<n, m, hila::scalar_type<T>> res;
         for (int i = 0; i < n * m; i++) {
             res.c[i] = c[i].abs();
         }
@@ -553,8 +553,8 @@ class Matrix_t {
     // }
 
     /// return real part
-    inline Matrix<n, m, hila::number_type<T>> real() const {
-        Matrix<n, m, hila::number_type<T>> res;
+    inline Matrix<n, m, hila::scalar_type<T>> real() const {
+        Matrix<n, m, hila::scalar_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::real(c[i]);
         }
@@ -562,8 +562,8 @@ class Matrix_t {
     }
 
     /// return imaginary part
-    inline Matrix<n, m, hila::number_type<T>> imag() const {
-        Matrix<n, m, hila::number_type<T>> res;
+    inline Matrix<n, m, hila::scalar_type<T>> imag() const {
+        Matrix<n, m, hila::scalar_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -596,8 +596,8 @@ class Matrix_t {
     }
 
     /// calculate square norm - sum of squared elements
-    hila::number_type<T> squarenorm() const {
-        hila::number_type<T> result(0);
+    hila::scalar_type<T> squarenorm() const {
+        hila::scalar_type<T> result(0);
         for (int i = 0; i < n * m; i++) {
             result += ::squarenorm(c[i]);
         }
@@ -606,13 +606,13 @@ class Matrix_t {
 
     /// calculate vector norm - sqrt of squarenorm
     template <typename S = T,
-              std::enable_if_t<hila::is_floating_point<hila::number_type<S>>::value, int> = 0>
-    hila::number_type<T> norm() const {
+              std::enable_if_t<hila::is_floating_point<hila::scalar_type<S>>::value, int> = 0>
+    hila::scalar_type<T> norm() const {
         return sqrt(squarenorm());
     }
 
     template <typename S = T,
-              std::enable_if_t<!hila::is_floating_point<hila::number_type<S>>::value, int> = 0>
+              std::enable_if_t<!hila::is_floating_point<hila::scalar_type<S>>::value, int> = 0>
     double norm() const {
         return sqrt(static_cast<double>(squarenorm()));
     }
@@ -664,7 +664,7 @@ class Matrix_t {
     /// Generate random elements
     Mtype &random() out_only {
 
-        static_assert(hila::is_floating_point<hila::number_type<T>>::value,
+        static_assert(hila::is_floating_point<hila::scalar_type<T>>::value,
                       "Matrix/Vector random() requires non-integral type elements");
 
         for (int i = 0; i < n * m; i++) {
@@ -676,7 +676,7 @@ class Matrix_t {
     /// Generate gaussian random elements
     Mtype &gaussian_random(double width = 1.0) out_only {
 
-        static_assert(hila::is_floating_point<hila::number_type<T>>::value,
+        static_assert(hila::is_floating_point<hila::scalar_type<T>>::value,
                       "Matrix/Vector gaussian_random() requires non-integral type elements");
 
         // for Complex numbers gaussian_random fills re and im efficiently
@@ -972,7 +972,7 @@ class Matrix : public Matrix_t<n, m, T, Matrix<n, m, T>> {
 
   public:
     /// std incantation for field types
-    using base_type = hila::number_type<T>;
+    using base_type = hila::scalar_type<T>;
     using argument_type = T;
 
     /// define default constructors to ensure std::is_trivial
@@ -1062,25 +1062,25 @@ using mat_x_mat_type = typename matrix_op_type_s<T1, T2>::type;
 // hila::mat_scalar_type<Mt,S>
 //  - if result is convertible to Mt, return Mt
 //  - if Mt is not complex and S is, return
-//  Matrix<Complex<type_sum(number_type(Mt),number_type(S))>>
+//  Matrix<Complex<type_sum(scalar_type(Mt),scalar_type(S))>>
 //  - otherwise return Matrix<type_sum>
 
 template <typename Mt, typename S, typename Enable = void>
 struct matrix_scalar_op_s {
     using type = Matrix<Mt::rows(), Mt::columns(),
-                        Complex<hila::type_plus<hila::number_type<Mt>, hila::number_type<S>>>>;
+                        Complex<hila::type_plus<hila::scalar_type<Mt>, hila::scalar_type<S>>>>;
 };
 
 template <typename Mt, typename S>
 struct matrix_scalar_op_s<
     Mt, S,
-    typename std::enable_if_t<std::is_convertible<hila::type_plus<hila::underlying_type<Mt>, S>,
-                                                  hila::underlying_type<Mt>>::value>> {
+    typename std::enable_if_t<std::is_convertible<hila::type_plus<hila::number_type<Mt>, S>,
+                                                  hila::number_type<Mt>>::value>> {
     // using type = Mt;
     using type = typename std::conditional<
-        hila::is_floating_point<hila::number_type<Mt>>::value, Mt,
+        hila::is_floating_point<hila::scalar_type<Mt>>::value, Mt,
         Matrix<Mt::rows(), Mt::columns(),
-               hila::type_plus<hila::number_type<Mt>, hila::number_type<S>>>>::type;
+               hila::type_plus<hila::scalar_type<Mt>, hila::scalar_type<S>>>>::type;
 };
 
 template <typename Mt, typename S>
@@ -1142,7 +1142,7 @@ inline auto imag(const Mtype &arg) {
 /// templates needed for naive calculation of determinants
 template <
     typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0,
-    typename Rtype = Matrix<Mtype::rows() - 1, Mtype::columns() - 1, hila::underlying_type<Mtype>>>
+    typename Rtype = Matrix<Mtype::rows() - 1, Mtype::columns() - 1, hila::number_type<Mtype>>>
 Rtype Minor(const Mtype &bigger, int row, int col) {
     constexpr int n = Mtype::rows();
     constexpr int m = Mtype::columns();
@@ -1166,12 +1166,12 @@ Rtype Minor(const Mtype &bigger, int row, int col) {
 
 /// determinant -> use LU factorization later
 template <typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0,
-          typename T = hila::underlying_type<Mtype>, int n = Mtype::rows(),
+          typename T = hila::number_type<Mtype>, int n = Mtype::rows(),
           int m = Mtype::columns(), std::enable_if_t<(n > 3), int> = 0>
 T det(const Mtype &mat) {
     static_assert(n == m, "determinants defined only for square matrices");
     T result(0);
-    hila::number_type<T> parity = 1, opposite = -1;
+    hila::scalar_type<T> parity = 1, opposite = -1;
     for (int i = 0; i < n; i++) {
         Matrix<n - 1, m - 1, T> minor = Minor(mat, 0, i);
         result += parity * det(minor) * mat.e(0, i);
@@ -1358,7 +1358,7 @@ inline Mt operator*(const Mt &A, const Mt &B) {
 template <typename Mt1, typename Mt2,
           std::enable_if_t<Mt1::is_matrix() && Mt2::is_matrix() && !std::is_same<Mt1, Mt2>::value,
                            int> = 0,
-          typename R = hila::ntype_op<hila::underlying_type<Mt1>, hila::underlying_type<Mt2>>,
+          typename R = hila::ntype_op<hila::number_type<Mt1>, hila::number_type<Mt2>>,
           int n = Mt1::rows(), int m = Mt2::columns()>
 inline Matrix<n, m, R> operator*(const Mt1 &A, const Mt2 &B) {
 
@@ -1552,7 +1552,7 @@ inline auto norm(const Mt &rhs) {
 
 /// find determinant using LU decomposition. Algorithm: numerical Recipes, 2nd ed.
 /// p. 47 ff
-template <int n, int m, typename T, typename MT, typename radix = hila::number_type<T>,
+template <int n, int m, typename T, typename MT, typename radix = hila::scalar_type<T>,
           std::enable_if_t<hila::is_complex<T>::value, int> = 0>
 Complex<radix> det_lu(const Matrix_t<n, m, T, MT> &mat) {
 
@@ -1746,7 +1746,7 @@ inline Matrix_t<n, m, T, MT> exp(const Matrix_t<n, m, T, MT> &mat, const int ord
     static_assert(n == m, "exp() only for square matrices");
 
     Matrix_t<n, m, T, MT> r;
-    hila::number_type<T> one = 1.0;
+    hila::scalar_type<T> one = 1.0;
 
     r = mat * (one / order) + one;
 

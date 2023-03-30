@@ -26,7 +26,7 @@ class adjointRep : public SquareMatrix<N * N - 1, radix> {
     static_assert(hila::is_arithmetic<radix>::value, "adjointRep<type>: type has to be real");
 
     /// The underlying arithmetic type of the matrix
-    using base_type = hila::number_type<radix>;
+    using base_type = hila::scalar_type<radix>;
     using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;
@@ -126,7 +126,7 @@ template <int N, typename radix>
 class antisymmetric : public SquareMatrix<N *(N - 1) / 2, Complex<radix>> {
   public:
     /// The underlying arithmetic type of the matrix
-    using base_type = hila::number_type<radix>;
+    using base_type = hila::scalar_type<radix>;
     using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;
@@ -260,7 +260,7 @@ template <int N, typename radix>
 class symmetric : public SquareMatrix<N *(N + 1) / 2, Complex<radix>> {
   public:
     /// The underlying arithmetic type of the matrix
-    using base_type = hila::number_type<radix>;
+    using base_type = hila::scalar_type<radix>;
     using argument_type = radix;
     /// The SU(N) type the adjoint matrix is constructed of
     using sun = SU<N, radix>;

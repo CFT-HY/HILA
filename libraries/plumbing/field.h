@@ -218,12 +218,12 @@ class Field {
 
         // put here some implementation checks for field vars
 #ifdef VECTORIZED
-        static_assert(sizeof(hila::number_type<T>) == 4 || sizeof(hila::number_type<T>) == 8,
+        static_assert(sizeof(hila::scalar_type<T>) == 4 || sizeof(hila::scalar_type<T>) == 8,
                       "In vectorized arch (e.g. AVX2), only 4 or 8 byte (32 or 64 bit) numbers for "
                       "Field<> implemented, sorry!");
 #endif
 #if defined(CUDA) || defined(HIP)
-        static_assert(!std::is_same<hila::number_type<T>, long double>::value,
+        static_assert(!std::is_same<hila::scalar_type<T>, long double>::value,
                       "Type 'long double' numbers in Field<> not supported by cuda/hip");
 #endif
 
@@ -678,7 +678,7 @@ class Field {
     }
 
     bool operator==(const Field<T> &rhs) const {
-        hila::number_type<T> epsilon = 0;
+        hila::scalar_type<T> epsilon = 0;
         return ((*this) - rhs).squarenorm() <= epsilon;
     }
 
@@ -855,9 +855,9 @@ class Field {
     Field<T> FFT(fft_direction fdir = fft_direction::forward) const;
     Field<T> FFT(const CoordinateVector &dirs, fft_direction fdir = fft_direction::forward) const;
 
-    Field<Complex<hila::number_type<T>>>
+    Field<Complex<hila::scalar_type<T>>>
     FFT_real_to_complex(fft_direction fdir = fft_direction::forward) const;
-    Field<hila::number_type<T>>
+    Field<hila::scalar_type<T>>
     FFT_complex_to_real(fft_direction fdir = fft_direction::forward) const;
 
 

@@ -72,7 +72,7 @@
 template <int n, typename radix = double>
 class SU : public SquareMatrix<n, Complex<radix>> {
   public:
-    using base_type = hila::number_type<radix>;
+    using base_type = hila::scalar_type<radix>;
     using argument_type = radix;
 
     static constexpr int size = n;
@@ -403,7 +403,7 @@ class SU3 : public SU<3, radix> {};
 template <typename radix>
 class SU2 {
   public:
-    using base_type = hila::number_type<radix>;
+    using base_type = hila::scalar_type<radix>;
     using argument_type = radix;
 
     SU2() : a(0), b(0), c(0), d(1) {}
@@ -668,7 +668,7 @@ void project_antihermitean(Matrix<N, N, Complex<radix>> &matrix) {
 template <int n, typename radix>
 class SU_vector : public Vector<n, Complex<radix>> {
   public:
-    using base_type = hila::number_type<radix>;
+    using base_type = hila::scalar_type<radix>;
     using argument_type = radix;
 
     static constexpr int size = n;
