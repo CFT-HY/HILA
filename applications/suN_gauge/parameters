@@ -17,8 +17,8 @@ config name                    config
 polyakov potential             off # min 0.1 mass2 100000
 
 updates/profile meas           20
-smearing steps                 5, 10
+smearing steps                 5, 10, 20, 30
 smear coefficient              0.9
-z smearing steps               10, 30
+z smearing steps               10, 10, 10, 10
 traj/surface                   100
 traj/polyakov dump             0

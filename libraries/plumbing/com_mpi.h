@@ -58,28 +58,28 @@ int get_next_msg_tag();
 template <typename T>
 MPI_Datatype get_MPI_number_type(size_t &size, bool with_int = false) {
 
-    if (std::is_same<hila::number_type<T>, int>::value) {
+    if (std::is_same<hila::scalar_type<T>, int>::value) {
         size = sizeof(int);
         return with_int ? MPI_2INT : MPI_INT;
-    } else if (std::is_same<hila::number_type<T>, unsigned>::value) {
+    } else if (std::is_same<hila::scalar_type<T>, unsigned>::value) {
         size = sizeof(unsigned);
         return with_int ? MPI_2INT : MPI_UNSIGNED; // MPI does not contain MPI_UNSIGNED_INT
-    } else if (std::is_same<hila::number_type<T>, long>::value) {
+    } else if (std::is_same<hila::scalar_type<T>, long>::value) {
         size = sizeof(long);
         return with_int ? MPI_LONG_INT : MPI_LONG;
-    } else if (std::is_same<hila::number_type<T>, int64_t>::value) {
+    } else if (std::is_same<hila::scalar_type<T>, int64_t>::value) {
         size = sizeof(int64_t);
         return with_int ? MPI_LONG_INT : MPI_INT64_T; // need to use LONG_INT
-    } else if (std::is_same<hila::number_type<T>, uint64_t>::value) {
+    } else if (std::is_same<hila::scalar_type<T>, uint64_t>::value) {
         size = sizeof(uint64_t);
         return with_int ? MPI_LONG_INT : MPI_UINT64_T; // ditto
-    } else if (std::is_same<hila::number_type<T>, float>::value) {
+    } else if (std::is_same<hila::scalar_type<T>, float>::value) {
         size = sizeof(float);
         return with_int ? MPI_FLOAT_INT : MPI_FLOAT;
-    } else if (std::is_same<hila::number_type<T>, double>::value) {
+    } else if (std::is_same<hila::scalar_type<T>, double>::value) {
         size = sizeof(double);
         return with_int ? MPI_DOUBLE_INT : MPI_DOUBLE;
-    } else if (std::is_same<hila::number_type<T>, long double>::value) {
+    } else if (std::is_same<hila::scalar_type<T>, long double>::value) {
         size = sizeof(long double);
         return with_int ? MPI_LONG_DOUBLE_INT : MPI_LONG_DOUBLE;
     }
@@ -262,13 +262,13 @@ void reduce_node_sum(T *value, int send_count, bool allreduce = true) {
     reduction_timer.start();
     if (allreduce) {
         MPI_Allreduce((void *)value, (void *)recv_data,
-                      send_count * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM,
+                      send_count * sizeof(T) / sizeof(hila::scalar_type<T>), dtype, MPI_SUM,
                       lattice.mpi_comm_lat);
         for (int i = 0; i < send_count; i++)
             value[i] = recv_data[i];
     } else {
         MPI_Reduce((void *)value, (void *)recv_data,
-                   send_count * sizeof(T) / sizeof(hila::number_type<T>), dtype, MPI_SUM, 0,
+                   send_count * sizeof(T) / sizeof(hila::scalar_type<T>), dtype, MPI_SUM, 0,
                    lattice.mpi_comm_lat);
         if (hila::myrank() == 0)
             for (int i = 0; i < send_count; i++)
@@ -335,7 +335,7 @@ void hila_reduce_sums();
 template <typename T>
 void hila_reduce_sum_setup(T *value) {
 
-    using b_t = hila::number_type<T>;
+    using b_t = hila::scalar_type<T>;
     if (std::is_same<b_t, double>::value) {
         hila_reduce_double_setup((double *)value, sizeof(T) / sizeof(double));
     } else if (std::is_same<b_t, float>::value) {
