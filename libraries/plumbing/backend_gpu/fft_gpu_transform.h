@@ -24,7 +24,7 @@ using gpufftHandle = cufftHandle;
 #else
 
 #include "hip/hip_runtime.h"
-#include <hipfft.h>
+#include <hipfft/hipfft.h>
 
 using gpufftComplex = hipfftComplex;
 using gpufftDoubleComplex = hipfftDoubleComplex;
