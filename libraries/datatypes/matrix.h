@@ -42,6 +42,7 @@ using SquareMatrix = Matrix<n, n, T>;
 // Special case - m.column(), column of a matrix (not used now)
 // #include "matrix_column.h"
 
+
 ////////////////////////////////////////////////////////////////
 /// The main nxm matrix type template Matrix_t
 /// This is a root type, and "useful" types are derived from this type
@@ -167,7 +168,12 @@ class Matrix_t {
         return m;
     }
 
+
     // define also method size() for vectors and square matrices only!
+    /**
+     * 
+    */
+
     template <int q = n, int p = m, std::enable_if_t<q == 1, int> = 0>
     static constexpr int size() {
         return p;
@@ -396,7 +402,7 @@ class Matrix_t {
     }
 
     /// subtract assign a Matrix_t
-#pragma hila loop_function
+//#pragma hila loop_function
     template <typename S, typename MT,
               std::enable_if_t<hila::is_assignable<T &, S>::value, int> = 0>
     Mtype &operator-=(const Matrix_t<n, m, S, MT> &rhs) {
@@ -406,8 +412,8 @@ class Matrix_t {
         return *this;
     }
 
-    /// add assign type T and convertible
-#pragma hila loop_function
+    /// add assign a scalar to square matrix
+//#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_plus<T, S>>::value, int> = 0>
     Mtype &operator+=(const S &rhs) {
@@ -421,7 +427,7 @@ class Matrix_t {
     }
 
     /// subtract assign type T and convertible
-#pragma hila loop_function
+//#pragma hila loop_function
     template <typename S,
               std::enable_if_t<hila::is_assignable<T &, hila::type_minus<T, S>>::value, int> = 0>
     Mtype &operator-=(const S rhs) {
@@ -946,7 +952,6 @@ class Matrix_t {
         return (-1);
     }
 
-
     /// Convert to string for printing
     ///
     std::string str(int prec = 8, char separator = ' ') const {
@@ -1166,8 +1171,8 @@ Rtype Minor(const Mtype &bigger, int row, int col) {
 
 /// determinant -> use LU factorization later
 template <typename Mtype, std::enable_if_t<Mtype::is_matrix(), int> = 0,
-          typename T = hila::number_type<Mtype>, int n = Mtype::rows(),
-          int m = Mtype::columns(), std::enable_if_t<(n > 3), int> = 0>
+          typename T = hila::number_type<Mtype>, int n = Mtype::rows(), int m = Mtype::columns(),
+          std::enable_if_t<(n > 3), int> = 0>
 T det(const Mtype &mat) {
     static_assert(n == m, "determinants defined only for square matrices");
     T result(0);
