@@ -10,6 +10,8 @@
 #SBATCH --time=04:10:00         # Run time (d-hh:mm:ss)
 #SBATCH --account=Project_XXX   # Project for billing
 
+# if fftw is also needed
+module load CrayEnv PrgEnv-cray craype-accel-amd-gfx90a cray-mpich rocm fftw
 
 CPU_BIND="map_cpu:48,56,16,24,1,8,32,40"
 
