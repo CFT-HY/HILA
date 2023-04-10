@@ -461,6 +461,7 @@ Complex<T> polar(T r, T arg) {
 //   return Complex<T>(a.re + b.re, a.im + b.im);
 // }
 
+#pragma hila loop_function
 template <typename T1, typename T2, typename Tr = hila::type_plus<T1, T2>>
 inline Complex<Tr> operator+(const Complex<T1> &a, const Complex<T2> &b) {
     return Complex<Tr>(a.re + b.re, a.im + b.im);
@@ -553,6 +554,20 @@ inline Complex<T> mul_add(const Complex<T> &a, const Complex<T> &b, const Comple
     return r;
 }
 
+/**
+ * @brief Compare equality of two complex numbers
+ *
+ * Two numbers are equal, if the arithmetic values are equal: thus,
+ * complex and real comparison  (a + i b) == a
+ * is true if b == 0.
+ *
+ * @tparam A
+ * @tparam B
+ * @param a
+ * @param b
+ * @return true if values compare to equal
+ */
+
 template <typename A, typename B>
 inline bool operator==(const Complex<A> &a, const Complex<B> &b) {
     return (a.re == b.re && a.im == b.im);
@@ -567,6 +582,18 @@ template <typename A, typename B, std::enable_if_t<hila::is_arithmetic<A>::value
 inline bool operator==(const A a, const Complex<B> &b) {
     return b == a;
 }
+
+/**
+ * @brief Compare non-equality of two complex numbers
+ *
+ * Negation of operator==()
+ *
+ * @tparam A
+ * @tparam B
+ * @param a
+ * @param b
+ * @return true if values are not arithmetically equal
+ */
 
 template <typename A, typename B>
 inline bool operator!=(const Complex<A> &a, const Complex<B> &b) {
@@ -660,26 +687,18 @@ std::string prettyprint(const Complex<T> &A, int prec = 8) {
 } // namespace hila
 
 
-//////////////////////////////////////////////////////////////////////////////////
-/// Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
-/// This is defined as an user-defined literal, which requires an underscore.
-////////////////////////////////////////////////////////////////////////////////
-
-constexpr Complex<double> operator""_i(long double a) {
-    return Complex<double>{0.0, a};
-}
-
-constexpr Complex<double> operator""_i(unsigned long long a) {
-    return Complex<double>(0.0, static_cast<double>(a));
-}
-
 
 /////////////////////////////////////////////////////////////////////////////
-/// Define Imaginary type, to represent purely imaginary numbers
-/// Useful for short-circuiting im * complex -type operations
-/// Derived from complex class, so all complex operations should be valid
+/// @brief Imaginary type, used to represent purely imaginary numbers
+///
+/// Useful for reducing multiply operations in im * complex or im * real -ops
+/// Derived from Complex class, so generic complex ops should remain valid
+/// Defines only operators * and /, others go via Complex class
+///
+/// Note: Imaginary_t should be used in Field variables
+///
+/// @tparam T  type of imaginary (float/double)
 /////////////////////////////////////////////////////////////////////////////
-
 template <typename T>
 class Imaginary_t : public Complex<T> {
   public:
@@ -695,110 +714,95 @@ class Imaginary_t : public Complex<T> {
     constexpr Imaginary_t operator-() const {
         return Imaginary_t<T>(-this->im);
     }
+
+    constexpr Imaginary_t operator+() const {
+        return *this;
+    }
 };
 
+///////////////////////////////////////////////////////////////////////////////////////
+/// @brief Imaginary unit I - global variable
+///
+/// Use now #define'd symbol I instead of constexpr variable 
+///
+// #if defined(CUDA) || defined(HIP)
+// __device__
+// #endif
+//     constexpr Imaginary_t<double> I(1.0);
+// constexpr Complex<double> I(0,1);
 
+#define I Imaginary_t<double>(1.0)
+
+///////////////////////////////////////////////////////////////////////////////////////
+
+
+/// @brief Imaginary * object containing complex
+/// @param i  Imaginary value
+/// @param c  multiplied value which contains complex numbers
+/// @return   i * c, of the same type as c
 template <typename A, typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline auto operator*(const Imaginary_t<A> &iv, const T &c) {
+inline auto operator*(const Imaginary_t<A> &i, const T &c) {
     Complex<hila::scalar_type<T>> ca, cb;
     T res;
     constexpr int n_cmplx = sizeof(T) / sizeof(Complex<hila::scalar_type<T>>);
-    for (int i = 0; i < n_cmplx; i++) {
-        ca = hila::get_complex_in_var(c, i);
-        cb.re = -ca.im * iv.imag();
-        cb.im = ca.re * iv.imag();
-        hila::set_complex_in_var(res, i, cb);
+    for (int k = 0; k < n_cmplx; k++) {
+        ca = hila::get_complex_in_var(c, k);
+        cb.re = -ca.im * i.imag();
+        cb.im = ca.re * i.imag();
+        hila::set_complex_in_var(res, k, cb);
     }
     return res;
 }
 
+/// @brief object containing complex * imaginary
 template <typename A, typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline auto operator*(const T &c, const Imaginary_t<A> &iv) {
-    return iv * c;
+inline auto operator*(const T &c, const Imaginary_t<A> &i) {
+    return i * c;
 }
 
-/// Imag * scalar = imag -- note: using std::is_arithmetic, not done for vector types
+
+/// @brief Imag * scalar, returns imag
+/// note: using std::is_arithmetic, not done for vector types
 template <typename A, typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-inline Imaginary_t<A> operator*(Imaginary_t<A> iv, const T &c) {
-    iv.imag() *= c;
-    return iv;
+inline Imaginary_t<A> operator*(Imaginary_t<A> i, const T &c) {
+    i.imag() *= c;
+    return i;
 }
 
+/// @brief scalar * imag, returns imag
 template <typename A, typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-inline Imaginary_t<A> operator*(const T &c, Imaginary_t<A> iv) {
-    iv.imag() *= c;
-    return iv;
+inline Imaginary_t<A> operator*(const T & c, Imaginary_t<A> i) {
+    i.imag() *= c;
+    return i;
 }
 
-
-////////////////////////////////////////////////////////////////////////////
-/// Define imaginary unit class, for imaginary I
-/// This is a derived special class of Complex<float>.  Define separately
-/// I*cmplx and cmplx*I
-/// Real micro-optimization, could have used Imaginary_t(1)
-///
-
-class Imaginaryunit_t : public Imaginary_t<double> {
-  public:
-    constexpr Imaginaryunit_t() : Imaginary_t(1.0) {}
-    ~Imaginaryunit_t() = default;
-    Imaginaryunit_t(const Imaginaryunit_t &i) = default;
-
-    constexpr Imaginary_t<double> operator-() const {
-        return Imaginary_t(-1);
-    }
-
-    template <typename T>
-    operator Imaginary_t<T>() const {
-        return Imaginary_t<T>(1);
-    }
-};
-
-/// Define constexpr imaginary unit I
-#if defined(CUDA) || defined(HIP)
-__device__
-#endif
-    constexpr Imaginaryunit_t I =
-        Imaginaryunit_t(); // this fails on GPUs without additional support
-// #define I Imaginaryunit_t()
-
-template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline auto operator*(const Imaginaryunit_t &iv, T c) {
-    Complex<hila::scalar_type<T>> ca, cb;
-    for (int i = 0; i < sizeof(T) / sizeof(Complex<hila::scalar_type<T>>); i++) {
-        ca = hila::get_complex_in_var(c, i);
-        cb.re = -ca.im;
-        cb.im = ca.re;
-        hila::set_complex_in_var(c, i, cb);
-    }
-    return c;
+/**
+ * @brief  Imaginary * Imaginary, returning real value
+ *
+ * @return  -(a.im * b.im) real value, of appropriate type
+ */
+template <typename A, typename B>
+inline auto operator*(const Imaginary_t<A> &a, const Imaginary_t<B> &b) {
+    return -(a.imag() * b.imag());
 }
 
-template <typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
-inline auto operator*(T c, const Imaginaryunit_t &iv) {
-    return iv * c;
+////////////////////////////
+
+
+/// @brief Imaginary / real value, returning imaginary
+/// Note: for vectorized types the generic version is used
+template <typename T, typename A, std::enable_if_t<std::is_arithmetic<A>::value, int> = 0>
+inline auto operator/(Imaginary_t<T> i, const A &a) {
+    i.imag() /= a;
+    return i;
 }
 
-template <typename T, std::enable_if_t<hila::is_floating_point<T>::value, int> = 0>
-inline auto operator*(const Imaginaryunit_t &iv, T c) {
-    return Imaginary_t<T>(c);
+/// @brief Imaginary / Imaginary, returning real
+template <typename A, typename B>
+inline auto operator/(const Imaginary_t<A> &a, const Imaginary_t<B> &b) {
+    return a.imag() / b.imag();
 }
 
-template <typename T, std::enable_if_t<hila::is_floating_point<T>::value, int> = 0>
-inline auto operator*(T c, const Imaginaryunit_t &iv) {
-    return Imaginary_t<T>(c);
-}
-
-// convert ints to double
-template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
-inline auto operator*(T c, const Imaginaryunit_t &iv) {
-    return Imaginary_t<double>(c);
-}
-
-template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
-inline auto operator*(const Imaginaryunit_t &iv, T c) {
-    return c * iv;
-}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -816,6 +820,12 @@ inline Complex<T> exp(const Complex<T> z) {
 template <typename T, std::enable_if_t<hila::is_arithmetic<T>::value, int> = 0>
 inline Complex<T> expi(T a) {
     return Complex<T>(cos(a), sin(a));
+}
+
+/// @brief exp(imaginary)
+template <typename T>
+inline Complex<T> exp(const Imaginary_t<T> im) {
+    return expi(im.imag());
 }
 
 /// log(z)
@@ -933,6 +943,19 @@ inline Complex<T> asinh(Complex<T> z) {
 template <typename T>
 inline Complex<T> acosh(Complex<T> z) {
     return log(z + sqrt(z * z - 1));
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+/// Operators to implement imaginary unit 1_i, enablig expressions  3 + 2_i  etc.
+/// This is defined as an user-defined literal, which requires an underscore.
+////////////////////////////////////////////////////////////////////////////////
+
+constexpr Imaginary_t<double> operator""_i(long double a) {
+    return Imaginary_t<double>{a};
+}
+
+constexpr Imaginary_t<double> operator""_i(unsigned long long a) {
+    return Imaginary_t<double>(a));
 }
 
 
