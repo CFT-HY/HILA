@@ -687,7 +687,6 @@ std::string prettyprint(const Complex<T> &A, int prec = 8) {
 } // namespace hila
 
 
-
 /////////////////////////////////////////////////////////////////////////////
 /// @brief Imaginary type, used to represent purely imaginary numbers
 ///
@@ -723,15 +722,16 @@ class Imaginary_t : public Complex<T> {
 ///////////////////////////////////////////////////////////////////////////////////////
 /// @brief Imaginary unit I - global variable
 ///
-/// Use now #define'd symbol I instead of constexpr variable 
+/// Don't use #define'd I : this will conflict with some headers in rocm
 ///
-// #if defined(CUDA) || defined(HIP)
-// __device__
-// #endif
-//     constexpr Imaginary_t<double> I(1.0);
-// constexpr Complex<double> I(0,1);
+/// For some reason it is sufficient to use only __device__ 
+#if defined(CUDA) || defined(HIP)
+__device__
+#endif
+    constexpr Imaginary_t<double> I(1.0);
 
-#define I Imaginary_t<double>(1.0)
+// constexpr Complex<double> I(0,1);
+// #define I Imaginary_t<double>(1.0)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
@@ -771,7 +771,7 @@ inline Imaginary_t<A> operator*(Imaginary_t<A> i, const T &c) {
 
 /// @brief scalar * imag, returns imag
 template <typename A, typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
-inline Imaginary_t<A> operator*(const T & c, Imaginary_t<A> i) {
+inline Imaginary_t<A> operator*(const T &c, Imaginary_t<A> i) {
     i.imag() *= c;
     return i;
 }
@@ -802,7 +802,6 @@ template <typename A, typename B>
 inline auto operator/(const Imaginary_t<A> &a, const Imaginary_t<B> &b) {
     return a.imag() / b.imag();
 }
-
 
 
 ///////////////////////////////////////////////////////////////////////////////
