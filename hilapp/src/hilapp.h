@@ -323,7 +323,8 @@ struct loop_const_expr_ref {
 //  Store "array-type" references inside site loops
 struct bracket_ref_t {
     Expr *E;                 // full bracket expression "a[i]"
-    Expr *DRE;               // "a"  - can be DeclRefExpr or MemberExpr
+    Expr *BASE;              // "a"  - can be DeclRefExpr, MemberExpr or CXXThisExpr
+    Expr *DRE;               // Variable where this is found.  == BASE in simple cases
     std::vector<Expr *> Idx; // "i", one element per index - note outermost as first element
     Stmt *assign_stmt;       // if it is reduction ref, full assign stmt here
 };
