@@ -912,7 +912,7 @@ inline Complex<T> tanh(Complex<T> z) {
 /// arctan(z)
 template <typename T>
 inline Complex<T> atan(Complex<T> z) {
-    return -0.5 * I * (log((1_i - z) / (1_i + z)));
+    return -0.5 * I * (log((I - z) / (I + z)));
 }
 
 /// arcsin(z)
@@ -955,7 +955,7 @@ constexpr Imaginary_t<double> operator""_i(long double a) {
 }
 
 constexpr Imaginary_t<double> operator""_i(unsigned long long a) {
-    return Imaginary_t<double>(a));
+    return Imaginary_t<double>(a);
 }
 
 
