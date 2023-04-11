@@ -223,7 +223,12 @@ class TopLevelVisitor : public GeneralVisitor, public RecursiveASTVisitor<TopLev
     /// Check if the field type is vectorizable and how
     vectorization_info inspect_field_type(Expr *fE);
 
-    DeclRefExpr *find_base_variable(Expr *E);
+    /// Find the "base" of compound expr, e.g. a in "a[i]"
+    Expr *find_base_expr(Expr *E);
+
+    /// Try to find the "root" of compound variable ref, i.e. 
+    /// the DeclRefExpr where Expr belongs.  Can also return CXXThisExpr
+    Expr *find_root_variable(Expr *E);
 
     bool is_variable_loop_local(VarDecl *decl);
 

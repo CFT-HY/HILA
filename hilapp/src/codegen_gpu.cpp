@@ -458,7 +458,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             kernel << ", const " << ar.wrapper_type << ' ' << ar.new_name;
 
             for (bracket_ref_t &br : ar.refs) {
-                loopBuf.replace(br.DRE, ar.new_name + ".c");
+                loopBuf.replace(br.BASE, ar.new_name + ".c");
             }
 
         } else if (ar.type != array_ref::REDUCTION) {
@@ -468,7 +468,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
             kernel << ", const " << ar.element_type << " * RESTRICT " << ar.new_name;
 
             for (bracket_ref_t &br : ar.refs) {
-                loopBuf.replace(br.DRE, ar.new_name);
+                loopBuf.replace(br.BASE, ar.new_name);
             }
 
         } else {
@@ -485,7 +485,7 @@ std::string TopLevelVisitor::generate_code_gpu(Stmt *S, bool semicolon_at_end, s
 
             for (bracket_ref_t &br : ar.refs) {
                 // change the name
-                loopBuf.replace(br.DRE, ar.new_name);
+                loopBuf.replace(br.BASE, ar.new_name);
 
                 SourceLocation oploc, beginloc, endloc;
                 beginloc = br.assign_stmt->getSourceRange().getBegin();

@@ -343,31 +343,47 @@ reduction get_reduction_type(bool is_assign, const std::string &assignop, var_in
 
 ///////////////////////////////////////////////////////////////////
 /// Find the the base of a compound variable expression
+/// Going only 1 level down
 ///////////////////////////////////////////////////////////////////
 
-DeclRefExpr *TopLevelVisitor::find_base_variable(Expr *E) {
-    Expr *RE = E;
 
-    while (!dyn_cast<DeclRefExpr>(RE)) {
-        // RE may be a compound expression. We want the base variable.
-        if (ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(RE)) {
-            RE = ASE->getBase()->IgnoreImplicit();
-        } else if (MemberExpr *ME = dyn_cast<MemberExpr>(RE)) {
-            RE = ME->getBase()->IgnoreImplicit();
-        } else if (CXXOperatorCallExpr *OCE = dyn_cast<CXXOperatorCallExpr>(RE)) {
-            if (strcmp(getOperatorSpelling(OCE->getOperator()), "[]") == 0) {
-                RE = OCE->getArg(0)->IgnoreImplicit();
-            } else {
-                // It's not a variable
-                return nullptr;
-            }
+Expr *TopLevelVisitor::find_base_expr(Expr *E) {
+
+
+    // RE may be a compound expression. We want the base variable.
+    if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
+        return DRE->IgnoreImplicit();
+    } else if (ArraySubscriptExpr *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+        return ASE->getBase()->IgnoreImplicit();
+    } else if (MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
+        return ME->getBase()->IgnoreImplicit();
+    } else if (CXXOperatorCallExpr *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
+        if (strcmp(getOperatorSpelling(OCE->getOperator()), "[]") == 0) {
+            return OCE->getArg(0)->IgnoreImplicit();
         } else {
             // It's not a variable
             return nullptr;
         }
+    } else if (CXXThisExpr *TE = dyn_cast<CXXThisExpr>(E)) {
+        return TE;
     }
-    return dyn_cast<DeclRefExpr>(RE);
+    return nullptr; // it was something else
 }
+
+///////////////////////////////////////////////////////////////////
+/// Find the the "root" of a compound var expression, trying
+/// to go to the bottom
+///////////////////////////////////////////////////////////////////
+
+Expr *TopLevelVisitor::find_root_variable(Expr *E) {
+    Expr *RE = E;
+
+    do {
+        RE = find_base_expr(RE);
+    } while (RE && !dyn_cast<DeclRefExpr>(RE) && !dyn_cast<CXXThisExpr>(RE));
+    return RE;
+}
+
 
 ///////////////////////////////////////////////////////////////////////
 
@@ -398,11 +414,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
     if (ref.DRE == nullptr) {
 
         reportDiag(DiagnosticsEngine::Level::Warning, ref.E->getSourceRange().getBegin(),
-                   "array brackets '[]' applied to a non-variable, and hilapp does not "
-                   "(yet) have logic to analyse this."
-                   " Fingers crossed ...");
-
-        return 0;
+                   "array brackets '[]' applied to an object hilapp does not know how to handle "
+                   "(yet). Assuming object is defined outside of the onsites()-loop.");
     }
 
     // if this has #pragma direct_access don't do anything
@@ -414,45 +427,56 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
         return 0;
     }
 
-    VarDecl *vd;
+    VarDecl *vd = nullptr;
     DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(ref.DRE);
-    if (DRE == nullptr) {
-        llvm::errs() << "hilapp error: array refs to member variables not yet "
-                        "implemented - probably does not work\n";
-        llvm::errs() << "Expression: " << get_stmt_str(ref.E) << '\n';
-        return 0;
-    }
-    vd = dyn_cast<VarDecl>(DRE->getDecl());
+    // if (DRE == nullptr) {
+    //     llvm::errs() << "hilapp error: array refs to member variables not yet "
+    //                     "implemented - probably does not work\n";
+    //     llvm::errs() << "Expression: " << get_stmt_str(ref.E) << '\n';
+    //     return 0;
+    // }
 
-    // Check if it's local
-    if (is_variable_loop_local(vd)) {
-        if (type == array_ref::ARRAY) {
+    if (DRE) {
+        vd = dyn_cast<VarDecl>(DRE->getDecl());
 
-            // if an array is declared within the loop, nothing special needs to
-            // be done.  Let us anyway put it through the std handler in order to
-            // flag it.
+        // Check if it's local
+        if (is_variable_loop_local(vd)) {
+            if (type == array_ref::ARRAY) {
 
-            handle_var_ref(DRE, is_assign, assignop);
+                // if an array is declared within the loop, nothing special needs to
+                // be done.  Let us anyway put it through the std handler in order to
+                // flag it.
 
-            // and traverse whatever is in the index in normal fashion
-            is_assign = false; // we're not assigning to the index
-            for (auto *s : ref.Idx)
-                TraverseStmt(s);
+                handle_var_ref(DRE, is_assign, assignop);
 
-            parsing_state.skip_children = 1; // it's handled now
-            return 1;
+                // and traverse whatever is in the index in normal fashion
+                is_assign = false; // we're not assigning to the index
+                for (auto *s : ref.Idx)
+                    TraverseStmt(s);
 
-        } else {
+                parsing_state.skip_children = 1; // it's handled now
+                return 1;
 
-            reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
-                       "cannot define this variable inside site loop");
-            parsing_state.skip_children = 1;
-            return 1;
+            } else {
+
+                reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                           "cannot define this type of variable inside onsites()-loop");
+                parsing_state.skip_children = 1;
+                return 1;
+            }
         }
     }
 
     // Now array is declared outside the loop
 
+    // Base should  not depend on site
+    if (is_site_dependent(ref.BASE, &loop_info.conditional_vars)) {
+        reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
+                   "Base of bracket expression '%0' should be constant within onsites()",
+                   get_stmt_str(ref.BASE).c_str());
+        parsing_state.skip_children = 1;
+        return 1;
+    }
 
     // If index is site dep or contains local variables, we need
     // the whole array in the loop
@@ -480,7 +504,19 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
     // has this array been referred to already?
     // if so, mark and return
     for (array_ref &ar : array_ref_list) {
-        if (vd == ar.vd && ar.type != array_ref::REPLACE) {
+        bool check = false;
+
+        // if the BASE is var ref, check the declaration
+        if (ref.DRE == ref.BASE) {
+            if (vd == ar.vd && ar.type != array_ref::REPLACE)
+                check = true;
+        } else {
+            // otherwise check the ref name
+            if (!check && ar.name == get_stmt_str(ref.BASE))
+                check = true;
+        }
+
+        if (check) {
 
             if ((ar.type == array_ref::REDUCTION) ^ (type == array_ref::REDUCTION)) {
                 reportDiag(DiagnosticsEngine::Level::Error, ref.E->getSourceRange().getBegin(),
@@ -506,11 +542,16 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
         }
     }
 
+
     // now it is a new array ref
     array_ref ar;
     ar.refs.push_back(ref);
     ar.vd = vd;
-    ar.name = vd->getNameAsString();
+    if (vd && ref.DRE == ref.BASE) {
+        ar.name = vd->getNameAsString();
+    } else {
+        ar.name = get_stmt_str(ref.BASE);
+    }
 
     // get type of the element of the array
     ar.element_type = ref.E->getType().getCanonicalType().getAsString(PP);
@@ -520,9 +561,8 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
 
     bool has_loop_local_var = false;
     for (auto *ip : ref.Idx) {
-    
-        has_loop_local_var |= contains_loop_local_var(ip, nullptr);
 
+        has_loop_local_var |= contains_loop_local_var(ip, nullptr);
     }
 
     // let the refs to ReductionVectors be handled further down
@@ -566,7 +606,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
     ar.type = type;
 
     if (type == array_ref::ARRAY) {
-        const ConstantArrayType *cat = Context->getAsConstantArrayType(vd->getType());
+        const ConstantArrayType *cat = Context->getAsConstantArrayType(ref.BASE->getType());
         if (cat) {
 
             ar.size = 1;
@@ -613,7 +653,7 @@ int TopLevelVisitor::handle_bracket_var_ref(bracket_ref_t &ref, const array_ref:
         }
     } else {
 
-        std::string typestr = vd->getType().getCanonicalType().getAsString(PP);
+        std::string typestr = ref.BASE->getType().getCanonicalType().getAsString(PP);
 
         if (type == array_ref::STD_ARRAY) {
 
@@ -656,7 +696,8 @@ int TopLevelVisitor::handle_array_var_ref(ArraySubscriptExpr *ASE, bool &is_assi
 
     bracket_ref_t br;
     br.E = ASE;
-    br.DRE = find_base_variable(ASE);
+    br.BASE = find_base_expr(ASE);
+    br.DRE = find_root_variable(ASE);
     br.Idx.push_back(ASE->getIdx());
     while ((ASE = dyn_cast<ArraySubscriptExpr>(ASE->getLHS()->IgnoreImplicit()))) {
         br.Idx.push_back(ASE->getIdx());
@@ -699,7 +740,9 @@ bool TopLevelVisitor::handle_vector_reference(Stmt *s, bool &is_assign, std::str
     br.E = dyn_cast<Expr>(s);
     CXXOperatorCallExpr *OC = dyn_cast<CXXOperatorCallExpr>(br.E);
 
-    br.DRE = find_base_variable(br.E);
+    br.BASE = find_base_expr(br.E);
+    br.DRE = find_root_variable(br.E);
+
     br.Idx.push_back(OC->getArg(1)->IgnoreImplicit());
 
     if (is_assign)
@@ -1121,10 +1164,10 @@ bool TopLevelVisitor::handle_loop_body_stmt(Stmt *s) {
     // Check for function calls parameters. We need to determine if the
     // function can assign to the a field parameter (is not const).
     if (is_function_call_stmt(s)) {
-        
+
         // remove loop const functions from loop body
         // TAKE THIS AWAY FOR NOW - IF LOOP CONST FUNCTION DEPENDS ON TEMPLATE PARAMETERS
-        // THINGS CAN GO WRONG!  
+        // THINGS CAN GO WRONG!
         // if (!is_assignment && loop_constant_function_call(s)) {
         //     parsing_state.skip_children = 1;
         //     return true;
