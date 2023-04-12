@@ -188,6 +188,19 @@ void test_set_elements_and_select() {
 /////////////////////////////////////////////////////////////////////////////////////
 
 void test_subvolumes() {
+
+    bool ok = true;
+    for (int i = 0; i < 20; i++) {
+        CoordinateVector c;
+        foralldir(d) c[d] = hila::random() * lattice.size(d);
+        auto si = SiteIndex(c);
+        if (si.coordinates() != c)
+            ok = false;
+    }
+
+    report_pass("SiteIndex", ok == false, 1e-2);
+
+
     Field<SiteIndex> f;
     f[ALL] = SiteIndex(X.coordinates());
 
@@ -207,12 +220,43 @@ void test_subvolumes() {
                             hila::prettyprint(vol),
                         slice.size() - vol, 1e-3);
 
+
             bool pass = true;
+
+            CoordinateVector mycoord = 0;
+            foralldir(d2) {
+                if (c[d2] >= 0)
+                    mycoord[d2] = c[d2];
+            }
+            foralldir(d2) {
+                if (c[d2] < 0) {
+                    mycoord[d2] = -1;
+                    break;
+                }
+            }
+
             for (auto s : slice) {
-                CoordinateVector cv = s.coordinates();
-                foralldir(d2) if (d2 <= d) {
-                    if (cv[d] != c[d])
-                        pass = false;
+
+                // get the coordinate which should be here
+                bool add = true;
+                foralldir(d2) {
+                    if (add && c[d2] < 0) {
+                        mycoord[d2]++;
+                        if (mycoord[d2] < lattice.size(d2)) {
+                            add = false;
+                        } else {
+                            mycoord[d2] = 0;
+                        }
+                    }
+                }
+
+                if (pass && mycoord != s.coordinates()) {
+                    hila::out0 << "Slice coord error, should be "
+                               << hila::prettyprint(mycoord.transpose()) << " is "
+                               << hila::prettyprint(s.coordinates().transpose()) << " slice is "
+                               << hila::prettyprint(c.transpose()) << '\n';
+                    pass = false;
+                    break;
                 }
             }
 
