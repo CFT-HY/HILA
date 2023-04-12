@@ -349,13 +349,16 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 
         hila::out0 << "Surface_level" << sl << ' ' << surface_level << '\n';
 
-        int startloc;
+        int startloc, startloc2;
         if (maxloc > minloc)
             startloc = (maxloc + minloc) / 2;
         else
             startloc = ((maxloc + minloc + lattice.size(e_z)) / 2) % lattice.size(e_z);
 
-        std::vector<float> surf1,surf2;
+        // starting positio for the other surface
+        startloc2 = z_ind(startloc + lattice.size(e_z) / 2);
+
+        std::vector<float> surf1, surf2;
         if (hila::myrank() == 0) {
             surf1.resize(area);
             surf2.resize(area);
@@ -363,27 +366,27 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 
         hila::out0 << std::setprecision(6);
 
+        std::vector<float> line;
         for (int y = 0; y < lattice.size(e_y); y++)
             for (int x = 0; x < lattice.size(e_x); x++) {
-                auto line = pl.get_slice({x, y, -1, 0});
+                line = plz.get_slice({x, y, -1, 0});
                 if (hila::myrank() == 0) {
                     // start search of the surface from the center between min and max
                     int z = startloc;
-                    if (line[z] > surface_level) {
-                        while (line[z_ind(z)] > surface_level &&
-                               startloc - z < lattice.size(e_z) * 0.8)
-                            z--;
-                    } else {
-                        while (line[z_ind(z + 1)] <= surface_level &&
-                               z - startloc < lattice.size(e_z) * 0.8)
-                            z++;
-                    }
+
+                    while (line[z_ind(z)] > surface_level && startloc - z < lattice.size(e_z) * 0.4)
+                        z--;
+
+                    while (line[z_ind(z + 1)] <= surface_level &&
+                           z - startloc < lattice.size(e_z) * 0.4)
+                        z++;
 
 
                     // do linear interpolation
                     // surf[x + y * lattice.size(e_x)] = z;
-                    surf1[x + y * lattice.size(e_x)] = z + (surface_level - line[z_ind(z)]) /
-                                                              (line[z_ind(z + 1)] - line[z_ind(z)]);
+                    surf1[x + y * lattice.size(e_x)] =
+                        z +
+                        (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
 
                     if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
                         hila::out0 << "SURF" << sl << ' ' << x << ' ' << y << ' '
@@ -391,22 +394,22 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
                     }
 
                     // and locate the other surface - start from Lz/2 offset
-                    z = startloc = z_ind(startloc + lattice.size(e_z)/2);
-                    if (line[z] > surface_level) {
-                        while (line[z_ind(z)] <= surface_level &&
-                               startloc - z < lattice.size(e_z) * 0.8)
-                            z--;
-                    } else {
-                        while (line[z_ind(z + 1)] > surface_level &&
-                               z - startloc < lattice.size(e_z) * 0.8)
-                            z++;
-                    }
+
+                    z = startloc2;
+
+                    while (line[z_ind(z)] <= surface_level &&
+                           startloc2 - z < lattice.size(e_z) * 0.4)
+                        z--;
+
+                    while (line[z_ind(z + 1)] > surface_level &&
+                           z - startloc2 < lattice.size(e_z) * 0.4)
+                        z++;
 
                     // do linear interpolation
                     // surf[x + y * lattice.size(e_x)] = z;
-                    surf2[x + y * lattice.size(e_x)] = z + (surface_level - line[z_ind(z)]) /
-                                                              (line[z_ind(z + 1)] - line[z_ind(z)]);
-
+                    surf2[x + y * lattice.size(e_x)] =
+                        z +
+                        (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
                 }
             }
 
