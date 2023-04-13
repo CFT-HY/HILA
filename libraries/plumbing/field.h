@@ -32,7 +32,7 @@ void ensure_field_operators_exist();
 /// The field class implements the standard methods for accessing fields
 /// Hilapp replaces the parity access patterns, Field[par] with a loop over
 /// the appropriate sites.
-///
+/// 
 /// The Field class also contains member functions used by hilapp, as well
 /// as members that may be useful for application developers.
 ///
@@ -46,19 +46,6 @@ void ensure_field_operators_exist();
 /// by each backend. It implements storing and accessing the Field data,
 /// including buffers for storing haloes returned from MPI communication.
 ///
-/// Memory allocation (mainly automised by hilapp):
-/// Field.allocate(): sets up memory for field content and communication.
-/// Field.free(): destroys the data.
-/// Field.is_allocated(): returns true if the Field data has been allocated
-/// Field.is_initialized() returns true if the Field has been written
-/// Field.check_alloc(): allocate if necessary
-/// Field.check_alloc() const: assert that the Field is allocated
-///
-/// MPI related (automatically done by hilapp, but may be useful in apps):
-/// Field.gather_status(): returns current gather_status_t
-/// Field.mark_changed(): make sure the Field gets communicated
-/// Field.mark_gathered(): mark the Field already gathered, no need to
-///        communicate.
 ///
 /// Field.shift(): create a periodically shifted copy of the field
 ///
@@ -74,6 +61,7 @@ void ensure_field_operators_exist();
 /// Field.set_element(): set an element in the Field
 ///
 
+
 /**
  * @class Field
  * @brief something
@@ -87,8 +75,12 @@ class Field {
     enum class gather_status_t : unsigned { NOT_DONE, STARTED, DONE };
 
   private:
-    /// @class field_struct
-    /// TODO: field-specific boundary conditions?
+    /**
+     * @class field_struct
+     * @brief Stores Field class data and communication parameters for said data
+     * 
+     * @todo field-specific boundary conditions
+     */
     class field_struct {
       public:
         field_storage<T> payload; // TODO: must be maximally aligned, modifiers - never null
@@ -284,6 +276,10 @@ class Field {
 #endif
     }
 
+    /**
+     * @brief  Sets up memory for field content and communication.
+     * 
+     */
     void allocate() {
         assert(fs == nullptr);
         if (lattice.volume() == 0) {
@@ -323,6 +319,11 @@ class Field {
 #endif
     }
 
+    /**
+     * @brief Destroys field data
+     * 
+     * 
+     */
     void free() {
         // don't call destructors when exiting - either MPI or cuda can already
         // be off.
@@ -336,14 +337,33 @@ class Field {
         }
     }
 
+    /**
+     * @brief Returns true if the Field data has been allocated
+     * 
+     * @return true 
+     * @return false 
+     */
     bool is_allocated() const {
         return (fs != nullptr);
     }
 
+    /**
+     * @brief Returns true if the Field has been written
+     * 
+     * @param p Field parity
+     * @return bool
+     */
     bool is_initialized(Parity p) const {
         return fs != nullptr && ((fs->assigned_to & parity_bits(p)) != 0);
     }
 
+    /**
+     * @brief Returns current gather_status_t
+     * 
+     * @param p Field partiy
+     * @param d Direction
+     * @return gather_status_t 
+     */
     gather_status_t gather_status(Parity p, int d) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
         return fs->gather_status_arr[(int)p - 1][d];
@@ -353,21 +373,31 @@ class Field {
         fs->gather_status_arr[(int)p - 1][d] = stat;
     }
 
-    /// check that Field is allocated, and if not do it (if not const)
-    /// Must be called BEFORE the var is actually used
-    /// "hilapp" will generate these calls as needed!
+    /**
+     * @brief  Allocate Field if it is not already allocated
+     * @details check that Field is allocated, and if not do it (if not const)
+     * Must be called BEFORE the var is actually used
+     * "hilapp" will generate these calls as needed!
+     * 
+     */
     void check_alloc() {
         if (!is_allocated())
             allocate();
     }
 
-    /// If Field is const specified, we should not be able to write to it in the first
-    /// place
+    /**
+     * @brief If Field is const assert that the Field is allocated
+     */
     void check_alloc() const {
         assert(is_allocated());
     }
 
-    // If ALL changes, both parities invalid; if p != ALL, then p and ALL.
+
+    /**
+     * @brief Bookkeeping for field communication
+     * @details If ALL changes, both parities invalid; if p != ALL, then p and ALL.
+     * @param p Field parity
+     */
     void mark_changed(const Parity p) const {
 
         for (Direction i = (Direction)0; i < NDIRS; ++i) {
@@ -385,21 +415,31 @@ class Field {
         fs->assigned_to |= parity_bits(p);
     }
 
-    /// Mark the field parity gathered from Direction
-    // In case p=ALL we could mark everything gathered, but we'll be conservative here
-    // and mark only this parity, because there might be other parities on the fly and
-    // corresponding waits should be done,  This should never happen in automatically
-    // generated loops. In any case start_gather, is_gathered, get_gather_parity has
-    // intelligence to figure out the right thing to do
-    //
-
+    /**
+     * @brief Mark the Field already gathered, no need to communicate
+     * @details Mark the field parity gathered from Direction
+     * In case p=ALL we could mark everything gathered, but we'll be conservative here
+     * and mark only this parity, because there might be other parities on the fly and
+     * corresponding waits should be done,  This should never happen in automatically
+     * generated loops. In any case start_gather, is_gathered, get_gather_parity has
+     * intelligence to figure out the right thing to do
+     * 
+     * @param dir 
+     * @param p 
+     */
     void mark_gathered(int dir, const Parity p) const {
         set_gather_status(p, dir, gather_status_t::DONE);
     }
 
-    // Check if the field has been gathered since the previous communication
-    // par = ALL:   ALL or (EVEN+ODD) are OK
-    // par != ALL:  ALL or par are OK
+    /**
+     * @brief Check if the field has been gathered since the previous communication
+     * @details par = ALL:   ALL or (EVEN+ODD) are OK\n
+     *          par != ALL:  ALL or par are OK
+     * @param dir 
+     * @param par 
+     * @return true 
+     * @return false 
+     */
     bool is_gathered(int dir, Parity par) const {
         if (par != ALL) {
             return gather_status(par, dir) == gather_status_t::DONE ||

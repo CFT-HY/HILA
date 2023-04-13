@@ -1,5 +1,5 @@
-
-# Description 
+Description  {#mainpage}
+========= 
 
 The Hila framework consists of 
 
