@@ -1,5 +1,5 @@
-
-# Description 
+Description  {#mainpage}
+========= 
 
 Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
 
@@ -27,7 +27,7 @@ lattice fields differently for different computing platforms: 'array of structur
 |--------------|-------------------|-----------|
 | Clang        | 8 -               | Yes       |
 
-#### **Installing dependencies for HILA preprocessor**:
+#### Installing dependencies for HILA preprocessor:
 
 See quickstart guide, since may not be necessary.
 
@@ -42,7 +42,7 @@ See quickstart guide, since may not be necessary.
 | CUDA         | x                 | No        |
 | HIP          | x                 | No        |
 
-#### **Installing dependencies for HILA applications**:
+#### Installing dependencies for HILA applications:
 
 Installing all non GPU dependencies on ubuntu:
 ```bash
@@ -65,13 +65,13 @@ See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/
 
 HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.
 
-### **Docker**
+### Docker
 
 The docker container is meant to develop and produce HILA applications, libraries and hilapp with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
 
 For instructions on using the docker container have a look at the [README.md](docker/README.md) in the docker folder
 
-### **Singularity**
+### Singularity
 
 The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of hilapp. This approach is mainly meant to be used for pre processing applications on an HPC platform.
 
