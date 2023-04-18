@@ -51,10 +51,17 @@ extern hila::timer
 // The MPI tag generator
 int get_next_msg_tag();
 
-// Obtain the MPI data type (MPI_XXX) for a particular type of native numbers.
-// Boolean flag "with_int" is used to return "type + int" - types of MPI, used
-// in maxloc/minloc reductions
-
+/// Obtain the MPI data type (MPI_XXX) for a particular type of native numbers.
+///
+/// @brief Return MPI data type compatible with native number type
+///
+/// Boolean flag "with_int" is used to return "type + int" - types of MPI, used
+/// in maxloc/minloc reductions
+///
+/// @tparam T  hila type, hila::scalar_type<T> is converted into MPI_type
+/// @param size  (optional) size of the MPI_type in bytes
+/// @param with_int
+/// @return  MPI_datatype (e.g. MPI_INT, MPI_DOUBLE etc.)
 template <typename T>
 MPI_Datatype get_MPI_number_type(size_t &size, bool with_int = false) {
 
@@ -93,6 +100,27 @@ template <typename T>
 MPI_Datatype get_MPI_number_type() {
     size_t s;
     return get_MPI_number_type<T>(s);
+}
+
+
+/// @brief Return MPI complex type equivalent to hila type
+///
+/// For example, if T is Complex<double>, get_MPI_complex_double<T>() returns MPI_C_DOUBLE_COMPLEX
+/// @tparam T  type to be converted
+/// @param siz  size of the type in bytes
+/// @return MPI_Datatype
+template <typename T>
+MPI_Datatype get_MPI_complex_type(size_t &siz) {
+    if constexpr (std::is_same<T,Complex<double>>::value) {
+        siz = sizeof(Complex<double>);
+        return MPI_C_DOUBLE_COMPLEX;
+    } else if constexpr (std::is_same<T,Complex<float>>::value) {
+        siz = sizeof(Complex<float>);
+        return MPI_C_FLOAT_COMPLEX;
+    } else {
+        static_assert(sizeof(T) > 0, "get_MPI_complex_type<T>() called without T being a complex type");
+        return MPI_BYTE;
+    }
 }
 
 
