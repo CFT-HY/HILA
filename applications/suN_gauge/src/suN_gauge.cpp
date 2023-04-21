@@ -10,6 +10,8 @@
 
 using mygroup = SU<NCOLOR, double>;
 
+enum class poly_limit {OFF, RANGE, PARABOLIC};
+
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
 struct parameters {
@@ -23,8 +25,8 @@ struct parameters {
     int n_profile;
     std::string config_file;
     double time_offset;
-    bool poly_range_on;
-    double poly_min, poly_m2;
+    poly_limit polyakov_pot;
+    double poly_min, poly_max, poly_m2;
     std::vector<int> n_smear;
     double smear_coeff;
     std::vector<int> z_smear;
@@ -197,7 +199,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     if (first) {
         hila::out0 << "Legend:";
-        if (p.poly_range_on)
+        if (p.polyakov_pot == poly_limit::PARABOLIC)
             hila::out0 << " -V(polyakov)";
         hila::out0 << " plaq  P.real  P.imag\n";
 
@@ -211,7 +213,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
     hila::out0 << "MEAS " << std::setprecision(8);
 
     // write the -(polyakov potential) first, this is used as a weight factor in aa
-    if (p.poly_range_on) {
+    if (p.polyakov_pot == poly_limit::PARABOLIC) {
         hila::out0 << -polyakov_potential(p, poly.real()) << ' ';
     }
 
@@ -569,6 +571,7 @@ void do_trajectory(GaugeField<group> &U, const parameters &p) {
 ////////////////////////////////////////////////////////////////
 
 double polyakov_potential(const parameters &p, const double poly) {
+
     return p.poly_m2 * (sqr(poly - p.poly_min));
 }
 
@@ -577,11 +580,21 @@ double polyakov_potential(const parameters &p, const double poly) {
 
 bool accept_polyakov(const parameters &p, const double p_old, const double p_new) {
 
-    double dpot = polyakov_potential(p, p_new) - polyakov_potential(p, p_old);
+    if (p.polyakov_pot == poly_limit::PARABOLIC) {
+        double dpot = polyakov_potential(p, p_new) - polyakov_potential(p, p_old);
 
-    bool accept = hila::broadcast(hila::random() < exp(-dpot));
+        bool accept = hila::broadcast(hila::random() < exp(-dpot));
 
-    return accept;
+        return accept;
+    } else {
+        if (p_new >= p.poly_min && p_new <= p.poly_max) 
+            return true;
+        if (p_new > p.poly_max && p_new < p_old)
+            return true;
+        if (p_new < p.poly_min && p_new > p_old)
+            return true;
+        return false;
+    }
 }
 
 ////////////////////////////////////////////////////////////////
@@ -692,12 +705,19 @@ int main(int argc, char **argv) {
     p.config_file = par.get("config name");
 
     // if polyakov range is off, do nothing with
-    if (par.get_item("polyakov potential", {"off", "min"}) == 1) {
-        p.poly_range_on = true;
+    int p_item = par.get_item("polyakov potential", {"off", "min", "range"});
+    if (p_item == 0) {
+        p.polyakov_pot = poly_limit::OFF;
+    } else if (p_item == 1) {
+        p.polyakov_pot = poly_limit::PARABOLIC;
         p.poly_min = par.get();
         p.poly_m2 = par.get("mass2");
     } else {
-        p.poly_range_on = false;
+        p.polyakov_pot = poly_limit::RANGE;
+        Vector<2,double> r;
+        r = par.get();
+        p.poly_min = r[0];
+        p.poly_max = r[1];
     }
 
     if (par.get_item("updates/profile meas", {"off", "%i"}) == 1) {
@@ -754,7 +774,7 @@ int main(int argc, char **argv) {
         update_timer.start();
 
         double acc = 0;
-        if (p.poly_range_on) {
+        if (p.polyakov_pot != poly_limit::OFF) {
             acc += trajectory_with_range(U, p, p_now);
         } else {
             do_trajectory(U, p);
@@ -786,7 +806,7 @@ int main(int argc, char **argv) {
                 pl.write_slice(poly, {-1, -1, -1, 0});
             }
 
-            if (p.poly_range_on) {
+            if (p.polyakov_pot != poly_limit::OFF) {
                 hila::out0 << "ACCP " << acc << '\n';
             }
 
