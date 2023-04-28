@@ -1,3 +1,4 @@
+/** @file field.h */
 #ifndef FIELD_H
 #define FIELD_H
 
@@ -32,7 +33,7 @@ void ensure_field_operators_exist();
 /// The field class implements the standard methods for accessing fields
 /// Hilapp replaces the parity access patterns, Field[par] with a loop over
 /// the appropriate sites.
-/// 
+///
 /// The Field class also contains member functions used by hilapp, as well
 /// as members that may be useful for application developers.
 ///
@@ -45,18 +46,6 @@ void ensure_field_operators_exist();
 /// The Field::field_struct points to a field_storage, which is defined
 /// by each backend. It implements storing and accessing the Field data,
 /// including buffers for storing haloes returned from MPI communication.
-///
-///
-/// Field.shift(): create a periodically shifted copy of the field
-///
-/// Others
-/// Field.set_boundary_condition(): set the boundary conditions in a
-///         given Direction (periodic or antiperiodic)
-/// Field.get_boundary_condition(): get the boundary condition of the Field
-/// Field.copy_boundary_condition(): copy the boundary condition to the
-///        from another Field
-/// Field.get_elements(): retrieve a list of elements to all nodes
-/// Field.get_element(): retrieve an element to all nodes
 /// Field.set_elements(): set elements in the Field
 /// Field.set_element(): set an element in the Field
 ///
@@ -65,7 +54,7 @@ void ensure_field_operators_exist();
 /**
  * @class Field
  * @brief something
- * 
+ *
  * @tparam T double, complex
  */
 template <typename T>
@@ -78,7 +67,7 @@ class Field {
     /**
      * @class field_struct
      * @brief Stores Field class data and communication parameters for said data
-     * 
+     *
      * @todo field-specific boundary conditions
      */
     class field_struct {
@@ -209,9 +198,14 @@ class Field {
 
     field_struct *RESTRICT fs;
 
-    ////////////////////////////////////////////////
-    /// Field constructors
-
+    /**
+     * @name Constructor
+     */
+    //@{
+    /**
+     * @brief Default construct a new Field object
+     *
+     */
     Field() {
 
         // put here some implementation checks for field vars
@@ -227,43 +221,60 @@ class Field {
 
         fs = nullptr; // lazy allocation on 1st use
     }
-
-    // Straightforward copy constructor seems to be necessary
+    /**
+     * @brief Copy constructor with already initialised Field
+     *
+     * @param other
+     */
     Field(const Field &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
         (*this)[ALL] = other[X];
     }
-
-    // copy constructor - from fields which can be assigned
+    /**
+     * @brief Copy constructor form Field of type A to field of type F if the conversion is defined
+     *
+     * @tparam A
+     * @param other
+     */
     template <typename A, std::enable_if_t<std::is_convertible<A, T>::value, int> = 0>
     Field(const Field<A> &other) : Field() {
         assert(other.is_initialized(ALL) && "Initializer Field value not set");
 
         (*this)[ALL] = other[X];
     }
-
-    // constructor with compatible scalar
+    /**
+     * @brief Construct a new Field object with scalar (val) of type A to a field of type F type if
+     * the conversion is defined
+     *
+     * @tparam A
+     * @param val
+     */
     template <typename A,
               std::enable_if_t<
                   hila::is_assignable<T &, A>::value || std::is_convertible<A, T>::value, int> = 0>
     Field(const A &val) : Field() {
         (*this)[ALL] = val;
     }
-
-    // constructor from 0 - nullptr trick in use
+    /**
+     * @brief Construct a new Field object with scalar 0 with nullpointer trick
+     *
+     * @param z
+     */
     Field(const std::nullptr_t z) : Field() {
         (*this)[ALL] = 0;
     }
 
-    // move constructor - steal the content
+    /**
+     * @brief Construct a new Field object by stealing content from previous field (rhs) which will
+     * be set to null
+     *
+     * @param rhs
+     */
     Field(Field &&rhs) {
         fs = rhs.fs;
         rhs.fs = nullptr;
     }
-
-    /////////////////////////////////////////////////
-    /// Destructor
 
     ~Field() {
         free();
@@ -275,10 +286,10 @@ class Field {
         ensure_field_operators_exist<T>();
 #endif
     }
+    //@}
 
     /**
      * @brief  Sets up memory for field content and communication.
-     * 
      */
     void allocate() {
         assert(fs == nullptr);
@@ -321,8 +332,8 @@ class Field {
 
     /**
      * @brief Destroys field data
-     * 
-     * 
+     *
+     *
      */
     void free() {
         // don't call destructors when exiting - either MPI or cuda can already
@@ -339,9 +350,11 @@ class Field {
 
     /**
      * @brief Returns true if the Field data has been allocated
-     * 
-     * @return true 
-     * @return false 
+     *   \code{.cpp}
+     *    class Cpp {};
+     *   \endcode
+     * @return true
+     * @return false
      */
     bool is_allocated() const {
         return (fs != nullptr);
@@ -349,7 +362,7 @@ class Field {
 
     /**
      * @brief Returns true if the Field has been written
-     * 
+     *
      * @param p Field parity
      * @return bool
      */
@@ -359,10 +372,10 @@ class Field {
 
     /**
      * @brief Returns current gather_status_t
-     * 
+     *
      * @param p Field partiy
      * @param d Direction
-     * @return gather_status_t 
+     * @return gather_status_t
      */
     gather_status_t gather_status(Parity p, int d) const {
         assert(parity_bits(p) && d >= 0 && d < NDIRS);
@@ -378,7 +391,7 @@ class Field {
      * @details check that Field is allocated, and if not do it (if not const)
      * Must be called BEFORE the var is actually used
      * "hilapp" will generate these calls as needed!
-     * 
+     *
      */
     void check_alloc() {
         if (!is_allocated())
@@ -423,9 +436,9 @@ class Field {
      * corresponding waits should be done,  This should never happen in automatically
      * generated loops. In any case start_gather, is_gathered, get_gather_parity has
      * intelligence to figure out the right thing to do
-     * 
-     * @param dir 
-     * @param p 
+     *
+     * @param dir
+     * @param p
      */
     void mark_gathered(int dir, const Parity p) const {
         set_gather_status(p, dir, gather_status_t::DONE);
@@ -435,10 +448,11 @@ class Field {
      * @brief Check if the field has been gathered since the previous communication
      * @details par = ALL:   ALL or (EVEN+ODD) are OK\n
      *          par != ALL:  ALL or par are OK
-     * @param dir 
-     * @param par 
-     * @return true 
-     * @return false 
+     * @hilapponly
+     * @param dir
+     * @param par
+     * @return true
+     * @return false
      */
     bool is_gathered(int dir, Parity par) const {
         if (par != ALL) {
@@ -451,13 +465,23 @@ class Field {
         }
     }
 
-    // Mark communication started -- this must be just the one
-    // going on with MPI
+    /**
+     * @brief Mark communication has started
+     * @hilapponly
+     * @param dir
+     * @param p
+     */
     void mark_gather_started(int dir, Parity p) const {
         set_gather_status(p, dir, gather_status_t::STARTED);
     }
 
-    /// Check if communication has started.  This is strict, checks exactly this parity
+    /**
+     * @brief Check if communication has started
+     * @hilapponly
+     * @param dir
+     * @param par
+     * @return bool
+     */
     bool is_gather_started(int dir, Parity par) const {
         return gather_status(par, dir) == gather_status_t::STARTED;
     }
@@ -480,11 +504,12 @@ class Field {
     }
 
 
-    ///////////////////////////////////////////////////////////////////////
-    /// Boundary condition methods
-
-    /// Set boundary condition for field
-
+    /**
+     * @brief Set the boundary condition in a given Direction (periodic or antiperiodic)
+     *
+     * @param dir Direction of boundary condition
+     * @param bc Field boundary condition
+     */
     void set_boundary_condition(Direction dir, hila::bc bc) {
 
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
@@ -525,8 +550,12 @@ class Field {
 #endif
     }
 
-    ///////////////////////////////////////////////////////////////////////
-
+    /**
+     * @brief Get the boundary condition of the Field
+     *
+     * @param dir Boundary condition in certain direction
+     * @return hila::bc The boundary condition of the Field
+     */
     hila::bc get_boundary_condition(Direction dir) const {
 #ifdef SPECIAL_BOUNDARY_CONDITIONS
         return fs->boundary_condition[dir];
@@ -544,6 +573,12 @@ class Field {
         hila::out0 << ")\n";
     }
 
+    /**
+     * @brief Copy the boundary condition from another field
+     *
+     * @tparam A the type of the field which we are copying from
+     * @param rhs the ohter Field
+     */
     template <typename A>
     void copy_boundary_condition(const Field<A> &rhs) {
         foralldir(dir) {
@@ -615,7 +650,19 @@ class Field {
     /// implemented by all field types
     /////////////////////////////////////////////////////////////////
 
-    // Basic assignment operator
+    /**
+     * @name Standard
+     * @brief Standard arithmetic ops which fields should implement
+     *        Not all are always callable, e.g. division may not be
+     *        implemented by all field types
+     *  @{
+     */
+    /**
+     * @brief Basic assignment operator
+     *
+     * @param rhs
+     * @return Field<T>&
+     */
     Field<T> &operator=(const Field<T> &rhs) {
         (*this)[ALL] = rhs[X];
         return *this;
@@ -766,23 +813,47 @@ class Field {
         f[ALL] = ::imag((*this)[X]);
         return f;
     }
+    /** @} */
 
-
-    ///////////////////////////////////////////////////////////////////////
-
-    // Communication routines
+    /// Communication routines
     dir_mask_t start_gather(Direction d, Parity p = ALL) const;
     void wait_gather(Direction d, Parity p) const;
     void gather(Direction d, Parity p = ALL) const;
     void drop_comms(Direction d, Parity p) const;
     void cancel_comm(Direction d, Parity p) const;
 
-    // Declaration of shift methods
+    /**
+     *
+     * @name Shift operations
+     * @brief Create a periodically shifted copy of the field
+     * @details  this is currently OK only for short moves, very inefficient for longer moves
+     * @param v
+     * @{
+     *  /
+    /**
+     * @todo make more advanced, switching to "global" move for long shifts
+     * @param par
+     * @param r
+     * @return Field<T>& returns a reference to res
+     */
     Field<T> &shift(const CoordinateVector &v, Field<T> &r, Parity par) const;
+    /**
+     * @remark Overload of @ref shift(const CoordinateVector &v, Field<T> &r, Parity par) with
+     * par=ALL
+     * @param r
+     */
     Field<T> &shift(const CoordinateVector &v, Field<T> &r) const {
         return shift(v, r, ALL);
     }
+    /**
+     *
+     * @param par
+     * @return Field<T>
+     */
     Field<T> shift(const CoordinateVector &v, Parity par) const;
+    /**
+     * @}
+     */
 
     // General getters and setters
 
@@ -799,11 +870,12 @@ class Field {
         mark_changed(coord.parity());
     }
 
-
-    /// Get an element and return it on all nodes
-    /// This is not local, the element needs to be communicated to all nodes
-    /// return const to prevent incorrect modifications
-
+    /**
+     * @brief Get singular element which will be broadcast to all nodes
+     *
+     * @param coord coordinate of which the element is fetched with
+     * @return const T
+     */
     const T get_element(const CoordinateVector &coord) const {
         T element;
 
@@ -819,9 +891,22 @@ class Field {
         return element;
     }
 
-
+    /**
+     * @brief Set an array of elements in the field
+     * @remark Assuming that each node calls this with the same value,
+     * it is sufficient to set the elements locally
+     *
+     * @param elements @typedef vector<T> of elements to set
+     * @param coord_list @typedef vector<CoordinateVector> of coordinates to set
+     */
     void set_elements(const std::vector<T> &elements,
                       const std::vector<CoordinateVector> &coord_list);
+    /**
+     * @brief Retrieves list of elements to all nodes.
+     * @param coord_list vector of coordinates which will be fetched
+     * @param broadcast if true then elements retrieved to root node will be broadcast to all nodes
+     * @return std::vector<T> list of all elements
+     */
     std::vector<T> get_elements(const std::vector<CoordinateVector> &coord_list,
                                 bool broadcast = false) const;
 
@@ -1373,9 +1458,9 @@ double squarenorm_relative(const Field<A> &a, const Field<B> &b) {
 }
 
 
-/////////////////////////////////////////////////////////////////
-
-
+/**
+ * @todo Add remark in comparison to other version of shift
+ */
 template <typename T>
 Field<T> Field<T>::shift(const CoordinateVector &v, const Parity par) const {
     Field<T> res;
@@ -1449,13 +1534,13 @@ void Field<T>::random() {
 
     } else {
         onsites(ALL) {
-            hila::random( (*this)[X] );
+            hila::random((*this)[X]);
         }
     }
 #else
 
     onsites(ALL) {
-        hila::random( (*this)[X] );
+        hila::random((*this)[X]);
     }
 
 #endif
