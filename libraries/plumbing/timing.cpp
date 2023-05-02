@@ -216,6 +216,7 @@ void timestamp(const char *msg) {
         hila::out0 << " -- date " << d << "  run time " << std::setprecision(4) << hila::gettime()
                    << "s" << std::endl;
         hila::out0.precision(p);
+        hila::out0.flush();
     }
 }
 
