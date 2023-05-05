@@ -240,7 +240,7 @@ class CoordinateVector_t : public Vector<NDIM, T> {
 
   public:
     // std incantation for field types
-    using base_type = hila::number_type<T>;
+    using base_type = hila::scalar_type<T>;
     using argument_type = T;
 
     // define these to ensure std::is_trivial

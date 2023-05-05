@@ -36,8 +36,7 @@ LDLIBS += $(MPI_LIBS)
 LDFLAGS += -gencode arch=compute_${CUDA_ARCH},code=sm_${CUDA_ARCH}
 
 # extra cuda objects here
-HILA_OBJECTS += build/hila_gpu.o build/memory_pool2.o
-
+HILA_OBJECTS += build/hila_gpu.o build/memory_pool.o
 ################
 
 # These variables must be defined here

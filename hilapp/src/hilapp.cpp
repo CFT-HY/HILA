@@ -31,6 +31,7 @@
 #include "specialization_db.h"
 
 // definitions for global variables
+// lots of global state, which we do not bother passing around in arguments
 ClassTemplateDecl *field_decl = nullptr;
 const std::string field_storage_type = "field_storage<";
 const std::string field_type = "Field<";
@@ -40,6 +41,7 @@ std::list<array_ref> array_ref_list = {};
 std::list<loop_const_expr_ref> loop_const_expr_ref_list = {};
 std::list<special_function_call> special_function_call_list = {};
 std::list<selection_info> selection_info_list = {};
+std::vector<reduction_expr> reduction_list = {};
 
 bool state::compile_errors_occurred = false;
 

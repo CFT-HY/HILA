@@ -1,8 +1,6 @@
 #ifndef SITE_SELECT_H_
 #define SITE_SELECT_H_
 
-#include "hila.h"
-
 // We insert the GPU code in the same file too
 // hilapp should not read in .cuh, because it does not understand it
 
@@ -18,6 +16,8 @@ namespace gpucub = cub;
 namespace gpucub = hipcub;
 #endif
 #endif // HILAPP
+
+#include "hila.h"
 
 
 //////////////////////////////////////////////////////////////////////////////////
