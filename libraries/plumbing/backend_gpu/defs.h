@@ -95,7 +95,7 @@ using gpuError = cudaError;
 #elif defined(HIP)
 
 #include <hip/hip_runtime.h>
-#include <hiprand.h>
+#include <hiprand/hiprand.h>
 
 //#include <hipcub/hipcub.hpp>*
 

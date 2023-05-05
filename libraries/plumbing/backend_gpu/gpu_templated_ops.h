@@ -60,7 +60,7 @@ template <typename T>
 T gpu_reduce_sum(T *vector, int N) {
     const int reduce_step = 32;
     T sum = 0;
-    T *host_vector = (T *)malloc(N * sizeof(T));
+    T *host_vector = (T *)memalloc(N * sizeof(T));
     int vector_size = N;
 
     while (vector_size > reduce_step) {
@@ -207,19 +207,19 @@ __device__ inline T atomicAdd(T *dp, B v) {
 }
 
 /// Atomic add for composed datatypes - do element-by-element
-/// requires that hila::number_type is defined
+/// requires that hila::scalar_type is defined
 template <
     typename T, typename B,
     std::enable_if_t<!std::is_arithmetic<T>::value && std::is_convertible<B, T>::value, int> = 0>
 __device__ inline void atomicAdd(T *d, const B &bv) {
 
     T v = bv;
-    hila::number_type<T> *dp;
-    const hila::number_type<T> *dv;
-    constexpr int N = sizeof(T) / sizeof(hila::number_type<T>);
+    hila::scalar_type<T> *dp;
+    const hila::scalar_type<T> *dv;
+    constexpr int N = sizeof(T) / sizeof(hila::scalar_type<T>);
 
-    dp = (hila::number_type<T> *)(void *)d;
-    dv = (hila::number_type<T> *)(void *)&v;
+    dp = (hila::scalar_type<T> *)(void *)d;
+    dv = (hila::scalar_type<T> *)(void *)&v;
 
     for (int i = 0; i < N; ++i) {
         atomic_Add(dp + i, dv[i]);
@@ -261,12 +261,19 @@ __device__ inline float atomicMultiply(float *dp, float v) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// NOTE: IF YOU DEFINE ALT_VECTOR_REDUCTION YOU NEED TO DEFINE THE SAME IN 
+// codegen_gpu.cpp!
+
+// #define ALT_VECTOR_REDUCTION
+
 template <typename T>
 __global__ void sum_blocked_vectorreduction_kernel(T *D, const int reduction_size,
                                                    const int threads) {
     int id = threadIdx.x + blockIdx.x * blockDim.x;
 
     T sum;
+
+#ifndef ALT_VECTOR_REDUCTION
     if (id < reduction_size) {
         // id is now the reduction coordinate
         sum = D[id];
@@ -276,8 +283,33 @@ __global__ void sum_blocked_vectorreduction_kernel(T *D, const int reduction_siz
         }
         D[id] = sum;
     }
+
+#else
+    if (id < reduction_size) {
+        // id is now the reduction coordinate
+        sum = D[id * threads];
+        for (int i = 1; i < threads; i++) {
+            sum += D[id * threads + i];
+        }
+        D[id * threads] = sum;
+    }
+#endif
 }
 
+#ifdef ALT_VECTOR_REDUCTION
+
+template <typename T>
+__global__ void sum_blocked_vectorreduction_k2(T *D, const int reduction_size, const int threads) {
+
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
+    if (id < threads) {
+        for (; id < reduction_size; id += threads) {
+            D[id] = D[id * threads];
+        }
+    }
+}
+
+#endif
 
 template <typename T>
 void sum_blocked_vectorreduction(T *data, const int reduction_size, const int threads) {
@@ -287,6 +319,11 @@ void sum_blocked_vectorreduction(T *data, const int reduction_size, const int th
     int blocks = (reduction_size + N_threads - 1) / N_threads;
 
     sum_blocked_vectorreduction_kernel<<<blocks, N_threads>>>(data, reduction_size, threads);
+
+#ifdef ALT_VECTOR_REDUCTION
+
+    sum_blocked_vectorreduction_k2<<<1, N_threads>>>(data, reduction_size, threads);
+#endif
 
     check_device_error("sum_blocked_vectorreduction");
 }

@@ -74,30 +74,30 @@ class Reduction {
         if (is_allreduce()) {
             if (is_nonblocking()) {
                 MPI_Iallreduce(MPI_IN_PLACE, ptr,
-                               sizeof(T) / sizeof(hila::number_type<T>), dtype,
+                               sizeof(T) / sizeof(hila::scalar_type<T>), dtype,
                                operation, lattice.mpi_comm_lat, &request);
             } else {
                 MPI_Allreduce(MPI_IN_PLACE, ptr,
-                              sizeof(T) / sizeof(hila::number_type<T>), dtype,
+                              sizeof(T) / sizeof(hila::scalar_type<T>), dtype,
                               operation, lattice.mpi_comm_lat);
             }
         } else {
             if (hila::myrank() == 0) {
                 if (is_nonblocking()) {
                     MPI_Ireduce(MPI_IN_PLACE, ptr,
-                                sizeof(T) / sizeof(hila::number_type<T>), dtype,
+                                sizeof(T) / sizeof(hila::scalar_type<T>), dtype,
                                 operation, 0, lattice.mpi_comm_lat, &request);
                 } else {
                     MPI_Reduce(MPI_IN_PLACE, ptr,
-                               sizeof(T) / sizeof(hila::number_type<T>), dtype,
+                               sizeof(T) / sizeof(hila::scalar_type<T>), dtype,
                                operation, 0, lattice.mpi_comm_lat);
                 }
             } else {
                 if (is_nonblocking()) {
-                    MPI_Ireduce(ptr, ptr, sizeof(T) / sizeof(hila::number_type<T>),
+                    MPI_Ireduce(ptr, ptr, sizeof(T) / sizeof(hila::scalar_type<T>),
                                 dtype, operation, 0, lattice.mpi_comm_lat, &request);
                 } else {
-                    MPI_Reduce(ptr, ptr, sizeof(T) / sizeof(hila::number_type<T>),
+                    MPI_Reduce(ptr, ptr, sizeof(T) / sizeof(hila::scalar_type<T>),
                                dtype, operation, 0, lattice.mpi_comm_lat);
                 }
             }

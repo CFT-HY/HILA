@@ -380,6 +380,8 @@ inline Vec4i operator%(const Vec4i &lhs, const int &rhs) {
 // Since you cannot specialize by return type,
 // it needs to be a struct...
 
+#ifdef THESE_ARE_NOT_NEEDED_BUT_LEAVE_HERE
+
 #if VECTOR_SIZE == 32
 template <typename T>
 inline auto hila_random_vector() {
@@ -426,6 +428,9 @@ inline auto hila_random_vector<double>() {
     r.load(&(tvec[0]));
     return r;
 };
+
+#endif // NOT NEEDED
+
 
 #endif // not HILAPP
 

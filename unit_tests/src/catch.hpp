@@ -1648,7 +1648,7 @@ namespace Catch {
 
         template<typename E>
         std::string convertUnknownEnumToString( E e ) {
-            return ::Catch::Detail::stringify(static_cast<typename std::underlying_type<E>::type>(e));
+            return ::Catch::Detail::stringify(static_cast<typename std::number_type<E>::type>(e));
         }
 
 #if defined(_MANAGED)
@@ -15481,26 +15481,26 @@ namespace {
     }
 
     bool shouldNewline(XmlFormatting fmt) {
-        return !!(static_cast<std::underlying_type<XmlFormatting>::type>(fmt & XmlFormatting::Newline));
+        return !!(static_cast<std::number_type<XmlFormatting>::type>(fmt & XmlFormatting::Newline));
     }
 
     bool shouldIndent(XmlFormatting fmt) {
-        return !!(static_cast<std::underlying_type<XmlFormatting>::type>(fmt & XmlFormatting::Indent));
+        return !!(static_cast<std::number_type<XmlFormatting>::type>(fmt & XmlFormatting::Indent));
     }
 
 } // anonymous namespace
 
     XmlFormatting operator | (XmlFormatting lhs, XmlFormatting rhs) {
         return static_cast<XmlFormatting>(
-            static_cast<std::underlying_type<XmlFormatting>::type>(lhs) |
-            static_cast<std::underlying_type<XmlFormatting>::type>(rhs)
+            static_cast<std::number_type<XmlFormatting>::type>(lhs) |
+            static_cast<std::number_type<XmlFormatting>::type>(rhs)
         );
     }
 
     XmlFormatting operator & (XmlFormatting lhs, XmlFormatting rhs) {
         return static_cast<XmlFormatting>(
-            static_cast<std::underlying_type<XmlFormatting>::type>(lhs) &
-            static_cast<std::underlying_type<XmlFormatting>::type>(rhs)
+            static_cast<std::number_type<XmlFormatting>::type>(lhs) &
+            static_cast<std::number_type<XmlFormatting>::type>(rhs)
         );
     }
 

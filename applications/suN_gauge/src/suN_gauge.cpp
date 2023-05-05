@@ -10,6 +10,8 @@
 
 using mygroup = SU<NCOLOR, double>;
 
+enum class poly_limit {OFF, RANGE, PARABOLIC};
+
 // define a struct to hold the input parameters: this
 // makes it simpler to pass the values around
 struct parameters {
@@ -23,8 +25,8 @@ struct parameters {
     int n_profile;
     std::string config_file;
     double time_offset;
-    bool poly_range_on;
-    double poly_min, poly_m2;
+    poly_limit polyakov_pot;
+    double poly_min, poly_max, poly_m2;
     std::vector<int> n_smear;
     double smear_coeff;
     std::vector<int> z_smear;
@@ -197,7 +199,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
     if (first) {
         hila::out0 << "Legend:";
-        if (p.poly_range_on)
+        if (p.polyakov_pot == poly_limit::PARABOLIC)
             hila::out0 << " -V(polyakov)";
         hila::out0 << " plaq  P.real  P.imag\n";
 
@@ -211,7 +213,7 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
     hila::out0 << "MEAS " << std::setprecision(8);
 
     // write the -(polyakov potential) first, this is used as a weight factor in aa
-    if (p.poly_range_on) {
+    if (p.polyakov_pot == poly_limit::PARABOLIC) {
         hila::out0 << -polyakov_potential(p, poly.real()) << ' ';
     }
 
@@ -220,6 +222,50 @@ void measure_stuff(const GaugeField<group> &U, const parameters &p) {
 
 ///////////////////////////////////////////////////////////////////////////////////
 
+void spectraldensity_surface(std::vector<float> &surf, std::vector<double> &npow,
+                             std::vector<int> &hits) {
+
+    // do fft for the surface
+    static bool first = true;
+    static Complex<double> *buf;
+    static fftw_plan fftwplan;
+
+    int area = lattice.size(e_x) * lattice.size(e_y);
+
+    if (first) {
+        first = false;
+
+        buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
+
+        // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be
+        // the "fast" one. thus, first y, then x.
+        fftwplan = fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
+                                    (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
+    }
+
+    for (int i = 0; i < area; i++) {
+        buf[i] = surf[i];
+    }
+
+    fftw_execute(fftwplan);
+
+    int pow_size = npow.size();
+
+    for (int i = 0; i < area; i++) {
+        int x = i % lattice.size(e_x);
+        int y = i / lattice.size(e_x);
+        x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
+        y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
+
+        int k = x * x + y * y;
+        if (k < pow_size) {
+            npow[k] += buf[i].squarenorm() / (area * area);
+            hits[k]++;
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////
 // helper function to get valid z-coordinate index
 
 int z_ind(int z) {
@@ -305,88 +351,77 @@ void measure_polyakov_surface(GaugeField<group> &U, const parameters &p, int tra
 
         hila::out0 << "Surface_level" << sl << ' ' << surface_level << '\n';
 
-        int startloc;
+        int startloc, startloc2;
         if (maxloc > minloc)
             startloc = (maxloc + minloc) / 2;
         else
             startloc = ((maxloc + minloc + lattice.size(e_z)) / 2) % lattice.size(e_z);
 
-        std::vector<float> surf;
-        if (hila::myrank() == 0)
-            surf.resize(area);
+        // starting positio for the other surface
+        startloc2 = z_ind(startloc + lattice.size(e_z) / 2);
+
+        std::vector<float> surf1, surf2;
+        if (hila::myrank() == 0) {
+            surf1.resize(area);
+            surf2.resize(area);
+        }
 
         hila::out0 << std::setprecision(6);
 
+        std::vector<float> line;
         for (int y = 0; y < lattice.size(e_y); y++)
             for (int x = 0; x < lattice.size(e_x); x++) {
-                auto line = pl.get_slice({x, y, -1, 0});
+                line = plz.get_slice({x, y, -1, 0});
                 if (hila::myrank() == 0) {
                     // start search of the surface from the center between min and max
                     int z = startloc;
-                    if (line[z] > surface_level) {
-                        while (line[z_ind(z)] > surface_level &&
-                               startloc - z < lattice.size(e_z) * 0.8)
-                            z--;
-                    } else {
-                        while (line[z_ind(z + 1)] <= surface_level &&
-                               z - startloc < lattice.size(e_z) * 0.8)
-                            z++;
-                    }
+
+                    while (line[z_ind(z)] > surface_level && startloc - z < lattice.size(e_z) * 0.4)
+                        z--;
+
+                    while (line[z_ind(z + 1)] <= surface_level &&
+                           z - startloc < lattice.size(e_z) * 0.4)
+                        z++;
 
 
                     // do linear interpolation
                     // surf[x + y * lattice.size(e_x)] = z;
-                    surf[x + y * lattice.size(e_x)] = z + (surface_level - line[z_ind(z)]) /
-                                                              (line[z_ind(z + 1)] - line[z_ind(z)]);
+                    surf1[x + y * lattice.size(e_x)] =
+                        z +
+                        (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
 
                     if (p.n_surface > 0 && (traj + 1) % p.n_surface == 0) {
                         hila::out0 << "SURF" << sl << ' ' << x << ' ' << y << ' '
-                                   << surf[x + y * lattice.size(e_x)] << '\n';
+                                   << surf1[x + y * lattice.size(e_x)] << '\n';
                     }
+
+                    // and locate the other surface - start from Lz/2 offset
+
+                    z = startloc2;
+
+                    while (line[z_ind(z)] <= surface_level &&
+                           startloc2 - z < lattice.size(e_z) * 0.4)
+                        z--;
+
+                    while (line[z_ind(z + 1)] > surface_level &&
+                           z - startloc2 < lattice.size(e_z) * 0.4)
+                        z++;
+
+                    // do linear interpolation
+                    // surf[x + y * lattice.size(e_x)] = z;
+                    surf2[x + y * lattice.size(e_x)] =
+                        z +
+                        (surface_level - line[z_ind(z)]) / (line[z_ind(z + 1)] - line[z_ind(z)]);
                 }
             }
 
         if (hila::myrank() == 0) {
-            // do fft for the surface
-            static bool first = true;
-            static Complex<double> *buf;
-            static fftw_plan fftwplan;
-
-            if (first) {
-                first = false;
-
-                buf = (Complex<double> *)fftw_malloc(sizeof(Complex<double>) * area);
-
-                // note: we had x as the "fast" dimension, but fftw wants the 2nd dim to be
-                // the "fast" one. thus, first y, then x.
-                fftwplan =
-                    fftw_plan_dft_2d(lattice.size(e_y), lattice.size(e_x), (fftw_complex *)buf,
-                                     (fftw_complex *)buf, FFTW_FORWARD, FFTW_ESTIMATE);
-            }
-
-            for (int i = 0; i < area; i++) {
-                buf[i] = surf[i];
-            }
-
-            fftw_execute(fftwplan);
-
             constexpr int pow_size = 200;
-
             std::vector<double> npow(pow_size);
             std::vector<int> hits(pow_size);
 
-            for (int i = 0; i < area; i++) {
-                int x = i % lattice.size(e_x);
-                int y = i / lattice.size(e_x);
-                x = (x <= lattice.size(e_x) / 2) ? x : (lattice.size(e_x) - x);
-                y = (y <= lattice.size(e_y) / 2) ? y : (lattice.size(e_y) - y);
-
-                int k = x * x + y * y;
-                if (k < pow_size) {
-                    npow[k] += buf[i].squarenorm() / (area * area);
-                    hits[k]++;
-                }
-            }
+            spectraldensity_surface(surf1, npow, hits);
+            spectraldensity_surface(surf2, npow, hits);
 
             for (int i = 0; i < pow_size; i++) {
                 if (hits[i] > 0)
@@ -536,6 +571,7 @@ void do_trajectory(GaugeField<group> &U, const parameters &p) {
 ////////////////////////////////////////////////////////////////
 
 double polyakov_potential(const parameters &p, const double poly) {
+
     return p.poly_m2 * (sqr(poly - p.poly_min));
 }
 
@@ -544,11 +580,21 @@ double polyakov_potential(const parameters &p, const double poly) {
 
 bool accept_polyakov(const parameters &p, const double p_old, const double p_new) {
 
-    double dpot = polyakov_potential(p, p_new) - polyakov_potential(p, p_old);
+    if (p.polyakov_pot == poly_limit::PARABOLIC) {
+        double dpot = polyakov_potential(p, p_new) - polyakov_potential(p, p_old);
 
-    bool accept = hila::broadcast(hila::random() < exp(-dpot));
+        bool accept = hila::broadcast(hila::random() < exp(-dpot));
 
-    return accept;
+        return accept;
+    } else {
+        if (p_new >= p.poly_min && p_new <= p.poly_max) 
+            return true;
+        if (p_new > p.poly_max && p_new < p_old)
+            return true;
+        if (p_new < p.poly_min && p_new > p_old)
+            return true;
+        return false;
+    }
 }
 
 ////////////////////////////////////////////////////////////////
@@ -659,12 +705,19 @@ int main(int argc, char **argv) {
     p.config_file = par.get("config name");
 
     // if polyakov range is off, do nothing with
-    if (par.get_item("polyakov potential", {"off", "min"}) == 1) {
-        p.poly_range_on = true;
+    int p_item = par.get_item("polyakov potential", {"off", "min", "range"});
+    if (p_item == 0) {
+        p.polyakov_pot = poly_limit::OFF;
+    } else if (p_item == 1) {
+        p.polyakov_pot = poly_limit::PARABOLIC;
         p.poly_min = par.get();
         p.poly_m2 = par.get("mass2");
     } else {
-        p.poly_range_on = false;
+        p.polyakov_pot = poly_limit::RANGE;
+        Vector<2,double> r;
+        r = par.get();
+        p.poly_min = r[0];
+        p.poly_max = r[1];
     }
 
     if (par.get_item("updates/profile meas", {"off", "%i"}) == 1) {
@@ -679,6 +732,13 @@ int main(int argc, char **argv) {
         p.z_smear = par.get("z smearing steps");
         p.n_surface = par.get("traj/surface");
         p.n_dump_polyakov = par.get("traj/polyakov dump");
+
+        if (p.n_smear.size() != p.z_smear.size()) {
+            hila::out0 << "Error in input file: number of values in 'smearing steps' != 'z "
+                          "smearing steps'\n";
+            hila::terminate(0);
+        }
+
     } else {
         p.n_dump_polyakov = 0;
     }
@@ -714,7 +774,7 @@ int main(int argc, char **argv) {
         update_timer.start();
 
         double acc = 0;
-        if (p.poly_range_on) {
+        if (p.polyakov_pot != poly_limit::OFF) {
             acc += trajectory_with_range(U, p, p_now);
         } else {
             do_trajectory(U, p);
@@ -746,7 +806,7 @@ int main(int argc, char **argv) {
                 pl.write_slice(poly, {-1, -1, -1, 0});
             }
 
-            if (p.poly_range_on) {
+            if (p.polyakov_pot != poly_limit::OFF) {
                 hila::out0 << "ACCP " << acc << '\n';
             }
 

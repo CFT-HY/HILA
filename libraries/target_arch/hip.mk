@@ -10,7 +10,7 @@
 CC := hipcc
 # CC = /usr/bin/nvcc
 #LD := $(CC) --std=c++17 --amdgpu-target=gfx1030 -fgpu-rdc --hip-link
-LD := $(CC) -g --std=c++17 --amdgpu-target=gfx1030 -fgpu-rdc --hip-link
+LD := $(CC) -O3 --std=c++17 --amdgpu-target=gfx1030 -fgpu-rdc --hip-link
 
 #-gencode arch=compute_61,code=sm_61 -gencode arch=compute_52,code=sm_52
 

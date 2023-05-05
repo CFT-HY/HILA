@@ -68,6 +68,28 @@ void TopLevelVisitor::handle_function_call_in_loop(Stmt *s, bool is_assignment) 
 }
 
 ////////////////////////////////////////////////////////////////////////////
+/// Check if call is loop constant, then can move it out of loop
+////////////////////////////////////////////////////////////////////////////
+
+bool TopLevelVisitor::loop_constant_function_call(Stmt *s) {
+
+    Expr *E = dyn_cast<Expr>(s);
+    // if (Expr *E = dyn_cast<Expr>(s))
+    //      if (handle_constant_ref(E)) {
+    //         llvm::errs() << "FUNCTION " << get_stmt_str(s) << " is const!\n";
+    //     }
+
+    if (E && is_loop_constant(E)) {
+        // it is, move outside of loop
+        handle_loop_const_expr_ref(E);
+        return true;
+    }
+    return false;
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////
 /// And entry point for constructors inside loops.
 ////////////////////////////////////////////////////////////////////////////
 

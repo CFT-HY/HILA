@@ -16,7 +16,7 @@ class Array {
     T c[n * m];
 
     /// std incantation for field types
-    using base_type = hila::number_type<T>;
+    using base_type = hila::scalar_type<T>;
     using argument_type = T;
 
     /// define default constructors to ensure std::is_trivial
@@ -152,8 +152,22 @@ class Array {
         return *this;
     }
 
-    template <typename S>
-    bool operator==(const Array<n, m, S> &rhs) const {
+    /**
+     * @brief Compare equality of arrays
+     * 
+     * Two arrays are equal iff arrays are of same dimension and all elements compare to equal
+     * Note: Complex == scalar if arithmetic value is equal
+     * 
+     * @tparam S 
+     * @param rhs 
+     * @return true if equal
+     */
+
+    template <typename S,int n1, int m1>
+    bool operator==(const Array<n1, m1, S> &rhs) const {
+        if constexpr (n != n1 || m != m1) 
+            return false;
+
         for (int i = 0; i < n; i++)
             for (int j = 0; j < m; j++) {
                 if (e(i, j) != rhs.e(i, j))
@@ -162,8 +176,21 @@ class Array {
         return true;
     }
 
-    template <typename S>
-    bool operator!=(const Array<n, m, S> &rhs) const {
+    /**
+     * @brief Compare non-equality of two arrays
+     * 
+     * Negation of operator==()
+     * 
+     * @tparam S 
+     * @tparam n1 
+     * @tparam m1 
+     * @param rhs 
+     * @return true 
+     * @return false 
+     */
+
+    template <typename S, int n1, int m1>
+    bool operator!=(const Array<n1, m1, S> &rhs) const {
         return !(*this == rhs);
     }
 
@@ -255,8 +282,8 @@ class Array {
         return res;
     }
     /// return real part
-    inline Array<n, m, hila::number_type<T>> real() const {
-        Array<n, m, hila::number_type<T>> res;
+    inline Array<n, m, hila::scalar_type<T>> real() const {
+        Array<n, m, hila::scalar_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::real(c[i]);
         }
@@ -264,8 +291,8 @@ class Array {
     }
 
     /// return imaginary part
-    inline Array<n, m, hila::number_type<T>> imag() const {
-        Array<n, m, hila::number_type<T>> res;
+    inline Array<n, m, hila::scalar_type<T>> imag() const {
+        Array<n, m, hila::scalar_type<T>> res;
         for (int i = 0; i < m * n; i++) {
             res.c[i] = ::imag(c[i]);
         }
@@ -273,8 +300,8 @@ class Array {
     }
 
     /// calculate square norm - sum of squared elements
-    hila::number_type<T> squarenorm() const {
-        hila::number_type<T> result = 0;
+    hila::scalar_type<T> squarenorm() const {
+        hila::scalar_type<T> result = 0;
         for (int i = 0; i < n * m; i++) {
             result += ::squarenorm(c[i]);
         }
@@ -282,7 +309,7 @@ class Array {
     }
 
     /// Generate random elements
-    const Array<n, m, T> &random() out_only {
+    Array<n, m, T> &random() out_only {
         for (int i = 0; i < n * m; i++) {
             hila::random(c[i]);
         }
@@ -290,7 +317,7 @@ class Array {
     }
 
     /// Generate gaussian random elements
-    const Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
+    Array<n, m, T> &gaussian_random(double width = 1.0) out_only {
         for (int i = 0; i < n * m; i++) {
             hila::gaussian_random(c[i], width);
         }
@@ -310,12 +337,12 @@ inline Array<n, m, T> conj(const Array<n, m, T> &arg) {
 }
 /// real part
 template <const int n, const int m, typename T>
-inline Array<n, m, hila::number_type<T>> real(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::scalar_type<T>> real(const Array<n, m, T> &arg) {
     return arg.real();
 }
 /// imaginary part
 template <const int n, const int m, typename T>
-inline Array<n, m, hila::number_type<T>> imag(const Array<n, m, T> &arg) {
+inline Array<n, m, hila::scalar_type<T>> imag(const Array<n, m, T> &arg) {
     return arg.imag();
 }
 
@@ -436,7 +463,7 @@ std::string prettyprint(const Array<n, m, T> &A, int prec = 8) {
 
 /// Norm squared function
 template <int n, int m, typename T>
-inline hila::number_type<T> squarenorm(const Array<n, m, T> &rhs) {
+inline hila::scalar_type<T> squarenorm(const Array<n, m, T> &rhs) {
     return rhs.squarenorm();
 }
 
