@@ -16,6 +16,9 @@ constexpr bool device_rng_on = true;
 
 void seed_random(uint64_t seed, bool device_rng = true);
 
+/// @brief Check if RNG is seeded already
+bool is_rng_seeded();
+
 ///
 /// Initialize host (CPU) random number generator separately, done implicitly by seed_random()
 /// Parameter random number seed.  On MPI shuffles different seed values for all MPI ranks.
