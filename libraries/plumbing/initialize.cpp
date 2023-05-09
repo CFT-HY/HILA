@@ -138,6 +138,7 @@ class cmdlineargs {
                 << "  -o <name>       : output filename (default: stdout)\n"
                 << "  -i <name>       : input filename (overrides the 1st hila::input() name)\n"
                 << "                    use '-i -' for standard input\n"
+                << "  -device <number>: in GPU runs using only 1 GPU, choose this GPU number (default 0)\n"
                 << "  -check          : check input & layout with <nodes>-nodes & exit\n"
                 << "                    only with 1 real MPI node (without mpirun)\n"
                 << "  -n nodes        : number of nodes used in layout check, only relevant with -check\n"
@@ -226,7 +227,11 @@ void hila::initialize(int argc, char **argv) {
 
 #if defined(CUDA) || defined(HIP)
     if (!hila::check_input) {
-        initialize_gpu(lattice.mynode.rank);
+        long device = commandline.get_int("-device");
+        if (device == LONG_MAX)
+            device = 0;
+
+        initialize_gpu(lattice.mynode.rank, device);
     }
 #endif
 
