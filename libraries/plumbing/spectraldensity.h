@@ -9,11 +9,14 @@ extern hila::timer binning_timer;
 /// sd_k_bin_parameters holds the parameters to define binning.
 
 struct sd_k_bin_parameters {
-    double max;   // min and max of k (default: 0 and pi)
-    double power; // binned function k^p, default p=1  : note, min and max are "powered"
-                  // too
-    int bins;     // how many bins in output (default=max of lattice.size(d)/2)
-    int exact;    // do this many low k-value "bins" exactly
+    double max;      // min and max of k (default: 0 and pi)
+    double power;    // binned function k^p, default p=1  : note, min and max are "powered"
+                     // too
+    double binwidth; 
+    int bins;        // how many bins in output (default=max of lattice.size(d)/2)
+    
+    int exact;       // do this many low k-value "bins" exactly NOT IMPLEMENTED YET
+    bool bins_set;   // bool to keep track if number of bins have been set
 };
 
 
@@ -38,19 +41,23 @@ namespace hila {
 //  k_i = 2*pi*x_i/L_i, where L_i = lattice.size(i) and x_i is the L_i/2 modded
 /// coordinate.
 /// Bin is determined by formula
-///   b = (int) ( pow(k/k_max)^p * n_bins )
+///   b = (int) ( (k/k_max)^p * n_bins ), where p is the power in binning - usually 1
 ///
 ///   hila::k_binning kb;
 ///   kb.bins(80).k_max(M_PI);
 ///   auto sd = kb.spectraldensity(f);  // get the spectral density of field f
 ///
 /// methods:  (use as kb.xxx)
-///   hila::k_binning & bins(int n)       set number of bins
+///   hila::k_binning & bins(int n)       set number of bins (k_max const.)
 ///   int bins()                          get number of bins
-///   hila::k_binning & k_max(double m)   set max value of k in binning
+///   hila::k_binning & k_max(double m)   set max value of k in binning 
+///                  if bins have been modified it is kept constant, otherwise
+///                  number of bins is changed so that binwidth is const.
 ///   double k_max()                      get max value of k
 ///   hila::k_binning & power(double p)   set the "power" in binning
 ///   double power()                      get power
+///   hila::k_binning & binwidth(double w)  set binwidth (k_max const, so bins changes)
+///   double binwidth()                   get binwidth
 ///
 ///   std::vector<T>      bin_k_field(const Field<T> &f)       bin the k-space field f
 ///   std::vector<double> bin_k_field_squarenorm(const Field<T & f)
@@ -74,10 +81,12 @@ class k_binning {
         par.power = 1;
         par.exact = 0;
         par.bins = 1;
+        par.bins_set = false;
         foralldir(d) {
             if (lattice.size(d) > 2 * par.bins)
                 par.bins = lattice.size(d) / 2;
         }
+        par.binwidth = par.max / par.bins;
     }
 
     k_binning(int b) {
@@ -85,16 +94,20 @@ class k_binning {
         par.power = 1;
         par.exact = 0;
         par.bins = b;
+        par.bins_set = true;
+        par.binwidth = par.max / par.bins;
     }
 
     /// Set number of bins in histogram
     k_binning &bins(int n) {
         assert(n > 0);
         par.bins = n;
+        par.bins_set = true;
+        par.binwidth = par.max / par.bins;
         return *this;
     }
 
-    int bins() {
+    int bins(void) {
         return par.bins;
     }
 
@@ -102,11 +115,28 @@ class k_binning {
     k_binning &k_max(double km) {
         assert(km > 0);
         par.max = km;
+        if (!par.bins_set) {
+            par.bins = ceil(par.max / par.binwidth);
+            par.max = par.binwidth * par.bins;
+        }
         return *this;
     }
 
-    double k_max() {
+    double k_max(void) {
         return par.max;
+    }
+
+    k_binning &binwidth(double w) {
+        assert(w > 0);
+        par.binwidth = w;
+        par.bins = ceil(par.max / w);
+        par.max = par.binwidth * par.bins;
+        par.bins_set = false;
+        return *this;
+    }
+
+    double binwidth() {
+        return par.binwidth;
     }
 
     /// Bin quantity k^p
@@ -189,7 +219,7 @@ class k_binning {
         }
 
         binning_timer.stop();
-        
+
         return s.vector();
     }
 
