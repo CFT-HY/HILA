@@ -1,51 +1,7 @@
-User guide
+Snippets of important information.
 =========
 
-The Hila framework consists of
-
-1. the hilapp and
-2. a lattice simulation library.
-
-Transformer contains a C++ preprocessing tool and framework for programming lattice field theory simulations: the main method for getting measurements from non-perturbative quantum field theories.  
-
-Lattice field theory simulations involve up to 4 dimensional grids whose points are updated continuously according to some Monte Carlo update algorithm. The update at each grid point depends on the data stored at neighboring lattice points, and the ideal
-update order depends on the parity of the lattice points. Efficient parallel implementations using MPI and GPU's can be quite complicated to implement, modify and debug. Some kind of simplification was clearly needed.
-
-Transformer aims to make it easier for researchers to implement a broad class of these simulations by abstracting a lot of the technicalities involved, and by bringing the syntax from CUDA kernels and MPI calls to the essentials. The approach given
-here involves new datatypes and a preprocessing tool that converts c++ code with the new simplified syntax for loops and element accessors into working c++ code and gpu kernels.
-
-Essentially, HilaPP extends C++ with statements of the following type:
-~~~ C++
-Field<double> f;
-f[ALL] = 1;
-f[EVEN] = f[X] + f[X+TUP];
-~~~
-The two latter statements are expanded into loops over all lattice sites and over EVEN sites,
-respectively. The ordering of sites in the loop is undefined.
-
-
-# HilaPP
-
-## Generating this documentation
-
-Build the documentation (with the git hash as the version number) using
-~~~ bash
-PROJECT_NUMBER=$(git rev-parse --short HEAD) doxygen
-~~~
-
-
-
-### Compiling on Puhti
-
-There is a separate makefile for compiling hilapp on Puhti.
-To use it, run
-~~~
-module load gcc
-make -f Makefile_puhti
-~~~
-
-This will link against the llvm installation in the hila development project folder.
-
+Old guide. Saving for if there is some useful guidance here or important informtion to add to the new guide.
 
 ## Syntax - What works
 
@@ -243,32 +199,6 @@ In is defined in libraries/dirac/conjugate_gradient.h
 
 Note that the [Hasenbusch preconditioned operator](@ref Hasenbusch_operator) in
 libraries/dirac/conjugate_gradient.h is a utility class used in the Hasenbusch action.
-
-## Backends
-
-Backends are primarily implemented in three places.
-First, in HilaPP, loop generation and loop function handling code is in the files
-`hilapp/src/codegen_*.cpp`.
-The code generation functions are called in
-[backend_handle_loop_function](@ref TopLevelVisitor::backend_handle_loop_function)
-and [backend_generate_code](@ref TopLevelVisitor::backend_generate_code).
-
-In order to define a new backend, you should edit the two functions above, implement the code
-generation function and add any new files to `hilapp/Makefile`.
-
-Second, in the library in the folders `libraries/plumbing/backend_*`. These implement
-field storage in (usually in `field_storage_backend.h`), any other necessary top level
-definitions in `defs.h` and possible an extension of the lattice class in `lattice.h`.
-These are included in `libraries/plumbing/field_storage.h`, `libraries/plumbing/defs.h`
-and `libraries/plumbing/lattice.h` respectively.
-
-A new backend should implement at least the [field storage](@ref TopLevelVisitor::field_storage)
-class. The new file needs to be included in `libraries/plumbing/field_storage.h`.
-
-Finally, `libraries/platforms` has a collection of makefiles, chosen by the `ARCH`
-flag in the standard Makefile. These include combinations of a specific system and 
-a backend. New backend requires a new makefile that defines the necessary flags
-to produce and compile the correct code.
 
 
 # Testing

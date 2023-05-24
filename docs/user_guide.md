@@ -1,16 +1,27 @@
-Overview
+User guide
 ==========
 
-This section is an overview on building hila applications and the functionality it offers. Hila applications require two things, the makefile and the source code. 
-2
+## Introduction
 
-## Using the Makefile system
+This section is a user guide on building hila applications and a comprehensive description of the functionality it offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen. To generate the user guide and technical documentation locally (TODO: should be running on a web interface) one can run
+
+    doxygen /docs/config 
+
+To open the documentation locally with any browser
+
+    firefox /docs/html/index.html
+
+## HILA application
+
+Like most c++ applications, HILA applications require two thing, a makefile and application source code. Due to the functionality that HILA offers, the makefile and source code follow a well defined structure. Generally HILA applications are at their core c++ and the user is free to implement any methods and libraries they see fit. But to implement the functionality that the pre processor offers, a well defined skeleton is introduced. 
+
+### Makefile system
 
 As we stated in the previous section, each of the example applications has a makefile for compiling the application with a given target backend. The options 
 
 An application makefile should define any target files and include the main makefile.
 Here is an example with comments:
-~~~
+~~~Make
 # Give the location of the top level distribution directory wrt. this.
 # Can be absolute or relative
 TOP_DIR := ../..
@@ -30,7 +41,7 @@ build/application: Makefile build/application.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/application.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 ~~~
 
-## A simple hila application
+### A simple hila application
 
 ~~~ C++
 #include "hila.h"
@@ -72,7 +83,9 @@ int main(int argc, char * argv[]) {
 ~~~
 You can compile this at `hila/applications/hila_example/` with `make simple` and run it with `build/simple`
 
-## Datatypes
+## Functionality
+
+### Datatypes
 
 - NDIM: number of dimensions, values 2,3,4  (TODO: NDIM=1?).  Typically set in application Makefile
 
@@ -109,7 +122,7 @@ You can compile this at `hila/applications/hila_example/` with `make simple` and
      
 ~~~            
 
-## Field access and traversal
+### Field access and traversal
 
 The principal traversal of the lattice is with *site loops* `onsites(Parity)`, and a
 special location identifier `X` (effectively a new keyword).  
@@ -202,7 +215,7 @@ Access field at a single point: `f[CoordinateVector]`.  This can be used only ou
 ~~~
 
 
-## Input library
+### Input library
 
 Class hila::input can be used to read parameters and other data for simulation programs.
 It matches key-value pairs from input files.  As an example, if the file `parameters.dat` contains
@@ -282,7 +295,7 @@ int main(int argc, char * argv[]) {
 - Method `input::get_value()` has more options for synchronization and error returns.  See 
   documentation in `input.h`
 
-## Check input and layout
+### Check input and layout
 
 The input files and the lattice layout can be checked with the 
 commands (after the application program has been built)
@@ -296,39 +309,3 @@ number-of-nodes argument is given, program reports how the node layout is done.
 
 Example: if you built the `hila_example` program above, in directory `hila/applications/hila_example`
 the command `build/hila_example check=32` checks the input file and the layout to 32 nodes.
-
-
-
-
-
-# Stale Instructions
-
-## Generating documentation
-
-Build the documentation (with the git hash as the version number) using
-~~~ bash
-PROJECT_NUMBER=$(git rev-parse --short HEAD) doxygen
-~~~
-
-## Compiling the preprocessing tool and using it on c++ code
-
-In short, the framework can be used in these steps: 
-
-1. Write c++ code using the syntax and datatypes laid out below
-2. Use the hilapp excecutable to convert this code into .cpt code 
-3. Compile the new .cpt code into the final excecutable
-
-![Workflow illustration](/docs/workflowV1.png)
- 
-
-You can then use it to compile an extended C++ file into standard C++ using
-~~~ bash
-bin/hilapp path/to/program.cpp
-~~~
-This will create a `cpt` file written in standard C++.
-
-The `cpt` can be compiled with any c++ compiler, but must be linked against the headers and c++ files in the plumbing directory.
-
-Check the example programs in the programs folder. You can use almost any standard C++ code, by there are a couple of new reserved names: the variable `X` and the function `onsites()`. In addition the framework defines a global `lattice` variable, which you should not overwrite.
-
-In order to use the additional features for field type variables, you should inlude `plumbing/field.h` in you program. You can also include one or more of the files in the `datatypes` folder, which contains predefined datatypes that can be used to construct a field.
