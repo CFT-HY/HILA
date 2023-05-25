@@ -1,4 +1,4 @@
-# HILAPP singularity container #
+# Singularity container for HILA pre-processor
 
 Definition file for HILA pre-processor [singularity](https://sylabs.io/singularity/) container. This container is meant to be a portable solution for compiling the first half of HILA code which is the parsing for specific architectures.
 
