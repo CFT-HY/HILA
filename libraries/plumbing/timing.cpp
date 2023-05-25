@@ -220,4 +220,8 @@ void timestamp(const char *msg) {
     }
 }
 
+void timestamp(const std::string &msg) {
+    hila::timestamp(msg.c_str());
+}
+
 } // namespace hila
