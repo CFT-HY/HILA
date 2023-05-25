@@ -1,45 +1,69 @@
 User guide
 ==========
 
-## Introduction
+This section is a user guide on building hila applications and a comprehensive description of the functionality it offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen.
 
-This section is a user guide on building hila applications and a comprehensive description of the functionality it offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen. To generate the user guide and technical documentation locally (TODO: should be running on a web interface) one can run
+## HILA Application
 
-    doxygen /docs/config 
-
-To open the documentation locally with any browser
-
-    firefox /docs/html/index.html
-
-## HILA application
-
-Like most c++ applications, HILA applications require two thing, a makefile and application source code. Due to the functionality that HILA offers, the makefile and source code follow a well defined structure. Generally HILA applications are at their core c++ and the user is free to implement any methods and libraries they see fit. But to implement the functionality that the pre processor offers, a well defined skeleton is introduced. 
+Like most c++ applications, HILA applications require two thing, a makefile and application source code. Due to the functionality that HILA offers, the makefile and source code follow a well defined structure. Generally HILA applications are at their core c++ and the user is free to implement any methods and libraries they see fit. But to implement the functionality that the pre processor offers, a well defined skeleton is introduced.
 
 ### Makefile system
 
-As we stated in the previous section, each of the example applications has a makefile for compiling the application with a given target backend. The options 
+Each application requires a makefile to link the necessary HILA libraries and to allow specification of the target backend. An application makefile should define any target files and include the main makefile defined for the HILA libraries. The main makefile handles the HILA library linking and inclusion of the target backend.
 
-An application makefile should define any target files and include the main makefile.
 Here is an example with comments:
 ~~~Make
+#NECESSARY
 # Give the location of the top level distribution directory wrt. this.
 # Can be absolute or relative
+# Allows the application folder to be defined anywhere in the machine
 TOP_DIR := ../..
+
+# Set default goal
+.DEFAULT_GOAL := applications
+
+#Set default architecture 
+ifndef ARCH
+ARCH := vanilla
+endif
 
 # Add an application specific header to the dependencies
 APP_HEADERS := application.h
 
-# Read in the main makefile contents, incl. platforms
+# Read in the main makefile contents to link and build HILA libraries
 include $(TOP_DIR)/libraries/main.mk
 
 # With multiple targets we want to use "make target", not "make build/target".
-# This is needed to carry the dependencies to build-subdir
+# This is needed to build the dependencies in the build subdirectory
 application: build/application ; @:
 
 # Now the linking step for each target executable
 build/application: Makefile build/application.o $(HILA_OBJECTS) $(HEADERS) 
 	$(LD) -o $@ build/application.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 ~~~
+
+TODO: **Should the above makefile illustrate which aspects are necessary and which are not**
+
+The target backends are defined in the folder HILA/libraries/target_arch. There are two types of target backends. General ones defined for specific paralellization technologies:
+
+| ARCH=   | Description                                                                                                            |
+|---------|------------------------------------------------------------------------------------------------------------------------|
+| vanilla | default CPU implementation                                                                                             |
+| AVX2    | AVX vectorization optimized program using [*vectorclass*](https://github.com/vectorclass)                              |
+| openmp  | OpenMP parallelized program                                                                                            |
+| cuda    | Parallel [CUDA](https://developer.nvidia.com/cuda-toolkit) program                                                     |
+| hip     | Parallel [HIP](https://docs.amd.com/bundle/HIP-Programming-Guide-v5.3/page/Introduction_to_HIP_Programming_Guide.html) |
+
+And ones which are defined for specific HPC platforms:
+
+| ARCH       | Description                                               |
+|------------|-----------------------------------------------------------|
+| lumi       | CPU-MPI implementation for LUMI supercomputer             |
+| lumi-hip   | GPU-MPI implementation for LUMI supercomputer using HIP   |
+| mahti      | CPU-MPI implementation for MAHTI supercomputer            |
+| mahti-cuda | GPU-MPI implementation for MAHTI supercomputer using CUDA |
+
+The latter definitions are due to the module systems and non-standard paths defined by supercomputing platforms.
 
 ### A simple hila application
 
@@ -83,7 +107,31 @@ int main(int argc, char * argv[]) {
 ~~~
 You can compile this at `hila/applications/hila_example/` with `make simple` and run it with `build/simple`
 
-## Functionality
+**SHOULD THIS PART GO HERE**
+### Compiling the preprocessing tool and using it on c++ code
+
+In short, the framework can be used in these steps: 
+
+1. Write c++ code using the syntax and datatypes laid out below
+2. Use the hilapp excecutable to convert this code into .cpt code 
+3. Compile the new .cpt code into the final excecutable
+
+![Workflow illustration](/docs/workflowV1.png)
+ 
+
+You can then use it to compile an extended C++ file into standard C++ using
+~~~ bash
+bin/hilapp path/to/program.cpp
+~~~
+This will create a `cpt` file written in standard C++.
+
+The `cpt` can be compiled with any c++ compiler, but must be linked against the headers and c++ files in the plumbing directory.
+
+Check the example programs in the programs folder. You can use almost any standard C++ code, by there are a couple of new reserved names: the variable `X` and the function `onsites()`. In addition the framework defines a global `lattice` variable, which you should not overwrite.
+
+In order to use the additional features for field type variables, you should inlude `plumbing/field.h` in you program. You can also include one or more of the files in the `datatypes` folder, which contains predefined datatypes that can be used to construct a field.
+
+## HILA Functionality
 
 ### Datatypes
 

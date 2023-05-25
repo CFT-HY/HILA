@@ -1,4 +1,4 @@
-Description  {#mainpage}
+Description and Installation  {#mainpage}
 ========= 
 
 Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
@@ -168,6 +168,12 @@ Typically these need to be customized for supercomputing platforms due to stack 
 
 Now that HILA has been built successfully, navigate to the user guide on how to build hila applications: [guide](./docs/user_guide.md)
 
+To generate the user guide and technical documentation locally (TODO: should be running on a web interface) one can run
+
+    doxygen /docs/config 
+
+To open the documentation locally with any browser
+
+    firefox /docs/html/index.html
+
 TODO: add link to github pages or hosted guide somewhere
-
-
