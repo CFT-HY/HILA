@@ -48,24 +48,26 @@ The target backends are defined in the folder HILA/libraries/target_arch. There 
 
 | ARCH=   | Description                                                                                                            |
 |---------|------------------------------------------------------------------------------------------------------------------------|
-| vanilla | default CPU implementation                                                                                             |
-| AVX2    | AVX vectorization optimized program using [*vectorclass*](https://github.com/vectorclass)                              |
-| openmp  | OpenMP parallelized program                                                                                            |
-| cuda    | Parallel [CUDA](https://developer.nvidia.com/cuda-toolkit) program                                                     |
-| hip     | Parallel [HIP](https://docs.amd.com/bundle/HIP-Programming-Guide-v5.3/page/Introduction_to_HIP_Programming_Guide.html) |
+| `vanilla` | default CPU implementation                                                                                             |
+| `AVX2   ` | AVX vectorization optimized program using [*vectorclass*](https://github.com/vectorclass)                              |
+| `openmp ` | OpenMP parallelized program                                                                                            |
+| `cuda   ` | Parallel [CUDA](https://developer.nvidia.com/cuda-toolkit) program                                                     |
+| `hip    ` | Parallel [HIP](https://docs.amd.com/bundle/HIP-Programming-Guide-v5.3/page/Introduction_to_HIP_Programming_Guide.html) |
 
 And ones which are defined for specific HPC platforms:
 
 | ARCH       | Description                                               |
 |------------|-----------------------------------------------------------|
-| lumi       | CPU-MPI implementation for LUMI supercomputer             |
-| lumi-hip   | GPU-MPI implementation for LUMI supercomputer using HIP   |
-| mahti      | CPU-MPI implementation for MAHTI supercomputer            |
-| mahti-cuda | GPU-MPI implementation for MAHTI supercomputer using CUDA |
+| `lumi      ` | CPU-MPI implementation for LUMI supercomputer             |
+| `lumi-hip  ` | GPU-MPI implementation for LUMI supercomputer using HIP   |
+| `mahti     ` | CPU-MPI implementation for MAHTI supercomputer            |
+| `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
 
 The latter definitions are due to the module systems and non-standard paths defined by supercomputing platforms.
 
-### A simple hila application
+### Simple hila application
+
+A simple HILA application which computes a random gaussian field (f), it's derivative (g) and the average of the derivative field is given by:
 
 ~~~ C++
 #include "hila.h"
@@ -87,28 +89,32 @@ int main(int argc, char * argv[]) {
     // make f Gaussian random distributed
     onsites(ALL) f[X].gaussian();
 
-    // calculate sum of 2nd derivatives of f to g
+    // calculate sum of 2nd derivatives of f in to g
     foralldir(d) {
         g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
     }
 
     // get average of g
-    double ave = 0;
+    double average = 0;
     onsites(ALL) {
-        ave += g[X];
+        average += g[X];
     }
 
-    hila::out0 << "Average of g is " << ave/lattice.volume() << '\n';
+    average = average/lattice.volume()
+    hila::out0 << "Average of g is " << average << '\n';
 
     // make a clean exit
     hila::finishrun();    
 }
 
 ~~~
-You can compile this at `hila/applications/hila_example/` with `make simple` and run it with `build/simple`
+
+One can compile this code at `HILA/applications/hila_example/` with `make simple` and run it with `./build/simple`.
+
+TODO: **CONTINUE FROM HERE**
 
 **SHOULD THIS PART GO HERE**
-### Compiling the preprocessing tool and using it on c++ code
+### HILA pre-processor tool
 
 In short, the framework can be used in these steps: 
 
