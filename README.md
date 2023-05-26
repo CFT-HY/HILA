@@ -19,6 +19,11 @@ Behind the scenes hila takes care of MPI layout and communications.  It lays out
 lattice fields differently for different computing platforms: 'array of structures' (standard),
 'array of structures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).
 
+## Table of Contents
+1. [Dependencies](#dependencies)
+2. [Installation](#installation)
+3. [User Guide](#user-guide)
+
 ## Dependencies
 
 ### Hilapp
@@ -29,7 +34,15 @@ lattice fields differently for different computing platforms: 'array of structur
 
 #### Installing dependencies for HILA preprocessor:
 
-See quickstart guide, since may not be necessary.
+If one opts to use a docker or singularity container, skip  directly to the [installation](#installation) section.
+
+For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 22.04:
+
+~~~ bash
+export LLVM_VERSION=15
+apt-get -y install clang-$LLVM_VERSION \
+                   libclang-$LLVM_VERSION-dev
+~~~
 
 ### HILA applications
 
@@ -43,6 +56,8 @@ See quickstart guide, since may not be necessary.
 | HIP          | x                 | No        |
 
 #### Installing dependencies for HILA applications:
+
+If one opts to use docker, skip directly to the [installation](#installation) section.
 
 Installing all non GPU dependencies on ubuntu:
 ```bash
@@ -62,42 +77,53 @@ See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/
 
 ## Installation
 
-### Containers
-
-HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.
-
-**Docker**
-
-The docker container is meant to develop and produce HILA applications, libraries and hilapp with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
-
-For instructions on using the docker container have a look at the [README.md](docker/README.md) in the docker folder
-
-**Singularity**
-
-The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of hilapp. This approach is mainly meant to be used for pre processing applications on an HPC platform.
-
-For instructions on installing singularity and building containers have a look at the [README.md](singularity/README.md) in the singularity folder
-
-### From source
-
 Begin by cloning HILA repository:
 
 ``` bash
 git clone https://github.com/CFT-HY/HILA
 ```
 
-The HILA working method is split into two parts. The first part is getting access to the hilapp preprocessor. And the second part is building simulations for targeted architectures and technologies using the hilapp preprocessor.
+The installation process is split into two parts. Building the HILA preprocessor and compiling HILA applications. Both can be installed from source, and both steps have their respective containerization options available. The variety in options is to address differing issues which arise in platform dependencies.
 
-#### 1. HILA preprocessor
-The preprocessor can be accessed either by compiling from source using the clang libtooling toolbox or by using the offered singularity container mentioned above.
+When it comes to installing HILA applications there are many avenues one can take depending on their platform. The available platforms and offered methods are listed below, which link to the necessary section in the installation guide.
 
-For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 22.04:
+#### LINUX
 
-~~~ bash
-export LLVM_VERSION=15
-apt-get -y install clang-$LLVM_VERSION \
-                   libclang-$LLVM_VERSION-dev
-~~~
+HILA has originally been developed on linux, hence all of the available options can be used. The HILA preprocessor can be built from [source](#hila-preprocessor) or with the use of a [singualrity](#singularity) container. Additionally one can opt to use the [docker](#docker) container which installs the hila preprocessor directly.
+
+#### MAC
+
+On mac the installation of the HILA preprocessor dependencies and HILA application dependencies can be tedious, and in some cases impossible. Availability of clang libtoolbox is open ended. For this reason the best option is to use the available [docker](#docker) container.
+
+#### WINDOWS
+
+On windows the installation of the HILA preprocessor dependencies and HILA application dependencies are untested. For this reason the best option is to use the available [docker](#docker) container. 
+
+#### HPC
+
+On supercomputing platforms the HILA application dependencies are most likely available. The only issue is the availability of the clang libtoolbox which is used in building the HILA preprocessor. Due to the availability of singularity on supercomputing platfroms the best solution is to opt to use the [singularity](#singularity) container. 
+
+After installing the hila preprocessor with one of above options one can move on to the [building HILA applications](#building-hila-applications) section.
+
+### Containers
+
+HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.
+
+#### Docker
+
+The docker container is meant to develop and produce HILA applications, libraries and hilapp with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
+
+For instructions on using the docker container have a look at the [README.md](docker/README.md) in the docker folder
+
+#### Singularity
+
+The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of hilapp. This approach is mainly meant to be used for pre processing applications on an HPC platform.
+
+For instructions on installing singularity and building containers have a look at the [README.md](singularity/README.md) in the singularity folder
+
+### HILA preprocessor
+
+Before building the preprocessor one must first install the dependencies. See the [dependencies](#dependencies)
 
 Compile *hilapp*:
 
@@ -120,7 +146,7 @@ Test that hilapp works
     ./bin/hilapp --help
 
 
-#### 2. Building HILA applications
+### Building HILA applications
 
 The second part is building HILA applications. Here we will go over a test example. All applications should lie in the applications folder.
 
@@ -141,39 +167,48 @@ Computing platform is chosen by
 
     make ARCH=<platform>
 
-- `[ ARCH=vanilla ]` (often default) builds a standard MPI-parallelized program
+**List of computing platforms:**
 
-- `ARCH=AVX2` builds AVX-optimized program using [*vectorclass*](https://github.com/vectorclass) 
-
-- `ARCH=openmp` builds OpenMP parallelized program
-
-- `ARCH=cuda` builds parallel CUDA-program 
+| ARCH=   | Description                                                                                                            |
+|---------|------------------------------------------------------------------------------------------------------------------------|
+| `vanilla` | default CPU implementation                                                                                             |
+| `AVX2   ` | AVX vectorization optimized program using [*vectorclass*](https://github.com/vectorclass)                              |
+| `openmp ` | OpenMP parallelized program                                                                                            |
+| `cuda   ` | Parallel [CUDA](https://developer.nvidia.com/cuda-toolkit) program                                                     |
+| `hip    ` | Parallel [HIP](https://docs.amd.com/bundle/HIP-Programming-Guide-v5.3/page/Introduction_to_HIP_Programming_Guide.html) |
 
 For cuda compilation one needs to define their CUDA version and architercure either as environment variables or during the make process:
 
 ```bash
 export CUDA_VERSION=11.6
 export CUDA_ARCH=61
+make ARCH=cuda
+or
+make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=61
 ```
+*NOTE: Default cuda version is 11.6 and compute architecture is sm_61*
 
-    make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=61
+**HPC platforms**:
 
-- *NOTE: Default cuda version is 11.6 and compute architecture is sm_61*
-
-**`ARCH=hip` builds parallel HIP-program**
-
-Typically these need to be customized for supercomputing platforms due to stack limitations of said platforms. ~~See directory hila/libraries/target_arch~~ -> TODO: should have a list of all system specific target architectures
+| ARCH       | Description                                               |
+|------------|-----------------------------------------------------------|
+| `lumi      ` | CPU-MPI implementation for LUMI supercomputer             |
+| `lumi-hip  ` | GPU-MPI implementation for LUMI supercomputer using HIP   |
+| `mahti     ` | CPU-MPI implementation for MAHTI supercomputer            |
+| `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
 
 ## User guide
 
-Now that HILA has been built successfully, navigate to the user guide on how to build hila applications: [guide](./docs/user_guide.md)
+Now that HILA has been built successfully, the next step is to build your first HILA application: [hila application guide](./docs/guide/hila_applications.md)
 
-To generate the user guide and technical documentation locally (TODO: should be running on a web interface) one can run
+After building your first HILA application one can move on to the comprehensive guide, which describes everything that HILA has to offer: [comprehensive guide](./docs/guide/hila_functionality.md)
+
+Both of these resources can be viewed on the web guide hosted on: TODO: add link to github pages or hosted guide somewhere
+
+To generate the user guide and technical documentation locally one can run:
 
     doxygen /docs/config 
 
-To open the documentation locally with any browser
+To open the documentation locally with any browser:
 
     firefox /docs/html/index.html
-
-TODO: add link to github pages or hosted guide somewhere

@@ -1,145 +1,9 @@
-User guide
-==========
+HILA Functionality
+====================
 
-This section is a user guide on building hila applications and a comprehensive description of the functionality it offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen.
+This section is comprehensive description of the functionality it offers. For technical documentation each class, method, function etc. has been (work in progress) documented with standard docstring documentation which has been generated with doxygen.
 
-## HILA Application
-
-Like most c++ applications, HILA applications require two thing, a makefile and application source code. Due to the functionality that HILA offers, the makefile and source code follow a well defined structure. Generally HILA applications are at their core c++ and the user is free to implement any methods and libraries they see fit. But to implement the functionality that the pre processor offers, a well defined skeleton is introduced.
-
-### Makefile system
-
-Each application requires a makefile to link the necessary HILA libraries and to allow specification of the target backend. An application makefile should define any target files and include the main makefile defined for the HILA libraries. The main makefile handles the HILA library linking and inclusion of the target backend.
-
-Here is an example with comments:
-~~~Make
-#NECESSARY
-# Give the location of the top level distribution directory wrt. this.
-# Can be absolute or relative
-# Allows the application folder to be defined anywhere in the machine
-TOP_DIR := ../..
-
-# Set default goal
-.DEFAULT_GOAL := applications
-
-#Set default architecture 
-ifndef ARCH
-ARCH := vanilla
-endif
-
-# Add an application specific header to the dependencies
-APP_HEADERS := application.h
-
-# Read in the main makefile contents to link and build HILA libraries
-include $(TOP_DIR)/libraries/main.mk
-
-# With multiple targets we want to use "make target", not "make build/target".
-# This is needed to build the dependencies in the build subdirectory
-application: build/application ; @:
-
-# Now the linking step for each target executable
-build/application: Makefile build/application.o $(HILA_OBJECTS) $(HEADERS) 
-	$(LD) -o $@ build/application.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
-~~~
-
-TODO: **Should the above makefile illustrate which aspects are necessary and which are not**
-
-The target backends are defined in the folder HILA/libraries/target_arch. There are two types of target backends. General ones defined for specific paralellization technologies:
-
-| ARCH=   | Description                                                                                                            |
-|---------|------------------------------------------------------------------------------------------------------------------------|
-| `vanilla` | default CPU implementation                                                                                             |
-| `AVX2   ` | AVX vectorization optimized program using [*vectorclass*](https://github.com/vectorclass)                              |
-| `openmp ` | OpenMP parallelized program                                                                                            |
-| `cuda   ` | Parallel [CUDA](https://developer.nvidia.com/cuda-toolkit) program                                                     |
-| `hip    ` | Parallel [HIP](https://docs.amd.com/bundle/HIP-Programming-Guide-v5.3/page/Introduction_to_HIP_Programming_Guide.html) |
-
-And ones which are defined for specific HPC platforms:
-
-| ARCH       | Description                                               |
-|------------|-----------------------------------------------------------|
-| `lumi      ` | CPU-MPI implementation for LUMI supercomputer             |
-| `lumi-hip  ` | GPU-MPI implementation for LUMI supercomputer using HIP   |
-| `mahti     ` | CPU-MPI implementation for MAHTI supercomputer            |
-| `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
-
-The latter definitions are due to the module systems and non-standard paths defined by supercomputing platforms.
-
-### Simple hila application
-
-A simple HILA application which computes a random gaussian field (f), it's derivative (g) and the average of the derivative field is given by:
-
-~~~ C++
-#include "hila.h"
-static_assert(NDIM == 3, "NDIM must be 3");
-
-int main(int argc, char * argv[]) {
-
-    hila::initialize(argc,argv);
-
-    // set up 32^3 lattice
-    lattice.setup({32,32,32});
-
-    // Random numbers are used here
-    hila::seed_random(32345);
-
-    Field<Complex<double>> f;
-    Field<double> g = 0;
-
-    // make f Gaussian random distributed
-    onsites(ALL) f[X].gaussian();
-
-    // calculate sum of 2nd derivatives of f in to g
-    foralldir(d) {
-        g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
-    }
-
-    // get average of g
-    double average = 0;
-    onsites(ALL) {
-        average += g[X];
-    }
-
-    average = average/lattice.volume()
-    hila::out0 << "Average of g is " << average << '\n';
-
-    // make a clean exit
-    hila::finishrun();    
-}
-
-~~~
-
-One can compile this code at `HILA/applications/hila_example/` with `make simple` and run it with `./build/simple`.
-
-TODO: **CONTINUE FROM HERE**
-
-**SHOULD THIS PART GO HERE**
-### HILA pre-processor tool
-
-In short, the framework can be used in these steps: 
-
-1. Write c++ code using the syntax and datatypes laid out below
-2. Use the hilapp excecutable to convert this code into .cpt code 
-3. Compile the new .cpt code into the final excecutable
-
-![Workflow illustration](/docs/workflowV1.png)
- 
-
-You can then use it to compile an extended C++ file into standard C++ using
-~~~ bash
-bin/hilapp path/to/program.cpp
-~~~
-This will create a `cpt` file written in standard C++.
-
-The `cpt` can be compiled with any c++ compiler, but must be linked against the headers and c++ files in the plumbing directory.
-
-Check the example programs in the programs folder. You can use almost any standard C++ code, by there are a couple of new reserved names: the variable `X` and the function `onsites()`. In addition the framework defines a global `lattice` variable, which you should not overwrite.
-
-In order to use the additional features for field type variables, you should inlude `plumbing/field.h` in you program. You can also include one or more of the files in the `datatypes` folder, which contains predefined datatypes that can be used to construct a field.
-
-## HILA Functionality
-
-### Datatypes
+## Datatypes
 
 - NDIM: number of dimensions, values 2,3,4  (TODO: NDIM=1?).  Typically set in application Makefile
 
@@ -176,7 +40,7 @@ In order to use the additional features for field type variables, you should inl
      
 ~~~            
 
-### Field access and traversal
+## Field access and traversal
 
 The principal traversal of the lattice is with *site loops* `onsites(Parity)`, and a
 special location identifier `X` (effectively a new keyword).  
@@ -269,7 +133,7 @@ Access field at a single point: `f[CoordinateVector]`.  This can be used only ou
 ~~~
 
 
-### Input library
+## Input library
 
 Class hila::input can be used to read parameters and other data for simulation programs.
 It matches key-value pairs from input files.  As an example, if the file `parameters.dat` contains
@@ -349,7 +213,7 @@ int main(int argc, char * argv[]) {
 - Method `input::get_value()` has more options for synchronization and error returns.  See 
   documentation in `input.h`
 
-### Check input and layout
+## Check input and layout
 
 The input files and the lattice layout can be checked with the 
 commands (after the application program has been built)
@@ -363,3 +227,26 @@ number-of-nodes argument is given, program reports how the node layout is done.
 
 Example: if you built the `hila_example` program above, in directory `hila/applications/hila_example`
 the command `build/hila_example check=32` checks the input file and the layout to 32 nodes.
+
+## HILA pre-processor tool
+
+In short, the framework can be used in these steps: 
+
+1. Write c++ code using the syntax and datatypes laid out below
+2. Use the hilapp excecutable to convert this code into .cpt code 
+3. Compile the new .cpt code into the final excecutable
+
+![Workflow illustration](/docs/workflowV1.png)
+ 
+
+You can then use it to compile an extended C++ file into standard C++ using
+~~~ bash
+bin/hilapp path/to/program.cpp
+~~~
+This will create a `cpt` file written in standard C++.
+
+The `cpt` can be compiled with any c++ compiler, but must be linked against the headers and c++ files in the plumbing directory.
+
+Check the example programs in the programs folder. You can use almost any standard C++ code, by there are a couple of new reserved names: the variable `X` and the function `onsites()`. In addition the framework defines a global `lattice` variable, which you should not overwrite.
+
+In order to use the additional features for field type variables, you should inlude `plumbing/field.h` in you program. You can also include one or more of the files in the `datatypes` folder, which contains predefined datatypes that can be used to construct a field.

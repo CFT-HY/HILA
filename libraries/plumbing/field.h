@@ -1586,10 +1586,12 @@ inline void dummy_X_f() {
     }
 }
 
-/// Dummy function including Field<T> functions and methods which
-/// need to be explicitly seen by hilapp during 1st pass in order to
-/// generater necessary functions.  Add here ops as needed
-
+/**
+ * @internal
+ * @brief  Dummy function including Field<T> functions and methods which
+ * need to be explicitly seen by hilapp during 1st pass in order to
+ * generater necessary functions.  Add here ops as needed
+ */
 template <typename T>
 inline void ensure_field_operators_exist() {
 
