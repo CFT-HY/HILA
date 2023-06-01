@@ -1,0 +1,9 @@
+# This is a parameter file for hila_example
+
+lattice size       128,128,128
+smear loops        100
+smear coefficient  0.1
+expansion order    12
+
+random seed        3324565456
+

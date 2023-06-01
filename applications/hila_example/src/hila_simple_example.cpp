@@ -1,12 +1,12 @@
 #include "hila.h"
 static_assert(NDIM == 3, "NDIM must be 3");
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
 
-    hila::initialize(argc,argv);
+    hila::initialize(argc, argv);
 
     // set up 32^3 lattice
-    lattice.setup({32,32,32});
+    lattice.setup({32, 32, 32});
 
     // Random numbers are used here
     hila::seed_random(32345);
@@ -19,7 +19,7 @@ int main(int argc, char * argv[]) {
 
     // calculate sum of 2nd derivatives of f in to g
     foralldir(d) {
-        g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
+        g[ALL] += abs(f[X + d] - 2 * f[X] + f[X - d]);
     }
 
     // get average of g
@@ -28,9 +28,9 @@ int main(int argc, char * argv[]) {
         average += g[X];
     }
 
-    average = average/lattice.volume();
+    average = average / lattice.volume();
     hila::out0 << "Average of g is " << average << '\n';
 
     // make a clean exit
-    hila::finishrun();    
+    hila::finishrun();
 }
