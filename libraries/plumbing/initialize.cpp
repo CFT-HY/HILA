@@ -165,6 +165,12 @@ class cmdlineargs {
 
 void setup_partitions(cmdlineargs &cl);
 
+/**
+ * @brief Read in command line arguments. Initialise default stream and MPI communication
+ *
+ * @param argc Number of command line arguments
+ * @param argv List of command line arguments
+ */
 void hila::initialize(int argc, char **argv) {
 
 #if (defined(__GNUC__) && !defined(DARWIN) && !defined(_MAC_OSX_)) // || defined(__bg__)
@@ -178,7 +184,7 @@ void hila::initialize(int argc, char **argv) {
     mallopt(M_TRIM_THRESHOLD, -1);
 
 #ifdef DEBUG_NAN
-    feenableexcept(FE_INVALID|FE_DIVBYZERO|FE_OVERFLOW);
+    feenableexcept(FE_INVALID | FE_DIVBYZERO | FE_OVERFLOW);
 #endif
 #endif
 
@@ -330,7 +336,8 @@ void hila::initialize(int argc, char **argv) {
 #if !defined(GPU_VECTOR_REDUCTION_THREAD_BLOCKS) || GPU_VECTOR_REDUCTION_THREAD_BLOCKS <= 0
     hila::out0 << "ReductionVector with atomic operations (GPU_VECTOR_REDUCTION_THREAD_BLOCKS=0)\n";
 #else
-    hila::out0 << "ReductionVector with " << GPU_VECTOR_REDUCTION_THREAD_BLOCKS << " thread blocks\n";
+    hila::out0 << "ReductionVector with " << GPU_VECTOR_REDUCTION_THREAD_BLOCKS
+               << " thread blocks\n";
 #endif
 
     if (!hila::check_input)
@@ -380,12 +387,10 @@ void hila::error(const std::string &msg) {
     hila::error(msg.c_str());
 }
 
-////////////////////////////////////////////////////////////////
-/// Normal, controlled exit - all nodes must call this.
-/// Prints timing information and information about
-/// communications
-////////////////////////////////////////////////////////////////
-
+/**
+ * @brief Normal, controlled exit - all nodes must call this.
+ * Prints timing information and information about communications
+ */
 void hila::finishrun() {
     report_timers();
 
@@ -401,7 +406,6 @@ void hila::finishrun() {
         } else {
             hila::out0 << " No communications done from node 0\n";
         }
-
     }
 
 

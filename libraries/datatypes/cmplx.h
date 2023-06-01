@@ -149,6 +149,12 @@ class Complex {
         return *this;
     }
 
+    /**
+     * @brief Produces complex gaussian random values
+     * @todo better documentation for complex gaussian_random
+     * @param width gaussian_random
+     * @return Complex<T>&
+     */
     inline Complex<T> &gaussian_random(double width = 1.0) out_only {
         double d;
         re = hila::gaussrand2(d) * width;
@@ -724,22 +730,24 @@ class Imaginary_t : public Complex<T> {
 ///
 /// Don't use #define'd I : this will conflict with some headers in rocm
 ///
-/// For some reason it is sufficient to use only __device__ 
+/// For some reason it is sufficient to use only __device__
 #if defined(CUDA) || defined(HIP)
 __device__
 #endif
-    constexpr Imaginary_t<double> I(1.0);
+    constexpr Imaginary_t<double>
+        I(1.0);
 
 // constexpr Complex<double> I(0,1);
 // #define I Imaginary_t<double>(1.0)
 
 ///////////////////////////////////////////////////////////////////////////////////////
 
-
-/// @brief Imaginary * object containing complex
-/// @param i  Imaginary value
-/// @param c  multiplied value which contains complex numbers
-/// @return   i * c, of the same type as c
+/**
+ * @brief Imaginary * object containing complex
+ * @param i  Imaginary value
+ * @param c  multiplied value which contains complex numbers
+ * @return   i * c, of the same type as c
+ */
 template <typename A, typename T, std::enable_if_t<hila::contains_complex<T>::value, int> = 0>
 inline auto operator*(const Imaginary_t<A> &i, const T &c) {
     Complex<hila::scalar_type<T>> ca, cb;
