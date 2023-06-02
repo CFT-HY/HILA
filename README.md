@@ -21,7 +21,7 @@ Behind the scenes hila takes care of MPI layout and communications.  It lays out
 lattice fields differently for different computing platforms: 'array of structures' (standard),
 'array of structures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).
 
-## User guide
+## Installation and documentation
 
 Installation and user guide can be viewed on the web documentation hosted on: TODO: add link to github pages or hosted guide somewhere
 
