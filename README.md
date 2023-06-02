@@ -24,7 +24,7 @@ lattice fields differently for different computing platforms: 'array of structur
 2. [Installation](#installation)
 3. [User Guide](#user-guide)
 
-## Dependencies {#dependencies}
+## <a id="dependencies"></a>Dependencies 
 
 ### Hilapp
 
@@ -75,7 +75,7 @@ See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-ins
 
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
 
-## Installation {#installation}
+## <a id="installation"></a>Installation
 
 Begin by cloning HILA repository:
 
@@ -145,8 +145,9 @@ Test that hilapp works:
 
     ./bin/hilapp --help
 
-<details>
-<summary> **Expected output** </summary>
+<details markdown="1">
+<summary> Expected output </summary>
+
 ~~~bash
 $ ./bin/hilapp --help
 USAGE: hilapp [options] <source files>
@@ -190,6 +191,7 @@ hilapp:
                               For example -target:vectorize=32 is equivalent to -target:AVX
   --verbosity=<int>         - Verbosity level 0-2.  Default 0 (quiet)
 ~~~
+
 </details>
 
 
@@ -208,6 +210,7 @@ make [-j4]
 
 <details>
 <summary> **Expected output** </summary>
+
 ~~~bash
 $ ./build/hila_healthcheck 
 ----- HILA ⩩ lattice framework ---------------------------
@@ -292,6 +295,7 @@ Finishing -- date Thu Jun  1 11:14:37 2023  run time 69.07s
 ~~~
 
 **NOTE: Naturally the run time depends on your system**
+
 </details>
 
 By default all HILA applications are built using MPI so one can run:
@@ -300,6 +304,7 @@ By default all HILA applications are built using MPI so one can run:
 
 <details>
 <summary> **Expected output** </summary>
+
 ~~~bash
 $ mpirun -n 4 ./build/hila_healthcheck
 ----- HILA ⩩ lattice framework ---------------------------
@@ -388,6 +393,7 @@ Finishing -- date Thu Jun  1 11:18:46 2023  run time 24.14s
 ------------------------------------------------------------
 ~~~
 **NOTE: Naturally the run time depends on your system**
+
 </details>
 
  
@@ -425,7 +431,7 @@ make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=61
 | `mahti` | CPU-MPI implementation for MAHTI supercomputer            |
 | `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
 
-## User guide {#user-guide}
+## <a id="user-guide"></a>User guide
 
 Now that HILA has been built successfully, the next step is to build your first HILA application: [hila application guide](./docs/guide/hila_applications.md)
 

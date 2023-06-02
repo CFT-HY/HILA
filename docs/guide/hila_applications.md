@@ -1,4 +1,4 @@
-Building you first HILA application
+Building your first HILA application
 ==========
 
 This section goes over how to get started with HILA and building your first HILA application
@@ -193,7 +193,7 @@ onsites(ALL) f[X].gaussian_random();
 
 In essence this is the most important functionality that HILA offers. Onsites loops allow the user to very simply loop over the whole field without having to think about indexing, memory alignment, communication or any of the complications that writing c++ and MPI brings about. Essentially these loops are glorified for loops. With the HILA pre processor the above onsites loop expands to the following c++ code:
 
-<details>
+<details markdown="1">
 <summary>onsites expansion</summary>
 ~~~cpp
 // make f Gaussian random distributed
