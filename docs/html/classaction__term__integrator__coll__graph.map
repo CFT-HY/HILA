@@ -1,0 +1,8 @@
+<map id="action_term_integrator" name="action_term_integrator">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,93,176,119"/>
+<area shape="rect" id="Node000002" href="$classintegrator__base.html" title=" " alt="" coords="6,5,130,31"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="66,44,68,69,82,92,77,95,63,70,61,44"/>
+<area shape="poly" id="edge3_Node000001_Node000002" title=" " alt="" coords="77,43,90,92,85,93,72,45"/>
+<area shape="rect" id="Node000003" href="$classaction__base.html" title=" " alt="" coords="183,5,283,31"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="223,45,200,71,176,86,149,96,147,91,173,81,197,67,219,41"/>
+</map>

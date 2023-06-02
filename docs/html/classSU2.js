@@ -1,0 +1,25 @@
+var classSU2 =
+[
+    [ "SU2", "classSU2.html#a4139ae57c48f61a2f0645548e8fce8a8", null ],
+    [ "SU2", "classSU2.html#acd6584b74d5766cda18a02a3d6354c40", null ],
+    [ "dagger", "classSU2.html#ab9c8f72bc4bde6b5b0b87a6a359ef816", null ],
+    [ "exp", "classSU2.html#af1b50518b24898d5389ed178800f7e36", null ],
+    [ "gaussian_random", "classSU2.html#a58a41130c5620571681f6476622c66c0", null ],
+    [ "log", "classSU2.html#ae30431eabb8d29b2c5bbde71a6a48fe7", null ],
+    [ "normalize", "classSU2.html#a9cf34bfc209202577db1259733ff8659", null ],
+    [ "operator*=", "classSU2.html#a498f4c7d7d49341e74d6d716b7447d75", null ],
+    [ "operator+", "classSU2.html#a8179a349952cf026f6c3f80ddf85ff18", null ],
+    [ "operator+=", "classSU2.html#aff656ef80a1c050b1ea27c2c44d0a366", null ],
+    [ "operator+=", "classSU2.html#a19b48d63dcd70394c00d4cee4d94a6b8", null ],
+    [ "operator-", "classSU2.html#a929d9d5404f808e3f221765596d36bf7", null ],
+    [ "operator-=", "classSU2.html#a640adc0d3531fdeb5eb50c080f5437ef", null ],
+    [ "operator-=", "classSU2.html#a574248deb494b78ce5329505379a7e8a", null ],
+    [ "operator/=", "classSU2.html#ab89494cc1ab5a873b9604b390d23e6bb", null ],
+    [ "operator=", "classSU2.html#a7d64b20c781eb9b9c32e826e812dacfb", null ],
+    [ "operator=", "classSU2.html#af588cb40fc694fb7e8a5794ef015a511", null ],
+    [ "operator=", "classSU2.html#a3234715ce0a90bf2c065bbb75ef5371d", null ],
+    [ "project_to_algebra", "classSU2.html#a0a7cacd8e47b754ec109efbadc099c4d", null ],
+    [ "random", "classSU2.html#a2754020dec4f47e70a547e7ccc62e0b9", null ],
+    [ "reunitarize", "classSU2.html#aae68edcb20cbd5e665dc5db09803d5b0", null ],
+    [ "trace", "classSU2.html#a56ae7e33dd6f2837dc2d1921a338593f", null ]
+];

@@ -1,0 +1,20 @@
+<map id="lattice_struct::node_struct" name="lattice_struct::node_struct">
+<area shape="rect" id="Node000001" title="Information about the node stored on this process." alt="" coords="897,67,1044,107"/>
+<area shape="rect" id="Node000002" href="$classlattice__struct.html" title=" " alt="" coords="1211,73,1317,99"/>
+<area shape="poly" id="edge2_Node000002_Node000001" title=" " alt="" coords="1058,102,1080,105,1133,109,1186,105,1225,96,1226,101,1187,110,1133,114,1080,110,1057,107"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="1197,89,1044,90,1044,84,1197,84"/>
+<area shape="rect" id="Node000003" href="$structlattice__struct_1_1allnodes.html" title="information about all nodes" alt="" coords="885,5,1056,31"/>
+<area shape="poly" id="edge3_Node000002_Node000003" title=" " alt="" coords="1042,31,1187,65,1212,71,1211,76,1186,70,1041,36"/>
+<area shape="rect" id="Node000004" href="$classCoordinateVector__t.html" title=" " alt="" coords="617,43,764,83"/>
+<area shape="poly" id="edge8_Node000001_Node000004" title=" " alt="" coords="778,73,788,74,897,82,897,87,788,79,777,78"/>
+<area shape="poly" id="edge4_Node000003_Node000004" title=" " alt="" coords="777,46,788,45,890,28,891,33,788,50,778,52"/>
+<area shape="rect" id="Node000005" href="$classMatrix.html" title="Generic Matrix class fwd definition." alt="" coords="213,52,372,77"/>
+<area shape="poly" id="edge5_Node000004_Node000005" title=" " alt="" coords="386,62,617,61,617,66,386,67"/>
+<area shape="rect" id="Node000006" href="$classMatrix__t.html" title=" " alt="" coords="5,81,164,121"/>
+<area shape="poly" id="edge6_Node000005_Node000006" title=" " alt="" coords="177,82,219,75,220,80,178,87"/>
+<area shape="rect" id="Node000008" href="$classMatrix.html" title=" " alt="" coords="396,105,593,131"/>
+<area shape="poly" id="edge10_Node000008_Node000006" title=" " alt="" coords="178,102,396,111,396,117,177,107"/>
+<area shape="rect" id="Node000007" href="$structbackend__lattice__struct.html" title="Helper class for loading the vectorized lattice." alt="" coords="887,141,1055,167"/>
+<area shape="poly" id="edge7_Node000002_Node000007" title=" " alt="" coords="1068,151,1127,144,1186,130,1218,115,1245,96,1248,101,1221,119,1188,135,1128,150,1069,156"/>
+<area shape="poly" id="edge9_Node000001_Node000008" title=" " alt="" coords="607,114,764,107,897,94,898,99,764,113,607,119"/>
+</map>

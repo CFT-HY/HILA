@@ -1,0 +1,6 @@
+<map id="loopFunctionVisitor" name="loopFunctionVisitor">
+<area shape="rect" id="node1" title=" " alt="" coords="11,184,157,211"/>
+<area shape="rect" id="node2" href="$classGeneralVisitor.html" title=" " alt="" coords="5,95,120,121"/>
+<area shape="rect" id="node3" href="$structcall__info__struct.html" title="Stores information about loop function calls." alt="" coords="145,95,266,121"/>
+<area shape="rect" id="node4" href="$structargument__info.html" title="Stores information about loop function function arguments." alt="" coords="147,5,264,32"/>
+</map>
