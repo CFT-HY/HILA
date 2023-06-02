@@ -1,4 +1,4 @@
-Description and Installation  {#mainpage}
+Description and Installation
 ========= 
 
 Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
@@ -24,7 +24,7 @@ lattice fields differently for different computing platforms: 'array of structur
 2. [Installation](#installation)
 3. [User Guide](#user-guide)
 
-## Dependencies {#dependencies}
+## <a id="dependencies"></a>Dependencies 
 
 ### Hilapp
 
@@ -34,9 +34,7 @@ lattice fields differently for different computing platforms: 'array of structur
 
 #### Installing dependencies for HILA preprocessor:
 
-If one opts to use a singularity container skip to HILA applications dependencies.
-
-If one opts to use a docker container, skip  directly to the [installation](#installation) section.
+If one opts to use a docker or singularity container, skip  directly to the [installation](#installation) section.
 
 For building *hilapp*, you need [clang](https://clang.llvm.org/) development tools (actually, only include files). These can be found in most Linux distribution repos, e.g. in Ubuntu 22.04:
 
@@ -77,7 +75,7 @@ See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-ins
 
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
 
-## Installation{#installation}
+## <a id="installation"></a>Installation
 
 Begin by cloning HILA repository:
 
@@ -111,19 +109,19 @@ On supercomputing platforms the HILA application dependencies are most likely av
 
 HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.
 
-#### Docker {#docker}
+#### <a id="docker"></a>Docker
 
 The docker container is meant to develop and produce HILA applications, libraries and hilapp with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
 
-For instructions on using the docker container have a look at the [README.md](../../docker/README.md) in the docker folder
+For instructions on using the docker container have a look at the [README.md](docker/README.md) in the docker folder
 
-#### Singularity {#singularity}
+#### <a id="singularity"></a>Singularity
 
 The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of hilapp. This approach is mainly meant to be used for pre processing applications on an HPC platform.
 
-For instructions on installing singularity and building containers have a look at the [README.md](../../singularity/README.md) in the singularity folder
+For instructions on installing singularity and building containers have a look at the [README.md](singularity/README.md) in the singularity folder
 
-### HILA preprocessor {#hila-preprocessor}
+### <a id="hila-preprocessor"></a>HILA preprocessor 
 
 Before building the preprocessor one must first install the dependencies. See the [dependencies](#dependencies)
 
@@ -150,7 +148,7 @@ Test that hilapp works:
 <details>
 <summary> Expected output </summary>
 
-~~~bash
+~~~
 $ ./bin/hilapp --help
 USAGE: hilapp [options] <source files>
 
@@ -197,20 +195,22 @@ hilapp:
 </details>
 
 
-### Building HILA applications {#building-hila-applications}
+### <a id="building-hila-applications"></a>Building HILA applications
+The second part is building HILA applications. Here we will go over an example with a health check test application. All applications should lie in the applications folder.
 
-First we will try to build and run a health check test application with the default computing platform which is CPU with MPI enabled. To do so navigate to the applications folder and try:
+- *NOTE: that at this point one will need to install the FFTW3 and OpenMPI development libraries, see dependencies section* 
 
+Build an application:
 ~~~bash
 cd hila/applications/hila_healthcheck
-make -j4
+make [-j4]
 ./build/hila_healthcheck
 ~~~
 
 <details>
 <summary> Expected output </summary>
 
-~~~bash
+~~~
 $ ./build/hila_healthcheck 
 ----- HILA ⩩ lattice framework ---------------------------
 Running program ./build/hila_healthcheck
@@ -297,14 +297,14 @@ Finishing -- date Thu Jun  1 11:14:37 2023  run time 69.07s
 
 </details>
 
-And for running with multiple processes:
+By default all HILA applications are built using MPI so one can run:
 
     mpirun -n 4 ./build/hila_healthcheck
 
 <details>
 <summary> Expected output </summary>
 
-~~~bash
+~~~
 $ mpirun -n 4 ./build/hila_healthcheck
 ----- HILA ⩩ lattice framework ---------------------------
 Running program ./build/hila_healthcheck
@@ -395,11 +395,12 @@ Finishing -- date Thu Jun  1 11:18:46 2023  run time 24.14s
 
 </details>
 
-Now we can try to perform the same health check by targeting a differing computing platform with:
+ 
+Computing platform is chosen by 
 
     make ARCH=<platform>
 
-where ARCH can take the following values:
+**List of computing platforms:**
 
 | ARCH=   | Description                                                                                                            |
 |---------|------------------------------------------------------------------------------------------------------------------------|
@@ -408,8 +409,6 @@ where ARCH can take the following values:
 | `openmp ` | OpenMP parallelized program                                                                                            |
 | `cuda` | Parallel [CUDA](https://developer.nvidia.com/cuda-toolkit) program                                                     |
 | `hip` | Parallel [HIP](https://docs.amd.com/bundle/HIP-Programming-Guide-v5.3/page/Introduction_to_HIP_Programming_Guide.html) |
-
-TODO: add dependencies to table
 
 For cuda compilation one needs to define their CUDA version and architercure either as environment variables or during the make process:
 
@@ -422,127 +421,7 @@ make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=61
 ~~~
 *NOTE: Default cuda version is 11.6 and compute architecture is sm_61*
 
-Now if we execute the cuda version one should expect the following output
-
-<details>
-<summary> Expected output </summary>
-
-~~~bash
-$ ./build/hila_healthcheck 
-GPU devices accessible from node 0: 1
------ HILA ⩩ lattice framework ---------------------------
-Running program ./build/hila_healthcheck
-with command line arguments ''
-Code version: git SHA df945bff
-Compiled Jun  2 2023 at 12:57:25
-with options: EVEN_SITES_FIRST SPECIAL_BOUNDARY_CONDITIONS
-Starting -- date Fri Jun  2 12:58:32 2023  run time 0.08375s
-No runtime limit given
-Using thread blocks of size 256 threads
-Using GPU_AWARE_MPI
-ReductionVector with atomic operations (GPU_VECTOR_REDUCTION_THREAD_BLOCKS=0)
-CUDA driver version: 12010, runtime 12010
-CUDART_VERSION 12010
-Device on node rank 0 device 0:
-  NVIDIA GeForce GTX 1080  capability: 6.1
-  Global memory:   8113MB
-  Shared memory:   48kB
-  Constant memory: 64kB
-  Block registers: 65536
-  Warp size:         32
-  Threads per block: 1024
-  Max block dimensions: [ 1024, 1024, 64 ]
-  Max grid dimensions:  [ 2147483647, 65535, 65535 ]
-Threads in use: 256
-OpenMPI library does not support CUDA-Aware MPI
-GPU_AWARE_MPI is defined -- THIS MAY CRASH IN MPI
-GNU c-library performance: not returning allocated memory
------ Reading file parameters ------------------------------
-lattice size         256,256,256
-random seed          0
-------------------------------------------------------------
-------------------------------------------------------------
-LAYOUT: lattice size  256 x 256 x 256  =  16777216 sites
-Dividing to 1 nodes
-
-Sites on node: 256 x 256 x 256  =  16777216
-Processor layout: 1 x 1 x 1  =  1 nodes
-Node remapping: NODE_LAYOUT_BLOCK with blocksize 4
-Node block size 1 1 1  block division 1 1 1
-------------------------------------------------------------
-Communication tests done -- date Fri Jun  2 12:58:34 2023  run time 1.827s
-------------------------------------------------------------
-Random seed from time: 7145975945297229
-Using node random numbers, seed for node 0: 7145975945297229
-GPU random number generator initialized
-GPU random number thread blocks: 32 of size 256 threads
---- Complex reduction value ( -3.9112593e-17, -3.2797116e-18 ) passed
---- Vector reduction, sum ( -7.1331829e-15, -1.3218593e-15 ) passed
---- Setting and reading a value at [ 187 200 25 ] passed
---- Setting and reading a value at [ 70 161 70 ] passed
---- Setting and reading a value at [ 197 191 182 ] passed
---- Maxloc is [ 13 45 107 ] passed
---- Max value 2 passed
---- Minloc is [ 33 24 224 ] passed
---- Min value -1 passed
---- Field set_elements and get_elements with 51 coordinates passed
---- SiteSelect size 51 passed
---- SiteValueSelect size 51 passed
---- SiteSelect content passed
---- SiteValueSelect content passed
---- SiteIndex passed
---- 2-dimensional slice size 65536 passed
---- slice content passed
---- 1-dimensional slice size 256 passed
---- slice content passed
---- FFT constant field passed
---- FFT inverse transform passed
---- FFT of wave vector [ 202 153 38 ] passed
---- FFT of wave vector [ 185 196 66 ] passed
---- FFT of wave vector [ 222 252 82 ] passed
---- FFT of wave vector [ 214 47 8 ] passed
---- FFT of wave vector [ 108 142 205 ] passed
---- FFT real to complex passed
---- FFT complex to real passed
---- Norm of field = 44465.9 and FFT = 44465.9 passed
---- Norm of binned FFT = 44465.9 passed
---- Binning test at vector [ 175 117 16 ] passed
---- Spectral density test with above vector  passed
---- Binning test at vector [ 129 107 153 ] passed
---- Spectral density test with above vector  passed
---- Binning test at vector [ 237 7 157 ] passed
---- Spectral density test with above vector  passed
-TIMER REPORT:             total(sec)          calls     time/call  fraction
----------------------------------------------------------------------------
-MPI broadcast       :          0.000             40      0.095 μs   0.0000
-MPI reduction       :          0.000             34      0.767 μs   0.0000
-FFT total time      :          4.149             14      0.296 s    0.6021
- copy pencils       :          0.000             15      2.560 μs   0.0000
- MPI for pencils    :          4.490             90     49.885 ms   0.6515
- FFT plan           :          0.016              1     16.047 ms   0.0023
- copy fft buffers   :          0.001             84      6.129 μs   0.0001
- FFT execute        :          0.018             42      0.433 ms   0.0026
- pencil reshuffle   :          0.000             30      3.821 μs   0.0000
- save pencils       :          0.000             15      3.851 μs   0.0000
-bin field time      :          0.208              7     29.777 ms   0.0302
----------------------------------------------------------------------------
- No communications done from node 0
-
-GPU Memory pool statistics from node 0:
-   Total pool size 3459.87 MB
-   # of allocations 268  real allocs 17%
-   Average free list search 6.3 steps
-   Average free list size 16 items
-
-Finishing -- date Fri Jun  2 12:58:39 2023  run time 6.891s
-------------------------------------------------------------
-
-~~~
-**NOTE: Naturally the run time depends on your system**
-
-</details>
-
-Additionally we have some ARCH values tuned for specific HPC platforms:
+**HPC platforms**:
 
 | ARCH       | Description                                               |
 |------------|-----------------------------------------------------------|
@@ -551,10 +430,18 @@ Additionally we have some ARCH values tuned for specific HPC platforms:
 | `mahti` | CPU-MPI implementation for MAHTI supercomputer            |
 | `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
 
-We will discuss the computing platforms more in the creating a hila application guide.
+## <a id="user-guide"></a>User guide
 
-## User guide {#user-guide}
+Now that HILA has been built successfully, the next step is to build your first HILA application: [hila application guide](./docs/guide/hila_applications.md)
 
-Now that HILA has been built successfully, the next step is to build your first HILA application: [hila application guide](./hila_applications.md)
+After building your first HILA application one can move on to the comprehensive guide, which describes everything that HILA has to offer: [comprehensive guide](./docs/guide/hila_functionality.md)
 
-After building your first HILA application one can move on to the comprehensive guide, which describes everything that HILA has to offer: [comprehensive guide](./hila_functionality.md)
+Both of these resources can be viewed on the web guide hosted on: TODO: add link to github pages or hosted guide somewhere
+
+To generate the user guide and technical documentation locally one can run:
+
+    doxygen /docs/config 
+
+To open the documentation locally with any browser:
+
+    firefox /docs/html/index.html

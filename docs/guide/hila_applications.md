@@ -1,9 +1,9 @@
-Building your first HILA application
+Creating your first HILA application
 ==========
 
-This section goes over how to get started with HILA and building your first HILA application
+This section goes over how to get started with HILA and creating your first HILA application
 
-Like most c++ applications, HILA applications require two thing, a makefile and application source code. Due to the functionality that HILA offers, the makefile and source code follow a well defined structure. Generally HILA applications are at their core c++ and the user is free to implement any methods and libraries they see fit. But to implement the functionality that the pre processor offers, a well defined default application structure is introduced:
+Like most c++ applications, HILA applications require two things, a makefile and application source code. Due to the functionality that HILA offers, the makefile and source code follow a well defined structure. Generally HILA applications are at their core c++ and the user is free to implement any methods and libraries they see fit. But to implement the functionality that the pre processor offers, a well defined default application structure is introduced:
 
 ~~~
 applications/
@@ -44,6 +44,8 @@ This file structure is necessary for the use of the makefile which handles the l
 Each application requires a makefile to link the necessary HILA libraries and to allow specification of the target backend. An application makefile should define any target files and include the main makefile defined for the HILA libraries. The main makefile handles the HILA library linking and inclusion of the target backend.
 
 The following makefile handles the compilation of two seperate hila example applications `hila_example.cpp` and `hila_simple_example.cpp`:
+
+TODO: Figure out syntax highlighs and wrapping for markdown
 ~~~makefile
 # Give the location of the top level distribution directory wrt. this location.
 # Can be absolute or relative 
@@ -77,6 +79,7 @@ build/hila_example: Makefile build/hila_example.o $(HILA_OBJECTS) $(HEADERS)
 build/hila_simple_example: Makefile build/hila_simple_example.o $(HILA_OBJECTS) $(HEADERS)
 	$(LD) -o $@ build/hila_simple_example.o $(HILA_OBJECTS) $(LDFLAGS) $(LDLIBS)
 ~~~
+TODO: Fix doxygen not understanding makefile syntax highlights and text wrapping
 
 The only point of note is the definition for the respective object file locations with ` build/hila_simple_example.o`. For an applications this needs to be formatted in the same way as above, otherwise linking of c++ libraries and HILA objects will not be done correctly. The general format would be:
 
@@ -89,7 +92,7 @@ The target backends are defined in the folder HILA/libraries/target_arch. There 
 
 | ARCH=   | Description                                                                                                            |
 |---------|------------------------------------------------------------------------------------------------------------------------|
-| `vanilla` | default CPU implementation                                                                                             |
+| `vanilla` | default CPU implementation with MPI                                                                                           |
 | `AVX2   ` | AVX vectorization optimized program using [*vectorclass*](https://github.com/vectorclass)                              |
 | `openmp ` | OpenMP parallelized program                                                                                            |
 | `cuda   ` | Parallel [CUDA](https://developer.nvidia.com/cuda-toolkit) program                                                     |
@@ -152,7 +155,7 @@ int main(int argc, char * argv[]) {
 
 ~~~
 
-Like all c++ applications, our program starts withing the main function. Before it we of course need to include some necessary header files. At the beginning of the file we include the `hila.h` header file which contains all of the definitions for HILA libraries. This is of course necessary to gain access to HILA functionality. Additionally we use a static_assert to test our defined application option `-DNDIM=3`. This is useful redundancy to that we do not compile our application incorrectly.
+Like all c++ applications, our program starts withing the main function. Before it, we need to include some necessary header files. At the beginning of the file we include the `hila.h` header file which contains all of the definitions for HILA libraries. This is necessary to gain access to HILA functionality. Additionally we use a static_assert to test our defined application option `-DNDIM=3`. This is useful redundancy so that we do not compile our application incorrectly.
 ~~~cpp
 #include "hila.h"
 static_assert(NDIM == 3, "NDIM must be 3");
@@ -172,18 +175,18 @@ hila::seed_random(32345);
 
 The first command `hila::initialize(argc,argv)` handles the initialization of mpi and reading in command line arguments and parameter files. This is a vital part of all HILA applications, but it is not too important for the user to understand what happens within it. 
 
-Next we setup the lattice and it's size with the command `lattice.setup({32,32,32})`. The `lattice` object is defined globally within hila and contains all the information on how the lattice is split within MPI. As with initialization, this is also a vital part of any HILA application, but is designed in a way where the user need not worry about it. 
+Next we setup the lattice and it's size with the command `lattice.setup({32,32,32})`. The `lattice` object is defined globally within hila and contains all the information on how the lattice is split within MPI. As with initialization, this is also a vital part of any HILA application, but is designed in a way where the user need not worry about it. Note that due to NDIM option above passing for example `{32,32}` to `lattice.setup()` would result in a runtime error. TODO: CATCH THIS ERROR
 
 Lastly for setup we initialize the random number generator with the command `hila::seed_random(32345)`. This will initialise the random number generator with the seed 32345.
 
-Next in the application we define two Field's with:
+Next in the application we define two Fields with:
 
 ~~~cpp
 Field<Complex<double>> f;
 Field<double> g = 0;
 ~~~
 
-A Field in HILA is the numerical object which we operate on and iterate over. The size and MPI layout of the Field's are inherited from the lattice structure which was initialized before hand with the `lattice.setup()` command. Field is a c++ object which can be of many different data types and operations between them have been defined within HILA. This is implemented using standard c++ object oriented programming where we define the type within the brackets <T>. The available datatypes will be thoroughly documented later. For now we define one field of type `Complex<double>` and `double`. The latter Field g is initialized with the = constructor, where we set the Field to be uniformly 0. The f Field is initialized to null. 
+A Field in HILA is the numerical object which we operate on and iterate over. The size and MPI layout of the Fields are inherited from the lattice structure which was initialized before hand with the `lattice.setup()` command. Field is a c++ object which can be of many different data types and operations between them have been defined within HILA. This is implemented using standard c++ object oriented programming where we define the type within the brackets <T>. The available datatypes will be thoroughly documented later. For now we define one field of type `Complex<double>` and `double`. The latter Field g is initialized with the = constructor, where we set the Field to be uniformly 0. The f Field is initialized to null. 
 
 We then introduce our first onsites loop which set's a complex gaussian random number for each point within the field:
 
@@ -195,6 +198,7 @@ In essence this is the most important functionality that HILA offers. Onsites lo
 
 <details markdown="1">
 <summary>onsites expansion</summary>
+
 ~~~cpp
 // make f Gaussian random distributed
      //--  onsites(ALL) f[X].gaussian_random()
@@ -219,4 +223,4 @@ In essence this is the most important functionality that HILA offers. Onsites lo
 AHHH SCARY PUT IT AWAY!!!
 </details>
 
-As we can see the expansion is complicated and scary. The X variable withing the onsites loop is a reserved variable within HILA applications. This variable is what defines the index of every point within the field. Appropriately the command `f[X].gaussian_random()` defines a gaussian random number for each point X within the field f. The ALL parameter within the onsites loop defines that we will iterate throughout the whole field. We will discuss variability of this parameter later in the documentation.
+As we can see the expansion is complicated and scary, one can imagine how complicated it get's with different computing platforms. The X variable withing the onsites loop is a reserved variable within HILA applications. This variable is what defines the index of every point within the field. Appropriately the command `f[X].gaussian_random()` defines a gaussian random number for each point X within the field f. The ALL parameter within the onsites loop defines that we will iterate throughout the whole field. We will discuss variability of this parameter later in the documentation.
