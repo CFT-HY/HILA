@@ -148,7 +148,7 @@ Test that hilapp works:
 <details>
 <summary> Expected output </summary>
 
-~~~bash
+~~~
 $ ./bin/hilapp --help
 USAGE: hilapp [options] <source files>
 
@@ -210,7 +210,7 @@ make [-j4]
 <details>
 <summary> Expected output </summary>
 
-~~~bash
+~~~
 $ ./build/hila_healthcheck 
 ----- HILA ⩩ lattice framework ---------------------------
 Running program ./build/hila_healthcheck
@@ -304,7 +304,7 @@ By default all HILA applications are built using MPI so one can run:
 <details>
 <summary> Expected output </summary>
 
-~~~bash
+~~~
 $ mpirun -n 4 ./build/hila_healthcheck
 ----- HILA ⩩ lattice framework ---------------------------
 Running program ./build/hila_healthcheck
