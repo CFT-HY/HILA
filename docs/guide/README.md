@@ -1,4 +1,4 @@
-Description and Installation
+Description and Installation  {#mainpage}
 ========= 
 
 Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
@@ -19,12 +19,12 @@ Behind the scenes hila takes care of MPI layout and communications.  It lays out
 lattice fields differently for different computing platforms: 'array of structures' (standard),
 'array of structures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).
 
-### Table of Contents
+## Table of Contents
 1. [Dependencies](#dependencies)
 2. [Installation](#installation)
 3. [User Guide](#user-guide)
 
-## <a id="dependencies"></a>Dependencies 
+## Dependencies {#dependencies}
 
 ### Hilapp
 
@@ -75,7 +75,7 @@ See NVIDIA drivers and CUDA documentation: https://docs.nvidia.com/cuda/cuda-ins
 
 See ROCm and HIP documentation: https://docs.amd.com/, https://rocmdocs.amd.com/en/latest/Installation_Guide/HIP-Installation.html
 
-## <a id="installation"></a>Installation
+## Installation{#installation}
 
 Begin by cloning HILA repository:
 
@@ -109,19 +109,19 @@ On supercomputing platforms the HILA application dependencies are most likely av
 
 HILA comes with both a singularity and docker container for differing purposes. The aim is to make use easy on any platform be it linux, mac, windows or a supercomputer.
 
-#### <a id="docker"></a>Docker
+#### Docker {#docker}
 
 The docker container is meant to develop and produce HILA applications, libraries and hilapp with ease. One can produce HILA applications on their local machine and run them in a container without having to worry about dependencies. Note that there is overhead when running MPI communication in docker, thus one will not get optimal simulation performance when running highly paralelled code in a container. This is a non issue with small scale simulations or testing.
 
-For instructions on using the docker container have a look at the [README.md](docker/README.md) in the docker folder
+For instructions on using the docker container have a look at the [README.md](../../docker/README.md) in the docker folder
 
-#### <a id="singularity"></a>Singularity
+#### Singularity {#singularity}
 
 The singularity container offers a more packaged approach where one doesn't need to worry about clang libtoolbox support for compiling the HILA pre processor. Hence for HPC platforms where the access of such compiler libraries can be tedious one can simply opt to use the container version of hilapp. This approach is mainly meant to be used for pre processing applications on an HPC platform.
 
-For instructions on installing singularity and building containers have a look at the [README.md](singularity/README.md) in the singularity folder
+For instructions on installing singularity and building containers have a look at the [README.md](../../singularity/README.md) in the singularity folder
 
-### <a id="hila-preprocessor"></a>HILA preprocessor 
+### HILA preprocessor {#hila-preprocessor}
 
 Before building the preprocessor one must first install the dependencies. See the [dependencies](#dependencies)
 
@@ -195,7 +195,8 @@ hilapp:
 </details>
 
 
-### <a id="building-hila-applications"></a>Building HILA applications
+### Building HILA applications {#building-hila-applications}
+
 The second part is building HILA applications. Here we will go over an example with a health check test application. All applications should lie in the applications folder.
 
 - *NOTE: that at this point one will need to install the FFTW3 and OpenMPI development libraries, see dependencies section* 
@@ -430,11 +431,11 @@ make ARCH=cuda CUDA_VERSION=11.6 CUDA_ARCH=61
 | `mahti` | CPU-MPI implementation for MAHTI supercomputer            |
 | `mahti-cuda` | GPU-MPI implementation for MAHTI supercomputer using CUDA |
 
-## <a id="user-guide"></a>User guide
+## User guide {#user-guide}
 
-Now that HILA has been built successfully, the next step is to build your first HILA application: [hila application guide](./docs/guide/hila_applications.md)
+Now that HILA has been built successfully, the next step is to build your first HILA application: [hila application guide](./hila_applications.md)
 
-After building your first HILA application one can move on to the comprehensive guide, which describes everything that HILA has to offer: [comprehensive guide](./docs/guide/hila_functionality.md)
+After building your first HILA application one can move on to the comprehensive guide, which describes everything that HILA has to offer: [comprehensive guide](./hila_functionality.md)
 
 Both of these resources can be viewed on the web guide hosted on: TODO: add link to github pages or hosted guide somewhere
 
