@@ -1,0 +1,19 @@
+<map id="represented_gauge_field&lt; repr &gt;" name="represented_gauge_field&lt; repr &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="31,383,213,423"/>
+<area shape="rect" id="Node000002" href="$classgauge__field__base.html" title=" " alt="" coords="5,245,196,271"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="107,284,122,382,117,383,102,285"/>
+<area shape="rect" id="Node000003" href="$classField.html" title=" " alt="" coords="46,93,155,119"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="103,133,103,245,98,245,98,133"/>
+<area shape="rect" id="Node000004" href="$classfield__struct.html" title="Stores Field class data and communication parameters for said data." alt="" coords="167,5,299,31"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="205,40,120,95,117,91,202,36"/>
+<area shape="rect" id="Node000007" href="$classField.html" title=" " alt="" coords="179,93,286,119"/>
+<area shape="poly" id="edge7_Node000007_Node000004" title=" " alt="" coords="235,45,235,93,230,93,230,45"/>
+<area shape="rect" id="Node000008" href="$classField.html" title=" " alt="" coords="313,145,461,170"/>
+<area shape="poly" id="edge9_Node000008_Node000004" title=" " alt="" coords="258,38,376,142,372,146,254,42"/>
+<area shape="rect" id="Node000005" href="$classgauge__field.html" title=" " alt="" coords="138,295,330,320"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="212,331,146,385,143,380,208,327"/>
+<area shape="rect" id="Node000006" href="$classgauge__field__base.html" title=" " alt="" coords="139,196,327,221"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="236,235,237,295,231,295,230,235"/>
+<area shape="poly" id="edge6_Node000006_Node000007" title=" " alt="" coords="228,132,226,143,226,172,231,195,226,196,221,172,221,142,223,131"/>
+<area shape="poly" id="edge8_Node000005_Node000008" title=" " alt="" coords="373,183,340,223,293,265,252,297,248,293,290,261,336,219,369,180"/>
+</map>

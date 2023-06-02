@@ -1,0 +1,7 @@
+<map id="gauge_field_base&lt; sun &gt;" name="gauge_field_base&lt; sun &gt;">
+<area shape="rect" id="Node000001" title=" " alt="" coords="5,196,193,221"/>
+<area shape="rect" id="Node000002" href="$classField.html" title=" " alt="" coords="46,93,153,119"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="102,133,102,196,97,196,97,133"/>
+<area shape="rect" id="Node000003" href="$classfield__struct.html" title="Stores Field class data and communication parameters for said data." alt="" coords="33,5,165,31"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="102,45,102,93,97,93,97,45"/>
+</map>

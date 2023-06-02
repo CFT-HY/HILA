@@ -1,0 +1,28 @@
+var searchData=
+[
+  ['c_0',['c',['../classMatrix__t.html#a8aefe1544bc5c4c0c91461da88a830fb',1,'Matrix_t::c'],['../classArray.html#ac2d3d85c82da58fc97942749fb21d550',1,'Array::c']]],
+  ['cancel_5fcomm_1',['cancel_comm',['../classField.html#aea30d8bfc43c059834bf931328796fdd',1,'Field']]],
+  ['cg_2',['CG',['../classCG.html',1,'CG&lt; Op &gt;'],['../classCG.html#a324136cf0ee648c6955093f5b8bd6a05',1,'CG::CG(Op &amp;op, double _accuracy, int _maxiters)'],['../classCG.html#a218cd78a66e6c37861eeec3ecacc8b5c',1,'CG::CG(Op &amp;op, double _accuracy)'],['../classCG.html#ad7dffa32c4384d3d9f7a72c112895568',1,'CG::CG(Op &amp;op)']]],
+  ['check_5falloc_3',['check_alloc',['../classField.html#ac2b47d5fd4285b4d0ec0792eabfc6d5d',1,'Field::check_alloc() const'],['../classField.html#ab5b73a0d1ca55fb875e39558c721cc81',1,'Field::check_alloc()']]],
+  ['check_5fthat_5frng_5fis_5finitialized_4',['check_that_rng_is_initialized',['../namespacehila.html#acdf775f23790c6c2694313db8643c873',1,'hila']]],
+  ['cmdlineargs_5',['cmdlineargs',['../classcmdlineargs.html',1,'']]],
+  ['collect_5fdata_6',['collect_data',['../classhila__fft.html#a34d2a204ed59e4600bbd8660a200e2fc',1,'hila_fft']]],
+  ['collect_5ffield_5fhalo_5fdata_5f_7',['collect_field_halo_data_',['../field__comm_8h.html#a5d4f2e1ce3a2ee1c1a19f8040dbd291e',1,'field_comm.h']]],
+  ['column_8',['column',['../classMatrix__t.html#a729340d500e4d11fcf5c3845e0ca391f',1,'Matrix_t']]],
+  ['comm_5fnode_5fstruct_9',['comm_node_struct',['../structlattice__struct_1_1comm__node__struct.html',1,'lattice_struct']]],
+  ['complex_10',['Complex',['../classComplex.html',1,'']]],
+  ['complex_11',['complex',['../classU1.html#aa92f091415661ef000d938724df8a57d',1,'U1']]],
+  ['complex_5for_5farithmetic_5ftype_5fstruct_12',['complex_or_arithmetic_type_struct',['../structhila_1_1complex__or__arithmetic__type__struct.html',1,'hila']]],
+  ['complex_5fx_5fscalar_5fs_13',['complex_x_scalar_s',['../structhila_1_1complex__x__scalar__s.html',1,'hila']]],
+  ['conj_14',['conj',['../classArray.html#ac9e102566f662e8e0b974723134a73ac',1,'Array::conj()'],['../classMatrix__t.html#a7bda9d240f8c0215799c515d9767f36b',1,'Matrix_t::conj()'],['../classWilsonVector__t.html#a2efe43728903e9713655f13c5b4cefde',1,'WilsonVector_t::conj()']]],
+  ['contains_5fcomplex_15',['contains_complex',['../structhila_1_1contains__complex.html',1,'hila']]],
+  ['contains_5ftype_16',['contains_type',['../structhila_1_1contains__type.html',1,'hila']]],
+  ['coordinates_17',['coordinates',['../structvectorized__lattice__struct.html#aa4505a76fb0e670ea3c9c6a008a595ba',1,'vectorized_lattice_struct']]],
+  ['coordinatevector_5ft_18',['CoordinateVector_t',['../classCoordinateVector__t.html',1,'CoordinateVector_t&lt; T &gt;'],['../classCoordinateVector__t.html#a415e78060e5ce2ac261021ef4ec8b5cb',1,'CoordinateVector_t::CoordinateVector_t(std::nullptr_t z)'],['../classCoordinateVector__t.html#abf657e0545670f2b3b306f8f26dce7bd',1,'CoordinateVector_t::CoordinateVector_t(std::initializer_list&lt; S &gt; rhs)'],['../classCoordinateVector__t.html#a3f2e80bebd26375dac79bdd15f79da88',1,'CoordinateVector_t::CoordinateVector_t(const Direction dir)']]],
+  ['coordinatevector_5ft_3c_20int_20_3e_19',['CoordinateVector_t&lt; int &gt;',['../classCoordinateVector__t.html',1,'']]],
+  ['copy_5fboundary_5fcondition_20',['copy_boundary_condition',['../classField.html#ab16c8dfd440b738952c86465f2a53bec',1,'Field']]],
+  ['copy_5flocal_5fdata_21',['copy_local_data',['../classField.html#a48de521e9e9beb5907351e7ee8721b0e',1,'Field']]],
+  ['count_22',['count',['../classhila_1_1k__binning.html#ad9db17d94efca74bedaaadbf3f21c2d9',1,'hila::k_binning']]],
+  ['create_5fstd_5fgathers_23',['create_std_gathers',['../classlattice__struct.html#a93c4adb3abd6497d1b7c7154042fb0b9',1,'lattice_struct']]],
+  ['creating_20your_20first_20hila_20application_24',['Creating your first HILA application',['../md_guide_2hila__applications.html',1,'']]]
+];
