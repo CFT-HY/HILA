@@ -1,7 +1,7 @@
 
 HILA
 ========= 
-![axions](./images/AxionStringNetwork.png)
+![axions](./docs/images/AxionStringNetwork.png)
 
 Hila (lattice in Finnish) is a C++ lattice field theory programming framework, aimed at HPC simulations.  
 
@@ -38,7 +38,7 @@ lattice fields differently for different computing platforms: 'array of structur
 
 ## Installation and documentation
 
-Installation and user guide can be viewed on the web documentation hosted on: TODO: add link to github pages or hosted guide somewhere
+Installation and user guide can be viewed on the [web documentation](https://cft-hy.github.io/HILA/html/index.html)
 
 To generate the user guide and technical documentation locally one can run:
 
