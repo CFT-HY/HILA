@@ -26,7 +26,7 @@ This section is comprehensive description of the functionality it offers. For te
        Direction variable acts as an unit vector in vector algebra:
        (assume below NDIM=4)
 
-~~~ C++            
+~~~cpp       
      CoordinateVector v;
      Direction d = e_x;
      v = d;             // v = [1,0,0,0]
@@ -45,7 +45,7 @@ This section is comprehensive description of the functionality it offers. For te
 The principal traversal of the lattice is with *site loops* `onsites(Parity)`, and a
 special location identifier `X` (effectively a new keyword).  
 
-~~~ C++
+~~~cpp
    using mytype = Matrix<3,3,Complex<double>>;   // use type alias
    Field<mytype> f,g,h;
    . . .
@@ -95,7 +95,7 @@ Because `f[X]` is of type field element, the methods defined for the element typ
 
 Reduction:
 
-~~~ C++
+~~~cpp
     mytype d = 0;
     onsites(ALL) d += f[X] - g[X+e_x];
 
@@ -104,7 +104,7 @@ Reduction:
 
 Other features:
 
-~~~ C++
+~~~cpp
     double a = 3, b = 5;
     Field<double> f, g=0;
 
@@ -125,7 +125,7 @@ Other features:
 
 Access field at a single point: `f[CoordinateVector]`.  This can be used only outside site loops.
 
-~~~ C++
+~~~cpp
   CoordinateVector v = {2,3,4,5};
   auto value = f[v];              // "value" is broadcast to all nodes!
   f[v] = 1;                       // In assignment, values are not broadcast: the node which
@@ -155,7 +155,7 @@ It matches key-value pairs from input files.  As an example, if the file `parame
 
 it can be read (mostly) using the method `input::get(std::string key)`:
 
-~~~ C++
+~~~cpp
 #include "hila.h"
 
 int main(int argc, char * argv[]) {
@@ -217,7 +217,7 @@ int main(int argc, char * argv[]) {
 
 The input files and the lattice layout can be checked with the 
 commands (after the application program has been built)
-~~~ bash
+~~~bash
    <hila-program-name> check
    <hila-program-name> check=<number-of-nodes>        # without spaces
 ~~~
