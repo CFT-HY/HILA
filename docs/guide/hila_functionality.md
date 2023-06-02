@@ -236,11 +236,11 @@ In short, the framework can be used in these steps:
 2. Use the hilapp excecutable to convert this code into .cpt code 
 3. Compile the new .cpt code into the final excecutable
 
-![Workflow illustration](/docs/workflowV1.png)
+![Workflow illustration](../images/workflowV1.png)
  
 
 You can then use it to compile an extended C++ file into standard C++ using
-~~~ bash
+~~~bash
 bin/hilapp path/to/program.cpp
 ~~~
 This will create a `cpt` file written in standard C++.
