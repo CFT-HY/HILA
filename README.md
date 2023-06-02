@@ -17,7 +17,22 @@ Hila is based on hila preprocessor "hilapp", which is a C++ source-to-source tra
 It converts application C++ to platform-specific C++ code,
 which is passed to appropriate compilers for the platforms.
 
-Behind the scenes hila takes care of MPI layout and communications.  It lays out the 
+Simplistic functionality which HILA promises is for example:
+
+```cpp
+Field<Complex<double>> f;
+Field<double> g = 0;
+
+onsites(ALL) f[X].gaussian_random();
+
+foralldir(d){
+  g[ALL] += abs(f[X+d] - 2*f[X] + f[X-d]);
+}
+```
+
+Above we have created a random gaussian field and then interated over it with some operation that holds neighboring communication. We then store the result in a field initialized to zero. 
+
+Hilapp handles the expansion of the above code into valid c++ code. Behind the scenes hila takes care of MPI layout and communications.  It lays out the 
 lattice fields differently for different computing platforms: 'array of structures' (standard),
 'array of structures of vectors' (AVX-type), or 'structure of arrays' (GPU-type).
 
