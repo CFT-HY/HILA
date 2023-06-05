@@ -40,8 +40,9 @@ jobs:
           git pull https://github.com/CFT-HY/HILA/tree/documentation
           cd documentation
           doxygen docs/config
+          zip -r docs/html.zip docs/html
       - name: Upload artifact
-        uses: HILA/docs/html
+        uses: HILA/docs/html.zip
 
   # Deployment job
   deploy:
