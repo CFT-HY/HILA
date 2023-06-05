@@ -37,6 +37,7 @@ jobs:
           destination: ./_site
       - name: Doxygen generate
         run: |
+          apt-get install doxygen -y
           doxygen docs/config
       - name: Upload artifact
         uses: ./docs/html
