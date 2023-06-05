@@ -9,4 +9,4 @@ settings.json
 #*#
 .VSCodeCounter/*
 docs/latex/
-docs/html/
+docs/html/*
