@@ -39,7 +39,7 @@ jobs:
         run: |
           doxygen docs/config
       - name: Upload artifact
-        uses: docs/html
+        uses: ./docs/html
 
   # Deployment job
   deploy:
