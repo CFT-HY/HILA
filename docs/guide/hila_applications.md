@@ -276,7 +276,6 @@ hila::out0 << "Average of g is " << average << '\n';
 
 Lastly we wrap up the HILA application with the `hila::finishrun` command which cleans up mpi and performs a safe exit with a memory cleanup step. Additionally it prints out useful timing information coupled with a timestamp. Like `hila::initialize`, `lattice.setup` and `hila::seed_random`, this is a necessary method to call in any HILA application, especially when running with MPI.
 
-
 ## Conclusion {#conclusion}
 
 This concludes the section on creating your first HILA application. We have gone through the basic structure of HILA applications, and how they are built and compiled. Additionally we have discussed basic functionality that HILA offers. With this foundational knowledge one can move on to reading the comprehensive guide on [HILA functionality](./hila_functionality.md)
